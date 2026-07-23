@@ -2,7 +2,7 @@
 
 set -eu
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 source_path=${KI_CLI_SOURCE:-"$script_dir/bin/ki"}
 install_dir=${KI_CLI_INSTALL_DIR:-"$HOME/.local/bin"}
 target="$install_dir/ki"
