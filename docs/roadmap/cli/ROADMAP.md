@@ -12,12 +12,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-### Deliver user-assisted ChatGPT acquisition
-
-After the seed and KEP v0 specification are accepted, add the first substantive command: `ki acquire chatgpt import <capture-directory> --output <kep-directory>`. It imports only locally user-provided evidence into a deterministic KEP.
-
-**Plan:** [CLI-002](plans/CLI-002-deliver-user-assisted-chatgpt-acquisition.md)
-
 ### Deliver native repository maintenance through registered skills
 
 Implement the first repository-maintenance slice without dispatching vendored `.ki/bin` runners: install one verified XDG-located skill collection, activate named skills explicitly in global or repository scope, resolve `.ki-config.toml` declarations, and run registered native `ki repo audit` and `ki repo conform` operations. Preserve scoped ownership, physical repository resolution, dry-run, safe writes, and actionable recovery; do not release, tag, or update Homebrew as part of this implementation plan.

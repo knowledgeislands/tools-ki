@@ -11,7 +11,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
 - [Cli: Deliver native repository maintenance through registered skills](docs/roadmap/cli/ROADMAP.md#deliver-native-repository-maintenance-through-registered-skills)
-- [Cli: Deliver user-assisted ChatGPT acquisition](docs/roadmap/cli/ROADMAP.md#deliver-user-assisted-chatgpt-acquisition)
 
 ## Soon
 
