@@ -18,6 +18,12 @@ Deliver the smallest installable `ki`: root help, version, completion, and a no-
 
 **Plan:** [CLI-001](plans/CLI-001-establish-ki-cli-seed-and-installation.md)
 
+### Publish the first release and Homebrew formula
+
+Release and tap delivery follow a tested first `ki` version; they must package the executable without redefining its command contract.
+
+**Plan:** [CLI-003](plans/CLI-003-publish-first-release-and-homebrew-formula.md)
+
 ### Deliver user-assisted ChatGPT acquisition
 
 After the seed and KEP v0 specification are accepted, add the first substantive command: `ki acquire chatgpt import <capture-directory> --output <kep-directory>`. It imports only locally user-provided evidence into a deterministic KEP.
@@ -31,10 +37,6 @@ Understood and roughly scoped but not yet started — worth doing once the **Nex
 ### Add broader user and repository lifecycle dispatch
 
 Adopt the remaining scoped lifecycle leaves only after the seed and acquisition slices have proved the executable, installer, output, and contract model.
-
-### Publish the first release and Homebrew formula
-
-Release and tap delivery follow a tested first `ki` version; they must package the executable without redefining its command contract.
 
 ## Waiting for
 
