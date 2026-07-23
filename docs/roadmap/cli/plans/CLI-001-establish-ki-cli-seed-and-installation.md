@@ -1,7 +1,7 @@
 ---
 id: "CLI-001"
 title: Establish the KI CLI seed and user installation route
-status: acceptance
+status: done
 roadmap: cli/establish-the-ki-cli-seed-and-user-installation-route
 blocks: CLI-002
 blocked-by: —
@@ -69,3 +69,7 @@ Release-asset transport and Homebrew delivery remain later work. CLI-002 owns ac
 ### Mini recap
 
 The seed proves the executable boundary without requiring a runtime or claiming lifecycle behaviour it does not yet provide.
+
+## Done
+
+Manual acceptance confirmed the seed executable and local installer. CLI-002 remains the next planned capability; tagged-release transport and Homebrew delivery remain later work.
