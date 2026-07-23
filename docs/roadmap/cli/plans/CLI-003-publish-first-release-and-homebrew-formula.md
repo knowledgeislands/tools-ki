@@ -1,7 +1,7 @@
 ---
 id: 'CLI-003'
 title: Publish first release and Homebrew formula
-status: acceptance
+status: done
 roadmap: cli/publish-the-first-release-and-homebrew-formula
 blocks: —
 blocked-by: —
@@ -78,3 +78,7 @@ None.
 ### Mini recap
 
 A source-archive formula gives the first release a simple, inspectable transport path while preserving the CLI's zero-dependency contract. Future releases need only repeat the tag, checksum, formula, and clean-install evidence sequence.
+
+## Done
+
+Manual acceptance confirmed the `ki v0.1.0` release, Homebrew formula, and clean-install evidence. CLI-002 remains the next independent capability; prune this retained record when its completed-work tranche is ready.
