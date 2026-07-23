@@ -1,7 +1,7 @@
 ---
 id: 'CLI-002'
 title: Deliver user-assisted ChatGPT acquisition
-status: acceptance
+status: done
 roadmap: cli/deliver-user-assisted-chatgpt-acquisition
 blocks: —
 blocked-by: —
@@ -65,3 +65,7 @@ The implementation remains unreleased as `ki 0.2.0`; tagging, publishing, and an
 ### Mini recap
 
 The KEP fixture exposed two contract details: every top-level payload file must be checksummed, and an asset-free package may omit `assets/` entirely. The specification fixture and CLI validator now agree; a future release can publish this verified capability without extending its user-assisted boundary.
+
+## Done
+
+Manual acceptance confirmed the user-assisted local ChatGPT capture importer, deterministic KEP output, validation fixtures, and CLI documentation. The residual concern is that `ki 0.2.0` remains unreleased; separately authorised follow-up may tag and publish it, then update the Homebrew formula.
