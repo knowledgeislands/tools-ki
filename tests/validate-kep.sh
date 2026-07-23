@@ -48,9 +48,10 @@ count_lines() {
 [ ! -L "$1" ] || validation_error "KEP directory must not be a symbolic link"
 KEP_DIRECTORY=$(physical_directory "$1") || validation_error "KEP directory must exist"
 
-for required in kep.toml checksums/sha256sums.txt relationships/native.jsonl source/originals source/records assets; do
+for required in kep.toml checksums/sha256sums.txt relationships/native.jsonl source/originals source/records; do
   [ -e "$KEP_DIRECTORY/$required" ] && [ ! -L "$KEP_DIRECTORY/$required" ] || validation_error "missing required path: $required"
 done
+[ ! -e "$KEP_DIRECTORY/assets" ] || { [ -d "$KEP_DIRECTORY/assets" ] && [ ! -L "$KEP_DIRECTORY/assets" ]; } || validation_error "assets must be a directory when present"
 
 format=$(manifest_value "$KEP_DIRECTORY/kep.toml" format)
 format_version=$(manifest_value "$KEP_DIRECTORY/kep.toml" format_version)
@@ -92,7 +93,11 @@ calculated_payload=$(sha256_file "$checksum_file")
 [ "$package_id" = "\"kep:sha256:$calculated_payload\"" ] || validation_error "package_id is invalid"
 
 records=$(count_files "$KEP_DIRECTORY/source/records")
-assets=$(count_files "$KEP_DIRECTORY/assets")
+if [ -d "$KEP_DIRECTORY/assets" ]; then
+  assets=$(count_files "$KEP_DIRECTORY/assets")
+else
+  assets=0
+fi
 relationships=$(count_lines "$KEP_DIRECTORY/relationships/native.jsonl")
 [ "$(manifest_value "$KEP_DIRECTORY/kep.toml" records)" = "$records" ] || validation_error "record inventory is invalid"
 [ "$(manifest_value "$KEP_DIRECTORY/kep.toml" assets)" = "$assets" ] || validation_error "asset inventory is invalid"

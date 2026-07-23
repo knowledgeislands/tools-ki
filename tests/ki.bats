@@ -108,6 +108,21 @@ EOF
   [[ "$output" == *"checksum mismatch"* ]]
 }
 
+@test "the validation fixture permits an absent empty assets directory" {
+  capture="$BATS_TEST_TMPDIR/capture"
+  output_dir="$BATS_TEST_TMPDIR/no-assets.kep"
+  make_capture "$capture"
+  rm "$capture/assets/example.png"
+  printf '%s\n' '{"type":"conversation-order","record":"records/conversation.md","position":1}' > "$capture/relationships/native.jsonl"
+
+  run "$KI" acquire chatgpt import "$capture" --output "$output_dir"
+  [ "$status" -eq 0 ]
+  rmdir "$output_dir/assets"
+
+  run "$VALIDATOR" "$output_dir"
+  [ "$status" -eq 0 ]
+}
+
 @test "dry-run validates the capture but creates no output" {
   capture="$BATS_TEST_TMPDIR/capture"
   output_dir="$BATS_TEST_TMPDIR/dry-run.kep"
