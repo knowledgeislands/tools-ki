@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+set -eu
+
+KI_VERSION="0.1.0"
+DOCTOR_MESSAGE="Knowledge Islands diagnostics are coming soon. This command currently performs no checks and changes nothing."
+
+root_help() {
+  cat <<'EOF'
+Usage: ki <command>
+
+Knowledge Islands command-line interface.
+
+Commands:
+  doctor              Report current diagnostic availability.
+  help [doctor]       Show command help.
+  completion <shell>  Print Bash or Zsh completion.
+
+Options:
+  -h, --help          Show this help.
+  -V, --version       Show the CLI version.
+EOF
+}
+
+doctor_help() {
+  cat <<'EOF'
+Usage: ki doctor
+
+Diagnostics are coming soon. This command currently performs no checks and changes nothing.
+EOF
+}
+
+completion() {
+  case "$1" in
+    bash) printf '%s\n' 'complete -W "doctor help completion --help --version" ki' ;;
+    zsh) printf '%s\n' '#compdef ki' '_arguments "1: :((doctor help completion))"' ;;
+    *) printf "ki: error: completion shell must be bash or zsh\n" >&2; exit 2 ;;
+  esac
+}
+
+case "${1:-}" in
+  ""|help|--help|-h)
+    if [ "${1:-}" = "help" ] && [ "${2:-}" = "doctor" ]; then doctor_help; elif [ "${1:-}" = "help" ] && [ -n "${2:-}" ]; then printf "ki: error: unknown help topic: %s\n" "$2" >&2; exit 2; else root_help; fi
+    ;;
+  --version|-V) printf 'ki %s\n' "$KI_VERSION" ;;
+  doctor) [ "$#" -eq 1 ] || { printf "ki: error: doctor accepts no arguments\n" >&2; exit 2; }; printf '%s\n' "$DOCTOR_MESSAGE" ;;
+  completion) [ "$#" -eq 2 ] || { printf "ki: error: completion requires bash or zsh\n" >&2; exit 2; }; completion "$2" ;;
+  acquire) printf "ki: error: ki acquire is not available in this release\n" >&2; exit 2 ;;
+  *) printf "ki: error: unknown command: %s\nki: try 'ki help'\n" "$1" >&2; exit 2 ;;
+esac
