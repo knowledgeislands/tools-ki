@@ -10,13 +10,14 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
+- [Cli: Deliver native repository maintenance through registered skills](docs/roadmap/cli/ROADMAP.md#deliver-native-repository-maintenance-through-registered-skills)
 - [Cli: Deliver user-assisted ChatGPT acquisition](docs/roadmap/cli/ROADMAP.md#deliver-user-assisted-chatgpt-acquisition)
 
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
-- [Cli: Add broader user and repository lifecycle dispatch](docs/roadmap/cli/ROADMAP.md#add-broader-user-and-repository-lifecycle-dispatch)
+- [Cli: Complete remaining user and repository lifecycle commands](docs/roadmap/cli/ROADMAP.md#complete-remaining-user-and-repository-lifecycle-commands)
 
 ## Waiting for
 

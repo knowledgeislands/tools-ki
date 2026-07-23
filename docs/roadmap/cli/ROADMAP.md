@@ -18,13 +18,19 @@ After the seed and KEP v0 specification are accepted, add the first substantive 
 
 **Plan:** [CLI-002](plans/CLI-002-deliver-user-assisted-chatgpt-acquisition.md)
 
+### Deliver native repository maintenance through registered skills
+
+Implement the first repository-maintenance slice without dispatching vendored `.ki/bin` runners: install one verified XDG-located skill collection, activate named skills explicitly in global or repository scope, resolve `.ki-config.toml` declarations, and run registered native `ki repo audit` and `ki repo conform` operations. Preserve scoped ownership, physical repository resolution, dry-run, safe writes, and actionable recovery; do not release, tag, or update Homebrew as part of this implementation plan.
+
+**Plan:** [CLI-004](plans/CLI-004-native-repo-maintenance.md)
+
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
-### Add broader user and repository lifecycle dispatch
+### Complete remaining user and repository lifecycle commands
 
-Adopt the remaining scoped lifecycle leaves only after the seed and acquisition slices have proved the executable, installer, output, and contract model.
+After native repository maintenance proves the installed-skill model, adopt the remaining scoped user and repository lifecycle leaves. Keep every command's ownership and safety boundary explicit; do not add compatibility dispatch to retired vendored runners.
 
 ## Waiting for
 
