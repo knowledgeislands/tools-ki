@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 
 KI="$BATS_TEST_DIRNAME/../bin/ki"
+VALIDATOR="$BATS_TEST_DIRNAME/validate-kep.sh"
 
 make_capture() {
   local capture="$1"
@@ -87,6 +88,24 @@ EOF
   payload_sha256=$(shasum -a 256 "$checksum_file" | awk '{print $1}')
   grep -F "payload_sha256 = \"$payload_sha256\"" "$output_dir/kep.toml"
   grep -F "package_id = \"kep:sha256:$payload_sha256\"" "$output_dir/kep.toml"
+}
+
+@test "passes the KIS-0002 validation fixture and detects payload drift" {
+  capture="$BATS_TEST_TMPDIR/capture"
+  output_dir="$BATS_TEST_TMPDIR/fixture.kep"
+  make_capture "$capture"
+
+  run "$KI" acquire chatgpt import "$capture" --output "$output_dir"
+  [ "$status" -eq 0 ]
+
+  run "$VALIDATOR" "$output_dir"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"KEP valid:"* ]]
+
+  printf '%s\n' 'drift' >> "$output_dir/source/records/conversation.md"
+  run "$VALIDATOR" "$output_dir"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"checksum mismatch"* ]]
 }
 
 @test "dry-run validates the capture but creates no output" {

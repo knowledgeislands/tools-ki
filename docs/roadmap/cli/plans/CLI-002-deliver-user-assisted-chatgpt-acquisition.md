@@ -13,7 +13,7 @@ The first substantive `ki` capability is acquisition of a user-provided ChatGPT 
 
 ## Current state
 
-The KAF boundary is accepted in the harness, [KEP-001](https://github.com/knowledgeislands/ki-specifications/blob/main/docs/roadmap/knowledge-acquisition/plans/KEP-001-specify-kep-v0-and-acquisition-boundary.md) records the adopted Draft KIS-0002 contract, and `ki 0.1.0` provides the seed executable. The controlled local-capture adapter and deterministic KEP emission are implemented in the unreleased CLI worktree. The only permitted source is a local, user-prepared capture directory. KI Specifications currently provides KEP conformance fixtures but no executable validator, so external validator interoperability remains to be proved before acceptance.
+The KAF boundary is accepted in the harness, [KEP-001](https://github.com/knowledgeislands/ki-specifications/blob/main/docs/roadmap/knowledge-acquisition/plans/KEP-001-specify-kep-v0-and-acquisition-boundary.md) records the adopted Draft KIS-0002 contract, and `ki 0.1.0` provides the seed executable. The controlled local-capture adapter and deterministic KEP emission are implemented in the unreleased CLI worktree. The only permitted source is a local, user-prepared capture directory. A local KIS-0002 validation fixture proves emitted layout, checksums, inventory, identity, relationships, and payload-drift refusal. KI Specifications currently provides no executable validator, so external validator interoperability remains to be proved before acceptance.
 
 ## Steps
 

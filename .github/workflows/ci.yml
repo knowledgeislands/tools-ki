@@ -8,5 +8,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: brew install bats-core shellcheck
-      - run: shellcheck bin/ki install.sh
+      - run: shellcheck bin/ki install.sh tests/validate-kep.sh
       - run: bats tests
