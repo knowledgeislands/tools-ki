@@ -13,15 +13,15 @@ The first substantive `ki` capability is acquisition of a user-provided ChatGPT 
 
 ## Current state
 
-The KAF boundary is accepted in the harness, [KEP-001](https://github.com/knowledgeislands/ki-specifications/blob/main/docs/roadmap/knowledge-acquisition/plans/KEP-001-specify-kep-v0-and-acquisition-boundary.md) records the adopted Draft KIS-0002 contract, and `ki 0.1.0` provides the seed executable. The controlled local-capture adapter and KEP emission remain to be implemented. The only permitted source is a local, user-prepared capture directory.
+The KAF boundary is accepted in the harness, [KEP-001](https://github.com/knowledgeislands/ki-specifications/blob/main/docs/roadmap/knowledge-acquisition/plans/KEP-001-specify-kep-v0-and-acquisition-boundary.md) records the adopted Draft KIS-0002 contract, and `ki 0.1.0` provides the seed executable. The controlled local-capture adapter and deterministic KEP emission are implemented in the unreleased CLI worktree. The only permitted source is a local, user-prepared capture directory. KI Specifications currently provides KEP conformance fixtures but no executable validator, so external validator interoperability remains to be proved before acceptance.
 
 ## Steps
 
 1. [x] Adopt the accepted KEP v0 specification and its validator fixtures. Stop if the normative package identity, manifest, checksum, record, asset, relationship, or omission contract remains unresolved.
-2. Define the local capture-input adapter for the controlled pilot layout: originals, records, binary assets, source-native relationships, and declared omissions. Reject credentials, browser state, resumable checkpoints, and inferred semantic relationships.
-3. Add the exact command `ki acquire chatgpt import <capture-directory> --output <kep-directory> [--dry-run] [--json]`, its root/leaf HELP, completion, diagnostics, exit codes, and unavailable/reserved behaviour from the accepted public manual.
-4. Implement deterministic, write-contained KEP creation: validate before writing; write only under the selected output; preserve binary bytes; produce canonical manifest, relationship ordering, and checksums; refuse unsafe, conflicting, or unrecognised output.
-5. Implement JSON and ordinary result reports that identify package identity, counts, declared omissions, and limits without exposing source content or secrets.
+2. [x] Define the local capture-input adapter for the controlled pilot layout: originals, records, binary assets, source-native relationships, and declared omissions. Reject credentials, browser state, resumable checkpoints, and inferred semantic relationships.
+3. [x] Add the exact command `ki acquire chatgpt import <capture-directory> --output <kep-directory> [--dry-run] [--json]`, its root/leaf HELP, completion, diagnostics, exit codes, and unavailable/reserved behaviour from the accepted public manual.
+4. [x] Implement deterministic, write-contained KEP creation: validate before writing; write only under the selected output; preserve binary bytes; produce canonical manifest, relationship ordering, and checksums; refuse unsafe, conflicting, or unrecognised output.
+5. [x] Implement JSON and ordinary result reports that identify package identity, counts, declared omissions, and limits without exposing source content or secrets.
 6. Add fixtures for repeatable output, dry-run write-freedom, malformed records, missing assets, relationship violations, output conflicts, content drift, and validator interoperability. Prove there is no browser, network, repository-discovery, credential, or child-process access.
 7. Update the CLI guide and release notes, run the KEP validator plus applicable tool checks, and prepare the plan for manual acceptance.
 

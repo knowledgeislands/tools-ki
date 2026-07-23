@@ -2,17 +2,182 @@
 
 KI="$BATS_TEST_DIRNAME/../bin/ki"
 
-@test "root help and doctor are available" {
+make_capture() {
+  local capture="$1"
+
+  mkdir -p "$capture/originals" "$capture/records" "$capture/assets" "$capture/relationships"
+  cat > "$capture/capture.toml" <<'EOF'
+format = "ki-chatgpt-capture"
+format_version = "0.1.0"
+capture_boundary = "One exported conversation: cli-002"
+omissions = ["No project membership was available"]
+EOF
+  printf '%s\n' '{"conversation_id":"cli-002"}' > "$capture/originals/export.json"
+  cat > "$capture/records/conversation.md" <<'EOF'
+# CLI-002 conversation
+
+user: Please preserve this source record.
+assistant: The record is preserved without extracting knowledge.
+EOF
+  printf '\211PNG\r\n' > "$capture/assets/example.png"
+  cat > "$capture/relationships/native.jsonl" <<'EOF'
+{"type":"conversation-order","record":"records/conversation.md","position":1}
+{"type":"message-asset","record":"records/conversation.md","asset":"assets/example.png","message_id":"message-001"}
+EOF
+}
+
+@test "root help, completion, and doctor expose the released surface" {
   run "$KI" --help
   [ "$status" -eq 0 ]
-  [[ "$output" == *"doctor"* ]]
+  [[ "$output" == *"acquire"* ]]
+
+  run "$KI" completion bash
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"acquire"* ]]
+
   run "$KI" doctor
   [ "$status" -eq 0 ]
   [[ "$output" == *"performs no checks"* ]]
 }
 
-@test "acquisition is reserved" {
-  run "$KI" acquire
+@test "acquisition root and leaf help are available" {
+  run "$KI" help acquire chatgpt import
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--output <kep-directory>"* ]]
+
+  run "$KI" acquire chatgpt import --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"local capture"* ]]
+}
+
+@test "imports a deterministic KEP with preserved source bytes" {
+  capture="$BATS_TEST_TMPDIR/capture"
+  first="$BATS_TEST_TMPDIR/first.kep"
+  second="$BATS_TEST_TMPDIR/second.kep"
+  make_capture "$capture"
+
+  run "$KI" acquire chatgpt import "$capture" --output "$first"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"KEP created:"* ]]
+  [ -f "$first/kep.toml" ]
+  [ -f "$first/checksums/sha256sums.txt" ]
+  cmp "$capture/originals/export.json" "$first/source/originals/export.json"
+  cmp "$capture/assets/example.png" "$first/assets/example.png"
+
+  run "$KI" acquire chatgpt import "$capture" --output "$second"
+  [ "$status" -eq 0 ]
+  diff -r "$first" "$second"
+}
+
+@test "emits lexicographically ordered checksums and the matching KEP identity" {
+  capture="$BATS_TEST_TMPDIR/capture"
+  output_dir="$BATS_TEST_TMPDIR/validated.kep"
+  make_capture "$capture"
+
+  run "$KI" acquire chatgpt import "$capture" --output "$output_dir"
+  [ "$status" -eq 0 ]
+
+  checksum_file="$output_dir/checksums/sha256sums.txt"
+  checksum_paths=$(awk '{print $2}' "$checksum_file")
+  [ "$(printf '%s\n' "$checksum_paths" | LC_ALL=C sort)" = "$checksum_paths" ]
+  while IFS='  ' read -r digest path; do
+    [ "$digest" = "$(shasum -a 256 "$output_dir/$path" | awk '{print $1}')" ]
+  done < "$checksum_file"
+
+  payload_sha256=$(shasum -a 256 "$checksum_file" | awk '{print $1}')
+  grep -F "payload_sha256 = \"$payload_sha256\"" "$output_dir/kep.toml"
+  grep -F "package_id = \"kep:sha256:$payload_sha256\"" "$output_dir/kep.toml"
+}
+
+@test "dry-run validates the capture but creates no output" {
+  capture="$BATS_TEST_TMPDIR/capture"
+  output_dir="$BATS_TEST_TMPDIR/dry-run.kep"
+  make_capture "$capture"
+
+  run "$KI" acquire chatgpt import "$capture" --output "$output_dir" --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Dry run: no files written."* ]]
+  [ ! -e "$output_dir" ]
+}
+
+@test "JSON reports package identity, inventory, omissions, and limits" {
+  capture="$BATS_TEST_TMPDIR/capture"
+  output_dir="$BATS_TEST_TMPDIR/result.kep"
+  make_capture "$capture"
+
+  run "$KI" acquire chatgpt import "$capture" --output "$output_dir" --dry-run --json
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"version":1'* ]]
+  [[ "$output" == *'"status":"dry-run"'* ]]
+  [[ "$output" == *'"package_id":"kep:sha256:'* ]]
+  [[ "$output" == *'"relationships":2'* ]]
+  [[ "$output" == *'"limitations"'* ]]
+  [ ! -e "$output_dir" ]
+}
+
+@test "imports without network or repository commands" {
+  capture="$BATS_TEST_TMPDIR/capture"
+  output_dir="$BATS_TEST_TMPDIR/isolation.kep"
+  spies="$BATS_TEST_TMPDIR/spies"
+  make_capture "$capture"
+  mkdir "$spies"
+  for command in curl git open; do
+    cat > "$spies/$command" <<'EOF'
+#!/usr/bin/env sh
+exit 99
+EOF
+    chmod 755 "$spies/$command"
+  done
+
+  run env PATH="$spies:$PATH" "$KI" acquire chatgpt import "$capture" --output "$output_dir"
+  [ "$status" -eq 0 ]
+  [ -f "$output_dir/kep.toml" ]
+}
+
+@test "rejects malformed metadata before creating output" {
+  capture="$BATS_TEST_TMPDIR/capture"
+  output_dir="$BATS_TEST_TMPDIR/bad.kep"
+  make_capture "$capture"
+  printf '%s\n' 'unknown = "field"' >> "$capture/capture.toml"
+
+  run "$KI" acquire chatgpt import "$capture" --output "$output_dir"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"unsupported field"* ]]
+  [ ! -e "$output_dir" ]
+}
+
+@test "rejects a relationship that references a missing asset" {
+  capture="$BATS_TEST_TMPDIR/capture"
+  output_dir="$BATS_TEST_TMPDIR/missing-asset.kep"
+  make_capture "$capture"
+  printf '%s\n' '{"type":"message-asset","record":"records/conversation.md","asset":"assets/missing.png","message_id":"message-002"}' >> "$capture/relationships/native.jsonl"
+
+  run "$KI" acquire chatgpt import "$capture" --output "$output_dir"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"missing asset"* ]]
+  [ ! -e "$output_dir" ]
+}
+
+@test "rejects non-native relationship records and conflicting output" {
+  capture="$BATS_TEST_TMPDIR/capture"
+  output_dir="$BATS_TEST_TMPDIR/existing.kep"
+  make_capture "$capture"
+  printf '%s\n' '{"type":"semantic-similarity","record":"records/conversation.md"}' > "$capture/relationships/native.jsonl"
+
+  run "$KI" acquire chatgpt import "$capture" --output "$output_dir"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"not a supported source-native"* ]]
+  [ ! -e "$output_dir" ]
+
+  mkdir "$output_dir"
+  run "$KI" acquire chatgpt import "$capture" --output "$output_dir"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"already exists"* ]]
+}
+
+@test "rejects grammar without inspecting a capture" {
+  run "$KI" acquire chatgpt import --output "$BATS_TEST_TMPDIR/output.kep"
   [ "$status" -eq 2 ]
-  [[ "$output" == *"not available"* ]]
+  [[ "$output" == *"capture-directory must come before options"* ]]
+  [ ! -e "$BATS_TEST_TMPDIR/output.kep" ]
 }
