@@ -1,7 +1,7 @@
 ---
 id: "CLI-001"
 title: Establish the KI CLI seed and user installation route
-status: open
+status: in-progress
 roadmap: cli/establish-the-ki-cli-seed-and-user-installation-route
 blocks: CLI-002
 blocked-by: —
