@@ -1,7 +1,7 @@
 ---
 id: 'CLI-002'
 title: Deliver user-assisted ChatGPT acquisition
-status: open
+status: ready
 roadmap: cli/deliver-user-assisted-chatgpt-acquisition
 blocks: —
 blocked-by: —
