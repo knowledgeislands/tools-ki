@@ -23,7 +23,7 @@ There is no published `ki` tag, release, immutable source-archive checksum, or `
 
 ## Steps
 
-1. Confirm the release commit, `v0.1.0` version output, changelog, clean test baseline, and absence of an existing `ki` tag, release, or tap formula.
+1. [x] Confirm the release commit, `v0.1.0` version output, changelog, clean test baseline, and absence of an existing `ki` tag, release, or tap formula.
 2. Ask for explicit approval before any external publication; once approved, create and push the `v0.1.0` tag for the accepted seed commit and publish its release without adding acquisition behaviour.
 3. Download the published immutable `v0.1.0` source archive, calculate and record its SHA-256, and verify that the archive installs `bin/ki` without generated or untracked payloads.
 4. Add `homebrew-tap/Formula/ki.rb`, modelled on `Formula/mgit.rb`, with the KI description, homepage, immutable source-archive URL and SHA-256, MIT licence, `bin.install "bin/ki"`, and version/help formula tests.
