@@ -1,5 +1,5 @@
 ---
-id: "CLI-001"
+id: 'CLI-001'
 title: Establish the KI CLI seed and user installation route
 status: done
 roadmap: cli/establish-the-ki-cli-seed-and-user-installation-route

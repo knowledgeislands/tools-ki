@@ -1,5 +1,5 @@
 ---
-id: "CLI-003"
+id: 'CLI-003'
 title: Publish first release and Homebrew formula
 status: in-progress
 roadmap: cli/publish-the-first-release-and-homebrew-formula

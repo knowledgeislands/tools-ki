@@ -1,5 +1,5 @@
 ---
-id: "CLI-002"
+id: 'CLI-002'
 title: Deliver user-assisted ChatGPT acquisition
 status: open
 roadmap: cli/deliver-user-assisted-chatgpt-acquisition
