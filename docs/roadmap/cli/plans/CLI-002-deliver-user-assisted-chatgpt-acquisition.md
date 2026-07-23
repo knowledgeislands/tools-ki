@@ -4,7 +4,7 @@ title: Deliver user-assisted ChatGPT acquisition
 status: open
 roadmap: cli/deliver-user-assisted-chatgpt-acquisition
 blocks: —
-blocked-by: CLI-001
+blocked-by: —
 ---
 
 ## Context
@@ -42,4 +42,4 @@ The KAF boundary is accepted in the harness, and KEP-001 is planned in KI Specif
 
 ## Dependencies / blocks
 
-CLI-001 is the local formal blocker. KEP-001 in `knowledgeislands/ki-specifications` is the external normative prerequisite; harness FND-003 supplies the final public help and command-contract wording. Neither external dependency is inferred as accepted until its owning repository records it done.
+[KEP-001](https://github.com/knowledgeislands/ki-specifications/blob/main/docs/roadmap/knowledge-acquisition/plans/KEP-001-specify-kep-v0-and-acquisition-boundary.md) in `knowledgeislands/ki-specifications` is the external normative prerequisite; harness [FND-003](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-003-define-ki-cli-user-guide-and-manual.md) supplies the final public help and command-contract wording. Neither external dependency is inferred as accepted until its owning repository records it done.

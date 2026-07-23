@@ -12,18 +12,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-### Establish the KI CLI seed and user installation route
-
-Deliver the smallest installable `ki`: root help, version, completion, and a no-op `ki doctor` coming-soon response. It follows the public manual being finalised in the harness and deliberately does not dispatch user, repository, or acquisition operations yet.
-
-**Plan:** [CLI-001](plans/CLI-001-establish-ki-cli-seed-and-installation.md)
-
-### Publish the first release and Homebrew formula
-
-Release and tap delivery follow a tested first `ki` version; they must package the executable without redefining its command contract.
-
-**Plan:** [CLI-003](plans/CLI-003-publish-first-release-and-homebrew-formula.md)
-
 ### Deliver user-assisted ChatGPT acquisition
 
 After the seed and KEP v0 specification are accepted, add the first substantive command: `ki acquire chatgpt import <capture-directory> --output <kep-directory>`. It imports only locally user-provided evidence into a deterministic KEP.

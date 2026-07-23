@@ -11,8 +11,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
 - [Cli: Deliver user-assisted ChatGPT acquisition](docs/roadmap/cli/ROADMAP.md#deliver-user-assisted-chatgpt-acquisition)
-- [Cli: Establish the KI CLI seed and user installation route](docs/roadmap/cli/ROADMAP.md#establish-the-ki-cli-seed-and-user-installation-route)
-- [Cli: Publish the first release and Homebrew formula](docs/roadmap/cli/ROADMAP.md#publish-the-first-release-and-homebrew-formula)
 
 ## Soon
 
