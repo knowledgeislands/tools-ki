@@ -1,7 +1,7 @@
 ---
 id: "CLI-001"
 title: Establish the KI CLI seed and user installation route
-status: in-progress
+status: acceptance
 roadmap: cli/establish-the-ki-cli-seed-and-user-installation-route
 blocks: CLI-002
 blocked-by: —
@@ -13,17 +13,17 @@ blocked-by: —
 
 ## Current state
 
-`tools-ki` contains only its initial README. The harness FND-003 plan owns the public user guide and the final resolution that root `ki doctor` is a harmless coming-soon response rather than an invalid unscoped command. No executable, installer, test suite, release process, or KEP implementation exists here.
+The seed now provides an executable, local installer, Bats suite, ShellCheck/Bats CI, configuration, and changelog. It implements no KEP or lifecycle dispatch.
 
 ## Steps
 
-1. Adopt the completed FND-003 user guide and command contract as the local product contract, including exact root and leaf HELP, output streams, exit codes, version shape, completion, and the no-op `ki doctor` response.
-2. Scaffold this single-command Bash 3.2 tool repository with its `ki-tools` container: `.ki-config.toml`, executable `bin/ki`, `install.sh`, Bats suite, ShellCheck/Bats CI, changelog, and release documentation. Do not add a language runtime or a second tool.
-3. Implement one available-command definition that derives root HELP, `ki help`, `--help`, `--version`, Bash/Zsh completion, and parser refusal behaviour without runtime, filesystem, repository, network, or child-process access.
-4. Implement root `ki doctor` as the fixed, honest coming-soon response defined by FND-003. It exits successfully and inspects or changes neither user nor repository state.
-5. Implement the minimal installer with an explicit user command directory, idempotent replacement, payload-integrity checks, and an actionable PATH recovery message. Keep release lookup and transport behind fixtures until a release channel exists.
-6. Test the executable and installer on macOS system Bash and Linux for help/version/completion parity, parser errors, doctor non-interference, installation, repeat installation, integrity failure, and PATH recovery.
-7. Run the applicable `ki-repo`, `ki-tools`, ShellCheck, Bats, documentation, and roadmap checks; prepare the plan for manual acceptance.
+1. [x] Adopt the completed FND-003 user guide and command contract as the local product contract, including exact root and leaf HELP, output streams, exit codes, version shape, completion, and the no-op `ki doctor` response.
+2. [x] Scaffold this single-command Bash 3.2 tool repository with its `ki-tools` container: `.ki-config.toml`, executable `bin/ki`, `install.sh`, Bats suite, ShellCheck/Bats CI, changelog, and release documentation. Do not add a language runtime or a second tool.
+3. [x] Implement one available-command definition that derives root HELP, `ki help`, `--help`, `--version`, Bash/Zsh completion, and parser refusal behaviour without runtime, filesystem, repository, network, or child-process access.
+4. [x] Implement root `ki doctor` as the fixed, honest coming-soon response defined by FND-003. It exits successfully and inspects or changes neither user nor repository state.
+5. [x] Implement the minimal installer with an explicit user command directory, idempotent replacement, payload-integrity checks, and an actionable PATH recovery message. Keep release lookup and transport behind fixtures until a release channel exists.
+6. [x] Test the executable and installer on macOS system Bash and Linux for help/version/completion parity, parser errors, doctor non-interference, installation, repeat installation, integrity failure, and PATH recovery.
+7. [x] Run the applicable `ki-repo`, `ki-tools`, ShellCheck, Bats, documentation, and roadmap checks; prepare the plan for manual acceptance.
 
 ## Files touched
 
@@ -43,3 +43,29 @@ blocked-by: —
 ## Dependencies / blocks
 
 This plan is blocked in practice by acceptance of harness FND-003's public manual and root-doctor contract; that external plan is deliberately not encoded as a local plan dependency. It blocks CLI-002.
+
+## Acceptance
+
+### Delivered
+
+A Bash 3.2 `ki` seed with HELP, version, Bash/Zsh completion, no-op doctor, reserved acquisition refusal, and an isolated installer.
+
+### Summary of changes
+
+- Added `bin/ki`, `install.sh`, Bats tests, CI, tool configuration, and changelog.
+- Kept user/repository dispatch and acquisition unavailable.
+
+### Verification
+
+- `shellcheck bin/ki install.sh` — passed.
+- `bats tests` — passed.
+- `ki-repo-roadmap` audit — passed with no FAIL or WARN findings.
+- Evidence: `e8cb0df`, `df27b22`.
+
+### Outstanding concerns
+
+Release-asset transport and Homebrew delivery remain later work. CLI-002 owns acquisition against Draft KIS-0002.
+
+### Mini recap
+
+The seed proves the executable boundary without requiring a runtime or claiming lifecycle behaviour it does not yet provide.
