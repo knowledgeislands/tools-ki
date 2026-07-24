@@ -6,6 +6,7 @@ status: current
 type: Governance Decision Record
 type_url: https://knowledgeislands.info/specifications/decision-records/gdr
 decision_type: governance
+shared_record: true
 ---
 
 # GDR-KI-ARCADIA-002: Knowledge Islands ecosystem fundamentals
