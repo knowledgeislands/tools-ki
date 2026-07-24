@@ -129,8 +129,11 @@ declared capabilities. The host verifies every selected harness inventory and
 integrity-covered operation before importing it in process; it never dispatches
 repository-vendored runners.
 .TP
-.B ki repo conform [--repo \fIpath\fR] [--skill \fIskill\fR] [--dry-run] [planned]
-Apply the same capabilities' safe mechanical changes and re-audit.
+.B ki repo conform [--repo \fIpath\fR] [--skill \fIskill\fR] [--dry-run]
+Plan and apply the same capabilities' safe writes, then re-audit. A dry run
+validates every complete write set and reports the affected paths without
+changing the repository. Publication refuses unsafe, changed, duplicate, or
+symbolic-link targets.
 .SH XDG PATHS
 .B ki
 uses the XDG Base Directory variables for user-owned KI state.

@@ -114,29 +114,19 @@ const makeCapture = async (root: string): Promise<string> => {
   return capture
 }
 
-const installHarness = async (data: string, auditSource?: string): Promise<void> => {
+const installHarness = async (data: string, auditSource?: string, conformSource?: string): Promise<void> => {
   const root = join(data, 'ki', 'harnesses', 'example', 'harness', 'latest')
   const skill = '# ki-example\n'
   await mkdir(join(root, 'skills', 'ki-example'), { recursive: true })
   await writeFile(join(root, 'skills', 'ki-example', 'SKILL.md'), skill)
   const digest = createHash('sha256').update(skill).digest('hex')
-  const operation = auditSource
-    ? [
-        '',
-        '[[capabilities.files]]',
-        'path = "operations/audit.mjs"',
-        `sha256 = "${createHash('sha256').update(auditSource).digest('hex')}"`,
-        '',
-        '[[capabilities.operations]]',
-        'protocol = "ki/native-operation@1"',
-        'module = "operations/audit.mjs"',
-        'export = "audit"',
-        'mode = "audit"'
-      ]
-    : []
-  if (auditSource) {
+  const operations = [
+    auditSource ? { mode: 'audit', source: auditSource } : undefined,
+    conformSource ? { mode: 'conform', source: conformSource } : undefined
+  ].filter((operation): operation is { readonly mode: string; readonly source: string } => operation !== undefined)
+  if (operations.length) {
     await mkdir(join(root, 'operations'), { recursive: true })
-    await writeFile(join(root, 'operations', 'audit.mjs'), auditSource)
+    await Promise.all(operations.map(async (operation) => writeFile(join(root, 'operations', `${operation.mode}.mjs`), operation.source)))
   }
   await writeFile(
     join(root, 'harness.toml'),
@@ -154,7 +144,20 @@ const installHarness = async (data: string, auditSource?: string): Promise<void>
       '[[capabilities.files]]',
       'path = "skills/ki-example/SKILL.md"',
       `sha256 = "${digest}"`,
-      ...operation,
+      ...operations.flatMap((operation) => [
+        '',
+        '[[capabilities.files]]',
+        `path = "operations/${operation.mode}.mjs"`,
+        `sha256 = "${createHash('sha256').update(operation.source).digest('hex')}"`
+      ]),
+      ...operations.flatMap((operation) => [
+        '',
+        '[[capabilities.operations]]',
+        'protocol = "ki/native-operation@1"',
+        `module = "operations/${operation.mode}.mjs"`,
+        `export = "${operation.mode}"`,
+        `mode = "${operation.mode}"`
+      ]),
       ''
     ].join('\n')
   )
@@ -248,6 +251,30 @@ describe('baseline commands', () => {
     const result = await runKiAt(['repo', 'audit', '--skill', 'ki-example'], project, { HOME: home, XDG_DATA_HOME: data })
 
     expect(result).toEqual({ exitCode: 0, output: 'info EXAMPLE-1: example/harness:ki-example\n' })
+  })
+
+  test('publishes a complete native conform write set, supports dry-run, and re-audits', async () => {
+    const root = await temporaryDirectory()
+    const home = join(root, 'home')
+    const data = join(root, 'data')
+    const project = join(root, 'project')
+    await mkdir(home)
+    await mkdir(project)
+    await writeFile(join(project, '.ki-config.toml'), '[ki-example]\n')
+    await writeFile(join(project, 'governed.txt'), 'before\n')
+    await installHarness(
+      data,
+      'import { readFile } from "node:fs/promises"\nexport const audit = async ({ repository }) => (await readFile(repository + "/governed.txt", "utf8")) === "after\\n" ? [] : [{ level: "fail", code: "EXAMPLE-1", message: "not conformed" }]\n',
+      'export const conform = async () => ({ findings: [], writes: [{ path: "governed.txt", content: "after\\n" }] })\n'
+    )
+
+    const dryRun = await runKiAt(['repo', 'conform', '--dry-run'], project, { HOME: home, XDG_DATA_HOME: data })
+    expect(dryRun).toEqual({ exitCode: 0, output: 'would write governed.txt\n' })
+    expect(await readFile(join(project, 'governed.txt'), 'utf8')).toBe('before\n')
+
+    const conformed = await runKiAt(['repo', 'conform'], project, { HOME: home, XDG_DATA_HOME: data })
+    expect(conformed).toEqual({ exitCode: 0, output: 'write governed.txt\n' })
+    expect(await readFile(join(project, 'governed.txt'), 'utf8')).toBe('after\n')
   })
 
   test('creates a context when the caller does not supply one and rethrows unexpected command errors', async () => {
