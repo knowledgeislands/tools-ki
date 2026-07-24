@@ -13,17 +13,16 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         redetect: options.redetect
       })
       const agents = configuration.agents
-      context.stdout.write(
-        configuration.disposition === 'created'
-          ? `created KI agent configuration for ${agents.map((agent) => agent.descriptor.id).join(', ') || 'no detected agents'}\n`
-          : configuration.disposition === 'redetected'
-            ? `redetected KI agents: ${agents.map((agent) => agent.descriptor.id).join(', ') || 'none'}\n`
-            : `using existing KI agent configuration for ${agents.map((agent) => agent.descriptor.id).join(', ') || 'no agents'}\n`
-      )
-      await installBootstrapSkills(context.paths.data, agents)
-      context.stdout.write(
-        agents.length
-          ? `installed ki-bootstrap for ${agents.map((agent) => agent.descriptor.id).join(', ')}\n`
-          : 'no configured agents support ki-bootstrap installation\n'
-      )
+      if (configuration.disposition === 'created') {
+        context.stdout.write(
+          `created KI agent configuration for ${agents.map((agent) => agent.descriptor.id).join(', ') || 'no detected agents'}\n`
+        )
+      }
+      if (configuration.disposition === 'redetected') {
+        context.stdout.write(`redetected KI agents: ${agents.map((agent) => agent.descriptor.id).join(', ') || 'none'}\n`)
+      }
+      const projections = await installBootstrapSkills(context.paths.data, agents)
+      for (const { agent, installed } of projections) {
+        context.stdout.write(`ki-bootstrap for ${agent.descriptor.id} ${installed ? 'installed' : 'already installed'}\n`)
+      }
     })

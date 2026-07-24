@@ -234,11 +234,11 @@ describe('baseline commands', () => {
 
     expect(bootstrapped).toEqual({
       exitCode: 0,
-      output: 'created KI agent configuration for chatgpt-codex\ninstalled ki-bootstrap for chatgpt-codex\n'
+      output: 'created KI agent configuration for chatgpt-codex\nki-bootstrap for chatgpt-codex installed\n'
     })
     expect(repeated).toEqual({
       exitCode: 0,
-      output: 'using existing KI agent configuration for chatgpt-codex\ninstalled ki-bootstrap for chatgpt-codex\n'
+      output: 'ki-bootstrap for chatgpt-codex already installed\n'
     })
     expect(await readFile(join(configuration, 'ki', 'agents.toml'), 'utf8')).toBe('schema = 1\nagents = ["chatgpt-codex"]\n')
   })

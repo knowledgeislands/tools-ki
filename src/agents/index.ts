@@ -86,7 +86,7 @@ const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAg
   return agents
 }
 
-const installBootstrapSkill = async (agent: InstalledAgent, source: string): Promise<void> => {
+const installBootstrapSkill = async (agent: InstalledAgent, source: string): Promise<boolean> => {
   const agentHome = await requiredPhysicalDirectory(agent.home, `${agent.descriptor.id} user directory`)
   skillCapability(agent)
   const skills = join(agentHome, 'skills')
@@ -97,11 +97,12 @@ const installBootstrapSkill = async (agent: InstalledAgent, source: string): Pro
   const targetState = await lstat(target).catch(() => undefined)
   if (!targetState) {
     await symlink(source, target, 'dir')
-    return
+    return true
   }
   if (!targetState.isSymbolicLink()) throw new KiError(`${agent.descriptor.id} ki-bootstrap skill is not KI-managed`, 1)
   const actual = await realpath(target).catch(() => undefined)
   if (actual !== source) throw new KiError(`${agent.descriptor.id} ki-bootstrap skill points to an unfamiliar source`, 1)
+  return false
 }
 
 const bootstrapCapabilitySource = async (dataDirectory: string): Promise<string> => {
@@ -132,9 +133,12 @@ export const configureBootstrapAgents = async (options: {
   return { agents, disposition: !configured ? 'created' : options.redetect ? 'redetected' : 'reused' }
 }
 
-export const installBootstrapSkills = async (dataDirectory: string, agents: readonly InstalledAgent[]): Promise<void> => {
+export const installBootstrapSkills = async (
+  dataDirectory: string,
+  agents: readonly InstalledAgent[]
+): Promise<readonly { readonly agent: InstalledAgent; readonly installed: boolean }[]> => {
   const source = await bootstrapCapabilitySource(dataDirectory)
-  await Promise.all(agents.map((agent) => installBootstrapSkill(agent, source)))
+  return Promise.all(agents.map(async (agent) => ({ agent, installed: await installBootstrapSkill(agent, source) })))
 }
 
 export const bootstrapAgents = async (options: {
