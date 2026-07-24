@@ -46,9 +46,21 @@ PATH="$HOME/.local/ki-dev/bin:$PATH" ki doctor
 
 Set `KI_MAN_INSTALL_DIR` when the manual should be installed outside the default sibling `share/man/man1` directory.
 
+## PATH precedence
+
+The first `ki` directory in `PATH` wins. If Homebrew's `bin` directory comes before the linked development directory, `ki` runs the Homebrew release instead of this checkout.
+
+To make the default linked installation take precedence, place the local bin directory before Homebrew in the shell startup configuration:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Open a new shell, or run `rehash` in Zsh, after changing `PATH`. Use `command -v ki` or `which -a ki` to inspect the selected executable and all available candidates.
+
 ## Compare with Homebrew
 
-Keep the development directory out of `PATH`, or invoke both executables explicitly:
+To compare the two installations without changing `PATH`, invoke both executables explicitly:
 
 ```sh
 "$(brew --prefix ki)/bin/ki" --version
