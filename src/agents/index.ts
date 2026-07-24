@@ -16,6 +16,11 @@ export interface InstalledAgent {
   readonly home: string
 }
 
+export interface BootstrapConfiguration {
+  readonly agents: readonly InstalledAgent[]
+  readonly disposition: 'created' | 'redetected' | 'reused'
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const physicalDirectory = async (path: string): Promise<boolean> => {
@@ -110,12 +115,11 @@ const bootstrapCapabilitySource = async (dataDirectory: string): Promise<string>
   return requiredPhysicalDirectory(join(harness.root, capability.source), 'installed ki-bootstrap skill')
 }
 
-export const bootstrapAgents = async (options: {
+export const configureBootstrapAgents = async (options: {
   readonly homeDirectory: string
   readonly configurationDirectory: string
-  readonly dataDirectory: string
   readonly redetect?: boolean
-}): Promise<readonly InstalledAgent[]> => {
+}): Promise<BootstrapConfiguration> => {
   const path = agentsPath(options.configurationDirectory)
   const state = await lstat(options.configurationDirectory).catch(() => undefined)
   if (state && (!state.isDirectory() || state.isSymbolicLink())) throw new KiError('KI configuration directory must be a directory', 1)
@@ -125,9 +129,23 @@ export const bootstrapAgents = async (options: {
     await mkdir(options.configurationDirectory, { recursive: true })
     await writeFile(path, renderConfiguration(agents), { encoding: 'utf8' })
   }
-  const source = await bootstrapCapabilitySource(options.dataDirectory)
+  return { agents, disposition: !configured ? 'created' : options.redetect ? 'redetected' : 'reused' }
+}
+
+export const installBootstrapSkills = async (dataDirectory: string, agents: readonly InstalledAgent[]): Promise<void> => {
+  const source = await bootstrapCapabilitySource(dataDirectory)
   await Promise.all(agents.map((agent) => installBootstrapSkill(agent, source)))
-  return agents
+}
+
+export const bootstrapAgents = async (options: {
+  readonly homeDirectory: string
+  readonly configurationDirectory: string
+  readonly dataDirectory: string
+  readonly redetect?: boolean
+}): Promise<readonly InstalledAgent[]> => {
+  const configuration = await configureBootstrapAgents(options)
+  await installBootstrapSkills(options.dataDirectory, configuration.agents)
+  return configuration.agents
 }
 
 export const configuredAgents = async (options: {

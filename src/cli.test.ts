@@ -232,8 +232,14 @@ describe('baseline commands', () => {
     const bootstrapped = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
     const repeated = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
 
-    expect(bootstrapped).toEqual({ exitCode: 0, output: 'bootstrapped KI environment for chatgpt-codex\n' })
-    expect(repeated).toEqual({ exitCode: 0, output: 'bootstrapped KI environment for chatgpt-codex\n' })
+    expect(bootstrapped).toEqual({
+      exitCode: 0,
+      output: 'created KI agent configuration for chatgpt-codex\ninstalled ki-bootstrap for chatgpt-codex\n'
+    })
+    expect(repeated).toEqual({
+      exitCode: 0,
+      output: 'using existing KI agent configuration for chatgpt-codex\ninstalled ki-bootstrap for chatgpt-codex\n'
+    })
     expect(await readFile(join(configuration, 'ki', 'agents.toml'), 'utf8')).toBe('schema = 1\nagents = ["chatgpt-codex"]\n')
   })
 
@@ -251,7 +257,7 @@ describe('baseline commands', () => {
     expect(result).toEqual({
       exitCode: 1,
       output:
-        'ki: error: base harness is not installed; run `ki harness install knowledgeislands/ki-agentic-harness` before `ki bootstrap`\n'
+        'created KI agent configuration for chatgpt-codex\nki: error: base harness is not installed; run `ki harness install knowledgeislands/ki-agentic-harness` before `ki bootstrap`\n'
     })
   })
 
