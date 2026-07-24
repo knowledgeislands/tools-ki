@@ -86,6 +86,7 @@ describe('baseline commands', () => {
     expect(help.output).toContain('acquire')
     expect(completions.output).toContain('#compdef ki')
     expect(version.output).toBe('ki 0.2.0\n')
+    expect(paths.output).toContain(`"executable":"${executable}"`)
     expect(paths.output).toContain(`"data":"${missingHome}/data/ki"`)
     expect(singular.exitCode).toBe(2)
   })
