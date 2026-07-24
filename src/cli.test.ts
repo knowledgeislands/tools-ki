@@ -204,10 +204,59 @@ describe('baseline commands', () => {
     expect(invalidCompletion).toEqual({ exitCode: 2, output: 'ki: error: completions shell must be bash or zsh\n' })
     expect(paths.output).toContain(`data: ${root}/data/ki`)
     expect(doctor.output).toContain(`ki version: ${packageMetadata.version}`)
+    expect(doctor.output).toContain('configuration: missing')
     expect(doctorJson.output).toContain(`"ki_version":"${packageMetadata.version}"`)
     expect(optionVersion).toEqual({ exitCode: 0, output: `${packageMetadata.version}\n` })
     expect(missingCompletionShell.exitCode).toBe(2)
     expect(unknown.exitCode).toBe(2)
+  })
+
+  test('reports user configuration values, unknown keys, and invalid entries', async () => {
+    const root = await temporaryDirectory()
+    const configuration = join(root, 'config', 'ki')
+    await mkdir(configuration, { recursive: true })
+    await writeFile(
+      join(configuration, 'config.toml'),
+      [
+        'schema = 2',
+        'agents = ["claude-code", "unknown-agent"]',
+        'harnesses = [{ id = "example/harness", url = "http://example.test/archive.tar.gz", sha256 = "invalid", extra = true }]',
+        'skills = ["example:skill", "example:skill"]',
+        'unexpected = true',
+        ''
+      ].join('\n')
+    )
+
+    const result = await runKi(['doctor', '--json'], { XDG_CONFIG_HOME: join(root, 'config') })
+    const report = JSON.parse(result.output) as {
+      configuration: {
+        readonly state: string
+        readonly agents: readonly string[]
+        readonly harnesses: readonly string[]
+        readonly skills: readonly string[]
+        readonly local: string | null
+        readonly warnings: readonly string[]
+        readonly errors: readonly string[]
+      }
+    }
+    const configurationReport = report.configuration
+
+    expect(result.exitCode).toBe(0)
+    expect(configurationReport.state).toBe('invalid')
+    expect(configurationReport.agents).toEqual(['claude-code', 'unknown-agent'])
+    expect(configurationReport.harnesses).toEqual(['example/harness'])
+    expect(configurationReport.skills).toEqual(['example:skill', 'example:skill'])
+    expect(configurationReport.warnings).toEqual(
+      expect.arrayContaining(['unrecognised key unexpected', 'unrecognised agent unknown-agent', 'harnesses[0] has unrecognised key extra'])
+    )
+    expect(configurationReport.errors).toEqual(
+      expect.arrayContaining([
+        'schema must equal 1',
+        'harnesses[0] url must be an HTTPS URL',
+        'harnesses[0] sha256 must be lowercase SHA-256',
+        'skills repeats a value'
+      ])
+    )
   })
 
   test('lists only verified installed compatible harnesses', async () => {
@@ -221,7 +270,7 @@ describe('baseline commands', () => {
     expect(json.output).toContain('"id":"example/harness"')
   })
 
-  test('bootstraps and redetects the user-managed agent configuration without replacing it by default', async () => {
+  test('bootstraps without replacement and refreshes the detected installed inventory on request', async () => {
     const root = await temporaryDirectory()
     const home = join(root, 'home')
     const configuration = join(root, 'config')
@@ -231,6 +280,7 @@ describe('baseline commands', () => {
 
     const bootstrapped = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
     const repeated = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
+    const refreshed = await runKi(['bootstrap', '--refresh'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
 
     expect(bootstrapped).toEqual({
       exitCode: 0,
@@ -240,8 +290,18 @@ describe('baseline commands', () => {
       exitCode: 0,
       output: `canonical harness already installed\tarchive ${'0'.repeat(64)}\nki-bootstrap for chatgpt-codex already installed\n`
     })
+    expect(refreshed).toEqual({
+      exitCode: 0,
+      output:
+        `refreshed KI agents: chatgpt-codex\ncanonical harness already installed\tarchive ${'0'.repeat(64)}\n` +
+        'refreshed KI configuration: 1 agents, 1 harnesses, 1 skills\nki-bootstrap for chatgpt-codex already installed\n'
+    })
     expect(await readFile(join(configuration, 'ki', 'config.toml'), 'utf8')).toBe(
-      'schema = 1\nagents = ["chatgpt-codex"]\nharnesses = []\nskills = []\n'
+      `schema = 1
+agents = ["chatgpt-codex"]
+harnesses = [{ id = "knowledgeislands/ki-agentic-harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'0'.repeat(64)}" }]
+skills = ["knowledgeislands/ki-agentic-harness:ki-bootstrap"]
+`
     )
   })
 
@@ -270,6 +330,14 @@ ki-bootstrap for chatgpt-codex installed
     })
     await expect(lstat(join(data, 'ki', 'harnesses'))).rejects.toThrow()
     expect((await lstat(join(home, '.agents', 'skills', 'ki-bootstrap'))).isSymbolicLink()).toBe(true)
+    expect(await readFile(join(root, 'config', 'ki', 'config.toml'), 'utf8')).toBe(
+      `schema = 1
+agents = ["chatgpt-codex"]
+harnesses = []
+skills = []
+local = ${JSON.stringify(await realpath(harness))}
+`
+    )
   })
 
   test('inspects and removes one verified non-base harness', async () => {

@@ -21,7 +21,7 @@ ki \- Knowledge Islands command-line interface
 .br
 .B ki bootstrap
 .RI [ --local " path" ]
-.RI [ --redetect ]
+.RI [ --refresh ]
 .br
 .B ki acquire chatgpt import
 .I capture-directory
@@ -88,6 +88,10 @@ for a versioned machine-readable result.
 .B doctor
 Print the CLI version, whether the executable is a regular installation or a
 development link, and the resolved XDG paths.
+It also inspects the user-level
+.IR config.toml
+for configured agents, harnesses, skills, a local bootstrap source, unknown
+keys, and invalid values.
 It makes no changes.
 Pass
 .B --json
@@ -103,8 +107,9 @@ agents, install the built-in verified canonical harness, then install that harne
 .B ki-bootstrap
 skill into every configured agent's user skill directory. An existing agent
 configuration is reused without replacement. Pass
-.B --redetect
-to refresh the generated agent list from the currently installed runtimes.
+.B --refresh
+to redetect every supported runtime and rebuild the user configuration's
+agents, verified installed harnesses, and harness-provided skills.
 Pass
 .B --local
 with a local harness checkout path to validate and link its

@@ -3,7 +3,9 @@ import {
   configureBootstrapAgents,
   installBootstrapSkills,
   installedBootstrapSkillSource,
-  localBootstrapSkillSource
+  localBootstrapHarness,
+  refreshUserConfiguration,
+  setLocalBootstrapHarness
 } from '../agents/index.ts'
 import type { KiContext } from '../core/context.ts'
 import { installCanonicalHarness } from '../core/registry.ts'
@@ -11,13 +13,13 @@ import { installCanonicalHarness } from '../core/registry.ts'
 export const createBootstrapCommand = (context: KiContext): Command =>
   new Command('bootstrap')
     .description('configure detected agents and install the KI bootstrap skill')
-    .option('--redetect', 'refresh the generated agent configuration from installed runtimes')
+    .option('--refresh', 'reconcile agents, harnesses, and skills from installed state')
     .option('--local <path>', 'link ki-bootstrap from a local harness checkout')
-    .action(async (options: { redetect?: boolean; local?: string }) => {
+    .action(async (options: { refresh?: boolean; local?: string }) => {
       const configuration = await configureBootstrapAgents({
         homeDirectory: context.homeDirectory,
         configurationDirectory: context.paths.config,
-        redetect: options.redetect
+        refresh: options.refresh
       })
       const agents = configuration.agents
       if (configuration.disposition === 'created') {
@@ -25,11 +27,12 @@ export const createBootstrapCommand = (context: KiContext): Command =>
           `created KI agent configuration for ${agents.map((agent) => agent.descriptor.id).join(', ') || 'no detected agents'}\n`
         )
       }
-      if (configuration.disposition === 'redetected') {
-        context.stdout.write(`redetected KI agents: ${agents.map((agent) => agent.descriptor.id).join(', ') || 'none'}\n`)
+      if (configuration.disposition === 'refreshed') {
+        context.stdout.write(`refreshed KI agents: ${agents.map((agent) => agent.descriptor.id).join(', ') || 'none'}\n`)
       }
-      const source = options.local
-        ? await localBootstrapSkillSource(options.local)
+      const local = options.local ? await localBootstrapHarness(options.local) : undefined
+      const source = local
+        ? local.skill
         : await (async () => {
             const installation = await installCanonicalHarness(context.paths.config, context.paths.data)
             context.stdout.write(
@@ -37,8 +40,14 @@ export const createBootstrapCommand = (context: KiContext): Command =>
             )
             return installedBootstrapSkillSource(context.paths.data)
           })()
-      if (options.local) context.stdout.write(`using local harness ${source}\n`)
+      if (local) context.stdout.write(`using local harness ${source}\n`)
       const projections = await installBootstrapSkills(source, agents)
+      if (options.refresh) {
+        const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents, local?.harness)
+        context.stdout.write(
+          `refreshed KI configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
+        )
+      } else await setLocalBootstrapHarness(context.paths.config, local?.harness)
       for (const { agent, installed } of projections) {
         context.stdout.write(`ki-bootstrap for ${agent.descriptor.id} ${installed ? 'installed' : 'already installed'}\n`)
       }

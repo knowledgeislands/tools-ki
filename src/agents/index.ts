@@ -2,7 +2,7 @@ import { lstat, mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/pr
 import { join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../core/errors.ts'
-import { baseHarnessIdentifier, readInstalledHarness } from '../core/harness.ts'
+import { baseHarnessIdentifier, discoverInstalledHarnesses, readInstalledHarness } from '../core/harness.ts'
 import chatgptCodex from './chatgpt-codex.ts'
 import claudeCode from './claude-code.ts'
 import type { AgentDescriptor } from './types.ts'
@@ -18,7 +18,24 @@ export interface InstalledAgent {
 
 export interface BootstrapConfiguration {
   readonly agents: readonly InstalledAgent[]
-  readonly disposition: 'created' | 'redetected' | 'reused'
+  readonly disposition: 'created' | 'refreshed' | 'reused'
+}
+
+interface ConfiguredHarness {
+  readonly id: string
+  readonly url: string
+  readonly sha256: string
+}
+
+export interface UserConfigurationInspection {
+  readonly path: string
+  readonly state: 'missing' | 'valid' | 'invalid'
+  readonly agents: readonly string[]
+  readonly harnesses: readonly string[]
+  readonly skills: readonly string[]
+  readonly local: string | null
+  readonly warnings: readonly string[]
+  readonly errors: readonly string[]
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -47,14 +64,122 @@ const skillCapability = (agent: InstalledAgent): string => {
 
 const bootstrapConfigurationPath = (configurationDirectory: string): string => join(configurationDirectory, 'config.toml')
 
-const renderConfiguration = (agents: readonly InstalledAgent[]): string =>
+const renderConfiguration = (
+  agents: readonly InstalledAgent[],
+  harnesses: readonly ConfiguredHarness[] = [],
+  skills: readonly string[] = [],
+  local?: string
+): string =>
   [
     'schema = 1',
     `agents = [${agents.map((agent) => JSON.stringify(agent.descriptor.id)).join(', ')}]`,
-    'harnesses = []',
-    'skills = []',
+    `harnesses = [${harnesses
+      .map(
+        (harness) =>
+          `{ id = ${JSON.stringify(harness.id)}, url = ${JSON.stringify(harness.url)}, sha256 = ${JSON.stringify(harness.sha256)} }`
+      )
+      .join(', ')}]`,
+    `skills = [${skills.map((skill) => JSON.stringify(skill)).join(', ')}]`,
+    ...(local ? [`local = ${JSON.stringify(local)}`] : []),
     ''
   ].join('\n')
+
+const inspectStringList = (value: unknown, key: string, errors: string[]): string[] => {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string' || !entry)) {
+    errors.push(`${key} must be an array of non-empty strings`)
+    return []
+  }
+  if (new Set(value).size !== value.length) errors.push(`${key} repeats a value`)
+  return value
+}
+
+export const inspectUserConfiguration = async (configurationDirectory: string): Promise<UserConfigurationInspection> => {
+  const path = bootstrapConfigurationPath(configurationDirectory)
+  const state = await lstat(path).catch(() => undefined)
+  if (!state) return { path, state: 'missing', agents: [], harnesses: [], skills: [], local: null, warnings: [], errors: [] }
+  if (!state.isFile() || state.isSymbolicLink()) {
+    return {
+      path,
+      state: 'invalid',
+      agents: [],
+      harnesses: [],
+      skills: [],
+      local: null,
+      warnings: [],
+      errors: ['configuration must be a regular file']
+    }
+  }
+  let parsed: unknown
+  try {
+    parsed = parse(await readFile(path, 'utf8'))
+  } catch {
+    return {
+      path,
+      state: 'invalid',
+      agents: [],
+      harnesses: [],
+      skills: [],
+      local: null,
+      warnings: [],
+      errors: ['configuration must be valid TOML']
+    }
+  }
+  if (!isRecord(parsed)) {
+    return {
+      path,
+      state: 'invalid',
+      agents: [],
+      harnesses: [],
+      skills: [],
+      local: null,
+      warnings: [],
+      errors: ['configuration must be a TOML table']
+    }
+  }
+
+  const configuration = parsed as Record<string, unknown> & {
+    schema?: unknown
+    agents?: unknown
+    harnesses?: unknown
+    skills?: unknown
+    local?: unknown
+  }
+  const warnings = Object.keys(configuration)
+    .filter((key) => !['schema', 'agents', 'harnesses', 'skills', 'local'].includes(key))
+    .map((key) => `unrecognised key ${key}`)
+  const errors: string[] = []
+  if (configuration.schema !== 1) errors.push('schema must equal 1')
+  const agents = inspectStringList(configuration.agents, 'agents', errors)
+  for (const agent of agents) {
+    if (!agentDescriptors.some((descriptor) => descriptor.id === agent)) warnings.push(`unrecognised agent ${agent}`)
+  }
+  const skills = inspectStringList(configuration.skills, 'skills', errors)
+  const harnesses: string[] = []
+  if (!Array.isArray(configuration.harnesses)) errors.push('harnesses must be an array')
+  else {
+    for (const [index, harness] of configuration.harnesses.entries()) {
+      if (!isRecord(harness)) {
+        errors.push(`harnesses[${index}] must be a table`)
+        continue
+      }
+      for (const key of Object.keys(harness)) {
+        if (!['id', 'url', 'sha256'].includes(key)) warnings.push(`harnesses[${index}] has unrecognised key ${key}`)
+      }
+      const release = harness as Record<string, unknown> & { id?: unknown; url?: unknown; sha256?: unknown }
+      const id = release.id
+      const url = release.url
+      const digest = release.sha256
+      if (typeof id !== 'string' || !id) errors.push(`harnesses[${index}] id must be a non-empty string`)
+      else harnesses.push(id)
+      if (typeof url !== 'string' || !url.startsWith('https://')) errors.push(`harnesses[${index}] url must be an HTTPS URL`)
+      if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) errors.push(`harnesses[${index}] sha256 must be lowercase SHA-256`)
+    }
+  }
+  const local =
+    configuration.local === undefined ? null : typeof configuration.local === 'string' && configuration.local ? configuration.local : null
+  if (configuration.local !== undefined && local === null) errors.push('local must be a non-empty path string')
+  return { path, state: errors.length ? 'invalid' : 'valid', agents, harnesses, skills, local, warnings, errors }
+}
 
 const readConfiguration = async (configurationDirectory: string, homeDirectory: string): Promise<readonly InstalledAgent[] | undefined> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
@@ -68,15 +193,16 @@ const readConfiguration = async (configurationDirectory: string, homeDirectory: 
     throw new KiError('agent configuration must be valid TOML', 1)
   }
   if (!isRecord(parsed)) throw new KiError('agent configuration must use schema 1', 1)
-  const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown }
+  const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown; local?: unknown }
   if (
     configuration.schema !== 1 ||
     !Array.isArray(configuration.agents) ||
     configuration.agents.some((agent) => typeof agent !== 'string') ||
     (configuration.skills !== undefined &&
-      (!Array.isArray(configuration.skills) || configuration.skills.some((skill) => typeof skill !== 'string')))
+      (!Array.isArray(configuration.skills) || configuration.skills.some((skill) => typeof skill !== 'string'))) ||
+    (configuration.local !== undefined && (typeof configuration.local !== 'string' || !configuration.local))
   ) {
-    throw new KiError('KI configuration must declare string agents and skills arrays', 1)
+    throw new KiError('KI configuration must declare string agents and skills arrays and an optional local path', 1)
   }
   if (new Set(configuration.agents).size !== configuration.agents.length) throw new KiError('agent configuration repeats an agent', 1)
   if (configuration.skills && new Set(configuration.skills).size !== configuration.skills.length) {
@@ -128,7 +254,7 @@ export const installedBootstrapSkillSource = async (dataDirectory: string, ident
   return requiredPhysicalDirectory(join(harness.root, capability.source), 'installed ki-bootstrap skill')
 }
 
-export const localBootstrapSkillSource = async (harnessDirectory: string): Promise<string> => {
+export const localBootstrapHarness = async (harnessDirectory: string): Promise<{ readonly harness: string; readonly skill: string }> => {
   const harness = await requiredPhysicalDirectory(resolve(harnessDirectory), 'local harness')
   const source = join(harness, 'skills', 'keystone', 'ki-bootstrap')
   const sourceState = await lstat(source).catch(() => undefined)
@@ -136,24 +262,58 @@ export const localBootstrapSkillSource = async (harnessDirectory: string): Promi
   if (!sourceState?.isDirectory() || sourceState.isSymbolicLink() || !entry?.isFile() || entry.isSymbolicLink()) {
     throw new KiError('local harness must contain skills/keystone/ki-bootstrap/SKILL.md', 1)
   }
-  return realpath(source)
+  return { harness, skill: await realpath(source) }
+}
+
+export const localBootstrapSkillSource = async (harnessDirectory: string): Promise<string> =>
+  (await localBootstrapHarness(harnessDirectory)).skill
+
+export const setLocalBootstrapHarness = async (configurationDirectory: string, local?: string): Promise<void> => {
+  const path = bootstrapConfigurationPath(configurationDirectory)
+  const contents = await readFile(path, 'utf8')
+  const expression = /^local\s*=.*(?:\n|$)/m
+  const updated = local
+    ? expression.test(contents)
+      ? contents.replace(expression, `local = ${JSON.stringify(local)}\n`)
+      : `${contents.trimEnd()}\nlocal = ${JSON.stringify(local)}\n`
+    : contents.replace(expression, '')
+  await writeFile(path, updated, 'utf8')
 }
 
 export const configureBootstrapAgents = async (options: {
   readonly homeDirectory: string
   readonly configurationDirectory: string
-  readonly redetect?: boolean
+  readonly refresh?: boolean
 }): Promise<BootstrapConfiguration> => {
   const path = bootstrapConfigurationPath(options.configurationDirectory)
   const state = await lstat(options.configurationDirectory).catch(() => undefined)
   if (state && (!state.isDirectory() || state.isSymbolicLink())) throw new KiError('KI configuration directory must be a directory', 1)
   const configured = await readConfiguration(options.configurationDirectory, options.homeDirectory)
-  const agents = options.redetect || !configured ? await detectAgents(options.homeDirectory) : configured
-  if (!configured || options.redetect) {
+  const agents = options.refresh || !configured ? await detectAgents(options.homeDirectory) : configured
+  if (!configured) {
     await mkdir(options.configurationDirectory, { recursive: true })
     await writeFile(path, renderConfiguration(agents), { encoding: 'utf8' })
   }
-  return { agents, disposition: !configured ? 'created' : options.redetect ? 'redetected' : 'reused' }
+  return { agents, disposition: !configured ? 'created' : options.refresh ? 'refreshed' : 'reused' }
+}
+
+export const refreshUserConfiguration = async (
+  configurationDirectory: string,
+  dataDirectory: string,
+  agents: readonly InstalledAgent[],
+  local?: string
+): Promise<{ readonly harnesses: number; readonly skills: number }> => {
+  const installed = await discoverInstalledHarnesses(dataDirectory)
+  const harnesses = installed
+    .map(({ lock }) => ({ id: lock.id, url: lock.archive.url, sha256: lock.archive.sha256 }))
+    .sort((left, right) => left.id.localeCompare(right.id))
+  const skills = installed
+    .flatMap(({ lock }) => lock.capabilities.map((capability) => `${lock.id}:${capability.name}`))
+    .sort((left, right) => left.localeCompare(right))
+  await writeFile(bootstrapConfigurationPath(configurationDirectory), renderConfiguration(agents, harnesses, skills, local), {
+    encoding: 'utf8'
+  })
+  return { harnesses: harnesses.length, skills: skills.length }
 }
 
 export const installBootstrapSkills = async (
@@ -167,10 +327,11 @@ export const bootstrapAgents = async (options: {
   readonly homeDirectory: string
   readonly configurationDirectory: string
   readonly dataDirectory: string
-  readonly redetect?: boolean
+  readonly refresh?: boolean
 }): Promise<readonly InstalledAgent[]> => {
   const configuration = await configureBootstrapAgents(options)
   await installBootstrapSkills(await installedBootstrapSkillSource(options.dataDirectory), configuration.agents)
+  if (options.refresh) await refreshUserConfiguration(options.configurationDirectory, options.dataDirectory, configuration.agents)
   return configuration.agents
 }
 

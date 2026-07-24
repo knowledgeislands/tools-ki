@@ -52,7 +52,7 @@ test('bootstraps a user-managed agent configuration from known agents', async ()
   expect(await realpath(join(home, '.claude', 'skills', 'ki-bootstrap'))).toBe(await realpath(source))
 })
 
-test('redetect refreshes the generated configuration and projects the bootstrap skill', async () => {
+test('refresh redetects every configured runtime and installed harness capability', async () => {
   const root = await temporaryDirectory()
   const home = join(root, 'home')
   const configuration = join(root, 'config', 'ki')
@@ -62,16 +62,20 @@ test('redetect refreshes the generated configuration and projects the bootstrap 
 
   await bootstrapAgents({ homeDirectory: home, configurationDirectory: configuration, dataDirectory: data })
   await mkdir(join(home, '.agents'), { recursive: true })
-  const redetected = await bootstrapAgents({
+  const refreshed = await bootstrapAgents({
     homeDirectory: home,
     configurationDirectory: configuration,
     dataDirectory: data,
-    redetect: true
+    refresh: true
   })
 
-  expect(redetected.map((agent) => agent.descriptor.id)).toEqual(['claude-code', 'chatgpt-codex'])
+  expect(refreshed.map((agent) => agent.descriptor.id)).toEqual(['claude-code', 'chatgpt-codex'])
   expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toBe(
-    'schema = 1\nagents = ["claude-code", "chatgpt-codex"]\nharnesses = []\nskills = []\n'
+    `schema = 1
+agents = ["claude-code", "chatgpt-codex"]
+harnesses = [{ id = "knowledgeislands/ki-agentic-harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'0'.repeat(64)}" }]
+skills = ["knowledgeislands/ki-agentic-harness:ki-bootstrap"]
+`
   )
   expect(await realpath(join(home, '.agents', 'skills', 'ki-bootstrap'))).toBe(
     await realpath(join(data, 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'latest', 'skills', 'keystone', 'ki-bootstrap'))
