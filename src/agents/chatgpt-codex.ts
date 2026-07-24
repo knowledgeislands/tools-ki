@@ -1,13 +1,13 @@
 import { join } from 'node:path'
-import type { AgentDescriptor } from './types.ts';
+import type { AgentDescriptor } from './types.ts'
 
-const descriptor: AgentDescriptor = { 
-  id: 'chatgpt-codex', 
+const descriptor = {
+  id: 'chatgpt-codex',
   capabilities: ['skills'],
   paths: {
     home: '.agents',
     skills: join('.agents', 'skills')
   }
-} 
+} as const satisfies AgentDescriptor
 
 export default descriptor

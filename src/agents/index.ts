@@ -3,12 +3,13 @@ import { join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../core/errors.ts'
 import { baseHarnessIdentifier, readInstalledHarness } from '../core/harness.ts'
+import chatgptCodex from './chatgpt-codex.ts'
+import claudeCode from './claude-code.ts'
 import type { AgentDescriptor } from './types.ts'
 
-const agentDescriptors: readonly AgentDescriptor[] = [
-  require('./claude-code.ts').default, 
-  require('./chatgpt-codex.ts').default
-]
+export const agentDescriptors = [claudeCode, chatgptCodex] as const satisfies readonly AgentDescriptor[]
+
+export type AgentId = (typeof agentDescriptors)[number]['id']
 
 export interface InstalledAgent {
   readonly descriptor: AgentDescriptor
@@ -32,6 +33,11 @@ const descriptor = (id: string): AgentDescriptor => {
   const value = agentDescriptors.find((candidate) => candidate.id === id)
   if (!value) throw new KiError(`unknown agent ${id}; use claude-code or chatgpt-codex`, 2)
   return value
+}
+
+const skillCapability = (agent: InstalledAgent): string => {
+  if (!agent.descriptor.paths.skills) throw new KiError(`agent ${agent.descriptor.id} has no skill path`, 1)
+  return agent.descriptor.paths.skills
 }
 
 const agentsPath = (configurationDirectory: string): string => join(configurationDirectory, 'agents.toml')
@@ -66,18 +72,18 @@ const readConfiguration = async (configurationDirectory: string, homeDirectory: 
   })
 }
 
-const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAgent[]> =>
-  (
-    await Promise.all(
-      agentDescriptors.map(async (candidate) => {
-        const home = resolve(homeDirectory, candidate.paths.home)
-        return (await physicalDirectory(home)) ? { descriptor: candidate, home } : undefined
-      })
-    )
-  ).filter((agent): agent is InstalledAgent => agent !== undefined)
+const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAgent[]> => {
+  const agents: InstalledAgent[] = []
+  for (const candidate of agentDescriptors) {
+    const home = resolve(homeDirectory, candidate.paths.home)
+    if (await physicalDirectory(home)) agents.push({ descriptor: candidate, home })
+  }
+  return agents
+}
 
 const installBootstrapSkill = async (agent: InstalledAgent, source: string): Promise<void> => {
   const agentHome = await requiredPhysicalDirectory(agent.home, `${agent.descriptor.id} user directory`)
+  skillCapability(agent)
   const skills = join(agentHome, 'skills')
   const state = await lstat(skills).catch(() => undefined)
   if (!state) await mkdir(skills)
@@ -138,11 +144,9 @@ export const configuredAgents = async (options: {
   return agents as readonly InstalledAgent[]
 }
 
-export const agentSkillDirectory = (agent: InstalledAgent, scope: 'user' | 'repo', repository?: string): string =>
-  scope === 'user'
-    ? join(agent.home, 'skills')
-    : repository
-      ? join(repository, agent.descriptor.paths.skills)
-      : (() => {
-          throw new KiError('repository scope requires a repository', 2)
-        })()
+export const agentSkillDirectory = (agent: InstalledAgent, scope: 'user' | 'repo', repository?: string): string => {
+  const skillPath = skillCapability(agent)
+  if (scope === 'user') return join(agent.home, 'skills')
+  if (repository) return join(repository, skillPath)
+  throw new KiError('repository scope requires a repository', 2)
+}

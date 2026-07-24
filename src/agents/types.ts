@@ -1,13 +1,12 @@
-
-
-export type AgentId = 'claude-code' | 'chatgpt-codex'
 export type AgentCapability = 'skills' | 'subagents'
+export type AgentCapabilities = readonly ['skills', ...AgentCapability[]]
+
 export interface AgentDescriptor {
-  id: AgentId
-  capabilities: AgentCapability[]
-  paths: {
-    home: string
-    skills?: string
-    subagents?: string
+  readonly id: string
+  readonly capabilities: AgentCapabilities
+  readonly paths: {
+    readonly home: string
+    readonly skills?: string
+    readonly subagents?: string
   }
 }
