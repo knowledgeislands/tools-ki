@@ -59,10 +59,13 @@ const configuredArchive = async (
   await writeFile(
     join(config, 'config.toml'),
     [
-      '[[harnesses]]',
-      'id = "example/harness"',
-      'url = "https://releases.example.test/harness.tar.gz"',
-      `sha256 = "${digestValue}"`,
+      'harnesses = [',
+      '  {',
+      '    id = "example/harness",',
+      '    url = "https://releases.example.test/harness.tar.gz",',
+      `    sha256 = "${digestValue}"`,
+      '  },',
+      ']',
       ''
     ].join('\n')
   )

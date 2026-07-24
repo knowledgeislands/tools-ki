@@ -86,7 +86,7 @@ export const readHarnessRegistry = async (configurationDirectory: string): Promi
   }
   if (!isRecord(parsed)) throw new KiError('KI configuration must be a TOML table', 1)
   if (parsed.harnesses === undefined) return [canonicalHarnessRelease]
-  if (!Array.isArray(parsed.harnesses)) throw new KiError('KI configuration harnesses must use [[harnesses]] entries', 1)
+  if (!Array.isArray(parsed.harnesses)) throw new KiError('KI configuration harnesses must be an array of release entries', 1)
   const releases = parsed.harnesses.map(parseRelease)
   const identities = new Set<string>([baseHarnessIdentifier])
   for (const release of releases) {
