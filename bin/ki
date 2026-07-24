@@ -100,8 +100,8 @@ unavailable() {
 
 completion() {
   case "$1" in
-    bash) printf '%s\n' 'complete -W "acquire doctor help completion --help --version" ki' ;;
-    zsh) printf '%s\n' '#compdef ki' '_arguments "1: :((acquire doctor help completion))"' ;;
+    bash) printf '%s\n' 'complete -W "acquire completion completions doctor help paths --help --version" ki' ;;
+    zsh) printf '%s\n' '#compdef ki' '_arguments "1: :((acquire completion completions doctor help paths))"' ;;
     *) grammar_error "completion shell must be bash or zsh" "completion" ;;
   esac
 }

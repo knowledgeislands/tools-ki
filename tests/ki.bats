@@ -36,6 +36,8 @@ EOF
   run "$KI" completion bash
   [ "$status" -eq 0 ]
   [[ "$output" == *"acquire"* ]]
+  [[ "$output" == *"paths"* ]]
+  [[ "$output" == *"completions"* ]]
 
   run "$KI" completions zsh
   [ "$status" -eq 0 ]
