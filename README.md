@@ -6,7 +6,7 @@ The first delivery sequence is a zero-dependency `ki` seed (`--help`, `--version
 
 ## Acquire a local ChatGPT capture
 
-Prepare a capture using the [controlled local-capture format](docs/chatgpt-local-capture.md), then import it into a new output directory:
+Prepare a capture using the [controlled local-capture format](docs/guides/user/chatgpt-local-capture.md), then import it into a new output directory:
 
 ```sh
 ki acquire chatgpt import ./capture --output ./conversation.kep
