@@ -14,7 +14,7 @@ Knowledge Islands command-line interface.
 
 Commands:
   acquire             Import a local user-prepared capture.
-  completion(s)       Print Bash or Zsh completion.
+  completions         Print Bash or Zsh completion.
   doctor              Report CLI installation and XDG paths.
   help [command]      Show command help.
   paths               Print the resolved XDG paths used by KI.
@@ -36,8 +36,7 @@ EOF
 
 completion_help() {
   cat <<'EOF'
-Usage: ki completion <bash|zsh>
-       ki completions <bash|zsh>
+Usage: ki completions <bash|zsh>
 
 Print shell completion source to standard output.
 EOF
@@ -97,6 +96,12 @@ grammar_error() {
   exit 2
 }
 
+root_grammar_error() {
+  printf 'ki: error: %s\n' "$1" >&2
+  printf "ki: try 'ki help'\n" >&2
+  exit 2
+}
+
 operation_error() {
   printf 'ki: error: %s\n' "$1" >&2
   exit 1
@@ -107,11 +112,11 @@ unavailable() {
   exit 2
 }
 
-completion() {
+completions() {
   case "$1" in
-    bash) printf '%s\n' 'complete -W "acquire completion completions doctor help paths --help --version" ki' ;;
-    zsh) printf '%s\n' '#compdef ki' '_arguments "1: :((acquire completion completions doctor help paths))"' ;;
-    *) grammar_error "completion shell must be bash or zsh" "completion" ;;
+    bash) printf '%s\n' 'complete -W "acquire completions doctor help paths version --help --version" ki' ;;
+    zsh) printf '%s\n' '#compdef ki' '_arguments "1: :((acquire completions doctor help paths version))"' ;;
+    *) grammar_error "completions shell must be bash or zsh" "completions" ;;
   esac
 }
 
@@ -554,7 +559,7 @@ help_command() {
     1)
       case "$1" in
         doctor) doctor_help ;;
-        completion|completions) completion_help ;;
+        completions) completion_help ;;
         paths) paths_help ;;
         version) version_help ;;
         acquire) acquire_help ;;
@@ -578,9 +583,9 @@ case "${1:-}" in
   help) shift; help_command "$@" ;;
   --version|-V|version) [ "$#" -eq 1 ] || grammar_error "$1 accepts no arguments" "version"; printf 'ki %s\n' "$KI_VERSION" ;;
   doctor) shift; doctor "$@" ;;
-  completion|completions) [ "$#" -eq 2 ] || grammar_error "$1 requires bash or zsh" "$1"; completion "$2" ;;
+  completions) [ "$#" -eq 2 ] || grammar_error "completions requires bash or zsh" "completions"; completions "$2" ;;
   paths) shift; paths_command "$@" ;;
   acquire) shift; acquire "$@" ;;
   repo|user) unavailable "$1" ;;
-  *) grammar_error "unknown command: $1" "help" ;;
+  *) root_grammar_error "unknown command: $1" ;;
 esac

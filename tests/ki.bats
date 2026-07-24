@@ -27,21 +27,20 @@ EOF
 EOF
 }
 
-@test "root help, completion, and doctor expose the released surface" {
+@test "root help, completions, and doctor expose the released surface" {
   run "$KI" --help
   [ "$status" -eq 0 ]
   [[ "$output" == *"acquire"* ]]
   [[ "$output" == *"paths"* ]]
 
-  run "$KI" completion bash
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"acquire"* ]]
-  [[ "$output" == *"paths"* ]]
-  [[ "$output" == *"completions"* ]]
-
   run "$KI" completions zsh
   [ "$status" -eq 0 ]
   [[ "$output" == *"#compdef ki"* ]]
+
+  run "$KI" completion bash
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"unknown command: completion"* ]]
+  [[ "$output" == *"try 'ki help'"* ]]
 
   run "$KI" doctor
   [ "$status" -eq 0 ]

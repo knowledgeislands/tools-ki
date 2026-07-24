@@ -18,7 +18,7 @@ blocked-by: —
 ## Completed foundation
 
 - Added read-only `ki paths` and useful `ki doctor` output, including versioned JSON forms, for the XDG and installation baseline.
-- Added `ki completions` as an alias for the existing completion command.
+- Adopted plural `ki completions` as the one completion command.
 - Added the tracked `ki(1)` manual with a clear current-versus-planned command boundary.
 - Added `./install.sh --link` for a repository-local development executable and `ki(1)`, with a guide for comparing it with Homebrew.
 
