@@ -42,7 +42,7 @@ The current `ki-engineering` checker still expects retired package-script aggreg
    - [x] Discover physically contained installed harnesses; validate manifests, capability identity, integrity-covered files, and registered operation modules.
    - [x] Replace positional manifest arrays with keyed capability tables and one global integrity map.
    - [x] Parse declared skill tables and resolve them only from verified installed harnesses.
-   - [ ] Order declared explicit dependencies before execution.
+   - [x] Order declared explicit dependencies before execution.
 6. Implement explicit user and repository capability activation using only the contract's managed projection boundaries. Prove idempotence, dry-run, containment, and refusal for altered, unsafe, incompatible, or missing state.
 7. Implement `ki repo audit [--repo <path>] [--skill <capability>]` from the selected repository's declared registered capabilities. Prove it is read-only, runs only declared compatible operations, preserves the shared finding model, and names recovery without network or source-checkout fallback.
    - [x] Deliver the command host and fixture-backed registered in-process execution; refuse a nearby checkout or an unavailable verified harness with recovery guidance.

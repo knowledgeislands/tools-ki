@@ -18,6 +18,7 @@ export interface HarnessCapability {
   readonly kind: string
   readonly name: string
   readonly source: string
+  readonly dependsOn: readonly string[]
   readonly operations: readonly RegisteredOperation[]
 }
 
@@ -78,10 +79,18 @@ const parseFiles = (value: unknown): readonly { readonly path: string; readonly 
   })
 }
 
+const parseDependencies = (value: unknown, description: string): readonly string[] => {
+  if (!Array.isArray(value) || value.some((dependency) => typeof dependency !== 'string' || !dependency)) {
+    throw new KiError(`${description} must declare depends_on as a string array`, 1)
+  }
+  if (new Set(value).size !== value.length) throw new KiError(`${description} repeats a dependency`, 1)
+  return value
+}
+
 const parseCapability = (name: string, value: unknown): HarnessCapability => {
   const description = `capabilities.${name}`
   if (!isRecord(value)) throw new KiError(`${description} must be a table`, 1)
-  const { operations: configuredOperations, source } = value
+  const { depends_on: configuredDependencies, operations: configuredOperations, source } = value
   const operations =
     configuredOperations === undefined
       ? []
@@ -96,6 +105,7 @@ const parseCapability = (name: string, value: unknown): HarnessCapability => {
     kind: stringField(value, 'kind', description),
     name,
     source: safeRelativePath(source, `${description} source`),
+    dependsOn: parseDependencies(configuredDependencies, description),
     operations
   }
 }

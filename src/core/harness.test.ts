@@ -44,6 +44,7 @@ const installHarness = async (data: string, identifier = 'example/harness'): Pro
       '[capabilities.ki-example]',
       'kind = "skill"',
       'source = "skills/ki-example"',
+      'depends_on = []',
       '',
       '[capabilities.ki-example.operations.audit]',
       'protocol = "ki/native-operation@1"',
@@ -69,6 +70,7 @@ test('parses a compatible harness manifest with integrity-covered operations', (
       '[capabilities.ki-example]',
       'kind = "skill"',
       'source = "skills/ki-example"',
+      'depends_on = []',
       ''
     ].join('\n')
   )

@@ -145,6 +145,7 @@ const installHarness = async (data: string, auditSource?: string, conformSource?
       '[capabilities.ki-example]',
       'kind = "skill"',
       'source = "skills/ki-example"',
+      'depends_on = []',
       ...operations.flatMap((operation) => [
         '',
         `[capabilities.ki-example.operations.${operation.mode}]`,

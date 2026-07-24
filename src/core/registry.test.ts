@@ -83,6 +83,7 @@ test('installs a configured gzip tar harness only after archive and manifest ver
       '[capabilities.ki-example]',
       'kind = "skill"',
       'source = "skills/ki-example"',
+      'depends_on = []',
       ''
     ].join('\n')
   })
