@@ -6,6 +6,7 @@
       "name": "@knowledgeislands/ki",
       "dependencies": {
         "commander": "^14.0.3",
+        "smol-toml": "1.7.0",
       },
       "devDependencies": {
         "@biomejs/biome": "2.5.4",
