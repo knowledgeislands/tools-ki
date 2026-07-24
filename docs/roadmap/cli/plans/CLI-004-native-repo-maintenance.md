@@ -27,19 +27,30 @@ The current `ki-engineering` checker still expects retired package-script aggreg
 - Replaced the Bash command host with typed in-process Bun and TypeScript modules, including the local ChatGPT importer and native Bun tests.
 - Added a Bun-compiled standalone executable for the current development platform; `./install.sh --copy` installs that regular executable, while `./install.sh --link` explicitly links the Bun source entry point and `ki(1)`.
 - Split the command surface into command-owned modules and introduced one shared read-only execution context for XDG paths, physical CWD, installation mode, and KI repository discovery.
+- Added verified installed-harness discovery, manifest parsing, integrity checking, and a read-only `ki harness list` command.
+- Added native `ki repo audit` and transactional `ki repo conform` command hosts, with fixture-backed proof of registered in-process execution, dry-run write-freedom, guarded publication, and re-audit.
 
 ## Steps
 
-1. Establish the TypeScript command host: a typed in-process module per command, shared diagnostics and structured result rendering, a testable command runner, and one authoritative command catalogue for help and completion output.
-2. Port the released development surface — help, version, completions, XDG paths, doctor, and the local ChatGPT capture importer — from Bash to native TypeScript modules without changing its documented contract.
+1. ✓ Establish the TypeScript command host: a typed in-process module per command, shared diagnostics and structured result rendering, a testable command runner, and one authoritative command catalogue for help and completion output.
+2. ✓ Port the released development surface — help, version, completions, XDG paths, doctor, and the local ChatGPT capture importer — from Bash to native TypeScript modules without changing its documented contract.
 3. Build the release boundary: Bun-compiled standalone artefacts for supported platforms, a source-mode development entry point, and installer and test coverage that distinguish linked development installations from regular executable installs.
-4. Adopt the settled native-operation contract from harness [FND-004](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-004-define-compatible-harness-registration.md); stop if it leaves registry integrity, registration, migration, or CI trust unresolved.
+4. ✓ Adopt the settled native-operation contract from harness [FND-004](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-004-define-compatible-harness-registration.md); stop if it leaves registry integrity, registration, migration, or CI trust unresolved.
 5. Build the `ki` core around shared native facilities for installed-harness discovery, integrity checks, physical path resolution, `.ki-config.toml` declaration parsing, dependency ordering, and capability resolution.
+   - [x] Discover physically contained installed harnesses; validate manifests, capability identity, integrity-covered files, and registered operation modules.
+   - [x] Parse declared skill tables and resolve them only from verified installed harnesses.
+   - [ ] Order declared explicit dependencies before execution.
 6. Implement explicit user and repository capability activation using only the contract's managed projection boundaries. Prove idempotence, dry-run, containment, and refusal for altered, unsafe, incompatible, or missing state.
 7. Implement `ki repo audit [--repo <path>] [--skill <capability>]` from the selected repository's declared registered capabilities. Prove it is read-only, runs only declared compatible operations, preserves the shared finding model, and names recovery without network or source-checkout fallback.
+   - [x] Deliver the command host and fixture-backed registered in-process execution; refuse a nearby checkout or an unavailable verified harness with recovery guidance.
+   - [ ] Prove the command against the installed base harness and a real declared repository.
 8. Implement `ki repo conform [--repo <path>] [--skill <capability>] [--dry-run]` with the same resolution rules. Prove safe mechanical writes, dry-run write-freedom, post-conform re-audit, and refusal before partial publication.
+   - [x] Deliver the transactional host and fixture-backed dry run, guarded publication, and post-conform re-audit.
+   - [ ] Prove the command against the installed base harness and a real declared repository.
 9. Provide an explicit migration path for repositories carrying generated `.ki/bin` state. Do not delete, overwrite, or use that state implicitly; retain migration and recovery proof for changed, missing, symlinked, and concurrent paths.
 10. Keep HELP, completion, `ki(1)`, user documentation, installer behaviour, release notes, CI fixtures, and current command-contract references aligned. Do not tag, publish, push, or update Homebrew without separate approval.
+    - [x] Align HELP, completion, `ki(1)`, and the native-operation decision with the delivered commands.
+    - [ ] Align activation, installation, release notes, full CI fixtures, and public user guidance when those surfaces exist.
 
 ## Files touched
 
