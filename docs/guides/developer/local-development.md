@@ -77,4 +77,4 @@ The tracked manual is [ki(1)](../../../man/ki.1). Preview it from a checkout wit
 man -l man/ki.1
 ```
 
-The manual records current commands and planned alternatives separately so command names can change before the first consolidated release.
+The manual groups current and planned commands together by purpose; `[planned]` forms can change before the first consolidated release.

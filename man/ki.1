@@ -32,7 +32,14 @@ It provides stable, local-first commands for working with Knowledge Islands
 material.
 This page describes the current unreleased development surface and distinguishes
 it from planned commands.
-.SH CURRENT COMMANDS
+.SH COMMAND GROUPS
+Commands marked
+.B [planned]
+document the intended interface.
+They are not available in this build, do not appear in
+.B ki help
+or completion output, and may change before release.
+.SS Interface and diagnostics
 .TP
 .B help [command]
 Print root or command-specific help.
@@ -65,11 +72,58 @@ Pass
 .B --json
 for a versioned machine-readable result.
 .TP
+.B ki docs [planned]
+Open or print the appropriate KI documentation location.
+.TP
+.B ki dr [planned]
+Inspect Decision Records relevant to the resolved KI context.
+.SS Acquisition
+.TP
 .B acquire chatgpt import \fIcapture-directory\fR --output \fIkep-directory\fR [--dry-run] [--json]
 Validate a user-prepared local ChatGPT capture and create a deterministic
 Knowledge Export Package (KEP).
 The command does not control a browser, contact ChatGPT, read credentials,
 discover a repository, or extract reusable knowledge.
+.SS Harness and capability management
+.TP
+.B ki list [planned]
+List installed harnesses, capabilities, and the activation status relevant to
+the current working directory.
+.TP
+.B ki harness install|uninstall|list|info [planned]
+Manage and inspect the verified, user-installed set of compatible harnesses.
+.TP
+.B ki missing|outdated [planned]
+Report capabilities absent from the selected scope or with a newer verified
+latest release available.
+.TP
+.B ki install|reinstall|uninstall \fIcapability\fR [planned]
+Manage a named capability; its final relationship to explicit scope activation
+commands remains to be settled.
+.TP
+.B ki update [planned]
+Update the executable and refresh installed harnesses.
+.TP
+.B ki upgrade [planned]
+Apply newer capability releases in the resolved repository context.
+.TP
+.B ki search|cleanup [planned]
+Search the available capability set or remove managed stale state.
+.SS Scoped capability activation
+.TP
+.B ki repo skill add|remove \fIskill\fR [planned]
+Add or remove a registered capability in one selected repository.
+.TP
+.B ki user skill add|remove \fIskill\fR [planned]
+Add or remove a registered capability in the selected user runtime.
+.SS Repository maintenance
+.TP
+.B ki repo audit [--repo \fIpath\fR] [--skill \fIskill\fR] [planned]
+Run the native read-only operations registered by the selected repository's
+declared capabilities.
+.TP
+.B ki repo conform [--repo \fIpath\fR] [--skill \fIskill\fR] [--dry-run] [planned]
+Apply the same capabilities' safe mechanical changes and re-audit.
 .SH XDG PATHS
 .B ki
 uses the XDG Base Directory variables for user-owned KI state.
@@ -111,31 +165,6 @@ Use a dedicated development command directory or invoke
 .B ./bin/ki
 directly when comparing it with Homebrew's installed executable. The linked
 source mode requires Bun; a regular compiled executable does not.
-.SH PLANNED COMMANDS
-The following command groups are intentionally not implemented yet.
-They are documented here as a target surface and may be renamed before the
-first consolidated release:
-.IP \(bu 2
-.BR ki\ list ,
-.BR ki\ harness\ list ,
-and capability inventory.
-.IP \(bu
-.BR ki\ missing ,
-.BR ki\ outdated ,
-.BR ki\ install ,
-.BR ki\ reinstall ,
-and
-.BR ki\ uninstall .
-.IP \(bu
-.BR ki\ update
-for the executable and installed harnesses, and CWD-resolved
-.BR ki\ upgrade
-for repository capabilities.
-.IP \(bu
-.BR ki\ repo\ audit
-and
-.BR ki\ repo\ conform
-using registered native operations rather than vendored runners.
 .SH EXIT STATUS
 .TP
 .B 0
