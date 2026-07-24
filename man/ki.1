@@ -33,8 +33,8 @@ material.
 This page describes the current unreleased development surface and distinguishes
 it from planned commands.
 .SH COMMAND GROUPS
-Commands marked
-.B [planned]
+Commands prefixed with
+.B *
 document the intended interface.
 They are not available in this build, do not appear in
 .B ki help
@@ -72,7 +72,7 @@ Pass
 .B --json
 for a versioned machine-readable result.
 .TP
-.B ki docs [planned]
+.B *ki docs
 Open or print the appropriate KI documentation location.
 .SS Acquisition
 .TP
@@ -83,7 +83,7 @@ The command does not control a browser, contact ChatGPT, read credentials,
 discover a repository, or extract reusable knowledge.
 .SS Harness and capability management
 .TP
-.B ki list [planned]
+.B *ki list
 List installed harnesses, capabilities, and the activation status relevant to
 the current working directory.
 .TP
@@ -92,31 +92,31 @@ List the verified compatible harnesses already installed beneath the KI XDG data
 directory. The command verifies each manifest and its declared integrity-covered
 files before reporting it, and does not create or change user state.
 .TP
-.B ki harness install|uninstall \fIharness-id\fR | info \fIharness-id\fR [planned]
+.B *ki harness install|uninstall \fIharness-id\fR | info \fIharness-id\fR
 Manage or inspect one verified, user-installed compatible harness.
 .TP
-.B ki missing|outdated [planned]
+.B *ki missing|outdated
 Report capabilities absent from the selected scope or with a newer verified
 latest release available.
 .TP
-.B ki install|reinstall|uninstall \fIcapability\fR [planned]
+.B *ki install|reinstall|uninstall \fIcapability\fR
 Manage a named capability; its final relationship to explicit scope activation
 commands remains to be settled.
 .TP
-.B ki update [planned]
+.B *ki update
 Update the executable and refresh installed harnesses.
 .TP
-.B ki upgrade [planned]
+.B *ki upgrade
 Apply newer capability releases in the resolved repository context.
 .TP
-.B ki search|cleanup [planned]
+.B *ki search|cleanup
 Search the available capability set or remove managed stale state.
 .SS Scoped capability activation
 .TP
-.B ki repo skill add|remove \fIharness-id:skill-name\fR [planned]
+.B *ki repo skill add|remove \fIharness-id:skill-name\fR
 Add or remove a registered skill in one selected repository.
 .TP
-.B ki user skill add|remove \fIharness-id:skill-name\fR [planned]
+.B *ki user skill add|remove \fIharness-id:skill-name\fR
 Add or remove a registered skill in the selected user runtime.
 .SS Repository maintenance
 .TP
