@@ -18,6 +18,7 @@ Commands:
   doctor              Report CLI installation and XDG paths.
   help [command]      Show command help.
   paths               Print the resolved XDG paths used by KI.
+  version             Print the CLI version.
 
 Options:
   -h, --help          Show this help.
@@ -27,7 +28,7 @@ EOF
 
 doctor_help() {
   cat <<'EOF'
-Usage: ki doctor
+Usage: ki doctor [--json]
 
 Report the current CLI installation mode and resolved XDG paths. This command does not create, inspect, or change repository or user state.
 EOF
@@ -44,9 +45,17 @@ EOF
 
 paths_help() {
   cat <<'EOF'
-Usage: ki paths
+Usage: ki paths [--json]
 
 Print the resolved XDG paths used for KI user data, configuration, cache, and state. This command does not create those paths.
+EOF
+}
+
+version_help() {
+  cat <<'EOF'
+Usage: ki version
+
+Print the CLI version.
 EOF
 }
 
@@ -106,27 +115,51 @@ completion() {
   esac
 }
 
-ki_paths() {
-  local xdg_data xdg_config xdg_cache xdg_state
+resolve_ki_paths() {
+  KI_DATA_PATH="${XDG_DATA_HOME:-"$HOME/.local/share"}/ki"
+  KI_CONFIG_PATH="${XDG_CONFIG_HOME:-"$HOME/.config"}/ki"
+  KI_CACHE_PATH="${XDG_CACHE_HOME:-"$HOME/.cache"}/ki"
+  KI_STATE_PATH="${XDG_STATE_HOME:-"$HOME/.local/state"}/ki"
+}
 
-  xdg_data=${XDG_DATA_HOME:-"$HOME/.local/share"}
-  xdg_config=${XDG_CONFIG_HOME:-"$HOME/.config"}
-  xdg_cache=${XDG_CACHE_HOME:-"$HOME/.cache"}
-  xdg_state=${XDG_STATE_HOME:-"$HOME/.local/state"}
-  printf 'data: %s/ki\n' "$xdg_data"
-  printf 'config: %s/ki\n' "$xdg_config"
-  printf 'cache: %s/ki\n' "$xdg_cache"
-  printf 'state: %s/ki\n' "$xdg_state"
+ki_paths() {
+  resolve_ki_paths
+  printf 'data: %s\n' "$KI_DATA_PATH"
+  printf 'config: %s\n' "$KI_CONFIG_PATH"
+  printf 'cache: %s\n' "$KI_CACHE_PATH"
+  printf 'state: %s\n' "$KI_STATE_PATH"
 }
 
 doctor() {
-  local installation
+  local installation json
 
+  json=0
+  case "${1:-}" in
+    "") ;;
+    --json) json=1 ;;
+    *) grammar_error "doctor accepts only --json" "doctor" ;;
+  esac
   installation='regular executable'
   [ ! -L "$0" ] || installation='linked development checkout'
+  if [ "$json" -eq 1 ]; then
+    resolve_ki_paths
+    printf '{"version":1,"ki_version":"%s","installation":"%s","data":"%s","config":"%s","cache":"%s","state":"%s"}\n' "$KI_VERSION" "$(json_escape "$installation")" "$(json_escape "$KI_DATA_PATH")" "$(json_escape "$KI_CONFIG_PATH")" "$(json_escape "$KI_CACHE_PATH")" "$(json_escape "$KI_STATE_PATH")"
+    return
+  fi
   printf 'ki version: %s\n' "$KI_VERSION"
   printf 'installation: %s\n' "$installation"
   ki_paths
+}
+
+paths_command() {
+  case "${1:-}" in
+    "") ki_paths ;;
+    --json)
+      resolve_ki_paths
+      printf '{"version":1,"data":"%s","config":"%s","cache":"%s","state":"%s"}\n' "$(json_escape "$KI_DATA_PATH")" "$(json_escape "$KI_CONFIG_PATH")" "$(json_escape "$KI_CACHE_PATH")" "$(json_escape "$KI_STATE_PATH")"
+      ;;
+    *) grammar_error "paths accepts only --json" "paths" ;;
+  esac
 }
 
 physical_directory() {
@@ -523,6 +556,7 @@ help_command() {
         doctor) doctor_help ;;
         completion|completions) completion_help ;;
         paths) paths_help ;;
+        version) version_help ;;
         acquire) acquire_help ;;
         *) grammar_error "unknown help topic: $1" "help" ;;
       esac
@@ -542,10 +576,10 @@ help_command() {
 case "${1:-}" in
   ""|--help|-h) root_help ;;
   help) shift; help_command "$@" ;;
-  --version|-V) [ "$#" -eq 1 ] || grammar_error "--version accepts no arguments" "help"; printf 'ki %s\n' "$KI_VERSION" ;;
-  doctor) [ "$#" -eq 1 ] || grammar_error "doctor accepts no arguments" "doctor"; doctor ;;
+  --version|-V|version) [ "$#" -eq 1 ] || grammar_error "$1 accepts no arguments" "version"; printf 'ki %s\n' "$KI_VERSION" ;;
+  doctor) shift; doctor "$@" ;;
   completion|completions) [ "$#" -eq 2 ] || grammar_error "$1 requires bash or zsh" "$1"; completion "$2" ;;
-  paths) [ "$#" -eq 1 ] || grammar_error "paths accepts no arguments" "paths"; ki_paths ;;
+  paths) shift; paths_command "$@" ;;
   acquire) shift; acquire "$@" ;;
   repo|user) unavailable "$1" ;;
   *) grammar_error "unknown command: $1" "help" ;;

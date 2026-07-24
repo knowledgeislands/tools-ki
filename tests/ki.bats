@@ -47,6 +47,10 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"ki version: 0.2.0"* ]]
   [[ "$output" == *"installation: regular executable"* ]]
+
+  run "$KI" version
+  [ "$status" -eq 0 ]
+  [ "$output" = "ki 0.2.0" ]
 }
 
 @test "paths resolves XDG defaults and explicit overrides without writing" {
@@ -64,6 +68,16 @@ EOF
   [[ "$output" == *"config: $BATS_TEST_TMPDIR/config/ki"* ]]
   [[ "$output" == *"cache: $BATS_TEST_TMPDIR/cache/ki"* ]]
   [[ "$output" == *"state: $BATS_TEST_TMPDIR/state/ki"* ]]
+
+  run env XDG_DATA_HOME="$BATS_TEST_TMPDIR/data" XDG_CONFIG_HOME="$BATS_TEST_TMPDIR/config" XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache" XDG_STATE_HOME="$BATS_TEST_TMPDIR/state" "$KI" paths --json
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"version":1'* ]]
+  [[ "$output" == *'"data":"'* ]]
+  [[ "$output" == *'"state":"'* ]]
+
+  run "$KI" doctor --json
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"installation":"regular executable"'* ]]
 }
 
 @test "the installer can link a development checkout without changing its version" {
@@ -73,6 +87,7 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"ki: linked"* ]]
   [ -L "$install_dir/ki" ]
+  [ -L "$BATS_TEST_TMPDIR/dev/share/man/man1/ki.1" ]
 
   run "$install_dir/ki" doctor
   [ "$status" -eq 0 ]

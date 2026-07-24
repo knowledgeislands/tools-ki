@@ -15,8 +15,12 @@ ki \- Knowledge Islands command-line interface
 .I shell
 .br
 .B ki paths
+.RI [ --json ]
 .br
 .B ki doctor
+.RI [ --json ]
+.br
+.B ki version
 .br
 .B ki acquire chatgpt import
 .I capture-directory
@@ -42,6 +46,9 @@ Print root help.
 .B --version, -V
 Print the CLI version.
 .TP
+.B version
+Print the CLI version.
+.TP
 .B completion \fIshell\fR
 .br
 .B completions \fIshell\fR
@@ -50,11 +57,17 @@ Print Bash or Zsh completion source to standard output.
 .B paths
 Print the resolved XDG data, configuration, cache, and state paths for KI
 without creating them.
+Pass
+.B --json
+for a versioned machine-readable result.
 .TP
 .B doctor
 Print the CLI version, whether the executable is a regular installation or a
 development link, and the resolved XDG paths.
 It makes no changes.
+Pass
+.B --json
+for a versioned machine-readable result.
 .TP
 .B acquire chatgpt import \fIcapture-directory\fR --output \fIkep-directory\fR [--dry-run] [--json]
 Validate a user-prepared local ChatGPT capture and create a deterministic
@@ -88,7 +101,11 @@ to place a symbolic link in
 (default
 .IR ~/.local/bin ).
 The linked command executes the current checkout without changing its release
-version.
+version, and links the manual into
+.B KI_MAN_INSTALL_DIR
+(default: the corresponding
+.IR share/man/man1
+directory).
 Use a dedicated development command directory or invoke
 .B ./bin/ki
 directly when comparing it with Homebrew's installed executable.

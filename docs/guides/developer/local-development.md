@@ -20,9 +20,9 @@ KI_CLI_INSTALL_DIR="$HOME/.local/ki-dev/bin" ./install.sh --link
 PATH="$HOME/.local/ki-dev/bin:$PATH" ki doctor
 ```
 
-`ki doctor` reports `installation: linked development checkout` when that link is running. The link follows subsequent edits to `bin/ki`; reinstall only when changing its target directory or restoring a regular copied executable.
+`ki doctor` reports `installation: linked development checkout` when that link is running. The command and `ki(1)` links follow subsequent edits to `bin/ki` and `man/ki.1`; reinstall only when changing their target directories or restoring regular copied files.
 
-Use `./install.sh --copy` to install a regular copy into the same selected command directory.
+Use `./install.sh --copy` to install a regular copy into the same selected command directory. Set `KI_MAN_INSTALL_DIR` when the manual should be installed outside the default sibling `share/man/man1` directory.
 
 ## Compare with Homebrew
 
