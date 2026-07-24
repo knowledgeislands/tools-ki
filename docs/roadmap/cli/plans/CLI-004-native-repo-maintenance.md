@@ -26,6 +26,7 @@ The current `ki-engineering` checker still expects retired package-script aggreg
 - Added the tracked `ki(1)` manual with a clear current-versus-planned command boundary.
 - Replaced the Bash command host with typed in-process Bun and TypeScript modules, including the local ChatGPT importer and native Bun tests.
 - Added a Bun-compiled standalone executable for the current development platform; `./install.sh --copy` installs that regular executable, while `./install.sh --link` explicitly links the Bun source entry point and `ki(1)`.
+- Split the command surface into command-owned modules and introduced one shared read-only execution context for XDG paths, physical CWD, installation mode, and KI repository discovery.
 
 ## Steps
 

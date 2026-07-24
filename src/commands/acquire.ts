@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto'
 import { cp, lstat, mkdir, readdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { Command } from 'commander'
+import type { KiContext } from '../core/context.ts'
 import { KiError } from '../core/errors.ts'
-import type { CommandContext } from '../core/output.ts'
 
 const CONNECTOR_ID = 'knowledgeislands.chatgpt.local-capture'
 const CONNECTOR_VERSION = '0.1.0'
@@ -280,7 +280,7 @@ const writeKep = async (capture: Capture, payload: Payload, output: string): Pro
   }
 }
 
-const emitResult = (context: CommandContext, capture: Capture, payload: Payload, output: string, options: ImportOptions): void => {
+const emitResult = (context: KiContext, capture: Capture, payload: Payload, output: string, options: ImportOptions): void => {
   const status = options.dryRun ? 'dry-run' : 'created'
   if (options.json) {
     context.stdout.write(
@@ -315,7 +315,7 @@ const emitResult = (context: CommandContext, capture: Capture, payload: Payload,
   if (options.dryRun) context.stdout.write('Dry run: no files written.\n')
 }
 
-const importCapture = async (context: CommandContext, captureArgument: string, options: ImportOptions): Promise<void> => {
+const importCapture = async (context: KiContext, captureArgument: string, options: ImportOptions): Promise<void> => {
   const captureState = await lstat(captureArgument).catch(() => undefined)
   if (captureState?.isSymbolicLink()) throw operationalError('capture-directory must not be a symbolic link')
   const captureDirectory = await physicalDirectory(captureArgument, 'capture-directory')
@@ -326,7 +326,7 @@ const importCapture = async (context: CommandContext, captureArgument: string, o
   emitResult(context, capture, payload, output, options)
 }
 
-export const createAcquireCommand = (context: CommandContext): Command => {
+export const createAcquireCommand = (context: KiContext): Command => {
   const importer = new Command('import')
     .description('import a local capture into an immutable Knowledge Export Package')
     .argument('<capture-directory>')

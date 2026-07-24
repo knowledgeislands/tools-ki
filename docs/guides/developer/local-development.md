@@ -13,6 +13,14 @@ Run the checkout without changing any installation:
 
 This source entry point requires Bun and runs the typed command modules in `src/` directly.
 
+## Command structure
+
+`src/cli.ts` owns only command assembly, help routing, and exit-code rendering.
+
+Each public command or command group has its own module under `src/commands/`; command modules receive one shared read-only execution context rather than inspecting process state independently.
+
+`src/core/context.ts` resolves the physical current working directory, executable installation mode, XDG KI paths, user home, and an optional ancestor KI repository. Repository discovery searches from the working directory upward for `.ki-config.toml`, but never treats the home directory or filesystem root as a repository. Future `ki repo` commands reuse this context and its explicit `--repo` resolver rather than reimplementing path traversal.
+
 ## Install a compiled executable
 
 Build the standalone executable for the current platform, then install a regular copy:

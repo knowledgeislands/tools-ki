@@ -1,12 +1,16 @@
 import { Command, CommanderError } from 'commander'
 import { createAcquireCommand } from './commands/acquire.ts'
-import { createBaselineCommands } from './commands/baseline.ts'
+import { createCompletionsCommand } from './commands/completions.ts'
+import { createDoctorCommand } from './commands/doctor.ts'
+import { createHelpCommand } from './commands/help.ts'
+import { createPathsCommand } from './commands/paths.ts'
+import { createVersionCommand } from './commands/version.ts'
+import { createContext, type KiContext } from './core/context.ts'
 import { KiError } from './core/errors.ts'
-import type { CommandContext } from './core/output.ts'
-import { processContext } from './core/output.ts'
+import { processContextOptions } from './core/output.ts'
 import { KI_VERSION } from './version.ts'
 
-export const createProgram = (context: CommandContext): Command => {
+export const createProgram = (context: KiContext): Command => {
   const program = new Command()
     .name('ki')
     .description('Knowledge Islands command-line interface.')
@@ -15,21 +19,12 @@ export const createProgram = (context: CommandContext): Command => {
     .showHelpAfterError()
     .exitOverride()
 
-  for (const command of createBaselineCommands(context)) program.addCommand(command)
+  program.addCommand(createCompletionsCommand(context))
+  program.addCommand(createDoctorCommand(context))
+  program.addCommand(createPathsCommand(context))
+  program.addCommand(createVersionCommand(context))
   program.addCommand(createAcquireCommand(context))
-  const help = new Command('help')
-    .description('show command help')
-    .argument('[command...]')
-    .action((topics: string[]) => {
-      let target = program
-      for (const topic of topics) {
-        const next = target.commands.find((command) => command.name() === topic)
-        if (!next) throw new KiError(`unknown help topic: ${topics.join(' ')}`, 2)
-        target = next
-      }
-      target.outputHelp()
-    })
-  program.addCommand(help)
+  program.addCommand(createHelpCommand(program))
   const configureExitOverride = (command: Command): void => {
     command.helpCommand(false)
     command.exitOverride()
@@ -39,7 +34,8 @@ export const createProgram = (context: CommandContext): Command => {
   return program
 }
 
-export const run = async (arguments_: readonly string[], context = processContext()): Promise<number> => {
+export const run = async (arguments_: readonly string[], suppliedContext?: KiContext): Promise<number> => {
+  const context = suppliedContext ?? (await createContext(processContextOptions()))
   const program = createProgram(context)
   if (!arguments_.length) {
     program.outputHelp()
