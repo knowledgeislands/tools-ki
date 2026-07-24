@@ -89,21 +89,27 @@ Run
 to inspect the effective values.
 .SH DEVELOPMENT INSTALLATIONS
 Homebrew installs a released regular executable.
+From a checkout, run
+.B bun run build
+then
+.B ./install.sh --copy
+to install a regular standalone executable for the current platform.
 For development against this checkout, run
 .B ./install.sh --link
 to place a symbolic link in
 .B KI_CLI_INSTALL_DIR
 (default
 .IR ~/.local/bin ).
-The linked command executes the current checkout without changing its release
-version, and links the manual into
+The linked command executes the current TypeScript source through Bun without
+changing its release version, and links the manual into
 .B KI_MAN_INSTALL_DIR
 (default: the corresponding
 .IR share/man/man1
 directory).
 Use a dedicated development command directory or invoke
 .B ./bin/ki
-directly when comparing it with Homebrew's installed executable.
+directly when comparing it with Homebrew's installed executable. The linked
+source mode requires Bun; a regular compiled executable does not.
 .SH PLANNED COMMANDS
 The following command groups are intentionally not implemented yet.
 They are documented here as a target surface and may be renamed before the

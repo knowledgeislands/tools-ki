@@ -3,7 +3,6 @@
 set -eu
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
-source_path=${KI_CLI_SOURCE:-"$script_dir/bin/ki"}
 install_dir=${KI_CLI_INSTALL_DIR:-"$HOME/.local/bin"}
 target="$install_dir/ki"
 man_source="$script_dir/man/ki.1"
@@ -21,8 +20,8 @@ Usage: ./install.sh [--copy|--link]
 Install `ki` into KI_CLI_INSTALL_DIR (default: ~/.local/bin) and `ki(1)` into
 KI_MAN_INSTALL_DIR (default: the corresponding share/man/man1 directory).
 
---copy  Install a regular executable copy (the default).
---link  Install a symbolic link to this checkout for local development.
+--copy  Install the compiled dist/ki executable (the default; run bun run build first).
+--link  Install a symbolic link to this checkout's Bun source entry point for local development.
 EOF
     exit 0
     ;;
@@ -30,6 +29,14 @@ EOF
 esac
 
 [ "$#" -le 1 ] || { printf 'ki: error: installer accepts one option\n' >&2; exit 2; }
+
+if [ -n "${KI_CLI_SOURCE:-}" ]; then
+  source_path=$KI_CLI_SOURCE
+elif [ "$mode" = link ]; then
+  source_path="$script_dir/bin/ki"
+else
+  source_path="$script_dir/dist/ki"
+fi
 
 [ -f "$source_path" ] || { printf 'ki: error: source executable not found: %s\n' "$source_path" >&2; exit 1; }
 [ -f "$man_source" ] || { printf 'ki: error: source manual not found: %s\n' "$man_source" >&2; exit 1; }

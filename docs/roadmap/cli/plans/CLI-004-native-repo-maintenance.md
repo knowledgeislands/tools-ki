@@ -17,12 +17,15 @@ The seed release establishes the `ki` delivery channel, and the current developm
 
 [ADR-KI-TOOLS-001](../../decisions/ADR-KI-TOOLS-001-typescript-native-command-host.md) adopts the native Bun and TypeScript host required for the work below. The existing Bash implementation is an interim development surface to port, not an execution architecture to extend.
 
+The current `ki-engineering` checker still expects retired package-script aggregate runners. Its rule and CI expectation must migrate with native `ki repo audit` and `ki repo conform`; this plan does not restore a local or vendored runner merely to satisfy that obsolete check.
+
 ## Completed foundation
 
 - Added read-only `ki paths` and useful `ki doctor` output, including versioned JSON forms, for the XDG and installation baseline.
 - Adopted plural `ki completions` as the one completion command.
 - Added the tracked `ki(1)` manual with a clear current-versus-planned command boundary.
-- Added `./install.sh --link` for a repository-local development executable and `ki(1)`, with a guide for comparing it with Homebrew.
+- Replaced the Bash command host with typed in-process Bun and TypeScript modules, including the local ChatGPT importer and native Bun tests.
+- Added a Bun-compiled standalone executable for the current development platform; `./install.sh --copy` installs that regular executable, while `./install.sh --link` explicitly links the Bun source entry point and `ki(1)`.
 
 ## Steps
 

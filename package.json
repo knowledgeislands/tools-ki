@@ -1,0 +1,55 @@
+{
+  "name": "@knowledgeislands/ki",
+  "description": "Knowledge Islands command-line interface.",
+  "version": "0.2.0",
+  "author": "kris@kris.me.uk",
+  "bugs": {
+    "url": "https://github.com/knowledgeislands/tools-ki/issues"
+  },
+  "dependencies": {
+    "commander": "^14.0.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.4",
+    "@types/bun": "^1.3.3",
+    "@types/node": "^24.10.1",
+    "husky": "^9.1.7",
+    "knip": "^6.27.0",
+    "lint-staged": "^17.1.0",
+    "markdownlint-cli2": "^0.23.1",
+    "prettier": "^3.9.5",
+    "syncpack": "^15.3.2",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "homepage": "https://github.com/knowledgeislands/tools-ki#readme",
+  "keywords": [
+    "agentic-harness",
+    "cli",
+    "knowledge-islands"
+  ],
+  "license": "MIT",
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json}": [
+      "bunx @biomejs/biome check --write --no-errors-on-unmatched"
+    ],
+    "*.md": [
+      "bunx prettier --write",
+      "bunx markdownlint-cli2 --no-globs"
+    ]
+  },
+  "packageManager": "bun@1.3.14",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/knowledgeislands/tools-ki.git"
+  },
+  "scripts": {
+    "build": "bun build --compile --outfile dist/ki src/cli.ts",
+    "clean": "rm -rf dist node_modules",
+    "prepare": "husky",
+    "test": "bun test"
+  },
+  "type": "module"
+}

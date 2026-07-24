@@ -3,10 +3,11 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  shell:
+  build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - run: brew install bats-core shellcheck
-      - run: shellcheck bin/ki install.sh tests/validate-kep.sh
-      - run: bats tests
+      - uses: jdx/mise-action@v3
+      - run: bun install --frozen-lockfile
+      - run: bun run test
+      - run: bun run build

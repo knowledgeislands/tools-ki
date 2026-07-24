@@ -8,7 +8,7 @@ The home of `ki`, the Knowledge Islands command-line interface (CLI).
 
 [Arcadia Principal](https://github.com/knowledgeislands/ki-arcadia-principal) remains the source of Knowledge Islands philosophy and model. The [KI Website](https://github.com/knowledgeislands/ki-website) may vendor source-labelled CLI material for public publication, while this repository remains canonical for the executable and its release artifacts. The mirrored [ecosystem decision](docs/decisions/GDR-KI-ARCADIA-002-knowledge-islands-ecosystem-fundamentals.md) defines the five authorities and publication flows.
 
-The first delivery sequence is a zero-dependency `ki` seed (`--help`, `--version`, and `doctor`), followed by a user-assisted `ki acquire chatgpt import` command that produces a Knowledge Export Package (KEP).
+The seed delivery established the `ki` command channel. The active TypeScript command host provides help, version, XDG inspection, and a user-assisted `ki acquire chatgpt import` command that produces a Knowledge Export Package (KEP).
 
 ## Acquire a local ChatGPT capture
 
@@ -28,7 +28,7 @@ Install the released CLI with Homebrew:
 brew install knowledgeislands/tap/ki
 ```
 
-For a local checkout, use the repository's `install.sh` installer instead.
+For a local checkout, run `bun run build` and use the repository's `install.sh --copy` installer for a regular standalone executable.
 
 For a development link to the current checkout, read the [local development guide](docs/guides/developer/local-development.md).
 
