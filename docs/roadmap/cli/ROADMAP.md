@@ -14,7 +14,7 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 
 ### Deliver native repository maintenance through registered skills
 
-Implement the first repository-maintenance slice without dispatching vendored `.ki/bin` runners: install one verified XDG-located skill collection, activate named skills explicitly in global or repository scope, resolve `.ki-config.toml` declarations, and run registered native `ki repo audit` and `ki repo conform` operations. Preserve scoped ownership, physical repository resolution, dry-run, safe writes, and actionable recovery; do not release, tag, or update Homebrew as part of this implementation plan.
+Implement the first repository-maintenance slice without dispatching vendored `.ki/bin` runners: install verified XDG-located compatible harnesses, activate their declared capabilities explicitly at user or repository scope, resolve `.ki-config.toml` declarations, and run registered native `ki repo audit` and `ki repo conform` operations. Preserve scoped ownership, physical repository resolution, dry-run, safe writes, and actionable recovery; do not release, tag, or update Homebrew as part of this implementation plan.
 
 **Plan:** [CLI-004](plans/CLI-004-native-repo-maintenance.md)
 
@@ -25,6 +25,10 @@ Understood and roughly scoped but not yet started — worth doing once the **Nex
 ### Complete remaining user and repository lifecycle commands
 
 After native repository maintenance proves the installed-skill model, adopt the remaining scoped user and repository lifecycle leaves. Keep every command's ownership and safety boundary explicit; do not add compatibility dispatch to retired vendored runners.
+
+### Define capability package-management commands
+
+Specify the inventory, status, maintenance, and upgrade forms around compatible harnesses and their typed capabilities: `ki list`, `ki harness list`, `ki missing`, `ki outdated`, `ki install`, `ki reinstall`, `ki uninstall`, `ki update`, and CWD-resolved `ki upgrade`. Use Homebrew and Cargo as behavioural exemplars while retaining KI's verified-harness and explicit-scope model.
 
 ### Publish a `ki` man page
 
