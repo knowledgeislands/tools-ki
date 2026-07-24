@@ -57,7 +57,7 @@ const auditContext = (repository: string, skill: ResolvedSkill): NativeAuditCont
   repository,
   capability: {
     identity: skill.identity,
-    harness: skill.harness.manifest.id,
+    harness: skill.harness.lock.id,
     name: skill.capability.name,
     configuration: skill.declaration.configuration
   }

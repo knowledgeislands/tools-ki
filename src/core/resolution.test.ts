@@ -13,11 +13,10 @@ const capability = (name: string, dependsOn: readonly string[] = []): HarnessCap
 
 const harness = (...capabilities: readonly HarnessCapability[]): InstalledHarness => ({
   root: '/verified/harness',
-  manifest: {
+  lock: {
     schema: 1,
     id: 'example/harness',
-    latest: '2026.07.24',
-    ki: '>=0.2.0',
+    archive: { url: 'https://releases.example.test/harness.tar.gz', sha256: '0'.repeat(64) },
     files: [],
     capabilities
   }

@@ -14,8 +14,8 @@ export const createHarnessCommand = (context: KiContext): Command =>
           const result = await installHarness(context.paths.config, context.paths.data, identifier)
           context.stdout.write(
             result.installed
-              ? `installed ${identifier}\tlatest ${result.latest}\n`
-              : `${identifier} is already installed\tlatest ${result.latest}\n`
+              ? `installed ${identifier}\tarchive ${result.archiveSha256}\n`
+              : `${identifier} is already installed\tarchive ${result.archiveSha256}\n`
           )
         })
     )
@@ -29,11 +29,10 @@ export const createHarnessCommand = (context: KiContext): Command =>
             context.stdout.write(
               `${JSON.stringify({
                 version: 1,
-                harnesses: harnesses.map(({ manifest }) => ({
-                  id: manifest.id,
-                  latest: manifest.latest,
-                  ki: manifest.ki,
-                  capabilities: manifest.capabilities.map(({ kind, name }) => ({ kind, name }))
+                harnesses: harnesses.map(({ lock }) => ({
+                  id: lock.id,
+                  archive: lock.archive,
+                  capabilities: lock.capabilities.map(({ kind, name }) => ({ kind, name }))
                 }))
               })}\n`
             )
@@ -43,8 +42,8 @@ export const createHarnessCommand = (context: KiContext): Command =>
             context.stdout.write('No installed compatible harnesses.\n')
             return
           }
-          for (const { manifest } of harnesses) {
-            context.stdout.write(`${manifest.id}\tlatest ${manifest.latest}\t${manifest.capabilities.length} capabilities\n`)
+          for (const { lock } of harnesses) {
+            context.stdout.write(`${lock.id}\tarchive ${lock.archive.sha256}\t${lock.capabilities.length} capabilities\n`)
           }
         })
     )

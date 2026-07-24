@@ -4,7 +4,7 @@ import { dirname, join, relative } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { parse } from 'smol-toml'
 import { KiError } from './errors.ts'
-import { readInstalledHarness, verifyHarnessRoot } from './harness.ts'
+import { createHarnessLock, readInstalledHarness, renderHarnessLock } from './harness.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const sha256 = /^[a-f0-9]{64}$/
@@ -105,26 +105,44 @@ const extractArchive = async (payload: Uint8Array, target: string): Promise<void
   } catch {
     throw new KiError('harness release must be a gzip-compressed tar archive', 1)
   }
+  let payloadPrefix: string | undefined
+  let retained = 0
   for (let offset = 0; offset + 512 <= archive.length; ) {
-    if (zeroBlock(archive, offset)) return
+    if (zeroBlock(archive, offset)) {
+      if (retained === 0) throw new KiError('harness archive contains no skills, agents, or hooks payload', 1)
+      return
+    }
     const name = tarString(archive, offset, 100)
-    const prefix = tarString(archive, offset + 345, 155)
-    const path = prefix ? `${prefix}/${name}` : name
+    const headerPrefix = tarString(archive, offset + 345, 155)
+    const path = headerPrefix ? `${headerPrefix}/${name}` : name
     const type = tarString(archive, offset + 156, 1)
     const size = tarSize(archive, offset + 124)
     const contentsStart = offset + 512
     const contentsEnd = contentsStart + size
     if (!safeRelativePath(path) || contentsEnd > archive.length) throw new KiError('harness archive contains an unsafe entry', 1)
-    const destination = join(target, path)
-    if (relative(target, destination).startsWith('..')) throw new KiError('harness archive entry escapes its staging directory', 1)
     if (type === '5') {
       if (size !== 0) throw new KiError('harness archive directory has contents', 1)
-      await mkdir(destination, { recursive: true })
-    } else if (type === '' || type === '0') {
+    } else if (type !== '' && type !== '0') {
+      throw new KiError('harness archive may contain only regular files and directories', 1)
+    }
+    const parts = path.split('/')
+    const direct = parts[0] === 'skills' || parts[0] === 'agents' || parts[0] === 'hooks'
+    const nested = parts[1] === 'skills' || parts[1] === 'agents' || parts[1] === 'hooks'
+    if (!direct && !nested) {
+      offset = contentsStart + Math.ceil(size / 512) * 512
+      continue
+    }
+    const entryPrefix = direct ? '' : (parts[0] as string)
+    if (payloadPrefix !== undefined && payloadPrefix !== entryPrefix) throw new KiError('harness archive mixes payload roots', 1)
+    payloadPrefix = entryPrefix
+    const payloadPath = parts.slice(direct ? 0 : 1).join('/')
+    const destination = join(target, payloadPath)
+    if (relative(target, destination).startsWith('..')) throw new KiError('harness archive entry escapes its staging directory', 1)
+    if (type === '5') await mkdir(destination, { recursive: true })
+    else {
       await mkdir(dirname(destination), { recursive: true })
       await writeFile(destination, archive.subarray(contentsStart, contentsEnd), { flag: 'wx' })
-    } else {
-      throw new KiError('harness archive may contain only regular files and directories', 1)
+      retained += 1
     }
     offset = contentsStart + Math.ceil(size / 512) * 512
   }
@@ -136,7 +154,7 @@ export const installHarness = async (
   dataDirectory: string,
   identifier: string,
   fetcher: Fetcher = fetch
-): Promise<{ readonly installed: boolean; readonly latest: string }> => {
+): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> => {
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   const releases = await readHarnessRegistry(configurationDirectory)
   const release = releases.find((candidate) => candidate.id === identifier)
@@ -163,15 +181,16 @@ export const installHarness = async (
   const existing = await lstat(latest).catch(() => undefined)
   if (existing) {
     const installed = await readInstalledHarness(dataDirectory, identifier)
-    return { installed: false, latest: installed.manifest.latest }
+    return { installed: false, archiveSha256: installed.lock.archive.sha256 }
   }
 
   const staging = await mkdtemp(join(destination, '.install-'))
   try {
     await extractArchive(payload, staging)
-    const manifest = await verifyHarnessRoot(staging, identifier)
+    const lock = await createHarnessLock(staging, identifier, { url: release.url, sha256: release.sha256 })
+    await writeFile(join(staging, 'harness-lock.toml'), renderHarnessLock(lock), { flag: 'wx' })
     await rename(staging, latest)
-    return { installed: true, latest: manifest.latest }
+    return { installed: true, archiveSha256: lock.archive.sha256 }
   } catch (error) {
     await rm(staging, { recursive: true, force: true })
     throw error

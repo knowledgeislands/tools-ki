@@ -1,5 +1,4 @@
 import { execFile } from 'node:child_process'
-import { createHash } from 'node:crypto'
 import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -9,6 +8,7 @@ import packageMetadata from '../package.json' with { type: 'json' }
 import { run as runCli } from './cli.ts'
 import { isSafeRelativePath } from './commands/acquire.ts'
 import { createContext } from './core/context.ts'
+import { createHarnessLock, renderHarnessLock } from './core/harness.ts'
 
 const writeFailure = vi.hoisted(() => ({ enabled: false }))
 
@@ -116,46 +116,25 @@ const makeCapture = async (root: string): Promise<string> => {
 
 const installHarness = async (data: string, auditSource?: string, conformSource?: string): Promise<void> => {
   const root = join(data, 'ki', 'harnesses', 'example', 'harness', 'latest')
-  const skill = '# ki-example\n'
-  await mkdir(join(root, 'skills', 'ki-example'), { recursive: true })
+  const source = join(root, 'skills', 'ki-example')
+  await mkdir(source, { recursive: true })
+  const skill = '---\nname: ki-example\nki-depends-on: []\n---\n'
   await writeFile(join(root, 'skills', 'ki-example', 'SKILL.md'), skill)
-  const digest = createHash('sha256').update(skill).digest('hex')
   const operations = [
     auditSource ? { mode: 'audit', source: auditSource } : undefined,
     conformSource ? { mode: 'conform', source: conformSource } : undefined
   ].filter((operation): operation is { readonly mode: string; readonly source: string } => operation !== undefined)
   if (operations.length) {
-    await mkdir(join(root, 'operations'), { recursive: true })
-    await Promise.all(operations.map(async (operation) => writeFile(join(root, 'operations', `${operation.mode}.mjs`), operation.source)))
+    await mkdir(join(source, 'scripts', 'native'), { recursive: true })
+    await Promise.all(
+      operations.map(async (operation) => writeFile(join(source, 'scripts', 'native', `${operation.mode}.mjs`), operation.source))
+    )
   }
-  await writeFile(
-    join(root, 'harness.toml'),
-    [
-      'schema = 1',
-      'id = "example/harness"',
-      'latest = "2026.07.24"',
-      'ki = ">=0.2.0"',
-      '',
-      '[files]',
-      `"skills/ki-example/SKILL.md" = "${digest}"`,
-      ...operations.map(
-        (operation) => `"operations/${operation.mode}.mjs" = "${createHash('sha256').update(operation.source).digest('hex')}"`
-      ),
-      '',
-      '[capabilities.ki-example]',
-      'kind = "skill"',
-      'source = "skills/ki-example"',
-      'depends_on = []',
-      ...operations.flatMap((operation) => [
-        '',
-        `[capabilities.ki-example.operations.${operation.mode}]`,
-        'protocol = "ki/native-operation@1"',
-        `module = "operations/${operation.mode}.mjs"`,
-        `export = "${operation.mode}"`
-      ]),
-      ''
-    ].join('\n')
-  )
+  const lock = await createHarnessLock(root, 'example/harness', {
+    url: 'https://releases.example.test/harness.tar.gz',
+    sha256: '0'.repeat(64)
+  })
+  await writeFile(join(root, 'harness-lock.toml'), renderHarnessLock(lock))
 }
 
 describe('baseline commands', () => {
@@ -226,7 +205,7 @@ describe('baseline commands', () => {
     const listed = await runKi(['harness', 'list'], { XDG_DATA_HOME: data })
     const json = await runKi(['harness', 'list', '--json'], { XDG_DATA_HOME: data })
 
-    expect(listed).toEqual({ exitCode: 0, output: 'example/harness\tlatest 2026.07.24\t1 capabilities\n' })
+    expect(listed).toEqual({ exitCode: 0, output: `example/harness\tarchive ${'0'.repeat(64)}\t1 capabilities\n` })
     expect(json.output).toContain('"id":"example/harness"')
   })
 

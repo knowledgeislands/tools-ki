@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
@@ -66,39 +66,30 @@ const configuredArchive = async (
   return { config, data }
 }
 
-test('installs a configured gzip tar harness only after archive and manifest verification', async () => {
+test('installs only the harness payload and generates a lock from the verified archive', async () => {
   const root = await temporaryDirectory()
-  const skill = '# ki-example\n'
+  const skill = '---\nname: ki-example\nki-depends-on: []\n---\n'
   const archive = tar({
-    'skills/ki-example/SKILL.md': skill,
-    'harness.toml': [
-      'schema = 1',
-      'id = "example/harness"',
-      'latest = "2026.07.24"',
-      'ki = ">=0.2.0"',
-      '',
-      '[files]',
-      `"skills/ki-example/SKILL.md" = "${digest(skill)}"`,
-      '',
-      '[capabilities.ki-example]',
-      'kind = "skill"',
-      'source = "skills/ki-example"',
-      'depends_on = []',
-      ''
-    ].join('\n')
+    'source-revision/docs/ignored.md': '# source documentation\n',
+    'source-revision/package.json': '{"private":true}\n',
+    'source-revision/skills/ki-example/SKILL.md': skill,
+    'source-revision/agents/example.md': '# agent\n',
+    'source-revision/hooks/example.sh': '#!/bin/sh\n'
   })
   const { config, data } = await configuredArchive(root, archive)
 
   const result = await installHarness(config, data, 'example/harness', async () => new Response(archive))
 
-  expect(result).toEqual({ installed: true, latest: '2026.07.24' })
-  expect((await readInstalledHarness(data, 'example/harness')).manifest.capabilities[0]?.name).toBe('ki-example')
+  expect(result).toEqual({ installed: true, archiveSha256: digest(archive) })
+  expect((await readInstalledHarness(data, 'example/harness')).lock.capabilities[0]?.name).toBe('ki-example')
   expect(await readFile(join(data, 'harnesses', 'example', 'harness', 'latest', 'skills', 'ki-example', 'SKILL.md'), 'utf8')).toBe(skill)
+  await expect(lstat(join(data, 'harnesses', 'example', 'harness', 'latest', 'docs'))).rejects.toThrow()
+  expect(await readFile(join(data, 'harnesses', 'example', 'harness', 'latest', 'harness-lock.toml'), 'utf8')).toContain('[files]')
 })
 
 test('refuses an archive that does not match configured immutable evidence without creating an installation', async () => {
   const root = await temporaryDirectory()
-  const archive = tar({ 'harness.toml': 'schema = 1\nid = "example/harness"\nlatest = "x"\nki = ">=0.2.0"\n' })
+  const archive = tar({ 'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' })
   const { config, data } = await configuredArchive(root, archive, '0'.repeat(64))
 
   await expect(installHarness(config, data, 'example/harness', async () => new Response(archive))).rejects.toThrow(

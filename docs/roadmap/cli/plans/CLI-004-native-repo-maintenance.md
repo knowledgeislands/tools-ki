@@ -39,8 +39,8 @@ The current `ki-engineering` checker still expects retired package-script aggreg
    - [ ] Retain successful hosted CI evidence and package supported distribution artefacts without publishing them.
 4. ✓ Adopt the settled native-operation contract from harness [FND-004](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-004-define-compatible-harness-registration.md); stop if it leaves registry integrity, registration, migration, or CI trust unresolved.
 5. Build the `ki` core around shared native facilities for installed-harness discovery, integrity checks, physical path resolution, `.ki-config.toml` declaration parsing, dependency ordering, and capability resolution.
-   - [x] Discover physically contained installed harnesses; validate manifests, capability identity, integrity-covered files, and registered operation modules.
-   - [x] Replace positional manifest arrays with keyed capability tables and one global integrity map.
+   - [x] Discover physically contained installed harnesses; validate generated locks, capability identity, integrity-covered files, and registered operation modules.
+   - [x] Install only the `skills/`, `agents/`, and `hooks/` archive payload, then generate the installed `harness-lock.toml` inventory and integrity record.
    - [x] Parse declared skill tables and resolve them only from verified installed harnesses.
    - [x] Order declared explicit dependencies before execution.
 6. Implement explicit user and repository capability activation using only the contract's managed projection boundaries. Prove idempotence, dry-run, containment, and refusal for altered, unsafe, incompatible, or missing state.

@@ -11,10 +11,10 @@ export interface ResolvedSkill {
 
 const skillCandidates = (harnesses: readonly InstalledHarness[], name: string): readonly ResolvedSkill[] =>
   harnesses.flatMap((harness) =>
-    harness.manifest.capabilities
+    harness.lock.capabilities
       .filter((capability) => capability.kind === 'skill' && capability.name === name)
       .map((capability) => ({
-        identity: `${harness.manifest.id}:${capability.name}`,
+        identity: `${harness.lock.id}:${capability.name}`,
         declaration: { name, configuration: {} },
         harness,
         capability
