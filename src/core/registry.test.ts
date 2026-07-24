@@ -57,7 +57,7 @@ const configuredArchive = async (
   const data = join(root, 'data', 'ki')
   await mkdir(config, { recursive: true })
   await writeFile(
-    join(config, 'harnesses.toml'),
+    join(config, 'config.toml'),
     [
       '[[harnesses]]',
       'id = "example/harness"',

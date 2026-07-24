@@ -48,7 +48,7 @@ const skillCapability = (agent: InstalledAgent): string => {
 const bootstrapConfigurationPath = (configurationDirectory: string): string => join(configurationDirectory, 'config.toml')
 
 const renderConfiguration = (agents: readonly InstalledAgent[]): string =>
-  ['schema = 1', `agents = [${agents.map((agent) => JSON.stringify(agent.descriptor.id)).join(', ')}]`, ''].join('\n')
+  ['schema = 1', `agents = [${agents.map((agent) => JSON.stringify(agent.descriptor.id)).join(', ')}]`, 'user_skills = []', ''].join('\n')
 
 const readConfiguration = async (configurationDirectory: string, homeDirectory: string): Promise<readonly InstalledAgent[] | undefined> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
@@ -62,15 +62,20 @@ const readConfiguration = async (configurationDirectory: string, homeDirectory: 
     throw new KiError('agent configuration must be valid TOML', 1)
   }
   if (!isRecord(parsed)) throw new KiError('agent configuration must use schema 1', 1)
-  const configuration = parsed as { schema?: unknown; agents?: unknown }
+  const configuration = parsed as { schema?: unknown; agents?: unknown; user_skills?: unknown }
   if (
     configuration.schema !== 1 ||
     !Array.isArray(configuration.agents) ||
-    configuration.agents.some((agent) => typeof agent !== 'string')
+    configuration.agents.some((agent) => typeof agent !== 'string') ||
+    (configuration.user_skills !== undefined &&
+      (!Array.isArray(configuration.user_skills) || configuration.user_skills.some((skill) => typeof skill !== 'string')))
   ) {
-    throw new KiError('agent configuration must declare a string agents array', 1)
+    throw new KiError('KI configuration must declare string agents and user_skills arrays', 1)
   }
   if (new Set(configuration.agents).size !== configuration.agents.length) throw new KiError('agent configuration repeats an agent', 1)
+  if (configuration.user_skills && new Set(configuration.user_skills).size !== configuration.user_skills.length) {
+    throw new KiError('KI configuration repeats a user skill', 1)
+  }
   return configuration.agents.map((id) => {
     const known = descriptor(id)
     return { descriptor: known, home: resolve(homeDirectory, known.paths.home) }

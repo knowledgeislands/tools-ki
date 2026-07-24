@@ -74,17 +74,19 @@ const parseRelease = (value: unknown, index: number): HarnessRelease => {
 }
 
 export const readHarnessRegistry = async (configurationDirectory: string): Promise<readonly HarnessRelease[]> => {
-  const path = join(configurationDirectory, 'harnesses.toml')
+  const path = join(configurationDirectory, 'config.toml')
   const state = await lstat(path).catch(() => undefined)
   if (!state) return [canonicalHarnessRelease]
-  if (!state.isFile() || state.isSymbolicLink()) throw new KiError('harness registry must be a regular file', 1)
+  if (!state.isFile() || state.isSymbolicLink()) throw new KiError('KI configuration must be a regular file', 1)
   let parsed: unknown
   try {
     parsed = parse(await readFile(path, 'utf8'))
   } catch {
-    throw new KiError('harness registry must be valid TOML', 1)
+    throw new KiError('KI configuration must be valid TOML', 1)
   }
-  if (!isRecord(parsed) || !Array.isArray(parsed.harnesses)) throw new KiError('harness registry must declare [[harnesses]] entries', 1)
+  if (!isRecord(parsed)) throw new KiError('KI configuration must be a TOML table', 1)
+  if (parsed.harnesses === undefined) return [canonicalHarnessRelease]
+  if (!Array.isArray(parsed.harnesses)) throw new KiError('KI configuration harnesses must use [[harnesses]] entries', 1)
   const releases = parsed.harnesses.map(parseRelease)
   const identities = new Set<string>([baseHarnessIdentifier])
   for (const release of releases) {
