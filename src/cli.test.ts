@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -106,6 +107,33 @@ const makeCapture = async (root: string): Promise<string> => {
   return capture
 }
 
+const installHarness = async (data: string): Promise<void> => {
+  const root = join(data, 'ki', 'harnesses', 'example', 'harness', 'latest')
+  const skill = '# ki-example\n'
+  await mkdir(join(root, 'skills', 'ki-example'), { recursive: true })
+  await writeFile(join(root, 'skills', 'ki-example', 'SKILL.md'), skill)
+  const digest = createHash('sha256').update(skill).digest('hex')
+  await writeFile(
+    join(root, 'harness.toml'),
+    [
+      'schema = 1',
+      'id = "example/harness"',
+      'latest = "2026.07.24"',
+      'ki = ">=0.2.0"',
+      '',
+      '[[capabilities]]',
+      'kind = "skill"',
+      'name = "ki-example"',
+      'source = "skills/ki-example"',
+      '',
+      '[[capabilities.files]]',
+      'path = "skills/ki-example/SKILL.md"',
+      `sha256 = "${digest}"`,
+      ''
+    ].join('\n')
+  )
+}
+
 describe('baseline commands', () => {
   test('provide help, version, plural completions, and read-only XDG inspection', async () => {
     const home = await temporaryDirectory()
@@ -157,7 +185,7 @@ describe('baseline commands', () => {
     const missingCompletionShell = await runKi(['completions'])
     const unknown = await runKi(['unknown'])
 
-    expect(bash.output).toContain('complete -W "acquire completions doctor help paths version --help --version" ki')
+    expect(bash.output).toContain('complete -W "acquire completions doctor harness help paths version --help --version" ki')
     expect(invalidCompletion).toEqual({ exitCode: 2, output: 'ki: error: completions shell must be bash or zsh\n' })
     expect(paths.output).toContain(`data: ${root}/data/ki`)
     expect(doctor.output).toContain(`ki version: ${packageMetadata.version}`)
@@ -165,6 +193,17 @@ describe('baseline commands', () => {
     expect(optionVersion).toEqual({ exitCode: 0, output: `${packageMetadata.version}\n` })
     expect(missingCompletionShell.exitCode).toBe(2)
     expect(unknown.exitCode).toBe(2)
+  })
+
+  test('lists only verified installed compatible harnesses', async () => {
+    const root = await temporaryDirectory()
+    const data = join(root, 'data')
+    await installHarness(data)
+    const listed = await runKi(['harness', 'list'], { XDG_DATA_HOME: data })
+    const json = await runKi(['harness', 'list', '--json'], { XDG_DATA_HOME: data })
+
+    expect(listed).toEqual({ exitCode: 0, output: 'example/harness\tlatest 2026.07.24\t1 capabilities\n' })
+    expect(json.output).toContain('"id":"example/harness"')
   })
 
   test('creates a context when the caller does not supply one and rethrows unexpected command errors', async () => {

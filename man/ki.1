@@ -90,8 +90,13 @@ discover a repository, or extract reusable knowledge.
 List installed harnesses, capabilities, and the activation status relevant to
 the current working directory.
 .TP
-.B ki harness install|uninstall \fIharness-id\fR | list | info \fIharness-id\fR [planned]
-Manage and inspect the verified, user-installed set of compatible harnesses.
+.B ki harness list [--json]
+List the verified compatible harnesses already installed beneath the KI XDG data
+directory. The command verifies each manifest and its declared integrity-covered
+files before reporting it, and does not create or change user state.
+.TP
+.B ki harness install|uninstall \fIharness-id\fR | info \fIharness-id\fR [planned]
+Manage or inspect one verified, user-installed compatible harness.
 .TP
 .B ki missing|outdated [planned]
 Report capabilities absent from the selected scope or with a newer verified

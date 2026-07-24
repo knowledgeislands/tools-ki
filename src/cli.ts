@@ -2,6 +2,7 @@ import { Command, CommanderError } from 'commander'
 import { createAcquireCommand } from './commands/acquire.ts'
 import { createCompletionsCommand } from './commands/completions.ts'
 import { createDoctorCommand } from './commands/doctor.ts'
+import { createHarnessCommand } from './commands/harness.ts'
 import { createHelpCommand } from './commands/help.ts'
 import { createPathsCommand } from './commands/paths.ts'
 import { createVersionCommand } from './commands/version.ts'
@@ -21,6 +22,7 @@ export const createProgram = (context: KiContext): Command => {
 
   program.addCommand(createCompletionsCommand(context))
   program.addCommand(createDoctorCommand(context))
+  program.addCommand(createHarnessCommand(context))
   program.addCommand(createPathsCommand(context))
   program.addCommand(createVersionCommand(context))
   program.addCommand(createAcquireCommand(context))
