@@ -20,7 +20,7 @@ ki \- Knowledge Islands command-line interface
 .B ki version
 .br
 .B ki bootstrap
-.RI [ --harness " identifier-or-path" ]
+.RI [ --local " path" ]
 .RI [ --redetect ]
 .br
 .B ki acquire chatgpt import
@@ -106,12 +106,8 @@ configuration is reused without replacement. Pass
 .B --redetect
 to refresh the generated agent list from the currently installed runtimes.
 Pass
-.B --harness
-with the canonical identifier to install and link its
-.B ki-bootstrap
-skill. The default identifier is
-.B knowledgeislands/ki-agentic-harness .
-Pass a local harness checkout path instead to validate and link its
+.B --local
+with a local harness checkout path to validate and link its
 .B ki-bootstrap
 skill directly. The checkout must contain
 .IR skills/keystone/ki-bootstrap/SKILL.md ;

@@ -253,7 +253,7 @@ describe('baseline commands', () => {
     await mkdir(source, { recursive: true })
     await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\nki-depends-on: []\n---\n')
 
-    const result = await runKi(['bootstrap', '--harness', harness], {
+    const result = await runKi(['bootstrap', '--local', harness], {
       HOME: home,
       XDG_CONFIG_HOME: join(root, 'config'),
       XDG_DATA_HOME: data
@@ -268,23 +268,6 @@ ki-bootstrap for chatgpt-codex installed
     })
     await expect(lstat(join(data, 'ki', 'harnesses'))).rejects.toThrow()
     expect((await lstat(join(home, '.agents', 'skills', 'ki-bootstrap'))).isSymbolicLink()).toBe(true)
-  })
-
-  test('refuses a non-canonical harness identifier for bootstrap', async () => {
-    const root = await temporaryDirectory()
-
-    const result = await runKi(['bootstrap', '--harness', 'example/harness'], {
-      HOME: join(root, 'home'),
-      XDG_CONFIG_HOME: join(root, 'config'),
-      XDG_DATA_HOME: join(root, 'data')
-    })
-
-    expect(result).toEqual({
-      exitCode: 2,
-      output:
-        'ki: error: bootstrap accepts only the canonical harness identifier knowledgeislands/ki-agentic-harness; pass a local checkout path instead\n'
-    })
-    await expect(lstat(join(root, 'config', 'ki', 'agents.toml'))).rejects.toThrow()
   })
 
   test('inspects and removes one verified non-base harness', async () => {
