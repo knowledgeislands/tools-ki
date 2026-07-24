@@ -35,6 +35,8 @@ The current `ki-engineering` checker still expects retired package-script aggreg
 1. ✓ Establish the TypeScript command host: a typed in-process module per command, shared diagnostics and structured result rendering, a testable command runner, and one authoritative command catalogue for help and completion output.
 2. ✓ Port the released development surface — help, version, completions, XDG paths, doctor, and the local ChatGPT capture importer — from Bash to native TypeScript modules without changing its documented contract.
 3. Build the release boundary: Bun-compiled standalone artefacts for supported platforms, a source-mode development entry point, and installer and test coverage that distinguish linked development installations from regular executable installs.
+   - [x] Build, test, smoke-test, and retain compiled macOS and Linux artefacts in CI.
+   - [ ] Retain successful hosted CI evidence and package supported distribution artefacts without publishing them.
 4. ✓ Adopt the settled native-operation contract from harness [FND-004](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-004-define-compatible-harness-registration.md); stop if it leaves registry integrity, registration, migration, or CI trust unresolved.
 5. Build the `ki` core around shared native facilities for installed-harness discovery, integrity checks, physical path resolution, `.ki-config.toml` declaration parsing, dependency ordering, and capability resolution.
    - [x] Discover physically contained installed harnesses; validate manifests, capability identity, integrity-covered files, and registered operation modules.

@@ -4,7 +4,12 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: macos-latest
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v3
@@ -12,3 +17,9 @@ jobs:
       - run: bun run test
       - run: bun run test:coverage
       - run: bun run build
+      - run: ./dist/ki --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ki-${{ runner.os }}
+          path: dist/ki
+          if-no-files-found: error
