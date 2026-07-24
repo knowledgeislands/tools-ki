@@ -137,6 +137,18 @@ const installHarness = async (data: string, auditSource?: string, conformSource?
   await writeFile(join(root, 'harness-lock.toml'), renderHarnessLock(lock))
 }
 
+const installBootstrapHarness = async (data: string): Promise<void> => {
+  const root = join(data, 'ki', 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'latest')
+  const source = join(root, 'skills', 'keystone', 'ki-bootstrap')
+  await mkdir(source, { recursive: true })
+  await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\nki-depends-on: []\n---\n')
+  const lock = await createHarnessLock(root, 'knowledgeislands/ki-agentic-harness', {
+    url: 'https://releases.example.test/harness.tar.gz',
+    sha256: '0'.repeat(64)
+  })
+  await writeFile(join(root, 'harness-lock.toml'), renderHarnessLock(lock))
+}
+
 describe('baseline commands', () => {
   test('provide help, version, plural completions, and read-only XDG inspection', async () => {
     const home = await temporaryDirectory()
@@ -209,17 +221,19 @@ describe('baseline commands', () => {
     expect(json.output).toContain('"id":"example/harness"')
   })
 
-  test('bootstraps the user-managed agent configuration once', async () => {
+  test('bootstraps and redetects the user-managed agent configuration without replacing it by default', async () => {
     const root = await temporaryDirectory()
     const home = join(root, 'home')
     const configuration = join(root, 'config')
+    const data = join(root, 'data')
     await mkdir(join(home, '.agents'), { recursive: true })
+    await installBootstrapHarness(data)
 
-    const bootstrapped = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration })
-    const repeated = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration })
+    const bootstrapped = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
+    const repeated = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
 
     expect(bootstrapped).toEqual({ exitCode: 0, output: 'bootstrapped KI environment for chatgpt-codex\n' })
-    expect(repeated).toEqual({ exitCode: 1, output: 'ki: error: KI environment is already bootstrapped\n' })
+    expect(repeated).toEqual({ exitCode: 0, output: 'bootstrapped KI environment for chatgpt-codex\n' })
     expect(await readFile(join(configuration, 'ki', 'agents.toml'), 'utf8')).toBe('schema = 1\nagents = ["chatgpt-codex"]\n')
   })
 

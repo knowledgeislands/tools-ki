@@ -20,6 +20,7 @@ ki \- Knowledge Islands command-line interface
 .B ki version
 .br
 .B ki bootstrap
+.RI [ --redetect ]
 .br
 .B ki acquire chatgpt import
 .I capture-directory
@@ -96,9 +97,13 @@ Open or print the appropriate KI documentation location.
 .SS General maintenance
 .TP
 .B ki bootstrap
-Create the user-managed KI environment configuration by detecting supported
-installed agents. It writes the initial agent list to the KI XDG configuration
-directory; edit that list to choose which agents KI should subsequently manage.
+Create the user-managed KI environment configuration from detected supported
+agents, then install the verified base harness's
+.B ki-bootstrap
+skill into every configured agent's user skill directory. An existing agent
+configuration is reused without replacement. Pass
+.B --redetect
+to refresh the generated agent list from the currently installed runtimes.
 .TP
 .B *ki update
 Update the executable and refresh installed harnesses.

@@ -45,7 +45,7 @@ The current `ki-engineering` checker still expects retired package-script aggreg
    - [x] Parse declared skill tables and resolve them only from verified installed harnesses.
    - [x] Order declared explicit dependencies before execution.
 6. Implement explicit user and repository capability activation using only the contract's managed projection boundaries. Prove idempotence, dry-run, containment, and refusal for altered, unsafe, incompatible, or missing state.
-   - [x] Bootstrap a non-overwriting, user-managed agent list in XDG configuration from detected known agents; future activation reads it fail-closed.
+   - [x] Bootstrap a non-overwriting, user-managed agent list in XDG configuration from detected known agents; `--redetect` explicitly refreshes it and every configured runtime receives the verified `ki-bootstrap` user-skill projection.
 7. Implement `ki repo audit [--repo <path>] [--skill <capability>]` from the selected repository's declared registered capabilities. Prove it is read-only, runs only declared compatible operations, preserves the shared finding model, and names recovery without network or source-checkout fallback.
    - [x] Deliver the command host and fixture-backed registered in-process execution; refuse a nearby checkout or an unavailable verified harness with recovery guidance.
    - [ ] Prove the command against the installed base harness and a real declared repository.

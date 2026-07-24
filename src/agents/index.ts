@@ -1,7 +1,8 @@
-import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../core/errors.ts'
+import { baseHarnessIdentifier, readInstalledHarness } from '../core/harness.ts'
 
 export const agentDescriptors = [
   { id: 'claude-code', home: '.claude', skills: join('.claude', 'skills') },
@@ -21,6 +22,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const physicalDirectory = async (path: string): Promise<boolean> => {
   const state = await lstat(path).catch(() => undefined)
   return Boolean(state?.isDirectory() && !state.isSymbolicLink())
+}
+
+const requiredPhysicalDirectory = async (path: string, description: string): Promise<string> => {
+  const state = await lstat(path).catch(() => undefined)
+  if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError(`${description} must be a directory`, 1)
+  return realpath(path)
 }
 
 const descriptor = (id: string): AgentDescriptor => {
@@ -71,17 +78,47 @@ const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAg
     )
   ).filter((agent): agent is InstalledAgent => agent !== undefined)
 
+const installBootstrapSkill = async (agent: InstalledAgent, source: string): Promise<void> => {
+  const agentHome = await requiredPhysicalDirectory(agent.home, `${agent.descriptor.id} user directory`)
+  const skills = join(agentHome, 'skills')
+  const state = await lstat(skills).catch(() => undefined)
+  if (!state) await mkdir(skills)
+  await requiredPhysicalDirectory(skills, `${agent.descriptor.id} user skills directory`)
+  const target = join(skills, 'ki-bootstrap')
+  const targetState = await lstat(target).catch(() => undefined)
+  if (!targetState) {
+    await symlink(source, target, 'dir')
+    return
+  }
+  if (!targetState.isSymbolicLink()) throw new KiError(`${agent.descriptor.id} ki-bootstrap skill is not KI-managed`, 1)
+  const actual = await realpath(target).catch(() => undefined)
+  if (actual !== source) throw new KiError(`${agent.descriptor.id} ki-bootstrap skill points to an unfamiliar source`, 1)
+}
+
+const bootstrapCapabilitySource = async (dataDirectory: string): Promise<string> => {
+  const harness = await readInstalledHarness(dataDirectory, baseHarnessIdentifier)
+  const capability = harness.lock.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === 'ki-bootstrap')
+  if (!capability) throw new KiError(`installed base harness does not provide ki-bootstrap; reinstall ${baseHarnessIdentifier}`, 1)
+  return requiredPhysicalDirectory(join(harness.root, capability.source), 'installed ki-bootstrap skill')
+}
+
 export const bootstrapAgents = async (options: {
   readonly homeDirectory: string
   readonly configurationDirectory: string
+  readonly dataDirectory: string
+  readonly redetect?: boolean
 }): Promise<readonly InstalledAgent[]> => {
   const path = agentsPath(options.configurationDirectory)
-  if (await lstat(path).catch(() => undefined)) throw new KiError('KI environment is already bootstrapped', 1)
   const state = await lstat(options.configurationDirectory).catch(() => undefined)
   if (state && (!state.isDirectory() || state.isSymbolicLink())) throw new KiError('KI configuration directory must be a directory', 1)
-  const agents = await detectAgents(options.homeDirectory)
-  await mkdir(options.configurationDirectory, { recursive: true })
-  await writeFile(path, renderConfiguration(agents), { encoding: 'utf8', flag: 'wx' })
+  const configured = await readConfiguration(options.configurationDirectory, options.homeDirectory)
+  const agents = options.redetect || !configured ? await detectAgents(options.homeDirectory) : configured
+  if (!configured || options.redetect) {
+    await mkdir(options.configurationDirectory, { recursive: true })
+    await writeFile(path, renderConfiguration(agents), { encoding: 'utf8' })
+  }
+  const source = await bootstrapCapabilitySource(options.dataDirectory)
+  await Promise.all(agents.map((agent) => installBootstrapSkill(agent, source)))
   return agents
 }
 
