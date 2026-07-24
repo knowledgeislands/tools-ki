@@ -31,14 +31,51 @@ EOF
   run "$KI" --help
   [ "$status" -eq 0 ]
   [[ "$output" == *"acquire"* ]]
+  [[ "$output" == *"paths"* ]]
 
   run "$KI" completion bash
   [ "$status" -eq 0 ]
   [[ "$output" == *"acquire"* ]]
 
+  run "$KI" completions zsh
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"#compdef ki"* ]]
+
   run "$KI" doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"performs no checks"* ]]
+  [[ "$output" == *"ki version: 0.2.0"* ]]
+  [[ "$output" == *"installation: regular executable"* ]]
+}
+
+@test "paths resolves XDG defaults and explicit overrides without writing" {
+  home="$BATS_TEST_TMPDIR/home"
+
+  run env HOME="$home" "$KI" paths
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"data: $home/.local/share/ki"* ]]
+  [[ "$output" == *"config: $home/.config/ki"* ]]
+  [ ! -e "$home" ]
+
+  run env XDG_DATA_HOME="$BATS_TEST_TMPDIR/data" XDG_CONFIG_HOME="$BATS_TEST_TMPDIR/config" XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache" XDG_STATE_HOME="$BATS_TEST_TMPDIR/state" "$KI" paths
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"data: $BATS_TEST_TMPDIR/data/ki"* ]]
+  [[ "$output" == *"config: $BATS_TEST_TMPDIR/config/ki"* ]]
+  [[ "$output" == *"cache: $BATS_TEST_TMPDIR/cache/ki"* ]]
+  [[ "$output" == *"state: $BATS_TEST_TMPDIR/state/ki"* ]]
+}
+
+@test "the installer can link a development checkout without changing its version" {
+  install_dir="$BATS_TEST_TMPDIR/dev/bin"
+
+  run env KI_CLI_INSTALL_DIR="$install_dir" "$BATS_TEST_DIRNAME/../install.sh" --link
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ki: linked"* ]]
+  [ -L "$install_dir/ki" ]
+
+  run "$install_dir/ki" doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ki version: 0.2.0"* ]]
+  [[ "$output" == *"installation: linked development checkout"* ]]
 }
 
 @test "acquisition root and leaf help are available" {

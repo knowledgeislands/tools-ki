@@ -30,4 +30,8 @@ brew install knowledgeislands/tap/ki
 
 For a local checkout, use the repository's `install.sh` installer instead.
 
+For a development link to the current checkout, read the [local development guide](docs/guides/developer/local-development.md).
+
+The tracked [ki(1) manual](man/ki.1) distinguishes the current command surface from planned alternatives.
+
 See the [roadmap](docs/roadmap/cli/ROADMAP.md).

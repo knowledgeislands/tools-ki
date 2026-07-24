@@ -1,0 +1,131 @@
+.TH KI 1 "2026-07-24" "Knowledge Islands" "User Commands"
+.SH NAME
+ki \- Knowledge Islands command-line interface
+.SH SYNOPSIS
+.B ki
+.RI [ command ]
+.br
+.B ki help
+.RI [ command ]
+.br
+.B ki completion
+.I shell
+.br
+.B ki completions
+.I shell
+.br
+.B ki paths
+.br
+.B ki doctor
+.br
+.B ki acquire chatgpt import
+.I capture-directory
+.B --output
+.I kep-directory
+.RI [ --dry-run ]
+.RI [ --json ]
+.SH DESCRIPTION
+.B ki
+is the Knowledge Islands command-line interface.
+It provides stable, local-first commands for working with Knowledge Islands
+material.
+This page describes the current unreleased development surface and distinguishes
+it from planned commands.
+.SH CURRENT COMMANDS
+.TP
+.B help [command]
+Print root or command-specific help.
+.TP
+.B --help, -h
+Print root help.
+.TP
+.B --version, -V
+Print the CLI version.
+.TP
+.B completion \fIshell\fR
+.br
+.B completions \fIshell\fR
+Print Bash or Zsh completion source to standard output.
+.TP
+.B paths
+Print the resolved XDG data, configuration, cache, and state paths for KI
+without creating them.
+.TP
+.B doctor
+Print the CLI version, whether the executable is a regular installation or a
+development link, and the resolved XDG paths.
+It makes no changes.
+.TP
+.B acquire chatgpt import \fIcapture-directory\fR --output \fIkep-directory\fR [--dry-run] [--json]
+Validate a user-prepared local ChatGPT capture and create a deterministic
+Knowledge Export Package (KEP).
+The command does not control a browser, contact ChatGPT, read credentials,
+discover a repository, or extract reusable knowledge.
+.SH XDG PATHS
+.B ki
+uses the XDG Base Directory variables for user-owned KI state.
+When unset, the defaults are
+.IR ~/.local/share ,
+.IR ~/.config ,
+.IR ~/.cache ,
+and
+.IR ~/.local/state .
+The corresponding KI paths are respectively
+.IR $XDG_DATA_HOME/ki ,
+.IR $XDG_CONFIG_HOME/ki ,
+.IR $XDG_CACHE_HOME/ki ,
+and
+.IR $XDG_STATE_HOME/ki .
+Run
+.B ki paths
+to inspect the effective values.
+.SH DEVELOPMENT INSTALLATIONS
+Homebrew installs a released regular executable.
+For development against this checkout, run
+.B ./install.sh --link
+to place a symbolic link in
+.B KI_CLI_INSTALL_DIR
+(default
+.IR ~/.local/bin ).
+The linked command executes the current checkout without changing its release
+version.
+Use a dedicated development command directory or invoke
+.B ./bin/ki
+directly when comparing it with Homebrew's installed executable.
+.SH PLANNED COMMANDS
+The following command groups are intentionally not implemented yet.
+They are documented here as a target surface and may be renamed before the
+first consolidated release:
+.IP \(bu 2
+.BR ki\ list ,
+.BR ki\ harness\ list ,
+and capability inventory.
+.IP \(bu
+.BR ki\ missing ,
+.BR ki\ outdated ,
+.BR ki\ install ,
+.BR ki\ reinstall ,
+and
+.BR ki\ uninstall .
+.IP \(bu
+.BR ki\ update
+for the executable and installed harnesses, and CWD-resolved
+.BR ki\ upgrade
+for repository capabilities.
+.IP \(bu
+.BR ki\ repo\ audit
+and
+.BR ki\ repo\ conform
+using registered native operations rather than vendored runners.
+.SH EXIT STATUS
+.TP
+.B 0
+The command completed successfully.
+.TP
+.B 1
+An operational check or requested operation failed.
+.TP
+.B 2
+The command grammar was invalid.
+.SH SEE ALSO
+The project README and the Knowledge Islands public tooling guide.

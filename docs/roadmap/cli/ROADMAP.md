@@ -30,9 +30,9 @@ After native repository maintenance proves the installed-skill model, adopt the 
 
 Specify the inventory, status, maintenance, and upgrade forms around compatible harnesses and their typed capabilities: `ki list`, `ki harness list`, `ki missing`, `ki outdated`, `ki install`, `ki reinstall`, `ki uninstall`, `ki update`, and CWD-resolved `ki upgrade`. Use Homebrew and Cargo as behavioural exemplars while retaining KI's verified-harness and explicit-scope model.
 
-### Publish a `ki` man page
+### Ship `ki(1)` through supported distributions
 
-Provide a generated or maintained `ki(1)` reference covering the released command surface, command groups, arguments, exit behaviour, configuration locations, and links to the public Website guide. Ship it with supported CLI distributions and keep it aligned with `ki help`; it must distinguish released commands from planned work.
+The source `ki(1)` manual and local-development preview are delivered with the CLI foundation. Package it in supported distributions, including the eventual Homebrew formula, and keep it aligned with `ki help`; it must distinguish released commands from planned work.
 
 ## Waiting for
 

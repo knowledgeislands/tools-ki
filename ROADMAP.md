@@ -18,7 +18,7 @@ Understood and roughly scoped but not yet started — worth doing once the **Nex
 
 - [Cli: Complete remaining user and repository lifecycle commands](docs/roadmap/cli/ROADMAP.md#complete-remaining-user-and-repository-lifecycle-commands)
 - [Cli: Define capability package-management commands](docs/roadmap/cli/ROADMAP.md#define-capability-package-management-commands)
-- [Cli: Publish a `ki` man page](docs/roadmap/cli/ROADMAP.md#publish-a-ki-man-page)
+- [Cli: Ship `ki(1)` through supported distributions](docs/roadmap/cli/ROADMAP.md#ship-ki1-through-supported-distributions)
 
 ## Waiting for
 
