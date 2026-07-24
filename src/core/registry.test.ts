@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { afterEach, expect, test } from 'vitest'
 import { readInstalledHarness } from './harness.ts'
-import { canonicalHarnessRelease, installHarness, readHarnessRegistry, uninstallHarness } from './registry.ts'
+import { canonicalHarnessRelease, installHarness, readHarnessRegistry, recordInstalledHarness, uninstallHarness } from './registry.ts'
 
 const temporaryDirectories: string[] = []
 
@@ -98,6 +98,24 @@ test('includes the immutable canonical harness without requiring user registry c
   const root = await temporaryDirectory()
 
   await expect(readHarnessRegistry(join(root, 'config', 'ki'))).resolves.toEqual([canonicalHarnessRelease])
+})
+
+test('records successful harness installation and removal without discarding release evidence', async () => {
+  const root = await temporaryDirectory()
+  const configuration = join(root, 'config', 'ki')
+  await mkdir(configuration, { recursive: true })
+  await writeFile(
+    join(configuration, 'config.toml'),
+    ['schema = 1', '', '[harnesses]', 'releases = []', '', '[skills]', 'ids = []', ''].join('\n')
+  )
+
+  await recordInstalledHarness(configuration, 'example/harness', true)
+  expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toContain(
+    '[harnesses]\nids = [\n  "example/harness",\n]\nreleases = []'
+  )
+
+  await recordInstalledHarness(configuration, 'example/harness', false)
+  expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toContain('[harnesses]\nids = [\n]\nreleases = []')
 })
 
 test('migrates a managed latest layout and removes its generated lock without downloading again', async () => {

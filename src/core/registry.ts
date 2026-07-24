@@ -109,6 +109,50 @@ export const readHarnessRegistry = async (configurationDirectory: string): Promi
   return [canonicalHarnessRelease, ...releases]
 }
 
+const configuredHarnessIds = async (configurationDirectory: string): Promise<readonly string[] | undefined> => {
+  const path = join(configurationDirectory, 'config.toml')
+  const state = await lstat(path).catch(() => undefined)
+  if (!state) return undefined
+  if (!state.isFile() || state.isSymbolicLink()) throw new KiError('KI configuration must be a regular file', 1)
+  let parsed: unknown
+  try {
+    parsed = parse(await readFile(path, 'utf8'))
+  } catch {
+    throw new KiError('KI configuration must be valid TOML', 1)
+  }
+  if (!isRecord(parsed)) throw new KiError('KI configuration must be a TOML table', 1)
+  if (parsed.harnesses === undefined) return []
+  if (!isRecord(parsed.harnesses)) throw new KiError('KI configuration harnesses must be a TOML table', 1)
+  const ids = (parsed.harnesses as { readonly ids?: unknown }).ids
+  if (ids === undefined) return []
+  if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string' || !harnessIdentifier.test(id))) {
+    throw new KiError('KI configuration harnesses.ids must be an array of harness identifiers', 1)
+  }
+  return ids
+}
+
+export const recordInstalledHarness = async (configurationDirectory: string, identifier: string, installed: boolean): Promise<void> => {
+  if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
+  const identifiers = await configuredHarnessIds(configurationDirectory)
+  if (identifiers === undefined) return
+  const next = new Set(identifiers)
+  if (installed) next.add(identifier)
+  else next.delete(identifier)
+  const path = join(configurationDirectory, 'config.toml')
+  const contents = await readFile(path, 'utf8')
+  const ids = ['ids = [', ...[...next].sort().map((id) => `  ${JSON.stringify(id)},`), ']'].join('\n')
+  const section = /\[harnesses\]\n([\s\S]*?)(?=\n\[|$)/
+  const match = section.exec(contents)
+  const updated = match
+    ? contents.replace(section, (_whole, body: string) => {
+        const existing = /ids\s*=\s*\[[\s\S]*?\](?=\n|$)/.exec(body)
+        const nextBody = existing ? body.replace(existing[0], ids) : `${ids}\n${body}`
+        return `[harnesses]\n${nextBody}`
+      })
+    : `${contents.trimEnd()}\n\n[harnesses]\n${ids}\n`
+  await writeFile(path, updated, 'utf8')
+}
+
 const tarString = (archive: Uint8Array, start: number, length: number): string => {
   const end = archive.subarray(start, start + length).indexOf(0)
   return decoder.decode(archive.subarray(start, end < 0 ? start + length : start + end))

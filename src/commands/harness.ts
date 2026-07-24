@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../core/context.ts'
 import { discoverInstalledHarnesses, readInstalledHarness } from '../core/harness.ts'
-import { installHarness, uninstallHarness } from '../core/registry.ts'
+import { installHarness, recordInstalledHarness, uninstallHarness } from '../core/registry.ts'
 
 export const createHarnessCommand = (context: KiContext): Command =>
   new Command('harness')
@@ -12,6 +12,7 @@ export const createHarnessCommand = (context: KiContext): Command =>
         .argument('<harness-id>', 'configured harness identifier')
         .action(async (identifier: string) => {
           const result = await installHarness(context.paths.config, context.paths.data, identifier)
+          await recordInstalledHarness(context.paths.config, identifier, true)
           context.stdout.write(
             result.installed
               ? `installed ${identifier}\tarchive ${result.archiveSha256}\n`
@@ -75,6 +76,7 @@ export const createHarnessCommand = (context: KiContext): Command =>
         .option('--dry-run', 'verify that the harness can be removed without changing state')
         .action(async (identifier: string, options: { dryRun?: boolean }) => {
           const result = await uninstallHarness(context.paths.data, identifier, options.dryRun)
+          if (result.uninstalled) await recordInstalledHarness(context.paths.config, identifier, false)
           context.stdout.write(result.uninstalled ? `uninstalled ${identifier}\n` : `would uninstall ${identifier}\n`)
         })
     )

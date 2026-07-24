@@ -403,7 +403,7 @@ path = ${JSON.stringify(await realpath(harness))}
     const root = await temporaryDirectory()
     const data = join(root, 'data')
     await installHarness(data)
-    const environment = { XDG_DATA_HOME: data }
+    const environment = { XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: data }
     const info = await runKi(['harness', 'info', 'example/harness'], environment)
     const json = await runKi(['harness', 'info', 'example/harness', '--json'], environment)
     const dryRun = await runKi(['harness', 'uninstall', 'example/harness', '--dry-run'], environment)
