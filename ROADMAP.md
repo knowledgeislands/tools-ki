@@ -27,3 +27,5 @@ Worth doing, but presently blocked on an external dependency or decision. Revisi
 ## Future
 
 Speculative or not yet scoped — items marked _(candidate)_ need a scoping pass (or a decision to drop them) before they're actionable.
+
+- [Cli: Persist qualified capability identities in repository declarations _(candidate)_](docs/roadmap/cli/ROADMAP.md#persist-qualified-capability-identities-in-repository-declarations-candidate)
