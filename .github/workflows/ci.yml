@@ -10,4 +10,5 @@ jobs:
       - uses: jdx/mise-action@v3
       - run: bun install --frozen-lockfile
       - run: bun run test
+      - run: bun run test:coverage
       - run: bun run build

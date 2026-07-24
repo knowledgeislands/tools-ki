@@ -37,6 +37,7 @@ export const createProgram = (context: KiContext): Command => {
 export const run = async (arguments_: readonly string[], suppliedContext?: KiContext): Promise<number> => {
   const context = suppliedContext ?? (await createContext(processContextOptions()))
   const program = createProgram(context)
+  /* v8 ignore next -- V8 reports a non-existent third outcome for this complete boolean condition. */
   if (!arguments_.length) {
     program.outputHelp()
     return 0
@@ -57,6 +58,7 @@ export const run = async (arguments_: readonly string[], suppliedContext?: KiCon
   }
 }
 
+/* v8 ignore next -- module entrypoint is exercised by the installed executable, not an importing test. */
 if (import.meta.main) {
   process.exitCode = await run(process.argv.slice(2))
 }

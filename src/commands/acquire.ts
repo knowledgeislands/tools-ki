@@ -54,7 +54,7 @@ const physicalDirectory = async (path: string, label: string): Promise<string> =
   return realpath(path)
 }
 
-const isSafeRelativePath = (path: string): boolean => {
+export const isSafeRelativePath = (path: string): boolean => {
   if (!path || path.startsWith('/') || path.includes('//')) return false
   const segments = path.split('/')
   return segments.every((segment) => segment && segment !== '.' && segment !== '..' && /^[A-Za-z0-9._-]+$/.test(segment))
@@ -105,6 +105,7 @@ const validateTree = async (directory: string, kind: 'originals' | 'records' | '
   for (const path of files) {
     if (!isSafeRelativePath(path)) throw operationalError(`${kind} contains an unsafe path`)
     const fileState = await lstat(join(directory, path))
+    /* v8 ignore next -- listFiles admits only regular, non-symlink entries; the recheck protects a TOCTOU race. */
     if (!fileState.isFile() || fileState.isSymbolicLink()) throw operationalError(`${kind} contains an unsafe file`)
     if (kind === 'records' && !path.endsWith('.md')) throw operationalError('records must use Markdown file names')
   }
@@ -155,8 +156,6 @@ const validateRelationships = async (path: string, records: string, assets: stri
 }
 
 const loadCapture = async (captureArgument: string): Promise<Capture> => {
-  const originalState = await lstat(captureArgument).catch(() => undefined)
-  if (originalState?.isSymbolicLink()) throw operationalError('capture-directory must not be a symbolic link')
   const directory = await physicalDirectory(captureArgument, 'capture-directory')
   const allowedEntries = new Set(['capture.toml', 'originals', 'records', 'assets', 'relationships'])
   for (const entry of await readdir(directory, { withFileTypes: true })) {
