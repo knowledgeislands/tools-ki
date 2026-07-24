@@ -203,8 +203,8 @@ describe('baseline commands', () => {
     expect(bash.output).toContain('complete -W "acquire bootstrap completions doctor harness help paths repo version --help --version" ki')
     expect(invalidCompletion).toEqual({ exitCode: 2, output: 'ki: error: completions shell must be bash or zsh\n' })
     expect(paths.output).toContain(`data: ${root}/data/ki`)
-    expect(doctor.output).toContain(`ki version: ${packageMetadata.version}`)
-    expect(doctor.output).toContain('configuration: missing')
+    expect(doctor.output).toContain(`KI doctor\n  Version       ${packageMetadata.version}`)
+    expect(doctor.output).toContain('Configuration\n  Status        missing')
     expect(doctorJson.output).toContain(`"ki_version":"${packageMetadata.version}"`)
     expect(optionVersion).toEqual({ exitCode: 0, output: `${packageMetadata.version}\n` })
     expect(missingCompletionShell.exitCode).toBe(2)
@@ -228,6 +228,7 @@ describe('baseline commands', () => {
     )
 
     const result = await runKi(['doctor', '--json'], { XDG_CONFIG_HOME: join(root, 'config') })
+    const human = await runKi(['doctor'], { XDG_CONFIG_HOME: join(root, 'config') })
     const report = JSON.parse(result.output) as {
       configuration: {
         readonly state: string
@@ -257,6 +258,8 @@ describe('baseline commands', () => {
         'skills repeats a value'
       ])
     )
+    expect(human.output).toContain('Warnings\n  - unrecognised key unexpected')
+    expect(human.output).toContain('Errors\n  - schema must equal 1')
   })
 
   test('lists only verified installed compatible harnesses', async () => {
@@ -449,7 +452,7 @@ local = ${JSON.stringify(await realpath(harness))}
 
     expect(result.exitCode).toBe(0)
     expect((await lstat(join(installDirectory, 'ki'))).isSymbolicLink()).toBe(true)
-    expect(doctor.output).toContain('installation: linked development checkout')
+    expect(doctor.output).toContain('Installation  linked development checkout')
   })
 
   test('installs a compiled regular executable without Bun at runtime', async () => {
@@ -461,7 +464,7 @@ local = ${JSON.stringify(await realpath(harness))}
 
     expect(result.exitCode).toBe(0)
     expect((await lstat(join(installDirectory, 'ki'))).isSymbolicLink()).toBe(false)
-    expect(doctor.output).toContain('installation: regular executable')
+    expect(doctor.output).toContain('Installation  regular executable')
   })
 })
 
