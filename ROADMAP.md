@@ -17,6 +17,7 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
 - [Cli: Complete remaining user and repository lifecycle commands](docs/roadmap/cli/ROADMAP.md#complete-remaining-user-and-repository-lifecycle-commands)
+- [Cli: Publish a `ki` man page](docs/roadmap/cli/ROADMAP.md#publish-a-ki-man-page)
 
 ## Waiting for
 

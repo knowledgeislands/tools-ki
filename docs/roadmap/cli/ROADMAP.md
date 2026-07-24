@@ -26,6 +26,10 @@ Understood and roughly scoped but not yet started — worth doing once the **Nex
 
 After native repository maintenance proves the installed-skill model, adopt the remaining scoped user and repository lifecycle leaves. Keep every command's ownership and safety boundary explicit; do not add compatibility dispatch to retired vendored runners.
 
+### Publish a `ki` man page
+
+Provide a generated or maintained `ki(1)` reference covering the released command surface, command groups, arguments, exit behaviour, configuration locations, and links to the public Website guide. Ship it with supported CLI distributions and keep it aligned with `ki help`; it must distinguish released commands from planned work.
+
 ## Waiting for
 
 Worth doing, but presently blocked on an external dependency or decision. Revisit when its named condition changes rather than treating it as dormant local work.
