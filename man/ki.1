@@ -19,6 +19,8 @@ ki \- Knowledge Islands command-line interface
 .br
 .B ki version
 .br
+.B ki bootstrap
+.br
 .B ki acquire chatgpt import
 .I capture-directory
 .B --output
@@ -92,6 +94,11 @@ for a versioned machine-readable result.
 .B *ki docs
 Open or print the appropriate KI documentation location.
 .SS General maintenance
+.TP
+.B ki bootstrap
+Create the user-managed KI environment configuration by detecting supported
+installed agents. It writes the initial agent list to the KI XDG configuration
+directory; edit that list to choose which agents KI should subsequently manage.
 .TP
 .B *ki update
 Update the executable and refresh installed harnesses.

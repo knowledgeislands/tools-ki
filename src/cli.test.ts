@@ -188,7 +188,7 @@ describe('baseline commands', () => {
     const missingCompletionShell = await runKi(['completions'])
     const unknown = await runKi(['unknown'])
 
-    expect(bash.output).toContain('complete -W "acquire completions doctor harness help paths repo version --help --version" ki')
+    expect(bash.output).toContain('complete -W "acquire bootstrap completions doctor harness help paths repo version --help --version" ki')
     expect(invalidCompletion).toEqual({ exitCode: 2, output: 'ki: error: completions shell must be bash or zsh\n' })
     expect(paths.output).toContain(`data: ${root}/data/ki`)
     expect(doctor.output).toContain(`ki version: ${packageMetadata.version}`)
@@ -207,6 +207,20 @@ describe('baseline commands', () => {
 
     expect(listed).toEqual({ exitCode: 0, output: `example/harness\tarchive ${'0'.repeat(64)}\t1 capabilities\n` })
     expect(json.output).toContain('"id":"example/harness"')
+  })
+
+  test('bootstraps the user-managed agent configuration once', async () => {
+    const root = await temporaryDirectory()
+    const home = join(root, 'home')
+    const configuration = join(root, 'config')
+    await mkdir(join(home, '.agents'), { recursive: true })
+
+    const bootstrapped = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration })
+    const repeated = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration })
+
+    expect(bootstrapped).toEqual({ exitCode: 0, output: 'bootstrapped KI environment for chatgpt-codex\n' })
+    expect(repeated).toEqual({ exitCode: 1, output: 'ki: error: KI environment is already bootstrapped\n' })
+    expect(await readFile(join(configuration, 'ki', 'agents.toml'), 'utf8')).toBe('schema = 1\nagents = ["chatgpt-codex"]\n')
   })
 
   test('inspects and removes one verified non-base harness', async () => {

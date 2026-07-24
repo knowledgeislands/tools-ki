@@ -1,5 +1,6 @@
 import { Command, CommanderError } from 'commander'
 import { createAcquireCommand } from './commands/acquire.ts'
+import { createBootstrapCommand } from './commands/bootstrap.ts'
 import { createCompletionsCommand } from './commands/completions.ts'
 import { createDoctorCommand } from './commands/doctor.ts'
 import { createHarnessCommand } from './commands/harness.ts'
@@ -22,6 +23,7 @@ export const createProgram = (context: KiContext): Command => {
     .exitOverride()
 
   program.addCommand(createCompletionsCommand(context))
+  program.addCommand(createBootstrapCommand(context))
   program.addCommand(createDoctorCommand(context))
   program.addCommand(createHarnessCommand(context))
   program.addCommand(createPathsCommand(context))
