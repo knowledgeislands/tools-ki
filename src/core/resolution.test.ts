@@ -12,14 +12,9 @@ const capability = (name: string, dependsOn: readonly string[] = []): HarnessCap
 })
 
 const harness = (...capabilities: readonly HarnessCapability[]): InstalledHarness => ({
+  id: 'example/harness',
   root: '/verified/harness',
-  lock: {
-    schema: 1,
-    id: 'example/harness',
-    archive: { url: 'https://releases.example.test/harness.tar.gz', sha256: '0'.repeat(64) },
-    files: [],
-    capabilities
-  }
+  capabilities
 })
 
 const declarations = (...names: readonly string[]): readonly DeclaredSkill[] => names.map((name) => ({ name, configuration: {} }))

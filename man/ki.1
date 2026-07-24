@@ -103,18 +103,23 @@ Open or print the appropriate KI documentation location.
 .TP
 .B ki bootstrap
 Create the user-managed KI environment configuration from detected supported
-agents, install the built-in verified canonical harness, then install that harness's
-.B ki-bootstrap
-skill into every configured agent's user skill directory. An existing agent
+agents, install the built-in verified canonical harness, then install the core
+user skills —
+.BR ki-bootstrap ,
+.BR ki-delegate ,
+.BR ki-next ,
+.BR ki-plan ,
+and
+.BR ki-recap
+— into every configured agent's user skill directory. An existing agent
 configuration is reused without replacement. Pass
 .B --refresh
 to redetect every supported runtime and rebuild the user configuration's
-agents, verified installed harnesses, and harness-provided skills.
+agents, installed harnesses, and KI-managed user skill links.
 Pass
 .B --local
-with a local harness checkout path to validate and link its
-.B ki-bootstrap
-skill directly. The checkout must contain
+with a local harness checkout path to validate and link those core user skills
+directly. The checkout must contain
 .IR skills/keystone/ki-bootstrap/SKILL.md ;
 that explicit local mode does not install or modify the canonical harness.
 .TP
@@ -133,13 +138,14 @@ Search the available capability set or remove managed stale state.
 .SS Harness management
 .TP
 .B ki harness info \fIharness-id\fR [--json]
-Inspect one verified, user-installed compatible harness and its capability
+Inspect one user-installed compatible harness and its capability
 inventory without changing user state.
 .TP
 .B ki harness list [--json]
-List the verified compatible harnesses already installed beneath the KI XDG data
-directory. The command verifies each generated lock and its declared integrity-covered
-files before reporting it, and does not create or change user state.
+List compatible harnesses already installed beneath the KI XDG data directory.
+Each harness lives directly at
+.I $XDG_DATA_HOME/ki/harnesses/<owner>/<repo>/
+and its capabilities are discovered from that payload without changing user state.
 .TP
 .B ki harness install \fIharness-id\fR
 Install the built-in canonical harness or one configured, verified compatible
@@ -147,8 +153,9 @@ harness from immutable release evidence. Bootstrap itself accepts only the
 canonical identifier.
 .TP
 .B ki harness uninstall \fIharness-id\fR [--dry-run]
-Remove one verified non-base harness. The base harness cannot be removed; a dry
-run verifies that a non-base harness can be removed without changing user state.
+Remove one non-base harness with only recognised payload directories. The base harness
+cannot be removed; a dry run verifies that a non-base harness can be removed without
+changing user state.
 .SS Skills management
 .TP
 .B *ki skill repo add|remove \fIharness-id:skill-name\fR

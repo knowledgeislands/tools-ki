@@ -8,7 +8,6 @@ import packageMetadata from '../package.json' with { type: 'json' }
 import { run as runCli } from './cli.ts'
 import { isSafeRelativePath } from './commands/acquire.ts'
 import { createContext } from './core/context.ts'
-import { createHarnessLock, renderHarnessLock } from './core/harness.ts'
 
 const writeFailure = vi.hoisted(() => ({ enabled: false }))
 
@@ -115,7 +114,7 @@ const makeCapture = async (root: string): Promise<string> => {
 }
 
 const installHarness = async (data: string, auditSource?: string, conformSource?: string): Promise<void> => {
-  const root = join(data, 'ki', 'harnesses', 'example', 'harness', 'latest')
+  const root = join(data, 'ki', 'harnesses', 'example', 'harness')
   const source = join(root, 'skills', 'ki-example')
   await mkdir(source, { recursive: true })
   const skill = '---\nname: ki-example\nki-depends-on: []\n---\n'
@@ -130,23 +129,15 @@ const installHarness = async (data: string, auditSource?: string, conformSource?
       operations.map(async (operation) => writeFile(join(source, 'scripts', 'native', `${operation.mode}.mjs`), operation.source))
     )
   }
-  const lock = await createHarnessLock(root, 'example/harness', {
-    url: 'https://releases.example.test/harness.tar.gz',
-    sha256: '0'.repeat(64)
-  })
-  await writeFile(join(root, 'harness-lock.toml'), renderHarnessLock(lock))
 }
 
 const installBootstrapHarness = async (data: string): Promise<void> => {
-  const root = join(data, 'ki', 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'latest')
-  const source = join(root, 'skills', 'keystone', 'ki-bootstrap')
-  await mkdir(source, { recursive: true })
-  await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\nki-depends-on: []\n---\n')
-  const lock = await createHarnessLock(root, 'knowledgeislands/ki-agentic-harness', {
-    url: 'https://releases.example.test/harness.tar.gz',
-    sha256: '0'.repeat(64)
-  })
-  await writeFile(join(root, 'harness-lock.toml'), renderHarnessLock(lock))
+  const root = join(data, 'ki', 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
+  for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
+    const source = skill === 'ki-bootstrap' ? join(root, 'skills', 'keystone', skill) : join(root, 'skills', 'process', skill)
+    await mkdir(source, { recursive: true })
+    await writeFile(join(source, 'SKILL.md'), `---\nname: ${skill}\nki-depends-on: []\n---\n`)
+  }
 }
 
 describe('baseline commands', () => {
@@ -268,14 +259,14 @@ describe('baseline commands', () => {
     expect(human.output).toContain('Errors\n  - schema must equal 1')
   })
 
-  test('lists only verified installed compatible harnesses', async () => {
+  test('lists installed compatible harnesses', async () => {
     const root = await temporaryDirectory()
     const data = join(root, 'data')
     await installHarness(data)
     const listed = await runKi(['harness', 'list'], { XDG_DATA_HOME: data })
     const json = await runKi(['harness', 'list', '--json'], { XDG_DATA_HOME: data })
 
-    expect(listed).toEqual({ exitCode: 0, output: `example/harness\tarchive ${'0'.repeat(64)}\t1 capabilities\n` })
+    expect(listed).toEqual({ exitCode: 0, output: 'example/harness\t1 capabilities\n' })
     expect(json.output).toContain('"id":"example/harness"')
   })
 
@@ -293,17 +284,36 @@ describe('baseline commands', () => {
 
     expect(bootstrapped).toEqual({
       exitCode: 0,
-      output: `created KI agent configuration for chatgpt-codex\ncanonical harness already installed\tarchive ${'0'.repeat(64)}\nki-bootstrap for chatgpt-codex installed\n`
+      output:
+        'created KI agent configuration for chatgpt-codex\n' +
+        'canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c\n' +
+        'ki-bootstrap for chatgpt-codex installed\n' +
+        'ki-delegate for chatgpt-codex installed\n' +
+        'ki-next for chatgpt-codex installed\n' +
+        'ki-plan for chatgpt-codex installed\n' +
+        'ki-recap for chatgpt-codex installed\n'
     })
     expect(repeated).toEqual({
       exitCode: 0,
-      output: `canonical harness already installed\tarchive ${'0'.repeat(64)}\nki-bootstrap for chatgpt-codex already installed\n`
+      output:
+        'canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c\n' +
+        'ki-bootstrap for chatgpt-codex already installed\n' +
+        'ki-delegate for chatgpt-codex already installed\n' +
+        'ki-next for chatgpt-codex already installed\n' +
+        'ki-plan for chatgpt-codex already installed\n' +
+        'ki-recap for chatgpt-codex already installed\n'
     })
     expect(refreshed).toEqual({
       exitCode: 0,
       output:
-        `refreshed KI agents: chatgpt-codex\ncanonical harness already installed\tarchive ${'0'.repeat(64)}\n` +
-        'refreshed KI configuration: 1 agents, 1 harnesses, 1 skills\nki-bootstrap for chatgpt-codex already installed\n'
+        'refreshed KI agents: chatgpt-codex\n' +
+        'canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c\n' +
+        'refreshed KI configuration: 1 agents, 1 harnesses, 5 skills\n' +
+        'ki-bootstrap for chatgpt-codex already installed\n' +
+        'ki-delegate for chatgpt-codex already installed\n' +
+        'ki-next for chatgpt-codex already installed\n' +
+        'ki-plan for chatgpt-codex already installed\n' +
+        'ki-recap for chatgpt-codex already installed\n'
     })
     expect(await readFile(join(configuration, 'ki', 'config.toml'), 'utf8')).toBe(
       `schema = 1
@@ -314,13 +324,17 @@ ids = [
 ]
 
 [harnesses]
-releases = [
-  { id = "knowledgeislands/ki-agentic-harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'0'.repeat(64)}" },
+ids = [
+  "knowledgeislands/ki-agentic-harness",
 ]
 
 [skills]
 ids = [
   "knowledgeislands/ki-agentic-harness:ki-bootstrap",
+  "knowledgeislands/ki-agentic-harness:ki-delegate",
+  "knowledgeislands/ki-agentic-harness:ki-next",
+  "knowledgeislands/ki-agentic-harness:ki-plan",
+  "knowledgeislands/ki-agentic-harness:ki-recap",
 ]
 `
     )
@@ -333,8 +347,11 @@ ids = [
     const source = join(harness, 'skills', 'keystone', 'ki-bootstrap')
     const data = join(root, 'data')
     await mkdir(join(home, '.agents'), { recursive: true })
-    await mkdir(source, { recursive: true })
-    await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\nki-depends-on: []\n---\n')
+    for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
+      const path = skill === 'ki-bootstrap' ? source : join(harness, 'skills', 'process', skill)
+      await mkdir(path, { recursive: true })
+      await writeFile(join(path, 'SKILL.md'), `---\nname: ${skill}\nki-depends-on: []\n---\n`)
+    }
 
     const result = await runKi(['bootstrap', '--local', harness], {
       HOME: home,
@@ -345,8 +362,12 @@ ids = [
     expect(result).toEqual({
       exitCode: 0,
       output: `created KI agent configuration for chatgpt-codex
-using local harness ${await realpath(source)}
+using local harness ${await realpath(harness)}
 ki-bootstrap for chatgpt-codex installed
+ki-delegate for chatgpt-codex installed
+ki-next for chatgpt-codex installed
+ki-plan for chatgpt-codex installed
+ki-recap for chatgpt-codex installed
 `
     })
     await expect(lstat(join(data, 'ki', 'harnesses'))).rejects.toThrow()
@@ -360,11 +381,16 @@ ids = [
 ]
 
 [harnesses]
-releases = [
+ids = [
 ]
 
 [skills]
 ids = [
+  "knowledgeislands/ki-agentic-harness:ki-bootstrap",
+  "knowledgeislands/ki-agentic-harness:ki-delegate",
+  "knowledgeislands/ki-agentic-harness:ki-next",
+  "knowledgeislands/ki-agentic-harness:ki-plan",
+  "knowledgeislands/ki-agentic-harness:ki-recap",
 ]
 
 [local]
@@ -373,7 +399,7 @@ path = ${JSON.stringify(await realpath(harness))}
     )
   })
 
-  test('inspects and removes one verified non-base harness', async () => {
+  test('inspects and removes one non-base harness', async () => {
     const root = await temporaryDirectory()
     const data = join(root, 'data')
     await installHarness(data)
@@ -383,7 +409,7 @@ path = ${JSON.stringify(await realpath(harness))}
     const dryRun = await runKi(['harness', 'uninstall', 'example/harness', '--dry-run'], environment)
     const removed = await runKi(['harness', 'uninstall', 'example/harness'], environment)
 
-    expect(info.output).toContain('archive: https://releases.example.test/harness.tar.gz')
+    expect(info.output).toContain('capabilities: 1')
     expect(info.output).toContain('  skill ki-example\n')
     expect(json.output).toContain('"depends_on":[]')
     expect(dryRun.output).toContain('would uninstall example/harness')

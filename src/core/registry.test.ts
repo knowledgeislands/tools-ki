@@ -73,7 +73,7 @@ const configuredArchive = async (
   return { config, data }
 }
 
-test('installs only the harness payload and generates a lock from the verified archive', async () => {
+test('installs only the harness payload directly under its owner and repository path', async () => {
   const root = await temporaryDirectory()
   const skill = '---\nname: ki-example\nki-depends-on: []\n---\n'
   const archive = tar({
@@ -88,16 +88,40 @@ test('installs only the harness payload and generates a lock from the verified a
   const result = await installHarness(config, data, 'example/harness', async () => new Response(archive))
 
   expect(result).toEqual({ installed: true, archiveSha256: digest(archive) })
-  expect((await readInstalledHarness(data, 'example/harness')).lock.capabilities[0]?.name).toBe('ki-example')
-  expect(await readFile(join(data, 'harnesses', 'example', 'harness', 'latest', 'skills', 'ki-example', 'SKILL.md'), 'utf8')).toBe(skill)
-  await expect(lstat(join(data, 'harnesses', 'example', 'harness', 'latest', 'docs'))).rejects.toThrow()
-  expect(await readFile(join(data, 'harnesses', 'example', 'harness', 'latest', 'harness-lock.toml'), 'utf8')).toContain('[files]')
+  expect((await readInstalledHarness(data, 'example/harness')).capabilities[0]?.name).toBe('ki-example')
+  expect(await readFile(join(data, 'harnesses', 'example', 'harness', 'skills', 'ki-example', 'SKILL.md'), 'utf8')).toBe(skill)
+  await expect(lstat(join(data, 'harnesses', 'example', 'harness', 'docs'))).rejects.toThrow()
+  await expect(lstat(join(data, 'harnesses', 'example', 'harness', 'harness-lock.toml'))).rejects.toThrow()
 })
 
 test('includes the immutable canonical harness without requiring user registry configuration', async () => {
   const root = await temporaryDirectory()
 
   await expect(readHarnessRegistry(join(root, 'config', 'ki'))).resolves.toEqual([canonicalHarnessRelease])
+})
+
+test('migrates a managed latest layout and removes its generated lock without downloading again', async () => {
+  const root = await temporaryDirectory()
+  const archive = tar({ 'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' })
+  const { config, data } = await configuredArchive(root, archive)
+  const latest = join(data, 'harnesses', 'example', 'harness', 'latest')
+  await mkdir(join(latest, 'skills', 'ki-example'), { recursive: true })
+  await writeFile(join(latest, 'skills', 'ki-example', 'SKILL.md'), '---\nname: ki-example\nki-depends-on: []\n---\n')
+  await writeFile(join(latest, 'harness-lock.toml'), 'legacy generated state\n')
+  let fetched = false
+
+  const result = await installHarness(config, data, 'example/harness', async () => {
+    fetched = true
+    return new Response(archive)
+  })
+
+  expect(result).toEqual({ installed: false, archiveSha256: digest(archive) })
+  expect(fetched).toBe(false)
+  await expect(readFile(join(data, 'harnesses', 'example', 'harness', 'skills', 'ki-example', 'SKILL.md'), 'utf8')).resolves.toContain(
+    'name: ki-example'
+  )
+  await expect(lstat(join(data, 'harnesses', 'example', 'harness', 'latest'))).rejects.toThrow()
+  await expect(lstat(join(data, 'harnesses', 'example', 'harness', 'harness-lock.toml'))).rejects.toThrow()
 })
 
 test('drops only legacy vendored links from the selected payload', async () => {
@@ -110,7 +134,7 @@ test('drops only legacy vendored links from the selected payload', async () => {
 
   await expect(installHarness(config, data, 'example/harness', async () => new Response(archive))).resolves.toBeDefined()
   await expect(
-    lstat(join(data, 'harnesses', 'example', 'harness', 'latest', 'skills', 'ki-example', 'scripts', 'vendored', 'legacy.ts'))
+    lstat(join(data, 'harnesses', 'example', 'harness', 'skills', 'ki-example', 'scripts', 'vendored', 'legacy.ts'))
   ).rejects.toThrow()
 })
 
@@ -132,18 +156,18 @@ test('refuses an archive that does not match configured immutable evidence witho
   await expect(installHarness(config, data, 'example/harness', async () => new Response(archive))).rejects.toThrow(
     'does not match its SHA-256'
   )
-  await expect(readInstalledHarness(data, 'example/harness')).rejects.toThrow('installed harnesses directory must be a directory')
+  await expect(readInstalledHarness(data, 'example/harness')).rejects.toThrow('installed harness example/harness must be a directory')
 })
 
-test('removes only a verified non-base harness with no unrecognised state', async () => {
+test('removes only a non-base harness with no unrecognised state', async () => {
   const root = await temporaryDirectory()
   const archive = tar({ 'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' })
   const { config, data } = await configuredArchive(root, archive)
   await installHarness(config, data, 'example/harness', async () => new Response(archive))
 
-  expect(await uninstallHarness(data, 'example/harness', true)).toEqual({ uninstalled: false, archiveSha256: digest(archive) })
+  expect(await uninstallHarness(data, 'example/harness', true)).toEqual({ uninstalled: false })
   await expect(readInstalledHarness(data, 'example/harness')).resolves.toBeDefined()
-  expect(await uninstallHarness(data, 'example/harness')).toEqual({ uninstalled: true, archiveSha256: digest(archive) })
+  expect(await uninstallHarness(data, 'example/harness')).toEqual({ uninstalled: true })
   await expect(readInstalledHarness(data, 'example/harness')).rejects.toThrow('installed harness example/harness must be a directory')
   await expect(uninstallHarness(data, 'knowledgeislands/ki-agentic-harness')).rejects.toThrow('cannot be uninstalled')
 })

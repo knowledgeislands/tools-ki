@@ -1,8 +1,8 @@
-import { lstat, mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../core/errors.ts'
-import { baseHarnessIdentifier, discoverInstalledHarnesses, readInstalledHarness } from '../core/harness.ts'
+import { baseHarnessIdentifier, discoverInstalledHarnesses, type HarnessCapability, readInstalledHarness } from '../core/harness.ts'
 import chatgptCodex from './chatgpt-codex.ts'
 import claudeCode from './claude-code.ts'
 import type { AgentDescriptor } from './types.ts'
@@ -10,6 +10,8 @@ import type { AgentDescriptor } from './types.ts'
 export const agentDescriptors = [claudeCode, chatgptCodex] as const satisfies readonly AgentDescriptor[]
 
 export type AgentId = (typeof agentDescriptors)[number]['id']
+
+export const bootstrapUserSkills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap'] as const
 
 export interface InstalledAgent {
   readonly descriptor: AgentDescriptor
@@ -21,10 +23,9 @@ export interface BootstrapConfiguration {
   readonly disposition: 'created' | 'refreshed' | 'reused'
 }
 
-interface ConfiguredHarness {
-  readonly id: string
-  readonly url: string
-  readonly sha256: string
+export interface ManagedUserSkill {
+  readonly name: (typeof bootstrapUserSkills)[number]
+  readonly source: string
 }
 
 interface StringListSection {
@@ -32,6 +33,7 @@ interface StringListSection {
 }
 
 interface HarnessSection {
+  readonly ids?: unknown
   readonly releases?: unknown
 }
 
@@ -78,7 +80,7 @@ const bootstrapConfigurationPath = (configurationDirectory: string): string => j
 
 const renderConfiguration = (
   agents: readonly InstalledAgent[],
-  harnesses: readonly ConfiguredHarness[] = [],
+  harnesses: readonly string[] = [],
   skills: readonly string[] = [],
   local?: string
 ): string =>
@@ -91,11 +93,8 @@ const renderConfiguration = (
     ']',
     '',
     '[harnesses]',
-    'releases = [',
-    ...harnesses.map(
-      (harness) =>
-        `  { id = ${JSON.stringify(harness.id)}, url = ${JSON.stringify(harness.url)}, sha256 = ${JSON.stringify(harness.sha256)} },`
-    ),
+    'ids = [',
+    ...harnesses.map((harness) => `  ${JSON.stringify(harness)},`),
     ']',
     '',
     '[skills]',
@@ -192,10 +191,11 @@ export const inspectUserConfiguration = async (configurationDirectory: string): 
   const skills = inspectStringList(skillSection.ids, 'skills.ids', errors)
   const harnessSection = inspectSection(configuration.harnesses, 'harnesses', errors) as HarnessSection
   for (const key of Object.keys(harnessSection)) {
-    if (key !== 'releases') warnings.push(`harnesses has unrecognised key ${key}`)
+    if (key !== 'ids' && key !== 'releases') warnings.push(`harnesses has unrecognised key ${key}`)
   }
   const harnesses: string[] = []
-  if (!Array.isArray(harnessSection.releases)) errors.push('harnesses.releases must be an array')
+  if (harnessSection.ids !== undefined) harnesses.push(...inspectStringList(harnessSection.ids, 'harnesses.ids', errors))
+  else if (!Array.isArray(harnessSection.releases)) errors.push('harnesses must declare an ids array')
   else {
     for (const [index, harness] of harnessSection.releases.entries()) {
       if (!isRecord(harness)) {
@@ -277,50 +277,81 @@ const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAg
   return agents
 }
 
-const installBootstrapSkill = async (agent: InstalledAgent, source: string): Promise<boolean> => {
+const installManagedUserSkill = async (agent: InstalledAgent, skill: ManagedUserSkill): Promise<boolean> => {
   const agentHome = await requiredPhysicalDirectory(agent.home, `${agent.descriptor.id} user directory`)
   skillCapability(agent)
   const skills = join(agentHome, 'skills')
   const state = await lstat(skills).catch(() => undefined)
-  if (!state) await mkdir(skills)
+  if (!state) await mkdir(skills, { recursive: true })
   await requiredPhysicalDirectory(skills, `${agent.descriptor.id} user skills directory`)
-  const target = join(skills, 'ki-bootstrap')
+  const target = join(skills, skill.name)
   const targetState = await lstat(target).catch(() => undefined)
   if (!targetState) {
-    await symlink(source, target, 'dir')
+    await symlink(skill.source, target, 'dir')
     return true
   }
-  if (!targetState.isSymbolicLink()) throw new KiError(`${agent.descriptor.id} ki-bootstrap skill is not KI-managed`, 1)
+  if (!targetState.isSymbolicLink()) throw new KiError(`${agent.descriptor.id} ${skill.name} skill is not KI-managed`, 1)
   const actual = await realpath(target).catch(() => undefined)
-  if (actual !== source) throw new KiError(`${agent.descriptor.id} ki-bootstrap skill points to an unfamiliar source`, 1)
+  if (actual !== skill.source) throw new KiError(`${agent.descriptor.id} ${skill.name} skill points to an unfamiliar source`, 1)
   return false
 }
 
-export const installedBootstrapSkillSource = async (dataDirectory: string, identifier = baseHarnessIdentifier): Promise<string> => {
+const bootstrapSkillSources = async (
+  harness: { readonly root: string; readonly capabilities: readonly HarnessCapability[] },
+  description: string
+): Promise<readonly ManagedUserSkill[]> =>
+  Promise.all(
+    bootstrapUserSkills.map(async (name) => {
+      const capability = harness.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === name)
+      if (!capability) throw new KiError(`${description} does not provide ${name}`, 1)
+      return { name, source: await requiredPhysicalDirectory(join(harness.root, capability.source), `${description} ${name} skill`) }
+    })
+  )
+
+export const installedBootstrapSkillSources = async (
+  dataDirectory: string,
+  identifier = baseHarnessIdentifier
+): Promise<readonly ManagedUserSkill[]> => {
   const [owner, name] = identifier.split('/')
-  const root = join(dataDirectory, 'harnesses', owner as string, name as string, 'latest')
+  const root = join(dataDirectory, 'harnesses', owner as string, name as string)
   if (!(await lstat(root).catch(() => undefined))) {
     throw new KiError(`harness ${identifier} is not installed`, 1)
   }
   const harness = await readInstalledHarness(dataDirectory, identifier)
-  const capability = harness.lock.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === 'ki-bootstrap')
-  if (!capability) throw new KiError(`installed harness ${identifier} does not provide ki-bootstrap`, 1)
-  return requiredPhysicalDirectory(join(harness.root, capability.source), 'installed ki-bootstrap skill')
+  return bootstrapSkillSources(harness, `installed harness ${identifier}`)
 }
 
-export const localBootstrapHarness = async (harnessDirectory: string): Promise<{ readonly harness: string; readonly skill: string }> => {
+export const installedBootstrapSkillSource = async (dataDirectory: string, identifier = baseHarnessIdentifier): Promise<string> => {
+  const skill = (await installedBootstrapSkillSources(dataDirectory, identifier))[0]
+  if (!skill) throw new KiError(`installed harness ${identifier} does not provide ki-bootstrap`, 1)
+  return skill.source
+}
+
+export const localBootstrapHarness = async (
+  harnessDirectory: string
+): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
   const harness = await requiredPhysicalDirectory(resolve(harnessDirectory), 'local harness')
-  const source = join(harness, 'skills', 'keystone', 'ki-bootstrap')
-  const sourceState = await lstat(source).catch(() => undefined)
-  const entry = await lstat(join(source, 'SKILL.md')).catch(() => undefined)
-  if (!sourceState?.isDirectory() || sourceState.isSymbolicLink() || !entry?.isFile() || entry.isSymbolicLink()) {
+  const skills = await Promise.all(
+    bootstrapUserSkills.map(async (name) => {
+      const source = join(harness, 'skills', name === 'ki-bootstrap' ? 'keystone' : 'process', name)
+      const entry = await lstat(join(source, 'SKILL.md')).catch(() => undefined)
+      if (!entry?.isFile() || entry.isSymbolicLink()) {
+        throw new KiError(`local harness must contain ${source.slice(harness.length + 1)}/SKILL.md`, 1)
+      }
+      return { name, source: await requiredPhysicalDirectory(source, `local harness ${name} skill`) }
+    })
+  )
+  if (!skills[0]) {
     throw new KiError('local harness must contain skills/keystone/ki-bootstrap/SKILL.md', 1)
   }
-  return { harness, skill: await realpath(source) }
+  return { harness, skills }
 }
 
-export const localBootstrapSkillSource = async (harnessDirectory: string): Promise<string> =>
-  (await localBootstrapHarness(harnessDirectory)).skill
+export const localBootstrapSkillSource = async (harnessDirectory: string): Promise<string> => {
+  const skill = (await localBootstrapHarness(harnessDirectory)).skills[0]
+  if (!skill) throw new KiError('local harness must contain skills/keystone/ki-bootstrap/SKILL.md', 1)
+  return skill.source
+}
 
 export const setLocalBootstrapHarness = async (configurationDirectory: string, local?: string): Promise<void> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
@@ -332,6 +363,15 @@ export const setLocalBootstrapHarness = async (configurationDirectory: string, l
       : `${contents.trimEnd()}\n\n[local]\npath = ${JSON.stringify(local)}\n`
     : contents.replace(expression, '')
   await writeFile(path, updated, 'utf8')
+}
+
+export const setConfiguredUserSkills = async (configurationDirectory: string, skills: readonly string[]): Promise<void> => {
+  const path = bootstrapConfigurationPath(configurationDirectory)
+  const contents = await readFile(path, 'utf8')
+  const section = ['[skills]', 'ids = [', ...skills.map((skill) => `  ${JSON.stringify(skill)},`), ']'].join('\n')
+  const expression = /\[skills\]\nids\s*=\s*\[[\s\S]*?\n\]/m
+  if (!expression.test(contents)) throw new KiError('KI configuration must declare a [skills] ids array', 1)
+  await writeFile(path, contents.replace(expression, section), 'utf8')
 }
 
 export const configureBootstrapAgents = async (options: {
@@ -358,23 +398,54 @@ export const refreshUserConfiguration = async (
   local?: string
 ): Promise<{ readonly harnesses: number; readonly skills: number }> => {
   const installed = await discoverInstalledHarnesses(dataDirectory)
-  const harnesses = installed
-    .map(({ lock }) => ({ id: lock.id, url: lock.archive.url, sha256: lock.archive.sha256 }))
-    .sort((left, right) => left.id.localeCompare(right.id))
-  const skills = installed
-    .flatMap(({ lock }) => lock.capabilities.map((capability) => `${lock.id}:${capability.name}`))
-    .sort((left, right) => left.localeCompare(right))
+  const harnesses = installed.map((harness) => harness.id).sort((left, right) => left.localeCompare(right))
+  const localSkills = local ? (await localBootstrapHarness(local)).skills : []
+  const skills = await discoverManagedUserSkills(agents, installed, localSkills)
   await writeFile(bootstrapConfigurationPath(configurationDirectory), renderConfiguration(agents, harnesses, skills, local), {
     encoding: 'utf8'
   })
   return { harnesses: harnesses.length, skills: skills.length }
 }
 
+const discoverManagedUserSkills = async (
+  agents: readonly InstalledAgent[],
+  harnesses: Awaited<ReturnType<typeof discoverInstalledHarnesses>>,
+  localSkills: readonly ManagedUserSkill[] = []
+): Promise<readonly string[]> => {
+  const identities = new Map<string, string>()
+  for (const harness of harnesses) {
+    for (const capability of harness.capabilities) {
+      const source = await realpath(join(harness.root, capability.source))
+      identities.set(source, `${harness.id}:${capability.name}`)
+    }
+  }
+  for (const skill of localSkills) identities.set(skill.source, `${baseHarnessIdentifier}:${skill.name}`)
+  const skills = new Set<string>()
+  for (const agent of agents) {
+    skillCapability(agent)
+    const directory = join(agent.home, 'skills')
+    const state = await lstat(directory).catch(() => undefined)
+    if (!state) continue
+    await requiredPhysicalDirectory(directory, `${agent.descriptor.id} user skills directory`)
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      if (!entry.isSymbolicLink()) continue
+      const source = await realpath(join(directory, entry.name)).catch(() => undefined)
+      const identity = source ? identities.get(source) : undefined
+      if (identity) skills.add(identity)
+    }
+  }
+  return [...skills].sort((left, right) => left.localeCompare(right))
+}
+
 export const installBootstrapSkills = async (
-  source: string,
+  skills: readonly ManagedUserSkill[],
   agents: readonly InstalledAgent[]
-): Promise<readonly { readonly agent: InstalledAgent; readonly installed: boolean }[]> => {
-  return Promise.all(agents.map(async (agent) => ({ agent, installed: await installBootstrapSkill(agent, source) })))
+): Promise<readonly { readonly agent: InstalledAgent; readonly skill: string; readonly installed: boolean }[]> => {
+  return Promise.all(
+    agents.flatMap((agent) =>
+      skills.map(async (skill) => ({ agent, skill: skill.name, installed: await installManagedUserSkill(agent, skill) }))
+    )
+  )
 }
 
 export const bootstrapAgents = async (options: {
@@ -384,8 +455,14 @@ export const bootstrapAgents = async (options: {
   readonly refresh?: boolean
 }): Promise<readonly InstalledAgent[]> => {
   const configuration = await configureBootstrapAgents(options)
-  await installBootstrapSkills(await installedBootstrapSkillSource(options.dataDirectory), configuration.agents)
+  const skills = await installedBootstrapSkillSources(options.dataDirectory)
+  await installBootstrapSkills(skills, configuration.agents)
   if (options.refresh) await refreshUserConfiguration(options.configurationDirectory, options.dataDirectory, configuration.agents)
+  else
+    await setConfiguredUserSkills(
+      options.configurationDirectory,
+      skills.map((skill) => `${baseHarnessIdentifier}:${skill.name}`)
+    )
   return configuration.agents
 }
 

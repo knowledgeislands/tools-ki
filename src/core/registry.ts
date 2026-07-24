@@ -4,11 +4,12 @@ import { dirname, join, relative } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { parse } from 'smol-toml'
 import { KiError } from './errors.ts'
-import { baseHarnessIdentifier, createHarnessLock, readInstalledHarness, renderHarnessLock, verifyHarnessRoot } from './harness.ts'
+import { baseHarnessIdentifier, inspectHarnessRoot, readInstalledHarness } from './harness.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const sha256 = /^[a-f0-9]{64}$/
 const decoder = new TextDecoder('utf-8', { fatal: true })
+const payloadRoots = ['skills', 'agents', 'hooks'] as const
 
 export interface HarnessRelease {
   readonly id: string
@@ -88,7 +89,13 @@ export const readHarnessRegistry = async (configurationDirectory: string): Promi
   const configuration = parsed as Record<string, unknown> & { harnesses?: unknown }
   if (configuration.harnesses === undefined) return [canonicalHarnessRelease]
   if (!isRecord(configuration.harnesses)) throw new KiError('KI configuration harnesses must be a TOML table', 1)
-  const harnesses = configuration.harnesses as Record<string, unknown> & { releases?: unknown }
+  const harnesses = configuration.harnesses as Record<string, unknown> & { ids?: unknown; releases?: unknown }
+  if (harnesses.releases === undefined) {
+    if (!Array.isArray(harnesses.ids) || harnesses.ids.some((id) => typeof id !== 'string' || !harnessIdentifier.test(id))) {
+      throw new KiError('KI configuration harnesses.ids must be an array of harness identifiers', 1)
+    }
+    return [canonicalHarnessRelease]
+  }
   if (!Array.isArray(harnesses.releases)) throw new KiError('KI configuration harnesses.releases must be an array of release entries', 1)
   const releases = harnesses.releases.map(parseRelease)
   const identities = new Set<string>([baseHarnessIdentifier])
@@ -173,6 +180,38 @@ const extractArchive = async (payload: Uint8Array, target: string): Promise<void
   throw new KiError('harness archive is missing its terminating tar block', 1)
 }
 
+const removeLegacyHarnessLock = async (root: string, identifier: string): Promise<void> => {
+  const path = join(root, 'harness-lock.toml')
+  const state = await lstat(path).catch(() => undefined)
+  if (!state) return
+  if (!state.isFile() || state.isSymbolicLink()) throw new KiError(`installed harness ${identifier} has an unsafe legacy lock`, 1)
+  await rm(path)
+}
+
+const migrateLegacyHarnessLayout = async (ownerDirectory: string, destination: string, identifier: string): Promise<void> => {
+  const entries = await readdir(destination, { withFileTypes: true })
+  const latest = entries.find((entry) => entry.name === 'latest')
+  if (!latest) {
+    await removeLegacyHarnessLock(destination, identifier)
+    return
+  }
+  if (entries.length !== 1 || !latest.isDirectory() || latest.isSymbolicLink()) {
+    throw new KiError(`installed harness ${identifier} has unrecognised legacy state`, 1)
+  }
+  const legacyRoot = join(destination, 'latest')
+  await inspectHarnessRoot(legacyRoot, identifier)
+  const previous = join(ownerDirectory, `.migrate-${randomUUID()}`)
+  await rename(destination, previous)
+  try {
+    await rename(join(previous, 'latest'), destination)
+    await removeLegacyHarnessLock(destination, identifier)
+    await rm(previous, { recursive: true, force: true })
+  } catch (error) {
+    if (!(await lstat(destination).catch(() => undefined))) await rename(previous, destination).catch(() => undefined)
+    throw error
+  }
+}
+
 export const installHarness = async (
   configurationDirectory: string,
   dataDirectory: string,
@@ -183,6 +222,19 @@ export const installHarness = async (
   const releases = await readHarnessRegistry(configurationDirectory)
   const release = releases.find((candidate) => candidate.id === identifier)
   if (!release) throw new KiError(`harness ${identifier} is not configured in the immutable release registry`, 1)
+  const [owner, name] = identifier.split('/') as [string, string]
+  const harnesses = join(dataDirectory, 'harnesses')
+  await ensureDirectory(harnesses, 'installed harnesses directory')
+  const ownerDirectory = join(harnesses, owner)
+  await ensureDirectory(ownerDirectory, `installed harness owner ${owner}`)
+  const destination = join(ownerDirectory, name)
+  const existing = await lstat(destination).catch(() => undefined)
+  if (existing) {
+    await migrateLegacyHarnessLayout(ownerDirectory, destination, identifier)
+    await readInstalledHarness(dataDirectory, identifier)
+    return { installed: false, archiveSha256: release.sha256 }
+  }
+
   let response: Response
   try {
     response = await fetcher(release.url, { redirect: 'error' })
@@ -194,27 +246,12 @@ export const installHarness = async (
   const digest = createHash('sha256').update(payload).digest('hex')
   if (digest !== release.sha256) throw new KiError(`configured harness ${identifier} archive does not match its SHA-256`, 1)
 
-  const [owner, name] = identifier.split('/') as [string, string]
-  const harnesses = join(dataDirectory, 'harnesses')
-  await ensureDirectory(harnesses, 'installed harnesses directory')
-  const ownerDirectory = join(harnesses, owner)
-  await ensureDirectory(ownerDirectory, `installed harness owner ${owner}`)
-  const destination = join(ownerDirectory, name)
-  await ensureDirectory(destination, `installed harness ${identifier}`)
-  const latest = join(destination, 'latest')
-  const existing = await lstat(latest).catch(() => undefined)
-  if (existing) {
-    const installed = await readInstalledHarness(dataDirectory, identifier)
-    return { installed: false, archiveSha256: installed.lock.archive.sha256 }
-  }
-
-  const staging = await mkdtemp(join(destination, '.install-'))
+  const staging = await mkdtemp(join(ownerDirectory, '.install-'))
   try {
     await extractArchive(payload, staging)
-    const lock = await createHarnessLock(staging, identifier, { url: release.url, sha256: release.sha256 })
-    await writeFile(join(staging, 'harness-lock.toml'), renderHarnessLock(lock), { flag: 'wx' })
-    await rename(staging, latest)
-    return { installed: true, archiveSha256: lock.archive.sha256 }
+    await inspectHarnessRoot(staging, identifier)
+    await rename(staging, destination)
+    return { installed: true, archiveSha256: release.sha256 }
   } catch (error) {
     await rm(staging, { recursive: true, force: true })
     throw error
@@ -232,11 +269,11 @@ export const uninstallHarness = async (
   dataDirectory: string,
   identifier: string,
   dryRun = false
-): Promise<{ readonly uninstalled: boolean; readonly archiveSha256: string }> => {
+): Promise<{ readonly uninstalled: boolean }> => {
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   if (identifier === baseHarnessIdentifier) throw new KiError(`the required base harness ${identifier} cannot be uninstalled`, 1)
 
-  const installed = await readInstalledHarness(dataDirectory, identifier)
+  await readInstalledHarness(dataDirectory, identifier)
   const [owner, name] = identifier.split('/') as [string, string]
   const harnesses = join(dataDirectory, 'harnesses')
   const ownerDirectory = join(harnesses, owner)
@@ -244,17 +281,22 @@ export const uninstallHarness = async (
   const destination = join(ownerDirectory, name)
   await physicalDirectory(destination, `installed harness ${identifier}`)
   const entries = await readdir(destination, { withFileTypes: true })
-  if (entries.length !== 1 || entries[0]?.name !== 'latest' || !entries[0].isDirectory() || entries[0].isSymbolicLink()) {
+  if (
+    !entries.length ||
+    entries.some(
+      (entry) => !payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) || !entry.isDirectory() || entry.isSymbolicLink()
+    )
+  ) {
     throw new KiError(`installed harness ${identifier} has unrecognised state and will not be removed`, 1)
   }
-  if (dryRun) return { uninstalled: false, archiveSha256: installed.lock.archive.sha256 }
+  if (dryRun) return { uninstalled: false }
 
   const removal = join(ownerDirectory, `.uninstall-${randomUUID()}`)
   await rename(destination, removal)
   try {
-    await verifyHarnessRoot(join(removal, 'latest'), identifier)
+    await inspectHarnessRoot(removal, identifier)
     await rm(removal, { recursive: true, force: true })
-    return { uninstalled: true, archiveSha256: installed.lock.archive.sha256 }
+    return { uninstalled: true }
   } catch (error) {
     await rename(removal, destination).catch(() => undefined)
     throw error

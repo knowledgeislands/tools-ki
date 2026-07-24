@@ -11,10 +11,10 @@ export interface ResolvedSkill {
 
 const skillCandidates = (harnesses: readonly InstalledHarness[], name: string): readonly ResolvedSkill[] =>
   harnesses.flatMap((harness) =>
-    harness.lock.capabilities
+    harness.capabilities
       .filter((capability) => capability.kind === 'skill' && capability.name === name)
       .map((capability) => ({
-        identity: `${harness.lock.id}:${capability.name}`,
+        identity: `${harness.id}:${capability.name}`,
         declaration: { name, configuration: {} },
         harness,
         capability
@@ -53,7 +53,7 @@ export const resolveDeclaredSkills = (
     const candidates = skillCandidates(harnesses, declaration.name)
     if (!candidates.length) {
       throw new KiError(
-        `declared skill ${declaration.name} is not available from a verified installed harness; install the harness that provides it before auditing`,
+        `declared skill ${declaration.name} is not available from an installed harness; install the harness that provides it before auditing`,
         1
       )
     }

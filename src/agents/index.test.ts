@@ -1,9 +1,8 @@
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, test } from 'vitest'
-import { createHarnessLock, renderHarnessLock } from '../core/harness.ts'
-import { bootstrapAgents, configuredAgents, localBootstrapSkillSource } from './index.ts'
+import { agentDescriptors, bootstrapAgents, configuredAgents, localBootstrapSkillSource, refreshUserConfiguration } from './index.ts'
 
 const directories: string[] = []
 
@@ -18,15 +17,13 @@ afterEach(async () => {
 })
 
 const installBootstrapHarness = async (data: string): Promise<string> => {
-  const root = join(data, 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'latest')
+  const root = join(data, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
   const source = join(root, 'skills', 'keystone', 'ki-bootstrap')
-  await mkdir(source, { recursive: true })
-  await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\nki-depends-on: []\n---\n')
-  const lock = await createHarnessLock(root, 'knowledgeislands/ki-agentic-harness', {
-    url: 'https://releases.example.test/harness.tar.gz',
-    sha256: '0'.repeat(64)
-  })
-  await writeFile(join(root, 'harness-lock.toml'), renderHarnessLock(lock))
+  for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
+    const path = skill === 'ki-bootstrap' ? source : join(root, 'skills', 'process', skill)
+    await mkdir(path, { recursive: true })
+    await writeFile(join(path, 'SKILL.md'), `---\nname: ${skill}\nki-depends-on: []\n---\n`)
+  }
   return source
 }
 
@@ -55,11 +52,16 @@ ids = [
 ]
 
 [harnesses]
-releases = [
+ids = [
 ]
 
 [skills]
 ids = [
+  "knowledgeislands/ki-agentic-harness:ki-bootstrap",
+  "knowledgeislands/ki-agentic-harness:ki-delegate",
+  "knowledgeislands/ki-agentic-harness:ki-next",
+  "knowledgeislands/ki-agentic-harness:ki-plan",
+  "knowledgeislands/ki-agentic-harness:ki-recap",
 ]
 `
   )
@@ -94,18 +96,22 @@ ids = [
 ]
 
 [harnesses]
-releases = [
-  { id = "knowledgeislands/ki-agentic-harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'0'.repeat(64)}" },
+ids = [
+  "knowledgeislands/ki-agentic-harness",
 ]
 
 [skills]
 ids = [
   "knowledgeislands/ki-agentic-harness:ki-bootstrap",
+  "knowledgeislands/ki-agentic-harness:ki-delegate",
+  "knowledgeislands/ki-agentic-harness:ki-next",
+  "knowledgeislands/ki-agentic-harness:ki-plan",
+  "knowledgeislands/ki-agentic-harness:ki-recap",
 ]
 `
   )
   expect(await realpath(join(home, '.agents', 'skills', 'ki-bootstrap'))).toBe(
-    await realpath(join(data, 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'latest', 'skills', 'keystone', 'ki-bootstrap'))
+    await realpath(join(data, 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'skills', 'keystone', 'ki-bootstrap'))
   )
 })
 
@@ -130,6 +136,39 @@ test('refresh replaces a legacy configuration with the current sectioned schema'
   expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toContain('[agents]\nids = [\n  "claude-code",\n]')
 })
 
+test('refresh records only KI skills linked into configured user agent spaces', async () => {
+  const root = await temporaryDirectory()
+  const home = join(root, 'home')
+  const configuration = join(root, 'config', 'ki')
+  const local = join(root, 'harness')
+  const skills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']
+  await mkdir(join(home, '.agents', 'skills'), { recursive: true })
+  await mkdir(configuration, { recursive: true })
+  for (const skill of skills) {
+    const source = join(local, 'skills', skill === 'ki-bootstrap' ? 'keystone' : 'process', skill)
+    await mkdir(source, { recursive: true })
+    await writeFile(join(source, 'SKILL.md'), `---\nname: ${skill}\nki-depends-on: []\n---\n`)
+    await symlink(source, join(home, '.agents', 'skills', skill), 'dir')
+  }
+
+  await refreshUserConfiguration(
+    configuration,
+    join(root, 'data', 'ki'),
+    [{ descriptor: agentDescriptors[1], home: join(home, '.agents') }],
+    local
+  )
+
+  expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toContain(
+    `ids = [
+  "knowledgeislands/ki-agentic-harness:ki-bootstrap",
+  "knowledgeislands/ki-agentic-harness:ki-delegate",
+  "knowledgeislands/ki-agentic-harness:ki-next",
+  "knowledgeislands/ki-agentic-harness:ki-plan",
+  "knowledgeislands/ki-agentic-harness:ki-recap",
+]`
+  )
+})
+
 test('requires bootstrap before reading configured agents', async () => {
   const root = await temporaryDirectory()
   await expect(configuredAgents({ homeDirectory: join(root, 'home'), configurationDirectory: join(root, 'config', 'ki') })).rejects.toThrow(
@@ -141,12 +180,17 @@ test('requires the canonical bootstrap skill path in a local harness', async () 
   const root = await temporaryDirectory()
   const harness = join(root, 'harness')
   await mkdir(join(harness, 'skills', 'other'), { recursive: true })
-  await writeFile(join(harness, 'skills', 'other', 'SKILL.md'), '---\nname: other\n---\n')
+  await writeFile(join(harness, 'skills', 'other', 'SKILL.md'), '---\nname: other\nki-depends-on: []\n---\n')
 
   await expect(localBootstrapSkillSource(harness)).rejects.toThrow('must contain skills/keystone/ki-bootstrap/SKILL.md')
 
   const source = join(harness, 'skills', 'keystone', 'ki-bootstrap')
   await mkdir(source, { recursive: true })
-  await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\n---\n')
+  await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\nki-depends-on: []\n---\n')
+  for (const skill of ['ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
+    const path = join(harness, 'skills', 'process', skill)
+    await mkdir(path, { recursive: true })
+    await writeFile(join(path, 'SKILL.md'), `---\nname: ${skill}\nki-depends-on: []\n---\n`)
+  }
   await expect(localBootstrapSkillSource(harness)).resolves.toBe(await realpath(source))
 })

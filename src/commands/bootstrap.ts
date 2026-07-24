@@ -2,19 +2,21 @@ import { Command } from 'commander'
 import {
   configureBootstrapAgents,
   installBootstrapSkills,
-  installedBootstrapSkillSource,
+  installedBootstrapSkillSources,
   localBootstrapHarness,
   refreshUserConfiguration,
+  setConfiguredUserSkills,
   setLocalBootstrapHarness
 } from '../agents/index.ts'
 import type { KiContext } from '../core/context.ts'
+import { baseHarnessIdentifier } from '../core/harness.ts'
 import { installCanonicalHarness } from '../core/registry.ts'
 
 export const createBootstrapCommand = (context: KiContext): Command =>
   new Command('bootstrap')
-    .description('configure detected agents and install the KI bootstrap skill')
+    .description('configure detected agents and install KI core user skills')
     .option('--refresh', 'reconcile agents, harnesses, and skills from installed state')
-    .option('--local <path>', 'link ki-bootstrap from a local harness checkout')
+    .option('--local <path>', 'link KI core user skills from a local harness checkout')
     .action(async (options: { refresh?: boolean; local?: string }) => {
       const configuration = await configureBootstrapAgents({
         homeDirectory: context.homeDirectory,
@@ -31,24 +33,30 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         context.stdout.write(`refreshed KI agents: ${agents.map((agent) => agent.descriptor.id).join(', ') || 'none'}\n`)
       }
       const local = options.local ? await localBootstrapHarness(options.local) : undefined
-      const source = local
-        ? local.skill
+      const skills = local
+        ? local.skills
         : await (async () => {
             const installation = await installCanonicalHarness(context.paths.config, context.paths.data)
             context.stdout.write(
               `canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`
             )
-            return installedBootstrapSkillSource(context.paths.data)
+            return installedBootstrapSkillSources(context.paths.data)
           })()
-      if (local) context.stdout.write(`using local harness ${source}\n`)
-      const projections = await installBootstrapSkills(source, agents)
+      if (local) context.stdout.write(`using local harness ${local.harness}\n`)
+      const projections = await installBootstrapSkills(skills, agents)
       if (options.refresh) {
         const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents, local?.harness)
         context.stdout.write(
           `refreshed KI configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
         )
-      } else await setLocalBootstrapHarness(context.paths.config, local?.harness)
-      for (const { agent, installed } of projections) {
-        context.stdout.write(`ki-bootstrap for ${agent.descriptor.id} ${installed ? 'installed' : 'already installed'}\n`)
+      } else {
+        await setLocalBootstrapHarness(context.paths.config, local?.harness)
+        await setConfiguredUserSkills(
+          context.paths.config,
+          skills.map((skill) => `${baseHarnessIdentifier}:${skill.name}`)
+        )
+      }
+      for (const { agent, skill, installed } of projections) {
+        context.stdout.write(`${skill} for ${agent.descriptor.id} ${installed ? 'installed' : 'already installed'}\n`)
       }
     })
