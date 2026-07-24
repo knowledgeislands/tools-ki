@@ -5,6 +5,7 @@ import { createDoctorCommand } from './commands/doctor.ts'
 import { createHarnessCommand } from './commands/harness.ts'
 import { createHelpCommand } from './commands/help.ts'
 import { createPathsCommand } from './commands/paths.ts'
+import { createRepoCommand } from './commands/repo.ts'
 import { createVersionCommand } from './commands/version.ts'
 import { createContext, type KiContext } from './core/context.ts'
 import { KiError } from './core/errors.ts'
@@ -24,6 +25,7 @@ export const createProgram = (context: KiContext): Command => {
   program.addCommand(createDoctorCommand(context))
   program.addCommand(createHarnessCommand(context))
   program.addCommand(createPathsCommand(context))
+  program.addCommand(createRepoCommand(context))
   program.addCommand(createVersionCommand(context))
   program.addCommand(createAcquireCommand(context))
   program.addCommand(createHelpCommand(program))

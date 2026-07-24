@@ -63,7 +63,11 @@ const runProcess = async (
   }
 }
 
-const runKi = async (arguments_: string[], environment: Record<string, string | undefined> = {}): Promise<CommandResult> => {
+const runKiAt = async (
+  arguments_: string[],
+  workingDirectory: string,
+  environment: Record<string, string | undefined> = {}
+): Promise<CommandResult> => {
   let output = ''
   const write = (chunk: string): void => {
     output += chunk
@@ -72,11 +76,14 @@ const runKi = async (arguments_: string[], environment: Record<string, string | 
     stdout: { write },
     stderr: { write },
     executable,
-    workingDirectory: repository,
+    workingDirectory,
     environment: { ...process.env, _: executable, ...environment }
   })
   return { exitCode: await runCli(arguments_, context), output }
 }
+
+const runKi = (arguments_: string[], environment: Record<string, string | undefined> = {}): Promise<CommandResult> =>
+  runKiAt(arguments_, repository, environment)
 
 const makeCapture = async (root: string): Promise<string> => {
   const capture = join(root, 'capture')
@@ -107,12 +114,30 @@ const makeCapture = async (root: string): Promise<string> => {
   return capture
 }
 
-const installHarness = async (data: string): Promise<void> => {
+const installHarness = async (data: string, auditSource?: string): Promise<void> => {
   const root = join(data, 'ki', 'harnesses', 'example', 'harness', 'latest')
   const skill = '# ki-example\n'
   await mkdir(join(root, 'skills', 'ki-example'), { recursive: true })
   await writeFile(join(root, 'skills', 'ki-example', 'SKILL.md'), skill)
   const digest = createHash('sha256').update(skill).digest('hex')
+  const operation = auditSource
+    ? [
+        '',
+        '[[capabilities.files]]',
+        'path = "operations/audit.mjs"',
+        `sha256 = "${createHash('sha256').update(auditSource).digest('hex')}"`,
+        '',
+        '[[capabilities.operations]]',
+        'protocol = "ki/native-operation@1"',
+        'module = "operations/audit.mjs"',
+        'export = "audit"',
+        'mode = "audit"'
+      ]
+    : []
+  if (auditSource) {
+    await mkdir(join(root, 'operations'), { recursive: true })
+    await writeFile(join(root, 'operations', 'audit.mjs'), auditSource)
+  }
   await writeFile(
     join(root, 'harness.toml'),
     [
@@ -129,6 +154,7 @@ const installHarness = async (data: string): Promise<void> => {
       '[[capabilities.files]]',
       'path = "skills/ki-example/SKILL.md"',
       `sha256 = "${digest}"`,
+      ...operation,
       ''
     ].join('\n')
   )
@@ -185,7 +211,7 @@ describe('baseline commands', () => {
     const missingCompletionShell = await runKi(['completions'])
     const unknown = await runKi(['unknown'])
 
-    expect(bash.output).toContain('complete -W "acquire completions doctor harness help paths version --help --version" ki')
+    expect(bash.output).toContain('complete -W "acquire completions doctor harness help paths repo version --help --version" ki')
     expect(invalidCompletion).toEqual({ exitCode: 2, output: 'ki: error: completions shell must be bash or zsh\n' })
     expect(paths.output).toContain(`data: ${root}/data/ki`)
     expect(doctor.output).toContain(`ki version: ${packageMetadata.version}`)
@@ -204,6 +230,24 @@ describe('baseline commands', () => {
 
     expect(listed).toEqual({ exitCode: 0, output: 'example/harness\tlatest 2026.07.24\t1 capabilities\n' })
     expect(json.output).toContain('"id":"example/harness"')
+  })
+
+  test("runs only a declared skill's registered native audit operation", async () => {
+    const root = await temporaryDirectory()
+    const home = join(root, 'home')
+    const data = join(root, 'data')
+    const project = join(root, 'project')
+    await mkdir(home)
+    await mkdir(project)
+    await writeFile(join(project, '.ki-config.toml'), '[ki-example]\n')
+    await installHarness(
+      data,
+      'export const audit = async ({ capability }) => [{ level: "info", code: "EXAMPLE-1", message: capability.identity }]\n'
+    )
+
+    const result = await runKiAt(['repo', 'audit', '--skill', 'ki-example'], project, { HOME: home, XDG_DATA_HOME: data })
+
+    expect(result).toEqual({ exitCode: 0, output: 'info EXAMPLE-1: example/harness:ki-example\n' })
   })
 
   test('creates a context when the caller does not supply one and rethrows unexpected command errors', async () => {

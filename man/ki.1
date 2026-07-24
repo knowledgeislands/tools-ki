@@ -123,9 +123,11 @@ Add or remove a registered skill in one selected repository.
 Add or remove a registered skill in the selected user runtime.
 .SS Repository maintenance
 .TP
-.B ki repo audit [--repo \fIpath\fR] [--skill \fIskill\fR] [planned]
+.B ki repo audit [--repo \fIpath\fR] [--skill \fIskill\fR]
 Run the native read-only operations registered by the selected repository's
-declared capabilities.
+declared capabilities. The host verifies every selected harness inventory and
+integrity-covered operation before importing it in process; it never dispatches
+repository-vendored runners.
 .TP
 .B ki repo conform [--repo \fIpath\fR] [--skill \fIskill\fR] [--dry-run] [planned]
 Apply the same capabilities' safe mechanical changes and re-audit.
