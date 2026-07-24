@@ -64,5 +64,5 @@ Cross-repository work is choreographed rather than centrally orchestrated. Each 
 - The CLI platform begins in `tools-ki`; the harness and `tools-ki` jointly supply implementation evidence to Specifications without either repository becoming the normative source.
 - Specifications receive conceptual input from Arcadia and implementation evidence from the harness and `tools-ki`; applicable Active specifications then constrain conforming implementations.
 - The website can publish all four source repositories while remaining independently deployable and non-authoritative.
-- The Website owns the public tooling guide and the stable routes `https://knowledgeislands.info/harness/install` for user installation and `https://knowledgeislands.info/harness/bootstrap` for repository bootstrap; `tools-ki` owns the executable artifacts to which the user-install route resolves, while the harness owns the reusable capability artifacts it publishes.
+- The Website owns the public tooling guide under `/tooling/`. `tools-ki` owns executable behaviour and delivery, while the harness owns the reusable capability artefacts it publishes.
 - Every primary repository states its place in this ecosystem near the top of its README and carries the shared progress, commit, and choreography conventions in runtime-neutral guidance.

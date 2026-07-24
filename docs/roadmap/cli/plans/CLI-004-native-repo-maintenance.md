@@ -15,7 +15,7 @@ blocked-by: —
 
 The seed release establishes the `ki` delivery channel, and the current development surface includes local ChatGPT capture acquisition. The former harness `-/_HANDOFFS/ki/tools-ki.md` and `command-contract.md` notes supplied delivery constraints, but their vendored-dispatch and Bash-only assumptions are intentionally rejected. [FND-004](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-004-define-compatible-harness-registration.md) defines the compatible-harness, capability, projection, and CI-trust boundary.
 
-[ADR-KI-TOOLS-001](../../decisions/ADR-KI-TOOLS-001-typescript-native-command-host.md) adopts the native Bun and TypeScript host required for the work below. The existing Bash implementation is an interim development surface to port, not an execution architecture to extend.
+[ADR-KI-TOOLS-001](../../decisions/ADR-KI-TOOLS-001-typescript-native-command-host.md) adopts the native Bun and TypeScript host required for the work below, and [ADR-KI-TOOLS-002](../../decisions/ADR-KI-TOOLS-002-compatible-harness-registry-and-native-operations.md) defines its registry, command, scope, and native-operation boundary. The existing Bash implementation is an interim development surface to port, not an execution architecture to extend.
 
 The current `ki-engineering` checker still expects retired package-script aggregate runners. Its rule and CI expectation must migrate with native `ki repo audit` and `ki repo conform`; this plan does not restore a local or vendored runner merely to satisfy that obsolete check.
 
@@ -50,7 +50,7 @@ The current `ki-engineering` checker still expects retired package-script aggreg
 
 ## Verify
 
-1. A clean user can install a verified collection under XDG locations and activate one named skill without activating unrelated skills.
+1. A clean user can install verified compatible harnesses under XDG locations and activate one named skill without activating unrelated skills.
 2. A repository with declared skills passes native aggregate and scoped audit without `.ki/bin` or a nearby harness checkout.
 3. Native conform makes only declared safe changes, dry-run writes nothing, and re-audit is clean.
 4. Missing, altered, untrusted, incompatible, undeclared, or unsafe inputs fail before unintended user or repository mutation.

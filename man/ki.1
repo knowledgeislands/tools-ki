@@ -90,7 +90,7 @@ discover a repository, or extract reusable knowledge.
 List installed harnesses, capabilities, and the activation status relevant to
 the current working directory.
 .TP
-.B ki harness install|uninstall|list|info [planned]
+.B ki harness install|uninstall \fIharness-id\fR | list | info \fIharness-id\fR [planned]
 Manage and inspect the verified, user-installed set of compatible harnesses.
 .TP
 .B ki missing|outdated [planned]
@@ -111,11 +111,11 @@ Apply newer capability releases in the resolved repository context.
 Search the available capability set or remove managed stale state.
 .SS Scoped capability activation
 .TP
-.B ki repo skill add|remove \fIskill\fR [planned]
-Add or remove a registered capability in one selected repository.
+.B ki repo skill add|remove \fIharness-id:skill-name\fR [planned]
+Add or remove a registered skill in one selected repository.
 .TP
-.B ki user skill add|remove \fIskill\fR [planned]
-Add or remove a registered capability in the selected user runtime.
+.B ki user skill add|remove \fIharness-id:skill-name\fR [planned]
+Add or remove a registered skill in the selected user runtime.
 .SS Repository maintenance
 .TP
 .B ki repo audit [--repo \fIpath\fR] [--skill \fIskill\fR] [planned]
