@@ -237,6 +237,24 @@ describe('baseline commands', () => {
     expect(await readFile(join(configuration, 'ki', 'agents.toml'), 'utf8')).toBe('schema = 1\nagents = ["chatgpt-codex"]\n')
   })
 
+  test('requires the verified base harness before projecting the bootstrap skill', async () => {
+    const root = await temporaryDirectory()
+    const home = join(root, 'home')
+    await mkdir(join(home, '.agents'), { recursive: true })
+
+    const result = await runKi(['bootstrap'], {
+      HOME: home,
+      XDG_CONFIG_HOME: join(root, 'config'),
+      XDG_DATA_HOME: join(root, 'data')
+    })
+
+    expect(result).toEqual({
+      exitCode: 1,
+      output:
+        'ki: error: base harness is not installed; run `ki harness install knowledgeislands/ki-agentic-harness` before `ki bootstrap`\n'
+    })
+  })
+
   test('inspects and removes one verified non-base harness', async () => {
     const root = await temporaryDirectory()
     const data = join(root, 'data')

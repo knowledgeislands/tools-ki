@@ -100,6 +100,10 @@ const installBootstrapSkill = async (agent: InstalledAgent, source: string): Pro
 }
 
 const bootstrapCapabilitySource = async (dataDirectory: string): Promise<string> => {
+  const root = join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'latest')
+  if (!(await lstat(root).catch(() => undefined))) {
+    throw new KiError(`base harness is not installed; run \`ki harness install ${baseHarnessIdentifier}\` before \`ki bootstrap\``, 1)
+  }
   const harness = await readInstalledHarness(dataDirectory, baseHarnessIdentifier)
   const capability = harness.lock.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === 'ki-bootstrap')
   if (!capability) throw new KiError(`installed base harness does not provide ki-bootstrap; reinstall ${baseHarnessIdentifier}`, 1)
