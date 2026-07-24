@@ -166,6 +166,17 @@ const verifyCapability = async (root: string, capability: HarnessCapability): Pr
   }
 }
 
+export const verifyHarnessRoot = async (rootPath: string, identifier: string): Promise<HarnessManifest> => {
+  if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
+  const root = await physicalDirectory(rootPath, `installed harness ${identifier}`)
+  const manifestPath = join(root, 'harness.toml')
+  await regularFile(manifestPath, `installed harness ${identifier} manifest`)
+  const manifest = parseHarnessManifest(await readFile(manifestPath, 'utf8'))
+  if (manifest.id !== identifier) throw new KiError(`installed harness ${identifier} manifest identity does not match its location`, 1)
+  await Promise.all(manifest.capabilities.map((capability) => verifyCapability(root, capability)))
+  return manifest
+}
+
 export const readInstalledHarness = async (dataDirectory: string, identifier: string): Promise<InstalledHarness> => {
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   const harnesses = await physicalDirectory(join(dataDirectory, 'harnesses'), 'installed harnesses directory')
@@ -174,12 +185,7 @@ export const readInstalledHarness = async (dataDirectory: string, identifier: st
   if (!contained(harnesses, ownerDirectory)) throw new KiError(`installed harness ${identifier} escapes the harnesses directory`, 1)
   const root = await physicalDirectory(join(ownerDirectory, name, 'latest'), `installed harness ${identifier}`)
   if (!contained(harnesses, root)) throw new KiError(`installed harness ${identifier} escapes the harnesses directory`, 1)
-  const manifestPath = join(root, 'harness.toml')
-  await regularFile(manifestPath, `installed harness ${identifier} manifest`)
-  const manifest = parseHarnessManifest(await readFile(manifestPath, 'utf8'))
-  if (manifest.id !== identifier) throw new KiError(`installed harness ${identifier} manifest identity does not match its location`, 1)
-  await Promise.all(manifest.capabilities.map((capability) => verifyCapability(root, capability)))
-  return { root, manifest }
+  return { root, manifest: await verifyHarnessRoot(root, identifier) }
 }
 
 export const discoverInstalledHarnesses = async (dataDirectory: string): Promise<readonly InstalledHarness[]> => {
