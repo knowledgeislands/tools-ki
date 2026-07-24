@@ -39,7 +39,24 @@ document the intended interface.
 They are not available in this build, do not appear in
 .B ki help
 or completion output, and may change before release.
-.SS Interface and diagnostics
+.SS Repository maintenance
+.TP
+.B ki repo audit [--repo \fIpath\fR] [--skill \fIskill\fR]
+Run the native read-only operations registered by the selected repository's
+declared capabilities. The host verifies every selected harness inventory and
+integrity-covered operation before importing it in process; it never dispatches
+repository-vendored runners.
+.TP
+.B ki repo conform [--repo \fIpath\fR] [--skill \fIskill\fR] [--dry-run]
+Plan and apply the same capabilities' safe writes, then re-audit. A dry run
+validates every complete write set and reports the affected paths without
+changing the repository. Publication refuses unsafe, changed, duplicate, or
+symbolic-link targets.
+.TP
+.B *ki repo educate [--repo \fIpath\fR] [--skill \fIskill\fR]
+Explain the selected repository's declared capabilities and their recommended
+maintenance actions without changing repository state.
+.SS Diagnostics
 .TP
 .B help [command]
 Print root or command-specific help.
@@ -74,36 +91,7 @@ for a versioned machine-readable result.
 .TP
 .B *ki docs
 Open or print the appropriate KI documentation location.
-.SS Acquisition
-.TP
-.B acquire chatgpt import \fIcapture-directory\fR --output \fIkep-directory\fR [--dry-run] [--json]
-Validate a user-prepared local ChatGPT capture and create a deterministic
-Knowledge Export Package (KEP).
-The command does not control a browser, contact ChatGPT, read credentials,
-discover a repository, or extract reusable knowledge.
-.SS Harness and capability management
-.TP
-.B *ki list
-List installed harnesses, capabilities, and the activation status relevant to
-the current working directory.
-.TP
-.B ki harness list [--json]
-List the verified compatible harnesses already installed beneath the KI XDG data
-directory. The command verifies each generated lock and its declared integrity-covered
-files before reporting it, and does not create or change user state.
-.TP
-.B ki harness install|uninstall \fIharness-id\fR | info \fIharness-id\fR
-Install, remove, or inspect one verified, user-installed compatible harness.
-The base harness cannot be removed; \fBki harness uninstall --dry-run\fR verifies
-that a non-base harness can be removed without changing user state.
-.TP
-.B *ki missing|outdated
-Report capabilities absent from the selected scope or with a newer verified
-latest release available.
-.TP
-.B *ki install|reinstall|uninstall \fIcapability\fR
-Manage a named capability; its final relationship to explicit scope activation
-commands remains to be settled.
+.SS General maintenance
 .TP
 .B *ki update
 Update the executable and refresh installed harnesses.
@@ -111,28 +99,44 @@ Update the executable and refresh installed harnesses.
 .B *ki upgrade
 Apply newer capability releases in the resolved repository context.
 .TP
+.B *ki missing|outdated
+Report capabilities absent from the selected scope or with a newer verified
+latest release available.
+.TP
 .B *ki search|cleanup
 Search the available capability set or remove managed stale state.
-.SS Scoped capability activation
+.SS Harness management
 .TP
-.B *ki repo skill add|remove \fIharness-id:skill-name\fR
+.B ki harness info \fIharness-id\fR [--json]
+Inspect one verified, user-installed compatible harness and its capability
+inventory without changing user state.
+.TP
+.B ki harness list [--json]
+List the verified compatible harnesses already installed beneath the KI XDG data
+directory. The command verifies each generated lock and its declared integrity-covered
+files before reporting it, and does not create or change user state.
+.TP
+.B ki harness install \fIharness-id\fR
+Install one configured, verified compatible harness from its immutable release
+evidence.
+.TP
+.B ki harness uninstall \fIharness-id\fR [--dry-run]
+Remove one verified non-base harness. The base harness cannot be removed; a dry
+run verifies that a non-base harness can be removed without changing user state.
+.SS Skills management
+.TP
+.B *ki skill repo add|remove \fIharness-id:skill-name\fR
 Add or remove a registered skill in one selected repository.
 .TP
-.B *ki user skill add|remove \fIharness-id:skill-name\fR
+.B *ki skill user add|remove \fIharness-id:skill-name\fR
 Add or remove a registered skill in the selected user runtime.
-.SS Repository maintenance
+.SS Acquisition
 .TP
-.B ki repo audit [--repo \fIpath\fR] [--skill \fIskill\fR]
-Run the native read-only operations registered by the selected repository's
-declared capabilities. The host verifies every selected harness inventory and
-integrity-covered operation before importing it in process; it never dispatches
-repository-vendored runners.
-.TP
-.B ki repo conform [--repo \fIpath\fR] [--skill \fIskill\fR] [--dry-run]
-Plan and apply the same capabilities' safe writes, then re-audit. A dry run
-validates every complete write set and reports the affected paths without
-changing the repository. Publication refuses unsafe, changed, duplicate, or
-symbolic-link targets.
+.B acquire chatgpt import \fIcapture-directory\fR --output \fIkep-directory\fR [--dry-run] [--json]
+Validate a user-prepared local ChatGPT capture and create a deterministic
+Knowledge Export Package (KEP).
+The command does not control a browser, contact ChatGPT, read credentials,
+discover a repository, or extract reusable knowledge.
 .SH XDG PATHS
 .B ki
 uses the XDG Base Directory variables for user-owned KI state.
