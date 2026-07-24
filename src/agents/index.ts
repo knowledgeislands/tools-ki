@@ -27,6 +27,18 @@ interface ConfiguredHarness {
   readonly sha256: string
 }
 
+interface StringListSection {
+  readonly ids?: unknown
+}
+
+interface HarnessSection {
+  readonly releases?: unknown
+}
+
+interface LocalSection {
+  readonly path?: unknown
+}
+
 export interface UserConfigurationInspection {
   readonly path: string
   readonly state: 'missing' | 'valid' | 'invalid'
@@ -72,15 +84,25 @@ const renderConfiguration = (
 ): string =>
   [
     'schema = 1',
-    `agents = [${agents.map((agent) => JSON.stringify(agent.descriptor.id)).join(', ')}]`,
-    `harnesses = [${harnesses
-      .map(
-        (harness) =>
-          `{ id = ${JSON.stringify(harness.id)}, url = ${JSON.stringify(harness.url)}, sha256 = ${JSON.stringify(harness.sha256)} }`
-      )
-      .join(', ')}]`,
-    `skills = [${skills.map((skill) => JSON.stringify(skill)).join(', ')}]`,
-    ...(local ? [`local = ${JSON.stringify(local)}`] : []),
+    '',
+    '[agents]',
+    'ids = [',
+    ...agents.map((agent) => `  ${JSON.stringify(agent.descriptor.id)},`),
+    ']',
+    '',
+    '[harnesses]',
+    'releases = [',
+    ...harnesses.map(
+      (harness) =>
+        `  { id = ${JSON.stringify(harness.id)}, url = ${JSON.stringify(harness.url)}, sha256 = ${JSON.stringify(harness.sha256)} },`
+    ),
+    ']',
+    '',
+    '[skills]',
+    'ids = [',
+    ...skills.map((skill) => `  ${JSON.stringify(skill)},`),
+    ']',
+    ...(local ? ['', '[local]', `path = ${JSON.stringify(local)}`] : []),
     ''
   ].join('\n')
 
@@ -91,6 +113,12 @@ const inspectStringList = (value: unknown, key: string, errors: string[]): strin
   }
   if (new Set(value).size !== value.length) errors.push(`${key} repeats a value`)
   return value
+}
+
+const inspectSection = (value: unknown, key: string, errors: string[]): Record<string, unknown> => {
+  if (isRecord(value)) return value
+  errors.push(`${key} must be a TOML table`)
+  return {}
 }
 
 export const inspectUserConfiguration = async (configurationDirectory: string): Promise<UserConfigurationInspection> => {
@@ -149,15 +177,27 @@ export const inspectUserConfiguration = async (configurationDirectory: string): 
     .map((key) => `unrecognised key ${key}`)
   const errors: string[] = []
   if (configuration.schema !== 1) errors.push('schema must equal 1')
-  const agents = inspectStringList(configuration.agents, 'agents', errors)
+  const agentSection = inspectSection(configuration.agents, 'agents', errors) as StringListSection
+  for (const key of Object.keys(agentSection)) {
+    if (key !== 'ids') warnings.push(`agents has unrecognised key ${key}`)
+  }
+  const agents = inspectStringList(agentSection.ids, 'agents.ids', errors)
   for (const agent of agents) {
     if (!agentDescriptors.some((descriptor) => descriptor.id === agent)) warnings.push(`unrecognised agent ${agent}`)
   }
-  const skills = inspectStringList(configuration.skills, 'skills', errors)
+  const skillSection = inspectSection(configuration.skills, 'skills', errors) as StringListSection
+  for (const key of Object.keys(skillSection)) {
+    if (key !== 'ids') warnings.push(`skills has unrecognised key ${key}`)
+  }
+  const skills = inspectStringList(skillSection.ids, 'skills.ids', errors)
+  const harnessSection = inspectSection(configuration.harnesses, 'harnesses', errors) as HarnessSection
+  for (const key of Object.keys(harnessSection)) {
+    if (key !== 'releases') warnings.push(`harnesses has unrecognised key ${key}`)
+  }
   const harnesses: string[] = []
-  if (!Array.isArray(configuration.harnesses)) errors.push('harnesses must be an array')
+  if (!Array.isArray(harnessSection.releases)) errors.push('harnesses.releases must be an array')
   else {
-    for (const [index, harness] of configuration.harnesses.entries()) {
+    for (const [index, harness] of harnessSection.releases.entries()) {
       if (!isRecord(harness)) {
         errors.push(`harnesses[${index}] must be a table`)
         continue
@@ -175,9 +215,15 @@ export const inspectUserConfiguration = async (configurationDirectory: string): 
       if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) errors.push(`harnesses[${index}] sha256 must be lowercase SHA-256`)
     }
   }
-  const local =
-    configuration.local === undefined ? null : typeof configuration.local === 'string' && configuration.local ? configuration.local : null
-  if (configuration.local !== undefined && local === null) errors.push('local must be a non-empty path string')
+  const localSection =
+    configuration.local === undefined ? undefined : (inspectSection(configuration.local, 'local', errors) as LocalSection)
+  if (localSection) {
+    for (const key of Object.keys(localSection)) {
+      if (key !== 'path') warnings.push(`local has unrecognised key ${key}`)
+    }
+  }
+  const local = localSection === undefined ? null : typeof localSection.path === 'string' && localSection.path ? localSection.path : null
+  if (localSection !== undefined && local === null) errors.push('local.path must be a non-empty path string')
   return { path, state: errors.length ? 'invalid' : 'valid', agents, harnesses, skills, local, warnings, errors }
 }
 
@@ -194,21 +240,29 @@ const readConfiguration = async (configurationDirectory: string, homeDirectory: 
   }
   if (!isRecord(parsed)) throw new KiError('agent configuration must use schema 1', 1)
   const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown; local?: unknown }
+  const agentSection = isRecord(configuration.agents) ? (configuration.agents as StringListSection) : undefined
+  const skillSection = isRecord(configuration.skills) ? (configuration.skills as StringListSection) : undefined
+  const localSection =
+    configuration.local === undefined ? undefined : isRecord(configuration.local) ? (configuration.local as LocalSection) : null
   if (
     configuration.schema !== 1 ||
-    !Array.isArray(configuration.agents) ||
-    configuration.agents.some((agent) => typeof agent !== 'string') ||
-    (configuration.skills !== undefined &&
-      (!Array.isArray(configuration.skills) || configuration.skills.some((skill) => typeof skill !== 'string'))) ||
-    (configuration.local !== undefined && (typeof configuration.local !== 'string' || !configuration.local))
+    !agentSection ||
+    !Array.isArray(agentSection.ids) ||
+    agentSection.ids.some((agent) => typeof agent !== 'string') ||
+    !skillSection ||
+    !Array.isArray(skillSection.ids) ||
+    skillSection.ids.some((skill) => typeof skill !== 'string') ||
+    (localSection !== undefined && (localSection === null || typeof localSection.path !== 'string' || !localSection.path))
   ) {
-    throw new KiError('KI configuration must declare string agents and skills arrays and an optional local path', 1)
+    throw new KiError('KI configuration must declare agents.ids and skills.ids string arrays and an optional local.path', 1)
   }
-  if (new Set(configuration.agents).size !== configuration.agents.length) throw new KiError('agent configuration repeats an agent', 1)
-  if (configuration.skills && new Set(configuration.skills).size !== configuration.skills.length) {
+  const agents = agentSection.ids as string[]
+  const skills = skillSection.ids as string[]
+  if (new Set(agents).size !== agents.length) throw new KiError('agent configuration repeats an agent', 1)
+  if (new Set(skills).size !== skills.length) {
     throw new KiError('KI configuration repeats a skill', 1)
   }
-  return configuration.agents.map((id) => {
+  return agents.map((id) => {
     const known = descriptor(id)
     return { descriptor: known, home: resolve(homeDirectory, known.paths.home) }
   })
@@ -271,11 +325,11 @@ export const localBootstrapSkillSource = async (harnessDirectory: string): Promi
 export const setLocalBootstrapHarness = async (configurationDirectory: string, local?: string): Promise<void> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
   const contents = await readFile(path, 'utf8')
-  const expression = /^local\s*=.*(?:\n|$)/m
+  const expression = /(?:^|\n)\[local\]\npath\s*=.*(?:\n|$)/m
   const updated = local
     ? expression.test(contents)
-      ? contents.replace(expression, `local = ${JSON.stringify(local)}\n`)
-      : `${contents.trimEnd()}\nlocal = ${JSON.stringify(local)}\n`
+      ? contents.replace(expression, `\n[local]\npath = ${JSON.stringify(local)}\n`)
+      : `${contents.trimEnd()}\n\n[local]\npath = ${JSON.stringify(local)}\n`
     : contents.replace(expression, '')
   await writeFile(path, updated, 'utf8')
 }
@@ -288,13 +342,13 @@ export const configureBootstrapAgents = async (options: {
   const path = bootstrapConfigurationPath(options.configurationDirectory)
   const state = await lstat(options.configurationDirectory).catch(() => undefined)
   if (state && (!state.isDirectory() || state.isSymbolicLink())) throw new KiError('KI configuration directory must be a directory', 1)
-  const configured = await readConfiguration(options.configurationDirectory, options.homeDirectory)
+  const configured = options.refresh ? undefined : await readConfiguration(options.configurationDirectory, options.homeDirectory)
   const agents = options.refresh || !configured ? await detectAgents(options.homeDirectory) : configured
   if (!configured) {
     await mkdir(options.configurationDirectory, { recursive: true })
     await writeFile(path, renderConfiguration(agents), { encoding: 'utf8' })
   }
-  return { agents, disposition: !configured ? 'created' : options.refresh ? 'refreshed' : 'reused' }
+  return { agents, disposition: options.refresh ? 'refreshed' : !configured ? 'created' : 'reused' }
 }
 
 export const refreshUserConfiguration = async (

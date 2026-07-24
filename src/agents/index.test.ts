@@ -47,7 +47,21 @@ test('bootstraps a user-managed agent configuration from known agents', async ()
   expect(repeated.map((agent) => agent.descriptor.id)).toEqual(['claude-code'])
   expect(configured.map((agent) => agent.descriptor.id)).toEqual(['claude-code'])
   expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toBe(
-    'schema = 1\nagents = ["claude-code"]\nharnesses = []\nskills = []\n'
+    `schema = 1
+
+[agents]
+ids = [
+  "claude-code",
+]
+
+[harnesses]
+releases = [
+]
+
+[skills]
+ids = [
+]
+`
   )
   expect(await realpath(join(home, '.claude', 'skills', 'ki-bootstrap'))).toBe(await realpath(source))
 })
@@ -72,14 +86,48 @@ test('refresh redetects every configured runtime and installed harness capabilit
   expect(refreshed.map((agent) => agent.descriptor.id)).toEqual(['claude-code', 'chatgpt-codex'])
   expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toBe(
     `schema = 1
-agents = ["claude-code", "chatgpt-codex"]
-harnesses = [{ id = "knowledgeislands/ki-agentic-harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'0'.repeat(64)}" }]
-skills = ["knowledgeislands/ki-agentic-harness:ki-bootstrap"]
+
+[agents]
+ids = [
+  "claude-code",
+  "chatgpt-codex",
+]
+
+[harnesses]
+releases = [
+  { id = "knowledgeislands/ki-agentic-harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'0'.repeat(64)}" },
+]
+
+[skills]
+ids = [
+  "knowledgeislands/ki-agentic-harness:ki-bootstrap",
+]
 `
   )
   expect(await realpath(join(home, '.agents', 'skills', 'ki-bootstrap'))).toBe(
     await realpath(join(data, 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'latest', 'skills', 'keystone', 'ki-bootstrap'))
   )
+})
+
+test('refresh replaces a legacy configuration with the current sectioned schema', async () => {
+  const root = await temporaryDirectory()
+  const home = join(root, 'home')
+  const configuration = join(root, 'config', 'ki')
+  const data = join(root, 'data', 'ki')
+  await mkdir(join(home, '.claude'), { recursive: true })
+  await mkdir(configuration, { recursive: true })
+  await writeFile(join(configuration, 'config.toml'), 'schema = 1\nagents = ["claude-code"]\nharnesses = []\nskills = []\n')
+  await installBootstrapHarness(data)
+
+  const refreshed = await bootstrapAgents({
+    homeDirectory: home,
+    configurationDirectory: configuration,
+    dataDirectory: data,
+    refresh: true
+  })
+
+  expect(refreshed.map((agent) => agent.descriptor.id)).toEqual(['claude-code'])
+  expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toContain('[agents]\nids = [\n  "claude-code",\n]')
 })
 
 test('requires bootstrap before reading configured agents', async () => {

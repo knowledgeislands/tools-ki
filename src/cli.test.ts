@@ -219,10 +219,16 @@ describe('baseline commands', () => {
       join(configuration, 'config.toml'),
       [
         'schema = 2',
-        'agents = ["claude-code", "unknown-agent"]',
-        'harnesses = [{ id = "example/harness", url = "http://example.test/archive.tar.gz", sha256 = "invalid", extra = true }]',
-        'skills = ["example:skill", "example:skill"]',
         'unexpected = true',
+        '',
+        '[agents]',
+        'ids = ["claude-code", "unknown-agent"]',
+        '',
+        '[harnesses]',
+        'releases = [{ id = "example/harness", url = "http://example.test/archive.tar.gz", sha256 = "invalid", extra = true }]',
+        '',
+        '[skills]',
+        'ids = ["example:skill", "example:skill"]',
         ''
       ].join('\n')
     )
@@ -255,7 +261,7 @@ describe('baseline commands', () => {
         'schema must equal 1',
         'harnesses[0] url must be an HTTPS URL',
         'harnesses[0] sha256 must be lowercase SHA-256',
-        'skills repeats a value'
+        'skills.ids repeats a value'
       ])
     )
     expect(human.output).toContain('Warnings\n  - unrecognised key unexpected')
@@ -301,9 +307,21 @@ describe('baseline commands', () => {
     })
     expect(await readFile(join(configuration, 'ki', 'config.toml'), 'utf8')).toBe(
       `schema = 1
-agents = ["chatgpt-codex"]
-harnesses = [{ id = "knowledgeislands/ki-agentic-harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'0'.repeat(64)}" }]
-skills = ["knowledgeislands/ki-agentic-harness:ki-bootstrap"]
+
+[agents]
+ids = [
+  "chatgpt-codex",
+]
+
+[harnesses]
+releases = [
+  { id = "knowledgeislands/ki-agentic-harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'0'.repeat(64)}" },
+]
+
+[skills]
+ids = [
+  "knowledgeislands/ki-agentic-harness:ki-bootstrap",
+]
 `
     )
   })
@@ -335,10 +353,22 @@ ki-bootstrap for chatgpt-codex installed
     expect((await lstat(join(home, '.agents', 'skills', 'ki-bootstrap'))).isSymbolicLink()).toBe(true)
     expect(await readFile(join(root, 'config', 'ki', 'config.toml'), 'utf8')).toBe(
       `schema = 1
-agents = ["chatgpt-codex"]
-harnesses = []
-skills = []
-local = ${JSON.stringify(await realpath(harness))}
+
+[agents]
+ids = [
+  "chatgpt-codex",
+]
+
+[harnesses]
+releases = [
+]
+
+[skills]
+ids = [
+]
+
+[local]
+path = ${JSON.stringify(await realpath(harness))}
 `
     )
   })
