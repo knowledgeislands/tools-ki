@@ -3,14 +3,12 @@ import { join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../core/errors.ts'
 import { baseHarnessIdentifier, readInstalledHarness } from '../core/harness.ts'
+import type { AgentDescriptor } from './types.ts'
 
-export const agentDescriptors = [
-  { id: 'claude-code', home: '.claude', skills: join('.claude', 'skills') },
-  { id: 'chatgpt-codex', home: '.agents', skills: join('.agents', 'skills') }
-] as const
-
-export type AgentId = (typeof agentDescriptors)[number]['id']
-export type AgentDescriptor = (typeof agentDescriptors)[number]
+const agentDescriptors: readonly AgentDescriptor[] = [
+  require('./claude-code.ts').default, 
+  require('./chatgpt-codex.ts').default
+]
 
 export interface InstalledAgent {
   readonly descriptor: AgentDescriptor
@@ -64,7 +62,7 @@ const readConfiguration = async (configurationDirectory: string, homeDirectory: 
   if (new Set(configuration.agents).size !== configuration.agents.length) throw new KiError('agent configuration repeats an agent', 1)
   return configuration.agents.map((id) => {
     const known = descriptor(id)
-    return { descriptor: known, home: resolve(homeDirectory, known.home) }
+    return { descriptor: known, home: resolve(homeDirectory, known.paths.home) }
   })
 }
 
@@ -72,7 +70,7 @@ const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAg
   (
     await Promise.all(
       agentDescriptors.map(async (candidate) => {
-        const home = resolve(homeDirectory, candidate.home)
+        const home = resolve(homeDirectory, candidate.paths.home)
         return (await physicalDirectory(home)) ? { descriptor: candidate, home } : undefined
       })
     )
@@ -144,7 +142,7 @@ export const agentSkillDirectory = (agent: InstalledAgent, scope: 'user' | 'repo
   scope === 'user'
     ? join(agent.home, 'skills')
     : repository
-      ? join(repository, agent.descriptor.skills)
+      ? join(repository, agent.descriptor.paths.skills)
       : (() => {
           throw new KiError('repository scope requires a repository', 2)
         })()
