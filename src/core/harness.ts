@@ -18,7 +18,6 @@ export interface HarnessCapability {
   readonly kind: string
   readonly name: string
   readonly source: string
-  readonly files: readonly { readonly path: string; readonly sha256: string }[]
   readonly operations: readonly RegisteredOperation[]
 }
 
@@ -27,6 +26,7 @@ export interface HarnessManifest {
   readonly id: string
   readonly latest: string
   readonly ki: string
+  readonly files: readonly { readonly path: string; readonly sha256: string }[]
   readonly capabilities: readonly HarnessCapability[]
 }
 
@@ -55,10 +55,9 @@ const stringField = (source: Record<string, unknown>, field: string, description
   return value
 }
 
-const parseOperation = (value: unknown, description: string): RegisteredOperation => {
+const parseOperation = (value: unknown, mode: 'audit' | 'conform', description: string): RegisteredOperation => {
   if (!isRecord(value)) throw new KiError(`${description} must be a table`, 1)
-  const { mode, module } = value
-  if (mode !== 'audit' && mode !== 'conform') throw new KiError(`${description} mode must be audit or conform`, 1)
+  const { module } = value
   return {
     protocol: stringField(value, 'protocol', description),
     module: safeRelativePath(module, `${description} module`),
@@ -67,31 +66,36 @@ const parseOperation = (value: unknown, description: string): RegisteredOperatio
   }
 }
 
-const parseCapability = (value: unknown, index: number): HarnessCapability => {
-  const description = `capabilities[${index}]`
-  if (!isRecord(value)) throw new KiError(`${description} must be a table`, 1)
-  const { files: configuredFiles, operations: configuredOperations, source } = value
-  if (!Array.isArray(configuredFiles) || !configuredFiles.length)
-    throw new KiError(`${description} must declare integrity-covered files`, 1)
-  const files = configuredFiles.map((entry, fileIndex) => {
-    if (!isRecord(entry)) throw new KiError(`${description}.files[${fileIndex}] must be a table`, 1)
-    const { path } = entry
-    const digest = stringField(entry, 'sha256', `${description}.files[${fileIndex}]`)
-    if (!sha256.test(digest)) throw new KiError(`${description}.files[${fileIndex}] sha256 must be lowercase SHA-256`, 1)
-    return { path: safeRelativePath(path, `${description}.files[${fileIndex}] path`), sha256: digest }
+const parseFiles = (value: unknown): readonly { readonly path: string; readonly sha256: string }[] => {
+  if (!isRecord(value)) throw new KiError('harness.toml must declare a [files] table', 1)
+  const paths = new Set<string>()
+  return Object.entries(value).map(([path, digest]) => {
+    const safePath = safeRelativePath(path, 'files path')
+    if (paths.has(safePath)) throw new KiError(`harness.toml repeats integrity file ${safePath}`, 1)
+    paths.add(safePath)
+    if (typeof digest !== 'string' || !sha256.test(digest)) throw new KiError(`integrity file ${safePath} must use lowercase SHA-256`, 1)
+    return { path: safePath, sha256: digest }
   })
+}
+
+const parseCapability = (name: string, value: unknown): HarnessCapability => {
+  const description = `capabilities.${name}`
+  if (!isRecord(value)) throw new KiError(`${description} must be a table`, 1)
+  const { operations: configuredOperations, source } = value
   const operations =
     configuredOperations === undefined
       ? []
-      : Array.isArray(configuredOperations)
-        ? configuredOperations.map((entry, operationIndex) => parseOperation(entry, `${description}.operations[${operationIndex}]`))
+      : isRecord(configuredOperations)
+        ? Object.entries(configuredOperations).map(([mode, operation]) => {
+            if (mode !== 'audit' && mode !== 'conform') throw new KiError(`${description}.operations must use audit or conform keys`, 1)
+            return parseOperation(operation, mode, `${description}.operations.${mode}`)
+          })
         : null
-  if (!operations) throw new KiError(`${description} operations must be an array`, 1)
+  if (!operations) throw new KiError(`${description}.operations must be a table`, 1)
   return {
     kind: stringField(value, 'kind', description),
-    name: stringField(value, 'name', description),
+    name,
     source: safeRelativePath(source, `${description} source`),
-    files,
     operations
   }
 }
@@ -104,12 +108,13 @@ export const parseHarnessManifest = (text: string): HarnessManifest => {
     throw new KiError('harness.toml must be valid TOML', 1)
   }
   if (!isRecord(parsed)) throw new KiError('harness.toml must be a table', 1)
-  const { schema, capabilities: configuredCapabilities } = parsed
+  const { schema, capabilities: configuredCapabilities, files: configuredFiles } = parsed
   if (schema !== 1) throw new KiError('harness.toml schema must be 1', 1)
   const id = stringField(parsed, 'id', 'harness.toml')
   if (!harnessIdentifier.test(id)) throw new KiError('harness.toml id must be an owner/name identifier', 1)
-  if (!Array.isArray(configuredCapabilities)) throw new KiError('harness.toml must declare capabilities', 1)
-  const capabilities = configuredCapabilities.map(parseCapability)
+  if (!isRecord(configuredCapabilities)) throw new KiError('harness.toml must declare a [capabilities] table', 1)
+  const files = parseFiles(configuredFiles)
+  const capabilities = Object.entries(configuredCapabilities).map(([name, capability]) => parseCapability(name, capability))
   const identities = new Set<string>()
   for (const capability of capabilities) {
     const identity = `${capability.kind}:${capability.name}`
@@ -121,6 +126,7 @@ export const parseHarnessManifest = (text: string): HarnessManifest => {
     id,
     latest: stringField(parsed, 'latest', 'harness.toml'),
     ki: stringField(parsed, 'ki', 'harness.toml'),
+    files,
     capabilities
   }
 }
@@ -141,24 +147,10 @@ const physicalDirectory = async (path: string, description: string): Promise<str
   return realpath(path)
 }
 
-const verifyCapability = async (root: string, capability: HarnessCapability): Promise<void> => {
+const verifyCapability = async (root: string, capability: HarnessCapability, paths: ReadonlySet<string>): Promise<void> => {
   const source = join(root, capability.source)
   const physicalSource = await physicalDirectory(source, `${capability.kind}:${capability.name} source`)
   if (!contained(root, physicalSource)) throw new KiError(`${capability.kind}:${capability.name} source escapes the harness`, 1)
-  const paths = new Set<string>()
-  for (const file of capability.files) {
-    if (paths.has(file.path)) throw new KiError(`${capability.kind}:${capability.name} repeats integrity file ${file.path}`, 1)
-    paths.add(file.path)
-    const path = join(root, file.path)
-    await regularFile(path, `${capability.kind}:${capability.name} integrity file ${file.path}`)
-    const physicalFile = await realpath(path)
-    if (!contained(root, physicalFile)) throw new KiError(`${capability.kind}:${capability.name} integrity file escapes the harness`, 1)
-    const digest = createHash('sha256')
-      .update(await readFile(path))
-      .digest('hex')
-    if (digest !== file.sha256)
-      throw new KiError(`${capability.kind}:${capability.name} integrity file ${file.path} does not match its digest`, 1)
-  }
   for (const operation of capability.operations) {
     if (!paths.has(operation.module)) {
       throw new KiError(`${capability.kind}:${capability.name} operation module must be integrity-covered`, 1)
@@ -173,7 +165,21 @@ export const verifyHarnessRoot = async (rootPath: string, identifier: string): P
   await regularFile(manifestPath, `installed harness ${identifier} manifest`)
   const manifest = parseHarnessManifest(await readFile(manifestPath, 'utf8'))
   if (manifest.id !== identifier) throw new KiError(`installed harness ${identifier} manifest identity does not match its location`, 1)
-  await Promise.all(manifest.capabilities.map((capability) => verifyCapability(root, capability)))
+  const paths = new Set(manifest.files.map((file) => file.path))
+  await Promise.all(
+    manifest.files.map(async (file) => {
+      const path = join(root, file.path)
+      await regularFile(path, `installed harness ${identifier} integrity file ${file.path}`)
+      const physicalFile = await realpath(path)
+      if (!contained(root, physicalFile)) throw new KiError(`installed harness ${identifier} integrity file escapes the harness`, 1)
+      const digest = createHash('sha256')
+        .update(await readFile(path))
+        .digest('hex')
+      if (digest !== file.sha256)
+        throw new KiError(`installed harness ${identifier} integrity file ${file.path} does not match its digest`, 1)
+    })
+  )
+  await Promise.all(manifest.capabilities.map((capability) => verifyCapability(root, capability, paths)))
   return manifest
 }
 

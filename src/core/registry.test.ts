@@ -77,14 +77,12 @@ test('installs a configured gzip tar harness only after archive and manifest ver
       'latest = "2026.07.24"',
       'ki = ">=0.2.0"',
       '',
-      '[[capabilities]]',
-      'kind = "skill"',
-      'name = "ki-example"',
-      'source = "skills/ki-example"',
+      '[files]',
+      `"skills/ki-example/SKILL.md" = "${digest(skill)}"`,
       '',
-      '[[capabilities.files]]',
-      'path = "skills/ki-example/SKILL.md"',
-      `sha256 = "${digest(skill)}"`,
+      '[capabilities.ki-example]',
+      'kind = "skill"',
+      'source = "skills/ki-example"',
       ''
     ].join('\n')
   })

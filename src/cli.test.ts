@@ -136,27 +136,21 @@ const installHarness = async (data: string, auditSource?: string, conformSource?
       'latest = "2026.07.24"',
       'ki = ">=0.2.0"',
       '',
-      '[[capabilities]]',
-      'kind = "skill"',
-      'name = "ki-example"',
-      'source = "skills/ki-example"',
+      '[files]',
+      `"skills/ki-example/SKILL.md" = "${digest}"`,
+      ...operations.map(
+        (operation) => `"operations/${operation.mode}.mjs" = "${createHash('sha256').update(operation.source).digest('hex')}"`
+      ),
       '',
-      '[[capabilities.files]]',
-      'path = "skills/ki-example/SKILL.md"',
-      `sha256 = "${digest}"`,
+      '[capabilities.ki-example]',
+      'kind = "skill"',
+      'source = "skills/ki-example"',
       ...operations.flatMap((operation) => [
         '',
-        '[[capabilities.files]]',
-        `path = "operations/${operation.mode}.mjs"`,
-        `sha256 = "${createHash('sha256').update(operation.source).digest('hex')}"`
-      ]),
-      ...operations.flatMap((operation) => [
-        '',
-        '[[capabilities.operations]]',
+        `[capabilities.ki-example.operations.${operation.mode}]`,
         'protocol = "ki/native-operation@1"',
         `module = "operations/${operation.mode}.mjs"`,
-        `export = "${operation.mode}"`,
-        `mode = "${operation.mode}"`
+        `export = "${operation.mode}"`
       ]),
       ''
     ].join('\n')

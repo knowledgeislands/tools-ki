@@ -37,24 +37,18 @@ const installHarness = async (data: string, identifier = 'example/harness'): Pro
       'latest = "2026.07.24"',
       'ki = ">=0.2.0"',
       '',
-      '[[capabilities]]',
+      '[files]',
+      `"skills/ki-example/SKILL.md" = "${digest(skill)}"`,
+      `"operations/example.ts" = "${digest(operation)}"`,
+      '',
+      '[capabilities.ki-example]',
       'kind = "skill"',
-      'name = "ki-example"',
       'source = "skills/ki-example"',
       '',
-      '[[capabilities.files]]',
-      'path = "skills/ki-example/SKILL.md"',
-      `sha256 = "${digest(skill)}"`,
-      '',
-      '[[capabilities.files]]',
-      'path = "operations/example.ts"',
-      `sha256 = "${digest(operation)}"`,
-      '',
-      '[[capabilities.operations]]',
+      '[capabilities.ki-example.operations.audit]',
       'protocol = "ki/native-operation@1"',
       'module = "operations/example.ts"',
       'export = "audit"',
-      'mode = "audit"',
       ''
     ].join('\n')
   )
@@ -69,14 +63,12 @@ test('parses a compatible harness manifest with integrity-covered operations', (
       'latest = "2026.07.24"',
       'ki = ">=0.2.0"',
       '',
-      '[[capabilities]]',
-      'kind = "skill"',
-      'name = "ki-example"',
-      'source = "skills/ki-example"',
+      '[files]',
+      `"skills/ki-example/SKILL.md" = "${digest('# ki-example\n')}"`,
       '',
-      '[[capabilities.files]]',
-      'path = "skills/ki-example/SKILL.md"',
-      `sha256 = "${digest('# ki-example\n')}"`,
+      '[capabilities.ki-example]',
+      'kind = "skill"',
+      'source = "skills/ki-example"',
       ''
     ].join('\n')
   )
@@ -86,7 +78,7 @@ test('parses a compatible harness manifest with integrity-covered operations', (
 })
 
 test('rejects malformed manifest identities', () => {
-  expect(() => parseHarnessManifest('schema = 1\nid = "../unsafe"\nlatest = "x"\nki = "x"\ncapabilities = []\n')).toThrow(
+  expect(() => parseHarnessManifest('schema = 1\nid = "../unsafe"\nlatest = "x"\nki = "x"\n[files]\n[capabilities]\n')).toThrow(
     'harness.toml id must be an owner/name identifier'
   )
 })
