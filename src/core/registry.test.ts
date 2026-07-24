@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { afterEach, expect, test } from 'vitest'
 import { readInstalledHarness } from './harness.ts'
-import { installHarness, uninstallHarness } from './registry.ts'
+import { canonicalHarnessRelease, installHarness, readHarnessRegistry, uninstallHarness } from './registry.ts'
 
 const temporaryDirectories: string[] = []
 
@@ -23,15 +23,18 @@ const digest = (contents: string | Uint8Array): string => createHash('sha256').u
 
 const octal = (value: number, length: number): string => `${value.toString(8).padStart(length - 1, '0')}\0`
 
-const tar = (files: Readonly<Record<string, string>>): Uint8Array => {
+type ArchiveEntry = string | { readonly type: '2' }
+
+const tar = (files: Readonly<Record<string, ArchiveEntry>>): Uint8Array => {
   const chunks: Uint8Array[] = []
-  for (const [path, contents] of Object.entries(files)) {
+  for (const [path, entry] of Object.entries(files)) {
+    const contents = typeof entry === 'string' ? entry : ''
     const encoded = new TextEncoder().encode(contents)
     const header = new Uint8Array(512)
     header.set(new TextEncoder().encode(path), 0)
     header.set(new TextEncoder().encode(octal(0o644, 8)), 100)
     header.set(new TextEncoder().encode(octal(encoded.length, 12)), 124)
-    header[156] = '0'.charCodeAt(0)
+    header[156] = (typeof entry === 'string' ? '0' : entry.type).charCodeAt(0)
     chunks.push(header, encoded, new Uint8Array((512 - (encoded.length % 512)) % 512))
   }
   chunks.push(new Uint8Array(1024))
@@ -85,6 +88,36 @@ test('installs only the harness payload and generates a lock from the verified a
   expect(await readFile(join(data, 'harnesses', 'example', 'harness', 'latest', 'skills', 'ki-example', 'SKILL.md'), 'utf8')).toBe(skill)
   await expect(lstat(join(data, 'harnesses', 'example', 'harness', 'latest', 'docs'))).rejects.toThrow()
   expect(await readFile(join(data, 'harnesses', 'example', 'harness', 'latest', 'harness-lock.toml'), 'utf8')).toContain('[files]')
+})
+
+test('includes the immutable canonical harness without requiring user registry configuration', async () => {
+  const root = await temporaryDirectory()
+
+  await expect(readHarnessRegistry(join(root, 'config', 'ki'))).resolves.toEqual([canonicalHarnessRelease])
+})
+
+test('drops only legacy vendored links from the selected payload', async () => {
+  const root = await temporaryDirectory()
+  const archive = tar({
+    'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n',
+    'skills/ki-example/scripts/vendored/legacy.ts': { type: '2' }
+  })
+  const { config, data } = await configuredArchive(root, archive)
+
+  await expect(installHarness(config, data, 'example/harness', async () => new Response(archive))).resolves.toBeDefined()
+  await expect(
+    lstat(join(data, 'harnesses', 'example', 'harness', 'latest', 'skills', 'ki-example', 'scripts', 'vendored', 'legacy.ts'))
+  ).rejects.toThrow()
+})
+
+test('refuses links outside the legacy vendored payload', async () => {
+  const root = await temporaryDirectory()
+  const archive = tar({ 'skills/ki-example/SKILL.md': { type: '2' } })
+  const { config, data } = await configuredArchive(root, archive)
+
+  await expect(installHarness(config, data, 'example/harness', async () => new Response(archive))).rejects.toThrow(
+    'may contain only regular files and directories'
+  )
 })
 
 test('refuses an archive that does not match configured immutable evidence without creating an installation', async () => {

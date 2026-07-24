@@ -105,7 +105,7 @@ const installBootstrapSkill = async (agent: InstalledAgent, source: string): Pro
   return false
 }
 
-const bootstrapCapabilitySource = async (dataDirectory: string): Promise<string> => {
+export const installedBootstrapSkillSource = async (dataDirectory: string): Promise<string> => {
   const root = join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'latest')
   if (!(await lstat(root).catch(() => undefined))) {
     throw new KiError(`base harness is not installed; run \`ki harness install ${baseHarnessIdentifier}\` before \`ki bootstrap\``, 1)
@@ -114,6 +114,15 @@ const bootstrapCapabilitySource = async (dataDirectory: string): Promise<string>
   const capability = harness.lock.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === 'ki-bootstrap')
   if (!capability) throw new KiError(`installed base harness does not provide ki-bootstrap; reinstall ${baseHarnessIdentifier}`, 1)
   return requiredPhysicalDirectory(join(harness.root, capability.source), 'installed ki-bootstrap skill')
+}
+
+export const developmentBootstrapSkillSource = async (harnessDirectory: string): Promise<string> => {
+  const harness = await requiredPhysicalDirectory(resolve(harnessDirectory), 'development harness')
+  const source = join(harness, 'skills', 'keystone', 'ki-bootstrap')
+  await requiredPhysicalDirectory(source, 'development ki-bootstrap skill')
+  const entry = await lstat(join(source, 'SKILL.md')).catch(() => undefined)
+  if (!entry?.isFile() || entry.isSymbolicLink()) throw new KiError('development ki-bootstrap skill must contain a regular SKILL.md', 1)
+  return source
 }
 
 export const configureBootstrapAgents = async (options: {
@@ -134,10 +143,9 @@ export const configureBootstrapAgents = async (options: {
 }
 
 export const installBootstrapSkills = async (
-  dataDirectory: string,
+  source: string,
   agents: readonly InstalledAgent[]
 ): Promise<readonly { readonly agent: InstalledAgent; readonly installed: boolean }[]> => {
-  const source = await bootstrapCapabilitySource(dataDirectory)
   return Promise.all(agents.map(async (agent) => ({ agent, installed: await installBootstrapSkill(agent, source) })))
 }
 
@@ -148,7 +156,7 @@ export const bootstrapAgents = async (options: {
   readonly redetect?: boolean
 }): Promise<readonly InstalledAgent[]> => {
   const configuration = await configureBootstrapAgents(options)
-  await installBootstrapSkills(options.dataDirectory, configuration.agents)
+  await installBootstrapSkills(await installedBootstrapSkillSource(options.dataDirectory), configuration.agents)
   return configuration.agents
 }
 

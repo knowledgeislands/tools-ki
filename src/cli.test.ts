@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -234,31 +234,40 @@ describe('baseline commands', () => {
 
     expect(bootstrapped).toEqual({
       exitCode: 0,
-      output: 'created KI agent configuration for chatgpt-codex\nki-bootstrap for chatgpt-codex installed\n'
+      output: `created KI agent configuration for chatgpt-codex\ncanonical harness already installed\tarchive ${'0'.repeat(64)}\nki-bootstrap for chatgpt-codex installed\n`
     })
     expect(repeated).toEqual({
       exitCode: 0,
-      output: 'ki-bootstrap for chatgpt-codex already installed\n'
+      output: `canonical harness already installed\tarchive ${'0'.repeat(64)}\nki-bootstrap for chatgpt-codex already installed\n`
     })
     expect(await readFile(join(configuration, 'ki', 'agents.toml'), 'utf8')).toBe('schema = 1\nagents = ["chatgpt-codex"]\n')
   })
 
-  test('requires the verified base harness before projecting the bootstrap skill', async () => {
+  test('links an explicit validated development harness without installing the canonical harness', async () => {
     const root = await temporaryDirectory()
     const home = join(root, 'home')
+    const harness = join(root, 'harness')
+    const source = join(harness, 'skills', 'keystone', 'ki-bootstrap')
+    const data = join(root, 'data')
     await mkdir(join(home, '.agents'), { recursive: true })
+    await mkdir(source, { recursive: true })
+    await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\nki-depends-on: []\n---\n')
 
-    const result = await runKi(['bootstrap'], {
+    const result = await runKi(['bootstrap', '--dev-harness', harness], {
       HOME: home,
       XDG_CONFIG_HOME: join(root, 'config'),
-      XDG_DATA_HOME: join(root, 'data')
+      XDG_DATA_HOME: data
     })
 
     expect(result).toEqual({
-      exitCode: 1,
-      output:
-        'created KI agent configuration for chatgpt-codex\nki: error: base harness is not installed; run `ki harness install knowledgeislands/ki-agentic-harness` before `ki bootstrap`\n'
+      exitCode: 0,
+      output: `created KI agent configuration for chatgpt-codex
+using development harness ${await realpath(source)}
+ki-bootstrap for chatgpt-codex installed
+`
     })
+    await expect(lstat(join(data, 'ki', 'harnesses'))).rejects.toThrow()
+    expect((await lstat(join(home, '.agents', 'skills', 'ki-bootstrap'))).isSymbolicLink()).toBe(true)
   })
 
   test('inspects and removes one verified non-base harness', async () => {

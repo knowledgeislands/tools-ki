@@ -16,6 +16,17 @@ export interface HarnessRelease {
   readonly sha256: string
 }
 
+/**
+ * The one harness every KI installation can acquire without user-managed
+ * registry configuration. The Git commit and archive digest together are the
+ * immutable acquisition evidence; additional harnesses remain opt-in.
+ */
+export const canonicalHarnessRelease: HarnessRelease = {
+  id: baseHarnessIdentifier,
+  url: 'https://codeload.github.com/knowledgeislands/ki-agentic-harness/tar.gz/41f5725c08687a5e94faf2d941d0a04134feb861',
+  sha256: 'fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c'
+}
+
 type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
 
 type RegistryValue = Record<string, unknown> & { readonly harnesses?: unknown }
@@ -65,8 +76,8 @@ const parseRelease = (value: unknown, index: number): HarnessRelease => {
 export const readHarnessRegistry = async (configurationDirectory: string): Promise<readonly HarnessRelease[]> => {
   const path = join(configurationDirectory, 'harnesses.toml')
   const state = await lstat(path).catch(() => undefined)
-  if (!state?.isFile() || state.isSymbolicLink())
-    throw new KiError(`harness registry is unavailable: create ${path} with immutable release evidence`, 1)
+  if (!state) return [canonicalHarnessRelease]
+  if (!state.isFile() || state.isSymbolicLink()) throw new KiError('harness registry must be a regular file', 1)
   let parsed: unknown
   try {
     parsed = parse(await readFile(path, 'utf8'))
@@ -75,12 +86,15 @@ export const readHarnessRegistry = async (configurationDirectory: string): Promi
   }
   if (!isRecord(parsed) || !Array.isArray(parsed.harnesses)) throw new KiError('harness registry must declare [[harnesses]] entries', 1)
   const releases = parsed.harnesses.map(parseRelease)
-  const identities = new Set<string>()
+  const identities = new Set<string>([baseHarnessIdentifier])
   for (const release of releases) {
+    if (release.id === baseHarnessIdentifier) {
+      throw new KiError(`harness registry must not override the built-in canonical harness ${baseHarnessIdentifier}`, 1)
+    }
     if (identities.has(release.id)) throw new KiError(`harness registry repeats ${release.id}`, 1)
     identities.add(release.id)
   }
-  return releases
+  return [canonicalHarnessRelease, ...releases]
 }
 
 const tarString = (archive: Uint8Array, start: number, length: number): string => {
@@ -114,17 +128,13 @@ const extractArchive = async (payload: Uint8Array, target: string): Promise<void
     }
     const name = tarString(archive, offset, 100)
     const headerPrefix = tarString(archive, offset + 345, 155)
-    const path = headerPrefix ? `${headerPrefix}/${name}` : name
     const type = tarString(archive, offset + 156, 1)
+    const rawPath = headerPrefix ? `${headerPrefix}/${name}` : name
+    const path = type === '5' ? rawPath.replace(/\/+$/, '') : rawPath
     const size = tarSize(archive, offset + 124)
     const contentsStart = offset + 512
     const contentsEnd = contentsStart + size
     if (!safeRelativePath(path) || contentsEnd > archive.length) throw new KiError('harness archive contains an unsafe entry', 1)
-    if (type === '5') {
-      if (size !== 0) throw new KiError('harness archive directory has contents', 1)
-    } else if (type !== '' && type !== '0') {
-      throw new KiError('harness archive may contain only regular files and directories', 1)
-    }
     const parts = path.split('/')
     const direct = parts[0] === 'skills' || parts[0] === 'agents' || parts[0] === 'hooks'
     const nested = parts[1] === 'skills' || parts[1] === 'agents' || parts[1] === 'hooks'
@@ -136,6 +146,15 @@ const extractArchive = async (payload: Uint8Array, target: string): Promise<void
     if (payloadPrefix !== undefined && payloadPrefix !== entryPrefix) throw new KiError('harness archive mixes payload roots', 1)
     payloadPrefix = entryPrefix
     const payloadPath = parts.slice(direct ? 0 : 1).join('/')
+    if (type === '2' && payloadPath.includes('/scripts/vendored/')) {
+      offset = contentsStart + Math.ceil(size / 512) * 512
+      continue
+    }
+    if (type === '5') {
+      if (size !== 0) throw new KiError('harness archive directory has contents', 1)
+    } else if (type !== '' && type !== '0') {
+      throw new KiError('harness archive may contain only regular files and directories', 1)
+    }
     const destination = join(target, payloadPath)
     if (relative(target, destination).startsWith('..')) throw new KiError('harness archive entry escapes its staging directory', 1)
     if (type === '5') await mkdir(destination, { recursive: true })
@@ -196,6 +215,13 @@ export const installHarness = async (
     throw error
   }
 }
+
+export const installCanonicalHarness = async (
+  configurationDirectory: string,
+  dataDirectory: string,
+  fetcher: Fetcher = fetch
+): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
+  installHarness(configurationDirectory, dataDirectory, baseHarnessIdentifier, fetcher)
 
 export const uninstallHarness = async (
   dataDirectory: string,
