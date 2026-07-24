@@ -240,7 +240,7 @@ describe('baseline commands', () => {
       exitCode: 0,
       output: `canonical harness already installed\tarchive ${'0'.repeat(64)}\nki-bootstrap for chatgpt-codex already installed\n`
     })
-    expect(await readFile(join(configuration, 'ki', 'agents.toml'), 'utf8')).toBe('schema = 1\nagents = ["chatgpt-codex"]\n')
+    expect(await readFile(join(configuration, 'ki', 'config.toml'), 'utf8')).toBe('schema = 1\nagents = ["chatgpt-codex"]\n')
   })
 
   test('links an explicit local harness without installing the canonical harness', async () => {

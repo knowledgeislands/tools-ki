@@ -46,7 +46,7 @@ test('bootstraps a user-managed agent configuration from known agents', async ()
   expect(detected.map((agent) => agent.descriptor.id)).toEqual(['claude-code'])
   expect(repeated.map((agent) => agent.descriptor.id)).toEqual(['claude-code'])
   expect(configured.map((agent) => agent.descriptor.id)).toEqual(['claude-code'])
-  expect(await readFile(join(configuration, 'agents.toml'), 'utf8')).toBe('schema = 1\nagents = ["claude-code"]\n')
+  expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toBe('schema = 1\nagents = ["claude-code"]\n')
   expect(await realpath(join(home, '.claude', 'skills', 'ki-bootstrap'))).toBe(await realpath(source))
 })
 
@@ -68,7 +68,7 @@ test('redetect refreshes the generated configuration and projects the bootstrap 
   })
 
   expect(redetected.map((agent) => agent.descriptor.id)).toEqual(['claude-code', 'chatgpt-codex'])
-  expect(await readFile(join(configuration, 'agents.toml'), 'utf8')).toBe('schema = 1\nagents = ["claude-code", "chatgpt-codex"]\n')
+  expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toBe('schema = 1\nagents = ["claude-code", "chatgpt-codex"]\n')
   expect(await realpath(join(home, '.agents', 'skills', 'ki-bootstrap'))).toBe(
     await realpath(join(data, 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'latest', 'skills', 'keystone', 'ki-bootstrap'))
   )

@@ -45,13 +45,13 @@ const skillCapability = (agent: InstalledAgent): string => {
   return agent.descriptor.paths.skills
 }
 
-const agentsPath = (configurationDirectory: string): string => join(configurationDirectory, 'agents.toml')
+const bootstrapConfigurationPath = (configurationDirectory: string): string => join(configurationDirectory, 'config.toml')
 
 const renderConfiguration = (agents: readonly InstalledAgent[]): string =>
   ['schema = 1', `agents = [${agents.map((agent) => JSON.stringify(agent.descriptor.id)).join(', ')}]`, ''].join('\n')
 
 const readConfiguration = async (configurationDirectory: string, homeDirectory: string): Promise<readonly InstalledAgent[] | undefined> => {
-  const path = agentsPath(configurationDirectory)
+  const path = bootstrapConfigurationPath(configurationDirectory)
   const state = await lstat(path).catch(() => undefined)
   if (!state) return undefined
   if (!state.isFile() || state.isSymbolicLink()) throw new KiError('agent configuration must be a regular file', 1)
@@ -133,7 +133,7 @@ export const configureBootstrapAgents = async (options: {
   readonly configurationDirectory: string
   readonly redetect?: boolean
 }): Promise<BootstrapConfiguration> => {
-  const path = agentsPath(options.configurationDirectory)
+  const path = bootstrapConfigurationPath(options.configurationDirectory)
   const state = await lstat(options.configurationDirectory).catch(() => undefined)
   if (state && (!state.isDirectory() || state.isSymbolicLink())) throw new KiError('KI configuration directory must be a directory', 1)
   const configured = await readConfiguration(options.configurationDirectory, options.homeDirectory)
@@ -176,7 +176,7 @@ export const configuredAgents = async (options: {
   const agents = selected.map((candidate) => byId.get(candidate.id))
   if (agents.some((agent) => !agent)) {
     const absent = selected.find((candidate) => !byId.has(candidate.id))
-    throw new KiError(`agent ${absent?.id} is not configured; add it to ${agentsPath(options.configurationDirectory)}`, 1)
+    throw new KiError(`agent ${absent?.id} is not configured; add it to ${bootstrapConfigurationPath(options.configurationDirectory)}`, 1)
   }
   return agents as readonly InstalledAgent[]
 }
