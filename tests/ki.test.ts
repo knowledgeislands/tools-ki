@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import packageMetadata from '../package.json' with { type: 'json' }
 
 const repository = new URL('..', import.meta.url).pathname
 const executable = new URL('../bin/ki', import.meta.url).pathname
@@ -85,7 +86,7 @@ describe('baseline commands', () => {
     expect(help.exitCode).toBe(0)
     expect(help.output).toContain('acquire')
     expect(completions.output).toContain('#compdef ki')
-    expect(version.output).toBe('ki 0.2.0\n')
+    expect(version.output).toBe(`ki ${packageMetadata.version}\n`)
     expect(paths.output).toContain(`"executable":"${executable}"`)
     expect(paths.output).toContain(`"data":"${missingHome}/data/ki"`)
     expect(singular.exitCode).toBe(2)
