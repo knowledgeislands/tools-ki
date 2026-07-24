@@ -1,10 +1,10 @@
-import { createHash } from 'node:crypto'
-import { lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { createHash, randomUUID } from 'node:crypto'
+import { lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { parse } from 'smol-toml'
 import { KiError } from './errors.ts'
-import { createHarnessLock, readInstalledHarness, renderHarnessLock } from './harness.ts'
+import { baseHarnessIdentifier, createHarnessLock, readInstalledHarness, renderHarnessLock, verifyHarnessRoot } from './harness.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const sha256 = /^[a-f0-9]{64}$/
@@ -193,6 +193,39 @@ export const installHarness = async (
     return { installed: true, archiveSha256: lock.archive.sha256 }
   } catch (error) {
     await rm(staging, { recursive: true, force: true })
+    throw error
+  }
+}
+
+export const uninstallHarness = async (
+  dataDirectory: string,
+  identifier: string,
+  dryRun = false
+): Promise<{ readonly uninstalled: boolean; readonly archiveSha256: string }> => {
+  if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
+  if (identifier === baseHarnessIdentifier) throw new KiError(`the required base harness ${identifier} cannot be uninstalled`, 1)
+
+  const installed = await readInstalledHarness(dataDirectory, identifier)
+  const [owner, name] = identifier.split('/') as [string, string]
+  const harnesses = join(dataDirectory, 'harnesses')
+  const ownerDirectory = join(harnesses, owner)
+  await physicalDirectory(ownerDirectory, `installed harness owner ${owner}`)
+  const destination = join(ownerDirectory, name)
+  await physicalDirectory(destination, `installed harness ${identifier}`)
+  const entries = await readdir(destination, { withFileTypes: true })
+  if (entries.length !== 1 || entries[0]?.name !== 'latest' || !entries[0].isDirectory() || entries[0].isSymbolicLink()) {
+    throw new KiError(`installed harness ${identifier} has unrecognised state and will not be removed`, 1)
+  }
+  if (dryRun) return { uninstalled: false, archiveSha256: installed.lock.archive.sha256 }
+
+  const removal = join(ownerDirectory, `.uninstall-${randomUUID()}`)
+  await rename(destination, removal)
+  try {
+    await verifyHarnessRoot(join(removal, 'latest'), identifier)
+    await rm(removal, { recursive: true, force: true })
+    return { uninstalled: true, archiveSha256: installed.lock.archive.sha256 }
+  } catch (error) {
+    await rename(removal, destination).catch(() => undefined)
     throw error
   }
 }

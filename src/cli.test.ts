@@ -209,6 +209,24 @@ describe('baseline commands', () => {
     expect(json.output).toContain('"id":"example/harness"')
   })
 
+  test('inspects and removes one verified non-base harness', async () => {
+    const root = await temporaryDirectory()
+    const data = join(root, 'data')
+    await installHarness(data)
+    const environment = { XDG_DATA_HOME: data }
+    const info = await runKi(['harness', 'info', 'example/harness'], environment)
+    const json = await runKi(['harness', 'info', 'example/harness', '--json'], environment)
+    const dryRun = await runKi(['harness', 'uninstall', 'example/harness', '--dry-run'], environment)
+    const removed = await runKi(['harness', 'uninstall', 'example/harness'], environment)
+
+    expect(info.output).toContain('archive: https://releases.example.test/harness.tar.gz')
+    expect(info.output).toContain('  skill ki-example\n')
+    expect(json.output).toContain('"depends_on":[]')
+    expect(dryRun.output).toContain('would uninstall example/harness')
+    expect(removed.output).toContain('uninstalled example/harness')
+    await expect(lstat(join(data, 'ki', 'harnesses', 'example', 'harness'))).rejects.toThrow()
+  })
+
   test("runs only a declared skill's registered native audit operation", async () => {
     const root = await temporaryDirectory()
     const home = join(root, 'home')

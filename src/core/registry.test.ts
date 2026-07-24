@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { afterEach, expect, test } from 'vitest'
 import { readInstalledHarness } from './harness.ts'
-import { installHarness } from './registry.ts'
+import { installHarness, uninstallHarness } from './registry.ts'
 
 const temporaryDirectories: string[] = []
 
@@ -96,4 +96,28 @@ test('refuses an archive that does not match configured immutable evidence witho
     'does not match its SHA-256'
   )
   await expect(readInstalledHarness(data, 'example/harness')).rejects.toThrow('installed harnesses directory must be a directory')
+})
+
+test('removes only a verified non-base harness with no unrecognised state', async () => {
+  const root = await temporaryDirectory()
+  const archive = tar({ 'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' })
+  const { config, data } = await configuredArchive(root, archive)
+  await installHarness(config, data, 'example/harness', async () => new Response(archive))
+
+  expect(await uninstallHarness(data, 'example/harness', true)).toEqual({ uninstalled: false, archiveSha256: digest(archive) })
+  await expect(readInstalledHarness(data, 'example/harness')).resolves.toBeDefined()
+  expect(await uninstallHarness(data, 'example/harness')).toEqual({ uninstalled: true, archiveSha256: digest(archive) })
+  await expect(readInstalledHarness(data, 'example/harness')).rejects.toThrow('installed harness example/harness must be a directory')
+  await expect(uninstallHarness(data, 'knowledgeislands/ki-agentic-harness')).rejects.toThrow('cannot be uninstalled')
+})
+
+test('refuses to remove an installed harness with unrecognised state', async () => {
+  const root = await temporaryDirectory()
+  const archive = tar({ 'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' })
+  const { config, data } = await configuredArchive(root, archive)
+  await installHarness(config, data, 'example/harness', async () => new Response(archive))
+  await writeFile(join(data, 'harnesses', 'example', 'harness', 'notes.txt'), 'preserve me\n')
+
+  await expect(uninstallHarness(data, 'example/harness')).rejects.toThrow('has unrecognised state')
+  await expect(readFile(join(data, 'harnesses', 'example', 'harness', 'notes.txt'), 'utf8')).resolves.toBe('preserve me\n')
 })

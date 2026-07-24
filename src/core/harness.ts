@@ -8,6 +8,8 @@ const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-
 const sha256 = /^[a-f0-9]{64}$/
 const payloadRoots = ['skills', 'agents', 'hooks'] as const
 
+export const baseHarnessIdentifier = 'knowledgeislands/ki-agentic-harness'
+
 export interface RegisteredOperation {
   readonly protocol: 'ki/native-operation@1'
   readonly module: string

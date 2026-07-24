@@ -89,11 +89,13 @@ the current working directory.
 .TP
 .B ki harness list [--json]
 List the verified compatible harnesses already installed beneath the KI XDG data
-directory. The command verifies each manifest and its declared integrity-covered
+directory. The command verifies each generated lock and its declared integrity-covered
 files before reporting it, and does not create or change user state.
 .TP
-.B *ki harness install|uninstall \fIharness-id\fR | info \fIharness-id\fR
-Manage or inspect one verified, user-installed compatible harness.
+.B ki harness install|uninstall \fIharness-id\fR | info \fIharness-id\fR
+Install, remove, or inspect one verified, user-installed compatible harness.
+The base harness cannot be removed; \fBki harness uninstall --dry-run\fR verifies
+that a non-base harness can be removed without changing user state.
 .TP
 .B *ki missing|outdated
 Report capabilities absent from the selected scope or with a newer verified

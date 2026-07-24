@@ -41,6 +41,7 @@ The current `ki-engineering` checker still expects retired package-script aggreg
 5. Build the `ki` core around shared native facilities for installed-harness discovery, integrity checks, physical path resolution, `.ki-config.toml` declaration parsing, dependency ordering, and capability resolution.
    - [x] Discover physically contained installed harnesses; validate generated locks, capability identity, integrity-covered files, and registered operation modules.
    - [x] Install only the `skills/`, `agents/`, and `hooks/` archive payload, then generate the installed `harness-lock.toml` inventory and integrity record.
+   - [x] Inspect verified installed harness locks and remove only ownership-proven, non-base harnesses, with a non-mutating dry run.
    - [x] Parse declared skill tables and resolve them only from verified installed harnesses.
    - [x] Order declared explicit dependencies before execution.
 6. Implement explicit user and repository capability activation using only the contract's managed projection boundaries. Prove idempotence, dry-run, containment, and refusal for altered, unsafe, incompatible, or missing state.
