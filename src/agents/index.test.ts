@@ -29,6 +29,6 @@ test('detects known agents once and then uses the persisted inventory', async ()
 
   expect(detected.map((agent) => agent.descriptor.id)).toEqual(['claude-code'])
   expect(cached.map((agent) => agent.descriptor.id)).toEqual(['claude-code'])
-  expect(refreshed.map((agent) => agent.descriptor.id)).toEqual(['claude-code', 'codex'])
-  expect(await readFile(join(state, 'agents.toml'), 'utf8')).toContain('[agents.codex]')
+  expect(refreshed.map((agent) => agent.descriptor.id)).toEqual(['claude-code', 'chatgpt-codex'])
+  expect(await readFile(join(state, 'agents.toml'), 'utf8')).toContain('[agents.chatgpt-codex]')
 })

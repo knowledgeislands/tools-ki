@@ -6,7 +6,7 @@ import { KiError } from '../core/errors.ts'
 
 export const agentDescriptors = [
   { id: 'claude-code', home: '.claude', skills: join('.claude', 'skills') },
-  { id: 'codex', home: '.agents', skills: join('.agents', 'skills') }
+  { id: 'chatgpt-codex', home: '.agents', skills: join('.agents', 'skills') }
 ] as const
 
 export type AgentId = (typeof agentDescriptors)[number]['id']
@@ -26,7 +26,7 @@ const physicalDirectory = async (path: string): Promise<boolean> => {
 
 const descriptor = (id: string): AgentDescriptor => {
   const value = agentDescriptors.find((candidate) => candidate.id === id)
-  if (!value) throw new KiError(`unknown agent ${id}; use claude-code or codex`, 2)
+  if (!value) throw new KiError(`unknown agent ${id}; use claude-code or chatgpt-codex`, 2)
   return value
 }
 
