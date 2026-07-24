@@ -81,18 +81,16 @@ test('requires bootstrap before reading configured agents', async () => {
   )
 })
 
-test('requires a local harness to provide exactly one ki-bootstrap skill', async () => {
+test('requires the canonical bootstrap skill path in a local harness', async () => {
   const root = await temporaryDirectory()
   const harness = join(root, 'harness')
   await mkdir(join(harness, 'skills', 'other'), { recursive: true })
   await writeFile(join(harness, 'skills', 'other', 'SKILL.md'), '---\nname: other\n---\n')
 
-  await expect(localBootstrapSkillSource(harness)).rejects.toThrow('does not provide ki-bootstrap')
+  await expect(localBootstrapSkillSource(harness)).rejects.toThrow('must contain skills/keystone/ki-bootstrap/SKILL.md')
 
-  for (const directory of ['one', 'two']) {
-    const source = join(harness, 'skills', directory)
-    await mkdir(source)
-    await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\n---\n')
-  }
-  await expect(localBootstrapSkillSource(harness)).rejects.toThrow('provides multiple ki-bootstrap skills')
+  const source = join(harness, 'skills', 'keystone', 'ki-bootstrap')
+  await mkdir(source, { recursive: true })
+  await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\n---\n')
+  await expect(localBootstrapSkillSource(harness)).resolves.toBe(await realpath(source))
 })

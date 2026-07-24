@@ -1,4 +1,4 @@
-import { lstat, mkdir, readdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../core/errors.ts'
@@ -117,35 +117,15 @@ export const installedBootstrapSkillSource = async (dataDirectory: string, ident
   return requiredPhysicalDirectory(join(harness.root, capability.source), 'installed ki-bootstrap skill')
 }
 
-const declaresBootstrapSkill = async (path: string): Promise<boolean> => {
-  const entry = await lstat(path).catch(() => undefined)
-  if (!entry?.isFile() || entry.isSymbolicLink()) return false
-  const contents = await readFile(path, 'utf8')
-  const frontmatter = /^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/.exec(contents)?.[1]
-  return Boolean(frontmatter && /^name:\s*ki-bootstrap\s*$/m.test(frontmatter))
-}
-
-const localBootstrapSkillSources = async (directory: string): Promise<readonly string[]> => {
-  const sources: string[] = []
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name)
-    if (entry.isDirectory() && !entry.isSymbolicLink()) {
-      sources.push(...(await localBootstrapSkillSources(path)))
-      continue
-    }
-    if (entry.name === 'SKILL.md' && (await declaresBootstrapSkill(path))) sources.push(directory)
-  }
-  return sources
-}
-
 export const localBootstrapSkillSource = async (harnessDirectory: string): Promise<string> => {
   const harness = await requiredPhysicalDirectory(resolve(harnessDirectory), 'local harness')
-  const skills = join(harness, 'skills')
-  await requiredPhysicalDirectory(skills, 'local harness skills directory')
-  const sources = await localBootstrapSkillSources(skills)
-  if (!sources.length) throw new KiError('local harness does not provide ki-bootstrap', 1)
-  if (sources.length > 1) throw new KiError('local harness provides multiple ki-bootstrap skills', 1)
-  return sources[0] as string
+  const source = join(harness, 'skills', 'keystone', 'ki-bootstrap')
+  const sourceState = await lstat(source).catch(() => undefined)
+  const entry = await lstat(join(source, 'SKILL.md')).catch(() => undefined)
+  if (!sourceState?.isDirectory() || sourceState.isSymbolicLink() || !entry?.isFile() || entry.isSymbolicLink()) {
+    throw new KiError('local harness must contain skills/keystone/ki-bootstrap/SKILL.md', 1)
+  }
+  return realpath(source)
 }
 
 export const configureBootstrapAgents = async (options: {

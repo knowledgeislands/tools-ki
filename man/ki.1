@@ -113,8 +113,9 @@ skill. The default identifier is
 .B knowledgeislands/ki-agentic-harness .
 Pass a local harness checkout path instead to validate and link its
 .B ki-bootstrap
-skill directly; that explicit local mode does not install or modify the
-canonical harness.
+skill directly. The checkout must contain
+.IR skills/keystone/ki-bootstrap/SKILL.md ;
+that explicit local mode does not install or modify the canonical harness.
 .TP
 .B *ki update
 Update the executable and refresh installed harnesses.
