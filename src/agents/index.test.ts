@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, test } from 'vitest'
 import { createHarnessLock, renderHarnessLock } from '../core/harness.ts'
-import { bootstrapAgents, configuredAgents } from './index.ts'
+import { bootstrapAgents, configuredAgents, localBootstrapSkillSource } from './index.ts'
 
 const directories: string[] = []
 
@@ -79,4 +79,20 @@ test('requires bootstrap before reading configured agents', async () => {
   await expect(configuredAgents({ homeDirectory: join(root, 'home'), configurationDirectory: join(root, 'config', 'ki') })).rejects.toThrow(
     'run `ki bootstrap` first'
   )
+})
+
+test('requires a local harness to provide exactly one ki-bootstrap skill', async () => {
+  const root = await temporaryDirectory()
+  const harness = join(root, 'harness')
+  await mkdir(join(harness, 'skills', 'other'), { recursive: true })
+  await writeFile(join(harness, 'skills', 'other', 'SKILL.md'), '---\nname: other\n---\n')
+
+  await expect(localBootstrapSkillSource(harness)).rejects.toThrow('does not provide ki-bootstrap')
+
+  for (const directory of ['one', 'two']) {
+    const source = join(harness, 'skills', directory)
+    await mkdir(source)
+    await writeFile(join(source, 'SKILL.md'), '---\nname: ki-bootstrap\n---\n')
+  }
+  await expect(localBootstrapSkillSource(harness)).rejects.toThrow('provides multiple ki-bootstrap skills')
 })

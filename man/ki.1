@@ -20,7 +20,7 @@ ki \- Knowledge Islands command-line interface
 .B ki version
 .br
 .B ki bootstrap
-.RI [ --dev-harness " path" ]
+.RI [ --harness " identifier-or-path" ]
 .RI [ --redetect ]
 .br
 .B ki acquire chatgpt import
@@ -106,11 +106,15 @@ configuration is reused without replacement. Pass
 .B --redetect
 to refresh the generated agent list from the currently installed runtimes.
 Pass
-.B --dev-harness
-with a local harness checkout to validate and link its
+.B --harness
+with the canonical identifier to install and link its
 .B ki-bootstrap
-skill directly instead; this explicit development mode does not install or
-modify the canonical harness.
+skill. The default identifier is
+.B knowledgeislands/ki-agentic-harness .
+Pass a local harness checkout path instead to validate and link its
+.B ki-bootstrap
+skill directly; that explicit local mode does not install or modify the
+canonical harness.
 .TP
 .B *ki update
 Update the executable and refresh installed harnesses.
@@ -137,7 +141,8 @@ files before reporting it, and does not create or change user state.
 .TP
 .B ki harness install \fIharness-id\fR
 Install the built-in canonical harness or one configured, verified compatible
-harness from immutable release evidence.
+harness from immutable release evidence. Bootstrap itself accepts only the
+canonical identifier.
 .TP
 .B ki harness uninstall \fIharness-id\fR [--dry-run]
 Remove one verified non-base harness. The base harness cannot be removed; a dry

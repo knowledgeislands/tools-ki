@@ -31,6 +31,8 @@ type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Re
 
 type RegistryValue = Record<string, unknown> & { readonly harnesses?: unknown }
 
+export const isHarnessIdentifier = (value: string): boolean => harnessIdentifier.test(value)
+
 const isRecord = (value: unknown): value is RegistryValue => typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const stringField = (source: Record<string, unknown>, field: string, description: string): string => {
