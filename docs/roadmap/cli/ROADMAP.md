@@ -18,6 +18,12 @@ Implement the first repository-maintenance slice without dispatching vendored `.
 
 **Plan:** [CLI-004](plans/CLI-004-native-repo-maintenance.md)
 
+### Lock the CLI contract, then simplify internals
+
+Lock the CLI's external contract with end-to-end tests over its uncovered surface (the `skill` command, `dev off`, `harness install`), then simplify the internals behind it — split the oversized `agents/index.ts`, collapse the duplicate skill-link functions, and remove coverage-dead paths — without changing behaviour. Test through the CLI against a real temporary filesystem; mock only the harness download.
+
+**Plan:** [CLI-005](plans/CLI-005-lock-the-cli-contract-then-simplify-internals.md)
+
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
