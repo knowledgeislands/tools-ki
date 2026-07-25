@@ -9,45 +9,89 @@ blocked-by: —
 
 ## Context
 
-`tools-ki` is the `ki` CLI; its external contract is the CLI itself. Complexity has concentrated in a few god-modules — `src/agents/index.ts` is 665 lines mixing five concerns (config schema render/read/inspect, agent detection, user-skill linking, repo-skill linking, bootstrap orchestration) and `src/core/registry.ts` is 422 (tar parse + acquire). The recently added `skill` command (`src/commands/skill.ts`) has zero end-to-end CLI tests, and `dev off` / `harness install` are also uncovered end-to-end. The goal is a codebase that is simple to comprehend, reached without changing behaviour blind: lock the CLI contract with tests first, then simplify the internals behind it, using coverage to expose dead or over-complex paths.
+`tools-ki` is the `ki` CLI; its external contract is the CLI itself. Complexity had concentrated in a few god-modules — `src/agents/index.ts` was 665 lines mixing five concerns, and `src/core/registry.ts` is 422 (release registry + tar parse + acquire + lifecycle + dev mode + a legacy-layout migration shim). The goal is a codebase that is simple to comprehend, reached without changing behaviour blind: lock the CLI contract with tests first, then simplify the internals behind it, using coverage to expose dead or over-complex paths.
 
 ## Principles
 
 - **Style** — arrow functions throughout; no classes (especially in TS); strong typing via `interface`/`type`; small, well-named functions over cleverness.
-- **Test the contract, not the units** — the API is the CLI. Drive it end-to-end in-process through the existing seam `runKi(args, env)` → `createContext(...)` → `run(args, context)` (`src/cli.test.ts:63-88`), asserting stdout and exit code. Do not unit-test internal functions — that ossifies internals and blocks refactoring.
-- **Real temp FS for effects** — `mkdtemp` + `HOME`/`XDG_CONFIG_HOME`/`XDG_DATA_HOME` env vars land symlinks, `config.toml`, and `.ki-config.toml` in a throwaway tree that is directly observable (`lstat`/`realpath`). Mock only for fault injection (the `vi.mock('node:fs/promises')` writeFile-failure pattern, `src/cli.test.ts:12-23`).
-- **Mock only the acquire/download** — a pure read; the seam already exists (`installHarness(..., fetcher: Fetcher = fetch)`, `src/core/registry.ts:263`) with a local `gzipSync` tarball fixture (`src/core/registry.test.ts:56`).
-- **Coverage as a dead-code detector** — full CLI-surface coverage means any reachable-but-uncovered code is a simplification or deletion candidate.
-- **No behaviour change during simplification** — the Phase 1 contract tests stay green and unchanged through all of Phase 2.
+- **Test the contract, not the units** — the API is the CLI. Every test drives the in-process seam `run(args, context)` via the `sandbox()` helper (`src/tests/cli/_cli_helper.ts`), asserting stdout and exit code. No unit tests of internal functions — they ossify internals and block refactoring. Code a CLI test cannot reach is deleted, not unit-tested.
+- **Effects land on a real temp FS** — the sandbox's throwaway HOME/XDG quartet; observable via `lstat`/`realpath`/`readFile`.
+- **The network is a context capability** — acquisition (download → digest verify → extract) is injected through `KiContext`, like stdout, never defaulted deep in core. Tests stub it at the same boundary they stub the streams; no env-gated or hidden CLI overrides.
+- **Fault injection stays at the interface** — a degenerate context (poisoned stream, stub fetcher returning bad bytes) or a real FS fault (permissions) is preferred; `vi.mock` of `node:fs/promises` is a last resort, documented at the use site, and only ever wrapped around a CLI-driven invocation.
+- **Coverage as a dead-code detector** — thresholds stay at 100%; any reachable-but-uncovered span is either provoked through the CLI or removed. No legacy shims kept for transition periods.
+- **No behaviour change during simplification** — the contract tests stay green and unchanged through every refactor step.
 
 ## Current state
 
-- Broad end-to-end CLI coverage exists via `runKi` + a real temp FS, but the `skill` command has no CLI test; `dev off` and `harness install` are also uncovered end-to-end.
-- The acquire/download seam is dependency-injected (`fetcher`), but `ki harness install` through the CLI still defaults to the real `fetch`.
+- Phase 1 landed: the CLI contract is locked end-to-end under `src/tests/cli/` (skill, harness, repo, bootstrap, dev, diag, doctor, acquire, help/completions/version/unknown) plus `src/tests/install/`; coverage runs at 94.4% lines / 88.3% statements against 100% thresholds.
+- Phase 2 structural work landed: `src/agents/index.ts` is a 15-line barrel over `internal.ts` / `configuration.ts` / `detection.ts` / `skills.ts` / `bootstrap.ts`, and the duplicate user/repo link wrappers are collapsed into one `linkManagedSkill(agent, scope, skill, replace)`.
+- Two non-interface test files remain: `src/core/registry.test.ts` (a full unit suite for install/uninstall/record/legacy-migration with an injected fetcher and a hand-built tar fixture) and the unit portions of `src/tests/cli/acquire.test.ts` (an `isSafeRelativePath` import test and a `vi.mock('node:fs/promises')` write-failure).
+- The fetcher seam exists only as a default parameter (`installHarness(..., fetcher: Fetcher = fetch)`); `KiContext` does not carry it, so commands always use the real `fetch` and the download/verify/extract path (`registry.ts:282-302`) is unreachable from any CLI test. This is the single largest uncovered concentration.
+- `registry.ts` also carries a legacy-layout migration shim (`migrateLegacyHarnessLayout` + `removeLegacyHarnessLock`, ~lines 227–257) for the old `latest/` + `harness-lock.toml` install layout, exercised only by the unit suite.
+
+## Decisions
+
+- **D1 — fetcher on the context.** Add `fetcher` to `KiContext`; `createContext` defaults it to global `fetch`; commands pass `context.fetcher` explicitly; remove every `= fetch` default parameter from `registry.ts`. The sandbox gains a stub-fetcher facility serving fixture archives, making `ki harness install`, a fresh `ki bootstrap`, and `ki dev off` drivable end-to-end with zero network.
+- **D2 — acquisition is its own module.** Extract the byte-level path — `Fetcher`, download + SHA-256 verify, and the tar reader (`tarString`/`tarSize`/`zeroBlock`/`extractArchive`) — into `src/core/acquire.ts` ("verified archive → payload tree"). `registry.ts` keeps the release registry (read/record), the install/uninstall lifecycle, and dev on/off. Two modules, no further splitting.
+- **D3 — delete the legacy-layout migration.** `migrateLegacyHarnessLayout` and `removeLegacyHarnessLock` go, with their call site. Recovery for a machine on the old layout is reinstall (`rm` the harness dir, `ki bootstrap`). No transition shim.
+- **D4 — delete the unit tests, migrate their scenarios.** `src/core/registry.test.ts` is removed; its scenarios (install from archive, sha mismatch, HTTP failure, unsafe/malformed tar entries, vendored-script filtering, already-installed short-circuit, uninstall guards, config record/unrecord) become CLI tests using the D1 stub fetcher, with the tar-builder moved to a `src/tests/cli/` helper. Afterwards run knip and strip exports only the unit suite consumed.
+- **D5 — remaining non-interface remnants.** Relocate `src/cli.test.ts` (poisoned-stdout — already a contract-seam test) under `src/tests/cli/`. In `acquire.test.ts`, drop the `isSafeRelativePath` import test and its export, provoking those branches through crafted capture content or deleting the unreachable ones. The `vi.mock` write-failure test **stays**: the rollback path (`transaction.ts` — a rename failing after an earlier rename succeeded) cannot be provoked by permissions, because the temp file and target share a directory, so any permission fault fires earlier in the transaction. It is the single sanctioned fault-injection exception.
+- **D6 — every other uncovered span is a work item, not a statistic.** The span dispositions below pre-decide each remaining gap: `test` means write the described CLI test; `delete` means remove the span as CLI-unreachable; `except` means keep the code and cover it with the sanctioned fault-injection exception. Do not delete a span marked `test` or `except` because a test proves hard to write — escalate instead.
+- **D7 — coverage measures product code.** Add `src/tests/**` to the coverage `exclude` list in `vitest.config.ts`: sandbox helpers are test infrastructure and must not consume threshold budget or invite tests-of-tests.
+
+## Span dispositions (D6 work list)
+
+Line numbers are from the current coverage run and will drift as steps 6–8 land; re-run `bun run test` and reconcile by description, not by number.
+
+| Span | Disposition |
+| --- | --- |
+| `commands/bootstrap.ts:27,31-35` | test — `ki bootstrap` with a `[local]` dev path set (refresh-through-local branch) |
+| `commands/dev.ts` branches (lines 21-53) | test — `ki dev on` repeated (already-enabled output) and `ki dev off` when a download is required |
+| `commands/diag.ts:24-25` | test — `ki diag --json` or the warnings-empty branch, whichever the lines show |
+| `commands/doctor.ts:37,50,61-64,78-79` | test — doctor against a broken environment: missing harness, invalid config, agent home missing (`✗` lines) |
+| `commands/harness.ts:27-28,47` | test — `ki harness list` with zero installed; `ki harness info` on a harness whose skills declare operations |
+| `commands/repo.ts:60` | test — `ki repo conform --skill <undeclared>` or the no-conform-operation branch |
+| `core/configuration.ts:17` | test — `.ki-config.toml` that is not a TOML table |
+| `core/harness.ts:74,77,86,146,151` | test — malformed installed-harness shapes via direct sandbox `data.write` (bad capability kind, non-directory payload) |
+| `core/operation.ts:38,49,85,89,94,98` | test — native script fixtures that misbehave: missing export, non-array findings, bad finding shape, conform returning malformed writes |
+| `core/paths.ts:15` | test — `setEnv({ HOME: undefined, USERPROFILE: <path> })` |
+| `core/paths.ts:36` | test — invoke with `executablePath` that is a symlink (`installationMode` linked branch) |
+| `core/repository.ts:44` | test — `--repository` pointing at a non-directory |
+| `core/resolution.ts:55,61,76-77` | test — declared skill missing from every installed harness; duplicate providers |
+| `core/transaction.ts:34` | test — conform write targeting a missing file or a symlink |
+| `core/transaction.ts:46,64-69` | except — TOCTOU guard and rollback are unreachable from a single CLI invocation by design; keep the code, cover via the documented `vi.mock` write-failure exception (see D5) |
+| `agents/configuration.ts` invalid-TOML early returns | test — seed `ki/config.toml` as: non-file, invalid TOML, non-table, each rejected shape asserted through `ki diag` |
+| `agents/skills.ts:50,59,75-84` | test — `ki skill user remove` of a non-KI-managed (regular dir) skill; duplicate-provider skill add |
+| `agents/bootstrap.ts:37,58`, `agents/detection.ts:18`, `agents/internal.ts` fn gaps | test — bootstrap with harness lacking a bootstrap skill; repo scope without repository; unknown agent id |
+| `src/tests/**` helper gaps | resolved by D7 (excluded from coverage) |
 
 ## Steps
 
-1. [ ] **Phase 1 — `skill` contract tests.** Add end-to-end `runKi` tests for `ki skill user add|remove` and `ki skill repo add|remove`: assert the symlinks land in the temp `~/.claude/skills` / `~/.agents/skills` and repo `.claude/skills` / `.agents/skills`, the `config.toml` per-skill tables and `.ki-config.toml` `[<skill>]` tables are written, and the not-KI-managed / foreign-file guards fire. _Verify:_ new tests pass under `bun run test`.
-2. [ ] **Phase 1 — remaining uncovered commands.** Add end-to-end tests for `dev off` and `harness install <id>`. For `harness install`, add a test-only fetcher override reachable from the CLI (env-gated or hidden option) so the download command is testable against a local tarball; optionally one opt-in networked smoke test. _Verify:_ both commands exercised end-to-end; no network in the default run.
-3. [ ] **Phase 1 — coverage baseline.** Turn on coverage in the vitest run; record the baseline and list every reachable-but-uncovered span as a Phase 2 dead-code candidate. _Verify:_ coverage report produced; candidate list captured.
-4. [ ] **Phase 2 — split `agents/index.ts`.** Split the 665-line module into cohesive, arrow-function, well-typed modules along its five seams (config schema, agents, skills-linking, bootstrap). _Verify:_ Phase 1 contract tests unchanged and green; tsc/biome/knip clean.
-5. [ ] **Phase 2 — collapse duplicate link functions.** Unify `installManagedUserSkill`/`installManagedRepoSkill` and `addUserSkill`/`addRepoSkill` behind one typed `linkManagedSkill(skillsDir, skill, ...)` primitive parameterised by target dir (`agentSkillDirectory(agent, scope, repo)` already resolves the dir). _Verify:_ contract tests green; duplication removed.
-6. [ ] **Phase 2 — registry review and dead-code removal.** Separate tar parsing from acquire/verify in `registry.ts`; delete the paths surfaced dead by the Phase 1 coverage run, noting anything intentionally kept. _Verify:_ no unreached CLI-reachable code; contract tests green.
-7. [ ] **Phase 3 — recap.** Run `ki-recap` over the whole set of changes to harvest lessons and route them to their homes. _Verify:_ recap produced; lessons filed.
+1. [x] **Phase 1 — `skill` contract tests.** Landed as `src/tests/cli/skill.test.ts` and siblings.
+2. [x] **Phase 1 — remaining uncovered commands.** `dev`, `harness`, `bootstrap`, `repo`, `diag`, `doctor` covered end-to-end via the sandbox.
+3. [x] **Phase 1 — coverage baseline.** Coverage on with 100% thresholds; baseline 94.4% lines recorded; gaps enumerated in Decisions above.
+4. [x] **Phase 2 — split `agents/index.ts`.** Barrel + five focused modules; tsc/biome/knip clean; contract tests unchanged.
+5. [x] **Phase 2 — collapse duplicate link functions.** One `linkManagedSkill(agent, scope, skill, replace)`; wrappers deleted.
+6. [ ] **Phase 2 — fetcher as a context capability (D1).** Mechanics: (a) declare `export type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>` where the acquisition code lives (registry.ts now, acquire.ts after step 7) and re-export as needed; (b) add `readonly fetcher: Fetcher` to `KiContext` and optional `fetcher?: Fetcher` to `ContextOptions`, defaulted to global `fetch` in `createContext`; (c) commands pass `context.fetcher` into `installHarness`/`restoreCanonicalHarness`; (d) delete every `= fetch` default parameter in registry.ts so injection is explicit; (e) sandbox gains `setFetcher(fetcher)` alongside `setEnv`, threaded into `createContext`; (f) move the tar-builder from `registry.test.ts` into a new `src/tests/cli/_archive_helper.ts` exposing `makeHarnessArchive(files)` returning `{ payload, sha256 }` — this step needs it, not step 8. _Verify:_ a CLI test seeds `ki/config.toml` with a release entry, stubs the fetcher with a fixture archive, runs `ki harness install example/harness`, and asserts the installed tree; `bun run test` green with no network.
+7. [ ] **Phase 2 — extract `core/acquire.ts` and delete the legacy shim (D2, D3).** Move `Fetcher`, download + SHA-256 verify, and `tarString`/`tarSize`/`zeroBlock`/`extractArchive` into `src/core/acquire.ts`; remove `migrateLegacyHarnessLayout`/`removeLegacyHarnessLock` and their call site in `installHarness`. **In the same commit, delete the legacy-migration test cases from `registry.test.ts`** — the suite must stay green at every step boundary even though step 8 removes it entirely. _Verify:_ full suite green; registry.ts holds only release registry + lifecycle + dev mode.
+8. [ ] **Phase 2 — retire the unit tests (D4, D5).** Port the remaining `registry.test.ts` scenarios to CLI tests (install from archive, sha mismatch, HTTP failure/redirect refusal, bad gzip, unsafe tar paths, vendored-script filtering, already-installed short-circuit, uninstall guards, config record/unrecord — each asserting exit code and message through `box.run`); delete `registry.test.ts`; move `src/cli.test.ts` under `src/tests/cli/`; excise the `isSafeRelativePath` unit block and un-export it (its branches are covered by the existing unsafe-path CLI cases — verify in coverage before deleting any branch); re-run knip and strip exports only the unit suite consumed (e.g. `canonicalHarnessRelease` if externally unused). _Verify:_ the only `vi.mock` remaining is the documented write-failure exception; knip clean.
+9. [ ] **Phase 2 — close every remaining uncovered span per the dispositions table (D6, D7).** Apply the Span dispositions list verbatim; add `src/tests/**` to coverage `exclude`. Any span whose disposition proves wrong in practice is escalated, not improvised. _Verify:_ `vitest run --coverage` passes the 100% thresholds.
+10. [ ] **Phase 3 — recap.** Run `ki-recap` over the whole set of changes to harvest lessons and route them to their homes. _Verify:_ recap produced; lessons filed.
 
 ## Files touched
 
-- `src/cli.test.ts` — Phase 1 CLI-surface tests (reuse `runKi`, `installBootstrapHarness`, `gzipSync` fixture, `vi.mock` fault seam).
-- `src/commands/skill.ts` — Phase 1 test target; possibly a fetcher-override seam for `harness install`.
-- `src/agents/index.ts` — Phase 2 split; `src/core/registry.ts` — acquire seam and Phase 2 review.
-- `src/core/context.ts` — the in-process test entry seam (referenced, not changed).
+- `src/context.ts` — gains `fetcher` (D1); `src/tests/cli/_cli_helper.ts` — stub-fetcher facility and tar-builder helper.
+- `src/core/registry.ts` — sheds acquisition and the legacy shim; `src/core/acquire.ts` — new home for download/verify/tar.
+- `src/commands/harness.ts`, `src/commands/bootstrap.ts`, `src/commands/dev.ts` — pass `context.fetcher`.
+- `src/core/registry.test.ts` — deleted; `src/cli.test.ts` — relocated; `src/tests/cli/acquire.test.ts` — unit remnants excised.
+- `src/commands/acquire.ts` — `isSafeRelativePath` un-exported or its dead branches removed.
 
 ## Verify
 
-- `bun run test` (vitest) green with coverage on; `bunx tsc --noEmit`, `bunx @biomejs/biome check`, and `bun run knip` clean.
-- The Phase 1 contract tests remain byte-unchanged across the entire Phase 2 refactor.
-- Manually: `ki skill user add <skill>` against a temp HOME, then `lstat` the resulting symlink.
+- `bun run test` green with the 100% coverage thresholds passing; `bunx tsc --noEmit`, `bunx biome check src`, and `bunx knip` clean.
+- The contract tests remain byte-unchanged across each refactor step (6–9), except where a step's own scenarios are being added.
+- Manually: `ki harness install example/harness` against a sandbox config pointing at a fixture archive; `lstat` the installed tree.
 
 ## Dependencies / blocks
 
-None. Independent of the in-flight config/doctor work; it touches the `skill` command and `agents`/`registry` internals behind a locked contract.
+None. Independent of the in-flight config/doctor work; everything moves behind the locked CLI contract.
