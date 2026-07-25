@@ -11,8 +11,6 @@ import type { AgentDescriptor } from './types.ts'
 
 export const agentDescriptors = [claudeCode, chatgptCodex] as const satisfies readonly AgentDescriptor[]
 
-export type AgentId = (typeof agentDescriptors)[number]['id']
-
 export const bootstrapUserSkills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap'] as const
 
 export interface InstalledAgent {
@@ -335,12 +333,6 @@ export const installedBootstrapSkillSources = async (
   return bootstrapSkillSources(harness, `installed harness ${identifier}`)
 }
 
-export const installedBootstrapSkillSource = async (dataDirectory: string, identifier = baseHarnessIdentifier): Promise<string> => {
-  const skill = (await installedBootstrapSkillSources(dataDirectory, identifier))[0]
-  if (!skill) throw new KiError(`installed harness ${identifier} does not provide ki-bootstrap`, 1)
-  return skill.source
-}
-
 export const localBootstrapHarness = async (
   harnessDirectory: string
 ): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
@@ -494,19 +486,10 @@ export const bootstrapAgents = async (options: {
 export const configuredAgents = async (options: {
   readonly homeDirectory: string
   readonly configurationDirectory: string
-  readonly selected?: readonly string[]
 }): Promise<readonly InstalledAgent[]> => {
   const configured = await readConfiguration(options.configurationDirectory, options.homeDirectory)
   if (!configured) throw new KiError('KI environment is not bootstrapped; run `ki bootstrap` first', 1)
-  if (!options.selected?.length) return configured
-  const selected = options.selected.map(descriptor)
-  const byId = new Map(configured.map((agent) => [agent.descriptor.id, agent]))
-  const agents = selected.map((candidate) => byId.get(candidate.id))
-  if (agents.some((agent) => !agent)) {
-    const absent = selected.find((candidate) => !byId.has(candidate.id))
-    throw new KiError(`agent ${absent?.id} is not configured; add it to ${bootstrapConfigurationPath(options.configurationDirectory)}`, 1)
-  }
-  return agents as readonly InstalledAgent[]
+  return configured
 }
 
 export const agentSkillDirectory = (agent: InstalledAgent, scope: 'user' | 'repo', repository?: string): string => {
