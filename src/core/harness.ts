@@ -4,7 +4,7 @@ import { KiError } from './errors.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const harnessComponent = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
-const payloadRoots = ['skills', 'agents', 'hooks'] as const
+const payloadRoots = ['skills', 'subagents', 'hooks'] as const
 
 export const baseHarnessIdentifier = 'knowledgeislands/ki-agentic-harness'
 

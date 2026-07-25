@@ -9,7 +9,7 @@ import { baseHarnessIdentifier, inspectHarnessRoot, readInstalledHarness } from 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const sha256 = /^[a-f0-9]{64}$/
 const decoder = new TextDecoder('utf-8', { fatal: true })
-const payloadRoots = ['skills', 'agents', 'hooks'] as const
+const payloadRoots = ['skills', 'subagents', 'hooks'] as const
 
 export interface HarnessRelease {
   readonly id: string
@@ -192,8 +192,8 @@ const extractArchive = async (payload: Uint8Array, target: string): Promise<void
     const contentsEnd = contentsStart + size
     if (!safeRelativePath(path) || contentsEnd > archive.length) throw new KiError('harness archive contains an unsafe entry', 1)
     const parts = path.split('/')
-    const direct = parts[0] === 'skills' || parts[0] === 'agents' || parts[0] === 'hooks'
-    const nested = parts[1] === 'skills' || parts[1] === 'agents' || parts[1] === 'hooks'
+    const direct = parts[0] === 'skills' || parts[0] === 'subagents' || parts[0] === 'hooks'
+    const nested = parts[1] === 'skills' || parts[1] === 'subagents' || parts[1] === 'hooks'
     if (!direct && !nested) {
       offset = contentsStart + Math.ceil(size / 512) * 512
       continue

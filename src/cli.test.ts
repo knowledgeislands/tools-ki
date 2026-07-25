@@ -133,7 +133,7 @@ const installHarness = async (data: string, auditSource?: string, conformSource?
 
 const installBootstrapHarness = async (data: string): Promise<void> => {
   const root = join(data, 'ki', 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
-  await Promise.all(['agents', 'hooks'].map((payload) => mkdir(join(root, payload), { recursive: true })))
+  await Promise.all(['subagents', 'hooks'].map((payload) => mkdir(join(root, payload), { recursive: true })))
   for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
     const source = skill === 'ki-bootstrap' ? join(root, 'skills', 'keystone', skill) : join(root, 'skills', 'process', skill)
     await mkdir(source, { recursive: true })
@@ -350,7 +350,7 @@ ids = [
     const source = join(harness, 'skills', 'keystone', 'ki-bootstrap')
     const data = join(root, 'data')
     await mkdir(join(home, '.agents'), { recursive: true })
-    await Promise.all(['agents', 'hooks'].map((payload) => mkdir(join(harness, payload), { recursive: true })))
+    await Promise.all(['subagents', 'hooks'].map((payload) => mkdir(join(harness, payload), { recursive: true })))
     await installBootstrapHarness(data)
     for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
       const path = skill === 'ki-bootstrap' ? source : join(harness, 'skills', 'process', skill)

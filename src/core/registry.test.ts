@@ -88,7 +88,7 @@ test('installs only the harness payload directly under its owner and repository 
     'source-revision/docs/ignored.md': '# source documentation\n',
     'source-revision/package.json': '{"private":true}\n',
     'source-revision/skills/ki-example/SKILL.md': skill,
-    'source-revision/agents/example.md': '# agent\n',
+    'source-revision/subagents/example.md': '# agent\n',
     'source-revision/hooks/example.sh': '#!/bin/sh\n'
   })
   const { config, data } = await configuredArchive(root, archive)
@@ -114,14 +114,14 @@ test('switches only the canonical payload directories to and from a local develo
   const installed = join(data, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
   const local = join(root, 'local-harness')
   await Promise.all(
-    ['skills', 'agents', 'hooks'].flatMap((payload) => [
+    ['skills', 'subagents', 'hooks'].flatMap((payload) => [
       mkdir(join(installed, payload), { recursive: true }),
       mkdir(join(local, payload), { recursive: true })
     ])
   )
 
   expect(await enableCanonicalHarnessDevelopment(data, local)).toBe(await realpath(local))
-  for (const payload of ['skills', 'agents', 'hooks']) {
+  for (const payload of ['skills', 'subagents', 'hooks']) {
     expect((await lstat(join(installed, payload))).isSymbolicLink()).toBe(true)
     expect(await realpath(join(installed, payload))).toBe(await realpath(join(local, payload)))
   }
