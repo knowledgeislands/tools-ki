@@ -1,0 +1,31 @@
+import { describe, expect, test } from 'vitest'
+import { sandbox } from './_cli_helper.ts'
+
+describe('ki completions', () => {
+  test('renders zsh and bash completion scripts', async () => {
+    const box = await sandbox()
+    const zsh = await box.run('ki completions zsh')
+    const bash = await box.run('ki completions bash')
+
+    expect(zsh.output).toContain('#compdef ki')
+    expect(bash.output).toContain(
+      'complete -W "acquire bootstrap completions diag dev doctor harness help repo version --help --version" ki'
+    )
+  })
+
+  test('rejects an unsupported shell and requires a shell argument', async () => {
+    const box = await sandbox()
+    const invalidCompletion = await box.run('ki completions fish')
+    const missingCompletionShell = await box.run('ki completions')
+
+    expect(invalidCompletion).toEqual({ exitCode: 2, output: 'ki: error: completions shell must be bash or zsh\n' })
+    expect(missingCompletionShell.exitCode).toBe(2)
+  })
+
+  test('rejects the singular completion command name', async () => {
+    const box = await sandbox()
+    const singular = await box.run('ki completion bash')
+
+    expect(singular.exitCode).toBe(2)
+  })
+})

@@ -33,13 +33,10 @@ const agentConfig: Record<AgentId, { home: string }> = {
   }
 }
 
-// This tools-ki checkout's own root and `bin/ki` — never spawned (run() drives the
-// CLI in-process), only used to populate `executable`/`_` in the synthetic context so
-// commands that inspect their own invocation path see a real, resolvable one.
-const repositoryFixtures = {
-  root: new URL('../../../', import.meta.url).pathname,
-  executable: new URL('../../../bin/ki', import.meta.url).pathname
-}
+// This tools-ki checkout's own `bin/ki` — never spawned (run() drives the CLI in-process),
+// only used to populate `executable`/`_` in the synthetic context so commands that inspect
+// their own invocation path see a real, resolvable one.
+const executablePath = new URL('../../../bin/ki', import.meta.url).pathname
 
 export interface CommandResult {
   readonly exitCode: number
@@ -117,7 +114,7 @@ export interface Sandbox {
   readonly data: SandboxArea
   readonly project: SandboxArea
   readonly env: Record<string, string>
-  readonly repo: typeof repositoryFixtures
+  readonly executable: string
   readonly setupExampleHarness: (skill?: { readonly audit?: string; readonly conform?: string }) => Promise<void>
   readonly setupCanonicalHarness: () => Promise<void>
   readonly setupLocalCanonicalHarness: (relativePath: string) => Promise<void>
@@ -163,9 +160,9 @@ const create = async (): Promise<Sandbox> => {
     const context = await createContext({
       stdout: { write },
       stderr: { write },
-      executable: repositoryFixtures.executable,
+      executable: executablePath,
       workingDirectory,
-      environment: { ...env, ...environmentOverrides, _: repositoryFixtures.executable }
+      environment: { ...env, ...environmentOverrides, _: executablePath }
     })
     const tokens = command.split(' ').filter(Boolean)
     if (tokens[0] !== 'ki') throw new Error(`sandbox run() commands must start with "ki": ${command}`)
@@ -179,7 +176,7 @@ const create = async (): Promise<Sandbox> => {
     data,
     project,
     env,
-    repo: repositoryFixtures,
+    executable: executablePath,
     setupExampleHarness: (skill) => setupExampleHarness(data, skill),
     setupCanonicalHarness: () => setupCanonicalHarness(data),
     setupLocalCanonicalHarness: (relativePath) => setupLocalCanonicalHarness(root, relativePath),
