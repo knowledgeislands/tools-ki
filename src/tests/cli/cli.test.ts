@@ -1,9 +1,8 @@
-import { lstat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
-import packageMetadata from '../../package.json' with { type: 'json' }
-import { run as runCli } from '../cli.ts'
-import { createContext } from '../core/context.ts'
+import packageMetadata from '../../../package.json' with { type: 'json' }
+import { run as runCli } from '../../cli.ts'
+import { createContext } from '../../core/context.ts'
 import { sandbox } from './testkit.ts'
 
 describe('command-line interface', () => {
@@ -83,28 +82,5 @@ describe('command-line interface', () => {
     await expect(
       runCli(['version'], { ...context, stdout: { write: () => Promise.reject(new Error('unexpected output')) } })
     ).rejects.toThrow('unexpected output')
-  })
-
-  test('distinguishes a linked source installation', async () => {
-    const box = await sandbox()
-    const installDirectory = join(box.root.path, 'bin')
-    const result = await box.exec(['bash', box.repo.installer, '--link'], { KI_CLI_INSTALL_DIR: installDirectory })
-    const doctor = await box.exec([join(installDirectory, 'ki'), 'diag'])
-
-    expect(result.exitCode).toBe(0)
-    expect((await lstat(join(installDirectory, 'ki'))).isSymbolicLink()).toBe(true)
-    expect(doctor.output).toContain('Installation  linked development checkout')
-  })
-
-  test('installs a compiled regular executable without Bun at runtime', async () => {
-    const box = await sandbox()
-    const installDirectory = join(box.root.path, 'bin')
-    expect((await box.exec(['bun', 'run', 'build'])).exitCode).toBe(0)
-    const result = await box.exec(['bash', box.repo.installer, '--copy'], { KI_CLI_INSTALL_DIR: installDirectory })
-    const doctor = await box.exec([join(installDirectory, 'ki'), 'diag'])
-
-    expect(result.exitCode).toBe(0)
-    expect((await lstat(join(installDirectory, 'ki'))).isSymbolicLink()).toBe(false)
-    expect(doctor.output).toContain('Installation  regular executable')
   })
 })

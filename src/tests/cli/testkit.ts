@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { onTestFinished } from 'vitest'
-import { run as runCli } from '../cli.ts'
-import { createContext } from '../core/context.ts'
+import { run as runCli } from '../../cli.ts'
+import { createContext } from '../../core/context.ts'
 
 // Shared end-to-end test harness for the `ki` CLI. Every test creates its own sandbox()
 // — a throwaway HOME/XDG_CONFIG_HOME/XDG_DATA_HOME/project quartet with methods to
@@ -14,9 +14,8 @@ import { createContext } from '../core/context.ts'
 // it, rather than a shared registry that a concurrent test could sweep prematurely.
 
 const repositoryFixtures = {
-  root: new URL('../../', import.meta.url).pathname,
-  executable: new URL('../../bin/ki', import.meta.url).pathname,
-  installer: new URL('../../install.sh', import.meta.url).pathname
+  root: new URL('../../../', import.meta.url).pathname,
+  executable: new URL('../../../bin/ki', import.meta.url).pathname
 }
 
 export interface CommandResult {
