@@ -78,6 +78,16 @@ Line numbers are from the current coverage run and will drift as steps 6–8 lan
 9. [ ] **Phase 2 — close every remaining uncovered span per the dispositions table (D6, D7).** Apply the Span dispositions list verbatim; add `src/tests/**` to coverage `exclude`. Any span whose disposition proves wrong in practice is escalated, not improvised. _Verify:_ `vitest run --coverage` passes the 100% thresholds.
 10. [ ] **Phase 3 — recap.** Run `ki-recap` over the whole set of changes to harvest lessons and route them to their homes. _Verify:_ recap produced; lessons filed.
 
+## Execution guidance (model / effort per step)
+
+| Step | Model | Effort | Why |
+| --- | --- | --- | --- |
+| 6 — fetcher seam | Sonnet 5 | high | Cross-cutting refactor (context, sandbox, three commands); recipe is explicit but integration judgment remains |
+| 7 — extract acquire.ts, delete shim | Sonnet 5 | medium | Code motion behind green contract tests; one ordering constraint, spelled out in the step |
+| 8 — retire unit tests | Sonnet 5 | medium | Volume test-porting from an enumerated scenario list; assertion-crafting, no design decisions |
+| 9 — span dispositions | Haiku 4.5 | medium | Verbatim checklist with an escalation rule; escalate any resistant span to Sonnet 5 rather than improvising |
+| 10 — recap | Opus 4.8 (or Fable 5) | medium | Synthesis and learning-routing across the whole plan; judgment work, not mechanics |
+
 ## Files touched
 
 - `src/context.ts` — gains `fetcher` (D1); `src/tests/cli/_cli_helper.ts` — stub-fetcher facility and tar-builder helper.
