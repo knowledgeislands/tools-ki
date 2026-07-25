@@ -18,15 +18,20 @@ describe('[ki skill]', () => {
       const source = join(box.data.path, 'ki', 'harnesses', 'example', 'harness', 'skills', 'ki-example')
 
       const added = await box.run('ki skill user add ki-example')
+      const linkStat = await lstat(link)
+      const linkTarget = await realpath(link)
+      const sourceTarget = await realpath(source)
+      const configAfterAdd = await box.config.read('ki/config.toml')
       expect(added).toEqual({ exitCode: 0, output: 'ki skill user add: linked ki-example for claude-code\n' })
-      expect((await lstat(link)).isSymbolicLink()).toBe(true)
-      expect(await realpath(link)).toBe(await realpath(source))
-      expect(await box.config.read('ki/config.toml')).toContain('[skills.ki-example]\nharness = "example/harness"')
+      expect(linkStat.isSymbolicLink()).toBe(true)
+      expect(linkTarget).toBe(sourceTarget)
+      expect(configAfterAdd).toContain('[skills.ki-example]\nharness = "example/harness"')
 
       const removed = await box.run('ki skill user remove ki-example')
+      const configAfterRemove = await box.config.read('ki/config.toml')
       expect(removed).toEqual({ exitCode: 0, output: 'ki skill user remove: unlinked ki-example for claude-code\n' })
       await expect(lstat(link)).rejects.toThrow()
-      expect(await box.config.read('ki/config.toml')).not.toContain('ki-example')
+      expect(configAfterRemove).not.toContain('ki-example')
 
       const repeated = await box.run('ki skill user remove ki-example')
       expect(repeated).toEqual({ exitCode: 0, output: 'ki skill user remove: no KI-managed link for ki-example for claude-code\n' })
@@ -41,15 +46,17 @@ describe('[ki skill]', () => {
       await symlink(decoy, link, 'dir')
 
       const refused = await box.run('ki skill user add ki-example')
+      const linkTargetBeforeReplace = await realpath(link)
+      const decoyTarget = await realpath(decoy)
       expect(refused.exitCode).toBe(1)
       expect(refused.output).toContain('points elsewhere; pass --replace to re-point')
-      expect(await realpath(link)).toBe(await realpath(decoy))
+      expect(linkTargetBeforeReplace).toBe(decoyTarget)
 
       const replaced = await box.run('ki skill user add ki-example --replace')
+      const linkTargetAfterReplace = await realpath(link)
+      const sourceTarget = await realpath(join(box.data.path, 'ki', 'harnesses', 'example', 'harness', 'skills', 'ki-example'))
       expect(replaced).toEqual({ exitCode: 0, output: 'ki skill user add: linked ki-example for claude-code\n' })
-      expect(await realpath(link)).toBe(
-        await realpath(join(box.data.path, 'ki', 'harnesses', 'example', 'harness', 'skills', 'ki-example'))
-      )
+      expect(linkTargetAfterReplace).toBe(sourceTarget)
     })
 
     test('refuses to adopt a foreign user skill directory', async () => {
@@ -72,14 +79,17 @@ describe('[ki skill]', () => {
       const link = join(projectRoot, '.claude', 'skills', 'ki-example')
 
       const added = await box.run(`ki skill repo add ki-example --repo ${box.project.path}`)
+      const linkStat = await lstat(link)
+      const configAfterAdd = await box.project.read('.ki-config.toml')
       expect(added).toEqual({ exitCode: 0, output: `ki skill repo add: linked ki-example into ${projectRoot} for claude-code\n` })
-      expect((await lstat(link)).isSymbolicLink()).toBe(true)
-      expect(await box.project.read('.ki-config.toml')).toContain('[ki-example]')
+      expect(linkStat.isSymbolicLink()).toBe(true)
+      expect(configAfterAdd).toContain('[ki-example]')
 
       const removed = await box.run(`ki skill repo remove ki-example --repo ${box.project.path}`)
+      const configAfterRemove = await box.project.read('.ki-config.toml')
       expect(removed).toEqual({ exitCode: 0, output: `ki skill repo remove: removed ki-example in ${projectRoot} for claude-code\n` })
       await expect(lstat(link)).rejects.toThrow()
-      expect(await box.project.read('.ki-config.toml')).not.toContain('[ki-example]')
+      expect(configAfterRemove).not.toContain('[ki-example]')
 
       const repeated = await box.run(`ki skill repo remove ki-example --repo ${box.project.path}`)
       expect(repeated).toEqual({

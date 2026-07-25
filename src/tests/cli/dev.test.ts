@@ -22,9 +22,12 @@ ki-plan for chatgpt-codex already installed
 ki-recap for chatgpt-codex already installed
 `
       })
-      expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness/skills')).toBe(true)
-      expect(await box.home.isSymlink('.agents/skills/ki-bootstrap')).toBe(true)
-      expect(await box.config.read('ki/config.toml')).toBe(
+      const dataIsSymlink = await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness/skills')
+      const homeIsSymlink = await box.home.isSymlink('.agents/skills/ki-bootstrap')
+      const config = await box.config.read('ki/config.toml')
+      expect(dataIsSymlink).toBe(true)
+      expect(homeIsSymlink).toBe(true)
+      expect(config).toBe(
         `schema = 1
 
 [agents]
@@ -71,16 +74,14 @@ path = ${JSON.stringify(harnessPath)}
 
       expect(off).toEqual({
         exitCode: 0,
-        output: [
-          'development harness disabled; canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c',
-          'refreshed ki configuration: 1 agents, 1 harnesses, 5 skills',
-          'ki-bootstrap for claude-code already installed',
-          'ki-delegate for claude-code already installed',
-          'ki-next for claude-code already installed',
-          'ki-plan for claude-code already installed',
-          'ki-recap for claude-code already installed',
-          ''
-        ].join('\n')
+        output: `development harness disabled; canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c
+refreshed ki configuration: 1 agents, 1 harnesses, 5 skills
+ki-bootstrap for claude-code already installed
+ki-delegate for claude-code already installed
+ki-next for claude-code already installed
+ki-plan for claude-code already installed
+ki-recap for claude-code already installed
+`
       })
     })
   })

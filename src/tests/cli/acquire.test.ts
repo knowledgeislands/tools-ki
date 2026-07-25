@@ -154,18 +154,32 @@ describe('[ki acquire chatgpt import]', () => {
     const importCapture = (): Promise<CommandResult> => box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
     const relationship = (content: string): Promise<void> => capture.write('relationships/native.jsonl', content)
 
-    await relationship('\n')
-    expect((await importCapture()).output).toContain('relationships/native.jsonl contains a blank record')
     const duplicate = '{"type":"conversation-order","record":"records/conversation.md","position":1}'
-    await relationship(`${duplicate}\n${duplicate}\n`)
-    expect((await importCapture()).output).toContain('relationships/native.jsonl contains a duplicate record')
+
+    await relationship('\n')
+    const blank = await importCapture()
+    expect(blank.output).toContain('relationships/native.jsonl contains a blank record')
+
+    await relationship(`${duplicate}
+${duplicate}
+`)
+    const duplicateResult = await importCapture()
+    expect(duplicateResult.output).toContain('relationships/native.jsonl contains a duplicate record')
+
     await relationship('{"type":"conversation-order","record":"records/missing.md","position":1}\n')
-    expect((await importCapture()).output).toContain('relationship references a missing record')
+    const missing = await importCapture()
+    expect(missing.output).toContain('relationship references a missing record')
+
     await capture.write('records/second.md', '# second record\n')
-    await relationship(`${duplicate}\n{"type":"conversation-order","record":"records/second.md","position":1}\n`)
-    expect((await importCapture()).output).toContain('relationship repeats a conversation position')
+    await relationship(`${duplicate}
+{"type":"conversation-order","record":"records/second.md","position":1}
+`)
+    const repeatedPosition = await importCapture()
+    expect(repeatedPosition.output).toContain('relationship repeats a conversation position')
+
     await relationship('{"type":"project-conversation","record":"records/conversation.md","project_id":"project-001"}\n')
-    expect((await importCapture()).exitCode).toBe(0)
+    const finalResult = await importCapture()
+    expect(finalResult.exitCode).toBe(0)
   })
 
   test('rejects missing capture elements and unsafe output locations', async () => {
@@ -308,7 +322,8 @@ describe('[ki acquire chatgpt import]', () => {
     box.setEnv({ PATH: `${spies}:${parentPath}` })
     const result = await box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
 
+    const kepToml = await readFile(join(output, 'kep.toml'), 'utf8')
     expect(result.exitCode).toBe(0)
-    expect(await readFile(join(output, 'kep.toml'), 'utf8')).toContain('format = "kep"')
+    expect(kepToml).toContain('format = "kep"')
   })
 })

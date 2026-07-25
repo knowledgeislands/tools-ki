@@ -46,20 +46,21 @@ describe('[ki harness]', () => {
       await mkdir(`${box.config.path}/ki`, { recursive: true })
       await writeFile(
         `${box.config.path}/ki/config.toml`,
-        [
-          '[harnesses]',
-          'releases = [',
-          `  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" },`,
-          ']',
-          ''
-        ].join('\n')
+        `[harnesses]
+releases = [
+  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" },
+]
+`
       )
       await box.setupExampleHarness()
 
       const installed = await box.run('ki harness install example/harness')
+      const config = await box.config.read('ki/config.toml')
 
       expect(installed).toEqual({ exitCode: 0, output: `example/harness is already installed\tarchive ${sha256}\n` })
-      expect(await box.config.read('ki/config.toml')).toContain('ids = [\n  "example/harness",\n]')
+      expect(config).toContain(`ids = [
+  "example/harness",
+]`)
     })
   })
 

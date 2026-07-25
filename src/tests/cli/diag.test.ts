@@ -23,20 +23,18 @@ describe('[ki diag]', () => {
     const box = await sandbox()
     await box.config.write(
       'ki/config.toml',
-      [
-        'schema = 2',
-        'unexpected = true',
-        '',
-        '[agents]',
-        'ids = ["claude-code", "unknown-agent"]',
-        '',
-        '[harnesses]',
-        'releases = [{ id = "example/harness", url = "http://example.test/archive.tar.gz", sha256 = "invalid", extra = true }]',
-        '',
-        '[skills]',
-        'ids = ["example:skill", "example:skill"]',
-        ''
-      ].join('\n')
+      `schema = 2
+unexpected = true
+
+[agents]
+ids = ["claude-code", "unknown-agent"]
+
+[harnesses]
+releases = [{ id = "example/harness", url = "http://example.test/archive.tar.gz", sha256 = "invalid", extra = true }]
+
+[skills]
+ids = ["example:skill", "example:skill"]
+`
     )
 
     const human = await box.run('ki diag')
