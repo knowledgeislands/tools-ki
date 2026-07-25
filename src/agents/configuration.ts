@@ -1,0 +1,245 @@
+import { lstat, readFile, writeFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
+import { parse } from 'smol-toml'
+import { KiError } from '../core/errors.ts'
+import {
+  agentDescriptors,
+  bootstrapConfigurationPath,
+  descriptor,
+  type HarnessSection,
+  type InstalledAgent,
+  isRecord,
+  type LocalSection,
+  type StringListSection,
+  type UserConfigurationInspection
+} from './internal.ts'
+
+export const renderConfiguration = (
+  agents: readonly InstalledAgent[],
+  harnesses: readonly string[] = [],
+  skills: readonly string[] = [],
+  local?: string
+): string =>
+  [
+    'schema = 1',
+    '',
+    '[agents]',
+    'ids = [',
+    ...agents.map((agent) => `  ${JSON.stringify(agent.descriptor.id)},`),
+    ']',
+    '',
+    '[harnesses]',
+    'ids = [',
+    ...harnesses.map((harness) => `  ${JSON.stringify(harness)},`),
+    ']',
+    '',
+    '[skills]',
+    ...skills.flatMap((skill) => {
+      const separator = skill.lastIndexOf(':')
+      return ['', `[skills.${skill.slice(separator + 1)}]`, `harness = ${JSON.stringify(skill.slice(0, separator))}`]
+    }),
+    ...(local ? ['', '[local]', `path = ${JSON.stringify(local)}`] : []),
+    ''
+  ].join('\n')
+
+const inspectStringList = (value: unknown, key: string, errors: string[]): string[] => {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string' || !entry)) {
+    errors.push(`${key} must be an array of non-empty strings`)
+    return []
+  }
+  if (new Set(value).size !== value.length) errors.push(`${key} repeats a value`)
+  return value
+}
+
+const inspectSection = (value: unknown, key: string, errors: string[]): Record<string, unknown> => {
+  if (isRecord(value)) return value
+  errors.push(`${key} must be a TOML table`)
+  return {}
+}
+
+export const inspectUserConfiguration = async (configurationDirectory: string): Promise<UserConfigurationInspection> => {
+  const path = bootstrapConfigurationPath(configurationDirectory)
+  const state = await lstat(path).catch(() => undefined)
+  if (!state) return { path, state: 'missing', agents: [], harnesses: [], skills: [], local: null, warnings: [], errors: [] }
+  if (!state.isFile() || state.isSymbolicLink()) {
+    return {
+      path,
+      state: 'invalid',
+      agents: [],
+      harnesses: [],
+      skills: [],
+      local: null,
+      warnings: [],
+      errors: ['configuration must be a regular file']
+    }
+  }
+  let parsed: unknown
+  try {
+    parsed = parse(await readFile(path, 'utf8'))
+  } catch {
+    return {
+      path,
+      state: 'invalid',
+      agents: [],
+      harnesses: [],
+      skills: [],
+      local: null,
+      warnings: [],
+      errors: ['configuration must be valid TOML']
+    }
+  }
+  if (!isRecord(parsed)) {
+    return {
+      path,
+      state: 'invalid',
+      agents: [],
+      harnesses: [],
+      skills: [],
+      local: null,
+      warnings: [],
+      errors: ['configuration must be a TOML table']
+    }
+  }
+
+  const configuration = parsed as Record<string, unknown> & {
+    schema?: unknown
+    agents?: unknown
+    harnesses?: unknown
+    skills?: unknown
+    local?: unknown
+  }
+  const warnings = Object.keys(configuration)
+    .filter((key) => !['schema', 'agents', 'harnesses', 'skills', 'local'].includes(key))
+    .map((key) => `unrecognised key ${key}`)
+  const errors: string[] = []
+  if (configuration.schema !== 1) errors.push('schema must equal 1')
+  const agentSection = inspectSection(configuration.agents, 'agents', errors) as StringListSection
+  for (const key of Object.keys(agentSection)) {
+    if (key !== 'ids') warnings.push(`agents has unrecognised key ${key}`)
+  }
+  const agents = inspectStringList(agentSection.ids, 'agents.ids', errors)
+  for (const agent of agents) {
+    if (!agentDescriptors.some((candidate) => candidate.id === agent)) warnings.push(`unrecognised agent ${agent}`)
+  }
+  const skillSection = inspectSection(configuration.skills, 'skills', errors)
+  const skills: string[] = []
+  for (const [name, value] of Object.entries(skillSection)) {
+    if (!isRecord(value)) {
+      errors.push(`skills.${name} must be a TOML table`)
+      continue
+    }
+    const harness = (value as { harness?: unknown }).harness
+    if (typeof harness !== 'string' || !harness) {
+      errors.push(`skills.${name} must declare a harness string`)
+      continue
+    }
+    skills.push(`${harness}:${name}`)
+  }
+  const harnessSection = inspectSection(configuration.harnesses, 'harnesses', errors) as HarnessSection
+  for (const key of Object.keys(harnessSection)) {
+    if (key !== 'ids' && key !== 'releases') warnings.push(`harnesses has unrecognised key ${key}`)
+  }
+  const harnesses: string[] = []
+  if (harnessSection.ids !== undefined) harnesses.push(...inspectStringList(harnessSection.ids, 'harnesses.ids', errors))
+  else if (!Array.isArray(harnessSection.releases)) errors.push('harnesses must declare an ids array')
+  else {
+    for (const [index, harness] of harnessSection.releases.entries()) {
+      if (!isRecord(harness)) {
+        errors.push(`harnesses[${index}] must be a table`)
+        continue
+      }
+      for (const key of Object.keys(harness)) {
+        if (!['id', 'url', 'sha256'].includes(key)) warnings.push(`harnesses[${index}] has unrecognised key ${key}`)
+      }
+      const release = harness as Record<string, unknown> & { id?: unknown; url?: unknown; sha256?: unknown }
+      const id = release.id
+      const url = release.url
+      const digest = release.sha256
+      if (typeof id !== 'string' || !id) errors.push(`harnesses[${index}] id must be a non-empty string`)
+      else harnesses.push(id)
+      if (typeof url !== 'string' || !url.startsWith('https://')) errors.push(`harnesses[${index}] url must be an HTTPS URL`)
+      if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) errors.push(`harnesses[${index}] sha256 must be lowercase SHA-256`)
+    }
+  }
+  const localSection =
+    configuration.local === undefined ? undefined : (inspectSection(configuration.local, 'local', errors) as LocalSection)
+  if (localSection) {
+    for (const key of Object.keys(localSection)) {
+      if (key !== 'path') warnings.push(`local has unrecognised key ${key}`)
+    }
+  }
+  const local = localSection === undefined ? null : typeof localSection.path === 'string' && localSection.path ? localSection.path : null
+  if (localSection !== undefined && local === null) errors.push('local.path must be a non-empty path string')
+  return { path, state: errors.length ? 'invalid' : 'valid', agents, harnesses, skills, local, warnings, errors }
+}
+
+export const readConfiguration = async (
+  configurationDirectory: string,
+  homeDirectory: string
+): Promise<readonly InstalledAgent[] | undefined> => {
+  const path = bootstrapConfigurationPath(configurationDirectory)
+  const state = await lstat(path).catch(() => undefined)
+  if (!state) return undefined
+  if (!state.isFile() || state.isSymbolicLink()) throw new KiError('agent configuration must be a regular file', 1)
+  let parsed: unknown
+  try {
+    parsed = parse(await readFile(path, 'utf8'))
+  } catch {
+    throw new KiError('agent configuration must be valid TOML', 1)
+  }
+  if (!isRecord(parsed)) throw new KiError('agent configuration must use schema 1', 1)
+  const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown; local?: unknown }
+  const agentSection = isRecord(configuration.agents) ? (configuration.agents as StringListSection) : undefined
+  const localSection =
+    configuration.local === undefined ? undefined : isRecord(configuration.local) ? (configuration.local as LocalSection) : null
+  if (
+    configuration.schema !== 1 ||
+    !agentSection ||
+    !Array.isArray(agentSection.ids) ||
+    agentSection.ids.some((agent) => typeof agent !== 'string') ||
+    (localSection !== undefined && (localSection === null || typeof localSection.path !== 'string' || !localSection.path))
+  ) {
+    throw new KiError('ki configuration must declare an agents.ids string array and an optional local.path', 1)
+  }
+  const agents = agentSection.ids as string[]
+  if (new Set(agents).size !== agents.length) throw new KiError('agent configuration repeats an agent', 1)
+  return agents.map((id) => {
+    const known = descriptor(id)
+    return { descriptor: known, home: resolve(homeDirectory, known.paths.home) }
+  })
+}
+
+export const configuredAgents = async (options: {
+  readonly homeDirectory: string
+  readonly configurationDirectory: string
+}): Promise<readonly InstalledAgent[]> => {
+  const configured = await readConfiguration(options.configurationDirectory, options.homeDirectory)
+  if (!configured) throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
+  return configured
+}
+
+export const setLocalBootstrapHarness = async (configurationDirectory: string, local?: string): Promise<void> => {
+  const path = bootstrapConfigurationPath(configurationDirectory)
+  const contents = await readFile(path, 'utf8')
+  const expression = /(?:^|\n)\[local\]\npath\s*=.*(?:\n|$)/m
+  const updated = local
+    ? expression.test(contents)
+      ? contents.replace(expression, `\n[local]\npath = ${JSON.stringify(local)}\n`)
+      : `${contents.trimEnd()}\n\n[local]\npath = ${JSON.stringify(local)}\n`
+    : contents.replace(expression, '')
+  await writeFile(path, updated, 'utf8')
+}
+
+export const setConfiguredUserSkills = async (
+  configurationDirectory: string,
+  homeDirectory: string,
+  skills: readonly string[]
+): Promise<void> => {
+  const agents = await configuredAgents({ homeDirectory, configurationDirectory })
+  const inspection = await inspectUserConfiguration(configurationDirectory)
+  await writeFile(
+    bootstrapConfigurationPath(configurationDirectory),
+    renderConfiguration(agents, inspection.harnesses, skills, inspection.local ?? undefined),
+    'utf8'
+  )
+}
