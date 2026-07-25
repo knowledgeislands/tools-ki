@@ -1,7 +1,5 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { sandbox } from './testkit.ts'
-
-afterEach(sandbox.cleanupAll)
 
 describe('ki dev', () => {
   describe('dev on', () => {

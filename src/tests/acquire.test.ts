@@ -17,9 +17,8 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   }
 })
 
-afterEach(async () => {
+afterEach(() => {
   writeFailure.enabled = false
-  await sandbox.cleanupAll()
 })
 
 const makeCapture = async (root: string): Promise<string> => {

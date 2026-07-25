@@ -1,7 +1,5 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { sandbox } from './testkit.ts'
-
-afterEach(sandbox.cleanupAll)
 
 describe('ki bootstrap', () => {
   test('bootstraps without replacement and refreshes the detected installed inventory on request', async () => {

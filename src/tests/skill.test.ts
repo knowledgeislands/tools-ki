@@ -1,9 +1,7 @@
 import { lstat, mkdir, realpath, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { afterEach, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from './testkit.ts'
-
-afterEach(sandbox.cleanupAll)
 
 describe('ki skill', () => {
   const bootstrapClaudeCode = async (box: Sandbox): Promise<void> => {

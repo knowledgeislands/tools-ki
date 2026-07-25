@@ -1,12 +1,10 @@
 import { lstat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { afterEach, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import packageMetadata from '../../package.json' with { type: 'json' }
 import { run as runCli } from '../cli.ts'
 import { createContext } from '../core/context.ts'
 import { sandbox } from './testkit.ts'
-
-afterEach(sandbox.cleanupAll)
 
 describe('command-line interface', () => {
   test('provide help, version, plural completions, and diagnostics', async () => {

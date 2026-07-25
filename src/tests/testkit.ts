@@ -3,14 +3,15 @@ import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:f
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
+import { onTestFinished } from 'vitest'
 import { run as runCli } from '../cli.ts'
 import { createContext } from '../core/context.ts'
 
 // Shared end-to-end test harness for the `ki` CLI. Every test creates its own sandbox()
 // — a throwaway HOME/XDG_CONFIG_HOME/XDG_DATA_HOME/project quartet with methods to
 // populate and run against it — so no test assembles that layout or a raw path by hand.
-// `sandbox` is the only export: fixed repo paths and cleanup hang off it as properties
-// (sandbox.repo, sandbox.cleanupAll) rather than being separate top-level exports.
+// Cleanup is registered per sandbox via `onTestFinished`, tied to the test that created
+// it, rather than a shared registry that a concurrent test could sweep prematurely.
 
 const repositoryFixtures = {
   root: new URL('../../', import.meta.url).pathname,
@@ -37,21 +38,47 @@ export interface SandboxArea {
   readonly isSymlink: (relativePath: string) => Promise<boolean>
 }
 
-const area = (path: string): SandboxArea => ({
-  path,
-  write: async (relativePath, content) => {
-    const target = join(path, relativePath)
-    await mkdir(dirname(target), { recursive: true })
-    await writeFile(target, content)
-  },
-  read: (relativePath) => readFile(join(path, relativePath), 'utf8'),
-  mkdir: async (relativePath) => {
-    await mkdir(join(path, relativePath), { recursive: true })
-  },
-  resolve: (relativePath) => join(path, relativePath),
-  realpath: (relativePath) => realpath(join(path, relativePath)),
-  isSymlink: async (relativePath) => (await lstat(join(path, relativePath))).isSymbolicLink()
-})
+const area = (path: string): SandboxArea => {
+  const resolve = (relativePath: string): string => join(path, relativePath)
+  return {
+    path,
+    resolve,
+    write: async (relativePath, content) => {
+      const target = resolve(relativePath)
+      await mkdir(dirname(target), { recursive: true })
+      await writeFile(target, content)
+    },
+    read: (relativePath) => readFile(resolve(relativePath), 'utf8'),
+    mkdir: (relativePath) => mkdir(resolve(relativePath), { recursive: true }).then(() => undefined),
+    realpath: (relativePath) => realpath(resolve(relativePath)),
+    isSymlink: async (relativePath) => (await lstat(resolve(relativePath))).isSymbolicLink()
+  }
+}
+
+// A single generic `example/harness` with one `ki-example` skill, whose audit/conform
+// native script bodies the caller supplies. Used to exercise the repo/harness/skill
+// commands against arbitrary skill behavior.
+const installExampleHarness = async (data: SandboxArea, { audit, conform }: { audit?: string; conform?: string } = {}): Promise<void> => {
+  const base = 'ki/harnesses/example/harness/skills/ki-example'
+  await data.write(`${base}/SKILL.md`, '---\nname: ki-example\nki-depends-on: []\n---\n')
+  const operations = [
+    audit ? { mode: 'audit', source: audit } : undefined,
+    conform ? { mode: 'conform', source: conform } : undefined
+  ].filter((operation): operation is { readonly mode: string; readonly source: string } => operation !== undefined)
+  await Promise.all(operations.map((operation) => data.write(`${base}/scripts/native/${operation.mode}.mjs`, operation.source)))
+}
+
+// A fixture shaped exactly like the real canonical knowledgeislands/ki-agentic-harness
+// (its specific skill names and keystone/process grouping), because `ki bootstrap`/`ki
+// dev` hardcode expectations about that identity rather than accepting any harness.
+const installBootstrapHarness = async (data: SandboxArea): Promise<void> => {
+  const base = 'ki/harnesses/knowledgeislands/ki-agentic-harness'
+  await Promise.all(['subagents', 'hooks'].map((payload) => data.mkdir(`${base}/${payload}`)))
+  for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
+    const group = skill === 'ki-bootstrap' ? 'keystone' : 'process'
+    await data.write(`${base}/skills/${group}/${skill}/SKILL.md`, `---\nname: ${skill}\nki-depends-on: []\n---\n`)
+  }
+}
 
 export interface Sandbox {
   readonly root: SandboxArea
@@ -72,16 +99,10 @@ export interface Sandbox {
 }
 
 const executeFile = promisify(execFile)
-const temporaryDirectories: string[] = []
-
-const temporaryDirectory = async (): Promise<string> => {
-  const directory = await mkdtemp(join(tmpdir(), 'ki-test-'))
-  temporaryDirectories.push(directory)
-  return directory
-}
 
 const create = async (): Promise<Sandbox> => {
-  const rootPath = await temporaryDirectory()
+  const rootPath = await mkdtemp(join(tmpdir(), 'ki-test-'))
+  onTestFinished(() => rm(rootPath, { recursive: true, force: true }))
   const root = area(rootPath)
   const home = area(join(rootPath, 'home'))
   const config = area(join(rootPath, 'config'))
@@ -90,31 +111,6 @@ const create = async (): Promise<Sandbox> => {
   await mkdir(home.path, { recursive: true })
   await mkdir(project.path, { recursive: true })
   const env = { HOME: home.path, XDG_CONFIG_HOME: config.path, XDG_DATA_HOME: data.path }
-
-  // A single generic `example/harness` with one `ki-example` skill, whose
-  // audit/conform native script bodies the caller supplies. Used to exercise the
-  // repo/harness/skill commands against arbitrary skill behavior.
-  const installExampleHarness = async ({ audit, conform }: { audit?: string; conform?: string } = {}): Promise<void> => {
-    const base = 'ki/harnesses/example/harness/skills/ki-example'
-    await data.write(`${base}/SKILL.md`, '---\nname: ki-example\nki-depends-on: []\n---\n')
-    const operations = [
-      audit ? { mode: 'audit', source: audit } : undefined,
-      conform ? { mode: 'conform', source: conform } : undefined
-    ].filter((operation): operation is { readonly mode: string; readonly source: string } => operation !== undefined)
-    await Promise.all(operations.map((operation) => data.write(`${base}/scripts/native/${operation.mode}.mjs`, operation.source)))
-  }
-
-  // A fixture shaped exactly like the real canonical knowledgeislands/ki-agentic-harness
-  // (its specific skill names and keystone/process grouping), because `ki bootstrap`/`ki
-  // dev` hardcode expectations about that identity rather than accepting any harness.
-  const installBootstrapHarness = async (): Promise<void> => {
-    const base = 'ki/harnesses/knowledgeislands/ki-agentic-harness'
-    await Promise.all(['subagents', 'hooks'].map((payload) => data.mkdir(`${base}/${payload}`)))
-    for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
-      const group = skill === 'ki-bootstrap' ? 'keystone' : 'process'
-      await data.write(`${base}/skills/${group}/${skill}/SKILL.md`, `---\nname: ${skill}\nki-depends-on: []\n---\n`)
-    }
-  }
 
   // Drives the real `ki` command tree in-process, always starting from this sandbox's
   // own env (a real HOME/XDG_* always exists by construction — no forgotten-override
@@ -156,11 +152,19 @@ const create = async (): Promise<Sandbox> => {
     }
   }
 
-  return { root, home, config, data, project, env, repo: repositoryFixtures, installExampleHarness, installBootstrapHarness, run, exec }
+  return {
+    root,
+    home,
+    config,
+    data,
+    project,
+    env,
+    repo: repositoryFixtures,
+    installExampleHarness: (skill) => installExampleHarness(data, skill),
+    installBootstrapHarness: () => installBootstrapHarness(data),
+    run,
+    exec
+  }
 }
 
-const cleanupAll = async (): Promise<void> => {
-  await Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })))
-}
-
-export const sandbox = Object.assign(create, { cleanupAll })
+export const sandbox = create

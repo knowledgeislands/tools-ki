@@ -1,7 +1,5 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { sandbox, type SandboxArea } from './testkit.ts'
-
-afterEach(sandbox.cleanupAll)
 
 describe('ki repo', () => {
   describe('repo audit', () => {

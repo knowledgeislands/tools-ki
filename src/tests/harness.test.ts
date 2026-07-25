@@ -1,8 +1,6 @@
 import { lstat, mkdir, symlink, writeFile } from 'node:fs/promises'
-import { afterEach, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { sandbox } from './testkit.ts'
-
-afterEach(sandbox.cleanupAll)
 
 describe('ki harness', () => {
   describe('harness list', () => {
