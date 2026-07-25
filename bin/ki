@@ -1,6 +1,3 @@
 #!/usr/bin/env bun
 
-import { run } from '../src/cli.ts'
-
-// The typed host in src/cli.ts resolves --version and the complete command grammar.
-process.exitCode = await run(process.argv.slice(2))
+import '../src/main.ts'

@@ -10,9 +10,8 @@ import { createHelpCommand } from './commands/help.ts'
 import { createRepoCommand } from './commands/repo.ts'
 import { createSkillCommand } from './commands/skill.ts'
 import { createVersionCommand } from './commands/version.ts'
-import { createContext, type KiContext } from './context.ts'
+import type { KiContext } from './context.ts'
 import { KiError } from './core/errors.ts'
-import { processContextOptions } from './core/output.ts'
 import { KI_VERSION } from './version.ts'
 
 export const createProgram = (context: KiContext): Command => {
@@ -46,8 +45,7 @@ export const createProgram = (context: KiContext): Command => {
   return program
 }
 
-export const run = async (arguments_: readonly string[], suppliedContext?: KiContext): Promise<number> => {
-  const context = suppliedContext ?? (await createContext(processContextOptions()))
+export const run = async (arguments_: readonly string[], context: KiContext): Promise<number> => {
   const program = createProgram(context)
   /* v8 ignore next -- V8 reports a non-existent third outcome for this complete boolean condition. */
   if (!arguments_.length) {
@@ -68,9 +66,4 @@ export const run = async (arguments_: readonly string[], suppliedContext?: KiCon
     }
     throw error
   }
-}
-
-/* v8 ignore next -- module entrypoint is exercised by the installed executable, not an importing test. */
-if (import.meta.main) {
-  process.exitCode = await run(process.argv.slice(2))
 }

@@ -49,7 +49,7 @@
     "url": "git+https://github.com/knowledgeislands/tools-ki.git"
   },
   "scripts": {
-    "build": "bun build --compile --outfile dist/ki src/cli.ts",
+    "build": "bun build --compile --outfile dist/ki src/main.ts",
     "clean": "rm -rf dist node_modules",
     "prepare": "husky",
     "test": "vitest run",

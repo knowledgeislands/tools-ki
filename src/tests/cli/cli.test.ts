@@ -4,8 +4,7 @@ import { createContext } from '../../context.ts'
 import { sandbox } from './_cli_helper.ts'
 
 describe('runCli() entry point', () => {
-  test('creates a context when the caller does not supply one and rethrows unexpected command errors', async () => {
-    expect(await runCli(['version'])).toBe(0)
+  test('rethrows unexpected command errors', async () => {
     const box = await sandbox()
     const context = await createContext({
       stdout: { write: () => undefined },
