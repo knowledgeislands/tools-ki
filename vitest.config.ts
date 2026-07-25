@@ -6,6 +6,7 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts'],
     fileParallelism: false,
+    reporters: ['tree'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
