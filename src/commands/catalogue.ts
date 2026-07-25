@@ -2,11 +2,11 @@ export const rootCommandNames = [
   'acquire',
   'bootstrap',
   'completions',
+  'diag',
   'dev',
   'doctor',
   'harness',
   'help',
-  'paths',
   'repo',
   'version'
 ] as const

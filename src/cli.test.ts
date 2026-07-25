@@ -142,13 +142,13 @@ const installBootstrapHarness = async (data: string): Promise<void> => {
 }
 
 describe('baseline commands', () => {
-  test('provide help, version, plural completions, and read-only XDG inspection', async () => {
+  test('provide help, version, plural completions, and diagnostics', async () => {
     const home = await temporaryDirectory()
     const missingHome = join(home, 'missing-home')
     const help = await runKi(['--help'])
     const completions = await runKi(['completions', 'zsh'])
     const version = await runKi(['version'])
-    const paths = await runKi(['paths', '--json'], {
+    const diag = await runKi(['diag'], {
       XDG_DATA_HOME: join(missingHome, 'data'),
       XDG_CONFIG_HOME: join(missingHome, 'config'),
       XDG_CACHE_HOME: join(missingHome, 'cache'),
@@ -160,8 +160,8 @@ describe('baseline commands', () => {
     expect(help.output).toContain('acquire')
     expect(completions.output).toContain('#compdef ki')
     expect(version.output).toBe(`ki ${packageMetadata.version}\n`)
-    expect(paths.output).toContain(`"executable":"${executable}"`)
-    expect(paths.output).toContain(`"data":"${missingHome}/data/ki"`)
+    expect(diag.output).toContain(`Executable    ${executable}`)
+    expect(diag.output).toContain(`Data          ${missingHome}/data/ki`)
     expect(singular.exitCode).toBe(2)
   })
 
@@ -185,7 +185,7 @@ describe('baseline commands', () => {
     }
     const bash = await runKi(['completions', 'bash'])
     const invalidCompletion = await runKi(['completions', 'fish'])
-    const paths = await runKi(['paths'], environment)
+    const diag = await runKi(['diag'], environment)
     const doctor = await runKi(['doctor'], environment)
     const doctorJson = await runKi(['doctor', '--json'], environment)
     const optionVersion = await runKi(['--version'])
@@ -193,13 +193,12 @@ describe('baseline commands', () => {
     const unknown = await runKi(['unknown'])
 
     expect(bash.output).toContain(
-      'complete -W "acquire bootstrap completions dev doctor harness help paths repo version --help --version" ki'
+      'complete -W "acquire bootstrap completions diag dev doctor harness help repo version --help --version" ki'
     )
     expect(invalidCompletion).toEqual({ exitCode: 2, output: 'ki: error: completions shell must be bash or zsh\n' })
-    expect(paths.output).toContain(`data: ${root}/data/ki`)
-    expect(doctor.output).toContain(`KI doctor\n  Version       ${packageMetadata.version}`)
-    expect(doctor.output).toContain('Configuration\n  Status        missing')
-    expect(doctorJson.output).toContain(`"ki_version":"${packageMetadata.version}"`)
+    expect(diag.output).toContain(`Data          ${root}/data/ki`)
+    expect(doctor.output).toContain('KI doctor\n  ✗ Configuration: missing; run ki bootstrap')
+    expect(doctorJson.exitCode).toBe(2)
     expect(optionVersion).toEqual({ exitCode: 0, output: `${packageMetadata.version}\n` })
     expect(missingCompletionShell.exitCode).toBe(2)
     expect(unknown.exitCode).toBe(2)
@@ -227,37 +226,8 @@ describe('baseline commands', () => {
       ].join('\n')
     )
 
-    const result = await runKi(['doctor', '--json'], { XDG_CONFIG_HOME: join(root, 'config') })
-    const human = await runKi(['doctor'], { XDG_CONFIG_HOME: join(root, 'config') })
-    const report = JSON.parse(result.output) as {
-      configuration: {
-        readonly state: string
-        readonly agents: readonly string[]
-        readonly harnesses: readonly string[]
-        readonly skills: readonly string[]
-        readonly local: string | null
-        readonly warnings: readonly string[]
-        readonly errors: readonly string[]
-      }
-    }
-    const configurationReport = report.configuration
+    const human = await runKi(['diag'], { XDG_CONFIG_HOME: join(root, 'config') })
 
-    expect(result.exitCode).toBe(0)
-    expect(configurationReport.state).toBe('invalid')
-    expect(configurationReport.agents).toEqual(['claude-code', 'unknown-agent'])
-    expect(configurationReport.harnesses).toEqual(['example/harness'])
-    expect(configurationReport.skills).toEqual(['example:skill', 'example:skill'])
-    expect(configurationReport.warnings).toEqual(
-      expect.arrayContaining(['unrecognised key unexpected', 'unrecognised agent unknown-agent', 'harnesses[0] has unrecognised key extra'])
-    )
-    expect(configurationReport.errors).toEqual(
-      expect.arrayContaining([
-        'schema must equal 1',
-        'harnesses[0] url must be an HTTPS URL',
-        'harnesses[0] sha256 must be lowercase SHA-256',
-        'skills.ids repeats a value'
-      ])
-    )
     expect(human.output).toContain('Warnings\n  - unrecognised key unexpected')
     expect(human.output).toContain('Errors\n  - schema must equal 1')
   })
@@ -267,10 +237,8 @@ describe('baseline commands', () => {
     const data = join(root, 'data')
     await installHarness(data)
     const listed = await runKi(['harness', 'list'], { XDG_DATA_HOME: data })
-    const json = await runKi(['harness', 'list', '--json'], { XDG_DATA_HOME: data })
 
     expect(listed).toEqual({ exitCode: 0, output: 'example/harness\t1 capabilities\n' })
-    expect(json.output).toContain('"id":"example/harness"')
   })
 
   test('bootstraps without replacement and refreshes the detected installed inventory on request', async () => {
@@ -284,6 +252,7 @@ describe('baseline commands', () => {
     const bootstrapped = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
     const repeated = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
     const refreshed = await runKi(['bootstrap', '--refresh'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
+    const checked = await runKi(['doctor'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
 
     expect(bootstrapped).toEqual({
       exitCode: 0,
@@ -318,6 +287,10 @@ describe('baseline commands', () => {
         'ki-plan for chatgpt-codex already installed\n' +
         'ki-recap for chatgpt-codex already installed\n'
     })
+    expect(checked.output).toContain('✓ Configuration:')
+    expect(checked.output).toContain('✓ Harness inventory: 1 installed')
+    expect(checked.output).toContain('✓ Agent chatgpt-codex: ready')
+    expect(checked.output).not.toContain('✗')
     expect(await readFile(join(configuration, 'ki', 'config.toml'), 'utf8')).toBe(
       `schema = 1
 
@@ -495,8 +468,8 @@ path = ${JSON.stringify(await realpath(harness))}
       environment: { HOME: home }
     })
 
-    expect(await runCli(['doctor', '--json'], context)).toBe(0)
-    expect(output).toContain('"repository":null')
+    expect(await runCli(['diag'], context)).toBe(0)
+    expect(output).toContain('Repository    none')
   })
 
   test('keeps source path validation strict for direct consumers', () => {
@@ -511,7 +484,7 @@ path = ${JSON.stringify(await realpath(harness))}
     const root = await temporaryDirectory()
     const installDirectory = join(root, 'bin')
     const result = await runProcess(['bash', installer, '--link'], { KI_CLI_INSTALL_DIR: installDirectory })
-    const doctor = await runProcess([join(installDirectory, 'ki'), 'doctor'])
+    const doctor = await runProcess([join(installDirectory, 'ki'), 'diag'])
 
     expect(result.exitCode).toBe(0)
     expect((await lstat(join(installDirectory, 'ki'))).isSymbolicLink()).toBe(true)
@@ -523,7 +496,7 @@ path = ${JSON.stringify(await realpath(harness))}
     const installDirectory = join(root, 'bin')
     expect((await runProcess(['bun', 'run', 'build'])).exitCode).toBe(0)
     const result = await runProcess(['bash', installer, '--copy'], { KI_CLI_INSTALL_DIR: installDirectory })
-    const doctor = await runProcess([join(installDirectory, 'ki'), 'doctor'])
+    const doctor = await runProcess([join(installDirectory, 'ki'), 'diag'])
 
     expect(result.exitCode).toBe(0)
     expect((await lstat(join(installDirectory, 'ki'))).isSymbolicLink()).toBe(false)

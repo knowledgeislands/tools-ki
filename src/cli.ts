@@ -3,10 +3,10 @@ import { createAcquireCommand } from './commands/acquire.ts'
 import { createBootstrapCommand } from './commands/bootstrap.ts'
 import { createCompletionsCommand } from './commands/completions.ts'
 import { createDevCommand } from './commands/dev.ts'
+import { createDiagCommand } from './commands/diag.ts'
 import { createDoctorCommand } from './commands/doctor.ts'
 import { createHarnessCommand } from './commands/harness.ts'
 import { createHelpCommand } from './commands/help.ts'
-import { createPathsCommand } from './commands/paths.ts'
 import { createRepoCommand } from './commands/repo.ts'
 import { createVersionCommand } from './commands/version.ts'
 import { createContext, type KiContext } from './core/context.ts'
@@ -26,9 +26,9 @@ export const createProgram = (context: KiContext): Command => {
   program.addCommand(createCompletionsCommand(context))
   program.addCommand(createBootstrapCommand(context))
   program.addCommand(createDevCommand(context))
+  program.addCommand(createDiagCommand(context))
   program.addCommand(createDoctorCommand(context))
   program.addCommand(createHarnessCommand(context))
-  program.addCommand(createPathsCommand(context))
   program.addCommand(createRepoCommand(context))
   program.addCommand(createVersionCommand(context))
   program.addCommand(createAcquireCommand(context))

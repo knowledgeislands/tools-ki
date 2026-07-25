@@ -11,11 +11,9 @@ ki \- Knowledge Islands command-line interface
 .B ki completions
 .I shell
 .br
-.B ki paths
-.RI [ --json ]
+.B ki diag
 .br
 .B ki doctor
-.RI [ --json ]
 .br
 .B ki version
 .br
@@ -81,25 +79,13 @@ Print the CLI version.
 .B completions \fIshell\fR
 Print Bash or Zsh completion source to standard output.
 .TP
-.B paths
-Print the invoked executable path and the resolved XDG data, configuration,
-cache, and state paths for KI
-without creating them.
-Pass
-.B --json
-for a versioned machine-readable result.
+.B diag
+Print the CLI version, installation mode, resolved paths, and user
+configuration without changing state.
 .TP
 .B doctor
-Print the CLI version, whether the executable is a regular installation or a
-development link, and the resolved XDG paths.
-It also inspects the user-level
-.IR config.toml
-for configured agents, harnesses, skills, a local development source, unknown
-keys, and invalid values.
-It makes no changes.
-Pass
-.B --json
-for a versioned machine-readable result.
+Check the user configuration, configured agent skill directories, installed
+harnesses, and configured KI user-skill links without changing state.
 .TP
 .B *ki docs
 Open or print the appropriate KI documentation location.
@@ -139,7 +125,7 @@ Search the available capability set or remove managed stale state.
 Inspect one user-installed compatible harness and its capability
 inventory without changing user state.
 .TP
-.B ki harness list [--json]
+.B ki harness list
 List compatible harnesses already installed.
 .TP
 .B ki harness install \fIharness-id\fR
@@ -199,7 +185,7 @@ $KI_CACHE_HOME  | $XDG_CACHE_HOME/ki  | ~/.cache/ki
 $KI_STATE_HOME  | $XDG_STATE_HOME/ki  | ~/.local/state/ki
 .fi
 Run
-.B ki paths
+.B ki diag
 to inspect the effective values.
 .SH DEVELOPMENT INSTALLATIONS
 Homebrew installs a released regular executable.

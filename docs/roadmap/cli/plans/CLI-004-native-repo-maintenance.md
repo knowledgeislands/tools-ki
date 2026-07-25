@@ -21,7 +21,7 @@ The current `ki-engineering` checker still expects retired package-script aggreg
 
 ## Completed foundation
 
-- Added read-only `ki paths` and useful `ki doctor` output, including versioned JSON forms, for the XDG and installation baseline.
+- Added read-only `ki diag` output for paths, installation, and configuration, plus `ki doctor` health checks for the configured KI environment.
 - Adopted plural `ki completions` as the one completion command.
 - Added the tracked `ki(1)` manual with a clear current-versus-planned command boundary.
 - Replaced the Bash command host with typed in-process Bun and TypeScript modules, including the local ChatGPT importer and native Bun tests.
@@ -33,7 +33,7 @@ The current `ki-engineering` checker still expects retired package-script aggreg
 ## Steps
 
 1. ✓ Establish the TypeScript command host: a typed in-process module per command, shared diagnostics and structured result rendering, a testable command runner, and one authoritative command catalogue for help and completion output.
-2. ✓ Port the released development surface — help, version, completions, XDG paths, doctor, and the local ChatGPT capture importer — from Bash to native TypeScript modules without changing its documented contract.
+2. ✓ Port the released development surface — help, version, completions, diagnostics, health checks, and the local ChatGPT capture importer — from Bash to native TypeScript modules without changing its documented contract.
 3. Build the release boundary: Bun-compiled standalone artefacts for supported platforms, a source-mode development entry point, and installer and test coverage that distinguish linked development installations from regular executable installs.
    - [x] Define CI jobs that build, test, smoke-test, and retain compiled macOS and Linux artefacts.
    - [ ] Retain successful hosted CI evidence and package supported distribution artefacts without publishing them.
