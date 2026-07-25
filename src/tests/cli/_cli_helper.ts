@@ -29,6 +29,7 @@ import { dirname, join } from 'node:path'
 import { onTestFinished } from 'vitest'
 import { run as runCli } from '../../cli.ts'
 import { createContext } from '../../context.ts'
+import type { Fetcher } from '../../core/registry.ts'
 
 // `ki bootstrap` detects the active agent from which of these home directories exists —
 // kept here as a literal, not imported from src/agents, so this black-box CLI harness
@@ -130,6 +131,7 @@ export interface Sandbox {
   readonly setupLocalCanonicalHarness: (relativePath: string) => Promise<string>
   readonly setupAgentHome: (agentId: AgentId) => Promise<void>
   readonly setEnv: (environment: Record<string, string | undefined>) => void
+  readonly setFetcher: (fetcher: Fetcher) => void
   readonly cd: (relativePath: string) => void
   readonly run: (command: string) => Promise<CommandResult>
 }
@@ -147,9 +149,18 @@ const create = async (): Promise<Sandbox> => {
   const env = { HOME: home.path, XDG_CONFIG_HOME: config.path, XDG_DATA_HOME: data.path }
   let environmentOverrides: Record<string, string | undefined> = {}
   let workingDirectory = project.path
+  // No sandbox test may reach the real network: a command that needs the fetcher
+  // without a test calling setFetcher() first fails loudly here instead of silently
+  // making a live request.
+  let fetcher: Fetcher = async () => {
+    throw new Error('sandbox fetcher not configured; call setFetcher() before running a command that acquires a harness')
+  }
 
   const setEnv = (environment: Record<string, string | undefined>): void => {
     environmentOverrides = { ...environmentOverrides, ...environment }
+  }
+  const setFetcher = (next: Fetcher): void => {
+    fetcher = next
   }
   const cd = (relativePath: string): void => {
     workingDirectory = join(workingDirectory, relativePath)
@@ -172,7 +183,8 @@ const create = async (): Promise<Sandbox> => {
       stderr: { write },
       executable: executablePath,
       workingDirectory,
-      environment: { ...env, ...environmentOverrides, _: executablePath }
+      environment: { ...env, ...environmentOverrides, _: executablePath },
+      fetcher: (input, init) => fetcher(input, init)
     })
     const tokens = command.split(' ').filter(Boolean)
     if (tokens[0] !== 'ki') throw new Error(`sandbox run() commands must start with "ki": ${command}`)
@@ -195,6 +207,7 @@ const create = async (): Promise<Sandbox> => {
       await setupCanonicalHarness(data)
     },
     setEnv,
+    setFetcher,
     cd,
     run
   }

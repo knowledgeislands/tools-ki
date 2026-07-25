@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import type { Output } from './core/output.ts'
 import type { Environment, KiInstallationMode, KiPaths } from './core/paths.ts'
 import { installationMode, resolveKiPaths, userHome } from './core/paths.ts'
+import type { Fetcher } from './core/registry.ts'
 import { discoverRepository, type RepositoryLocation } from './core/repository.ts'
 
 export interface KiContext {
@@ -14,6 +15,7 @@ export interface KiContext {
   readonly homeDirectory: string
   readonly paths: KiPaths
   readonly repository: RepositoryLocation | null
+  readonly fetcher: Fetcher
 }
 
 export interface ContextOptions {
@@ -22,6 +24,7 @@ export interface ContextOptions {
   readonly executable: string
   readonly workingDirectory: string
   readonly environment: Environment
+  readonly fetcher?: Fetcher
 }
 
 export const createContext = async (options: ContextOptions): Promise<KiContext> => {
@@ -35,6 +38,7 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
     workingDirectory,
     homeDirectory,
     paths: resolveKiPaths(options.environment),
-    repository: await discoverRepository(workingDirectory, homeDirectory)
+    repository: await discoverRepository(workingDirectory, homeDirectory),
+    fetcher: options.fetcher ?? fetch
   }
 }

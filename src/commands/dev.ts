@@ -45,7 +45,7 @@ export const createDevCommand = (context: KiContext): Command => {
     .description('restore the verified canonical harness archive')
     .action(async () => {
       const agents = await configured(context)
-      const installation = await restoreCanonicalHarness(context.paths.config, context.paths.data)
+      const installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
       const skills = await installedBootstrapSkillSources(context.paths.data)
       const projections = await installBootstrapSkills(skills, agents, { replace: true })
       const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents)

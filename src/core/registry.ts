@@ -28,7 +28,7 @@ export const canonicalHarnessRelease: HarnessRelease = {
   sha256: 'fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c'
 }
 
-type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+export type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
 
 type RegistryValue = Record<string, unknown> & { readonly harnesses?: unknown }
 
@@ -260,7 +260,7 @@ export const installHarness = async (
   configurationDirectory: string,
   dataDirectory: string,
   identifier: string,
-  fetcher: Fetcher = fetch
+  fetcher: Fetcher
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> => {
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   const releases = await readHarnessRegistry(configurationDirectory)
@@ -305,7 +305,7 @@ export const installHarness = async (
 export const installCanonicalHarness = async (
   configurationDirectory: string,
   dataDirectory: string,
-  fetcher: Fetcher = fetch
+  fetcher: Fetcher
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
   installHarness(configurationDirectory, dataDirectory, baseHarnessIdentifier, fetcher)
 
@@ -377,7 +377,7 @@ export const disableCanonicalHarnessDevelopment = async (dataDirectory: string):
 export const restoreCanonicalHarness = async (
   configurationDirectory: string,
   dataDirectory: string,
-  fetcher: Fetcher = fetch
+  fetcher: Fetcher
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> => {
   await disableCanonicalHarnessDevelopment(dataDirectory)
   return installCanonicalHarness(configurationDirectory, dataDirectory, fetcher)

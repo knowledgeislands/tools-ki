@@ -30,7 +30,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
       if (configuration.disposition === 'refreshed') {
         context.stdout.write(`refreshed KI agents: ${agents.map((agent) => agent.descriptor.id).join(', ') || 'none'}\n`)
       }
-      const installation = await restoreCanonicalHarness(context.paths.config, context.paths.data)
+      const installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
       context.stdout.write(
         `canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`
       )

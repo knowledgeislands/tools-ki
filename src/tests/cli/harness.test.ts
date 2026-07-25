@@ -1,5 +1,6 @@
 import { lstat, mkdir, symlink, writeFile } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
+import { makeHarnessArchive } from './_archive_helper.ts'
 import { sandbox } from './_cli_helper.ts'
 
 describe('[ki harness]', () => {
@@ -68,6 +69,26 @@ releases = [
 
       expect(installed).toEqual({ exitCode: 0, output: `example/harness is already installed\tarchive ${sha256}\n` })
       expect(config).toContain(expectedHarnessesSection)
+    })
+
+    test('downloads, verifies, and extracts a configured harness from a stubbed fetcher', async () => {
+      const box = await sandbox()
+      const skill = '---\nname: ki-example\nki-depends-on: []\n---\n'
+      const { payload, sha256 } = makeHarnessArchive({ 'skills/ki-example/SKILL.md': skill })
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]
+releases = [
+  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" },
+]
+`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const installed = await box.run('ki harness install example/harness')
+
+      expect(installed).toEqual({ exitCode: 0, output: `installed example/harness\tarchive ${sha256}\n` })
+      expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)
     })
   })
 
