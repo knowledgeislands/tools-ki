@@ -56,13 +56,21 @@ ids = [
 ]
 
 [skills]
-ids = [
-  "knowledgeislands/ki-agentic-harness:ki-bootstrap",
-  "knowledgeislands/ki-agentic-harness:ki-delegate",
-  "knowledgeislands/ki-agentic-harness:ki-next",
-  "knowledgeislands/ki-agentic-harness:ki-plan",
-  "knowledgeislands/ki-agentic-harness:ki-recap",
-]
+
+[skills.ki-bootstrap]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-delegate]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-next]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-plan]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-recap]
+harness = "knowledgeislands/ki-agentic-harness"
 `
   )
   expect(await realpath(join(home, '.claude', 'skills', 'ki-bootstrap'))).toBe(await realpath(source))
@@ -101,13 +109,21 @@ ids = [
 ]
 
 [skills]
-ids = [
-  "knowledgeislands/ki-agentic-harness:ki-bootstrap",
-  "knowledgeislands/ki-agentic-harness:ki-delegate",
-  "knowledgeislands/ki-agentic-harness:ki-next",
-  "knowledgeislands/ki-agentic-harness:ki-plan",
-  "knowledgeislands/ki-agentic-harness:ki-recap",
-]
+
+[skills.ki-bootstrap]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-delegate]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-next]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-plan]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-recap]
+harness = "knowledgeislands/ki-agentic-harness"
 `
   )
   expect(await realpath(join(home, '.agents', 'skills', 'ki-bootstrap'))).toBe(
@@ -159,13 +175,20 @@ test('refresh records only KI skills linked into configured user agent spaces', 
   )
 
   expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toContain(
-    `ids = [
-  "knowledgeislands/ki-agentic-harness:ki-bootstrap",
-  "knowledgeislands/ki-agentic-harness:ki-delegate",
-  "knowledgeislands/ki-agentic-harness:ki-next",
-  "knowledgeislands/ki-agentic-harness:ki-plan",
-  "knowledgeislands/ki-agentic-harness:ki-recap",
-]`
+    `[skills.ki-bootstrap]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-delegate]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-next]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-plan]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-recap]
+harness = "knowledgeislands/ki-agentic-harness"`
   )
 })
 

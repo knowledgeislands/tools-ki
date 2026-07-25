@@ -305,13 +305,21 @@ ids = [
 ]
 
 [skills]
-ids = [
-  "knowledgeislands/ki-agentic-harness:ki-bootstrap",
-  "knowledgeislands/ki-agentic-harness:ki-delegate",
-  "knowledgeislands/ki-agentic-harness:ki-next",
-  "knowledgeislands/ki-agentic-harness:ki-plan",
-  "knowledgeislands/ki-agentic-harness:ki-recap",
-]
+
+[skills.ki-bootstrap]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-delegate]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-next]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-plan]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-recap]
+harness = "knowledgeislands/ki-agentic-harness"
 `
     )
   })
@@ -365,13 +373,21 @@ ids = [
 ]
 
 [skills]
-ids = [
-  "knowledgeislands/ki-agentic-harness:ki-bootstrap",
-  "knowledgeislands/ki-agentic-harness:ki-delegate",
-  "knowledgeislands/ki-agentic-harness:ki-next",
-  "knowledgeislands/ki-agentic-harness:ki-plan",
-  "knowledgeislands/ki-agentic-harness:ki-recap",
-]
+
+[skills.ki-bootstrap]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-delegate]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-next]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-plan]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-recap]
+harness = "knowledgeislands/ki-agentic-harness"
 
 [local]
 path = ${JSON.stringify(await realpath(harness))}

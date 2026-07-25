@@ -45,6 +45,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         await setLocalBootstrapHarness(context.paths.config)
         await setConfiguredUserSkills(
           context.paths.config,
+          context.homeDirectory,
           skills.map((skill) => `${baseHarnessIdentifier}:${skill.name}`)
         )
       }

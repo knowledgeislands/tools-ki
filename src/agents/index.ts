@@ -100,9 +100,10 @@ const renderConfiguration = (
     ']',
     '',
     '[skills]',
-    'ids = [',
-    ...skills.map((skill) => `  ${JSON.stringify(skill)},`),
-    ']',
+    ...skills.flatMap((skill) => {
+      const separator = skill.lastIndexOf(':')
+      return ['', `[skills.${skill.slice(separator + 1)}]`, `harness = ${JSON.stringify(skill.slice(0, separator))}`]
+    }),
     ...(local ? ['', '[local]', `path = ${JSON.stringify(local)}`] : []),
     ''
   ].join('\n')
@@ -186,11 +187,20 @@ export const inspectUserConfiguration = async (configurationDirectory: string): 
   for (const agent of agents) {
     if (!agentDescriptors.some((descriptor) => descriptor.id === agent)) warnings.push(`unrecognised agent ${agent}`)
   }
-  const skillSection = inspectSection(configuration.skills, 'skills', errors) as StringListSection
-  for (const key of Object.keys(skillSection)) {
-    if (key !== 'ids') warnings.push(`skills has unrecognised key ${key}`)
+  const skillSection = inspectSection(configuration.skills, 'skills', errors)
+  const skills: string[] = []
+  for (const [name, value] of Object.entries(skillSection)) {
+    if (!isRecord(value)) {
+      errors.push(`skills.${name} must be a TOML table`)
+      continue
+    }
+    const harness = (value as { harness?: unknown }).harness
+    if (typeof harness !== 'string' || !harness) {
+      errors.push(`skills.${name} must declare a harness string`)
+      continue
+    }
+    skills.push(`${harness}:${name}`)
   }
-  const skills = inspectStringList(skillSection.ids, 'skills.ids', errors)
   const harnessSection = inspectSection(configuration.harnesses, 'harnesses', errors) as HarnessSection
   for (const key of Object.keys(harnessSection)) {
     if (key !== 'ids' && key !== 'releases') warnings.push(`harnesses has unrecognised key ${key}`)
@@ -243,7 +253,6 @@ const readConfiguration = async (configurationDirectory: string, homeDirectory: 
   if (!isRecord(parsed)) throw new KiError('agent configuration must use schema 1', 1)
   const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown; local?: unknown }
   const agentSection = isRecord(configuration.agents) ? (configuration.agents as StringListSection) : undefined
-  const skillSection = isRecord(configuration.skills) ? (configuration.skills as StringListSection) : undefined
   const localSection =
     configuration.local === undefined ? undefined : isRecord(configuration.local) ? (configuration.local as LocalSection) : null
   if (
@@ -251,19 +260,12 @@ const readConfiguration = async (configurationDirectory: string, homeDirectory: 
     !agentSection ||
     !Array.isArray(agentSection.ids) ||
     agentSection.ids.some((agent) => typeof agent !== 'string') ||
-    !skillSection ||
-    !Array.isArray(skillSection.ids) ||
-    skillSection.ids.some((skill) => typeof skill !== 'string') ||
     (localSection !== undefined && (localSection === null || typeof localSection.path !== 'string' || !localSection.path))
   ) {
-    throw new KiError('KI configuration must declare agents.ids and skills.ids string arrays and an optional local.path', 1)
+    throw new KiError('KI configuration must declare an agents.ids string array and an optional local.path', 1)
   }
   const agents = agentSection.ids as string[]
-  const skills = skillSection.ids as string[]
   if (new Set(agents).size !== agents.length) throw new KiError('agent configuration repeats an agent', 1)
-  if (new Set(skills).size !== skills.length) {
-    throw new KiError('KI configuration repeats a skill', 1)
-  }
   return agents.map((id) => {
     const known = descriptor(id)
     return { descriptor: known, home: resolve(homeDirectory, known.paths.home) }
@@ -377,13 +379,18 @@ export const setLocalBootstrapHarness = async (configurationDirectory: string, l
   await writeFile(path, updated, 'utf8')
 }
 
-export const setConfiguredUserSkills = async (configurationDirectory: string, skills: readonly string[]): Promise<void> => {
-  const path = bootstrapConfigurationPath(configurationDirectory)
-  const contents = await readFile(path, 'utf8')
-  const section = ['[skills]', 'ids = [', ...skills.map((skill) => `  ${JSON.stringify(skill)},`), ']'].join('\n')
-  const expression = /\[skills\]\nids\s*=\s*\[[\s\S]*?\n\]/m
-  if (!expression.test(contents)) throw new KiError('KI configuration must declare a [skills] ids array', 1)
-  await writeFile(path, contents.replace(expression, section), 'utf8')
+export const setConfiguredUserSkills = async (
+  configurationDirectory: string,
+  homeDirectory: string,
+  skills: readonly string[]
+): Promise<void> => {
+  const agents = await configuredAgents({ homeDirectory, configurationDirectory })
+  const inspection = await inspectUserConfiguration(configurationDirectory)
+  await writeFile(
+    bootstrapConfigurationPath(configurationDirectory),
+    renderConfiguration(agents, inspection.harnesses, skills, inspection.local ?? undefined),
+    'utf8'
+  )
 }
 
 export const configureBootstrapAgents = async (options: {
@@ -478,6 +485,7 @@ export const bootstrapAgents = async (options: {
   else
     await setConfiguredUserSkills(
       options.configurationDirectory,
+      options.homeDirectory,
       skills.map((skill) => `${baseHarnessIdentifier}:${skill.name}`)
     )
   return configuration.agents
@@ -555,7 +563,7 @@ export const addUserSkill = async (options: {
   const next = [...current.filter((entry) => skillNameOf(entry) !== resolved.skill.name), identity].sort((left, right) =>
     left.localeCompare(right)
   )
-  await setConfiguredUserSkills(options.configurationDirectory, next)
+  await setConfiguredUserSkills(options.configurationDirectory, options.homeDirectory, next)
   return { skill: resolved.skill.name, agents: agents.map((agent) => agent.descriptor.id) }
 }
 
@@ -571,7 +579,7 @@ export const removeUserSkill = async (options: {
   }
   const current = (await inspectUserConfiguration(options.configurationDirectory)).skills
   const next = current.filter((entry) => skillNameOf(entry) !== options.skill)
-  await setConfiguredUserSkills(options.configurationDirectory, next)
+  await setConfiguredUserSkills(options.configurationDirectory, options.homeDirectory, next)
   return { skill: options.skill, agents: agents.map((agent) => agent.descriptor.id), removed }
 }
 
