@@ -105,4 +105,19 @@ ki-recap for claude-code already installed
       expect(result.output).toContain('skills/keystone/ki-bootstrap/SKILL.md')
     })
   })
+
+  describe('reporting', () => {
+    test('dev on reports already-enabled when projections are already installed', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+
+      const result = await box.run(`ki dev on ${harnessPath}`)
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('development harness enabled')
+      expect(result.output).toContain('already installed')
+    })
+  })
 })

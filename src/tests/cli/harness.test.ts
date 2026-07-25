@@ -13,6 +13,14 @@ describe('[ki harness]', () => {
 
       expect(listed).toEqual({ exitCode: 0, output: 'example/harness\t1 capabilities\n' })
     })
+
+    test('reports no installed harnesses when list is empty', async () => {
+      const box = await sandbox()
+
+      const listed = await box.run('ki harness list')
+
+      expect(listed).toEqual({ exitCode: 0, output: 'No installed compatible harnesses.\n' })
+    })
   })
 
   describe('[ki harness info]', () => {

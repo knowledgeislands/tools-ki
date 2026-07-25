@@ -61,4 +61,18 @@ ids = ["example:skill", "example:skill"]
 
     expect(diag.output).toContain('Repository    none')
   })
+
+  test('displays configuration with no warnings or errors', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.output).toContain('Status        valid')
+    expect(diag.output).not.toContain('Warnings')
+    expect(diag.output).not.toContain('Errors')
+    expect(diag.output).toContain('Agents')
+    expect(diag.output).toContain('Harnesses')
+  })
 })

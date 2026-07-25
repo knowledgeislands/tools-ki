@@ -38,6 +38,92 @@ export const audit = async ({ repository }) => (await readFile(repository + "/go
       expect(conformed).toEqual({ exitCode: 0, output: 'write governed.txt\n' })
       expect(afterContent).toBe('after\n')
     })
+
+    test('fails when re-audit after conform finds issues', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.write('governed.txt', 'before\n')
+      await box.setupExampleHarness({
+        audit: 'export const audit = async () => [{ level: "fail", code: "EXAMPLE-1", message: "always fails" }]\n',
+        conform: 'export const conform = async () => ({ findings: [], writes: [{ path: "governed.txt", content: "after\\n" }] })\n'
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('fail EXAMPLE-1: always fails')
+      expect(result.output).toContain('re-audit found failures')
+    })
+  })
+
+  describe('conform with missing operations', () => {
+    test('handles skill without conform operation', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        audit: 'export const audit = async () => []\n'
+        // No conform operation
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('does not register a native conform operation')
+    })
+  })
+
+  describe('malformed operations', () => {
+    test('rejects audit operation with missing export', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        audit: '// missing export\n'
+      })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('is not a function')
+    })
+
+    test('rejects audit operation returning non-array findings', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        audit: 'export const audit = async () => ({ level: "info" })\n'
+      })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('must return')
+    })
+
+    test('rejects conform operation returning malformed writes', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        conform: 'export const conform = async () => ({ findings: [], writes: "not an array" })\n'
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('must return')
+    })
+
+    test('rejects audit operation with malformed finding shape', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        audit: 'export const audit = async () => [{ level: "info" }]\n'  // missing code and message
+      })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('must have a code')
+    })
   })
 
   describe('skill resolution', () => {
