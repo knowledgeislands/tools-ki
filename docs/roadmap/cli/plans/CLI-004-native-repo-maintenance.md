@@ -9,7 +9,7 @@ blocked-by: —
 
 ## Context
 
-`ki repo audit` and `ki repo conform` must become native CLI capabilities. They must resolve capabilities declared by the selected repository's `.ki-config.toml` from installed compatible harnesses, rather than spawning legacy vendored scripts or requiring every repository to carry `.ki/bin` runners.
+`ki repo audit` and `ki repo conform` must become direct Bun capabilities. They must resolve capabilities declared by the selected repository's `.ki-config.toml` from installed compatible harnesses and load the harness's TypeScript operation modules in-process, rather than spawning legacy vendored scripts or requiring every repository to carry `.ki/bin` runners.
 
 ## Current state
 
@@ -48,11 +48,16 @@ The current `ki-engineering` checker still expects retired package-script aggreg
    - [x] Bootstrap a non-overwriting, user-managed XDG configuration from detected known agents. `--refresh` redetects agents and installed harnesses, then inventories only KI-managed skills linked in configured user agent spaces; the built-in canonical harness is installed from pinned evidence, and every configured runtime receives the five core user skills: `ki-bootstrap`, `ki-delegate`, `ki-next`, `ki-plan`, and `ki-recap`. `ki dev on <path>` switches only the canonical `skills/`, `agents/`, and `hooks/` payload to a validated local checkout; `ki dev off` restores the verified canonical archive and user-skill links.
 7. Implement `ki repo audit [--repo <path>] [--skill <capability>]` from the selected repository's declared registered capabilities. Prove it is read-only, runs only declared compatible operations, preserves the shared finding model, and names recovery without network or source-checkout fallback.
    - [x] Deliver the command host and fixture-backed registered in-process execution; refuse a nearby checkout or an unavailable verified harness with recovery guidance.
+   - [ ] Replace the temporary `.mjs` operation convention with source-authored `scripts/native/audit.ts` modules loaded directly by Bun. Update fixtures and installed-harness discovery together; do not retain an `.mjs` fallback.
+   - [ ] Reuse each skill's existing TypeScript audit logic through a thin in-process adapter that returns the shared finding model; do not spawn its former CLI entry point.
    - [ ] Prove the command against the installed base harness and a real declared repository.
 8. Implement `ki repo conform [--repo <path>] [--skill <capability>] [--dry-run]` with the same resolution rules. Prove safe mechanical writes, dry-run write-freedom, post-conform re-audit, and refusal before partial publication.
    - [x] Deliver the transactional host and fixture-backed dry run, guarded publication, and post-conform re-audit.
+   - [ ] Load source-authored `scripts/native/conform.ts` modules directly through Bun, with no `.mjs` compatibility path after the fixture migration.
+   - [ ] Reuse each skill's TypeScript conform logic through a thin adapter that reports findings and proposed writes to the host transaction; do not permit direct repository writes from an operation.
    - [ ] Prove the command against the installed base harness and a real declared repository.
 9. Provide an explicit migration path for repositories carrying generated `.ki/bin` state. Do not delete, overwrite, or use that state implicitly; retain migration and recovery proof for changed, missing, symlinked, and concurrent paths.
+   - [ ] Start with this harness: publish its native TypeScript operation adapters, prove both commands against an installed or explicitly linked canonical payload, then move CI, package scripts, and pre-commit one surface at a time before removing proven-redundant `.ki` material.
 10. Keep HELP, completion, `ki(1)`, user documentation, installer behaviour, release notes, CI fixtures, and current command-contract references aligned. Do not tag, publish, push, or update Homebrew without separate approval.
     - [x] Align HELP, completion, `ki(1)`, and the native-operation decision with the delivered commands.
     - [ ] Align activation, installation, release notes, full CI fixtures, and public user guidance when those surfaces exist.
