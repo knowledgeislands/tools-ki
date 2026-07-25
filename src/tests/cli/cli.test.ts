@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { run as runCli } from '../../cli.ts'
-import { createContext } from '../../core/context.ts'
+import { createContext } from '../../context.ts'
 import { sandbox } from './_cli_helper.ts'
 
 describe('runCli() entry point', () => {

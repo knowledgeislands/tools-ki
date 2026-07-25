@@ -1,6 +1,8 @@
 import { lstat } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
+export type KiInstallationMode = 'regular' | 'local'
+
 export interface KiPaths {
   readonly data: string
   readonly config: string
@@ -28,8 +30,8 @@ export const resolveKiPaths = (environment: Environment): KiPaths => ({
 export const installationMode = async (
   executable: string,
   workingDirectory: string
-): Promise<'regular executable' | 'linked development checkout'> => {
+): Promise<KiInstallationMode> => {
   const executablePath = resolve(workingDirectory, executable)
   const state = await lstat(executablePath).catch(() => undefined)
-  return state?.isSymbolicLink() ? 'linked development checkout' : 'regular executable'
+  return state?.isSymbolicLink() ? 'local' : 'regular'
 }

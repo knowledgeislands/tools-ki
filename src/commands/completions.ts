@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import type { KiContext } from '../core/context.ts'
+import type { KiContext } from '../context.ts'
 import { grammarError } from '../core/errors.ts'
 import { rootCommandNames } from './catalogue.ts'
 

@@ -1,14 +1,15 @@
 import { realpath } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import type { Output } from './output.ts'
-import { type Environment, installationMode, type KiPaths, resolveKiPaths, userHome } from './paths.ts'
-import { discoverRepository, type RepositoryLocation } from './repository.ts'
+import type { Output } from './core/output.ts'
+import type { Environment, KiInstallationMode, KiPaths } from './core/paths.ts'
+import { installationMode, resolveKiPaths, userHome } from './core/paths.ts'
+import { discoverRepository, type RepositoryLocation } from './core/repository.ts'
 
 export interface KiContext {
   readonly stdout: Output
   readonly stderr: Output
   readonly executable: string
-  readonly installation: 'regular executable' | 'linked development checkout'
+  readonly installation: KiInstallationMode
   readonly workingDirectory: string
   readonly homeDirectory: string
   readonly paths: KiPaths

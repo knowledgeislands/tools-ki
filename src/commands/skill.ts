@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import { addRepoSkill, addUserSkill, removeRepoSkill, removeUserSkill } from '../agents/index.ts'
-import type { KiContext } from '../core/context.ts'
+import type { KiContext } from '../context.ts'
 
 const createUserCommand = (context: KiContext): Command =>
   new Command('user')

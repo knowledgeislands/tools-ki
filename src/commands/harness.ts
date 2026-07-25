@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import type { KiContext } from '../core/context.ts'
+import type { KiContext } from '../context.ts'
 import { discoverInstalledHarnesses, readInstalledHarness } from '../core/harness.ts'
 import { installHarness, recordInstalledHarness, uninstallHarness } from '../core/registry.ts'
 

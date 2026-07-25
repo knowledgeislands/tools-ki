@@ -7,7 +7,7 @@ import {
   setConfiguredUserSkills,
   setLocalBootstrapHarness
 } from '../agents/index.ts'
-import type { KiContext } from '../core/context.ts'
+import type { KiContext } from '../context.ts'
 import { baseHarnessIdentifier } from '../core/harness.ts'
 import { restoreCanonicalHarness } from '../core/registry.ts'
 

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { cp, lstat, mkdir, readdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { Command } from 'commander'
-import type { KiContext } from '../core/context.ts'
+import type { KiContext } from '../context.ts'
 import { KiError } from '../core/errors.ts'
 
 const CONNECTOR_ID = 'knowledgeislands.chatgpt.local-capture'

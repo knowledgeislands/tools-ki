@@ -1,6 +1,6 @@
 import { Command } from 'commander'
+import type { KiContext } from '../context.ts'
 import { readDeclaredSkills } from '../core/configuration.ts'
-import type { KiContext } from '../core/context.ts'
 import { KiError } from '../core/errors.ts'
 import { discoverInstalledHarnesses } from '../core/harness.ts'
 import { runAuditOperation, runConformOperation } from '../core/operation.ts'

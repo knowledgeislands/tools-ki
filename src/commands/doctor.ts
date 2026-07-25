@@ -2,7 +2,7 @@ import { lstat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Command } from 'commander'
 import { agentSkillDirectory, configuredAgents, inspectUserConfiguration } from '../agents/index.ts'
-import type { KiContext } from '../core/context.ts'
+import type { KiContext } from '../context.ts'
 import { discoverInstalledHarnesses } from '../core/harness.ts'
 
 type CheckStatus = 'pass' | 'fail' | 'skip'

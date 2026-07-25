@@ -7,7 +7,7 @@ import {
   localBootstrapHarness,
   refreshUserConfiguration
 } from '../agents/index.ts'
-import type { KiContext } from '../core/context.ts'
+import type { KiContext } from '../context.ts'
 import { enableCanonicalHarnessDevelopment, restoreCanonicalHarness } from '../core/registry.ts'
 
 const configured = (context: KiContext) =>

@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../agents/index.ts'
-import type { KiContext } from '../core/context.ts'
+import type { KiContext } from '../context.ts'
 import { KI_VERSION } from '../version.ts'
 
 const field = (label: string, value: string): string => `  ${label.padEnd(14)}${value}`
