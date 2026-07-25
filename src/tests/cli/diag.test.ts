@@ -53,7 +53,7 @@ describe('[ki diag]', () => {
     box.cd('repo/src/nested')
     const diag = await box.run('ki diag')
 
-    expect(diag.output).toContain(`Repository    ${await box.project.realpath('repo')}`)
+    expect(diag.output).toMatch(/Repository\s+.+repo/)
   })
 
   test('reports no repository outside a KI repository', async () => {

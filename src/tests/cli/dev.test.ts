@@ -97,9 +97,9 @@ path = ${JSON.stringify(harnessPath)}
 
     test('requires the local harness to contain the canonical bootstrap skill', async () => {
       const box = await sandbox()
-      await box.root.mkdir('dev/knowledgeislands/ki-agentic-harness/skills/process/ki-other')
+      const path = await box.root.mkdir('dev/knowledgeislands/ki-agentic-harness/skills/process/ki-other')
 
-      const result = await box.run(`ki dev on ${await box.root.realpath('dev/knowledgeislands/ki-agentic-harness')}`)
+      const result = await box.run(`ki dev on ${path}`)
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('skills/keystone/ki-bootstrap/SKILL.md')

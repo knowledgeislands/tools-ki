@@ -65,8 +65,7 @@ export interface SandboxArea {
   readonly path: string
   readonly write: (relativePath: string, content: string) => Promise<void>
   readonly read: (relativePath: string) => Promise<string>
-  readonly mkdir: (relativePath: string) => Promise<void>
-  readonly realpath: (relativePath: string) => Promise<string>
+  readonly mkdir: (relativePath: string) => Promise<string>
   readonly isSymlink: (relativePath: string) => Promise<boolean>
 }
 
@@ -80,8 +79,7 @@ const area = (path: string): SandboxArea => {
       await writeFile(target, content)
     },
     read: (relativePath) => readFile(resolve(relativePath), 'utf8'),
-    mkdir: (relativePath) => mkdir(resolve(relativePath), { recursive: true }).then(() => undefined),
-    realpath: (relativePath) => realpath(resolve(relativePath)),
+    mkdir: (relativePath) => mkdir(resolve(relativePath), { recursive: true }).then(() => realpath(resolve(relativePath))),
     isSymlink: async (relativePath) => (await lstat(resolve(relativePath))).isSymbolicLink()
   }
 }
@@ -116,7 +114,7 @@ const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
 // path, since callers always need it to build the `ki dev on <path>` invocation.
 const setupLocalCanonicalHarness = async (root: SandboxArea, relativePath: string): Promise<string> => {
   await writeBootstrapHarness(root, relativePath)
-  return root.realpath(relativePath)
+  return realpath(join(root.path, relativePath))
 }
 
 export interface Sandbox {
