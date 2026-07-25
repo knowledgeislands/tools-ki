@@ -599,6 +599,59 @@ describe('skill activation', () => {
   })
 })
 
+describe('development and harness install', () => {
+  test('restores the verified canonical harness and re-projects skills on dev off', async () => {
+    const root = await temporaryDirectory()
+    const home = join(root, 'home')
+    const configuration = join(root, 'config')
+    const data = join(root, 'data')
+    await mkdir(join(home, '.claude'), { recursive: true })
+    await installBootstrapHarness(data)
+    const environment = { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data }
+    await runKi(['bootstrap'], environment)
+
+    const off = await runKi(['dev', 'off'], environment)
+
+    expect(off).toEqual({
+      exitCode: 0,
+      output: [
+        'development harness disabled; canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c',
+        'refreshed KI configuration: 1 agents, 1 harnesses, 5 skills',
+        'ki-bootstrap for claude-code already installed',
+        'ki-delegate for claude-code already installed',
+        'ki-next for claude-code already installed',
+        'ki-plan for claude-code already installed',
+        'ki-recap for claude-code already installed',
+        ''
+      ].join('\n')
+    })
+  })
+
+  test('reports an already-installed configured harness and records it', async () => {
+    const root = await temporaryDirectory()
+    const configuration = join(root, 'config', 'ki')
+    const data = join(root, 'data')
+    await mkdir(configuration, { recursive: true })
+    const sha256 = 'a'.repeat(64)
+    await writeFile(
+      join(configuration, 'config.toml'),
+      [
+        '[harnesses]',
+        'releases = [',
+        `  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" },`,
+        ']',
+        ''
+      ].join('\n')
+    )
+    await installHarness(data)
+
+    const installed = await runKi(['harness', 'install', 'example/harness'], { XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: data })
+
+    expect(installed).toEqual({ exitCode: 0, output: `example/harness is already installed\tarchive ${sha256}\n` })
+    expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toContain('ids = [\n  "example/harness",\n]')
+  })
+})
+
 describe('ChatGPT capture import', () => {
   test('creates a deterministic KEP that passes the KIS-0002 fixture validator', async () => {
     const root = await temporaryDirectory()
