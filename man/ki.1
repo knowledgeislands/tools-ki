@@ -129,12 +129,8 @@ inventory without changing user state.
 List compatible harnesses already installed.
 .TP
 .B ki harness install \fIharness-id\fR
-Install the built-in canonical harness or one configured, verified compatible
-harness from immutable release evidence. Bootstrap itself accepts only the
-canonical identifier. A successful installation records the harness identifier
-in the user configuration's
-.B [harnesses].ids
-array.
+Install a harness from which capabilities, such as skills and subagents, can
+be added.
 .TP
 .B ki harness uninstall \fIharness-id\fR [--dry-run]
 Remove one non-base harness with only recognised payload directories. The base harness
