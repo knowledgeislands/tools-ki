@@ -117,6 +117,21 @@ test('path resolution supports user-profile fallback and linked executables', as
     cache: join(root, 'home/.cache/ki'),
     state: join(root, 'home/.local/state/ki')
   })
+  expect(
+    resolveKiPaths({
+      HOME: join(root, 'home'),
+      KI_DATA_HOME: join(root, 'ki-data'),
+      KI_CONFIG_HOME: join(root, 'ki-config'),
+      KI_CACHE_HOME: join(root, 'ki-cache'),
+      KI_STATE_HOME: join(root, 'ki-state'),
+      XDG_DATA_HOME: join(root, 'xdg-data')
+    })
+  ).toEqual({
+    data: join(root, 'ki-data'),
+    config: join(root, 'ki-config'),
+    cache: join(root, 'ki-cache'),
+    state: join(root, 'ki-state')
+  })
   expect(await installationMode(executable, root)).toBe('regular executable')
   expect(await installationMode(linkedExecutable, root)).toBe('linked development checkout')
   expect((await lstat(linkedExecutable)).isSymbolicLink()).toBe(true)

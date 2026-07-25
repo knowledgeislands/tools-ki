@@ -190,21 +190,14 @@ Remove that recognised local payload projection, reinstall the verified
 canonical archive, clear
 .BR [local].path ,
 and repoint the five core user skills to the restored archive.
-.SH XDG PATHS
-.B ki
-uses the XDG Base Directory variables for user-owned KI state.
-When unset, the defaults are
-.IR ~/.local/share ,
-.IR ~/.config ,
-.IR ~/.cache ,
-and
-.IR ~/.local/state .
-The corresponding KI paths are respectively
-.IR $XDG_DATA_HOME/ki ,
-.IR $XDG_CONFIG_HOME/ki ,
-.IR $XDG_CACHE_HOME/ki ,
-and
-.IR $XDG_STATE_HOME/ki .
+.SH PATHS
+Each KI path uses the first non-empty value:
+.nf
+$KI_DATA_HOME   | $XDG_DATA_HOME/ki   | ~/.local/share/ki
+$KI_CONFIG_HOME | $XDG_CONFIG_HOME/ki | ~/.config/ki
+$KI_CACHE_HOME  | $XDG_CACHE_HOME/ki  | ~/.cache/ki
+$KI_STATE_HOME  | $XDG_STATE_HOME/ki  | ~/.local/state/ki
+.fi
 Run
 .B ki paths
 to inspect the effective values.

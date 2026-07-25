@@ -15,11 +15,14 @@ export const userHome = (environment: Environment): string => environment.HOME ?
 const xdg = (environment: Environment, name: string, fallback: string): string =>
   environment[name] || resolve(userHome(environment), fallback)
 
+const kiPath = (environment: Environment, kiName: string, xdgName: string, fallback: string): string =>
+  environment[kiName] || resolve(xdg(environment, xdgName, fallback), 'ki')
+
 export const resolveKiPaths = (environment: Environment): KiPaths => ({
-  data: resolve(xdg(environment, 'XDG_DATA_HOME', '.local/share'), 'ki'),
-  config: resolve(xdg(environment, 'XDG_CONFIG_HOME', '.config'), 'ki'),
-  cache: resolve(xdg(environment, 'XDG_CACHE_HOME', '.cache'), 'ki'),
-  state: resolve(xdg(environment, 'XDG_STATE_HOME', '.local/state'), 'ki')
+  data: kiPath(environment, 'KI_DATA_HOME', 'XDG_DATA_HOME', '.local/share'),
+  config: kiPath(environment, 'KI_CONFIG_HOME', 'XDG_CONFIG_HOME', '.config'),
+  cache: kiPath(environment, 'KI_CACHE_HOME', 'XDG_CACHE_HOME', '.cache'),
+  state: kiPath(environment, 'KI_STATE_HOME', 'XDG_STATE_HOME', '.local/state')
 })
 
 export const installationMode = async (
