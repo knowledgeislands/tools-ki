@@ -20,9 +20,6 @@ export const createProgram = (context: KiContext): Command => {
     .name('ki')
     .description('Knowledge Islands command-line interface.')
     .version(KI_VERSION, '-V, --version', 'print the CLI version')
-    .configureOutput({ writeOut: (text) => context.stdout.write(text), writeErr: (text) => context.stderr.write(text) })
-    .showHelpAfterError()
-    .exitOverride()
 
   program.addCommand(createCompletionsCommand(context))
   program.addCommand(createBootstrapCommand(context))
@@ -35,12 +32,17 @@ export const createProgram = (context: KiContext): Command => {
   program.addCommand(createVersionCommand(context))
   program.addCommand(createAcquireCommand(context))
   program.addCommand(createHelpCommand(program))
-  const configureExitOverride = (command: Command): void => {
+  // Commander does not inherit these settings by subcommands added with addCommand,
+  // so apply them to the whole tree — otherwise a subcommand's error, usage, or help
+  // output bypasses the context streams and writes straight to the real process.
+  const configureCommandTree = (command: Command): void => {
     command.helpCommand(false)
     command.exitOverride()
-    for (const child of command.commands) configureExitOverride(child)
+    command.showHelpAfterError()
+    command.configureOutput({ writeOut: (text) => context.stdout.write(text), writeErr: (text) => context.stderr.write(text) })
+    for (const child of command.commands) configureCommandTree(child)
   }
-  configureExitOverride(program)
+  configureCommandTree(program)
   return program
 }
 
