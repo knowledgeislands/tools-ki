@@ -279,34 +279,38 @@ const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAg
   return agents
 }
 
-const installManagedUserSkill = async (
-  agent: InstalledAgent,
+// Link one KI-managed skill into a resolved skills directory, returning whether the
+// link changed. Guards a foreign (non-symlink) occupant, and re-points an existing
+// KI-managed link only under `replace`. Shared by both user and repository scope.
+const linkManagedSkill = async (
+  skillsDirectory: string,
   skill: { readonly name: string; readonly source: string },
-  replace = false
+  agentId: string,
+  replace: boolean
 ): Promise<boolean> => {
-  const agentHome = await requiredPhysicalDirectory(agent.home, `${agent.descriptor.id} user directory`)
-  skillCapability(agent)
-  const skills = join(agentHome, 'skills')
-  const state = await lstat(skills).catch(() => undefined)
-  if (!state) await mkdir(skills, { recursive: true })
-  await requiredPhysicalDirectory(skills, `${agent.descriptor.id} user skills directory`)
-  const target = join(skills, skill.name)
+  await mkdir(skillsDirectory, { recursive: true })
+  await requiredPhysicalDirectory(skillsDirectory, `${agentId} skills directory`)
+  const target = join(skillsDirectory, skill.name)
   const targetState = await lstat(target).catch(() => undefined)
   if (!targetState) {
     await symlink(skill.source, target, 'dir')
     return true
   }
-  if (!targetState.isSymbolicLink()) throw new KiError(`${agent.descriptor.id} ${skill.name} skill is not KI-managed`, 1)
+  if (!targetState.isSymbolicLink()) throw new KiError(`${agentId} ${skill.name} skill is not KI-managed`, 1)
   const actual = await realpath(target).catch(() => undefined)
   const expected = await realpath(skill.source)
-  if (actual !== expected) {
-    if (!replace) throw new KiError(`${agent.descriptor.id} ${skill.name} skill points to an unfamiliar source`, 1)
-    await unlink(target)
-    await symlink(skill.source, target, 'dir')
-    return true
-  }
-  return false
+  if (actual === expected) return false
+  if (!replace) throw new KiError(`${agentId} ${skill.name} skill points elsewhere; pass --replace to re-point`, 1)
+  await unlink(target)
+  await symlink(skill.source, target, 'dir')
+  return true
 }
+
+const installManagedUserSkill = (
+  agent: InstalledAgent,
+  skill: { readonly name: string; readonly source: string },
+  replace = false
+): Promise<boolean> => linkManagedSkill(agentSkillDirectory(agent, 'user'), skill, agent.descriptor.id, replace)
 
 const bootstrapSkillSources = async (
   harness: { readonly root: string; readonly capabilities: readonly HarnessCapability[] },
@@ -566,30 +570,12 @@ export const removeUserSkill = async (options: {
   return { skill: options.skill, agents: agents.map((agent) => agent.descriptor.id), removed }
 }
 
-const installManagedRepoSkill = async (
+const installManagedRepoSkill = (
   agent: InstalledAgent,
   repositoryRoot: string,
   skill: { readonly name: string; readonly source: string },
   replace = false
-): Promise<boolean> => {
-  const skills = agentSkillDirectory(agent, 'repo', repositoryRoot)
-  await mkdir(skills, { recursive: true })
-  await requiredPhysicalDirectory(skills, `${agent.descriptor.id} repository skills directory`)
-  const target = join(skills, skill.name)
-  const targetState = await lstat(target).catch(() => undefined)
-  if (!targetState) {
-    await symlink(skill.source, target)
-    return true
-  }
-  if (!targetState.isSymbolicLink()) throw new KiError(`${agent.descriptor.id} ${skill.name} skill is not KI-managed`, 1)
-  const expected = await realpath(skill.source)
-  const actual = await realpath(target).catch(() => undefined)
-  if (actual === expected) return false
-  if (!replace) throw new KiError(`${agent.descriptor.id} ${skill.name} skill points elsewhere; pass --replace to re-point`, 1)
-  await unlink(target)
-  await symlink(skill.source, target)
-  return true
-}
+): Promise<boolean> => linkManagedSkill(agentSkillDirectory(agent, 'repo', repositoryRoot), skill, agent.descriptor.id, replace)
 
 const removeManagedRepoSkill = async (agent: InstalledAgent, repositoryRoot: string, name: string): Promise<boolean> => {
   const target = join(agentSkillDirectory(agent, 'repo', repositoryRoot), name)

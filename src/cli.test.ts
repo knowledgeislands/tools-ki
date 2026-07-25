@@ -562,6 +562,24 @@ describe('skill activation', () => {
     expect(repeated).toEqual({ exitCode: 0, output: 'ki skill user remove: no KI-managed link for ki-example for claude-code\n' })
   })
 
+  test('re-points a divergent KI-managed user link only under --replace', async () => {
+    const root = await temporaryDirectory()
+    const { home, data, environment } = await bootstrapClaudeCode(root)
+    const decoy = join(root, 'decoy')
+    await mkdir(decoy, { recursive: true })
+    const link = join(home, '.claude', 'skills', 'ki-example')
+    await symlink(decoy, link, 'dir')
+
+    const refused = await runKi(['skill', 'user', 'add', 'ki-example'], environment)
+    expect(refused.exitCode).toBe(1)
+    expect(refused.output).toContain('points elsewhere; pass --replace to re-point')
+    expect(await realpath(link)).toBe(await realpath(decoy))
+
+    const replaced = await runKi(['skill', 'user', 'add', 'ki-example', '--replace'], environment)
+    expect(replaced).toEqual({ exitCode: 0, output: 'ki skill user add: linked ki-example for claude-code\n' })
+    expect(await realpath(link)).toBe(await realpath(join(data, 'ki', 'harnesses', 'example', 'harness', 'skills', 'ki-example')))
+  })
+
   test('refuses to adopt a foreign user skill directory', async () => {
     const root = await temporaryDirectory()
     const { home, environment } = await bootstrapClaudeCode(root)
