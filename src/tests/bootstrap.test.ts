@@ -1,23 +1,20 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'vitest'
-import { cleanupTemporaryDirectories, installBootstrapHarness, runKi, temporaryDirectory } from './testkit.ts'
+import { cleanupTemporaryDirectories, installBootstrapHarness, runKi, sandbox } from './testkit.ts'
 
 afterEach(cleanupTemporaryDirectories)
 
 describe('ki bootstrap', () => {
   test('bootstraps without replacement and refreshes the detected installed inventory on request', async () => {
-    const root = await temporaryDirectory()
-    const home = join(root, 'home')
-    const configuration = join(root, 'config')
-    const data = join(root, 'data')
+    const { home, config: configuration, data, env, read } = await sandbox()
     await mkdir(join(home, '.agents'), { recursive: true })
     await installBootstrapHarness(data)
 
-    const bootstrapped = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
-    const repeated = await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
-    const refreshed = await runKi(['bootstrap', '--refresh'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
-    const checked = await runKi(['doctor'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
+    const bootstrapped = await runKi(['bootstrap'], env)
+    const repeated = await runKi(['bootstrap'], env)
+    const refreshed = await runKi(['bootstrap', '--refresh'], env)
+    const checked = await runKi(['doctor'], env)
 
     expect(bootstrapped).toEqual({
       exitCode: 0,
@@ -56,7 +53,7 @@ describe('ki bootstrap', () => {
     expect(checked.output).toContain('✓ Harness inventory: 1 installed')
     expect(checked.output).toContain('✓ Agent chatgpt-codex: ready')
     expect(checked.output).not.toContain('✗')
-    expect(await readFile(join(configuration, 'ki', 'config.toml'), 'utf8')).toBe(
+    expect(await read(join(configuration, 'ki', 'config.toml'))).toBe(
       `schema = 1
 
 [agents]
@@ -90,18 +87,14 @@ harness = "knowledgeislands/ki-agentic-harness"
   })
 
   test('replaces a legacy flat configuration with the current sectioned schema on refresh', async () => {
-    const root = await temporaryDirectory()
-    const home = join(root, 'home')
-    const configuration = join(root, 'config')
-    const data = join(root, 'data')
+    const { home, config: configuration, data, env, write, read } = await sandbox()
     await mkdir(join(home, '.agents'), { recursive: true })
-    await mkdir(join(configuration, 'ki'), { recursive: true })
-    await writeFile(join(configuration, 'ki', 'config.toml'), 'schema = 1\nagents = ["chatgpt-codex"]\nharnesses = []\nskills = []\n')
+    await write(join(configuration, 'ki', 'config.toml'), 'schema = 1\nagents = ["chatgpt-codex"]\nharnesses = []\nskills = []\n')
     await installBootstrapHarness(data)
 
-    const refreshed = await runKi(['bootstrap', '--refresh'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
+    const refreshed = await runKi(['bootstrap', '--refresh'], env)
 
     expect(refreshed.exitCode).toBe(0)
-    expect(await readFile(join(configuration, 'ki', 'config.toml'), 'utf8')).toContain('[agents]\nids = [\n  "chatgpt-codex",\n]')
+    expect(await read(join(configuration, 'ki', 'config.toml'))).toContain('[agents]\nids = [\n  "chatgpt-codex",\n]')
   })
 })

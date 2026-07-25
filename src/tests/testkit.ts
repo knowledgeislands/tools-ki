@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { run as runCli } from '../cli.ts'
 import { createContext } from '../core/context.ts'
@@ -32,6 +32,46 @@ export const cleanupTemporaryDirectories = async (): Promise<void> => {
   await Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })))
 }
 
+export interface Sandbox {
+  readonly root: string
+  readonly home: string
+  readonly config: string
+  readonly data: string
+  readonly env: Record<string, string>
+  readonly write: (path: string, content: string) => Promise<void>
+  readonly read: (path: string) => Promise<string>
+}
+
+// A throwaway HOME/XDG_CONFIG_HOME/XDG_DATA_HOME triple, pre-wired as an
+// environment override, for tests that don't need bespoke directory layout.
+export const sandbox = async (): Promise<Sandbox> => {
+  const root = await temporaryDirectory()
+  const home = join(root, 'home')
+  const config = join(root, 'config')
+  const data = join(root, 'data')
+  await mkdir(home, { recursive: true })
+  const write = async (path: string, content: string): Promise<void> => {
+    await mkdir(dirname(path), { recursive: true })
+    await writeFile(path, content)
+  }
+  const read = (path: string): Promise<string> => readFile(path, 'utf8')
+  return { root, home, config, data, env: { HOME: home, XDG_CONFIG_HOME: config, XDG_DATA_HOME: data }, write, read }
+}
+
+// A HOME no test ever creates, so a test that forgets to override HOME/XDG_*
+// fails loudly (ENOENT) instead of silently reading or writing the real
+// developer machine's config, cache, or data directories.
+const unboundHome = join(tmpdir(), 'ki-test-unbound-home')
+
+// The only ambient state child processes and in-process runs are allowed to see;
+// everything else must come from an explicit override, so tests stay hermetic.
+const hermeticEnvironment = (overrides: Record<string, string | undefined>): Record<string, string | undefined> => ({
+  PATH: process.env['PATH'],
+  TMPDIR: process.env['TMPDIR'],
+  HOME: unboundHome,
+  ...overrides
+})
+
 const executeFile = promisify(execFile)
 
 export const runProcess = async (
@@ -41,7 +81,7 @@ export const runProcess = async (
   try {
     const result = await executeFile(command[0], command.slice(1), {
       cwd: repository,
-      env: { ...process.env, _: command[0], ...environment }
+      env: { ...hermeticEnvironment(environment), _: command[0] }
     })
     return { exitCode: 0, output: `${result.stdout}${result.stderr}` }
   } catch (error: unknown) {
@@ -64,7 +104,7 @@ export const runKiAt = async (
     stderr: { write },
     executable,
     workingDirectory,
-    environment: { ...process.env, _: executable, ...environment }
+    environment: { ...hermeticEnvironment(environment), _: executable }
   })
   return { exitCode: await runCli(arguments_, context), output }
 }
