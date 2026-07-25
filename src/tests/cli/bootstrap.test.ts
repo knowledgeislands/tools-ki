@@ -4,7 +4,7 @@ import { sandbox } from './_cli_helper.ts'
 describe('ki bootstrap', () => {
   test('bootstraps without replacement and refreshes the detected installed inventory on request', async () => {
     const box = await sandbox()
-    await box.bootstrapAgent('.agents')
+    await box.setupAgentHome('chatgpt-codex')
 
     const bootstrapped = await box.run('ki bootstrap')
     const repeated = await box.run('ki bootstrap')
@@ -85,7 +85,7 @@ harness = "knowledgeislands/ki-agentic-harness"
     const box = await sandbox()
     await box.home.mkdir('.agents')
     await box.config.write('ki/config.toml', 'schema = 1\nagents = ["chatgpt-codex"]\nharnesses = []\nskills = []\n')
-    await box.installBootstrapHarness()
+    await box.setupCanonicalHarness()
 
     const refreshed = await box.run('ki bootstrap --refresh')
 

@@ -5,9 +5,8 @@ describe('ki dev', () => {
   describe('dev on', () => {
     test('switches the canonical harness to a local development checkout', async () => {
       const box = await sandbox()
-      await box.home.mkdir('.agents')
-      await box.installBootstrapHarnessLocal('harness')
-      await box.installBootstrapHarness()
+      await box.setupLocalCanonicalHarness('harness')
+      await box.setupAgentHome('chatgpt-codex')
 
       await box.run('ki bootstrap')
       const result = await box.run(`ki dev on ${box.root.resolve('harness')}`)
@@ -65,8 +64,7 @@ path = ${JSON.stringify(await box.root.realpath('harness'))}
   describe('dev off', () => {
     test('restores the verified canonical harness and re-projects skills', async () => {
       const box = await sandbox()
-      await box.home.mkdir('.claude')
-      await box.installBootstrapHarness()
+      await box.setupAgentHome('claude-code')
       await box.run('ki bootstrap')
 
       const off = await box.run('ki dev off')

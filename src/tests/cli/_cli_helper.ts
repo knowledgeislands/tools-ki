@@ -1,10 +1,3 @@
-import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
-import { onTestFinished } from 'vitest'
-import { run as runCli } from '../../cli.ts'
-import { createContext } from '../../core/context.ts'
-
 // Shared end-to-end test harness for the `ki` CLI. Every test creates its own sandbox()
 // — a throwaway HOME/XDG_CONFIG_HOME/XDG_DATA_HOME/project quartet with methods to
 // populate and run against it — so no test assembles that layout or a raw path by hand.
@@ -19,6 +12,26 @@ import { createContext } from '../../core/context.ts'
 // ├── data/                   ($XDG_DATA_HOME — installed harnesses/skills project here)
 // │   └── ki/harnesses/...
 // └── project/                (run()'s default cwd; cd() moves relative to here)
+
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { onTestFinished } from 'vitest'
+import { run as runCli } from '../../cli.ts'
+import { createContext } from '../../core/context.ts'
+
+// `ki bootstrap` detects the active agent from which of these home directories exists —
+// kept here as a literal, not imported from src/agents, so this black-box CLI harness
+// exercises detection through observable behavior rather than sharing implementation.
+type AgentId = 'chatgpt-codex' | 'claude-code'
+const agentConfig: Record<AgentId, { home: string }> = {
+  'chatgpt-codex': {
+    home: '.agents'
+  },
+  'claude-code': {
+    home: '.claude'
+  }
+}
 
 // This tools-ki checkout's own root and `bin/ki` — never spawned (run() drives the
 // CLI in-process), only used to populate `executable`/`_` in the synthetic context so
@@ -66,7 +79,7 @@ const area = (path: string): SandboxArea => {
 // A single generic `example/harness` with one `ki-example` skill, whose audit/conform
 // native script bodies the caller supplies. Used to exercise the repo/harness/skill
 // commands against arbitrary skill behavior.
-const installExampleHarness = async (data: SandboxArea, { audit, conform }: { audit?: string; conform?: string } = {}): Promise<void> => {
+const setupExampleHarness = async (data: SandboxArea, { audit, conform }: { audit?: string; conform?: string } = {}): Promise<void> => {
   const base = 'ki/harnesses/example/harness/skills/ki-example'
   await data.write(`${base}/SKILL.md`, '---\nname: ki-example\nki-depends-on: []\n---\n')
   const operations = [
@@ -89,13 +102,13 @@ const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<v
   }
 }
 
-const installBootstrapHarness = (data: SandboxArea): Promise<void> =>
+const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
   writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
 
 // The same fixture, but written under an arbitrary local directory rather than the
 // installed-harness data root — for exercising `ki dev on <path>` against a local
 // development checkout instead of an installed harness.
-const installBootstrapHarnessLocal = (root: SandboxArea, relativePath: string): Promise<void> => writeBootstrapHarness(root, relativePath)
+const setupLocalCanonicalHarness = (root: SandboxArea, relativePath: string): Promise<void> => writeBootstrapHarness(root, relativePath)
 
 export interface Sandbox {
   readonly root: SandboxArea
@@ -105,14 +118,10 @@ export interface Sandbox {
   readonly project: SandboxArea
   readonly env: Record<string, string>
   readonly repo: typeof repositoryFixtures
-  readonly installExampleHarness: (skill?: { readonly audit?: string; readonly conform?: string }) => Promise<void>
-  readonly installBootstrapHarness: () => Promise<void>
-  readonly installBootstrapHarnessLocal: (relativePath: string) => Promise<void>
-  // Detection reads which agent home directory exists ('.agents' selects chatgpt-codex,
-  // '.claude' selects claude-code) and installs the canonical bootstrap harness that `ki
-  // bootstrap` needs to find under $XDG_DATA_HOME — the combination every test that runs
-  // `ki bootstrap` against a single detected agent needs.
-  readonly bootstrapAgent: (agentHomeDirectory: '.agents' | '.claude') => Promise<void>
+  readonly setupExampleHarness: (skill?: { readonly audit?: string; readonly conform?: string }) => Promise<void>
+  readonly setupCanonicalHarness: () => Promise<void>
+  readonly setupLocalCanonicalHarness: (relativePath: string) => Promise<void>
+  readonly setupAgentHome: (agentId: AgentId) => Promise<void>
   readonly setEnv: (environment: Record<string, string | undefined>) => void
   readonly cd: (relativePath: string) => void
   readonly run: (command: string) => Promise<CommandResult>
@@ -171,12 +180,12 @@ const create = async (): Promise<Sandbox> => {
     project,
     env,
     repo: repositoryFixtures,
-    installExampleHarness: (skill) => installExampleHarness(data, skill),
-    installBootstrapHarness: () => installBootstrapHarness(data),
-    installBootstrapHarnessLocal: (relativePath) => installBootstrapHarnessLocal(root, relativePath),
-    bootstrapAgent: async (agentHomeDirectory) => {
-      await home.mkdir(agentHomeDirectory)
-      await installBootstrapHarness(data)
+    setupExampleHarness: (skill) => setupExampleHarness(data, skill),
+    setupCanonicalHarness: () => setupCanonicalHarness(data),
+    setupLocalCanonicalHarness: (relativePath) => setupLocalCanonicalHarness(root, relativePath),
+    setupAgentHome: async (agentId) => {
+      await home.mkdir(agentConfig[agentId].home)
+      await setupCanonicalHarness(data)
     },
     setEnv,
     cd,

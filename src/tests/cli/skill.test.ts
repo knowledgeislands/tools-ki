@@ -5,9 +5,8 @@ import { type Sandbox, sandbox } from './_cli_helper.ts'
 
 describe('ki skill', () => {
   const bootstrapClaudeCode = async (box: Sandbox): Promise<void> => {
-    await box.home.mkdir('.claude')
-    await box.installBootstrapHarness()
-    await box.installExampleHarness()
+    await box.setupAgentHome('claude-code')
+    await box.setupExampleHarness()
     await box.run('ki bootstrap')
   }
 

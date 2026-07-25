@@ -6,7 +6,7 @@ describe('ki harness', () => {
   describe('harness list', () => {
     test('lists installed compatible harnesses', async () => {
       const box = await sandbox()
-      await box.installExampleHarness()
+      await box.setupExampleHarness()
       const listed = await box.run('ki harness list')
 
       expect(listed).toEqual({ exitCode: 0, output: 'example/harness\t1 capabilities\n' })
@@ -16,7 +16,7 @@ describe('ki harness', () => {
   describe('harness info & uninstall', () => {
     test('inspects and removes one non-base harness', async () => {
       const box = await sandbox()
-      await box.installExampleHarness()
+      await box.setupExampleHarness()
       const info = await box.run('ki harness info example/harness')
       const json = await box.run('ki harness info example/harness --json')
       const dryRun = await box.run('ki harness uninstall example/harness --dry-run')
@@ -46,7 +46,7 @@ describe('ki harness', () => {
           ''
         ].join('\n')
       )
-      await box.installExampleHarness()
+      await box.setupExampleHarness()
 
       const installed = await box.run('ki harness install example/harness')
 
@@ -58,7 +58,7 @@ describe('ki harness', () => {
   describe('installed harness integrity', () => {
     test('rejects an installed harness with malformed skill contents', async () => {
       const box = await sandbox()
-      await box.installExampleHarness()
+      await box.setupExampleHarness()
       await box.data.write('ki/harnesses/example/harness/skills/ki-example/SKILL.md', 'no frontmatter here\n')
 
       const info = await box.run('ki harness info example/harness')
@@ -69,7 +69,7 @@ describe('ki harness', () => {
 
     test('rejects an installed harness whose payload contains a symlink', async () => {
       const box = await sandbox()
-      await box.installExampleHarness()
+      await box.setupExampleHarness()
       const skillDirectory = `${box.data.path}/ki/harnesses/example/harness/skills/ki-example`
       await symlink(`${skillDirectory}/SKILL.md`, `${skillDirectory}/ALIAS.md`)
 
