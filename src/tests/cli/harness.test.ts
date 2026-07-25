@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
 describe('[ki harness]', () => {
-  describe('harness list', () => {
+  describe('[ki harness list]', () => {
     test('lists installed compatible harnesses', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
@@ -13,25 +13,33 @@ describe('[ki harness]', () => {
     })
   })
 
-  describe('harness info & uninstall', () => {
-    test('inspects and removes one non-base harness', async () => {
+  describe('[ki harness info]', () => {
+    test('inspects one non-base harness, in human and JSON form', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
       const info = await box.run('ki harness info example/harness')
       const json = await box.run('ki harness info example/harness --json')
-      const dryRun = await box.run('ki harness uninstall example/harness --dry-run')
-      const removed = await box.run('ki harness uninstall example/harness')
 
       expect(info.output).toContain('capabilities: 1')
       expect(info.output).toContain('  skill ki-example\n')
       expect(json.output).toContain('"depends_on":[]')
+    })
+  })
+
+  describe('[ki harness uninstall]', () => {
+    test('removes one non-base harness, honoring a dry run first', async () => {
+      const box = await sandbox()
+      await box.setupExampleHarness()
+      const dryRun = await box.run('ki harness uninstall example/harness --dry-run')
+      const removed = await box.run('ki harness uninstall example/harness')
+
       expect(dryRun.output).toContain('would uninstall example/harness')
       expect(removed.output).toContain('uninstalled example/harness')
       await expect(lstat(`${box.data.path}/ki/harnesses/example/harness`)).rejects.toThrow()
     })
   })
 
-  describe('harness install', () => {
+  describe('[ki harness install]', () => {
     test('reports an already-installed configured harness and records it', async () => {
       const box = await sandbox()
       const sha256 = 'a'.repeat(64)
