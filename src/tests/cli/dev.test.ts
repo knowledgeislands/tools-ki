@@ -5,15 +5,15 @@ describe('[ki dev]', () => {
   describe('dev on', () => {
     test('switches the canonical harness to a local development checkout', async () => {
       const box = await sandbox()
-      await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
       await box.setupAgentHome('chatgpt-codex')
 
       await box.run('ki bootstrap')
-      const result = await box.run(`ki dev on ${box.root.resolve('dev/knowledgeislands/ki-agentic-harness')}`)
+      const result = await box.run(`ki dev on ${harnessPath}`)
 
       expect(result).toEqual({
         exitCode: 0,
-        output: `development harness enabled ${await box.root.realpath('dev/knowledgeislands/ki-agentic-harness')}
+        output: `development harness enabled ${harnessPath}
 refreshed ki configuration: 1 agents, 1 harnesses, 5 skills
 ki-bootstrap for chatgpt-codex already installed
 ki-delegate for chatgpt-codex already installed
@@ -55,7 +55,7 @@ harness = "knowledgeislands/ki-agentic-harness"
 harness = "knowledgeislands/ki-agentic-harness"
 
 [local]
-path = ${JSON.stringify(await box.root.realpath('dev/knowledgeislands/ki-agentic-harness'))}
+path = ${JSON.stringify(harnessPath)}
 `
       )
     })
@@ -99,7 +99,7 @@ path = ${JSON.stringify(await box.root.realpath('dev/knowledgeislands/ki-agentic
       const box = await sandbox()
       await box.root.mkdir('dev/knowledgeislands/ki-agentic-harness/skills/process/ki-other')
 
-      const result = await box.run(`ki dev on ${box.root.resolve('dev/knowledgeislands/ki-agentic-harness')}`)
+      const result = await box.run(`ki dev on ${await box.root.realpath('dev/knowledgeislands/ki-agentic-harness')}`)
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('skills/keystone/ki-bootstrap/SKILL.md')

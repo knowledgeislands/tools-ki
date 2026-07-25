@@ -66,7 +66,6 @@ export interface SandboxArea {
   readonly write: (relativePath: string, content: string) => Promise<void>
   readonly read: (relativePath: string) => Promise<string>
   readonly mkdir: (relativePath: string) => Promise<void>
-  readonly resolve: (relativePath: string) => string
   readonly realpath: (relativePath: string) => Promise<string>
   readonly isSymlink: (relativePath: string) => Promise<boolean>
 }
@@ -75,7 +74,6 @@ const area = (path: string): SandboxArea => {
   const resolve = (relativePath: string): string => join(path, relativePath)
   return {
     path,
-    resolve,
     write: async (relativePath, content) => {
       const target = resolve(relativePath)
       await mkdir(dirname(target), { recursive: true })
@@ -114,8 +112,12 @@ const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
 
 // The same fixture, but written under an arbitrary local directory rather than the
 // installed-harness data root — for exercising `ki dev on <path>` against a local
-// development checkout instead of an installed harness.
-const setupLocalCanonicalHarness = (root: SandboxArea, relativePath: string): Promise<void> => writeBootstrapHarness(root, relativePath)
+// development checkout instead of an installed harness. Returns the checkout's real
+// path, since callers always need it to build the `ki dev on <path>` invocation.
+const setupLocalCanonicalHarness = async (root: SandboxArea, relativePath: string): Promise<string> => {
+  await writeBootstrapHarness(root, relativePath)
+  return root.realpath(relativePath)
+}
 
 export interface Sandbox {
   readonly root: SandboxArea
@@ -127,7 +129,7 @@ export interface Sandbox {
   readonly executable: string
   readonly setupExampleHarness: (skill?: { readonly audit?: string; readonly conform?: string }) => Promise<void>
   readonly setupCanonicalHarness: () => Promise<void>
-  readonly setupLocalCanonicalHarness: (relativePath: string) => Promise<void>
+  readonly setupLocalCanonicalHarness: (relativePath: string) => Promise<string>
   readonly setupAgentHome: (agentId: AgentId) => Promise<void>
   readonly setEnv: (environment: Record<string, string | undefined>) => void
   readonly cd: (relativePath: string) => void
