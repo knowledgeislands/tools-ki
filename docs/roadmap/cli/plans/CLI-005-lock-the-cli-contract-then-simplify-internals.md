@@ -1,7 +1,7 @@
 ---
 id: 'CLI-005'
 title: Lock the CLI contract with end-to-end tests, then simplify internals
-status: open
+status: in-progress
 roadmap: cli/lock-the-cli-contract-then-simplify-internals
 blocks: —
 blocked-by: —
