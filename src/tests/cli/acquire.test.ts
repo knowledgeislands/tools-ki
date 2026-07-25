@@ -1,9 +1,13 @@
+import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { lstat, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { promisify } from 'node:util'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { isSafeRelativePath } from '../../commands/acquire.ts'
 import { type CommandResult, sandbox } from './_helper.ts'
+
+const mkfifo = promisify(execFile)
 
 const writeFailure = vi.hoisted(() => ({ enabled: false }))
 
@@ -310,7 +314,7 @@ describe('ki acquire chatgpt import', () => {
     await writeFile(relationship, '{"type":"conversation-order","record":"records/conversation.md","position":1}')
     expect((await importCapture()).exitCode).toBe(0)
     await rm(output, { recursive: true })
-    await box.exec(['mkfifo', join(capture, 'assets/pipe')])
+    await mkfifo('mkfifo', [join(capture, 'assets/pipe')])
     expect((await importCapture()).output).toContain('capture contains an unsafe file')
     await rm(join(capture, 'assets/pipe'))
     await rm(join(capture, 'assets'), { recursive: true })

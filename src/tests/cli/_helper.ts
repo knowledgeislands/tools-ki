@@ -1,8 +1,6 @@
-import { execFile } from 'node:child_process'
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { promisify } from 'node:util'
 import { onTestFinished } from 'vitest'
 import { run as runCli } from '../../cli.ts'
 import { createContext } from '../../core/context.ts'
@@ -93,10 +91,7 @@ export interface Sandbox {
     environment?: Record<string, string | undefined>,
     workingDirectory?: string
   ) => Promise<CommandResult>
-  readonly exec: (command: readonly [string, ...string[]], environment?: Record<string, string | undefined>) => Promise<CommandResult>
 }
-
-const executeFile = promisify(execFile)
 
 const create = async (): Promise<Sandbox> => {
   const rootPath = await mkdtemp(join(tmpdir(), 'ki-test-'))
@@ -132,24 +127,6 @@ const create = async (): Promise<Sandbox> => {
     return { exitCode: await runCli(arguments_, context), output }
   }
 
-  // Shells out for concerns `run` can't reach in-process: the installer script,
-  // the compiled/installed executable, and one-off OS tools like `mkfifo`.
-  const exec = async (
-    command: readonly [string, ...string[]],
-    environment: Record<string, string | undefined> = {}
-  ): Promise<CommandResult> => {
-    try {
-      const result = await executeFile(command[0], command.slice(1), {
-        cwd: repositoryFixtures.root,
-        env: { PATH: process.env['PATH'], TMPDIR: process.env['TMPDIR'], HOME: home.path, ...environment, _: command[0] }
-      })
-      return { exitCode: 0, output: `${result.stdout}${result.stderr}` }
-    } catch (error: unknown) {
-      const result = error as { code?: number; stdout?: string; stderr?: string }
-      return { exitCode: result.code ?? 1, output: `${result.stdout ?? ''}${result.stderr ?? ''}` }
-    }
-  }
-
   return {
     root,
     home,
@@ -160,8 +137,7 @@ const create = async (): Promise<Sandbox> => {
     repo: repositoryFixtures,
     installExampleHarness: (skill) => installExampleHarness(data, skill),
     installBootstrapHarness: () => installBootstrapHarness(data),
-    run,
-    exec
+    run
   }
 }
 
