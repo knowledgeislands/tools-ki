@@ -67,14 +67,24 @@ const installExampleHarness = async (data: SandboxArea, { audit, conform }: { au
 // A fixture shaped exactly like the real canonical knowledgeislands/ki-agentic-harness
 // (its specific skill names and keystone/process grouping), because `ki bootstrap`/`ki
 // dev` hardcode expectations about that identity rather than accepting any harness.
-const installBootstrapHarness = async (data: SandboxArea): Promise<void> => {
-  const base = 'ki/harnesses/knowledgeislands/ki-agentic-harness'
-  await Promise.all(['subagents', 'hooks'].map((payload) => data.mkdir(`${base}/${payload}`)))
-  for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
+const bootstrapHarnessSkills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']
+
+const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<void> => {
+  await Promise.all(['subagents', 'hooks'].map((payload) => area.mkdir(`${base}/${payload}`)))
+  for (const skill of bootstrapHarnessSkills) {
     const group = skill === 'ki-bootstrap' ? 'keystone' : 'process'
-    await data.write(`${base}/skills/${group}/${skill}/SKILL.md`, `---\nname: ${skill}\nki-depends-on: []\n---\n`)
+    await area.write(`${base}/skills/${group}/${skill}/SKILL.md`, `---\nname: ${skill}\nki-depends-on: []\n---\n`)
   }
 }
+
+const installBootstrapHarness = (data: SandboxArea): Promise<void> =>
+  writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
+
+// The same fixture, but written under an arbitrary local directory rather than the
+// installed-harness data root — for exercising `ki dev on <path>` against a local
+// development checkout instead of an installed harness.
+const installBootstrapHarnessLocal = (root: SandboxArea, relativePath: string): Promise<void> =>
+  writeBootstrapHarness(root, relativePath)
 
 export interface Sandbox {
   readonly root: SandboxArea
@@ -86,11 +96,10 @@ export interface Sandbox {
   readonly repo: typeof repositoryFixtures
   readonly installExampleHarness: (skill?: { readonly audit?: string; readonly conform?: string }) => Promise<void>
   readonly installBootstrapHarness: () => Promise<void>
-  readonly run: (
-    arguments_: string[],
-    environment?: Record<string, string | undefined>,
-    workingDirectory?: string
-  ) => Promise<CommandResult>
+  readonly installBootstrapHarnessLocal: (relativePath: string) => Promise<void>
+  readonly setEnv: (environment: Record<string, string | undefined>) => void
+  readonly cd: (workingDirectory: string) => void
+  readonly run: (command: string) => Promise<CommandResult>
 }
 
 const create = async (): Promise<Sandbox> => {
@@ -104,15 +113,22 @@ const create = async (): Promise<Sandbox> => {
   await mkdir(home.path, { recursive: true })
   await mkdir(project.path, { recursive: true })
   const env = { HOME: home.path, XDG_CONFIG_HOME: config.path, XDG_DATA_HOME: data.path }
+  let environmentOverrides: Record<string, string | undefined> = {}
+  let workingDirectory = project.path
+
+  const setEnv = (environment: Record<string, string | undefined>): void => {
+    environmentOverrides = { ...environmentOverrides, ...environment }
+  }
+  const cd = (path: string): void => {
+    workingDirectory = path
+  }
 
   // Drives the real `ki` command tree in-process, always starting from this sandbox's
   // own env (a real HOME/XDG_* always exists by construction — no forgotten-override
-  // footgun) and, by default, this sandbox's empty project directory.
-  const run = async (
-    arguments_: string[],
-    environment: Record<string, string | undefined> = {},
-    workingDirectory: string = project.path
-  ): Promise<CommandResult> => {
+  // footgun) and, by default, this sandbox's empty project directory. Overridden via
+  // setEnv()/cd(). Commands are written exactly as typed at a shell, `ki ...`, so the
+  // literal command a test asserts against is unambiguous at the call site.
+  const run = async (command: string): Promise<CommandResult> => {
     let output = ''
     const write = (chunk: string): void => {
       output += chunk
@@ -122,9 +138,11 @@ const create = async (): Promise<Sandbox> => {
       stderr: { write },
       executable: repositoryFixtures.executable,
       workingDirectory,
-      environment: { ...env, ...environment, _: repositoryFixtures.executable }
+      environment: { ...env, ...environmentOverrides, _: repositoryFixtures.executable }
     })
-    return { exitCode: await runCli(arguments_, context), output }
+    const tokens = command.split(' ').filter(Boolean)
+    if (tokens[0] !== 'ki') throw new Error(`sandbox run() commands must start with "ki": ${command}`)
+    return { exitCode: await runCli(tokens.slice(1), context), output }
   }
 
   return {
@@ -137,6 +155,9 @@ const create = async (): Promise<Sandbox> => {
     repo: repositoryFixtures,
     installExampleHarness: (skill) => installExampleHarness(data, skill),
     installBootstrapHarness: () => installBootstrapHarness(data),
+    installBootstrapHarnessLocal: (relativePath) => installBootstrapHarnessLocal(root, relativePath),
+    setEnv,
+    cd,
     run
   }
 }

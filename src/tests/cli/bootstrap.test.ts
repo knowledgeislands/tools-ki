@@ -7,10 +7,10 @@ describe('ki bootstrap', () => {
     await box.home.mkdir('.agents')
     await box.installBootstrapHarness()
 
-    const bootstrapped = await box.run(['bootstrap'])
-    const repeated = await box.run(['bootstrap'])
-    const refreshed = await box.run(['bootstrap', '--refresh'])
-    const checked = await box.run(['doctor'])
+    const bootstrapped = await box.run('ki bootstrap')
+    const repeated = await box.run('ki bootstrap')
+    const refreshed = await box.run('ki bootstrap --refresh')
+    const checked = await box.run('ki doctor')
 
     expect(bootstrapped).toEqual({
       exitCode: 0,
@@ -88,7 +88,7 @@ harness = "knowledgeislands/ki-agentic-harness"
     await box.config.write('ki/config.toml', 'schema = 1\nagents = ["chatgpt-codex"]\nharnesses = []\nskills = []\n')
     await box.installBootstrapHarness()
 
-    const refreshed = await box.run(['bootstrap', '--refresh'])
+    const refreshed = await box.run('ki bootstrap --refresh')
 
     expect(refreshed.exitCode).toBe(0)
     expect(await box.config.read('ki/config.toml')).toContain('[agents]\nids = [\n  "chatgpt-codex",\n]')

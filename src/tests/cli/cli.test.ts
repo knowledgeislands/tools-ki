@@ -9,16 +9,17 @@ describe('command-line interface', () => {
   test('provide help, version, plural completions, and diagnostics', async () => {
     const box = await sandbox()
     const missingHome = join(box.root.path, 'missing-home')
-    const help = await box.run(['--help'])
-    const completions = await box.run(['completions', 'zsh'])
-    const version = await box.run(['version'])
-    const diag = await box.run(['diag'], {
+    const help = await box.run('ki --help')
+    const completions = await box.run('ki completions zsh')
+    const version = await box.run('ki version')
+    box.setEnv({
       XDG_DATA_HOME: join(missingHome, 'data'),
       XDG_CONFIG_HOME: join(missingHome, 'config'),
       XDG_CACHE_HOME: join(missingHome, 'cache'),
       XDG_STATE_HOME: join(missingHome, 'state')
     })
-    const singular = await box.run(['completion', 'bash'])
+    const diag = await box.run('ki diag')
+    const singular = await box.run('ki completion bash')
 
     expect(help.exitCode).toBe(0)
     expect(help.output).toContain('acquire')
@@ -31,9 +32,9 @@ describe('command-line interface', () => {
 
   test('prints the root, nested and unknown-help command interfaces', async () => {
     const box = await sandbox()
-    const root = await box.run([])
-    const nested = await box.run(['help', 'acquire', 'chatgpt', 'import'])
-    const unknown = await box.run(['help', 'missing'])
+    const root = await box.run('ki')
+    const nested = await box.run('ki help acquire chatgpt import')
+    const unknown = await box.run('ki help missing')
 
     expect(root.output).toContain('Usage: ki')
     expect(nested.exitCode).toBe(0)
@@ -42,20 +43,20 @@ describe('command-line interface', () => {
 
   test('reports every baseline output variant and command grammar errors', async () => {
     const box = await sandbox()
-    const environment = {
+    const bash = await box.run('ki completions bash')
+    const invalidCompletion = await box.run('ki completions fish')
+    box.setEnv({
       XDG_DATA_HOME: join(box.root.path, 'data'),
       XDG_CONFIG_HOME: join(box.root.path, 'config'),
       XDG_CACHE_HOME: join(box.root.path, 'cache'),
       XDG_STATE_HOME: join(box.root.path, 'state')
-    }
-    const bash = await box.run(['completions', 'bash'])
-    const invalidCompletion = await box.run(['completions', 'fish'])
-    const diag = await box.run(['diag'], environment)
-    const doctor = await box.run(['doctor'], environment)
-    const doctorJson = await box.run(['doctor', '--json'], environment)
-    const optionVersion = await box.run(['--version'])
-    const missingCompletionShell = await box.run(['completions'])
-    const unknown = await box.run(['unknown'])
+    })
+    const diag = await box.run('ki diag')
+    const doctor = await box.run('ki doctor')
+    const doctorJson = await box.run('ki doctor --json')
+    const optionVersion = await box.run('ki --version')
+    const missingCompletionShell = await box.run('ki completions')
+    const unknown = await box.run('ki unknown')
 
     expect(bash.output).toContain(
       'complete -W "acquire bootstrap completions diag dev doctor harness help repo version --help --version" ki'

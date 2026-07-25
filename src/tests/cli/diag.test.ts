@@ -22,7 +22,7 @@ describe('ki diag', () => {
       ].join('\n')
     )
 
-    const human = await box.run(['diag'])
+    const human = await box.run('ki diag')
 
     expect(human.output).toContain('Warnings\n  - unrecognised key unexpected')
     expect(human.output).toContain('Errors\n  - schema must equal 1')
@@ -33,7 +33,8 @@ describe('ki diag', () => {
     await box.home.mkdir('repo/src/nested')
     await box.home.write('repo/.ki-config.toml', '# repo\n')
 
-    const diag = await box.run(['diag'], {}, box.home.resolve('repo/src/nested'))
+    box.cd(box.home.resolve('repo/src/nested'))
+    const diag = await box.run('ki diag')
 
     expect(diag.output).toContain(`Repository    ${await box.home.realpath('repo')}`)
   })
@@ -42,7 +43,8 @@ describe('ki diag', () => {
     const box = await sandbox()
     await box.home.mkdir('scratch')
 
-    const diag = await box.run(['diag'], {}, box.home.resolve('scratch'))
+    box.cd(box.home.resolve('scratch'))
+    const diag = await box.run('ki diag')
 
     expect(diag.output).toContain('Repository    none')
   })

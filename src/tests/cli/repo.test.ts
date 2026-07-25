@@ -10,7 +10,7 @@ describe('ki repo', () => {
         audit: 'export const audit = async ({ capability }) => [{ level: "info", code: "EXAMPLE-1", message: capability.identity }]\n'
       })
 
-      const result = await box.run(['repo', 'audit', '--skill', 'ki-example'])
+      const result = await box.run('ki repo audit --skill ki-example')
 
       expect(result).toEqual({ exitCode: 0, output: 'info EXAMPLE-1: example/harness:ki-example\n' })
     })
@@ -27,11 +27,11 @@ describe('ki repo', () => {
         conform: 'export const conform = async () => ({ findings: [], writes: [{ path: "governed.txt", content: "after\\n" }] })\n'
       })
 
-      const dryRun = await box.run(['repo', 'conform', '--dry-run'])
+      const dryRun = await box.run('ki repo conform --dry-run')
       expect(dryRun).toEqual({ exitCode: 0, output: 'would write governed.txt\n' })
       expect(await box.project.read('governed.txt')).toBe('before\n')
 
-      const conformed = await box.run(['repo', 'conform'])
+      const conformed = await box.run('ki repo conform')
       expect(conformed).toEqual({ exitCode: 0, output: 'write governed.txt\n' })
       expect(await box.project.read('governed.txt')).toBe('after\n')
     })
@@ -61,7 +61,7 @@ describe('ki repo', () => {
       ])
       await box.project.write('.ki-config.toml', '[ki-feature]\n\n[ki-foundation]\n')
 
-      const result = await box.run(['repo', 'audit'])
+      const result = await box.run('ki repo audit')
 
       expect(result).toEqual({
         exitCode: 0,
@@ -77,7 +77,7 @@ describe('ki repo', () => {
       ])
       await box.project.write('.ki-config.toml', '[ki-feature]\n')
 
-      const result = await box.run(['repo', 'audit'])
+      const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('requires declared dependency ki-foundation')
@@ -91,7 +91,7 @@ describe('ki repo', () => {
       ])
       await box.project.write('.ki-config.toml', '[ki-first]\n\n[ki-second]\n')
 
-      const result = await box.run(['repo', 'audit'])
+      const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('has a dependency cycle')

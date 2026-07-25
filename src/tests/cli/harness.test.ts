@@ -7,7 +7,7 @@ describe('ki harness', () => {
     test('lists installed compatible harnesses', async () => {
       const box = await sandbox()
       await box.installExampleHarness()
-      const listed = await box.run(['harness', 'list'])
+      const listed = await box.run('ki harness list')
 
       expect(listed).toEqual({ exitCode: 0, output: 'example/harness\t1 capabilities\n' })
     })
@@ -17,10 +17,10 @@ describe('ki harness', () => {
     test('inspects and removes one non-base harness', async () => {
       const box = await sandbox()
       await box.installExampleHarness()
-      const info = await box.run(['harness', 'info', 'example/harness'])
-      const json = await box.run(['harness', 'info', 'example/harness', '--json'])
-      const dryRun = await box.run(['harness', 'uninstall', 'example/harness', '--dry-run'])
-      const removed = await box.run(['harness', 'uninstall', 'example/harness'])
+      const info = await box.run('ki harness info example/harness')
+      const json = await box.run('ki harness info example/harness --json')
+      const dryRun = await box.run('ki harness uninstall example/harness --dry-run')
+      const removed = await box.run('ki harness uninstall example/harness')
 
       expect(info.output).toContain('capabilities: 1')
       expect(info.output).toContain('  skill ki-example\n')
@@ -48,7 +48,7 @@ describe('ki harness', () => {
       )
       await box.installExampleHarness()
 
-      const installed = await box.run(['harness', 'install', 'example/harness'])
+      const installed = await box.run('ki harness install example/harness')
 
       expect(installed).toEqual({ exitCode: 0, output: `example/harness is already installed\tarchive ${sha256}\n` })
       expect(await box.config.read('ki/config.toml')).toContain('ids = [\n  "example/harness",\n]')
@@ -61,7 +61,7 @@ describe('ki harness', () => {
       await box.installExampleHarness()
       await box.data.write('ki/harnesses/example/harness/skills/ki-example/SKILL.md', 'no frontmatter here\n')
 
-      const info = await box.run(['harness', 'info', 'example/harness'])
+      const info = await box.run('ki harness info example/harness')
 
       expect(info.exitCode).toBe(1)
       expect(info.output).toContain('must declare frontmatter')
@@ -73,7 +73,7 @@ describe('ki harness', () => {
       const skillDirectory = `${box.data.path}/ki/harnesses/example/harness/skills/ki-example`
       await symlink(`${skillDirectory}/SKILL.md`, `${skillDirectory}/ALIAS.md`)
 
-      const listed = await box.run(['harness', 'list'])
+      const listed = await box.run('ki harness list')
 
       expect(listed.exitCode).toBe(1)
       expect(listed.output).toContain('must not be a symlink')

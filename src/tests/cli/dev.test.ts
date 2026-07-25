@@ -6,15 +6,11 @@ describe('ki dev', () => {
     test('switches the canonical harness to a local development checkout', async () => {
       const box = await sandbox()
       await box.home.mkdir('.agents')
-      await Promise.all(['subagents', 'hooks'].map((payload) => box.root.mkdir(`harness/${payload}`)))
+      await box.installBootstrapHarnessLocal('harness')
       await box.installBootstrapHarness()
-      for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
-        const group = skill === 'ki-bootstrap' ? 'keystone' : 'process'
-        await box.root.write(`harness/skills/${group}/${skill}/SKILL.md`, `---\nname: ${skill}\nki-depends-on: []\n---\n`)
-      }
 
-      await box.run(['bootstrap'])
-      const result = await box.run(['dev', 'on', box.root.resolve('harness')])
+      await box.run('ki bootstrap')
+      const result = await box.run(`ki dev on ${box.root.resolve('harness')}`)
 
       expect(result).toEqual({
         exitCode: 0,
@@ -71,9 +67,9 @@ path = ${JSON.stringify(await box.root.realpath('harness'))}
       const box = await sandbox()
       await box.home.mkdir('.claude')
       await box.installBootstrapHarness()
-      await box.run(['bootstrap'])
+      await box.run('ki bootstrap')
 
-      const off = await box.run(['dev', 'off'])
+      const off = await box.run('ki dev off')
 
       expect(off).toEqual({
         exitCode: 0,
@@ -95,7 +91,7 @@ path = ${JSON.stringify(await box.root.realpath('harness'))}
     test('refuses to switch before the environment is bootstrapped', async () => {
       const box = await sandbox()
 
-      const off = await box.run(['dev', 'off'])
+      const off = await box.run('ki dev off')
 
       expect(off.exitCode).toBe(1)
       expect(off.output).toContain('run `ki bootstrap` first')
@@ -105,7 +101,7 @@ path = ${JSON.stringify(await box.root.realpath('harness'))}
       const box = await sandbox()
       await box.root.mkdir('harness/skills/process/ki-other')
 
-      const result = await box.run(['dev', 'on', box.root.resolve('harness')])
+      const result = await box.run(`ki dev on ${box.root.resolve('harness')}`)
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('skills/keystone/ki-bootstrap/SKILL.md')

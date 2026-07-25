@@ -24,7 +24,10 @@ const executeFile = promisify(execFile)
 export interface InstallSandbox {
   readonly path: string
   readonly installer: string
-  readonly exec: (command: readonly [string, ...string[]], environment?: Record<string, string | undefined>) => Promise<CommandResult>
+  readonly exec: (
+    command: readonly [string, ...string[]],
+    options?: { readonly environment?: Record<string, string | undefined> }
+  ) => Promise<CommandResult>
 }
 
 export const installSandbox = async (): Promise<InstallSandbox> => {
@@ -35,7 +38,7 @@ export const installSandbox = async (): Promise<InstallSandbox> => {
 
   const exec = async (
     command: readonly [string, ...string[]],
-    environment: Record<string, string | undefined> = {}
+    { environment = {} }: { readonly environment?: Record<string, string | undefined> } = {}
   ): Promise<CommandResult> => {
     try {
       const result = await executeFile(command[0], command.slice(1), {

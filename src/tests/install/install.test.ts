@@ -19,8 +19,7 @@ describe('install.sh', () => {
     const installDir = join(box.path, 'bin')
     const shareDir = join(box.path, 'share')
     const result = await box.exec([box.installer], {
-      KI_CLI_INSTALL_DIR: installDir,
-      KI_MAN_INSTALL_DIR: join(shareDir, 'man', 'man1')
+      environment: { KI_CLI_INSTALL_DIR: installDir, KI_MAN_INSTALL_DIR: join(shareDir, 'man', 'man1') }
     })
 
     expect(result.exitCode).toBe(0)
@@ -35,8 +34,7 @@ describe('install.sh', () => {
     const installDir = join(box.path, 'bin')
     const manDir = join(box.path, 'man1')
     const result = await box.exec([box.installer, '--link'], {
-      KI_CLI_INSTALL_DIR: installDir,
-      KI_MAN_INSTALL_DIR: manDir
+      environment: { KI_CLI_INSTALL_DIR: installDir, KI_MAN_INSTALL_DIR: manDir }
     })
 
     expect(result.exitCode).toBe(0)
@@ -47,9 +45,11 @@ describe('install.sh', () => {
   test('honors KI_CLI_SOURCE and fails when the source executable or manual is missing', async () => {
     const box = await installSandbox()
     const missingSource = await box.exec([box.installer], {
-      KI_CLI_INSTALL_DIR: join(box.path, 'bin'),
-      KI_MAN_INSTALL_DIR: join(box.path, 'man1'),
-      KI_CLI_SOURCE: join(box.path, 'no-such-executable')
+      environment: {
+        KI_CLI_INSTALL_DIR: join(box.path, 'bin'),
+        KI_MAN_INSTALL_DIR: join(box.path, 'man1'),
+        KI_CLI_SOURCE: join(box.path, 'no-such-executable')
+      }
     })
 
     expect(missingSource).toEqual({
@@ -62,14 +62,10 @@ describe('install.sh', () => {
     const box = await installSandbox()
     const installDir = join(box.path, 'bin')
     const notOnPath = await box.exec([box.installer], {
-      KI_CLI_INSTALL_DIR: installDir,
-      KI_MAN_INSTALL_DIR: join(box.path, 'man1'),
-      PATH: '/usr/bin:/bin'
+      environment: { KI_CLI_INSTALL_DIR: installDir, KI_MAN_INSTALL_DIR: join(box.path, 'man1'), PATH: '/usr/bin:/bin' }
     })
     const onPath = await box.exec([box.installer], {
-      KI_CLI_INSTALL_DIR: installDir,
-      KI_MAN_INSTALL_DIR: join(box.path, 'man1'),
-      PATH: `${installDir}:/usr/bin:/bin`
+      environment: { KI_CLI_INSTALL_DIR: installDir, KI_MAN_INSTALL_DIR: join(box.path, 'man1'), PATH: `${installDir}:/usr/bin:/bin` }
     })
 
     expect(notOnPath.output).toContain(`ki: add ${installDir} to PATH to use ki from any directory`)
