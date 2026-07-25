@@ -9,7 +9,7 @@ blocked-by: —
 
 ## Context
 
-`ki repo audit` and `ki repo conform` must become direct Bun capabilities. They must resolve capabilities declared by the selected repository's `.ki-config.toml` from installed compatible harnesses and load each skill's existing TypeScript `scripts/govern.ts` module in-process, rather than spawning legacy vendored scripts or requiring every repository to carry `.ki/bin` runners.
+`ki repo audit` and `ki repo conform` must become direct Bun capabilities. They must resolve capabilities declared by the selected repository's `.ki-config.toml` from installed compatible harnesses and run their rubrics through one `tools-ki` governed-rubric runtime, rather than spawning legacy vendored scripts or requiring every repository to carry `.ki/bin` runners.
 
 ## Current state
 
@@ -18,6 +18,8 @@ The seed release establishes the `ki` delivery channel, and the current developm
 [ADR-KI-TOOLS-001](../../decisions/ADR-KI-TOOLS-001-typescript-native-command-host.md) adopts the native Bun and TypeScript host required for the work below, and [ADR-KI-TOOLS-002](../../decisions/ADR-KI-TOOLS-002-compatible-harness-registry-and-native-operations.md) defines its registry, command, scope, and native-operation boundary. The existing Bash implementation is an interim development surface to port, not an execution architecture to extend.
 
 The current `ki-engineering` checker still expects retired package-script aggregate runners. Its rule and CI expectation must migrate with native `ki repo audit` and `ki repo conform`; this plan does not restore a local or vendored runner merely to satisfy that obsolete check.
+
+The generic checker, reporter, mode, ordering, and transaction logic currently collected in the harness's shared `govern.ts` and `checker.ts` belongs in `tools-ki`. A harness retains only skill-specific rubrics, evidence/context builders, and declared safe repairs. The runtime loads those definitions from the installed payload and owns audit execution, finding rendering, dry-run, ordered conform, and publication.
 
 ## Completed foundation
 
@@ -44,17 +46,18 @@ The current `ki-engineering` checker still expects retired package-script aggreg
    - [x] Inspect installed payloads and remove only structurally recognised, non-base harnesses, with a non-mutating dry run.
    - [x] Parse declared skill tables and resolve them only from installed harnesses.
    - [x] Order declared explicit dependencies before execution.
+   - [ ] Make the canonical payload executable without nested symbolic links. Its source skills currently use shared-module links while installed-harness inspection correctly refuses them; materialise integrity-checked regular files at acquisition or replace the source links. Do not weaken or follow nested-link validation.
 6. Implement explicit user and repository capability activation using only the contract's managed projection boundaries. Prove idempotence, dry-run, containment, and refusal for altered, unsafe, incompatible, or missing state.
    - [x] Bootstrap a non-overwriting, user-managed XDG configuration from detected known agents. `--refresh` redetects agents and installed harnesses, then inventories only KI-managed skills linked in configured user agent spaces; the built-in canonical harness is installed from pinned evidence, and every configured runtime receives the five core user skills: `ki-bootstrap`, `ki-delegate`, `ki-next`, `ki-plan`, and `ki-recap`. `ki dev on <path>` switches only the canonical `skills/`, `agents/`, and `hooks/` payload to a validated local checkout; `ki dev off` restores the verified canonical archive and user-skill links.
-7. Implement `ki repo audit [--repo <path>] [--skill <capability>]` from the selected repository's declared registered capabilities. Prove it is read-only, runs only declared compatible operations, preserves the shared finding model, and names recovery without network or source-checkout fallback.
+7. Implement `ki repo audit [--repo <path>] [--skill <capability>]` from the selected repository's declared registered capabilities. Prove it is read-only, runs only declared compatible rubrics, preserves the shared finding model, and names recovery without network or source-checkout fallback.
    - [x] Deliver the command host and fixture-backed registered in-process execution; refuse a nearby checkout or an unavailable verified harness with recovery guidance.
-   - [ ] Replace the temporary `.mjs` operation convention with direct Bun imports of each installed skill's existing `scripts/govern.ts` checker exports. Update fixtures and installed-harness discovery together; do not retain an `.mjs` fallback or introduce a second native-wrapper convention.
-   - [ ] Call the existing programmatic audit checker and translate its established result records to the CLI finding model. Use its exported option parser where present; do not spawn the former CLI entry point.
+   - [ ] Move the harness's generic governed-rubric lifecycle into `tools-ki`: rubric execution, finding conversion and rendering, dependency order, dry-run, and safe publication. Define one versioned TypeScript rubric-definition contract for installed skills; do not retain `.mjs` operations, a per-skill runner, or a second wrapper convention.
+   - [ ] Load each installed skill's rubric definition and evidence/context builder through Bun, then run its audit through the tools-owned runtime. Do not spawn the former CLI entry point.
    - [ ] Prove the command against the installed base harness and a real declared repository.
-8. Implement `ki repo conform [--repo <path>] [--skill <capability>] [--dry-run]` with the same resolution rules. Delegate each selected skill's conform lifecycle directly to its existing `scripts/govern.ts` checker through Bun: that checker retains its own established safety transaction, dry-run, and post-conform verification rather than reporting writes to a second host transaction.
+8. Implement `ki repo conform [--repo <path>] [--skill <capability>] [--dry-run]` with the same resolution rules. The tools-owned runtime performs the audit-gated conform lifecycle and its transaction; a skill-specific repair declares only its safe proposed changes and verification.
    - [x] Deliver the transactional host and fixture-backed dry run, guarded publication, and post-conform re-audit.
-   - [ ] Replace the temporary host transaction with direct serial Bun calls to each installed skill's existing `scripts/govern.ts` conform contract, with no `.mjs` compatibility path or parallel wrapper module. Preserve resolver dependency order; do not claim unsupported cross-skill atomicity.
-   - [ ] Prove the direct path preserves each skill's existing dry-run, safe-write, and post-conform behaviour, including failures between selected skills.
+   - [ ] Replace direct-writing rubric callbacks and skill-owned persistence with declared repair plans consumed by the tools-owned transaction. Preserve resolver dependency order and retain existing fail-closed safety guarantees before any legacy write path is removed.
+   - [ ] Prove native conform preserves dry-run, safe-write, and post-conform behaviour, including failures between selected skills and concurrent replacement of a proposed target.
    - [ ] Prove the command against the installed base harness and a real declared repository.
 9. Provide an explicit migration path for repositories carrying generated `.ki/bin` state. Do not delete, overwrite, or use that state implicitly; retain migration and recovery proof for changed, missing, symlinked, and concurrent paths.
    - [ ] Start with this harness: prove its existing TypeScript governed checkers through an installed or explicitly linked canonical payload, then move CI, package scripts, and pre-commit one surface at a time before removing proven-redundant `.ki` material.
