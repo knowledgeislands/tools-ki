@@ -55,4 +55,42 @@ ids = [
     // Agent check should fail since home doesn't exist
     expect(doctor.output).toContain('✗ Agent')
   })
+
+  test('reports a harness inventory failure when the installed harnesses directory is malformed', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    // A non-directory entry directly under ki/harnesses is an unsafe owner entry.
+    await box.data.write('ki/harnesses/not-a-directory', 'x')
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).toContain('✗ Harness inventory: installed harnesses directory contains an unsafe owner entry')
+  })
+
+  test('reports an agents failure when configuration names an unknown agent', async () => {
+    const box = await sandbox()
+    await box.config.write(
+      'ki/config.toml',
+      `schema = 1
+
+[agents]
+ids = [
+  "unknown-agent",
+]
+
+[harnesses]
+ids = [
+  "knowledgeislands/ki-agentic-harness",
+]
+
+[skills]
+`
+    )
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).toContain('✗ Agents: unknown agent unknown-agent; use claude-code or chatgpt-codex')
+    expect(doctor.output).toContain('○ User skills: agents are unavailable')
+  })
 })

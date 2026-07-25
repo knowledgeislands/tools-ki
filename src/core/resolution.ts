@@ -60,6 +60,7 @@ export const resolveDeclaredSkills = (
     if (candidates.length > 1)
       throw new KiError(`declared skill ${declaration.name} is ambiguous; qualify its harness before activation`, 1)
     const candidate = candidates[0]
+    /* v8 ignore next -- candidates.length is exactly 1 here (0 and >1 are both handled above); defends only against a future refactor. */
     if (!candidate) throw new KiError(`declared skill ${declaration.name} could not be resolved`, 1)
     return { ...candidate, declaration }
   })
@@ -67,6 +68,7 @@ export const resolveDeclaredSkills = (
   if (!selected) return ordered
   const selectedSkills = resolved.filter((skill) => skill.identity === selected || skill.declaration.name === selected)
   if (!selectedSkills.length) throw new KiError(`--skill must name one declared resolved skill`, 2)
+  /* v8 ignore next -- each declared skill's name/identity is unique per repository configuration, so selectedSkills can never exceed 1. */
   if (selectedSkills.length > 1) throw new KiError(`--skill ${selected} is ambiguous; use its qualified identity`, 2)
   const selectedNames = new Set<string>()
   const includeDependencies = (skill: ResolvedSkill): void => {
@@ -74,6 +76,8 @@ export const resolveDeclaredSkills = (
     selectedNames.add(skill.declaration.name)
     for (const dependencyName of skill.capability.dependsOn) {
       const dependency = resolved.find((candidate) => candidate.declaration.name === dependencyName)
+      // Dependency existence was already validated by orderedSkills() above, so dependency is always found here.
+      /* v8 ignore next */
       if (dependency) includeDependencies(dependency)
     }
   }

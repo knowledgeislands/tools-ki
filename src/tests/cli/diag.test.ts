@@ -19,6 +19,15 @@ describe('[ki diag]', () => {
     expect(diag.output).toContain(`Data          ${missingHome}/data/ki`)
   })
 
+  test('resolves the user home from USERPROFILE when HOME is unset', async () => {
+    const box = await sandbox()
+    box.setEnv({ HOME: undefined, USERPROFILE: box.home.path })
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.exitCode).toBe(0)
+  })
+
   test('reports user configuration values, unknown keys, and invalid entries', async () => {
     const box = await sandbox()
     const invalidConfig = `schema = 2

@@ -74,6 +74,9 @@ export const createDoctorCommand = (context: KiContext): Command =>
       }
       for (const identity of configuration.skills) {
         const name = managedSkillName(identity)
+        // inspectUserConfiguration only ever pushes "harness:name" identities with a non-empty
+        // harness and name when the configuration is valid, so this defends only a future change.
+        /* v8 ignore next 4 */
         if (!name) {
           checks.push({ status: 'fail', label: `User skill ${identity}`, detail: 'invalid identity' })
           continue

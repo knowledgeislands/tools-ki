@@ -14,6 +14,26 @@ describe('[ki repo]', () => {
 
       expect(result).toEqual({ exitCode: 0, output: 'info EXAMPLE-1: example/harness:ki-example\n' })
     })
+
+    test('reports clean when no findings are returned', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ audit: 'export const audit = async () => []\n' })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result).toEqual({ exitCode: 0, output: 'ki repo audit: clean (1 skills)\n' })
+    })
+
+    test('rejects a repository configuration that is not valid TOML', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example\n')
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('.ki-config.toml must be valid TOML')
+    })
   })
 
   describe('repo conform', () => {
@@ -53,6 +73,19 @@ export const audit = async ({ repository }) => (await readFile(repository + "/go
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('fail EXAMPLE-1: always fails')
       expect(result.output).toContain('re-audit found failures')
+    })
+
+    test('rejects a conform write whose target does not exist as a regular file', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        conform: 'export const conform = async () => ({ findings: [], writes: [{ path: "missing.txt", content: "x" }] })\n'
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('native conform write target missing.txt must be an existing regular file')
     })
   })
 
@@ -123,6 +156,58 @@ export const audit = async ({ repository }) => (await readFile(repository + "/go
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('must have a code')
+    })
+
+    test('rejects audit operation with an invalid finding level', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        audit: 'export const audit = async () => [{ level: "invalid", code: "EXAMPLE-1", message: "x" }]\n'
+      })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('has an invalid level')
+    })
+
+    test('rejects an audit operation whose native module fails to import', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        audit: 'this is not valid javascript syntax {{{\n'
+      })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('native audit operation could not be imported')
+    })
+
+    test('rejects a conform operation that does not return a findings/writes table', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        conform: 'export const conform = async () => null\n'
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('must return findings and writes arrays')
+    })
+
+    test('rejects a conform write entry with a non-string path or content', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        conform: 'export const conform = async () => ({ findings: [], writes: [{ path: 1, content: "x" }] })\n'
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('must have string path and content')
     })
   })
 
@@ -199,6 +284,58 @@ info R-1: example/harness:ki-feature
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('has a dependency cycle')
+    })
+
+    test('refuses --skill naming a skill not among the declared skills', async () => {
+      const box = await sandbox()
+      await installSkillsHarness(box.data, [{ name: 'ki-foundation', deps: [] }])
+      await box.project.write('.ki-config.toml', '[ki-foundation]\n')
+
+      const result = await box.run('ki repo audit --skill ki-nonexistent')
+
+      expect(result.exitCode).toBe(2)
+      expect(result.output).toContain('--skill must name one declared resolved skill')
+    })
+
+    test('refuses a declared skill not available from any installed harness', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-missing]\n')
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('declared skill ki-missing is not available from an installed harness')
+    })
+
+    test('refuses an ambiguous declared skill provided by more than one installed harness', async () => {
+      const box = await sandbox()
+      await installSkillsHarness(box.data, [{ name: 'ki-shared', deps: [] }])
+      const base = 'ki/harnesses/other/harness/skills/ki-shared'
+      await box.data.write(`${base}/SKILL.md`, '---\nname: ki-shared\nki-depends-on: []\n---\n')
+      await box.project.write('.ki-config.toml', '[ki-shared]\n')
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('declared skill ki-shared is ambiguous; qualify its harness before activation')
+    })
+
+    test('selecting one skill by --skill pulls in its declared dependency', async () => {
+      const box = await sandbox()
+      await installSkillsHarness(box.data, [
+        { name: 'ki-foundation', deps: [] },
+        { name: 'ki-feature', deps: ['ki-foundation'] }
+      ])
+      await box.project.write('.ki-config.toml', '[ki-feature]\n\n[ki-foundation]\n')
+
+      const result = await box.run('ki repo audit --skill ki-feature')
+
+      expect(result).toEqual({
+        exitCode: 0,
+        output: `info R-1: example/harness:ki-foundation
+info R-1: example/harness:ki-feature
+`
+      })
     })
   })
 })
