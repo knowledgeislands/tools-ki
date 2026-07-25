@@ -1,9 +1,7 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, realpath, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'vitest'
-import { run as runCli } from '../cli.ts'
-import { createContext } from '../core/context.ts'
-import { cleanupTemporaryDirectories, executable, runKi, temporaryDirectory } from './testkit.ts'
+import { cleanupTemporaryDirectories, runKi, runKiAt, temporaryDirectory } from './testkit.ts'
 
 afterEach(cleanupTemporaryDirectories)
 
@@ -36,21 +34,27 @@ describe('ki diag', () => {
     expect(human.output).toContain('Errors\n  - schema must equal 1')
   })
 
-  test('reports a null repository outside a KI repository', async () => {
+  test('resolves the ancestor KI repository from a nested working directory', async () => {
+    const root = await temporaryDirectory()
+    const home = join(root, 'home')
+    const repository = join(home, 'repo')
+    const nested = join(repository, 'src', 'nested')
+    await mkdir(nested, { recursive: true })
+    await writeFile(join(repository, '.ki-config.toml'), '# repo\n')
+
+    const diag = await runKiAt(['diag'], nested, { HOME: home })
+
+    expect(diag.output).toContain(`Repository    ${await realpath(repository)}`)
+  })
+
+  test('reports no repository outside a KI repository', async () => {
     const root = await temporaryDirectory()
     const home = join(root, 'home')
     const workingDirectory = join(home, 'scratch')
-    let output = ''
     await mkdir(workingDirectory, { recursive: true })
-    const context = await createContext({
-      stdout: { write: (chunk) => (output += chunk) },
-      stderr: { write: (chunk) => (output += chunk) },
-      executable,
-      workingDirectory,
-      environment: { HOME: home }
-    })
 
-    expect(await runCli(['diag'], context)).toBe(0)
-    expect(output).toContain('Repository    none')
+    const diag = await runKiAt(['diag'], workingDirectory, { HOME: home })
+
+    expect(diag.output).toContain('Repository    none')
   })
 })

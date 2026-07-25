@@ -1,4 +1,4 @@
-import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readFile, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'vitest'
 import { cleanupTemporaryDirectories, installHarness, runKi, temporaryDirectory } from './testkit.ts'
@@ -63,6 +63,33 @@ describe('ki harness', () => {
 
       expect(installed).toEqual({ exitCode: 0, output: `example/harness is already installed\tarchive ${sha256}\n` })
       expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toContain('ids = [\n  "example/harness",\n]')
+    })
+  })
+
+  describe('installed harness integrity', () => {
+    test('rejects an installed harness with malformed skill contents', async () => {
+      const root = await temporaryDirectory()
+      const data = join(root, 'data')
+      await installHarness(data)
+      await writeFile(join(data, 'ki', 'harnesses', 'example', 'harness', 'skills', 'ki-example', 'SKILL.md'), 'no frontmatter here\n')
+
+      const info = await runKi(['harness', 'info', 'example/harness'], { XDG_DATA_HOME: data })
+
+      expect(info.exitCode).toBe(1)
+      expect(info.output).toContain('must declare frontmatter')
+    })
+
+    test('rejects an installed harness whose payload contains a symlink', async () => {
+      const root = await temporaryDirectory()
+      const data = join(root, 'data')
+      await installHarness(data)
+      const skillDirectory = join(data, 'ki', 'harnesses', 'example', 'harness', 'skills', 'ki-example')
+      await symlink(join(skillDirectory, 'SKILL.md'), join(skillDirectory, 'ALIAS.md'))
+
+      const listed = await runKi(['harness', 'list'], { XDG_DATA_HOME: data })
+
+      expect(listed.exitCode).toBe(1)
+      expect(listed.output).toContain('must not be a symlink')
     })
   })
 })

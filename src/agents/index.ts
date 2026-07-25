@@ -357,12 +357,6 @@ export const localBootstrapHarness = async (
   return { harness, skills }
 }
 
-export const localBootstrapSkillSource = async (harnessDirectory: string): Promise<string> => {
-  const skill = (await localBootstrapHarness(harnessDirectory)).skills[0]
-  if (!skill) throw new KiError('local harness must contain skills/keystone/ki-bootstrap/SKILL.md', 1)
-  return skill.source
-}
-
 export const setLocalBootstrapHarness = async (configurationDirectory: string, local?: string): Promise<void> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
   const contents = await readFile(path, 'utf8')
@@ -466,25 +460,6 @@ export const installBootstrapSkills = async (
       }))
     )
   )
-}
-
-export const bootstrapAgents = async (options: {
-  readonly homeDirectory: string
-  readonly configurationDirectory: string
-  readonly dataDirectory: string
-  readonly refresh?: boolean
-}): Promise<readonly InstalledAgent[]> => {
-  const configuration = await configureBootstrapAgents(options)
-  const skills = await installedBootstrapSkillSources(options.dataDirectory)
-  await installBootstrapSkills(skills, configuration.agents)
-  if (options.refresh) await refreshUserConfiguration(options.configurationDirectory, options.dataDirectory, configuration.agents)
-  else
-    await setConfiguredUserSkills(
-      options.configurationDirectory,
-      options.homeDirectory,
-      skills.map((skill) => `${baseHarnessIdentifier}:${skill.name}`)
-    )
-  return configuration.agents
 }
 
 export const configuredAgents = async (options: {

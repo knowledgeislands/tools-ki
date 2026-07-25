@@ -1,4 +1,4 @@
-import { mkdir, readFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'vitest'
 import { cleanupTemporaryDirectories, installBootstrapHarness, runKi, temporaryDirectory } from './testkit.ts'
@@ -87,5 +87,21 @@ harness = "knowledgeislands/ki-agentic-harness"
 harness = "knowledgeislands/ki-agentic-harness"
 `
     )
+  })
+
+  test('replaces a legacy flat configuration with the current sectioned schema on refresh', async () => {
+    const root = await temporaryDirectory()
+    const home = join(root, 'home')
+    const configuration = join(root, 'config')
+    const data = join(root, 'data')
+    await mkdir(join(home, '.agents'), { recursive: true })
+    await mkdir(join(configuration, 'ki'), { recursive: true })
+    await writeFile(join(configuration, 'ki', 'config.toml'), 'schema = 1\nagents = ["chatgpt-codex"]\nharnesses = []\nskills = []\n')
+    await installBootstrapHarness(data)
+
+    const refreshed = await runKi(['bootstrap', '--refresh'], { HOME: home, XDG_CONFIG_HOME: configuration, XDG_DATA_HOME: data })
+
+    expect(refreshed.exitCode).toBe(0)
+    expect(await readFile(join(configuration, 'ki', 'config.toml'), 'utf8')).toContain('[agents]\nids = [\n  "chatgpt-codex",\n]')
   })
 })

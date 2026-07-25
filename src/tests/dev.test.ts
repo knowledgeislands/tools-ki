@@ -107,4 +107,32 @@ path = ${JSON.stringify(await realpath(harness))}
       })
     })
   })
+
+  describe('guards', () => {
+    test('refuses to switch before the environment is bootstrapped', async () => {
+      const root = await temporaryDirectory()
+      const home = join(root, 'home')
+      await mkdir(home, { recursive: true })
+
+      const off = await runKi(['dev', 'off'], { HOME: home, XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: join(root, 'data') })
+
+      expect(off.exitCode).toBe(1)
+      expect(off.output).toContain('run `ki bootstrap` first')
+    })
+
+    test('requires the local harness to contain the canonical bootstrap skill', async () => {
+      const root = await temporaryDirectory()
+      const harness = join(root, 'harness')
+      await mkdir(join(harness, 'skills', 'process', 'ki-other'), { recursive: true })
+
+      const result = await runKi(['dev', 'on', harness], {
+        HOME: join(root, 'home'),
+        XDG_CONFIG_HOME: join(root, 'config'),
+        XDG_DATA_HOME: join(root, 'data')
+      })
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('skills/keystone/ki-bootstrap/SKILL.md')
+    })
+  })
 })
