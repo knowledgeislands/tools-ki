@@ -10,6 +10,15 @@ import { createContext } from '../../core/context.ts'
 // populate and run against it — so no test assembles that layout or a raw path by hand.
 // Cleanup is registered per sandbox via `onTestFinished`, tied to the test that created
 // it, rather than a shared registry that a concurrent test could sweep prematurely.
+//
+// <mkdtemp>/                  (root — content outside the four areas below, e.g. a
+// │                            harness checkout for `ki dev on`)
+// ├── home/                   ($HOME — dotfiles a real `ki` install would read)
+// ├── config/                 ($XDG_CONFIG_HOME)
+// │   └── ki/config.toml
+// ├── data/                   ($XDG_DATA_HOME — installed harnesses/skills project here)
+// │   └── ki/harnesses/...
+// └── project/                (run()'s default cwd; cd() moves relative to here)
 
 // This tools-ki checkout's own root and `bin/ki` — never spawned (run() drives the
 // CLI in-process), only used to populate `executable`/`_` in the synthetic context so
@@ -86,8 +95,7 @@ const installBootstrapHarness = (data: SandboxArea): Promise<void> =>
 // The same fixture, but written under an arbitrary local directory rather than the
 // installed-harness data root — for exercising `ki dev on <path>` against a local
 // development checkout instead of an installed harness.
-const installBootstrapHarnessLocal = (root: SandboxArea, relativePath: string): Promise<void> =>
-  writeBootstrapHarness(root, relativePath)
+const installBootstrapHarnessLocal = (root: SandboxArea, relativePath: string): Promise<void> => writeBootstrapHarness(root, relativePath)
 
 export interface Sandbox {
   readonly root: SandboxArea
@@ -100,6 +108,11 @@ export interface Sandbox {
   readonly installExampleHarness: (skill?: { readonly audit?: string; readonly conform?: string }) => Promise<void>
   readonly installBootstrapHarness: () => Promise<void>
   readonly installBootstrapHarnessLocal: (relativePath: string) => Promise<void>
+  // Detection reads which agent home directory exists ('.agents' selects chatgpt-codex,
+  // '.claude' selects claude-code) and installs the canonical bootstrap harness that `ki
+  // bootstrap` needs to find under $XDG_DATA_HOME — the combination every test that runs
+  // `ki bootstrap` against a single detected agent needs.
+  readonly bootstrapAgent: (agentHomeDirectory: '.agents' | '.claude') => Promise<void>
   readonly setEnv: (environment: Record<string, string | undefined>) => void
   readonly cd: (relativePath: string) => void
   readonly run: (command: string) => Promise<CommandResult>
@@ -108,19 +121,10 @@ export interface Sandbox {
 const create = async (): Promise<Sandbox> => {
   const rootPath = await mkdtemp(join(tmpdir(), 'ki-test-'))
   onTestFinished(() => rm(rootPath, { recursive: true, force: true }))
-  // The temp directory itself — for content that doesn't belong under any of the
-  // four areas below, e.g. a harness checkout to `ki dev on` or an out-of-tree
-  // acquire capture directory.
   const root = area(rootPath)
-  // The user's simulated $HOME — where a real `ki` install would read dotfiles.
   const home = area(join(rootPath, 'home'))
-  // $XDG_CONFIG_HOME — where `ki`'s own user config (`ki/config.toml`) lives.
   const config = area(join(rootPath, 'config'))
-  // $XDG_DATA_HOME — where installed harnesses/skills are projected; most
-  // `install*Harness` fixtures write here.
   const data = area(join(rootPath, 'data'))
-  // The current directory `run()` starts in by default and `cd()` moves relative
-  // to — i.e. the repository a test is standing inside when it runs `ki`.
   const project = area(join(rootPath, 'project'))
   await mkdir(home.path, { recursive: true })
   await mkdir(project.path, { recursive: true })
@@ -170,6 +174,10 @@ const create = async (): Promise<Sandbox> => {
     installExampleHarness: (skill) => installExampleHarness(data, skill),
     installBootstrapHarness: () => installBootstrapHarness(data),
     installBootstrapHarnessLocal: (relativePath) => installBootstrapHarnessLocal(root, relativePath),
+    bootstrapAgent: async (agentHomeDirectory) => {
+      await home.mkdir(agentHomeDirectory)
+      await installBootstrapHarness(data)
+    },
     setEnv,
     cd,
     run

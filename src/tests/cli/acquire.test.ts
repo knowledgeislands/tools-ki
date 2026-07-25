@@ -5,9 +5,9 @@ import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { isSafeRelativePath } from '../../commands/acquire.ts'
-import { type CommandResult, sandbox } from './_helper.ts'
 
 const mkfifo = promisify(execFile)
+import { type CommandResult, sandbox } from './_cli_helper.ts'
 
 const writeFailure = vi.hoisted(() => ({ enabled: false }))
 

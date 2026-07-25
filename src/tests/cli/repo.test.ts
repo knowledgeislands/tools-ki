@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { sandbox, type SandboxArea } from './_helper.ts'
+import { sandbox, type SandboxArea } from './_cli_helper.ts'
 
 describe('ki repo', () => {
   describe('repo audit', () => {

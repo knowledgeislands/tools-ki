@@ -1,11 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { sandbox } from './_helper.ts'
+import { sandbox } from './_cli_helper.ts'
 
 describe('ki bootstrap', () => {
   test('bootstraps without replacement and refreshes the detected installed inventory on request', async () => {
     const box = await sandbox()
-    await box.home.mkdir('.agents')
-    await box.installBootstrapHarness()
+    await box.bootstrapAgent('.agents')
 
     const bootstrapped = await box.run('ki bootstrap')
     const repeated = await box.run('ki bootstrap')

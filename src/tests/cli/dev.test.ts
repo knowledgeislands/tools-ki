@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { sandbox } from './_helper.ts'
+import { sandbox } from './_cli_helper.ts'
 
 describe('ki dev', () => {
   describe('dev on', () => {
