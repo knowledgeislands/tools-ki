@@ -72,35 +72,6 @@ export const runKiAt = async (
 export const runKi = (arguments_: string[], environment: Record<string, string | undefined> = {}): Promise<CommandResult> =>
   runKiAt(arguments_, repository, environment)
 
-export const makeCapture = async (root: string): Promise<string> => {
-  const capture = join(root, 'capture')
-  await Promise.all(
-    ['originals', 'records', 'assets', 'relationships'].map((directory) => mkdir(join(capture, directory), { recursive: true }))
-  )
-  await writeFile(
-    join(capture, 'capture.toml'),
-    [
-      'format = "ki-chatgpt-capture"',
-      'format_version = "0.1.0"',
-      'capture_boundary = "One exported conversation: cli-002"',
-      'omissions = ["No project membership was available"]',
-      ''
-    ].join('\n')
-  )
-  await writeFile(join(capture, 'originals/export.json'), '{"conversation_id":"cli-002"}\n')
-  await writeFile(join(capture, 'records/conversation.md'), '# CLI-002 conversation\n\nuser: Please preserve this source record.\n')
-  await writeFile(join(capture, 'assets/example.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]))
-  await writeFile(
-    join(capture, 'relationships/native.jsonl'),
-    [
-      '{"type":"conversation-order","record":"records/conversation.md","position":1}',
-      '{"type":"message-asset","record":"records/conversation.md","asset":"assets/example.png","message_id":"message-001"}',
-      ''
-    ].join('\n')
-  )
-  return capture
-}
-
 export const installHarness = async (data: string, auditSource?: string, conformSource?: string): Promise<void> => {
   const root = join(data, 'ki', 'harnesses', 'example', 'harness')
   const source = join(root, 'skills', 'ki-example')
