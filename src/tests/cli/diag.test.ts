@@ -30,20 +30,20 @@ describe('ki diag', () => {
 
   test('resolves the ancestor KI repository from a nested working directory', async () => {
     const box = await sandbox()
-    await box.home.mkdir('repo/src/nested')
-    await box.home.write('repo/.ki-config.toml', '# repo\n')
+    await box.project.mkdir('repo/src/nested')
+    await box.project.write('repo/.ki-config.toml', '# repo\n')
 
-    box.cd(box.home.resolve('repo/src/nested'))
+    box.cd('repo/src/nested')
     const diag = await box.run('ki diag')
 
-    expect(diag.output).toContain(`Repository    ${await box.home.realpath('repo')}`)
+    expect(diag.output).toContain(`Repository    ${await box.project.realpath('repo')}`)
   })
 
   test('reports no repository outside a KI repository', async () => {
     const box = await sandbox()
-    await box.home.mkdir('scratch')
+    await box.project.mkdir('scratch')
 
-    box.cd(box.home.resolve('scratch'))
+    box.cd('scratch')
     const diag = await box.run('ki diag')
 
     expect(diag.output).toContain('Repository    none')

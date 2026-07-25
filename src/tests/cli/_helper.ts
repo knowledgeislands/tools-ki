@@ -11,6 +11,9 @@ import { createContext } from '../../core/context.ts'
 // Cleanup is registered per sandbox via `onTestFinished`, tied to the test that created
 // it, rather than a shared registry that a concurrent test could sweep prematurely.
 
+// This tools-ki checkout's own root and `bin/ki` — never spawned (run() drives the
+// CLI in-process), only used to populate `executable`/`_` in the synthetic context so
+// commands that inspect their own invocation path see a real, resolvable one.
 const repositoryFixtures = {
   root: new URL('../../../', import.meta.url).pathname,
   executable: new URL('../../../bin/ki', import.meta.url).pathname
@@ -98,17 +101,26 @@ export interface Sandbox {
   readonly installBootstrapHarness: () => Promise<void>
   readonly installBootstrapHarnessLocal: (relativePath: string) => Promise<void>
   readonly setEnv: (environment: Record<string, string | undefined>) => void
-  readonly cd: (workingDirectory: string) => void
+  readonly cd: (relativePath: string) => void
   readonly run: (command: string) => Promise<CommandResult>
 }
 
 const create = async (): Promise<Sandbox> => {
   const rootPath = await mkdtemp(join(tmpdir(), 'ki-test-'))
   onTestFinished(() => rm(rootPath, { recursive: true, force: true }))
+  // The temp directory itself — for content that doesn't belong under any of the
+  // four areas below, e.g. a harness checkout to `ki dev on` or an out-of-tree
+  // acquire capture directory.
   const root = area(rootPath)
+  // The user's simulated $HOME — where a real `ki` install would read dotfiles.
   const home = area(join(rootPath, 'home'))
+  // $XDG_CONFIG_HOME — where `ki`'s own user config (`ki/config.toml`) lives.
   const config = area(join(rootPath, 'config'))
+  // $XDG_DATA_HOME — where installed harnesses/skills are projected; most
+  // `install*Harness` fixtures write here.
   const data = area(join(rootPath, 'data'))
+  // The current directory `run()` starts in by default and `cd()` moves relative
+  // to — i.e. the repository a test is standing inside when it runs `ki`.
   const project = area(join(rootPath, 'project'))
   await mkdir(home.path, { recursive: true })
   await mkdir(project.path, { recursive: true })
@@ -119,15 +131,17 @@ const create = async (): Promise<Sandbox> => {
   const setEnv = (environment: Record<string, string | undefined>): void => {
     environmentOverrides = { ...environmentOverrides, ...environment }
   }
-  const cd = (path: string): void => {
-    workingDirectory = path
+  const cd = (relativePath: string): void => {
+    workingDirectory = join(workingDirectory, relativePath)
   }
 
   // Drives the real `ki` command tree in-process, always starting from this sandbox's
   // own env (a real HOME/XDG_* always exists by construction — no forgotten-override
   // footgun) and, by default, this sandbox's empty project directory. Overridden via
-  // setEnv()/cd(). Commands are written exactly as typed at a shell, `ki ...`, so the
-  // literal command a test asserts against is unambiguous at the call site.
+  // setEnv() and cd() — like a real shell, cd() moves relative to wherever the
+  // sandbox currently is, so repeated calls compose. Commands are written exactly
+  // as typed at a shell, `ki ...`, so the literal command a test asserts against is
+  // unambiguous at the call site.
   const run = async (command: string): Promise<CommandResult> => {
     let output = ''
     const write = (chunk: string): void => {
