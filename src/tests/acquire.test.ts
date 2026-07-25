@@ -2,7 +2,7 @@ import { lstat, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises
 import { join } from 'node:path'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { isSafeRelativePath } from '../commands/acquire.ts'
-import { type CommandResult, cleanupTemporaryDirectories, runKi, runProcess, temporaryDirectory, validator } from './testkit.ts'
+import { type CommandResult, sandbox } from './testkit.ts'
 
 const writeFailure = vi.hoisted(() => ({ enabled: false }))
 
@@ -19,7 +19,7 @@ vi.mock('node:fs/promises', async (importOriginal) => {
 
 afterEach(async () => {
   writeFailure.enabled = false
-  await cleanupTemporaryDirectories()
+  await sandbox.cleanupAll()
 })
 
 const makeCapture = async (root: string): Promise<string> => {
@@ -63,25 +63,25 @@ describe('source path safety', () => {
 
 describe('ki acquire chatgpt import', () => {
   test('creates a deterministic KEP that passes the KIS-0002 fixture validator', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const first = join(root, 'first.kep')
-    const second = join(root, 'second.kep')
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const first = join(box.root.path, 'first.kep')
+    const second = join(box.root.path, 'second.kep')
 
-    expect((await runKi(['acquire', 'chatgpt', 'import', capture, '--output', first])).exitCode).toBe(0)
-    expect((await runKi(['acquire', 'chatgpt', 'import', capture, '--output', second])).exitCode).toBe(0)
+    expect((await box.run(['acquire', 'chatgpt', 'import', capture, '--output', first])).exitCode).toBe(0)
+    expect((await box.run(['acquire', 'chatgpt', 'import', capture, '--output', second])).exitCode).toBe(0)
     expect(await readFile(join(first, 'checksums/sha256sums.txt'), 'utf8')).toBe(
       await readFile(join(second, 'checksums/sha256sums.txt'), 'utf8')
     )
     expect(await readFile(join(first, 'kep.toml'), 'utf8')).toContain('package_id = "kep:sha256:')
-    expect((await runProcess(['bash', validator, first])).exitCode).toBe(0)
+    expect((await box.exec(['bash', box.repo.validator, first])).exitCode).toBe(0)
   })
 
   test('reports a dry run without writing and a versioned JSON result', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'dry-run.kep')
-    const result = await runKi(['acquire', 'chatgpt', 'import', capture, '--output', output, '--dry-run', '--json'])
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'dry-run.kep')
+    const result = await box.run(['acquire', 'chatgpt', 'import', capture, '--output', output, '--dry-run', '--json'])
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('"status":"dry-run"')
@@ -94,28 +94,28 @@ describe('ki acquire chatgpt import', () => {
   })
 
   test('rejects malformed input, missing relationship assets, and conflicting output before publication', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'existing.kep')
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'existing.kep')
     await writeFile(
       join(capture, 'relationships/native.jsonl'),
       '{"type":"message-asset","record":"records/conversation.md","asset":"assets/missing.png","message_id":"message-002"}\n'
     )
-    const missingAsset = await runKi(['acquire', 'chatgpt', 'import', capture, '--output', output])
+    const missingAsset = await box.run(['acquire', 'chatgpt', 'import', capture, '--output', output])
     expect(missingAsset.exitCode).toBe(1)
     expect(missingAsset.output).toContain('missing asset')
 
     await mkdir(output)
-    const conflicting = await runKi(['acquire', 'chatgpt', 'import', capture, '--output', output])
+    const conflicting = await box.run(['acquire', 'chatgpt', 'import', capture, '--output', output])
     expect(conflicting.exitCode).toBe(1)
     expect(conflicting.output).toContain('already exists')
   })
 
   test('rejects malformed metadata and unsafe capture trees', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'result.kep')
-    const importCapture = (): Promise<CommandResult> => runKi(['acquire', 'chatgpt', 'import', capture, '--output', output])
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'result.kep')
+    const importCapture = (): Promise<CommandResult> => box.run(['acquire', 'chatgpt', 'import', capture, '--output', output])
 
     await writeFile(join(capture, 'capture.toml'), 'format = "wrong"\n')
     expect((await importCapture()).output).toContain('capture metadata format must be ki-chatgpt-capture')
@@ -131,10 +131,10 @@ describe('ki acquire chatgpt import', () => {
   })
 
   test('rejects metadata field, repetition, version and omissions violations', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'result.kep')
-    const importCapture = (): Promise<CommandResult> => runKi(['acquire', 'chatgpt', 'import', capture, '--output', output])
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'result.kep')
+    const importCapture = (): Promise<CommandResult> => box.run(['acquire', 'chatgpt', 'import', capture, '--output', output])
     const metadata = (lines: readonly string[]): Promise<void> => writeFile(join(capture, 'capture.toml'), `${lines.join('\n')}\n`)
 
     await metadata(['unexpected = "field"'])
@@ -153,11 +153,11 @@ describe('ki acquire chatgpt import', () => {
   })
 
   test('rejects malformed relationship records', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'result.kep')
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'result.kep')
     const relationship = join(capture, 'relationships/native.jsonl')
-    const importCapture = (): Promise<CommandResult> => runKi(['acquire', 'chatgpt', 'import', capture, '--output', output])
+    const importCapture = (): Promise<CommandResult> => box.run(['acquire', 'chatgpt', 'import', capture, '--output', output])
 
     await writeFile(relationship, '\n')
     expect((await importCapture()).output).toContain('relationships/native.jsonl contains a blank record')
@@ -174,27 +174,27 @@ describe('ki acquire chatgpt import', () => {
   })
 
   test('rejects missing capture elements and unsafe output locations', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'result.kep')
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'result.kep')
     const importCapture = (destination = output): Promise<CommandResult> =>
-      runKi(['acquire', 'chatgpt', 'import', capture, '--output', destination])
+      box.run(['acquire', 'chatgpt', 'import', capture, '--output', destination])
 
     await rm(join(capture, 'relationships/native.jsonl'))
     expect((await importCapture()).output).toContain('relationships/native.jsonl is required')
     await writeFile(join(capture, 'relationships/native.jsonl'), '')
     expect((await importCapture()).exitCode).toBe(0)
     expect((await importCapture(join(capture, 'nested.kep'))).output).toContain('output directory must be outside capture-directory')
-    expect((await runKi(['acquire', 'chatgpt', 'import', join(root, 'missing'), '--output', output])).output).toContain(
+    expect((await box.run(['acquire', 'chatgpt', 'import', join(box.root.path, 'missing'), '--output', output])).output).toContain(
       'capture-directory must be an existing directory'
     )
   })
 
   test('rejects empty directories, symbolic links and unsupported top-level entries', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'result.kep')
-    const importCapture = (): Promise<CommandResult> => runKi(['acquire', 'chatgpt', 'import', capture, '--output', output])
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'result.kep')
+    const importCapture = (): Promise<CommandResult> => box.run(['acquire', 'chatgpt', 'import', capture, '--output', output])
 
     await rm(join(capture, 'originals/export.json'))
     expect((await importCapture()).output).toContain('originals directory must contain at least one file')
@@ -210,12 +210,12 @@ describe('ki acquire chatgpt import', () => {
   })
 
   test('rejects unsafe relationships, paths and output parents', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'result.kep')
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'result.kep')
     const relationship = join(capture, 'relationships/native.jsonl')
     const importCapture = (destination = output): Promise<CommandResult> =>
-      runKi(['acquire', 'chatgpt', 'import', capture, '--output', destination])
+      box.run(['acquire', 'chatgpt', 'import', capture, '--output', destination])
 
     await writeFile(relationship, '{"type":"conversation-order","record":"records/../conversation.md","position":1}\n')
     expect((await importCapture()).output).toContain('relationship record path is unsafe')
@@ -240,27 +240,27 @@ describe('ki acquire chatgpt import', () => {
     expect((await importCapture()).output).toContain('relationship references a missing record')
     await writeFile(relationship, '{"type":"unsupported"}\n')
     expect((await importCapture()).output).toContain('relationship is not a supported source-native record')
-    expect((await importCapture(`${root}/missing-parent/result.kep`)).output).toContain(
+    expect((await importCapture(`${box.root.path}/missing-parent/result.kep`)).output).toContain(
       'output parent directory must be an existing directory'
     )
-    expect((await importCapture(`${root}/missing-parent/..`)).output).toContain('output directory name is invalid')
+    expect((await importCapture(`${box.root.path}/missing-parent/..`)).output).toContain('output directory name is invalid')
   })
 
   test('removes a partially written package after an output error', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'result.kep')
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'result.kep')
     writeFailure.enabled = true
 
-    await expect(runKi(['acquire', 'chatgpt', 'import', capture, '--output', output])).rejects.toThrow('write failure')
+    await expect(box.run(['acquire', 'chatgpt', 'import', capture, '--output', output])).rejects.toThrow('write failure')
     await expect(lstat(output)).rejects.toThrow()
   })
 
   test('rejects symbolic captures, invalid top-level types and unsafe names', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'result.kep')
-    const importCapture = (): Promise<CommandResult> => runKi(['acquire', 'chatgpt', 'import', capture, '--output', output])
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'result.kep')
+    const importCapture = (): Promise<CommandResult> => box.run(['acquire', 'chatgpt', 'import', capture, '--output', output])
 
     await writeFile(join(capture, 'assets/file with spaces.png'), 'unsafe name\n')
     expect((await importCapture()).output).toContain('assets contains an unsafe path')
@@ -274,46 +274,47 @@ describe('ki acquire chatgpt import', () => {
       join(capture, 'capture.toml'),
       ['format = "ki-chatgpt-capture"', 'format_version = "0.1.0"', 'capture_boundary = "valid boundary"', 'omissions = []', ''].join('\n')
     )
-    await symlink(capture, join(root, 'capture-link'))
-    expect((await runKi(['acquire', 'chatgpt', 'import', join(root, 'capture-link'), '--output', output])).output).toContain(
+    await symlink(capture, join(box.root.path, 'capture-link'))
+    expect((await box.run(['acquire', 'chatgpt', 'import', join(box.root.path, 'capture-link'), '--output', output])).output).toContain(
       'capture-directory must not be a symbolic link'
     )
   })
 
   test('validates nested trees, special file types, missing directories and text dry-run output', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'result.kep')
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'result.kep')
     const relationship = join(capture, 'relationships/native.jsonl')
-    const importCapture = (): Promise<CommandResult> => runKi(['acquire', 'chatgpt', 'import', capture, '--output', output])
+    const importCapture = (): Promise<CommandResult> => box.run(['acquire', 'chatgpt', 'import', capture, '--output', output])
 
     await mkdir(join(capture, 'assets/nested'))
     await writeFile(join(capture, 'assets/nested/asset.txt'), 'nested asset\n')
     await writeFile(relationship, '{"type":"conversation-order","record":"records/conversation.md","position":1}')
     expect((await importCapture()).exitCode).toBe(0)
     await rm(output, { recursive: true })
-    await runProcess(['mkfifo', join(capture, 'assets/pipe')])
+    await box.exec(['mkfifo', join(capture, 'assets/pipe')])
     expect((await importCapture()).output).toContain('capture contains an unsafe file')
     await rm(join(capture, 'assets/pipe'))
     await rm(join(capture, 'assets'), { recursive: true })
     expect((await importCapture()).output).toContain('assets directory is required')
 
-    const dryCapture = await makeCapture(await temporaryDirectory())
-    const dryOutput = join(root, 'dry-result.kep')
-    const dry = await runKi(['acquire', 'chatgpt', 'import', dryCapture, '--output', dryOutput, '--dry-run'])
+    const dryBox = await sandbox()
+    const dryCapture = await makeCapture(dryBox.root.path)
+    const dryOutput = join(box.root.path, 'dry-result.kep')
+    const dry = await box.run(['acquire', 'chatgpt', 'import', dryCapture, '--output', dryOutput, '--dry-run'])
     expect(dry.output).toContain('KEP plan:')
     expect(dry.output).toContain('Dry run: no files written.')
   })
 
   test('does not use the network or repository tools', async () => {
-    const root = await temporaryDirectory()
-    const capture = await makeCapture(root)
-    const output = join(root, 'isolated.kep')
-    const spies = join(root, 'spies')
+    const box = await sandbox()
+    const capture = await makeCapture(box.root.path)
+    const output = join(box.root.path, 'isolated.kep')
+    const spies = join(box.root.path, 'spies')
     await mkdir(spies)
     await Promise.all(['curl', 'git', 'open'].map(async (name) => symlink('/usr/bin/false', join(spies, name))))
     const parentPath = (process.env as NodeJS.ProcessEnv & { PATH?: string }).PATH
-    const result = await runKi(['acquire', 'chatgpt', 'import', capture, '--output', output], { PATH: `${spies}:${parentPath}` })
+    const result = await box.run(['acquire', 'chatgpt', 'import', capture, '--output', output], { PATH: `${spies}:${parentPath}` })
 
     expect(result.exitCode).toBe(0)
     expect(await readFile(join(output, 'kep.toml'), 'utf8')).toContain('format = "kep"')

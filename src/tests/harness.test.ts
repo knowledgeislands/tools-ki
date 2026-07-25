@@ -1,17 +1,15 @@
-import { lstat, mkdir, readFile, symlink, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { lstat, mkdir, symlink, writeFile } from 'node:fs/promises'
 import { afterEach, describe, expect, test } from 'vitest'
-import { cleanupTemporaryDirectories, installHarness, runKi, temporaryDirectory } from './testkit.ts'
+import { sandbox } from './testkit.ts'
 
-afterEach(cleanupTemporaryDirectories)
+afterEach(sandbox.cleanupAll)
 
 describe('ki harness', () => {
   describe('harness list', () => {
     test('lists installed compatible harnesses', async () => {
-      const root = await temporaryDirectory()
-      const data = join(root, 'data')
-      await installHarness(data)
-      const listed = await runKi(['harness', 'list'], { XDG_DATA_HOME: data })
+      const box = await sandbox()
+      await box.installHarness()
+      const listed = await box.run(['harness', 'list'])
 
       expect(listed).toEqual({ exitCode: 0, output: 'example/harness\t1 capabilities\n' })
     })
@@ -19,33 +17,29 @@ describe('ki harness', () => {
 
   describe('harness info & uninstall', () => {
     test('inspects and removes one non-base harness', async () => {
-      const root = await temporaryDirectory()
-      const data = join(root, 'data')
-      await installHarness(data)
-      const environment = { XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: data }
-      const info = await runKi(['harness', 'info', 'example/harness'], environment)
-      const json = await runKi(['harness', 'info', 'example/harness', '--json'], environment)
-      const dryRun = await runKi(['harness', 'uninstall', 'example/harness', '--dry-run'], environment)
-      const removed = await runKi(['harness', 'uninstall', 'example/harness'], environment)
+      const box = await sandbox()
+      await box.installHarness()
+      const info = await box.run(['harness', 'info', 'example/harness'])
+      const json = await box.run(['harness', 'info', 'example/harness', '--json'])
+      const dryRun = await box.run(['harness', 'uninstall', 'example/harness', '--dry-run'])
+      const removed = await box.run(['harness', 'uninstall', 'example/harness'])
 
       expect(info.output).toContain('capabilities: 1')
       expect(info.output).toContain('  skill ki-example\n')
       expect(json.output).toContain('"depends_on":[]')
       expect(dryRun.output).toContain('would uninstall example/harness')
       expect(removed.output).toContain('uninstalled example/harness')
-      await expect(lstat(join(data, 'ki', 'harnesses', 'example', 'harness'))).rejects.toThrow()
+      await expect(lstat(`${box.data.path}/ki/harnesses/example/harness`)).rejects.toThrow()
     })
   })
 
   describe('harness install', () => {
     test('reports an already-installed configured harness and records it', async () => {
-      const root = await temporaryDirectory()
-      const configuration = join(root, 'config', 'ki')
-      const data = join(root, 'data')
-      await mkdir(configuration, { recursive: true })
+      const box = await sandbox()
       const sha256 = 'a'.repeat(64)
+      await mkdir(`${box.config.path}/ki`, { recursive: true })
       await writeFile(
-        join(configuration, 'config.toml'),
+        `${box.config.path}/ki/config.toml`,
         [
           '[harnesses]',
           'releases = [',
@@ -54,39 +48,34 @@ describe('ki harness', () => {
           ''
         ].join('\n')
       )
-      await installHarness(data)
+      await box.installHarness()
 
-      const installed = await runKi(['harness', 'install', 'example/harness'], {
-        XDG_CONFIG_HOME: join(root, 'config'),
-        XDG_DATA_HOME: data
-      })
+      const installed = await box.run(['harness', 'install', 'example/harness'])
 
       expect(installed).toEqual({ exitCode: 0, output: `example/harness is already installed\tarchive ${sha256}\n` })
-      expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toContain('ids = [\n  "example/harness",\n]')
+      expect(await box.config.read('ki/config.toml')).toContain('ids = [\n  "example/harness",\n]')
     })
   })
 
   describe('installed harness integrity', () => {
     test('rejects an installed harness with malformed skill contents', async () => {
-      const root = await temporaryDirectory()
-      const data = join(root, 'data')
-      await installHarness(data)
-      await writeFile(join(data, 'ki', 'harnesses', 'example', 'harness', 'skills', 'ki-example', 'SKILL.md'), 'no frontmatter here\n')
+      const box = await sandbox()
+      await box.installHarness()
+      await box.data.write('ki/harnesses/example/harness/skills/ki-example/SKILL.md', 'no frontmatter here\n')
 
-      const info = await runKi(['harness', 'info', 'example/harness'], { XDG_DATA_HOME: data })
+      const info = await box.run(['harness', 'info', 'example/harness'])
 
       expect(info.exitCode).toBe(1)
       expect(info.output).toContain('must declare frontmatter')
     })
 
     test('rejects an installed harness whose payload contains a symlink', async () => {
-      const root = await temporaryDirectory()
-      const data = join(root, 'data')
-      await installHarness(data)
-      const skillDirectory = join(data, 'ki', 'harnesses', 'example', 'harness', 'skills', 'ki-example')
-      await symlink(join(skillDirectory, 'SKILL.md'), join(skillDirectory, 'ALIAS.md'))
+      const box = await sandbox()
+      await box.installHarness()
+      const skillDirectory = `${box.data.path}/ki/harnesses/example/harness/skills/ki-example`
+      await symlink(`${skillDirectory}/SKILL.md`, `${skillDirectory}/ALIAS.md`)
 
-      const listed = await runKi(['harness', 'list'], { XDG_DATA_HOME: data })
+      const listed = await box.run(['harness', 'list'])
 
       expect(listed.exitCode).toBe(1)
       expect(listed.output).toContain('must not be a symlink')

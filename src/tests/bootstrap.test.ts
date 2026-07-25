@@ -1,20 +1,18 @@
-import { mkdir } from 'node:fs/promises'
-import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'vitest'
-import { cleanupTemporaryDirectories, installBootstrapHarness, runKi, sandbox } from './testkit.ts'
+import { sandbox } from './testkit.ts'
 
-afterEach(cleanupTemporaryDirectories)
+afterEach(sandbox.cleanupAll)
 
 describe('ki bootstrap', () => {
   test('bootstraps without replacement and refreshes the detected installed inventory on request', async () => {
-    const { home, config: configuration, data, env, read } = await sandbox()
-    await mkdir(join(home, '.agents'), { recursive: true })
-    await installBootstrapHarness(data)
+    const box = await sandbox()
+    await box.home.mkdir('.agents')
+    await box.installBootstrapHarness()
 
-    const bootstrapped = await runKi(['bootstrap'], env)
-    const repeated = await runKi(['bootstrap'], env)
-    const refreshed = await runKi(['bootstrap', '--refresh'], env)
-    const checked = await runKi(['doctor'], env)
+    const bootstrapped = await box.run(['bootstrap'])
+    const repeated = await box.run(['bootstrap'])
+    const refreshed = await box.run(['bootstrap', '--refresh'])
+    const checked = await box.run(['doctor'])
 
     expect(bootstrapped).toEqual({
       exitCode: 0,
@@ -53,7 +51,7 @@ describe('ki bootstrap', () => {
     expect(checked.output).toContain('✓ Harness inventory: 1 installed')
     expect(checked.output).toContain('✓ Agent chatgpt-codex: ready')
     expect(checked.output).not.toContain('✗')
-    expect(await read(join(configuration, 'ki', 'config.toml'))).toBe(
+    expect(await box.config.read('ki/config.toml')).toBe(
       `schema = 1
 
 [agents]
@@ -87,14 +85,14 @@ harness = "knowledgeislands/ki-agentic-harness"
   })
 
   test('replaces a legacy flat configuration with the current sectioned schema on refresh', async () => {
-    const { home, config: configuration, data, env, write, read } = await sandbox()
-    await mkdir(join(home, '.agents'), { recursive: true })
-    await write(join(configuration, 'ki', 'config.toml'), 'schema = 1\nagents = ["chatgpt-codex"]\nharnesses = []\nskills = []\n')
-    await installBootstrapHarness(data)
+    const box = await sandbox()
+    await box.home.mkdir('.agents')
+    await box.config.write('ki/config.toml', 'schema = 1\nagents = ["chatgpt-codex"]\nharnesses = []\nskills = []\n')
+    await box.installBootstrapHarness()
 
-    const refreshed = await runKi(['bootstrap', '--refresh'], env)
+    const refreshed = await box.run(['bootstrap', '--refresh'])
 
     expect(refreshed.exitCode).toBe(0)
-    expect(await read(join(configuration, 'ki', 'config.toml'))).toContain('[agents]\nids = [\n  "chatgpt-codex",\n]')
+    expect(await box.config.read('ki/config.toml')).toContain('[agents]\nids = [\n  "chatgpt-codex",\n]')
   })
 })

@@ -1,17 +1,13 @@
 import { mkdir, realpath, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { afterEach, describe, expect, test } from 'vitest'
-import { cleanupTemporaryDirectories, runKi, runKiAt, temporaryDirectory } from './testkit.ts'
-
-afterEach(cleanupTemporaryDirectories)
+import { describe, expect, test } from 'vitest'
+import { sandbox } from './testkit.ts'
 
 describe('ki diag', () => {
   test('reports user configuration values, unknown keys, and invalid entries', async () => {
-    const root = await temporaryDirectory()
-    const configuration = join(root, 'config', 'ki')
-    await mkdir(configuration, { recursive: true })
-    await writeFile(
-      join(configuration, 'config.toml'),
+    const box = await sandbox()
+    await box.config.write(
+      'ki/config.toml',
       [
         'schema = 2',
         'unexpected = true',
@@ -28,32 +24,30 @@ describe('ki diag', () => {
       ].join('\n')
     )
 
-    const human = await runKi(['diag'], { XDG_CONFIG_HOME: join(root, 'config') })
+    const human = await box.run(['diag'])
 
     expect(human.output).toContain('Warnings\n  - unrecognised key unexpected')
     expect(human.output).toContain('Errors\n  - schema must equal 1')
   })
 
   test('resolves the ancestor KI repository from a nested working directory', async () => {
-    const root = await temporaryDirectory()
-    const home = join(root, 'home')
-    const repository = join(home, 'repo')
+    const box = await sandbox()
+    const repository = join(box.home.path, 'repo')
     const nested = join(repository, 'src', 'nested')
     await mkdir(nested, { recursive: true })
     await writeFile(join(repository, '.ki-config.toml'), '# repo\n')
 
-    const diag = await runKiAt(['diag'], nested, { HOME: home })
+    const diag = await box.run(['diag'], {}, nested)
 
     expect(diag.output).toContain(`Repository    ${await realpath(repository)}`)
   })
 
   test('reports no repository outside a KI repository', async () => {
-    const root = await temporaryDirectory()
-    const home = join(root, 'home')
-    const workingDirectory = join(home, 'scratch')
+    const box = await sandbox()
+    const workingDirectory = join(box.home.path, 'scratch')
     await mkdir(workingDirectory, { recursive: true })
 
-    const diag = await runKiAt(['diag'], workingDirectory, { HOME: home })
+    const diag = await box.run(['diag'], {}, workingDirectory)
 
     expect(diag.output).toContain('Repository    none')
   })
