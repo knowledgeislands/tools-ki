@@ -26,7 +26,7 @@ const managedSkillName = (identity: string): string | undefined => {
 }
 
 export const createDoctorCommand = (context: KiContext): Command =>
-  new Command('doctor').description('check KI configuration, agents, harnesses, and user skills').action(async () => {
+  new Command('doctor').description('check ki configuration, agents, harnesses, and user skills').action(async () => {
     const configuration = await inspectUserConfiguration(context.paths.config)
     const checks: DoctorCheck[] = []
     if (configuration.state === 'valid') {
@@ -60,7 +60,7 @@ export const createDoctorCommand = (context: KiContext): Command =>
       } catch (error) {
         checks.push({ status: 'fail', label: 'Agents', detail: error instanceof Error ? error.message : 'unavailable' })
         checks.push({ status: 'skip', label: 'User skills', detail: 'agents are unavailable' })
-        context.stdout.write(`KI doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
+        context.stdout.write(`ki doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
         return
       }
       for (const agent of agents) {
@@ -90,5 +90,5 @@ export const createDoctorCommand = (context: KiContext): Command =>
         })
       }
     }
-    context.stdout.write(`KI doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
+    context.stdout.write(`ki doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
   })

@@ -1,20 +1,20 @@
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
-describe('ki dev', () => {
+describe('[ki dev]', () => {
   describe('dev on', () => {
     test('switches the canonical harness to a local development checkout', async () => {
       const box = await sandbox()
-      await box.setupLocalCanonicalHarness('harness')
+      await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
       await box.setupAgentHome('chatgpt-codex')
 
       await box.run('ki bootstrap')
-      const result = await box.run(`ki dev on ${box.root.resolve('harness')}`)
+      const result = await box.run(`ki dev on ${box.root.resolve('dev/knowledgeislands/ki-agentic-harness')}`)
 
       expect(result).toEqual({
         exitCode: 0,
-        output: `development harness enabled ${await box.root.realpath('harness')}
-refreshed KI configuration: 1 agents, 1 harnesses, 5 skills
+        output: `development harness enabled ${await box.root.realpath('dev/knowledgeislands/ki-agentic-harness')}
+refreshed ki configuration: 1 agents, 1 harnesses, 5 skills
 ki-bootstrap for chatgpt-codex already installed
 ki-delegate for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
@@ -55,7 +55,7 @@ harness = "knowledgeislands/ki-agentic-harness"
 harness = "knowledgeislands/ki-agentic-harness"
 
 [local]
-path = ${JSON.stringify(await box.root.realpath('harness'))}
+path = ${JSON.stringify(await box.root.realpath('dev/knowledgeislands/ki-agentic-harness'))}
 `
       )
     })
@@ -73,7 +73,7 @@ path = ${JSON.stringify(await box.root.realpath('harness'))}
         exitCode: 0,
         output: [
           'development harness disabled; canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c',
-          'refreshed KI configuration: 1 agents, 1 harnesses, 5 skills',
+          'refreshed ki configuration: 1 agents, 1 harnesses, 5 skills',
           'ki-bootstrap for claude-code already installed',
           'ki-delegate for claude-code already installed',
           'ki-next for claude-code already installed',
@@ -97,9 +97,9 @@ path = ${JSON.stringify(await box.root.realpath('harness'))}
 
     test('requires the local harness to contain the canonical bootstrap skill', async () => {
       const box = await sandbox()
-      await box.root.mkdir('harness/skills/process/ki-other')
+      await box.root.mkdir('dev/knowledgeislands/ki-agentic-harness/skills/process/ki-other')
 
-      const result = await box.run(`ki dev on ${box.root.resolve('harness')}`)
+      const result = await box.run(`ki dev on ${box.root.resolve('dev/knowledgeislands/ki-agentic-harness')}`)
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('skills/keystone/ki-bootstrap/SKILL.md')

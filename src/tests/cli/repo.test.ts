@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { sandbox, type SandboxArea } from './_cli_helper.ts'
 
-describe('ki repo', () => {
+describe('[ki repo]', () => {
   describe('repo audit', () => {
     test("runs only a declared skill's registered native audit operation", async () => {
       const box = await sandbox()

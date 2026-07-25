@@ -33,7 +33,7 @@ describe('source path safety', () => {
   })
 })
 
-describe('ki acquire chatgpt import', () => {
+describe('[ki acquire chatgpt import]', () => {
   test('creates a deterministic KEP that conforms to the KIS-0002 payload layout', async () => {
     const box = await sandbox()
     const capture = await makeCapture(box.root.path)

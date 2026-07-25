@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
-describe('ki bootstrap', () => {
+describe('[ki bootstrap]', () => {
   test('bootstraps without replacement and refreshes the detected installed inventory on request', async () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
@@ -37,7 +37,7 @@ describe('ki bootstrap', () => {
       output:
         'refreshed KI agents: chatgpt-codex\n' +
         'canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c\n' +
-        'refreshed KI configuration: 1 agents, 1 harnesses, 5 skills\n' +
+        'refreshed ki configuration: 1 agents, 1 harnesses, 5 skills\n' +
         'ki-bootstrap for chatgpt-codex already installed\n' +
         'ki-delegate for chatgpt-codex already installed\n' +
         'ki-next for chatgpt-codex already installed\n' +

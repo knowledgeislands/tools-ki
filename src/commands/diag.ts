@@ -9,7 +9,7 @@ export const createDiagCommand = (context: KiContext): Command =>
   new Command('diag').description('report CLI installation mode, paths, and configuration').action(async () => {
     const configuration = await inspectUserConfiguration(context.paths.config)
     const lines = [
-      'KI diag',
+      'ki diag',
       field('Version', KI_VERSION),
       field('Installation', context.installation),
       field('Executable', context.executable),

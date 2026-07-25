@@ -39,7 +39,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
       if (options.refresh) {
         const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents)
         context.stdout.write(
-          `refreshed KI configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
+          `refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
         )
       } else {
         await setLocalBootstrapHarness(context.paths.config)

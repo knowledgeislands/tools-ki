@@ -4,13 +4,23 @@
 // Cleanup is registered per sandbox via `onTestFinished`, tied to the test that created
 // it, rather than a shared registry that a concurrent test could sweep prematurely.
 //
-// <mkdtemp>/                  (root — content outside the four areas below, e.g. a
-// │                            harness checkout for `ki dev on`)
+// <mkdtemp>/                  (root — content outside the four areas below)
+// │   └── dev/                (a local checkout, once `ki dev on` runs against it — populated by setupLocalCanonicalHarness())
+// │       └── knowledgeislands/
+// │           └── ki-agentic-harness/   (skills/, subagents/, hooks/ are real, never symlinks — `ki dev on` validates each root)
+// │               ├── skills/
+// │               ├── subagents/
+// │               └── hooks/
 // ├── home/                   ($HOME — dotfiles a real `ki` install would read)
 // ├── config/                 ($XDG_CONFIG_HOME)
 // │   └── ki/config.toml
 // ├── data/                   ($XDG_DATA_HOME — installed harnesses/skills project here)
-// │   └── ki/harnesses/...
+// │   └── ki/harnesses/
+// │       └── knowledgeislands/
+// │           └── ki-agentic-harness/   (installed mode: real, from the archive. After `ki dev on`: symlinked to root/dev/.../<payload>)
+// │               ├── skills/
+// │               ├── subagents/
+// │               └── hooks/
 // └── project/                (run()'s default cwd; cd() moves relative to here)
 
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
@@ -32,6 +42,11 @@ const agentConfig: Record<AgentId, { home: string }> = {
     home: '.claude'
   }
 }
+
+// A fixture shaped exactly like the real canonical knowledgeislands/ki-agentic-harness
+// (its specific skill names and keystone/process grouping), because `ki bootstrap`/`ki
+// dev` hardcode expectations about that identity rather than accepting any harness.
+const bootstrapHarnessSkills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap'] as const
 
 // This tools-ki checkout's own `bin/ki` — never spawned (run() drives the CLI in-process),
 // only used to populate `executable`/`_` in the synthetic context so commands that inspect
@@ -85,11 +100,6 @@ const setupExampleHarness = async (data: SandboxArea, { audit, conform }: { audi
   ].filter((operation): operation is { readonly mode: string; readonly source: string } => operation !== undefined)
   await Promise.all(operations.map((operation) => data.write(`${base}/scripts/native/${operation.mode}.mjs`, operation.source)))
 }
-
-// A fixture shaped exactly like the real canonical knowledgeislands/ki-agentic-harness
-// (its specific skill names and keystone/process grouping), because `ki bootstrap`/`ki
-// dev` hardcode expectations about that identity rather than accepting any harness.
-const bootstrapHarnessSkills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']
 
 const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<void> => {
   await Promise.all(['subagents', 'hooks'].map((payload) => area.mkdir(`${base}/${payload}`)))

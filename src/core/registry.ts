@@ -78,25 +78,25 @@ export const readHarnessRegistry = async (configurationDirectory: string): Promi
   const path = join(configurationDirectory, 'config.toml')
   const state = await lstat(path).catch(() => undefined)
   if (!state) return [canonicalHarnessRelease]
-  if (!state.isFile() || state.isSymbolicLink()) throw new KiError('KI configuration must be a regular file', 1)
+  if (!state.isFile() || state.isSymbolicLink()) throw new KiError('ki configuration must be a regular file', 1)
   let parsed: unknown
   try {
     parsed = parse(await readFile(path, 'utf8'))
   } catch {
-    throw new KiError('KI configuration must be valid TOML', 1)
+    throw new KiError('ki configuration must be valid TOML', 1)
   }
-  if (!isRecord(parsed)) throw new KiError('KI configuration must be a TOML table', 1)
+  if (!isRecord(parsed)) throw new KiError('ki configuration must be a TOML table', 1)
   const configuration = parsed as Record<string, unknown> & { harnesses?: unknown }
   if (configuration.harnesses === undefined) return [canonicalHarnessRelease]
-  if (!isRecord(configuration.harnesses)) throw new KiError('KI configuration harnesses must be a TOML table', 1)
+  if (!isRecord(configuration.harnesses)) throw new KiError('ki configuration harnesses must be a TOML table', 1)
   const harnesses = configuration.harnesses as Record<string, unknown> & { ids?: unknown; releases?: unknown }
   if (harnesses.releases === undefined) {
     if (!Array.isArray(harnesses.ids) || harnesses.ids.some((id) => typeof id !== 'string' || !harnessIdentifier.test(id))) {
-      throw new KiError('KI configuration harnesses.ids must be an array of harness identifiers', 1)
+      throw new KiError('ki configuration harnesses.ids must be an array of harness identifiers', 1)
     }
     return [canonicalHarnessRelease]
   }
-  if (!Array.isArray(harnesses.releases)) throw new KiError('KI configuration harnesses.releases must be an array of release entries', 1)
+  if (!Array.isArray(harnesses.releases)) throw new KiError('ki configuration harnesses.releases must be an array of release entries', 1)
   const releases = harnesses.releases.map(parseRelease)
   const identities = new Set<string>([baseHarnessIdentifier])
   for (const release of releases) {
@@ -113,20 +113,20 @@ const configuredHarnessIds = async (configurationDirectory: string): Promise<rea
   const path = join(configurationDirectory, 'config.toml')
   const state = await lstat(path).catch(() => undefined)
   if (!state) return undefined
-  if (!state.isFile() || state.isSymbolicLink()) throw new KiError('KI configuration must be a regular file', 1)
+  if (!state.isFile() || state.isSymbolicLink()) throw new KiError('ki configuration must be a regular file', 1)
   let parsed: unknown
   try {
     parsed = parse(await readFile(path, 'utf8'))
   } catch {
-    throw new KiError('KI configuration must be valid TOML', 1)
+    throw new KiError('ki configuration must be valid TOML', 1)
   }
-  if (!isRecord(parsed)) throw new KiError('KI configuration must be a TOML table', 1)
+  if (!isRecord(parsed)) throw new KiError('ki configuration must be a TOML table', 1)
   if (parsed.harnesses === undefined) return []
-  if (!isRecord(parsed.harnesses)) throw new KiError('KI configuration harnesses must be a TOML table', 1)
+  if (!isRecord(parsed.harnesses)) throw new KiError('ki configuration harnesses must be a TOML table', 1)
   const ids = (parsed.harnesses as { readonly ids?: unknown }).ids
   if (ids === undefined) return []
   if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string' || !harnessIdentifier.test(id))) {
-    throw new KiError('KI configuration harnesses.ids must be an array of harness identifiers', 1)
+    throw new KiError('ki configuration harnesses.ids must be an array of harness identifiers', 1)
   }
   return ids
 }

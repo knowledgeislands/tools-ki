@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import packageMetadata from '../../../package.json' with { type: 'json' }
 import { sandbox } from './_cli_helper.ts'
 
-describe('ki version', () => {
+describe('[ki version]', () => {
   test('reports the package version, as a command and as an option', async () => {
     const box = await sandbox()
     const version = await box.run('ki version')

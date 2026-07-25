@@ -36,7 +36,7 @@ export const createDevCommand = (context: KiContext): Command => {
       const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents, harness)
       context.stdout.write(`development harness enabled ${harness}\n`)
       context.stdout.write(
-        `refreshed KI configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
+        `refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
       )
       reportProjections(context, projections)
     })
@@ -53,7 +53,7 @@ export const createDevCommand = (context: KiContext): Command => {
         `development harness disabled; canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`
       )
       context.stdout.write(
-        `refreshed KI configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
+        `refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
       )
       reportProjections(context, projections)
     })

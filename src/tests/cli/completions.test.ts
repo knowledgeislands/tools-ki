@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
-describe('ki completions', () => {
+describe('[ki completions]', () => {
   test('renders zsh and bash completion scripts', async () => {
     const box = await sandbox()
     const zsh = await box.run('ki completions zsh')

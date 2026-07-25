@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
-describe('ki help', () => {
+describe('[ki help]', () => {
   test('prints the root usage, --help, and nested and unknown-help command interfaces', async () => {
     const box = await sandbox()
     const root = await box.run('ki')

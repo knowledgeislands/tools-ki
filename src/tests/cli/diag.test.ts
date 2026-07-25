@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
-describe('ki diag', () => {
+describe('[ki diag]', () => {
   test('reports the executable path and the resolved data directory', async () => {
     const box = await sandbox()
     const missingHome = join(box.root.path, 'missing-home')

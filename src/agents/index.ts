@@ -260,7 +260,7 @@ const readConfiguration = async (configurationDirectory: string, homeDirectory: 
     agentSection.ids.some((agent) => typeof agent !== 'string') ||
     (localSection !== undefined && (localSection === null || typeof localSection.path !== 'string' || !localSection.path))
   ) {
-    throw new KiError('KI configuration must declare an agents.ids string array and an optional local.path', 1)
+    throw new KiError('ki configuration must declare an agents.ids string array and an optional local.path', 1)
   }
   const agents = agentSection.ids as string[]
   if (new Set(agents).size !== agents.length) throw new KiError('agent configuration repeats an agent', 1)
@@ -390,7 +390,7 @@ export const configureBootstrapAgents = async (options: {
 }): Promise<BootstrapConfiguration> => {
   const path = bootstrapConfigurationPath(options.configurationDirectory)
   const state = await lstat(options.configurationDirectory).catch(() => undefined)
-  if (state && (!state.isDirectory() || state.isSymbolicLink())) throw new KiError('KI configuration directory must be a directory', 1)
+  if (state && (!state.isDirectory() || state.isSymbolicLink())) throw new KiError('ki configuration directory must be a directory', 1)
   const configured = options.refresh ? undefined : await readConfiguration(options.configurationDirectory, options.homeDirectory)
   const agents = options.refresh || !configured ? await detectAgents(options.homeDirectory) : configured
   if (!configured) {
@@ -467,7 +467,7 @@ export const configuredAgents = async (options: {
   readonly configurationDirectory: string
 }): Promise<readonly InstalledAgent[]> => {
   const configured = await readConfiguration(options.configurationDirectory, options.homeDirectory)
-  if (!configured) throw new KiError('KI environment is not bootstrapped; run `ki bootstrap` first', 1)
+  if (!configured) throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
   return configured
 }
 

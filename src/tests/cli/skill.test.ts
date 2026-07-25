@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from './_cli_helper.ts'
 
-describe('ki skill', () => {
+describe('[ki skill]', () => {
   const bootstrapClaudeCode = async (box: Sandbox): Promise<void> => {
     await box.setupAgentHome('claude-code')
     await box.setupExampleHarness()
