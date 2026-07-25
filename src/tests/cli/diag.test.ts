@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { sandbox } from './testkit.ts'
+import { sandbox } from './_helper.ts'
 
 describe('ki diag', () => {
   test('reports user configuration values, unknown keys, and invalid entries', async () => {

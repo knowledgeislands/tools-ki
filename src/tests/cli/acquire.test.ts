@@ -3,7 +3,7 @@ import { lstat, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises
 import { join } from 'node:path'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { isSafeRelativePath } from '../../commands/acquire.ts'
-import { type CommandResult, sandbox } from './testkit.ts'
+import { type CommandResult, sandbox } from './_helper.ts'
 
 const writeFailure = vi.hoisted(() => ({ enabled: false }))
 

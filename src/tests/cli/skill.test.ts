@@ -1,7 +1,7 @@
 import { lstat, mkdir, realpath, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
-import { type Sandbox, sandbox } from './testkit.ts'
+import { type Sandbox, sandbox } from './_helper.ts'
 
 describe('ki skill', () => {
   const bootstrapClaudeCode = async (box: Sandbox): Promise<void> => {

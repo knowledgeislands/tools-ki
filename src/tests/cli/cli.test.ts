@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest'
 import packageMetadata from '../../../package.json' with { type: 'json' }
 import { run as runCli } from '../../cli.ts'
 import { createContext } from '../../core/context.ts'
-import { sandbox } from './testkit.ts'
+import { sandbox } from './_helper.ts'
 
 describe('command-line interface', () => {
   test('provide help, version, plural completions, and diagnostics', async () => {

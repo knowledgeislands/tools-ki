@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
-import { installSandbox } from './installkit.ts'
+import { installSandbox } from './_helper.ts'
 
 describe('install.sh', () => {
   test('prints usage and rejects unknown or excess options', async () => {

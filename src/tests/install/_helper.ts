@@ -6,7 +6,7 @@ import { promisify } from 'node:util'
 import { onTestFinished } from 'vitest'
 
 // A minimal shell-out harness for install.sh, isolated from the in-process `ki` CLI
-// sandbox in ../cli/testkit.ts. This exists only to prove the released installer does
+// sandbox in ../cli/_helper.ts. This exists only to prove the released installer does
 // what it claims outside of any TypeScript command logic, so it deliberately has no
 // `run()`, no fixture builders, and no assertions about `ki`'s own behavior beyond what
 // `install.sh` produces.

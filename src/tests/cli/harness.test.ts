@@ -1,6 +1,6 @@
 import { lstat, mkdir, symlink, writeFile } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
-import { sandbox } from './testkit.ts'
+import { sandbox } from './_helper.ts'
 
 describe('ki harness', () => {
   describe('harness list', () => {
