@@ -16,8 +16,7 @@ import { createContext } from '../core/context.ts'
 const repositoryFixtures = {
   root: new URL('../../', import.meta.url).pathname,
   executable: new URL('../../bin/ki', import.meta.url).pathname,
-  installer: new URL('../../install.sh', import.meta.url).pathname,
-  validator: new URL('../../tests/validate-kep.sh', import.meta.url).pathname
+  installer: new URL('../../install.sh', import.meta.url).pathname
 }
 
 export interface CommandResult {

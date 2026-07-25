@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { lstat, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test, vi } from 'vitest'
@@ -61,7 +62,7 @@ describe('source path safety', () => {
 })
 
 describe('ki acquire chatgpt import', () => {
-  test('creates a deterministic KEP that passes the KIS-0002 fixture validator', async () => {
+  test('creates a deterministic KEP that conforms to the KIS-0002 payload layout', async () => {
     const box = await sandbox()
     const capture = await makeCapture(box.root.path)
     const first = join(box.root.path, 'first.kep')
@@ -69,11 +70,29 @@ describe('ki acquire chatgpt import', () => {
 
     expect((await box.run(['acquire', 'chatgpt', 'import', capture, '--output', first])).exitCode).toBe(0)
     expect((await box.run(['acquire', 'chatgpt', 'import', capture, '--output', second])).exitCode).toBe(0)
-    expect(await readFile(join(first, 'checksums/sha256sums.txt'), 'utf8')).toBe(
-      await readFile(join(second, 'checksums/sha256sums.txt'), 'utf8')
-    )
-    expect(await readFile(join(first, 'kep.toml'), 'utf8')).toContain('package_id = "kep:sha256:')
-    expect((await box.exec(['bash', box.repo.validator, first])).exitCode).toBe(0)
+
+    const checksums = await readFile(join(first, 'checksums/sha256sums.txt'), 'utf8')
+    expect(checksums).toBe(await readFile(join(second, 'checksums/sha256sums.txt'), 'utf8'))
+
+    const checksumLines = checksums.trimEnd().split('\n')
+    const paths = checksumLines.map((line) => line.slice(66))
+    expect(paths).toEqual([...paths].sort((left, right) => left.localeCompare(right, 'en')))
+    expect(new Set(paths).size).toBe(paths.length)
+    for (const line of checksumLines) {
+      const [digest, path] = [line.slice(0, 64), line.slice(66)]
+      expect(digest).toMatch(/^[a-f0-9]{64}$/)
+      expect(createHash('sha256').update(await readFile(join(first, path))).digest('hex')).toBe(digest)
+    }
+
+    const kepToml = await readFile(join(first, 'kep.toml'), 'utf8')
+    const payloadSha256 = createHash('sha256').update(checksums).digest('hex')
+    expect(kepToml).toContain('format = "kep"')
+    expect(kepToml).toContain('checksum_manifest = "checksums/sha256sums.txt"')
+    expect(kepToml).toContain(`payload_sha256 = "${payloadSha256}"`)
+    expect(kepToml).toContain(`package_id = "kep:sha256:${payloadSha256}"`)
+    expect(kepToml).toContain('records = 1')
+    expect(kepToml).toContain('assets = 1')
+    expect(kepToml).toContain('relationships = 2')
   })
 
   test('reports a dry run without writing and a versioned JSON result', async () => {
