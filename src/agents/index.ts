@@ -277,7 +277,11 @@ const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAg
   return agents
 }
 
-const installManagedUserSkill = async (agent: InstalledAgent, skill: ManagedUserSkill, replace = false): Promise<boolean> => {
+const installManagedUserSkill = async (
+  agent: InstalledAgent,
+  skill: { readonly name: string; readonly source: string },
+  replace = false
+): Promise<boolean> => {
   const agentHome = await requiredPhysicalDirectory(agent.home, `${agent.descriptor.id} user directory`)
   skillCapability(agent)
   const skills = join(agentHome, 'skills')
@@ -500,4 +504,66 @@ export const agentSkillDirectory = (agent: InstalledAgent, scope: 'user' | 'repo
   if (scope === 'user') return join(agent.home, 'skills')
   if (repository) return join(repository, skillPath)
   throw new KiError('repository scope requires a repository', 2)
+}
+
+const removeManagedUserSkill = async (agent: InstalledAgent, name: string): Promise<boolean> => {
+  const agentHome = await requiredPhysicalDirectory(agent.home, `${agent.descriptor.id} user directory`)
+  const target = join(agentHome, 'skills', name)
+  const targetState = await lstat(target).catch(() => undefined)
+  if (!targetState) return false
+  if (!targetState.isSymbolicLink()) throw new KiError(`${agent.descriptor.id} ${name} skill is not KI-managed`, 1)
+  await unlink(target)
+  return true
+}
+
+const installedUserSkillSource = async (
+  dataDirectory: string,
+  name: string
+): Promise<{ readonly skill: { readonly name: string; readonly source: string }; readonly harness: string }> => {
+  const harnesses = await discoverInstalledHarnesses(dataDirectory)
+  const matches = harnesses.flatMap((harness) =>
+    harness.capabilities
+      .filter((capability) => capability.kind === 'skill' && capability.name === name)
+      .map((capability) => ({ harness, capability }))
+  )
+  const [match] = matches
+  if (!match) throw new KiError(`no installed harness provides skill ${name}`, 1)
+  if (matches.length > 1) throw new KiError(`skill ${name} is provided by multiple installed harnesses`, 1)
+  const source = await requiredPhysicalDirectory(join(match.harness.root, match.capability.source), `installed harness ${match.harness.id} ${name} skill`)
+  return { skill: { name, source }, harness: match.harness.id }
+}
+
+const skillNameOf = (identity: string): string => (identity.includes(':') ? identity.slice(identity.lastIndexOf(':') + 1) : identity)
+
+export const addUserSkill = async (options: {
+  readonly configurationDirectory: string
+  readonly dataDirectory: string
+  readonly homeDirectory: string
+  readonly skill: string
+  readonly replace?: boolean
+}): Promise<{ readonly skill: string; readonly agents: readonly string[] }> => {
+  const agents = await configuredAgents({ homeDirectory: options.homeDirectory, configurationDirectory: options.configurationDirectory })
+  const resolved = await installedUserSkillSource(options.dataDirectory, options.skill)
+  for (const agent of agents) await installManagedUserSkill(agent, resolved.skill, options.replace)
+  const identity = `${resolved.harness}:${resolved.skill.name}`
+  const current = (await inspectUserConfiguration(options.configurationDirectory)).skills
+  const next = [...current.filter((entry) => skillNameOf(entry) !== resolved.skill.name), identity].sort((left, right) => left.localeCompare(right))
+  await setConfiguredUserSkills(options.configurationDirectory, next)
+  return { skill: resolved.skill.name, agents: agents.map((agent) => agent.descriptor.id) }
+}
+
+export const removeUserSkill = async (options: {
+  readonly configurationDirectory: string
+  readonly homeDirectory: string
+  readonly skill: string
+}): Promise<{ readonly skill: string; readonly agents: readonly string[]; readonly removed: boolean }> => {
+  const agents = await configuredAgents({ homeDirectory: options.homeDirectory, configurationDirectory: options.configurationDirectory })
+  let removed = false
+  for (const agent of agents) {
+    if (await removeManagedUserSkill(agent, options.skill)) removed = true
+  }
+  const current = (await inspectUserConfiguration(options.configurationDirectory)).skills
+  const next = current.filter((entry) => skillNameOf(entry) !== options.skill)
+  await setConfiguredUserSkills(options.configurationDirectory, next)
+  return { skill: options.skill, agents: agents.map((agent) => agent.descriptor.id), removed }
 }
