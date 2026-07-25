@@ -14,14 +14,22 @@ describe('[ki harness]', () => {
   })
 
   describe('[ki harness info]', () => {
-    test('inspects one non-base harness, in human and JSON form', async () => {
+    test('inspects one non-base harness in human form', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
       const info = await box.run('ki harness info example/harness')
-      const json = await box.run('ki harness info example/harness --json')
 
+      expect(info.exitCode).toBe(0)
       expect(info.output).toContain('capabilities: 1')
       expect(info.output).toContain('  skill ki-example\n')
+    })
+
+    test('inspects one non-base harness in JSON form', async () => {
+      const box = await sandbox()
+      await box.setupExampleHarness()
+      const json = await box.run('ki harness info example/harness --json')
+
+      expect(json.exitCode).toBe(0)
       expect(json.output).toContain('"depends_on":[]')
     })
   })
@@ -44,23 +52,22 @@ describe('[ki harness]', () => {
       const box = await sandbox()
       const sha256 = 'a'.repeat(64)
       await mkdir(`${box.config.path}/ki`, { recursive: true })
-      await writeFile(
-        `${box.config.path}/ki/config.toml`,
-        `[harnesses]
+      const seedConfig = `[harnesses]
 releases = [
   { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" },
 ]
 `
-      )
+      await writeFile(`${box.config.path}/ki/config.toml`, seedConfig)
       await box.setupExampleHarness()
 
       const installed = await box.run('ki harness install example/harness')
       const config = await box.config.read('ki/config.toml')
+      const expectedHarnessesSection = `ids = [
+  "example/harness",
+]`
 
       expect(installed).toEqual({ exitCode: 0, output: `example/harness is already installed\tarchive ${sha256}\n` })
-      expect(config).toContain(`ids = [
-  "example/harness",
-]`)
+      expect(config).toContain(expectedHarnessesSection)
     })
   })
 

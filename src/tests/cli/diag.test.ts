@@ -21,9 +21,7 @@ describe('[ki diag]', () => {
 
   test('reports user configuration values, unknown keys, and invalid entries', async () => {
     const box = await sandbox()
-    await box.config.write(
-      'ki/config.toml',
-      `schema = 2
+    const invalidConfig = `schema = 2
 unexpected = true
 
 [agents]
@@ -35,7 +33,7 @@ releases = [{ id = "example/harness", url = "http://example.test/archive.tar.gz"
 [skills]
 ids = ["example:skill", "example:skill"]
 `
-    )
+    await box.config.write('ki/config.toml', invalidConfig)
 
     const human = await box.run('ki diag')
 

@@ -40,8 +40,10 @@ describe('[ki acquire chatgpt import]', () => {
     const first = join(box.root.path, 'first.kep')
     const second = join(box.root.path, 'second.kep')
 
-    expect((await box.run(`ki acquire chatgpt import ${capture.path} --output ${first}`)).exitCode).toBe(0)
-    expect((await box.run(`ki acquire chatgpt import ${capture.path} --output ${second}`)).exitCode).toBe(0)
+    const firstResult = await box.run(`ki acquire chatgpt import ${capture.path} --output ${first}`)
+    const secondResult = await box.run(`ki acquire chatgpt import ${capture.path} --output ${second}`)
+    expect(firstResult.exitCode).toBe(0)
+    expect(secondResult.exitCode).toBe(0)
 
     const checksums = await readFile(join(first, 'checksums/sha256sums.txt'), 'utf8')
     expect(checksums).toBe(await readFile(join(second, 'checksums/sha256sums.txt'), 'utf8'))
@@ -112,7 +114,8 @@ describe('[ki acquire chatgpt import]', () => {
     const importCapture = (): Promise<CommandResult> => box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
 
     await capture.write('capture.toml', 'format = "wrong"\n')
-    expect((await importCapture()).output).toContain('capture metadata format must be ki-chatgpt-capture')
+    const wrongFormat = await importCapture()
+    expect(wrongFormat.output).toContain('capture metadata format must be ki-chatgpt-capture')
 
     await capture.writeMetadata([
       'format = "ki-chatgpt-capture"',
@@ -120,10 +123,12 @@ describe('[ki acquire chatgpt import]', () => {
       'capture_boundary = "bad\\tboundary"',
       'omissions = []'
     ])
-    expect((await importCapture()).output).toContain('capture_boundary contains unsupported characters')
+    const badBoundary = await importCapture()
+    expect(badBoundary.output).toContain('capture_boundary contains unsupported characters')
 
     await capture.write('records/not-markdown.txt', 'not a record\n')
-    expect((await importCapture()).output).toContain('records must use Markdown file names')
+    const nonMarkdown = await importCapture()
+    expect(nonMarkdown.output).toContain('records must use Markdown file names')
   })
 
   test('rejects metadata field, repetition, version and omissions violations', async () => {
@@ -133,18 +138,25 @@ describe('[ki acquire chatgpt import]', () => {
     const importCapture = (): Promise<CommandResult> => box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
 
     await capture.writeMetadata(['unexpected = "field"'])
-    expect((await importCapture()).output).toContain('capture metadata contains an unsupported field')
+    const unexpectedField = await importCapture()
+    expect(unexpectedField.output).toContain('capture metadata contains an unsupported field')
+
     await capture.writeMetadata(['format = "ki-chatgpt-capture"', 'format = "ki-chatgpt-capture"'])
-    expect((await importCapture()).output).toContain('capture metadata repeats format')
+    const repeatedFormat = await importCapture()
+    expect(repeatedFormat.output).toContain('capture metadata repeats format')
+
     await capture.writeMetadata(['format = "ki-chatgpt-capture"', 'format_version = "0.2.0"'])
-    expect((await importCapture()).output).toContain('capture metadata format_version must be 0.1.0')
+    const badVersion = await importCapture()
+    expect(badVersion.output).toContain('capture metadata format_version must be 0.1.0')
+
     await capture.writeMetadata([
       'format = "ki-chatgpt-capture"',
       'format_version = "0.1.0"',
       'capture_boundary = "valid boundary"',
       'omissions = ["not compact", "array"]'
     ])
-    expect((await importCapture()).output).toContain('omissions must be a compact array of plain strings')
+    const badOmissions = await importCapture()
+    expect(badOmissions.output).toContain('omissions must be a compact array of plain strings')
   })
 
   test('rejects malformed relationship records', async () => {
@@ -190,13 +202,18 @@ ${duplicate}
       box.run(`ki acquire chatgpt import ${capture.path} --output ${destination}`)
 
     await capture.remove('relationships/native.jsonl')
-    expect((await importCapture()).output).toContain('relationships/native.jsonl is required')
+    const missingRelationships = await importCapture()
+    expect(missingRelationships.output).toContain('relationships/native.jsonl is required')
+
     await capture.write('relationships/native.jsonl', '')
-    expect((await importCapture()).exitCode).toBe(0)
-    expect((await importCapture(join(capture.path, 'nested.kep'))).output).toContain('output directory must be outside capture-directory')
-    expect((await box.run(`ki acquire chatgpt import ${join(box.root.path, 'missing')} --output ${output}`)).output).toContain(
-      'capture-directory must be an existing directory'
-    )
+    const emptyRelationships = await importCapture()
+    expect(emptyRelationships.exitCode).toBe(0)
+
+    const nestedOutput = await importCapture(join(capture.path, 'nested.kep'))
+    expect(nestedOutput.output).toContain('output directory must be outside capture-directory')
+
+    const missingCaptureDirectory = await box.run(`ki acquire chatgpt import ${join(box.root.path, 'missing')} --output ${output}`)
+    expect(missingCaptureDirectory.output).toContain('capture-directory must be an existing directory')
   })
 
   test('rejects empty directories, symbolic links and unsupported top-level entries', async () => {
@@ -206,16 +223,23 @@ ${duplicate}
     const importCapture = (): Promise<CommandResult> => box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
 
     await capture.remove('originals/export.json')
-    expect((await importCapture()).output).toContain('originals directory must contain at least one file')
+    const emptyOriginals = await importCapture()
+    expect(emptyOriginals.output).toContain('originals directory must contain at least one file')
+
     await capture.write('originals/export.json', '{}\n')
     await capture.remove('records/conversation.md')
-    expect((await importCapture()).output).toContain('records directory must contain at least one file')
+    const emptyRecords = await importCapture()
+    expect(emptyRecords.output).toContain('records directory must contain at least one file')
+
     await capture.write('records/conversation.md', '# conversation\n')
     await capture.write('unexpected.txt', 'unexpected\n')
-    expect((await importCapture()).output).toContain('capture-directory contains an unsupported top-level entry')
+    const unsupportedEntry = await importCapture()
+    expect(unsupportedEntry.output).toContain('capture-directory contains an unsupported top-level entry')
+
     await capture.remove('unexpected.txt')
     await capture.symlink('assets/example.png', 'assets/link.png')
-    expect((await importCapture()).output).toContain('capture contains an unsafe file')
+    const unsafeFile = await importCapture()
+    expect(unsafeFile.output).toContain('capture contains an unsafe file')
   })
 
   test('rejects unsafe relationships, paths and output parents', async () => {
@@ -227,27 +251,42 @@ ${duplicate}
     const relationship = (content: string): Promise<void> => capture.write('relationships/native.jsonl', content)
 
     await relationship('{"type":"conversation-order","record":"records/../conversation.md","position":1}\n')
-    expect((await importCapture()).output).toContain('relationship record path is unsafe')
+    const unsafeRecordPath = await importCapture()
+    expect(unsafeRecordPath.output).toContain('relationship record path is unsafe')
+
     await relationship(
       '{"type":"message-asset","record":"records/conversation.md","asset":"assets/../example.png","message_id":"message-001"}\n'
     )
-    expect((await importCapture()).output).toContain('relationship asset path is unsafe')
+    const unsafeAssetPath = await importCapture()
+    expect(unsafeAssetPath.output).toContain('relationship asset path is unsafe')
+
     await relationship(
       '{"type":"message-asset","record":"records/../conversation.md","asset":"assets/example.png","message_id":"message-001"}\n'
     )
-    expect((await importCapture()).output).toContain('relationship record path is unsafe')
+    const unsafeAssetRecordPath = await importCapture()
+    expect(unsafeAssetRecordPath.output).toContain('relationship record path is unsafe')
+
     await relationship('{"type":"message-asset","record":"records/missing.md","asset":"assets/example.png","message_id":"message-001"}\n')
-    expect((await importCapture()).output).toContain('relationship references a missing record')
+    const missingAssetRecord = await importCapture()
+    expect(missingAssetRecord.output).toContain('relationship references a missing record')
+
     await relationship('{"type":"project-conversation","record":"records/../conversation.md","project_id":"project-001"}\n')
-    expect((await importCapture()).output).toContain('relationship record path is unsafe')
+    const unsafeConversationPath = await importCapture()
+    expect(unsafeConversationPath.output).toContain('relationship record path is unsafe')
+
     await relationship('{"type":"project-conversation","record":"records/missing.md","project_id":"project-001"}\n')
-    expect((await importCapture()).output).toContain('relationship references a missing record')
+    const missingConversationRecord = await importCapture()
+    expect(missingConversationRecord.output).toContain('relationship references a missing record')
+
     await relationship('{"type":"unsupported"}\n')
-    expect((await importCapture()).output).toContain('relationship is not a supported source-native record')
-    expect((await importCapture(`${box.root.path}/missing-parent/result.kep`)).output).toContain(
-      'output parent directory must be an existing directory'
-    )
-    expect((await importCapture(`${box.root.path}/missing-parent/..`)).output).toContain('output directory name is invalid')
+    const unsupportedRelationship = await importCapture()
+    expect(unsupportedRelationship.output).toContain('relationship is not a supported source-native record')
+
+    const missingOutputParent = await importCapture(`${box.root.path}/missing-parent/result.kep`)
+    expect(missingOutputParent.output).toContain('output parent directory must be an existing directory')
+
+    const invalidOutputName = await importCapture(`${box.root.path}/missing-parent/..`)
+    expect(invalidOutputName.output).toContain('output directory name is invalid')
   })
 
   test('removes a partially written package after an output error', async () => {

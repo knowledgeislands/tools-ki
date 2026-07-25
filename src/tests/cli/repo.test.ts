@@ -48,14 +48,12 @@ export const audit = async ({ repository }) => (await readFile(repository + "/go
       for (const { name, deps } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
         const list = `[${deps.join(', ')}]`
-        await data.write(
-          `${base}/SKILL.md`,
-          `---
+        const skillMarkdown = `---
 name: ${name}
 ki-depends-on: ${list}
 ---
 `
-        )
+        await data.write(`${base}/SKILL.md`, skillMarkdown)
         await data.write(
           `${base}/scripts/native/audit.mjs`,
           'export const audit = async ({ capability }) => [{ level: "info", code: "R-1", message: capability.identity }]\n'
@@ -69,13 +67,11 @@ ki-depends-on: ${list}
         { name: 'ki-foundation', deps: [] },
         { name: 'ki-feature', deps: ['ki-foundation'] }
       ])
-      await box.project.write(
-        '.ki-config.toml',
-        `[ki-feature]
+      const declarations = `[ki-feature]
 
 [ki-foundation]
 `
-      )
+      await box.project.write('.ki-config.toml', declarations)
 
       const result = await box.run('ki repo audit')
 
@@ -107,13 +103,11 @@ info R-1: example/harness:ki-feature
         { name: 'ki-first', deps: ['ki-second'] },
         { name: 'ki-second', deps: ['ki-first'] }
       ])
-      await box.project.write(
-        '.ki-config.toml',
-        `[ki-first]
+      const declarations = `[ki-first]
 
 [ki-second]
 `
-      )
+      await box.project.write('.ki-config.toml', declarations)
 
       const result = await box.run('ki repo audit')
 

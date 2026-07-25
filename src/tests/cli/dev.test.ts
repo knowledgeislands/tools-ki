@@ -25,10 +25,7 @@ ki-recap for chatgpt-codex already installed
       const dataIsSymlink = await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness/skills')
       const homeIsSymlink = await box.home.isSymlink('.agents/skills/ki-bootstrap')
       const config = await box.config.read('ki/config.toml')
-      expect(dataIsSymlink).toBe(true)
-      expect(homeIsSymlink).toBe(true)
-      expect(config).toBe(
-        `schema = 1
+      const expectedConfig = `schema = 1
 
 [agents]
 ids = [
@@ -60,7 +57,9 @@ harness = "knowledgeislands/ki-agentic-harness"
 [local]
 path = ${JSON.stringify(harnessPath)}
 `
-      )
+      expect(dataIsSymlink).toBe(true)
+      expect(homeIsSymlink).toBe(true)
+      expect(config).toBe(expectedConfig)
     })
   })
 
