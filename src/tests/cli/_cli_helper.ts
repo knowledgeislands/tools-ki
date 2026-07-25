@@ -29,7 +29,7 @@ import { dirname, join } from 'node:path'
 import { onTestFinished } from 'vitest'
 import { run as runCli } from '../../cli.ts'
 import { createContext } from '../../context.ts'
-import type { Fetcher } from '../../core/registry.ts'
+import type { Fetcher } from '../../core/acquire.ts'
 
 // `ki bootstrap` detects the active agent from which of these home directories exists —
 // kept here as a literal, not imported from src/agents, so this black-box CLI harness

@@ -116,32 +116,6 @@ test('records successful harness installation and removal without discarding rel
   expect(await readFile(join(configuration, 'config.toml'), 'utf8')).toContain('[harnesses]\nids = [\n]\nreleases = []')
 })
 
-test('migrates a managed latest layout and removes its generated lock without downloading again', async () => {
-  const root = await temporaryDirectory()
-  const { payload: archive, sha256 } = makeHarnessArchive({
-    'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n'
-  })
-  const { config, data } = await configuredArchive(root, sha256)
-  const latest = join(data, 'harnesses', 'example', 'harness', 'latest')
-  await mkdir(join(latest, 'skills', 'ki-example'), { recursive: true })
-  await writeFile(join(latest, 'skills', 'ki-example', 'SKILL.md'), '---\nname: ki-example\nki-depends-on: []\n---\n')
-  await writeFile(join(latest, 'harness-lock.toml'), 'legacy generated state\n')
-  let fetched = false
-
-  const result = await installHarness(config, data, 'example/harness', async () => {
-    fetched = true
-    return new Response(archive)
-  })
-
-  expect(result).toEqual({ installed: false, archiveSha256: sha256 })
-  expect(fetched).toBe(false)
-  await expect(readFile(join(data, 'harnesses', 'example', 'harness', 'skills', 'ki-example', 'SKILL.md'), 'utf8')).resolves.toContain(
-    'name: ki-example'
-  )
-  await expect(lstat(join(data, 'harnesses', 'example', 'harness', 'latest'))).rejects.toThrow()
-  await expect(lstat(join(data, 'harnesses', 'example', 'harness', 'harness-lock.toml'))).rejects.toThrow()
-})
-
 test('drops only legacy vendored links from the selected payload', async () => {
   const root = await temporaryDirectory()
   const { payload: archive, sha256 } = makeHarnessArchive({

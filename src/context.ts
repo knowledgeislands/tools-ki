@@ -1,9 +1,9 @@
 import { realpath } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import type { Fetcher } from './core/acquire.ts'
 import type { Output } from './core/output.ts'
 import type { Environment, KiInstallationMode, KiPaths } from './core/paths.ts'
 import { installationMode, resolveKiPaths, userHome } from './core/paths.ts'
-import type { Fetcher } from './core/registry.ts'
 import { discoverRepository, type RepositoryLocation } from './core/repository.ts'
 
 export interface KiContext {
