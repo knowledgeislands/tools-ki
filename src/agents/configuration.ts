@@ -89,6 +89,9 @@ export const inspectUserConfiguration = async (configurationDirectory: string): 
     }
   }
   if (!isRecord(parsed)) {
+    // A successfully parsed TOML document is always a table (the TOML grammar has no bare top-level
+    // scalar or array form), so this defends only against a future parser change, not a reachable input.
+    /* v8 ignore next 10 */
     return {
       path,
       state: 'invalid',

@@ -15,5 +15,8 @@ export const agentSkillDirectory = (agent: InstalledAgent, scope: 'user' | 'repo
   const skillPath = skillCapability(agent)
   if (scope === 'user') return join(agent.home, 'skills')
   if (repository) return join(repository, skillPath)
+  // Every repo-scope call site resolves a repository via resolveRepository() before reaching
+  // here, so this defends only against a future caller that skips that resolution.
+  /* v8 ignore next */
   throw new KiError('repository scope requires a repository', 2)
 }

@@ -1,3 +1,4 @@
+import { symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
@@ -69,6 +70,51 @@ ids = ["example:skill", "example:skill"]
     const diag = await box.run('ki diag')
 
     expect(diag.output).toContain('Repository    none')
+  })
+
+  test('rejects a configuration file that is a symlink rather than a regular file', async () => {
+    const box = await sandbox()
+    await box.config.write('ki/real-config.toml', 'schema = 1\n')
+    await symlink(join(box.config.path, 'ki/real-config.toml'), join(box.config.path, 'ki/config.toml'))
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.output).toContain('Errors\n  - configuration must be a regular file')
+  })
+
+  test('rejects a configuration file that is not valid TOML', async () => {
+    const box = await sandbox()
+    await box.config.write('ki/config.toml', 'schema = 1\n[agents\n')
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.output).toContain('Errors\n  - configuration must be valid TOML')
+  })
+
+  test('reports non-array agents.ids, a skill missing its harness, a non-table harness release, and an unrecognised local key', async () => {
+    const box = await sandbox()
+    const invalidConfig = `schema = 1
+
+[agents]
+ids = "not-an-array"
+
+[harnesses]
+releases = [42]
+
+[skills.foo]
+
+[local]
+path = "/somewhere"
+extra = true
+`
+    await box.config.write('ki/config.toml', invalidConfig)
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.output).toContain('Errors\n  - agents.ids must be an array of non-empty strings')
+    expect(diag.output).toContain('- skills.foo must declare a harness string')
+    expect(diag.output).toContain('- harnesses[0] must be a table')
+    expect(diag.output).toContain('Warnings\n  - local has unrecognised key extra')
   })
 
   test('displays configuration with no warnings or errors', async () => {

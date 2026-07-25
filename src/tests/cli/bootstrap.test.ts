@@ -102,4 +102,33 @@ ids = [
     expect(refreshed.exitCode).toBe(0)
     expect(config).toContain(expectedAgentsSection)
   })
+
+  test('rejects an existing configuration file that is not valid TOML', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('chatgpt-codex')
+    await box.config.write('ki/config.toml', 'schema = 1\n[agents\n')
+
+    const bootstrapped = await box.run('ki bootstrap')
+
+    expect(bootstrapped.exitCode).toBe(1)
+    expect(bootstrapped.output).toContain('agent configuration must be valid TOML')
+  })
+
+  test('rejects an existing configuration whose agents.ids is not a string array', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('chatgpt-codex')
+    await box.config.write(
+      'ki/config.toml',
+      `schema = 1
+
+[agents]
+ids = ["chatgpt-codex", 5]
+`
+    )
+
+    const bootstrapped = await box.run('ki bootstrap')
+
+    expect(bootstrapped.exitCode).toBe(1)
+    expect(bootstrapped.output).toContain('ki configuration must declare an agents.ids string array and an optional local.path')
+  })
 })
