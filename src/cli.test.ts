@@ -133,6 +133,7 @@ const installHarness = async (data: string, auditSource?: string, conformSource?
 
 const installBootstrapHarness = async (data: string): Promise<void> => {
   const root = join(data, 'ki', 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
+  await Promise.all(['agents', 'hooks'].map((payload) => mkdir(join(root, payload), { recursive: true })))
   for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
     const source = skill === 'ki-bootstrap' ? join(root, 'skills', 'keystone', skill) : join(root, 'skills', 'process', skill)
     await mkdir(source, { recursive: true })
@@ -191,7 +192,9 @@ describe('baseline commands', () => {
     const missingCompletionShell = await runKi(['completions'])
     const unknown = await runKi(['unknown'])
 
-    expect(bash.output).toContain('complete -W "acquire bootstrap completions doctor harness help paths repo version --help --version" ki')
+    expect(bash.output).toContain(
+      'complete -W "acquire bootstrap completions dev doctor harness help paths repo version --help --version" ki'
+    )
     expect(invalidCompletion).toEqual({ exitCode: 2, output: 'ki: error: completions shell must be bash or zsh\n' })
     expect(paths.output).toContain(`data: ${root}/data/ki`)
     expect(doctor.output).toContain(`KI doctor\n  Version       ${packageMetadata.version}`)
@@ -340,20 +343,23 @@ ids = [
     )
   })
 
-  test('links an explicit local harness without installing the canonical harness', async () => {
+  test('switches the canonical harness to a local development checkout', async () => {
     const root = await temporaryDirectory()
     const home = join(root, 'home')
     const harness = join(root, 'harness')
     const source = join(harness, 'skills', 'keystone', 'ki-bootstrap')
     const data = join(root, 'data')
     await mkdir(join(home, '.agents'), { recursive: true })
+    await Promise.all(['agents', 'hooks'].map((payload) => mkdir(join(harness, payload), { recursive: true })))
+    await installBootstrapHarness(data)
     for (const skill of ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap']) {
       const path = skill === 'ki-bootstrap' ? source : join(harness, 'skills', 'process', skill)
       await mkdir(path, { recursive: true })
       await writeFile(join(path, 'SKILL.md'), `---\nname: ${skill}\nki-depends-on: []\n---\n`)
     }
 
-    const result = await runKi(['bootstrap', '--local', harness], {
+    await runKi(['bootstrap'], { HOME: home, XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: data })
+    const result = await runKi(['dev', 'on', harness], {
       HOME: home,
       XDG_CONFIG_HOME: join(root, 'config'),
       XDG_DATA_HOME: data
@@ -361,16 +367,16 @@ ids = [
 
     expect(result).toEqual({
       exitCode: 0,
-      output: `created KI agent configuration for chatgpt-codex
-using local harness ${await realpath(harness)}
-ki-bootstrap for chatgpt-codex installed
-ki-delegate for chatgpt-codex installed
-ki-next for chatgpt-codex installed
-ki-plan for chatgpt-codex installed
-ki-recap for chatgpt-codex installed
+      output: `development harness enabled ${await realpath(harness)}
+refreshed KI configuration: 1 agents, 1 harnesses, 5 skills
+ki-bootstrap for chatgpt-codex already installed
+ki-delegate for chatgpt-codex already installed
+ki-next for chatgpt-codex already installed
+ki-plan for chatgpt-codex already installed
+ki-recap for chatgpt-codex already installed
 `
     })
-    await expect(lstat(join(data, 'ki', 'harnesses'))).rejects.toThrow()
+    expect((await lstat(join(data, 'ki', 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'skills'))).isSymbolicLink()).toBe(true)
     expect((await lstat(join(home, '.agents', 'skills', 'ki-bootstrap'))).isSymbolicLink()).toBe(true)
     expect(await readFile(join(root, 'config', 'ki', 'config.toml'), 'utf8')).toBe(
       `schema = 1
@@ -382,6 +388,7 @@ ids = [
 
 [harnesses]
 ids = [
+  "knowledgeislands/ki-agentic-harness",
 ]
 
 [skills]

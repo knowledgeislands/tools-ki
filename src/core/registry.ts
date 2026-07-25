@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
-import { dirname, join, relative } from 'node:path'
+import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises'
+import { dirname, join, relative, resolve } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { parse } from 'smol-toml'
 import { KiError } from './errors.ts'
@@ -308,6 +308,80 @@ export const installCanonicalHarness = async (
   fetcher: Fetcher = fetch
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
   installHarness(configurationDirectory, dataDirectory, baseHarnessIdentifier, fetcher)
+
+const canonicalHarnessDirectory = (dataDirectory: string): string =>
+  join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
+
+const localPayloadDirectory = async (local: string, payload: (typeof payloadRoots)[number]): Promise<string> => {
+  const source = resolve(local, payload)
+  await physicalDirectory(source, `local harness ${payload} directory`)
+  return realpath(source)
+}
+
+export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, local: string): Promise<string> => {
+  const harness = await realpath(resolve(local)).catch(() => undefined)
+  if (!harness) throw new KiError('local harness must be a directory', 1)
+  await physicalDirectory(harness, 'local harness')
+  const sources = new Map(
+    await Promise.all(payloadRoots.map(async (payload) => [payload, await localPayloadDirectory(harness, payload)] as const))
+  )
+  const destination = canonicalHarnessDirectory(dataDirectory)
+  await ensureDirectory(join(dataDirectory, 'harnesses'), 'installed harnesses directory')
+  await ensureDirectory(dirname(destination), 'installed harness owner knowledgeislands')
+  const state = await lstat(destination).catch(() => undefined)
+  if (!state) await mkdir(destination)
+  await physicalDirectory(destination, `installed harness ${baseHarnessIdentifier}`)
+  const entries = await readdir(destination, { withFileTypes: true })
+  if (
+    entries.some(
+      (entry) => !payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) || (!entry.isDirectory() && !entry.isSymbolicLink())
+    )
+  ) {
+    throw new KiError(`installed harness ${baseHarnessIdentifier} has unrecognised state`, 1)
+  }
+  for (const payload of payloadRoots) {
+    const target = join(destination, payload)
+    const targetState = await lstat(target).catch(() => undefined)
+    const source = sources.get(payload)
+    if (!source) throw new KiError(`local harness must provide ${payload}`, 1)
+    if (targetState?.isSymbolicLink()) {
+      const actual = await realpath(target).catch(() => undefined)
+      if (actual !== source) throw new KiError(`installed harness ${baseHarnessIdentifier} ${payload} link is unfamiliar`, 1)
+      continue
+    }
+    if (targetState) await rm(target, { recursive: true })
+    await symlink(source, target, 'dir')
+  }
+  return harness
+}
+
+const canonicalDevelopmentProjection = async (dataDirectory: string): Promise<boolean> => {
+  const destination = canonicalHarnessDirectory(dataDirectory)
+  const state = await lstat(destination).catch(() => undefined)
+  if (!state) return false
+  await physicalDirectory(destination, `installed harness ${baseHarnessIdentifier}`)
+  const entries = await readdir(destination, { withFileTypes: true })
+  return (
+    entries.length === payloadRoots.length &&
+    entries.every((entry) => payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) && entry.isSymbolicLink())
+  )
+}
+
+export const disableCanonicalHarnessDevelopment = async (dataDirectory: string): Promise<boolean> => {
+  const destination = canonicalHarnessDirectory(dataDirectory)
+  if (!(await canonicalDevelopmentProjection(dataDirectory))) return false
+  await rm(destination, { recursive: true })
+  return true
+}
+
+export const restoreCanonicalHarness = async (
+  configurationDirectory: string,
+  dataDirectory: string,
+  fetcher: Fetcher = fetch
+): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> => {
+  await disableCanonicalHarnessDevelopment(dataDirectory)
+  return installCanonicalHarness(configurationDirectory, dataDirectory, fetcher)
+}
 
 export const uninstallHarness = async (
   dataDirectory: string,

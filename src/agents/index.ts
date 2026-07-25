@@ -1,4 +1,4 @@
-import { lstat, mkdir, readdir, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readFile, realpath, symlink, unlink, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../core/errors.ts'
@@ -277,7 +277,7 @@ const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAg
   return agents
 }
 
-const installManagedUserSkill = async (agent: InstalledAgent, skill: ManagedUserSkill): Promise<boolean> => {
+const installManagedUserSkill = async (agent: InstalledAgent, skill: ManagedUserSkill, replace = false): Promise<boolean> => {
   const agentHome = await requiredPhysicalDirectory(agent.home, `${agent.descriptor.id} user directory`)
   skillCapability(agent)
   const skills = join(agentHome, 'skills')
@@ -292,7 +292,13 @@ const installManagedUserSkill = async (agent: InstalledAgent, skill: ManagedUser
   }
   if (!targetState.isSymbolicLink()) throw new KiError(`${agent.descriptor.id} ${skill.name} skill is not KI-managed`, 1)
   const actual = await realpath(target).catch(() => undefined)
-  if (actual !== skill.source) throw new KiError(`${agent.descriptor.id} ${skill.name} skill points to an unfamiliar source`, 1)
+  const expected = await realpath(skill.source)
+  if (actual !== expected) {
+    if (!replace) throw new KiError(`${agent.descriptor.id} ${skill.name} skill points to an unfamiliar source`, 1)
+    await unlink(target)
+    await symlink(skill.source, target, 'dir')
+    return true
+  }
   return false
 }
 
@@ -439,11 +445,16 @@ const discoverManagedUserSkills = async (
 
 export const installBootstrapSkills = async (
   skills: readonly ManagedUserSkill[],
-  agents: readonly InstalledAgent[]
+  agents: readonly InstalledAgent[],
+  options: { readonly replace?: boolean } = {}
 ): Promise<readonly { readonly agent: InstalledAgent; readonly skill: string; readonly installed: boolean }[]> => {
   return Promise.all(
     agents.flatMap((agent) =>
-      skills.map(async (skill) => ({ agent, skill: skill.name, installed: await installManagedUserSkill(agent, skill) }))
+      skills.map(async (skill) => ({
+        agent,
+        skill: skill.name,
+        installed: await installManagedUserSkill(agent, skill, options.replace)
+      }))
     )
   )
 }

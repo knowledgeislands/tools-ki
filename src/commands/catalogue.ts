@@ -1,1 +1,12 @@
-export const rootCommandNames = ['acquire', 'bootstrap', 'completions', 'doctor', 'harness', 'help', 'paths', 'repo', 'version'] as const
+export const rootCommandNames = [
+  'acquire',
+  'bootstrap',
+  'completions',
+  'dev',
+  'doctor',
+  'harness',
+  'help',
+  'paths',
+  'repo',
+  'version'
+] as const

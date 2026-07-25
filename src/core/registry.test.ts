@@ -1,11 +1,19 @@
 import { createHash } from 'node:crypto'
-import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { afterEach, expect, test } from 'vitest'
 import { readInstalledHarness } from './harness.ts'
-import { canonicalHarnessRelease, installHarness, readHarnessRegistry, recordInstalledHarness, uninstallHarness } from './registry.ts'
+import {
+  canonicalHarnessRelease,
+  disableCanonicalHarnessDevelopment,
+  enableCanonicalHarnessDevelopment,
+  installHarness,
+  readHarnessRegistry,
+  recordInstalledHarness,
+  uninstallHarness
+} from './registry.ts'
 
 const temporaryDirectories: string[] = []
 
@@ -98,6 +106,30 @@ test('includes the immutable canonical harness without requiring user registry c
   const root = await temporaryDirectory()
 
   await expect(readHarnessRegistry(join(root, 'config', 'ki'))).resolves.toEqual([canonicalHarnessRelease])
+})
+
+test('switches only the canonical payload directories to and from a local development harness', async () => {
+  const root = await temporaryDirectory()
+  const data = join(root, 'data', 'ki')
+  const installed = join(data, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
+  const local = join(root, 'local-harness')
+  await Promise.all(
+    ['skills', 'agents', 'hooks'].flatMap((payload) => [
+      mkdir(join(installed, payload), { recursive: true }),
+      mkdir(join(local, payload), { recursive: true })
+    ])
+  )
+
+  expect(await enableCanonicalHarnessDevelopment(data, local)).toBe(await realpath(local))
+  for (const payload of ['skills', 'agents', 'hooks']) {
+    expect((await lstat(join(installed, payload))).isSymbolicLink()).toBe(true)
+    expect(await realpath(join(installed, payload))).toBe(await realpath(join(local, payload)))
+  }
+
+  expect(await disableCanonicalHarnessDevelopment(data)).toBe(true)
+  await expect(lstat(installed)).rejects.toThrow()
+  await expect(lstat(join(local, 'skills'))).resolves.toBeDefined()
+  expect(await disableCanonicalHarnessDevelopment(data)).toBe(false)
 })
 
 test('records successful harness installation and removal without discarding release evidence', async () => {

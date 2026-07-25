@@ -62,18 +62,26 @@ const frontmatterDependencies = (value: string | undefined, path: string): reado
   return dependencies
 }
 
-const enumeratePayloadFiles = async (root: string, directory: string): Promise<readonly string[]> => {
+const enumeratePayloadFiles = async (root: string, directory: string, externalPayload = false): Promise<readonly string[]> => {
   const path = join(root, directory)
   const state = await lstat(path).catch(() => undefined)
   if (!state) return []
-  const physicalDirectoryPath = await physicalDirectory(path, `installed harness payload ${directory}`)
-  if (!contained(root, physicalDirectoryPath)) throw new KiError(`installed harness payload ${directory} escapes the harness`, 1)
+  const linkedRoot = state.isSymbolicLink()
+  if (linkedRoot && directory.includes('/')) throw new KiError(`installed harness payload ${directory} must not be a symlink`, 1)
+  const physicalDirectoryPath = linkedRoot ? await realpath(path) : await physicalDirectory(path, `installed harness payload ${directory}`)
+  const physicalState = await lstat(physicalDirectoryPath).catch(() => undefined)
+  if (!physicalState?.isDirectory() || physicalState.isSymbolicLink()) {
+    throw new KiError(`installed harness payload ${directory} must be a directory`, 1)
+  }
+  if (!linkedRoot && !externalPayload && !contained(root, physicalDirectoryPath)) {
+    throw new KiError(`installed harness payload ${directory} escapes the harness`, 1)
+  }
   const entries = await readdir(physicalDirectoryPath, { withFileTypes: true })
   const files: string[] = []
   for (const entry of entries) {
     const relativePath = `${directory}/${entry.name}`
     if (entry.isSymbolicLink()) throw new KiError(`installed harness payload ${relativePath} must not be a symlink`, 1)
-    if (entry.isDirectory()) files.push(...(await enumeratePayloadFiles(root, relativePath)))
+    if (entry.isDirectory()) files.push(...(await enumeratePayloadFiles(root, relativePath, externalPayload || linkedRoot)))
     else if (entry.isFile()) files.push(relativePath)
     else throw new KiError(`installed harness payload ${relativePath} must be a regular file or directory`, 1)
   }

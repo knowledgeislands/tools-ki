@@ -20,8 +20,12 @@ ki \- Knowledge Islands command-line interface
 .B ki version
 .br
 .B ki bootstrap
-.RI [ --local " path" ]
 .RI [ --refresh ]
+.br
+.B ki dev on
+.I local-harness-path
+.br
+.B ki dev off
 .br
 .B ki acquire chatgpt import
 .I capture-directory
@@ -90,7 +94,7 @@ Print the CLI version, whether the executable is a regular installation or a
 development link, and the resolved XDG paths.
 It also inspects the user-level
 .IR config.toml
-for configured agents, harnesses, skills, a local bootstrap source, unknown
+for configured agents, harnesses, skills, a local development source, unknown
 keys, and invalid values.
 It makes no changes.
 Pass
@@ -116,12 +120,26 @@ configuration is reused without replacement. Pass
 .B --refresh
 to redetect every supported runtime and rebuild the user configuration's
 agents, installed harnesses, and KI-managed user skill links.
-Pass
-.B --local
-with a local harness checkout path to validate and link those core user skills
-directly. The checkout must contain
-.IR skills/keystone/ki-bootstrap/SKILL.md ;
-that explicit local mode does not install or modify the canonical harness.
+.TP
+.B ki dev on Ilocal-harness-pathR
+Switch the canonical harness to a local checkout for development. The checkout
+must contain the core bootstrap skill at
+.IR skills/keystone/ki-bootstrap/SKILL.md
+and physical
+.IR skills ,
+.IR agents ,
+and
+.IR hooks
+payload directories. KI replaces only the canonical harness's managed payload
+directories with links to that checkout, records the local path in
+.BR [local].path ,
+and repoints the five core user skills.
+.TP
+.B ki dev off
+Remove that recognised local payload projection, reinstall the verified
+canonical archive, clear
+.BR [local].path ,
+and repoint the five core user skills to the restored archive.
 .TP
 .B *ki update
 Update the executable and refresh installed harnesses.
