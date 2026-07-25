@@ -9,7 +9,7 @@ describe('ki skill', () => {
   const bootstrapClaudeCode = async (box: Sandbox): Promise<void> => {
     await box.home.mkdir('.claude')
     await box.installBootstrapHarness()
-    await box.installHarness()
+    await box.installExampleHarness()
     await box.run(['bootstrap'])
   }
 

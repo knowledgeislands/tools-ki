@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
@@ -32,6 +32,9 @@ export interface SandboxArea {
   readonly write: (relativePath: string, content: string) => Promise<void>
   readonly read: (relativePath: string) => Promise<string>
   readonly mkdir: (relativePath: string) => Promise<void>
+  readonly resolve: (relativePath: string) => string
+  readonly realpath: (relativePath: string) => Promise<string>
+  readonly isSymlink: (relativePath: string) => Promise<boolean>
 }
 
 const area = (path: string): SandboxArea => ({
@@ -44,7 +47,10 @@ const area = (path: string): SandboxArea => ({
   read: (relativePath) => readFile(join(path, relativePath), 'utf8'),
   mkdir: async (relativePath) => {
     await mkdir(join(path, relativePath), { recursive: true })
-  }
+  },
+  resolve: (relativePath) => join(path, relativePath),
+  realpath: (relativePath) => realpath(join(path, relativePath)),
+  isSymlink: async (relativePath) => (await lstat(join(path, relativePath))).isSymbolicLink()
 })
 
 export interface Sandbox {
@@ -55,7 +61,7 @@ export interface Sandbox {
   readonly project: SandboxArea
   readonly env: Record<string, string>
   readonly repo: typeof repositoryFixtures
-  readonly installHarness: (auditSource?: string, conformSource?: string) => Promise<void>
+  readonly installExampleHarness: (skill?: { readonly audit?: string; readonly conform?: string }) => Promise<void>
   readonly installBootstrapHarness: () => Promise<void>
   readonly run: (
     arguments_: string[],
@@ -88,12 +94,12 @@ const create = async (): Promise<Sandbox> => {
   // A single generic `example/harness` with one `ki-example` skill, whose
   // audit/conform native script bodies the caller supplies. Used to exercise the
   // repo/harness/skill commands against arbitrary skill behavior.
-  const installHarness = async (auditSource?: string, conformSource?: string): Promise<void> => {
+  const installExampleHarness = async ({ audit, conform }: { audit?: string; conform?: string } = {}): Promise<void> => {
     const base = 'ki/harnesses/example/harness/skills/ki-example'
     await data.write(`${base}/SKILL.md`, '---\nname: ki-example\nki-depends-on: []\n---\n')
     const operations = [
-      auditSource ? { mode: 'audit', source: auditSource } : undefined,
-      conformSource ? { mode: 'conform', source: conformSource } : undefined
+      audit ? { mode: 'audit', source: audit } : undefined,
+      conform ? { mode: 'conform', source: conform } : undefined
     ].filter((operation): operation is { readonly mode: string; readonly source: string } => operation !== undefined)
     await Promise.all(operations.map((operation) => data.write(`${base}/scripts/native/${operation.mode}.mjs`, operation.source)))
   }
@@ -150,7 +156,7 @@ const create = async (): Promise<Sandbox> => {
     }
   }
 
-  return { root, home, config, data, project, env, repo: repositoryFixtures, installHarness, installBootstrapHarness, run, exec }
+  return { root, home, config, data, project, env, repo: repositoryFixtures, installExampleHarness, installBootstrapHarness, run, exec }
 }
 
 const cleanupAll = async (): Promise<void> => {

@@ -1,5 +1,3 @@
-import { mkdir, realpath, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './testkit.ts'
 
@@ -32,22 +30,19 @@ describe('ki diag', () => {
 
   test('resolves the ancestor KI repository from a nested working directory', async () => {
     const box = await sandbox()
-    const repository = join(box.home.path, 'repo')
-    const nested = join(repository, 'src', 'nested')
-    await mkdir(nested, { recursive: true })
-    await writeFile(join(repository, '.ki-config.toml'), '# repo\n')
+    await box.home.mkdir('repo/src/nested')
+    await box.home.write('repo/.ki-config.toml', '# repo\n')
 
-    const diag = await box.run(['diag'], {}, nested)
+    const diag = await box.run(['diag'], {}, box.home.resolve('repo/src/nested'))
 
-    expect(diag.output).toContain(`Repository    ${await realpath(repository)}`)
+    expect(diag.output).toContain(`Repository    ${await box.home.realpath('repo')}`)
   })
 
   test('reports no repository outside a KI repository', async () => {
     const box = await sandbox()
-    const workingDirectory = join(box.home.path, 'scratch')
-    await mkdir(workingDirectory, { recursive: true })
+    await box.home.mkdir('scratch')
 
-    const diag = await box.run(['diag'], {}, workingDirectory)
+    const diag = await box.run(['diag'], {}, box.home.resolve('scratch'))
 
     expect(diag.output).toContain('Repository    none')
   })

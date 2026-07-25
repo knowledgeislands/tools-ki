@@ -8,9 +8,9 @@ describe('ki repo', () => {
     test("runs only a declared skill's registered native audit operation", async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
-      await box.installHarness(
-        'export const audit = async ({ capability }) => [{ level: "info", code: "EXAMPLE-1", message: capability.identity }]\n'
-      )
+      await box.installExampleHarness({
+        audit: 'export const audit = async ({ capability }) => [{ level: "info", code: "EXAMPLE-1", message: capability.identity }]\n'
+      })
 
       const result = await box.run(['repo', 'audit', '--skill', 'ki-example'])
 
@@ -23,10 +23,11 @@ describe('ki repo', () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.project.write('governed.txt', 'before\n')
-      await box.installHarness(
-        'import { readFile } from "node:fs/promises"\nexport const audit = async ({ repository }) => (await readFile(repository + "/governed.txt", "utf8")) === "after\\n" ? [] : [{ level: "fail", code: "EXAMPLE-1", message: "not conformed" }]\n',
-        'export const conform = async () => ({ findings: [], writes: [{ path: "governed.txt", content: "after\\n" }] })\n'
-      )
+      await box.installExampleHarness({
+        audit:
+          'import { readFile } from "node:fs/promises"\nexport const audit = async ({ repository }) => (await readFile(repository + "/governed.txt", "utf8")) === "after\\n" ? [] : [{ level: "fail", code: "EXAMPLE-1", message: "not conformed" }]\n',
+        conform: 'export const conform = async () => ({ findings: [], writes: [{ path: "governed.txt", content: "after\\n" }] })\n'
+      })
 
       const dryRun = await box.run(['repo', 'conform', '--dry-run'])
       expect(dryRun).toEqual({ exitCode: 0, output: 'would write governed.txt\n' })
