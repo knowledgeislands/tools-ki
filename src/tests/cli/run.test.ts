@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import { run as runCli } from './cli.ts'
-import type { KiContext } from './context.ts'
+import { run as runCli } from '../../cli.ts'
+import type { KiContext } from '../../context.ts'
 
 // The one branch of run() the sandbox cannot reach: its in-memory streams never fail,
 // so an unexpected (non-KiError, non-Commander) error can only be provoked by handing

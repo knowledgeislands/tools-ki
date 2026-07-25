@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto'
 import { lstat, mkdir, readFile, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { isSafeRelativePath } from '../../commands/acquire.ts'
 import { makeCapture } from './_chatgpt_helper.ts'
 import { type CommandResult, sandbox } from './_cli_helper.ts'
 
@@ -21,16 +20,6 @@ vi.mock('node:fs/promises', async (importOriginal) => {
 
 afterEach(() => {
   writeFailure.enabled = false
-})
-
-describe('source path safety', () => {
-  test('keeps source path validation strict for direct consumers', () => {
-    expect(isSafeRelativePath('')).toBe(false)
-    expect(isSafeRelativePath('/absolute')).toBe(false)
-    expect(isSafeRelativePath('nested//path')).toBe(false)
-    expect(isSafeRelativePath('nested/../path')).toBe(false)
-    expect(isSafeRelativePath('nested/file.txt')).toBe(true)
-  })
 })
 
 describe('[ki acquire chatgpt import]', () => {

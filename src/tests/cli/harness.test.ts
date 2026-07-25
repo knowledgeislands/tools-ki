@@ -1,4 +1,5 @@
-import { lstat, mkdir, symlink, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { lstat, mkdir, readFile, symlink, writeFile } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { makeHarnessArchive } from './_archive_helper.ts'
 import { sandbox } from './_cli_helper.ts'
@@ -36,15 +37,43 @@ describe('[ki harness]', () => {
   })
 
   describe('[ki harness uninstall]', () => {
-    test('removes one non-base harness, honoring a dry run first', async () => {
+    test('removes one non-base harness, honoring a dry run first, and un-records it', async () => {
       const box = await sandbox()
+      await mkdir(`${box.config.path}/ki`, { recursive: true })
+      await writeFile(
+        `${box.config.path}/ki/config.toml`,
+        ['schema = 1', '', '[harnesses]', 'ids = [', '  "example/harness",', ']', 'releases = []', ''].join('\n')
+      )
       await box.setupExampleHarness()
       const dryRun = await box.run('ki harness uninstall example/harness --dry-run')
       const removed = await box.run('ki harness uninstall example/harness')
+      const config = await box.config.read('ki/config.toml')
 
       expect(dryRun.output).toContain('would uninstall example/harness')
       expect(removed.output).toContain('uninstalled example/harness')
       await expect(lstat(`${box.data.path}/ki/harnesses/example/harness`)).rejects.toThrow()
+      expect(config).toContain('[harnesses]\nids = [\n]\nreleases = []')
+    })
+
+    test('refuses to uninstall the required base harness', async () => {
+      const box = await sandbox()
+      await box.setupCanonicalHarness()
+      const result = await box.run('ki harness uninstall knowledgeislands/ki-agentic-harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('cannot be uninstalled')
+    })
+
+    test('refuses to remove an installed harness with unrecognised state, preserving it', async () => {
+      const box = await sandbox()
+      await box.setupExampleHarness()
+      await box.data.write('ki/harnesses/example/harness/notes.txt', 'preserve me\n')
+
+      const result = await box.run('ki harness uninstall example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('has unrecognised state')
+      await expect(readFile(`${box.data.path}/ki/harnesses/example/harness/notes.txt`, 'utf8')).resolves.toBe('preserve me\n')
     })
   })
 
@@ -71,10 +100,16 @@ releases = [
       expect(config).toContain(expectedHarnessesSection)
     })
 
-    test('downloads, verifies, and extracts a configured harness from a stubbed fetcher', async () => {
+    test('downloads, verifies, and extracts only the owner/repo payload of a configured harness', async () => {
       const box = await sandbox()
       const skill = '---\nname: ki-example\nki-depends-on: []\n---\n'
-      const { payload, sha256 } = makeHarnessArchive({ 'skills/ki-example/SKILL.md': skill })
+      const { payload, sha256 } = makeHarnessArchive({
+        'source-revision/docs/ignored.md': '# source documentation\n',
+        'source-revision/package.json': '{"private":true}\n',
+        'source-revision/skills/ki-example/SKILL.md': skill,
+        'source-revision/subagents/example.md': '# agent\n',
+        'source-revision/hooks/example.sh': '#!/bin/sh\n'
+      })
       await box.config.write(
         'ki/config.toml',
         `[harnesses]
@@ -89,6 +124,159 @@ releases = [
 
       expect(installed).toEqual({ exitCode: 0, output: `installed example/harness\tarchive ${sha256}\n` })
       expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)
+      await expect(lstat(`${box.data.path}/ki/harnesses/example/harness/docs`)).rejects.toThrow()
+      await expect(lstat(`${box.data.path}/ki/harnesses/example/harness/package.json`)).rejects.toThrow()
+    })
+
+    test('resolves the immutable canonical harness from the registry without user configuration', async () => {
+      const box = await sandbox()
+      const { payload } = makeHarnessArchive({ 'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' })
+      box.setFetcher(async () => new Response(payload))
+
+      const result = await box.run('ki harness install knowledgeislands/ki-agentic-harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('does not match its SHA-256')
+      await expect(lstat(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`)).rejects.toThrow()
+    })
+
+    test('drops only legacy vendored links from the selected payload', async () => {
+      const box = await sandbox()
+      const { payload, sha256 } = makeHarnessArchive({
+        'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n',
+        'skills/ki-example/scripts/vendored/legacy.ts': { type: '2' }
+      })
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]
+releases = [
+  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" },
+]
+`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const installed = await box.run('ki harness install example/harness')
+
+      expect(installed.exitCode).toBe(0)
+      await expect(lstat(`${box.data.path}/ki/harnesses/example/harness/skills/ki-example/scripts/vendored/legacy.ts`)).rejects.toThrow()
+    })
+
+    test('refuses links outside the legacy vendored payload', async () => {
+      const box = await sandbox()
+      const { payload, sha256 } = makeHarnessArchive({ 'skills/ki-example/SKILL.md': { type: '2' } })
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]
+releases = [
+  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" },
+]
+`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('may contain only regular files and directories')
+    })
+
+    test('refuses a non-ok download response', async () => {
+      const box = await sandbox()
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]
+releases = [
+  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'a'.repeat(64)}" },
+]
+`
+      )
+      box.setFetcher(async () => new Response(null, { status: 500 }))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('could not download configured harness example/harness: HTTP 500')
+    })
+
+    test('refuses a failed or redirected download', async () => {
+      const box = await sandbox()
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]
+releases = [
+  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'a'.repeat(64)}" },
+]
+`
+      )
+      box.setFetcher(async () => {
+        throw new Error('redirected')
+      })
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('could not download configured harness example/harness')
+    })
+
+    test('refuses a non-gzip archive', async () => {
+      const box = await sandbox()
+      const payload = new TextEncoder().encode('not a gzip archive')
+      const sha256 = createHash('sha256').update(payload).digest('hex')
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]
+releases = [
+  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" },
+]
+`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('must be a gzip-compressed tar archive')
+    })
+
+    test('refuses an archive entry with an unsafe path', async () => {
+      const box = await sandbox()
+      const { payload, sha256 } = makeHarnessArchive({ 'skills/../secret': 'x' })
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]
+releases = [
+  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" },
+]
+`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('harness archive contains an unsafe entry')
+    })
+
+    test('refuses an archive that does not match configured immutable evidence without creating an installation', async () => {
+      const box = await sandbox()
+      const { payload } = makeHarnessArchive({ 'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' })
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]
+releases = [
+  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${'0'.repeat(64)}" },
+]
+`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('does not match its SHA-256')
+      const info = await box.run('ki harness info example/harness')
+      expect(info.exitCode).toBe(1)
     })
   })
 

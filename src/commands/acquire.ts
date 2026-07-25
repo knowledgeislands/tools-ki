@@ -54,7 +54,7 @@ const physicalDirectory = async (path: string, label: string): Promise<string> =
   return realpath(path)
 }
 
-export const isSafeRelativePath = (path: string): boolean => {
+const isSafeRelativePath = (path: string): boolean => {
   if (!path || path.startsWith('/') || path.includes('//')) return false
   const segments = path.split('/')
   return segments.every((segment) => segment && segment !== '.' && segment !== '..' && /^[A-Za-z0-9._-]+$/.test(segment))
