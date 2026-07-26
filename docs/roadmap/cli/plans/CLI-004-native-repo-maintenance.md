@@ -29,7 +29,7 @@ blocked-by: —
 
 ### Tranche T1 — tools-ki bulk move (execution guidance)
 
-`tools-ki`-owned tranche handoff: versioned rubric-definition contract, generic host runtime, fixture package. T1.1–T1.3 are committed, so Codex may begin the first harness definition conversion; the canonical `ki dev on` proof remains gated on T1.2a and a regular-file harness development payload. Constraints are in the [incoming handoff](../../../../+/_HANDOFFS/ki-agentic-harness/CLI-004-compatible-harness-operation-constraints.md); harness inventory measured the generic engine at ~1,561 non-test lines (`rubric.ts` 156, `checker.ts` 594, `govern.ts` 180, `reporter.ts` 262, plus legacy `checker-reporter.ts` deliberately not ported).
+`tools-ki`-owned tranche handoff: versioned rubric-definition contract, generic host runtime, fixture package. T1.1–T1.3 and T1.2a are committed, so Codex may begin the first harness definition conversion; the canonical `ki dev on` proof remains gated on a regular-file harness development payload. Constraints are in the [incoming handoff](../../../../+/_HANDOFFS/ki-agentic-harness/CLI-004-compatible-harness-operation-constraints.md); harness inventory measured the generic engine at ~1,561 non-test lines (`rubric.ts` 156, `checker.ts` 594, `govern.ts` 180, `reporter.ts` 262, plus legacy `checker-reporter.ts` deliberately not ported).
 
 Contract decisions locked at T1.1:
 
@@ -41,11 +41,11 @@ Contract decisions locked at T1.1:
 | Unit | Scope | Model / effort | Status |
 | --- | --- | --- | --- |
 | T1.1 Contract | `src/core/rubric.ts` versioned types + loading convention (above) | Fable (main loop) | done |
-| T1.2 Runtime | Loader (contained Bun import), audit executor, host-owned conform transaction, rendering; replace `.mjs` operations, migrate CLI test fixtures | Sonnet 5 / high | done, subject to T1.2a |
-| T1.2a Transaction identity guard | Snapshot each repair target's regular-file identity and physical containment at preparation; revalidate identity as well as bytes before publication and before rollback. Prove same-byte inode replacement and rollback-target replacement are refused without overwriting the replacement. | Sonnet 5 / medium | pending — required before canonical-harness conform proof |
+| T1.2 Runtime | Loader (contained Bun import), audit executor, host-owned conform transaction, rendering; replace `.mjs` operations, migrate CLI test fixtures | Sonnet 5 / high | done |
+| T1.2a Transaction identity guard | Snapshot each repair target's regular-file identity and physical containment at preparation; revalidate identity as well as bytes before publication and before rollback. Prove same-byte inode replacement and rollback-target replacement are refused without overwriting the replacement. | Sonnet 5 / medium | done |
 | T1.3 Acceptance fixtures | Handoff's acceptance-evidence list as CLI tests: contained loading, dependency order, malformed/linked/altered/unavailable/duplicate providers, byte-identical dry run, concurrent-replacement refusal, rollback, re-audit | Sonnet 5 / medium | done |
 | T1.4 Nested-link materialisation | Step 5.4: materialise shared-module links as regular verified files at acquisition; never weaken or follow nested-link validation. This protects acquired payloads only, not a raw `ki dev on` checkout. | Sonnet 5 / medium | done |
-| T1.5 Proof against canonical payload | Steps 7.4/8.4 first passes + step 9.1 first clause via `ki dev on` linked harness | Sonnet 5 / medium | blocked on T1.2a, the first harness skill conversion (Codex, `ki-handoffs`), and removal or materialisation of nested links in the development payload |
+| T1.5 Proof against canonical payload | Steps 7.4/8.4 first passes + step 9.1 first clause via `ki dev on` linked harness | Sonnet 5 / medium | blocked on the first harness skill conversion (Codex, `ki-handoffs`) and removal or materialisation of nested links in the development payload |
 | T1.6 Surface alignment | Step 10 residuals touched by above | Haiku 4.5 / low | gated on T1.5 |
 | T1.7 Generic rubric publication | `ki skill rubric <name> [--write]`: drift check by default, publication only through a dev-linked payload; replaces every per-skill `scripts/rubric/publish.ts` | Sonnet 5 / medium | done (`65d288e`) |
 
