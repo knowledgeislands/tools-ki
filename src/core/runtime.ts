@@ -42,6 +42,13 @@ export interface SkillAuditResult {
   readonly items: readonly ItemAuditState[]
 }
 
+/** A validated rubric definition and its execution order, loaded once by the repository host. */
+export interface PreparedSkill {
+  readonly skill: ResolvedSkill
+  readonly definition: SkillRubricDefinition<unknown>
+  readonly items: readonly MechanicalRubricItem<unknown>[]
+}
+
 /** The static maintenance catalogue a declared skill exposes through `ki repo educate`. */
 export interface SkillEducationResult {
   readonly identity: string
@@ -70,7 +77,8 @@ const validateOutcome = (value: unknown, code: string, index: number): AuditOutc
   if (status !== 'PASS' && status !== 'VIOLATION' && status !== 'NOT_APPLICABLE' && status !== 'INFO')
     throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid status`, 1)
   if (typeof message !== 'string' || !message) throw new KiError(`rubric item ${code} audit outcome ${index} must have a message`, 1)
-  if (subject !== undefined && typeof subject !== 'string') throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
+  if (subject !== undefined && typeof subject !== 'string')
+    throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
   return subject === undefined ? { status, message } : { status, message, subject }
 }
 
@@ -89,7 +97,8 @@ export const validateRepairProposal = (
     const { path, content, create } = write
     if (typeof path !== 'string' || typeof content !== 'string')
       throw new KiError(`rubric item ${code} repair write ${index} must have string path and content`, 1)
-    if (create !== undefined && typeof create !== 'boolean') throw new KiError(`rubric item ${code} repair write ${index} create must be boolean`, 1)
+    if (create !== undefined && typeof create !== 'boolean')
+      throw new KiError(`rubric item ${code} repair write ${index} create must be boolean`, 1)
     return create ? { path, content, create } : { path, content }
   })
   const validatedCommands = commands.map((command, index) => {
@@ -148,8 +157,17 @@ interface InternalAudit {
   readonly scope: RubricScope
 }
 
-const auditSkill = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<InternalAudit> => {
+export const prepareSkill = async (skill: ResolvedSkill): Promise<PreparedSkill> => {
   const definition = await loadRubricDefinition(skill)
+  return { skill, definition, items: orderedMechanicalItems(definition) }
+}
+
+const auditSkill = async (
+  scope: RuntimeScope,
+  prepared: PreparedSkill,
+  onItemComplete?: (item: MechanicalRubricItem<unknown>) => void
+): Promise<InternalAudit> => {
+  const { skill, definition, items: plannedItems } = prepared
   const definitionScope: RubricScope = definition.scope ?? { kind: 'repository' }
   if (definitionScope.kind === 'user-home') {
     const state = await lstat(scope.userHome).catch(() => undefined)
@@ -161,7 +179,11 @@ const auditSkill = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<In
     userHome: scope.userHome,
     configuration: skill.declaration.configuration
   })
-  const items = await Promise.all(orderedMechanicalItems(definition).map((item) => auditItem(item, context)))
+  const items: ItemAuditState[] = []
+  for (const item of plannedItems) {
+    items.push(await auditItem(item, context))
+    onItemComplete?.(item)
+  }
   const findings = items.flatMap((state) =>
     state.outcomes.flatMap((outcome) => {
       const finding = findingForOutcome(state.item, outcome)
@@ -171,15 +193,18 @@ const auditSkill = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<In
   return { context, items, findings, scope: definitionScope }
 }
 
-export const runSkillAudit = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<SkillAuditResult> => {
-  const { items, findings } = await auditSkill(scope, skill)
+export const runSkillAudit = async (
+  scope: RuntimeScope,
+  prepared: PreparedSkill,
+  onItemComplete?: (item: MechanicalRubricItem<unknown>) => void
+): Promise<SkillAuditResult> => {
+  const { items, findings } = await auditSkill(scope, prepared, onItemComplete)
   return { findings, items }
 }
 
 /** Loads a declared skill's validated rubric catalogue without constructing evidence or executing an item. */
-export const educateSkill = async (skill: ResolvedSkill): Promise<SkillEducationResult> => {
-  const definition = await loadRubricDefinition(skill)
-  return { identity: skill.identity, families: definition.families }
+export const educateSkill = async (prepared: PreparedSkill): Promise<SkillEducationResult> => {
+  return { identity: prepared.skill.identity, families: prepared.definition.families }
 }
 
 // A violated item that declares a repair is only actually "fixed this round" once its
@@ -194,8 +219,12 @@ const attemptRepair = async (
   return repair.writes.length || repair.commands.length ? repair : undefined
 }
 
-export const runSkillConform = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<SkillConformResult> => {
-  const { context, items, scope: definitionScope } = await auditSkill(scope, skill)
+export const runSkillConform = async (
+  scope: RuntimeScope,
+  prepared: PreparedSkill,
+  onItemComplete?: (item: MechanicalRubricItem<unknown>) => void
+): Promise<SkillConformResult> => {
+  const { context, items, scope: definitionScope } = await auditSkill(scope, prepared, onItemComplete)
   const attempts = await Promise.all(items.map((state) => attemptRepair(state, context)))
 
   const findings: NativeFinding[] = []

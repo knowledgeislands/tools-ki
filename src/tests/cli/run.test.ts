@@ -16,7 +16,8 @@ describe('runCli()', () => {
       homeDirectory: '/unused',
       paths: { data: '/unused', config: '/unused', cache: '/unused', state: '/unused' },
       repository: null,
-      fetcher: () => Promise.reject(new Error('sandbox fetcher unused'))
+      fetcher: () => Promise.reject(new Error('sandbox fetcher unused')),
+      now: () => 0
     }
     await expect(runCli(['version'], context)).rejects.toThrow('unexpected output')
   })

@@ -22,7 +22,9 @@ describe('[ki repo]', () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
-        rubric: rubric(`[{\n          code: 'F', title: 'Family',\n          items: [\n            { kind: 'judgment', code: 'J-1', title: 'Judgment', prompt: 'Review the design.' },\n            { kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',\n              audit: async () => { throw new Error('educate must not execute items') } }\n          ]\n        }]`)
+        rubric: rubric(
+          `[{\n          code: 'F', title: 'Family',\n          items: [\n            { kind: 'judgment', code: 'J-1', title: 'Judgment', prompt: 'Review the design.' },\n            { kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',\n              audit: async () => { throw new Error('educate must not execute items') } }\n          ]\n        }]`
+        )
       })
 
       const result = await box.run('ki repo educate --skill ki-example')
@@ -74,17 +76,54 @@ describe('[ki repo]', () => {
       expect(result).toEqual({ exitCode: 0, output: 'ki repo audit: clean (1 skills)\n' })
     })
 
-    test('renders an interactive stderr progress bar without changing non-interactive output', async () => {
+    test('renders per-rubric progress with bounded three-column TTY status without changing non-interactive output', async () => {
       const box = await sandbox()
-      await box.project.write('.ki-config.toml', '[ki-example]\n')
-      await box.setupExampleHarness({ rubric: rubric('[]') })
-
-      const result = await box.run('ki repo audit', { interactive: true })
-
-      expect(result).toEqual({
-        exitCode: 0,
-        output: '\rki repo audit: [--------------------] 0/1\rki repo audit: [####################] 1/1\nki repo audit: clean (1 skills)\n'
+      await box.project.write('.ki-config.toml', '[ki-example]\n[ki-extra]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [
+          { kind: 'mechanical', code: 'EXAMPLE-1', title: 'First', level: 'FAIL', phase: 'PRIMARY', audit: async () => [] },
+          { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Second', level: 'FAIL', phase: 'DERIVED', audit: async () => [] }
+        ] }]`)
       })
+      await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
+      await box.data.write(
+        'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/index.ts',
+        rubric(
+          `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXTRA-1', title: 'Extra', level: 'FAIL', phase: 'PRIMARY', audit: async () => [] }] }]`,
+          'ki-extra'
+        )
+      )
+      const times = [0, 0, 1_250, 1_500]
+      const now = (): number => times.shift() ?? 1_500
+
+      const result = await box.run('ki repo audit', { interactive: true, now })
+      const [progressOutput = '', standardOutput] = result.output.split('ki repo audit: clean (2 skills)\n')
+      const frames = progressOutput
+        .replace(/\n$/, '')
+        .split('\r\x1b[2K')
+        .filter(Boolean)
+        .map((frame) => frame.replace('\n', ''))
+
+      expect(result.exitCode).toBe(0)
+      expect(standardOutput).toBe('')
+      expect(frames.map((frame) => frame.trimEnd())).toEqual([
+        'AUDIT      [>...............................] 0.0s loading 0/2 definitions',
+        'AUDIT      [>...............................] 1.3s loading 1/2 definitions',
+        'AUDIT      [>...............................] 1.5s loading 2/2 definitions',
+        'AUDIT      [................................] 0/3 0% starting',
+        'AUDIT      [##########......................] 1/3 33% ki-example EXAMPLE-1',
+        'AUDIT      [#####################...........] 2/3 67% ki-example EXAMPLE-2',
+        'AUDIT      [################################] 3/3 100% ki-extra EXTRA-1',
+        'AUDIT      [################################] 3/3 100% complete'
+      ])
+      expect(frames.every((frame) => frame.length === 80)).toBe(true)
+
+      const wide = await box.run('ki repo audit', { interactive: true, columns: 240, now: () => 0 })
+      const firstBar = wide.output.match(/\[(>[^\]]*)\]/)?.[1]
+      expect(firstBar).toHaveLength(98)
+
+      const nonInteractive = await box.run('ki repo audit')
+      expect(nonInteractive).toEqual({ exitCode: 0, output: 'ki repo audit: clean (2 skills)\n' })
     })
 
     test('rejects a repository configuration that is not valid TOML', async () => {
@@ -824,7 +863,10 @@ describe('[ki repo]', () => {
     test('orders mechanical items across families by phase, then family, then item position', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
-      const item = (code: string, phase: string) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
+      const item = (
+        code: string,
+        phase: string
+      ) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
         audit: async () => [{ status: 'INFO', message: '${code}' }] }`
       await box.setupExampleHarness({
         rubric: rubric(`[
@@ -1022,7 +1064,10 @@ describe('[ki repo]', () => {
   })
 
   describe('skill resolution', () => {
-    const installSkillsHarness = async (data: SandboxArea, specs: readonly { readonly name: string; readonly deps: readonly string[] }[]): Promise<void> => {
+    const installSkillsHarness = async (
+      data: SandboxArea,
+      specs: readonly { readonly name: string; readonly deps: readonly string[] }[]
+    ): Promise<void> => {
       for (const { name, deps } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
         const list = `[${deps.join(', ')}]`

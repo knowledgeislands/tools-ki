@@ -16,6 +16,8 @@ export interface KiContext {
   readonly paths: KiPaths
   readonly repository: RepositoryLocation | null
   readonly fetcher: Fetcher
+  /** Injectable wall clock for user-facing elapsed-time reporting. */
+  readonly now: () => number
 }
 
 export interface ContextOptions {
@@ -25,6 +27,7 @@ export interface ContextOptions {
   readonly workingDirectory: string
   readonly environment: Environment
   readonly fetcher?: Fetcher
+  readonly now?: () => number
 }
 
 export const createContext = async (options: ContextOptions): Promise<KiContext> => {
@@ -39,6 +42,7 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
     homeDirectory,
     paths: resolveKiPaths(options.environment),
     repository: await discoverRepository(workingDirectory, homeDirectory),
-    fetcher: options.fetcher ?? fetch
+    fetcher: options.fetcher ?? fetch,
+    now: options.now ?? Date.now
   }
 }

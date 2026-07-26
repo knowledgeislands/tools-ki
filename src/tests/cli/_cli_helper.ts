@@ -103,7 +103,8 @@ const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<v
   }
 }
 
-const setupCanonicalHarness = (data: SandboxArea): Promise<void> => writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
+const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
+  writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
 
 // The same fixture, but written under an arbitrary local directory rather than the
 // installed-harness data root — for exercising `ki dev on <path>` against a local
@@ -129,7 +130,10 @@ export interface Sandbox {
   readonly setEnv: (environment: Record<string, string | undefined>) => void
   readonly setFetcher: (fetcher: Fetcher) => void
   readonly cd: (relativePath: string) => void
-  readonly run: (command: string, options?: { readonly interactive?: boolean }) => Promise<CommandResult>
+  readonly run: (
+    command: string,
+    options?: { readonly interactive?: boolean; readonly columns?: number; readonly now?: () => number }
+  ) => Promise<CommandResult>
 }
 
 const create = async (): Promise<Sandbox> => {
@@ -169,18 +173,22 @@ const create = async (): Promise<Sandbox> => {
   // sandbox currently is, so repeated calls compose. Commands are written exactly
   // as typed at a shell, `ki ...`, so the literal command a test asserts against is
   // unambiguous at the call site.
-  const run = async (command: string, options?: { readonly interactive?: boolean }): Promise<CommandResult> => {
+  const run = async (
+    command: string,
+    options?: { readonly interactive?: boolean; readonly columns?: number; readonly now?: () => number }
+  ): Promise<CommandResult> => {
     let output = ''
     const write = (chunk: string): void => {
       output += chunk
     }
     const context = await createContext({
       stdout: { write },
-      stderr: { write, isTTY: options?.interactive },
+      stderr: { write, isTTY: options?.interactive, columns: options?.columns },
       executable: executablePath,
       workingDirectory,
       environment: { ...env, ...environmentOverrides, _: executablePath },
-      fetcher: (input, init) => fetcher(input, init)
+      fetcher: (input, init) => fetcher(input, init),
+      now: options?.now
     })
     const tokens = command.split(' ').filter(Boolean)
     if (tokens[0] !== 'ki') throw new Error(`sandbox run() commands must start with "ki": ${command}`)
