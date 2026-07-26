@@ -83,7 +83,17 @@ export default {
   contract: 1,
   name: 'ki-example',
   concern: 'transaction safety',
-  createContext: async ({ repository }) => ({ repository }),
+  createSession: async ({ repository }) => {
+    const proposals = []
+    const context = { repository, propose: (proposal) => proposals.push(proposal) }
+    return {
+      subjects: [{ families: ${families}.map(({ code }) => code), context: () => context }],
+      proposal: () => ({
+        writes: proposals.flatMap(({ writes = [] }) => writes),
+        commands: proposals.flatMap(({ commands = [] }) => commands)
+      })
+    }
+  },
   families: ${families}
 }
 `
@@ -93,7 +103,10 @@ const governedItem = (path: string, code: string, content: string) => `{
   mechanical: {
     level: 'FAIL',
     audit: { phase: 'PRIMARY', run: async () => [{ status: 'VIOLATION', message: 'not conformed' }] },
-    conform: { phase: 'PRIMARY', run: async () => ({ writes: [{ path: '${path}', content: '${content}' }] }) }
+    conform: {
+      phase: 'PRIMARY',
+      run: async (context) => { context.propose({ writes: [{ path: '${path}', content: '${content}' }] }) }
+    }
   }
 }`
 

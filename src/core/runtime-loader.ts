@@ -148,12 +148,12 @@ export const loadRubricDefinition = async (skill: ResolvedSkill): Promise<SkillR
   }
   const candidate = module[RUBRIC_MODULE_EXPORT]
   if (!isRecord(candidate)) throw new KiError(`${skill.identity} rubric catalogue default export is not a table`, 1)
-  const { contract, name, concern, scope, createContext, families } = candidate
+  const { contract, name, concern, scope, createSession, families } = candidate
   if (contract !== RUBRIC_CONTRACT_VERSION) throw new KiError(`${skill.identity} rubric catalogue has an unsupported contract version`, 1)
   if (name !== skill.capability.name)
     throw new KiError(`${skill.identity} rubric catalogue name does not match the installed capability`, 1)
   if (!nonEmptyString(concern)) throw new KiError(`${skill.identity} rubric catalogue must name its concern`, 1)
-  if (typeof createContext !== 'function') throw new KiError(`${skill.identity} rubric catalogue must have a createContext function`, 1)
+  if (typeof createSession !== 'function') throw new KiError(`${skill.identity} rubric catalogue must have a createSession function`, 1)
   if (!Array.isArray(families)) throw new KiError(`${skill.identity} rubric catalogue must have a families array`, 1)
   const seenFamilies = new Set<string>()
   const seenItems = new Set<string>()
@@ -162,7 +162,7 @@ export const loadRubricDefinition = async (skill: ResolvedSkill): Promise<SkillR
     name,
     concern,
     scope: validateScope(scope, skill.identity),
-    createContext: createContext as SkillRubricDefinition<unknown>['createContext'],
+    createSession: createSession as SkillRubricDefinition<unknown>['createSession'],
     families: families.map((family) => validateFamily(family, skill.identity, seenFamilies, seenItems))
   }
 }

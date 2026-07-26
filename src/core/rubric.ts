@@ -62,7 +62,7 @@ export interface MechanicalRubric<Context> {
   readonly overrideLevels?: readonly ViolationLevel[]
   readonly heuristic?: boolean
   readonly audit: RubricExecution<Context, readonly AuditOutcome[]>
-  readonly conform?: RubricExecution<Context, ConformProposal>
+  readonly conform?: RubricExecution<Context, void>
   readonly conformOn?: readonly 'INFO'[]
 }
 
@@ -89,9 +89,21 @@ export interface RubricFamily<RootContext, FamilyContext = unknown> {
 }
 
 export interface RubricContextOptions {
+  readonly mode: 'audit' | 'conform'
   readonly repository: string
   readonly userHome: string
   readonly configuration: Readonly<Record<string, unknown>>
+}
+
+export interface RubricSubject<RootContext> {
+  readonly context: () => Promise<RootContext> | RootContext
+  readonly families: readonly string[]
+  readonly subject?: string
+}
+
+export interface RubricSession<RootContext> {
+  readonly subjects: readonly RubricSubject<RootContext>[]
+  readonly proposal: () => Promise<ConformProposal> | ConformProposal
 }
 
 export interface SkillRubricDefinition<RootContext = unknown> {
@@ -99,8 +111,11 @@ export interface SkillRubricDefinition<RootContext = unknown> {
   readonly name: string
   readonly concern: string
   readonly scope?: RubricScope
-  /** Builds read-only root evidence; it must never write. */
-  readonly createContext: (options: RubricContextOptions) => Promise<RootContext> | RootContext
+  /**
+   * Builds one operation-scoped session. AUDIT callbacks remain read-only;
+   * CONFORM callbacks may change only the session's private in-memory draft.
+   */
+  readonly createSession: (options: RubricContextOptions) => Promise<RubricSession<RootContext>> | RubricSession<RootContext>
   readonly families: readonly RubricFamily<RootContext>[]
 }
 

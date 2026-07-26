@@ -13,6 +13,8 @@ import {
   type RubricFamily,
   type RubricItem,
   type RubricScope,
+  type RubricSession,
+  type RubricSubject,
   type SkillRubricDefinition
 } from './rubric.ts'
 import { loadRubricDefinition } from './runtime-loader.ts'
@@ -38,6 +40,12 @@ export interface Finding {
 
 export interface ItemAuditState {
   readonly item: PreparedRubricItem
+  readonly outcomes: readonly AuditOutcome[]
+  readonly subjects: readonly SubjectAuditState[]
+}
+
+export interface SubjectAuditState {
+  readonly subject: RubricSubject<unknown>
   readonly outcomes: readonly AuditOutcome[]
 }
 
@@ -88,6 +96,33 @@ export interface FixedItem {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
+const validateRubricSession = (value: unknown, definition: SkillRubricDefinition<unknown>, identity: string): RubricSession<unknown> => {
+  if (!isRecord(value)) throw new KiError(`${identity} rubric context must return a session table`, 1)
+  const { subjects, proposal } = value
+  if (!Array.isArray(subjects)) throw new KiError(`${identity} rubric session must contain a subjects array`, 1)
+  if (typeof proposal !== 'function') throw new KiError(`${identity} rubric session must provide a proposal function`, 1)
+  const familyCodes = new Set(definition.families.map(({ code }) => code))
+  const validatedSubjects = subjects.map((subject, index): RubricSubject<unknown> => {
+    if (!isRecord(subject)) throw new KiError(`${identity} rubric subject ${index} must be a table`, 1)
+    const { context, families, subject: label } = subject
+    if (typeof context !== 'function') throw new KiError(`${identity} rubric subject ${index} must provide a context function`, 1)
+    if (!Array.isArray(families) || families.some((family) => typeof family !== 'string' || !familyCodes.has(family)))
+      throw new KiError(`${identity} rubric subject ${index} families must name only declared rubric families`, 1)
+    if (new Set(families).size !== families.length) throw new KiError(`${identity} rubric subject ${index} repeats a family`, 1)
+    if (label !== undefined && typeof label !== 'string')
+      throw new KiError(`${identity} rubric subject ${index} has an invalid subject label`, 1)
+    return {
+      context: context as RubricSubject<unknown>['context'],
+      families: families as string[],
+      ...(label === undefined ? {} : { subject: label })
+    }
+  })
+  return {
+    subjects: validatedSubjects,
+    proposal: proposal as RubricSession<unknown>['proposal']
+  }
+}
+
 const validateOutcome = (value: unknown, item: PreparedRubricItem, index: number): AuditOutcome => {
   const { code, mechanical } = item.item
   if (!isRecord(value)) throw new KiError(`rubric item ${code} audit outcome ${index} must be a table`, 1)
@@ -114,28 +149,28 @@ const validProgram = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
 
 export const validateConformProposal = (
   value: unknown,
-  code: string
+  identity: string
 ): { readonly writes: readonly NativeWrite[]; readonly commands: readonly ConformCommand[] } => {
-  if (!isRecord(value)) throw new KiError(`rubric item ${code} conform must return a table`, 1)
+  if (!isRecord(value)) throw new KiError(`${identity} rubric session proposal must return a table`, 1)
   const { writes, commands = [] } = value
-  if (!Array.isArray(writes)) throw new KiError(`rubric item ${code} conform must return a writes array`, 1)
-  if (!Array.isArray(commands)) throw new KiError(`rubric item ${code} conform commands must be an array`, 1)
+  if (!Array.isArray(writes)) throw new KiError(`${identity} rubric session proposal must return a writes array`, 1)
+  if (!Array.isArray(commands)) throw new KiError(`${identity} rubric session proposal commands must be an array`, 1)
   const validatedWrites = writes.map((write, index) => {
-    if (!isRecord(write)) throw new KiError(`rubric item ${code} conform write ${index} must have string path and content`, 1)
+    if (!isRecord(write)) throw new KiError(`${identity} rubric session proposal write ${index} must have string path and content`, 1)
     const { path, content, create } = write
     if (typeof path !== 'string' || typeof content !== 'string')
-      throw new KiError(`rubric item ${code} conform write ${index} must have string path and content`, 1)
+      throw new KiError(`${identity} rubric session proposal write ${index} must have string path and content`, 1)
     if (create !== undefined && typeof create !== 'boolean')
-      throw new KiError(`rubric item ${code} conform write ${index} create must be boolean`, 1)
+      throw new KiError(`${identity} rubric session proposal write ${index} create must be boolean`, 1)
     return create ? { path, content, create } : { path, content }
   })
   const validatedCommands = commands.map((command, index) => {
-    if (!isRecord(command)) throw new KiError(`rubric item ${code} conform command ${index} must have a program and arguments`, 1)
+    if (!isRecord(command)) throw new KiError(`${identity} rubric session proposal command ${index} must have a program and arguments`, 1)
     const { program, arguments: arguments_ } = command
     if (typeof program !== 'string' || !validProgram.test(program) || !Array.isArray(arguments_))
-      throw new KiError(`rubric item ${code} conform command ${index} must have a program and arguments`, 1)
+      throw new KiError(`${identity} rubric session proposal command ${index} must have a program and arguments`, 1)
     if (arguments_.some((argument) => typeof argument !== 'string' || argument.includes('\0')))
-      throw new KiError(`rubric item ${code} conform command ${index} arguments must be strings without NUL bytes`, 1)
+      throw new KiError(`${identity} rubric session proposal command ${index} arguments must be strings without NUL bytes`, 1)
     return { program, arguments: arguments_ }
   })
   return { writes: validatedWrites, commands: validatedCommands }
@@ -182,15 +217,29 @@ const findingForOutcome = (prepared: PreparedRubricItem, outcome: AuditOutcome):
     : { level, code: item.code, title: item.title, message: outcome.message, subject: outcome.subject }
 }
 
-const auditItem = async (item: PreparedRubricItem, rootContext: unknown): Promise<ItemAuditState> => {
+const applicableSubjects = (session: RubricSession<unknown>, family: RubricFamily<unknown>): readonly RubricSubject<unknown>[] =>
+  session.subjects.filter((subject) => subject.families.includes(family.code))
+
+const auditSubject = async (item: PreparedRubricItem, subject: RubricSubject<unknown>): Promise<SubjectAuditState> => {
+  const rootContext = await subject.context()
   const context = await item.family.selectContext(rootContext)
   const raw = await item.item.mechanical.audit.run(context)
   if (!Array.isArray(raw)) throw new KiError(`rubric item ${item.code} audit must return an outcomes array`, 1)
-  return { item, outcomes: raw.map((outcome, index) => validateOutcome(outcome, item, index)) }
+  const outcomes = raw.map((outcome, index) => {
+    const validated = validateOutcome(outcome, item, index)
+    return validated.subject === undefined && subject.subject !== undefined ? { ...validated, subject: subject.subject } : validated
+  })
+  return { subject, outcomes }
+}
+
+const auditItem = async (item: PreparedRubricItem, session: RubricSession<unknown>): Promise<ItemAuditState> => {
+  const subjects: SubjectAuditState[] = []
+  for (const subject of applicableSubjects(session, item.family)) subjects.push(await auditSubject(item, subject))
+  return { item, subjects, outcomes: subjects.flatMap(({ outcomes }) => outcomes) }
 }
 
 interface InternalAudit {
-  readonly context: unknown
+  readonly session: RubricSession<unknown>
   readonly items: readonly ItemAuditState[]
   readonly findings: readonly Finding[]
   readonly scope: RubricScope
@@ -204,6 +253,7 @@ export const prepareSkill = async (skill: ResolvedSkill): Promise<PreparedSkill>
 const auditSkill = async (
   scope: RuntimeScope,
   prepared: PreparedSkill,
+  mode: 'audit' | 'conform',
   onItemComplete?: (item: PreparedRubricItem) => void
 ): Promise<InternalAudit> => {
   const { skill, definition, items: plannedItems } = prepared
@@ -213,14 +263,19 @@ const auditSkill = async (
     if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError('user home must be an existing physical directory', 1)
     scope = { ...scope, userHome: await realpath(scope.userHome) }
   }
-  const context = await definition.createContext({
-    repository: scope.repository,
-    userHome: scope.userHome,
-    configuration: skill.declaration.configuration
-  })
+  const session = validateRubricSession(
+    await definition.createSession({
+      mode,
+      repository: scope.repository,
+      userHome: scope.userHome,
+      configuration: skill.declaration.configuration
+    }),
+    definition,
+    skill.identity
+  )
   const items: ItemAuditState[] = []
   for (const item of plannedItems) {
-    items.push(await auditItem(item, context))
+    items.push(await auditItem(item, session))
     onItemComplete?.(item)
   }
   const findings = items.flatMap((state) =>
@@ -229,7 +284,7 @@ const auditSkill = async (
       return finding ? [finding] : []
     })
   )
-  return { context, items, findings, scope: definitionScope }
+  return { session, items, findings, scope: definitionScope }
 }
 
 export const runSkillAudit = async (
@@ -237,7 +292,7 @@ export const runSkillAudit = async (
   prepared: PreparedSkill,
   onItemComplete?: (item: PreparedRubricItem) => void
 ): Promise<SkillAuditResult> => {
-  const { items, findings } = await auditSkill(scope, prepared, onItemComplete)
+  const { items, findings } = await auditSkill(scope, prepared, 'audit', onItemComplete)
   return { findings, items }
 }
 
@@ -251,21 +306,21 @@ export const educateSkill = async (prepared: PreparedSkill): Promise<SkillEducat
   }
 }
 
-// A violated item that declares conform is only actually "fixed this round" once its
-// conform action proposes at least one write — an empty proposal means it had nothing safe to
-// change, so its violation still surfaces like any other unaddressed finding below.
-const attemptConform = async (
-  state: ItemAuditState,
-  rootContext: unknown
-): Promise<{ readonly writes: readonly NativeWrite[]; readonly commands: readonly ConformCommand[] } | undefined> => {
+const attemptConform = async (state: ItemAuditState): Promise<boolean> => {
   const { family, item } = state.item
-  const conformable = state.outcomes.some(
-    (outcome) => outcome.status === 'VIOLATION' || (outcome.status === 'INFO' && item.mechanical.conformOn?.includes('INFO'))
-  )
-  if (!item.mechanical.conform || !conformable) return undefined
-  const context = await family.selectContext(rootContext)
-  const proposal = validateConformProposal(await item.mechanical.conform.run(context), item.code)
-  return proposal.writes.length || proposal.commands.length ? proposal : undefined
+  if (!item.mechanical.conform) return false
+  let attempted = false
+  for (const audited of state.subjects) {
+    const conformable = audited.outcomes.some(
+      (outcome) => outcome.status === 'VIOLATION' || (outcome.status === 'INFO' && item.mechanical.conformOn?.includes('INFO'))
+    )
+    if (!conformable) continue
+    const rootContext = await audited.subject.context()
+    const context = await family.selectContext(rootContext)
+    await item.mechanical.conform.run(context)
+    attempted = true
+  }
+  return attempted
 }
 
 export const runSkillConform = async (
@@ -273,7 +328,7 @@ export const runSkillConform = async (
   prepared: PreparedSkill,
   onItemComplete?: (item: PreparedRubricItem) => void
 ): Promise<SkillConformResult> => {
-  const { context, items, scope: definitionScope } = await auditSkill(scope, prepared, onItemComplete)
+  const { session, items, scope: definitionScope } = await auditSkill(scope, prepared, 'conform', onItemComplete)
   const conformOrder = items
     .filter((state) => state.item.item.mechanical.conform)
     .slice()
@@ -285,18 +340,17 @@ export const runSkillConform = async (
       if (left.item.familyIndex !== right.item.familyIndex) return left.item.familyIndex - right.item.familyIndex
       return left.item.itemIndex - right.item.itemIndex
     })
-  const attempts = new Map<string, Awaited<ReturnType<typeof attemptConform>>>()
-  for (const state of conformOrder) attempts.set(state.item.code, await attemptConform(state, context))
+  const attempted = new Set<string>()
+  for (const state of conformOrder) if (await attemptConform(state)) attempted.add(state.item.code)
 
   const findings: Finding[] = []
-  const writes: NativeWrite[] = []
-  const commands: ConformCommand[] = []
   const fixable: ItemAuditState[] = []
+  const proposal = attempted.size
+    ? validateConformProposal(await session.proposal(), prepared.skill.identity)
+    : { writes: [] as readonly NativeWrite[], commands: [] as readonly ConformCommand[] }
+  const proposed = proposal.writes.length > 0 || proposal.commands.length > 0
   items.forEach((state) => {
-    const proposed = attempts.get(state.item.code)
-    if (proposed) {
-      writes.push(...proposed.writes)
-      commands.push(...proposed.commands)
+    if (proposed && attempted.has(state.item.code)) {
       fixable.push(state)
       return
     }
@@ -305,7 +359,7 @@ export const runSkillConform = async (
       if (finding) findings.push(finding)
     }
   })
-  return { findings, writes, commands, scope: definitionScope, fixable }
+  return { findings, writes: proposal.writes, commands: proposal.commands, scope: definitionScope, fixable }
 }
 
 /** Compares a conform's pre-conform violated items against a post-conform re-audit to name what got fixed. */

@@ -17,7 +17,12 @@ const item = (value) => {
     mechanical: {
       level: value.level,
       audit: { phase: value.phase, run: value.audit },
-      ...(value.conform === undefined ? {} : { conform: { phase: 'PRIMARY', run: value.conform } })
+      ...(value.conform === undefined ? {} : {
+        conform: {
+          phase: 'PRIMARY',
+          run: async (context) => { context.propose(await value.conform(context)) }
+        }
+      })
     }
   }
   if (value.kind === 'judgment') return {
@@ -40,12 +45,40 @@ const family = (value) => !value || typeof value !== 'object' ? value : ({
   selectContext: value.selectContext ?? ((context) => context),
   items: Array.isArray(value.items) ? value.items.map(item) : value.items
 })
+const families = Array.isArray(${families}) ? (${families}).map(family) : ${families}
 export default {
   contract: 1,
   name: '${skill}',
   concern: 'test governance',
-  createContext: async ({ repository }) => ({ repository }),
-  families: Array.isArray(${families}) ? (${families}).map(family) : ${families}
+  createSession: async ({ repository }) => {
+    const proposals = []
+    const context = { repository, propose: (proposal) => proposals.push(proposal) }
+    return {
+      subjects: [{ families: Array.isArray(families) ? families.map(({ code }) => code) : [], context: () => context }],
+      proposal: () => proposals.length === 1 ? proposals[0] : ({
+        writes: proposals.flatMap(({ writes = [] }) => writes),
+        commands: proposals.flatMap(({ commands = [] }) => commands)
+      })
+    }
+  },
+  families
+}
+`
+
+const rubricWithSession = (session: string): string => `
+export default {
+  contract: 1,
+  name: 'ki-example',
+  concern: 'session validation',
+  createSession: () => (${session}),
+  families: [{
+    code: 'F',
+    title: 'Family',
+    description: 'Test family.',
+    standard: 'standard.md',
+    selectContext: (context) => context,
+    items: []
+  }]
 }
 `
 
@@ -265,7 +298,13 @@ export default {
   contract: 1,
   name: 'ki-example',
   concern: 'direct catalogue',
-  createContext: ({ repository }) => ({ evidence: { repository } }),
+  createSession: ({ repository }) => {
+    const context = { evidence: { repository } }
+    return {
+      subjects: [{ families: ['DIRECT'], context: () => context }],
+      proposal: () => ({ writes: [] })
+    }
+  },
   families: [{
     code: 'DIRECT',
     title: 'Direct family',
@@ -380,6 +419,78 @@ export default {
       expect(result.output).toContain('would write governed.txt\n')
       expect(result.output).toContain('==> recap')
       expect(await box.project.read('governed.txt')).toBe('before\n')
+    })
+
+    test('applies ordered item conforms to one shared draft and publishes one final write', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.write('governed.txt', 'start\n')
+      await box.setupExampleHarness({
+        rubric: `
+import { readFileSync } from 'node:fs'
+export default {
+  contract: 1,
+  name: 'ki-example',
+  concern: 'ordered conform',
+  createSession: ({ repository }) => {
+    const original = readFileSync(repository + '/governed.txt', 'utf8')
+    let draft = original
+    const context = {
+      read: () => draft,
+      append: (line) => { draft += line }
+    }
+    return {
+      subjects: [{ families: ['ORDER'], context: () => context }],
+      proposal: () => ({ writes: draft === original ? [] : [{ path: 'governed.txt', content: draft }] })
+    }
+  },
+  families: [{
+    code: 'ORDER',
+    title: 'Ordered changes',
+    description: 'Several rules share one draft.',
+    standard: 'standard.md',
+    selectContext: (context) => context,
+    items: [{
+      code: 'ORDER-1',
+      title: 'Primary line',
+      description: 'Adds the primary line.',
+      sources: ['standard.md'],
+      mechanical: {
+        level: 'FAIL',
+        audit: {
+          phase: 'INSPECT',
+          run: ({ read }) => read().includes('primary\\n')
+            ? [{ status: 'PASS', message: 'primary line is present' }]
+            : [{ status: 'VIOLATION', message: 'primary line is absent' }]
+        },
+        conform: { phase: 'PRIMARY', run: ({ append }) => { append('primary\\n') } }
+      }
+    }, {
+      code: 'ORDER-2',
+      title: 'Normalised line',
+      description: 'Adds the final line.',
+      sources: ['standard.md'],
+      mechanical: {
+        level: 'FAIL',
+        audit: {
+          phase: 'INSPECT',
+          run: ({ read }) => read().includes('normalised\\n')
+            ? [{ status: 'PASS', message: 'normalised line is present' }]
+            : [{ status: 'VIOLATION', message: 'normalised line is absent' }]
+        },
+        conform: { phase: 'NORMALISE', run: ({ append }) => { append('normalised\\n') } }
+      }
+    }]
+  }]
+}
+`
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output.match(/^write governed\.txt$/gm)).toHaveLength(1)
+      expect(await box.project.read('governed.txt')).toBe('start\nprimary\nnormalised\n')
     })
 
     test('rejects same-target conform proposals with different replacement content', async () => {
@@ -715,7 +826,7 @@ export default {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('conform command 0 must have a program and arguments')
+      expect(result.output).toContain('rubric session proposal command 0 must have a program and arguments')
     })
   })
 
@@ -756,6 +867,42 @@ export default {
   })
 
   describe('malformed rubric definitions', () => {
+    test.each([
+      ['a non-table session', 'null', 'rubric context must return a session table'],
+      ['no subjects array', `{ subjects: null, proposal: () => ({ writes: [] }) }`, 'rubric session must contain a subjects array'],
+      ['no proposal function', `{ subjects: [], proposal: null }`, 'rubric session must provide a proposal function'],
+      ['a non-table subject', `{ subjects: [null], proposal: () => ({ writes: [] }) }`, 'rubric subject 0 must be a table'],
+      [
+        'a subject with no context function',
+        `{ subjects: [{ families: ['F'] }], proposal: () => ({ writes: [] }) }`,
+        'rubric subject 0 must provide a context function'
+      ],
+      [
+        'a subject naming an undeclared family',
+        `{ subjects: [{ families: ['UNKNOWN'], context: () => ({}) }], proposal: () => ({ writes: [] }) }`,
+        'rubric subject 0 families must name only declared rubric families'
+      ],
+      [
+        'a subject repeating a family',
+        `{ subjects: [{ families: ['F', 'F'], context: () => ({}) }], proposal: () => ({ writes: [] }) }`,
+        'rubric subject 0 repeats a family'
+      ],
+      [
+        'a subject with a non-string label',
+        `{ subjects: [{ families: ['F'], context: () => ({}), subject: 42 }], proposal: () => ({ writes: [] }) }`,
+        'rubric subject 0 has an invalid subject label'
+      ]
+    ])('rejects a rubric context with %s', async (_case, session, expected) => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubricWithSession(session) })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(expected)
+    })
+
     test('rejects a rubric module with no default export', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
@@ -799,7 +946,7 @@ export default {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('conform must return a writes array')
+      expect(result.output).toContain('rubric session proposal must return a writes array')
     })
 
     test('rejects an audit outcome that is not a table', async () => {
@@ -834,7 +981,7 @@ export default {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('conform write 0 must have string path and content')
+      expect(result.output).toContain('rubric session proposal write 0 must have string path and content')
     })
 
     test('rejects an audit outcome missing a status', async () => {
@@ -897,7 +1044,7 @@ export default {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('conform must return a table')
+      expect(result.output).toContain('rubric session proposal must return a table')
     })
 
     test('rejects a conform write entry with a non-string path or content', async () => {
@@ -958,8 +1105,14 @@ export default {
       await box.setupExampleHarness({
         rubric: rubric(`[{
           code: 'F', title: 'Family',
-          items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
-            audit: async () => [], conform: 'not a function' }]
+          items: [{
+            code: 'EXAMPLE-1', title: 'Example',
+            mechanical: {
+              level: 'FAIL',
+              audit: { phase: 'PRIMARY', run: async () => [] },
+              conform: { phase: 'PRIMARY', run: 'not a function' }
+            }
+          }]
         }]`)
       })
 
@@ -1171,7 +1324,7 @@ export default {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
-        rubric: `export default { contract: 2, name: 'ki-example', concern: 'test', createContext: async () => ({}), families: [] }`
+        rubric: `export default { contract: 2, name: 'ki-example', concern: 'test', createSession: async () => ({}), families: [] }`
       })
 
       const result = await box.run('ki repo audit')
@@ -1180,24 +1333,24 @@ export default {
       expect(result.output).toContain('rubric catalogue has an unsupported contract version')
     })
 
-    test('rejects a rubric definition whose createContext is not a function', async () => {
+    test('rejects a rubric definition whose createSession is not a function', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
-        rubric: `export default { contract: 1, name: 'ki-example', concern: 'test', createContext: 'not a function', families: [] }`
+        rubric: `export default { contract: 1, name: 'ki-example', concern: 'test', createSession: 'not a function', families: [] }`
       })
 
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('rubric catalogue must have a createContext function')
+      expect(result.output).toContain('rubric catalogue must have a createSession function')
     })
 
     test('rejects a rubric definition whose families is not an array', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
-        rubric: `export default { contract: 1, name: 'ki-example', concern: 'test', createContext: async () => ({}), families: 'not an array' }`
+        rubric: `export default { contract: 1, name: 'ki-example', concern: 'test', createSession: async () => ({}), families: 'not an array' }`
       })
 
       const result = await box.run('ki repo audit')

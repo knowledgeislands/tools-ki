@@ -9,7 +9,10 @@ export default {
   contract: 1,
   name: '${skill}',
   concern: 'example governance',
-  createContext: async ({ repository }) => ({ repository }),
+  createSession: async ({ repository }) => ({
+    subjects: [{ families: ['EXAMPLE'], context: () => ({ repository }) }],
+    proposal: () => ({ writes: [] })
+  }),
   families: ${families}
 }
 `

@@ -9,7 +9,14 @@ export default {
   name: 'ki-example',
   concern: 'user files',
   scope: { kind: 'user-home', paths: ['.managed'] },
-  createContext: async ({ userHome }) => ({ userHome }),
+  createSession: async ({ userHome }) => {
+    let proposal = { writes: [] }
+    const context = { userHome, propose: (value) => { proposal = value } }
+    return {
+      subjects: [{ families: ['USER'], context: () => context }],
+      proposal: () => proposal
+    }
+  },
   families: ${body}
 }
 `
@@ -26,7 +33,7 @@ const governedItem = (conform: string): string => `[{
         const content = await readFile(userHome + '/.managed/governed.txt', 'utf8')
         return content === 'after\\n' ? [{ status: 'PASS', message: 'user file is conformed' }] : [{ status: 'VIOLATION', message: 'user file needs conform' }]
       }},
-      conform: { phase: 'PRIMARY', run: async () => (${conform}) }
+      conform: { phase: 'PRIMARY', run: async (context) => { context.propose(${conform}) } }
     },
   }]
 }]`
@@ -86,7 +93,7 @@ export default {
   name: 'ki-example',
   concern: 'user files',
   scope: { kind: 'user-home', paths: ['../outside'] },
-  createContext: async () => ({}),
+  createSession: async () => ({}),
   families: []
 }
 `)
