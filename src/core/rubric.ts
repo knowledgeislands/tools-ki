@@ -50,6 +50,23 @@ export interface RepairProposal {
   readonly commands?: readonly RepairCommand[]
 }
 
+/** Repository rubrics are the default, retaining the original contract shape. */
+export interface RepositoryRubricScope {
+  readonly kind: 'repository'
+}
+
+/**
+ * A user-maintenance rubric may inspect the user home and repair only these
+ * relative paths beneath it. The host validates both this declaration and each
+ * proposed write; a scope is never an arbitrary absolute path.
+ */
+export interface UserHomeRubricScope {
+  readonly kind: 'user-home'
+  readonly paths: readonly string[]
+}
+
+export type RubricScope = RepositoryRubricScope | UserHomeRubricScope
+
 /** A mechanical item the runtime executes; `repair` is optional and only consulted in conform mode. */
 export interface MechanicalRubricItem<Context> {
   readonly kind: 'mechanical'
@@ -77,14 +94,23 @@ export interface RubricFamily<Context> {
   readonly items: readonly RubricItem<Context>[]
 }
 
-export interface RubricContextOptions {
+export interface RepositoryRubricContextOptions {
   readonly repository: string
   readonly configuration: Readonly<Record<string, unknown>>
 }
 
+export interface UserHomeRubricContextOptions {
+  readonly userHome: string
+  readonly configuration: Readonly<Record<string, unknown>>
+}
+
+export type RubricContextOptions = RepositoryRubricContextOptions | UserHomeRubricContextOptions
+
 export interface SkillRubricDefinition<Context = unknown> {
   readonly contract: typeof RUBRIC_CONTRACT_VERSION
   readonly skill: string
+  /** Omit for a repository rubric; user maintenance must explicitly declare its bounded user-home scope. */
+  readonly scope?: RubricScope
   /** Builds the read-only evidence/context the items evaluate; it must not write anywhere. */
   readonly createContext: (options: RubricContextOptions) => Promise<Context> | Context
   readonly families: readonly RubricFamily<Context>[]

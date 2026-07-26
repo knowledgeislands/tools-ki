@@ -26,7 +26,10 @@ const runCommand = async (
     child.on('close', (exitCode) => resolve({ exitCode: exitCode ?? 1, stdout, stderr }))
   })
 
-const runCommands = async (repository: string, commands: readonly { readonly program: string; readonly arguments: readonly string[] }[]): Promise<void> => {
+const runCommands = async (
+  repository: string,
+  commands: readonly { readonly program: string; readonly arguments: readonly string[] }[]
+): Promise<void> => {
   for (const command of commands) {
     const { exitCode, stdout, stderr } = await runCommand(repository, command)
     if (exitCode === 0) continue
@@ -84,7 +87,9 @@ export const createRepoCommand = (context: KiContext): Command =>
         .option('--skill <capability>', 'one declared resolved skill to audit')
         .action(async (options: { repo?: string; skill?: string }) => {
           const { repository, skills } = await resolveSkills(context, options)
-          const results = await runWithProgress(context, 'audit', skills, (skill) => runSkillAudit(repository.root, skill))
+          const results = await runWithProgress(context, 'audit', skills, (skill) =>
+            runSkillAudit({ kind: 'repository', repository: repository.root }, skill)
+          )
           const findings = results.flatMap((result) => result.findings)
           if (!findings.length) context.stdout.write(`ki repo audit: clean (${skills.length} skills)\n`)
           for (const finding of findings) context.stdout.write(`${finding.level} ${finding.code}: ${finding.message}\n`)
@@ -101,7 +106,7 @@ export const createRepoCommand = (context: KiContext): Command =>
           const { repository, skills } = await resolveSkills(context, options)
           const conformed = await runWithProgress(context, 'conform', skills, async (skill) => ({
             skill,
-            conform: await runSkillConform(repository.root, skill)
+            conform: await runSkillConform({ kind: 'repository', repository: repository.root }, skill)
           }))
           const findings = conformed.flatMap(({ conform }) => conform.findings)
           const writes = await prepareWrites(
@@ -118,12 +123,13 @@ export const createRepoCommand = (context: KiContext): Command =>
           await runCommands(repository.root, commands)
           const reaudited = await runWithProgress(context, 're-audit', conformed, async ({ skill, conform }) => ({
             conform,
-            audit: await runSkillAudit(repository.root, skill)
+            audit: await runSkillAudit({ kind: 'repository', repository: repository.root }, skill)
           }))
           const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
           for (const finding of auditFindings) context.stdout.write(`${finding.level} ${finding.code}: ${finding.message}\n`)
           const fixed = reaudited.flatMap(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
           for (const entry of fixed) context.stdout.write(`FIXED ${entry.code}: ${entry.message}\n`)
-          if (auditFindings.some((finding) => finding.level === 'fail')) throw new KiError('native repository conform re-audit found failures', 1)
+          if (auditFindings.some((finding) => finding.level === 'fail'))
+            throw new KiError('native repository conform re-audit found failures', 1)
         })
     )

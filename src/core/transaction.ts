@@ -9,6 +9,17 @@ export interface NativeWrite {
   readonly create?: boolean
 }
 
+/** An optional lexical allow-list below the physical root for a restricted transaction. */
+export interface WriteScope {
+  readonly paths: readonly string[]
+}
+
+/** A proposal and the particular scope that authorised it; scopes never pool across skills. */
+export interface ScopedNativeWrite {
+  readonly write: NativeWrite
+  readonly scope: WriteScope
+}
+
 interface PreparedWrite extends NativeWrite {
   readonly repository: string
   readonly absolutePath: string
@@ -28,6 +39,9 @@ const isContained = (root: string, path: string): boolean => {
 
 const safeRelativePath = (value: string): boolean =>
   Boolean(value) && !value.startsWith('/') && value.split('/').every((part) => part && part !== '.' && part !== '..')
+
+const allowedByScope = (path: string, scope: WriteScope | undefined): boolean =>
+  !scope || scope.paths.some((allowed) => path === allowed || path.startsWith(`${allowed}/`))
 
 const sameIdentity = (left: FileIdentity, right: FileIdentity): boolean => left.dev === right.dev && left.ino === right.ino
 
@@ -50,6 +64,21 @@ const distinctWrites = (writes: readonly NativeWrite[]): readonly NativeWrite[] 
   return [...byPath.values()]
 }
 
+const distinctScopedWrites = (writes: readonly ScopedNativeWrite[]): readonly ScopedNativeWrite[] => {
+  const byPath = new Map<string, ScopedNativeWrite>()
+  for (const proposal of writes) {
+    const existing = byPath.get(proposal.write.path)
+    if (!existing) {
+      byPath.set(proposal.write.path, proposal)
+      continue
+    }
+    if (existing.write.content !== proposal.write.content || Boolean(existing.write.create) !== Boolean(proposal.write.create)) {
+      throw new KiError(`native conform repeats write path ${proposal.write.path} with different content`, 1)
+    }
+  }
+  return [...byPath.values()]
+}
+
 const inspectWriteTarget = async (repository: string, path: string, absolutePath: string): Promise<FileIdentity> => {
   const state = await lstat(absolutePath).catch(() => undefined)
   if (!state?.isFile() || state.isSymbolicLink())
@@ -66,10 +95,33 @@ const inspectCreateTarget = async (repository: string, path: string, absolutePat
   if (!parent || !isContained(repository, parent)) throw new KiError(`native conform create target ${path} escapes the repository`, 1)
 }
 
-export const prepareWrites = async (repository: string, writes: readonly NativeWrite[]): Promise<readonly PreparedWrite[]> => {
+export const prepareWrites = async (
+  repository: string,
+  writes: readonly NativeWrite[],
+  scope?: WriteScope
+): Promise<readonly PreparedWrite[]> =>
+  prepareScopedWrites(
+    repository,
+    distinctWrites(writes).map((write) => ({ write, scope: scope ?? { paths: [] } })),
+    scope === undefined
+  )
+
+/**
+ * Prepares multiple user-scoped proposals as one transaction. Every path is
+ * checked against the scope belonging to the skill that proposed it before
+ * identical writes may be coalesced with another skill's proposal.
+ */
+export const prepareScopedWrites = async (
+  repository: string,
+  writes: readonly ScopedNativeWrite[],
+  unrestricted = false
+): Promise<readonly PreparedWrite[]> => {
   const prepared: PreparedWrite[] = []
-  for (const write of distinctWrites(writes)) {
+  for (const proposal of distinctScopedWrites(writes)) {
+    const { write, scope } = proposal
     if (!safeRelativePath(write.path)) throw new KiError(`native conform write path ${write.path} is unsafe`, 1)
+    if (!unrestricted && !allowedByScope(write.path, scope))
+      throw new KiError(`native conform write path ${write.path} is outside its declared filesystem scope`, 1)
     const absolutePath = join(repository, write.path)
     if (write.create) {
       await inspectCreateTarget(repository, write.path, absolutePath)

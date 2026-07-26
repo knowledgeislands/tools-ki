@@ -19,11 +19,28 @@ import {
   RUBRIC_PHASES,
   type RubricFamily,
   type RubricItem,
+  type RubricScope,
   type SkillRubricDefinition,
   VIOLATION_LEVELS
 } from './rubric.ts'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const safeRelativePath = (value: string): boolean =>
+  Boolean(value) && !value.startsWith('/') && value.split('/').every((part) => part && part !== '.' && part !== '..')
+
+const validateScope = (value: unknown, identity: string): RubricScope => {
+  if (value === undefined) return { kind: 'repository' }
+  if (!isRecord(value)) throw new KiError(`${identity} rubric definition scope must be a table`, 1)
+  const { kind, paths } = value as { readonly kind?: unknown; readonly paths?: unknown }
+  if (kind === 'repository') return { kind: 'repository' }
+  if (kind !== 'user-home' || !Array.isArray(paths) || !paths.length)
+    throw new KiError(`${identity} rubric definition user-home scope must declare paths`, 1)
+  if (paths.some((path) => typeof path !== 'string' || !safeRelativePath(path)))
+    throw new KiError(`${identity} rubric definition user-home scope paths must be safe relative paths`, 1)
+  if (new Set(paths).size !== paths.length) throw new KiError(`${identity} rubric definition user-home scope repeats a path`, 1)
+  return { kind: 'user-home', paths: paths as string[] }
+}
 
 const validateMechanicalItem = (
   value: Record<string, unknown>,
@@ -90,7 +107,7 @@ export const loadRubricDefinition = async (skill: ResolvedSkill): Promise<SkillR
   }
   const candidate = module[RUBRIC_MODULE_EXPORT]
   if (!isRecord(candidate)) throw new KiError(`${skill.identity} rubric definition export is not a table`, 1)
-  const { contract, skill: definedSkill, createContext, families } = candidate
+  const { contract, skill: definedSkill, scope, createContext, families } = candidate
   if (contract !== RUBRIC_CONTRACT_VERSION) throw new KiError(`${skill.identity} rubric definition has an unsupported contract version`, 1)
   if (definedSkill !== skill.capability.name)
     throw new KiError(`${skill.identity} rubric definition skill does not match the installed capability`, 1)
@@ -100,6 +117,7 @@ export const loadRubricDefinition = async (skill: ResolvedSkill): Promise<SkillR
   return {
     contract,
     skill: definedSkill,
+    scope: validateScope(scope, skill.identity),
     createContext: createContext as SkillRubricDefinition<unknown>['createContext'],
     families: families.map((family) => validateFamily(family, skill.identity, seenCodes))
   }

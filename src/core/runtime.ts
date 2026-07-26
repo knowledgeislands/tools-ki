@@ -5,9 +5,28 @@
 
 import { KiError } from './errors.ts'
 import type { ResolvedSkill } from './resolution.ts'
-import { type AuditOutcome, type MechanicalRubricItem, type RepairCommand, RUBRIC_PHASES, type SkillRubricDefinition } from './rubric.ts'
+import {
+  type AuditOutcome,
+  type MechanicalRubricItem,
+  type RepairCommand,
+  RUBRIC_PHASES,
+  type RubricScope,
+  type SkillRubricDefinition
+} from './rubric.ts'
 import { loadRubricDefinition } from './runtime-loader.ts'
 import type { NativeWrite } from './transaction.ts'
+
+export interface RepositoryRuntimeScope {
+  readonly kind: 'repository'
+  readonly repository: string
+}
+
+export interface UserRuntimeScope {
+  readonly kind: 'user-home'
+  readonly userHome: string
+}
+
+export type RuntimeScope = RepositoryRuntimeScope | UserRuntimeScope
 
 export interface NativeFinding {
   readonly level: 'fail' | 'warn' | 'info'
@@ -29,6 +48,7 @@ export interface SkillConformResult {
   readonly findings: readonly NativeFinding[]
   readonly writes: readonly NativeWrite[]
   readonly commands: readonly RepairCommand[]
+  readonly scope: RubricScope
   /** Items whose pre-conform audit produced at least one VIOLATION outcome — candidates for a post-conform FIXED line. */
   readonly fixable: readonly ItemAuditState[]
 }
@@ -123,11 +143,19 @@ interface InternalAudit {
   readonly context: unknown
   readonly items: readonly ItemAuditState[]
   readonly findings: readonly NativeFinding[]
+  readonly scope: RubricScope
 }
 
-const auditSkill = async (repository: string, skill: ResolvedSkill): Promise<InternalAudit> => {
+const auditSkill = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<InternalAudit> => {
   const definition = await loadRubricDefinition(skill)
-  const context = await definition.createContext({ repository, configuration: skill.declaration.configuration })
+  const definitionScope: RubricScope = definition.scope ?? { kind: 'repository' }
+  if (definitionScope.kind !== scope.kind)
+    throw new KiError(`${skill.identity} declares ${definitionScope.kind} scope and cannot run in ${scope.kind} mode`, 1)
+  const context = await definition.createContext(
+    scope.kind === 'repository'
+      ? { repository: scope.repository, configuration: skill.declaration.configuration }
+      : { userHome: scope.userHome, configuration: skill.declaration.configuration }
+  )
   const items = await Promise.all(orderedMechanicalItems(definition).map((item) => auditItem(item, context)))
   const findings = items.flatMap((state) =>
     state.outcomes.flatMap((outcome) => {
@@ -135,11 +163,11 @@ const auditSkill = async (repository: string, skill: ResolvedSkill): Promise<Int
       return finding ? [finding] : []
     })
   )
-  return { context, items, findings }
+  return { context, items, findings, scope: definitionScope }
 }
 
-export const runSkillAudit = async (repository: string, skill: ResolvedSkill): Promise<SkillAuditResult> => {
-  const { items, findings } = await auditSkill(repository, skill)
+export const runSkillAudit = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<SkillAuditResult> => {
+  const { items, findings } = await auditSkill(scope, skill)
   return { findings, items }
 }
 
@@ -155,8 +183,8 @@ const attemptRepair = async (
   return repair.writes.length || repair.commands.length ? repair : undefined
 }
 
-export const runSkillConform = async (repository: string, skill: ResolvedSkill): Promise<SkillConformResult> => {
-  const { context, items } = await auditSkill(repository, skill)
+export const runSkillConform = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<SkillConformResult> => {
+  const { context, items, scope: definitionScope } = await auditSkill(scope, skill)
   const attempts = await Promise.all(items.map((state) => attemptRepair(state, context)))
 
   const findings: NativeFinding[] = []
@@ -176,7 +204,7 @@ export const runSkillConform = async (repository: string, skill: ResolvedSkill):
       if (finding) findings.push(finding)
     }
   })
-  return { findings, writes, commands, fixable }
+  return { findings, writes, commands, scope: definitionScope, fixable }
 }
 
 /** Compares a conform's pre-conform violated items against a post-conform re-audit to name what got fixed. */
