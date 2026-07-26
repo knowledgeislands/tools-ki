@@ -47,7 +47,7 @@ Contract decisions locked at T1.1:
 | T1.4 Nested-link materialisation | Step 5.4: materialise shared-module links as regular verified files at acquisition; never weaken or follow nested-link validation | Sonnet 5 / medium | done |
 | T1.5 Proof against canonical payload | Steps 7.4/8.4 first passes + step 9.1 first clause via `ki dev on` linked harness | Sonnet 5 / medium | blocked on the first harness skill conversion (Codex, `ki-handoffs`) |
 | T1.6 Surface alignment | Step 10 residuals touched by above | Haiku 4.5 / low | gated on T1.5 |
-| T1.7 Generic rubric publication | Host-owned renderer for `references/rubric.md` replacing every per-skill `scripts/rubric/publish.ts` | Sonnet 5 / medium | pending; needs a command-surface decision first |
+| T1.7 Generic rubric publication | `ki skill rubric <name> [--write]`: drift check by default, publication only through a dev-linked payload; replaces every per-skill `scripts/rubric/publish.ts` | Sonnet 5 / medium | done (`65d288e`) |
 
 Orchestration: Fable coordinates, designs T1.1, reviews diffs, and runs gates (`bun run test` at 100% thresholds, tsc, biome, knip) before unit commits; sub-agents implement.
 T1.2 and T1.4 ran in parallel (disjoint files); T1.3 follows T1.2.
