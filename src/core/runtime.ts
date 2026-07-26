@@ -26,7 +26,7 @@ export interface RepositoryRuntimeScope {
 
 export type RuntimeScope = RepositoryRuntimeScope
 
-export interface NativeFinding {
+export interface Finding {
   readonly level: 'fail' | 'warn' | 'info'
   readonly code: string
   /** The rubric item's human-facing title, retained for host-owned reporting. */
@@ -51,7 +51,7 @@ export interface PreparedRubricItem {
 }
 
 export interface SkillAuditResult {
-  readonly findings: readonly NativeFinding[]
+  readonly findings: readonly Finding[]
   readonly items: readonly ItemAuditState[]
 }
 
@@ -71,7 +71,7 @@ export interface SkillEducationResult {
 }
 
 export interface SkillConformResult {
-  readonly findings: readonly NativeFinding[]
+  readonly findings: readonly Finding[]
   readonly writes: readonly NativeWrite[]
   readonly commands: readonly RepairCommand[]
   readonly scope: RubricScope
@@ -172,7 +172,7 @@ const orderedMechanicalItems = (definition: SkillRubricDefinition<unknown>): rea
     .map((entry) => entry.item)
 }
 
-const findingForOutcome = (prepared: PreparedRubricItem, outcome: AuditOutcome): NativeFinding | undefined => {
+const findingForOutcome = (prepared: PreparedRubricItem, outcome: AuditOutcome): Finding | undefined => {
   const { item } = prepared
   if (outcome.status === 'PASS' || outcome.status === 'NOT_APPLICABLE') return undefined
   const violationLevel = outcome.level ?? item.mechanical.level
@@ -192,7 +192,7 @@ const auditItem = async (item: PreparedRubricItem, rootContext: unknown): Promis
 interface InternalAudit {
   readonly context: unknown
   readonly items: readonly ItemAuditState[]
-  readonly findings: readonly NativeFinding[]
+  readonly findings: readonly Finding[]
   readonly scope: RubricScope
 }
 
@@ -288,7 +288,7 @@ export const runSkillConform = async (
   const attempts = new Map<string, Awaited<ReturnType<typeof attemptRepair>>>()
   for (const state of repairOrder) attempts.set(state.item.code, await attemptRepair(state, context))
 
-  const findings: NativeFinding[] = []
+  const findings: Finding[] = []
   const writes: NativeWrite[] = []
   const commands: RepairCommand[] = []
   const fixable: ItemAuditState[] = []

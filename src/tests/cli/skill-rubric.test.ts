@@ -136,7 +136,7 @@ describe('[ki skill rubric]', () => {
     const result = await box.run('ki skill rubric ki-example')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('does not provide a native rubric catalogue')
+    expect(result.output).toContain('does not provide a rubric catalogue')
   })
 
   test('refuses an unknown skill', async () => {

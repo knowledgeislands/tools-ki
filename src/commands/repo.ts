@@ -10,7 +10,7 @@ import {
   detectFixed,
   educateSkill,
   type FixedItem,
-  type NativeFinding,
+  type Finding,
   type PreparedSkill,
   prepareSkill,
   runSkillAudit,
@@ -43,7 +43,7 @@ const runCommands = async (
     const { exitCode, stdout, stderr } = await runCommand(repository, command)
     if (exitCode === 0) continue
     const detail = [stdout, stderr].filter(Boolean).join('\n').trim()
-    throw new KiError(`native subprocess repair failed: ${renderCommand(command)}${detail ? `\n${detail}` : ''}`, 1)
+    throw new KiError(`direct subprocess repair failed: ${renderCommand(command)}${detail ? `\n${detail}` : ''}`, 1)
   }
 }
 
@@ -191,11 +191,11 @@ const renderEducation = (education: Awaited<ReturnType<typeof educateSkill>>): s
   ])
 ]
 
-type RenderedFinding = (NativeFinding | FixedItem) & { readonly level: NativeFinding['level'] | 'fixed' }
+type RenderedFinding = (Finding | FixedItem) & { readonly level: Finding['level'] | 'fixed' }
 
 interface SkillReport {
   readonly skill: PreparedSkill
-  readonly findings: readonly NativeFinding[]
+  readonly findings: readonly Finding[]
   readonly fixed?: readonly FixedItem[]
 }
 
@@ -235,7 +235,7 @@ const summary = (findings: readonly RenderedFinding[], judgmentUnevaluated: numb
 }
 
 /**
- * The host owns presentation just as it owns execution. Native rubric contracts return
+ * The host owns presentation just as it owns execution. Rubric contracts return
  * structured outcomes; this renderer keeps their item title and evidence subject intact
  * instead of making each harness ship a runner merely to format a report.
  */
@@ -264,10 +264,10 @@ const renderReports = (context: KiContext, operation: 'audit' | 'conform', repor
 
 export const createRepoCommand = (context: KiContext): Command =>
   new Command('repo')
-    .description('run native operations for one KI repository')
+    .description('run operations for one KI repository')
     .addCommand(
       new Command('educate')
-        .description('explain native maintenance for declared skills')
+        .description('explain maintenance for declared skills')
         .option('--repo <path>', 'repository root to explain')
         .option('--skill <capability>', 'one declared resolved skill to explain')
         .action(async (options: { repo?: string; skill?: string }) => {
@@ -282,7 +282,7 @@ export const createRepoCommand = (context: KiContext): Command =>
     )
     .addCommand(
       new Command('audit')
-        .description('run registered native audit operations for declared skills')
+        .description('run registered audit operations for declared skills')
         .option('--repo <path>', 'repository root to audit')
         .option('--skill <capability>', 'one declared resolved skill to audit')
         .action(async (options: { repo?: string; skill?: string }) => {
@@ -302,12 +302,12 @@ export const createRepoCommand = (context: KiContext): Command =>
             'audit',
             results.map(({ skill, audit }) => ({ skill, findings: audit.findings }))
           )
-          if (findings.some((finding) => finding.level === 'fail')) throw new KiError('native repository audit found failures', 1)
+          if (findings.some((finding) => finding.level === 'fail')) throw new KiError('repository audit found failures', 1)
         })
     )
     .addCommand(
       new Command('conform')
-        .description('apply registered native conform operations for declared skills')
+        .description('apply registered conform operations for declared skills')
         .option('--repo <path>', 'repository root to conform')
         .option('--skill <capability>', 'one declared resolved skill to conform')
         .option('--dry-run', 'validate and report without writing')
@@ -345,7 +345,7 @@ export const createRepoCommand = (context: KiContext): Command =>
               'conform',
               conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings }))
             )
-            throw new KiError('native repository conform found failures', 1)
+            throw new KiError('repository conform found failures', 1)
           }
           await publishWrites(writes, Boolean(options.dryRun))
           if (options.dryRun) {
@@ -366,7 +366,7 @@ export const createRepoCommand = (context: KiContext): Command =>
               // The re-audit selection is derived directly from conformed above; this only
               // protects a future refactor from pairing an audit with the wrong repair set.
               /* v8 ignore next */
-              if (!previous) throw new KiError(`native repository conform lost ${skill.skill.identity} before re-audit`, 1)
+              if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
               return {
                 prepared: skill,
                 conform: previous.conform,
@@ -386,6 +386,6 @@ export const createRepoCommand = (context: KiContext): Command =>
             reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] }))
           )
           if (auditFindings.some((finding) => finding.level === 'fail'))
-            throw new KiError('native repository conform re-audit found failures', 1)
+            throw new KiError('repository conform re-audit found failures', 1)
         })
     )

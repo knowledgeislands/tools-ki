@@ -112,7 +112,7 @@ describe('[ki repo conform] transaction interleaving safety', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('native conform write target governed.txt changed before publication')
+    expect(result.output).toContain('direct conform write target governed.txt changed before publication')
     expect(await box.project.read('governed.txt')).toBe('before\n')
   })
 
@@ -152,7 +152,7 @@ describe('[ki repo conform] transaction interleaving safety', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('native conform write target governed.txt changed before publication')
+    expect(result.output).toContain('direct conform write target governed.txt changed before publication')
     expect(await box.project.read('governed.txt')).toBe('before\n')
   })
 
@@ -176,7 +176,7 @@ describe('[ki repo conform] transaction interleaving safety', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('native conform rollback target governed-1.txt changed after publication')
+    expect(result.output).toContain('direct conform rollback target governed-1.txt changed after publication')
     expect(await box.project.read('governed-1.txt')).toBe('third-party replacement\n')
     expect(await box.project.read('governed-2.txt')).toBe('before-2\n')
   })

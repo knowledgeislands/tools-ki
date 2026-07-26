@@ -208,7 +208,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('does not provide a native rubric catalogue')
+      expect(result.output).toContain('does not provide a rubric catalogue')
     })
 
     test('fails when a FAIL-level item reports a violation', async () => {
@@ -226,7 +226,7 @@ describe('[ki repo]', () => {
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('❌ fail  [Example (EXAMPLE-1)] — not conformed')
-      expect(result.output).toContain('native repository audit found failures')
+      expect(result.output).toContain('repository audit found failures')
     })
 
     test('appends the subject to a finding message when an outcome declares one', async () => {
@@ -403,7 +403,7 @@ export default {
       const result = await box.run('ki repo conform --dry-run')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('native conform repeats write path governed.txt with different content')
+      expect(result.output).toContain('direct conform repeats write path governed.txt with different content')
       expect(await box.project.read('governed.txt')).toBe('before\n')
     })
 
@@ -450,7 +450,7 @@ export default {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('native conform write target governed.txt must be an existing regular file')
+      expect(result.output).toContain('direct conform write target governed.txt must be an existing regular file')
       expect((await lstat(join(box.project.path, 'governed.txt'))).isSymbolicLink()).toBe(true)
       expect(await box.project.read('elsewhere.txt')).toBe('shadow\n')
     })
@@ -478,7 +478,7 @@ export default {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('native conform write target escape/target.txt escapes the repository')
+      expect(result.output).toContain('direct conform write target escape/target.txt escapes the repository')
       expect(await box.root.read('outside/target.txt')).toBe('before\n')
     })
 
@@ -510,7 +510,7 @@ export default {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('native conform write target governed-2.txt must be an existing regular file')
+      expect(result.output).toContain('direct conform write target governed-2.txt must be an existing regular file')
       expect(await box.project.read('governed-1.txt')).toBe('before-1\n')
     })
 
@@ -589,7 +589,7 @@ export default {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('native conform write target missing.txt must be an existing regular file')
+      expect(result.output).toContain('direct conform write target missing.txt must be an existing regular file')
     })
 
     test('creates an explicitly declared new regular file transactionally', async () => {
@@ -632,7 +632,7 @@ export default {
 
       const result = await box.run('ki repo conform')
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('native conform create target created.txt must not already exist')
+      expect(result.output).toContain('direct conform create target created.txt must not already exist')
       await expect(box.project.read('created.txt')).resolves.toBe('existing\n')
     })
 
@@ -653,7 +653,7 @@ export default {
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('❌ fail  [Example (EXAMPLE-1)] — not fixable')
-      expect(result.output).toContain('native repository conform found failures')
+      expect(result.output).toContain('repository conform found failures')
     })
 
     test('a repair proposing no writes leaves its violation reported and unfixed', async () => {

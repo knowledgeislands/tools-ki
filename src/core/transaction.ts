@@ -59,7 +59,7 @@ const distinctWrites = (writes: readonly NativeWrite[]): readonly NativeWrite[] 
       continue
     }
     if (existing.content !== write.content || Boolean(existing.create) !== Boolean(write.create))
-      throw new KiError(`native conform repeats write path ${write.path} with different content`, 1)
+      throw new KiError(`direct conform repeats write path ${write.path} with different content`, 1)
   }
   return [...byPath.values()]
 }
@@ -73,7 +73,7 @@ const distinctScopedWrites = (writes: readonly ScopedNativeWrite[]): readonly Sc
       continue
     }
     if (existing.write.content !== proposal.write.content || Boolean(existing.write.create) !== Boolean(proposal.write.create)) {
-      throw new KiError(`native conform repeats write path ${proposal.write.path} with different content`, 1)
+      throw new KiError(`direct conform repeats write path ${proposal.write.path} with different content`, 1)
     }
   }
   return [...byPath.values()]
@@ -82,17 +82,17 @@ const distinctScopedWrites = (writes: readonly ScopedNativeWrite[]): readonly Sc
 const inspectWriteTarget = async (repository: string, path: string, absolutePath: string): Promise<FileIdentity> => {
   const state = await lstat(absolutePath).catch(() => undefined)
   if (!state?.isFile() || state.isSymbolicLink())
-    throw new KiError(`native conform write target ${path} must be an existing regular file`, 1)
+    throw new KiError(`direct conform write target ${path} must be an existing regular file`, 1)
   const physicalPath = await realpath(absolutePath)
-  if (!isContained(repository, physicalPath)) throw new KiError(`native conform write target ${path} escapes the repository`, 1)
+  if (!isContained(repository, physicalPath)) throw new KiError(`direct conform write target ${path} escapes the repository`, 1)
   return { dev: state.dev, ino: state.ino }
 }
 
 const inspectCreateTarget = async (repository: string, path: string, absolutePath: string): Promise<void> => {
   const state = await lstat(absolutePath).catch(() => undefined)
-  if (state) throw new KiError(`native conform create target ${path} must not already exist`, 1)
+  if (state) throw new KiError(`direct conform create target ${path} must not already exist`, 1)
   const parent = await realpath(dirname(absolutePath)).catch(() => undefined)
-  if (!parent || !isContained(repository, parent)) throw new KiError(`native conform create target ${path} escapes the repository`, 1)
+  if (!parent || !isContained(repository, parent)) throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
 }
 
 export const prepareWrites = async (
@@ -119,9 +119,9 @@ export const prepareScopedWrites = async (
   const prepared: PreparedWrite[] = []
   for (const proposal of distinctScopedWrites(writes)) {
     const { write, scope } = proposal
-    if (!safeRelativePath(write.path)) throw new KiError(`native conform write path ${write.path} is unsafe`, 1)
+    if (!safeRelativePath(write.path)) throw new KiError(`direct conform write path ${write.path} is unsafe`, 1)
     if (!unrestricted && !allowedByScope(write.path, scope))
-      throw new KiError(`native conform write path ${write.path} is outside its declared filesystem scope`, 1)
+      throw new KiError(`direct conform write path ${write.path} is outside its declared filesystem scope`, 1)
     const absolutePath = join(repository, write.path)
     if (write.create) {
       await inspectCreateTarget(repository, write.path, absolutePath)
@@ -131,7 +131,7 @@ export const prepareScopedWrites = async (
     const identity = await inspectWriteTarget(repository, write.path, absolutePath)
     const original = await readFile(absolutePath, 'utf8')
     if (!sameIdentity(identity, await inspectWriteTarget(repository, write.path, absolutePath)))
-      throw new KiError(`native conform write target ${write.path} changed during preparation`, 1)
+      throw new KiError(`direct conform write target ${write.path} changed during preparation`, 1)
     prepared.push({ ...write, repository, absolutePath, original, identity })
   }
   return prepared
@@ -151,7 +151,7 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
       !sameIdentity(identity, write.identity) ||
       (await readFile(write.absolutePath, 'utf8')) !== write.original
     ) {
-      throw new KiError(`native conform write target ${write.path} changed before publication`, 1)
+      throw new KiError(`direct conform write target ${write.path} changed before publication`, 1)
     }
   }
   const temporary = new Map<PreparedWrite, string>()
@@ -165,7 +165,7 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
     }
     for (const write of writes) {
       const path = temporary.get(write)
-      if (!path) throw new KiError(`native conform transaction lost temporary content for ${write.path}`, 1)
+      if (!path) throw new KiError(`direct conform transaction lost temporary content for ${write.path}`, 1)
       if (write.create) await link(path, write.absolutePath)
       else await rename(path, write.absolutePath)
       published.push(write)
@@ -177,11 +177,11 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
       const publishedIdentity = publishedIdentities.get(write)
       const currentIdentity = await inspectWriteTarget(write.repository, write.path, write.absolutePath).catch(() => undefined)
       if (!publishedIdentity || !currentIdentity || !sameIdentity(publishedIdentity, currentIdentity)) {
-        rollbackRefusal ??= new KiError(`native conform rollback target ${write.path} changed after publication`, 1)
+        rollbackRefusal ??= new KiError(`direct conform rollback target ${write.path} changed after publication`, 1)
       } else if (write.create) {
         await rm(write.absolutePath, { force: true })
       } else {
-        if (write.original === undefined) throw new KiError(`native conform transaction lost original content for ${write.path}`, 1)
+        if (write.original === undefined) throw new KiError(`direct conform transaction lost original content for ${write.path}`, 1)
         await writeFile(write.absolutePath, write.original, 'utf8')
       }
     }
