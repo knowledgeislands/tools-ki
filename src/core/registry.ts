@@ -11,6 +11,9 @@ export type { Fetcher } from './acquire.ts'
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const sha256 = /^[a-f0-9]{64}$/
 const payloadRoots = ['skills', 'subagents', 'hooks'] as const
+// The first canonical archive used `agents/`; `ki dev on` may replace that
+// recognised retired layout with the current `subagents/` projection.
+const retiredCanonicalPayloadRoots = ['agents'] as const
 
 export interface HarnessRelease {
   readonly id: string
@@ -192,8 +195,7 @@ export const installCanonicalHarness = async (
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
   installHarness(configurationDirectory, dataDirectory, baseHarnessIdentifier, fetcher)
 
-const canonicalHarnessDirectory = (dataDirectory: string): string =>
-  join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
+const canonicalHarnessDirectory = (dataDirectory: string): string => join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
 
 const localPayloadDirectory = async (local: string, payload: (typeof payloadRoots)[number]): Promise<string> => {
   const source = resolve(local, payload)
@@ -205,9 +207,7 @@ export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, l
   const harness = await realpath(resolve(local)).catch(() => undefined)
   if (!harness) throw new KiError('local harness must be a directory', 1)
   await physicalDirectory(harness, 'local harness')
-  const sources = new Map(
-    await Promise.all(payloadRoots.map(async (payload) => [payload, await localPayloadDirectory(harness, payload)] as const))
-  )
+  const sources = new Map(await Promise.all(payloadRoots.map(async (payload) => [payload, await localPayloadDirectory(harness, payload)] as const)))
   const destination = canonicalHarnessDirectory(dataDirectory)
   await ensureDirectory(join(dataDirectory, 'harnesses'), 'installed harnesses directory')
   await ensureDirectory(dirname(destination), 'installed harness owner knowledgeislands')
@@ -217,11 +217,15 @@ export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, l
   const entries = await readdir(destination, { withFileTypes: true })
   if (
     entries.some(
-      (entry) => !payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) || (!entry.isDirectory() && !entry.isSymbolicLink())
+      (entry) =>
+        (!payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) &&
+          !retiredCanonicalPayloadRoots.includes(entry.name as (typeof retiredCanonicalPayloadRoots)[number])) ||
+        (!entry.isDirectory() && !entry.isSymbolicLink())
     )
   ) {
     throw new KiError(`installed harness ${baseHarnessIdentifier} has unrecognised state`, 1)
   }
+  await Promise.all(retiredCanonicalPayloadRoots.map((payload) => rm(join(destination, payload), { recursive: true, force: true })))
   for (const payload of payloadRoots) {
     const target = join(destination, payload)
     const targetState = await lstat(target).catch(() => undefined)
@@ -266,11 +270,7 @@ export const restoreCanonicalHarness = async (
   return installCanonicalHarness(configurationDirectory, dataDirectory, fetcher)
 }
 
-export const uninstallHarness = async (
-  dataDirectory: string,
-  identifier: string,
-  dryRun = false
-): Promise<{ readonly uninstalled: boolean }> => {
+export const uninstallHarness = async (dataDirectory: string, identifier: string, dryRun = false): Promise<{ readonly uninstalled: boolean }> => {
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   if (identifier === baseHarnessIdentifier) throw new KiError(`the required base harness ${identifier} cannot be uninstalled`, 1)
 
@@ -284,9 +284,7 @@ export const uninstallHarness = async (
   const entries = await readdir(destination, { withFileTypes: true })
   if (
     !entries.length ||
-    entries.some(
-      (entry) => !payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) || !entry.isDirectory() || entry.isSymbolicLink()
-    )
+    entries.some((entry) => !payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) || !entry.isDirectory() || entry.isSymbolicLink())
   ) {
     throw new KiError(`installed harness ${identifier} has unrecognised state and will not be removed`, 1)
   }

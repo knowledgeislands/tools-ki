@@ -1,3 +1,4 @@
+import { lstat, rename } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
@@ -60,6 +61,21 @@ path = ${JSON.stringify(harnessPath)}
       expect(dataIsSymlink).toBe(true)
       expect(homeIsSymlink).toBe(true)
       expect(config).toBe(expectedConfig)
+    })
+
+    test('migrates the recognised retired agents payload while switching to a local checkout', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      const canonical = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`
+      await rename(`${canonical}/subagents`, `${canonical}/agents`)
+
+      const result = await box.run(`ki dev on ${harnessPath}`)
+
+      expect(result.exitCode).toBe(0)
+      expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness/subagents')).toBe(true)
+      await expect(lstat(`${canonical}/agents`)).rejects.toThrow()
     })
   })
 
