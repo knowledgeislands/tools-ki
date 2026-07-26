@@ -31,9 +31,16 @@ export interface RepairWrite {
   readonly content: string
 }
 
-/** A serialisable repair proposal; `writes` may be empty when the item has nothing safe to propose. */
+/** One pathless subprocess command run by the host from the repository root after transactional file writes publish. */
+export interface RepairCommand {
+  readonly program: string
+  readonly arguments: readonly string[]
+}
+
+/** A serialisable repair proposal; an item may declare transactional file replacements, bounded host commands, or both. */
 export interface RepairProposal {
   readonly writes: readonly RepairWrite[]
+  readonly commands?: readonly RepairCommand[]
 }
 
 /** A mechanical item the runtime executes; `repair` is optional and only consulted in conform mode. */

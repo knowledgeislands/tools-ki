@@ -5,7 +5,7 @@
 
 import { KiError } from './errors.ts'
 import type { ResolvedSkill } from './resolution.ts'
-import { type AuditOutcome, type MechanicalRubricItem, RUBRIC_PHASES, type SkillRubricDefinition } from './rubric.ts'
+import { type AuditOutcome, type MechanicalRubricItem, type RepairCommand, RUBRIC_PHASES, type SkillRubricDefinition } from './rubric.ts'
 import { loadRubricDefinition } from './runtime-loader.ts'
 import type { NativeWrite } from './transaction.ts'
 
@@ -28,6 +28,7 @@ export interface SkillAuditResult {
 export interface SkillConformResult {
   readonly findings: readonly NativeFinding[]
   readonly writes: readonly NativeWrite[]
+  readonly commands: readonly RepairCommand[]
   /** Items whose pre-conform audit produced at least one VIOLATION outcome — candidates for a post-conform FIXED line. */
   readonly fixable: readonly ItemAuditState[]
 }
@@ -45,22 +46,37 @@ const validateOutcome = (value: unknown, code: string, index: number): AuditOutc
   if (status !== 'PASS' && status !== 'VIOLATION' && status !== 'NOT_APPLICABLE' && status !== 'INFO')
     throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid status`, 1)
   if (typeof message !== 'string' || !message) throw new KiError(`rubric item ${code} audit outcome ${index} must have a message`, 1)
-  if (subject !== undefined && typeof subject !== 'string')
-    throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
+  if (subject !== undefined && typeof subject !== 'string') throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
   return subject === undefined ? { status, message } : { status, message, subject }
 }
 
-const validateRepairProposal = (value: unknown, code: string): readonly NativeWrite[] => {
+const validProgram = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
+
+export const validateRepairProposal = (
+  value: unknown,
+  code: string
+): { readonly writes: readonly NativeWrite[]; readonly commands: readonly RepairCommand[] } => {
   if (!isRecord(value)) throw new KiError(`rubric item ${code} repair must return a table`, 1)
-  const { writes } = value
+  const { writes, commands = [] } = value
   if (!Array.isArray(writes)) throw new KiError(`rubric item ${code} repair must return a writes array`, 1)
-  return writes.map((write, index) => {
+  if (!Array.isArray(commands)) throw new KiError(`rubric item ${code} repair commands must be an array`, 1)
+  const validatedWrites = writes.map((write, index) => {
     if (!isRecord(write)) throw new KiError(`rubric item ${code} repair write ${index} must have string path and content`, 1)
     const { path, content } = write
     if (typeof path !== 'string' || typeof content !== 'string')
       throw new KiError(`rubric item ${code} repair write ${index} must have string path and content`, 1)
     return { path, content }
   })
+  const validatedCommands = commands.map((command, index) => {
+    if (!isRecord(command)) throw new KiError(`rubric item ${code} repair command ${index} must have a program and arguments`, 1)
+    const { program, arguments: arguments_ } = command
+    if (typeof program !== 'string' || !validProgram.test(program) || !Array.isArray(arguments_))
+      throw new KiError(`rubric item ${code} repair command ${index} must have a program and arguments`, 1)
+    if (arguments_.some((argument) => typeof argument !== 'string' || argument.includes('\0')))
+      throw new KiError(`rubric item ${code} repair command ${index} arguments must be strings without NUL bytes`, 1)
+    return { program, arguments: arguments_ }
+  })
+  return { writes: validatedWrites, commands: validatedCommands }
 }
 
 interface OrderedItem {
@@ -127,10 +143,13 @@ export const runSkillAudit = async (repository: string, skill: ResolvedSkill): P
 // A violated item that declares a repair is only actually "fixed this round" once its
 // repair proposes at least one write — an empty proposal means it had nothing safe to
 // change, so its violation still surfaces like any other unaddressed finding below.
-const attemptRepair = async (state: ItemAuditState, context: unknown): Promise<readonly NativeWrite[] | undefined> => {
+const attemptRepair = async (
+  state: ItemAuditState,
+  context: unknown
+): Promise<{ readonly writes: readonly NativeWrite[]; readonly commands: readonly RepairCommand[] } | undefined> => {
   if (!state.item.repair || !state.outcomes.some((outcome) => outcome.status === 'VIOLATION')) return undefined
-  const writes = validateRepairProposal(await state.item.repair(context), state.item.code)
-  return writes.length ? writes : undefined
+  const repair = validateRepairProposal(await state.item.repair(context), state.item.code)
+  return repair.writes.length || repair.commands.length ? repair : undefined
 }
 
 export const runSkillConform = async (repository: string, skill: ResolvedSkill): Promise<SkillConformResult> => {
@@ -139,11 +158,13 @@ export const runSkillConform = async (repository: string, skill: ResolvedSkill):
 
   const findings: NativeFinding[] = []
   const writes: NativeWrite[] = []
+  const commands: RepairCommand[] = []
   const fixable: ItemAuditState[] = []
   items.forEach((state, index) => {
     const proposed = attempts[index]
     if (proposed) {
-      writes.push(...proposed)
+      writes.push(...proposed.writes)
+      commands.push(...proposed.commands)
       fixable.push(state)
       return
     }
@@ -152,7 +173,7 @@ export const runSkillConform = async (repository: string, skill: ResolvedSkill):
       if (finding) findings.push(finding)
     }
   })
-  return { findings, writes, fixable }
+  return { findings, writes, commands, fixable }
 }
 
 /** Compares a conform's pre-conform violated items against a post-conform re-audit to name what got fixed. */

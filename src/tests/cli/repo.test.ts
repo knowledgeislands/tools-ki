@@ -362,6 +362,53 @@ describe('[ki repo]', () => {
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('warn EXAMPLE-1: nothing safe to propose')
     })
+
+    test('reports subprocess repairs in dry-run mode without executing them, then runs and re-audits them', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'NORMALISE',
+          audit: async ({ repository }) => {
+            const { existsSync } = await import('node:fs')
+            return existsSync(repository + '/conformed.txt')
+              ? [{ status: 'PASS', message: 'conformed' }]
+              : [{ status: 'VIOLATION', message: 'not conformed' }]
+          },
+          repair: async () => ({ writes: [], commands: [{ program: 'node', arguments: ['-e', "require('node:fs').writeFileSync('conformed.txt', 'ok')"] }] })
+        }] }]`)
+      })
+
+      const dryRun = await box.run('ki repo conform --dry-run')
+      const conformed = await box.run('ki repo conform')
+
+      expect(dryRun).toEqual({
+        exitCode: 0,
+        output: `would run "node" "-e" "require('node:fs').writeFileSync('conformed.txt', 'ok')"\n`
+      })
+      expect(conformed).toEqual({
+        exitCode: 0,
+        output: `run "node" "-e" "require('node:fs').writeFileSync('conformed.txt', 'ok')"\nFIXED EXAMPLE-1: conformed\n`
+      })
+      await expect(box.project.read('conformed.txt')).resolves.toBe('ok')
+    })
+
+    test('rejects a malformed subprocess repair proposal before execution', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          repair: async () => ({ writes: [], commands: [{}] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('repair command 0 must have a program and arguments')
+    })
   })
 
   // CLI-004 acceptance evidence (c): a provider that was valid at install time but has
@@ -645,10 +692,7 @@ describe('[ki repo]', () => {
     test('orders mechanical items across families by phase, then family, then item position', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
-      const item = (
-        code: string,
-        phase: string
-      ) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
+      const item = (code: string, phase: string) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
         audit: async () => [{ status: 'INFO', message: '${code}' }] }`
       await box.setupExampleHarness({
         rubric: rubric(`[
@@ -846,10 +890,7 @@ describe('[ki repo]', () => {
   })
 
   describe('skill resolution', () => {
-    const installSkillsHarness = async (
-      data: SandboxArea,
-      specs: readonly { readonly name: string; readonly deps: readonly string[] }[]
-    ): Promise<void> => {
+    const installSkillsHarness = async (data: SandboxArea, specs: readonly { readonly name: string; readonly deps: readonly string[] }[]): Promise<void> => {
       for (const { name, deps } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
         const list = `[${deps.join(', ')}]`
