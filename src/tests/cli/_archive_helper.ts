@@ -5,7 +5,7 @@
 import { createHash } from 'node:crypto'
 import { gzipSync } from 'node:zlib'
 
-export type ArchiveEntry = string | { readonly type: '2' }
+export type ArchiveEntry = string | { readonly type: '2'; readonly linkname?: string }
 
 const octal = (value: number, length: number): string => `${value.toString(8).padStart(length - 1, '0')}\0`
 
@@ -24,6 +24,7 @@ export const makeHarnessArchive = (files: Readonly<Record<string, ArchiveEntry>>
     header.set(new TextEncoder().encode(octal(0o644, 8)), 100)
     header.set(new TextEncoder().encode(octal(encoded.length, 12)), 124)
     header[156] = (typeof entry === 'string' ? '0' : entry.type).charCodeAt(0)
+    if (typeof entry !== 'string' && entry.linkname) header.set(new TextEncoder().encode(entry.linkname), 157)
     chunks.push(header, encoded, new Uint8Array((512 - (encoded.length % 512)) % 512))
   }
   chunks.push(new Uint8Array(1024))

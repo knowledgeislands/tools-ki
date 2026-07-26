@@ -28,23 +28,30 @@ export const tarSize = (archive: Uint8Array, start: number): number => {
 export const zeroBlock = (archive: Uint8Array, offset: number): boolean =>
   archive.subarray(offset, offset + 512).every((byte) => byte === 0)
 
-export const extractArchive = async (payload: Uint8Array, target: string): Promise<void> => {
-  let archive: Uint8Array
-  try {
-    archive = gunzipSync(payload)
-  } catch {
-    throw new KiError('harness release must be a gzip-compressed tar archive', 1)
-  }
+interface ParsedTarEntry {
+  readonly payloadPath: string
+  readonly type: string
+  readonly contentsStart: number
+  readonly contentsEnd: number
+  readonly linkname: string
+}
+
+/**
+ * Parses every payload entry (under `skills/`, `subagents/`, or `hooks/`, optionally
+ * nested one level under a harness-source prefix) out of a decompressed tar archive,
+ * without writing anything to disk. Scanning the whole archive index up front lets
+ * `extractArchive` resolve `scripts/vendored/` symlink targets that appear later in
+ * the archive than the symlink entry itself.
+ */
+const parsePayloadEntries = (archive: Uint8Array): readonly ParsedTarEntry[] => {
   let payloadPrefix: string | undefined
-  let retained = 0
+  const entries: ParsedTarEntry[] = []
   for (let offset = 0; offset + 512 <= archive.length; ) {
-    if (zeroBlock(archive, offset)) {
-      if (retained === 0) throw new KiError('harness archive contains no skills, agents, or hooks payload', 1)
-      return
-    }
+    if (zeroBlock(archive, offset)) return entries
     const name = tarString(archive, offset, 100)
     const headerPrefix = tarString(archive, offset + 345, 155)
     const type = tarString(archive, offset + 156, 1)
+    const linkname = tarString(archive, offset + 157, 100)
     const rawPath = headerPrefix ? `${headerPrefix}/${name}` : name
     const path = type === '5' ? rawPath.replace(/\/+$/, '') : rawPath
     const size = tarSize(archive, offset + 124)
@@ -54,34 +61,71 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
     const parts = path.split('/')
     const direct = parts[0] === 'skills' || parts[0] === 'subagents' || parts[0] === 'hooks'
     const nested = parts[1] === 'skills' || parts[1] === 'subagents' || parts[1] === 'hooks'
-    if (!direct && !nested) {
-      offset = contentsStart + Math.ceil(size / 512) * 512
-      continue
-    }
-    const entryPrefix = direct ? '' : (parts[0] as string)
-    if (payloadPrefix !== undefined && payloadPrefix !== entryPrefix) throw new KiError('harness archive mixes payload roots', 1)
-    payloadPrefix = entryPrefix
-    const payloadPath = parts.slice(direct ? 0 : 1).join('/')
-    if (type === '2' && payloadPath.includes('/scripts/vendored/')) {
-      offset = contentsStart + Math.ceil(size / 512) * 512
-      continue
-    }
-    if (type === '5') {
-      if (size !== 0) throw new KiError('harness archive directory has contents', 1)
-    } else if (type !== '' && type !== '0') {
-      throw new KiError('harness archive may contain only regular files and directories', 1)
-    }
-    const destination = join(target, payloadPath)
-    if (relative(target, destination).startsWith('..')) throw new KiError('harness archive entry escapes its staging directory', 1)
-    if (type === '5') await mkdir(destination, { recursive: true })
-    else {
-      await mkdir(dirname(destination), { recursive: true })
-      await writeFile(destination, archive.subarray(contentsStart, contentsEnd), { flag: 'wx' })
-      retained += 1
+    if (direct || nested) {
+      const entryPrefix = direct ? '' : (parts[0] as string)
+      if (payloadPrefix !== undefined && payloadPrefix !== entryPrefix) throw new KiError('harness archive mixes payload roots', 1)
+      payloadPrefix = entryPrefix
+      const payloadPath = parts.slice(direct ? 0 : 1).join('/')
+      entries.push({ payloadPath, type, contentsStart, contentsEnd, linkname })
     }
     offset = contentsStart + Math.ceil(size / 512) * 512
   }
   throw new KiError('harness archive is missing its terminating tar block', 1)
+}
+
+/**
+ * Resolves a `scripts/vendored/` symlink entry's link target against the archive's
+ * own payload index, materialising shared-module links (e.g.
+ * `skills/x/scripts/vendored/ki-skills/checker.ts -> ../../../keystone/ki-skills/scripts/shared/checker.ts`)
+ * into real files at install time so the installed tree needs no filesystem symlinks.
+ * Fails closed if the target escapes the payload root, does not exist in the archive,
+ * or is itself a symlink entry.
+ */
+const resolveVendoredLinkTarget = (entry: ParsedTarEntry, byPath: ReadonlyMap<string, ParsedTarEntry>): ParsedTarEntry => {
+  const resolved = join(dirname(entry.payloadPath), entry.linkname)
+  if (resolved.startsWith('..') || resolved === '.') throw new KiError('harness archive vendored symlink target escapes its payload', 1)
+  const targetEntry = byPath.get(resolved)
+  if (!targetEntry) throw new KiError('harness archive vendored symlink target does not exist in the archive', 1)
+  if (targetEntry.type === '2') throw new KiError('harness archive vendored symlink target must not itself be a symlink', 1)
+  return targetEntry
+}
+
+export const extractArchive = async (payload: Uint8Array, target: string): Promise<void> => {
+  let archive: Uint8Array
+  try {
+    archive = gunzipSync(payload)
+  } catch {
+    throw new KiError('harness release must be a gzip-compressed tar archive', 1)
+  }
+  const entries = parsePayloadEntries(archive)
+  const byPath = new Map(entries.map((entry) => [entry.payloadPath, entry] as const))
+
+  let retained = 0
+  for (const entry of entries) {
+    if (entry.type === '2' && entry.payloadPath.includes('/scripts/vendored/')) {
+      const targetEntry = resolveVendoredLinkTarget(entry, byPath)
+      const destination = join(target, entry.payloadPath)
+      if (relative(target, destination).startsWith('..')) throw new KiError('harness archive entry escapes its staging directory', 1)
+      await mkdir(dirname(destination), { recursive: true })
+      await writeFile(destination, archive.subarray(targetEntry.contentsStart, targetEntry.contentsEnd), { flag: 'wx' })
+      retained += 1
+      continue
+    }
+    if (entry.type === '5') {
+      if (entry.contentsEnd !== entry.contentsStart) throw new KiError('harness archive directory has contents', 1)
+    } else if (entry.type !== '' && entry.type !== '0') {
+      throw new KiError('harness archive may contain only regular files and directories', 1)
+    }
+    const destination = join(target, entry.payloadPath)
+    if (relative(target, destination).startsWith('..')) throw new KiError('harness archive entry escapes its staging directory', 1)
+    if (entry.type === '5') await mkdir(destination, { recursive: true })
+    else {
+      await mkdir(dirname(destination), { recursive: true })
+      await writeFile(destination, archive.subarray(entry.contentsStart, entry.contentsEnd), { flag: 'wx' })
+      retained += 1
+    }
+  }
+  if (retained === 0) throw new KiError('harness archive contains no skills, agents, or hooks payload', 1)
 }
 
 /**
