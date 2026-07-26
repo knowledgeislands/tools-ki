@@ -1,18 +1,19 @@
 import { randomUUID } from 'node:crypto'
-import { lstat, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
+import { link, lstat, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { KiError } from './errors.ts'
 
 export interface NativeWrite {
   readonly path: string
   readonly content: string
+  readonly create?: boolean
 }
 
 interface PreparedWrite extends NativeWrite {
   readonly repository: string
   readonly absolutePath: string
-  readonly original: string
-  readonly identity: FileIdentity
+  readonly original?: string
+  readonly identity?: FileIdentity
 }
 
 interface FileIdentity {
@@ -43,7 +44,8 @@ const distinctWrites = (writes: readonly NativeWrite[]): readonly NativeWrite[] 
       byPath.set(write.path, write)
       continue
     }
-    if (existing.content !== write.content) throw new KiError(`native conform repeats write path ${write.path} with different content`, 1)
+    if (existing.content !== write.content || Boolean(existing.create) !== Boolean(write.create))
+      throw new KiError(`native conform repeats write path ${write.path} with different content`, 1)
   }
   return [...byPath.values()]
 }
@@ -57,11 +59,23 @@ const inspectWriteTarget = async (repository: string, path: string, absolutePath
   return { dev: state.dev, ino: state.ino }
 }
 
+const inspectCreateTarget = async (repository: string, path: string, absolutePath: string): Promise<void> => {
+  const state = await lstat(absolutePath).catch(() => undefined)
+  if (state) throw new KiError(`native conform create target ${path} must not already exist`, 1)
+  const parent = await realpath(dirname(absolutePath)).catch(() => undefined)
+  if (!parent || !isContained(repository, parent)) throw new KiError(`native conform create target ${path} escapes the repository`, 1)
+}
+
 export const prepareWrites = async (repository: string, writes: readonly NativeWrite[]): Promise<readonly PreparedWrite[]> => {
   const prepared: PreparedWrite[] = []
   for (const write of distinctWrites(writes)) {
     if (!safeRelativePath(write.path)) throw new KiError(`native conform write path ${write.path} is unsafe`, 1)
     const absolutePath = join(repository, write.path)
+    if (write.create) {
+      await inspectCreateTarget(repository, write.path, absolutePath)
+      prepared.push({ ...write, repository, absolutePath })
+      continue
+    }
     const identity = await inspectWriteTarget(repository, write.path, absolutePath)
     const original = await readFile(absolutePath, 'utf8')
     if (!sameIdentity(identity, await inspectWriteTarget(repository, write.path, absolutePath)))
@@ -74,8 +88,17 @@ export const prepareWrites = async (repository: string, writes: readonly NativeW
 export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: boolean): Promise<void> => {
   if (dryRun) return
   for (const write of writes) {
+    if (write.create) {
+      await inspectCreateTarget(write.repository, write.path, write.absolutePath)
+      continue
+    }
     const identity = await inspectWriteTarget(write.repository, write.path, write.absolutePath)
-    if (!sameIdentity(identity, write.identity) || (await readFile(write.absolutePath, 'utf8')) !== write.original) {
+    if (
+      !write.identity ||
+      write.original === undefined ||
+      !sameIdentity(identity, write.identity) ||
+      (await readFile(write.absolutePath, 'utf8')) !== write.original
+    ) {
       throw new KiError(`native conform write target ${write.path} changed before publication`, 1)
     }
   }
@@ -91,7 +114,8 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
     for (const write of writes) {
       const path = temporary.get(write)
       if (!path) throw new KiError(`native conform transaction lost temporary content for ${write.path}`, 1)
-      await rename(path, write.absolutePath)
+      if (write.create) await link(path, write.absolutePath)
+      else await rename(path, write.absolutePath)
       published.push(write)
       publishedIdentities.set(write, await inspectWriteTarget(write.repository, write.path, write.absolutePath))
     }
@@ -102,7 +126,10 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
       const currentIdentity = await inspectWriteTarget(write.repository, write.path, write.absolutePath).catch(() => undefined)
       if (!publishedIdentity || !currentIdentity || !sameIdentity(publishedIdentity, currentIdentity)) {
         rollbackRefusal ??= new KiError(`native conform rollback target ${write.path} changed after publication`, 1)
+      } else if (write.create) {
+        await rm(write.absolutePath, { force: true })
       } else {
+        if (write.original === undefined) throw new KiError(`native conform transaction lost original content for ${write.path}`, 1)
         await writeFile(write.absolutePath, write.original, 'utf8')
       }
     }

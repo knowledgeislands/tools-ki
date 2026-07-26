@@ -25,10 +25,17 @@ export interface AuditOutcome {
   readonly subject?: string
 }
 
-/** One declared file replacement, relative to the repository root — the only effect a repair may propose. */
+/**
+ * One declared file replacement, relative to the repository root.
+ *
+ * Existing regular files are replaced transactionally.  A repair must opt in
+ * explicitly with `create` to create a previously absent regular file; this
+ * keeps accidental path typos from turning into new repository content.
+ */
 export interface RepairWrite {
   readonly path: string
   readonly content: string
+  readonly create?: boolean
 }
 
 /** One pathless subprocess command run by the host from the repository root after transactional file writes publish. */

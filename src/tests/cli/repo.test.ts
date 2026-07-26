@@ -372,6 +372,49 @@ describe('[ki repo]', () => {
       expect(result.output).toContain('native conform write target missing.txt must be an existing regular file')
     })
 
+    test('creates an explicitly declared new regular file transactionally', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async ({ repository }) => {
+            const { existsSync } = await import('node:fs')
+            return existsSync(repository + '/created.txt')
+              ? [{ status: 'PASS', message: 'created' }]
+              : [{ status: 'VIOLATION', message: 'missing' }]
+          },
+          repair: async () => ({ writes: [{ path: 'created.txt', content: 'created\\n', create: true }] })
+        }] }]`)
+      })
+
+      const dryRun = await box.run('ki repo conform --dry-run')
+      expect(dryRun).toEqual({ exitCode: 0, output: 'would write created.txt\n' })
+      await expect(box.project.read('created.txt')).rejects.toThrow()
+
+      const result = await box.run('ki repo conform')
+      expect(result).toEqual({ exitCode: 0, output: 'write created.txt\nFIXED EXAMPLE-1: created\n' })
+      await expect(box.project.read('created.txt')).resolves.toBe('created\n')
+    })
+
+    test('refuses an explicit create target that already exists', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.write('created.txt', 'existing\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          repair: async () => ({ writes: [{ path: 'created.txt', content: 'created\\n', create: true }] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('native conform create target created.txt must not already exist')
+      await expect(box.project.read('created.txt')).resolves.toBe('existing\n')
+    })
+
     test('an unfixed violation (no repair function) blocks conform and is reported', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
@@ -741,7 +784,10 @@ describe('[ki repo]', () => {
     test('orders mechanical items across families by phase, then family, then item position', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
-      const item = (code: string, phase: string) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
+      const item = (
+        code: string,
+        phase: string
+      ) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
         audit: async () => [{ status: 'INFO', message: '${code}' }] }`
       await box.setupExampleHarness({
         rubric: rubric(`[
@@ -939,7 +985,10 @@ describe('[ki repo]', () => {
   })
 
   describe('skill resolution', () => {
-    const installSkillsHarness = async (data: SandboxArea, specs: readonly { readonly name: string; readonly deps: readonly string[] }[]): Promise<void> => {
+    const installSkillsHarness = async (
+      data: SandboxArea,
+      specs: readonly { readonly name: string; readonly deps: readonly string[] }[]
+    ): Promise<void> => {
       for (const { name, deps } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
         const list = `[${deps.join(', ')}]`

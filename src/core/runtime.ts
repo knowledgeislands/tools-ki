@@ -46,7 +46,8 @@ const validateOutcome = (value: unknown, code: string, index: number): AuditOutc
   if (status !== 'PASS' && status !== 'VIOLATION' && status !== 'NOT_APPLICABLE' && status !== 'INFO')
     throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid status`, 1)
   if (typeof message !== 'string' || !message) throw new KiError(`rubric item ${code} audit outcome ${index} must have a message`, 1)
-  if (subject !== undefined && typeof subject !== 'string') throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
+  if (subject !== undefined && typeof subject !== 'string')
+    throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
   return subject === undefined ? { status, message } : { status, message, subject }
 }
 
@@ -62,10 +63,12 @@ export const validateRepairProposal = (
   if (!Array.isArray(commands)) throw new KiError(`rubric item ${code} repair commands must be an array`, 1)
   const validatedWrites = writes.map((write, index) => {
     if (!isRecord(write)) throw new KiError(`rubric item ${code} repair write ${index} must have string path and content`, 1)
-    const { path, content } = write
+    const { path, content, create } = write
     if (typeof path !== 'string' || typeof content !== 'string')
       throw new KiError(`rubric item ${code} repair write ${index} must have string path and content`, 1)
-    return { path, content }
+    if (create !== undefined && typeof create !== 'boolean')
+      throw new KiError(`rubric item ${code} repair write ${index} create must be boolean`, 1)
+    return create ? { path, content, create } : { path, content }
   })
   const validatedCommands = commands.map((command, index) => {
     if (!isRecord(command)) throw new KiError(`rubric item ${code} repair command ${index} must have a program and arguments`, 1)
