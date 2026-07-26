@@ -73,6 +73,28 @@ The operative compatible-harness constraints are in the incoming [CLI-004 handof
     - [x] Align HELP, completion, `ki(1)`, and the native-operation decision with the delivered commands.
     - [ ] Align activation, installation, release notes, full CI fixtures, and public user guidance when those surfaces exist.
 
+## Tranche T1 — tools-ki bulk move (execution guidance)
+
+The `tools-ki`-owned tranche from the handoff: the versioned rubric-definition contract, the generic host runtime, and the fixture package. Codex's harness conversion is stood down until T1.1–T1.3 are committed (the handover gate). Constraints are the seven in the [incoming handoff](../../../../+/_HANDOFFS/ki-agentic-harness/CLI-004-compatible-harness-operation-constraints.md); the harness inventory measured the generic engine at ~1,561 non-test lines (`rubric.ts` 156, `checker.ts` 594, `govern.ts` 180, `reporter.ts` 262, plus a legacy `checker-reporter.ts` deliberately not ported).
+
+Contract decisions locked for T1.1:
+
+- One versioned TypeScript module per installed skill at `scripts/native/rubric.ts`, default-exporting a `SkillRubricDefinition` with `contract: 1`; structural validation at load; no `.mjs` operations, per-skill runner, or second wrapper convention survives.
+- The definition model adapts the harness catalogue (families → items; phases `PREPARE`/`INSPECT`/`PRIMARY`/`DERIVED`/`NORMALISE`; levels `FAIL`/`WARN`; outcomes `PASS`/`VIOLATION`/`NOT_APPLICABLE`/`INFO`) with judgment-only items carried as data, never executed.
+- **Repairs are declared, not performed** (handoff constraint 4): a repair returns a serialisable proposal of `RepairWrite { path, content }` aligned with the existing `NativeWrite` transaction; the host validates containment and pre-write snapshots, publishes atomically in dependency order, rolls back where safe, and re-audits — `FIXED` is derived from the post-publication re-audit, not claimed by the skill.
+- Context builders are read-only; dry-run is observational (same resolution, same plans, zero writes) — the runtime owns the boolean, skills never see a write path.
+
+| Unit | Scope | Model / effort | Status |
+| --- | --- | --- | --- |
+| T1.1 Contract | `src/core/rubric.ts` versioned types + loading convention (above) | Fable (main loop) | in progress |
+| T1.2 Runtime | Loader (contained Bun import), audit executor, host-owned conform transaction, rendering; replace `.mjs` operations and migrate the CLI test fixtures | Sonnet 5 / high | pending |
+| T1.3 Acceptance fixtures | The handoff's acceptance-evidence list as CLI tests: contained loading, dependency order, malformed/linked/altered/unavailable/duplicate providers, byte-identical dry run, concurrent-replacement refusal, rollback, re-audit | Sonnet 5 / medium | pending |
+| T1.4 Nested-link materialisation | Step 5.4: materialise shared-module links as regular verified files at acquisition; never weaken or follow nested-link validation | Sonnet 5 / medium | pending |
+| T1.5 Proof against canonical payload | Steps 7.4/8.4 first passes + step 9.1 first clause via `ki dev on` linked harness | Sonnet 5 / medium | gated on T1.2 |
+| T1.6 Surface alignment | Step 10 residuals touched by the above | Haiku 4.5 / low | gated on T1.2–T1.5 |
+
+Orchestration: Fable coordinates, designs T1.1, reviews every diff, and runs the gates (`bun run test` at 100% thresholds, tsc, biome, knip) before each unit commits; sub-agents implement. T1.2 and T1.4 run in parallel (disjoint files); T1.3 follows T1.2.
+
 ## Files touched
 
 - `src/`, `bin/ki`, installer, completion, tests, build artefacts, and CI
