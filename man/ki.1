@@ -1,36 +1,76 @@
-.TH KI 1 "2026-07-24" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-07-26" "Knowledge Islands" "User Commands"
 .SH NAME
 ki \- Knowledge Islands command-line interface
 .SH SYNOPSIS
-.B ki
-.RI [ command ]
-.br
-.B ki help
-.RI [ command ]
-.br
-.B ki completions
-.I shell
-.br
+.TP
+.B ki [command]
+Run a KI command, or print root help when no command is supplied.
+.TP
+.B ki help [command]
+Print root or command-specific help.
+.TP
+.B ki completions shell
+Print Bash or Zsh completion source.
+.TP
 .B ki diag
-.br
+Show installation mode, paths, and user configuration.
+.TP
 .B ki doctor
-.br
+Check user configuration, agents, harnesses, and user-skill links.
+.TP
 .B ki version
-.br
-.B ki bootstrap
-.RI [ --refresh ]
-.br
-.B ki dev on
-.I local-harness-path
-.br
+Print the CLI version.
+.TP
+.B ki bootstrap [--refresh]
+Detect agents, install the canonical harness, and install core user skills.
+.TP
+.B ki dev on local-harness-path
+Switch the canonical harness to a local checkout.
+.TP
 .B ki dev off
-.br
-.B ki acquire chatgpt import
-.I capture-directory
-.B --output
-.I kep-directory
-.RI [ --dry-run ]
-.RI [ --json ]
+Restore the verified canonical harness archive.
+.TP
+.B ki harness list
+List installed compatible harnesses.
+.TP
+.B ki harness info harness-id [--json]
+Inspect one installed harness and its capabilities.
+.TP
+.B ki harness install harness-id
+Install one configured compatible harness.
+.TP
+.B ki harness uninstall harness-id [--dry-run]
+Remove one installed non-base harness.
+.TP
+.B ki skill user add skill [--replace]
+Link a harness skill into configured user agent skill spaces.
+.TP
+.B ki skill user remove skill
+Remove a KI-managed user skill link.
+.TP
+.B ki skill repo add skill [--repo path] [--replace]
+Link and declare a harness skill in one repository.
+.TP
+.B ki skill repo remove skill [--repo path]
+Remove a KI-managed repository skill link and declaration.
+.TP
+.B ki skill rubric skill [--write]
+Check or regenerate a skill's rubric catalogue.
+.TP
+.B ki repo audit [--repo path] [--skill skill]
+Run registered native repository audits.
+.TP
+.B ki repo conform [--repo path] [--skill skill] [--dry-run]
+Apply registered native repository repairs.
+.TP
+.B ki user audit [--skill skill]
+Run registered native audits for configured user skills.
+.TP
+.B ki user conform [--skill skill] [--dry-run]
+Apply registered native repairs for configured user skills.
+.TP
+.B ki acquire chatgpt import capture-directory --output kep-directory [--dry-run] [--json]
+Create a deterministic Knowledge Export Package from a local ChatGPT capture.
 .SH DESCRIPTION
 .B ki
 is the Knowledge Islands command-line interface.
