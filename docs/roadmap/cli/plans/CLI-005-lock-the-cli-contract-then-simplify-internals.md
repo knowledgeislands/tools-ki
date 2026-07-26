@@ -1,7 +1,7 @@
 ---
 id: 'CLI-005'
 title: Lock the CLI contract with end-to-end tests, then simplify internals
-status: acceptance
+status: done
 roadmap: cli/lock-the-cli-contract-then-simplify-internals
 blocks: —
 blocked-by: —
@@ -76,7 +76,7 @@ Line numbers are from the current coverage run and will drift as steps 6–8 lan
 7. [x] **Phase 2 — extract `core/acquire.ts` and delete the legacy shim (D2, D3).** Move `Fetcher`, download + SHA-256 verify, and `tarString`/`tarSize`/`zeroBlock`/`extractArchive` into `src/core/acquire.ts`; remove `migrateLegacyHarnessLayout`/`removeLegacyHarnessLock` and their call site in `installHarness`. **In the same commit, delete the legacy-migration test cases from `registry.test.ts`** — the suite must stay green at every step boundary even though step 8 removes it entirely. _Verify:_ full suite green; registry.ts holds only release registry + lifecycle + dev mode.
 8. [x] **Phase 2 — retire the unit tests (D4, D5).** Port the remaining `registry.test.ts` scenarios to CLI tests (install from archive, sha mismatch, HTTP failure/redirect refusal, bad gzip, unsafe tar paths, vendored-script filtering, already-installed short-circuit, uninstall guards, config record/unrecord — each asserting exit code and message through `box.run`); delete `registry.test.ts`; move `src/cli.test.ts` under `src/tests/cli/`; excise the `isSafeRelativePath` unit block and un-export it (its branches are covered by the existing unsafe-path CLI cases — verify in coverage before deleting any branch); re-run knip and strip exports only the unit suite consumed (e.g. `canonicalHarnessRelease` if externally unused). _Verify:_ the only `vi.mock` remaining is the documented write-failure exception; knip clean.
 9. [x] **Phase 2 — close every remaining uncovered span per the dispositions table (D6, D7).** Apply the Span dispositions list verbatim; add `src/tests/**` to coverage `exclude`. Any span whose disposition proves wrong in practice is escalated, not improvised. _Verify:_ `vitest run --coverage` passes the 100% thresholds. _Note:_ a fourth disposition emerged in execution and is hereby sanctioned retroactively: a justified `/* v8 ignore */` with a reachability argument at the use site, for future-proofing guards — this matches the codebase's pre-existing idiom (`cli.ts`, `main.ts`, `resolution.ts`, `acquire.ts`) which D6 as originally written contradicted.
-10. [ ] **Phase 3 — recap.** Run `ki-recap` over the whole set of changes to harvest lessons and route them to their homes. _Verify:_ recap produced; lessons filed.
+10. [x] **Phase 3 — recap.** Run `ki-recap` over the whole set of changes to harvest lessons and route them to their homes. _Verify:_ recap produced; lessons filed (session recap of 2026-07-26; learnings routed to user memory).
 
 ## Execution guidance (model / effort per step)
 
@@ -129,3 +129,7 @@ Steps 1–9 complete. The CLI contract is locked end-to-end and the internals ar
 ### Mini recap
 
 The load-bearing learning: one missing interface seam (the fetcher) was the entire justification for the unit-test suite — moving it onto the context made the suite deletable. Proposed routes (not yet applied): (1) delegation briefs must be checked against repo idiom before forbidding a pattern — the "no v8-ignore" rule contradicted this codebase's convention; (2) never amend/rewrite history on a branch a concurrent session is writing to; both are memory candidates, to be confirmed at the step-10 recap.
+
+## Done
+
+Accepted by the user in-session (2026-07-26). The CLI contract is locked with interface-only tests at 100% coverage thresholds; internals are simplified behind it (fetcher on the context, acquire.ts extraction, legacy shim and unit suite deleted). Residual concern: the branch's step-9 history is interleaved with a concurrent session's commits, and pre-existing biome debt in three files remains out of scope — no follow-up owed by this plan. Intended follow-up: none beyond the step-10 recap's routed learnings.
