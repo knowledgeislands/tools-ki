@@ -1,0 +1,55 @@
+---
+id: 'CLI-006'
+title: Deliver verified KI release installation
+status: open
+roadmap: cli/deliver-verified-ki-release-installation
+blocks: —
+blocked-by: —
+---
+
+## Context
+
+`tools-ki` owns the public `ki` executable and its release artifacts, but its current `install.sh` can only copy a locally built `dist/ki` or link a checkout-local `bin/ki` launcher.
+
+The Website's `/harness/install` redirect still targets the harness installer, which is no longer the correct public owner.
+
+The public installer must not download an unauthenticated or mutable artifact.
+
+It needs a tag-bound release contract that lets a user select a supported target, verify an immutable archive, and install the executable and `ki(1)` atomically.
+
+## Current state
+
+- GitHub release `v0.1.0` has no binary assets.
+- CI builds `dist/ki` only as ephemeral Actions artifacts, with no tag trigger, stable artifact names, checksums, signatures, or retention contract.
+- The Homebrew formula installs the `v0.1` source archive and historical `bin/ki` launcher rather than a compiled release artifact.
+- `install.sh --link` is a useful local-development path, but `--copy` cannot serve as public installation because it requires a populated checkout.
+
+## Steps
+
+1. Define the supported operating-system and architecture matrix, archive layout, stable versioned asset names, immutable release reference, checksum manifest, and signature/public-key verification contract.
+2. Add a tag-bound release workflow that builds each supported `ki` executable, packages it with `man/ki.1`, publishes the archives and signed checksum manifest as GitHub release assets, and proves the published archive contents before release.
+3. Replace `install.sh`'s checkout-only default with target detection, immutable release resolution, manifest-signature and archive-checksum verification, and atomic executable/manual installation.
+4. Retain `install.sh --link` exclusively for local checkout development, make its source entry point explicit, and remove the obsolete `bin/` launcher only after the linked path and its tests no longer depend on it.
+5. Add end-to-end installer fixtures for supported target selection, unavailable targets, malformed or unsigned manifests, checksum mismatch, atomic replacement, and the retained local `--link` path.
+6. Align `README.md`, `ki(1)`, the local-development guide, changelog, and Homebrew formula with the verified release artifacts and the development-only link path.
+7. Move the Website public install redirect to the tools-owned installer after a released artifact passes the end-to-end verification; retain an intentional compatibility redirect only if the Website plan approves it.
+
+## Files touched
+
+- `install.sh`, release workflow, installer tests, build/package configuration, and release documentation in `tools-ki`
+- Homebrew formula and release-delivery configuration
+- The KI Website redirect configuration in a separately committed recipient change
+
+## Verify
+
+1. Every supported release archive contains only the expected executable and manual, with stable names and manifest entries.
+2. The installer rejects missing, unsigned, malformed, mismatched, redirected, and unsupported release inputs before changing an existing installation.
+3. A successful public installation atomically replaces both `ki` and `ki(1)`, and `ki --version` reports the released version.
+4. `install.sh --link` continues to follow a local checkout without requiring a release download.
+5. The tools test suite, TypeScript check, formatter/linter, and installer integration tests pass.
+
+## Dependencies / blocks
+
+This plan is independently executable from [CLI-004](CLI-004-native-repo-maintenance.md), but must use the same canonical harness and CLI delivery vocabulary.
+
+The Website redirect change is an outbound recipient task after this plan's first verified released artifact; it does not block release-workflow or installer implementation.

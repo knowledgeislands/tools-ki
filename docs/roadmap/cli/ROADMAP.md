@@ -18,6 +18,12 @@ Implement the first repository-maintenance slice without dispatching vendored `.
 
 **Plan:** [CLI-004](plans/CLI-004-native-repo-maintenance.md)
 
+### Deliver verified KI release installation
+
+Replace the checkout-only default installer with a `tools-ki`-owned, verified release installer. Publish immutable platform archives and signed checksums from tag-bound releases; retain `--link` only for a local checkout. Once the installer has release evidence, move the public Website install redirect from the harness to `tools-ki` and align Homebrew with the same artifacts.
+
+**Plan:** [CLI-006](plans/CLI-006-deliver-verified-ki-release-installation.md)
+
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
