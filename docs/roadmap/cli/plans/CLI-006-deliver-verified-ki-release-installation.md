@@ -1,11 +1,11 @@
 ---
 id: 'CLI-006'
 title: Deliver verified KI release installation
-status: open
+status: in-progress
 roadmap: cli/deliver-verified-ki-release-installation
 blocks: —
 blocked-by: —
-baseline-ref: —
+baseline-ref: 1ecb6e48e71346688c3d1734fe764e57df0be1e3
 ---
 
 ## Context
