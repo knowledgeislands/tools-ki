@@ -30,6 +30,24 @@ const safeRelativePath = (value: string): boolean =>
 
 const sameIdentity = (left: FileIdentity, right: FileIdentity): boolean => left.dev === right.dev && left.ino === right.ino
 
+/**
+ * Several independent rubric items may derive the same complete-file repair
+ * from shared read-only evidence. Retain one identical proposal, but never
+ * choose between competing replacement content.
+ */
+const distinctWrites = (writes: readonly NativeWrite[]): readonly NativeWrite[] => {
+  const byPath = new Map<string, NativeWrite>()
+  for (const write of writes) {
+    const existing = byPath.get(write.path)
+    if (!existing) {
+      byPath.set(write.path, write)
+      continue
+    }
+    if (existing.content !== write.content) throw new KiError(`native conform repeats write path ${write.path} with different content`, 1)
+  }
+  return [...byPath.values()]
+}
+
 const inspectWriteTarget = async (repository: string, path: string, absolutePath: string): Promise<FileIdentity> => {
   const state = await lstat(absolutePath).catch(() => undefined)
   if (!state?.isFile() || state.isSymbolicLink())
@@ -40,12 +58,9 @@ const inspectWriteTarget = async (repository: string, path: string, absolutePath
 }
 
 export const prepareWrites = async (repository: string, writes: readonly NativeWrite[]): Promise<readonly PreparedWrite[]> => {
-  const paths = new Set<string>()
   const prepared: PreparedWrite[] = []
-  for (const write of writes) {
+  for (const write of distinctWrites(writes)) {
     if (!safeRelativePath(write.path)) throw new KiError(`native conform write path ${write.path} is unsafe`, 1)
-    if (paths.has(write.path)) throw new KiError(`native conform repeats write path ${write.path}`, 1)
-    paths.add(write.path)
     const absolutePath = join(repository, write.path)
     const identity = await inspectWriteTarget(repository, write.path, absolutePath)
     const original = await readFile(absolutePath, 'utf8')

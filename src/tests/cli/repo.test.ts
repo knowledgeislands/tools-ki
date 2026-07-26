@@ -150,6 +150,55 @@ describe('[ki repo]', () => {
       expect(afterContent).toBe('after\n')
     })
 
+    test('deduplicates identical same-target repair proposals', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.write('governed.txt', 'before\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{
+          code: 'F', title: 'Family',
+          items: [
+            { kind: 'mechanical', code: 'EXAMPLE-1', title: 'One', level: 'FAIL', phase: 'PRIMARY',
+              audit: async () => [{ status: 'VIOLATION', message: 'one' }],
+              repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] }) },
+            { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Two', level: 'FAIL', phase: 'PRIMARY',
+              audit: async () => [{ status: 'VIOLATION', message: 'two' }],
+              repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] }) }
+          ]
+        }]`)
+      })
+
+      const result = await box.run('ki repo conform --dry-run')
+
+      expect(result).toEqual({ exitCode: 0, output: 'would write governed.txt\n' })
+      expect(await box.project.read('governed.txt')).toBe('before\n')
+    })
+
+    test('rejects same-target repair proposals with different replacement content', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.write('governed.txt', 'before\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{
+          code: 'F', title: 'Family',
+          items: [
+            { kind: 'mechanical', code: 'EXAMPLE-1', title: 'One', level: 'FAIL', phase: 'PRIMARY',
+              audit: async () => [{ status: 'VIOLATION', message: 'one' }],
+              repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after-one\\n' }] }) },
+            { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Two', level: 'FAIL', phase: 'PRIMARY',
+              audit: async () => [{ status: 'VIOLATION', message: 'two' }],
+              repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after-two\\n' }] }) }
+          ]
+        }]`)
+      })
+
+      const result = await box.run('ki repo conform --dry-run')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('native conform repeats write path governed.txt with different content')
+      expect(await box.project.read('governed.txt')).toBe('before\n')
+    })
+
     // CLI-004 acceptance evidence (d): dry run is observational — repeating it changes
     // nothing (content or mtime) and produces byte-identical output each time; only the
     // real conform differs, in its `write` (not `would write`) line and its actual effect.
