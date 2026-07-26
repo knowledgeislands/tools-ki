@@ -1,3 +1,5 @@
+import { lstat, rm, symlink } from 'node:fs/promises'
+import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { type SandboxArea, sandbox } from './_cli_helper.ts'
 
@@ -148,6 +150,113 @@ describe('[ki repo]', () => {
       expect(afterContent).toBe('after\n')
     })
 
+    // CLI-004 acceptance evidence (d): dry run is observational — repeating it changes
+    // nothing (content or mtime) and produces byte-identical output each time; only the
+    // real conform differs, in its `write` (not `would write`) line and its actual effect.
+    test('a repeated dry run is byte-identical and touches nothing; only a real conform writes', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.write('governed.txt', 'before\n')
+      await box.setupExampleHarness({ rubric: rubric(governedItem()) })
+      const targetPath = join(box.project.path, 'governed.txt')
+      const beforeStat = await lstat(targetPath)
+
+      const firstDryRun = await box.run('ki repo conform --dry-run')
+      const secondDryRun = await box.run('ki repo conform --dry-run')
+      const afterDryRunsStat = await lstat(targetPath)
+
+      expect(firstDryRun).toEqual(secondDryRun)
+      expect(firstDryRun).toEqual({ exitCode: 0, output: 'would write governed.txt\n' })
+      expect(await box.project.read('governed.txt')).toBe('before\n')
+      expect(afterDryRunsStat.mtimeMs).toBe(beforeStat.mtimeMs)
+      expect(afterDryRunsStat.size).toBe(beforeStat.size)
+
+      const conformed = await box.run('ki repo conform')
+
+      expect(conformed.output).not.toBe(firstDryRun.output)
+      expect(conformed).toEqual({ exitCode: 0, output: 'write governed.txt\n' })
+      expect(await box.project.read('governed.txt')).toBe('after\n')
+    })
+
+    // CLI-004 acceptance evidence (e): a write target replaced by a symlink before conform
+    // runs (the CLI-reachable shape of "concurrent target replacement" — no live process
+    // interleaving needed, since prepareWrites' regular-file check runs fresh every call)
+    // is refused before any transaction write, leaving the symlink and its shadowed file
+    // untouched.
+    test('refuses to conform a repair write target that has become a symlink', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.write('elsewhere.txt', 'shadow\n')
+      await symlink(join(box.project.path, 'elsewhere.txt'), join(box.project.path, 'governed.txt'))
+      await box.setupExampleHarness({ rubric: rubric(governedItem()) })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('native conform write target governed.txt must be an existing regular file')
+      expect((await lstat(join(box.project.path, 'governed.txt'))).isSymbolicLink()).toBe(true)
+      expect(await box.project.read('elsewhere.txt')).toBe('shadow\n')
+    })
+
+    // CLI-004 acceptance evidence (e): a write target that resolves, through a symlinked
+    // parent directory, outside the repository root is refused even though its own lstat
+    // looks like an ordinary regular file — the escape only shows up once the path is
+    // fully resolved.
+    test('refuses to conform a repair write target that escapes the repository through a symlinked directory', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.root.write('outside/target.txt', 'before\n')
+      await symlink(join(box.root.path, 'outside'), join(box.project.path, 'escape'))
+      await box.setupExampleHarness({
+        rubric: rubric(`[{
+          code: 'F', title: 'Family',
+          items: [{
+            kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+            audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+            repair: async () => ({ writes: [{ path: 'escape/target.txt', content: 'after\\n' }] })
+          }]
+        }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('native conform write target escape/target.txt escapes the repository')
+      expect(await box.root.read('outside/target.txt')).toBe('before\n')
+    })
+
+    // CLI-004 acceptance evidence (f): prepareWrites validates every write in the batch
+    // before publishWrites touches any of them, so a second write's rejection leaves the
+    // first write's — otherwise perfectly valid — target untouched. No mid-publication
+    // failure is needed to prove this half of "rollback/recovery": nothing was ever
+    // published in the first place.
+    test('a later write failing validation blocks the whole batch, leaving an earlier valid write unpublished', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.write('governed-1.txt', 'before-1\n')
+      await box.project.write('elsewhere.txt', 'shadow\n')
+      await symlink(join(box.project.path, 'elsewhere.txt'), join(box.project.path, 'governed-2.txt'))
+      await box.setupExampleHarness({
+        rubric: rubric(`[{
+          code: 'F', title: 'Family',
+          items: [
+            { kind: 'mechanical', code: 'EXAMPLE-1', title: 'One', level: 'FAIL', phase: 'PRIMARY',
+              audit: async () => [{ status: 'VIOLATION', message: 'x' }],
+              repair: async () => ({ writes: [{ path: 'governed-1.txt', content: 'after-1\\n' }] }) },
+            { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Two', level: 'FAIL', phase: 'PRIMARY',
+              audit: async () => [{ status: 'VIOLATION', message: 'y' }],
+              repair: async () => ({ writes: [{ path: 'governed-2.txt', content: 'after-2\\n' }] }) }
+          ]
+        }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('native conform write target governed-2.txt must be an existing regular file')
+      expect(await box.project.read('governed-1.txt')).toBe('before-1\n')
+    })
+
     test('reports FIXED when a re-audited item that was violated is now clean', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
@@ -252,6 +361,42 @@ describe('[ki repo]', () => {
 
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('warn EXAMPLE-1: nothing safe to propose')
+    })
+  })
+
+  // CLI-004 acceptance evidence (c): a provider that was valid at install time but has
+  // since been tampered with on disk — not a malformed payload from the start — is
+  // refused at `ki repo audit` time, before any of its rubric items run. Both scenarios
+  // reuse the same installed-payload integrity checks `ki harness info`/`list` exercise
+  // (src/core/harness.ts enumeratePayloadFiles/frontmatter), proven here end-to-end
+  // through the CLI surface CLI-004 names.
+  describe('altered installed providers', () => {
+    test('refuses a rubric module replaced by a symlink after install', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+      const base = 'ki/harnesses/example/harness/skills/ki-example'
+      await box.data.write(`${base}/scripts/rubric/notes.ts`, '// alternate target\n')
+      const rubricModulePath = `${box.data.path}/${base}/scripts/rubric/index.ts`
+      await rm(rubricModulePath)
+      await symlink(`${box.data.path}/${base}/scripts/rubric/notes.ts`, rubricModulePath)
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('must not be a symlink')
+    })
+
+    test('refuses a skill whose SKILL.md frontmatter was broken after install', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+      await box.data.write('ki/harnesses/example/harness/skills/ki-example/SKILL.md', 'no frontmatter here\n')
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('must declare frontmatter')
     })
   })
 
