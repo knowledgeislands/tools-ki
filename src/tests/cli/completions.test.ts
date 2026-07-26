@@ -8,9 +8,9 @@ describe('[ki completions]', () => {
     const bash = await box.run('ki completions bash')
 
     expect(zsh.output).toContain('#compdef ki')
-    expect(bash.output).toContain(
-      'complete -W "acquire bootstrap completions diag dev doctor harness help repo version --help --version" ki'
-    )
+    expect(zsh.output).toContain("_values 'repository command' educate audit conform")
+    expect(bash.output).toContain('compgen -W "educate audit conform"')
+    expect(bash.output).toContain('complete -F _ki ki')
   })
 
   test('rejects an unsupported shell and requires a shell argument', async () => {

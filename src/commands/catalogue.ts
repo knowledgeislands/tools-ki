@@ -10,3 +10,5 @@ export const rootCommandNames = [
   'repo',
   'version'
 ] as const
+
+export const repoCommandNames = ['educate', 'audit', 'conform'] as const
