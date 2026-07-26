@@ -46,7 +46,7 @@ Contract decisions locked at T1.1:
 | T1.3 Acceptance fixtures | Handoff's acceptance-evidence list as CLI tests: contained loading, dependency order, malformed/linked/altered/unavailable/duplicate providers, byte-identical dry run, concurrent-replacement refusal, rollback, re-audit | Sonnet 5 / medium | done |
 | T1.4 Nested-link materialisation | Step 5.4: materialise shared-module links as regular verified files at acquisition; never weaken or follow nested-link validation. This protects acquired payloads only, not a raw `ki dev on` checkout. | Sonnet 5 / medium | done |
 | T1.5 Proof against canonical payload | Steps 7.4/8.4 first passes + step 9.1 first clause via `ki dev on` linked harness | Sonnet 5 / medium | done — `ki-handoffs` ran from the canonical development payload: audit, byte-identical dry run, host-owned conform, and post-conform re-audit |
-| T1.6 Surface alignment | Step 10 residuals touched by above | Haiku 4.5 / low | ready |
+| T1.6 Surface alignment | Step 10 residuals touched by above | Haiku 4.5 / low | done — `ki repo` now renders an interactive TTY progress bar while non-interactive output remains stable |
 | T1.7 Generic rubric publication | `ki skill rubric <name> [--write]`: drift check by default, publication only through a dev-linked payload; replaces every per-skill `scripts/rubric/publish.ts` | Sonnet 5 / medium | done (`65d288e`) |
 | T1.8 Bounded subprocess repairs | Versioned repair commands declared by a native rubric; `ki` validates, reports, dry-runs, runs from the resolved repository without a shell, and re-audits. This enables honest migration of the authoring and engineering tool gates without reviving per-skill wrappers. | Codex / high | done (`4ca4ff3`) |
 

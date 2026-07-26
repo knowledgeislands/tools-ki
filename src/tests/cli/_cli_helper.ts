@@ -103,8 +103,7 @@ const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<v
   }
 }
 
-const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
-  writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
+const setupCanonicalHarness = (data: SandboxArea): Promise<void> => writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
 
 // The same fixture, but written under an arbitrary local directory rather than the
 // installed-harness data root — for exercising `ki dev on <path>` against a local
@@ -130,7 +129,7 @@ export interface Sandbox {
   readonly setEnv: (environment: Record<string, string | undefined>) => void
   readonly setFetcher: (fetcher: Fetcher) => void
   readonly cd: (relativePath: string) => void
-  readonly run: (command: string) => Promise<CommandResult>
+  readonly run: (command: string, options?: { readonly interactive?: boolean }) => Promise<CommandResult>
 }
 
 const create = async (): Promise<Sandbox> => {
@@ -170,14 +169,14 @@ const create = async (): Promise<Sandbox> => {
   // sandbox currently is, so repeated calls compose. Commands are written exactly
   // as typed at a shell, `ki ...`, so the literal command a test asserts against is
   // unambiguous at the call site.
-  const run = async (command: string): Promise<CommandResult> => {
+  const run = async (command: string, options?: { readonly interactive?: boolean }): Promise<CommandResult> => {
     let output = ''
     const write = (chunk: string): void => {
       output += chunk
     }
     const context = await createContext({
       stdout: { write },
-      stderr: { write },
+      stderr: { write, isTTY: options?.interactive },
       executable: executablePath,
       workingDirectory,
       environment: { ...env, ...environmentOverrides, _: executablePath },

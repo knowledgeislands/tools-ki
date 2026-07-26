@@ -47,6 +47,19 @@ describe('[ki repo]', () => {
       expect(result).toEqual({ exitCode: 0, output: 'ki repo audit: clean (1 skills)\n' })
     })
 
+    test('renders an interactive stderr progress bar without changing non-interactive output', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+
+      const result = await box.run('ki repo audit', { interactive: true })
+
+      expect(result).toEqual({
+        exitCode: 0,
+        output: '\rki repo audit: [--------------------] 0/1\rki repo audit: [####################] 1/1\nki repo audit: clean (1 skills)\n'
+      })
+    })
+
     test('rejects a repository configuration that is not valid TOML', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example\n')
@@ -784,10 +797,7 @@ describe('[ki repo]', () => {
     test('orders mechanical items across families by phase, then family, then item position', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
-      const item = (
-        code: string,
-        phase: string
-      ) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
+      const item = (code: string, phase: string) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
         audit: async () => [{ status: 'INFO', message: '${code}' }] }`
       await box.setupExampleHarness({
         rubric: rubric(`[
@@ -985,10 +995,7 @@ describe('[ki repo]', () => {
   })
 
   describe('skill resolution', () => {
-    const installSkillsHarness = async (
-      data: SandboxArea,
-      specs: readonly { readonly name: string; readonly deps: readonly string[] }[]
-    ): Promise<void> => {
+    const installSkillsHarness = async (data: SandboxArea, specs: readonly { readonly name: string; readonly deps: readonly string[] }[]): Promise<void> => {
       for (const { name, deps } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
         const list = `[${deps.join(', ')}]`
