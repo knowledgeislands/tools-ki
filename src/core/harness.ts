@@ -1,6 +1,7 @@
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { KiError } from './errors.ts'
+import { RUBRIC_MODULE_PATH } from './rubric.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const harnessComponent = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
@@ -8,19 +9,13 @@ const payloadRoots = ['skills', 'subagents', 'hooks'] as const
 
 export const baseHarnessIdentifier = 'knowledgeislands/ki-agentic-harness'
 
-export interface RegisteredOperation {
-  readonly protocol: 'ki/native-operation@1'
-  readonly module: string
-  readonly export: 'audit' | 'conform'
-  readonly mode: 'audit' | 'conform'
-}
-
 export interface HarnessCapability {
   readonly kind: 'skill'
   readonly name: string
   readonly source: string
   readonly dependsOn: readonly string[]
-  readonly operations: readonly RegisteredOperation[]
+  /** Payload-relative path to the skill's `scripts/rubric/index.ts` module, when it provides one. */
+  readonly rubricModule?: string
 }
 
 export interface InstalledHarness {
@@ -99,15 +94,9 @@ const discoverCapabilities = async (root: string, identifier: string): Promise<r
     const metadata = frontmatter(await readFile(join(root, file), 'utf8'), file)
     const { name } = metadata
     if (!name) throw new KiError(`${file} must declare name`, 1)
-    const operations = (['audit', 'conform'] as const)
-      .filter((mode) => files.includes(`${source}/scripts/native/${mode}.mjs`))
-      .map((mode) => ({
-        protocol: 'ki/native-operation@1' as const,
-        module: `${source}/scripts/native/${mode}.mjs`,
-        export: mode,
-        mode
-      }))
-    capabilities.push({ kind: 'skill', name, source, dependsOn: frontmatterDependencies(metadata['ki-depends-on'], file), operations })
+    const rubricPath = `${source}/${RUBRIC_MODULE_PATH}`
+    const rubricModule = files.includes(rubricPath) ? rubricPath : undefined
+    capabilities.push({ kind: 'skill', name, source, dependsOn: frontmatterDependencies(metadata['ki-depends-on'], file), rubricModule })
   }
   const names = new Set<string>()
   for (const capability of capabilities) {

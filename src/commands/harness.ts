@@ -39,12 +39,12 @@ export const createHarnessCommand = (context: KiContext): Command =>
         .option('--json', 'emit a versioned JSON result')
         .action(async (identifier: string, options: { json?: boolean }) => {
           const harness = await readInstalledHarness(context.paths.data, identifier)
-          const capabilities = harness.capabilities.map(({ kind, name, source, dependsOn, operations }) => ({
+          const capabilities = harness.capabilities.map(({ kind, name, source, dependsOn, rubricModule }) => ({
             kind,
             name,
             source,
             depends_on: dependsOn,
-            operations: operations.map(({ mode, module }) => ({ mode, module }))
+            rubric_module: rubricModule ?? null
           }))
           if (options.json) {
             context.stdout.write(`${JSON.stringify({ version: 1, harness: { id: harness.id, capabilities } })}\n`)

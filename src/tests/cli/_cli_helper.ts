@@ -85,17 +85,14 @@ const area = (path: string): SandboxArea => {
   }
 }
 
-// A single generic `example/harness` with one `ki-example` skill, whose audit/conform
-// native script bodies the caller supplies. Used to exercise the repo/harness/skill
-// commands against arbitrary skill behavior.
-const setupExampleHarness = async (data: SandboxArea, { audit, conform }: { audit?: string; conform?: string } = {}): Promise<void> => {
+// A single generic `example/harness` with one `ki-example` skill, whose `scripts/rubric/index.ts`
+// default export body the caller supplies verbatim. Used to exercise the repo/harness/skill
+// commands against arbitrary rubric-definition behavior. Omitting `rubric` writes the skill
+// without a rubric module at all, for exercising skills that provide no native governance.
+const setupExampleHarness = async (data: SandboxArea, { rubric }: { rubric?: string } = {}): Promise<void> => {
   const base = 'ki/harnesses/example/harness/skills/ki-example'
   await data.write(`${base}/SKILL.md`, '---\nname: ki-example\nki-depends-on: []\n---\n')
-  const operations = [
-    audit ? { mode: 'audit', source: audit } : undefined,
-    conform ? { mode: 'conform', source: conform } : undefined
-  ].filter((operation): operation is { readonly mode: string; readonly source: string } => operation !== undefined)
-  await Promise.all(operations.map((operation) => data.write(`${base}/scripts/native/${operation.mode}.mjs`, operation.source)))
+  if (rubric !== undefined) await data.write(`${base}/scripts/rubric/index.ts`, rubric)
 }
 
 const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<void> => {
@@ -126,7 +123,7 @@ export interface Sandbox {
   readonly project: SandboxArea
   readonly env: Record<string, string>
   readonly executable: string
-  readonly setupExampleHarness: (skill?: { readonly audit?: string; readonly conform?: string }) => Promise<void>
+  readonly setupExampleHarness: (skill?: { readonly rubric?: string }) => Promise<void>
   readonly setupCanonicalHarness: () => Promise<void>
   readonly setupLocalCanonicalHarness: (relativePath: string) => Promise<string>
   readonly setupAgentHome: (agentId: AgentId) => Promise<void>
