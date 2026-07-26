@@ -21,6 +21,14 @@ The current `ki-engineering` checker still expects retired package-script aggreg
 
 The generic checker, reporter, mode, ordering, and transaction logic currently collected in the harness's shared `govern.ts` and `checker.ts` belongs in `tools-ki`. A harness retains only skill-specific rubrics, evidence/context builders, and declared safe repairs. The runtime loads those definitions from the installed payload and owns audit execution, finding rendering, dry-run, ordered conform, and publication.
 
+## Cross-repository agent handoff
+
+The operative compatible-harness constraints are in the incoming [CLI-004 handoff](../../../../+/_HANDOFFS/ki-agentic-harness/CLI-004-compatible-harness-operation-constraints.md). It transfers verified acquisition, contained regular payloads, dependency ordering, managed projection, host-owned transaction, dry-run, drift reporting, and nested-link refusal; it explicitly excludes the former generic package, lock-file, adapter, ZIP, and command-tree proposals.
+
+1. **Claude / `tools-ki` owns the bulk move.** Define and implement the versioned, declarative rubric-definition contract and generic host runtime in this repository: contained loading, audit execution, finding rendering, dependency ordering, dry-run, transactional publication/rollback, and hostile-payload fixtures. Do not change harness skill implementations during this tranche.
+2. **Codex / `ki-agentic-harness` owns the first consumer conversion.** Once the tools contract and fixture package are committed, migrate `ki-handoffs` to it. Its single repository-local Markdown-frontmatter repair proves host-applied conform without subprocess, network, GitHub, or user-home effects. The harness then migrates successive repository-scoped skills in batches.
+3. **The committed tools contract is the handover gate.** The harness conversion consumes it; it neither maintains a parallel wrapper nor changes the tools runtime while a conversion batch is in progress. `ki-repo`, external-process skills, and user-scoped skills remain later, explicitly designed cases.
+
 ## Completed foundation
 
 - Added read-only `ki diag` output for paths, installation, and configuration, plus `ki doctor` health checks for the configured KI environment.
