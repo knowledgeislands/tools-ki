@@ -3,6 +3,7 @@
 // violated items into the host-owned transaction (see ./transaction.ts). Judgment items
 // are catalogue data only; the runtime never executes them.
 
+import { lstat, realpath } from 'node:fs/promises'
 import { KiError } from './errors.ts'
 import type { ResolvedSkill } from './resolution.ts'
 import {
@@ -10,6 +11,7 @@ import {
   type MechanicalRubricItem,
   type RepairCommand,
   RUBRIC_PHASES,
+  type RubricFamily,
   type RubricScope,
   type SkillRubricDefinition
 } from './rubric.ts'
@@ -19,14 +21,10 @@ import type { NativeWrite } from './transaction.ts'
 export interface RepositoryRuntimeScope {
   readonly kind: 'repository'
   readonly repository: string
-}
-
-export interface UserRuntimeScope {
-  readonly kind: 'user-home'
   readonly userHome: string
 }
 
-export type RuntimeScope = RepositoryRuntimeScope | UserRuntimeScope
+export type RuntimeScope = RepositoryRuntimeScope
 
 export interface NativeFinding {
   readonly level: 'fail' | 'warn' | 'info'
@@ -42,6 +40,12 @@ export interface ItemAuditState {
 export interface SkillAuditResult {
   readonly findings: readonly NativeFinding[]
   readonly items: readonly ItemAuditState[]
+}
+
+/** The static maintenance catalogue a declared skill exposes through `ki repo educate`. */
+export interface SkillEducationResult {
+  readonly identity: string
+  readonly families: readonly RubricFamily<unknown>[]
 }
 
 export interface SkillConformResult {
@@ -66,8 +70,7 @@ const validateOutcome = (value: unknown, code: string, index: number): AuditOutc
   if (status !== 'PASS' && status !== 'VIOLATION' && status !== 'NOT_APPLICABLE' && status !== 'INFO')
     throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid status`, 1)
   if (typeof message !== 'string' || !message) throw new KiError(`rubric item ${code} audit outcome ${index} must have a message`, 1)
-  if (subject !== undefined && typeof subject !== 'string')
-    throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
+  if (subject !== undefined && typeof subject !== 'string') throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
   return subject === undefined ? { status, message } : { status, message, subject }
 }
 
@@ -86,8 +89,7 @@ export const validateRepairProposal = (
     const { path, content, create } = write
     if (typeof path !== 'string' || typeof content !== 'string')
       throw new KiError(`rubric item ${code} repair write ${index} must have string path and content`, 1)
-    if (create !== undefined && typeof create !== 'boolean')
-      throw new KiError(`rubric item ${code} repair write ${index} create must be boolean`, 1)
+    if (create !== undefined && typeof create !== 'boolean') throw new KiError(`rubric item ${code} repair write ${index} create must be boolean`, 1)
     return create ? { path, content, create } : { path, content }
   })
   const validatedCommands = commands.map((command, index) => {
@@ -149,13 +151,16 @@ interface InternalAudit {
 const auditSkill = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<InternalAudit> => {
   const definition = await loadRubricDefinition(skill)
   const definitionScope: RubricScope = definition.scope ?? { kind: 'repository' }
-  if (definitionScope.kind !== scope.kind)
-    throw new KiError(`${skill.identity} declares ${definitionScope.kind} scope and cannot run in ${scope.kind} mode`, 1)
-  const context = await definition.createContext(
-    scope.kind === 'repository'
-      ? { repository: scope.repository, configuration: skill.declaration.configuration }
-      : { userHome: scope.userHome, configuration: skill.declaration.configuration }
-  )
+  if (definitionScope.kind === 'user-home') {
+    const state = await lstat(scope.userHome).catch(() => undefined)
+    if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError('user home must be an existing physical directory', 1)
+    scope = { ...scope, userHome: await realpath(scope.userHome) }
+  }
+  const context = await definition.createContext({
+    repository: scope.repository,
+    userHome: scope.userHome,
+    configuration: skill.declaration.configuration
+  })
   const items = await Promise.all(orderedMechanicalItems(definition).map((item) => auditItem(item, context)))
   const findings = items.flatMap((state) =>
     state.outcomes.flatMap((outcome) => {
@@ -169,6 +174,12 @@ const auditSkill = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<In
 export const runSkillAudit = async (scope: RuntimeScope, skill: ResolvedSkill): Promise<SkillAuditResult> => {
   const { items, findings } = await auditSkill(scope, skill)
   return { findings, items }
+}
+
+/** Loads a declared skill's validated rubric catalogue without constructing evidence or executing an item. */
+export const educateSkill = async (skill: ResolvedSkill): Promise<SkillEducationResult> => {
+  const definition = await loadRubricDefinition(skill)
+  return { identity: skill.identity, families: definition.families }
 }
 
 // A violated item that declares a repair is only actually "fixed this round" once its

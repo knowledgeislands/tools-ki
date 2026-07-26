@@ -9,7 +9,7 @@ blocked-by: —
 
 ## Context
 
-`ki repo audit` and `ki repo conform` must become direct Bun capabilities. `ki` resolves capabilities declared in the selected repository's `.ki-config.toml`, and installed compatible harnesses run their rubrics through one `tools-ki`-owned governed-rubric runtime, without spawning legacy vendored scripts or requiring the repository to carry `.ki/bin` runners.
+`ki repo educate`, `ki repo audit`, and `ki repo conform` must become direct Bun capabilities. `ki` resolves capabilities declared in the selected repository's `.ki-config.toml`, and installed compatible harnesses run their rubrics through one `tools-ki`-owned governed-rubric runtime, without spawning legacy vendored scripts or requiring the repository to carry `.ki/bin` runners.
 
 [ADR-KI-TOOLS-001](../../decisions/ADR-KI-TOOLS-001-typescript-native-command-host.md) adopts the native Bun TypeScript host this work builds on. [ADR-KI-TOOLS-002](../../decisions/ADR-KI-TOOLS-002-compatible-harness-registry-and-native-operations.md) defines the registry, command, and scope boundary for native operations. [FND-004](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-004-define-compatible-harness-registration.md) (owned by `ki-agentic-harness`) defines compatible-harness, capability, projection, and CI-trust boundary; this plan does not transfer ownership of that architecture, release, or delivery decision.
 
@@ -20,7 +20,7 @@ blocked-by: —
 - Installed-harness acquisition and verification: read-only `ki harness list`, XDG-located installed-harness discovery, immutable archive-evidence checks ahead of extraction.
 - Capability activation at explicit user or repository scope, including the five core user skills (`ki-bootstrap`, `ki-delegate`, `ki-next`, `ki-plan`, `ki-recap`) and `ki dev on`/`ki dev off` for canonical-payload development links.
 - `.ki-config.toml` resolution: declared skill tables parsed and resolved only against installed harnesses, with declared dependencies ordered before execution.
-- `ki repo audit` and `ki repo conform` running against the legacy `.mjs`-runner model, now superseded by the governed-rubric runtime below: fixture-backed in-process execution, transactional dry-run, guarded publication, and post-conform re-audit.
+- `ki repo educate`, `ki repo audit`, and `ki repo conform` supersede the legacy `.mjs`-runner model: educate renders the validated static rubric catalogue without executing it; audit and conform provide fixture-backed in-process execution, transactional dry-run, guarded publication, and post-conform re-audit.
 - CLI-005's contract-test lock and 100% coverage safety net across the command surface, closing out the prior tranche this plan builds on.
 - T1.1 + T1.2 — versioned TypeScript rubric contract and governed runtime (commit `148fe6f`).
 - T1.4 — vendored shared-module link materialisation at acquisition (commit `e2b82ce`).
@@ -46,7 +46,7 @@ Contract decisions locked at T1.1:
 | T1.3 Acceptance fixtures | Handoff's acceptance-evidence list as CLI tests: contained loading, dependency order, malformed/linked/altered/unavailable/duplicate providers, byte-identical dry run, concurrent-replacement refusal, rollback, re-audit | Sonnet 5 / medium | done |
 | T1.4 Nested-link materialisation | Step 5.4: materialise shared-module links as regular verified files at acquisition; never weaken or follow nested-link validation. This protects acquired payloads only, not a raw `ki dev on` checkout. | Sonnet 5 / medium | done |
 | T1.5 Proof against canonical payload | Steps 7.4/8.4 first passes + step 9.1 first clause via `ki dev on` linked harness | Sonnet 5 / medium | done — `ki-handoffs` ran from the canonical development payload: audit, byte-identical dry run, host-owned conform, and post-conform re-audit |
-| T1.6 Surface alignment | Step 10 residuals touched by above | Haiku 4.5 / low | done — `ki repo` now renders an interactive TTY progress bar while non-interactive output remains stable |
+| T1.6 Surface alignment | Step 10 residuals touched by above | Haiku 4.5 / low | done — `ki repo educate`, `audit`, and `conform` render an interactive TTY progress bar while non-interactive output remains stable |
 | T1.7 Generic rubric publication | `ki skill rubric <name> [--write]`: drift check by default, publication only through a dev-linked payload; replaces every per-skill `scripts/rubric/publish.ts` | Sonnet 5 / medium | done (`65d288e`) |
 | T1.8 Bounded subprocess repairs | Versioned repair commands declared by a native rubric; `ki` validates, reports, dry-runs, runs from the resolved repository without a shell, and re-audits. This enables honest migration of the authoring and engineering tool gates without reviving per-skill wrappers. | Codex / high | done (`4ca4ff3`) |
 

@@ -14,7 +14,7 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 
 ### Deliver native repository maintenance through registered skills
 
-Implement the first repository-maintenance slice without dispatching vendored `.ki/bin` runners: install verified XDG-located compatible harnesses, activate their declared capabilities explicitly at user or repository scope, resolve `.ki-config.toml` declarations, and run registered native `ki repo audit` and `ki repo conform` operations. Preserve scoped ownership, physical repository resolution, dry-run, safe writes, and actionable recovery; do not release, tag, or update Homebrew as part of this implementation plan.
+Implement the first repository-maintenance slice without dispatching vendored `.ki/bin` runners: install verified XDG-located compatible harnesses, activate their declared capabilities explicitly at user or repository scope, resolve `.ki-config.toml` declarations, and run registered native `ki repo educate`, `ki repo audit`, and `ki repo conform` operations. Preserve scoped ownership, physical repository resolution, dry-run, safe writes, and actionable recovery; do not release, tag, or update Homebrew as part of this implementation plan.
 
 **Plan:** [CLI-004](plans/CLI-004-native-repo-maintenance.md)
 

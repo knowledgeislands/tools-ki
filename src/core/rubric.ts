@@ -56,9 +56,9 @@ export interface RepositoryRubricScope {
 }
 
 /**
- * A user-maintenance rubric may inspect the user home and repair only these
- * relative paths beneath it. The host validates both this declaration and each
- * proposed write; a scope is never an arbitrary absolute path.
+ * A repository-declared rubric may additionally inspect the user home and repair
+ * only these relative paths beneath it. The host validates both this declaration
+ * and each proposed write; a scope is never an arbitrary absolute path.
  */
 export interface UserHomeRubricScope {
   readonly kind: 'user-home'
@@ -96,10 +96,12 @@ export interface RubricFamily<Context> {
 
 export interface RepositoryRubricContextOptions {
   readonly repository: string
+  readonly userHome: string
   readonly configuration: Readonly<Record<string, unknown>>
 }
 
 export interface UserHomeRubricContextOptions {
+  readonly repository: string
   readonly userHome: string
   readonly configuration: Readonly<Record<string, unknown>>
 }
@@ -109,7 +111,7 @@ export type RubricContextOptions = RepositoryRubricContextOptions | UserHomeRubr
 export interface SkillRubricDefinition<Context = unknown> {
   readonly contract: typeof RUBRIC_CONTRACT_VERSION
   readonly skill: string
-  /** Omit for a repository rubric; user maintenance must explicitly declare its bounded user-home scope. */
+  /** Omit for repository-only evidence; user-home evidence and repairs must declare their bounded paths. */
   readonly scope?: RubricScope
   /** Builds the read-only evidence/context the items evaluate; it must not write anywhere. */
   readonly createContext: (options: RubricContextOptions) => Promise<Context> | Context

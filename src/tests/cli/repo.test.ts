@@ -17,6 +17,33 @@ export default {
 `
 
 describe('[ki repo]', () => {
+  describe('repo educate', () => {
+    test('renders only the static catalogue for one declared skill', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{\n          code: 'F', title: 'Family',\n          items: [\n            { kind: 'judgment', code: 'J-1', title: 'Judgment', prompt: 'Review the design.' },\n            { kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',\n              audit: async () => { throw new Error('educate must not execute items') } }\n          ]\n        }]`)
+      })
+
+      const result = await box.run('ki repo educate --skill ki-example')
+
+      expect(result).toEqual({
+        exitCode: 0,
+        output:
+          'example/harness:ki-example\n  F: Family\n    J-1: Judgment\n      Review the design.\n    EXAMPLE-1: Example (FAIL)\n      Audit this criterion; conform applies its declared safe repair when available.\n'
+      })
+    })
+
+    test('reports when the repository declares no skills', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '# no skills\n')
+
+      const result = await box.run('ki repo educate')
+
+      expect(result).toEqual({ exitCode: 0, output: 'ki repo educate: no declared skills\n' })
+    })
+  })
+
   describe('repo audit', () => {
     test("runs only a declared skill's mechanical rubric items", async () => {
       const box = await sandbox()

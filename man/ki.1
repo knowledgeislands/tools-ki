@@ -40,7 +40,7 @@ Inspect one installed harness and its capabilities.
 Install one configured compatible harness.
 .TP
 .B ki harness uninstall harness-id [--dry-run]
-Remove one installed non-base harness.
+Remove one installed non-canonical harness.
 .TP
 .B ki skill user add skill [--replace]
 Link a harness skill into configured user agent skill spaces.
@@ -60,14 +60,11 @@ Check or regenerate a skill's rubric catalogue.
 .B ki repo audit [--repo path] [--skill skill]
 Run registered native repository audits.
 .TP
+.B ki repo educate [--repo path] [--skill skill]
+Explain the registered repository maintenance catalogue.
+.TP
 .B ki repo conform [--repo path] [--skill skill] [--dry-run]
 Apply registered native repository repairs.
-.TP
-.B ki user audit [--skill skill]
-Run registered native audits for configured user skills.
-.TP
-.B ki user conform [--skill skill] [--dry-run]
-Apply registered native repairs for configured user skills.
 .TP
 .B ki acquire chatgpt import capture-directory --output kep-directory [--dry-run] [--json]
 Create a deterministic Knowledge Export Package from a local ChatGPT capture.
@@ -99,7 +96,7 @@ validates every complete write set and reports the affected paths without
 changing the repository. Publication refuses unsafe, changed, duplicate, or
 symbolic-link targets.
 .TP
-.B *ki repo educate [--repo \fIpath\fR] [--skill \fIskill\fR]
+.B ki repo educate [--repo \fIpath\fR] [--skill \fIskill\fR]
 Explain the selected repository's declared capabilities and their recommended
 maintenance actions without changing repository state.
 .SS Diagnostics
@@ -173,17 +170,17 @@ Install a harness from which capabilities, such as skills and subagents, can
 be added.
 .TP
 .B ki harness uninstall \fIharness-id\fR [--dry-run]
-Remove one non-base harness with only recognised payload directories. The base harness
-cannot be removed; a dry run verifies that a non-base harness can be removed without
+Remove one non-canonical harness with only recognised payload directories. The canonical harness
+cannot be removed; a dry run verifies that a non-canonical harness can be removed without
 changing user state. A successful removal deletes its identifier from
 .BR [harnesses].ids .
 .SS Skills management
 .TP
-.B *ki skill repo add|remove \fIharness-id:skill-name\fR
+.B ki skill repo add|remove \fIskill\fR
 Add or remove a registered skill in one selected repository.
 .TP
-.B *ki skill user add|remove \fIharness-id:skill-name\fR
-Add or remove a registered skill in the selected user runtime.
+.B ki skill user add|remove \fIskill\fR
+Add or remove a registered skill in configured user agent skill spaces.
 .SS Acquisition
 .TP
 .B acquire chatgpt import \fIcapture-directory\fR --output \fIkep-directory\fR [--dry-run] [--json]
@@ -199,7 +196,7 @@ must contain the core bootstrap skill at
 .IR skills/keystone/ki-bootstrap/SKILL.md
 and physical
 .IR skills ,
-.IR agents ,
+.IR subagents ,
 and
 .IR hooks
 payload directories. KI replaces only the canonical harness's managed payload

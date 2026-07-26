@@ -3,18 +3,6 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
-const configuration = `schema = 1
-
-[agents]
-ids = []
-
-[harnesses]
-ids = ["example/harness"]
-
-[skills.ki-example]
-harness = "example/harness"
-`
-
 const rubric = (body: string): string => `
 export default {
   contract: 1,
@@ -40,19 +28,19 @@ const governedItem = (repair: string): string => `[{
 
 const setup = async (rubricSource: string) => {
   const box = await sandbox()
-  await box.config.write('ki/config.toml', configuration)
+  await box.project.write('.ki-config.toml', '[ki-example]\n')
   await box.home.write('.managed/governed.txt', 'before\n')
   await box.setupExampleHarness({ rubric: rubricSource })
   return box
 }
 
-describe('[ki user]', () => {
-  test('audits and transactionally conforms a configured user-home rubric', async () => {
+describe('[ki repo] user-home rubric scope', () => {
+  test('audits and transactionally conforms a repository-declared user-home rubric', async () => {
     const box = await setup(rubric(governedItem(`{ writes: [{ path: '.managed/governed.txt', content: 'after\\n' }] }`)))
 
-    const audit = await box.run('ki user audit')
-    const dryRun = await box.run('ki user conform --dry-run')
-    const conform = await box.run('ki user conform')
+    const audit = await box.run('ki repo audit')
+    const dryRun = await box.run('ki repo conform --dry-run')
+    const conform = await box.run('ki repo conform')
 
     expect(audit.exitCode).toBe(1)
     expect(audit.output).toContain('fail USER-1: user file needs repair')
@@ -64,7 +52,7 @@ describe('[ki user]', () => {
   test('refuses a user repair outside the rubric-declared filesystem scope', async () => {
     const box = await setup(rubric(governedItem(`{ writes: [{ path: '.other.txt', content: 'after\\n', create: true }] }`)))
 
-    const result = await box.run('ki user conform')
+    const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('.other.txt is outside its declared filesystem scope')
@@ -78,27 +66,11 @@ describe('[ki user]', () => {
     await rm(join(box.home.path, '.managed', 'governed.txt'))
     await symlink(join(box.root.path, 'outside.txt'), join(box.home.path, '.managed', 'governed.txt'))
 
-    const result = await box.run('ki user conform')
+    const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('.managed/governed.txt must be an existing regular file')
     expect(await readFile(join(box.root.path, 'outside.txt'), 'utf8')).toBe('outside\n')
-  })
-
-  test('requires an explicit user-home scope rather than running a repository rubric against home', async () => {
-    const box = await setup(`
-export default {
-  contract: 1,
-  skill: 'ki-example',
-  createContext: async ({ repository }) => ({ repository }),
-  families: []
-}
-`)
-
-    const result = await box.run('ki user audit')
-
-    expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('declares repository scope and cannot run in user-home mode')
   })
 
   test('rejects an unsafe user-home scope before executing its rubric', async () => {
@@ -112,7 +84,7 @@ export default {
 }
 `)
 
-    const result = await box.run('ki user audit')
+    const result = await box.run('ki repo audit')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('user-home scope paths must be safe relative paths')
