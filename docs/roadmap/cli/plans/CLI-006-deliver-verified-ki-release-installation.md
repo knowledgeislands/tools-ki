@@ -5,6 +5,7 @@ status: open
 roadmap: cli/deliver-verified-ki-release-installation
 blocks: —
 blocked-by: —
+baseline-ref: —
 ---
 
 ## Context

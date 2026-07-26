@@ -5,6 +5,7 @@ status: in-progress
 roadmap: cli/deliver-native-repository-maintenance-through-registered-skills
 blocks: —
 blocked-by: —
+baseline-ref: 99e714d5084cd58e026daaf70086efd006177478
 ---
 
 ## Context
