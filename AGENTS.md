@@ -4,7 +4,7 @@ This is the runtime-neutral working convention for the Knowledge Islands CLI. Th
 
 ## Engineering conventions
 
-Established through [CLI-005](docs/roadmap/cli/plans/CLI-005-lock-the-cli-contract-then-simplify-internals.md); they outlive it and govern all work here.
+These govern all work in this repo.
 
 - **Style** — arrow functions throughout; no classes; strong typing via `interface`/`type`; small, well-named functions over cleverness. Modules stay focused: when a file accumulates unrelated concerns, split it behind a barrel rather than letting it grow.
 - **Test the contract, not the units** — the API is the CLI. Every test drives the in-process seam `run(args, context)` via the `sandbox()` helper (`src/tests/cli/_cli_helper.ts`), asserting stdout, exit code, and on-disk effects on the sandbox's throwaway HOME/XDG quartet. No unit tests of internal functions — they ossify internals and block refactoring.
