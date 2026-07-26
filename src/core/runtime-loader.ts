@@ -43,7 +43,7 @@ const validatePhaseExecution = <Result>(
   value: unknown,
   identity: string,
   code: string,
-  aspect: 'audit' | 'repair'
+  aspect: 'audit' | 'conform'
 ): RubricExecution<unknown, Result> => {
   if (!isRecord(value)) throw new KiError(`${identity} rubric item ${code} ${aspect} must be a table`, 1)
   const { phase, run } = value
@@ -64,23 +64,23 @@ const validateLevels = (value: unknown, identity: string, code: string): readonl
 const validateMechanical = (value: unknown, identity: string, code: string): MechanicalRubric<unknown> | undefined => {
   if (value === undefined) return undefined
   if (!isRecord(value)) throw new KiError(`${identity} rubric item ${code} mechanical aspect must be a table`, 1)
-  const { level, overrideLevels, heuristic, audit, repair, repairOn } = value
+  const { level, overrideLevels, heuristic, audit, conform, conformOn } = value
   if (typeof level !== 'string' || !(VIOLATION_LEVELS as readonly string[]).includes(level))
     throw new KiError(`${identity} rubric item ${code} has an invalid level`, 1)
   if (heuristic !== undefined && typeof heuristic !== 'boolean')
     throw new KiError(`${identity} rubric item ${code} heuristic must be boolean`, 1)
   if (
-    repairOn !== undefined &&
-    (!Array.isArray(repairOn) || repairOn.some((status) => status !== 'INFO') || new Set(repairOn).size !== repairOn.length)
+    conformOn !== undefined &&
+    (!Array.isArray(conformOn) || conformOn.some((status) => status !== 'INFO') || new Set(conformOn).size !== conformOn.length)
   )
-    throw new KiError(`${identity} rubric item ${code} repairOn must contain unique INFO statuses`, 1)
+    throw new KiError(`${identity} rubric item ${code} conformOn must contain unique INFO statuses`, 1)
   return {
     level: level as ViolationLevel,
     ...(overrideLevels === undefined ? {} : { overrideLevels: validateLevels(overrideLevels, identity, code) }),
     ...(heuristic === undefined ? {} : { heuristic }),
     audit: validatePhaseExecution(audit, identity, code, 'audit'),
-    ...(repair === undefined ? {} : { repair: validatePhaseExecution(repair, identity, code, 'repair') }),
-    ...(repairOn === undefined ? {} : { repairOn: repairOn as 'INFO'[] })
+    ...(conform === undefined ? {} : { conform: validatePhaseExecution(conform, identity, code, 'conform') }),
+    ...(conformOn === undefined ? {} : { conformOn: conformOn as 'INFO'[] })
   }
 }
 

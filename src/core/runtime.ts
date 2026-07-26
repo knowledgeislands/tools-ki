@@ -1,5 +1,5 @@
 // Executes a loaded rubric definition (CLI-004 T1.2): runs mechanical items' audit in
-// phase order, renders findings, and — for conform — collects RepairProposals from
+// phase order, renders findings, and — for conform — collects ConformProposals from
 // violated items into the host-owned transaction (see ./transaction.ts). Judgment items
 // are catalogue data only; the runtime never executes them.
 
@@ -8,7 +8,7 @@ import { KiError } from './errors.ts'
 import type { ResolvedSkill } from './resolution.ts'
 import {
   type AuditOutcome,
-  type RepairCommand,
+  type ConformCommand,
   RUBRIC_PHASES,
   type RubricFamily,
   type RubricItem,
@@ -73,7 +73,7 @@ export interface SkillEducationResult {
 export interface SkillConformResult {
   readonly findings: readonly Finding[]
   readonly writes: readonly NativeWrite[]
-  readonly commands: readonly RepairCommand[]
+  readonly commands: readonly ConformCommand[]
   readonly scope: RubricScope
   /** Items whose pre-conform audit produced at least one VIOLATION outcome — candidates for a post-conform FIXED line. */
   readonly fixable: readonly ItemAuditState[]
@@ -112,30 +112,30 @@ const validateOutcome = (value: unknown, item: PreparedRubricItem, index: number
 
 const validProgram = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
 
-export const validateRepairProposal = (
+export const validateConformProposal = (
   value: unknown,
   code: string
-): { readonly writes: readonly NativeWrite[]; readonly commands: readonly RepairCommand[] } => {
-  if (!isRecord(value)) throw new KiError(`rubric item ${code} repair must return a table`, 1)
+): { readonly writes: readonly NativeWrite[]; readonly commands: readonly ConformCommand[] } => {
+  if (!isRecord(value)) throw new KiError(`rubric item ${code} conform must return a table`, 1)
   const { writes, commands = [] } = value
-  if (!Array.isArray(writes)) throw new KiError(`rubric item ${code} repair must return a writes array`, 1)
-  if (!Array.isArray(commands)) throw new KiError(`rubric item ${code} repair commands must be an array`, 1)
+  if (!Array.isArray(writes)) throw new KiError(`rubric item ${code} conform must return a writes array`, 1)
+  if (!Array.isArray(commands)) throw new KiError(`rubric item ${code} conform commands must be an array`, 1)
   const validatedWrites = writes.map((write, index) => {
-    if (!isRecord(write)) throw new KiError(`rubric item ${code} repair write ${index} must have string path and content`, 1)
+    if (!isRecord(write)) throw new KiError(`rubric item ${code} conform write ${index} must have string path and content`, 1)
     const { path, content, create } = write
     if (typeof path !== 'string' || typeof content !== 'string')
-      throw new KiError(`rubric item ${code} repair write ${index} must have string path and content`, 1)
+      throw new KiError(`rubric item ${code} conform write ${index} must have string path and content`, 1)
     if (create !== undefined && typeof create !== 'boolean')
-      throw new KiError(`rubric item ${code} repair write ${index} create must be boolean`, 1)
+      throw new KiError(`rubric item ${code} conform write ${index} create must be boolean`, 1)
     return create ? { path, content, create } : { path, content }
   })
   const validatedCommands = commands.map((command, index) => {
-    if (!isRecord(command)) throw new KiError(`rubric item ${code} repair command ${index} must have a program and arguments`, 1)
+    if (!isRecord(command)) throw new KiError(`rubric item ${code} conform command ${index} must have a program and arguments`, 1)
     const { program, arguments: arguments_ } = command
     if (typeof program !== 'string' || !validProgram.test(program) || !Array.isArray(arguments_))
-      throw new KiError(`rubric item ${code} repair command ${index} must have a program and arguments`, 1)
+      throw new KiError(`rubric item ${code} conform command ${index} must have a program and arguments`, 1)
     if (arguments_.some((argument) => typeof argument !== 'string' || argument.includes('\0')))
-      throw new KiError(`rubric item ${code} repair command ${index} arguments must be strings without NUL bytes`, 1)
+      throw new KiError(`rubric item ${code} conform command ${index} arguments must be strings without NUL bytes`, 1)
     return { program, arguments: arguments_ }
   })
   return { writes: validatedWrites, commands: validatedCommands }
@@ -251,21 +251,21 @@ export const educateSkill = async (prepared: PreparedSkill): Promise<SkillEducat
   }
 }
 
-// A violated item that declares a repair is only actually "fixed this round" once its
-// repair proposes at least one write — an empty proposal means it had nothing safe to
+// A violated item that declares conform is only actually "fixed this round" once its
+// conform action proposes at least one write — an empty proposal means it had nothing safe to
 // change, so its violation still surfaces like any other unaddressed finding below.
-const attemptRepair = async (
+const attemptConform = async (
   state: ItemAuditState,
   rootContext: unknown
-): Promise<{ readonly writes: readonly NativeWrite[]; readonly commands: readonly RepairCommand[] } | undefined> => {
+): Promise<{ readonly writes: readonly NativeWrite[]; readonly commands: readonly ConformCommand[] } | undefined> => {
   const { family, item } = state.item
-  const repairable = state.outcomes.some(
-    (outcome) => outcome.status === 'VIOLATION' || (outcome.status === 'INFO' && item.mechanical.repairOn?.includes('INFO'))
+  const conformable = state.outcomes.some(
+    (outcome) => outcome.status === 'VIOLATION' || (outcome.status === 'INFO' && item.mechanical.conformOn?.includes('INFO'))
   )
-  if (!item.mechanical.repair || !repairable) return undefined
+  if (!item.mechanical.conform || !conformable) return undefined
   const context = await family.selectContext(rootContext)
-  const repair = validateRepairProposal(await item.mechanical.repair.run(context), item.code)
-  return repair.writes.length || repair.commands.length ? repair : undefined
+  const proposal = validateConformProposal(await item.mechanical.conform.run(context), item.code)
+  return proposal.writes.length || proposal.commands.length ? proposal : undefined
 }
 
 export const runSkillConform = async (
@@ -274,23 +274,23 @@ export const runSkillConform = async (
   onItemComplete?: (item: PreparedRubricItem) => void
 ): Promise<SkillConformResult> => {
   const { context, items, scope: definitionScope } = await auditSkill(scope, prepared, onItemComplete)
-  const repairOrder = items
-    .filter((state) => state.item.item.mechanical.repair)
+  const conformOrder = items
+    .filter((state) => state.item.item.mechanical.conform)
     .slice()
     .sort((left, right) => {
       const phaseDelta =
-        RUBRIC_PHASES.indexOf(left.item.item.mechanical.repair?.phase ?? 'NORMALISE') -
-        RUBRIC_PHASES.indexOf(right.item.item.mechanical.repair?.phase ?? 'NORMALISE')
+        RUBRIC_PHASES.indexOf(left.item.item.mechanical.conform?.phase ?? 'NORMALISE') -
+        RUBRIC_PHASES.indexOf(right.item.item.mechanical.conform?.phase ?? 'NORMALISE')
       if (phaseDelta !== 0) return phaseDelta
       if (left.item.familyIndex !== right.item.familyIndex) return left.item.familyIndex - right.item.familyIndex
       return left.item.itemIndex - right.item.itemIndex
     })
-  const attempts = new Map<string, Awaited<ReturnType<typeof attemptRepair>>>()
-  for (const state of repairOrder) attempts.set(state.item.code, await attemptRepair(state, context))
+  const attempts = new Map<string, Awaited<ReturnType<typeof attemptConform>>>()
+  for (const state of conformOrder) attempts.set(state.item.code, await attemptConform(state, context))
 
   const findings: Finding[] = []
   const writes: NativeWrite[] = []
-  const commands: RepairCommand[] = []
+  const commands: ConformCommand[] = []
   const fixable: ItemAuditState[] = []
   items.forEach((state) => {
     const proposed = attempts.get(state.item.code)

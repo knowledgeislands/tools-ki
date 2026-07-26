@@ -36,19 +36,19 @@ Contract decisions locked at T1.1:
 - One versioned TypeScript module per installed skill at `scripts/rubric/index.ts`, default-exporting a `SkillRubricDefinition` (`contract: 1`), structurally validated at load; no `.mjs` operations, per-skill runner, or second wrapper convention survives.
 - The runtime imports that TypeScript as it stands, via Bun — no compile, transpile, or bundle step anywhere in the path — from the installed payload or the `ki dev on`-linked checkout.
 - Reporter, progress, and JSONL presentation are host-owned `ki` functionality; skills declare outcomes only and never render.
-- The definition model adapts the harness catalogue (phases `PREPARE`/`INSPECT`/`PRIMARY`/`DERIVED`/`NORMALISE`; levels `FAIL`/`WARN`; audit outcomes `PASS`/`VIOLATION`/`NOT_APPLICABLE`/`INFO`) with judgment items as never-executed catalogue data. Repairs declare serialisable `RepairWrite` proposals consumed by the host transaction; `FIXED` derives from the post-publication re-audit; skills never see a write path or a dry-run flag.
+- The definition model adapts the harness catalogue (phases `PREPARE`/`INSPECT`/`PRIMARY`/`DERIVED`/`NORMALISE`; levels `FAIL`/`WARN`; audit outcomes `PASS`/`VIOLATION`/`NOT_APPLICABLE`/`INFO`) with judgment items as never-executed catalogue data. Conform actions declare serialisable `ConformWrite` proposals consumed by the host transaction; `FIXED` derives from the post-publication re-audit; skills never see a write path or a dry-run flag.
 
 | Unit | Scope | Model / effort | Status |
 | --- | --- | --- | --- |
 | T1.1 Contract | `src/core/rubric.ts` versioned types + loading convention (above) | Fable (main loop) | done |
 | T1.2 Runtime | Loader (contained Bun import), audit executor, host-owned conform transaction, rendering; replace `.mjs` operations, migrate CLI test fixtures | Sonnet 5 / high | done |
-| T1.2a Transaction identity guard | Snapshot each repair target's regular-file identity and physical containment at preparation; revalidate identity as well as bytes before publication and before rollback. Prove same-byte inode replacement and rollback-target replacement are refused without overwriting the replacement. | Sonnet 5 / medium | done |
+| T1.2a Transaction identity guard | Snapshot each conform target's regular-file identity and physical containment at preparation; revalidate identity as well as bytes before publication and before rollback. Prove same-byte inode replacement and rollback-target replacement are refused without overwriting the replacement. | Sonnet 5 / medium | done |
 | T1.3 Acceptance fixtures | Handoff's acceptance-evidence list as CLI tests: contained loading, dependency order, malformed/linked/altered/unavailable/duplicate providers, byte-identical dry run, concurrent-replacement refusal, rollback, re-audit | Sonnet 5 / medium | done |
 | T1.4 Nested-link materialisation | Step 5.4: materialise shared-module links as regular verified files at acquisition; never weaken or follow nested-link validation. This protects acquired payloads only, not a raw `ki dev on` checkout. | Sonnet 5 / medium | done |
 | T1.5 Proof against canonical payload | Steps 7.4/8.4 first passes + step 9.1 first clause via `ki dev on` linked harness | Sonnet 5 / medium | done — `ki-handoffs` ran from the canonical development payload: audit, byte-identical dry run, host-owned conform, and post-conform re-audit |
 | T1.6 Surface alignment | Step 10 residuals touched by above | Haiku 4.5 / low | done — `ki repo educate`, `audit`, and `conform` render an interactive TTY progress bar while non-interactive output remains stable |
 | T1.7 Generic rubric publication | `ki skill rubric <name> [--write]`: drift check by default, publication only through a dev-linked payload; replaces every per-skill `scripts/rubric/publish.ts` | Sonnet 5 / medium | done (`65d288e`) |
-| T1.8 Bounded subprocess repairs | Versioned repair commands declared by a native rubric; `ki` validates, reports, dry-runs, runs from the resolved repository without a shell, and re-audits. This enables honest migration of the authoring and engineering tool gates without reviving per-skill wrappers. | Codex / high | done (`4ca4ff3`) |
+| T1.8 Bounded subprocess conforms | Versioned conform commands declared by a native rubric; `ki` validates, reports, dry-runs, runs from the resolved repository without a shell, and re-audits. This enables honest migration of the authoring and engineering tool gates without reviving per-skill wrappers. | Codex / high | done (`4ca4ff3`) |
 
 Orchestration: Fable coordinates, designs T1.1, reviews diffs, and runs gates (`bun run test` at 100% thresholds, tsc, biome, knip) before unit commits; sub-agents implement. T1.2 and T1.4 ran in parallel (disjoint files); T1.3 follows T1.2.
 
@@ -64,7 +64,7 @@ Orchestration: Fable coordinates, designs T1.1, reviews diffs, and runs gates (`
 1. The tools test suite, TypeScript check, Biome, Knip, and roadmap audit pass after each T1 unit.
 2. T1.2a proves a same-byte replacement and a replacement during rollback both survive untouched; conform fails closed before overwriting either target.
 3. T1.5 proves the converted canonical harness from a dev-linked regular-file payload, including audit, byte-identical dry run, conform, and post-conform re-audit.
-4. The first consumer conversion demonstrates that a skill only supplies read-only evidence and serialisable repair proposals; the host owns every write and presentation surface.
+4. The first consumer conversion demonstrates that a skill only supplies read-only evidence and serialisable conform proposals; the host owns every write and presentation surface.
 
 ## Dependencies / blocks
 

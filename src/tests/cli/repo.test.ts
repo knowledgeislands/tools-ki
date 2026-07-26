@@ -17,7 +17,7 @@ const item = (value) => {
     mechanical: {
       level: value.level,
       audit: { phase: value.phase, run: value.audit },
-      ...(value.repair === undefined ? {} : { repair: { phase: 'PRIMARY', run: value.repair } })
+      ...(value.conform === undefined ? {} : { conform: { phase: 'PRIMARY', run: value.conform } })
     }
   }
   if (value.kind === 'judgment') return {
@@ -311,11 +311,11 @@ export default {
           const content = await readFile(repository + '/governed.txt', 'utf8')
           return content === 'after\\n' ? [] : [{ status: 'VIOLATION', message: 'not conformed' }]
         },
-        repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] })
+        conform: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] })
       }]
     }]`
 
-    test('reports nothing for an unrepairable item whose outcome is not a violation', async () => {
+    test('reports nothing for an unconformable item whose outcome is not a violation', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -338,7 +338,7 @@ export default {
       })
     })
 
-    test('publishes a complete repair write set, supports dry-run, and re-audits', async () => {
+    test('publishes a complete conform write set, supports dry-run, and re-audits', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.project.write('governed.txt', 'before\n')
@@ -357,7 +357,7 @@ export default {
       expect(afterContent).toBe('after\n')
     })
 
-    test('deduplicates identical same-target repair proposals', async () => {
+    test('deduplicates identical same-target conform proposals', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.project.write('governed.txt', 'before\n')
@@ -367,10 +367,10 @@ export default {
           items: [
             { kind: 'mechanical', code: 'EXAMPLE-1', title: 'One', level: 'FAIL', phase: 'PRIMARY',
               audit: async () => [{ status: 'VIOLATION', message: 'one' }],
-              repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] }) },
+              conform: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] }) },
             { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Two', level: 'FAIL', phase: 'PRIMARY',
               audit: async () => [{ status: 'VIOLATION', message: 'two' }],
-              repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] }) }
+              conform: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] }) }
           ]
         }]`)
       })
@@ -382,7 +382,7 @@ export default {
       expect(await box.project.read('governed.txt')).toBe('before\n')
     })
 
-    test('rejects same-target repair proposals with different replacement content', async () => {
+    test('rejects same-target conform proposals with different replacement content', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.project.write('governed.txt', 'before\n')
@@ -392,10 +392,10 @@ export default {
           items: [
             { kind: 'mechanical', code: 'EXAMPLE-1', title: 'One', level: 'FAIL', phase: 'PRIMARY',
               audit: async () => [{ status: 'VIOLATION', message: 'one' }],
-              repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after-one\\n' }] }) },
+              conform: async () => ({ writes: [{ path: 'governed.txt', content: 'after-one\\n' }] }) },
             { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Two', level: 'FAIL', phase: 'PRIMARY',
               audit: async () => [{ status: 'VIOLATION', message: 'two' }],
-              repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after-two\\n' }] }) }
+              conform: async () => ({ writes: [{ path: 'governed.txt', content: 'after-two\\n' }] }) }
           ]
         }]`)
       })
@@ -440,7 +440,7 @@ export default {
     // interleaving needed, since prepareWrites' regular-file check runs fresh every call)
     // is refused before any transaction write, leaving the symlink and its shadowed file
     // untouched.
-    test('refuses to conform a repair write target that has become a symlink', async () => {
+    test('refuses to conform a conform write target that has become a symlink', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.project.write('elsewhere.txt', 'shadow\n')
@@ -459,7 +459,7 @@ export default {
     // parent directory, outside the repository root is refused even though its own lstat
     // looks like an ordinary regular file — the escape only shows up once the path is
     // fully resolved.
-    test('refuses to conform a repair write target that escapes the repository through a symlinked directory', async () => {
+    test('refuses to conform a conform write target that escapes the repository through a symlinked directory', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.root.write('outside/target.txt', 'before\n')
@@ -470,7 +470,7 @@ export default {
           items: [{
             kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
             audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
-            repair: async () => ({ writes: [{ path: 'escape/target.txt', content: 'after\\n' }] })
+            conform: async () => ({ writes: [{ path: 'escape/target.txt', content: 'after\\n' }] })
           }]
         }]`)
       })
@@ -499,10 +499,10 @@ export default {
           items: [
             { kind: 'mechanical', code: 'EXAMPLE-1', title: 'One', level: 'FAIL', phase: 'PRIMARY',
               audit: async () => [{ status: 'VIOLATION', message: 'x' }],
-              repair: async () => ({ writes: [{ path: 'governed-1.txt', content: 'after-1\\n' }] }) },
+              conform: async () => ({ writes: [{ path: 'governed-1.txt', content: 'after-1\\n' }] }) },
             { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Two', level: 'FAIL', phase: 'PRIMARY',
               audit: async () => [{ status: 'VIOLATION', message: 'y' }],
-              repair: async () => ({ writes: [{ path: 'governed-2.txt', content: 'after-2\\n' }] }) }
+              conform: async () => ({ writes: [{ path: 'governed-2.txt', content: 'after-2\\n' }] }) }
           ]
         }]`)
       })
@@ -528,7 +528,7 @@ export default {
               const content = await readFile(repository + '/governed.txt', 'utf8')
               return content === 'after\\n' ? [{ status: 'PASS', message: 'conformed' }] : [{ status: 'VIOLATION', message: 'not conformed' }]
             },
-            repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] })
+            conform: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] })
           }]
         }]`)
       })
@@ -560,7 +560,7 @@ export default {
           items: [{
             kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
             audit: async () => [{ status: 'VIOLATION', message: 'always fails' }],
-            repair: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] })
+            conform: async () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] })
           }]
         }]`)
       })
@@ -572,7 +572,7 @@ export default {
       expect(result.output).toContain('re-audit found failures')
     })
 
-    test('rejects a repair write whose target does not exist as a regular file', async () => {
+    test('rejects a conform write whose target does not exist as a regular file', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -581,7 +581,7 @@ export default {
           items: [{
             kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
             audit: async () => [{ status: 'VIOLATION', message: 'missing' }],
-            repair: async () => ({ writes: [{ path: 'missing.txt', content: 'x' }] })
+            conform: async () => ({ writes: [{ path: 'missing.txt', content: 'x' }] })
           }]
         }]`)
       })
@@ -604,7 +604,7 @@ export default {
               ? [{ status: 'PASS', message: 'created' }]
               : [{ status: 'VIOLATION', message: 'missing' }]
           },
-          repair: async () => ({ writes: [{ path: 'created.txt', content: 'created\\n', create: true }] })
+          conform: async () => ({ writes: [{ path: 'created.txt', content: 'created\\n', create: true }] })
         }] }]`)
       })
 
@@ -626,7 +626,7 @@ export default {
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
-          repair: async () => ({ writes: [{ path: 'created.txt', content: 'created\\n', create: true }] })
+          conform: async () => ({ writes: [{ path: 'created.txt', content: 'created\\n', create: true }] })
         }] }]`)
       })
 
@@ -636,7 +636,7 @@ export default {
       await expect(box.project.read('created.txt')).resolves.toBe('existing\n')
     })
 
-    test('an unfixed violation (no repair function) blocks conform and is reported', async () => {
+    test('an unfixed violation (no conform function) blocks conform and is reported', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -656,7 +656,7 @@ export default {
       expect(result.output).toContain('repository conform found failures')
     })
 
-    test('a repair proposing no writes leaves its violation reported and unfixed', async () => {
+    test('a conform proposing no writes leaves its violation reported and unfixed', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -665,7 +665,7 @@ export default {
           items: [{
             kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
             audit: async () => [{ status: 'VIOLATION', message: 'nothing safe to propose' }],
-            repair: async () => ({ writes: [] })
+            conform: async () => ({ writes: [] })
           }]
         }]`)
       })
@@ -676,7 +676,7 @@ export default {
       expect(result.output).toContain('⚠️  warn  [Example (EXAMPLE-1)] — nothing safe to propose')
     })
 
-    test('reports subprocess repairs in dry-run mode without executing them, then runs and re-audits them', async () => {
+    test('reports subprocess conforms in dry-run mode without executing them, then runs and re-audits them', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -688,7 +688,7 @@ export default {
               ? [{ status: 'PASS', message: 'conformed' }]
               : [{ status: 'VIOLATION', message: 'not conformed' }]
           },
-          repair: async () => ({ writes: [], commands: [{ program: 'node', arguments: ['-e', "require('node:fs').writeFileSync('conformed.txt', 'ok')"] }] })
+          conform: async () => ({ writes: [], commands: [{ program: 'node', arguments: ['-e', "require('node:fs').writeFileSync('conformed.txt', 'ok')"] }] })
         }] }]`)
       })
 
@@ -701,21 +701,21 @@ export default {
       await expect(box.project.read('conformed.txt')).resolves.toBe('ok')
     })
 
-    test('rejects a malformed subprocess repair proposal before execution', async () => {
+    test('rejects a malformed subprocess conform proposal before execution', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
-          repair: async () => ({ writes: [], commands: [{}] })
+          conform: async () => ({ writes: [], commands: [{}] })
         }] }]`)
       })
 
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('repair command 0 must have a program and arguments')
+      expect(result.output).toContain('conform command 0 must have a program and arguments')
     })
   })
 
@@ -784,7 +784,7 @@ export default {
       expect(result.output).toContain('must return an outcomes array')
     })
 
-    test('rejects a repair returning a non-array writes field', async () => {
+    test('rejects a conform returning a non-array writes field', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -792,14 +792,14 @@ export default {
           code: 'F', title: 'Family',
           items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
             audit: async () => [{ status: 'VIOLATION', message: 'x' }],
-            repair: async () => ({ writes: 'not an array' }) }]
+            conform: async () => ({ writes: 'not an array' }) }]
         }]`)
       })
 
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('repair must return a writes array')
+      expect(result.output).toContain('conform must return a writes array')
     })
 
     test('rejects an audit outcome that is not a table', async () => {
@@ -819,7 +819,7 @@ export default {
       expect(result.output).toContain('audit outcome 0 must be a table')
     })
 
-    test('rejects a repair write that is not a table', async () => {
+    test('rejects a conform write that is not a table', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -827,14 +827,14 @@ export default {
           code: 'F', title: 'Family',
           items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
             audit: async () => [{ status: 'VIOLATION', message: 'x' }],
-            repair: async () => ({ writes: [null] }) }]
+            conform: async () => ({ writes: [null] }) }]
         }]`)
       })
 
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('repair write 0 must have string path and content')
+      expect(result.output).toContain('conform write 0 must have string path and content')
     })
 
     test('rejects an audit outcome missing a status', async () => {
@@ -882,7 +882,7 @@ export default {
       expect(result.output).toContain('rubric catalogue could not be imported')
     })
 
-    test('rejects a repair that does not return a writes table', async () => {
+    test('rejects a conform that does not return a writes table', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -890,17 +890,17 @@ export default {
           code: 'F', title: 'Family',
           items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
             audit: async () => [{ status: 'VIOLATION', message: 'x' }],
-            repair: async () => null }]
+            conform: async () => null }]
         }]`)
       })
 
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('repair must return a table')
+      expect(result.output).toContain('conform must return a table')
     })
 
-    test('rejects a repair write entry with a non-string path or content', async () => {
+    test('rejects a conform write entry with a non-string path or content', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -908,7 +908,7 @@ export default {
           code: 'F', title: 'Family',
           items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
             audit: async () => [{ status: 'VIOLATION', message: 'x' }],
-            repair: async () => ({ writes: [{ path: 1, content: 'x' }] }) }]
+            conform: async () => ({ writes: [{ path: 1, content: 'x' }] }) }]
         }]`)
       })
 
@@ -952,21 +952,21 @@ export default {
       expect(result.output).toContain('has an invalid phase')
     })
 
-    test('rejects a rubric item whose repair is not a function', async () => {
+    test('rejects a rubric item whose conform is not a function', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
         rubric: rubric(`[{
           code: 'F', title: 'Family',
           items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
-            audit: async () => [], repair: 'not a function' }]
+            audit: async () => [], conform: 'not a function' }]
         }]`)
       })
 
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('repair must have a run function')
+      expect(result.output).toContain('conform must have a run function')
     })
 
     test('rejects a rubric definition whose declared skill does not match the installed capability', async () => {

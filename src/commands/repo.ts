@@ -9,8 +9,8 @@ import { type ResolvedSkill, resolveDeclaredSkills } from '../core/resolution.ts
 import {
   detectFixed,
   educateSkill,
-  type FixedItem,
   type Finding,
+  type FixedItem,
   type PreparedSkill,
   prepareSkill,
   runSkillAudit,
@@ -43,7 +43,7 @@ const runCommands = async (
     const { exitCode, stdout, stderr } = await runCommand(repository, command)
     if (exitCode === 0) continue
     const detail = [stdout, stderr].filter(Boolean).join('\n').trim()
-    throw new KiError(`direct subprocess repair failed: ${renderCommand(command)}${detail ? `\n${detail}` : ''}`, 1)
+    throw new KiError(`direct subprocess conform failed: ${renderCommand(command)}${detail ? `\n${detail}` : ''}`, 1)
   }
 }
 
@@ -336,7 +336,7 @@ export const createRepoCommand = (context: KiContext): Command =>
           const writes = [...repositoryWrites, ...userWrites]
           const commands = conformed.flatMap(({ conform }) => conform.commands)
           if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
-            throw new KiError('user-home rubric repairs must be transactional writes; subprocess repairs are not permitted', 1)
+            throw new KiError('user-home rubric conform actions must be transactional writes; conform commands are not permitted', 1)
           for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
           for (const command of commands) context.stdout.write(`${options.dryRun ? 'would run' : 'run'} ${renderCommand(command)}\n`)
           if (findings.some((finding) => finding.level === 'fail')) {
@@ -364,7 +364,7 @@ export const createRepoCommand = (context: KiContext): Command =>
             async (skill, onItemComplete) => {
               const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
               // The re-audit selection is derived directly from conformed above; this only
-              // protects a future refactor from pairing an audit with the wrong repair set.
+              // protects a future refactor from pairing an audit with the wrong conform set.
               /* v8 ignore next */
               if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
               return {
@@ -385,7 +385,6 @@ export const createRepoCommand = (context: KiContext): Command =>
             'conform',
             reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] }))
           )
-          if (auditFindings.some((finding) => finding.level === 'fail'))
-            throw new KiError('repository conform re-audit found failures', 1)
+          if (auditFindings.some((finding) => finding.level === 'fail')) throw new KiError('repository conform re-audit found failures', 1)
         })
     )

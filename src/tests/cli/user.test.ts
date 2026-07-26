@@ -14,7 +14,7 @@ export default {
 }
 `
 
-const governedItem = (repair: string): string => `[{
+const governedItem = (conform: string): string => `[{
   code: 'USER', title: 'User', description: 'User files.', standard: 'standard.md',
   selectContext: (context) => context,
   items: [{
@@ -24,9 +24,9 @@ const governedItem = (repair: string): string => `[{
       audit: { phase: 'PRIMARY', run: async ({ userHome }) => {
         const { readFile } = await import('node:fs/promises')
         const content = await readFile(userHome + '/.managed/governed.txt', 'utf8')
-        return content === 'after\\n' ? [{ status: 'PASS', message: 'user file is conformed' }] : [{ status: 'VIOLATION', message: 'user file needs repair' }]
+        return content === 'after\\n' ? [{ status: 'PASS', message: 'user file is conformed' }] : [{ status: 'VIOLATION', message: 'user file needs conform' }]
       }},
-      repair: { phase: 'PRIMARY', run: async () => (${repair}) }
+      conform: { phase: 'PRIMARY', run: async () => (${conform}) }
     },
   }]
 }]`
@@ -48,14 +48,14 @@ describe('[ki repo] user-home rubric scope', () => {
     const conform = await box.run('ki repo conform')
 
     expect(audit.exitCode).toBe(1)
-    expect(audit.output).toContain('❌ fail  [Governed file (USER-1)] — user file needs repair')
+    expect(audit.output).toContain('❌ fail  [Governed file (USER-1)] — user file needs conform')
     expect(dryRun.output).toContain('would write .managed/governed.txt\n')
     expect(conform.output).toContain('write .managed/governed.txt\n')
     expect(conform.output).toContain('✅ fixed [Governed file (USER-1)] — user file is conformed')
     expect(await box.home.read('.managed/governed.txt')).toBe('after\n')
   })
 
-  test('refuses a user repair outside the rubric-declared filesystem scope', async () => {
+  test('refuses a user conform outside the rubric-declared filesystem scope', async () => {
     const box = await setup(rubric(governedItem(`{ writes: [{ path: '.other.txt', content: 'after\\n', create: true }] }`)))
 
     const result = await box.run('ki repo conform')
@@ -66,7 +66,7 @@ describe('[ki repo] user-home rubric scope', () => {
     expect(await box.home.read('.managed/governed.txt')).toBe('before\n')
   })
 
-  test('refuses a symlinked user-home repair target before publishing anything', async () => {
+  test('refuses a symlinked user-home conform target before publishing anything', async () => {
     const box = await setup(rubric(governedItem(`{ writes: [{ path: '.managed/governed.txt', content: 'after\\n' }] }`)))
     await box.root.write('outside.txt', 'outside\n')
     await rm(join(box.home.path, '.managed', 'governed.txt'))

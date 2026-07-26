@@ -24,21 +24,21 @@ export interface AuditOutcome {
   readonly level?: ViolationLevel
 }
 
-export interface RepairWrite {
+export interface ConformWrite {
   readonly path: string
   readonly content: string
   readonly create?: boolean
 }
 
-export interface RepairCommand {
+export interface ConformCommand {
   readonly program: string
   readonly arguments: readonly string[]
 }
 
-/** A repair describes desired changes; only the host is allowed to publish them. */
-export interface RepairProposal {
-  readonly writes: readonly RepairWrite[]
-  readonly commands?: readonly RepairCommand[]
+/** A conform action describes desired changes; only the host is allowed to publish them. */
+export interface ConformProposal {
+  readonly writes: readonly ConformWrite[]
+  readonly commands?: readonly ConformCommand[]
 }
 
 export interface RepositoryRubricScope {
@@ -62,8 +62,8 @@ export interface MechanicalRubric<Context> {
   readonly overrideLevels?: readonly ViolationLevel[]
   readonly heuristic?: boolean
   readonly audit: RubricExecution<Context, readonly AuditOutcome[]>
-  readonly repair?: RubricExecution<Context, RepairProposal>
-  readonly repairOn?: readonly 'INFO'[]
+  readonly conform?: RubricExecution<Context, ConformProposal>
+  readonly conformOn?: readonly 'INFO'[]
 }
 
 export interface JudgmentRubric {

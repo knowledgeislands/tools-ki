@@ -46,7 +46,7 @@ const allowedByScope = (path: string, scope: WriteScope | undefined): boolean =>
 const sameIdentity = (left: FileIdentity, right: FileIdentity): boolean => left.dev === right.dev && left.ino === right.ino
 
 /**
- * Several independent rubric items may derive the same complete-file repair
+ * Several independent rubric items may derive the same complete-file conform
  * from shared read-only evidence. Retain one identical proposal, but never
  * choose between competing replacement content.
  */

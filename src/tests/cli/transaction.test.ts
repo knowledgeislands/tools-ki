@@ -93,7 +93,7 @@ const governedItem = (path: string, code: string, content: string) => `{
   mechanical: {
     level: 'FAIL',
     audit: { phase: 'PRIMARY', run: async () => [{ status: 'VIOLATION', message: 'not conformed' }] },
-    repair: { phase: 'PRIMARY', run: async () => ({ writes: [{ path: '${path}', content: '${content}' }] }) }
+    conform: { phase: 'PRIMARY', run: async () => ({ writes: [{ path: '${path}', content: '${content}' }] }) }
   }
 }`
 
