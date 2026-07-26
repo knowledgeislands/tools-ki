@@ -44,6 +44,17 @@ const orderedSkills = (skills: readonly ResolvedSkill[]): readonly ResolvedSkill
   return ordered
 }
 
+/** Resolves one installed skill by capability name, independent of any repository declaration — the same duplicate/unknown-provider guards `ki skill user add` applies. */
+export const resolveInstalledSkill = (harnesses: readonly InstalledHarness[], name: string): ResolvedSkill => {
+  const candidates = skillCandidates(harnesses, name)
+  if (!candidates.length) throw new KiError(`no installed harness provides skill ${name}`, 1)
+  if (candidates.length > 1) throw new KiError(`skill ${name} is provided by multiple installed harnesses`, 1)
+  const [candidate] = candidates
+  /* v8 ignore next -- candidates.length is exactly 1 here (0 and >1 are both handled above); defends only against a future refactor. */
+  if (!candidate) throw new KiError(`skill ${name} could not be resolved`, 1)
+  return candidate
+}
+
 export const resolveDeclaredSkills = (
   declarations: readonly DeclaredSkill[],
   harnesses: readonly InstalledHarness[],

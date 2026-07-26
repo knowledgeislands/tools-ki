@@ -1,0 +1,150 @@
+import { rm, symlink } from 'node:fs/promises'
+import { join } from 'node:path'
+import { describe, expect, test } from 'vitest'
+import { sandbox } from './_cli_helper.ts'
+
+// Builds a full `scripts/rubric/index.ts` module source, wrapping the contract's required
+// boilerplate (contract version, skill name, createContext) around a caller-supplied
+// `families` array literal — same shape as repo.test.ts's fixture.
+const rubric = (families: string, skill = 'ki-example'): string => `
+export default {
+  contract: 1,
+  skill: '${skill}',
+  createContext: async ({ repository }) => ({ repository }),
+  families: ${families}
+}
+`
+
+const mixedFamilies = `[{
+  code: 'FAM', title: 'Family title',
+  items: [
+    { kind: 'mechanical', code: 'FAM-1', title: 'Mechanical item', level: 'FAIL', phase: 'PRIMARY',
+      audit: async () => [] },
+    { kind: 'judgment', code: 'FAM-2', title: 'Judgment item', prompt: 'weigh it by hand' }
+  ]
+}]`
+
+const expectedRendered = [
+  '<!-- GENERATED FILE: produced by `ki skill rubric`. Do not hand-edit; edit scripts/rubric/index.ts, then rerun `ki skill rubric <skill> --write`. -->',
+  '',
+  '# Rubric — ki-example',
+  '',
+  '> **Generated publication.** The TypeScript rubric items under `scripts/rubric/index.ts` are canonical. Edit that definition, then rerun `ki skill rubric <skill> --write`.',
+  '',
+  '## Contents',
+  '',
+  '- [FAM — Family title](#fam--family-title)',
+  '',
+  '## FAM — Family title',
+  '',
+  '- **FAM-1 [FAIL · PRIMARY] — Mechanical item**',
+  '- **FAM-2 [J] — Judgment item**',
+  '  > weigh it by hand',
+  ''
+].join('\n')
+
+// Simulates a dev-linked harness install without going through `ki dev on` (which only
+// projects the canonical knowledgeislands/ki-agentic-harness): writes the real skill payload
+// under the sandbox root, then symlinks the installed harness's `skills` payload root at it —
+// the same signal `enableCanonicalHarnessDevelopment` establishes for the canonical harness.
+const devLinkExampleHarness = async (box: Awaited<ReturnType<typeof sandbox>>, rubricSource: string): Promise<void> => {
+  await box.root.write('local/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
+  await box.root.write('local/skills/ki-example/scripts/rubric/index.ts', rubricSource)
+  const installedSkills = join(box.data.path, 'ki/harnesses/example/harness/skills')
+  await rm(installedSkills, { recursive: true, force: true })
+  await symlink(join(box.root.path, 'local/skills'), installedSkills)
+}
+
+describe('[ki skill rubric]', () => {
+  test('renders mechanical and judgment items and reports in sync once written', async () => {
+    const box = await sandbox()
+    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+    const target = 'ki/harnesses/example/harness/skills/ki-example/references/rubric.md'
+    await devLinkExampleHarness(box, rubric(mixedFamilies))
+
+    const written = await box.run('ki skill rubric ki-example --write')
+    expect(written.exitCode).toBe(0)
+    expect(written.output).toMatch(/^write .*ki\/harnesses\/example\/harness\/skills\/ki-example\/references\/rubric\.md\n$/)
+    expect(await box.data.read(target)).toBe(expectedRendered)
+
+    const checked = await box.run('ki skill rubric ki-example')
+    expect(checked).toEqual({ exitCode: 0, output: 'ki skill rubric: example/harness:ki-example references/rubric.md is in sync\n' })
+  })
+
+  test('reports missing when references/rubric.md has never been generated', async () => {
+    const box = await sandbox()
+    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+
+    const result = await box.run('ki skill rubric ki-example')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('references/rubric.md is missing; run with --write from a dev-linked harness')
+  })
+
+  test('reports stale when the on-disk catalogue no longer matches the definition', async () => {
+    const box = await sandbox()
+    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+    await box.data.write('ki/harnesses/example/harness/skills/ki-example/references/rubric.md', 'stale content\n')
+
+    const result = await box.run('ki skill rubric ki-example')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('references/rubric.md is stale; run with --write from a dev-linked harness')
+  })
+
+  test('produces byte-identical output across repeated renders', async () => {
+    const box = await sandbox()
+    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+    await devLinkExampleHarness(box, rubric(mixedFamilies))
+    const target = 'ki/harnesses/example/harness/skills/ki-example/references/rubric.md'
+
+    await box.run('ki skill rubric ki-example --write')
+    const first = await box.data.read(target)
+    await box.run('ki skill rubric ki-example --write')
+    const second = await box.data.read(target)
+
+    expect(first).toBe(second)
+  })
+
+  test('refuses --write against an installed, non-dev-linked payload', async () => {
+    const box = await sandbox()
+    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+
+    const result = await box.run('ki skill rubric ki-example --write')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('run ki dev on before writing its rubric catalogue')
+    await expect(box.data.read('ki/harnesses/example/harness/skills/ki-example/references/rubric.md')).rejects.toThrow()
+  })
+
+  test('refuses a skill with no rubric definition module', async () => {
+    const box = await sandbox()
+    await box.setupExampleHarness()
+
+    const result = await box.run('ki skill rubric ki-example')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('does not provide a native rubric definition')
+  })
+
+  test('refuses an unknown skill', async () => {
+    const box = await sandbox()
+    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+
+    const result = await box.run('ki skill rubric does-not-exist')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('no installed harness provides skill does-not-exist')
+  })
+
+  test('refuses a skill provided by multiple installed harnesses', async () => {
+    const box = await sandbox()
+    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+    await box.data.write('ki/harnesses/second/harness/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
+
+    const result = await box.run('ki skill rubric ki-example')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('is provided by multiple installed harnesses')
+  })
+})
