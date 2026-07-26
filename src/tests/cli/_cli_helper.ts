@@ -85,14 +85,15 @@ const area = (path: string): SandboxArea => {
   }
 }
 
-// A single generic `example/harness` with one `ki-example` skill, whose `scripts/rubric/index.ts`
-// default export body the caller supplies verbatim. Used to exercise the repo/harness/skill
+// A single generic `example/harness` with one `ki-example` skill, whose
+// `scripts/rubric/items/index.ts` default export body the caller supplies verbatim.
+// Used to exercise the repo/harness/skill
 // commands against arbitrary rubric-definition behavior. Omitting `rubric` writes the skill
 // without a rubric module at all, for exercising skills that provide no native governance.
 const setupExampleHarness = async (data: SandboxArea, { rubric }: { rubric?: string } = {}): Promise<void> => {
   const base = 'ki/harnesses/example/harness/skills/ki-example'
   await data.write(`${base}/SKILL.md`, '---\nname: ki-example\nki-depends-on: []\n---\n')
-  if (rubric !== undefined) await data.write(`${base}/scripts/rubric/index.ts`, rubric)
+  if (rubric !== undefined) await data.write(`${base}/scripts/rubric/items/index.ts`, rubric)
 }
 
 const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<void> => {

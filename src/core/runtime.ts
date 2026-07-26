@@ -8,10 +8,10 @@ import { KiError } from './errors.ts'
 import type { ResolvedSkill } from './resolution.ts'
 import {
   type AuditOutcome,
-  type MechanicalRubricItem,
   type RepairCommand,
   RUBRIC_PHASES,
   type RubricFamily,
+  type RubricItem,
   type RubricScope,
   type SkillRubricDefinition
 } from './rubric.ts'
@@ -29,12 +29,25 @@ export type RuntimeScope = RepositoryRuntimeScope
 export interface NativeFinding {
   readonly level: 'fail' | 'warn' | 'info'
   readonly code: string
+  /** The rubric item's human-facing title, retained for host-owned reporting. */
+  readonly title: string
   readonly message: string
+  /** The optional specific file, path, or other evidence subject supplied by the item. */
+  readonly subject?: string
 }
 
 export interface ItemAuditState {
-  readonly item: MechanicalRubricItem<unknown>
+  readonly item: PreparedRubricItem
   readonly outcomes: readonly AuditOutcome[]
+}
+
+/** One mechanical catalogue item paired with the family that selects its evidence. */
+export interface PreparedRubricItem {
+  readonly family: RubricFamily<unknown>
+  readonly item: RubricItem<unknown> & { readonly mechanical: NonNullable<RubricItem<unknown>['mechanical']> }
+  readonly code: string
+  readonly familyIndex: number
+  readonly itemIndex: number
 }
 
 export interface SkillAuditResult {
@@ -46,12 +59,14 @@ export interface SkillAuditResult {
 export interface PreparedSkill {
   readonly skill: ResolvedSkill
   readonly definition: SkillRubricDefinition<unknown>
-  readonly items: readonly MechanicalRubricItem<unknown>[]
+  readonly items: readonly PreparedRubricItem[]
 }
 
 /** The static maintenance catalogue a declared skill exposes through `ki repo educate`. */
 export interface SkillEducationResult {
   readonly identity: string
+  readonly concern: string
+  readonly scope: RubricScope
   readonly families: readonly RubricFamily<unknown>[]
 }
 
@@ -66,20 +81,33 @@ export interface SkillConformResult {
 
 export interface FixedItem {
   readonly code: string
+  readonly title: string
   readonly message: string
+  readonly subject?: string
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
-const validateOutcome = (value: unknown, code: string, index: number): AuditOutcome => {
+const validateOutcome = (value: unknown, item: PreparedRubricItem, index: number): AuditOutcome => {
+  const { code, mechanical } = item.item
   if (!isRecord(value)) throw new KiError(`rubric item ${code} audit outcome ${index} must be a table`, 1)
-  const { status, message, subject } = value
+  const { status, message, subject, level } = value
   if (status !== 'PASS' && status !== 'VIOLATION' && status !== 'NOT_APPLICABLE' && status !== 'INFO')
     throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid status`, 1)
   if (typeof message !== 'string' || !message) throw new KiError(`rubric item ${code} audit outcome ${index} must have a message`, 1)
   if (subject !== undefined && typeof subject !== 'string')
     throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
-  return subject === undefined ? { status, message } : { status, message, subject }
+  if (level !== undefined) {
+    if (status !== 'VIOLATION') throw new KiError(`rubric item ${code} audit outcome ${index} sets a level outside VIOLATION`, 1)
+    if ((level !== 'FAIL' && level !== 'WARN') || (level !== mechanical.level && !mechanical.overrideLevels?.includes(level)))
+      throw new KiError(`rubric item ${code} audit outcome ${index} uses an undeclared level`, 1)
+  }
+  return {
+    status,
+    message,
+    ...(subject === undefined ? {} : { subject }),
+    ...(level === undefined ? {} : { level: level as 'FAIL' | 'WARN' })
+  }
 }
 
 const validProgram = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/
@@ -114,22 +142,29 @@ export const validateRepairProposal = (
 }
 
 interface OrderedItem {
-  readonly item: MechanicalRubricItem<unknown>
+  readonly item: PreparedRubricItem
   readonly familyIndex: number
   readonly itemIndex: number
 }
 
-const orderedMechanicalItems = (definition: SkillRubricDefinition<unknown>): readonly MechanicalRubricItem<unknown>[] => {
+const orderedMechanicalItems = (definition: SkillRubricDefinition<unknown>): readonly PreparedRubricItem[] => {
   const entries: OrderedItem[] = []
   definition.families.forEach((family, familyIndex) => {
     family.items.forEach((item, itemIndex) => {
-      if (item.kind === 'mechanical') entries.push({ item, familyIndex, itemIndex })
+      if (item.mechanical) {
+        entries.push({
+          item: { family, item: item as PreparedRubricItem['item'], code: item.code, familyIndex, itemIndex },
+          familyIndex,
+          itemIndex
+        })
+      }
     })
   })
   return entries
     .slice()
     .sort((left, right) => {
-      const phaseDelta = RUBRIC_PHASES.indexOf(left.item.phase) - RUBRIC_PHASES.indexOf(right.item.phase)
+      const phaseDelta =
+        RUBRIC_PHASES.indexOf(left.item.item.mechanical.audit.phase) - RUBRIC_PHASES.indexOf(right.item.item.mechanical.audit.phase)
       if (phaseDelta !== 0) return phaseDelta
       if (left.familyIndex !== right.familyIndex) return left.familyIndex - right.familyIndex
       return left.itemIndex - right.itemIndex
@@ -137,17 +172,21 @@ const orderedMechanicalItems = (definition: SkillRubricDefinition<unknown>): rea
     .map((entry) => entry.item)
 }
 
-const findingForOutcome = (item: MechanicalRubricItem<unknown>, outcome: AuditOutcome): NativeFinding | undefined => {
+const findingForOutcome = (prepared: PreparedRubricItem, outcome: AuditOutcome): NativeFinding | undefined => {
+  const { item } = prepared
   if (outcome.status === 'PASS' || outcome.status === 'NOT_APPLICABLE') return undefined
-  const level = outcome.status === 'INFO' ? 'info' : item.level === 'FAIL' ? 'fail' : 'warn'
-  const message = outcome.subject ? `${outcome.message} — ${outcome.subject}` : outcome.message
-  return { level, code: item.code, message }
+  const violationLevel = outcome.level ?? item.mechanical.level
+  const level = outcome.status === 'INFO' ? 'info' : violationLevel === 'FAIL' ? 'fail' : 'warn'
+  return outcome.subject === undefined
+    ? { level, code: item.code, title: item.title, message: outcome.message }
+    : { level, code: item.code, title: item.title, message: outcome.message, subject: outcome.subject }
 }
 
-const auditItem = async (item: MechanicalRubricItem<unknown>, context: unknown): Promise<ItemAuditState> => {
-  const raw = await item.audit(context)
+const auditItem = async (item: PreparedRubricItem, rootContext: unknown): Promise<ItemAuditState> => {
+  const context = await item.family.selectContext(rootContext)
+  const raw = await item.item.mechanical.audit.run(context)
   if (!Array.isArray(raw)) throw new KiError(`rubric item ${item.code} audit must return an outcomes array`, 1)
-  return { item, outcomes: raw.map((outcome, index) => validateOutcome(outcome, item.code, index)) }
+  return { item, outcomes: raw.map((outcome, index) => validateOutcome(outcome, item, index)) }
 }
 
 interface InternalAudit {
@@ -165,7 +204,7 @@ export const prepareSkill = async (skill: ResolvedSkill): Promise<PreparedSkill>
 const auditSkill = async (
   scope: RuntimeScope,
   prepared: PreparedSkill,
-  onItemComplete?: (item: MechanicalRubricItem<unknown>) => void
+  onItemComplete?: (item: PreparedRubricItem) => void
 ): Promise<InternalAudit> => {
   const { skill, definition, items: plannedItems } = prepared
   const definitionScope: RubricScope = definition.scope ?? { kind: 'repository' }
@@ -196,7 +235,7 @@ const auditSkill = async (
 export const runSkillAudit = async (
   scope: RuntimeScope,
   prepared: PreparedSkill,
-  onItemComplete?: (item: MechanicalRubricItem<unknown>) => void
+  onItemComplete?: (item: PreparedRubricItem) => void
 ): Promise<SkillAuditResult> => {
   const { items, findings } = await auditSkill(scope, prepared, onItemComplete)
   return { findings, items }
@@ -204,7 +243,12 @@ export const runSkillAudit = async (
 
 /** Loads a declared skill's validated rubric catalogue without constructing evidence or executing an item. */
 export const educateSkill = async (prepared: PreparedSkill): Promise<SkillEducationResult> => {
-  return { identity: prepared.skill.identity, families: prepared.definition.families }
+  return {
+    identity: prepared.skill.identity,
+    concern: prepared.definition.concern,
+    scope: prepared.definition.scope ?? { kind: 'repository' },
+    families: prepared.definition.families
+  }
 }
 
 // A violated item that declares a repair is only actually "fixed this round" once its
@@ -212,27 +256,44 @@ export const educateSkill = async (prepared: PreparedSkill): Promise<SkillEducat
 // change, so its violation still surfaces like any other unaddressed finding below.
 const attemptRepair = async (
   state: ItemAuditState,
-  context: unknown
+  rootContext: unknown
 ): Promise<{ readonly writes: readonly NativeWrite[]; readonly commands: readonly RepairCommand[] } | undefined> => {
-  if (!state.item.repair || !state.outcomes.some((outcome) => outcome.status === 'VIOLATION')) return undefined
-  const repair = validateRepairProposal(await state.item.repair(context), state.item.code)
+  const { family, item } = state.item
+  const repairable = state.outcomes.some(
+    (outcome) => outcome.status === 'VIOLATION' || (outcome.status === 'INFO' && item.mechanical.repairOn?.includes('INFO'))
+  )
+  if (!item.mechanical.repair || !repairable) return undefined
+  const context = await family.selectContext(rootContext)
+  const repair = validateRepairProposal(await item.mechanical.repair.run(context), item.code)
   return repair.writes.length || repair.commands.length ? repair : undefined
 }
 
 export const runSkillConform = async (
   scope: RuntimeScope,
   prepared: PreparedSkill,
-  onItemComplete?: (item: MechanicalRubricItem<unknown>) => void
+  onItemComplete?: (item: PreparedRubricItem) => void
 ): Promise<SkillConformResult> => {
   const { context, items, scope: definitionScope } = await auditSkill(scope, prepared, onItemComplete)
-  const attempts = await Promise.all(items.map((state) => attemptRepair(state, context)))
+  const repairOrder = items
+    .filter((state) => state.item.item.mechanical.repair)
+    .slice()
+    .sort((left, right) => {
+      const phaseDelta =
+        RUBRIC_PHASES.indexOf(left.item.item.mechanical.repair?.phase ?? 'NORMALISE') -
+        RUBRIC_PHASES.indexOf(right.item.item.mechanical.repair?.phase ?? 'NORMALISE')
+      if (phaseDelta !== 0) return phaseDelta
+      if (left.item.familyIndex !== right.item.familyIndex) return left.item.familyIndex - right.item.familyIndex
+      return left.item.itemIndex - right.item.itemIndex
+    })
+  const attempts = new Map<string, Awaited<ReturnType<typeof attemptRepair>>>()
+  for (const state of repairOrder) attempts.set(state.item.code, await attemptRepair(state, context))
 
   const findings: NativeFinding[] = []
   const writes: NativeWrite[] = []
   const commands: RepairCommand[] = []
   const fixable: ItemAuditState[] = []
-  items.forEach((state, index) => {
-    const proposed = attempts[index]
+  items.forEach((state) => {
+    const proposed = attempts.get(state.item.code)
     if (proposed) {
       writes.push(...proposed.writes)
       commands.push(...proposed.commands)
@@ -260,6 +321,9 @@ export const detectFixed = (fixable: readonly ItemAuditState[], postItems: reado
     if (!post) return []
     if (post.outcomes.some((outcome) => outcome.status === 'VIOLATION')) return []
     const passOutcome = post.outcomes.find((outcome) => outcome.status === 'PASS')
-    return passOutcome ? [{ code: state.item.code, message: passOutcome.message }] : []
+    if (!passOutcome) return []
+    return passOutcome.subject === undefined
+      ? [{ code: state.item.code, title: state.item.item.title, message: passOutcome.message }]
+      : [{ code: state.item.code, title: state.item.item.title, message: passOutcome.message, subject: passOutcome.subject }]
   })
 }

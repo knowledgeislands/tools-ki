@@ -6,7 +6,16 @@ import { KiError } from '../core/errors.ts'
 import { discoverInstalledHarnesses } from '../core/harness.ts'
 import { resolveRepository } from '../core/repository.ts'
 import { type ResolvedSkill, resolveDeclaredSkills } from '../core/resolution.ts'
-import { detectFixed, educateSkill, type PreparedSkill, prepareSkill, runSkillAudit, runSkillConform } from '../core/runtime.ts'
+import {
+  detectFixed,
+  educateSkill,
+  type FixedItem,
+  type NativeFinding,
+  type PreparedSkill,
+  prepareSkill,
+  runSkillAudit,
+  runSkillConform
+} from '../core/runtime.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../core/transaction.ts'
 
 const renderCommand = (command: { readonly program: string; readonly arguments: readonly string[] }): string =>
@@ -162,18 +171,96 @@ const runWithProgress = async <Result>(
 
 const renderEducation = (education: Awaited<ReturnType<typeof educateSkill>>): string[] => [
   education.identity,
+  `  Concern: ${education.concern}`,
+  `  Scope: ${education.scope.kind === 'repository' ? 'repository' : `user home (${education.scope.paths.join(', ')})`}`,
   ...education.families.flatMap((family) => [
     `  ${family.code}: ${family.title}`,
-    ...family.items.flatMap((item) =>
-      item.kind === 'judgment'
-        ? [`    ${item.code}: ${item.title}`, `      ${item.prompt}`]
-        : [
-            `    ${item.code}: ${item.title} (${item.level})`,
-            '      Audit this criterion; conform applies its declared safe repair when available.'
-          ]
-    )
+    `    ${family.description}`,
+    `    Standard: ${family.standard}`,
+    ...family.items.flatMap((item) => {
+      const aspects = [...(item.mechanical ? [item.mechanical.heuristic ? 'M-heuristic' : 'M'] : []), ...(item.judgment ? ['J'] : [])].join(
+        ' + '
+      )
+      return [
+        `    ${item.code} [${aspects}]: ${item.title}`,
+        `      ${item.description}`,
+        `      Sources: ${item.sources.join(', ')}`,
+        ...(item.judgment ? [`      Review: ${item.judgment.prompt}`] : [])
+      ]
+    })
   ])
 ]
+
+type RenderedFinding = (NativeFinding | FixedItem) & { readonly level: NativeFinding['level'] | 'fixed' }
+
+interface SkillReport {
+  readonly skill: PreparedSkill
+  readonly findings: readonly NativeFinding[]
+  readonly fixed?: readonly FixedItem[]
+}
+
+const REPORT_ICON: Record<RenderedFinding['level'], string> = {
+  fail: '❌',
+  warn: '⚠️ ',
+  fixed: '✅',
+  info: 'ℹ️ '
+}
+
+const REPORT_LABEL: Record<RenderedFinding['level'], string> = {
+  fail: 'fail',
+  warn: 'warn',
+  fixed: 'fixed',
+  info: 'info'
+}
+
+const judgmentItemCount = (skill: PreparedSkill): number =>
+  skill.definition.families.reduce((count, family) => count + family.items.filter((item) => item.judgment).length, 0)
+
+const withFixed = (report: SkillReport): readonly RenderedFinding[] => [
+  ...report.findings,
+  ...(report.fixed ?? []).map((finding) => ({ ...finding, level: 'fixed' as const }))
+]
+
+const formatFinding = (finding: RenderedFinding, skill?: string, full = true): string => {
+  const message = full ? finding.message : (finding.message.split(/\r?\n/, 1)[0] ?? '')
+  const subject = finding.subject ? ` ${finding.subject}` : ''
+  const prefix = `  ${REPORT_ICON[finding.level]} ${REPORT_LABEL[finding.level].padEnd(5)}${skill ? ` ${skill.padEnd(20)}` : ''}`
+  return `${prefix} [${finding.title} (${finding.code})]${subject} — ${message.replace(/\r?\n/g, '\n    ')}`
+}
+
+const summary = (findings: readonly RenderedFinding[], judgmentUnevaluated: number): string => {
+  const count = (level: RenderedFinding['level']): number => findings.filter((finding) => finding.level === level).length
+  const icon = count('fail') ? REPORT_ICON.fail : count('warn') ? REPORT_ICON.warn : REPORT_ICON.fixed
+  return `  ${icon} summary: FAIL=${count('fail')} WARN=${count('warn')} FIXED=${count('fixed')} JUDGMENT_UNEVALUATED=${judgmentUnevaluated}`
+}
+
+/**
+ * The host owns presentation just as it owns execution. Native rubric contracts return
+ * structured outcomes; this renderer keeps their item title and evidence subject intact
+ * instead of making each harness ship a runner merely to format a report.
+ */
+const renderReports = (context: KiContext, operation: 'audit' | 'conform', reports: readonly SkillReport[]): void => {
+  const reportFindings = reports.map((report) => ({ report, findings: withFixed(report) }))
+  for (const { report, findings } of reportFindings) {
+    if (!findings.length) continue
+    context.stdout.write(`\n==> ${report.skill.skill.identity}:${operation}\n`)
+    for (const finding of findings) context.stdout.write(`${formatFinding(finding)}\n`)
+    context.stdout.write(`${summary(findings, judgmentItemCount(report.skill))}\n`)
+  }
+
+  const findings = reportFindings.flatMap(({ report, findings: entries }) =>
+    entries.map((finding) => ({ finding, skill: report.skill.skill.identity }))
+  )
+  const count = (level: RenderedFinding['level']): number => findings.filter(({ finding }) => finding.level === level).length
+  const judgmentUnevaluated = reports.reduce((total, report) => total + judgmentItemCount(report.skill), 0)
+  context.stdout.write('\n==> recap\n')
+  if (!findings.length) context.stdout.write(`  ✅ no findings across ${operation === 'audit' ? 'audited' : 'conformed'} skills\n`)
+  else for (const { finding, skill } of findings) context.stdout.write(`${formatFinding(finding, skill, false)}\n`)
+  const icon = count('fail') ? REPORT_ICON.fail : count('warn') ? REPORT_ICON.warn : REPORT_ICON.fixed
+  context.stdout.write(
+    `  ${icon} totals: FAIL=${count('fail')} WARN=${count('warn')} FIXED=${count('fixed')} JUDGMENT_UNEVALUATED=${judgmentUnevaluated}\n`
+  )
+}
 
 export const createRepoCommand = (context: KiContext): Command =>
   new Command('repo')
@@ -200,14 +287,21 @@ export const createRepoCommand = (context: KiContext): Command =>
         .option('--skill <capability>', 'one declared resolved skill to audit')
         .action(async (options: { repo?: string; skill?: string }) => {
           const { repository, skills } = await resolveSkills(context, options)
-          const results = await runWithProgress(context, 'audit', skills, (skill, onItemComplete) =>
-            runSkillAudit({ kind: 'repository', repository: repository.root, userHome: context.homeDirectory }, skill, (item) =>
-              onItemComplete(item.code)
+          const results = await runWithProgress(context, 'audit', skills, async (skill, onItemComplete) => ({
+            skill,
+            audit: await runSkillAudit(
+              { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
+              skill,
+              (item) => onItemComplete(item.code)
             )
-          )
-          const findings = results.flatMap((result) => result.findings)
+          }))
+          const findings = results.flatMap(({ audit }) => audit.findings)
           if (!findings.length) context.stdout.write(`ki repo audit: clean (${skills.length} skills)\n`)
-          for (const finding of findings) context.stdout.write(`${finding.level} ${finding.code}: ${finding.message}\n`)
+          renderReports(
+            context,
+            'audit',
+            results.map(({ skill, audit }) => ({ skill, findings: audit.findings }))
+          )
           if (findings.some((finding) => finding.level === 'fail')) throw new KiError('native repository audit found failures', 1)
         })
     )
@@ -243,12 +337,25 @@ export const createRepoCommand = (context: KiContext): Command =>
           const commands = conformed.flatMap(({ conform }) => conform.commands)
           if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
             throw new KiError('user-home rubric repairs must be transactional writes; subprocess repairs are not permitted', 1)
-          for (const finding of findings) context.stdout.write(`${finding.level} ${finding.code}: ${finding.message}\n`)
           for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
           for (const command of commands) context.stdout.write(`${options.dryRun ? 'would run' : 'run'} ${renderCommand(command)}\n`)
-          if (findings.some((finding) => finding.level === 'fail')) throw new KiError('native repository conform found failures', 1)
+          if (findings.some((finding) => finding.level === 'fail')) {
+            renderReports(
+              context,
+              'conform',
+              conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings }))
+            )
+            throw new KiError('native repository conform found failures', 1)
+          }
           await publishWrites(writes, Boolean(options.dryRun))
-          if (options.dryRun) return
+          if (options.dryRun) {
+            renderReports(
+              context,
+              'conform',
+              conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings }))
+            )
+            return
+          }
           await runCommands(repository.root, commands)
           const reaudited = await runPreparedWithProgress(
             context,
@@ -261,6 +368,7 @@ export const createRepoCommand = (context: KiContext): Command =>
               /* v8 ignore next */
               if (!previous) throw new KiError(`native repository conform lost ${skill.skill.identity} before re-audit`, 1)
               return {
+                prepared: skill,
                 conform: previous.conform,
                 audit: await runSkillAudit(
                   { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
@@ -271,9 +379,12 @@ export const createRepoCommand = (context: KiContext): Command =>
             }
           )
           const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
-          for (const finding of auditFindings) context.stdout.write(`${finding.level} ${finding.code}: ${finding.message}\n`)
-          const fixed = reaudited.flatMap(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
-          for (const entry of fixed) context.stdout.write(`FIXED ${entry.code}: ${entry.message}\n`)
+          const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
+          renderReports(
+            context,
+            'conform',
+            reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] }))
+          )
           if (auditFindings.some((finding) => finding.level === 'fail'))
             throw new KiError('native repository conform re-audit found failures', 1)
         })

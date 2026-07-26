@@ -1,45 +1,54 @@
-// Renders a loaded SkillRubricDefinition into a deterministic, byte-stable Markdown
-// catalogue (CLI-004 T1.7) — the host-owned replacement for every per-skill
-// `scripts/rubric/publish.ts`. Skills declare rubric data; only `ki skill rubric`
-// turns it into prose, so rendering stays out of the governed contract entirely.
+// Renders the complete direct catalogue into its deterministic Markdown
+// publication. Item modules remain canonical; this host-owned renderer replaces
+// every per-skill publisher without discarding catalogue metadata.
 
 import type { RubricItem, SkillRubricDefinition } from './rubric.ts'
 
-// Mirrors GitHub's heading-anchor algorithm closely enough for internal cross-links:
-// lowercase, drop everything but letters/digits/spaces/hyphens, then turn spaces into
-// hyphens. An em dash between two spaces collapses to a double hyphen, which is what
-// produces anchors like `#hand--handoff-readiness` from a "HAND — Handoff readiness" heading.
-const slug = (text: string): string =>
-  text
+const headingAnchor = (heading: string): string =>
+  heading
     .toLowerCase()
-    .replace(/[^a-z0-9 -]/g, '')
-    .replace(/ /g, '-')
+    .replaceAll(/\s/g, '-')
+    .replaceAll(/[^a-z0-9-]/g, '')
 
-const renderItem = (item: RubricItem<unknown>): readonly string[] => {
-  if (item.kind === 'judgment') return [`- **${item.code} [J] — ${item.title}**`, `  > ${item.prompt}`]
-  return [`- **${item.code} [${item.level} · ${item.phase}] — ${item.title}**`]
+const classification = (item: RubricItem<unknown>): string => {
+  const aspects = [...(item.mechanical ? [item.mechanical.heuristic ? 'M-heuristic' : 'M'] : []), ...(item.judgment ? ['J'] : [])]
+  return aspects.join(' + ')
 }
 
-/** Renders a rubric definition into Markdown. Deterministic: the same definition always renders to the same bytes. */
+const renderItem = (item: RubricItem<unknown>): string => {
+  const prompt = item.judgment ? `\n  - _Review prompt:_ ${item.judgment.prompt}` : ''
+  return `- **${item.code} [${classification(item)}] — ${item.title}** — ${item.description} (${item.sources.join(', ')})${prompt}`
+}
+
+/** The same loaded catalogue drives both execution and publication. */
 export const renderRubricMarkdown = (definition: SkillRubricDefinition<unknown>): string => {
-  const familyHeading = (family: SkillRubricDefinition<unknown>['families'][number]): string => `${family.code} — ${family.title}`
+  const contents = definition.families
+    .map((family) => {
+      const heading = `${family.code} — ${family.title}`
+      return `- [${heading}](#${headingAnchor(heading)})`
+    })
+    .join('\n')
+  const families = definition.families
+    .map(
+      (family) =>
+        `## ${family.code} — ${family.title}\n\n→ [standard](${family.standard})\n\n${family.description}\n\n${family.items
+          .map(renderItem)
+          .join('\n')}`
+    )
+    .join('\n\n')
 
-  const lines: string[] = [
-    '<!-- GENERATED FILE: produced by `ki skill rubric`. Do not hand-edit; edit scripts/rubric/index.ts, then rerun `ki skill rubric <skill> --write`. -->',
-    '',
-    `# Rubric — ${definition.skill}`,
-    '',
-    '> **Generated publication.** The TypeScript rubric items under `scripts/rubric/index.ts` are canonical. Edit that definition, then rerun `ki skill rubric <skill> --write`.',
-    '',
-    '## Contents',
-    ''
-  ]
-  for (const family of definition.families) lines.push(`- [${familyHeading(family)}](#${slug(familyHeading(family))})`)
+  return `<!-- GENERATED FILE: produced by \`ki skill rubric\`. Do not hand-edit; edit scripts/rubric/items/, then rerun \`ki skill rubric <skill> --write\`. -->
 
-  for (const family of definition.families) {
-    lines.push('', `## ${familyHeading(family)}`, '')
-    for (const item of family.items) lines.push(...renderItem(item))
-  }
+# Generated rubric — ${definition.concern}
 
-  return `${lines.join('\n')}\n`
+> **Generated publication.** The TypeScript rubric items under \`scripts/rubric/items/\` are canonical. Edit those definitions, then rerun \`ki skill rubric ${definition.name} --write\`.
+
+Line-by-line criteria for auditing ${definition.name}. Classifications are derived from item aspects: **[M]** mechanical, **[J]** judgment, **[M + J]** hybrid, and **[M-heuristic + J]** hybrid with heuristic mechanical evidence. Sources are cited as declared by each canonical item.
+
+## Contents
+
+${contents}
+
+${families}
+`
 }

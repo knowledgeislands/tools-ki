@@ -6,7 +6,8 @@ import { sandbox } from './_cli_helper.ts'
 const rubric = (body: string): string => `
 export default {
   contract: 1,
-  skill: 'ki-example',
+  name: 'ki-example',
+  concern: 'user files',
   scope: { kind: 'user-home', paths: ['.managed'] },
   createContext: async ({ userHome }) => ({ userHome }),
   families: ${body}
@@ -14,15 +15,19 @@ export default {
 `
 
 const governedItem = (repair: string): string => `[{
-  code: 'USER', title: 'User',
+  code: 'USER', title: 'User', description: 'User files.', standard: 'standard.md',
+  selectContext: (context) => context,
   items: [{
-    kind: 'mechanical', code: 'USER-1', title: 'Governed file', level: 'FAIL', phase: 'PRIMARY',
-    audit: async ({ userHome }) => {
-      const { readFile } = await import('node:fs/promises')
-      const content = await readFile(userHome + '/.managed/governed.txt', 'utf8')
-      return content === 'after\\n' ? [{ status: 'PASS', message: 'user file is conformed' }] : [{ status: 'VIOLATION', message: 'user file needs repair' }]
+    code: 'USER-1', title: 'Governed file', description: 'The file is governed.', sources: ['standard.md'],
+    mechanical: {
+      level: 'FAIL',
+      audit: { phase: 'PRIMARY', run: async ({ userHome }) => {
+        const { readFile } = await import('node:fs/promises')
+        const content = await readFile(userHome + '/.managed/governed.txt', 'utf8')
+        return content === 'after\\n' ? [{ status: 'PASS', message: 'user file is conformed' }] : [{ status: 'VIOLATION', message: 'user file needs repair' }]
+      }},
+      repair: { phase: 'PRIMARY', run: async () => (${repair}) }
     },
-    repair: async () => (${repair})
   }]
 }]`
 
@@ -43,9 +48,10 @@ describe('[ki repo] user-home rubric scope', () => {
     const conform = await box.run('ki repo conform')
 
     expect(audit.exitCode).toBe(1)
-    expect(audit.output).toContain('fail USER-1: user file needs repair')
-    expect(dryRun).toEqual({ exitCode: 0, output: 'would write .managed/governed.txt\n' })
-    expect(conform).toEqual({ exitCode: 0, output: 'write .managed/governed.txt\nFIXED USER-1: user file is conformed\n' })
+    expect(audit.output).toContain('❌ fail  [Governed file (USER-1)] — user file needs repair')
+    expect(dryRun.output).toContain('would write .managed/governed.txt\n')
+    expect(conform.output).toContain('write .managed/governed.txt\n')
+    expect(conform.output).toContain('✅ fixed [Governed file (USER-1)] — user file is conformed')
     expect(await box.home.read('.managed/governed.txt')).toBe('after\n')
   })
 
@@ -77,7 +83,8 @@ describe('[ki repo] user-home rubric scope', () => {
     const box = await setup(`
 export default {
   contract: 1,
-  skill: 'ki-example',
+  name: 'ki-example',
+  concern: 'user files',
   scope: { kind: 'user-home', paths: ['../outside'] },
   createContext: async () => ({}),
   families: []

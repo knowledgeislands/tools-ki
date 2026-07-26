@@ -14,7 +14,7 @@ export interface HarnessCapability {
   readonly name: string
   readonly source: string
   readonly dependsOn: readonly string[]
-  /** Payload-relative path to the skill's `scripts/rubric/index.ts` module, when it provides one. */
+  /** Payload-relative path to the skill's canonical `scripts/rubric/items/index.ts` catalogue, when it provides one. */
   readonly rubricModule?: string
 }
 

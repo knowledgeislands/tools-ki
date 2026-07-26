@@ -1,12 +1,9 @@
-// The versioned rubric-definition contract — the one shape an installed skill exposes
-// to the tools-owned governed-rubric runtime (CLI-004 T1.1, handoff constraints 1–5).
+// The versioned direct-catalogue contract for rubric-bearing skills.
 //
-// An installed skill payload provides `scripts/rubric/index.ts`, default-exporting a
-// `SkillRubricDefinition`. The runtime validates the shape structurally at load against
-// `RUBRIC_CONTRACT_VERSION` before executing anything. Context builders are read-only;
-// repairs declare serialisable write proposals and never write — the host owns the one
-// transaction, publishes in dependency order, and derives `FIXED` from the
-// post-publication re-audit rather than trusting a skill's claim.
+// A skill owns one canonical catalogue at `scripts/rubric/items/index.ts`. The
+// module default-exports its complete definition: publication metadata, root
+// context factory, heterogeneous families, and distributed item definitions.
+// The host validates that structure before executing any skill code.
 
 export const RUBRIC_CONTRACT_VERSION = 1
 
@@ -23,43 +20,31 @@ export interface AuditOutcome {
   readonly status: AuditStatus
   readonly message: string
   readonly subject?: string
+  /** A VIOLATION may use the item's default level or one of its declared overrides. */
+  readonly level?: ViolationLevel
 }
 
-/**
- * One declared file replacement, relative to the repository root.
- *
- * Existing regular files are replaced transactionally.  A repair must opt in
- * explicitly with `create` to create a previously absent regular file; this
- * keeps accidental path typos from turning into new repository content.
- */
 export interface RepairWrite {
   readonly path: string
   readonly content: string
   readonly create?: boolean
 }
 
-/** One pathless subprocess command run by the host from the repository root after transactional file writes publish. */
 export interface RepairCommand {
   readonly program: string
   readonly arguments: readonly string[]
 }
 
-/** A serialisable repair proposal; an item may declare transactional file replacements, bounded host commands, or both. */
+/** A repair describes desired changes; only the host is allowed to publish them. */
 export interface RepairProposal {
   readonly writes: readonly RepairWrite[]
   readonly commands?: readonly RepairCommand[]
 }
 
-/** Repository rubrics are the default, retaining the original contract shape. */
 export interface RepositoryRubricScope {
   readonly kind: 'repository'
 }
 
-/**
- * A repository-declared rubric may additionally inspect the user home and repair
- * only these relative paths beneath it. The host validates both this declaration
- * and each proposed write; a scope is never an arbitrary absolute path.
- */
 export interface UserHomeRubricScope {
   readonly kind: 'user-home'
   readonly paths: readonly string[]
@@ -67,59 +52,60 @@ export interface UserHomeRubricScope {
 
 export type RubricScope = RepositoryRubricScope | UserHomeRubricScope
 
-/** A mechanical item the runtime executes; `repair` is optional and only consulted in conform mode. */
-export interface MechanicalRubricItem<Context> {
-  readonly kind: 'mechanical'
-  readonly code: string
-  readonly title: string
-  readonly level: ViolationLevel
+export interface RubricExecution<Context, Result> {
   readonly phase: RubricPhase
-  readonly audit: (context: Context) => Promise<readonly AuditOutcome[]> | readonly AuditOutcome[]
-  readonly repair?: (context: Context) => Promise<RepairProposal> | RepairProposal
+  readonly run: (context: Context) => Promise<Result> | Result
 }
 
-/** A judgment item is carried as catalogue data for educate/reporting surfaces; the runtime never executes it. */
-export interface JudgmentRubricItem {
-  readonly kind: 'judgment'
-  readonly code: string
-  readonly title: string
+export interface MechanicalRubric<Context> {
+  readonly level: ViolationLevel
+  readonly overrideLevels?: readonly ViolationLevel[]
+  readonly heuristic?: boolean
+  readonly audit: RubricExecution<Context, readonly AuditOutcome[]>
+  readonly repair?: RubricExecution<Context, RepairProposal>
+  readonly repairOn?: readonly 'INFO'[]
+}
+
+export interface JudgmentRubric {
   readonly prompt: string
 }
 
-export type RubricItem<Context> = MechanicalRubricItem<Context> | JudgmentRubricItem
-
-export interface RubricFamily<Context> {
+export interface RubricItem<Context> {
   readonly code: string
   readonly title: string
-  readonly items: readonly RubricItem<Context>[]
+  readonly description: string
+  readonly sources: readonly [string, ...string[]]
+  readonly mechanical?: MechanicalRubric<Context>
+  readonly judgment?: JudgmentRubric
 }
 
-export interface RepositoryRubricContextOptions {
+export interface RubricFamily<RootContext, FamilyContext = unknown> {
+  readonly code: string
+  readonly title: string
+  readonly description: string
+  readonly standard: string
+  readonly selectContext: (root: RootContext) => Promise<FamilyContext> | FamilyContext
+  readonly items: readonly RubricItem<FamilyContext>[]
+}
+
+export interface RubricContextOptions {
   readonly repository: string
   readonly userHome: string
   readonly configuration: Readonly<Record<string, unknown>>
 }
 
-export interface UserHomeRubricContextOptions {
-  readonly repository: string
-  readonly userHome: string
-  readonly configuration: Readonly<Record<string, unknown>>
-}
-
-export type RubricContextOptions = RepositoryRubricContextOptions | UserHomeRubricContextOptions
-
-export interface SkillRubricDefinition<Context = unknown> {
+export interface SkillRubricDefinition<RootContext = unknown> {
   readonly contract: typeof RUBRIC_CONTRACT_VERSION
-  readonly skill: string
-  /** Omit for repository-only evidence; user-home evidence and repairs must declare their bounded paths. */
+  readonly name: string
+  readonly concern: string
   readonly scope?: RubricScope
-  /** Builds the read-only evidence/context the items evaluate; it must not write anywhere. */
-  readonly createContext: (options: RubricContextOptions) => Promise<Context> | Context
-  readonly families: readonly RubricFamily<Context>[]
+  /** Builds read-only root evidence; it must never write. */
+  readonly createContext: (options: RubricContextOptions) => Promise<RootContext> | RootContext
+  readonly families: readonly RubricFamily<RootContext>[]
 }
 
-/** The payload-relative module every rubric-bearing skill provides. */
-export const RUBRIC_MODULE_PATH = 'scripts/rubric/index.ts'
+/** The sole canonical module for a rubric-bearing skill. */
+export const RUBRIC_MODULE_PATH = 'scripts/rubric/items/index.ts'
 
-/** The export name the runtime loads; a definition is the module's default export. */
+/** The catalogue is the module's default export. */
 export const RUBRIC_MODULE_EXPORT = 'default'

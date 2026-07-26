@@ -3,16 +3,49 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { type SandboxArea, sandbox } from './_cli_helper.ts'
 
-// Builds a full `scripts/rubric/index.ts` module source, wrapping the contract's
-// required boilerplate (contract version, skill name, createContext) around a caller-
-// supplied `families` array literal. Keeps each test's fixture down to just the
-// families/items shape it actually exercises.
+// Builds a full direct `scripts/rubric/items/index.ts` catalogue. Most tests use a
+// compact literal which this fixture expands into the real family/item contract;
+// dedicated catalogue tests below exercise the unabridged shape.
 const rubric = (families: string, skill = 'ki-example'): string => `
+const item = (value) => {
+  if (!value || typeof value !== 'object') return value
+  if (value.kind === 'mechanical') return {
+    code: value.code,
+    title: value.title,
+    description: value.description ?? 'Mechanical test criterion.',
+    sources: value.sources ?? ['standard.md'],
+    mechanical: {
+      level: value.level,
+      audit: { phase: value.phase, run: value.audit },
+      ...(value.repair === undefined ? {} : { repair: { phase: 'PRIMARY', run: value.repair } })
+    }
+  }
+  if (value.kind === 'judgment') return {
+    code: value.code,
+    title: value.title,
+    description: value.description ?? 'Judgment test criterion.',
+    sources: value.sources ?? ['standard.md'],
+    judgment: { prompt: value.prompt }
+  }
+  return {
+    ...value,
+    description: value.description ?? 'Invalid test criterion.',
+    sources: value.sources ?? ['standard.md']
+  }
+}
+const family = (value) => !value || typeof value !== 'object' ? value : ({
+  ...value,
+  description: value.description ?? 'Test family.',
+  standard: value.standard ?? 'standard.md',
+  selectContext: value.selectContext ?? ((context) => context),
+  items: Array.isArray(value.items) ? value.items.map(item) : value.items
+})
 export default {
   contract: 1,
-  skill: '${skill}',
+  name: '${skill}',
+  concern: 'test governance',
   createContext: async ({ repository }) => ({ repository }),
-  families: ${families}
+  families: Array.isArray(${families}) ? (${families}).map(family) : ${families}
 }
 `
 
@@ -32,7 +65,7 @@ describe('[ki repo]', () => {
       expect(result).toEqual({
         exitCode: 0,
         output:
-          'example/harness:ki-example\n  F: Family\n    J-1: Judgment\n      Review the design.\n    EXAMPLE-1: Example (FAIL)\n      Audit this criterion; conform applies its declared safe repair when available.\n'
+          'example/harness:ki-example\n  Concern: test governance\n  Scope: repository\n  F: Family\n    Test family.\n    Standard: standard.md\n    J-1 [J]: Judgment\n      Judgment test criterion.\n      Sources: standard.md\n      Review: Review the design.\n    EXAMPLE-1 [M]: Example\n      Mechanical test criterion.\n      Sources: standard.md\n'
       })
     })
 
@@ -63,7 +96,18 @@ describe('[ki repo]', () => {
 
       const result = await box.run('ki repo audit --skill ki-example')
 
-      expect(result).toEqual({ exitCode: 0, output: 'info EXAMPLE-1: ok\n' })
+      expect(result).toEqual({
+        exitCode: 0,
+        output: `
+==> example/harness:ki-example:audit
+  ℹ️  info  [Example (EXAMPLE-1)] — ok
+  ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=1
+
+==> recap
+  ℹ️  info  example/harness:ki-example [Example (EXAMPLE-1)] — ok
+  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=1
+`
+      })
     })
 
     test('reports clean when no families declare items', async () => {
@@ -73,7 +117,15 @@ describe('[ki repo]', () => {
 
       const result = await box.run('ki repo audit')
 
-      expect(result).toEqual({ exitCode: 0, output: 'ki repo audit: clean (1 skills)\n' })
+      expect(result).toEqual({
+        exitCode: 0,
+        output: `ki repo audit: clean (1 skills)
+
+==> recap
+  ✅ no findings across audited skills
+  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
+`
+      })
     })
 
     test('renders per-rubric progress with bounded three-column TTY status without changing non-interactive output', async () => {
@@ -87,7 +139,7 @@ describe('[ki repo]', () => {
       })
       await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
       await box.data.write(
-        'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/index.ts',
+        'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
         rubric(
           `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXTRA-1', title: 'Extra', level: 'FAIL', phase: 'PRIMARY', audit: async () => [] }] }]`,
           'ki-extra'
@@ -105,7 +157,11 @@ describe('[ki repo]', () => {
         .map((frame) => frame.replace('\n', ''))
 
       expect(result.exitCode).toBe(0)
-      expect(standardOutput).toBe('')
+      expect(standardOutput).toBe(`
+==> recap
+  ✅ no findings across audited skills
+  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
+`)
       expect(frames.map((frame) => frame.trimEnd())).toEqual([
         'AUDIT      [>...............................] 0.0s loading 0/2 definitions',
         'AUDIT      [>...............................] 1.3s loading 1/2 definitions',
@@ -123,7 +179,15 @@ describe('[ki repo]', () => {
       expect(firstBar).toHaveLength(98)
 
       const nonInteractive = await box.run('ki repo audit')
-      expect(nonInteractive).toEqual({ exitCode: 0, output: 'ki repo audit: clean (2 skills)\n' })
+      expect(nonInteractive).toEqual({
+        exitCode: 0,
+        output: `ki repo audit: clean (2 skills)
+
+==> recap
+  ✅ no findings across audited skills
+  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
+`
+      })
     })
 
     test('rejects a repository configuration that is not valid TOML', async () => {
@@ -144,7 +208,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('does not provide a native rubric definition')
+      expect(result.output).toContain('does not provide a native rubric catalogue')
     })
 
     test('fails when a FAIL-level item reports a violation', async () => {
@@ -161,7 +225,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('fail EXAMPLE-1: not conformed\n')
+      expect(result.output).toContain('❌ fail  [Example (EXAMPLE-1)] — not conformed')
       expect(result.output).toContain('native repository audit found failures')
     })
 
@@ -178,7 +242,62 @@ describe('[ki repo]', () => {
 
       const result = await box.run('ki repo audit')
 
-      expect(result).toEqual({ exitCode: 0, output: 'info EXAMPLE-1: ok — some/file.ts\n' })
+      expect(result).toEqual({
+        exitCode: 0,
+        output: `
+==> example/harness:ki-example:audit
+  ℹ️  info  [Example (EXAMPLE-1)] some/file.ts — ok
+  ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
+
+==> recap
+  ℹ️  info  example/harness:ki-example [Example (EXAMPLE-1)] some/file.ts — ok
+  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
+`
+      })
+    })
+
+    test('executes a full direct catalogue with family context selection, hybrid judgment, and a declared level override', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: `
+export default {
+  contract: 1,
+  name: 'ki-example',
+  concern: 'direct catalogue',
+  createContext: ({ repository }) => ({ evidence: { repository } }),
+  families: [{
+    code: 'DIRECT',
+    title: 'Direct family',
+    description: 'Exercises the complete direct contract.',
+    standard: 'standard.md#direct',
+    selectContext: (root) => root.evidence,
+    items: [{
+      code: 'DIRECT-1',
+      title: 'Hybrid evidence',
+      description: 'Uses selected family evidence.',
+      sources: ['standard.md#direct'],
+      mechanical: {
+        level: 'FAIL',
+        overrideLevels: ['WARN'],
+        heuristic: true,
+        audit: {
+          phase: 'INSPECT',
+          run: ({ repository }) => [{ status: 'VIOLATION', level: 'WARN', message: repository }]
+        }
+      },
+      judgment: { prompt: 'Review the evidence.' }
+    }]
+  }]
+}
+`
+      })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('⚠️  warn  [Hybrid evidence (DIRECT-1)]')
+      expect(result.output).toContain('JUDGMENT_UNEVALUATED=1')
     })
   })
 
@@ -209,7 +328,14 @@ describe('[ki repo]', () => {
 
       const result = await box.run('ki repo conform')
 
-      expect(result).toEqual({ exitCode: 0, output: '' })
+      expect(result).toEqual({
+        exitCode: 0,
+        output: `
+==> recap
+  ✅ no findings across conformed skills
+  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
+`
+      })
     })
 
     test('publishes a complete repair write set, supports dry-run, and re-audits', async () => {
@@ -220,12 +346,14 @@ describe('[ki repo]', () => {
 
       const dryRun = await box.run('ki repo conform --dry-run')
       const beforeContent = await box.project.read('governed.txt')
-      expect(dryRun).toEqual({ exitCode: 0, output: 'would write governed.txt\n' })
+      expect(dryRun.output).toContain('would write governed.txt\n')
+      expect(dryRun.output).toContain('==> recap\n  ✅ no findings across conformed skills')
       expect(beforeContent).toBe('before\n')
 
       const conformed = await box.run('ki repo conform')
       const afterContent = await box.project.read('governed.txt')
-      expect(conformed).toEqual({ exitCode: 0, output: 'write governed.txt\n' })
+      expect(conformed.output).toContain('write governed.txt\n')
+      expect(conformed.output).toContain('✅ no findings across conformed skills')
       expect(afterContent).toBe('after\n')
     })
 
@@ -249,7 +377,8 @@ describe('[ki repo]', () => {
 
       const result = await box.run('ki repo conform --dry-run')
 
-      expect(result).toEqual({ exitCode: 0, output: 'would write governed.txt\n' })
+      expect(result.output).toContain('would write governed.txt\n')
+      expect(result.output).toContain('==> recap')
       expect(await box.project.read('governed.txt')).toBe('before\n')
     })
 
@@ -294,7 +423,7 @@ describe('[ki repo]', () => {
       const afterDryRunsStat = await lstat(targetPath)
 
       expect(firstDryRun).toEqual(secondDryRun)
-      expect(firstDryRun).toEqual({ exitCode: 0, output: 'would write governed.txt\n' })
+      expect(firstDryRun.output).toContain('would write governed.txt\n')
       expect(await box.project.read('governed.txt')).toBe('before\n')
       expect(afterDryRunsStat.mtimeMs).toBe(beforeStat.mtimeMs)
       expect(afterDryRunsStat.size).toBe(beforeStat.size)
@@ -302,7 +431,7 @@ describe('[ki repo]', () => {
       const conformed = await box.run('ki repo conform')
 
       expect(conformed.output).not.toBe(firstDryRun.output)
-      expect(conformed).toEqual({ exitCode: 0, output: 'write governed.txt\n' })
+      expect(conformed.output).toContain('write governed.txt\n')
       expect(await box.project.read('governed.txt')).toBe('after\n')
     })
 
@@ -406,7 +535,19 @@ describe('[ki repo]', () => {
 
       const result = await box.run('ki repo conform')
 
-      expect(result).toEqual({ exitCode: 0, output: 'write governed.txt\nFIXED EXAMPLE-1: conformed\n' })
+      expect(result).toEqual({
+        exitCode: 0,
+        output: `write governed.txt
+
+==> example/harness:ki-example:conform
+  ✅ fixed [Example (EXAMPLE-1)] — conformed
+  ✅ summary: FAIL=0 WARN=0 FIXED=1 JUDGMENT_UNEVALUATED=0
+
+==> recap
+  ✅ fixed example/harness:ki-example [Example (EXAMPLE-1)] — conformed
+  ✅ totals: FAIL=0 WARN=0 FIXED=1 JUDGMENT_UNEVALUATED=0
+`
+      })
     })
 
     test('fails when re-audit after conform still finds the violation', async () => {
@@ -427,7 +568,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('fail EXAMPLE-1: always fails')
+      expect(result.output).toContain('❌ fail  [Example (EXAMPLE-1)] — always fails')
       expect(result.output).toContain('re-audit found failures')
     })
 
@@ -468,11 +609,12 @@ describe('[ki repo]', () => {
       })
 
       const dryRun = await box.run('ki repo conform --dry-run')
-      expect(dryRun).toEqual({ exitCode: 0, output: 'would write created.txt\n' })
+      expect(dryRun.output).toContain('would write created.txt\n')
       await expect(box.project.read('created.txt')).rejects.toThrow()
 
       const result = await box.run('ki repo conform')
-      expect(result).toEqual({ exitCode: 0, output: 'write created.txt\nFIXED EXAMPLE-1: created\n' })
+      expect(result.output).toContain('write created.txt\n')
+      expect(result.output).toContain('✅ fixed [Example (EXAMPLE-1)] — created')
       await expect(box.project.read('created.txt')).resolves.toBe('created\n')
     })
 
@@ -510,7 +652,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('fail EXAMPLE-1: not fixable')
+      expect(result.output).toContain('❌ fail  [Example (EXAMPLE-1)] — not fixable')
       expect(result.output).toContain('native repository conform found failures')
     })
 
@@ -531,7 +673,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain('warn EXAMPLE-1: nothing safe to propose')
+      expect(result.output).toContain('⚠️  warn  [Example (EXAMPLE-1)] — nothing safe to propose')
     })
 
     test('reports subprocess repairs in dry-run mode without executing them, then runs and re-audits them', async () => {
@@ -553,14 +695,9 @@ describe('[ki repo]', () => {
       const dryRun = await box.run('ki repo conform --dry-run')
       const conformed = await box.run('ki repo conform')
 
-      expect(dryRun).toEqual({
-        exitCode: 0,
-        output: `would run "node" "-e" "require('node:fs').writeFileSync('conformed.txt', 'ok')"\n`
-      })
-      expect(conformed).toEqual({
-        exitCode: 0,
-        output: `run "node" "-e" "require('node:fs').writeFileSync('conformed.txt', 'ok')"\nFIXED EXAMPLE-1: conformed\n`
-      })
+      expect(dryRun.output).toContain(`would run "node" "-e" "require('node:fs').writeFileSync('conformed.txt', 'ok')"\n`)
+      expect(conformed.output).toContain(`run "node" "-e" "require('node:fs').writeFileSync('conformed.txt', 'ok')"\n`)
+      expect(conformed.output).toContain('✅ fixed [Example (EXAMPLE-1)] — conformed')
       await expect(box.project.read('conformed.txt')).resolves.toBe('ok')
     })
 
@@ -595,7 +732,7 @@ describe('[ki repo]', () => {
       await box.setupExampleHarness({ rubric: rubric('[]') })
       const base = 'ki/harnesses/example/harness/skills/ki-example'
       await box.data.write(`${base}/scripts/rubric/notes.ts`, '// alternate target\n')
-      const rubricModulePath = `${box.data.path}/${base}/scripts/rubric/index.ts`
+      const rubricModulePath = `${box.data.path}/${base}/scripts/rubric/items/index.ts`
       await rm(rubricModulePath)
       await symlink(`${box.data.path}/${base}/scripts/rubric/notes.ts`, rubricModulePath)
 
@@ -627,7 +764,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('rubric definition export is not a table')
+      expect(result.output).toContain('rubric catalogue default export is not a table')
     })
 
     test('rejects an audit function returning non-array outcomes', async () => {
@@ -742,7 +879,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('rubric definition could not be imported')
+      expect(result.output).toContain('rubric catalogue could not be imported')
     })
 
     test('rejects a repair that does not return a writes table', async () => {
@@ -829,7 +966,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('repair must be a function')
+      expect(result.output).toContain('repair must have a run function')
     })
 
     test('rejects a rubric definition whose declared skill does not match the installed capability', async () => {
@@ -840,7 +977,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('rubric definition skill does not match the installed capability')
+      expect(result.output).toContain('rubric catalogue name does not match the installed capability')
     })
 
     test('rejects an audit outcome with a non-string subject', async () => {
@@ -878,7 +1015,14 @@ describe('[ki repo]', () => {
 
       const result = await box.run('ki repo audit')
 
-      expect(result.output).toBe('info B1: B1\ninfo A1: A1\ninfo A2: A2\ninfo C1: C1\n')
+      const first = result.output.indexOf('[B1 (B1)] — B1')
+      const second = result.output.indexOf('[A1 (A1)] — A1')
+      const third = result.output.indexOf('[A2 (A2)] — A2')
+      const fourth = result.output.indexOf('[C1 (C1)] — C1')
+      expect([first, second, third, fourth].every((index) => index >= 0)).toBe(true)
+      expect(first).toBeLessThan(second)
+      expect(second).toBeLessThan(third)
+      expect(third).toBeLessThan(fourth)
     })
 
     test('rejects a rubric item whose audit is not a function', async () => {
@@ -894,7 +1038,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('must have an audit function')
+      expect(result.output).toContain('audit must have a run function')
     })
 
     test('rejects a rubric item that is not a table', async () => {
@@ -963,10 +1107,10 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('rubric item J-1 must have a prompt')
+      expect(result.output).toContain('rubric item J-1 judgment must have a prompt')
     })
 
-    test('rejects a rubric item with an invalid kind', async () => {
+    test('rejects a rubric item with neither aspect', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -976,7 +1120,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('rubric item X-1 has an invalid kind')
+      expect(result.output).toContain('rubric item X-1 must be mechanical, judgment, or both')
     })
 
     test('rejects a rubric family that is not a table', async () => {
@@ -1027,39 +1171,39 @@ describe('[ki repo]', () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
-        rubric: `export default { contract: 2, skill: 'ki-example', createContext: async () => ({}), families: [] }`
+        rubric: `export default { contract: 2, name: 'ki-example', concern: 'test', createContext: async () => ({}), families: [] }`
       })
 
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('rubric definition has an unsupported contract version')
+      expect(result.output).toContain('rubric catalogue has an unsupported contract version')
     })
 
     test('rejects a rubric definition whose createContext is not a function', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
-        rubric: `export default { contract: 1, skill: 'ki-example', createContext: 'not a function', families: [] }`
+        rubric: `export default { contract: 1, name: 'ki-example', concern: 'test', createContext: 'not a function', families: [] }`
       })
 
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('rubric definition must have a createContext function')
+      expect(result.output).toContain('rubric catalogue must have a createContext function')
     })
 
     test('rejects a rubric definition whose families is not an array', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
-        rubric: `export default { contract: 1, skill: 'ki-example', createContext: async () => ({}), families: 'not an array' }`
+        rubric: `export default { contract: 1, name: 'ki-example', concern: 'test', createContext: async () => ({}), families: 'not an array' }`
       })
 
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('rubric definition must have a families array')
+      expect(result.output).toContain('rubric catalogue must have a families array')
     })
   })
 
@@ -1078,7 +1222,7 @@ ki-depends-on: ${list}
 `
         await data.write(`${base}/SKILL.md`, skillMarkdown)
         await data.write(
-          `${base}/scripts/rubric/index.ts`,
+          `${base}/scripts/rubric/items/index.ts`,
           rubric(
             `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'R-1', title: 'Order', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'INFO', message: '${name}' }] }] }]`,
             name
@@ -1101,12 +1245,12 @@ ki-depends-on: ${list}
 
       const result = await box.run('ki repo audit')
 
-      expect(result).toEqual({
-        exitCode: 0,
-        output: `info R-1: ki-foundation
-info R-1: ki-feature
-`
-      })
+      expect(result.exitCode).toBe(0)
+      expect(result.output.indexOf('==> example/harness:ki-foundation:audit')).toBeLessThan(
+        result.output.indexOf('==> example/harness:ki-feature:audit')
+      )
+      expect(result.output).toContain('[Order (R-1)] — ki-foundation')
+      expect(result.output).toContain('[Order (R-1)] — ki-feature')
     })
 
     test('refuses a declared skill whose dependency is undeclared', async () => {
@@ -1185,12 +1329,10 @@ info R-1: ki-feature
 
       const result = await box.run('ki repo audit --skill ki-feature')
 
-      expect(result).toEqual({
-        exitCode: 0,
-        output: `info R-1: ki-foundation
-info R-1: ki-feature
-`
-      })
+      expect(result.exitCode).toBe(0)
+      expect(result.output.indexOf('==> example/harness:ki-foundation:audit')).toBeLessThan(
+        result.output.indexOf('==> example/harness:ki-feature:audit')
+      )
     })
   })
 })

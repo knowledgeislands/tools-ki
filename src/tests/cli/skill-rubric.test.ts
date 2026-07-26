@@ -3,33 +3,39 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
-// Builds a full `scripts/rubric/index.ts` module source, wrapping the contract's required
-// boilerplate (contract version, skill name, createContext) around a caller-supplied
-// `families` array literal — same shape as repo.test.ts's fixture.
+// Builds a full canonical `scripts/rubric/items/index.ts` catalogue.
 const rubric = (families: string, skill = 'ki-example'): string => `
 export default {
   contract: 1,
-  skill: '${skill}',
+  name: '${skill}',
+  concern: 'example governance',
   createContext: async ({ repository }) => ({ repository }),
   families: ${families}
 }
 `
 
 const mixedFamilies = `[{
-  code: 'FAM', title: 'Family title',
+  code: 'FAM', title: 'Family title', description: 'The family description.', standard: 'standard.md',
+  selectContext: (context) => context,
   items: [
-    { kind: 'mechanical', code: 'FAM-1', title: 'Mechanical item', level: 'FAIL', phase: 'PRIMARY',
-      audit: async () => [] },
-    { kind: 'judgment', code: 'FAM-2', title: 'Judgment item', prompt: 'weigh it by hand' }
+    { code: 'FAM-1', title: 'Mechanical item', description: 'Mechanical description.', sources: ['standard.md#mechanical'],
+      mechanical: { level: 'FAIL', audit: { phase: 'PRIMARY', run: async () => [] } } },
+    { code: 'FAM-2', title: 'Judgment item', description: 'Judgment description.', sources: ['standard.md#judgment'],
+      judgment: { prompt: 'weigh it by hand' } },
+    { code: 'FAM-3', title: 'Hybrid item', description: 'Hybrid description.', sources: ['standard.md#hybrid'],
+      mechanical: { level: 'WARN', heuristic: true, audit: { phase: 'INSPECT', run: async () => [] } },
+      judgment: { prompt: 'review the heuristic' } }
   ]
 }]`
 
 const expectedRendered = [
-  '<!-- GENERATED FILE: produced by `ki skill rubric`. Do not hand-edit; edit scripts/rubric/index.ts, then rerun `ki skill rubric <skill> --write`. -->',
+  '<!-- GENERATED FILE: produced by `ki skill rubric`. Do not hand-edit; edit scripts/rubric/items/, then rerun `ki skill rubric <skill> --write`. -->',
   '',
-  '# Rubric — ki-example',
+  '# Generated rubric — example governance',
   '',
-  '> **Generated publication.** The TypeScript rubric items under `scripts/rubric/index.ts` are canonical. Edit that definition, then rerun `ki skill rubric <skill> --write`.',
+  '> **Generated publication.** The TypeScript rubric items under `scripts/rubric/items/` are canonical. Edit those definitions, then rerun `ki skill rubric ki-example --write`.',
+  '',
+  'Line-by-line criteria for auditing ki-example. Classifications are derived from item aspects: **[M]** mechanical, **[J]** judgment, **[M + J]** hybrid, and **[M-heuristic + J]** hybrid with heuristic mechanical evidence. Sources are cited as declared by each canonical item.',
   '',
   '## Contents',
   '',
@@ -37,9 +43,15 @@ const expectedRendered = [
   '',
   '## FAM — Family title',
   '',
-  '- **FAM-1 [FAIL · PRIMARY] — Mechanical item**',
-  '- **FAM-2 [J] — Judgment item**',
-  '  > weigh it by hand',
+  '→ [standard](standard.md)',
+  '',
+  'The family description.',
+  '',
+  '- **FAM-1 [M] — Mechanical item** — Mechanical description. (standard.md#mechanical)',
+  '- **FAM-2 [J] — Judgment item** — Judgment description. (standard.md#judgment)',
+  '  - _Review prompt:_ weigh it by hand',
+  '- **FAM-3 [M-heuristic + J] — Hybrid item** — Hybrid description. (standard.md#hybrid)',
+  '  - _Review prompt:_ review the heuristic',
   ''
 ].join('\n')
 
@@ -49,7 +61,7 @@ const expectedRendered = [
 // the same signal `enableCanonicalHarnessDevelopment` establishes for the canonical harness.
 const devLinkExampleHarness = async (box: Awaited<ReturnType<typeof sandbox>>, rubricSource: string): Promise<void> => {
   await box.root.write('local/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
-  await box.root.write('local/skills/ki-example/scripts/rubric/index.ts', rubricSource)
+  await box.root.write('local/skills/ki-example/scripts/rubric/items/index.ts', rubricSource)
   const installedSkills = join(box.data.path, 'ki/harnesses/example/harness/skills')
   await rm(installedSkills, { recursive: true, force: true })
   await symlink(join(box.root.path, 'local/skills'), installedSkills)
@@ -124,7 +136,7 @@ describe('[ki skill rubric]', () => {
     const result = await box.run('ki skill rubric ki-example')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('does not provide a native rubric definition')
+    expect(result.output).toContain('does not provide a native rubric catalogue')
   })
 
   test('refuses an unknown skill', async () => {

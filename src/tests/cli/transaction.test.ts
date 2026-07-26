@@ -81,16 +81,20 @@ afterEach(() => {
 const rubric = (families: string): string => `
 export default {
   contract: 1,
-  skill: 'ki-example',
+  name: 'ki-example',
+  concern: 'transaction safety',
   createContext: async ({ repository }) => ({ repository }),
   families: ${families}
 }
 `
 
 const governedItem = (path: string, code: string, content: string) => `{
-  kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: 'PRIMARY',
-  audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
-  repair: async () => ({ writes: [{ path: '${path}', content: '${content}' }] })
+  code: '${code}', title: '${code}', description: 'Transaction test item.', sources: ['standard.md'],
+  mechanical: {
+    level: 'FAIL',
+    audit: { phase: 'PRIMARY', run: async () => [{ status: 'VIOLATION', message: 'not conformed' }] },
+    repair: { phase: 'PRIMARY', run: async () => ({ writes: [{ path: '${path}', content: '${content}' }] }) }
+  }
 }`
 
 describe('[ki repo conform] transaction interleaving safety', () => {
@@ -100,7 +104,9 @@ describe('[ki repo conform] transaction interleaving safety', () => {
     await box.project.write('governed.txt', 'before\n')
     readInterception.path = '/governed.txt'
     await box.setupExampleHarness({
-      rubric: rubric(`[{ code: 'F', title: 'Family', items: [${governedItem('governed.txt', 'EXAMPLE-1', 'after\\n')}] }]`)
+      rubric: rubric(
+        `[{ code: 'F', title: 'Family', description: 'Transactions.', standard: 'standard.md', selectContext: (context) => context, items: [${governedItem('governed.txt', 'EXAMPLE-1', 'after\\n')}] }]`
+      )
     })
 
     const result = await box.run('ki repo conform')
@@ -117,7 +123,7 @@ describe('[ki repo conform] transaction interleaving safety', () => {
     await box.project.write('governed-2.txt', 'before-2\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{
-        code: 'F', title: 'Family',
+        code: 'F', title: 'Family', description: 'Transactions.', standard: 'standard.md', selectContext: (context) => context,
         items: [
           ${governedItem('governed-1.txt', 'EXAMPLE-1', 'after-1\\n')},
           ${governedItem('governed-2.txt', 'EXAMPLE-2', 'after-2\\n')}
@@ -138,7 +144,9 @@ describe('[ki repo conform] transaction interleaving safety', () => {
     await box.project.write('governed.txt', 'before\n')
     identityReplacement.path = '/governed.txt'
     await box.setupExampleHarness({
-      rubric: rubric(`[{ code: 'F', title: 'Family', items: [${governedItem('governed.txt', 'EXAMPLE-1', 'after\\n')}] }]`)
+      rubric: rubric(
+        `[{ code: 'F', title: 'Family', description: 'Transactions.', standard: 'standard.md', selectContext: (context) => context, items: [${governedItem('governed.txt', 'EXAMPLE-1', 'after\\n')}] }]`
+      )
     })
 
     const result = await box.run('ki repo conform')
@@ -155,7 +163,7 @@ describe('[ki repo conform] transaction interleaving safety', () => {
     await box.project.write('governed-2.txt', 'before-2\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{
-        code: 'F', title: 'Family',
+        code: 'F', title: 'Family', description: 'Transactions.', standard: 'standard.md', selectContext: (context) => context,
         items: [
           ${governedItem('governed-1.txt', 'EXAMPLE-1', 'after-1\\n')},
           ${governedItem('governed-2.txt', 'EXAMPLE-2', 'after-2\\n')}
