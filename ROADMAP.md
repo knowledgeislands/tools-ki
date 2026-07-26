@@ -28,4 +28,7 @@ Worth doing, but presently blocked on an external dependency or decision. Revisi
 
 Speculative or not yet scoped — items marked _(candidate)_ need a scoping pass (or a decision to drop them) before they're actionable.
 
+- [Cli: Define cross-repository skill vendor provenance _(candidate)_](docs/roadmap/cli/ROADMAP.md#define-cross-repository-skill-vendor-provenance-candidate)
+- [Cli: Exit `ki doctor` non-zero on failing checks _(candidate)_](docs/roadmap/cli/ROADMAP.md#exit-ki-doctor-non-zero-on-failing-checks-candidate)
+- [Cli: Harden user harness installation and runtime skill publication](docs/roadmap/cli/ROADMAP.md#harden-user-harness-installation-and-runtime-skill-publication)
 - [Cli: Persist qualified capability identities in repository declarations _(candidate)_](docs/roadmap/cli/ROADMAP.md#persist-qualified-capability-identities-in-repository-declarations-candidate)
