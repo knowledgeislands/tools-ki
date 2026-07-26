@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { acquireVerifiedArchive, extractArchive, type Fetcher } from './acquire.ts'
 import { KiError } from './errors.ts'
-import { baseHarnessIdentifier, inspectHarnessRoot, readInstalledHarness } from './harness.ts'
+import { canonicalHarnessIdentifier, inspectHarnessRoot, readInstalledHarness } from './harness.ts'
 
 export type { Fetcher } from './acquire.ts'
 
@@ -27,7 +27,7 @@ export interface HarnessRelease {
  * immutable acquisition evidence; additional harnesses remain opt-in.
  */
 export const canonicalHarnessRelease: HarnessRelease = {
-  id: baseHarnessIdentifier,
+  id: canonicalHarnessIdentifier,
   url: 'https://codeload.github.com/knowledgeislands/ki-agentic-harness/tar.gz/41f5725c08687a5e94faf2d941d0a04134feb861',
   sha256: 'fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c'
 }
@@ -97,10 +97,10 @@ export const readHarnessRegistry = async (configurationDirectory: string): Promi
   }
   if (!Array.isArray(harnesses.releases)) throw new KiError('ki configuration harnesses.releases must be an array of release entries', 1)
   const releases = harnesses.releases.map(parseRelease)
-  const identities = new Set<string>([baseHarnessIdentifier])
+  const identities = new Set<string>([canonicalHarnessIdentifier])
   for (const release of releases) {
-    if (release.id === baseHarnessIdentifier) {
-      throw new KiError(`harness registry must not override the built-in canonical harness ${baseHarnessIdentifier}`, 1)
+    if (release.id === canonicalHarnessIdentifier) {
+      throw new KiError(`harness registry must not override the built-in canonical harness ${canonicalHarnessIdentifier}`, 1)
     }
     if (identities.has(release.id)) throw new KiError(`harness registry repeats ${release.id}`, 1)
     identities.add(release.id)
@@ -193,7 +193,7 @@ export const installCanonicalHarness = async (
   dataDirectory: string,
   fetcher: Fetcher
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
-  installHarness(configurationDirectory, dataDirectory, baseHarnessIdentifier, fetcher)
+  installHarness(configurationDirectory, dataDirectory, canonicalHarnessIdentifier, fetcher)
 
 const canonicalHarnessDirectory = (dataDirectory: string): string => join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
 
@@ -213,7 +213,7 @@ export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, l
   await ensureDirectory(dirname(destination), 'installed harness owner knowledgeislands')
   const state = await lstat(destination).catch(() => undefined)
   if (!state) await mkdir(destination)
-  await physicalDirectory(destination, `installed harness ${baseHarnessIdentifier}`)
+  await physicalDirectory(destination, `installed harness ${canonicalHarnessIdentifier}`)
   const entries = await readdir(destination, { withFileTypes: true })
   if (
     entries.some(
@@ -223,7 +223,7 @@ export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, l
         (!entry.isDirectory() && !entry.isSymbolicLink())
     )
   ) {
-    throw new KiError(`installed harness ${baseHarnessIdentifier} has unrecognised state`, 1)
+    throw new KiError(`installed harness ${canonicalHarnessIdentifier} has unrecognised state`, 1)
   }
   await Promise.all(retiredCanonicalPayloadRoots.map((payload) => rm(join(destination, payload), { recursive: true, force: true })))
   for (const payload of payloadRoots) {
@@ -233,7 +233,7 @@ export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, l
     if (!source) throw new KiError(`local harness must provide ${payload}`, 1)
     if (targetState?.isSymbolicLink()) {
       const actual = await realpath(target).catch(() => undefined)
-      if (actual !== source) throw new KiError(`installed harness ${baseHarnessIdentifier} ${payload} link is unfamiliar`, 1)
+      if (actual !== source) throw new KiError(`installed harness ${canonicalHarnessIdentifier} ${payload} link is unfamiliar`, 1)
       continue
     }
     if (targetState) await rm(target, { recursive: true })
@@ -246,7 +246,7 @@ const canonicalDevelopmentProjection = async (dataDirectory: string): Promise<bo
   const destination = canonicalHarnessDirectory(dataDirectory)
   const state = await lstat(destination).catch(() => undefined)
   if (!state) return false
-  await physicalDirectory(destination, `installed harness ${baseHarnessIdentifier}`)
+  await physicalDirectory(destination, `installed harness ${canonicalHarnessIdentifier}`)
   const entries = await readdir(destination, { withFileTypes: true })
   return (
     entries.length === payloadRoots.length &&
@@ -272,7 +272,7 @@ export const restoreCanonicalHarness = async (
 
 export const uninstallHarness = async (dataDirectory: string, identifier: string, dryRun = false): Promise<{ readonly uninstalled: boolean }> => {
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
-  if (identifier === baseHarnessIdentifier) throw new KiError(`the required base harness ${identifier} cannot be uninstalled`, 1)
+  if (identifier === canonicalHarnessIdentifier) throw new KiError(`the canonical harness ${identifier} cannot be uninstalled`, 1)
 
   await readInstalledHarness(dataDirectory, identifier)
   const [owner, name] = identifier.split('/') as [string, string]

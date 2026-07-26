@@ -1,7 +1,7 @@
 import { lstat, mkdir, readdir, realpath, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../core/errors.ts'
-import { baseHarnessIdentifier, discoverInstalledHarnesses, type HarnessCapability, readInstalledHarness } from '../core/harness.ts'
+import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type HarnessCapability, readInstalledHarness } from '../core/harness.ts'
 import { readConfiguration, renderConfiguration } from './configuration.ts'
 import { detectAgents } from './detection.ts'
 import {
@@ -29,7 +29,7 @@ const bootstrapSkillSources = async (
 
 export const installedBootstrapSkillSources = async (
   dataDirectory: string,
-  identifier = baseHarnessIdentifier
+  identifier = canonicalHarnessIdentifier
 ): Promise<readonly ManagedUserSkill[]> => {
   const [owner, name] = identifier.split('/')
   const root = join(dataDirectory, 'harnesses', owner as string, name as string)
@@ -89,7 +89,7 @@ const discoverManagedUserSkills = async (
       identities.set(source, `${harness.id}:${capability.name}`)
     }
   }
-  for (const skill of localSkills) identities.set(skill.source, `${baseHarnessIdentifier}:${skill.name}`)
+  for (const skill of localSkills) identities.set(skill.source, `${canonicalHarnessIdentifier}:${skill.name}`)
   const skills = new Set<string>()
   for (const agent of agents) {
     skillCapability(agent)

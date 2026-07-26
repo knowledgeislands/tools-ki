@@ -56,8 +56,8 @@ export const createHarnessCommand = (context: KiContext): Command =>
     )
     .addCommand(
       new Command('uninstall')
-        .description('remove one installed non-base harness')
-        .argument('<harness-id>', 'installed non-base harness identifier')
+        .description('remove one installed non-canonical harness')
+        .argument('<harness-id>', 'installed non-canonical harness identifier')
         .option('--dry-run', 'verify that the harness can be removed without changing state')
         .action(async (identifier: string, options: { dryRun?: boolean }) => {
           const result = await uninstallHarness(context.paths.data, identifier, options.dryRun)

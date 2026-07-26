@@ -24,7 +24,7 @@ describe('[ki harness]', () => {
   })
 
   describe('[ki harness info]', () => {
-    test('inspects one non-base harness in human form', async () => {
+    test('inspects one non-canonical harness in human form', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
       const info = await box.run('ki harness info example/harness')
@@ -34,7 +34,7 @@ describe('[ki harness]', () => {
       expect(info.output).toContain('  skill ki-example\n')
     })
 
-    test('inspects one non-base harness in JSON form', async () => {
+    test('inspects one non-canonical harness in JSON form', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
       const json = await box.run('ki harness info example/harness --json')
@@ -45,7 +45,7 @@ describe('[ki harness]', () => {
   })
 
   describe('[ki harness uninstall]', () => {
-    test('removes one non-base harness, honoring a dry run first, and un-records it', async () => {
+    test('removes one non-canonical harness, honoring a dry run first, and un-records it', async () => {
       const box = await sandbox()
       await mkdir(`${box.config.path}/ki`, { recursive: true })
       await writeFile(
@@ -63,7 +63,7 @@ describe('[ki harness]', () => {
       expect(config).toContain('[harnesses]\nids = [\n]\nreleases = []')
     })
 
-    test('refuses to uninstall the required base harness', async () => {
+    test('refuses to uninstall the canonical harness', async () => {
       const box = await sandbox()
       await box.setupCanonicalHarness()
       const result = await box.run('ki harness uninstall knowledgeislands/ki-agentic-harness')

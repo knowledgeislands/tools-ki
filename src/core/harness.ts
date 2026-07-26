@@ -7,7 +7,7 @@ const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-
 const harnessComponent = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const payloadRoots = ['skills', 'subagents', 'hooks'] as const
 
-export const baseHarnessIdentifier = 'knowledgeislands/ki-agentic-harness'
+export const canonicalHarnessIdentifier = 'knowledgeislands/ki-agentic-harness'
 
 export interface HarnessCapability {
   readonly kind: 'skill'

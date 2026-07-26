@@ -8,7 +8,7 @@ import {
   setLocalBootstrapHarness
 } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
-import { baseHarnessIdentifier } from '../core/harness.ts'
+import { canonicalHarnessIdentifier } from '../core/harness.ts'
 import { restoreCanonicalHarness } from '../core/registry.ts'
 
 export const createBootstrapCommand = (context: KiContext): Command =>
@@ -46,7 +46,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         await setConfiguredUserSkills(
           context.paths.config,
           context.homeDirectory,
-          skills.map((skill) => `${baseHarnessIdentifier}:${skill.name}`)
+          skills.map((skill) => `${canonicalHarnessIdentifier}:${skill.name}`)
         )
       }
       for (const { agent, skill, installed } of projections) {
