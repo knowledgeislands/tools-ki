@@ -114,7 +114,52 @@ harness = "example/harness"
 
     const doctor = await box.run('ki doctor')
 
-    expect(doctor.output).toContain('✗ User skill ki-example: not linked for every configured agent')
+    expect(doctor.output).toContain('✗ User skill ki-example: not linked for every compatible configured agent')
+  })
+
+  test('accepts a runtime-bound user skill linked only into compatible agents', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.setupAgentHome('chatgpt-codex')
+    await box.setupExampleHarness()
+    await box.data.write(
+      'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+      '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
+    )
+    await box.run('ki bootstrap')
+    await box.run('ki skill user add ki-example')
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).toContain('✓ User skill ki-example: linked')
+  })
+
+  test('reports a runtime-bound user skill with no compatible configured agent', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.setupExampleHarness()
+    await box.data.write(
+      'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+      '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
+    )
+    await box.config.write(
+      'ki/config.toml',
+      `schema = 1
+
+[agents]
+ids = ["claude-code"]
+
+[harnesses]
+ids = ["example/harness"]
+
+[skills.ki-example]
+harness = "example/harness"
+`
+    )
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).toContain('✗ User skill ki-example: no compatible configured agent')
   })
 
   test('reports an empty quoted skill key as an invalid managed user-skill identity', async () => {

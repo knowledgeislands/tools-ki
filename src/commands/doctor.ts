@@ -1,9 +1,9 @@
 import { lstat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Command } from 'commander'
-import { agentSkillDirectory, configuredAgents, inspectUserConfiguration } from '../agents/index.ts'
+import { agentSkillDirectory, compatibleWithSkill, configuredAgents, inspectUserConfiguration } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
-import { discoverInstalledHarnesses } from '../core/harness.ts'
+import { discoverInstalledHarnesses, type InstalledHarness } from '../core/harness.ts'
 
 type CheckStatus = 'pass' | 'fail' | 'skip'
 
@@ -37,8 +37,9 @@ export const createDoctorCommand = (context: KiContext): Command =>
       checks.push({ status: 'fail', label: 'Configuration', detail: configuration.errors.join('; ') })
     }
 
+    let installed: readonly InstalledHarness[] = []
     try {
-      const installed = await discoverInstalledHarnesses(context.paths.data)
+      installed = await discoverInstalledHarnesses(context.paths.data)
       const identifiers = new Set(installed.map((harness) => harness.id))
       const missing = configuration.harnesses.filter((identifier) => !identifiers.has(identifier))
       checks.push({
@@ -81,15 +82,23 @@ export const createDoctorCommand = (context: KiContext): Command =>
           checks.push({ status: 'fail', label: `User skill ${identity}`, detail: 'invalid identity' })
           continue
         }
+        const capability = installed
+          .flatMap((harness) => harness.capabilities.map((candidate) => ({ harness: harness.id, capability: candidate })))
+          .find(({ harness, capability: candidate }) => identity === `${harness}:${candidate.name}`)?.capability
+        const compatibleAgents = capability ? agents.filter((agent) => compatibleWithSkill(agent, capability.supportedRuntimes)) : agents
+        if (compatibleAgents.length === 0) {
+          checks.push({ status: 'fail', label: `User skill ${name}`, detail: 'no compatible configured agent' })
+          continue
+        }
         const absent = await Promise.all(
-          agents.map(
+          compatibleAgents.map(
             async (agent) => !(await lstat(join(agentSkillDirectory(agent, 'user'), name)).catch(() => undefined))?.isSymbolicLink()
           )
         )
         checks.push({
           status: absent.some(Boolean) ? 'fail' : 'pass',
           label: `User skill ${name}`,
-          detail: absent.some(Boolean) ? 'not linked for every configured agent' : 'linked'
+          detail: absent.some(Boolean) ? 'not linked for every compatible configured agent' : 'linked'
         })
       }
     }

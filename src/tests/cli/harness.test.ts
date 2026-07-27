@@ -629,7 +629,22 @@ releases = [
         '---\nname: ki-example\nki-depends-on: ki-other\n---\n',
         'must declare ki-depends-on as a flow list'
       ],
-      ['a repeated dependency', '---\nname: ki-example\nki-depends-on: [ki-other, ki-other]\n---\n', 'repeats a dependency']
+      ['a repeated dependency', '---\nname: ki-example\nki-depends-on: [ki-other, ki-other]\n---\n', 'repeats a dependency'],
+      [
+        'an empty runtime list',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: []\n---\n',
+        'must declare ki-supported-runtimes as a non-empty flow list'
+      ],
+      [
+        'an unsupported runtime',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n',
+        'must declare ki-supported-runtimes using only claude-code or codex'
+      ],
+      [
+        'a repeated runtime',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex, codex]\n---\n',
+        'repeats a supported runtime'
+      ]
     ])('rejects %s in installed skill frontmatter', async (_case, skill, expected) => {
       const box = await sandbox()
       await box.setupExampleHarness()

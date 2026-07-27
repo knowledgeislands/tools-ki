@@ -12,4 +12,5 @@ export {
 export { configuredAgents, inspectUserConfiguration, setConfiguredUserSkills, setLocalBootstrapHarness } from './configuration.ts'
 export { agentSkillDirectory } from './detection.ts'
 export type { InstalledAgent } from './internal.ts'
+export { compatibleWithSkill } from './runtimes.ts'
 export { addRepoSkill, addUserSkill, removeRepoSkill, removeUserSkill } from './skills.ts'

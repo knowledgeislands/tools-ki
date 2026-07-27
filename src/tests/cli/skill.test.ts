@@ -11,6 +11,85 @@ describe('[ki skill]', () => {
   }
 
   describe('user scope', () => {
+    test('activates portable and runtime-bound skills only for compatible configured agents', async () => {
+      const portable = await sandbox()
+      await portable.setupAgentHome('claude-code')
+      await portable.setupAgentHome('chatgpt-codex')
+      await portable.setupExampleHarness()
+      await portable.run('ki bootstrap')
+
+      const portableAdded = await portable.run('ki skill user add ki-example')
+
+      expect(portableAdded).toEqual({ exitCode: 0, output: 'ki skill user add: linked ki-example for claude-code, chatgpt-codex\n' })
+      expect(await portable.home.isSymlink('.claude/skills/ki-example')).toBe(true)
+      expect(await portable.home.isSymlink('.agents/skills/ki-example')).toBe(true)
+
+      const codex = await sandbox()
+      await codex.setupAgentHome('claude-code')
+      await codex.setupAgentHome('chatgpt-codex')
+      await codex.setupExampleHarness()
+      await codex.data.write(
+        'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
+      )
+      await codex.run('ki bootstrap')
+
+      const codexAdded = await codex.run('ki skill user add ki-example')
+
+      expect(codexAdded).toEqual({ exitCode: 0, output: 'ki skill user add: linked ki-example for chatgpt-codex\n' })
+      await expect(lstat(join(codex.home.path, '.claude', 'skills', 'ki-example'))).rejects.toThrow()
+      expect(await codex.home.isSymlink('.agents/skills/ki-example')).toBe(true)
+    })
+
+    test('refuses incompatible or invalid runtime metadata before mutating user state', async () => {
+      const incompatible = await sandbox()
+      await incompatible.setupAgentHome('claude-code')
+      await incompatible.setupExampleHarness()
+      await incompatible.data.write(
+        'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
+      )
+      await incompatible.run('ki bootstrap')
+
+      const refused = await incompatible.run('ki skill user add ki-example')
+
+      expect(refused).toEqual({ exitCode: 1, output: 'ki: error: skill ki-example is incompatible with every configured agent\n' })
+      await expect(lstat(join(incompatible.home.path, '.claude', 'skills', 'ki-example'))).rejects.toThrow()
+      expect(await incompatible.config.read('ki/config.toml')).not.toContain('[skills.ki-example]')
+
+      const invalid = await sandbox()
+      await invalid.setupAgentHome('claude-code')
+      await invalid.setupExampleHarness()
+      await invalid.data.write(
+        'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: []\n---\n'
+      )
+      await invalid.run('ki bootstrap')
+
+      const invalidResult = await invalid.run('ki skill user add ki-example')
+
+      expect(invalidResult.output).toContain('must declare ki-supported-runtimes as a non-empty flow list')
+    })
+
+    test('removes stale managed links from every configured agent after compatibility narrows', async () => {
+      const box = await sandbox()
+      await box.setupAgentHome('claude-code')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.setupExampleHarness()
+      await box.run('ki bootstrap')
+      await box.run('ki skill user add ki-example')
+      await box.data.write(
+        'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [claude-code]\n---\n'
+      )
+
+      const removed = await box.run('ki skill user remove ki-example')
+
+      expect(removed).toEqual({ exitCode: 0, output: 'ki skill user remove: unlinked ki-example for claude-code, chatgpt-codex\n' })
+      await expect(lstat(join(box.home.path, '.claude', 'skills', 'ki-example'))).rejects.toThrow()
+      await expect(lstat(join(box.home.path, '.agents', 'skills', 'ki-example'))).rejects.toThrow()
+    })
+
     test('links and declares a user skill, then unlinks and undeclares it', async () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)
@@ -132,6 +211,62 @@ ids = []
   })
 
   describe('repository scope', () => {
+    test('rejects missing, malformed, and unsupported repository runtime declarations before mutation', async () => {
+      const run = async (configuration: string): Promise<{ readonly output: string; readonly declared: string }> => {
+        const box = await sandbox()
+        await box.setupAgentHome('claude-code')
+        await box.setupExampleHarness()
+        await box.project.write('.ki-config.toml', configuration)
+        await box.run('ki bootstrap')
+        const result = await box.run(`ki skill repo add ki-example --repo ${box.project.path}`)
+        return { output: result.output, declared: await box.project.read('.ki-config.toml') }
+      }
+
+      const missing = await run('[other]\nvalue = true\n')
+      const malformed = await run('[ki-repo]\nsupported_runtimes = []\n')
+      const unsupported = await run('[ki-repo]\nsupported_runtimes = ["other"]\n')
+      const repeated = await run('[ki-repo]\nsupported_runtimes = ["codex", "codex"]\n')
+      const invalidToml = await run('[ki-repo\n')
+
+      expect(missing.output).toContain('must declare the repository runtime set')
+      expect(malformed.output).toContain('must be a non-empty array')
+      expect(unsupported.output).toContain('may contain only claude-code or codex')
+      expect(repeated.output).toContain('repeats a runtime')
+      expect(invalidToml.output).toContain('.ki-config.toml must be valid TOML')
+      expect([missing, malformed, unsupported, repeated, invalidToml].every((result) => !result.declared.includes('[ki-example]'))).toBe(
+        true
+      )
+    })
+
+    test('intersects repository and skill runtimes before linking or declaring', async () => {
+      const box = await sandbox()
+      await box.setupAgentHome('claude-code')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.setupExampleHarness()
+      await box.data.write(
+        'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
+      )
+      await box.project.write('.ki-config.toml', '[ki-repo]\nsupported_runtimes = ["codex"]\n')
+      await box.run('ki bootstrap')
+
+      const added = await box.run(`ki skill repo add ki-example --repo ${box.project.path}`)
+
+      expect(added.output).toContain('for chatgpt-codex\n')
+      expect(await box.project.isSymlink('.agents/skills/ki-example')).toBe(true)
+      await expect(lstat(join(box.project.path, '.claude', 'skills', 'ki-example'))).rejects.toThrow()
+
+      await box.project.write('.ki-config.toml', '[ki-repo]\nsupported_runtimes = ["claude-code"]\n')
+      const refused = await box.run(`ki skill repo add ki-example --repo ${box.project.path}`)
+
+      expect(refused).toEqual({
+        exitCode: 1,
+        output: "ki: error: skill ki-example is incompatible with this repository's configured agents\n"
+      })
+      expect(await box.project.isSymlink('.agents/skills/ki-example')).toBe(true)
+      expect((await box.project.read('.ki-config.toml')).includes('[ki-example]')).toBe(false)
+    })
+
     test('rejects non-directory repositories and missing or symbolic repository configuration files', async () => {
       const box = await sandbox()
       await box.root.write('not-a-repository', 'not a directory\n')
@@ -154,7 +289,7 @@ ids = []
     test('links and declares a repository skill, then removes and undeclares it', async () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)
-      await writeFile(join(box.project.path, '.ki-config.toml'), '# project declarations\n')
+      await writeFile(join(box.project.path, '.ki-config.toml'), '[ki-repo]\nsupported_runtimes = ["claude-code"]\n')
       const projectRoot = await realpath(box.project.path)
       const link = join(projectRoot, '.claude', 'skills', 'ki-example')
 
@@ -181,18 +316,18 @@ ids = []
     test('declares a repository skill when its configuration has no final newline', async () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)
-      await box.project.write('.ki-config.toml', '# project declarations')
+      await box.project.write('.ki-config.toml', '[ki-repo]\nsupported_runtimes = ["claude-code"]')
 
       const added = await box.run(`ki skill repo add ki-example --repo ${box.project.path}`)
 
       expect(added.exitCode).toBe(0)
-      expect(await box.project.read('.ki-config.toml')).toBe('# project declarations\n\n[ki-example]\n')
+      expect(await box.project.read('.ki-config.toml')).toBe('[ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[ki-example]\n')
     })
 
     test('refuses to remove a foreign repository skill directory', async () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)
-      await box.project.write('.ki-config.toml', '# project declarations\n')
+      await box.project.write('.ki-config.toml', '[ki-repo]\nsupported_runtimes = ["claude-code"]\n')
       const link = join(box.project.path, '.claude', 'skills', 'ki-example')
       await box.run(`ki skill repo add ki-example --repo ${box.project.path}`)
       await unlink(link)
@@ -206,7 +341,10 @@ ids = []
     test('does not duplicate a declaration and preserves a following table when removing it', async () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)
-      await box.project.write('.ki-config.toml', '[ki-example]\nsetting = true\n\n[other]\nvalue = 1')
+      await box.project.write(
+        '.ki-config.toml',
+        '[ki-example]\nsetting = true\n\n[ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1'
+      )
 
       const repeated = await box.run(`ki skill repo add ki-example --repo ${box.project.path}`)
       const removed = await box.run(`ki skill repo remove ki-example --repo ${box.project.path}`)
@@ -214,7 +352,7 @@ ids = []
 
       expect(repeated.exitCode).toBe(0)
       expect(removed.exitCode).toBe(0)
-      expect(configuration).toBe('[other]\nvalue = 1')
+      expect(configuration).toBe('[ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1')
     })
 
     test('rejects a non-table declared skill before preparing an educational catalogue', async () => {

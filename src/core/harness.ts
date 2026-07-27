@@ -9,11 +9,16 @@ const payloadRoots = ['skills', 'subagents', 'hooks'] as const
 
 export const canonicalHarnessIdentifier = 'knowledgeislands/ki-agentic-harness'
 
+export const supportedRuntimes = ['claude-code', 'codex'] as const
+export type SupportedRuntime = (typeof supportedRuntimes)[number]
+
 export interface HarnessCapability {
   readonly kind: 'skill'
   readonly name: string
   readonly source: string
   readonly dependsOn: readonly string[]
+  /** Runtime identifiers this skill supports; absent means portable across supported runtimes. */
+  readonly supportedRuntimes?: readonly SupportedRuntime[]
   /** Payload-relative path to the skill's canonical `scripts/rubric/items/index.ts` catalogue, when it provides one. */
   readonly rubricModule?: string
 }
@@ -55,6 +60,22 @@ const frontmatterDependencies = (value: string | undefined, path: string): reado
     .filter(Boolean)
   if (new Set(dependencies).size !== dependencies.length) throw new KiError(`${path} repeats a dependency`, 1)
   return dependencies
+}
+
+const frontmatterSupportedRuntimes = (value: string | undefined, path: string): readonly SupportedRuntime[] | undefined => {
+  if (value === undefined) return undefined
+  if (!/^\[[^\]]+\]$/.test(value)) {
+    throw new KiError(`${path} must declare ki-supported-runtimes as a non-empty flow list`, 1)
+  }
+  const runtimes = value
+    .slice(1, -1)
+    .split(',')
+    .map((runtime) => runtime.trim())
+  if (runtimes.some((runtime) => !runtime || !supportedRuntimes.includes(runtime as SupportedRuntime))) {
+    throw new KiError(`${path} must declare ki-supported-runtimes using only claude-code or codex`, 1)
+  }
+  if (new Set(runtimes).size !== runtimes.length) throw new KiError(`${path} repeats a supported runtime`, 1)
+  return runtimes as readonly SupportedRuntime[]
 }
 
 const enumeratePayloadFiles = async (root: string, directory: string, externalPayload = false): Promise<readonly string[]> => {
@@ -100,7 +121,14 @@ const discoverCapabilities = async (root: string, identifier: string): Promise<r
     if (!name) throw new KiError(`${file} must declare name`, 1)
     const rubricPath = `${source}/${RUBRIC_MODULE_PATH}`
     const rubricModule = files.includes(rubricPath) ? rubricPath : undefined
-    capabilities.push({ kind: 'skill', name, source, dependsOn: frontmatterDependencies(metadata['ki-depends-on'], file), rubricModule })
+    capabilities.push({
+      kind: 'skill',
+      name,
+      source,
+      dependsOn: frontmatterDependencies(metadata['ki-depends-on'], file),
+      supportedRuntimes: frontmatterSupportedRuntimes(metadata['ki-supported-runtimes'], file),
+      rubricModule
+    })
   }
   const names = new Set<string>()
   for (const capability of capabilities) {
