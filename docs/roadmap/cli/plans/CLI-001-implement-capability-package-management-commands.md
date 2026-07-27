@@ -1,11 +1,11 @@
 ---
 id: 'CLI-001'
 title: Implement capability package-management commands
-status: ready
+status: in-progress
 roadmap: cli/implement-capability-package-management-commands
 blocks: —
 blocked-by: —
-baseline-ref: —
+baseline-ref: 0cd15ad372b5050c6f2be014d0131a337a93f1c8
 ---
 
 ## Context
