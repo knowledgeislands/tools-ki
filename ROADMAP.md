@@ -14,9 +14,8 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
-- [Cli: Complete remaining user and repository lifecycle commands](docs/roadmap/cli/ROADMAP.md#complete-remaining-user-and-repository-lifecycle-commands)
-- [Cli: Define capability package-management commands](docs/roadmap/cli/ROADMAP.md#define-capability-package-management-commands)
-- [Cli: Ship `ki(1)` through supported distributions](docs/roadmap/cli/ROADMAP.md#ship-ki1-through-supported-distributions)
+- [Cli: Deliver `ki(1)` through the Homebrew formula](docs/roadmap/cli/ROADMAP.md#deliver-ki1-through-the-homebrew-formula)
+- [Cli: Implement capability package-management commands](docs/roadmap/cli/ROADMAP.md#implement-capability-package-management-commands)
 
 ## Waiting for
 

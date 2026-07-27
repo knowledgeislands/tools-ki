@@ -16,17 +16,13 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
-### Complete remaining user and repository lifecycle commands
+### Implement capability package-management commands
 
-After native repository maintenance proves the installed-skill model, adopt the remaining scoped user and repository lifecycle leaves. Keep every command's ownership and safety boundary explicit; do not add compatibility dispatch to retired vendored runners.
+Implement the defined capability inventory, status, maintenance, and upgrade forms: `ki list`, `ki missing`, `ki outdated`, `ki install`, `ki reinstall`, `ki uninstall`, `ki update`, and CWD-resolved `ki upgrade`. Retain `ki harness list` as the harness-focused inventory and preserve KI's verified-harness and explicit-scope boundaries.
 
-### Define capability package-management commands
+### Deliver `ki(1)` through the Homebrew formula
 
-Specify the inventory, status, maintenance, and upgrade forms around compatible harnesses and their typed capabilities: `ki list`, `ki harness list`, `ki missing`, `ki outdated`, `ki install`, `ki reinstall`, `ki uninstall`, `ki update`, and CWD-resolved `ki upgrade`. Use Homebrew and Cargo as behavioural exemplars while retaining KI's verified-harness and explicit-scope model.
-
-### Ship `ki(1)` through supported distributions
-
-The source `ki(1)` manual and local-development preview are delivered with the CLI foundation. Package it in supported distributions, including the eventual Homebrew formula, and keep it aligned with `ki help`; it must distinguish released commands from planned work.
+Signed release archives and the installer already package `ki(1)`. Deliver the same manual through the Homebrew formula as part of V1 release delivery, keep it aligned with `ki help`, and distinguish released commands from planned work.
 
 ## Waiting for
 
