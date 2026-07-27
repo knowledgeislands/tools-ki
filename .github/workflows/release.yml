@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: ${{ matrix.asset-target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            bun-target: bun-linux-x64
+            asset-target: linux-x64
+          - os: macos-13
+            bun-target: bun-darwin-x64
+            asset-target: darwin-x64
+          - os: macos-14
+            bun-target: bun-darwin-arm64
+            asset-target: darwin-arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v3
+      - run: bun install --frozen-lockfile
+      - run: bun run test
+      - run: bun run test:coverage
+      - run: release/package.sh "${GITHUB_REF_NAME}" "${{ matrix.bun-target }}" "${{ matrix.asset-target }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset-target }}
+          path: dist/ki-${{ github.ref_name }}-${{ matrix.asset-target }}.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/release-assets
+          merge-multiple: true
+      - name: Create and sign the release manifest
+        env:
+          KI_RELEASE_SIGNING_KEY: ${{ secrets.KI_RELEASE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$KI_RELEASE_SIGNING_KEY"
+          release_dir=dist/release-assets
+          manifest="$release_dir/ki-checksums.txt"
+          {
+            printf 'version=%s\n' "$GITHUB_REF_NAME"
+            shasum -a 256 "$release_dir"/*.tar.gz | sed "s#  $release_dir/#  #"
+          } > "$manifest"
+          printf '%s\n' "$KI_RELEASE_SIGNING_KEY" > "$release_dir/signing-key.pem"
+          chmod 600 "$release_dir/signing-key.pem"
+          openssl pkeyutl -sign -rawin -inkey "$release_dir/signing-key.pem" -in "$manifest" -out "$release_dir/ki-checksums.txt.sig"
+          openssl pkey -in "$release_dir/signing-key.pem" -pubout > "$release_dir/derived-public-key.pem"
+          diff -u release/ki-release-signing-public.pem "$release_dir/derived-public-key.pem"
+          rm "$release_dir/signing-key.pem" "$release_dir/derived-public-key.pem"
+      - name: Publish immutable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --generate-notes \
+            dist/release-assets/*.tar.gz dist/release-assets/ki-checksums.txt dist/release-assets/ki-checksums.txt.sig
