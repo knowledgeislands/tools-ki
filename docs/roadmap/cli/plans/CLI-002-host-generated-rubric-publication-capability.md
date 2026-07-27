@@ -28,14 +28,14 @@ This CLI plan delivers the host half of that contract.
 
 1. ✓ Freeze a narrow, typed host-injected publication capability: validated catalogue identity, canonical rendered bytes, tracked-target state, and a derived write proposal with deterministic failure semantics.
 2. ✓ Route standalone `ki skill rubric` inspection and repository publication preparation through the same validated loading and rendering path, without parsing generated Markdown or adding a second renderer.
-3. Replace cross-file direct-write transactions with guarded incremental publication: physical containment, scope and symlink refusal, concurrent-change refusal, atomic per-file replacement, deterministic order, retained earlier successes on a later failure, and truthful re-audit/reporting.
+3. ✓ Replace cross-file direct-write transactions with guarded incremental publication: physical containment, scope and symlink refusal, concurrent-change refusal, atomic per-file replacement, deterministic order, retained earlier successes on a later failure, and truthful re-audit/reporting.
 4. ✓ Inject only publication evidence and a host-owned derived-write mechanism into rubric contexts; do not create a host-side automatic finding, encode a `KI-CHECKER-6` identity, or weaken installed-harness validation.
-5. Add CLI-contract coverage for clean, missing, stale, malformed, symlink, dry-run, repeated conform, ordered multi-write failure, concurrent replacement refusal, retained earlier successes, accurate remaining findings, FIXED reporting, and standalone/repository byte parity.
+5. ✓ Add CLI-contract coverage for clean, missing, stale, malformed, symlink, dry-run, repeated conform, ordered multi-write failure, concurrent replacement refusal, retained earlier successes, accurate remaining findings, FIXED reporting, and standalone/repository byte parity.
 6. Hand the frozen capability contract and verification evidence back to the harness so [FND-002](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-002-protect-generated-rubric-publications.md) can add `ki-skills` policy and regenerate its derived publications.
 
 ## Files touched
 
-- `src/core/rubric-render.ts`, `src/core/transaction.ts`, and focused rubric/session/repository-operation modules
+- `src/core/rubric-render.ts`, the guarded publisher, and focused rubric/session/repository-operation modules
 - `src/commands/skill.ts` and repository-operation host modules where the injected capability is composed
 - `src/tests/cli/` contract coverage for standalone rubric and repository audit/conform paths
 - `docs/roadmap/cli/ROADMAP.md`
@@ -56,7 +56,7 @@ This plan is the receiving-repository implementation half of `knowledgeislands/k
 
 The cross-repository relationship is recorded as `transferred-from` rather than a local `blocked-by` identifier because roadmap dependency fields resolve only plans in this repository.
 
-The existing renderer and transaction framework are implementation prerequisites, not blockers.
+The existing renderer and guarded publication framework are implementation prerequisites, not blockers.
 
 No compatibility path, generated-Markdown parser, duplicate renderer, host-created automatic finding, relaxed installed-harness validation, or cross-file rollback is permitted.
 

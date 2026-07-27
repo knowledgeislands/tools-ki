@@ -116,7 +116,7 @@ describe('[ki generated rubric publication]', () => {
     expect(result.output).toContain('references/rubric.md')
   })
 
-  test('keeps dry-run publication proposals in memory, publishes transactionally, and is idempotent', async () => {
+  test('keeps dry-run publication proposals in memory, publishes incrementally, and is idempotent', async () => {
     const box = await sandbox()
     await projectLinkedHarness(box)
     const target = 'skills/ki-example/references/rubric.md'
@@ -154,7 +154,7 @@ describe('[ki generated rubric publication]', () => {
     expect(await box.root.read('outside-rubric.md')).toBe('outside\n')
   })
 
-  test('refuses a publication request outside the repository transaction', async () => {
+  test('refuses a publication request outside the repository publication scope', async () => {
     const box = await sandbox()
     await box.setupExampleHarness({ rubric: publicationRubric })
     await box.project.write('.ki-config.toml', '[ki-example]\n')
@@ -162,7 +162,7 @@ describe('[ki generated rubric publication]', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('rubric publication is outside the repository transaction')
+    expect(result.output).toContain('rubric publication is outside the repository publication scope')
   })
 
   test('refuses a publication request during audit', async () => {

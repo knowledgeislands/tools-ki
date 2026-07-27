@@ -802,7 +802,7 @@ export default {
     // CLI-004 acceptance evidence (e): a write target replaced by a symlink before conform
     // runs (the CLI-reachable shape of "concurrent target replacement" — no live process
     // interleaving needed, since prepareWrites' regular-file check runs fresh every call)
-    // is refused before any transaction write, leaving the symlink and its shadowed file
+    // is refused before any guarded write, leaving the symlink and its shadowed file
     // untouched.
     test('refuses to conform a conform write target that has become a symlink', async () => {
       const box = await sandbox()
@@ -846,12 +846,7 @@ export default {
       expect(await box.root.read('outside/target.txt')).toBe('before\n')
     })
 
-    // CLI-004 acceptance evidence (f): prepareWrites validates every write in the batch
-    // before publishWrites touches any of them, so a second write's rejection leaves the
-    // first write's — otherwise perfectly valid — target untouched. No mid-publication
-    // failure is needed to prove this half of "rollback/recovery": nothing was ever
-    // published in the first place.
-    test('a later write failing validation blocks the whole batch, leaving an earlier valid write unpublished', async () => {
+    test('retains an earlier successful write when a later target is unsafe', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.project.write('governed-1.txt', 'before-1\n')
@@ -871,11 +866,17 @@ export default {
         }]`)
       })
 
+      const dryRun = await box.run('ki repo conform --dry-run')
+
+      expect(dryRun.exitCode).toBe(1)
+      expect(dryRun.output).toContain('direct conform write target governed-2.txt must be an existing regular file')
+      expect(await box.project.read('governed-1.txt')).toBe('before-1\n')
+
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('direct conform write target governed-2.txt must be an existing regular file')
-      expect(await box.project.read('governed-1.txt')).toBe('before-1\n')
+      expect(await box.project.read('governed-1.txt')).toBe('after-1\n')
     })
 
     test('reports FIXED when a re-audited item that was violated is now clean', async () => {
@@ -956,7 +957,7 @@ export default {
       expect(result.output).toContain('direct conform write target missing.txt must be an existing regular file')
     })
 
-    test('creates an explicitly declared new regular file transactionally', async () => {
+    test('creates an explicitly declared new regular file atomically', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
@@ -1045,6 +1046,11 @@ export default {
         }] }]`)
       })
 
+      const dryRun = await box.run('ki repo conform --dry-run')
+
+      expect(dryRun.exitCode).toBe(1)
+      expect(dryRun.output).toContain('direct conform create target blocked/created.txt escapes the repository')
+
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
@@ -1070,7 +1076,7 @@ export default {
       expect(result.output).toContain('direct conform create target linked/created.txt escapes the repository')
     })
 
-    test('conforms a declared user-home path transactionally', async () => {
+    test('conforms a declared user-home path incrementally', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.home.write('.managed/setting.txt', 'before\n')
@@ -1211,7 +1217,7 @@ export default {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('user-home rubric conform actions must be transactional writes; conform commands are not permitted')
+      expect(result.output).toContain('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted')
       expect(await box.home.read('.managed/setting.txt')).toBe('before\n')
     })
 

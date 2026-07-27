@@ -47,7 +47,7 @@ const setup = async (rubricSource: string) => {
 }
 
 describe('[ki repo] user-home rubric scope', () => {
-  test('audits and transactionally conforms a repository-declared user-home rubric', async () => {
+  test('audits and incrementally conforms a repository-declared user-home rubric', async () => {
     const box = await setup(rubric(governedItem(`{ writes: [{ path: '.managed/governed.txt', content: 'after\\n' }] }`)))
 
     const audit = await box.run('ki repo audit')
@@ -110,6 +110,6 @@ export default {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('user-home rubric conform actions must be transactional writes')
+    expect(result.output).toContain('user-home rubric conform actions must be guarded direct writes')
   })
 })

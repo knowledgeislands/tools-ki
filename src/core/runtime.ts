@@ -1,6 +1,6 @@
 // Executes a loaded rubric definition (CLI-004 T1.2): runs mechanical items' audit in
 // phase order, renders findings, and — for conform — collects ConformProposals from
-// violated items into the host-owned transaction (see ./transaction.ts). Judgment items
+// violated items into host-owned guarded publication (see ./transaction.ts). Judgment items
 // are catalogue data only; the runtime never executes them.
 
 import { lstat, realpath } from 'node:fs/promises'

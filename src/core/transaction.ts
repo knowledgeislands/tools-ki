@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { link, lstat, mkdir, readFile, realpath, rename, rm, rmdir, writeFile } from 'node:fs/promises'
+import { link, lstat, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { KiError } from './errors.ts'
 
@@ -9,7 +9,7 @@ export interface NativeWrite {
   readonly create?: boolean
 }
 
-/** An optional lexical allow-list below the physical root for a restricted transaction. */
+/** An optional lexical allow-list below the physical root for a restricted publisher. */
 export interface WriteScope {
   readonly paths: readonly string[]
 }
@@ -23,8 +23,6 @@ export interface ScopedNativeWrite {
 interface PreparedWrite extends NativeWrite {
   readonly repository: string
   readonly absolutePath: string
-  readonly original?: string
-  readonly identity?: FileIdentity
 }
 
 interface FileIdentity {
@@ -113,20 +111,18 @@ const inspectCreateTarget = async (repository: string, path: string, absolutePat
   }
 }
 
-const ensureCreateParent = async (repository: string, path: string, absolutePath: string): Promise<readonly string[]> => {
+const ensureCreateParent = async (repository: string, path: string, absolutePath: string): Promise<void> => {
   const parent = dirname(absolutePath)
   const relativeParent = relative(repository, parent)
   /* v8 ignore next -- Prepared create targets are safe relative paths beneath the resolved repository. */
   if (!isContained(repository, parent) || (!relativeParent && parent !== repository))
     throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
-  const created: string[] = []
   let current = repository
   for (const part of relativeParent ? relativeParent.split('/') : []) {
     current = join(current, part)
     let state = await lstat(current).catch(() => undefined)
     if (!state) {
       await mkdir(current)
-      created.push(current)
       // A concurrent removal immediately after mkdir is not reachable through one CLI invocation.
       /* v8 ignore next */
       state = await lstat(current).catch(() => undefined)
@@ -140,7 +136,6 @@ const ensureCreateParent = async (repository: string, path: string, absolutePath
     if (!physicalDirectory || !isContained(repository, physicalDirectory))
       throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
   }
-  return created
 }
 
 export const prepareWrites = async (
@@ -154,11 +149,7 @@ export const prepareWrites = async (
     scope === undefined
   )
 
-/**
- * Prepares multiple user-scoped proposals as one transaction. Every path is
- * checked against the scope belonging to the skill that proposed it before
- * identical writes may be coalesced with another skill's proposal.
- */
+/** Every path is checked against the scope belonging to the skill that proposed it before identical writes may be coalesced. */
 export const prepareScopedWrites = async (
   repository: string,
   writes: readonly ScopedNativeWrite[],
@@ -171,95 +162,65 @@ export const prepareScopedWrites = async (
     if (!unrestricted && !allowedByScope(write.path, scope))
       throw new KiError(`direct conform write path ${write.path} is outside its declared filesystem scope`, 1)
     const absolutePath = join(repository, write.path)
-    if (write.create) {
-      await inspectCreateTarget(repository, write.path, absolutePath)
-      prepared.push({ ...write, repository, absolutePath })
-      continue
-    }
-    const identity = await inspectWriteTarget(repository, write.path, absolutePath)
-    const original = await readFile(absolutePath, 'utf8')
-    if (!sameIdentity(identity, await inspectWriteTarget(repository, write.path, absolutePath)))
-      throw new KiError(`direct conform write target ${write.path} changed during preparation`, 1)
-    prepared.push({ ...write, repository, absolutePath, original, identity })
+    prepared.push({ ...write, repository, absolutePath })
   }
   return prepared
 }
 
-export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: boolean): Promise<void> => {
-  if (dryRun) return
-  const createdDirectories: string[] = []
-  for (const write of writes) {
-    if (write.create) {
-      await inspectCreateTarget(write.repository, write.path, write.absolutePath)
-      continue
+interface ExistingSnapshot {
+  readonly identity: FileIdentity
+  readonly contents: string
+}
+
+const snapshotExistingTarget = async (write: PreparedWrite): Promise<ExistingSnapshot> => {
+  const identity = await inspectWriteTarget(write.repository, write.path, write.absolutePath)
+  const contents = await readFile(write.absolutePath, 'utf8')
+  if (!sameIdentity(identity, await inspectWriteTarget(write.repository, write.path, write.absolutePath)))
+    throw new KiError(`direct conform write target ${write.path} changed during publication`, 1)
+  return { identity, contents }
+}
+
+const assertSnapshotCurrent = async (write: PreparedWrite, snapshot: ExistingSnapshot): Promise<void> => {
+  const identity = await inspectWriteTarget(write.repository, write.path, write.absolutePath)
+  if (!sameIdentity(identity, snapshot.identity) || (await readFile(write.absolutePath, 'utf8')) !== snapshot.contents)
+    throw new KiError(`direct conform write target ${write.path} changed before publication`, 1)
+}
+
+const temporaryPath = (write: PreparedWrite): string => join(dirname(write.absolutePath), `.${randomUUID()}.ki-conform.tmp`)
+
+const publishOne = async (write: PreparedWrite): Promise<void> => {
+  if (write.create) {
+    await ensureCreateParent(write.repository, write.path, write.absolutePath)
+    await inspectCreateTarget(write.repository, write.path, write.absolutePath)
+    const temporary = temporaryPath(write)
+    try {
+      await writeFile(temporary, write.content, { encoding: 'utf8', flag: 'wx' })
+      await link(temporary, write.absolutePath)
+    } finally {
+      await rm(temporary, { force: true })
     }
-    const identity = await inspectWriteTarget(write.repository, write.path, write.absolutePath)
-    if (
-      !write.identity ||
-      write.original === undefined ||
-      !sameIdentity(identity, write.identity) ||
-      (await readFile(write.absolutePath, 'utf8')) !== write.original
-    ) {
-      throw new KiError(`direct conform write target ${write.path} changed before publication`, 1)
-    }
+    return
   }
-  const temporary = new Map<PreparedWrite, string>()
-  const publishedIdentities = new Map<PreparedWrite, FileIdentity>()
-  const published: PreparedWrite[] = []
-  let publishedSuccessfully = false
+
+  const snapshot = await snapshotExistingTarget(write)
+  const temporary = temporaryPath(write)
   try {
-    for (const write of writes) {
-      if (!write.create) continue
-      for (const directory of await ensureCreateParent(write.repository, write.path, write.absolutePath)) {
-        /* v8 ignore next -- A directory is returned only when this transaction created it; duplicate return values require concurrent replacement. */
-        if (!createdDirectories.includes(directory)) createdDirectories.push(directory)
-      }
-      await inspectCreateTarget(write.repository, write.path, write.absolutePath)
-    }
-    for (const write of writes) {
-      const path = join(dirname(write.absolutePath), `.${randomUUID()}.ki-conform.tmp`)
-      await writeFile(path, write.content, { encoding: 'utf8', flag: 'wx' })
-      temporary.set(write, path)
-    }
-    for (const write of writes) {
-      const path = temporary.get(write)
-      // This private map is populated for every write immediately before this publication loop.
-      /* v8 ignore next */
-      if (!path) throw new KiError(`direct conform transaction lost temporary content for ${write.path}`, 1)
-      if (write.create) await link(path, write.absolutePath)
-      else await rename(path, write.absolutePath)
-      published.push(write)
-      publishedIdentities.set(write, await inspectWriteTarget(write.repository, write.path, write.absolutePath))
-    }
-    publishedSuccessfully = true
-  } catch (error) {
-    let rollbackRefusal: KiError | undefined
-    for (const write of published.reverse()) {
-      const publishedIdentity = publishedIdentities.get(write)
-      /* v8 ignore start -- This callback requires a third party to remove the just-published target during rollback. */
-      const currentIdentity = await inspectWriteTarget(write.repository, write.path, write.absolutePath).catch(() => undefined)
-      /* v8 ignore stop */
-      if (!publishedIdentity || !currentIdentity || !sameIdentity(publishedIdentity, currentIdentity)) {
-        rollbackRefusal ??= new KiError(`direct conform rollback target ${write.path} changed after publication`, 1)
-      } else if (write.create) {
-        await rm(write.absolutePath, { force: true })
-      } else {
-        // Only non-create writes reach this branch, and preparation always snapshots their original content.
-        /* v8 ignore next */
-        if (write.original === undefined) throw new KiError(`direct conform transaction lost original content for ${write.path}`, 1)
-        await writeFile(write.absolutePath, write.original, 'utf8')
-      }
-    }
-    if (rollbackRefusal) throw rollbackRefusal
-    throw error
+    await writeFile(temporary, write.content, { encoding: 'utf8', flag: 'wx' })
+    await assertSnapshotCurrent(write, snapshot)
+    await rename(temporary, write.absolutePath)
   } finally {
-    await Promise.all([...temporary.values()].map(async (path) => rm(path, { force: true })))
-    if (!publishedSuccessfully) {
-      for (const directory of createdDirectories.reverse()) {
-        // A third party must replace the transaction-owned empty directory to make this catch reachable.
-        /* v8 ignore next */
-        await rmdir(directory).catch(() => undefined)
-      }
-    }
+    await rm(temporary, { force: true })
+  }
+}
+
+const validateOne = async (write: PreparedWrite): Promise<void> => {
+  if (write.create) await inspectCreateTarget(write.repository, write.path, write.absolutePath)
+  else await snapshotExistingTarget(write)
+}
+
+export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: boolean): Promise<void> => {
+  for (const write of writes) {
+    if (dryRun) await validateOne(write)
+    else await publishOne(write)
   }
 }

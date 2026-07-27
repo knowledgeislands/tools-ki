@@ -35,18 +35,18 @@ export interface PreparedRubricPublication {
 /**
  * Loads the same validated catalogue bytes for standalone inspection and for a
  * repository rubric context. A proposal is possible only when the publication
- * physically belongs to the caller's transaction root.
+ * physically belongs to the caller's publication root.
  */
 export const prepareRubricPublication = async (
   skill: ResolvedSkill,
   definition: SkillRubricDefinition<unknown>,
-  transactionRoot?: string
+  publicationRoot?: string
 ): Promise<PreparedRubricPublication> => {
   const source = await realpath(join(skill.harness.root, skill.capability.source))
   const target = join(source, publicationPath)
   const existing = await readPublication(target)
   const rendered = renderRubricMarkdown(definition)
-  const root = transactionRoot === undefined ? source : await realpath(transactionRoot)
+  const root = publicationRoot === undefined ? source : await realpath(publicationRoot)
   const writePath = containedRelativePath(root, target)
   const state = existing === undefined ? 'missing' : existing === rendered ? 'in-sync' : 'stale'
   const evidence = {
@@ -61,7 +61,7 @@ export const prepareRubricPublication = async (
     displayTarget: join(skill.harness.root, skill.capability.source, publicationPath),
     publicationRoot: root,
     proposal: () => {
-      if (!writePath) throw new KiError(`${skill.identity} rubric publication is outside the repository transaction`, 1)
+      if (!writePath) throw new KiError(`${skill.identity} rubric publication is outside the repository publication scope`, 1)
       return state === 'missing' ? { path: writePath, content: rendered, create: true } : { path: writePath, content: rendered }
     }
   }

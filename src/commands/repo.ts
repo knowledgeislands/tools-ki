@@ -522,7 +522,7 @@ export const createRepoCommand = (context: KiContext): Command =>
             const writes = [...repositoryWrites, ...userWrites]
             const commands = conformed.flatMap(({ conform }) => conform.commands)
             if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
-              throw new KiError('user-home rubric conform actions must be transactional writes; conform commands are not permitted', 1)
+              throw new KiError('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted', 1)
             for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
             for (const command of commands) context.stdout.write(`${options.dryRun ? 'would run' : 'run'} ${renderCommand(command)}\n`)
             if (findings.some((finding) => finding.level === 'fail')) {
@@ -534,7 +534,12 @@ export const createRepoCommand = (context: KiContext): Command =>
               )
               throw new KiError('repository conform found failures', 1)
             }
-            await publishWrites(writes, Boolean(options.dryRun))
+            let publicationError: unknown
+            try {
+              await publishWrites(writes, Boolean(options.dryRun))
+            } catch (error) {
+              publicationError = error
+            }
             if (options.dryRun) {
               renderReports(
                 context,
@@ -542,9 +547,10 @@ export const createRepoCommand = (context: KiContext): Command =>
                 conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
               )
+              if (publicationError) throw publicationError
               return
             }
-            await runCommands(repository.root, commands)
+            if (!publicationError) await runCommands(repository.root, commands)
             const reaudited = await runPreparedWithProgress(
               context,
               're-audit',
@@ -575,6 +581,7 @@ export const createRepoCommand = (context: KiContext): Command =>
               reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
               output.reporterLevels
             )
+            if (publicationError) throw publicationError
             if (auditFindings.some((finding) => finding.level === 'fail'))
               throw new KiError('repository conform re-audit found failures', 1)
           }
