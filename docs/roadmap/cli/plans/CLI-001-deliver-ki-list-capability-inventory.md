@@ -1,7 +1,7 @@
 ---
 id: 'CLI-001'
 title: Deliver `ki list` capability inventory
-status: in-progress
+status: acceptance
 roadmap: cli/deliver-ki-list-capability-inventory
 blocks: —
 blocked-by: —
@@ -49,3 +49,32 @@ This plan uses the existing verified installed-harness inventory and explicit ac
 - Round 1 — mechanical: implement the command and CLI contracts; files: `src/commands/list.ts`, `src/cli.ts`, `src/commands/catalogue.ts`, and `src/tests/cli/{list,help,completions}.test.ts`; minimum model: `gpt-5.6-terra` (the contract and existing seams are explicit); definition of done: focused contracts pass and the output is deterministic, read-only, and uses no fetcher; gate: orchestrator reviews the diff and reruns the focused suite before documentation work; checkpoint: report the changed paths, contract output, and focused-test result.
 - Escalate: any need to infer a desired capability set, compare releases, mutate activation, add network access, or expose another reserved command.
 - Round 2 — orchestrator: review the worker diff, complete documentation and changelog updates, run final verification, and commit only the gated work.
+
+## Acceptance
+
+### Delivered
+
+`ki list` now provides a read-only capability inventory for V1: verified installed harnesses and their capabilities, declared user skills, and declared repository skills when the working directory resolves to a KI repository.
+
+### Summary of changes
+
+- Added `src/commands/list.ts` and registered the command in the root CLI and completion catalogue.
+- Added CLI contracts for populated and empty inventories, user and repository declarations, invalid input, and no configuration mutation.
+- Updated `ki(1)`, `CHANGELOG.md`, and ADR-KI-TOOLS-002 so the released command surface is consistent.
+- Split the remaining package-management vocabulary into distinct **Soon** roadmap items for status, lifecycle, and package/harness update–upgrade work.
+
+### Verification
+
+- `bun run test -- src/tests/cli/list.test.ts src/tests/cli/help.test.ts src/tests/cli/completions.test.ts` — 7 passing focused contracts.
+- `bun run test` and `bun run test:coverage` — 323 passing tests and 100% statements, branches, functions, and lines.
+- `bunx biome check .`, `bunx tsc --noEmit`, `bunx knip`, `bash -n install.sh`, and `git diff --check` — passed.
+- `ki repo audit --skill ki-roadmap` and `ki repo audit --skill ki-decision-records` — no FAIL or WARN findings.
+- Checked implementation revision: `9916f65` (`feat: add capability inventory command`).
+
+### Outstanding concerns
+
+None for this delivery. The authoring audit retains one pre-existing `.markdownlint-cli2.jsonc` template-drift warning outside this plan's scope.
+
+### Mini recap
+
+The inventory contract is useful before package lifecycle work because it reports facts already held locally without inventing a desired-state or release-update model. The separate **Soon** items retain those later decisions at their proper boundary.
