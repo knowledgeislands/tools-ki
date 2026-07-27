@@ -1,5 +1,5 @@
 ---
-id: GDR-KI-ARCADIA-002
+id: GDR-KI-FUNDAMENTALS-001
 title: 'Knowledge Islands ecosystem fundamentals'
 date: 2026-07-24
 status: current
@@ -9,7 +9,7 @@ decision_type: governance
 shared_record: true
 ---
 
-# GDR-KI-ARCADIA-002: Knowledge Islands ecosystem fundamentals
+# GDR-KI-FUNDAMENTALS-001: Knowledge Islands ecosystem fundamentals
 
 ## Context
 
