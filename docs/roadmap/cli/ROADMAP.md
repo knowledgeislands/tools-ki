@@ -18,12 +18,6 @@ Restore the output controls lost in the native repository-operation cutover: sel
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-### Deliver verified KI release installation
-
-Replace the checkout-only default installer with a `tools-ki`-owned, verified release installer. Publish immutable platform archives and signed checksums from tag-bound releases; retain `--link` only for a local checkout. Complete the first verified publish against the protected release environment so the release contract has end-to-end evidence.
-
-**Plan:** [CLI-006](plans/CLI-006-deliver-verified-ki-release-installation.md)
-
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
