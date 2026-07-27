@@ -1,7 +1,7 @@
 ---
 id: 'CLI-001'
 title: 'Define `ki missing` and `ki outdated` capability status'
-status: acceptance
+status: done
 roadmap: cli/define-ki-missing-and-ki-outdated-capability-status
 blocks: —
 blocked-by: —
@@ -75,3 +75,11 @@ None. A later lifecycle or update plan must add immutable installed-release prov
 ### Mini recap
 
 The installed-harness registry records configured release targets but does not preserve the resolved immutable release that produced a `latest` installation. The status commands therefore establish the safe baseline: diagnose availability locally and surface the evidence gap plainly, without network access or mutation.
+
+## Done
+
+Completed `ki missing` and `ki outdated` as read-only capability-status commands, with deterministic CLI-contract coverage and the V1 command baseline updated.
+
+Residual concern: immutable installed-release provenance and a trusted comparison source remain future lifecycle/update work; `ki outdated` reports that gap rather than making a freshness claim.
+
+Intended follow-up: plan and deliver the capability lifecycle and update–upgrade operations before any V1 release.
