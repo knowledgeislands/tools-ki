@@ -5,7 +5,7 @@ status: in-progress
 roadmap: cli/repair-verified-release-installer-contract-for-ci
 blocks: —
 blocked-by: —
-baseline-ref: —
+baseline-ref: a7f340387f1696c4fb01a766a0be76147d6d3ab4
 transferred-from: knowledgeislands/ki-agentic-harness:FND-001
 ---
 
