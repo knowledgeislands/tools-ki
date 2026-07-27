@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { Command } from 'commander'
 import { agentSkillDirectory, compatibleWithSkill, configuredAgents, inspectUserConfiguration } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
+import { KiExit } from '../core/errors.ts'
 import { discoverInstalledHarnesses, type InstalledHarness } from '../core/harness.ts'
 
 type CheckStatus = 'pass' | 'fail' | 'skip'
@@ -23,6 +24,12 @@ const physicalDirectory = async (path: string): Promise<boolean> => {
 const managedSkillName = (identity: string): string | undefined => {
   const separator = identity.indexOf(':')
   return separator > 0 && separator < identity.length - 1 ? identity.slice(separator + 1) : undefined
+}
+
+const report = (context: KiContext, checks: readonly DoctorCheck[]): void => {
+  context.stdout.write(`ki doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
+
+  if (checks.some((check) => check.status === 'fail')) throw new KiExit(1)
 }
 
 export const createDoctorCommand = (context: KiContext): Command =>
@@ -61,7 +68,7 @@ export const createDoctorCommand = (context: KiContext): Command =>
       } catch (error) {
         checks.push({ status: 'fail', label: 'Agents', detail: (error as Error).message })
         checks.push({ status: 'skip', label: 'User skills', detail: 'agents are unavailable' })
-        context.stdout.write(`ki doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
+        report(context, checks)
         return
       }
       for (const agent of agents) {
@@ -102,5 +109,5 @@ export const createDoctorCommand = (context: KiContext): Command =>
         })
       }
     }
-    context.stdout.write(`ki doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
+    report(context, checks)
   })

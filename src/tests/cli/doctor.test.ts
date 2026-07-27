@@ -7,7 +7,8 @@ describe('[ki doctor]', () => {
     const doctor = await box.run('ki doctor')
 
     expect(doctor.output).toContain('ki doctor\n  ✗ Configuration: missing; run ki bootstrap')
-    expect(doctor.exitCode).toBe(0)
+    expect(doctor.output).not.toContain('ki: error:')
+    expect(doctor.exitCode).toBe(1)
   })
 
   test('reports broken environment with invalid config and missing harness', async () => {
@@ -25,7 +26,7 @@ ids = ["nonexistent/harness"]
 
     expect(doctor.output).toContain('✗ Configuration')
     expect(doctor.output).toContain('✗ Harness inventory')
-    expect(doctor.exitCode).toBe(0)
+    expect(doctor.exitCode).toBe(1)
   })
 
   test('reports missing user skills when agent home is not a physical directory', async () => {
@@ -54,6 +55,7 @@ ids = [
     expect(doctor.output).toContain('✓ Configuration')
     // Agent check should fail since home doesn't exist
     expect(doctor.output).toContain('✗ Agent')
+    expect(doctor.exitCode).toBe(1)
   })
 
   test('reports a harness inventory failure when the installed harnesses directory is malformed', async () => {
@@ -66,6 +68,7 @@ ids = [
     const doctor = await box.run('ki doctor')
 
     expect(doctor.output).toContain('✗ Harness inventory: installed harnesses directory contains an unsafe owner entry')
+    expect(doctor.exitCode).toBe(1)
   })
 
   test('reports an agents failure when configuration names an unknown agent', async () => {
@@ -92,6 +95,7 @@ ids = [
 
     expect(doctor.output).toContain('✗ Agents: unknown agent unknown-agent; use claude-code or chatgpt-codex')
     expect(doctor.output).toContain('○ User skills: agents are unavailable')
+    expect(doctor.exitCode).toBe(1)
   })
 
   test('reports a configured skill whose link is absent', async () => {
@@ -115,6 +119,7 @@ harness = "example/harness"
     const doctor = await box.run('ki doctor')
 
     expect(doctor.output).toContain('✗ User skill ki-example: not linked for every compatible configured agent')
+    expect(doctor.exitCode).toBe(1)
   })
 
   test('accepts a runtime-bound user skill linked only into compatible agents', async () => {
@@ -132,6 +137,7 @@ harness = "example/harness"
     const doctor = await box.run('ki doctor')
 
     expect(doctor.output).toContain('✓ User skill ki-example: linked')
+    expect(doctor.exitCode).toBe(0)
   })
 
   test('reports a runtime-bound user skill with no compatible configured agent', async () => {
@@ -160,6 +166,7 @@ harness = "example/harness"
     const doctor = await box.run('ki doctor')
 
     expect(doctor.output).toContain('✗ User skill ki-example: no compatible configured agent')
+    expect(doctor.exitCode).toBe(1)
   })
 
   test('reports an empty quoted skill key as an invalid managed user-skill identity', async () => {
@@ -182,9 +189,22 @@ harness = "example/harness"
     const doctor = await box.run('ki doctor')
 
     expect(doctor).toEqual({
-      exitCode: 0,
+      exitCode: 1,
       output: expect.stringContaining('✓ Configuration:')
     })
     expect(doctor.output).toContain('✗ User skill example/harness:: invalid identity')
+  })
+
+  test('exits zero for a complete report with only passing checks', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor).toEqual({
+      exitCode: 0,
+      output: expect.not.stringContaining('✗')
+    })
   })
 })

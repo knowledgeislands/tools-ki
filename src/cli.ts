@@ -11,7 +11,7 @@ import { createRepoCommand } from './commands/repo.ts'
 import { createSkillCommand } from './commands/skill.ts'
 import { createVersionCommand } from './commands/version.ts'
 import type { KiContext } from './context.ts'
-import { KiError } from './core/errors.ts'
+import { KiError, KiExit } from './core/errors.ts'
 import { KI_VERSION } from './version.ts'
 
 export const createProgram = (context: KiContext): Command => {
@@ -56,6 +56,8 @@ export const run = async (arguments_: readonly string[], context: KiContext): Pr
     await program.parseAsync([...arguments_], { from: 'user' })
     return 0
   } catch (error) {
+    if (error instanceof KiExit) return error.exitCode
+
     if (error instanceof KiError) {
       context.stderr.write(`ki: error: ${error.message}\n`)
       return error.exitCode

@@ -8,4 +8,14 @@ export class KiError extends Error {
   }
 }
 
+export class KiExit extends Error {
+  public readonly exitCode: number
+
+  public constructor(exitCode: number) {
+    super()
+    this.name = 'KiExit'
+    this.exitCode = exitCode
+  }
+}
+
 export const grammarError = (message: string): KiError => new KiError(message, 2)

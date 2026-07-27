@@ -20,15 +20,17 @@ baseline-ref: 912f422defbfa9abd908edf7293f601a18b951e2
 
 ## Steps
 
-1. Settle the doctor exit contract: return non-zero when one or more checks are FAIL, retain 0 for PASS and SKIP-only reports, and preserve the complete human-readable report before exit.
-2. Implement the aggregation at the command boundary without reclassifying operational errors, bypassing injected streams, or changing the meaning of individual checks.
-3. Update CLI-contract tests for clean, failing, skipped, invalid-configuration, missing-harness, unavailable-agent, and missing-user-skill reports.
-4. Update `ki(1)` and any user-facing command guidance that states or implies doctor success semantics.
-5. Run the complete quality gate and verify the command in a representative valid and failing sandbox.
+1. ✓ Settle the doctor exit contract: return non-zero when one or more checks are FAIL, retain 0 for PASS and SKIP-only reports, and preserve the complete human-readable report before exit.
+2. ✓ Implement the aggregation at the command boundary without reclassifying operational errors, bypassing injected streams, or changing the meaning of individual checks.
+3. ✓ Update CLI-contract tests for clean, failing, skipped, invalid-configuration, missing-harness, unavailable-agent, and missing-user-skill reports.
+4. ✓ Update `ki(1)` and any user-facing command guidance that states or implies doctor success semantics.
+5. ✓ Run the complete quality gate and verify the command in a representative valid and failing sandbox.
 
 ## Files touched
 
 - `src/commands/doctor.ts`
+- `src/cli.ts`
+- `src/core/errors.ts`
 - `src/tests/cli/doctor.test.ts`
 - `man/ki.1` and any affected command guidance
 
