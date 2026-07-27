@@ -1,7 +1,7 @@
 ---
 id: 'CLI-001'
 title: Deliver `ki list` capability inventory
-status: acceptance
+status: done
 roadmap: cli/deliver-ki-list-capability-inventory
 blocks: —
 blocked-by: —
@@ -78,3 +78,11 @@ None for this delivery. The authoring audit retains one pre-existing `.markdownl
 ### Mini recap
 
 The inventory contract is useful before package lifecycle work because it reports facts already held locally without inventing a desired-state or release-update model. The separate **Soon** items retain those later decisions at their proper boundary.
+
+## Done
+
+Completed the read-only `ki list` capability inventory and retained its verified acceptance record.
+
+Residual concerns: None for the delivered command.
+
+Intended follow-up: Prune this retained plan and canonical roadmap item with the completed CLI plan batch, then select the next package-management group from **Soon**.
