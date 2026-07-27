@@ -6,6 +6,8 @@ Each release contains three `ki-vX.Y.Z-<target>.tar.gz` archives, each holding o
 
 The public installer verifies the manifest signature before it downloads an archive, verifies the archive checksum and layout, then stages and installs the executable and manual.
 
+The installer requires an OpenSSL implementation with Ed25519 `pkeyutl -rawin` support. On macOS it automatically uses Homebrew's `openssl@3` when the system OpenSSL is too old; otherwise install it with `brew install openssl@3`, or point `KI_OPENSSL` at an appropriate OpenSSL executable.
+
 ## Create the signing key
 
 Create the key pair once on a trusted development machine.

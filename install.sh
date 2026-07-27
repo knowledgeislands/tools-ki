@@ -16,6 +16,7 @@ man_target="$man_install_dir/ki.1"
 mode=release
 requested_version=''
 stage=''
+openssl_bin=${KI_OPENSSL:-openssl}
 
 die() {
   printf 'ki: error: %s\n' "$*" >&2
@@ -65,16 +66,28 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
 }
 
+supports_ed25519_rawin() {
+  "$1" pkeyutl -help 2>&1 | grep -q -- '-rawin'
+}
+
+select_openssl() {
+  if supports_ed25519_rawin "$openssl_bin"; then return; fi
+  if [ -z "${KI_OPENSSL:-}" ] && command -v brew >/dev/null 2>&1; then
+    homebrew_openssl="$(brew --prefix openssl@3 2>/dev/null)/bin/openssl"
+    if [ -x "$homebrew_openssl" ] && supports_ed25519_rawin "$homebrew_openssl"; then
+      openssl_bin=$homebrew_openssl
+      return
+    fi
+  fi
+  die 'OpenSSL with Ed25519 -rawin support is required; install openssl@3 or set KI_OPENSSL'
+}
+
 verify_manifest_signature() {
   public_key=$1
   manifest=$2
   signature=$3
 
-  if openssl pkeyutl -help 2>&1 | grep -q -- '-rawin'; then
-    openssl pkeyutl -verify -rawin -pubin -inkey "$public_key" -in "$manifest" -sigfile "$signature" >/dev/null 2>&1
-  else
-    openssl pkeyutl -verify -pubin -inkey "$public_key" -in "$manifest" -sigfile "$signature" >/dev/null 2>&1
-  fi
+  "$openssl_bin" pkeyutl -verify -rawin -pubin -inkey "$public_key" -in "$manifest" -sigfile "$signature" >/dev/null 2>&1
 }
 
 replace_file() {
@@ -266,11 +279,11 @@ install_pair() {
 
 install_release() {
   require_command curl
-  require_command openssl
   require_command shasum
   require_command tar
   require_command awk
   require_command od
+  select_openssl
 
   base=$(release_base)
   version=$requested_version

@@ -6,7 +6,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- Installer verification now selects the compatible OpenSSL `pkeyutl` form for its host, and its test fixtures use Node's Ed25519 signer rather than the unsupported macOS signing interface.
+- The installer now selects Homebrew's modern OpenSSL on macOS when the system OpenSSL lacks Ed25519 support, and its test fixtures use Node's Ed25519 signer rather than the unsupported macOS signing interface.
 
 ### Added
 
