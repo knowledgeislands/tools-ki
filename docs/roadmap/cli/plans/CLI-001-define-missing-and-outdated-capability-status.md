@@ -1,7 +1,7 @@
 ---
 id: 'CLI-001'
 title: 'Define `ki missing` and `ki outdated` capability status'
-status: open
+status: ready
 roadmap: cli/define-ki-missing-and-ki-outdated-capability-status
 blocks: —
 blocked-by: —
