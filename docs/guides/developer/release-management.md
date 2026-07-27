@@ -34,17 +34,28 @@ cp "$key_dir/ki-release-signing-public.pem" release/ki-release-signing-public.pe
 
 The tracked [public key](../../../release/ki-release-signing-public.pem) must match the private key stored in GitHub; the workflow compares them before it signs a release.
 
-## Configure GitHub release protection
+## Configure the solo-maintainer release environment
 
 The release workflow reads `KI_RELEASE_SIGNING_KEY` only from a GitHub Actions **environment secret**. Do not create it as a general repository secret: a release tag could otherwise select workflow code that reads it.
 
-1. Add a second, trusted GitHub account to `knowledgeislands/tools-ki` with at least **Read** access. This account is the independent release reviewer; it must not be the account that starts a release. A trusted colleague or separately controlled account is suitable.
-2. Protect `main`: open **Settings** → **Rules** → **Rulesets** → **New branch ruleset**; target `main`; require pull requests and one approving review from the independent account. Do not permit bypass for the release publisher.
-3. Open **Settings** → **Environments** → **New environment** and name it `release`. Under deployment branches and tags, select only `main` (or **Protected branches only** after the `main` ruleset is active).
-4. Under deployment protection rules, enable **Required reviewers**, select the independent account, and enable **Prevent self-review**. Disable any administrator bypass option.
-5. Under **Environment secrets**, add `KI_RELEASE_SIGNING_KEY` and paste the private PEM file contents. Never paste that file into chat, an issue, or a repository file.
+This is the active configuration for a sole maintainer; it does not need a second GitHub account:
 
-GitHub exposes an environment secret to the publisher job only after the protection rules pass. See [GitHub's guide to environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments) and [managing environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
+1. Open **Settings** → **Environments** → **New environment** and name it `release`.
+2. Under deployment branches and tags, select **Selected branches and tags**, add a **Branch** rule, and enter `main`. Do not allow tags or other branches to deploy.
+3. Do not configure **Required reviewers** while this is a solo-maintainer repository: a required review would prevent you from completing a release.
+4. Under **Environment secrets**, add `KI_RELEASE_SIGNING_KEY` and paste the private PEM file contents. Never paste that file into chat, an issue, or a repository file.
+
+The workflow is manually dispatched from `main` and the secret is scoped to its `release` publishing job rather than to the repository's other workflows. See [GitHub's guide to environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments) and [managing environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
+
+## Future: team release protection
+
+When a second trusted maintainer joins, strengthen the above configuration with a genuine two-person approval gate:
+
+1. Give the independent reviewer at least **Read** access to `knowledgeislands/tools-ki`.
+2. Protect `main` with a ruleset that requires pull requests and one approving review from that person, without a release-publisher bypass.
+3. In the `release` environment, enable **Required reviewers**, select that person, enable **Prevent self-review**, and disable administrator bypass.
+
+A separate GitHub account controlled by the same person can add a small operational barrier, but it is not an independent review. This is future hardening guidance, not a roadmap item.
 
 ## Publish a release
 
@@ -55,6 +66,6 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-Open **Actions** → **Release** → **Run workflow**, choose `main`, and enter the same `vX.Y.Z` version. The independent reviewer approves the pending `release` deployment. The workflow builds the three archives, signs the manifest, creates a draft release, re-downloads and verifies its published assets, then publishes it.
+Open **Actions** → **Release** → **Run workflow**, choose `main`, and enter the same `vX.Y.Z` version. The workflow builds the three archives, signs the manifest, creates a draft release, re-downloads and verifies its published assets, then publishes it. If future team protection is enabled, the independent reviewer approves the pending `release` deployment first.
 
 After the first verified release, update the Homebrew tap and the KI Website install redirect in their owning repositories.
