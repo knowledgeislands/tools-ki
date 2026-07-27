@@ -8,6 +8,14 @@ code: CLI
 
 Actively broken, or blocking the `Next` horizon: takes priority over everything else and must clear before `Next` work proceeds. Empty means nothing is on fire.
 
+### Activate skills only for compatible runtimes
+
+Read explicit runtime compatibility from installed skill metadata and link a user- or repository-scoped skill only into configured agents for compatible runtimes. Keep removal broad enough to clean stale KI-managed projections after compatibility changes.
+
+Received from `ki-agentic-harness` [RTP-002](../../../../ki-agentic-harness/docs/roadmap/runtime-portability/plans/RTP-002-runtime-explicit-environment-capabilities.md); blocks completion of that plan's fleet migration.
+
+**Plan:** [CLI-003](plans/CLI-003-activate-skills-only-for-compatible-runtimes.md)
+
 ## Next
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
