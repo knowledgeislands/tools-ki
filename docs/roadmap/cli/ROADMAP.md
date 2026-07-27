@@ -20,6 +20,10 @@ Understood and roughly scoped but not yet started — worth doing once the **Nex
 
 Implement the defined capability inventory, status, maintenance, and upgrade forms: `ki list`, `ki missing`, `ki outdated`, `ki install`, `ki reinstall`, `ki uninstall`, `ki update`, and CWD-resolved `ki upgrade`. Retain `ki harness list` as the harness-focused inventory and preserve KI's verified-harness and explicit-scope boundaries.
 
+### Exit `ki doctor` non-zero on failing checks
+
+`ki doctor` prints `✗` for failing checks (missing configuration, missing harnesses, unlinked skills) but always exits 0, so it can't be used as a script/CI gate. Decide the exit-code contract (e.g. non-zero if any check is `fail`) and update the CLI-005 contract test at `src/tests/cli/doctor.test.ts` alongside the fix.
+
 ### Deliver `ki(1)` through the Homebrew formula
 
 Signed release archives and the installer already package `ki(1)`. Deliver the same manual through the Homebrew formula as part of V1 release delivery, keep it aligned with `ki help`, and distinguish released commands from planned work.
@@ -35,10 +39,6 @@ Speculative or not yet scoped — items marked _(candidate)_ need a scoping pass
 ### Persist qualified capability identities in repository declarations _(candidate)_
 
 Require each declared skill in `.ki-config.toml` to carry its resolved `<harness-id>:<skill-name>` identity, rather than retaining a bare skill name after resolution. Choose a TOML representation that remains safe and legible, update activation, resolver, migration, diagnostics, and fixtures together, and migrate every existing declaration in one current-state change. Do not retain bare-name fallback or dual configuration paths after the migration; ambiguity should be impossible from the repository declaration itself.
-
-### Exit `ki doctor` non-zero on failing checks _(candidate)_
-
-`ki doctor` prints `✗` for failing checks (missing configuration, missing harnesses, unlinked skills) but always exits 0, so it can't be used as a script/CI gate. Decide the exit-code contract (e.g. non-zero if any check is `fail`) and update the CLI-005 contract test at `src/tests/cli/doctor.test.ts` alongside the fix.
 
 ### Harden user harness installation and runtime skill publication
 

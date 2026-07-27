@@ -15,6 +15,7 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
 - [Cli: Deliver `ki(1)` through the Homebrew formula](docs/roadmap/cli/ROADMAP.md#deliver-ki1-through-the-homebrew-formula)
+- [Cli: Exit `ki doctor` non-zero on failing checks](docs/roadmap/cli/ROADMAP.md#exit-ki-doctor-non-zero-on-failing-checks)
 - [Cli: Implement capability package-management commands](docs/roadmap/cli/ROADMAP.md#implement-capability-package-management-commands)
 
 ## Waiting for
@@ -26,6 +27,5 @@ Worth doing, but presently blocked on an external dependency or decision. Revisi
 Speculative or not yet scoped — items marked _(candidate)_ need a scoping pass (or a decision to drop them) before they're actionable.
 
 - [Cli: Define cross-repository skill vendor provenance _(candidate)_](docs/roadmap/cli/ROADMAP.md#define-cross-repository-skill-vendor-provenance-candidate)
-- [Cli: Exit `ki doctor` non-zero on failing checks _(candidate)_](docs/roadmap/cli/ROADMAP.md#exit-ki-doctor-non-zero-on-failing-checks-candidate)
 - [Cli: Harden user harness installation and runtime skill publication](docs/roadmap/cli/ROADMAP.md#harden-user-harness-installation-and-runtime-skill-publication)
 - [Cli: Persist qualified capability identities in repository declarations _(candidate)_](docs/roadmap/cli/ROADMAP.md#persist-qualified-capability-identities-in-repository-declarations-candidate)
