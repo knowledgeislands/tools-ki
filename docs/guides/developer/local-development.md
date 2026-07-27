@@ -91,7 +91,7 @@ chmod 644 "$key_dir/ki-release-signing-public.pem"
 
 Keep `ki-release-signing-key.pem` private: do not commit it, paste it into chat, or send it by email. The public-key file is safe to commit and distribute.
 
-In GitHub, open the `knowledgeislands/tools-ki` repository, then select **Settings** → **Secrets and variables** → **Actions** → **New repository secret**. Name the secret `KI_RELEASE_SIGNING_KEY`, and paste the complete private-key file into its value field. You need repository write access; GitHub encrypts the secret and makes it available only to authorized workflow runs. See [GitHub's guide to repository secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets?tool=webui).
+Do not create `KI_RELEASE_SIGNING_KEY` as a general repository secret. A release tag can otherwise select workflow code that reads it. Instead, in GitHub open `knowledgeislands/tools-ki`, select **Settings** → **Environments** → **New environment**, and create `release`. Require a reviewer other than the person publishing the release, prevent self-approval or bypass, and limit deployment to protected release tags. Add `KI_RELEASE_SIGNING_KEY` under that environment's **Environment secrets**. GitHub exposes an environment secret to a job only after its protection rules pass. See [GitHub's guide to environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments) and [repository secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets?tool=webui).
 
 Copy the private key directly from the file rather than printing it into a shared terminal or chat transcript:
 
