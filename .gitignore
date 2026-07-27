@@ -1,3 +1,8 @@
 node_modules/
 dist/
 coverage/
+
+# KI-managed repository skill projections are machine-local.
+.claude/skills/*
+.claude/agents/
+.agents/skills/*
