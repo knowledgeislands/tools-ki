@@ -1,7 +1,7 @@
 ---
 id: 'CLI-002'
 title: Host generated rubric-publication capability
-status: acceptance
+status: done
 roadmap: cli/host-generated-rubric-publication-capability
 blocks: —
 blocked-by: —
@@ -93,3 +93,11 @@ None. The capability deliberately does not provide cross-file rollback; its incr
 ### Mini recap
 
 The host contract and receiving harness policy are now aligned, verified, and complete. No learning route is proposed; the plan is ready for manual acceptance.
+
+## Done
+
+CLI-002 completed after manual acceptance. The host now owns validated structured-rubric rendering, criterion-agnostic publication evidence, and guarded incremental publication across standalone and repository paths.
+
+Residual concerns: None for this plan.
+
+Follow-up: retain this done record until the related command-delivery tranche is ready for a confirmed prune; CLI-003 and then its dependent CLI-004 remain the next unstarted V1 command plans.
