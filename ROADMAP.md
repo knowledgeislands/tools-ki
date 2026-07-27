@@ -11,6 +11,7 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
 - [Cli: Define `ki missing` and `ki outdated` capability status](docs/roadmap/cli/ROADMAP.md#define-ki-missing-and-ki-outdated-capability-status)
+- [Cli: Host generated rubric-publication capability](docs/roadmap/cli/ROADMAP.md#host-generated-rubric-publication-capability)
 
 ## Soon
 

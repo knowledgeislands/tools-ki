@@ -18,6 +18,12 @@ Define the desired capability set and release-status evidence required for read-
 
 **Plan:** [CLI-001](plans/CLI-001-define-missing-and-outdated-capability-status.md)
 
+### Host generated rubric-publication capability
+
+Provide the narrow host capability required for `ki repo audit` and `ki repo conform` to assess and publish generated skill rubric publications. The host owns validated catalogue loading, canonical rendered bytes, guarded transactional publication, rollback, re-audit, and standalone parity. The harness's `ki-skills` capability owns the policy criterion, drift findings, and derived write proposals; neither side duplicates the other's concern.
+
+**Plan:** [CLI-002](plans/CLI-002-host-generated-rubric-publication-capability.md)
+
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
