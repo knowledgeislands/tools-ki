@@ -1,6 +1,7 @@
 import { Command, CommanderError } from 'commander'
 import { createAcquireCommand } from './commands/acquire.ts'
 import { createBootstrapCommand } from './commands/bootstrap.ts'
+import { createMissingCommand, createOutdatedCommand } from './commands/capability-status.ts'
 import { createCompletionsCommand } from './commands/completions.ts'
 import { createDevCommand } from './commands/dev.ts'
 import { createDiagCommand } from './commands/diag.ts'
@@ -28,6 +29,8 @@ export const createProgram = (context: KiContext): Command => {
   program.addCommand(createDoctorCommand(context))
   program.addCommand(createHarnessCommand(context))
   program.addCommand(createListCommand(context))
+  program.addCommand(createMissingCommand(context))
+  program.addCommand(createOutdatedCommand(context))
   program.addCommand(createRepoCommand(context))
   program.addCommand(createSkillCommand(context))
   program.addCommand(createVersionCommand(context))

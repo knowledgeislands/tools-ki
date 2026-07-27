@@ -20,11 +20,11 @@ Before KI adds capability lifecycle and update operations, users need read-only 
 
 ## Steps
 
-1. Define the read-only status contract for `ki missing` and `ki outdated`: desired user and CWD-resolved repository capabilities, installed verified harnesses, applicable release evidence, output and exit semantics, and the honest outcome when no comparable freshness evidence exists.
-2. Add a shared host-owned capability-status collector that reads user configuration, an optional resolved repository declaration, the installed harness inventory, and configured immutable release evidence without mutating state or using network access.
-3. Implement `ki missing` and `ki outdated` using that collector, with deterministic human output and explicit distinctions between unavailable capabilities, installed sources, active declarations, and unavailable freshness evidence.
-4. Register the commands, update help, completion coverage, `ki(1)`, and the V1 capability baseline without exposing later lifecycle or update commands prematurely.
-5. Add CLI-contract tests for empty and configured state, user and repository scopes, missing providers, ambiguous or malformed state, stable ordering, no-network status execution, and unchanged failure semantics; keep full coverage intact.
+1. ✓ Define the read-only status contract for `ki missing` and `ki outdated`: desired user and CWD-resolved repository capabilities, installed verified harnesses, applicable release evidence, output and exit semantics, and the honest outcome when no comparable freshness evidence exists.
+2. ✓ Add a shared host-owned capability-status collector that reads user configuration, an optional resolved repository declaration, the installed harness inventory, and configured immutable release evidence without mutating state or using network access.
+3. ✓ Implement `ki missing` and `ki outdated` using that collector, with deterministic human output and explicit distinctions between unavailable capabilities, installed sources, active declarations, and unavailable freshness evidence.
+4. ✓ Register the commands, update help, completion coverage, `ki(1)`, and the V1 capability baseline without exposing later lifecycle or update commands prematurely.
+5. ✓ Add CLI-contract tests for empty and configured state, user and repository scopes, missing providers, ambiguous or malformed state, stable ordering, no-network status execution, and unchanged failure semantics; keep full coverage intact.
 
 ## Files touched
 
@@ -39,7 +39,7 @@ Before KI adds capability lifecycle and update operations, users need read-only 
 1. `ki missing --help` and `ki outdated --help` describe only the approved read-only status contracts.
 2. Sandboxed CLI tests prove deterministic output for no configuration, installed and missing harnesses, user activation, a CWD-resolved repository declaration, and absent comparable release evidence without network access.
 3. `bun run test` and `bun run test:coverage` pass with the repository's required 100% coverage thresholds.
-4. `bunx biome check .`, `bunx tsc --noEmit`, `bunx knip`, `bash -n install.sh`, `bunx prettier --check CHANGELOG.md man/ki.1`, and `git diff --check` pass.
+4. `bunx biome check .`, `bunx tsc --noEmit`, `bunx knip`, `bash -n install.sh`, `bunx prettier --check CHANGELOG.md`, and `git diff --check` pass.
 5. `ki missing`, `ki outdated`, and their help output work against the current local installation without changing XDG or repository state.
 
 ## Dependencies / blocks

@@ -97,12 +97,16 @@ const inspectCreateTarget = async (repository: string, path: string, absolutePat
     if (parentState) {
       if (!parentState.isDirectory() || parentState.isSymbolicLink())
         throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+      // A concurrent deletion after lstat is not reachable through one CLI invocation.
+      /* v8 ignore next */
       const physicalParent = await realpath(parent).catch(() => undefined)
+      /* v8 ignore next -- A physical existing parent was validated above; only a concurrent replacement can violate this. */
       if (!physicalParent || !isContained(repository, physicalParent))
         throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
       return
     }
     const next = dirname(parent)
+    /* v8 ignore next -- A safe relative target starts below the repository, so ascent cannot escape without a concurrent replacement. */
     if (next === parent || !isContained(repository, next))
       throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
     parent = next
@@ -112,6 +116,7 @@ const inspectCreateTarget = async (repository: string, path: string, absolutePat
 const ensureCreateParent = async (repository: string, path: string, absolutePath: string): Promise<readonly string[]> => {
   const parent = dirname(absolutePath)
   const relativeParent = relative(repository, parent)
+  /* v8 ignore next -- Prepared create targets are safe relative paths beneath the resolved repository. */
   if (!isContained(repository, parent) || (!relativeParent && parent !== repository))
     throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
   const created: string[] = []
@@ -122,10 +127,16 @@ const ensureCreateParent = async (repository: string, path: string, absolutePath
     if (!state) {
       await mkdir(current)
       created.push(current)
+      // A concurrent removal immediately after mkdir is not reachable through one CLI invocation.
+      /* v8 ignore next */
       state = await lstat(current).catch(() => undefined)
     }
+    /* v8 ignore next -- Current was either a physical existing directory or created and rechecked above. */
     if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+    // A concurrent replacement after lstat is not reachable through one CLI invocation.
+    /* v8 ignore next */
     const physicalDirectory = await realpath(current).catch(() => undefined)
+    /* v8 ignore next -- Current was validated as a contained physical directory above. */
     if (!physicalDirectory || !isContained(repository, physicalDirectory))
       throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
   }
@@ -200,6 +211,7 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
     for (const write of writes) {
       if (!write.create) continue
       for (const directory of await ensureCreateParent(write.repository, write.path, write.absolutePath)) {
+        /* v8 ignore next -- A directory is returned only when this transaction created it; duplicate return values require concurrent replacement. */
         if (!createdDirectories.includes(directory)) createdDirectories.push(directory)
       }
       await inspectCreateTarget(write.repository, write.path, write.absolutePath)
@@ -243,7 +255,11 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
   } finally {
     await Promise.all([...temporary.values()].map(async (path) => rm(path, { force: true })))
     if (!publishedSuccessfully) {
-      for (const directory of createdDirectories.reverse()) await rmdir(directory).catch(() => undefined)
+      for (const directory of createdDirectories.reverse()) {
+        // A third party must replace the transaction-owned empty directory to make this catch reachable.
+        /* v8 ignore next */
+        await rmdir(directory).catch(() => undefined)
+      }
     }
   }
 }

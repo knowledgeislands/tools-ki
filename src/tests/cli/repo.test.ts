@@ -1005,6 +1005,71 @@ export default {
       await expect(box.project.read('missing/created.txt')).resolves.toBe('created\n')
     })
 
+    test('creates an explicit target beneath an existing repository directory', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.mkdir('existing')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async ({ repository }) => {
+            const { existsSync } = await import('node:fs')
+            return existsSync(repository + '/existing/created.txt')
+              ? [{ status: 'PASS', message: 'created' }]
+              : [{ status: 'VIOLATION', message: 'missing' }]
+          },
+          conform: async () => ({ writes: [{ path: 'existing/created.txt', content: 'created\\n', create: true }] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(0)
+      await expect(box.project.read('existing/created.txt')).resolves.toBe('created\n')
+    })
+
+    test('refuses nested create targets below a file or symbolic-link parent', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.write('blocked', 'not a directory\n')
+      await box.root.mkdir('outside')
+      await symlink(`${box.root.path}/outside`, `${box.project.path}/linked`)
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'missing' }],
+          conform: async () => ({ writes: [
+            { path: 'blocked/created.txt', content: 'created\\n', create: true },
+            { path: 'linked/created.txt', content: 'created\\n', create: true }
+          ] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('direct conform create target blocked/created.txt escapes the repository')
+    })
+
+    test('refuses a nested create target below a symbolic-link parent', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.root.mkdir('outside')
+      await symlink(`${box.root.path}/outside`, `${box.project.path}/linked`)
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'missing' }],
+          conform: async () => ({ writes: [{ path: 'linked/created.txt', content: 'created\\n', create: true }] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('direct conform create target linked/created.txt escapes the repository')
+    })
+
     test('conforms a declared user-home path transactionally', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')

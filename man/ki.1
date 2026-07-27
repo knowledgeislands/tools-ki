@@ -22,6 +22,14 @@ Check user configuration, agents, harnesses, and user-skill links.
 List verified installed harnesses and capabilities with declared user and
 CWD-resolved repository skills.
 .TP
+.B ki missing
+Report desired user and CWD-resolved repository capabilities that have no
+installed provider.
+.TP
+.B ki outdated
+Report installed harnesses only when comparable newer release evidence is
+available; it names unavailable evidence rather than claiming freshness.
+.TP
 .B ki version
 Print the CLI version.
 .TP
@@ -163,10 +171,6 @@ Update the executable and refresh installed harnesses.
 .TP
 .B *ki upgrade
 Apply newer capability releases in the resolved repository context.
-.TP
-.B *ki missing|outdated
-Report capabilities absent from the selected scope or with a newer verified
-latest release available.
 .TP
 .B *ki search|cleanup
 Search the available capability set or remove managed stale state.
