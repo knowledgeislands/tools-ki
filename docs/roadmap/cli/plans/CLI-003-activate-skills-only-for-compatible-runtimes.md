@@ -1,7 +1,7 @@
 ---
 id: 'CLI-003'
 title: Activate skills only for compatible runtimes
-status: acceptance
+status: done
 roadmap: cli/activate-skills-only-for-compatible-runtimes
 blocks: —
 blocked-by: —
@@ -84,3 +84,7 @@ None.
 ### Mini recap
 
 Runtime compatibility belongs to installed capability metadata, not naming inference. Activation intersects that metadata with configured agents and repository runtime intent, while removal deliberately remains broader so obsolete managed links stay recoverable.
+
+## Done
+
+Completed runtime-compatible skill activation across user and repository scopes, including runtime-aware diagnostics and recoverable stale-link removal. No residual concerns. No intended follow-up.
