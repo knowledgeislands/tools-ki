@@ -17,6 +17,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki diag`
 - `ki doctor`
 - `ki harness`
+- `ki list`
 - `ki repo audit`
 - `ki repo conform`
 - `ki skill`

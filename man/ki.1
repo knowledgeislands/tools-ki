@@ -18,6 +18,10 @@ Show installation mode, paths, and user configuration.
 .B ki doctor
 Check user configuration, agents, harnesses, and user-skill links.
 .TP
+.B ki list
+List verified installed harnesses and capabilities with declared user and
+CWD-resolved repository skills.
+.TP
 .B ki version
 Print the CLI version.
 .TP
@@ -148,6 +152,11 @@ configuration is reused without replacement. Pass
 .B --refresh
 to redetect every supported runtime and rebuild the user configuration's
 agents, installed harnesses, and KI-managed user skill links.
+.TP
+.B list
+List verified installed harnesses and their capabilities, declared user skills,
+and declared repository skills when the current working directory resolves to a
+KI repository. The command does not fetch or change state.
 .TP
 .B *ki update
 Update the executable and refresh installed harnesses.

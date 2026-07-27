@@ -21,16 +21,17 @@ baseline-ref: 0cd15ad372b5050c6f2be014d0131a337a93f1c8
 ## Steps
 
 1. ✓ Settle the `ki list` contract: it takes no arguments or options, does not fetch or mutate, inventories verified installed harnesses and their capabilities, lists declared user skills, and lists declared repository skills only when CWD resolves a KI repository.
-2. Implement the command through injected context capabilities and existing installed-harness, user-configuration, and repository-declaration readers; retain existing errors for unsafe inventory and invalid declaration inputs.
-3. Add CLI-contract coverage for populated and empty inventory, user activation, CWD-resolved repository activation, no resolved repository, invalid grammar, and no-mutation behaviour.
-4. Register `ki list` in the root CLI, HELP, completions, `ki(1)`, and the V1 changelog baseline; leave all unimplemented package-management commands out of the public surface.
-5. Run the complete quality gate and verify representative populated and empty sandboxes.
+2. ✓ Implement the command through injected context capabilities and existing installed-harness, user-configuration, and repository-declaration readers; retain existing errors for unsafe inventory and invalid declaration inputs.
+3. ✓ Add CLI-contract coverage for populated and empty inventory, user activation, CWD-resolved repository activation, no resolved repository, invalid grammar, and no-mutation behaviour.
+4. ✓ Register `ki list` in the root CLI, HELP, completions, `ki(1)`, and the V1 changelog baseline; leave all unimplemented package-management commands out of the public surface.
+5. ✓ Run the complete quality gate and verify representative populated and empty sandboxes.
 
 ## Files touched
 
 - `src/commands/list.ts`, root command registration, and completion catalogue
 - `src/tests/cli/` list, HELP, and completion contracts
 - `CHANGELOG.md`, `man/ki.1`, and relevant user documentation
+- `docs/decisions/ADR-KI-TOOLS-002-compatible-harness-registry-and-native-operations.md`
 
 ## Verify
 

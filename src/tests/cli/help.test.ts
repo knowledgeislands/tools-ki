@@ -7,6 +7,7 @@ describe('[ki help]', () => {
     const root = await box.run('ki')
     const help = await box.run('ki --help')
     const nested = await box.run('ki help acquire chatgpt import')
+    const list = await box.run('ki help list')
     const repository = await box.run('ki repo --help')
     const unknown = await box.run('ki help missing')
 
@@ -14,6 +15,7 @@ describe('[ki help]', () => {
     expect(help.exitCode).toBe(0)
     expect(help.output).toContain('acquire')
     expect(nested.exitCode).toBe(0)
+    expect(list.output).toContain('list installed harness capabilities and declared skills')
     expect(repository.output).toContain('educate')
     expect(unknown).toEqual({ exitCode: 2, output: 'ki: error: unknown help topic: missing\n' })
   })
