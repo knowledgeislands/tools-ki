@@ -1,3 +1,5 @@
+import { mkdir, rm, symlink, unlink } from 'node:fs/promises'
+import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
@@ -130,5 +132,143 @@ ids = ["chatgpt-codex", 5]
 
     expect(bootstrapped.exitCode).toBe(1)
     expect(bootstrapped.output).toContain('ki configuration must declare an agents.ids string array and an optional local.path')
+  })
+
+  test('rejects duplicate configured agents', async () => {
+    const box = await sandbox()
+    await box.config.write(
+      'ki/config.toml',
+      `schema = 1
+
+[agents]
+ids = ["claude-code", "claude-code"]
+`
+    )
+
+    const bootstrapped = await box.run('ki bootstrap')
+
+    expect(bootstrapped).toEqual({ exitCode: 1, output: 'ki: error: agent configuration repeats an agent\n' })
+  })
+
+  test('rejects a configuration file that is a directory', async () => {
+    const box = await sandbox()
+    await box.config.mkdir('ki/config.toml')
+
+    const bootstrapped = await box.run('ki bootstrap')
+
+    expect(bootstrapped).toEqual({ exitCode: 1, output: 'ki: error: agent configuration must be a regular file\n' })
+  })
+
+  test('rejects a non-table agents or local section', async () => {
+    const agentSection = await sandbox()
+    await agentSection.config.write(
+      'ki/config.toml',
+      `schema = 1
+agents = "not-a-table"
+`
+    )
+    const localSection = await sandbox()
+    await localSection.config.write(
+      'ki/config.toml',
+      `schema = 1
+local = "not-a-table"
+
+[agents]
+ids = ["claude-code"]
+`
+    )
+
+    const rejectedAgents = await agentSection.run('ki bootstrap')
+    const rejectedLocal = await localSection.run('ki bootstrap')
+
+    expect(rejectedAgents).toEqual({
+      exitCode: 1,
+      output: 'ki: error: ki configuration must declare an agents.ids string array and an optional local.path\n'
+    })
+    expect(rejectedLocal).toEqual({
+      exitCode: 1,
+      output: 'ki: error: ki configuration must declare an agents.ids string array and an optional local.path\n'
+    })
+  })
+
+  test('rejects a configuration location whose parent is not a directory', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.config.write('ki', 'not a directory')
+
+    const bootstrapped = await box.run('ki bootstrap')
+
+    expect(bootstrapped).toEqual({ exitCode: 1, output: 'ki: error: ki configuration directory must be a directory\n' })
+  })
+
+  test('detects both physical agent homes when creating configuration', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.setupAgentHome('chatgpt-codex')
+
+    const bootstrapped = await box.run('ki bootstrap')
+
+    expect(bootstrapped.exitCode).toBe(0)
+    expect(bootstrapped.output).toContain('created KI agent configuration for claude-code, chatgpt-codex')
+  })
+
+  test('uses a configured agent’s repository skill path when linking a repository skill', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.setupExampleHarness()
+    await box.project.write('.ki-config.toml', '# repository declarations\n')
+    await box.run('ki bootstrap')
+
+    const added = await box.run(`ki skill repo add ki-example --repo ${box.project.path}`)
+
+    expect(added.exitCode).toBe(0)
+    expect(added.output).toContain('ki skill repo add: linked ki-example into ')
+    expect(added.output).toContain(' for claude-code\n')
+    expect(await box.project.isSymlink('.claude/skills/ki-example')).toBe(true)
+  })
+
+  test('reports an empty detected inventory when creating and refreshing configuration', async () => {
+    const box = await sandbox()
+    await box.setupCanonicalHarness()
+
+    const created = await box.run('ki bootstrap')
+    const refreshed = await box.run('ki bootstrap --refresh')
+
+    expect(created.output).toContain('created KI agent configuration for no detected agents')
+    expect(refreshed.output).toContain('refreshed KI agents: none')
+  })
+
+  test('refuses an installed canonical harness missing a required bootstrap skill', async () => {
+    const box = await sandbox()
+    await box.setupCanonicalHarness()
+    await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills/process/ki-recap`, { recursive: true })
+
+    const bootstrapped = await box.run('ki bootstrap')
+
+    expect(bootstrapped).toEqual({
+      exitCode: 1,
+      output:
+        'created KI agent configuration for no detected agents\ncanonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c\nki: error: installed harness knowledgeislands/ki-agentic-harness does not provide ki-recap\n'
+    })
+  })
+
+  test('refresh ignores a dangling managed link and a non-link skill entry', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.setupExampleHarness()
+    await box.run('ki bootstrap')
+    await box.run('ki skill user add ki-example')
+    const skillDirectory = join(box.home.path, '.claude', 'skills')
+    const target = join(skillDirectory, 'ki-example')
+    await unlink(target)
+    await symlink(join(box.root.path, 'missing-skill'), target, 'dir')
+    await mkdir(join(skillDirectory, 'notes'))
+
+    const refreshed = await box.run('ki bootstrap --refresh')
+    const config = await box.config.read('ki/config.toml')
+
+    expect(refreshed.exitCode).toBe(0)
+    expect(refreshed.output).toContain('refreshed ki configuration: 1 agents, 2 harnesses, 5 skills')
+    expect(config).not.toContain('[skills.ki-example]')
   })
 })

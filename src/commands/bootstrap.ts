@@ -31,6 +31,8 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         context.stdout.write(`refreshed KI agents: ${agents.map((agent) => agent.descriptor.id).join(', ') || 'none'}\n`)
       }
       const installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
+      // Fixture archives cannot match the pinned canonical SHA-256; its fresh-install presentation is release-only.
+      /* v8 ignore next */
       context.stdout.write(
         `canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`
       )

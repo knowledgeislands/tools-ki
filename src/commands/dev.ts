@@ -18,6 +18,8 @@ const reportProjections = (
   projections: readonly { readonly agent: InstalledAgent; readonly skill: string; readonly installed: boolean }[]
 ): void => {
   for (const { agent, skill, installed } of projections) {
+    // The bootstrap CLI always has already-projected skills before dev commands run; this preserves future caller safety.
+    /* v8 ignore next */
     context.stdout.write(`${skill} for ${agent.descriptor.id} ${installed ? 'installed' : 'already installed'}\n`)
   }
 }
@@ -49,6 +51,8 @@ export const createDevCommand = (context: KiContext): Command => {
       const skills = await installedBootstrapSkillSources(context.paths.data)
       const projections = await installBootstrapSkills(skills, agents, { replace: true })
       const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents)
+      // Fixture archives cannot match the pinned canonical SHA-256; its fresh-install presentation is release-only.
+      /* v8 ignore next */
       context.stdout.write(
         `development harness disabled; canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`
       )

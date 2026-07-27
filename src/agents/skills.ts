@@ -81,7 +81,7 @@ const installedSkillSource = async (
   return { skill: { name, source }, harness: match.harness.id }
 }
 
-const skillNameOf = (identity: string): string => (identity.includes(':') ? identity.slice(identity.lastIndexOf(':') + 1) : identity)
+const skillNameOf = (identity: string): string => identity.slice(identity.lastIndexOf(':') + 1)
 
 export const addUserSkill = async (options: {
   readonly configurationDirectory: string

@@ -16,6 +16,8 @@ export const readDeclaredSkills = async (configurationPath: string): Promise<rea
   } catch {
     throw new KiError('.ki-config.toml must be valid TOML', 1)
   }
+  // A successfully parsed TOML document is always a table; this only guards a future parser change.
+  /* v8 ignore next */
   if (!isRecord(parsed)) throw new KiError('.ki-config.toml must be a table', 1)
   return Object.entries(parsed)
     .filter(([name]) => name.startsWith('ki-'))
@@ -41,7 +43,7 @@ export const undeclareRepositorySkill = async (configurationPath: string, skill:
   const start = lines.findIndex((line) => line.trim() === `[${skill}]`)
   if (start === -1) return false
   let end = start + 1
-  while (end < lines.length && !(lines[end]?.trimStart().startsWith('[') ?? false)) end += 1
+  while (end < lines.length && !(lines[end] as string).trimStart().startsWith('[')) end += 1
   const from = start > 0 && lines[start - 1]?.trim() === '' ? start - 1 : start
   lines.splice(from, end - from)
   await writeFile(configurationPath, lines.join('\n'), 'utf8')

@@ -93,4 +93,53 @@ ids = [
     expect(doctor.output).toContain('✗ Agents: unknown agent unknown-agent; use claude-code or chatgpt-codex')
     expect(doctor.output).toContain('○ User skills: agents are unavailable')
   })
+
+  test('reports a configured skill whose link is absent', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.config.write(
+      'ki/config.toml',
+      `schema = 1
+
+[agents]
+ids = ["claude-code"]
+
+[harnesses]
+ids = []
+
+[skills.ki-example]
+harness = "example/harness"
+`
+    )
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).toContain('✗ User skill ki-example: not linked for every configured agent')
+  })
+
+  test('reports an empty quoted skill key as an invalid managed user-skill identity', async () => {
+    const box = await sandbox()
+    await box.config.write(
+      'ki/config.toml',
+      `schema = 1
+
+[agents]
+ids = []
+
+[harnesses]
+ids = []
+
+[skills.""]
+harness = "example/harness"
+`
+    )
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor).toEqual({
+      exitCode: 0,
+      output: expect.stringContaining('✓ Configuration:')
+    })
+    expect(doctor.output).toContain('✗ User skill example/harness:: invalid identity')
+  })
 })

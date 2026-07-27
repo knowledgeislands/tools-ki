@@ -1,5 +1,4 @@
 import { join, resolve } from 'node:path'
-import { KiError } from '../core/errors.ts'
 import { agentDescriptors, type InstalledAgent, physicalDirectory, skillCapability } from './internal.ts'
 
 export const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAgent[]> => {
@@ -14,9 +13,5 @@ export const detectAgents = async (homeDirectory: string): Promise<readonly Inst
 export const agentSkillDirectory = (agent: InstalledAgent, scope: 'user' | 'repo', repository?: string): string => {
   const skillPath = skillCapability(agent)
   if (scope === 'user') return join(agent.home, 'skills')
-  if (repository) return join(repository, skillPath)
-  // Every repo-scope call site resolves a repository via resolveRepository() before reaching
-  // here, so this defends only against a future caller that skips that resolution.
-  /* v8 ignore next */
-  throw new KiError('repository scope requires a repository', 2)
+  return join(repository as string, skillPath)
 }

@@ -136,9 +136,48 @@ describe('[ki repo]', () => {
 
       expect(result).toEqual({ exitCode: 0, output: 'ki repo educate: no declared skills\n' })
     })
+
+    test('renders an explicitly declared repository scope', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric('[]').replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'repository' },")
+      })
+
+      const result = await box.run('ki repo educate')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('  Scope: repository\n')
+    })
+
+    test('renders user-home scope and a heuristic hybrid item in the static catalogue', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          code: 'HYBRID-1', title: 'Heuristic hybrid',
+          mechanical: { level: 'WARN', heuristic: true, audit: { phase: 'PRIMARY', run: async () => [] } },
+          judgment: { prompt: 'Review the result.' }
+        }] }]`).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+      })
+
+      const result = await box.run('ki repo educate')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('  Scope: user home (.managed)\n')
+      expect(result.output).toContain('HYBRID-1 [M-heuristic + J]: Heuristic hybrid')
+    })
   })
 
   describe('repo audit', () => {
+    test('requires a resolved KI repository', async () => {
+      const box = await sandbox()
+
+      const result = await box.run('ki repo audit')
+
+      expect(result).toEqual({ exitCode: 2, output: 'ki: error: no KI repository found from the current working directory\n' })
+    })
+
     test("runs only a declared skill's mechanical rubric items", async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
@@ -197,6 +236,29 @@ describe('[ki repo]', () => {
   ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
 `
       })
+    })
+
+    test('reports an interactive zero-item audit as complete', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+
+      const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('AUDIT      [################################] 0/0 100% starting')
+      expect(result.output).toContain('AUDIT      [################################] 0/0 100% complete')
+    })
+
+    test('uses the fallback progress width when a TTY reports an invalid column count', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+
+      const result = await box.run('ki repo audit', { interactive: true, columns: Number.NaN, now: () => 0 })
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('AUDIT      [################################] 0/0 100% complete')
     })
 
     test('renders per-rubric progress with bounded three-column TTY status without changing non-interactive output', async () => {
@@ -259,6 +321,42 @@ describe('[ki repo]', () => {
   ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
 `
       })
+    })
+
+    test.each([
+      [Number.MIN_VALUE, ''],
+      [1, '.'],
+      [3, '...'],
+      [8, '0.0s ...']
+    ])('renders a safe abbreviated TTY progress frame at %p columns', async (columns, expected) => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY', audit: async () => []
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo audit', { interactive: true, columns, now: () => 0 })
+      const frames = result.output
+        .split('\r\x1b[2K')
+        .slice(1)
+        .map((frame) => frame.replace('\n', ''))
+
+      expect(result.exitCode).toBe(0)
+      expect(frames[0]).toBe(expected)
+    })
+
+    test('finishes an interactive progress line when loading a malformed provider fails', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ rubric: 'this is not valid javascript syntax {{{\n' })
+
+      const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('\r\x1b[2K')
+      expect(result.output).toContain('\nki: error: example/harness:ki-example rubric catalogue could not be imported')
     })
 
     test('rejects a repository configuration that is not valid TOML', async () => {
@@ -325,6 +423,25 @@ describe('[ki repo]', () => {
   ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
 `
       })
+    })
+
+    test('inherits a rubric-session subject when an outcome leaves it unspecified', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async () => [{ status: 'INFO', message: 'ok' }]
+        }] }]`).replace(
+          'subjects: [{ families: Array.isArray(families) ? families.map(({ code }) => code) : [], context: () => context }]',
+          "subjects: [{ families: Array.isArray(families) ? families.map(({ code }) => code) : [], context: () => context, subject: 'workspace' }]"
+        )
+      })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('[Example (EXAMPLE-1)] workspace — ok')
     })
 
     test('executes a full direct catalogue with family context selection, hybrid judgment, and a declared level override', async () => {
@@ -781,6 +898,168 @@ export default {
       await expect(box.project.read('created.txt')).resolves.toBe('created\n')
     })
 
+    test('refuses an explicit create target whose parent does not exist', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          conform: async () => ({ writes: [{ path: 'missing/created.txt', content: 'created\\n', create: true }] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('direct conform create target missing/created.txt escapes the repository')
+    })
+
+    test('conforms a declared user-home path transactionally', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.home.write('.managed/setting.txt', 'before\n')
+      await box.setupExampleHarness({
+        rubric: rubric(
+          `[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async ({ userHome }) => {
+            const { readFile } = await import('node:fs/promises')
+            return (await readFile(userHome + '/.managed/setting.txt', 'utf8')) === 'after\\n'
+              ? [{ status: 'PASS', message: 'conformed' }]
+              : [{ status: 'VIOLATION', message: 'not conformed' }]
+          },
+          conform: async () => ({ writes: [{ path: '.managed/setting.txt', content: 'after\\n' }] })
+        }] }]
+`,
+          'ki-example'
+        )
+          .replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+          .replace('createSession: async ({ repository })', 'createSession: async ({ repository, userHome })')
+          .replace('const context = { repository,', 'const context = { repository, userHome,')
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('write .managed/setting.txt')
+      expect(await box.home.read('.managed/setting.txt')).toBe('after\n')
+    })
+
+    test('refuses a user-home rubric when HOME is missing', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric('[]').replace(
+          "concern: 'test governance',",
+          "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
+        )
+      })
+      await rm(box.home.path, { recursive: true })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result).toEqual({ exitCode: 1, output: 'ki: error: user home must be an existing physical directory\n' })
+    })
+
+    test('coalesces identical user-home writes proposed by separate skills', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n[ki-extra]\n')
+      await box.home.write('.managed/setting.txt', 'before\n')
+      const userHomeRubric = (skill: string, code: string): string =>
+        rubric(
+          `[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: '${code}', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          conform: async () => ({ writes: [{ path: '.managed/setting.txt', content: 'after\\n' }] })
+        }] }]`,
+          skill
+        ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+      await box.setupExampleHarness({ rubric: userHomeRubric('ki-example', 'EXAMPLE-1') })
+      await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
+      await box.data.write(
+        'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
+        userHomeRubric('ki-extra', 'EXTRA-1')
+      )
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output.match(/^write \.managed\/setting\.txt$/gm)).toHaveLength(1)
+      expect(await box.home.read('.managed/setting.txt')).toBe('after\n')
+    })
+
+    test('refuses conflicting user-home writes proposed by separate skills', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n[ki-extra]\n')
+      await box.home.write('.managed/setting.txt', 'before\n')
+      const userHomeRubric = (skill: string, code: string, content: string): string =>
+        rubric(
+          `[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: '${code}', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          conform: async () => ({ writes: [{ path: '.managed/setting.txt', content: '${content}' }] })
+        }] }]`,
+          skill
+        ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+      await box.setupExampleHarness({ rubric: userHomeRubric('ki-example', 'EXAMPLE-1', 'first\\n') })
+      await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
+      await box.data.write(
+        'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
+        userHomeRubric('ki-extra', 'EXTRA-1', 'second\\n')
+      )
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('direct conform repeats write path .managed/setting.txt with different content')
+      expect(await box.home.read('.managed/setting.txt')).toBe('before\n')
+    })
+
+    test('refuses a user-home write outside the declaring skill filesystem scope', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.home.write('.outside/setting.txt', 'before\n')
+      await box.setupExampleHarness({
+        rubric: rubric(
+          `[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          conform: async () => ({ writes: [{ path: '.outside/setting.txt', content: 'after\\n' }] })
+        }] }]`,
+          'ki-example'
+        ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('direct conform write path .outside/setting.txt is outside its declared filesystem scope')
+      expect(await box.home.read('.outside/setting.txt')).toBe('before\n')
+    })
+
+    test('refuses user-home conform commands before running them', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.home.write('.managed/setting.txt', 'before\n')
+      await box.setupExampleHarness({
+        rubric: rubric(
+          `[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          conform: async () => ({ writes: [], commands: [{ program: 'false', arguments: [] }] })
+        }] }]`,
+          'ki-example'
+        ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('user-home rubric conform actions must be transactional writes; conform commands are not permitted')
+      expect(await box.home.read('.managed/setting.txt')).toBe('before\n')
+    })
+
     test('refuses an explicit create target that already exists', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
@@ -864,6 +1143,175 @@ export default {
       await expect(box.project.read('conformed.txt')).resolves.toBe('ok')
     })
 
+    test('reports a failed subprocess conform with its command output', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          conform: async () => ({ writes: [], commands: [{ program: 'node', arguments: ['-e', "process.stdout.write('detail'); process.exit(3)"] }] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(
+        'direct subprocess conform failed: "node" "-e" "process.stdout.write(\'detail\'); process.exit(3)"\ndetail'
+      )
+    })
+
+    test('combines stdout and stderr from a failed subprocess conform', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          conform: async () => ({ writes: [], commands: [{ program: 'node', arguments: ['-e', "process.stdout.write('out'); process.stderr.write('err'); process.exit(3)"] }] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain("\"process.stdout.write('out'); process.stderr.write('err'); process.exit(3)\"\nout\nerr")
+    })
+
+    test('conforms INFO outcomes explicitly opted into conforming and retains a fixed subject', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.project.write('governed.txt', 'before\n')
+      await box.setupExampleHarness({
+        rubric: `
+import { readFile } from 'node:fs/promises'
+
+export default {
+  contract: 1,
+  name: 'ki-example',
+  concern: 'INFO conforming',
+  createSession: async ({ repository }) => ({
+    subjects: [{ families: ['F'], subject: 'workspace', context: () => ({ repository }) }],
+    proposal: () => ({ writes: [{ path: 'governed.txt', content: 'after\\n' }] })
+  }),
+  families: [{
+    code: 'F', title: 'Family', description: 'Test family.', standard: 'standard.md', selectContext: (context) => context,
+    items: [
+      {
+        code: 'INFO-1', title: 'Info conform', description: 'Conforms an opted-in INFO result.', sources: ['standard.md'],
+        mechanical: {
+          level: 'WARN', conformOn: ['INFO'],
+          audit: { phase: 'PRIMARY', run: async ({ repository }) =>
+            (await readFile(repository + '/governed.txt', 'utf8')) === 'after\\n'
+              ? [{ status: 'PASS', message: 'conformed' }]
+              : [{ status: 'INFO', message: 'needs normalisation' }]
+          },
+          conform: { phase: 'PRIMARY', run: async () => {} }
+        }
+      },
+      {
+        code: 'SKIP-1', title: 'Skipped conform', description: 'Does not conform a non-violation.', sources: ['standard.md'],
+        mechanical: {
+          level: 'WARN',
+          audit: { phase: 'PRIMARY', run: async () => [{ status: 'NOT_APPLICABLE', message: 'not applicable' }] },
+          conform: { phase: 'PRIMARY', run: async () => { throw new Error('must not conform') } }
+        }
+      }
+    ]
+  }]
+}
+`
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('✅ fixed [Info conform (INFO-1)] workspace — conformed')
+      expect(await box.project.read('governed.txt')).toBe('after\n')
+    })
+
+    test('orders same-phase conform actions by their family declaration', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[
+          { code: 'SECOND', title: 'Second', items: [{
+            kind: 'mechanical', code: 'SECOND-1', title: 'Second item', level: 'WARN', phase: 'PRIMARY',
+            audit: async () => [{ status: 'VIOLATION', message: 'second' }],
+            conform: async () => ({ writes: [] })
+          }] },
+          { code: 'FIRST', title: 'First', items: [{
+            kind: 'mechanical', code: 'FIRST-1', title: 'First item', level: 'WARN', phase: 'PRIMARY',
+            audit: async () => [{ status: 'VIOLATION', message: 'first' }],
+            conform: async () => ({ writes: [] })
+          }] }
+        ]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output.indexOf('[Second item (SECOND-1)]')).toBeLessThan(result.output.indexOf('[First item (FIRST-1)]'))
+    })
+
+    test('refuses an unsafe direct conform write before publication', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          conform: async () => ({ writes: [{ path: '../outside.txt', content: 'after\\n', create: true }] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('direct conform write path ../outside.txt is unsafe')
+      await expect(box.root.read('outside.txt')).rejects.toThrow()
+    })
+
+    test('reports a failed silent subprocess conform without an empty detail line', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          conform: async () => ({ writes: [], commands: [{ program: 'node', arguments: ['-e', 'process.exit(3)'] }] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result).toEqual({
+        exitCode: 1,
+        output: 'run "node" "-e" "process.exit(3)"\nki: error: direct subprocess conform failed: "node" "-e" "process.exit(3)"\n'
+      })
+    })
+
+    test('reports a subprocess terminated by a signal as a failed conform', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          conform: async () => ({ writes: [], commands: [{ program: 'node', arguments: ['-e', "process.kill(process.pid, 'SIGTERM')"] }] })
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result).toEqual({
+        exitCode: 1,
+        output:
+          'run "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\nki: error: direct subprocess conform failed: "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\n'
+      })
+    })
+
     test('rejects a malformed subprocess conform proposal before execution', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
@@ -919,6 +1367,135 @@ export default {
   })
 
   describe('malformed rubric definitions', () => {
+    test.each([
+      [
+        'invalid override levels',
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', overrideLevels: ['CRITICAL'], audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
+        'overrideLevels must contain only FAIL or WARN'
+      ],
+      [
+        'repeated override levels',
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', overrideLevels: ['WARN', 'WARN'], audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
+        'repeats an override level'
+      ],
+      [
+        'a non-boolean heuristic',
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', heuristic: 'yes', audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
+        'heuristic must be boolean'
+      ],
+      [
+        'an invalid conform-on status',
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', conformOn: ['VIOLATION'], audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
+        'conformOn must contain unique INFO statuses'
+      ],
+      [
+        'repeated conform-on statuses',
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', conformOn: ['INFO', 'INFO'], audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
+        'conformOn must contain unique INFO statuses'
+      ],
+      [
+        'a mechanical aspect that is not a table',
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: null }] }]`,
+        'mechanical aspect must be a table'
+      ],
+      [
+        'a conform aspect that is not a table',
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', audit: { phase: 'PRIMARY', run: async () => [] }, conform: null } }] }]`,
+        'conform must be a table'
+      ],
+      [
+        'a judgment aspect that is not a table',
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', judgment: null }] }]`,
+        'judgment must have a prompt'
+      ],
+      [
+        'an empty sources list',
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', sources: [], mechanical: { level: 'FAIL', audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
+        'must have a non-empty sources array'
+      ],
+      [
+        'an empty source entry',
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', sources: [''], mechanical: { level: 'FAIL', audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
+        'must have a non-empty sources array'
+      ]
+    ])('rejects %s', async (_case, families, expected) => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric(families) })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(expected)
+    })
+
+    test.each([
+      [
+        'a malformed scope',
+        `export default { contract: 1, name: 'ki-example', concern: 'test', scope: null, createSession: async () => ({}), families: [] }`,
+        'rubric definition scope must be a table'
+      ],
+      [
+        'a user-home scope without paths',
+        `export default { contract: 1, name: 'ki-example', concern: 'test', scope: { kind: 'user-home' }, createSession: async () => ({}), families: [] }`,
+        'user-home scope must declare paths'
+      ],
+      [
+        'a user-home scope with repeated paths',
+        `export default { contract: 1, name: 'ki-example', concern: 'test', scope: { kind: 'user-home', paths: ['.managed', '.managed'] }, createSession: async () => ({}), families: [] }`,
+        'user-home scope repeats a path'
+      ],
+      [
+        'a user-home scope with an unsafe path',
+        `export default { contract: 1, name: 'ki-example', concern: 'test', scope: { kind: 'user-home', paths: ['../managed'] }, createSession: async () => ({}), families: [] }`,
+        'user-home scope paths must be safe relative paths'
+      ],
+      [
+        'an unrecognised scope kind',
+        `export default { contract: 1, name: 'ki-example', concern: 'test', scope: { kind: 'workspace', paths: ['managed'] }, createSession: async () => ({}), families: [] }`,
+        'user-home scope must declare paths'
+      ],
+      [
+        'a family with no description',
+        `export default { contract: 1, name: 'ki-example', concern: 'test', createSession: async () => ({}), families: [{ code: 'F', title: 'Family', standard: 'standard.md', selectContext: () => ({}), items: [] }] }`,
+        'rubric family F must have a description'
+      ],
+      [
+        'a family with no standard',
+        `export default { contract: 1, name: 'ki-example', concern: 'test', createSession: async () => ({}), families: [{ code: 'F', title: 'Family', description: 'Family.', selectContext: () => ({}), items: [] }] }`,
+        'rubric family F must name its standard'
+      ],
+      [
+        'a family with no context selector',
+        `export default { contract: 1, name: 'ki-example', concern: 'test', createSession: async () => ({}), families: [{ code: 'F', title: 'Family', description: 'Family.', standard: 'standard.md', items: [] }] }`,
+        'rubric family F must have a selectContext function'
+      ],
+      [
+        'a repeated family code',
+        `export default { contract: 1, name: 'ki-example', concern: 'test', createSession: async () => ({}), families: [{ code: 'F', title: 'Family', description: 'Family.', standard: 'standard.md', selectContext: () => ({}), items: [] }, { code: 'F', title: 'Other', description: 'Other.', standard: 'standard.md', selectContext: () => ({}), items: [] }] }`,
+        'rubric repeats family F'
+      ],
+      [
+        'a definition with no concern',
+        `export default { contract: 1, name: 'ki-example', createSession: async () => ({}), families: [] }`,
+        'rubric catalogue must name its concern'
+      ],
+      [
+        'an item with no description',
+        `export default { contract: 1, name: 'ki-example', concern: 'test', createSession: async () => ({}), families: [{ code: 'F', title: 'Family', description: 'Family.', standard: 'standard.md', selectContext: () => ({}), items: [{ code: 'EXAMPLE-1', title: 'Example', sources: ['standard.md'], mechanical: { level: 'FAIL', audit: { phase: 'PRIMARY', run: async () => [] } } }] }] }`,
+        'rubric item EXAMPLE-1 must have a description'
+      ]
+    ])('rejects %s', async (_case, source, expected) => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ rubric: source })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(expected)
+    })
+
     test.each([
       ['a non-table session', 'null', 'rubric context must return a session table'],
       ['no subjects array', `{ subjects: null, proposal: () => ({ writes: [] }) }`, 'rubric session must contain a subjects array'],
@@ -1070,6 +1647,36 @@ export default {
       expect(result.output).toContain('must have a message')
     })
 
+    test('rejects an audit outcome with an undeclared level', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric:
+          rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', level: 'WARN', message: 'x' }] }] }]`)
+      })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('uses an undeclared level')
+    })
+
+    test('rejects an audit outcome that sets a level outside a violation', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric:
+          rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'INFO', level: 'WARN', message: 'x' }] }] }]`)
+      })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('sets a level outside VIOLATION')
+    })
+
     test('rejects a rubric module whose native module fails to import', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
@@ -1115,6 +1722,40 @@ export default {
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('must have string path and content')
+    })
+
+    test.each([
+      ['a non-boolean create flag', `{ writes: [{ path: 'governed.txt', content: 'x', create: 'yes' }] }`, 'create must be boolean'],
+      ['a non-array commands field', `{ writes: [], commands: 'not an array' }`, 'proposal commands must be an array'],
+      ['a non-table command', `{ writes: [], commands: [null] }`, 'command 0 must have a program and arguments'],
+      [
+        'an invalid command program',
+        `{ writes: [], commands: [{ program: '../false', arguments: [] }] }`,
+        'command 0 must have a program and arguments'
+      ],
+      [
+        'a command argument with a NUL byte',
+        `{ writes: [], commands: [{ program: 'false', arguments: ['a\\0b'] }] }`,
+        'arguments must be strings without NUL bytes'
+      ],
+      [
+        'a non-string command argument',
+        `{ writes: [], commands: [{ program: 'false', arguments: [1] }] }`,
+        'arguments must be strings without NUL bytes'
+      ]
+    ])('rejects %s in a conform proposal', async (_case, proposal, expected) => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric:
+          rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'x' }], conform: async () => (${proposal}) }] }]`)
+      })
+
+      const result = await box.run('ki repo conform')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(expected)
     })
 
     test('rejects a rubric item with an invalid level', async () => {

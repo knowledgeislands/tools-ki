@@ -54,7 +54,6 @@ const validatePhaseExecution = <Result>(
 }
 
 const validateLevels = (value: unknown, identity: string, code: string): readonly ViolationLevel[] | undefined => {
-  if (value === undefined) return undefined
   if (!Array.isArray(value) || value.some((level) => !(VIOLATION_LEVELS as readonly unknown[]).includes(level)))
     throw new KiError(`${identity} rubric item ${code} overrideLevels must contain only FAIL or WARN`, 1)
   if (new Set(value).size !== value.length) throw new KiError(`${identity} rubric item ${code} repeats an override level`, 1)

@@ -133,7 +133,13 @@ export interface Sandbox {
   readonly cd: (relativePath: string) => void
   readonly run: (
     command: string,
-    options?: { readonly interactive?: boolean; readonly columns?: number; readonly now?: () => number }
+    options?: {
+      readonly interactive?: boolean
+      readonly columns?: number
+      readonly now?: () => number
+      readonly fetcher?: 'default'
+      readonly executable?: string
+    }
   ) => Promise<CommandResult>
 }
 
@@ -176,19 +182,26 @@ const create = async (): Promise<Sandbox> => {
   // unambiguous at the call site.
   const run = async (
     command: string,
-    options?: { readonly interactive?: boolean; readonly columns?: number; readonly now?: () => number }
+    options?: {
+      readonly interactive?: boolean
+      readonly columns?: number
+      readonly now?: () => number
+      readonly fetcher?: 'default'
+      readonly executable?: string
+    }
   ): Promise<CommandResult> => {
     let output = ''
     const write = (chunk: string): void => {
       output += chunk
     }
+    const executable = options?.executable ?? executablePath
     const context = await createContext({
       stdout: { write },
       stderr: { write, isTTY: options?.interactive, columns: options?.columns },
-      executable: executablePath,
+      executable,
       workingDirectory,
-      environment: { ...env, ...environmentOverrides, _: executablePath },
-      fetcher: (input, init) => fetcher(input, init),
+      environment: { ...env, ...environmentOverrides, _: executable },
+      ...(options?.fetcher === 'default' ? {} : { fetcher: (input, init) => fetcher(input, init) }),
       now: options?.now
     })
     const tokens = command.split(' ').filter(Boolean)

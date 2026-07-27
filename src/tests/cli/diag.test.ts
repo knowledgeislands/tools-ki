@@ -130,4 +130,69 @@ extra = true
     expect(diag.output).toContain('Agents')
     expect(diag.output).toContain('Harnesses')
   })
+
+  test('reports scalar sections and an invalid local section as configuration errors', async () => {
+    const box = await sandbox()
+    await box.config.write(
+      'ki/config.toml',
+      `schema = 1
+agents = "not-a-table"
+harnesses = "not-a-table"
+skills = "not-a-table"
+local = "not-a-table"
+`
+    )
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.output).toContain('- agents must be a TOML table')
+    expect(diag.output).toContain('- skills must be a TOML table')
+    expect(diag.output).toContain('- harnesses must be a TOML table')
+    expect(diag.output).toContain('- harnesses must declare an ids array')
+    expect(diag.output).toContain('- local must be a TOML table')
+    expect(diag.output).toContain('- local.path must be a non-empty path string')
+  })
+
+  test('reports duplicate, unrecognised, and malformed entries throughout a sectioned configuration', async () => {
+    const box = await sandbox()
+    await box.config.write(
+      'ki/config.toml',
+      `schema = 1
+
+[agents]
+ids = ["claude-code", "claude-code", "unrecognised"]
+extra = true
+
+[harnesses]
+section_extra = true
+releases = [
+  { id = 3, url = 3, sha256 = 3, extra = true },
+  { id = "example/harness", url = "https://example.test/archive.tar.gz", sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+]
+
+[skills]
+scalar = 3
+
+[skills.empty]
+harness = ""
+
+[local]
+path = ""
+`
+    )
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.output).toContain('- agents.ids repeats a value')
+    expect(diag.output).toContain('- unrecognised agent unrecognised')
+    expect(diag.output).toContain('- agents has unrecognised key extra')
+    expect(diag.output).toContain('- harnesses has unrecognised key section_extra')
+    expect(diag.output).toContain('- harnesses[0] has unrecognised key extra')
+    expect(diag.output).toContain('- harnesses[0] id must be a non-empty string')
+    expect(diag.output).toContain('- harnesses[0] url must be an HTTPS URL')
+    expect(diag.output).toContain('- harnesses[0] sha256 must be lowercase SHA-256')
+    expect(diag.output).toContain('- skills.scalar must be a TOML table')
+    expect(diag.output).toContain('- skills.empty must declare a harness string')
+    expect(diag.output).toContain('- local.path must be a non-empty path string')
+  })
 })

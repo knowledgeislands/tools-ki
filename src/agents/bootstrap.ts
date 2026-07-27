@@ -31,11 +31,6 @@ export const installedBootstrapSkillSources = async (
   dataDirectory: string,
   identifier = canonicalHarnessIdentifier
 ): Promise<readonly ManagedUserSkill[]> => {
-  const [owner, name] = identifier.split('/')
-  const root = join(dataDirectory, 'harnesses', owner as string, name as string)
-  if (!(await lstat(root).catch(() => undefined))) {
-    throw new KiError(`harness ${identifier} is not installed`, 1)
-  }
   const harness = await readInstalledHarness(dataDirectory, identifier)
   return bootstrapSkillSources(harness, `installed harness ${identifier}`)
 }
@@ -44,18 +39,14 @@ export const localBootstrapHarness = async (
   harnessDirectory: string
 ): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
   const harness = await requiredPhysicalDirectory(resolve(harnessDirectory), 'local harness')
-  const skills = await Promise.all(
-    bootstrapUserSkills.map(async (name) => {
-      const source = join(harness, 'skills', name === 'ki-bootstrap' ? 'keystone' : 'process', name)
-      const entry = await lstat(join(source, 'SKILL.md')).catch(() => undefined)
-      if (!entry?.isFile() || entry.isSymbolicLink()) {
-        throw new KiError(`local harness must contain ${source.slice(harness.length + 1)}/SKILL.md`, 1)
-      }
-      return { name, source: await requiredPhysicalDirectory(source, `local harness ${name} skill`) }
-    })
-  )
-  if (!skills[0]) {
-    throw new KiError('local harness must contain skills/keystone/ki-bootstrap/SKILL.md', 1)
+  const skills: ManagedUserSkill[] = []
+  for (const name of bootstrapUserSkills) {
+    const source = join(harness, 'skills', name === 'ki-bootstrap' ? 'keystone' : 'process', name)
+    const entry = await lstat(join(source, 'SKILL.md')).catch(() => undefined)
+    if (!entry?.isFile() || entry.isSymbolicLink()) {
+      throw new KiError(`local harness must contain ${source.slice(harness.length + 1)}/SKILL.md`, 1)
+    }
+    skills.push({ name, source: await requiredPhysicalDirectory(source, `local harness ${name} skill`) })
   }
   return { harness, skills }
 }
@@ -94,8 +85,6 @@ const discoverManagedUserSkills = async (
   for (const agent of agents) {
     skillCapability(agent)
     const directory = join(agent.home, 'skills')
-    const state = await lstat(directory).catch(() => undefined)
-    if (!state) continue
     await requiredPhysicalDirectory(directory, `${agent.descriptor.id} user skills directory`)
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       if (!entry.isSymbolicLink()) continue

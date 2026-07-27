@@ -165,6 +165,8 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
     }
     for (const write of writes) {
       const path = temporary.get(write)
+      // This private map is populated for every write immediately before this publication loop.
+      /* v8 ignore next */
       if (!path) throw new KiError(`direct conform transaction lost temporary content for ${write.path}`, 1)
       if (write.create) await link(path, write.absolutePath)
       else await rename(path, write.absolutePath)
@@ -175,12 +177,16 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
     let rollbackRefusal: KiError | undefined
     for (const write of published.reverse()) {
       const publishedIdentity = publishedIdentities.get(write)
+      /* v8 ignore start -- This callback requires a third party to remove the just-published target during rollback. */
       const currentIdentity = await inspectWriteTarget(write.repository, write.path, write.absolutePath).catch(() => undefined)
+      /* v8 ignore stop */
       if (!publishedIdentity || !currentIdentity || !sameIdentity(publishedIdentity, currentIdentity)) {
         rollbackRefusal ??= new KiError(`direct conform rollback target ${write.path} changed after publication`, 1)
       } else if (write.create) {
         await rm(write.absolutePath, { force: true })
       } else {
+        // Only non-create writes reach this branch, and preparation always snapshots their original content.
+        /* v8 ignore next */
         if (write.original === undefined) throw new KiError(`direct conform transaction lost original content for ${write.path}`, 1)
         await writeFile(write.absolutePath, write.original, 'utf8')
       }

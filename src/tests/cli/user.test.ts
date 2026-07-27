@@ -103,4 +103,13 @@ export default {
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('user-home scope paths must be safe relative paths')
   })
+
+  test('refuses user-home subprocess conforms before a command can run', async () => {
+    const box = await setup(rubric(governedItem(`{ writes: [], commands: [{ program: 'false', arguments: [] }] }`)))
+
+    const result = await box.run('ki repo conform')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('user-home rubric conform actions must be transactional writes')
+  })
 })

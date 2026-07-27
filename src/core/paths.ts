@@ -27,10 +27,7 @@ export const resolveKiPaths = (environment: Environment): KiPaths => ({
   state: kiPath(environment, 'KI_STATE_HOME', 'XDG_STATE_HOME', '.local/state')
 })
 
-export const installationMode = async (
-  executable: string,
-  workingDirectory: string
-): Promise<KiInstallationMode> => {
+export const installationMode = async (executable: string, workingDirectory: string): Promise<KiInstallationMode> => {
   const executablePath = resolve(workingDirectory, executable)
   const state = await lstat(executablePath).catch(() => undefined)
   return state?.isSymbolicLink() ? 'local' : 'regular'

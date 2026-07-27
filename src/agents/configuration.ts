@@ -88,10 +88,10 @@ export const inspectUserConfiguration = async (configurationDirectory: string): 
       errors: ['configuration must be valid TOML']
     }
   }
+  // A successfully parsed TOML document is always a table (the TOML grammar has no bare top-level
+  // scalar or array form), so this defends only against a future parser change, not a reachable input.
+  /* v8 ignore next */
   if (!isRecord(parsed)) {
-    // A successfully parsed TOML document is always a table (the TOML grammar has no bare top-level
-    // scalar or array form), so this defends only against a future parser change, not a reachable input.
-    /* v8 ignore next 10 */
     return {
       path,
       state: 'invalid',
@@ -190,6 +190,8 @@ export const readConfiguration = async (
   } catch {
     throw new KiError('agent configuration must be valid TOML', 1)
   }
+  // A successfully parsed TOML document is always a table; this only guards a future parser change.
+  /* v8 ignore next */
   if (!isRecord(parsed)) throw new KiError('agent configuration must use schema 1', 1)
   const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown; local?: unknown }
   const agentSection = isRecord(configuration.agents) ? (configuration.agents as StringListSection) : undefined
@@ -221,16 +223,11 @@ export const configuredAgents = async (options: {
   return configured
 }
 
-export const setLocalBootstrapHarness = async (configurationDirectory: string, local?: string): Promise<void> => {
+export const setLocalBootstrapHarness = async (configurationDirectory: string): Promise<void> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
   const contents = await readFile(path, 'utf8')
   const expression = /(?:^|\n)\[local\]\npath\s*=.*(?:\n|$)/m
-  const updated = local
-    ? expression.test(contents)
-      ? contents.replace(expression, `\n[local]\npath = ${JSON.stringify(local)}\n`)
-      : `${contents.trimEnd()}\n\n[local]\npath = ${JSON.stringify(local)}\n`
-    : contents.replace(expression, '')
-  await writeFile(path, updated, 'utf8')
+  await writeFile(path, contents.replace(expression, ''), 'utf8')
 }
 
 export const setConfiguredUserSkills = async (

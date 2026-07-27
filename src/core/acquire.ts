@@ -21,6 +21,8 @@ export const tarSize = (archive: Uint8Array, start: number): number => {
   const raw = tarString(archive, start, 12).trim()
   if (!/^[0-7]*$/.test(raw)) throw new KiError('harness archive has an invalid tar entry size', 1)
   const size = Number.parseInt(raw || '0', 8)
+  // A twelve-byte octal tar size is necessarily a non-negative safe JavaScript integer.
+  /* v8 ignore next */
   if (!Number.isSafeInteger(size) || size < 0) throw new KiError('harness archive has an unsafe tar entry size', 1)
   return size
 }
@@ -86,6 +88,8 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
       throw new KiError('harness archive may contain only regular files and directories', 1)
     }
     const destination = join(target, entry.payloadPath)
+    // payloadPath passed safeRelativePath before this join; this only guards a future extraction refactor.
+    /* v8 ignore next */
     if (relative(target, destination).startsWith('..')) throw new KiError('harness archive entry escapes its staging directory', 1)
     if (entry.type === '5') await mkdir(destination, { recursive: true })
     else {

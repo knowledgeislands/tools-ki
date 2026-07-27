@@ -1,6 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["bin/ki", "src/cli.ts", "src/**/*.test.ts"],
+  "ignoreBinaries": ["mkfifo"],
   "ignoreDependencies": ["lint-staged", "syncpack"],
   "ignoreExportsUsedInFile": true
 }

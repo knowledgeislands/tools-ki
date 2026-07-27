@@ -243,6 +243,10 @@ ${duplicate}
     const unsafeRecordPath = await importCapture()
     expect(unsafeRecordPath.output).toContain('relationship record path is unsafe')
 
+    await relationship('{"type":"conversation-order","record":"records//conversation.md","position":1}\n')
+    const repeatedSeparator = await importCapture()
+    expect(repeatedSeparator.output).toContain('relationship record path is unsafe')
+
     await relationship(
       '{"type":"message-asset","record":"records/conversation.md","asset":"assets/../example.png","message_id":"message-001"}\n'
     )

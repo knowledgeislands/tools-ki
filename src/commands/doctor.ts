@@ -47,7 +47,7 @@ export const createDoctorCommand = (context: KiContext): Command =>
         detail: missing.length ? `missing ${missing.join(', ')}` : `${installed.length} installed`
       })
     } catch (error) {
-      checks.push({ status: 'fail', label: 'Harness inventory', detail: error instanceof Error ? error.message : 'unavailable' })
+      checks.push({ status: 'fail', label: 'Harness inventory', detail: (error as Error).message })
     }
 
     if (configuration.state !== 'valid') {
@@ -58,7 +58,7 @@ export const createDoctorCommand = (context: KiContext): Command =>
       try {
         agents = await configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config })
       } catch (error) {
-        checks.push({ status: 'fail', label: 'Agents', detail: error instanceof Error ? error.message : 'unavailable' })
+        checks.push({ status: 'fail', label: 'Agents', detail: (error as Error).message })
         checks.push({ status: 'skip', label: 'User skills', detail: 'agents are unavailable' })
         context.stdout.write(`ki doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
         return

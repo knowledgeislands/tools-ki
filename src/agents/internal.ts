@@ -69,6 +69,8 @@ export const descriptor = (id: string): AgentDescriptor => {
 }
 
 export const skillCapability = (agent: InstalledAgent): string => {
+  // Every current static descriptor declares its skill path; this guards a future descriptor addition.
+  /* v8 ignore next */
   if (!agent.descriptor.paths.skills) throw new KiError(`agent ${agent.descriptor.id} has no skill path`, 1)
   return agent.descriptor.paths.skills
 }

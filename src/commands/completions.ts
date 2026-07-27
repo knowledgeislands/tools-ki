@@ -10,8 +10,8 @@ export const createCompletionsCommand = (context: KiContext): Command =>
     .action((shell: string) => {
       if (shell === 'bash') {
         context.stdout.write(`_ki() {
-  local current="${'${COMP_WORDS[COMP_CWORD]}'}"
-  if [[ "${'${COMP_WORDS[1]}'}" == repo && "${'${COMP_CWORD}'}" -eq 2 ]]; then
+  local current="\${COMP_WORDS[COMP_CWORD]}"
+  if [[ "\${COMP_WORDS[1]}" == repo && "\${COMP_CWORD}" -eq 2 ]]; then
     COMPREPLY=( $(compgen -W "${repoCommandNames.join(' ')}" -- "$current") )
     return
   fi

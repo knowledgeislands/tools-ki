@@ -68,7 +68,8 @@ export const resolveDeclaredSkills = (
         1
       )
     }
-    if (candidates.length > 1) throw new KiError(`declared skill ${declaration.name} is ambiguous; qualify its harness before activation`, 1)
+    if (candidates.length > 1)
+      throw new KiError(`declared skill ${declaration.name} is ambiguous; qualify its harness before activation`, 1)
     const candidate = candidates[0]
     /* v8 ignore next -- candidates.length is exactly 1 here (0 and >1 are both handled above); defends only against a future refactor. */
     if (!candidate) throw new KiError(`declared skill ${declaration.name} could not be resolved`, 1)

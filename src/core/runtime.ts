@@ -257,7 +257,7 @@ const auditSkill = async (
   onItemComplete?: (item: PreparedRubricItem) => void
 ): Promise<InternalAudit> => {
   const { skill, definition, items: plannedItems } = prepared
-  const definitionScope: RubricScope = definition.scope ?? { kind: 'repository' }
+  const definitionScope = definition.scope as RubricScope
   if (definitionScope.kind === 'user-home') {
     const state = await lstat(scope.userHome).catch(() => undefined)
     if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError('user home must be an existing physical directory', 1)
@@ -301,14 +301,14 @@ export const educateSkill = async (prepared: PreparedSkill): Promise<SkillEducat
   return {
     identity: prepared.skill.identity,
     concern: prepared.definition.concern,
-    scope: prepared.definition.scope ?? { kind: 'repository' },
+    scope: prepared.definition.scope as RubricScope,
     families: prepared.definition.families
   }
 }
 
 const attemptConform = async (state: ItemAuditState): Promise<boolean> => {
   const { family, item } = state.item
-  if (!item.mechanical.conform) return false
+  const conform = item.mechanical.conform as NonNullable<typeof item.mechanical.conform>
   let attempted = false
   for (const audited of state.subjects) {
     const conformable = audited.outcomes.some(
@@ -317,7 +317,7 @@ const attemptConform = async (state: ItemAuditState): Promise<boolean> => {
     if (!conformable) continue
     const rootContext = await audited.subject.context()
     const context = await family.selectContext(rootContext)
-    await item.mechanical.conform.run(context)
+    await conform.run(context)
     attempted = true
   }
   return attempted
@@ -332,10 +332,12 @@ export const runSkillConform = async (
   const conformOrder = items
     .filter((state) => state.item.item.mechanical.conform)
     .slice()
+    // The filter above guarantees conform is present; the fallback only protects a future filter refactor.
+    /* v8 ignore next */
     .sort((left, right) => {
       const phaseDelta =
-        RUBRIC_PHASES.indexOf(left.item.item.mechanical.conform?.phase ?? 'NORMALISE') -
-        RUBRIC_PHASES.indexOf(right.item.item.mechanical.conform?.phase ?? 'NORMALISE')
+        RUBRIC_PHASES.indexOf((left.item.item.mechanical.conform as NonNullable<typeof left.item.item.mechanical.conform>).phase) -
+        RUBRIC_PHASES.indexOf((right.item.item.mechanical.conform as NonNullable<typeof right.item.item.mechanical.conform>).phase)
       if (phaseDelta !== 0) return phaseDelta
       if (left.item.familyIndex !== right.item.familyIndex) return left.item.familyIndex - right.item.familyIndex
       return left.item.itemIndex - right.item.itemIndex

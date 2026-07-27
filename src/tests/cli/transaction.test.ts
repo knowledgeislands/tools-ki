@@ -13,7 +13,9 @@ import { sandbox } from './_cli_helper.ts'
 const readInterception = vi.hoisted(() => ({ path: undefined as string | undefined, count: 0 }))
 const renameFailure = vi.hoisted(() => ({ enabled: false, calls: 0 }))
 const identityReplacement = vi.hoisted(() => ({ path: undefined as string | undefined, count: 0 }))
+const preparationReplacement = vi.hoisted(() => ({ path: undefined as string | undefined, count: 0 }))
 const rollbackReplacement = vi.hoisted(() => ({ enabled: false, path: undefined as string | undefined }))
+const linkFailure = vi.hoisted(() => ({ enabled: false, calls: 0 }))
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs/promises')>()
@@ -34,6 +36,14 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     },
     lstat: async (...arguments_: Parameters<typeof original.lstat>) => {
       const [path] = arguments_
+      if (preparationReplacement.path && String(path).endsWith(preparationReplacement.path)) {
+        preparationReplacement.count += 1
+        if (preparationReplacement.count === 2) {
+          const replacement = `${String(path)}.concurrent-replacement`
+          await original.writeFile(replacement, 'replacement\n', 'utf8')
+          await original.rename(replacement, String(path))
+        }
+      }
       if (identityReplacement.path && String(path).endsWith(identityReplacement.path)) {
         identityReplacement.count += 1
         // prepareWrites inspects each target twice. Replace it just before the
@@ -45,6 +55,13 @@ vi.mock('node:fs/promises', async (importOriginal) => {
         }
       }
       return original.lstat(...arguments_)
+    },
+    link: async (...arguments_: Parameters<typeof original.link>) => {
+      if (linkFailure.enabled) {
+        linkFailure.calls += 1
+        if (linkFailure.calls === 2) throw new Error('link failure')
+      }
+      await original.link(...arguments_)
     },
     // Lets the first temp-file rename (one write's publication) succeed normally, then
     // fails the second — simulating a mid-publication crash after one write already
@@ -74,8 +91,12 @@ afterEach(() => {
   renameFailure.calls = 0
   identityReplacement.path = undefined
   identityReplacement.count = 0
+  preparationReplacement.path = undefined
+  preparationReplacement.count = 0
   rollbackReplacement.enabled = false
   rollbackReplacement.path = undefined
+  linkFailure.enabled = false
+  linkFailure.calls = 0
 })
 
 const rubric = (families: string): string => `
@@ -169,6 +190,24 @@ describe('[ki repo conform] transaction interleaving safety', () => {
     expect(await box.project.read('governed.txt')).toBe('before\n')
   })
 
+  test('refuses a target replaced while its pre-conform snapshot is being prepared', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '[ki-example]\n')
+    await box.project.write('governed.txt', 'before\n')
+    preparationReplacement.path = '/governed.txt'
+    await box.setupExampleHarness({
+      rubric: rubric(
+        `[{ code: 'F', title: 'Family', description: 'Transactions.', standard: 'standard.md', selectContext: (context) => context, items: [${governedItem('governed.txt', 'EXAMPLE-1', 'after\\n')}] }]`
+      )
+    })
+
+    const result = await box.run('ki repo conform')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('direct conform write target governed.txt changed during preparation')
+    expect(await box.project.read('governed.txt')).toBe('replacement\n')
+  })
+
   test('does not overwrite a target replaced during rollback', async () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '[ki-example]\n')
@@ -192,5 +231,25 @@ describe('[ki repo conform] transaction interleaving safety', () => {
     expect(result.output).toContain('direct conform rollback target governed-1.txt changed after publication')
     expect(await box.project.read('governed-1.txt')).toBe('third-party replacement\n')
     expect(await box.project.read('governed-2.txt')).toBe('before-2\n')
+  })
+
+  test('removes an already-created file when a later create fails during publication', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '[ki-example]\n')
+    await box.setupExampleHarness({
+      rubric: rubric(`[{
+        code: 'F', title: 'Family', description: 'Transactions.', standard: 'standard.md', selectContext: (context) => context,
+        items: [
+          ${governedItem('created-1.txt', 'EXAMPLE-1', 'after-1\\n').replace("path: 'created-1.txt', content: 'after-1\\n'", "path: 'created-1.txt', content: 'after-1\\n', create: true")},
+          ${governedItem('created-2.txt', 'EXAMPLE-2', 'after-2\\n').replace("path: 'created-2.txt', content: 'after-2\\n'", "path: 'created-2.txt', content: 'after-2\\n', create: true")}
+        ]
+      }]`)
+    })
+    linkFailure.enabled = true
+
+    await expect(box.run('ki repo conform')).rejects.toThrow('link failure')
+
+    await expect(box.project.read('created-1.txt')).rejects.toThrow()
+    await expect(box.project.read('created-2.txt')).rejects.toThrow()
   })
 })

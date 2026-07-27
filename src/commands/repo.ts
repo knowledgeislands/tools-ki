@@ -120,10 +120,10 @@ const createProgressTracker = (context: KiContext, operation: string): ProgressT
     },
     item: (skill, code) => {
       complete += 1
-      const percentage = total === 0 ? 100 : Math.round((complete / (total ?? 1)) * 100)
+      const percentage = Math.round((complete / (total as number)) * 100)
       write(`${complete}/${total} ${percentage}% ${skill.skill.declaration.name} ${code}`)
     },
-    complete: () => write(`${total ?? 0}/${total ?? 0} 100% complete`, true),
+    complete: () => write(`${total as number}/${total as number} 100% complete`, true),
     failed: () => context.stderr.write('\n')
   }
 }
@@ -224,7 +224,7 @@ const withFixed = (report: SkillReport): readonly RenderedFinding[] => [
 
 const formatFinding = (finding: RenderedFinding, skill?: string, full = true): string => {
   const safeMessage = stripVTControlCharacters(finding.message)
-  const message = full ? safeMessage : (safeMessage.split(/\r?\n/, 1)[0] ?? '')
+  const message = full ? safeMessage : safeMessage.replace(/\r?\n[\s\S]*/, '')
   const subject = finding.subject ? ` ${finding.subject}` : ''
   const prefix = `  ${REPORT_ICON[finding.level]} ${REPORT_LABEL[finding.level].padEnd(5)}${skill ? ` ${skill.padEnd(20)}` : ''}`
   return `${prefix} [${finding.title} (${finding.code})]${subject} — ${message.replace(/\r?\n/g, '\n    ')}`

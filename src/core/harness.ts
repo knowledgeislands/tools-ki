@@ -62,12 +62,16 @@ const enumeratePayloadFiles = async (root: string, directory: string, externalPa
   const state = await lstat(path).catch(() => undefined)
   if (!state) return []
   const linkedRoot = state.isSymbolicLink()
+  // Recursion reaches nested entries only after their parent was verified non-symlinked.
+  /* v8 ignore next */
   if (linkedRoot && directory.includes('/')) throw new KiError(`installed harness payload ${directory} must not be a symlink`, 1)
   const physicalDirectoryPath = linkedRoot ? await realpath(path) : await physicalDirectory(path, `installed harness payload ${directory}`)
-  const physicalState = await lstat(physicalDirectoryPath).catch(() => undefined)
+  const physicalState = await lstat(physicalDirectoryPath)
   if (!physicalState?.isDirectory() || physicalState.isSymbolicLink()) {
     throw new KiError(`installed harness payload ${directory} must be a directory`, 1)
   }
+  // A non-linked child of a physical harness root cannot resolve outside that root; this guards a future path refactor.
+  /* v8 ignore next */
   if (!linkedRoot && !externalPayload && !contained(root, physicalDirectoryPath)) {
     throw new KiError(`installed harness payload ${directory} escapes the harness`, 1)
   }
@@ -107,6 +111,8 @@ const discoverCapabilities = async (root: string, identifier: string): Promise<r
 }
 
 export const inspectHarnessRoot = async (rootPath: string, identifier: string): Promise<InstalledHarness> => {
+  // Every CLI caller validates identifiers before invoking this internal inspection boundary.
+  /* v8 ignore next */
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   const root = await physicalDirectory(rootPath, `installed harness ${identifier}`)
   return { id: identifier, root, capabilities: await discoverCapabilities(root, identifier) }
@@ -117,8 +123,12 @@ export const readInstalledHarness = async (dataDirectory: string, identifier: st
   const harnesses = await physicalDirectory(join(dataDirectory, 'harnesses'), 'installed harnesses directory')
   const [owner, name] = identifier.split('/') as [string, string]
   const ownerDirectory = await physicalDirectory(join(harnesses, owner), `installed harness ${identifier}`)
+  // physicalDirectory rejects symlinks; a physical child cannot escape its physical parent.
+  /* v8 ignore next */
   if (!contained(harnesses, ownerDirectory)) throw new KiError(`installed harness ${identifier} escapes the harnesses directory`, 1)
   const root = await physicalDirectory(join(ownerDirectory, name), `installed harness ${identifier}`)
+  // physicalDirectory rejects symlinks; a physical child cannot escape its physical parent.
+  /* v8 ignore next */
   if (!contained(harnesses, root)) throw new KiError(`installed harness ${identifier} escapes the harnesses directory`, 1)
   return inspectHarnessRoot(root, identifier)
 }

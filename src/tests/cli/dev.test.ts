@@ -1,9 +1,22 @@
-import { lstat, rename } from 'node:fs/promises'
+import { lstat, rename, rm, symlink, unlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
 describe('[ki dev]', () => {
   describe('dev on', () => {
+    test('initialises a development projection when its canonical harness directory is absent', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('claude-code')
+      await box.run('ki bootstrap')
+      await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`, { recursive: true })
+
+      const result = await box.run(`ki dev on ${harnessPath}`)
+
+      expect(result.exitCode).toBe(0)
+      expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness/skills')).toBe(true)
+    })
+
     test('switches the canonical harness to a local development checkout', async () => {
       const box = await sandbox()
       const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
@@ -99,6 +112,38 @@ ki-recap for claude-code already installed
 `
       })
     })
+
+    test('removes a recognised development projection before attempting canonical restoration', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('claude-code')
+      await box.run('ki bootstrap')
+      await box.run(`ki dev on ${harnessPath}`)
+      box.setFetcher(async () => {
+        throw new Error('offline')
+      })
+
+      const off = await box.run('ki dev off')
+
+      expect(off.exitCode).toBe(1)
+      expect(off.output).toContain('could not download configured harness knowledgeislands/ki-agentic-harness')
+      await expect(lstat(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`)).rejects.toThrow()
+    })
+
+    test('attempts canonical restoration when its development destination is already absent', async () => {
+      const box = await sandbox()
+      await box.setupAgentHome('claude-code')
+      await box.run('ki bootstrap')
+      await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`, { recursive: true })
+      box.setFetcher(async () => {
+        throw new Error('offline')
+      })
+
+      const off = await box.run('ki dev off')
+
+      expect(off.exitCode).toBe(1)
+      expect(off.output).toContain('could not download configured harness knowledgeislands/ki-agentic-harness')
+    })
   })
 
   describe('guards', () => {
@@ -120,6 +165,62 @@ ki-recap for claude-code already installed
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('skills/keystone/ki-bootstrap/SKILL.md')
     })
+
+    test('refuses to replace an unfamiliar canonical development link', async () => {
+      const box = await sandbox()
+      const first = await box.setupLocalCanonicalHarness('dev/first/knowledgeislands/ki-agentic-harness')
+      const second = await box.setupLocalCanonicalHarness('dev/second/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await box.run(`ki dev on ${first}`)
+
+      const result = await box.run(`ki dev on ${second}`)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('skills link is unfamiliar')
+    })
+
+    test('refuses a dangling canonical development link', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await box.run(`ki dev on ${harnessPath}`)
+      const link = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/hooks`
+      await unlink(link)
+      await symlink(`${box.root.path}/missing-hooks`, link, 'dir')
+
+      const result = await box.run(`ki dev on ${harnessPath}`)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('hooks link is unfamiliar')
+    })
+
+    test('refuses a local checkout missing one of the required payload directories', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await rm(`${harnessPath}/hooks`, { recursive: true })
+
+      const result = await box.run(`ki dev on ${harnessPath}`)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('local harness hooks directory must be a directory')
+    })
+
+    test('refuses an installed canonical directory with unrecognised state', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await box.data.write('ki/harnesses/knowledgeislands/ki-agentic-harness/notes.txt', 'preserve me\n')
+
+      const result = await box.run(`ki dev on ${harnessPath}`)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('has unrecognised state')
+    })
   })
 
   describe('reporting', () => {
@@ -134,6 +235,20 @@ ki-recap for claude-code already installed
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('development harness enabled')
       expect(result.output).toContain('already installed')
+    })
+
+    test('preserves recognised local payload links when development is already enabled', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await box.run(`ki dev on ${harnessPath}`)
+
+      const result = await box.run(`ki dev on ${harnessPath}`)
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('development harness enabled')
+      expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness/skills')).toBe(true)
     })
   })
 })
