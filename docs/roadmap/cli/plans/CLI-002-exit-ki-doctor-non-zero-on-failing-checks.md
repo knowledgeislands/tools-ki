@@ -1,7 +1,7 @@
 ---
 id: 'CLI-002'
 title: Exit ki doctor non-zero on failing checks
-status: in-progress
+status: acceptance
 roadmap: cli/exit-ki-doctor-non-zero-on-failing-checks
 blocks: —
 blocked-by: —
@@ -43,3 +43,31 @@ baseline-ref: 912f422defbfa9abd908edf7293f601a18b951e2
 ## Dependencies / blocks
 
 This is a self-contained CLI exit-contract change. It has no plan dependency and can execute independently of CLI-001.
+
+## Acceptance
+
+### Delivered
+
+`ki doctor` now returns a non-zero exit status after rendering any failing check, making the command suitable as a script and CI gate while preserving its complete human-readable report.
+
+### Summary of changes
+
+- Added a silent `KiExit` outcome at the root CLI boundary so an already-rendered report can return a status without a duplicate error line.
+- Centralised doctor report emission and return status in `src/commands/doctor.ts`.
+- Expanded `src/tests/cli/doctor.test.ts` to assert failing and clean-report exit contracts, and documented the contract in `man/ki.1`.
+
+### Verification
+
+- `bun run test -- src/tests/cli/doctor.test.ts` — 10 passing CLI-contract tests.
+- `bun run test` — 320 passing tests.
+- `bun run test:coverage` — 100% statements, branches, functions, and lines.
+- `bunx biome check .`, `bunx tsc --noEmit`, `bunx knip`, `bash -n install.sh`, and `git diff --check` — passed.
+- Checked implementation revision: `02f2bd6` (`fix(doctor): fail on unhealthy checks`).
+
+### Outstanding concerns
+
+None.
+
+### Mini recap
+
+Returning an explicit silent outcome from the command boundary keeps fully rendered diagnostic reports distinct from operational errors while preserving the CLI's injected stream contract.
