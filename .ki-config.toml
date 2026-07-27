@@ -10,3 +10,11 @@ supported_runtimes = ["claude-code", "codex"]
 [ki-roadmap]
 
 [ki-decision-records]
+
+[ki-tokenomics]
+
+[ki-housekeeping-claude]
+
+[ki-tokenomics-claude]
+
+[ki-tokenomics-codex]
