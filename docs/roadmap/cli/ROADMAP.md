@@ -16,9 +16,13 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 
 Implement the defined capability inventory, status, maintenance, and upgrade forms: `ki list`, `ki missing`, `ki outdated`, `ki install`, `ki reinstall`, `ki uninstall`, `ki update`, and CWD-resolved `ki upgrade`. Retain `ki harness list` as the harness-focused inventory and preserve KI's verified-harness and explicit-scope boundaries.
 
+**Plan:** [CLI-001](plans/CLI-001-implement-capability-package-management-commands.md)
+
 ### Exit `ki doctor` non-zero on failing checks
 
 `ki doctor` prints `✗` for failing checks (missing configuration, missing harnesses, unlinked skills) but always exits 0, so it can't be used as a script/CI gate. Decide the exit-code contract (e.g. non-zero if any check is `fail`) and update the CLI-005 contract test at `src/tests/cli/doctor.test.ts` alongside the fix.
+
+**Plan:** [CLI-002](plans/CLI-002-exit-ki-doctor-non-zero-on-failing-checks.md)
 
 ## Soon
 
