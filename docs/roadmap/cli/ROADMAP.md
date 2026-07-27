@@ -20,7 +20,7 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 
 ### Host generated rubric-publication capability
 
-Provide the narrow host capability required for `ki repo audit` and `ki repo conform` to assess and publish generated skill rubric publications. The host owns validated catalogue loading, canonical rendered bytes, guarded transactional publication, rollback, re-audit, and standalone parity. The harness's `ki-skills` capability owns the policy criterion, drift findings, and derived write proposals; neither side duplicates the other's concern.
+Provide the narrow host capability required for `ki repo audit` and `ki repo conform` to assess and publish generated skill rubric publications. The host owns validated catalogue loading, canonical rendered bytes, guarded incremental publication, re-audit, and standalone parity. The harness's `ki-skills` capability owns the policy criterion, drift findings, and derived write proposals; neither side duplicates the other's concern.
 
 **Plan:** [CLI-002](plans/CLI-002-host-generated-rubric-publication-capability.md)
 
