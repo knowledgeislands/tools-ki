@@ -19,10 +19,10 @@ This CLI plan delivers the host half of that contract.
 
 ## Current state
 
-- `src/core/rubric-render.ts` already renders a structured catalogue, and `ki skill rubric <skill>` detects missing or stale `references/rubric.md` output.
-- That standalone writer is outside repository CONFORM, so it cannot share the host's validated target checks, deterministic write ordering, re-audit, or FIXED reporting.
-- The rubric context contract has no injected capability for `ki-skills` to receive canonical publication bytes and propose a derived write.
-- The received harness plan is already in progress; its policy and catalogue changes must not start until this CLI plan settles the host interface and mechanics.
+- `ki skill rubric <skill>` and repository CONFORM now share one validated loading and rendering path for `references/rubric.md` publications.
+- The host publishes each safe write atomically in deterministic order, refuses unsafe and concurrently changed targets, retains earlier successes after a later failure, then re-audits and reports remaining state.
+- Rubric contexts receive only canonical publication evidence and a host-owned derived-write capability; `ki` creates no criterion-specific finding.
+- The receiving [FND-002](https://github.com/knowledgeislands/ki-agentic-harness/commit/4bd31732) plan is done after regenerating and verifying all 30 structured publications.
 
 ## Steps
 
@@ -31,7 +31,7 @@ This CLI plan delivers the host half of that contract.
 3. ✓ Replace cross-file direct-write transactions with guarded incremental publication: physical containment, scope and symlink refusal, concurrent-change refusal, atomic per-file replacement, deterministic order, retained earlier successes on a later failure, and truthful re-audit/reporting.
 4. ✓ Inject only publication evidence and a host-owned derived-write mechanism into rubric contexts; do not create a host-side automatic finding, encode a `KI-CHECKER-6` identity, or weaken installed-harness validation.
 5. ✓ Add CLI-contract coverage for clean, missing, stale, malformed, symlink, dry-run, repeated conform, ordered multi-write failure, concurrent replacement refusal, retained earlier successes, accurate remaining findings, FIXED reporting, and standalone/repository byte parity.
-6. Hand the frozen capability contract and verification evidence back to the harness so [FND-002](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-002-protect-generated-rubric-publications.md) can add `ki-skills` policy and regenerate its derived publications.
+6. ✓ Hand the frozen capability contract and verification evidence back to the harness so [FND-002](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-002-protect-generated-rubric-publications.md) can add `ki-skills` policy and regenerate its derived publications. FND-002 completed after validating all 30 structured publications against this host contract.
 
 ## Files touched
 
@@ -66,3 +66,30 @@ No compatibility path, generated-Markdown parser, duplicate renderer, host-creat
 - Round 2 — mechanical: implement host loading, guarded incremental publication, context injection, and CLI-contract tests; files: exclusive `tools-ki/src/**`; gate: focused standalone, audit, conform, retained-success, and parity tests.
 - Round 3 — mechanical: consume the frozen interface in harness `ki-skills`, regenerate publications, and verify cross-repository integration; files: exclusive harness scope; gate: both repositories' full verification suites.
 - Orchestrator: review every worker diff, ensure host mechanics remain criterion-agnostic, run final verification, and commit only gated work.
+
+## Acceptance
+
+### Delivered
+
+`ki` now supplies the sole structured-rubric renderer and a criterion-agnostic, guarded incremental publisher to both standalone rubric inspection and repository CONFORM. The receiving harness integration is complete and retained in done FND-002.
+
+### Summary of changes
+
+- Added the validated catalogue renderer, publication evidence, and host-owned derived-write capability across standalone and repository paths.
+- Replaced cross-file rollback with guarded incremental publication: containment, scope, symlink, and concurrent-change checks remain; each safe replacement is atomic; a later failure retains earlier successful writes and triggers re-audit.
+- Added CLI contract coverage for drift, dry runs, idempotence, unsafe targets, partial failure, remaining-state reporting, FIXED results, and standalone/repository byte parity.
+- Completed the reciprocal handoff to [FND-002](https://github.com/knowledgeislands/ki-agentic-harness/commit/4bd31732), which regenerated and checked all 30 structured rubric publications.
+
+### Verification
+
+At `9f569b2`, `bun run test` and `bun run test:coverage` passed: 343 tests and 100% statements, branches, functions, and lines. `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .` also passed.
+
+The CLI suites exercise exact standalone/repository publication bytes, dry-run immutability, real guarded writes, unsafe-target and concurrent-replacement refusal, retained earlier writes after a later failure, and re-audited remaining findings.
+
+### Outstanding concerns
+
+None. The capability deliberately does not provide cross-file rollback; its incremental partial-success behaviour is the accepted contract and is documented in FND-002.
+
+### Mini recap
+
+The host contract and receiving harness policy are now aligned, verified, and complete. No learning route is proposed; the plan is ready for manual acceptance.
