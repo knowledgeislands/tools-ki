@@ -36,6 +36,12 @@ Define and implement `ki update` and CWD-resolved `ki upgrade` for compatible pa
 
 **Plan:** [CLI-004](plans/CLI-004-deliver-update-upgrade-operations.md)
 
+### Make audit and conform output name its target and its passes
+
+Report output currently identifies each section by the harness that supplies the skill, as in `knowledgeislands/ki-agentic-harness:ki-engineering:audit`, and never names the repository under assessment. Across a multi-repository sweep every section therefore carries an identical prefix, and an operator reasonably reads that prefix as the target rather than the provider. Name the assessed repository in the output so a sweep is legible without correlating against the invoking command.
+
+The default reporter also renders only `FAIL`, `WARN`, and `FIXED`, so a skill that assesses a repository cleanly emits no section at all. A fully passing skill is then indistinguishable from one that never ran, and confirming the difference requires re-running with `--reporter-levels all`. Emit a per-skill result line unconditionally, so a clean pass is positively reported rather than inferred from silence.
+
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
