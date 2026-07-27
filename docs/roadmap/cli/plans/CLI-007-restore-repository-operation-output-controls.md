@@ -1,7 +1,7 @@
 ---
 id: 'CLI-007'
 title: Restore repository-operation output controls
-status: in-progress
+status: done
 roadmap: cli/restore-repository-operation-output-controls
 blocks: —
 blocked-by: —
@@ -53,3 +53,35 @@ The missing controls are a current CLI regression, not a compatibility requireme
 ## Dependencies / blocks
 
 This is a local `tools-ki` regression with no recipient handoff or external dependency. It is placed in Blocking because the native replacement removed an established operational capability used to control interactive and CI output.
+
+## Acceptance
+
+### Delivered
+
+`ki repo audit` and `ki repo conform` again expose caller-controlled progress visibility, progress layout, and finding-level reporting without changing operation selection, totals, or failure semantics.
+
+### Summary of changes
+
+- Added `--progress <auto|always|never>` and `--progress-style <single|multi>` to both repository operations; forced progress is deterministic outside a TTY, while multi mode maintains stable per-skill rows.
+- Added case-insensitive `--reporter-levels <levels|all>` with FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS reporting; audit defaults to FAIL,WARN and conform to FAIL,WARN,FIXED.
+- Preserved PASS and NOT_APPLICABLE through the runtime reporting boundary, added CLI-contract coverage, and documented the controls in `ki(1)`.
+
+### Verification
+
+- `bun run test` — 308 tests passed at `a58b53a`.
+- `bun run test:coverage` — 308 tests passed with 100% statements, branches, functions, and lines at `a58b53a`.
+- `bunx biome check .`, `bunx tsc --noEmit`, `bunx knip`, `bash -n install.sh`, and `git diff --check` — passed at `a58b53a`.
+- `bun src/main.ts repo audit --help` and `bun src/main.ts repo conform --help` — both list all three controls.
+- `bun src/main.ts repo audit --skill ki-roadmap --progress never` and `--reporter-levels all --progress never` — passed with zero FAIL and WARN; the latter rendered PASS and INFO outcomes.
+
+### Outstanding concerns
+
+None.
+
+### Mini recap
+
+The runtime had retained outcome detail in item state but discarded PASS and NOT_APPLICABLE before rendering; preserving them in host-owned findings restores the output contract without pushing presentation logic into rubric providers. No further learning route is proposed.
+
+## Done
+
+Completed the restored repository-operation output controls: selectable progress visibility, stable single- and multi-row presentation, and level-filtered reporting including PASS and NOT_APPLICABLE. No residual concerns. No intended follow-up.
