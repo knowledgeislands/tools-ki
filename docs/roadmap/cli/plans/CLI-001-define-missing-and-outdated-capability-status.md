@@ -1,11 +1,11 @@
 ---
 id: 'CLI-001'
 title: 'Define `ki missing` and `ki outdated` capability status'
-status: ready
+status: in-progress
 roadmap: cli/define-ki-missing-and-ki-outdated-capability-status
 blocks: —
 blocked-by: —
-baseline-ref: —
+baseline-ref: e1d6bbd536f1e2250a495ca94c216c94532b9bce
 ---
 
 ## Context
