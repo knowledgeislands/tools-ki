@@ -1,7 +1,7 @@
 ---
 id: 'CLI-003'
 title: Activate skills only for compatible runtimes
-status: open
+status: ready
 roadmap: cli/activate-skills-only-for-compatible-runtimes
 blocks: ki-agentic-harness/RTP-002
 blocked-by: —
