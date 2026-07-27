@@ -3,7 +3,7 @@ id: 'CLI-003'
 title: Activate skills only for compatible runtimes
 status: acceptance
 roadmap: cli/activate-skills-only-for-compatible-runtimes
-blocks: ki-agentic-harness/RTP-002
+blocks: —
 blocked-by: —
 baseline-ref: a8520e3db83260caaf223d3ec0beb2ab3bff50b6
 ---
