@@ -76,10 +76,8 @@ export const resolveDeclaredSkills = (
   })
   const ordered = orderedSkills(resolved)
   if (!selected) return ordered
-  const selectedSkills = resolved.filter((skill) => skill.identity === selected || skill.declaration.name === selected)
-  if (!selectedSkills.length) throw new KiError(`--skill must name one declared resolved skill`, 2)
-  /* v8 ignore next -- each declared skill's name/identity is unique per repository configuration, so selectedSkills can never exceed 1. */
-  if (selectedSkills.length > 1) throw new KiError(`--skill ${selected} is ambiguous; use its qualified identity`, 2)
+  const selectedSkill = resolved.find((skill) => skill.identity === selected || skill.declaration.name === selected)
+  if (!selectedSkill) throw new KiError(`--skill must name one declared resolved skill`, 2)
   const selectedNames = new Set<string>()
   const includeDependencies = (skill: ResolvedSkill): void => {
     if (selectedNames.has(skill.declaration.name)) return
@@ -91,6 +89,6 @@ export const resolveDeclaredSkills = (
       if (dependency) includeDependencies(dependency)
     }
   }
-  for (const skill of selectedSkills) includeDependencies(skill)
+  includeDependencies(selectedSkill)
   return ordered.filter((skill) => selectedNames.has(skill.declaration.name))
 }

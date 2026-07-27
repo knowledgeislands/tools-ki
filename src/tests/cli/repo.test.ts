@@ -82,6 +82,32 @@ export default {
 }
 `
 
+const setupPrefixCollisionHarness = async (data: SandboxArea): Promise<void> => {
+  for (const { name, code, marker } of [
+    { name: 'ki-website', code: 'WEB-1', marker: 'website.txt' },
+    { name: 'ki-website-cloudflare', code: 'WCF-1', marker: 'cloudflare.txt' }
+  ]) {
+    const base = `ki/harnesses/example/harness/skills/${name}`
+    await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
+    await data.write(
+      `${base}/scripts/rubric/items/index.ts`,
+      rubric(
+        `[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: '${code}', title: '${name}', level: 'WARN', phase: 'PRIMARY',
+          audit: async ({ repository }) => {
+            const { existsSync } = await import('node:fs')
+            return existsSync(repository + '/${marker}')
+              ? [{ status: 'PASS', message: 'conformed' }]
+              : [{ status: 'VIOLATION', message: 'not conformed' }]
+          },
+          conform: async () => ({ writes: [{ path: '${marker}', content: '${name}\\n', create: true }] })
+        }] }]`,
+        name
+      )
+    )
+  }
+}
+
 describe('[ki repo]', () => {
   describe('repo educate', () => {
     test('renders only the static catalogue for one declared skill', async () => {
@@ -141,6 +167,18 @@ describe('[ki repo]', () => {
   ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=1
 `
       })
+    })
+
+    test('selects an exact capability when another declared skill extends its name', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-website]\n[ki-website-cloudflare]\n')
+      await setupPrefixCollisionHarness(box.data)
+
+      const result = await box.run(`ki repo audit --repo ${box.project.path} --skill ki-website`)
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('==> example/harness:ki-website:audit')
+      expect(result.output).not.toContain('ki-website-cloudflare')
     })
 
     test('reports clean when no families declare items', async () => {
@@ -341,6 +379,20 @@ export default {
   })
 
   describe('repo conform', () => {
+    test('selects an exact capability when another conforming skill extends its name', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-website]\n[ki-website-cloudflare]\n')
+      await setupPrefixCollisionHarness(box.data)
+
+      const result = await box.run(`ki repo conform --repo ${box.project.path} --skill ki-website`)
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('write website.txt')
+      expect(result.output).not.toContain('cloudflare.txt')
+      await expect(box.project.read('website.txt')).resolves.toBe('ki-website\n')
+      await expect(box.project.read('cloudflare.txt')).rejects.toThrow()
+    })
+
     const governedItem = (level = 'FAIL') => `[{
       code: 'F', title: 'Family',
       items: [{
