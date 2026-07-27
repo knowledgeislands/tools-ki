@@ -33,6 +33,14 @@ jobs:
           ki bootstrap
           ki diag | grep -F 'Status        valid'
           ki harness list | grep -F 'knowledgeislands/ki-agentic-harness'
+          {
+            printf 'KI_CLI_INSTALL_DIR=%s\n' "$KI_CLI_INSTALL_DIR"
+            printf 'KI_MAN_INSTALL_DIR=%s\n' "$KI_MAN_INSTALL_DIR"
+            printf 'KI_DATA_HOME=%s\n' "$KI_DATA_HOME"
+            printf 'KI_CONFIG_HOME=%s\n' "$KI_CONFIG_HOME"
+            printf 'KI_CACHE_HOME=%s\n' "$KI_CACHE_HOME"
+            printf 'KI_STATE_HOME=%s\n' "$KI_STATE_HOME"
+          } >> "$GITHUB_ENV"
           printf '%s\n' "$KI_CLI_INSTALL_DIR" >> "$GITHUB_PATH"
       - name: Audit
         run: ki repo audit --repo .
