@@ -1,7 +1,7 @@
 ---
 id: 'CLI-007'
 title: Restore repository-operation output controls
-status: open
+status: ready
 roadmap: cli/restore-repository-operation-output-controls
 blocks: —
 blocked-by: —
