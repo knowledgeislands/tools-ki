@@ -1,4 +1,5 @@
 [ki-repo]
+supported_runtimes = ["claude-code", "codex"]
 
 [ki-authoring]
 
