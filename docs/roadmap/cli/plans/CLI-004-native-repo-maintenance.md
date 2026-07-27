@@ -20,11 +20,11 @@ The planned implementation is delivered: verified installed-harness acquisition,
 
 The canonical harness has proved the runtime through a development-linked payload. No CLI-004 implementation unit remains.
 
-The plan is not yet ready for acceptance because the current repository-wide verification baseline is not clean: tests, TypeScript, and Knip pass, while Biome reports formatting drift in `src/core/paths.ts`, `src/core/registry.ts`, and `src/core/resolution.ts` plus two warnings. The 100% coverage gate also needs a fresh result after the recent command-surface changes.
+The repository-wide verification baseline is clean: 303 CLI-contract tests pass, including 100% statements, branches, functions, and lines over product code. TypeScript, Biome, and Knip also pass.
 
 ## Steps
 
-1. Clear or explicitly resolve the current repository verification drift, run the complete CLI-004 gate, and present the plan for acceptance.
+1. Present the completed implementation and clean verification evidence for manual acceptance.
 
 ## Files touched
 
