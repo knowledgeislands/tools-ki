@@ -20,11 +20,11 @@ Received from `ki-agentic-harness` [RTP-002](../../../../ki-agentic-harness/docs
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-### Implement capability package-management commands
+### Deliver `ki list` capability inventory
 
-Implement the defined capability inventory, status, maintenance, and upgrade forms: `ki list`, `ki missing`, `ki outdated`, `ki install`, `ki reinstall`, `ki uninstall`, `ki update`, and CWD-resolved `ki upgrade`. Retain `ki harness list` as the harness-focused inventory and preserve KI's verified-harness and explicit-scope boundaries.
+Deliver a read-only inventory of verified installed harnesses and their capabilities, declared user skills, and CWD-resolved repository skills. Retain `ki harness list` as the harness-focused summary and make no release, desired-state, or mutation claim.
 
-**Plan:** [CLI-001](plans/CLI-001-implement-capability-package-management-commands.md)
+**Plan:** [CLI-001](plans/CLI-001-deliver-ki-list-capability-inventory.md)
 
 ### Exit `ki doctor` non-zero on failing checks
 
@@ -35,6 +35,18 @@ Implement the defined capability inventory, status, maintenance, and upgrade for
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
+
+### Define `ki missing` and `ki outdated` capability status
+
+Define the desired capability set and release-status evidence required for read-only `ki missing` and `ki outdated` reports. Preserve the distinction between installed verified harnesses, active user or repository declarations, and releases that have not yet been acquired.
+
+### Deliver `ki install`, `ki reinstall`, and `ki uninstall` capability lifecycle
+
+Define and implement lifecycle commands for a named compatible capability or its supplying harness without duplicating `ki harness` operations or bypassing explicit `ki user` and `ki repo` activation scope. Settle target identity, replacement, removal, dry-run, and safe ownership semantics first.
+
+### Deliver package and harness update–upgrade operations
+
+Define and implement `ki update` and CWD-resolved `ki upgrade` for compatible packages or harnesses. Respect the selected CLI distribution, verified immutable acquisition evidence, and explicit user or repository activation boundaries; do not treat a generic executable self-update as universal across Homebrew and installer deployments.
 
 ## Waiting for
 

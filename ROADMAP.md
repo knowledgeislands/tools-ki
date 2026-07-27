@@ -12,12 +12,16 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
+- [Cli: Deliver `ki list` capability inventory](docs/roadmap/cli/ROADMAP.md#deliver-ki-list-capability-inventory)
 - [Cli: Exit `ki doctor` non-zero on failing checks](docs/roadmap/cli/ROADMAP.md#exit-ki-doctor-non-zero-on-failing-checks)
-- [Cli: Implement capability package-management commands](docs/roadmap/cli/ROADMAP.md#implement-capability-package-management-commands)
 
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
+
+- [Cli: Define `ki missing` and `ki outdated` capability status](docs/roadmap/cli/ROADMAP.md#define-ki-missing-and-ki-outdated-capability-status)
+- [Cli: Deliver `ki install`, `ki reinstall`, and `ki uninstall` capability lifecycle](docs/roadmap/cli/ROADMAP.md#deliver-ki-install-ki-reinstall-and-ki-uninstall-capability-lifecycle)
+- [Cli: Deliver package and harness update–upgrade operations](docs/roadmap/cli/ROADMAP.md#deliver-package-and-harness-updateupgrade-operations)
 
 ## Waiting for
 
