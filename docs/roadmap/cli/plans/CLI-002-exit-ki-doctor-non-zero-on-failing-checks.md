@@ -1,7 +1,7 @@
 ---
 id: 'CLI-002'
 title: Exit ki doctor non-zero on failing checks
-status: open
+status: ready
 roadmap: cli/exit-ki-doctor-non-zero-on-failing-checks
 blocks: —
 blocked-by: —

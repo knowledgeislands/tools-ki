@@ -1,7 +1,7 @@
 ---
 id: 'CLI-001'
 title: Implement capability package-management commands
-status: open
+status: ready
 roadmap: cli/implement-capability-package-management-commands
 blocks: —
 blocked-by: —
