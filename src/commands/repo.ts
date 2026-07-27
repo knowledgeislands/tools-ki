@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { stripVTControlCharacters } from 'node:util'
 import { Command } from 'commander'
 import type { KiContext } from '../context.ts'
 import { readDeclaredSkills } from '../core/configuration.ts'
@@ -222,7 +223,8 @@ const withFixed = (report: SkillReport): readonly RenderedFinding[] => [
 ]
 
 const formatFinding = (finding: RenderedFinding, skill?: string, full = true): string => {
-  const message = full ? finding.message : (finding.message.split(/\r?\n/, 1)[0] ?? '')
+  const safeMessage = stripVTControlCharacters(finding.message)
+  const message = full ? safeMessage : (safeMessage.split(/\r?\n/, 1)[0] ?? '')
   const subject = finding.subject ? ` ${finding.subject}` : ''
   const prefix = `  ${REPORT_ICON[finding.level]} ${REPORT_LABEL[finding.level].padEnd(5)}${skill ? ` ${skill.padEnd(20)}` : ''}`
   return `${prefix} [${finding.title} (${finding.code})]${subject} — ${message.replace(/\r?\n/g, '\n    ')}`
