@@ -2183,6 +2183,34 @@ ki-depends-on: ${list}
       expect(result.output).toContain('[Order (R-1)] — ki-feature')
     })
 
+    test('uses a stable topological order independent of declaration and dependency-list order', async () => {
+      const box = await sandbox()
+      await installSkillsHarness(box.data, [
+        { name: 'ki-a-feature', deps: ['ki-z-foundation', 'ki-y-foundation'] },
+        { name: 'ki-b-independent', deps: [] },
+        { name: 'ki-y-foundation', deps: [] },
+        { name: 'ki-z-foundation', deps: [] }
+      ])
+      const declarations = `[ki-z-foundation]
+
+[ki-a-feature]
+
+[ki-y-foundation]
+
+[ki-b-independent]
+`
+      await box.project.write('.ki-config.toml', declarations)
+
+      const result = await box.run('ki repo audit --reporter-levels info')
+      const positions = ['ki-b-independent', 'ki-y-foundation', 'ki-z-foundation', 'ki-a-feature'].map((name) =>
+        result.output.indexOf(`==> example/harness:${name}:audit`)
+      )
+
+      expect(result.exitCode).toBe(0)
+      expect(positions.every((position) => position >= 0)).toBe(true)
+      expect(positions).toEqual([...positions].sort((left, right) => left - right))
+    })
+
     test('refuses a declared skill whose dependency is undeclared', async () => {
       const box = await sandbox()
       await installSkillsHarness(box.data, [

@@ -23,24 +23,34 @@ const skillCandidates = (harnesses: readonly InstalledHarness[], name: string): 
 
 const orderedSkills = (skills: readonly ResolvedSkill[]): readonly ResolvedSkill[] => {
   const byName = new Map(skills.map((skill) => [skill.declaration.name, skill]))
-  const states = new Map<string, 'visiting' | 'visited'>()
+  const remaining = new Map(
+    [...skills]
+      .sort((left, right) => left.declaration.name.localeCompare(right.declaration.name))
+      .map((skill) => [skill.declaration.name, { skill, dependencies: new Set(skill.capability.dependsOn) }])
+  )
   const ordered: ResolvedSkill[] = []
-  const visit = (skill: ResolvedSkill): void => {
-    const state = states.get(skill.declaration.name)
-    if (state === 'visiting') throw new KiError(`declared skill ${skill.declaration.name} has a dependency cycle`, 1)
-    if (state === 'visited') return
-    states.set(skill.declaration.name, 'visiting')
-    for (const dependencyName of skill.capability.dependsOn) {
-      const dependency = byName.get(dependencyName)
-      if (!dependency) {
-        throw new KiError(`declared skill ${skill.declaration.name} requires declared dependency ${dependencyName}`, 1)
+  for (const [name, { dependencies }] of remaining) {
+    for (const dependencyName of dependencies) {
+      if (!byName.has(dependencyName)) {
+        throw new KiError(`declared skill ${name} requires declared dependency ${dependencyName}`, 1)
       }
-      visit(dependency)
     }
-    states.set(skill.declaration.name, 'visited')
-    ordered.push(skill)
   }
-  for (const skill of skills) visit(skill)
+  while (remaining.size) {
+    const next = [...remaining.values()]
+      .filter(({ dependencies }) => dependencies.size === 0)
+      .sort((left, right) => left.skill.declaration.name.localeCompare(right.skill.declaration.name))[0]
+    if (!next) {
+      const [name] = [...remaining.keys()].sort()
+      /* v8 ignore next -- remaining is non-empty and its sorted key set therefore has a first member. */
+      if (!name) throw new KiError('declared skills have a dependency cycle', 1)
+      throw new KiError(`declared skill ${name} has a dependency cycle`, 1)
+    }
+    const name = next.skill.declaration.name
+    remaining.delete(name)
+    ordered.push(next.skill)
+    for (const candidate of remaining.values()) candidate.dependencies.delete(name)
+  }
   return ordered
 }
 
