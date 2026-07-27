@@ -68,51 +68,9 @@ To compare the two installations without changing `PATH`, invoke both executable
 
 The first command runs the currently installed Homebrew release. The second runs this checkout.
 
-## Configure release signing
+## Release work
 
-The verified-release installer uses a signed checksum manifest. Its release workflow reads the private signing key only from the `KI_RELEASE_SIGNING_KEY` GitHub Actions **environment secret**; the repository and released installer carry only its public key.
-
-Create the key pair once on a trusted development machine. The commands refuse to overwrite an existing private key and restrict its permissions:
-
-```sh
-key_dir="$HOME/Documents/ki-release-key"
-umask 077
-mkdir -p "$key_dir"
-test ! -e "$key_dir/ki-release-signing-key.pem" || {
-  echo "A signing key already exists at $key_dir; stopping without overwriting it."
-  exit 1
-}
-openssl genpkey -algorithm ED25519 -out "$key_dir/ki-release-signing-key.pem"
-openssl pkey -in "$key_dir/ki-release-signing-key.pem" -pubout -out "$key_dir/ki-release-signing-public.pem"
-chmod 600 "$key_dir/ki-release-signing-key.pem"
-chmod 644 "$key_dir/ki-release-signing-public.pem"
-```
-
-Keep `ki-release-signing-key.pem` private: do not commit it, paste it into chat, or send it by email. The public-key file is safe to commit and distribute.
-
-Do not create `KI_RELEASE_SIGNING_KEY` as a general repository secret. A release tag can otherwise select workflow code that reads it. Configure the protected `release` environment before adding the key:
-
-1. Add a second, trusted GitHub account to `knowledgeislands/tools-ki` with at least **Read** access. This account is the independent release reviewer; it must not be the account that starts a release. A trusted colleague or a separately controlled account is suitable.
-2. Protect `main`: open **Settings** → **Rules** → **Rulesets** → **New branch ruleset**; target `main`; require pull requests and one approving review from that independent account. Do not permit bypass for the release publisher.
-3. Open **Settings** → **Environments** → **New environment** and name it `release`. Under deployment branches and tags, select only `main` (or **Protected branches only** after the `main` ruleset is active).
-4. Under deployment protection rules, enable **Required reviewers**, select the independent account, and enable **Prevent self-review**. Disable any administrator bypass option.
-5. Under **Environment secrets**, add `KI_RELEASE_SIGNING_KEY` and paste the private PEM file contents. Never paste that file into chat, an issue, or a repository file.
-
-The release workflow is manually dispatched from `main` and checks out the exact requested release tag only after approval. GitHub exposes the secret to its publisher job only after the environment's protection rules pass. See [GitHub's guide to environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments) and [managing environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
-
-Copy the private key directly from the file rather than printing it into a shared terminal or chat transcript:
-
-```sh
-pbcopy < "$key_dir/ki-release-signing-key.pem"
-```
-
-Copy the public key into the repository's tracked trust-anchor file, then commit it with the release-maintenance work:
-
-```sh
-cp "$key_dir/ki-release-signing-public.pem" release/ki-release-signing-public.pem
-```
-
-The tracked [public key](../../../release/ki-release-signing-public.pem) is safe to inspect and distribute. The release workflow signs only with the matching `KI_RELEASE_SIGNING_KEY` secret; if the two files do not belong to the same key pair, release verification will fail.
+Release signing, protected GitHub environment configuration, and publication are covered by the [release management guide](release-management.md).
 
 ## Read the manual
 
