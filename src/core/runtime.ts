@@ -12,11 +12,13 @@ import {
   RUBRIC_PHASES,
   type RubricFamily,
   type RubricItem,
+  type RubricPublication,
   type RubricScope,
   type RubricSession,
   type RubricSubject,
   type SkillRubricDefinition
 } from './rubric.ts'
+import { prepareRubricPublication } from './rubric-publication.ts'
 import { loadRubricDefinition } from './runtime-loader.ts'
 import type { NativeWrite } from './transaction.ts'
 
@@ -253,6 +255,7 @@ interface InternalAudit {
   readonly items: readonly ItemAuditState[]
   readonly findings: readonly Finding[]
   readonly scope: RubricScope
+  readonly publication: { write?: NativeWrite; conforming: boolean }
 }
 
 export const prepareSkill = async (skill: ResolvedSkill): Promise<PreparedSkill> => {
@@ -273,12 +276,23 @@ const auditSkill = async (
     if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError('user home must be an existing physical directory', 1)
     scope = { ...scope, userHome: await realpath(scope.userHome) }
   }
+  const preparedPublication = await prepareRubricPublication(skill, definition, scope.repository)
+  const publicationDraft: { write?: NativeWrite; conforming: boolean } = { conforming: false }
+  const publication: RubricPublication = {
+    ...preparedPublication.evidence,
+    propose: () => {
+      if (mode !== 'conform' || !publicationDraft.conforming)
+        throw new KiError('rubric publication can be proposed only from a conform action', 1)
+      publicationDraft.write = preparedPublication.proposal()
+    }
+  }
   const session = validateRubricSession(
     await definition.createSession({
       mode,
       repository: scope.repository,
       userHome: scope.userHome,
-      configuration: skill.declaration.configuration
+      configuration: skill.declaration.configuration,
+      publication
     }),
     definition,
     skill.identity
@@ -293,7 +307,7 @@ const auditSkill = async (
       return [findingForOutcome(state.item, outcome)]
     })
   )
-  return { session, items, findings, scope: definitionScope }
+  return { session, items, findings, scope: definitionScope, publication: publicationDraft }
 }
 
 export const runSkillAudit = async (
@@ -315,7 +329,7 @@ export const educateSkill = async (prepared: PreparedSkill): Promise<SkillEducat
   }
 }
 
-const attemptConform = async (state: ItemAuditState): Promise<boolean> => {
+const attemptConform = async (state: ItemAuditState, publication: { write?: NativeWrite; conforming: boolean }): Promise<boolean> => {
   const { family, item } = state.item
   const conform = item.mechanical.conform as NonNullable<typeof item.mechanical.conform>
   let attempted = false
@@ -326,7 +340,12 @@ const attemptConform = async (state: ItemAuditState): Promise<boolean> => {
     if (!conformable) continue
     const rootContext = await audited.subject.context()
     const context = await family.selectContext(rootContext)
-    await conform.run(context)
+    publication.conforming = true
+    try {
+      await conform.run(context)
+    } finally {
+      publication.conforming = false
+    }
     attempted = true
   }
   return attempted
@@ -337,7 +356,7 @@ export const runSkillConform = async (
   prepared: PreparedSkill,
   onItemComplete?: (item: PreparedRubricItem) => void
 ): Promise<SkillConformResult> => {
-  const { session, items, scope: definitionScope } = await auditSkill(scope, prepared, 'conform', onItemComplete)
+  const { session, items, scope: definitionScope, publication } = await auditSkill(scope, prepared, 'conform', onItemComplete)
   const conformOrder = items
     .filter((state) => state.item.item.mechanical.conform)
     .slice()
@@ -352,14 +371,15 @@ export const runSkillConform = async (
       return left.item.itemIndex - right.item.itemIndex
     })
   const attempted = new Set<string>()
-  for (const state of conformOrder) if (await attemptConform(state)) attempted.add(state.item.code)
+  for (const state of conformOrder) if (await attemptConform(state, publication)) attempted.add(state.item.code)
 
   const findings: Finding[] = []
   const fixable: ItemAuditState[] = []
   const proposal = attempted.size
     ? validateConformProposal(await session.proposal(), prepared.skill.identity)
     : { writes: [] as readonly NativeWrite[], commands: [] as readonly ConformCommand[] }
-  const proposed = proposal.writes.length > 0 || proposal.commands.length > 0
+  const writes = attempted.size && publication.write !== undefined ? [...proposal.writes, publication.write] : proposal.writes
+  const proposed = writes.length > 0 || proposal.commands.length > 0
   items.forEach((state) => {
     if (proposed && attempted.has(state.item.code)) {
       fixable.push(state)
@@ -369,7 +389,7 @@ export const runSkillConform = async (
       findings.push(findingForOutcome(state.item, outcome))
     }
   })
-  return { findings, writes: proposal.writes, commands: proposal.commands, scope: definitionScope, fixable }
+  return { findings, writes, commands: proposal.commands, scope: definitionScope, fixable }
 }
 
 /** Compares a conform's pre-conform violated items against a post-conform re-audit to name what got fixed. */

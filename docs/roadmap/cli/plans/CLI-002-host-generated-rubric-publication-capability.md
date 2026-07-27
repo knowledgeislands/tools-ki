@@ -1,11 +1,11 @@
 ---
 id: 'CLI-002'
 title: Host generated rubric-publication capability
-status: open
+status: in-progress
 roadmap: cli/host-generated-rubric-publication-capability
 blocks: —
 blocked-by: —
-baseline-ref: —
+baseline-ref: 3c8b27127ea46ebacef3cb74dbcc4b3f7149f128
 transferred-from: knowledgeislands/ki-agentic-harness:FND-002
 ---
 
@@ -26,11 +26,11 @@ This CLI plan delivers the host half of that contract.
 
 ## Steps
 
-1. Freeze a narrow, typed host-injected publication capability: validated catalogue identity, canonical rendered bytes, tracked-target state, and a derived write proposal with deterministic failure semantics.
-2. Route standalone `ki skill rubric` inspection and repository publication preparation through the same validated loading and rendering path, without parsing generated Markdown or adding a second renderer.
-3. Add guarded repository publication execution to the existing session transaction: physical repository containment, symlink refusal, atomic write, rollback, and post-write re-audit.
-4. Inject only publication evidence and a host-owned derived-write mechanism into rubric contexts; do not create a host-side automatic finding, encode a `KI-CHECKER-6` identity, or weaken installed-harness validation.
-5. Add CLI-contract coverage for clean, missing, stale, malformed, symlink, dry-run, repeated conform, batched writes, rollback/race refusal, FIXED reporting, and standalone/repository byte parity.
+1. ✓ Freeze a narrow, typed host-injected publication capability: validated catalogue identity, canonical rendered bytes, tracked-target state, and a derived write proposal with deterministic failure semantics.
+2. ✓ Route standalone `ki skill rubric` inspection and repository publication preparation through the same validated loading and rendering path, without parsing generated Markdown or adding a second renderer.
+3. ✓ Add guarded repository publication execution to the existing session transaction: physical repository containment, symlink refusal, atomic write, rollback, and post-write re-audit.
+4. ✓ Inject only publication evidence and a host-owned derived-write mechanism into rubric contexts; do not create a host-side automatic finding, encode a `KI-CHECKER-6` identity, or weaken installed-harness validation.
+5. ✓ Add CLI-contract coverage for clean, missing, stale, malformed, symlink, dry-run, repeated conform, batched writes, rollback/race refusal, FIXED reporting, and standalone/repository byte parity.
 6. Hand the frozen capability contract and verification evidence back to the harness so [FND-002](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-002-protect-generated-rubric-publications.md) can add `ki-skills` policy and regenerate its derived publications.
 
 ## Files touched

@@ -1,13 +1,14 @@
-import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { lstat } from 'node:fs/promises'
+import { join } from 'node:path'
 import { Command } from 'commander'
 import { addRepoSkill, addUserSkill, removeRepoSkill, removeUserSkill } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
 import { KiError } from '../core/errors.ts'
 import { discoverInstalledHarnesses } from '../core/harness.ts'
 import { resolveInstalledSkill } from '../core/resolution.ts'
-import { renderRubricMarkdown } from '../core/rubric-render.ts'
+import { prepareRubricPublication } from '../core/rubric-publication.ts'
 import { loadRubricDefinition } from '../core/runtime-loader.ts'
+import { prepareWrites, publishWrites } from '../core/transaction.ts'
 
 const createUserCommand = (context: KiContext): Command =>
   new Command('user')
@@ -85,9 +86,6 @@ const createRepoScopeCommand = (context: KiContext): Command =>
         })
     )
 
-const rubricTargetPath = (harnessRoot: string, capabilitySource: string): string =>
-  join(harnessRoot, capabilitySource, 'references', 'rubric.md')
-
 // A harness is dev-linked when `ki dev on` (or, in tests, an equivalent manual symlink) has
 // pointed its `skills` payload root at a local checkout — the same signal `enableCanonicalHarnessDevelopment`
 // establishes and `canonicalDevelopmentProjection` checks. Only a dev-linked payload can safely
@@ -111,26 +109,22 @@ const createRubricCommand = (context: KiContext): Command =>
       const harnesses = await discoverInstalledHarnesses(context.paths.data)
       const resolved = resolveInstalledSkill(harnesses, skill)
       const definition = await loadRubricDefinition(resolved)
-      const rendered = renderRubricMarkdown(definition)
-      const target = rubricTargetPath(resolved.harness.root, resolved.capability.source)
-      const existing = await readFile(target, 'utf8').catch(() => undefined)
+      const publication = await prepareRubricPublication(resolved, definition)
 
       if (options.write) {
         if (!(await isDevLinkedHarness(resolved.harness.root)))
           throw new KiError(`${resolved.identity} is an installed payload; run ki dev on before writing its rubric catalogue`, 1)
-        if (existing !== rendered) {
-          await mkdir(dirname(target), { recursive: true })
-          await writeFile(target, rendered, 'utf8')
-        }
-        context.stdout.write(`write ${target}\n`)
+        if (publication.evidence.state !== 'in-sync')
+          await publishWrites(await prepareWrites(publication.publicationRoot, [publication.proposal()]), false)
+        context.stdout.write(`write ${publication.displayTarget}\n`)
         return
       }
 
-      if (existing === rendered) {
+      if (publication.evidence.state === 'in-sync') {
         context.stdout.write(`ki skill rubric: ${resolved.identity} references/rubric.md is in sync\n`)
         return
       }
-      const reason = existing === undefined ? 'is missing' : 'is stale'
+      const reason = publication.evidence.state === 'missing' ? 'is missing' : 'is stale'
       context.stdout.write(
         `ki skill rubric: ${resolved.identity} references/rubric.md ${reason}; run with --write from a dev-linked harness\n`
       )
