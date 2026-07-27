@@ -1,7 +1,7 @@
 ---
 id: 'CLI-002'
 title: Host generated rubric-publication capability
-status: in-progress
+status: acceptance
 roadmap: cli/host-generated-rubric-publication-capability
 blocks: —
 blocked-by: —
