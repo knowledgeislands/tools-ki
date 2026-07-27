@@ -16,6 +16,8 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 
 Define the desired capability set and release-status evidence required for read-only `ki missing` and `ki outdated` reports. Preserve the distinction between installed verified harnesses, active user or repository declarations, and releases that have not yet been acquired.
 
+**Plan:** [CLI-001](plans/CLI-001-define-missing-and-outdated-capability-status.md)
+
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
