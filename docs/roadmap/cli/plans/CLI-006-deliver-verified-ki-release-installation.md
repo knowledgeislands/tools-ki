@@ -57,7 +57,7 @@ The Website redirect change is an outbound recipient task after this plan's firs
 
 The protected GitHub `release` environment is required before the first publishing run: restrict it to the protected default branch, require independent approval without bypass, and store `KI_RELEASE_SIGNING_KEY` only as its environment secret. Its absence blocks the final publish proof and the Website/Homebrew recipient handoffs, not this local implementation.
 
-The first publish proof for `v0.2.0` stopped during the `darwin-arm64` package test because the macOS runner's OpenSSL does not recognise `pkeyutl -rawin`; no release was published. The installer and fixtures now choose the compatible Ed25519 form when that option is unavailable. The corrected first release must use the next patch version, `v0.2.1`, because the original tag remains immutable.
+The first publish proof for `v0.2.0` stopped during the `darwin-arm64` package test because the macOS runner's OpenSSL does not recognise `pkeyutl -rawin`; no release was published. The attempted `v0.2.1` correction then exposed that the test fixture itself tried to create Ed25519 signatures through the same unsupported interface; it also published no release. Installer fixtures now use Node's standards-format Ed25519 signer so they exercise the macOS verification path without depending on host OpenSSL signing support. The corrected first release must use the next patch version, `v0.2.2`, because both prior tags remain immutable.
 
 ## Delegation
 

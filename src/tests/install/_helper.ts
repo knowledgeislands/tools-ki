@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import { generateKeyPairSync, sign } from 'node:crypto'
 import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
@@ -9,16 +10,6 @@ import { onTestFinished } from 'vitest'
 const repositoryRoot = new URL('../../../', import.meta.url).pathname
 const installerScript = new URL('../../../install.sh', import.meta.url).pathname
 const executeFile = promisify(execFile)
-
-const supportsPkeyutlRawin = async (): Promise<boolean> => {
-  try {
-    const result = await executeFile('openssl', ['pkeyutl', '-help'])
-    return `${result.stdout}${result.stderr}`.includes('-rawin')
-  } catch (error: unknown) {
-    const result = error as { stdout?: string; stderr?: string }
-    return `${result.stdout ?? ''}${result.stderr ?? ''}`.includes('-rawin')
-  }
-}
 
 export interface CommandResult {
   readonly exitCode: number
@@ -88,7 +79,6 @@ export const installSandbox = async (): Promise<InstallSandbox> => {
     const fixture = join(path, `release-${Math.random().toString(16).slice(2)}`)
     const content = join(fixture, 'content')
     const archiveRoot = join(fixture, 'archive')
-    const key = join(fixture, 'private.pem')
     const publicKey = join(fixture, 'public.pem')
     const asset = `ki-${version}-${target}.tar.gz`
     const targets = ['darwin-arm64', 'darwin-x64', 'linux-x64'] as const
@@ -108,22 +98,12 @@ export const installSandbox = async (): Promise<InstallSandbox> => {
     const canonicalManifest = `format=ki-release-checksums-v1\nversion=${version}\n${targets
       .map((candidate) => `${hash}  ki-${version}-${candidate}.tar.gz`)
       .join('\n')}\n`
-    await writeFile(join(content, 'ki-checksums.txt'), manifest ?? canonicalManifest)
-    await executeFile('openssl', ['genpkey', '-algorithm', 'Ed25519', '-out', key])
-    await executeFile('openssl', ['pkey', '-in', key, '-pubout', '-out', publicKey])
+    const manifestContents = manifest ?? canonicalManifest
+    const { privateKey, publicKey: generatedPublicKey } = generateKeyPairSync('ed25519')
+    await writeFile(join(content, 'ki-checksums.txt'), manifestContents)
+    await writeFile(publicKey, generatedPublicKey.export({ type: 'spki', format: 'pem' }))
     if (!unsigned) {
-      const rawin = (await supportsPkeyutlRawin()) ? ['-rawin'] : []
-      await executeFile('openssl', [
-        'pkeyutl',
-        '-sign',
-        '-inkey',
-        key,
-        ...rawin,
-        '-in',
-        join(content, 'ki-checksums.txt'),
-        '-out',
-        join(content, 'ki-checksums.txt.sig')
-      ])
+      await writeFile(join(content, 'ki-checksums.txt.sig'), sign(null, Buffer.from(manifestContents), privateKey))
     }
     const server = createServer(async (request, response) => {
       const requestPath = request.url ?? ''
