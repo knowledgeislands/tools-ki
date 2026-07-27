@@ -69,6 +69,44 @@ To compare the two installations without changing `PATH`, invoke both executable
 
 The first command runs the currently installed Homebrew release. The second runs this checkout.
 
+## Configure release signing
+
+The verified-release installer will use a signed checksum manifest. Its release workflow will read the private signing key only from the `KI_RELEASE_SIGNING_KEY` GitHub Actions repository secret; the repository and released installer will carry only its public key.
+
+Create the key pair once on a trusted development machine. The commands refuse to overwrite an existing private key and restrict its permissions:
+
+```sh
+key_dir="$HOME/Documents/ki-release-key"
+umask 077
+mkdir -p "$key_dir"
+test ! -e "$key_dir/ki-release-signing-key.pem" || {
+  echo "A signing key already exists at $key_dir; stopping without overwriting it."
+  exit 1
+}
+openssl genpkey -algorithm ED25519 -out "$key_dir/ki-release-signing-key.pem"
+openssl pkey -in "$key_dir/ki-release-signing-key.pem" -pubout -out "$key_dir/ki-release-signing-public.pem"
+chmod 600 "$key_dir/ki-release-signing-key.pem"
+chmod 644 "$key_dir/ki-release-signing-public.pem"
+```
+
+Keep `ki-release-signing-key.pem` private: do not commit it, paste it into chat, or send it by email. The public-key file is safe to commit and distribute.
+
+In GitHub, open the `knowledgeislands/tools-ki` repository, then select **Settings** → **Secrets and variables** → **Actions** → **New repository secret**. Name the secret `KI_RELEASE_SIGNING_KEY`, and paste the complete private-key file into its value field. You need repository write access; GitHub encrypts the secret and makes it available only to authorized workflow runs. See [GitHub's guide to repository secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets?tool=webui).
+
+Copy the private key directly from the file rather than printing it into a shared terminal or chat transcript:
+
+```sh
+pbcopy < "$key_dir/ki-release-signing-key.pem"
+```
+
+Copy the public key into the repository's tracked trust-anchor file, then commit it with the release-maintenance work:
+
+```sh
+cp "$key_dir/ki-release-signing-public.pem" release/ki-release-signing-public.pem
+```
+
+The tracked [public key](../../../release/ki-release-signing-public.pem) is safe to inspect and distribute. The release workflow signs only with the matching `KI_RELEASE_SIGNING_KEY` secret; if the two files do not belong to the same key pair, release verification will fail.
+
 ## Read the manual
 
 The tracked manual is [ki(1)](../../../man/ki.1). Preview it from a checkout with:
