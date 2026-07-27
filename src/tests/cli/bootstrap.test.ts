@@ -16,7 +16,7 @@ describe('[ki bootstrap]', () => {
     expect(bootstrapped).toEqual({
       exitCode: 0,
       output: `created KI agent configuration for chatgpt-codex
-canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c
+canonical harness already installed\tarchive 333f1711db0d57c26ec3566ca9cbc732d2478a05161c4fb8639ff6e2ffb75235
 ki-bootstrap for chatgpt-codex installed
 ki-delegate for chatgpt-codex installed
 ki-next for chatgpt-codex installed
@@ -26,7 +26,7 @@ ki-recap for chatgpt-codex installed
     })
     expect(repeated).toEqual({
       exitCode: 0,
-      output: `canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c
+      output: `canonical harness already installed\tarchive 333f1711db0d57c26ec3566ca9cbc732d2478a05161c4fb8639ff6e2ffb75235
 ki-bootstrap for chatgpt-codex already installed
 ki-delegate for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
@@ -37,7 +37,7 @@ ki-recap for chatgpt-codex already installed
     expect(refreshed).toEqual({
       exitCode: 0,
       output: `refreshed KI agents: chatgpt-codex
-canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c
+canonical harness already installed\tarchive 333f1711db0d57c26ec3566ca9cbc732d2478a05161c4fb8639ff6e2ffb75235
 refreshed ki configuration: 1 agents, 1 harnesses, 5 skills
 ki-bootstrap for chatgpt-codex already installed
 ki-delegate for chatgpt-codex already installed
@@ -248,7 +248,7 @@ ids = ["claude-code"]
     expect(bootstrapped).toEqual({
       exitCode: 1,
       output:
-        'created KI agent configuration for no detected agents\ncanonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c\nki: error: installed harness knowledgeislands/ki-agentic-harness does not provide ki-recap\n'
+        'created KI agent configuration for no detected agents\ncanonical harness already installed\tarchive 333f1711db0d57c26ec3566ca9cbc732d2478a05161c4fb8639ff6e2ffb75235\nki: error: installed harness knowledgeislands/ki-agentic-harness does not provide ki-recap\n'
     })
   })
 

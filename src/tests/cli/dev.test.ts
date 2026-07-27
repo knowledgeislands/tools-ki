@@ -102,7 +102,7 @@ path = ${JSON.stringify(harnessPath)}
 
       expect(off).toEqual({
         exitCode: 0,
-        output: `development harness disabled; canonical harness already installed\tarchive fff4d3f0b13b6efcde064c5f8278fc58289b6ed6ae8cbc5ae0b18c7fd0bec68c
+        output: `development harness disabled; canonical harness already installed\tarchive 333f1711db0d57c26ec3566ca9cbc732d2478a05161c4fb8639ff6e2ffb75235
 refreshed ki configuration: 1 agents, 1 harnesses, 5 skills
 ki-bootstrap for claude-code already installed
 ki-delegate for claude-code already installed
