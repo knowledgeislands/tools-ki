@@ -90,6 +90,16 @@ verify_manifest_signature() {
   "$openssl_bin" pkeyutl -verify -rawin -pubin -inkey "$public_key" -in "$manifest" -sigfile "$signature" >/dev/null 2>&1
 }
 
+materialise_embedded_public_key() {
+  public_key=$1
+  umask 077
+  cat >"$public_key" <<'EOF'
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAoJ2dlJ9vBQTN7uq9EgoUzgypcpC8H1A0FjAgPzV5Vhs=
+-----END PUBLIC KEY-----
+EOF
+}
+
 replace_file() {
   replacement=$1
   destination=$2
@@ -295,8 +305,12 @@ install_release() {
   manifest="$stage/ki-checksums.txt"
   signature="$stage/ki-checksums.txt.sig"
   archive="$stage/$asset"
-  public_key="$script_dir/release/ki-release-signing-public.pem"
-  if [ "${KI_INSTALL_TEST_MODE:-}" = '1' ]; then public_key=$KI_INSTALL_TEST_PUBLIC_KEY; fi
+  public_key="$stage/ki-release-signing-public.pem"
+  if [ "${KI_INSTALL_TEST_MODE:-}" = '1' ]; then
+    public_key=$KI_INSTALL_TEST_PUBLIC_KEY
+  else
+    materialise_embedded_public_key "$public_key"
+  fi
   [ -f "$public_key" ] || die "release signing public key not found: $public_key"
 
   download "$base/releases/download/$version/ki-checksums.txt" "$manifest"

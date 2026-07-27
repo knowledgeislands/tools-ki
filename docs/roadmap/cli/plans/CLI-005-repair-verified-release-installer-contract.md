@@ -1,7 +1,7 @@
 ---
 id: 'CLI-005'
 title: Repair verified release-installer contract for CI
-status: open
+status: in-progress
 roadmap: cli/repair-verified-release-installer-contract-for-ci
 blocks: —
 blocked-by: —
@@ -24,12 +24,12 @@ This plan repairs the `tools-ki` release and installer contract that currently p
 
 ## Steps
 
-1. Resolve the release-integrity decision: determine whether immutable GitHub releases can be guaranteed by repository settings and release design; if they cannot, define and record an explicitly verified equivalent that protects the installer, signing key, manifest, archive, version, and release identity.
-2. Define one documented public acquisition path that obtains every installer verification input, including the pinned public key, without an undocumented side download or a checkout dependency.
-3. Implement the selected release packaging, installer, and documentation contract while retaining Ed25519 manifest verification, checksum verification, archive-shape validation, executable-version validation, HTTPS-only retrieval, and atomic replacement/rollback.
-4. Add focused installer and release tests that fail closed for absent, substituted, malformed, or unverifiable verification inputs and prove that the documented command works from an empty temporary directory.
-5. Add a clean GitHub-hosted Linux runner proof that installs an exact released version into an isolated path, asserts the expected executable and `ki --version`, uses isolated KI state, bootstraps the canonical harness, and proves the harness inventory before repository audit.
-6. Publish the resolved release evidence and clean-runner result to [FND-001](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-001-verify-github-ci-across-fleet.md), enabling its receiving-repository workflow rollout.
+1. [x] Resolve the release-integrity decision: GitHub immutable releases are required. GitHub locks the published assets and their associated tag; the installer embeds its public trust anchor. Enabling the repository or organization setting remains an external prerequisite before the next release.
+2. [x] Define one documented public acquisition path: download root `install.sh` from an exact immutable release tag, then run it with the same exact tag. It needs neither a checkout nor a separately discovered key.
+3. [x] Implement the local installer, release workflow, and documentation contract while retaining Ed25519 manifest verification, checksum verification, archive-shape validation, executable-version validation, HTTPS-only retrieval, and atomic replacement/rollback.
+4. [x] Add focused installer tests for the embedded anchor and a copied installer without a sibling `release/` directory, while retaining the existing unsigned, malformed, checksum, and rollback failure tests.
+5. [ ] Execute the clean GitHub-hosted Linux proof added to the release workflow. It installs an exact released version into isolated paths, checks the executable and version, bootstraps the canonical harness, and inventories it. This requires immutable releases to be enabled and a new release because GitHub does not apply immutability retrospectively.
+6. [ ] Publish the resulting immutable-release and clean-runner evidence to [FND-001](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/foundation-tooling/plans/FND-001-verify-github-ci-across-fleet.md), enabling its receiving-repository workflow rollout.
 
 ## Files touched
 
@@ -56,7 +56,7 @@ This plan is the receiving-repository release-install prerequisite for `knowledg
 
 The source plan is recorded as `transferred-from` rather than a local `blocked-by` identifier because CLI roadmap dependencies resolve only plans in `tools-ki`.
 
-The release-immutability mechanism is intentionally an explicit decision step: do not assume GitHub settings alone are sufficient or silently substitute a weaker integrity claim.
+GitHub immutable releases are an external release prerequisite, not a claim about `v0.2.6`: they apply only to future releases. Do not substitute a weaker integrity claim or fallback path.
 
 ## Delegation
 

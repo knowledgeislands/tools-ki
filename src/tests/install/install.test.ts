@@ -1,4 +1,4 @@
-import { access, lstat, readFile, writeFile } from 'node:fs/promises'
+import { access, chmod, copyFile, lstat, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import packageMetadata from '../../../package.json' with { type: 'json' }
@@ -12,6 +12,15 @@ const releaseEnvironment = (baseUrl: string, publicKey: string, extra: Record<st
 })
 
 describe('install.sh', () => {
+  test('embeds the tracked release signing public key', async () => {
+    const [installer, anchor] = await Promise.all([
+      readFile(new URL('../../../install.sh', import.meta.url), 'utf8'),
+      readFile(new URL('../../../release/ki-release-signing-public.pem', import.meta.url), 'utf8')
+    ])
+
+    expect(installer).toContain(anchor.trim())
+  })
+
   test('prints usage and rejects non-version arguments', async () => {
     const box = await installSandbox()
     const help = await box.exec([box.installer, '--help'])
@@ -40,6 +49,47 @@ describe('install.sh', () => {
     expect(result).toEqual({ exitCode: 0, output: expect.stringContaining('installed verified release v1.2.3 (darwin-arm64)') })
     expect(await box.exec([join(installDir, 'ki'), '--version'])).toEqual({ exitCode: 0, output: '1.2.3\n' })
     await expect(access(join(manDir, 'ki.1'))).resolves.toBeUndefined()
+  })
+
+  test('installs from an installer without a sibling release directory', async () => {
+    const box = await installSandbox()
+    const fixture = await box.release({ version: 'v1.2.3', target: 'linux-x64' })
+    const emptyDirectory = join(box.path, 'empty')
+    const installer = join(emptyDirectory, 'install.sh')
+    const installDir = join(box.path, 'bin')
+    const manDir = join(box.path, 'man1')
+    await mkdir(emptyDirectory)
+    await copyFile(box.installer, installer)
+    await chmod(installer, 0o755)
+
+    const result = await box.exec([installer, fixture.version], {
+      environment: releaseEnvironment(fixture.baseUrl, fixture.publicKey, {
+        KI_CLI_INSTALL_DIR: installDir,
+        KI_MAN_INSTALL_DIR: manDir,
+        KI_INSTALL_TEST_UNAME_S: 'Linux',
+        KI_INSTALL_TEST_UNAME_M: 'x86_64'
+      })
+    })
+
+    expect(result).toEqual({ exitCode: 0, output: expect.stringContaining('installed verified release v1.2.3 (linux-x64)') })
+    expect(await box.exec([join(installDir, 'ki'), '--version'])).toEqual({ exitCode: 0, output: '1.2.3\n' })
+  })
+
+  test('rejects a release signed by a substituted test key', async () => {
+    const box = await installSandbox()
+    const release = await box.release({ version: 'v1.2.3', target: 'linux-x64' })
+    const substitutedKey = await box.release({ version: 'v1.2.3', target: 'linux-x64' })
+    const result = await box.exec([box.installer, release.version], {
+      environment: releaseEnvironment(release.baseUrl, substitutedKey.publicKey, {
+        KI_CLI_INSTALL_DIR: join(box.path, 'bin'),
+        KI_MAN_INSTALL_DIR: join(box.path, 'man1'),
+        KI_INSTALL_TEST_UNAME_S: 'Linux',
+        KI_INSTALL_TEST_UNAME_M: 'x86_64'
+      })
+    })
+
+    expect(result).toEqual({ exitCode: 1, output: expect.stringContaining('release manifest signature could not be verified') })
+    await expect(access(join(box.path, 'bin', 'ki'))).rejects.toThrow()
   })
 
   test('resolves latest to an exact immutable release before downloading assets', async () => {

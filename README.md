@@ -22,17 +22,17 @@ Use `--dry-run` to validate without creating output, or `--json` for a versioned
 
 ## Install
 
-After the first verified release, download `install.sh` from an exact released tag, inspect it, then run it with that tag:
+After the first immutable release, download `install.sh` from an exact released tag, inspect it, then run it with that tag:
 
 ```sh
-curl --fail --location --remote-name \
+curl --fail --location --proto '=https' --proto-redir '=https' --output install.sh \
   https://raw.githubusercontent.com/knowledgeislands/tools-ki/vX.Y.Z/install.sh
-bash install.sh vX.Y.Z
+bash ./install.sh vX.Y.Z
 ```
 
-The installer verifies the release's Ed25519-signed checksum manifest before downloading the platform archive. It supports macOS (Apple Silicon and Intel) and x86_64 glibc Linux. Omitting the version resolves the latest release to an exact signed tag; use an explicit version when you need a reproducible installation.
+The installer carries the pinned public key and verifies the release's Ed25519-signed checksum manifest before downloading the platform archive. It supports macOS (Apple Silicon and Intel) and x86_64 glibc Linux. Use an explicit version for every public installation.
 
-The Homebrew tap will move to these same release artifacts after that first verified release.
+The Homebrew tap will move to these same release artifacts after that first immutable release.
 
 `install.sh --link` is exclusively for development from a local checkout. Read the [local development guide](docs/guides/developer/local-development.md) for that path.
 

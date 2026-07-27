@@ -4,7 +4,7 @@
 
 Each release contains three `ki-vX.Y.Z-<target>.tar.gz` archives, each holding only `ki` and `man/ki.1`, plus the Ed25519-signed `ki-checksums.txt` manifest and `ki-checksums.txt.sig` signature.
 
-The public installer verifies the manifest signature before it downloads an archive, verifies the archive checksum and layout, then stages and installs the executable and manual.
+The public installer embeds the stable release public key, verifies the manifest signature before it downloads an archive, verifies the archive checksum and layout, then stages and installs the executable and manual. It therefore needs no checkout or separately downloaded key.
 
 The installer requires an OpenSSL implementation with Ed25519 `pkeyutl -rawin` support. On macOS it automatically uses Homebrew's `openssl@3` when the system OpenSSL is too old; otherwise install it with `brew install openssl@3`, or point `KI_OPENSSL` at an appropriate OpenSSL executable.
 
@@ -35,6 +35,14 @@ cp "$key_dir/ki-release-signing-public.pem" release/ki-release-signing-public.pe
 ```
 
 The tracked [public key](../../../release/ki-release-signing-public.pem) must match the private key stored in GitHub; the workflow compares them before it signs a release.
+
+## Require immutable releases
+
+Before publishing the next release, enable **Settings** → **Releases** → **Enable release immutability** for `knowledgeislands/tools-ki`, or apply the equivalent organization policy to this repository.
+
+Immutable releases are required: publication locks every release asset and its exact Git tag. The workflow fails closed when the setting is absent and verifies that the published release is immutable.
+
+This applies only to future releases, so the existing `v0.2.6` release is not release-integrity evidence for this contract.
 
 ## Configure the solo-maintainer release environment
 
@@ -69,5 +77,13 @@ git push origin vX.Y.Z
 ```
 
 Open **Actions** → **Release** → **Run workflow**, choose `main`, and enter the same `vX.Y.Z` version. The workflow builds the three archives, signs the manifest, creates a draft release, re-downloads and verifies its published assets, then publishes it. If future team protection is enabled, the independent reviewer approves the pending `release` deployment first.
+
+After the release workflow has completed its clean Linux installation proof, public users install that exact release from an empty directory:
+
+```sh
+curl --fail --location --proto '=https' --proto-redir '=https' --output install.sh \
+  https://raw.githubusercontent.com/knowledgeislands/tools-ki/vX.Y.Z/install.sh
+bash ./install.sh vX.Y.Z
+```
 
 After the first verified release, update the Homebrew tap and the KI Website install redirect in their owning repositories.
