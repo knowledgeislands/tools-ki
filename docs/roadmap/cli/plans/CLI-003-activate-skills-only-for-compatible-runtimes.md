@@ -73,7 +73,7 @@ Installed skills now carry explicit runtime compatibility into user and reposito
 
 ### Verification
 
-- At `645714baab8ed498794726ad1e5d77fda8b24e6e`, `bun run test` passed 317 tests.
+- At `645714baab8ed498794726ad1e5d77fda8b24e6e`, `bun run test` passed 318 tests.
 - `bun run test:coverage` passed 318 tests at 100% statements, branches, functions, and lines after the diagnostic edge-case test.
 - `bunx biome check .`, `bunx tsc --noEmit`, `bunx knip`, `bash -n install.sh`, and `git diff --check` passed.
 
