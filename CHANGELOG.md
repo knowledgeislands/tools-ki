@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- Installer verification now supports the macOS-compatible OpenSSL `pkeyutl` form for Ed25519 signatures.
+
 ### Added
 
 - A verified release installer for Apple Silicon and Intel macOS plus x86_64 glibc Linux, with an Ed25519-signed checksum manifest and a local-development-only `--link` mode.

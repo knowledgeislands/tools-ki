@@ -1,6 +1,7 @@
 import { access, lstat, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
+import packageMetadata from '../../../package.json' with { type: 'json' }
 import { installSandbox } from './_helper.ts'
 
 const releaseEnvironment = (baseUrl: string, publicKey: string, extra: Record<string, string> = {}): Record<string, string> => ({
@@ -54,6 +55,22 @@ describe('install.sh', () => {
     })
 
     expect(result).toEqual({ exitCode: 0, output: expect.stringContaining('v2.3.4 (linux-x64)') })
+  })
+
+  test('supports the macOS-compatible pkeyutl form without -rawin', async () => {
+    const box = await installSandbox()
+    const fixture = await box.release()
+    const result = await box.exec([box.installer, fixture.version], {
+      environment: releaseEnvironment(fixture.baseUrl, fixture.publicKey, {
+        KI_CLI_INSTALL_DIR: join(box.path, 'bin'),
+        KI_MAN_INSTALL_DIR: join(box.path, 'man1'),
+        KI_INSTALL_TEST_NO_RAWIN: '1',
+        KI_INSTALL_TEST_UNAME_S: 'Darwin',
+        KI_INSTALL_TEST_UNAME_M: 'arm64'
+      })
+    })
+
+    expect(result).toEqual({ exitCode: 0, output: expect.stringContaining('v1.2.3 (darwin-arm64)') })
   })
 
   test('rejects unsigned, malformed, or checksum-mismatched releases before changing an existing install', async () => {
@@ -140,6 +157,6 @@ describe('install.sh', () => {
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('src/main.ts')
     expect((await lstat(join(installDir, 'ki'))).isSymbolicLink()).toBe(true)
-    expect(await box.exec([join(installDir, 'ki'), '--version'])).toEqual({ exitCode: 0, output: '0.2.0\n' })
+    expect(await box.exec([join(installDir, 'ki'), '--version'])).toEqual({ exitCode: 0, output: `${packageMetadata.version}\n` })
   })
 })

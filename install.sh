@@ -65,6 +65,18 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
 }
 
+verify_manifest_signature() {
+  public_key=$1
+  manifest=$2
+  signature=$3
+
+  if [ "${KI_INSTALL_TEST_NO_RAWIN:-}" != '1' ] && openssl pkeyutl -help 2>&1 | grep -q -- '-rawin'; then
+    openssl pkeyutl -verify -rawin -pubin -inkey "$public_key" -in "$manifest" -sigfile "$signature" >/dev/null 2>&1
+  else
+    openssl pkeyutl -verify -pubin -inkey "$public_key" -in "$manifest" -sigfile "$signature" >/dev/null 2>&1
+  fi
+}
+
 replace_file() {
   replacement=$1
   destination=$2
@@ -259,7 +271,6 @@ install_release() {
   require_command tar
   require_command awk
   require_command od
-  openssl pkeyutl -help 2>&1 | grep -q -- '-rawin' || die 'OpenSSL with Ed25519 -rawin support is required'
 
   base=$(release_base)
   version=$requested_version
@@ -277,7 +288,7 @@ install_release() {
 
   download "$base/releases/download/$version/ki-checksums.txt" "$manifest"
   download "$base/releases/download/$version/ki-checksums.txt.sig" "$signature"
-  openssl pkeyutl -verify -pubin -inkey "$public_key" -rawin -in "$manifest" -sigfile "$signature" >/dev/null 2>&1 || die 'release manifest signature could not be verified'
+  verify_manifest_signature "$public_key" "$manifest" "$signature" || die 'release manifest signature could not be verified'
   expected_hash=$(validate_manifest "$manifest" "$version" "$asset")
   download "$base/releases/download/$version/$asset" "$archive"
   actual_hash=$(shasum -a 256 "$archive" | awk '{print $1}')

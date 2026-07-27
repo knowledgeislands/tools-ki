@@ -57,6 +57,8 @@ The Website redirect change is an outbound recipient task after this plan's firs
 
 The protected GitHub `release` environment is required before the first publishing run: restrict it to the protected default branch, require independent approval without bypass, and store `KI_RELEASE_SIGNING_KEY` only as its environment secret. Its absence blocks the final publish proof and the Website/Homebrew recipient handoffs, not this local implementation.
 
+The first publish proof for `v0.2.0` stopped during the `darwin-arm64` package test because the macOS runner's OpenSSL does not recognise `pkeyutl -rawin`; no release was published. The installer and fixtures now choose the compatible Ed25519 form when that option is unavailable. The corrected first release must use the next patch version, `v0.2.1`, because the original tag remains immutable.
+
 ## Delegation
 
 - Round 1 — research, `gpt-5.6-terra`: specify the release asset, checksum, signature, and installer-verification contract from the current repository and official GitHub evidence; files: read-only repository and primary sources; gate: orchestrator review before workflow or installer edits.

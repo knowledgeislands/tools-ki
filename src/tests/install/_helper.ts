@@ -10,6 +10,16 @@ const repositoryRoot = new URL('../../../', import.meta.url).pathname
 const installerScript = new URL('../../../install.sh', import.meta.url).pathname
 const executeFile = promisify(execFile)
 
+const supportsPkeyutlRawin = async (): Promise<boolean> => {
+  try {
+    const result = await executeFile('openssl', ['pkeyutl', '-help'])
+    return `${result.stdout}${result.stderr}`.includes('-rawin')
+  } catch (error: unknown) {
+    const result = error as { stdout?: string; stderr?: string }
+    return `${result.stdout ?? ''}${result.stderr ?? ''}`.includes('-rawin')
+  }
+}
+
 export interface CommandResult {
   readonly exitCode: number
   readonly output: string
@@ -102,12 +112,13 @@ export const installSandbox = async (): Promise<InstallSandbox> => {
     await executeFile('openssl', ['genpkey', '-algorithm', 'Ed25519', '-out', key])
     await executeFile('openssl', ['pkey', '-in', key, '-pubout', '-out', publicKey])
     if (!unsigned) {
+      const rawin = (await supportsPkeyutlRawin()) ? ['-rawin'] : []
       await executeFile('openssl', [
         'pkeyutl',
         '-sign',
         '-inkey',
         key,
-        '-rawin',
+        ...rawin,
         '-in',
         join(content, 'ki-checksums.txt'),
         '-out',
