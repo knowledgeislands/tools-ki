@@ -12,7 +12,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-- [Cli: Define `ki missing` and `ki outdated` capability status](docs/roadmap/cli/ROADMAP.md#define-ki-missing-and-ki-outdated-capability-status)
 - [Cli: Deliver `ki install`, `ki reinstall`, and `ki uninstall` capability lifecycle](docs/roadmap/cli/ROADMAP.md#deliver-ki-install-ki-reinstall-and-ki-uninstall-capability-lifecycle)
 - [Cli: Deliver package and harness update–upgrade operations](docs/roadmap/cli/ROADMAP.md#deliver-package-and-harness-updateupgrade-operations)
 - [Cli: Host generated rubric-publication capability](docs/roadmap/cli/ROADMAP.md#host-generated-rubric-publication-capability)

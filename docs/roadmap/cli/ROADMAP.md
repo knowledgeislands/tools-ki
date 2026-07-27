@@ -18,12 +18,6 @@ Make the public `ki` installation contract self-contained, cryptographically ver
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-### Define `ki missing` and `ki outdated` capability status
-
-Define the desired capability set and release-status evidence required for read-only `ki missing` and `ki outdated` reports. Preserve the distinction between installed verified harnesses, active user or repository declarations, and releases that have not yet been acquired.
-
-**Plan:** [CLI-001](plans/CLI-001-define-missing-and-outdated-capability-status.md)
-
 ### Host generated rubric-publication capability
 
 Provide the narrow host capability required for `ki repo audit` and `ki repo conform` to assess and publish generated skill rubric publications. The host owns validated catalogue loading, canonical rendered bytes, guarded transactional publication, rollback, re-audit, and standalone parity. The harness's `ki-skills` capability owns the policy criterion, drift findings, and derived write proposals; neither side duplicates the other's concern.
