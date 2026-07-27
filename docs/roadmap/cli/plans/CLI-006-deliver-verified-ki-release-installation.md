@@ -51,7 +51,7 @@ It needs a tag-bound release contract that lets a user select a supported target
 
 ## Dependencies / blocks
 
-This plan is independently executable from [CLI-004](CLI-004-native-repo-maintenance.md), but must use the same canonical harness and CLI delivery vocabulary.
+This plan is independently executable from the completed native repository-maintenance work, but must use the same canonical harness and CLI delivery vocabulary.
 
 The Website redirect change is an outbound recipient task after this plan's first verified released artifact; it does not block release-workflow or installer implementation.
 
