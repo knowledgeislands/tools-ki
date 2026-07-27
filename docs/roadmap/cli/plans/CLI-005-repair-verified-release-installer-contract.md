@@ -1,7 +1,7 @@
 ---
 id: 'CLI-005'
 title: Repair verified release-installer contract for CI
-status: acceptance
+status: done
 roadmap: cli/repair-verified-release-installer-contract-for-ci
 blocks: —
 blocked-by: —
@@ -92,3 +92,11 @@ GitHub immutable releases are an external release prerequisite, not a claim abou
 
 - First immutable evidence revealed that the canonical registry still referenced a pre-cutover harness archive with vendored symlinks.
 - The registry now pins the current regular-file canonical payload, and the release proof validates that exact installed path end to end.
+
+## Done
+
+CLI-005 completed after manual acceptance. The released installer contract uses immutable GitHub release evidence, an embedded trust anchor, and a clean hosted Linux install proof.
+
+Residual concerns: None for this plan; FND-001 owns the remaining receiving-repository workflow rollout.
+
+Follow-up: retain this done record until the related CLI work tranche is ready for a confirmed prune.
