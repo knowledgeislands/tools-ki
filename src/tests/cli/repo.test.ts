@@ -982,21 +982,27 @@ export default {
       await expect(box.project.read('created.txt')).resolves.toBe('created\n')
     })
 
-    test('refuses an explicit create target whose parent does not exist', async () => {
+    test('creates an explicit target beneath absent repository directories', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-example]\n')
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
-          audit: async () => [{ status: 'VIOLATION', message: 'not conformed' }],
+          audit: async ({ repository }) => {
+            const { existsSync } = await import('node:fs')
+            return existsSync(repository + '/missing/created.txt')
+              ? [{ status: 'PASS', message: 'created' }]
+              : [{ status: 'VIOLATION', message: 'missing' }]
+          },
           conform: async () => ({ writes: [{ path: 'missing/created.txt', content: 'created\\n', create: true }] })
         }] }]`)
       })
 
       const result = await box.run('ki repo conform')
 
-      expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('direct conform create target missing/created.txt escapes the repository')
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('write missing/created.txt')
+      await expect(box.project.read('missing/created.txt')).resolves.toBe('created\n')
     })
 
     test('conforms a declared user-home path transactionally', async () => {

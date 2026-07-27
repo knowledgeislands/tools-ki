@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { link, lstat, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
+import { link, lstat, mkdir, readFile, realpath, rename, rm, rmdir, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { KiError } from './errors.ts'
 
@@ -91,8 +91,45 @@ const inspectWriteTarget = async (repository: string, path: string, absolutePath
 const inspectCreateTarget = async (repository: string, path: string, absolutePath: string): Promise<void> => {
   const state = await lstat(absolutePath).catch(() => undefined)
   if (state) throw new KiError(`direct conform create target ${path} must not already exist`, 1)
-  const parent = await realpath(dirname(absolutePath)).catch(() => undefined)
-  if (!parent || !isContained(repository, parent)) throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+  let parent = dirname(absolutePath)
+  while (true) {
+    const parentState = await lstat(parent).catch(() => undefined)
+    if (parentState) {
+      if (!parentState.isDirectory() || parentState.isSymbolicLink())
+        throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+      const physicalParent = await realpath(parent).catch(() => undefined)
+      if (!physicalParent || !isContained(repository, physicalParent))
+        throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+      return
+    }
+    const next = dirname(parent)
+    if (next === parent || !isContained(repository, next))
+      throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+    parent = next
+  }
+}
+
+const ensureCreateParent = async (repository: string, path: string, absolutePath: string): Promise<readonly string[]> => {
+  const parent = dirname(absolutePath)
+  const relativeParent = relative(repository, parent)
+  if (!isContained(repository, parent) || (!relativeParent && parent !== repository))
+    throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+  const created: string[] = []
+  let current = repository
+  for (const part of relativeParent ? relativeParent.split('/') : []) {
+    current = join(current, part)
+    let state = await lstat(current).catch(() => undefined)
+    if (!state) {
+      await mkdir(current)
+      created.push(current)
+      state = await lstat(current).catch(() => undefined)
+    }
+    if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+    const physicalDirectory = await realpath(current).catch(() => undefined)
+    if (!physicalDirectory || !isContained(repository, physicalDirectory))
+      throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+  }
+  return created
 }
 
 export const prepareWrites = async (
@@ -139,6 +176,7 @@ export const prepareScopedWrites = async (
 
 export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: boolean): Promise<void> => {
   if (dryRun) return
+  const createdDirectories: string[] = []
   for (const write of writes) {
     if (write.create) {
       await inspectCreateTarget(write.repository, write.path, write.absolutePath)
@@ -157,7 +195,15 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
   const temporary = new Map<PreparedWrite, string>()
   const publishedIdentities = new Map<PreparedWrite, FileIdentity>()
   const published: PreparedWrite[] = []
+  let publishedSuccessfully = false
   try {
+    for (const write of writes) {
+      if (!write.create) continue
+      for (const directory of await ensureCreateParent(write.repository, write.path, write.absolutePath)) {
+        if (!createdDirectories.includes(directory)) createdDirectories.push(directory)
+      }
+      await inspectCreateTarget(write.repository, write.path, write.absolutePath)
+    }
     for (const write of writes) {
       const path = join(dirname(write.absolutePath), `.${randomUUID()}.ki-conform.tmp`)
       await writeFile(path, write.content, { encoding: 'utf8', flag: 'wx' })
@@ -173,6 +219,7 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
       published.push(write)
       publishedIdentities.set(write, await inspectWriteTarget(write.repository, write.path, write.absolutePath))
     }
+    publishedSuccessfully = true
   } catch (error) {
     let rollbackRefusal: KiError | undefined
     for (const write of published.reverse()) {
@@ -195,5 +242,8 @@ export const publishWrites = async (writes: readonly PreparedWrite[], dryRun: bo
     throw error
   } finally {
     await Promise.all([...temporary.values()].map(async (path) => rm(path, { force: true })))
+    if (!publishedSuccessfully) {
+      for (const directory of createdDirectories.reverse()) await rmdir(directory).catch(() => undefined)
+    }
   }
 }
