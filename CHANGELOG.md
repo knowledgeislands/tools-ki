@@ -7,6 +7,7 @@ All notable changes to this project are documented here.
 ### Fixed
 
 - The installer now selects Homebrew's modern OpenSSL on macOS when the system OpenSSL lacks Ed25519 support, and its test fixtures use Node's Ed25519 signer rather than the unsupported macOS signing interface.
+- The release-signing public-key trust anchor now matches the protected environment's valid Ed25519 private key.
 
 ### Added
 
