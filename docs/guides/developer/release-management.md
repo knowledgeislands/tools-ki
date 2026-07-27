@@ -40,7 +40,7 @@ The tracked [public key](../../../release/ki-release-signing-public.pem) must ma
 
 Before publishing the next release, enable **Settings** → **Releases** → **Enable release immutability** for `knowledgeislands/tools-ki`, or apply the equivalent organization policy to this repository.
 
-Immutable releases are required: publication locks every release asset and its exact Git tag. The workflow fails closed when the setting is absent and verifies that the published release is immutable.
+Immutable releases are required: publication locks every release asset and its exact Git tag. The workflow verifies that the published release is immutable.
 
 This applies only to future releases, so the existing `v0.2.6` release is not release-integrity evidence for this contract.
 
