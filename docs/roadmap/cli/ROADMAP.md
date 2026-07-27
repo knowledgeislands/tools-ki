@@ -8,6 +8,12 @@ code: CLI
 
 Actively broken, or blocking the `Next` horizon: takes priority over everything else and must clear before `Next` work proceeds. Empty means nothing is on fire.
 
+### Repair verified release-installer contract for CI
+
+Make the public `ki` installation contract self-contained, cryptographically verified, and reproducible on a clean hosted Linux runner. A caller following the documented path must receive every verification input without discovering an adjacent key file, while release evidence must be immutable or satisfy an explicitly verified equivalent integrity contract. This is the `tools-ki` prerequisite for fleet CI rollout; it does not permit checkout, package-alias, vendored, or unsigned fallback execution.
+
+**Plan:** [CLI-005](plans/CLI-005-repair-verified-release-installer-contract.md)
+
 ## Next
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
