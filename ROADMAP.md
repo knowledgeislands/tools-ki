@@ -10,12 +10,12 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
+- [Cli: Exit `ki doctor` non-zero on failing checks](docs/roadmap/cli/ROADMAP.md#exit-ki-doctor-non-zero-on-failing-checks)
+- [Cli: Implement capability package-management commands](docs/roadmap/cli/ROADMAP.md#implement-capability-package-management-commands)
+
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
-
-- [Cli: Exit `ki doctor` non-zero on failing checks](docs/roadmap/cli/ROADMAP.md#exit-ki-doctor-non-zero-on-failing-checks)
-- [Cli: Implement capability package-management commands](docs/roadmap/cli/ROADMAP.md#implement-capability-package-management-commands)
 
 ## Waiting for
 

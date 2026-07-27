@@ -12,10 +12,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-## Soon
-
-Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
-
 ### Implement capability package-management commands
 
 Implement the defined capability inventory, status, maintenance, and upgrade forms: `ki list`, `ki missing`, `ki outdated`, `ki install`, `ki reinstall`, `ki uninstall`, `ki update`, and CWD-resolved `ki upgrade`. Retain `ki harness list` as the harness-focused inventory and preserve KI's verified-harness and explicit-scope boundaries.
@@ -23,6 +19,10 @@ Implement the defined capability inventory, status, maintenance, and upgrade for
 ### Exit `ki doctor` non-zero on failing checks
 
 `ki doctor` prints `✗` for failing checks (missing configuration, missing harnesses, unlinked skills) but always exits 0, so it can't be used as a script/CI gate. Decide the exit-code contract (e.g. non-zero if any check is `fail`) and update the CLI-005 contract test at `src/tests/cli/doctor.test.ts` alongside the fix.
+
+## Soon
+
+Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
 ## Waiting for
 
