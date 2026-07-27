@@ -8,29 +8,9 @@ code: CLI
 
 Actively broken, or blocking the `Next` horizon: takes priority over everything else and must clear before `Next` work proceeds. Empty means nothing is on fire.
 
-### Activate skills only for compatible runtimes
-
-Read explicit runtime compatibility from installed skill metadata and link a user- or repository-scoped skill only into configured agents for compatible runtimes. Keep removal broad enough to clean stale KI-managed projections after compatibility changes.
-
-Received from `ki-agentic-harness` [RTP-002](../../../../ki-agentic-harness/docs/roadmap/runtime-portability/plans/RTP-002-runtime-explicit-environment-capabilities.md); blocks completion of that plan's fleet migration.
-
-**Plan:** [CLI-003](plans/CLI-003-activate-skills-only-for-compatible-runtimes.md)
-
 ## Next
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
-
-### Deliver `ki list` capability inventory
-
-Deliver a read-only inventory of verified installed harnesses and their capabilities, declared user skills, and CWD-resolved repository skills. Retain `ki harness list` as the harness-focused summary and make no release, desired-state, or mutation claim.
-
-**Plan:** [CLI-001](plans/CLI-001-deliver-ki-list-capability-inventory.md)
-
-### Exit `ki doctor` non-zero on failing checks
-
-`ki doctor` prints `✗` for failing checks (missing configuration, missing harnesses, unlinked skills) but always exits 0, so it can't be used as a script/CI gate. Decide the exit-code contract (e.g. non-zero if any check is `fail`) and update the CLI-005 contract test at `src/tests/cli/doctor.test.ts` alongside the fix.
-
-**Plan:** [CLI-002](plans/CLI-002-exit-ki-doctor-non-zero-on-failing-checks.md)
 
 ## Soon
 
