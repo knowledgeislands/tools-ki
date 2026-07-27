@@ -1,7 +1,7 @@
 ---
 id: 'CLI-002'
 title: Exit ki doctor non-zero on failing checks
-status: acceptance
+status: done
 roadmap: cli/exit-ki-doctor-non-zero-on-failing-checks
 blocks: —
 blocked-by: —
@@ -71,3 +71,11 @@ None.
 ### Mini recap
 
 Returning an explicit silent outcome from the command boundary keeps fully rendered diagnostic reports distinct from operational errors while preserving the CLI's injected stream contract.
+
+## Done
+
+Completed the `ki doctor` exit-status contract and retained its verified acceptance record.
+
+Residual concerns: None.
+
+Intended follow-up: Prune this retained record with its canonical roadmap item when the completed CLI tranche is ready for cleanup.
