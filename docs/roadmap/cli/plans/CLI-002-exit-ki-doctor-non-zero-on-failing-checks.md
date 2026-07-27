@@ -1,11 +1,11 @@
 ---
 id: 'CLI-002'
 title: Exit ki doctor non-zero on failing checks
-status: ready
+status: in-progress
 roadmap: cli/exit-ki-doctor-non-zero-on-failing-checks
 blocks: —
 blocked-by: —
-baseline-ref: —
+baseline-ref: 912f422defbfa9abd908edf7293f601a18b951e2
 ---
 
 ## Context
