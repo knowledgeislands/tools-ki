@@ -8,12 +8,6 @@ code: CLI
 
 Actively broken, or blocking the `Next` horizon: takes priority over everything else and must clear before `Next` work proceeds. Empty means nothing is on fire.
 
-### Restore repository-operation output controls
-
-Restore the output controls lost in the native repository-operation cutover: selectable progress visibility, single- or multi-row progress, and finding-level filtering. Preserve the aggregate recap, restore the established audit and conform defaults, and retain structured PASS and NOT_APPLICABLE outcomes long enough to render them when explicitly requested.
-
-**Plan:** [CLI-007](plans/CLI-007-restore-repository-operation-output-controls.md)
-
 ## Next
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
