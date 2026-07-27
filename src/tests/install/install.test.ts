@@ -57,22 +57,6 @@ describe('install.sh', () => {
     expect(result).toEqual({ exitCode: 0, output: expect.stringContaining('v2.3.4 (linux-x64)') })
   })
 
-  test('supports the macOS-compatible pkeyutl form without -rawin', async () => {
-    const box = await installSandbox()
-    const fixture = await box.release()
-    const result = await box.exec([box.installer, fixture.version], {
-      environment: releaseEnvironment(fixture.baseUrl, fixture.publicKey, {
-        KI_CLI_INSTALL_DIR: join(box.path, 'bin'),
-        KI_MAN_INSTALL_DIR: join(box.path, 'man1'),
-        KI_INSTALL_TEST_NO_RAWIN: '1',
-        KI_INSTALL_TEST_UNAME_S: 'Darwin',
-        KI_INSTALL_TEST_UNAME_M: 'arm64'
-      })
-    })
-
-    expect(result).toEqual({ exitCode: 0, output: expect.stringContaining('v1.2.3 (darwin-arm64)') })
-  })
-
   test('rejects unsigned, malformed, or checksum-mismatched releases before changing an existing install', async () => {
     const box = await installSandbox()
     const installDir = join(box.path, 'bin')

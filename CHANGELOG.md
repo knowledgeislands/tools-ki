@@ -6,7 +6,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
-- Installer verification now supports the macOS-compatible OpenSSL `pkeyutl` form for Ed25519 signatures.
+- Installer test fixtures now use Node's Ed25519 signer, avoiding an unsupported OpenSSL signing interface on macOS runners.
 
 ### Added
 
