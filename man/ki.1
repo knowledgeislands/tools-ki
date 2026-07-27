@@ -221,12 +221,15 @@ Run
 .B ki diag
 to inspect the effective values.
 .SH DEVELOPMENT INSTALLATIONS
-Homebrew installs a released regular executable.
-From a checkout, run
-.B bun run build
-then
-.B ./install.sh --copy
-to install a regular standalone executable for the current platform.
+After the first verified release, the Homebrew tap will install the same regular
+release executable.
+For a direct verified install, download
+.B install.sh
+from an exact KI release tag and run it with that tag, for example
+.BR "bash install.sh v1.2.3" .
+The installer verifies the Ed25519-signed checksum manifest before it downloads
+and installs the target archive. It supports Apple Silicon and Intel macOS, and
+x86_64 glibc Linux.
 For development against this checkout, run
 .B ./install.sh --link
 to place a symbolic link in
@@ -242,7 +245,7 @@ directory).
 Use a dedicated development command directory or invoke
 .B ./bin/ki
 directly when comparing it with Homebrew's installed executable. The linked
-source mode requires Bun; a regular compiled executable does not.
+source mode requires Bun; a verified release executable does not.
 .SH EXIT STATUS
 .TP
 .B 0

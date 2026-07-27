@@ -6,6 +6,7 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- A verified release installer for Apple Silicon and Intel macOS plus x86_64 glibc Linux, with an Ed25519-signed checksum manifest and a local-development-only `--link` mode.
 - Initial `ki` seed executable with HELP, version, completion, and no-op doctor.
 - User-assisted `ki acquire chatgpt import` with deterministic local KEP creation, dry-run, and JSON reporting.
 - Read-only `ki paths`, useful local `ki doctor` output, JSON inspection results, the `ki version` command, and plural `ki completions`.

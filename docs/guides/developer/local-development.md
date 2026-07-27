@@ -1,6 +1,6 @@
 # Local development
 
-`tools-ki` supports a released Homebrew installation, a regular locally compiled executable, and an explicit link to the current checkout. Both local modes expose the same unreleased version while development continues; the mode changes which executable runs, not the version number.
+`tools-ki` supports released Homebrew and signed-release installations, plus an explicit link to the current checkout. The link mode exposes the checkout's unreleased version; released modes run the selected released executable.
 
 ## Run the checkout directly
 
@@ -21,17 +21,16 @@ Each public command or command group has its own module under `src/commands/`; c
 
 `src/core/context.ts` resolves the physical current working directory, executable installation mode, XDG KI paths, user home, and an optional ancestor KI repository. Repository discovery searches from the working directory upward for `.ki-config.toml`, but never treats the home directory or filesystem root as a repository. Future `ki repo` commands reuse this context and its explicit `--repo` resolver rather than reimplementing path traversal.
 
-## Install a compiled executable
+## Build a compiled executable
 
-Build the standalone executable for the current platform, then install a regular copy:
+Build and run a standalone executable for the current platform without changing any installation:
 
 ```sh
 bun run build
-KI_CLI_INSTALL_DIR="$HOME/.local/ki-dev/bin" ./install.sh --copy
-PATH="$HOME/.local/ki-dev/bin:$PATH" ki doctor
+./dist/ki doctor
 ```
 
-The compiled executable contains the Bun runtime and its dependency graph, so the installed command does not need a checkout or Bun on `PATH`.
+The compiled executable contains the Bun runtime and its dependency graph, so it does not need Bun on `PATH`. Public installation is deliberately release-based: `install.sh` verifies a signed archive instead of copying a mutable local build.
 
 ## Link a development command
 
@@ -42,7 +41,7 @@ KI_CLI_INSTALL_DIR="$HOME/.local/ki-dev/bin" ./install.sh --link
 PATH="$HOME/.local/ki-dev/bin:$PATH" ki doctor
 ```
 
-`ki doctor` reports `installation: linked development checkout` when that link is running. The command and `ki(1)` links follow subsequent edits to `bin/ki` and `man/ki.1`; reinstall only when changing their target directories or restoring regular copied files.
+`ki doctor` reports `installation: linked development checkout` when that link is running. The command runs `src/main.ts` through Bun and the `ki(1)` link follows subsequent manual edits; reinstall only when changing target directories or replacing the link with a release installation.
 
 Set `KI_MAN_INSTALL_DIR` when the manual should be installed outside the default sibling `share/man/man1` directory.
 
@@ -91,7 +90,7 @@ chmod 644 "$key_dir/ki-release-signing-public.pem"
 
 Keep `ki-release-signing-key.pem` private: do not commit it, paste it into chat, or send it by email. The public-key file is safe to commit and distribute.
 
-Do not create `KI_RELEASE_SIGNING_KEY` as a general repository secret. A release tag can otherwise select workflow code that reads it. Instead, in GitHub open `knowledgeislands/tools-ki`, select **Settings** → **Environments** → **New environment**, and create `release`. Require a reviewer other than the person publishing the release, prevent self-approval or bypass, and limit deployment to protected release tags. Add `KI_RELEASE_SIGNING_KEY` under that environment's **Environment secrets**. GitHub exposes an environment secret to a job only after its protection rules pass. See [GitHub's guide to environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments) and [repository secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets?tool=webui).
+Do not create `KI_RELEASE_SIGNING_KEY` as a general repository secret. A release tag can otherwise select workflow code that reads it. Instead, in GitHub open `knowledgeislands/tools-ki`, select **Settings** → **Environments** → **New environment**, and create `release`. Require a reviewer other than the person publishing the release, prevent self-approval or bypass, and restrict deployments to the protected default branch. Add `KI_RELEASE_SIGNING_KEY` under that environment's **Environment secrets**. The release workflow is manually dispatched from that branch and checks out the exact requested release tag only after approval; GitHub exposes the secret to its publisher job only after its protection rules pass. See [GitHub's guide to environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments) and [repository secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets?tool=webui).
 
 Copy the private key directly from the file rather than printing it into a shared terminal or chat transcript:
 

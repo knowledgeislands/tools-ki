@@ -22,15 +22,19 @@ Use `--dry-run` to validate without creating output, or `--json` for a versioned
 
 ## Install
 
-Install the released CLI with Homebrew:
+After the first verified release, download `install.sh` from an exact released tag, inspect it, then run it with that tag:
 
 ```sh
-brew install knowledgeislands/tap/ki
+curl --fail --location --remote-name \
+  https://raw.githubusercontent.com/knowledgeislands/tools-ki/vX.Y.Z/install.sh
+bash install.sh vX.Y.Z
 ```
 
-For a local checkout, run `bun run build` and use the repository's `install.sh --copy` installer for a regular standalone executable.
+The installer verifies the release's Ed25519-signed checksum manifest before downloading the platform archive. It supports macOS (Apple Silicon and Intel) and x86_64 glibc Linux. Omitting the version resolves the latest release to an exact signed tag; use an explicit version when you need a reproducible installation.
 
-For a development link to the current checkout, read the [local development guide](docs/guides/developer/local-development.md).
+The Homebrew tap will move to these same release artifacts after that first verified release.
+
+`install.sh --link` is exclusively for development from a local checkout. Read the [local development guide](docs/guides/developer/local-development.md) for that path.
 
 The tracked [ki(1) manual](man/ki.1) distinguishes the current command surface from planned alternatives.
 

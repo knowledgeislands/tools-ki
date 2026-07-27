@@ -1,14 +1,55 @@
 name: Release
 
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact release tag (for example v1.2.3)
+        required: true
+        type: string
 
+# The workflow must be dispatched from the protected default branch. The protected
+# `release` environment further restricts deployment to that branch and requires
+# independent approval before the publisher can read its signing-key secret.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  validate:
+    name: Validate requested release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tag-commit: ${{ steps.release.outputs.tag-commit }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: release
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]]; then
+            printf 'ki release: dispatch this workflow from the protected default branch\n' >&2
+            exit 2
+          fi
+          if [[ ! "$REQUESTED_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            printf 'ki release: version must be an exact v-prefixed semantic version\n' >&2
+            exit 2
+          fi
+          git fetch --no-tags origin "refs/tags/$REQUESTED_VERSION:refs/tags/$REQUESTED_VERSION"
+          tag_commit=$(git rev-parse --verify "$REQUESTED_VERSION^{commit}")
+          git fetch --no-tags origin "$DEFAULT_BRANCH"
+          git merge-base --is-ancestor "$tag_commit" "origin/$DEFAULT_BRANCH"
+          printf 'version=%s\n' "$REQUESTED_VERSION" >> "$GITHUB_OUTPUT"
+          printf 'tag-commit=%s\n' "$tag_commit" >> "$GITHUB_OUTPUT"
+
   package:
+    needs: validate
     name: ${{ matrix.asset-target }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -25,48 +66,99 @@ jobs:
             bun-target: bun-darwin-arm64
             asset-target: darwin-arm64
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.validate.outputs.tag-commit }}
+          persist-credentials: false
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
       - run: bun install --frozen-lockfile
       - run: bun run test
       - run: bun run test:coverage
-      - run: release/package.sh "${GITHUB_REF_NAME}" "${{ matrix.bun-target }}" "${{ matrix.asset-target }}"
-      - uses: actions/upload-artifact@v4
+      - run: release/package.sh "${{ needs.validate.outputs.version }}" "${{ matrix.bun-target }}" "${{ matrix.asset-target }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ matrix.asset-target }}
-          path: dist/ki-${{ github.ref_name }}-${{ matrix.asset-target }}.tar.gz
+          path: dist/ki-${{ needs.validate.outputs.version }}-${{ matrix.asset-target }}.tar.gz
           if-no-files-found: error
 
   publish:
-    needs: package
+    needs: [validate, package]
+    name: Sign and publish ${{ needs.validate.outputs.version }}
     runs-on: ubuntu-latest
+    # Configure this protected environment to allow only the protected default
+    # branch, require a reviewer other than the requester, and disallow bypass.
+    environment: release
+    permissions:
+      actions: read
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.validate.outputs.tag-commit }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: dist/release-assets
           merge-multiple: true
-      - name: Create and sign the release manifest
-        env:
-          KI_RELEASE_SIGNING_KEY: ${{ secrets.KI_RELEASE_SIGNING_KEY }}
-        run: |
-          set -euo pipefail
-          test -n "$KI_RELEASE_SIGNING_KEY"
-          release_dir=dist/release-assets
-          manifest="$release_dir/ki-checksums.txt"
-          {
-            printf 'version=%s\n' "$GITHUB_REF_NAME"
-            shasum -a 256 "$release_dir"/*.tar.gz | sed "s#  $release_dir/#  #"
-          } > "$manifest"
-          printf '%s\n' "$KI_RELEASE_SIGNING_KEY" > "$release_dir/signing-key.pem"
-          chmod 600 "$release_dir/signing-key.pem"
-          openssl pkeyutl -sign -rawin -inkey "$release_dir/signing-key.pem" -in "$manifest" -out "$release_dir/ki-checksums.txt.sig"
-          openssl pkey -in "$release_dir/signing-key.pem" -pubout > "$release_dir/derived-public-key.pem"
-          diff -u release/ki-release-signing-public.pem "$release_dir/derived-public-key.pem"
-          rm "$release_dir/signing-key.pem" "$release_dir/derived-public-key.pem"
-      - name: Publish immutable release assets
+      - name: Create draft release, manifest, and signature
         env:
           GH_TOKEN: ${{ github.token }}
+          KI_RELEASE_SIGNING_KEY: ${{ secrets.KI_RELEASE_SIGNING_KEY }}
+          VERSION: ${{ needs.validate.outputs.version }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --generate-notes \
-            dist/release-assets/*.tar.gz dist/release-assets/ki-checksums.txt dist/release-assets/ki-checksums.txt.sig
+          set -euo pipefail
+          umask 077
+          release_dir=dist/release-assets
+          signing_key=$(mktemp)
+          derived_public_key=$(mktemp)
+          trap 'rm -f "$signing_key" "$derived_public_key"' EXIT
+          test -n "$KI_RELEASE_SIGNING_KEY"
+          for target in darwin-arm64 darwin-x64 linux-x64; do
+            asset="ki-${VERSION}-${target}.tar.gz"
+            test -f "$release_dir/$asset"
+          done
+          test "$(find "$release_dir" -maxdepth 1 -type f -name '*.tar.gz' | wc -l | tr -d ' ')" = 3
+          manifest="$release_dir/ki-checksums.txt"
+          {
+            printf 'format=ki-release-checksums-v1\n'
+            printf 'version=%s\n' "$VERSION"
+            (
+              cd "$release_dir"
+              shasum -a 256 -- ki-"$VERSION"-darwin-arm64.tar.gz ki-"$VERSION"-darwin-x64.tar.gz ki-"$VERSION"-linux-x64.tar.gz | LC_ALL=C sort -k 2
+            )
+          } > "$manifest"
+          printf '%s\n' "$KI_RELEASE_SIGNING_KEY" > "$signing_key"
+          openssl pkey -in "$signing_key" -pubout -out "$derived_public_key"
+          diff -u release/ki-release-signing-public.pem "$derived_public_key"
+          openssl pkeyutl -sign -rawin -inkey "$signing_key" -in "$manifest" -out "$release_dir/ki-checksums.txt.sig"
+          gh release view "$VERSION" >/dev/null 2>&1 && {
+            printf 'ki release: release already exists: %s\n' "$VERSION" >&2
+            exit 2
+          }
+          gh release create "$VERSION" --verify-tag --draft --title "$VERSION" --generate-notes
+      - name: Upload and verify draft release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          release_dir=dist/release-assets
+          verify_dir=$(mktemp -d)
+          trap 'rm -rf "$verify_dir"' EXIT
+          gh release upload "$VERSION" \
+            "$release_dir"/ki-"$VERSION"-darwin-arm64.tar.gz \
+            "$release_dir"/ki-"$VERSION"-darwin-x64.tar.gz \
+            "$release_dir"/ki-"$VERSION"-linux-x64.tar.gz \
+            "$release_dir"/ki-checksums.txt \
+            "$release_dir"/ki-checksums.txt.sig
+          gh release download "$VERSION" --dir "$verify_dir" --pattern 'ki-*'
+          test "$(find "$verify_dir" -maxdepth 1 -type f | wc -l | tr -d ' ')" = 5
+          cmp "$release_dir/ki-checksums.txt" "$verify_dir/ki-checksums.txt"
+          cmp "$release_dir/ki-checksums.txt.sig" "$verify_dir/ki-checksums.txt.sig"
+          openssl pkeyutl -verify -rawin -pubin -inkey release/ki-release-signing-public.pem \
+            -in "$verify_dir/ki-checksums.txt" -sigfile "$verify_dir/ki-checksums.txt.sig"
+          (
+            cd "$verify_dir"
+            tail -n +3 ki-checksums.txt | shasum -a 256 --check --strict
+          )
+          gh release edit "$VERSION" --draft=false --latest

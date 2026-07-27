@@ -27,12 +27,12 @@ It needs a tag-bound release contract that lets a user select a supported target
 
 ## Steps
 
-1. Define the supported operating-system and architecture matrix, archive layout, stable versioned asset names, immutable release reference, checksum manifest, and signature/public-key verification contract.
-2. Add a tag-bound release workflow that builds each supported `ki` executable, packages it with `man/ki.1`, publishes the archives and signed checksum manifest as GitHub release assets, and proves the published archive contents before release.
-3. Replace `install.sh`'s checkout-only default with target detection, immutable release resolution, manifest-signature and archive-checksum verification, and atomic executable/manual installation.
-4. Retain `install.sh --link` exclusively for local checkout development, make its source entry point explicit, and remove the obsolete `bin/` launcher only after the linked path and its tests no longer depend on it.
-5. Add end-to-end installer fixtures for supported target selection, unavailable targets, malformed or unsigned manifests, checksum mismatch, atomic replacement, and the retained local `--link` path.
-6. Align `README.md`, `ki(1)`, the local-development guide, changelog, and Homebrew formula with the verified release artifacts and the development-only link path.
+1. ✓ Define the supported matrix: `darwin-arm64`, `darwin-x64`, and glibc `linux-x64`; each `ki-vX.Y.Z-<target>.tar.gz` contains only regular `ki` and `man/ki.1`; `ki-checksums.txt` is a sorted LF `ki-release-checksums-v1` manifest and `ki-checksums.txt.sig` is its Ed25519 signature.
+2. ✓ Add the protected-default-branch manual release workflow: validate an exact `vX.Y.Z` tag, build the three tag-commit archives, sign and upload a draft release, download and reverify its assets, then publish it. The GitHub `release` environment must still be configured before the first real run.
+3. ✓ Replace `install.sh`'s checkout-only default with target detection, exact-tag resolution, manifest-signature and archive-checksum verification, strict archive validation, staged version verification, and rollback-safe per-file replacement.
+4. ✓ Retain `install.sh --link` exclusively for local checkout development, using a Bun launcher for `src/main.ts`. Keep `bin/ki` because the existing in-process CLI test seam still requires it; remove it only when that independent dependency ends.
+5. ✓ Add end-to-end installer fixtures for target selection, latest-release resolution, unsigned/malformed/checksum-mismatched manifests, rollback with and without an existing installation, and the retained local `--link` path.
+6. ✓ Align the in-repository README, `ki(1)`, local-development guide, and changelog with the verified release artifacts and development-only link path. The Homebrew tap update belongs to its external repository and waits for the first verified release asset.
 7. Move the Website public install redirect to the tools-owned installer after a released artifact passes the end-to-end verification; retain an intentional compatibility redirect only if the Website plan approves it.
 
 ## Files touched
@@ -54,6 +54,8 @@ It needs a tag-bound release contract that lets a user select a supported target
 This plan is independently executable from [CLI-004](CLI-004-native-repo-maintenance.md), but must use the same canonical harness and CLI delivery vocabulary.
 
 The Website redirect change is an outbound recipient task after this plan's first verified released artifact; it does not block release-workflow or installer implementation.
+
+The protected GitHub `release` environment is required before the first publishing run: restrict it to the protected default branch, require independent approval without bypass, and store `KI_RELEASE_SIGNING_KEY` only as its environment secret. Its absence blocks the final publish proof and the Website/Homebrew recipient handoffs, not this local implementation.
 
 ## Delegation
 
