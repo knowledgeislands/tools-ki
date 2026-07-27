@@ -40,7 +40,8 @@ interface ParsedTarEntry {
 /**
  * Parses every payload entry (under `skills/`, `subagents/`, or `hooks/`, optionally
  * nested one level under a harness-source prefix) out of a decompressed tar archive
- * without writing anything to disk.
+ * without writing anything to disk. Runtime projections such as `.agents/skills/`
+ * are source metadata, not harness payloads.
  */
 const parsePayloadEntries = (archive: Uint8Array): readonly ParsedTarEntry[] => {
   let payloadPrefix: string | undefined
@@ -58,7 +59,7 @@ const parsePayloadEntries = (archive: Uint8Array): readonly ParsedTarEntry[] => 
     if (!safeRelativePath(path) || contentsEnd > archive.length) throw new KiError('harness archive contains an unsafe entry', 1)
     const parts = path.split('/')
     const direct = parts[0] === 'skills' || parts[0] === 'subagents' || parts[0] === 'hooks'
-    const nested = parts[1] === 'skills' || parts[1] === 'subagents' || parts[1] === 'hooks'
+    const nested = !parts[0]?.startsWith('.') && (parts[1] === 'skills' || parts[1] === 'subagents' || parts[1] === 'hooks')
     if (direct || nested) {
       const entryPrefix = direct ? '' : (parts[0] as string)
       if (payloadPrefix !== undefined && payloadPrefix !== entryPrefix) throw new KiError('harness archive mixes payload roots', 1)

@@ -416,6 +416,28 @@ releases = [
       expect(result.output).toContain('may contain only regular files and directories')
     })
 
+    test('ignores runtime projection links outside the harness payload', async () => {
+      const box = await sandbox()
+      const { payload, sha256 } = makeHarnessArchive({
+        '.agents/skills/ki-example': { type: '2' },
+        'source/skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n'
+      })
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]
+releases = [
+  { id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" },
+]
+`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(0)
+      await expect(box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).resolves.toContain('name: ki-example')
+    })
+
     test('refuses a non-ok download response', async () => {
       const box = await sandbox()
       await box.config.write(
