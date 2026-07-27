@@ -24,10 +24,6 @@ Implement the defined capability inventory, status, maintenance, and upgrade for
 
 `ki doctor` prints `✗` for failing checks (missing configuration, missing harnesses, unlinked skills) but always exits 0, so it can't be used as a script/CI gate. Decide the exit-code contract (e.g. non-zero if any check is `fail`) and update the CLI-005 contract test at `src/tests/cli/doctor.test.ts` alongside the fix.
 
-### Deliver `ki(1)` through the Homebrew formula
-
-Signed release archives and the installer already package `ki(1)`. Deliver the same manual through the Homebrew formula as part of V1 release delivery, keep it aligned with `ki help`, and distinguish released commands from planned work.
-
 ## Waiting for
 
 Worth doing, but presently blocked on an external dependency or decision. Revisit when its named condition changes rather than treating it as dormant local work.
