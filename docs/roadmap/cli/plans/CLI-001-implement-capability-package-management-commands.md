@@ -23,7 +23,7 @@ ADR-KI-TOOLS-002 reserves the public capability package-management vocabulary, b
 1. Define the exact argument, output, exit-code, and scope contracts for every new top-level form from ADR-KI-TOOLS-002, distinguishing harness inventory from capability inventory and refusing ambiguous, unverified, or out-of-scope targets.
 2. Implement the read-only inventory and status forms (`ki list`, `ki missing`, and `ki outdated`) through injected context capabilities and the installed-harness registry.
 3. Implement the maintenance and upgrade forms (`ki install`, `ki reinstall`, `ki uninstall`, `ki update`, and CWD-resolved `ki upgrade`) with explicit verified-harness acquisition, user/repository activation boundaries, and safe mutation semantics.
-4. Register the forms in the root CLI, update HELP, completions, and `ki(1)`, and keep planned or unavailable forms out of the public surface until their contract tests and release evidence exist.
+4. Register the forms in the root CLI; update HELP, completions, `ki(1)`, and the V1 changelog baseline; and keep planned or unavailable forms out of the public surface until their contract tests and release evidence exist.
 5. Add CLI-contract coverage for successful, unavailable, ambiguous, unsafe, dry-run, and mutation cases; run the complete quality gate.
 
 ## Files touched
@@ -31,7 +31,7 @@ ADR-KI-TOOLS-002 reserves the public capability package-management vocabulary, b
 - `src/cli.ts` and command modules for the new public forms
 - Registry, harness, resolver, and activation modules required by the settled contracts
 - `src/tests/cli/` contract tests and shared CLI fixtures
-- `man/ki.1`, completion output, and relevant user documentation
+- `CHANGELOG.md`, `man/ki.1`, completion output, and relevant user documentation
 
 ## Verify
 
