@@ -28,8 +28,10 @@ export interface RepositoryRuntimeScope {
 
 export type RuntimeScope = RepositoryRuntimeScope
 
+export type FindingLevel = 'fail' | 'warn' | 'info' | 'not-applicable' | 'pass'
+
 export interface Finding {
-  readonly level: 'fail' | 'warn' | 'info'
+  readonly level: FindingLevel
   readonly code: string
   /** The rubric item's human-facing title, retained for host-owned reporting. */
   readonly title: string
@@ -207,11 +209,19 @@ const orderedMechanicalItems = (definition: SkillRubricDefinition<unknown>): rea
     .map((entry) => entry.item)
 }
 
-const findingForOutcome = (prepared: PreparedRubricItem, outcome: AuditOutcome): Finding | undefined => {
+const findingForOutcome = (prepared: PreparedRubricItem, outcome: AuditOutcome): Finding => {
   const { item } = prepared
-  if (outcome.status === 'PASS' || outcome.status === 'NOT_APPLICABLE') return undefined
   const violationLevel = outcome.level ?? item.mechanical.level
-  const level = outcome.status === 'INFO' ? 'info' : violationLevel === 'FAIL' ? 'fail' : 'warn'
+  const level: FindingLevel =
+    outcome.status === 'PASS'
+      ? 'pass'
+      : outcome.status === 'NOT_APPLICABLE'
+        ? 'not-applicable'
+        : outcome.status === 'INFO'
+          ? 'info'
+          : violationLevel === 'FAIL'
+            ? 'fail'
+            : 'warn'
   return outcome.subject === undefined
     ? { level, code: item.code, title: item.title, message: outcome.message }
     : { level, code: item.code, title: item.title, message: outcome.message, subject: outcome.subject }
@@ -280,8 +290,7 @@ const auditSkill = async (
   }
   const findings = items.flatMap((state) =>
     state.outcomes.flatMap((outcome) => {
-      const finding = findingForOutcome(state.item, outcome)
-      return finding ? [finding] : []
+      return [findingForOutcome(state.item, outcome)]
     })
   )
   return { session, items, findings, scope: definitionScope }
@@ -357,8 +366,7 @@ export const runSkillConform = async (
       return
     }
     for (const outcome of state.outcomes) {
-      const finding = findingForOutcome(state.item, outcome)
-      if (finding) findings.push(finding)
+      findings.push(findingForOutcome(state.item, outcome))
     }
   })
   return { findings, writes: proposal.writes, commands: proposal.commands, scope: definitionScope, fixable }

@@ -41,7 +41,7 @@ export default {
 `
   })
 
-  const result = await box.run('ki repo audit')
+  const result = await box.run('ki repo audit --reporter-levels info')
 
   expect(result.exitCode).toBe(0)
   expect(result.output.match(/default user model pinned: claude-fable-5; linked/g)).toHaveLength(2)

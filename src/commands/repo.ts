@@ -11,6 +11,7 @@ import {
   detectFixed,
   educateSkill,
   type Finding,
+  type FindingLevel,
   type FixedItem,
   type PreparedSkill,
   prepareSkill,
@@ -62,6 +63,52 @@ const resolveSkills = async (context: KiContext, options: { repo?: string; skill
 const FALLBACK_TERMINAL_COLUMNS = 80
 const COMMAND_COLUMN_WIDTH = 10
 
+type ProgressMode = 'auto' | 'always' | 'never'
+type ProgressStyle = 'single' | 'multi'
+type ReporterLevel = FindingLevel | 'fixed'
+
+interface OperationOptions {
+  readonly progress: ProgressMode
+  readonly progressStyle: ProgressStyle
+  readonly reporterLevels: readonly ReporterLevel[]
+}
+
+const REPORTER_LEVELS: readonly ReporterLevel[] = ['fail', 'warn', 'fixed', 'info', 'not-applicable', 'pass']
+
+const defaultReporterLevels = (operation: 'audit' | 'conform'): readonly ReporterLevel[] =>
+  operation === 'audit' ? ['fail', 'warn'] : ['fail', 'warn', 'fixed']
+
+const parseProgressMode = (value: string | undefined): ProgressMode => {
+  if (value === undefined || value === 'auto' || value === 'always' || value === 'never') return value ?? 'auto'
+  throw new KiError('--progress accepts auto, always, or never', 2)
+}
+
+const parseProgressStyle = (value: string | undefined): ProgressStyle => {
+  if (value === undefined || value === 'single' || value === 'multi') return value ?? 'single'
+  throw new KiError('--progress-style accepts single or multi', 2)
+}
+
+const parseReporterLevels = (value: string | undefined, operation: 'audit' | 'conform'): readonly ReporterLevel[] => {
+  if (value === undefined) return defaultReporterLevels(operation)
+  if (value.toLowerCase() === 'all') return REPORTER_LEVELS
+  const levels = value
+    .split(',')
+    .map((level) => level.trim().toLowerCase())
+    .filter(Boolean) as ReporterLevel[]
+  if (!levels.length || levels.some((level) => !REPORTER_LEVELS.includes(level)))
+    throw new KiError('--reporter-levels accepts FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, PASS, or all', 2)
+  return [...new Set(levels)]
+}
+
+const operationOptions = (
+  operation: 'audit' | 'conform',
+  options: { readonly progress?: string; readonly progressStyle?: string; readonly reporterLevels?: string }
+): OperationOptions => ({
+  progress: parseProgressMode(options.progress),
+  progressStyle: parseProgressStyle(options.progressStyle),
+  reporterLevels: parseReporterLevels(options.reporterLevels, operation)
+})
+
 const truncate = (text: string, width: number): string => {
   if (text.length <= width) return text
   if (width <= 0) return ''
@@ -96,35 +143,108 @@ const elapsed = (milliseconds: number): string => `${(Math.max(0, milliseconds) 
 
 interface ProgressTracker {
   readonly loading: (loaded: number, total: number) => void
-  readonly planned: (total: number) => void
+  readonly planned: (skills: readonly PreparedSkill[]) => void
   readonly item: (skill: PreparedSkill, code: string) => void
   readonly complete: () => void
   readonly failed: () => void
 }
 
-const createProgressTracker = (context: KiContext, operation: string): ProgressTracker | undefined => {
-  if (context.stderr.isTTY !== true) return undefined
+interface MultiProgressState {
+  readonly complete: number
+  readonly total: number
+  readonly planned: boolean
+  readonly status: string
+}
+
+const createProgressTracker = (
+  context: KiContext,
+  operation: string,
+  options: OperationOptions,
+  skillNames: readonly string[]
+): ProgressTracker | undefined => {
+  const enabled = options.progress === 'always' || (options.progress === 'auto' && context.stderr.isTTY === true)
+  if (!enabled) return undefined
   const started = context.now()
   let complete = 0
   let total: number | undefined
   const columns = context.stderr.columns ?? FALLBACK_TERMINAL_COLUMNS
-  const write = (right: string, final = false): void =>
+  const writeSingle = (right: string, final = false): void =>
     context.stderr.write(
-      `\r\x1b[2K${progressLine(operation.toUpperCase(), right, total === undefined ? undefined : complete, total, columns)}${final ? '\n' : ''}`
+      `${context.stderr.isTTY === true ? '\r\x1b[2K' : ''}${progressLine(
+        operation.toUpperCase(),
+        right,
+        total === undefined ? undefined : complete,
+        total,
+        columns
+      )}${final || context.stderr.isTTY !== true ? '\n' : ''}`
     )
+  const states = new Map<string, MultiProgressState>(
+    skillNames.map((skill) => [skill, { complete: 0, total: 0, planned: false, status: 'loading' }])
+  )
+  const progressState = (skill: string): MultiProgressState => {
+    const state = states.get(skill)
+    // Every caller uses the fixed skill list used to initialise this tracker; this only protects a future refactor.
+    /* v8 ignore next */
+    if (!state) throw new KiError(`progress lost state for ${skill}`, 1)
+    return state
+  }
+  let multiRendered = false
+  const renderMulti = (): void => {
+    const lines = skillNames.map((skill) => {
+      const state = progressState(skill)
+      return progressLine(
+        operation.toUpperCase(),
+        `[${skill}] ${state.status}`,
+        state.planned ? state.complete : undefined,
+        state.planned ? state.total : undefined,
+        columns
+      )
+    })
+    if (context.stderr.isTTY === true && multiRendered) context.stderr.write(`\x1b[${lines.length}A`)
+    context.stderr.write(lines.map((line) => `${context.stderr.isTTY === true ? '\r\x1b[2K' : ''}${line}\n`).join(''))
+    multiRendered = true
+  }
+  const render = (right: string, final = false): void => {
+    if (options.progressStyle === 'single') writeSingle(right, final)
+    else renderMulti()
+  }
   return {
-    loading: (loaded, definitions) => write(`${elapsed(context.now() - started)} loading ${loaded}/${definitions} definitions`),
-    planned: (itemTotal) => {
+    loading: (loaded, definitions) => {
+      const detail = `${elapsed(context.now() - started)} loading ${loaded}/${definitions} definitions`
+      for (const skill of skillNames) states.set(skill, { complete: 0, total: 0, planned: false, status: detail })
+      render(detail)
+    },
+    planned: (skills) => {
+      const itemTotal = skills.reduce((count, skill) => count + skill.items.length, 0)
       total = itemTotal
-      write(`${complete}/${total} ${total === 0 ? 100 : 0}% starting`)
+      for (const skill of skills)
+        states.set(skill.skill.declaration.name, { complete: 0, total: skill.items.length, planned: true, status: 'pending' })
+      render(`${complete}/${total} ${total === 0 ? 100 : 0}% starting`)
     },
     item: (skill, code) => {
       complete += 1
       const percentage = Math.round((complete / (total as number)) * 100)
-      write(`${complete}/${total} ${percentage}% ${skill.skill.declaration.name} ${code}`)
+      const name = skill.skill.declaration.name
+      const state = progressState(name)
+      states.set(name, { complete: state.complete + 1, total: skill.items.length, planned: true, status: code })
+      render(`${complete}/${total} ${percentage}% ${name} ${code}`)
     },
-    complete: () => write(`${total as number}/${total as number} 100% complete`, true),
-    failed: () => context.stderr.write('\n')
+    complete: () => {
+      for (const skill of skillNames) {
+        const state = progressState(skill)
+        states.set(skill, { complete: state.total, total: state.total, planned: state.planned, status: 'complete' })
+      }
+      render(`${total as number}/${total as number} 100% complete`, true)
+    },
+    failed: () => {
+      if (options.progressStyle === 'multi') {
+        for (const skill of skillNames) {
+          const state = progressState(skill)
+          states.set(skill, { ...state, status: 'failed' })
+        }
+        renderMulti()
+      } else if (context.stderr.isTTY === true) context.stderr.write('\n')
+    }
   }
 }
 
@@ -133,11 +253,19 @@ const runPreparedWithProgress = async <Result>(
   operation: string,
   prepared: readonly PreparedSkill[],
   run: (skill: PreparedSkill, onItemComplete: (code: string) => void) => Promise<Result>,
-  progress = prepared.length ? createProgressTracker(context, operation) : undefined
+  options: OperationOptions,
+  progress = prepared.length
+    ? createProgressTracker(
+        context,
+        operation,
+        options,
+        prepared.map((skill) => skill.skill.declaration.name)
+      )
+    : undefined
 ): Promise<Result[]> => {
   const results: Result[] = []
   try {
-    progress?.planned(prepared.reduce((count, skill) => count + skill.items.length, 0))
+    progress?.planned(prepared)
     for (const skill of prepared) {
       results.push(await run(skill, (code) => progress?.item(skill, code)))
     }
@@ -153,9 +281,17 @@ const runWithProgress = async <Result>(
   context: KiContext,
   operation: string,
   skills: readonly ResolvedSkill[],
-  run: (skill: PreparedSkill, onItemComplete: (code: string) => void) => Promise<Result>
+  run: (skill: PreparedSkill, onItemComplete: (code: string) => void) => Promise<Result>,
+  options: OperationOptions
 ): Promise<Result[]> => {
-  const progress = skills.length ? createProgressTracker(context, operation) : undefined
+  const progress = skills.length
+    ? createProgressTracker(
+        context,
+        operation,
+        options,
+        skills.map((skill) => skill.declaration.name)
+      )
+    : undefined
   const prepared: PreparedSkill[] = []
   try {
     progress?.loading(0, skills.length)
@@ -167,7 +303,7 @@ const runWithProgress = async <Result>(
     progress?.failed()
     throw error
   }
-  return runPreparedWithProgress(context, operation, prepared, run, progress)
+  return runPreparedWithProgress(context, operation, prepared, run, options, progress)
 }
 
 const renderEducation = (education: Awaited<ReturnType<typeof educateSkill>>): string[] => [
@@ -192,7 +328,7 @@ const renderEducation = (education: Awaited<ReturnType<typeof educateSkill>>): s
   ])
 ]
 
-type RenderedFinding = (Finding | FixedItem) & { readonly level: Finding['level'] | 'fixed' }
+type RenderedFinding = (Finding | FixedItem) & { readonly level: ReporterLevel }
 
 interface SkillReport {
   readonly skill: PreparedSkill
@@ -204,14 +340,18 @@ const REPORT_ICON: Record<RenderedFinding['level'], string> = {
   fail: '❌',
   warn: '⚠️ ',
   fixed: '✅',
-  info: 'ℹ️ '
+  info: 'ℹ️ ',
+  'not-applicable': '🚫',
+  pass: '✅'
 }
 
 const REPORT_LABEL: Record<RenderedFinding['level'], string> = {
   fail: 'fail',
   warn: 'warn',
   fixed: 'fixed',
-  info: 'info'
+  info: 'info',
+  'not-applicable': 'na',
+  pass: 'pass'
 }
 
 const judgmentItemCount = (skill: PreparedSkill): number =>
@@ -231,7 +371,7 @@ const formatFinding = (finding: RenderedFinding, skill?: string, full = true): s
 }
 
 const summary = (findings: readonly RenderedFinding[], judgmentUnevaluated: number): string => {
-  const count = (level: RenderedFinding['level']): number => findings.filter((finding) => finding.level === level).length
+  const count = (level: ReporterLevel): number => findings.filter((finding) => finding.level === level).length
   const icon = count('fail') ? REPORT_ICON.fail : count('warn') ? REPORT_ICON.warn : REPORT_ICON.fixed
   return `  ${icon} summary: FAIL=${count('fail')} WARN=${count('warn')} FIXED=${count('fixed')} JUDGMENT_UNEVALUATED=${judgmentUnevaluated}`
 }
@@ -241,23 +381,34 @@ const summary = (findings: readonly RenderedFinding[], judgmentUnevaluated: numb
  * structured outcomes; this renderer keeps their item title and evidence subject intact
  * instead of making each harness ship a runner merely to format a report.
  */
-const renderReports = (context: KiContext, operation: 'audit' | 'conform', reports: readonly SkillReport[]): void => {
+const renderReports = (
+  context: KiContext,
+  operation: 'audit' | 'conform',
+  reports: readonly SkillReport[],
+  reporterLevels: readonly ReporterLevel[]
+): void => {
   const reportFindings = reports.map((report) => ({ report, findings: withFixed(report) }))
   for (const { report, findings } of reportFindings) {
-    if (!findings.length) continue
+    const visible = findings.filter((finding) => reporterLevels.includes(finding.level))
+    if (!visible.length) continue
     context.stdout.write(`\n==> ${report.skill.skill.identity}:${operation}\n`)
-    for (const finding of findings) context.stdout.write(`${formatFinding(finding)}\n`)
+    for (const finding of visible) context.stdout.write(`${formatFinding(finding)}\n`)
     context.stdout.write(`${summary(findings, judgmentItemCount(report.skill))}\n`)
   }
 
   const findings = reportFindings.flatMap(({ report, findings: entries }) =>
     entries.map((finding) => ({ finding, skill: report.skill.skill.identity }))
   )
-  const count = (level: RenderedFinding['level']): number => findings.filter(({ finding }) => finding.level === level).length
+  const visible = findings.filter(({ finding }) => reporterLevels.includes(finding.level))
+  const count = (level: ReporterLevel): number => findings.filter(({ finding }) => finding.level === level).length
   const judgmentUnevaluated = reports.reduce((total, report) => total + judgmentItemCount(report.skill), 0)
   context.stdout.write('\n==> recap\n')
-  if (!findings.length) context.stdout.write(`  ✅ no findings across ${operation === 'audit' ? 'audited' : 'conformed'} skills\n`)
-  else for (const { finding, skill } of findings) context.stdout.write(`${formatFinding(finding, skill, false)}\n`)
+  if (!visible.length) {
+    const label = findings.length
+      ? `no ${reporterLevels.map((level) => level.toUpperCase().replace('-', '_')).join(' / ')} findings`
+      : 'no findings'
+    context.stdout.write(`  ✅ ${label} across ${operation === 'audit' ? 'audited' : 'conformed'} skills\n`)
+  } else for (const { finding, skill } of visible) context.stdout.write(`${formatFinding(finding, skill, false)}\n`)
   const icon = count('fail') ? REPORT_ICON.fail : count('warn') ? REPORT_ICON.warn : REPORT_ICON.fixed
   context.stdout.write(
     `  ${icon} totals: FAIL=${count('fail')} WARN=${count('warn')} FIXED=${count('fixed')} JUDGMENT_UNEVALUATED=${judgmentUnevaluated}\n`
@@ -274,7 +425,11 @@ export const createRepoCommand = (context: KiContext): Command =>
         .option('--skill <capability>', 'one declared resolved skill to explain')
         .action(async (options: { repo?: string; skill?: string }) => {
           const { skills } = await resolveSkills(context, options)
-          const educations = await runWithProgress(context, 'educate', skills, (skill) => educateSkill(skill))
+          const educations = await runWithProgress(context, 'educate', skills, (skill) => educateSkill(skill), {
+            progress: 'auto',
+            progressStyle: 'single',
+            reporterLevels: []
+          })
           if (!educations.length) {
             context.stdout.write('ki repo educate: no declared skills\n')
             return
@@ -287,22 +442,33 @@ export const createRepoCommand = (context: KiContext): Command =>
         .description('run registered audit operations for declared skills')
         .option('--repo <path>', 'repository root to audit')
         .option('--skill <capability>', 'one declared resolved skill to audit')
-        .action(async (options: { repo?: string; skill?: string }) => {
+        .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
+        .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
+        .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN)')
+        .action(async (options: { repo?: string; skill?: string; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
+          const output = operationOptions('audit', options)
           const { repository, skills } = await resolveSkills(context, options)
-          const results = await runWithProgress(context, 'audit', skills, async (skill, onItemComplete) => ({
-            skill,
-            audit: await runSkillAudit(
-              { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
+          const results = await runWithProgress(
+            context,
+            'audit',
+            skills,
+            async (skill, onItemComplete) => ({
               skill,
-              (item) => onItemComplete(item.code)
-            )
-          }))
+              audit: await runSkillAudit(
+                { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
+                skill,
+                (item) => onItemComplete(item.code)
+              )
+            }),
+            output
+          )
           const findings = results.flatMap(({ audit }) => audit.findings)
           if (!findings.length) context.stdout.write(`ki repo audit: clean (${skills.length} skills)\n`)
           renderReports(
             context,
             'audit',
-            results.map(({ skill, audit }) => ({ skill, findings: audit.findings }))
+            results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
+            output.reporterLevels
           )
           if (findings.some((finding) => finding.level === 'fail')) throw new KiError('repository audit found failures', 1)
         })
@@ -313,80 +479,104 @@ export const createRepoCommand = (context: KiContext): Command =>
         .option('--repo <path>', 'repository root to conform')
         .option('--skill <capability>', 'one declared resolved skill to conform')
         .option('--dry-run', 'validate and report without writing')
-        .action(async (options: { repo?: string; skill?: string; dryRun?: boolean }) => {
-          const { repository, skills } = await resolveSkills(context, options)
-          const conformed = await runWithProgress(context, 'conform', skills, async (skill, onItemComplete) => ({
-            skill: skill.skill,
-            prepared: skill,
-            conform: await runSkillConform(
-              { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
-              skill,
-              (item) => onItemComplete(item.code)
-            )
-          }))
-          const findings = conformed.flatMap(({ conform }) => conform.findings)
-          const repositoryWrites = await prepareWrites(
-            repository.root,
-            conformed.filter(({ conform }) => conform.scope.kind === 'repository').flatMap(({ conform }) => conform.writes)
-          )
-          const scopedUserWrites = conformed.flatMap(({ conform }) => {
-            const scope = conform.scope
-            if (scope.kind !== 'user-home') return []
-            return conform.writes.map((write) => ({ write, scope: { paths: scope.paths } }))
-          })
-          const userWrites = await prepareScopedWrites(context.homeDirectory, scopedUserWrites)
-          const writes = [...repositoryWrites, ...userWrites]
-          const commands = conformed.flatMap(({ conform }) => conform.commands)
-          if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
-            throw new KiError('user-home rubric conform actions must be transactional writes; conform commands are not permitted', 1)
-          for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
-          for (const command of commands) context.stdout.write(`${options.dryRun ? 'would run' : 'run'} ${renderCommand(command)}\n`)
-          if (findings.some((finding) => finding.level === 'fail')) {
-            renderReports(
+        .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
+        .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
+        .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN,FIXED)')
+        .action(
+          async (options: {
+            repo?: string
+            skill?: string
+            dryRun?: boolean
+            progress?: string
+            progressStyle?: string
+            reporterLevels?: string
+          }) => {
+            const output = operationOptions('conform', options)
+            const { repository, skills } = await resolveSkills(context, options)
+            const conformed = await runWithProgress(
               context,
               'conform',
-              conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings }))
-            )
-            throw new KiError('repository conform found failures', 1)
-          }
-          await publishWrites(writes, Boolean(options.dryRun))
-          if (options.dryRun) {
-            renderReports(
-              context,
-              'conform',
-              conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings }))
-            )
-            return
-          }
-          await runCommands(repository.root, commands)
-          const reaudited = await runPreparedWithProgress(
-            context,
-            're-audit',
-            conformed.map(({ prepared }) => prepared),
-            async (skill, onItemComplete) => {
-              const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
-              // The re-audit selection is derived directly from conformed above; this only
-              // protects a future refactor from pairing an audit with the wrong conform set.
-              /* v8 ignore next */
-              if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
-              return {
+              skills,
+              async (skill, onItemComplete) => ({
+                skill: skill.skill,
                 prepared: skill,
-                conform: previous.conform,
-                audit: await runSkillAudit(
+                conform: await runSkillConform(
                   { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
                   skill,
                   (item) => onItemComplete(item.code)
                 )
-              }
+              }),
+              output
+            )
+            const findings = conformed.flatMap(({ conform }) => conform.findings)
+            const repositoryWrites = await prepareWrites(
+              repository.root,
+              conformed.filter(({ conform }) => conform.scope.kind === 'repository').flatMap(({ conform }) => conform.writes)
+            )
+            const scopedUserWrites = conformed.flatMap(({ conform }) => {
+              const scope = conform.scope
+              if (scope.kind !== 'user-home') return []
+              return conform.writes.map((write) => ({ write, scope: { paths: scope.paths } }))
+            })
+            const userWrites = await prepareScopedWrites(context.homeDirectory, scopedUserWrites)
+            const writes = [...repositoryWrites, ...userWrites]
+            const commands = conformed.flatMap(({ conform }) => conform.commands)
+            if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
+              throw new KiError('user-home rubric conform actions must be transactional writes; conform commands are not permitted', 1)
+            for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
+            for (const command of commands) context.stdout.write(`${options.dryRun ? 'would run' : 'run'} ${renderCommand(command)}\n`)
+            if (findings.some((finding) => finding.level === 'fail')) {
+              renderReports(
+                context,
+                'conform',
+                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
+                output.reporterLevels
+              )
+              throw new KiError('repository conform found failures', 1)
             }
-          )
-          const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
-          const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
-          renderReports(
-            context,
-            'conform',
-            reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] }))
-          )
-          if (auditFindings.some((finding) => finding.level === 'fail')) throw new KiError('repository conform re-audit found failures', 1)
-        })
+            await publishWrites(writes, Boolean(options.dryRun))
+            if (options.dryRun) {
+              renderReports(
+                context,
+                'conform',
+                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
+                output.reporterLevels
+              )
+              return
+            }
+            await runCommands(repository.root, commands)
+            const reaudited = await runPreparedWithProgress(
+              context,
+              're-audit',
+              conformed.map(({ prepared }) => prepared),
+              async (skill, onItemComplete) => {
+                const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
+                // The re-audit selection is derived directly from conformed above; this only
+                // protects a future refactor from pairing an audit with the wrong conform set.
+                /* v8 ignore next */
+                if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
+                return {
+                  prepared: skill,
+                  conform: previous.conform,
+                  audit: await runSkillAudit(
+                    { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
+                    skill,
+                    (item) => onItemComplete(item.code)
+                  )
+                }
+              },
+              output
+            )
+            const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
+            const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
+            renderReports(
+              context,
+              'conform',
+              reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
+              output.reporterLevels
+            )
+            if (auditFindings.some((finding) => finding.level === 'fail'))
+              throw new KiError('repository conform re-audit found failures', 1)
+          }
+        )
     )

@@ -57,13 +57,13 @@ Remove a KI-managed repository skill link and declaration.
 .B ki skill rubric skill [--write]
 Check or regenerate a skill's rubric catalogue.
 .TP
-.B ki repo audit [--repo path] [--skill skill]
+.B ki repo audit [--repo path] [--skill skill] [--progress auto|always|never] [--progress-style single|multi] [--reporter-levels levels|all]
 Run registered native repository audits.
 .TP
 .B ki repo educate [--repo path] [--skill skill]
 Explain the registered repository maintenance catalogue.
 .TP
-.B ki repo conform [--repo path] [--skill skill] [--dry-run]
+.B ki repo conform [--repo path] [--skill skill] [--dry-run] [--progress auto|always|never] [--progress-style single|multi] [--reporter-levels levels|all]
 Apply registered native repository repairs.
 .TP
 .B ki acquire chatgpt import capture-directory --output kep-directory [--dry-run] [--json]
@@ -84,17 +84,21 @@ They are not available in this build, do not appear in
 or completion output, and may change before release.
 .SS Repository maintenance
 .TP
-.B ki repo audit [--repo \fIpath\fR] [--skill \fIskill\fR]
+.B ki repo audit [--repo \fIpath\fR] [--skill \fIskill\fR] [--progress \fIauto|always|never\fR] [--progress-style \fIsingle|multi\fR] [--reporter-levels \fIlevels|all\fR]
 Run the native read-only operations registered by the selected repository's
 declared capabilities. The host verifies every selected harness inventory and
 integrity-covered operation before importing it in process; it never dispatches
 repository-vendored runners.
+Progress defaults to \fBauto\fR, which follows stderr's TTY state; \fBalways\fR also renders deterministic progress in redirected output, and \fBnever\fR suppresses it.
+Use \fB--progress-style multi\fR for stable per-skill rows.
+Audit renders FAIL and WARN by default; \fB--reporter-levels\fR accepts a case-insensitive comma-separated selection from FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS, or \fBall\fR.
 .TP
-.B ki repo conform [--repo \fIpath\fR] [--skill \fIskill\fR] [--dry-run]
+.B ki repo conform [--repo \fIpath\fR] [--skill \fIskill\fR] [--dry-run] [--progress \fIauto|always|never\fR] [--progress-style \fIsingle|multi\fR] [--reporter-levels \fIlevels|all\fR]
 Plan and apply the same capabilities' safe writes, then re-audit. A dry run
 validates every complete write set and reports the affected paths without
 changing the repository. Publication refuses unsafe, changed, duplicate, or
 symbolic-link targets.
+Conform uses the same progress controls and reporter-level vocabulary as audit, and renders FAIL, WARN, and FIXED by default.
 .TP
 .B ki repo educate [--repo \fIpath\fR] [--skill \fIskill\fR]
 Explain the selected repository's declared capabilities and their recommended

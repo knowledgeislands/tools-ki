@@ -25,13 +25,13 @@ The missing controls are a current CLI regression, not a compatibility requireme
 
 ## Steps
 
-1. Restore `--progress <auto|always|never>` on `ki repo audit` and `ki repo conform`; default to `auto`, retain the current bounded three-column layout, and make forced non-TTY output deterministic.
-2. Restore `--progress-style <single|multi>` on both commands; default to `single` and render one stable per-skill row in `multi` mode without weakening the aggregate item count.
-3. Restore case-insensitive `--reporter-levels <levels|all>` with the complete FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS vocabulary. Default audit to FAIL,WARN and conform to FAIL,WARN,FIXED.
-4. Carry structured PASS and NOT_APPLICABLE outcomes through the host presentation boundary when requested, without treating them as failures, changing totals, or exposing rubric-owned formatting.
-5. Apply the selected reporter levels consistently to the per-skill sections and the desired aggregate recap while retaining unfiltered totals and exit semantics.
-6. Add CLI-contract coverage for defaults, every progress mode and style, level parsing and rejection, `all`, non-TTY output, filtered per-skill sections, the recap, and unchanged failure exit codes.
-7. Update command help, `ki(1)`, and relevant user guidance with the restored options and defaults.
+1. ✓ Restore `--progress <auto|always|never>` on `ki repo audit` and `ki repo conform`; default to `auto`, retain the current bounded three-column layout, and make forced non-TTY output deterministic.
+2. ✓ Restore `--progress-style <single|multi>` on both commands; default to `single` and render one stable per-skill row in `multi` mode without weakening the aggregate item count.
+3. ✓ Restore case-insensitive `--reporter-levels <levels|all>` with the complete FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS vocabulary. Default audit to FAIL,WARN and conform to FAIL,WARN,FIXED.
+4. ✓ Carry structured PASS and NOT_APPLICABLE outcomes through the host presentation boundary when requested, without treating them as failures, changing totals, or exposing rubric-owned formatting.
+5. ✓ Apply the selected reporter levels consistently to the per-skill sections and the desired aggregate recap while retaining unfiltered totals and exit semantics.
+6. ✓ Add CLI-contract coverage for defaults, every progress mode and style, level parsing and rejection, `all`, non-TTY output, filtered per-skill sections, the recap, and unchanged failure exit codes.
+7. ✓ Update command help, `ki(1)`, and relevant user guidance with the restored options and defaults.
 
 ## Files touched
 

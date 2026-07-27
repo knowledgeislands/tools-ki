@@ -192,7 +192,7 @@ describe('[ki repo]', () => {
         }]`)
       })
 
-      const result = await box.run('ki repo audit --skill ki-example')
+      const result = await box.run('ki repo audit --skill ki-example --reporter-levels info')
 
       expect(result).toEqual({
         exitCode: 0,
@@ -206,6 +206,69 @@ describe('[ki repo]', () => {
   ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=1
 `
       })
+    })
+
+    test('filters complete outcome levels by default and renders every level on request', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [
+          { kind: 'mechanical', code: 'PASS-1', title: 'Pass', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'PASS', message: 'pass evidence' }] },
+          { kind: 'mechanical', code: 'NA-1', title: 'Not applicable', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'NOT_APPLICABLE', message: 'not applicable evidence' }] },
+          { kind: 'mechanical', code: 'INFO-1', title: 'Info', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'INFO', message: 'info evidence' }] },
+          { kind: 'mechanical', code: 'WARN-1', title: 'Warn', level: 'WARN', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'warn evidence' }] },
+          { kind: 'mechanical', code: 'FAIL-1', title: 'Fail', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'fail evidence' }] }
+        ] }]`)
+      })
+
+      const defaults = await box.run('ki repo audit')
+      const all = await box.run('ki repo audit --reporter-levels all')
+      const warnings = await box.run('ki repo audit --reporter-levels wArN')
+
+      expect(defaults.exitCode).toBe(1)
+      expect(defaults.output).toContain('warn evidence')
+      expect(defaults.output).toContain('fail evidence')
+      expect(defaults.output).not.toContain('pass evidence')
+      expect(defaults.output).not.toContain('not applicable evidence')
+      expect(defaults.output).not.toContain('info evidence')
+      expect(all.output).toContain('✅ pass')
+      expect(all.output).toContain('🚫 na')
+      expect(all.output).toContain('ℹ️  info')
+      expect(all.output).toContain('⚠️  warn')
+      expect(all.output).toContain('❌ fail')
+      expect(warnings.output).toContain('warn evidence')
+      expect(warnings.output).not.toContain('fail evidence')
+      expect(warnings.output).toContain('FAIL=1 WARN=1')
+    })
+
+    test('exposes and validates repository-operation output controls', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+
+      const help = await box.run('ki repo audit --help')
+      const never = await box.run('ki repo audit --progress never', { interactive: true, now: () => 0 })
+      const always = await box.run('ki repo audit --progress always', { now: () => 0 })
+      const multi = await box.run('ki repo audit --progress always --progress-style multi', { now: () => 0 })
+      const multiInteractive = await box.run('ki repo audit --progress-style multi', { interactive: true, now: () => 0 })
+      const invalidProgress = await box.run('ki repo audit --progress later')
+      const invalidStyle = await box.run('ki repo audit --progress-style rows')
+      const invalidLevels = await box.run('ki repo audit --reporter-levels nope')
+
+      expect(help.output).toContain('--progress <mode>')
+      expect(help.output).toContain('--progress-style <style>')
+      expect(help.output).toContain('--reporter-levels <levels>')
+      expect(never.output).not.toContain('\r\x1b[2K')
+      expect(always.output).toContain('AUDIT')
+      expect(always.output).not.toContain('\r\x1b[2K')
+      expect(multi.output).toContain('[ki-example]')
+      expect(multiInteractive.output).toContain('\x1b[1A')
+      expect(invalidProgress).toMatchObject({ exitCode: 2 })
+      expect(invalidProgress.output).toContain('--progress accepts auto, always, or never')
+      expect(invalidStyle).toMatchObject({ exitCode: 2 })
+      expect(invalidStyle.output).toContain('--progress-style accepts single or multi')
+      expect(invalidLevels).toMatchObject({ exitCode: 2 })
+      expect(invalidLevels.output).toContain('--reporter-levels accepts FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, PASS, or all')
     })
 
     test('selects an exact capability when another declared skill extends its name', async () => {
@@ -311,6 +374,10 @@ describe('[ki repo]', () => {
       const firstBar = wide.output.match(/\[(>[^\]]*)\]/)?.[1]
       expect(firstBar).toHaveLength(98)
 
+      const multi = await box.run('ki repo audit --progress-style multi', { interactive: true, now: () => 0 })
+      expect(multi.output).toContain('[ki-example] EXAMPLE-1')
+      expect(multi.output).toContain('[ki-extra] EXTRA-1')
+
       const nonInteractive = await box.run('ki repo audit')
       expect(nonInteractive).toEqual({
         exitCode: 0,
@@ -353,10 +420,15 @@ describe('[ki repo]', () => {
       await box.setupExampleHarness({ rubric: 'this is not valid javascript syntax {{{\n' })
 
       const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
+      const forcedSingle = await box.run('ki repo audit --progress always', { now: () => 0 })
+      const multi = await box.run('ki repo audit --progress always --progress-style multi', { now: () => 0 })
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('\r\x1b[2K')
       expect(result.output).toContain('\nki: error: example/harness:ki-example rubric catalogue could not be imported')
+      expect(forcedSingle.exitCode).toBe(1)
+      expect(multi.exitCode).toBe(1)
+      expect(multi.output).toContain('[ki-example] failed')
     })
 
     test('rejects a repository configuration that is not valid TOML', async () => {
@@ -409,7 +481,7 @@ describe('[ki repo]', () => {
         }]`)
       })
 
-      const result = await box.run('ki repo audit')
+      const result = await box.run('ki repo audit --reporter-levels info')
 
       expect(result).toEqual({
         exitCode: 0,
@@ -438,7 +510,7 @@ describe('[ki repo]', () => {
         )
       })
 
-      const result = await box.run('ki repo audit')
+      const result = await box.run('ki repo audit --reporter-levels info')
 
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('[Example (EXAMPLE-1)] workspace — ok')
@@ -496,6 +568,18 @@ export default {
   })
 
   describe('repo conform', () => {
+    test('documents the shared output controls', async () => {
+      const box = await sandbox()
+
+      const result = await box.run('ki repo conform --help')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('--progress <mode>')
+      expect(result.output).toContain('--progress-style <style>')
+      expect(result.output).toContain('--reporter-levels <levels>')
+      expect(result.output).toContain('FAIL,WARN,FIXED')
+    })
+
     test('selects an exact capability when another conforming skill extends its name', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[ki-website]\n[ki-website-cloudflare]\n')
@@ -540,7 +624,7 @@ export default {
         exitCode: 0,
         output: `
 ==> recap
-  ✅ no findings across conformed skills
+  ✅ no FAIL / WARN / FIXED findings across conformed skills
   ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
 `
       })
@@ -1859,7 +1943,7 @@ export default {
         ]`)
       })
 
-      const result = await box.run('ki repo audit')
+      const result = await box.run('ki repo audit --reporter-levels info')
 
       const first = result.output.indexOf('[B1 (B1)] — B1')
       const second = result.output.indexOf('[A1 (A1)] — A1')
@@ -2089,7 +2173,7 @@ ki-depends-on: ${list}
 `
       await box.project.write('.ki-config.toml', declarations)
 
-      const result = await box.run('ki repo audit')
+      const result = await box.run('ki repo audit --reporter-levels info')
 
       expect(result.exitCode).toBe(0)
       expect(result.output.indexOf('==> example/harness:ki-foundation:audit')).toBeLessThan(
@@ -2173,7 +2257,7 @@ ki-depends-on: ${list}
       ])
       await box.project.write('.ki-config.toml', '[ki-feature]\n\n[ki-foundation]\n')
 
-      const result = await box.run('ki repo audit --skill ki-feature')
+      const result = await box.run('ki repo audit --skill ki-feature --reporter-levels info')
 
       expect(result.exitCode).toBe(0)
       expect(result.output.indexOf('==> example/harness:ki-foundation:audit')).toBeLessThan(
