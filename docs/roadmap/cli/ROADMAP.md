@@ -24,17 +24,21 @@ Provide the narrow host capability required for `ki repo audit` and `ki repo con
 
 **Plan:** [CLI-002](plans/CLI-002-host-generated-rubric-publication-capability.md)
 
-## Soon
-
-Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
-
 ### Deliver `ki install`, `ki reinstall`, and `ki uninstall` capability lifecycle
 
 Define and implement lifecycle commands for a named compatible capability or its supplying harness without duplicating `ki harness` operations or bypassing explicit `ki user` and `ki repo` activation scope. Settle target identity, replacement, removal, dry-run, and safe ownership semantics first.
 
+**Plan:** [CLI-003](plans/CLI-003-deliver-capability-lifecycle.md)
+
 ### Deliver package and harness update–upgrade operations
 
 Define and implement `ki update` and CWD-resolved `ki upgrade` for compatible packages or harnesses. Respect the selected CLI distribution, verified immutable acquisition evidence, and explicit user or repository activation boundaries; do not treat a generic executable self-update as universal across Homebrew and installer deployments.
+
+**Plan:** [CLI-004](plans/CLI-004-deliver-update-upgrade-operations.md)
+
+## Soon
+
+Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
 ## Waiting for
 
