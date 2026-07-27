@@ -12,8 +12,6 @@ baseline-ref: 1ecb6e48e71346688c3d1734fe764e57df0be1e3
 
 `tools-ki` owns the public `ki` executable and its release artifacts, but its current `install.sh` can only copy a locally built `dist/ki` or link a checkout-local `bin/ki` launcher.
 
-The Website's `/harness/install` redirect still targets the harness installer, which is no longer the correct public owner.
-
 The public installer must not download an unauthenticated or mutable artifact.
 
 It needs a tag-bound release contract that lets a user select a supported target, verify an immutable archive, and install the executable and `ki(1)` atomically.
@@ -32,14 +30,11 @@ It needs a tag-bound release contract that lets a user select a supported target
 3. ✓ Replace `install.sh`'s checkout-only default with target detection, exact-tag resolution, manifest-signature and archive-checksum verification, strict archive validation, staged version verification, and rollback-safe per-file replacement.
 4. ✓ Retain `install.sh --link` exclusively for local checkout development, using a Bun launcher for `src/main.ts`. Keep `bin/ki` because the existing in-process CLI test seam still requires it; remove it only when that independent dependency ends.
 5. ✓ Add end-to-end installer fixtures for target selection, latest-release resolution, unsigned/malformed/checksum-mismatched manifests, rollback with and without an existing installation, and the retained local `--link` path.
-6. ✓ Align the in-repository README, `ki(1)`, local-development guide, and changelog with the verified release artifacts and development-only link path. The Homebrew tap update belongs to its external repository and waits for the first verified release asset.
-7. Move the Website public install redirect to the tools-owned installer after a released artifact passes the end-to-end verification; retain an intentional compatibility redirect only if the Website plan approves it.
+6. ✓ Align the in-repository README, `ki(1)`, local-development guide, and changelog with the verified release artifacts and development-only link path.
 
 ## Files touched
 
 - `install.sh`, release workflow, installer tests, build/package configuration, and release documentation in `tools-ki`
-- Homebrew formula and release-delivery configuration
-- The KI Website redirect configuration in a separately committed recipient change
 
 ## Verify
 
@@ -53,9 +48,9 @@ It needs a tag-bound release contract that lets a user select a supported target
 
 This plan is independently executable from the completed native repository-maintenance work, but must use the same canonical harness and CLI delivery vocabulary.
 
-The Website redirect change is an outbound recipient task after this plan's first verified released artifact; it does not block release-workflow or installer implementation.
+The protected GitHub `release` environment is required before the first publishing run: restrict it to the protected default branch, require independent approval without bypass, and store `KI_RELEASE_SIGNING_KEY` only as its environment secret. Its absence blocks the final publish proof, not this local implementation.
 
-The protected GitHub `release` environment is required before the first publishing run: restrict it to the protected default branch, require independent approval without bypass, and store `KI_RELEASE_SIGNING_KEY` only as its environment secret. Its absence blocks the final publish proof and the Website/Homebrew recipient handoffs, not this local implementation.
+The Website redirect is now recipient-owned as `knowledgeislands/ki-website` SITE-002 and waits for that publish proof. Aligning the Homebrew formula to the verified artifacts is also separate recipient work after the same evidence; neither belongs to this plan's files or completion gate.
 
 The first publish proof for `v0.2.0` stopped during the `darwin-arm64` package test because the fixture tried to create an Ed25519 signature through an unsupported OpenSSL signing interface; no release was published. The subsequent `v0.2.1` through `v0.2.4` corrections also published nothing while isolating the difference between modern and Apple OpenSSL capabilities. Installer fixtures now use Node's standards-format Ed25519 signer, and the installer automatically selects Homebrew's OpenSSL 3 on macOS when the system OpenSSL cannot verify an Ed25519 signature. The normal macOS CI run passed before `v0.2.5` was tagged. Release packaging uses `macos-latest` for the Intel target because `macos-13` remained indefinitely queued. The unpublished `v0.2.5` run was cancelled after its replacement private key correctly failed the old public-key trust-anchor check. The committed anchor now matches that protected environment key; `v0.2.6` is the next release candidate.
 

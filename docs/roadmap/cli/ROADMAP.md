@@ -14,7 +14,7 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 
 ### Deliver verified KI release installation
 
-Replace the checkout-only default installer with a `tools-ki`-owned, verified release installer. Publish immutable platform archives and signed checksums from tag-bound releases; retain `--link` only for a local checkout. Once the installer has release evidence, move the public Website install redirect from the harness to `tools-ki` and align Homebrew with the same artifacts.
+Replace the checkout-only default installer with a `tools-ki`-owned, verified release installer. Publish immutable platform archives and signed checksums from tag-bound releases; retain `--link` only for a local checkout. Complete the first verified publish against the protected release environment so the release contract has end-to-end evidence.
 
 **Plan:** [CLI-006](plans/CLI-006-deliver-verified-ki-release-installation.md)
 
