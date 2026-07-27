@@ -1,7 +1,7 @@
 ---
 id: 'CLI-006'
 title: Deliver verified KI release installation
-status: acceptance
+status: done
 roadmap: cli/deliver-verified-ki-release-installation
 blocks: —
 blocked-by: —
@@ -92,3 +92,7 @@ None in this repository. Website redirect and Homebrew formula adoption are reci
 ### Mini recap
 
 OpenSSH private keys are not suitable for this OpenSSL release signer; a rotated OpenSSL Ed25519 key requires its committed public trust anchor to rotate with it and a new immutable tag. This is documented in the release-management guide; no further learning route is proposed.
+
+## Done
+
+Delivered the verified `v0.2.6` release-installation contract, including its public installer, release assets, protected release environment, website redirect, and Homebrew distribution. No residual concerns or follow-up work remain in this plan.
