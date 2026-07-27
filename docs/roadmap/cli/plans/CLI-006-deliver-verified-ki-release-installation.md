@@ -54,3 +54,10 @@ It needs a tag-bound release contract that lets a user select a supported target
 This plan is independently executable from [CLI-004](CLI-004-native-repo-maintenance.md), but must use the same canonical harness and CLI delivery vocabulary.
 
 The Website redirect change is an outbound recipient task after this plan's first verified released artifact; it does not block release-workflow or installer implementation.
+
+## Delegation
+
+- Round 1 — research, `gpt-5.6-terra`: specify the release asset, checksum, signature, and installer-verification contract from the current repository and official GitHub evidence; files: read-only repository and primary sources; gate: orchestrator review before workflow or installer edits.
+- Round 1 — research, `gpt-5.6-terra`: adversarially review the planned installer and release-workflow trust boundary, including key handling, redirects, archive paths, and atomic replacement; files: read-only repository and primary sources; gate: findings incorporated before auto-executing artefacts are authored.
+- Round 2 — mechanical, `gpt-5.6-terra`: implement the settled installer, packaging, workflow, tests, and documentation in exclusive file scopes; gate: adversarial review of every script/workflow diff plus full integration verification.
+- Orchestrator: resolves the release contract, assigns non-overlapping file boundaries, reviews every worker diff, performs the dedicated auto-execution safety pass, and commits only verified work.

@@ -41,3 +41,9 @@ The plan is not yet ready for acceptance because the current repository-wide ver
 ## Dependencies / blocks
 
 No implementation dependency remains. FND-004 owns the separate migration of the remaining harness catalogues and source-harness integration surfaces.
+
+## Delegation
+
+- Round 1 — research, `gpt-5.6-terra`: classify every remaining coverage span as a CLI-contract test, a justified unreachable guard, or removable code; files: read-only `src/` and `src/tests/`; gate: orchestrator review of a complete file-and-line disposition before any write.
+- Round 2 — mechanical, `gpt-5.6-terra`: add only approved CLI-contract coverage tests in exclusive test-file scopes; gate: orchestrator diff review and the complete coverage gate.
+- Orchestrator: owns dispositions, reviews every worker diff, runs final verification, and commits only a clean acceptance unit.
