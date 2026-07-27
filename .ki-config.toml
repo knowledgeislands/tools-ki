@@ -18,3 +18,5 @@ supported_runtimes = ["claude-code", "codex"]
 [ki-tokenomics-claude]
 
 [ki-tokenomics-codex]
+
+[ki-git]
