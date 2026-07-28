@@ -1,7 +1,7 @@
 ---
 id: 'KI-CLI-CLI-002'
 title: Evaluate release-please for KI CLI releases
-status: open
+status: ready
 roadmap: cli/evaluate-release-please-for-ki-cli-releases
 blocks: —
 blocked-by: —
