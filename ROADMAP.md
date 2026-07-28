@@ -14,6 +14,8 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
+- [Cli: Persist qualified capability identities in repository declarations](docs/roadmap/cli/ROADMAP.md#persist-qualified-capability-identities-in-repository-declarations)
+
 ## Waiting for
 
 Worth doing, but presently blocked on an external dependency or decision. Revisit when its named condition changes rather than treating it as dormant local work.
@@ -24,4 +26,3 @@ Speculative or not yet scoped — items marked _(candidate)_ need a scoping pass
 
 - [Cli: Define cross-repository skill vendor provenance _(candidate)_](docs/roadmap/cli/ROADMAP.md#define-cross-repository-skill-vendor-provenance-candidate)
 - [Cli: Harden user harness installation and runtime skill publication](docs/roadmap/cli/ROADMAP.md#harden-user-harness-installation-and-runtime-skill-publication)
-- [Cli: Persist qualified capability identities in repository declarations _(candidate)_](docs/roadmap/cli/ROADMAP.md#persist-qualified-capability-identities-in-repository-declarations-candidate)
