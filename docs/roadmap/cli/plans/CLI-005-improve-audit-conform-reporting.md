@@ -1,7 +1,7 @@
 ---
 id: 'CLI-005'
 title: 'Improve audit and conform reporting'
-status: acceptance
+status: done
 roadmap: cli/make-audit-and-conform-output-name-its-target-and-its-passes
 blocks: —
 blocked-by: —
@@ -73,3 +73,11 @@ None.
 ### Mini recap
 
 Separating the target from the supplier in the report header makes the result usable in sweeps without removing provenance. A terminal per-skill status is sufficient to show that a clean skill ran while preserving detailed-level filtering for the findings themselves.
+
+## Done
+
+CLI-005 completed target-first audit and conform reporting with visible per-skill results.
+
+Residual concerns: None.
+
+Intended follow-up: none; the user approved pruning this completed tranche.
