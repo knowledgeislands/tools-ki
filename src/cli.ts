@@ -8,6 +8,7 @@ import { createDiagCommand } from './commands/diag.ts'
 import { createDoctorCommand } from './commands/doctor.ts'
 import { createHarnessCommand } from './commands/harness.ts'
 import { createHelpCommand } from './commands/help.ts'
+import { createLifecycleCommands } from './commands/lifecycle.ts'
 import { createListCommand } from './commands/list.ts'
 import { createRepoCommand } from './commands/repo.ts'
 import { createSkillCommand } from './commands/skill.ts'
@@ -28,6 +29,7 @@ export const createProgram = (context: KiContext): Command => {
   program.addCommand(createDiagCommand(context))
   program.addCommand(createDoctorCommand(context))
   program.addCommand(createHarnessCommand(context))
+  for (const command of createLifecycleCommands(context)) program.addCommand(command)
   program.addCommand(createListCommand(context))
   program.addCommand(createMissingCommand(context))
   program.addCommand(createOutdatedCommand(context))

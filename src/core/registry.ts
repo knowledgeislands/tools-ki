@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { acquireVerifiedArchive, extractArchive, type Fetcher } from './acquire.ts'
 import { KiError } from './errors.ts'
-import { canonicalHarnessIdentifier, inspectHarnessRoot, readInstalledHarness } from './harness.ts'
+import { canonicalHarnessIdentifier, type InstalledHarness, inspectHarnessRoot, readInstalledHarness } from './harness.ts'
 
 export type { Fetcher } from './acquire.ts'
 
@@ -19,6 +19,19 @@ export interface HarnessRelease {
   readonly id: string
   readonly url: string
   readonly sha256: string
+}
+
+export interface HarnessInstallationOptions {
+  /** A capability the verified payload must expose before it can be published. */
+  readonly requiredCapability?: string
+  /** Replace an existing verified harness only after the replacement is fully inspected. */
+  readonly replace?: boolean
+}
+
+export interface HarnessInstallation {
+  readonly installed: boolean
+  readonly replaced: boolean
+  readonly archiveSha256: string
 }
 
 /**
@@ -162,12 +175,19 @@ export const recordInstalledHarness = async (configurationDirectory: string, ide
   await writeFile(path, updated, 'utf8')
 }
 
+const requireCapability = (harness: InstalledHarness, capability: string | undefined): void => {
+  if (capability && !harness.capabilities.some((candidate) => candidate.name === capability)) {
+    throw new KiError(`harness ${harness.id} does not provide skill ${capability}`, 1)
+  }
+}
+
 export const installHarness = async (
   configurationDirectory: string,
   dataDirectory: string,
   identifier: string,
-  fetcher: Fetcher
-): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> => {
+  fetcher: Fetcher,
+  options: HarnessInstallationOptions = {}
+): Promise<HarnessInstallation> => {
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   const releases = await readHarnessRegistry(configurationDirectory)
   const release = releases.find((candidate) => candidate.id === identifier)
@@ -180,8 +200,8 @@ export const installHarness = async (
   const destination = join(ownerDirectory, name)
   const existing = await lstat(destination).catch(() => undefined)
   if (existing) {
-    await readInstalledHarness(dataDirectory, identifier)
-    return { installed: false, archiveSha256: release.sha256 }
+    requireCapability(await readInstalledHarness(dataDirectory, identifier), options.requiredCapability)
+    if (!options.replace) return { installed: false, replaced: false, archiveSha256: release.sha256 }
   }
 
   const payload = await acquireVerifiedArchive(fetcher, release)
@@ -189,9 +209,23 @@ export const installHarness = async (
   const staging = await mkdtemp(join(ownerDirectory, '.install-'))
   try {
     await extractArchive(payload, staging)
-    await inspectHarnessRoot(staging, identifier)
-    await rename(staging, destination)
-    return { installed: true, archiveSha256: release.sha256 }
+    requireCapability(await inspectHarnessRoot(staging, identifier), options.requiredCapability)
+    if (!existing) {
+      await rename(staging, destination)
+      return { installed: true, replaced: false, archiveSha256: release.sha256 }
+    }
+    const previous = join(ownerDirectory, `.replace-${randomUUID()}`)
+    await rename(destination, previous)
+    /* v8 ignore start -- Recovery needs a filesystem failure after the old verified payload is parked; no CLI input can cause it. */
+    try {
+      await rename(staging, destination)
+    } catch (error) {
+      await rename(previous, destination).catch(() => undefined)
+      throw error
+    }
+    /* v8 ignore stop */
+    await rm(previous, { recursive: true, force: true })
+    return { installed: true, replaced: true, archiveSha256: release.sha256 }
   } catch (error) {
     await rm(staging, { recursive: true, force: true })
     throw error
@@ -267,6 +301,9 @@ const canonicalDevelopmentProjection = async (dataDirectory: string): Promise<bo
     entries.every((entry) => payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) && entry.isSymbolicLink())
   )
 }
+
+export const isCanonicalHarnessDevelopmentLinked = (dataDirectory: string): Promise<boolean> =>
+  canonicalDevelopmentProjection(dataDirectory)
 
 export const disableCanonicalHarnessDevelopment = async (dataDirectory: string): Promise<boolean> => {
   const destination = canonicalHarnessDirectory(dataDirectory)

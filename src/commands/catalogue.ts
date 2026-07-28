@@ -7,10 +7,13 @@ export const rootCommandNames = [
   'doctor',
   'harness',
   'help',
+  'install',
   'list',
   'missing',
   'outdated',
   'repo',
+  'reinstall',
+  'uninstall',
   'version'
 ] as const
 

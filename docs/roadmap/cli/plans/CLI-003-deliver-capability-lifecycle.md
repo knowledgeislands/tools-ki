@@ -21,12 +21,12 @@ KI reserves `ki install`, `ki reinstall`, and `ki uninstall` for capability life
 
 ## Steps
 
-1. Define the lifecycle command contract and target grammar for qualified capabilities and supplying harnesses, including resolution failure, ambiguity, canonical-harness rules, replacement, ownership proof, exit semantics, and which operation never changes activation state.
-2. Extend the validated registry and installed-inventory seams only as required to resolve lifecycle targets safely; preserve immutable acquisition evidence and fail closed when a requested provider or capability cannot be proven.
-3. Implement `ki install`, `ki reinstall`, and `ki uninstall` with deterministic human output and `--dry-run` behavior, reusing verified acquisition and guarded removal mechanics rather than duplicating archive or transaction code.
-4. Preserve explicit user and repository activation boundaries: report affected active declarations where useful, refuse unsafe removal or replacement, and require a separate `ki skill user` or `ki skill repo` operation for any activation change.
-5. Register the commands; update help, completions, `ki(1)`, the user-facing command documentation, and the V1 changelog baseline without publishing or releasing the CLI.
-6. Add CLI-contract tests for qualified and bare targets, configured and unconfigured suppliers, ambiguity, canonical protection, dry-run, first install, forced reinstall, removal, active declarations, malformed registry state, acquisition failure, rollback, and unchanged state on failure; retain full coverage.
+1. ✓ Defined a three-form lifecycle grammar: harness (`owner/name`), supplier-qualified skill (`owner/name:skill`), and unambiguous installed bare skill (`skill`); failures, canonical protection, replacement, ownership, exit semantics, and the activation boundary are explicit.
+2. ✓ Extended verified installation with optional required-capability proof and guarded replacement; acquisition stays tied to immutable configured evidence and fails before publication when the requested skill is absent.
+3. ✓ Implemented deterministic `ki install`, `ki reinstall`, and `ki uninstall` commands with `--dry-run`, using the existing verified archive and guarded-removal seams.
+4. ✓ Preserved activation boundaries: lifecycle commands never alter skill activation and refuse reinstall or removal when the harness supplies active user skills or skills declared by the current repository.
+5. ✓ Registered the commands and updated root help, completions, `ki(1)`, README, a user lifecycle guide, the active-surface decision record, and the V1 changelog baseline without a release action.
+6. ✓ Added CLI-contract coverage for qualified and bare targets, configured and unconfigured suppliers, ambiguity, canonical and development-link protection, dry runs, first install, forced reinstall, removal, active declarations, malformed targets and configuration, acquisition failure, rollback, and unchanged state; full coverage remains enforced.
 
 ## Files touched
 

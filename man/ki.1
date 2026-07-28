@@ -1,4 +1,4 @@
-.TH KI 1 "2026-07-26" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-07-28" "Knowledge Islands" "User Commands"
 .SH NAME
 ki \- Knowledge Islands command-line interface
 .SH SYNOPSIS
@@ -53,6 +53,18 @@ Install one configured compatible harness.
 .TP
 .B ki harness uninstall harness-id [--dry-run]
 Remove one installed non-canonical harness.
+.TP
+.B ki install target [--dry-run]
+Install one configured harness or supplier-qualified capability without
+activating it.
+.TP
+.B ki reinstall target [--dry-run]
+Replace one installed configured harness or capability with a verified archive
+without activating it.
+.TP
+.B ki uninstall target [--dry-run]
+Remove one installed non-canonical harness or capability without changing
+activation.
 .TP
 .B ki skill user add skill [--replace]
 Link a harness skill into configured user agent skill spaces.
@@ -165,6 +177,28 @@ agents, installed harnesses, and KI-managed user skill links.
 List verified installed harnesses and their capabilities, declared user skills,
 and declared repository skills when the current working directory resolves to a
 KI repository. The command does not fetch or change state.
+.TP
+.B ki install \fItarget\fR [--dry-run]
+Install a configured harness, or a capability qualified as
+.IR harness-id:skill .
+An unqualified skill is accepted only when exactly one installed harness
+provides it. Install never activates a skill. A dry run validates configured
+immutable acquisition evidence without downloading or changing state.
+.TP
+.B ki reinstall \fItarget\fR [--dry-run]
+Replace an installed configured harness only after the replacement archive is
+verified and inspected. Reinstall never activates a skill and refuses a
+harness that supplies active user skills or skills declared by the current
+repository. A dry run performs those checks without changing state.
+.TP
+.B ki uninstall \fItarget\fR [--dry-run]
+Remove an installed non-canonical harness after ownership and activation
+checks. The canonical harness cannot be removed. Uninstall never deactivates
+skills: remove affected declarations with
+.B ki skill user remove
+or
+.B ki skill repo remove
+first.
 .TP
 .B *ki update
 Update the executable and refresh installed harnesses.

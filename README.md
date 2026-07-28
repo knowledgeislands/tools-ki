@@ -20,6 +20,14 @@ ki acquire chatgpt import ./capture --output ./conversation.kep
 
 Use `--dry-run` to validate without creating output, or `--json` for a versioned machine-readable result. The command is local only: it does not contact ChatGPT, automate a browser, read credentials, discover a repository, or extract knowledge.
 
+## Manage installed capabilities
+
+`ki install`, `ki reinstall`, and `ki uninstall` manage verified harness payloads without activating or deactivating skills.
+
+Use a harness identifier such as `example/harness`, a supplier-qualified skill such as `example/harness:ki-example`, or an already-installed bare skill name when exactly one harness supplies it.
+
+For target forms, dry-run behavior, and the explicit activation boundary, read the [capability lifecycle guide](docs/guides/user/capability-lifecycle.md).
+
 ## Install
 
 After the first immutable release, download `install.sh` from an exact released tag, inspect it, then run it with that tag:
