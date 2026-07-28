@@ -1,11 +1,11 @@
 ---
 id: 'CLI-004'
 title: 'Deliver update and upgrade operations'
-status: ready
+status: in-progress
 roadmap: cli/deliver-package-and-harness-update-upgrade-operations
 blocks: —
 blocked-by: CLI-003
-baseline-ref: —
+baseline-ref: e4b4b94ffd128ce7f618deb8bb2af25ac1cb1548
 ---
 
 ## Context
