@@ -12,17 +12,21 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-## Soon
-
-Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
-
 ### Harden user harness installation and runtime skill publication
 
 Make runtime skill publication fail-safe, runtime-selected, and independently testable on top of the user-level contract `ki bootstrap` now owns. Assess whether the harness's local hook-installer subprocess can become an import-safe direct call without weakening user-space failure isolation. Preserve unrelated user files and refuse unsafe parents. Received from the `ki-agentic-harness` Foundation Tooling roadmap (2026-07-26); blocks nothing on either side.
 
-### Evaluate release-please for KI CLI releases _(candidate)_
+**Plan:** [KI-CLI-CLI-001](plans/KI-CLI-CLI-001-harden-user-harness-publication.md)
+
+### Evaluate release-please for KI CLI releases
 
 Trial [release-please](https://github.com/googleapis/release-please) against a real `tools-ki` release cadence. Assess its Conventional Commits and release-PR model against the repository's direct-main workflow, existing version and changelog records, release artifact publication, installer evidence, and Homebrew update path. Adopt it only if the trial produces a simpler, reviewable release boundary; do not make it a `ki-tools` standard or a required workflow before it has proven repeatable.
+
+**Plan:** [KI-CLI-CLI-002](plans/KI-CLI-CLI-002-evaluate-release-please.md)
+
+## Soon
+
+Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
 ## Waiting for
 
