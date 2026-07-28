@@ -1,7 +1,7 @@
 ---
 id: 'CLI-005'
 title: 'Improve audit and conform reporting'
-status: open
+status: ready
 roadmap: cli/make-audit-and-conform-output-name-its-target-and-its-passes
 blocks: —
 blocked-by: —
