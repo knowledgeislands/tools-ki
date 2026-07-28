@@ -21,12 +21,12 @@ baseline-ref: ae67ee6ad7eaeef855232e110cfd9a28fb41732f
 
 ## Steps
 
-1. Define the stable human-readable reporting contract for audit and conform: target repository identity first, provider identity retained as provenance, and one per-skill terminal result even when no finding is selected for display.
-2. Thread the resolved repository target through the host-owned renderer and implement the contract consistently for audit, dry-run conform, successful conform re-audit, and failure reporting without changing finding levels, exit status, or progress streams.
-3. Make the unconditional per-skill result concise and deterministic, including a positive clean/pass indication and the existing judgment-unevaluated count where applicable; preserve detailed findings only for requested reporter levels.
-4. Update CLI help or user documentation where the settled reporting surface needs to explain the target/provenance distinction and default clean-result visibility.
-5. Add CLI-contract cases through `sandbox()` for clean audit and conform results, filtered findings, multiple declared skills, target identity, provider provenance, and unchanged error and progress behavior; retain 100% coverage.
-6. Run the complete verification gate and update this plan with the implemented contract and evidence, without a tag, release, push, or Homebrew-tap change.
+1. ✓ Defined the stable human-readable reporting contract: `target repository [supplier:skill] operation`, with supplier provenance retained and one terminal result per skill even when no finding is selected for display.
+2. ✓ Threaded the resolved physical repository target through the host-owned renderer for audit, dry-run conform, successful conform re-audit, and failure reporting without changing finding levels, exit status, or progress streams.
+3. ✓ Added deterministic terminal `pass`, `warn`, `fail`, or `fixed` lines; existing detailed-finding filtering and per-skill judgment-unevaluated summaries remain intact.
+4. ✓ Updated `ki(1)` to explain target-first reporting, supplier provenance, and visible clean results under the default reporter levels.
+5. ✓ Extended sandboxed CLI-contract coverage for target identity, provider provenance, clean audit and conform results, filtered findings, fixed results, dependency ordering, and unchanged progress output; 100% coverage remains enforced.
+6. ✓ Ran the complete verification gate without a tag, release, push, publication, or Homebrew-tap change.
 
 ## Files touched
 

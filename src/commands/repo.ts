@@ -376,6 +376,18 @@ const summary = (findings: readonly RenderedFinding[], judgmentUnevaluated: numb
   return `  ${icon} summary: FAIL=${count('fail')} WARN=${count('warn')} FIXED=${count('fixed')} JUDGMENT_UNEVALUATED=${judgmentUnevaluated}`
 }
 
+const resultLevel = (findings: readonly RenderedFinding[]): ReporterLevel => {
+  if (findings.some((finding) => finding.level === 'fail')) return 'fail'
+  if (findings.some((finding) => finding.level === 'warn')) return 'warn'
+  if (findings.some((finding) => finding.level === 'fixed')) return 'fixed'
+  return 'pass'
+}
+
+const completion = (findings: readonly RenderedFinding[]): string => {
+  const level = resultLevel(findings)
+  return `  ${REPORT_ICON[level]} ${REPORT_LABEL[level].padEnd(5)} complete`
+}
+
 /**
  * The host owns presentation just as it owns execution. Rubric contracts return
  * structured outcomes; this renderer keeps their item title and evidence subject intact
@@ -383,6 +395,7 @@ const summary = (findings: readonly RenderedFinding[], judgmentUnevaluated: numb
  */
 const renderReports = (
   context: KiContext,
+  repository: string,
   operation: 'audit' | 'conform',
   reports: readonly SkillReport[],
   reporterLevels: readonly ReporterLevel[]
@@ -390,10 +403,10 @@ const renderReports = (
   const reportFindings = reports.map((report) => ({ report, findings: withFixed(report) }))
   for (const { report, findings } of reportFindings) {
     const visible = findings.filter((finding) => reporterLevels.includes(finding.level))
-    if (!visible.length) continue
-    context.stdout.write(`\n==> ${report.skill.skill.identity}:${operation}\n`)
+    context.stdout.write(`\n==> ${repository} [${report.skill.skill.identity}] ${operation}\n`)
     for (const finding of visible) context.stdout.write(`${formatFinding(finding)}\n`)
     context.stdout.write(`${summary(findings, judgmentItemCount(report.skill))}\n`)
+    context.stdout.write(`${completion(findings)}\n`)
   }
 
   const findings = reportFindings.flatMap(({ report, findings: entries }) =>
@@ -466,6 +479,7 @@ export const createRepoCommand = (context: KiContext): Command =>
           if (!findings.length) context.stdout.write(`ki repo audit: clean (${skills.length} skills)\n`)
           renderReports(
             context,
+            repository.root,
             'audit',
             results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
             output.reporterLevels
@@ -528,6 +542,7 @@ export const createRepoCommand = (context: KiContext): Command =>
             if (findings.some((finding) => finding.level === 'fail')) {
               renderReports(
                 context,
+                repository.root,
                 'conform',
                 conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
@@ -543,6 +558,7 @@ export const createRepoCommand = (context: KiContext): Command =>
             if (options.dryRun) {
               renderReports(
                 context,
+                repository.root,
                 'conform',
                 conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
@@ -577,6 +593,7 @@ export const createRepoCommand = (context: KiContext): Command =>
             const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
             renderReports(
               context,
+              repository.root,
               'conform',
               reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
               output.reporterLevels
