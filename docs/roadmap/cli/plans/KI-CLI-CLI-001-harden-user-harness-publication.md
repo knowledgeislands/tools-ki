@@ -1,11 +1,11 @@
 ---
 id: 'KI-CLI-CLI-001'
 title: Harden user harness installation and runtime skill publication
-status: ready
+status: in-progress
 roadmap: cli/harden-user-harness-installation-and-runtime-skill-publication
 blocks: —
 blocked-by: —
-baseline-ref: —
+baseline-ref: b99387b600abd0041e1253b2a09429a855b1e2db
 ---
 
 ## Context

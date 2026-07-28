@@ -1,11 +1,11 @@
 ---
 id: 'KI-CLI-CLI-002'
 title: Evaluate release-please for KI CLI releases
-status: ready
+status: in-progress
 roadmap: cli/evaluate-release-please-for-ki-cli-releases
 blocks: —
 blocked-by: —
-baseline-ref: —
+baseline-ref: b99387b600abd0041e1253b2a09429a855b1e2db
 ---
 
 ## Context
