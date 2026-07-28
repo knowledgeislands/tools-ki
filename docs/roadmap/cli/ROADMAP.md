@@ -24,7 +24,11 @@ Understood and roughly scoped but not yet started — worth doing once the **Nex
 
 ## Waiting for
 
-Worth doing, but presently blocked on an external dependency or decision. Revisit when its named condition changes rather than treating it as dormant local work.
+Worth doing, but presently blocked on an external dependency or decision. Revisit when its named condition changes; do not use this horizon for intentionally paused work.
+
+## Parked
+
+Intentionally paused work with no current attention. Revisit only when its priority or named return trigger changes.
 
 ## Future
 

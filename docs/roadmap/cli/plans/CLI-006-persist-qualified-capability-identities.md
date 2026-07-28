@@ -1,7 +1,7 @@
 ---
 id: 'CLI-006'
 title: 'Persist qualified capability identities'
-status: in-progress
+status: acceptance
 roadmap: cli/persist-qualified-capability-identities-in-repository-declarations
 blocks: —
 blocked-by: —
@@ -30,7 +30,7 @@ Repository declarations presently use bare `[ki-*]` TOML tables, even though the
 6. ✓ Confirmed no local user-facing configuration guide declares repository table-header grammar; ran the complete quality gate with no tag, release, publication, or Homebrew-tap change.
 7. ✓ Created, committed, and delivered explicit rollout handoffs to `ki-agentic-harness`, `ki-arcadia-principal`, `ki-website`, and `ki-specifications`; each names CLI-006, its non-blocking local scope, and verification against the released CLI. The receivers own scheduling and execution; after delivery, the outbound copies were pruned from this repository. Do not release the CLI until the receiving repositories have scheduled their work.
 8. ✓ Rendered each audit and conform report header as `[<repository-basename>][<qualified-skill-identity>] <operation>`, retaining the concise repository identity without an absolute local path; CLI contracts cover both operations.
-9. ✓ Resolved the local repository-audit baseline: declared public visibility, added the MIT license, and aligned Biome and Knip managed-discovery exclusions. Live GitHub settings remain pending an explicitly confirmed change set.
+9. ✓ Resolved the local repository-audit baseline: declared public visibility, added the MIT license, aligned Biome and Knip managed-discovery exclusions, and applied the confirmed live GitHub settings.
 
 ## Files touched
 
@@ -54,3 +54,37 @@ Repository declarations presently use bare `[ki-*]` TOML tables, even though the
 ## Dependencies / blocks
 
 CLI-006 has no plan dependency. It implements the repository-side identity already defined by ADR-KI-TOOLS-002. The post-acceptance rollout is deliberately cross-repository but non-blocking for each receiving repository; it is a release-coordination gate for this CLI change, not permission to change another repository's priority or implementation.
+
+## Acceptance
+
+### Delivered
+
+CLI-006 persists qualified harness capability identities in repository configuration and removes repository-time provider ambiguity.
+
+### Summary of changes
+
+- Repository declarations now use quoted qualified roots such as `["knowledgeislands/ki-agentic-harness:ki-repo"]`, including qualified nested tables.
+- Resolution, activation, removal, selection, status, audit, conform, upgrade, and list paths preserve and display the recorded provider identity.
+- CLI contract coverage migrates every fixture to the qualified grammar and covers invalid, missing, duplicate, nested, selector, dependency, and lifecycle cases.
+- Audit and conform headers now use `[<repository-basename>][<qualified-skill-identity>] <operation>`.
+- The local repository baseline now includes public visibility, MIT licensing, managed Biome/Knip exclusions, and the confirmed GitHub repository settings.
+- The four rollout handoffs were delivered to their receiving repositories and removed locally; the receivers retain their independent scheduling and execution ownership.
+
+### Verification
+
+- All nine implementation steps are complete.
+- `bun run test` — 375 CLI contract tests passed.
+- `bun run test:coverage` — 100% statements, branches, functions, and lines.
+- `bunx biome check .`, `bunx tsc --noEmit`, `bunx knip`, `bunx prettier --check '**/*.md'`, and `bunx markdownlint-cli2 '**/*.md'` passed. Knip emits only two non-failing redundant-ignore configuration hints for the managed skill-link directories.
+- `./bin/ki repo audit --repo .` — no FAIL or WARN findings across all declared skills.
+- `git diff --check` and the working tree were clean at `b8d9ec963b498dc92db32f936c4e5d0a50e357d7` before this acceptance-record transition.
+- Live GitHub settings confirm public visibility, squash-only merging, branch deletion, disabled wiki and projects, and enabled Dependabot security updates, secret scanning, and push protection.
+
+### Outstanding concerns
+
+- The CLI must not be released until the four receiving repositories have scheduled their rollout work and the coordinated release is approved.
+- This local acceptance record has not been pushed or released.
+
+### Mini recap
+
+The implementation showed that a persisted identity is only useful when every reader, writer, selector, and report carries it intact. The quoted TOML-root form keeps the qualified identity unambiguous while preserving ordinary nested configuration.
