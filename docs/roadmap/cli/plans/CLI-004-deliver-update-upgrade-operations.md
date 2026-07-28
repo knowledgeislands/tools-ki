@@ -1,7 +1,7 @@
 ---
 id: 'CLI-004'
 title: 'Deliver update and upgrade operations'
-status: acceptance
+status: done
 roadmap: cli/deliver-package-and-harness-update-upgrade-operations
 blocks: —
 blocked-by: CLI-003
@@ -80,3 +80,11 @@ None. `ki outdated` is intentionally unchanged because configured immutable rele
 ### Mini recap
 
 Updater safety does not need a generic executable replacement mechanism: preserving the verified installer with a receipt gives one distribution channel a narrow, auditable self-update route, while local and external distributions remain owned by their respective managers. The current registry similarly supports safe configured-harness refreshes without asserting a freshness comparison.
+
+## Done
+
+CLI-004 completed the verified update and repository-scoped upgrade command surfaces.
+
+Residual concerns: None; `ki outdated` continues to state unavailable evidence rather than claim a newer-candidate comparison.
+
+Intended follow-up: plan the remaining audit and conform reporting item in the CLI roadmap.
