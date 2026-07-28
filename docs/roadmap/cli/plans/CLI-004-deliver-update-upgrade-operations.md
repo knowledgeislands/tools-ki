@@ -1,7 +1,7 @@
 ---
 id: 'CLI-004'
 title: 'Deliver update and upgrade operations'
-status: in-progress
+status: acceptance
 roadmap: cli/deliver-package-and-harness-update-upgrade-operations
 blocks: —
 blocked-by: CLI-003
@@ -51,3 +51,32 @@ After lifecycle identity and mutation semantics are settled, KI needs distinct u
 CLI-004 is blocked by CLI-003 because lifecycle target identity, ownership, and mutation semantics are prerequisites for a safe upgrade operation.
 
 CLI-001 supplies the read-only evidence baseline; CLI-004 may strengthen its output only when the new provenance contract makes that result truthful. CLI-002 is independent.
+
+## Acceptance
+
+### Delivered
+
+`ki update` and `ki upgrade` now refresh only evidenced installation targets while preserving capability and activation boundaries.
+
+### Summary of changes
+
+- Added installer-managed executable ownership through a regular-file receipt written by verified `install.sh` releases, with `--cli` and `--dry-run` support in `src/commands/update.ts` and `src/core/installation.ts`.
+- Added `ki update` configured-harness refresh and repository-scoped `ki upgrade`; provider selection is deterministic, ambiguous declarations are refused, and replacements retain all existing capabilities.
+- Registered the commands in help and completions; documented their distribution boundaries in `README.md`, [update and upgrade guide](../../../guides/user/update-upgrade.md), `ki(1)`, the active-surface decision record, and the V1 changelog baseline.
+- Added 13 CLI-contract cases for ownership, malformed receipts, process failures, dry runs, configured and unconfigured providers, repository resolution, ambiguity, and capability retention.
+
+### Verification
+
+- `./bin/ki repo audit --skill ki-roadmap --repo .` and `./bin/ki repo audit --skill ki-authoring --repo .` — passed with no FAIL or WARN findings.
+- `bun run test` — passed: 23 files and 373 tests.
+- `bun run test:coverage` — passed: 100% statements, branches, functions, and lines.
+- `bunx biome check .`, `bunx tsc --noEmit`, `bunx knip`, `bash -n install.sh`, `mandoc -T utf8 man/ki.1`, `bunx prettier --check README.md CHANGELOG.md docs/decisions/ADR-KI-TOOLS-002-compatible-harness-registry-and-native-operations.md docs/guides/user/update-upgrade.md docs/roadmap/cli/plans/CLI-004-deliver-update-upgrade-operations.md`, and `git diff --check` — passed.
+- Evidence revision: `59f2125` (`feat(cli): deliver update and upgrade operations`).
+
+### Outstanding concerns
+
+None. `ki outdated` is intentionally unchanged because configured immutable release evidence supports a safe refresh but does not identify a newer candidate.
+
+### Mini recap
+
+Updater safety does not need a generic executable replacement mechanism: preserving the verified installer with a receipt gives one distribution channel a narrow, auditable self-update route, while local and external distributions remain owned by their respective managers. The current registry similarly supports safe configured-harness refreshes without asserting a freshness comparison.
