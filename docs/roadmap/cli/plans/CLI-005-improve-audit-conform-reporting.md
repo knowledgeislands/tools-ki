@@ -1,11 +1,11 @@
 ---
 id: 'CLI-005'
 title: 'Improve audit and conform reporting'
-status: ready
+status: in-progress
 roadmap: cli/make-audit-and-conform-output-name-its-target-and-its-passes
 blocks: —
 blocked-by: —
-baseline-ref: —
+baseline-ref: ae67ee6ad7eaeef855232e110cfd9a28fb41732f
 ---
 
 ## Context
