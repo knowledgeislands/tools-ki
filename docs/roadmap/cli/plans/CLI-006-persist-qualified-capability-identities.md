@@ -30,6 +30,7 @@ Repository declarations presently use bare `[ki-*]` TOML tables, even though the
 6. ✓ Confirmed no local user-facing configuration guide declares repository table-header grammar; ran the complete quality gate with no tag, release, publication, or Homebrew-tap change.
 7. ✓ Created, committed, and delivered explicit rollout handoffs to `ki-agentic-harness`, `ki-arcadia-principal`, `ki-website`, and `ki-specifications`; each names CLI-006, its non-blocking local scope, and verification against the released CLI. The receivers own scheduling and execution; after delivery, the outbound copies were pruned from this repository. Do not release the CLI until the receiving repositories have scheduled their work.
 8. ✓ Rendered each audit and conform report header as `[<repository-basename>][<qualified-skill-identity>] <operation>`, retaining the concise repository identity without an absolute local path; CLI contracts cover both operations.
+9. ✓ Resolved the local repository-audit baseline: declared public visibility, added the MIT license, and aligned Biome and Knip managed-discovery exclusions. Live GitHub settings remain pending an explicitly confirmed change set.
 
 ## Files touched
 
@@ -37,6 +38,7 @@ Repository declarations presently use bare `[ki-*]` TOML tables, even though the
 - `src/agents/skills.ts` and CLI command surfaces that list, select, audit, conform, update, or upgrade repository declarations
 - `src/commands/repo.ts` and its CLI audit/conform rendering contracts
 - `.ki-config.toml`, relevant CLI contract tests and fixture configuration strings, and user-facing CLI documentation where required
+- `LICENSE`, `biome.json`, and `knip.json` for the local repository-audit baseline
 - `-/_HANDOFFS/` only after accepted implementation, for the coordinated rollout briefs
 
 ## Verify

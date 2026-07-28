@@ -1,5 +1,6 @@
 ["knowledgeislands/ki-agentic-harness:ki-repo"]
 supported_runtimes = ["claude-code", "codex"]
+visibility = "public"
 
 ["knowledgeislands/ki-agentic-harness:ki-authoring"]
 
