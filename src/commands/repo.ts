@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { basename } from 'node:path'
 import { stripVTControlCharacters } from 'node:util'
 import { Command } from 'commander'
 import type { KiContext } from '../context.ts'
@@ -403,7 +404,7 @@ const renderReports = (
   const reportFindings = reports.map((report) => ({ report, findings: withFixed(report) }))
   for (const { report, findings } of reportFindings) {
     const visible = findings.filter((finding) => reporterLevels.includes(finding.level))
-    context.stdout.write(`\n==> ${repository} [${report.skill.skill.identity}] ${operation}\n`)
+    context.stdout.write(`\n==> [${basename(repository)}][${report.skill.skill.identity}] ${operation}\n`)
     for (const finding of visible) context.stdout.write(`${formatFinding(finding)}\n`)
     context.stdout.write(`${summary(findings, judgmentItemCount(report.skill))}\n`)
     context.stdout.write(`${completion(findings)}\n`)

@@ -1,5 +1,5 @@
 import { lstat, realpath, rm, symlink } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { type SandboxArea, sandbox } from './_cli_helper.ts'
 
@@ -199,7 +199,7 @@ describe('[ki repo]', () => {
       expect(result).toEqual({
         exitCode: 0,
         output: `
-==> ${await projectRoot(box.project)} [example/harness:ki-example] audit
+==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
   ℹ️  info  [Example (EXAMPLE-1)] — ok
   ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=1
   ✅ pass  complete
@@ -282,7 +282,7 @@ describe('[ki repo]', () => {
       const result = await box.run(`ki repo audit --repo ${box.project.path} --skill ki-website`)
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain(`==> ${await projectRoot(box.project)} [example/harness:ki-website] audit`)
+      expect(result.output).toContain(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-website] audit`)
       expect(result.output).not.toContain('ki-website-cloudflare')
     })
 
@@ -297,7 +297,7 @@ describe('[ki repo]', () => {
         exitCode: 0,
         output: `ki repo audit: clean (1 skills)
 
-==> ${await projectRoot(box.project)} [example/harness:ki-example] audit
+==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
   ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
   ✅ pass  complete
 
@@ -361,11 +361,11 @@ describe('[ki repo]', () => {
 
       expect(result.exitCode).toBe(0)
       expect(standardOutput).toBe(`
-==> ${await projectRoot(box.project)} [example/harness:ki-example] audit
+==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
   ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
   ✅ pass  complete
 
-==> ${await projectRoot(box.project)} [example/harness:ki-extra] audit
+==> [${basename(await projectRoot(box.project))}][example/harness:ki-extra] audit
   ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
   ✅ pass  complete
 
@@ -398,11 +398,11 @@ describe('[ki repo]', () => {
         exitCode: 0,
         output: `ki repo audit: clean (2 skills)
 
-==> ${await projectRoot(box.project)} [example/harness:ki-example] audit
+==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
   ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
   ✅ pass  complete
 
-==> ${await projectRoot(box.project)} [example/harness:ki-extra] audit
+==> [${basename(await projectRoot(box.project))}][example/harness:ki-extra] audit
   ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
   ✅ pass  complete
 
@@ -509,7 +509,7 @@ describe('[ki repo]', () => {
       expect(result).toEqual({
         exitCode: 0,
         output: `
-==> ${await projectRoot(box.project)} [example/harness:ki-example] audit
+==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
   ℹ️  info  [Example (EXAMPLE-1)] some/file.ts — ok
   ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
   ✅ pass  complete
@@ -647,7 +647,7 @@ export default {
       expect(result).toEqual({
         exitCode: 0,
         output: `
-==> ${await projectRoot(box.project)} [example/harness:ki-example] conform
+==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] conform
   ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
   ✅ pass  complete
 
@@ -932,7 +932,7 @@ export default {
         exitCode: 0,
         output: `write governed.txt
 
-==> ${await projectRoot(box.project)} [example/harness:ki-example] conform
+==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] conform
   ✅ fixed [Example (EXAMPLE-1)] — conformed
   ✅ summary: FAIL=0 WARN=0 FIXED=1 JUDGMENT_UNEVALUATED=0
   ✅ fixed complete
@@ -2282,8 +2282,8 @@ ki-depends-on: ${list}
       const result = await box.run('ki repo audit --reporter-levels info')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output.indexOf(`==> ${await projectRoot(box.project)} [example/harness:ki-foundation] audit`)).toBeLessThan(
-        result.output.indexOf(`==> ${await projectRoot(box.project)} [example/harness:ki-feature] audit`)
+      expect(result.output.indexOf(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-foundation] audit`)).toBeLessThan(
+        result.output.indexOf(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-feature] audit`)
       )
       expect(result.output).toContain('[Order (R-1)] — ki-foundation')
       expect(result.output).toContain('[Order (R-1)] — ki-feature')
@@ -2308,9 +2308,9 @@ ki-depends-on: ${list}
       await box.project.write('.ki-config.toml', declarations)
 
       const result = await box.run('ki repo audit --reporter-levels info')
-      const target = await projectRoot(box.project)
+      const target = basename(await projectRoot(box.project))
       const positions = ['ki-b-independent', 'ki-y-foundation', 'ki-z-foundation', 'ki-a-feature'].map((name) =>
-        result.output.indexOf(`==> ${target} [example/harness:${name}] audit`)
+        result.output.indexOf(`==> [${target}][example/harness:${name}] audit`)
       )
 
       expect(result.exitCode).toBe(0)
@@ -2407,8 +2407,8 @@ ki-depends-on: ${list}
       const result = await box.run('ki repo audit --skill example/harness:ki-feature --reporter-levels info')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output.indexOf(`==> ${await projectRoot(box.project)} [example/harness:ki-foundation] audit`)).toBeLessThan(
-        result.output.indexOf(`==> ${await projectRoot(box.project)} [example/harness:ki-feature] audit`)
+      expect(result.output.indexOf(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-foundation] audit`)).toBeLessThan(
+        result.output.indexOf(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-feature] audit`)
       )
     })
   })
