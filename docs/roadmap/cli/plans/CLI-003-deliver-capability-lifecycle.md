@@ -1,7 +1,7 @@
 ---
 id: 'CLI-003'
 title: 'Deliver capability lifecycle commands'
-status: open
+status: ready
 roadmap: cli/deliver-ki-install-ki-reinstall-and-ki-uninstall-capability-lifecycle
 blocks: CLI-004
 blocked-by: —
