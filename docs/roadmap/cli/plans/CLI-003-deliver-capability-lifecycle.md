@@ -1,7 +1,7 @@
 ---
 id: 'CLI-003'
 title: 'Deliver capability lifecycle commands'
-status: acceptance
+status: done
 roadmap: cli/deliver-ki-install-ki-reinstall-and-ki-uninstall-capability-lifecycle
 blocks: CLI-004
 blocked-by: —
@@ -79,3 +79,11 @@ None.
 ### Mini recap
 
 The existing immutable harness registry can safely support a public capability lifecycle without a provider metadata expansion: a supplier-qualified target verifies the requested skill only after its archive is acquired and inspected, while a bare target is intentionally limited to one installed provider. CLI-004 can build update and upgrade semantics on these settled target and activation rules.
+
+## Done
+
+CLI-003 completed the public capability lifecycle contract and implementation, including verified replacement and explicit activation protection.
+
+Residual concerns: None.
+
+Intended follow-up: CLI-004 may now use the settled lifecycle target and mutation semantics for update and upgrade operations.
