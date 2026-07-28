@@ -27,4 +27,5 @@ Intentionally paused work with no current attention. Revisit only when its prior
 Speculative or not yet scoped — items marked _(candidate)_ need a scoping pass (or a decision to drop them) before they're actionable.
 
 - [Cli: Define cross-repository skill vendor provenance _(candidate)_](docs/roadmap/cli/ROADMAP.md#define-cross-repository-skill-vendor-provenance-candidate)
+- [Cli: Evaluate release-please for KI CLI releases _(candidate)_](docs/roadmap/cli/ROADMAP.md#evaluate-release-please-for-ki-cli-releases-candidate)
 - [Cli: Harden user harness installation and runtime skill publication](docs/roadmap/cli/ROADMAP.md#harden-user-harness-installation-and-runtime-skill-publication)

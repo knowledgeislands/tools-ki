@@ -35,3 +35,7 @@ Make runtime skill publication fail-safe, runtime-selected, and independently te
 ### Define cross-repository skill vendor provenance _(candidate)_
 
 Define how one KI harness can declare and receive a shared module from another harness without relying on a nearby checkout or an ambient filesystem path. Assess an explicit `repository-id:skill:module` dependency identity, such as `ki-agentic-harness:ki-skills:reporter`, alongside repository identifiers, version or revision pinning, integrity, acquisition, missing-provider and conflict handling, and release packaging. Keep the rule that only a provider in the same physical harness checkout may be symlinked; an external provider must arrive through an explicit portable vendor or installation contract. Complements the capability package-management commands item in **Soon**. Received from the `ki-agentic-harness` Foundation Tooling roadmap (2026-07-26); blocks nothing on either side.
+
+### Evaluate release-please for KI CLI releases _(candidate)_
+
+Trial [release-please](https://github.com/googleapis/release-please) against a real `tools-ki` release cadence. Assess its Conventional Commits and release-PR model against the repository's direct-main workflow, existing version and changelog records, release artifact publication, installer evidence, and Homebrew update path. Adopt it only if the trial produces a simpler, reviewable release boundary; do not make it a `ki-tools` standard or a required workflow before it has proven repeatable.
