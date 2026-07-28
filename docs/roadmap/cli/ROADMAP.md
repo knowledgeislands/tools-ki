@@ -30,6 +30,8 @@ Report output currently identifies each section by the harness that supplies the
 
 The default reporter also renders only `FAIL`, `WARN`, and `FIXED`, so a skill that assesses a repository cleanly emits no section at all. A fully passing skill is then indistinguishable from one that never ran, and confirming the difference requires re-running with `--reporter-levels all`. Emit a per-skill result line unconditionally, so a clean pass is positively reported rather than inferred from silence.
 
+**Plan:** [CLI-005](plans/CLI-005-improve-audit-conform-reporting.md)
+
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
