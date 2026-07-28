@@ -12,6 +12,12 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
+### Publish atomic conform moves
+
+Extend the native rubric conform transaction with a guarded, repository-contained move operation so a skill can migrate a canonical file without retaining a compatibility copy. The operation must validate both paths and snapshots, preserve dry-run behaviour, and compose safely with ordinary writes. Origin: `knowledgeislands/ki-agentic-harness` FND-001, repository-qualified plan identifiers.
+
+**Plan:** [CLI-001](plans/CLI-001-publish-atomic-conform-moves.md)
+
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
