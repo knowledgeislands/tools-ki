@@ -1,7 +1,7 @@
 ---
 id: 'CLI-004'
 title: 'Deliver update and upgrade operations'
-status: open
+status: ready
 roadmap: cli/deliver-package-and-harness-update-upgrade-operations
 blocks: —
 blocked-by: CLI-003
