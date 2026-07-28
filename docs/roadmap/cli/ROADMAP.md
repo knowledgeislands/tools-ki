@@ -12,12 +12,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-### Persist qualified capability identities in repository declarations
-
-Migrate every declared repository skill to one `harness-id:skill-name` TOML representation. Define the shape, update activation, resolver, diagnostics, fixtures, and all existing declarations together, and reject bare names with no compatibility fallback.
-
-**Plan:** [CLI-006](plans/CLI-006-persist-qualified-capability-identities.md)
-
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
