@@ -10,6 +10,8 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
+- [Cli: Add explicit KI workspaces](docs/roadmap/cli/ROADMAP.md#add-explicit-ki-workspaces)
+- [Cli: Add native governed-plan inventory](docs/roadmap/cli/ROADMAP.md#add-native-governed-plan-inventory)
 - [Cli: Evaluate release-please for KI CLI releases](docs/roadmap/cli/ROADMAP.md#evaluate-release-please-for-ki-cli-releases)
 - [Cli: Harden user harness installation and runtime skill publication](docs/roadmap/cli/ROADMAP.md#harden-user-harness-installation-and-runtime-skill-publication)
 

@@ -24,6 +24,18 @@ Trial [release-please](https://github.com/googleapis/release-please) against a r
 
 **Plan:** [KI-CLI-CLI-002](plans/KI-CLI-CLI-002-evaluate-release-please.md)
 
+### Add native governed-plan inventory
+
+Expose the governed plans already present in a resolved KI repository through a read-only `ki plan list` command. Report each plan's qualified identifier, title, status, canonical roadmap locator, dependency edges, and baseline reference; support stable machine-readable output without making the CLI the owner of plan semantics or lifecycle transitions.
+
+**Plan:** [KI-CLI-CLI-003](plans/KI-CLI-CLI-003-add-native-governed-plan-inventory.md)
+
+### Add explicit KI workspaces
+
+Let a user define a named, explicit set of KI repository roots and query their governed-plan inventory through `ki workspace`. Start read-only: physical-root validation, deterministic ordering, isolated per-repository diagnostics, and an aggregate plan view. Do not recursively scan ambient folders or introduce multi-repository mutation fan-out in the first capability.
+
+**Plan:** [KI-CLI-CLI-004](plans/KI-CLI-CLI-004-add-explicit-ki-workspaces.md)
+
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
