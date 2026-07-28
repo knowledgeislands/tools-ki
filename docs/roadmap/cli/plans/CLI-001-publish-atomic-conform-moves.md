@@ -1,11 +1,11 @@
 ---
 id: 'CLI-001'
 title: Publish atomic conform moves
-status: ready
+status: in-progress
 roadmap: cli/publish-atomic-conform-moves
 blocks: —
 blocked-by: —
-baseline-ref: —
+baseline-ref: 7662ebf34aa9fa7d1be851da57a0027570a640dd
 transferred-from: knowledgeislands/ki-agentic-harness:FND-001
 ---
 
