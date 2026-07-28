@@ -34,7 +34,7 @@ export const createDevCommand = (context: KiContext): Command => {
       const agents = await configured(context)
       const harness = await enableCanonicalHarnessDevelopment(context.paths.data, local.harness)
       const skills = await installedBootstrapSkillSources(context.paths.data)
-      const projections = await installBootstrapSkills(skills, agents, { replace: true })
+      const projections = await installBootstrapSkills(skills, agents)
       const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents, harness)
       context.stdout.write(`development harness enabled ${harness}\n`)
       context.stdout.write(
@@ -49,7 +49,7 @@ export const createDevCommand = (context: KiContext): Command => {
       const agents = await configured(context)
       const installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
       const skills = await installedBootstrapSkillSources(context.paths.data)
-      const projections = await installBootstrapSkills(skills, agents, { replace: true })
+      const projections = await installBootstrapSkills(skills, agents)
       const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents)
       // Fixture archives cannot match the pinned canonical SHA-256; its fresh-install presentation is release-only.
       /* v8 ignore next */

@@ -1,4 +1,4 @@
-import { mkdir, rm, symlink, unlink } from 'node:fs/promises'
+import { mkdir, realpath, rm, symlink, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
@@ -103,6 +103,21 @@ ids = [
 
     expect(refreshed.exitCode).toBe(0)
     expect(config).toContain(expectedAgentsSection)
+  })
+
+  test('refuses to replace a foreign core-skill link during bootstrap', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('chatgpt-codex')
+    const foreign = await box.root.mkdir('foreign-core-skill')
+    const target = join(box.home.path, '.agents', 'skills', 'ki-bootstrap')
+    await mkdir(join(box.home.path, '.agents', 'skills'), { recursive: true })
+    await symlink(foreign, target, 'dir')
+
+    const result = await box.run('ki bootstrap')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('ki-bootstrap skill points elsewhere; pass --replace to re-point')
+    expect(await realpath(target)).toBe(await realpath(foreign))
   })
 
   test('rejects an existing configuration file that is not valid TOML', async () => {

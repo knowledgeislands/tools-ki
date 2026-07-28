@@ -14,15 +14,15 @@ baseline-ref: b99387b600abd0041e1253b2a09429a855b1e2db
 
 ## Current state
 
-Bootstrap restores the canonical harness, resolves its core skill sources, and replaces KI-managed user skill links through `src/agents/bootstrap.ts` and `src/agents/skills.ts`. The received Foundation Tooling item asks for an explicit assessment of replacing the harness-local hook-installer subprocess with an import-safe direct call without weakening failure isolation.
+Bootstrap and `ki dev` restore or reproject core skills through the existing in-process `installBootstrapSkills` boundary. The compatible harness has no local hook-installer to invoke: its hook guidance explicitly keeps hook-state ownership outside these commands. Core-skill projection now retains the normal KI-managed-link contract but refuses a foreign link instead of silently replacing it; no harness handoff is required.
 
 ## Steps
 
-1. Map the current bootstrap, skill-linking, agent-runtime, and hook-installer boundaries, including their existing CLI contract tests and failure paths.
-2. Decide and document the narrow publication boundary: retain a subprocess only where isolation is required, or introduce an import-safe direct call with equivalent runtime selection and containment guards.
-3. Implement the selected boundary in the CLI and, if a compatible harness change is required, prepare a bounded recipient handoff rather than editing an unowned harness surface.
-4. Extend in-process CLI contract tests for successful projection, managed-link replacement, unsafe-parent refusal, and preservation of unrelated user files.
-5. Run the complete CLI verification set and update only the user-facing documentation that changes with the resulting contract.
+1. ✓ Map the current bootstrap, skill-linking, agent-runtime, and hook-installer boundaries, including their existing CLI contract tests and failure paths.
+2. ✓ Retain the import-safe direct publication boundary; no hook-installer subprocess exists in the compatible harness, and its hook state remains out of scope.
+3. ✓ Remove unconditional replacement from bootstrap and development re-projection; no compatible harness change or handoff is required.
+4. ✓ Extend in-process CLI contract coverage to prove bootstrap preserves a foreign core-skill link while existing success, managed-link, and unsafe-parent coverage remains in place.
+5. ✓ Run the complete CLI verification set. No user-facing documentation changes because the existing refusal diagnostic already instructs an intentional `--replace` workflow.
 
 ## Files touched
 
