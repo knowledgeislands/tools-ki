@@ -10,10 +10,6 @@ Actively broken, or blocking the `Next` horizon: takes priority over everything 
 
 Scoped and ready to start — the immediate queue, picked up before anything in **Soon** or **Future**.
 
-- [Cli: Deliver `ki install`, `ki reinstall`, and `ki uninstall` capability lifecycle](docs/roadmap/cli/ROADMAP.md#deliver-ki-install-ki-reinstall-and-ki-uninstall-capability-lifecycle)
-- [Cli: Deliver package and harness update–upgrade operations](docs/roadmap/cli/ROADMAP.md#deliver-package-and-harness-updateupgrade-operations)
-- [Cli: Make audit and conform output name its target and its passes](docs/roadmap/cli/ROADMAP.md#make-audit-and-conform-output-name-its-target-and-its-passes)
-
 ## Soon
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
