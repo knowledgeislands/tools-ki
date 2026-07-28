@@ -10,11 +10,11 @@ describe('[ki completions]', () => {
     expect(zsh.output).toContain('#compdef ki')
     expect(zsh.output).toContain("_values 'repository command' educate audit conform")
     expect(zsh.output).toContain(
-      "_values 'command' acquire bootstrap completions diag dev doctor harness help install list missing outdated repo reinstall uninstall version"
+      "_values 'command' acquire bootstrap completions diag dev doctor harness help install list missing outdated repo reinstall uninstall update upgrade version"
     )
     expect(bash.output).toContain('compgen -W "educate audit conform"')
     expect(bash.output).toContain(
-      'compgen -W "acquire bootstrap completions diag dev doctor harness help install list missing outdated repo reinstall uninstall version --help --version"'
+      'compgen -W "acquire bootstrap completions diag dev doctor harness help install list missing outdated repo reinstall uninstall update upgrade version --help --version"'
     )
     expect(bash.output).toContain('complete -F _ki ki')
   })

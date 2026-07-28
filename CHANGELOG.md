@@ -26,6 +26,8 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki reinstall`
 - `ki skill`
 - `ki uninstall`
+- `ki update`
+- `ki upgrade`
 - `ki version`
 
 ### Distribution baseline

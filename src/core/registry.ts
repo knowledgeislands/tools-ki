@@ -24,6 +24,8 @@ export interface HarnessRelease {
 export interface HarnessInstallationOptions {
   /** A capability the verified payload must expose before it can be published. */
   readonly requiredCapability?: string
+  /** Capabilities the replacement must retain, so active projections remain valid. */
+  readonly requiredCapabilities?: readonly string[]
   /** Replace an existing verified harness only after the replacement is fully inspected. */
   readonly replace?: boolean
 }
@@ -175,9 +177,12 @@ export const recordInstalledHarness = async (configurationDirectory: string, ide
   await writeFile(path, updated, 'utf8')
 }
 
-const requireCapability = (harness: InstalledHarness, capability: string | undefined): void => {
-  if (capability && !harness.capabilities.some((candidate) => candidate.name === capability)) {
-    throw new KiError(`harness ${harness.id} does not provide skill ${capability}`, 1)
+const requireCapabilities = (harness: InstalledHarness, options: HarnessInstallationOptions): void => {
+  const required = new Set([...(options.requiredCapabilities ?? []), ...(options.requiredCapability ? [options.requiredCapability] : [])])
+  for (const capability of required) {
+    if (!harness.capabilities.some((candidate) => candidate.name === capability)) {
+      throw new KiError(`harness ${harness.id} does not provide skill ${capability}`, 1)
+    }
   }
 }
 
@@ -200,7 +205,7 @@ export const installHarness = async (
   const destination = join(ownerDirectory, name)
   const existing = await lstat(destination).catch(() => undefined)
   if (existing) {
-    requireCapability(await readInstalledHarness(dataDirectory, identifier), options.requiredCapability)
+    requireCapabilities(await readInstalledHarness(dataDirectory, identifier), options)
     if (!options.replace) return { installed: false, replaced: false, archiveSha256: release.sha256 }
   }
 
@@ -209,7 +214,7 @@ export const installHarness = async (
   const staging = await mkdtemp(join(ownerDirectory, '.install-'))
   try {
     await extractArchive(payload, staging)
-    requireCapability(await inspectHarnessRoot(staging, identifier), options.requiredCapability)
+    requireCapabilities(await inspectHarnessRoot(staging, identifier), options)
     if (!existing) {
       await rename(staging, destination)
       return { installed: true, replaced: false, archiveSha256: release.sha256 }

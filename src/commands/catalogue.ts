@@ -14,6 +14,8 @@ export const rootCommandNames = [
   'repo',
   'reinstall',
   'uninstall',
+  'update',
+  'upgrade',
   'version'
 ] as const
 

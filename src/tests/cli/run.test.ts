@@ -14,9 +14,11 @@ describe('runCli()', () => {
       installation: 'regular',
       workingDirectory: '/unused',
       homeDirectory: '/unused',
+      environment: {},
       paths: { data: '/unused', config: '/unused', cache: '/unused', state: '/unused' },
       repository: null,
       fetcher: () => Promise.reject(new Error('sandbox fetcher unused')),
+      runner: async () => ({ exitCode: 0, output: '' }),
       now: () => 0
     }
     await expect(runCli(['version'], context)).rejects.toThrow('unexpected output')

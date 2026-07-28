@@ -21,18 +21,18 @@ After lifecycle identity and mutation semantics are settled, KI needs distinct u
 
 ## Steps
 
-1. Define separate, evidence-led contracts for `ki update` and CWD-resolved `ki upgrade`: supported distribution modes, target selection, no-op and unavailable-evidence outcomes, network policy, confirmation or dry-run behavior, exit semantics, and explicit non-goals.
-2. Add the minimum trusted provenance and release-discovery contract required to compare an installed CLI or harness release with a verified candidate; retain immutable URL, digest, signature, and distribution evidence, and fail closed when it is absent or incompatible.
-3. Implement `ki update` to refresh only supported CLI-distribution and configured-harness targets, refusing local-development and externally managed installations rather than attempting a generic executable self-replacement.
-4. Implement `ki upgrade` against the resolved repository declaration and CLI-003 lifecycle targets, with deterministic selection, ambiguity refusal, atomic guarded replacement, rollback, and no activation-scope mutation.
-5. Extend `ki outdated` only where the new provenance contract yields a truthful comparable result; retain explicit unavailable-evidence reporting for every unsupported or unrecorded source.
-6. Register the commands; update help, completions, `ki(1)`, release and user documentation, and the V1 changelog baseline without creating a tag, pushing, publishing, or modifying the Homebrew tap.
-7. Add CLI-contract tests using injected fetchers and fixture archives for supported and unsupported distribution modes, signed and immutable evidence failure, no-op, dry-run, repository selection, ambiguity, partial-write rollback, and unchanged state on error; retain full coverage.
+1. ✓ Defined separate, evidence-led contracts for `ki update` and CWD-resolved `ki upgrade`: target selection, unavailable-evidence and no-op outcomes, dry-run behavior, exit semantics, and the explicit no-release boundary.
+2. ✓ Added an installer receipt written only by a verified release installation; it records the executable, manual, and preserved installer paths. Harnesses continue to refresh only from configured immutable URL-and-digest evidence. No newer-candidate comparison is claimed, so `ki outdated` correctly retains unavailable-evidence reporting.
+3. ✓ Implemented `ki update` to refresh configured installed harnesses and run the recorded installer only when it owns the current regular executable. Local-development and externally managed installations are refused rather than self-replaced.
+4. ✓ Implemented `ki upgrade` against uniquely resolved current-repository declarations. Provider selection is deterministic; each replacement is guarded and retains every existing supplied capability, and neither activation scope is changed.
+5. ✓ Retained `ki outdated` unchanged because the new receipt and configured release evidence do not make an installed source comparable with a newer candidate.
+6. ✓ Registered the commands and updated help, completions, `ki(1)`, release and user documentation, the active-surface decision record, and the V1 changelog baseline without creating a tag, pushing, publishing, or modifying the Homebrew tap.
+7. ✓ Added CLI-contract tests with injected fetchers, fixture archives, and runner failures for supported and unsupported executable ownership, invalid receipts, immutable evidence, no-op, dry-run, repository selection, ambiguity, capability retention, process failure, and unchanged state on error; full coverage remains enforced.
 
 ## Files touched
 
-- `src/commands/` update, upgrade, and status command modules plus registration and catalogue
-- `src/core/` installation-mode, release provenance, registry, acquisition, harness, repository-resolution, and guarded transaction seams
+- `src/commands/` update and upgrade command modules plus registration and catalogue
+- `src/core/` installer receipt, injected process runner, registry, acquisition, harness, repository-resolution, and guarded replacement seams
 - `src/tests/cli/` update and upgrade CLI-contract coverage, fixture archives, and fault-injection cases
 - `install.sh`, `man/ki.1`, `README.md`, release/user guides, and `CHANGELOG.md`
 

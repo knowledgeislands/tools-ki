@@ -49,6 +49,9 @@ describe('install.sh', () => {
     expect(result).toEqual({ exitCode: 0, output: expect.stringContaining('installed verified release v1.2.3 (darwin-arm64)') })
     expect(await box.exec([join(installDir, 'ki'), '--version'])).toEqual({ exitCode: 0, output: '1.2.3\n' })
     await expect(access(join(manDir, 'ki.1'))).resolves.toBeUndefined()
+    expect(await readFile(join(box.path, 'home', '.local', 'state', 'ki', 'installation.toml'), 'utf8')).toContain(
+      `executable = "${join(installDir, 'ki')}"`
+    )
   })
 
   test('installs from an installer without a sibling release directory', async () => {

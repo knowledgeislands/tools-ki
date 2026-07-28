@@ -28,6 +28,14 @@ Use a harness identifier such as `example/harness`, a supplier-qualified skill s
 
 For target forms, dry-run behavior, and the explicit activation boundary, read the [capability lifecycle guide](docs/guides/user/capability-lifecycle.md).
 
+## Update verified installations
+
+`ki update` refreshes installed harnesses with configured immutable releases and updates the executable only when a verified installer receipt proves that it owns the running regular installation.
+
+`ki upgrade` refreshes the uniquely resolved providers declared by the current KI repository.
+
+Neither command changes user or repository skill activation; read the [update and upgrade guide](docs/guides/user/update-upgrade.md) for target selection and ownership boundaries.
+
 ## Install
 
 After the first immutable release, download `install.sh` from an exact released tag, inspect it, then run it with that tag:

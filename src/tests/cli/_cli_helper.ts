@@ -30,6 +30,7 @@ import { onTestFinished } from 'vitest'
 import { run as runCli } from '../../cli.ts'
 import { createContext } from '../../context.ts'
 import type { Fetcher } from '../../core/acquire.ts'
+import type { Runner } from '../../core/runner.ts'
 
 // `ki bootstrap` detects the active agent from which of these home directories exists —
 // kept here as a literal, not imported from src/agents, so this black-box CLI harness
@@ -130,6 +131,7 @@ export interface Sandbox {
   readonly setupAgentHome: (agentId: AgentId) => Promise<void>
   readonly setEnv: (environment: Record<string, string | undefined>) => void
   readonly setFetcher: (fetcher: Fetcher) => void
+  readonly setRunner: (runner: Runner) => void
   readonly cd: (relativePath: string) => void
   readonly run: (
     command: string,
@@ -138,6 +140,7 @@ export interface Sandbox {
       readonly columns?: number
       readonly now?: () => number
       readonly fetcher?: 'default'
+      readonly runner?: 'default'
       readonly executable?: string
     }
   ) => Promise<CommandResult>
@@ -162,12 +165,18 @@ const create = async (): Promise<Sandbox> => {
   let fetcher: Fetcher = async () => {
     throw new Error('sandbox fetcher not configured; call setFetcher() before running a command that acquires a harness')
   }
+  let runner: Runner = async () => {
+    throw new Error('sandbox runner not configured; call setRunner() before running a command that invokes an installer')
+  }
 
   const setEnv = (environment: Record<string, string | undefined>): void => {
     environmentOverrides = { ...environmentOverrides, ...environment }
   }
   const setFetcher = (next: Fetcher): void => {
     fetcher = next
+  }
+  const setRunner = (next: Runner): void => {
+    runner = next
   }
   const cd = (relativePath: string): void => {
     workingDirectory = join(workingDirectory, relativePath)
@@ -187,6 +196,7 @@ const create = async (): Promise<Sandbox> => {
       readonly columns?: number
       readonly now?: () => number
       readonly fetcher?: 'default'
+      readonly runner?: 'default'
       readonly executable?: string
     }
   ): Promise<CommandResult> => {
@@ -202,6 +212,7 @@ const create = async (): Promise<Sandbox> => {
       workingDirectory,
       environment: { ...env, ...environmentOverrides, _: executable },
       ...(options?.fetcher === 'default' ? {} : { fetcher: (input, init) => fetcher(input, init) }),
+      ...(options?.runner === 'default' ? {} : { runner }),
       now: options?.now
     })
     const tokens = command.split(' ').filter(Boolean)
@@ -226,6 +237,7 @@ const create = async (): Promise<Sandbox> => {
     },
     setEnv,
     setFetcher,
+    setRunner,
     cd,
     run
   }

@@ -66,6 +66,12 @@ without activating it.
 Remove one installed non-canonical harness or capability without changing
 activation.
 .TP
+.B ki update [--dry-run] [--cli]
+Update an installer-managed CLI and refresh installed configured harnesses.
+.TP
+.B ki upgrade [--dry-run]
+Refresh uniquely resolved capabilities declared by the current repository.
+.TP
 .B ki skill user add skill [--replace]
 Link a harness skill into configured user agent skill spaces.
 .TP
@@ -200,11 +206,18 @@ or
 .B ki skill repo remove
 first.
 .TP
-.B *ki update
-Update the executable and refresh installed harnesses.
+.B ki update [--dry-run] [--cli]
+Refresh installed configured harnesses. The executable updates only when a
+verified installer receipt proves that it owns the running regular executable.
+Use
+.B --cli
+to require that executable target. Linked development and externally managed
+executables, including Homebrew installations, are not self-updated.
 .TP
-.B *ki upgrade
-Apply newer capability releases in the resolved repository context.
+.B ki upgrade [--dry-run]
+Refresh the uniquely resolved harness providers declared by the current
+repository. It changes neither user nor repository skill activation, and
+refuses an ambiguous, unavailable, or capability-removing replacement.
 .TP
 .B *ki search|cleanup
 Search the available capability set or remove managed stale state.

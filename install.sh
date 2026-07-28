@@ -11,6 +11,7 @@ readonly default_release_base="https://github.com/${release_owner}/${release_rep
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 install_dir=${KI_CLI_INSTALL_DIR:-"$HOME/.local/bin"}
 man_install_dir=${KI_MAN_INSTALL_DIR:-"$(dirname -- "$install_dir")/share/man/man1"}
+state_dir=${KI_STATE_HOME:-"${XDG_STATE_HOME:-"$HOME/.local/state"}/ki"}
 target="$install_dir/ki"
 man_target="$man_install_dir/ki.1"
 mode=release
@@ -287,6 +288,27 @@ install_pair() {
   die 'could not replace installed manual; restored previous installation'
 }
 
+record_installation() {
+  version=$1
+  receipt="$state_dir/installation.toml"
+  installer_dir="$state_dir/installer"
+  installer_target="$installer_dir/install.sh"
+  mkdir -p "$installer_dir"
+  installer_stage=$(mktemp "$installer_dir/.install.sh.XXXXXX") || die 'could not stage installer receipt'
+  receipt_stage=$(mktemp "$state_dir/.installation.toml.XXXXXX") || die 'could not stage installer receipt'
+  cp -L "$0" "$installer_stage" || die 'could not record installer receipt'
+  chmod 755 "$installer_stage"
+  mv "$installer_stage" "$installer_target"
+  {
+    printf '%s\n' 'schema = 1' 'distribution = "installer"'
+    printf 'version = "%s"\n' "$(printf '%s' "$version" | sed 's/"/\\"/g')"
+    printf 'executable = "%s"\n' "$(printf '%s' "$target" | sed 's/"/\\"/g')"
+    printf 'manual = "%s"\n' "$(printf '%s' "$man_target" | sed 's/"/\\"/g')"
+    printf 'installer = "%s"\n' "$(printf '%s' "$installer_target" | sed 's/"/\\"/g')"
+  } >"$receipt_stage"
+  mv "$receipt_stage" "$receipt"
+}
+
 install_release() {
   require_command curl
   require_command shasum
@@ -328,6 +350,7 @@ install_release() {
   [ -x "$extract/ki" ] || die 'release executable is not executable'
   [ "$("$extract/ki" --version)" = "${version#v}" ] || die "release executable does not report $version"
   install_pair "$extract/ki" "$extract/man/ki.1"
+  record_installation "$version"
   printf 'ki: installed verified release %s (%s) at %s\n' "$version" "$target_name" "$target"
   printf 'ki: installed %s\n' "$man_target"
 }
