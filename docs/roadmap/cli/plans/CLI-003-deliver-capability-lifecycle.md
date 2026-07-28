@@ -1,7 +1,7 @@
 ---
 id: 'CLI-003'
 title: 'Deliver capability lifecycle commands'
-status: in-progress
+status: acceptance
 roadmap: cli/deliver-ki-install-ki-reinstall-and-ki-uninstall-capability-lifecycle
 blocks: CLI-004
 blocked-by: —
@@ -50,3 +50,32 @@ KI reserves `ki install`, `ki reinstall`, and `ki uninstall` for capability life
 CLI-003 establishes the trusted lifecycle target and mutation semantics required by CLI-004, so it blocks `CLI-004`.
 
 The plan builds on the completed read-only status baseline in CLI-001. It does not depend on CLI-002's rubric-publication work.
+
+## Acceptance
+
+### Delivered
+
+`ki install`, `ki reinstall`, and `ki uninstall` now provide verified capability lifecycle management while preserving explicit user and repository skill activation boundaries.
+
+### Summary of changes
+
+- Added lifecycle target parsing and command registration in `src/commands/lifecycle.ts`, including supplier-qualified capability proof and fail-closed bare-name resolution.
+- Extended `src/core/registry.ts` with inspected replacement publication that retains the existing verified payload until its replacement is ready.
+- Refused reinstall and removal where a supplied user skill is active or the CWD-resolved repository declares a supplied skill; no lifecycle command changes activation.
+- Added 17 CLI-contract cases in `src/tests/cli/lifecycle.test.ts` and registered the public surface in completions, help, `ki(1)`, README, the user guide, decision record, and V1 changelog baseline.
+
+### Verification
+
+- `./bin/ki repo audit --skill ki-roadmap --repo .` — passed with no FAIL or WARN findings.
+- `bun run test` — passed: 22 files and 360 tests.
+- `bun run test:coverage` — passed: 100% statements, branches, functions, and lines.
+- `bunx biome check .`, `bunx tsc --noEmit`, `bunx knip`, `bash -n install.sh`, `bunx prettier --check README.md CHANGELOG.md docs/guides/user/capability-lifecycle.md docs/decisions/ADR-KI-TOOLS-002-compatible-harness-registry-and-native-operations.md`, `mandoc -T utf8 man/ki.1`, and `git diff --check` — passed.
+- Evidence revision: `4feebb2` (`feat(cli): deliver capability lifecycle commands`).
+
+### Outstanding concerns
+
+None.
+
+### Mini recap
+
+The existing immutable harness registry can safely support a public capability lifecycle without a provider metadata expansion: a supplier-qualified target verifies the requested skill only after its archive is acquired and inspected, while a bare target is intentionally limited to one installed provider. CLI-004 can build update and upgrade semantics on these settled target and activation rules.
