@@ -1,7 +1,7 @@
 ---
 id: 'CLI-006'
 title: 'Persist qualified capability identities'
-status: open
+status: ready
 roadmap: cli/persist-qualified-capability-identities-in-repository-declarations
 blocks: —
 blocked-by: —
