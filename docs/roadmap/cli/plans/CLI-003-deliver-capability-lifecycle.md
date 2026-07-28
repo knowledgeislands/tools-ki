@@ -1,11 +1,11 @@
 ---
 id: 'CLI-003'
 title: 'Deliver capability lifecycle commands'
-status: ready
+status: in-progress
 roadmap: cli/deliver-ki-install-ki-reinstall-and-ki-uninstall-capability-lifecycle
 blocks: CLI-004
 blocked-by: —
-baseline-ref: —
+baseline-ref: 563133a8918f85fd8b3427421d4f0a2a5251d020
 ---
 
 ## Context
