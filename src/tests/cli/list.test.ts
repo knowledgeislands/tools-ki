@@ -24,7 +24,7 @@ describe('[ki list]', () => {
         ''
       ].join('\n')
     )
-    await box.project.write('.ki-config.toml', '[ki-example]\n\n[ki-a]\n')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n\n["example/harness:ki-a"]\n')
     const configuration = await box.config.read('ki/config.toml')
 
     const result = await box.run('ki list')
@@ -32,7 +32,7 @@ describe('[ki list]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        'ki list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\nRepository skills:\n  ki-a\n  ki-example\n'
+        'ki list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\nRepository skills:\n  example/harness:ki-a\n  example/harness:ki-example\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
   })
@@ -50,7 +50,7 @@ describe('[ki list]', () => {
     await box.project.write('.ki-config.toml', '[ki-example\n')
     const grammar = await box.run('ki list unexpected')
     const invalidDeclaration = await box.run('ki list')
-    await box.project.write('.ki-config.toml', '[ki-example]\n')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
     await box.config.write('ki/config.toml', '[agents\n')
     const invalidConfiguration = await box.run('ki list')
 

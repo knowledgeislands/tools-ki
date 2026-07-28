@@ -1,22 +1,22 @@
-[ki-repo]
+["knowledgeislands/ki-agentic-harness:ki-repo"]
 supported_runtimes = ["claude-code", "codex"]
 
-[ki-authoring]
+["knowledgeislands/ki-agentic-harness:ki-authoring"]
 
-[ki-tools]
+["knowledgeislands/ki-agentic-harness:ki-tools"]
 
-[ki-engineering]
+["knowledgeislands/ki-agentic-harness:ki-engineering"]
 
-[ki-roadmap]
+["knowledgeislands/ki-agentic-harness:ki-roadmap"]
 
-[ki-decision-records]
+["knowledgeislands/ki-agentic-harness:ki-decision-records"]
 
-[ki-tokenomics]
+["knowledgeislands/ki-agentic-harness:ki-tokenomics"]
 
-[ki-housekeeping-claude]
+["knowledgeislands/ki-agentic-harness:ki-housekeeping-claude"]
 
-[ki-tokenomics-claude]
+["knowledgeislands/ki-agentic-harness:ki-tokenomics-claude"]
 
-[ki-tokenomics-codex]
+["knowledgeislands/ki-agentic-harness:ki-tokenomics-codex"]
 
-[ki-git]
+["knowledgeislands/ki-agentic-harness:ki-git"]

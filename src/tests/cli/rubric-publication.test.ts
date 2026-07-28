@@ -69,7 +69,7 @@ export default {
 
 const projectLinkedHarness = async (box: Awaited<ReturnType<typeof sandbox>>): Promise<void> => {
   await box.setupExampleHarness()
-  await box.project.write('.ki-config.toml', '[ki-example]\n')
+  await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
   await box.project.write('skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
   await box.project.write('skills/ki-example/scripts/rubric/items/index.ts', publicationRubric)
   const installedSkills = join(box.data.path, 'ki/harnesses/example/harness/skills')
@@ -157,7 +157,7 @@ describe('[ki generated rubric publication]', () => {
   test('refuses a publication request outside the repository publication scope', async () => {
     const box = await sandbox()
     await box.setupExampleHarness({ rubric: publicationRubric })
-    await box.project.write('.ki-config.toml', '[ki-example]\n')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
 
     const result = await box.run('ki repo conform')
 
@@ -168,7 +168,7 @@ describe('[ki generated rubric publication]', () => {
   test('refuses a publication request during audit', async () => {
     const box = await sandbox()
     await box.setupExampleHarness({ rubric: auditProposalRubric })
-    await box.project.write('.ki-config.toml', '[ki-example]\n')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
 
     const audit = await box.run('ki repo audit')
     const conform = await box.run('ki repo conform')

@@ -30,19 +30,19 @@ describe('[ki missing and ki outdated]', () => {
         ''
       ].join('\n')
     )
-    await box.project.write('.ki-config.toml', '[ki-repository]\n')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-repository"]\n')
     const configuration = await box.config.read('ki/config.toml')
 
     const result = await box.run('ki missing')
 
     expect(result).toEqual({
       exitCode: 0,
-      output: 'ki missing\nMissing capabilities:\n  repository skill ki-repository\n  user skill example/harness:ki-user\n'
+      output: 'ki missing\nMissing capabilities:\n  repository skill example/harness:ki-repository\n  user skill example/harness:ki-user\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
   })
 
-  test('distinguishes available and ambiguous repository providers', async () => {
+  test('uses the declared repository provider even when another provides the same skill', async () => {
     const box = await sandbox()
     await box.config.write('ki/config.toml', 'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n')
     await box.setupExampleHarness()
@@ -50,14 +50,16 @@ describe('[ki missing and ki outdated]', () => {
     await box.data.write('ki/harnesses/example/harness/skills/ki-only/SKILL.md', '---\nname: ki-only\nki-depends-on: []\n---\n')
     await box.data.write('ki/harnesses/other/harness/skills/ki-a/SKILL.md', '---\nname: ki-a\nki-depends-on: []\n---\n')
     await box.data.write('ki/harnesses/other/harness/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
-    await box.project.write('.ki-config.toml', '[ki-example]\n\n[ki-a]\n\n[ki-only]\n')
+    await box.project.write(
+      '.ki-config.toml',
+      '["example/harness:ki-example"]\n\n["example/harness:ki-a"]\n\n["example/harness:ki-only"]\n'
+    )
 
     const result = await box.run('ki missing')
 
     expect(result).toEqual({
       exitCode: 0,
-      output:
-        'ki missing\nNo missing capabilities.\nAmbiguous repository capabilities:\n  repository skill ki-a: example/harness, other/harness\n  repository skill ki-example: example/harness, other/harness\n'
+      output: 'ki missing\nNo missing capabilities.\n'
     })
   })
 

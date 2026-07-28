@@ -196,7 +196,7 @@ describe('[ki update and upgrade]', () => {
     const payload = archive()
     await box.setupExampleHarness()
     await box.config.write('ki/config.toml', configuration(payload.sha256))
-    await box.project.write('.ki-config.toml', '[ki-example]\n')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
     box.setFetcher(async () => new Response(payload.payload))
 
     const dryRun = await box.run('ki upgrade --dry-run')
@@ -217,21 +217,18 @@ describe('[ki update and upgrade]', () => {
     expect(result).toEqual({ exitCode: 0, output: 'ki upgrade\nNo declared capabilities.\n' })
   })
 
-  test('refuses upgrade outside a repository and ambiguous repository providers', async () => {
+  test('refuses upgrade outside a repository and uses the declared repository provider', async () => {
     const outside = await sandbox()
     const missingRepository = await outside.run('ki upgrade')
 
     const box = await sandbox()
     await box.setupExampleHarness()
     await box.data.write('ki/harnesses/other/harness/skills/example/SKILL.md', skill)
-    await box.project.write('.ki-config.toml', '[ki-example]\n')
-    const ambiguous = await box.run('ki upgrade')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    const declared = await box.run('ki upgrade')
 
     expect(missingRepository).toEqual({ exitCode: 2, output: 'ki: error: no KI repository found from the current working directory\n' })
-    expect(ambiguous).toEqual({
-      exitCode: 1,
-      output: 'ki: error: declared skill ki-example is ambiguous; qualify its harness before activation\n'
-    })
+    expect(declared.output).toContain('example/harness: unavailable (no configured immutable release)')
   })
 
   test('keeps a provider intact when its upgrade archive drops an installed capability', async () => {
@@ -239,7 +236,7 @@ describe('[ki update and upgrade]', () => {
     const payload = makeHarnessArchive({ 'source/skills/other/SKILL.md': '---\nname: ki-other\nki-depends-on: []\n---\n' })
     await box.setupExampleHarness()
     await box.config.write('ki/config.toml', configuration(payload.sha256))
-    await box.project.write('.ki-config.toml', '[ki-example]\n')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
     box.setFetcher(async () => new Response(payload.payload))
 
     const result = await box.run('ki upgrade')

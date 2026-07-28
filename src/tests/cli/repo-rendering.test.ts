@@ -3,7 +3,7 @@ import { sandbox } from './_cli_helper.ts'
 
 test('repo audit strips complete terminal control sequences from finding messages', async () => {
   const box = await sandbox()
-  await box.project.write('.ki-config.toml', '[ki-example]\n')
+  await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
   await box.setupExampleHarness({
     rubric: `
 export default {

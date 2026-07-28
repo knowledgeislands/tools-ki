@@ -40,7 +40,7 @@ const governedItem = (conform: string): string => `[{
 
 const setup = async (rubricSource: string) => {
   const box = await sandbox()
-  await box.project.write('.ki-config.toml', '[ki-example]\n')
+  await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
   await box.home.write('.managed/governed.txt', 'before\n')
   await box.setupExampleHarness({ rubric: rubricSource })
   return box

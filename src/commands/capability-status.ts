@@ -14,10 +14,6 @@ export const createMissingCommand = (context: KiContext): Command =>
     const lines = ['ki missing']
     if (!status.missing.length) lines.push('No missing capabilities.')
     else lines.push('Missing capabilities:', ...status.missing.map((entry) => `  ${scopeLabel(entry.scope)} ${entry.name}`))
-    if (status.ambiguous.length) {
-      lines.push('Ambiguous repository capabilities:')
-      for (const entry of status.ambiguous) lines.push(`  repository skill ${entry.name}: ${entry.providers.join(', ')}`)
-    }
     context.stdout.write(`${lines.join('\n')}\n`)
   })
 

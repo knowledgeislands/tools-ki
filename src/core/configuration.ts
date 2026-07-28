@@ -3,11 +3,29 @@ import { parse } from 'smol-toml'
 import { KiError } from './errors.ts'
 
 export interface DeclaredSkill {
+  readonly identity: string
+  readonly harness: string
   readonly name: string
   readonly configuration: Readonly<Record<string, unknown>>
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
+const skillName = /^ki-[a-z0-9][a-z0-9-]*$/
+
+const qualifiedSkill = (identity: string): { readonly harness: string; readonly name: string } | undefined => {
+  const separator = identity.indexOf(':')
+  if (separator === -1 || identity.indexOf(':', separator + 1) !== -1) return undefined
+  const harness = identity.slice(0, separator)
+  const name = identity.slice(separator + 1)
+  return harnessIdentifier.test(harness) && skillName.test(name) ? { harness, name } : undefined
+}
+
+const looksLikeSkill = (name: string): boolean => name.startsWith('ki-') || name.includes(':')
+
+const declarationError = (identity: string): KiError =>
+  new KiError(`declared skill ${identity} must use a qualified <harness-id>:<skill-name> TOML table`, 1)
 
 export const readDeclaredSkills = async (configurationPath: string): Promise<readonly DeclaredSkill[]> => {
   let parsed: unknown
@@ -19,33 +37,57 @@ export const readDeclaredSkills = async (configurationPath: string): Promise<rea
   // A successfully parsed TOML document is always a table; this only guards a future parser change.
   /* v8 ignore next */
   if (!isRecord(parsed)) throw new KiError('.ki-config.toml must be a table', 1)
-  return Object.entries(parsed)
-    .filter(([name]) => name.startsWith('ki-'))
-    .map(([name, configuration]) => {
-      if (!isRecord(configuration)) throw new KiError(`declared skill ${name} must use a TOML table`, 1)
-      return { name, configuration }
-    })
+  const declared = Object.entries(parsed).flatMap(([identity, configuration]) => {
+    if (!looksLikeSkill(identity)) return []
+    const qualified = qualifiedSkill(identity)
+    if (!qualified) throw declarationError(identity)
+    if (!isRecord(configuration)) throw new KiError(`declared skill ${identity} must use a TOML table`, 1)
+    return [{ identity, ...qualified, configuration }]
+  })
+  const names = new Set<string>()
+  for (const declaration of declared) {
+    if (names.has(declaration.name)) throw new KiError(`declared skill ${declaration.name} is repeated by multiple providers`, 1)
+    names.add(declaration.name)
+  }
+  return declared
 }
 
-// Declare a skill in a repository's .ki-config.toml by appending its `[<skill>]` table.
+// Declare a skill in a repository's .ki-config.toml by appending its quoted qualified table.
 // Text-appended (not re-serialised) to preserve the file's comments and formatting.
-export const declareRepositorySkill = async (configurationPath: string, skill: string): Promise<boolean> => {
+export const declareRepositorySkill = async (configurationPath: string, identity: string): Promise<boolean> => {
+  // v8 ignore next -- callers construct this only from a resolved installed harness identity.
+  if (!qualifiedSkill(identity)) throw declarationError(identity)
   const contents = await readFile(configurationPath, 'utf8')
-  if (contents.split('\n').some((line) => line.trim() === `[${skill}]`)) return false
+  if (contents.split('\n').some((line) => line.trim() === `["${identity}"]`)) return false
   const base = contents.endsWith('\n') ? contents : `${contents}\n`
-  await writeFile(configurationPath, `${base}\n[${skill}]\n`, 'utf8')
+  await writeFile(configurationPath, `${base}\n["${identity}"]\n`, 'utf8')
   return true
 }
 
-// Remove a skill's `[<skill>]` table (header plus body up to the next table header).
-export const undeclareRepositorySkill = async (configurationPath: string, skill: string): Promise<boolean> => {
+const isDeclaredHeader = (line: string, identity: string): boolean => {
+  const header = line.trim()
+  return header === `["${identity}"]` || header.startsWith(`["${identity}".`)
+}
+
+// Remove a skill's quoted root and nested tables, preserving unrelated text and tables.
+export const undeclareRepositorySkill = async (configurationPath: string, identity: string): Promise<boolean> => {
+  // v8 ignore next -- callers receive this only from a validated repository declaration.
+  if (!qualifiedSkill(identity)) throw declarationError(identity)
   const lines = (await readFile(configurationPath, 'utf8')).split('\n')
-  const start = lines.findIndex((line) => line.trim() === `[${skill}]`)
-  if (start === -1) return false
-  let end = start + 1
-  while (end < lines.length && !(lines[end] as string).trimStart().startsWith('[')) end += 1
-  const from = start > 0 && lines[start - 1]?.trim() === '' ? start - 1 : start
-  lines.splice(from, end - from)
+  let removed = false
+  for (
+    let start = lines.findIndex((line) => isDeclaredHeader(line, identity));
+    start !== -1;
+    start = lines.findIndex((line) => isDeclaredHeader(line, identity))
+  ) {
+    let end = start + 1
+    while (end < lines.length && !(lines[end] as string).trimStart().startsWith('[')) end += 1
+    const from = start > 0 && lines[start - 1]?.trim() === '' ? start - 1 : start
+    lines.splice(from, end - from)
+    removed = true
+  }
+  // v8 ignore next -- repository removal invokes this only after locating the declaration in the same parsed file.
+  if (!removed) return false
   await writeFile(configurationPath, lines.join('\n'), 'utf8')
   return true
 }

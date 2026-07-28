@@ -15,7 +15,7 @@ const skillCandidates = (harnesses: readonly InstalledHarness[], name: string): 
       .filter((capability) => capability.kind === 'skill' && capability.name === name)
       .map((capability) => ({
         identity: `${harness.id}:${capability.name}`,
-        declaration: { name, configuration: {} },
+        declaration: { identity: `${harness.id}:${capability.name}`, harness: harness.id, name, configuration: {} },
         harness,
         capability
       }))
@@ -71,19 +71,16 @@ export const resolveDeclaredSkills = (
   selected?: string
 ): readonly ResolvedSkill[] => {
   const resolved = declarations.map((declaration) => {
-    const candidates = skillCandidates(harnesses, declaration.name)
-    if (!candidates.length) {
+    const harness = harnesses.find((candidate) => candidate.id === declaration.harness)
+    if (!harness) {
       throw new KiError(
-        `declared skill ${declaration.name} is not available from an installed harness; install the harness that provides it before auditing`,
+        `declared skill ${declaration.identity} requires installed harness ${declaration.harness}; install it before auditing`,
         1
       )
     }
-    if (candidates.length > 1)
-      throw new KiError(`declared skill ${declaration.name} is ambiguous; qualify its harness before activation`, 1)
-    const candidate = candidates[0]
-    /* v8 ignore next -- candidates.length is exactly 1 here (0 and >1 are both handled above); defends only against a future refactor. */
-    if (!candidate) throw new KiError(`declared skill ${declaration.name} could not be resolved`, 1)
-    return { ...candidate, declaration }
+    const capability = harness.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === declaration.name)
+    if (!capability) throw new KiError(`installed harness ${declaration.harness} does not provide declared skill ${declaration.name}`, 1)
+    return { identity: declaration.identity, declaration, harness, capability }
   })
   const ordered = orderedSkills(resolved)
   if (!selected) return ordered

@@ -1,8 +1,7 @@
-import { readFile } from 'node:fs/promises'
-import { parse } from 'smol-toml'
+import { readDeclaredSkills } from '../core/configuration.ts'
 import { KiError } from '../core/errors.ts'
 import { type SupportedRuntime, supportedRuntimes } from '../core/harness.ts'
-import { type InstalledAgent, isRecord } from './internal.ts'
+import type { InstalledAgent } from './internal.ts'
 
 const agentRuntimes = {
   'claude-code': 'claude-code',
@@ -27,13 +26,7 @@ export const compatibleWithSkill = (agent: InstalledAgent, skillRuntimes: readon
   skillRuntimes === undefined || skillRuntimes.includes(runtimeForAgent(agent))
 
 export const repositorySupportedRuntimes = async (configuration: string): Promise<readonly SupportedRuntime[]> => {
-  let parsed: unknown
-  try {
-    parsed = parse(await readFile(configuration, 'utf8'))
-  } catch {
-    throw new KiError('.ki-config.toml must be valid TOML', 1)
-  }
-  const repository = isRecord(parsed) && isRecord(parsed['ki-repo']) ? parsed['ki-repo'] : undefined
+  const repository = (await readDeclaredSkills(configuration)).find((skill) => skill.name === 'ki-repo')?.configuration
   if (!repository || !Object.hasOwn(repository, 'supported_runtimes')) {
     throw new KiError('[ki-repo].supported_runtimes must declare the repository runtime set', 1)
   }

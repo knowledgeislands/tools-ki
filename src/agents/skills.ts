@@ -1,6 +1,6 @@
 import { lstat, mkdir, realpath, symlink, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import { declareRepositorySkill, undeclareRepositorySkill } from '../core/configuration.ts'
+import { declareRepositorySkill, readDeclaredSkills, undeclareRepositorySkill } from '../core/configuration.ts'
 import { KiError } from '../core/errors.ts'
 import { discoverInstalledHarnesses, type SupportedRuntime } from '../core/harness.ts'
 import { resolveRepository } from '../core/repository.ts'
@@ -147,7 +147,7 @@ export const addRepoSkill = async (options: {
   if (compatible.length === 0) throw new KiError(`skill ${resolved.skill.name} is incompatible with this repository's configured agents`, 1)
   for (const agent of compatible)
     await linkManagedSkill(agent, { scope: 'repo', repository: location.root }, resolved.skill, options.replace)
-  await declareRepositorySkill(location.configuration, resolved.skill.name)
+  await declareRepositorySkill(location.configuration, `${resolved.harness}:${resolved.skill.name}`)
   return { skill: resolved.skill.name, repository: location.root, agents: compatible.map((agent) => agent.descriptor.id) }
 }
 
@@ -163,12 +163,13 @@ export const removeRepoSkill = async (options: {
     workingDirectory: options.workingDirectory,
     homeDirectory: options.homeDirectory
   })
+  const declaration = (await readDeclaredSkills(location.configuration)).find((candidate) => candidate.name === options.skill)
   const agents = await configuredAgents({ homeDirectory: options.homeDirectory, configurationDirectory: options.configurationDirectory })
   let removed = false
   for (const agent of agents) {
     if (await removeManagedRepoSkill(agent, location.root, options.skill)) removed = true
   }
-  const undeclared = await undeclareRepositorySkill(location.configuration, options.skill)
+  const undeclared = declaration ? await undeclareRepositorySkill(location.configuration, declaration.identity) : false
   return {
     skill: options.skill,
     repository: location.root,

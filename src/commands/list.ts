@@ -23,7 +23,10 @@ export const createListCommand = (context: KiContext): Command =>
     }
     lines.push('User skills:', listed([...userConfiguration.skills].sort((left, right) => left.localeCompare(right))))
     if (repositorySkills) {
-      lines.push('Repository skills:', listed(repositorySkills.map((skill) => skill.name).sort((left, right) => left.localeCompare(right))))
+      lines.push(
+        'Repository skills:',
+        listed(repositorySkills.map((skill) => skill.identity).sort((left, right) => left.localeCompare(right)))
+      )
     }
     context.stdout.write(`${lines.join('\n')}\n`)
   })

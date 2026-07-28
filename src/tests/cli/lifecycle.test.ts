@@ -161,7 +161,7 @@ describe('[ki lifecycle]', () => {
     const box = await sandbox()
     await box.setupExampleHarness()
     await box.config.write('ki/config.toml', userConfiguration())
-    await box.project.write('.ki-config.toml', '[ki-example]\n')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
 
     const result = await box.run('ki uninstall example/harness')
 
@@ -178,7 +178,7 @@ describe('[ki lifecycle]', () => {
       'ki/config.toml',
       `${userConfiguration().replace('[skills]\n', '[skills.ki-example]\nharness = "example/harness"\n')}`
     )
-    await box.project.write('.ki-config.toml', '[ki-example]\n')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
 
     const result = await box.run('ki uninstall example/harness')
 

@@ -90,7 +90,7 @@ const activeRemovalActions = async (context: KiContext, harness: InstalledHarnes
   if (context.repository) {
     const declarations = await readDeclaredSkills(context.repository.configuration)
     for (const declaration of declarations) {
-      if (names.has(declaration.name)) active.push(`ki skill repo remove ${declaration.name}`)
+      if (declaration.harness === harness.id && names.has(declaration.name)) active.push(`ki skill repo remove ${declaration.name}`)
     }
   }
   return active
