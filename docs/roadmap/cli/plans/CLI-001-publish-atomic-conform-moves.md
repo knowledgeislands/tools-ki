@@ -1,7 +1,7 @@
 ---
 id: 'CLI-001'
 title: Publish atomic conform moves
-status: open
+status: ready
 roadmap: cli/publish-atomic-conform-moves
 blocks: —
 blocked-by: —
