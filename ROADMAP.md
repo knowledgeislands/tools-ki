@@ -14,6 +14,9 @@ Scoped and ready to start — the immediate queue, picked up before anything in 
 
 Understood and roughly scoped but not yet started — worth doing once the **Next** queue clears, ahead of anything still speculative.
 
+- [Cli: Evaluate release-please for KI CLI releases _(candidate)_](docs/roadmap/cli/ROADMAP.md#evaluate-release-please-for-ki-cli-releases-candidate)
+- [Cli: Harden user harness installation and runtime skill publication](docs/roadmap/cli/ROADMAP.md#harden-user-harness-installation-and-runtime-skill-publication)
+
 ## Waiting for
 
 Worth doing, but presently blocked on an external dependency or decision. Revisit when its named condition changes; do not use this horizon for intentionally paused work.
@@ -27,5 +30,3 @@ Intentionally paused work with no current attention. Revisit only when its prior
 Speculative or not yet scoped — items marked _(candidate)_ need a scoping pass (or a decision to drop them) before they're actionable.
 
 - [Cli: Define cross-repository skill vendor provenance _(candidate)_](docs/roadmap/cli/ROADMAP.md#define-cross-repository-skill-vendor-provenance-candidate)
-- [Cli: Evaluate release-please for KI CLI releases _(candidate)_](docs/roadmap/cli/ROADMAP.md#evaluate-release-please-for-ki-cli-releases-candidate)
-- [Cli: Harden user harness installation and runtime skill publication](docs/roadmap/cli/ROADMAP.md#harden-user-harness-installation-and-runtime-skill-publication)
