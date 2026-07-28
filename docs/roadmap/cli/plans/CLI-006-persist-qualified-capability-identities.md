@@ -1,7 +1,7 @@
 ---
 id: 'CLI-006'
 title: 'Persist qualified capability identities'
-status: acceptance
+status: done
 roadmap: cli/persist-qualified-capability-identities-in-repository-declarations
 blocks: —
 blocked-by: —
@@ -88,3 +88,7 @@ CLI-006 persists qualified harness capability identities in repository configura
 ### Mini recap
 
 The implementation showed that a persisted identity is only useful when every reader, writer, selector, and report carries it intact. The quoted TOML-root form keeps the qualified identity unambiguous while preserving ordinary nested configuration.
+
+## Done
+
+CLI-006 completed the qualified repository-capability identity cutover and was manually accepted. The residual concern is release coordination with the four receiving repositories; the intended follow-up is to release only after each has scheduled its rollout work and the coordinated release is approved.
