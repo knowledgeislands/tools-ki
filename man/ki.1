@@ -82,6 +82,27 @@ Remove a KI-managed user skill link.
 .TP
 .B ki repo [--repo <path-or-pattern>]... [command]
 Use repeated \fB--repo\fR options to select explicit repository roots or patterns.
+.TP
+.B ki repo --workspace <group> [command]
+Use one named group from the direct-CWD KI workspace.
+.SS Workspace management
+\&
+.PP
+.TP
+.B ki workspace init
+Create a direct-CWD \fB.ki-workspace.toml\fR.
+.TP
+.B ki workspace list
+List configured workspace groups.
+.TP
+.B ki workspace show <group>
+Show one workspace group.
+.TP
+.B ki workspace add <group> <path-or-pattern>
+Add a member to one workspace group.
+.TP
+.B ki workspace remove <group> <path-or-pattern>
+Remove a member from one workspace group.
 .SS Repository management
 \&
 .PP
@@ -292,7 +313,7 @@ Remove a KI-managed user skill link.
 .PP
 Use this shared option with any
 .B ki repo
-command to select one or more repositories explicitly. It appears after
+command to select one or more repositories. It appears after
 .B ki repo
 and before the command.
 .TP
@@ -300,11 +321,40 @@ and before the command.
 Repeat this option to select literal repository roots or patterns in supplied
 order. KI resolves every target physically before an operation begins and
 rejects unmatched patterns, invalid roots, and duplicate physical roots.
-Without this option, KI reads only a regular \fB.mgitconfig\fR in the physical
-current working directory, following declared repository and nested-container
-entries downward. It never invokes \fBmgit\fR or searches ancestor directories.
-Without a direct-CWD configuration, KI discovers one repository from the
-current working directory.
+.TP
+.B --workspace <group>
+Select one named group from a regular direct-CWD \fB.ki-workspace.toml\fR.
+This option and \fB--repo\fR are mutually exclusive. Workspace paths and
+patterns resolve from that file's physical directory. With neither selector,
+KI uses the workspace default group when that direct-CWD file exists, before
+checking a regular direct-CWD \fB.mgitconfig\fR. It never searches ancestor
+directories for either configuration or invokes \fBmgit\fR. Without a
+direct-CWD configuration, KI discovers one repository from the current
+working directory.
+.SS Workspace management
+\&
+.PP
+Use these commands from a workspace directory to manage KI-owned named
+repository groups without requiring the directory itself to be a KI repository.
+The regular \fB.ki-workspace.toml\fR file has schema version 1, a required
+default group, and ordered repository path-or-pattern members. It is the only
+mutable workspace surface.
+.TP
+.B ki workspace init
+Create the initial workspace file with an empty \fBdefault\fR group.
+.TP
+.B ki workspace list
+List every group and its member count, marking the default.
+.TP
+.B ki workspace show <group>
+Print the ordered members of one group.
+.TP
+.B ki workspace add <group> <path-or-pattern>
+Append one path or pattern to a named group. A new named group is created when
+needed.
+.TP
+.B ki workspace remove <group> <path-or-pattern>
+Remove one existing path or pattern from a named group.
 .SS Repository management
 \&
 .PP
@@ -344,9 +394,10 @@ Refresh uniquely resolved harness providers declared by each selected KI reposit
 changes neither user nor repository skill activation.
 .TP
 .B ki repo [repo-options] diag
-Resolve every selected KI repository. Without \fB--repo\fR, KI uses the direct-CWD
-configuration or discovers from the current working directory; with it, KI
-resolves only the supplied target set.
+Resolve every selected KI repository. Without an explicit selector, KI uses a
+direct-CWD workspace default, then direct-CWD \fB.mgitconfig\fR, or discovers
+from the current working directory; with a selector, KI resolves only the
+supplied target set.
 .SS Harness management
 \&
 .PP

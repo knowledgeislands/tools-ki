@@ -51,16 +51,25 @@ export const createDiagCommand = (context: KiContext): Command =>
     context.stdout.write(`${lines.join('\n')}\n`)
   })
 
-export const createRepoDiagCommand = (context: KiContext, selectedRepositories: () => readonly string[]): Command =>
+export const createRepoDiagCommand = (
+  context: KiContext,
+  selectedRepositories: () => { readonly repositories: readonly string[]; readonly workspace?: string }
+): Command =>
   new Command('diag').description('report one or more KI repository resolutions').action(async () => {
     const selected = selectedRepositories()
     const repositories = await resolveRepositoryTargets({
-      repositories: selected,
+      repositories: selected.repositories,
+      workspace: selected.workspace,
       workingDirectory: context.workingDirectory,
       homeDirectory: context.homeDirectory
     })
-    const source =
-      selected.length === 1 ? `explicit path ${selected[0]}` : selected.length ? 'explicit target set' : 'current working directory'
+    const source = selected.workspace
+      ? `workspace group ${selected.workspace}`
+      : selected.repositories.length === 1
+        ? `explicit path ${selected.repositories[0]}`
+        : selected.repositories.length
+          ? 'explicit target set'
+          : 'current working directory'
     const reports = repositories.map(
       (repository) => `Repository: ${repository.root}\nConfiguration: ${repository.configuration}\nSource: ${source}`
     )

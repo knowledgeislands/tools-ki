@@ -1,6 +1,7 @@
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import { KiError } from './errors.ts'
+import { workspaceConfigurationExists, workspaceGroup } from './workspace.ts'
 
 const CONFIGURATION_FILE = '.ki-config.toml'
 const MGIT_CONFIGURATION_FILE = '.mgitconfig'
@@ -85,10 +86,10 @@ const walkDirectories = async (directory: string): Promise<readonly string[]> =>
   return directories
 }
 
-const expandPattern = async (value: string, workingDirectory: string): Promise<readonly string[]> => {
+const expandPattern = async (value: string, workingDirectory: string, source = '--repo'): Promise<readonly string[]> => {
   const pattern = isAbsolute(value) ? resolve(value) : resolve(workingDirectory, value)
   const base = globBase(pattern)
-  await physicalDirectory(base, `--repo pattern ${value} has no existing directory`)
+  await physicalDirectory(base, `${source} pattern ${value} has no existing directory`)
   const expression = globExpression(pattern)
   return (await walkDirectories(base)).filter((directory) => expression.test(directory))
 }
@@ -156,9 +157,11 @@ const distinctTargets = (targets: readonly RepositoryLocation[], source: string)
 
 export const resolveRepositoryTargets = async (options: {
   readonly repositories: readonly string[]
+  readonly workspace?: string
   readonly workingDirectory: string
   readonly homeDirectory: string
 }): Promise<readonly RepositoryLocation[]> => {
+  if (options.repositories.length && options.workspace) throw new KiError('--repo and --workspace cannot be used together', 2)
   if (options.repositories.length) {
     const targets: RepositoryLocation[] = []
     for (const value of options.repositories) {
@@ -179,6 +182,27 @@ export const resolveRepositoryTargets = async (options: {
     return distinctTargets(targets, '--repo')
   }
   const working = await realpath(options.workingDirectory)
+  if (options.workspace || (await workspaceConfigurationExists(working))) {
+    const selected = await workspaceGroup(working, options.workspace)
+    const targets: RepositoryLocation[] = []
+    for (const repository of selected.repositories) {
+      if (!hasPattern(repository)) {
+        targets.push(
+          await targetFromDirectory(
+            resolve(working, repository),
+            `workspace group ${selected.name} repository ${repository} must be an existing directory`,
+            `workspace group ${selected.name} repository ${repository} must name a repository containing .ki-config.toml`
+          )
+        )
+        continue
+      }
+      const matches = await expandPattern(repository, working, `workspace group ${selected.name}`)
+      if (!matches.length) throw new KiError(`workspace group ${selected.name} pattern ${repository} matched no repositories`, 2)
+      for (const match of matches)
+        targets.push(await targetFromDirectory(match, `workspace group ${selected.name} pattern ${repository} matched a non-KI directory`))
+    }
+    return distinctTargets(targets, `workspace group ${selected.name}`)
+  }
   const configuration = join(working, MGIT_CONFIGURATION_FILE)
   if (await isRegularFile(configuration)) return distinctTargets(await repositoriesFromMgitConfiguration(working), '.mgitconfig')
   return [await resolveRepository({ workingDirectory: options.workingDirectory, homeDirectory: options.homeDirectory })]

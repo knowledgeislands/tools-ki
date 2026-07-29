@@ -32,7 +32,10 @@ const createUserCommands = (context: KiContext): readonly Command[] => [
     })
 ]
 
-export const createRepoSkillCommand = (context: KiContext, selectedRepositories: () => readonly string[]): Command =>
+export const createRepoSkillCommand = (
+  context: KiContext,
+  selectedRepositories: () => { readonly repositories: readonly string[]; readonly workspace?: string }
+): Command =>
   new Command('skill')
     .description('manage KI-managed skills in one or more repositories')
     .addCommand(
@@ -42,7 +45,7 @@ export const createRepoSkillCommand = (context: KiContext, selectedRepositories:
         .option('--replace', 're-point an existing KI-managed link at the resolved harness source')
         .action(async (skill: string, options: { replace?: boolean }) => {
           const repositories = await resolveRepositoryTargets({
-            repositories: selectedRepositories(),
+            ...selectedRepositories(),
             workingDirectory: context.workingDirectory,
             homeDirectory: context.homeDirectory
           })
@@ -66,7 +69,7 @@ export const createRepoSkillCommand = (context: KiContext, selectedRepositories:
         .argument('<skill>', 'skill capability name to unlink')
         .action(async (skill: string) => {
           const repositories = await resolveRepositoryTargets({
-            repositories: selectedRepositories(),
+            ...selectedRepositories(),
             workingDirectory: context.workingDirectory,
             homeDirectory: context.homeDirectory
           })

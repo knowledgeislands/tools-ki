@@ -16,7 +16,8 @@ export const rootCommandNames = [
   'search',
   'skill',
   'update',
-  'version'
+  'version',
+  'workspace'
 ] as const
 
 export const repoCommandNames = ['audit', 'conform', 'diag', 'educate', 'skill', 'upgrade'] as const

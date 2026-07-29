@@ -65,10 +65,13 @@ export const createUpdateCommand = (context: KiContext): Command =>
       context.stdout.write(`${lines.join('\n')}\n`)
     })
 
-export const createUpgradeCommand = (context: KiContext, selectedRepositories: () => readonly string[]): Command =>
+export const createUpgradeCommand = (
+  context: KiContext,
+  selectedRepositories: () => { readonly repositories: readonly string[]; readonly workspace?: string }
+): Command =>
   new Command('upgrade').description('refresh uniquely resolved capabilities declared by one or more KI repositories').action(async () => {
     const repositories = await resolveRepositoryTargets({
-      repositories: selectedRepositories(),
+      ...selectedRepositories(),
       workingDirectory: context.workingDirectory,
       homeDirectory: context.homeDirectory
     })

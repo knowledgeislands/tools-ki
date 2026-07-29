@@ -38,11 +38,21 @@ Neither command changes user or repository skill activation; read the [update an
 
 ## Select repository targets
 
-Every `ki repo` operation accepts repeated `--repo <path-or-pattern>` options. Literal paths and patterns resolve to physical KI repository roots in deterministic order; an unmatched pattern, invalid root, or duplicate root stops the operation before any target runs.
+Every `ki repo` operation accepts repeated `--repo <path-or-pattern>` options or one `--workspace <group>` option. The two explicit selectors are mutually exclusive. Literal paths and patterns resolve to physical KI repository roots in deterministic order; an unmatched pattern, invalid root, or duplicate root stops the operation before any target runs.
 
-Without `--repo`, `ki` reads a regular `.mgitconfig` only from the physical current working directory and follows its declared repository and nested-container entries downward. It never invokes `mgit` or searches ancestor directories for that configuration. Without a direct-CWD configuration, it retains single-repository discovery from the working directory.
+Use `ki workspace init` in a workspace directory to create a KI-owned `.ki-workspace.toml`, then add ordered repository paths or patterns to named groups. A regular direct-CWD workspace file takes precedence when no selector is supplied: its default group is selected before a direct-CWD `.mgitconfig`. `--workspace <group>` selects a named group explicitly. Workspace members resolve relative to the workspace directory; KI never searches ancestor directories for a workspace or `mgit` configuration.
+
+Without an explicit selector or direct-CWD workspace, `ki` reads a regular direct-CWD `.mgitconfig` and follows its declared repository and nested-container entries downward. It never invokes `mgit`. Without a direct-CWD configuration, it retains single-repository discovery from the working directory.
 
 After target selection, operations run in target order. Read-only operations isolate a target's diagnostic; mutations retain earlier successful targets if a later target fails and return a non-zero overall result.
+
+```sh
+ki workspace init
+ki workspace add default 'repos/*'
+ki workspace add release ../release-repositories/*
+ki repo diag
+ki repo --workspace release audit
+```
 
 ## Install
 

@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-004
 title: Add explicit KI workspaces
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: c2ac480f5553eca0754d315a1528eed7dff14957
@@ -31,11 +31,11 @@ Repository-scoped commands will accept `--workspace <group>` and resolve that na
 
 ## Steps
 
-1. Define the direct-CWD `.ki-workspace.toml` schema and `ki workspace` grammar for initialising, listing, inspecting, adding, and removing named repository groups and their default.
-2. Extend repository target selection with mutually exclusive `--repo` and `--workspace` selectors, then direct-CWD workspace-default, `.mgitconfig`, and single-repository fallback precedence.
-3. Reuse the CLI-006 resolver for workspace-relative physical-root validation, duplicate detection, deterministic ordering, and clear missing or non-KI diagnostics.
-4. Add black-box contracts for workspace persistence, group validation, selector precedence, ordering, and independent per-repository outcomes across existing `ki repo` commands.
-5. Update help, completions, `ki(1)`, README, developer guidance, and the non-blocking `ki-website` handoff with the workspace authority and lifecycle boundary.
+1. ✓ Define the direct-CWD `.ki-workspace.toml` schema and `ki workspace` grammar for initialising, listing, inspecting, adding, and removing named repository groups and their default.
+2. ✓ Extend repository target selection with mutually exclusive `--repo` and `--workspace` selectors, then direct-CWD workspace-default, `.mgitconfig`, and single-repository fallback precedence.
+3. ✓ Reuse the CLI-006 resolver for workspace-relative physical-root validation, duplicate detection, deterministic ordering, and clear missing or non-KI diagnostics.
+4. ✓ Add black-box contracts for workspace persistence, group validation, selector precedence, ordering, and independent per-repository outcomes across existing `ki repo` commands.
+5. ✓ Update help, completions, `ki(1)`, README, developer guidance, and the non-blocking `ki-website` handoff with the workspace authority and lifecycle boundary.
 
 ## Files touched
 
@@ -61,6 +61,33 @@ One mechanical implementation lane may edit the workspace parser, target resolve
 Locked decisions: direct-CWD regular `.ki-workspace.toml`; `schema = 1`; named groups and a required default; workspace-relative paths or patterns; explicit `--repo` and `--workspace` conflict; fallback order workspace default, `.mgitconfig`, then normal discovery; workspace management is the only mutable surface.
 
 Escalate any question about public command spelling, TOML grammar beyond the locked shape, output wording that affects compatibility, or a need to change unrelated command semantics. Definition of done: the bounded files implement that contract, focused black-box tests pass, and the worker reports changed files plus uncommitted verification output. The orchestrator reviews the diff, runs the full gate, and owns integration and acceptance.
+
+## Acceptance
+
+### Delivered
+
+- `ki workspace init`, `list`, `show`, `add`, and `remove` manage a direct-CWD regular `.ki-workspace.toml` without requiring a KI repository in that directory.
+- Workspace files use `schema = 1`, a required named default group, and ordered group member paths or patterns; malformed, symbolic, missing, or invalid files fail closed.
+- Every `ki repo` operation now receives the mutually exclusive `--repo` and `--workspace` selectors through the shared target resolver. With neither selector, selection is direct-CWD workspace default, direct-CWD `.mgitconfig`, then normal repository discovery.
+- Workspace member paths and patterns resolve physically from the workspace root, preserve deterministic ordering, reject missing, non-KI, duplicate, and unmatched targets, and do not search ancestor configuration.
+- Root help, completion contracts, README, local-development guidance, `ki(1)`, and the non-blocking [`ki-website` handoff](../../-/_HANDOFFS/ki-website/KI-TOOL-CLI-004-ki-workspaces.md) describe the boundary.
+
+### Verification
+
+- `bunx tsc --noEmit`
+- `bun run test:coverage` — 402 passing tests and 100% statements, branches, functions, and lines.
+- `bunx markdownlint-cli2 --no-globs README.md docs/developer/local-development.md ./-/_HANDOFFS/ki-website/KI-TOOL-CLI-004-ki-workspaces.md`
+- `mandoc -T utf8 man/ki.1`
+- `./bin/ki repo audit --skill ki-roadmap --repo .` — 0 FAIL, 0 WARN.
+- `git diff --check`
+
+### Outstanding concerns
+
+`ki workspace` records selectors but deliberately does not validate or normalise each member during mutation; validation happens when a repository operation selects the group. This keeps the workspace editable while a repository checkout is temporarily absent, and preserves the operation's all-or-nothing target preflight.
+
+### Mini recap
+
+CLI-004 adds KI-owned, explicit repository workspaces on top of CLI-006's shared physical target resolver. It is ready for user acceptance and remains an enabling selector for CLI-003's future governed-work inventory.
 
 ## Discussion
 

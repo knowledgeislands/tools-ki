@@ -16,6 +16,7 @@ import { createSearchCommand } from './commands/search.ts'
 import { createSkillCommand } from './commands/skill.ts'
 import { createUpdateCommand } from './commands/update.ts'
 import { createVersionCommand } from './commands/version.ts'
+import { createWorkspaceCommand } from './commands/workspace.ts'
 import type { KiContext } from './context.ts'
 import { KiError, KiExit } from './core/errors.ts'
 import { KI_VERSION } from './version.ts'
@@ -41,6 +42,7 @@ export const createProgram = (context: KiContext): Command => {
   program.addCommand(createSearchCommand(context))
   program.addCommand(createSkillCommand(context))
   program.addCommand(createVersionCommand(context))
+  program.addCommand(createWorkspaceCommand(context))
   program.addCommand(createUpdateCommand(context))
   program.addCommand(createAcquireCommand(context))
   program.addCommand(createHelpCommand(program))

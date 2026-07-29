@@ -53,9 +53,10 @@ const runCommands = async (
   }
 }
 
-const resolveSkills = async (context: KiContext, options: { repositories: readonly string[]; skill?: string }) => {
+const resolveSkills = async (context: KiContext, options: { repositories: readonly string[]; workspace?: string; skill?: string }) => {
   const repositories = await resolveRepositoryTargets({
     repositories: options.repositories,
+    workspace: options.workspace,
     workingDirectory: context.workingDirectory,
     homeDirectory: context.homeDirectory
   })
@@ -445,7 +446,11 @@ export const createRepoCommand = (context: KiContext): Command => {
       (value: string, previous: readonly string[] = []) => [...previous, value],
       []
     )
-  const selectedRepositories = (): readonly string[] => command.opts<{ repo: readonly string[] }>().repo
+    .option('--workspace <group>', 'workspace group from .ki-workspace.toml in the current directory')
+  const selectedRepositories = (): { readonly repositories: readonly string[]; readonly workspace?: string } => {
+    const options = command.opts<{ repo: readonly string[]; workspace?: string }>()
+    return { repositories: options.repo, workspace: options.workspace }
+  }
   return command
     .addCommand(createRepoDiagCommand(context, selectedRepositories))
     .addCommand(createRepoSkillCommand(context, selectedRepositories))
@@ -455,7 +460,7 @@ export const createRepoCommand = (context: KiContext): Command => {
         .description('explain maintenance for declared skills')
         .option('--skill <capability>', 'one declared resolved skill to explain')
         .action(async (options: { skill?: string }) => {
-          const selected = await resolveSkills(context, { ...options, repositories: selectedRepositories() })
+          const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
           for (const { skills } of selected) {
             const educations = await runWithProgress(context, 'educate', skills, (skill) => educateSkill(skill), {
               progress: 'auto',
@@ -476,7 +481,7 @@ export const createRepoCommand = (context: KiContext): Command => {
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN)')
         .action(async (options: { skill?: string; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
           const output = operationOptions('audit', options)
-          const selected = await resolveSkills(context, { ...options, repositories: selectedRepositories() })
+          const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
           let failed = false
           for (const { repository, skills } of selected) {
             const results = await runWithProgress(
@@ -518,7 +523,7 @@ export const createRepoCommand = (context: KiContext): Command => {
         .action(
           async (options: { skill?: string; dryRun?: boolean; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
             const output = operationOptions('conform', options)
-            const selected = await resolveSkills(context, { ...options, repositories: selectedRepositories() })
+            const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
             for (const { repository, skills } of selected) {
               const conformed = await runWithProgress(
                 context,
