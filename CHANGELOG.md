@@ -10,27 +10,60 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 ### Shipped commands
 
-- `ki acquire chatgpt import`
+#### General
+
+- `ki`
+- `ki help`
+
+#### Installation
+
 - `ki bootstrap`
 - `ki completions <shell>`
-- `ki dev`
+- `ki outdated`
+- `ki missing`
+- `ki update`
+- `ki search`
+- `ki cleanup`
+
+#### Diagnostics
+
+- `ki version`
 - `ki diag`
 - `ki doctor`
-- `ki harness`
-- `ki install`
+- `ki docs`
+
+#### User management
+
 - `ki list`
-- `ki missing`
-- `ki outdated`
+- `ki skill add`
+- `ki skill remove`
+
+#### Repository management
+
 - `ki repo audit`
 - `ki repo conform`
-- `ki repo diag`
-- `ki repo skill`
+- `ki repo educate`
+- `ki repo skill add`
+- `ki repo skill remove`
 - `ki repo upgrade`
-- `ki reinstall`
-- `ki skill`
-- `ki uninstall`
-- `ki update`
-- `ki version`
+- `ki repo diag`
+
+#### Harness management
+
+- `ki harness info`
+- `ki harness list`
+- `ki harness install`
+- `ki harness uninstall`
+
+#### Acquisition
+
+- `ki acquire chatgpt import`
+
+#### Development
+
+- `ki dev local on`
+- `ki dev local off`
+- `ki dev skill rubric`
 
 ### Distribution baseline
 

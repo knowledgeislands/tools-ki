@@ -3,9 +3,9 @@ id: KI-TOOL-CLI-006
 title: Add multi-repository invocations
 theme: cli
 horizon: next
-status: ready
+status: open
 blocks: [KI-TOOL-CLI-003]
-blocked-by: [KI-TOOL-CLI-005]
+blocked-by: [KI-TOOL-CLI-005, KI-TOOL-CLI-008]
 baseline-ref: null
 ---
 
@@ -59,4 +59,4 @@ The rendered manual also needs clearer sectional rhythm: place visible vertical 
 
 ## Dependencies / blocks
 
-This item is blocked by [KI-TOOL-CLI-005](KI-TOOL-CLI-005-align-command-scopes-and-repository-resolution.md). It blocks [KI-TOOL-CLI-003](KI-TOOL-CLI-003-add-native-governed-plan-inventory.md).
+This item is blocked by [KI-TOOL-CLI-005](KI-TOOL-CLI-005-align-command-scopes-and-repository-resolution.md) and [KI-TOOL-CLI-008](KI-TOOL-CLI-008-consolidate-harness-and-developer-commands.md). It blocks [KI-TOOL-CLI-003](KI-TOOL-CLI-003-add-native-governed-plan-inventory.md).
