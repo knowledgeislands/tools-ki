@@ -4,7 +4,7 @@ title: Add native governed-plan inventory
 theme: cli
 horizon: next
 status: open
-blocks: [KI-TOOL-CLI-004]
+blocks: []
 blocked-by: [KI-TOOL-CLI-006]
 baseline-ref: null
 ---
@@ -21,7 +21,7 @@ This item does not implement lifecycle transitions or aggregate multiple reposit
 
 `ki repo` now resolves the reusable multi-target set from `KI-TOOL-CLI-006`, but exposes no native work-item inventory. Canonical governed work items are regular Markdown files directly below `docs/roadmap/`; the harness owns their format and lifecycle.
 
-The inventory needs a deliberately read-only parser and result model that CLI-004 can reuse when it later selects repositories through KI-owned workspace groups.
+The inventory needs a deliberately read-only parser and result model that can consume any repository target set, including KI-owned workspace groups once CLI-004 supplies them.
 
 ### Inventory contract
 
@@ -68,7 +68,7 @@ The contract uses text by default and JSON only through an explicit `--format js
 
 ### Workspace reuse
 
-CLI-003 owns no workspace selection. Its target-set input and per-repository result model are deliberately reusable so CLI-004 can add KI-owned named workspace groups without adding another inventory implementation.
+CLI-003 owns no workspace selection. Its target-set input and per-repository result model deliberately accept the selector that CLI-004 supplies, without making either item a prerequisite for the other.
 
 ### Dependency boundary
 

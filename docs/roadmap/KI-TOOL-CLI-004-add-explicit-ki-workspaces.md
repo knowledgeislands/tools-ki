@@ -3,9 +3,9 @@ id: KI-TOOL-CLI-004
 title: Add explicit KI workspaces
 theme: cli
 horizon: next
-status: open
+status: ready
 blocks: []
-blocked-by: [KI-TOOL-CLI-003]
+blocked-by: []
 baseline-ref: null
 ---
 
@@ -21,7 +21,7 @@ This item does not recursively scan ambient folders, replace Git or `mgit`, sear
 
 ## Current state
 
-The CLI has no persisted workspace definition or aggregate work-item view. `KI-TOOL-CLI-003` owns the read-only per-repository inventory representation this item will reuse, and `KI-TOOL-CLI-006` owns the reusable target-set resolver.
+The CLI has no persisted workspace definition. `KI-TOOL-CLI-006` owns the reusable target-set resolver; CLI-004 extends that resolver with KI-owned workspace selection before CLI-003 adds a plan-inventory command that can consume it.
 
 ### Workspace and selection contract
 
@@ -34,14 +34,13 @@ Repository-scoped commands will accept `--workspace <group>` and resolve that na
 1. Define the direct-CWD `.ki-workspace.toml` schema and `ki workspace` grammar for initialising, listing, inspecting, adding, and removing named repository groups and their default.
 2. Extend repository target selection with mutually exclusive `--repo` and `--workspace` selectors, then direct-CWD workspace-default, `.mgitconfig`, and single-repository fallback precedence.
 3. Reuse the CLI-006 resolver for workspace-relative physical-root validation, duplicate detection, deterministic ordering, and clear missing or non-KI diagnostics.
-4. Make `ki repo --workspace <group> plan list` reuse CLI-003 inventory results and isolate every repository result or diagnostic.
-5. Add black-box contracts for workspace persistence, group validation, selector precedence, ordering, mixed outcomes, and read-only inventory operations.
-6. Update help, completions, `ki(1)`, README, developer guidance, and the non-blocking `ki-website` handoff with the workspace authority and lifecycle boundary.
+4. Add black-box contracts for workspace persistence, group validation, selector precedence, ordering, and independent per-repository outcomes across existing `ki repo` commands.
+5. Update help, completions, `ki(1)`, README, developer guidance, and the non-blocking `ki-website` handoff with the workspace authority and lifecycle boundary.
 
 ## Files touched
 
 - `src/commands/`, `src/core/`, configuration/path modules, registration, and completions
-- `src/tests/cli/` workspace and aggregate inventory contracts
+- `src/tests/cli/` workspace selection and management contracts
 - `man/ki.1`, README, developer documentation, and a non-blocking KI Website handoff for public user guidance
 
 ## Verify
@@ -49,11 +48,11 @@ Repository-scoped commands will accept `--workspace <group>` and resolve that na
 1. `bunx tsc --noEmit`
 2. `bun run test:coverage`
 3. `./bin/ki repo audit --repo .`
-4. CLI contracts prove workspace-root containment, schema validation, explicit-selector conflict handling, direct-CWD precedence over `.mgitconfig`, deterministic aggregate output, isolated diagnostics, and no list mutation.
+4. CLI contracts prove workspace-root containment, schema validation, explicit-selector conflict handling, direct-CWD precedence over `.mgitconfig`, deterministic selection, isolated diagnostics, and no workspace-management mutation from `ki repo` commands.
 
 ## Dependencies / blocks
 
-This item is blocked by [KI-TOOL-CLI-003](KI-TOOL-CLI-003-add-native-governed-plan-inventory.md).
+CLI-004 has no blocking roadmap dependency. It extends the target-set selector from CLI-006 and provides a reusable workspace selector that CLI-003 may consume for inventory later.
 
 ## Discussion
 
@@ -65,10 +64,10 @@ A workspace is a named KI-owned definition of physical KI repository roots, not 
 
 An explicit `--repo` or `--workspace` makes a caller's intent unambiguous, so the two selectors are rejected together rather than silently applying one. Without either selector, the direct-CWD `.ki-workspace.toml` default comes before direct-CWD `.mgitconfig`; ordinary repository discovery remains the final fallback.
 
-### Aggregate boundary
+### Command boundary
 
-The aggregate operation reuses CLI-003's inventory representation and runs read-only. A missing, invalid, or unavailable member produces an isolated diagnostic; it neither removes the member from the workspace nor prevents independent members from being reported.
+Workspace management is the only mutable surface in this item. Every `ki repo` operation remains responsible for its own behaviour after selection; workspace selection changes neither operation semantics nor lifecycle ownership. When CLI-003 introduces plan inventory, `ki repo --workspace <group> plan list` will follow from this shared selector without another aggregate implementation.
 
 ### Dependency boundary
 
-CLI-003 supplies the inventory contract and CLI-006 supplies multi-target resolution. This item should add persistence and named coordination only after both contracts are delivered.
+CLI-006 supplies multi-target resolution. CLI-004 adds persistence and named coordination independently; CLI-003 may subsequently consume the resulting selector for inventory.
