@@ -27,8 +27,8 @@ The source registers all three commands. The manual, changelog, runtime help, co
 
 1. Publish `ki search`, `ki cleanup`, and `ki docs` in the manual and changelog, remove the obsolete `*` marker explanation, and make the manual describe the intended V1 surface.
 2. Implement the locked contracts with black-box CLI tests and update help, completions, manual, and user guides.
-4. Render and inspect the manual, then verify the runtime exposes each command without any `*`-prefixed planned interface.
-5. Perform a post-implementation CLI-surface audit: compare command registration, root and command help, completion inventory, documentation, and black-box contracts against the intended V1 command inventory. Record and resolve every discrepancy before acceptance.
+3. Render and inspect the manual, then verify the runtime exposes each command without any `*`-prefixed planned interface.
+4. Perform a post-implementation CLI-surface audit: compare command registration, root and command help, completion inventory, documentation, and black-box contracts against the intended V1 command inventory. Record and resolve every discrepancy before acceptance.
 
 ## Files touched
 
@@ -54,7 +54,7 @@ This item is independent of KI-TOOL-CLI-008’s code changes, but both must comp
 
 - `ki search <query>` requires one non-empty query and searches only verified installed harnesses. It matches case-insensitively against harness identifier, capability kind, and capability name; results are sorted by harness identifier, capability kind, and capability name. It never consults a repository, a remote registry, or the network. No match exits successfully with an explicit empty result.
 - `ki cleanup` has no arguments. It may remove only a persisted, versioned KI-owned stale-artifact format. No such format exists in V1, so it reports that no eligible managed stale state exists and makes no filesystem change. It must not infer that transaction-looking directories, cache contents, unconfigured harnesses, links, or unknown files are stale.
-- `ki docs [topic]` is read-only and prints a canonical URL; it never launches a browser or fetches content. The supported topics are `overview` (the default), `manual`, and `roadmap`, resolving respectively to the repository overview, tracked `ki(1)` manual, and roadmap URLs. An unknown topic exits with a grammar-style error.
+- `ki docs [topic]` is read-only and prints canonical URLs; it never launches a browser or fetches content. With no topic, it prints every available location with `Overview:`, `Site:`, `Manual:`, and `Roadmap:` prefixes. The supported single-location topics are `overview`, `site`, `manual`, and `roadmap`, resolving respectively to the public KI CLI guide, general KI site, tracked `ki(1)` manual, and roadmap URLs. An unknown topic exits with a grammar-style error.
 - The manual describes the precise V1 contracts above. The changelog remains a compact command inventory and does not repeat option or output detail.
 
 ### Escalate
@@ -76,7 +76,7 @@ This item is independent of KI-TOOL-CLI-008’s code changes, but both must comp
 
 - Added `ki search <query>` for deterministic case-insensitive search across verified installed harness identifiers, capability kinds, and capability names.
 - Added `ki cleanup` as an explicit non-mutating report until KI persists a versioned, owned stale-artifact format.
-- Added `ki docs [overview|manual|roadmap]` to print fixed canonical documentation URLs without opening a browser or fetching content.
+- Added `ki docs [overview|site|manual|roadmap]` to print fixed canonical documentation URLs without opening a browser or fetching content.
 - Added root registration, help, Bash and Zsh completion inventory, user guide coverage, and black-box CLI contracts for all three commands.
 
 ### Summary of changes

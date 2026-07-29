@@ -60,7 +60,7 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 `ki cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files.
 
-`ki docs [overview|manual|roadmap]` prints a canonical public documentation URL and never opens a browser or fetches content.
+`ki docs` prints labelled public CLI, site, manual, and roadmap locations; `ki docs [overview|site|manual|roadmap]` prints one location. It never opens a browser or fetches content.
 
 The [local utility commands guide](docs/guides/user/local-commands.md) defines their precise behavior and output.
 

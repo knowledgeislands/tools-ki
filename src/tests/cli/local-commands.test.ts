@@ -72,10 +72,18 @@ describe('[ki local utility commands]', () => {
   test('prints canonical documentation URLs without launching or fetching content', async () => {
     const box = await sandbox()
     const overview = await box.run('ki docs')
+    const explicitOverview = await box.run('ki docs overview')
+    const site = await box.run('ki docs site')
     const manual = await box.run('ki docs manual')
     const roadmap = await box.run('ki docs roadmap')
 
-    expect(overview).toEqual({ exitCode: 0, output: 'https://github.com/knowledgeislands/tools-ki\n' })
+    expect(overview).toEqual({
+      exitCode: 0,
+      output:
+        'Overview: https://knowledgeislands.info/tooling/cli/\nSite: https://knowledgeislands.info/\nManual: https://github.com/knowledgeislands/tools-ki/blob/main/man/ki.1\nRoadmap: https://github.com/knowledgeislands/tools-ki/blob/main/ROADMAP.md\n'
+    })
+    expect(explicitOverview).toEqual({ exitCode: 0, output: 'https://knowledgeislands.info/tooling/cli/\n' })
+    expect(site).toEqual({ exitCode: 0, output: 'https://knowledgeislands.info/\n' })
     expect(manual).toEqual({ exitCode: 0, output: 'https://github.com/knowledgeislands/tools-ki/blob/main/man/ki.1\n' })
     expect(roadmap).toEqual({ exitCode: 0, output: 'https://github.com/knowledgeislands/tools-ki/blob/main/ROADMAP.md\n' })
   })
@@ -86,7 +94,7 @@ describe('[ki local utility commands]', () => {
     const option = await box.run('ki docs --open')
     const extra = await box.run('ki docs manual extra')
 
-    expect(unknown).toEqual({ exitCode: 2, output: 'ki: error: docs topic must be overview, manual, or roadmap\n' })
+    expect(unknown).toEqual({ exitCode: 2, output: 'ki: error: docs topic must be overview, site, manual, or roadmap\n' })
     expect(option.exitCode).toBe(2)
     expect(extra.exitCode).toBe(2)
   })

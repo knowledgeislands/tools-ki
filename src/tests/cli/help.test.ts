@@ -36,7 +36,7 @@ describe('[ki help]', () => {
     expect(missing.output).toContain('report desired capabilities without an installed provider')
     expect(search.output).toContain('search verified installed harness capabilities')
     expect(cleanup.output).toContain('report eligible KI-managed stale state')
-    expect(docs.output).toContain('print a canonical KI documentation URL')
+    expect(docs.output).toContain('print canonical KI documentation locations')
     expect(repository.output).toContain('educate')
     expect(unknown).toEqual({ exitCode: 2, output: 'ki: error: unknown help topic: absent\n' })
   })

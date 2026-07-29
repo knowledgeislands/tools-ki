@@ -26,11 +26,14 @@ It never treats cache contents, transaction-looking directories, unconfigured ha
 
 ## Print documentation locations
 
-Run `ki docs [topic]` to print one canonical public URL.
+Run `ki docs [topic]` to print canonical public URLs.
 
-The supported topics are `overview` (the default), `manual`, and `roadmap`.
+With no topic, KI prints every location with an `Overview:`, `Site:`, `Manual:`, or `Roadmap:` prefix.
 
-- `ki docs` and `ki docs overview` print `https://github.com/knowledgeislands/tools-ki`.
+The supported single-location topics are `overview`, `site`, `manual`, and `roadmap`.
+
+- `ki docs overview` prints `https://knowledgeislands.info/tooling/cli/`.
+- `ki docs site` prints `https://knowledgeislands.info/`.
 - `ki docs manual` prints `https://github.com/knowledgeislands/tools-ki/blob/main/man/ki.1`.
 - `ki docs roadmap` prints `https://github.com/knowledgeislands/tools-ki/blob/main/ROADMAP.md`.
 

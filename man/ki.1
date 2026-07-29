@@ -63,7 +63,7 @@ Show installation mode, paths, and user configuration.
 Check user configuration, agents, harnesses, and user-skill links.
 .TP
 .B ki docs [topic]
-Print a canonical KI documentation URL.
+Print canonical KI documentation locations.
 .SS User management
 \&
 .PP
@@ -251,12 +251,15 @@ harnesses, and configured KI user-skill links without changing state. A failing
 check produces a non-zero exit status after the complete report.
 .TP
 .B ki docs [topic]
-Print a canonical documentation URL without opening a browser, fetching
-content, or discovering a repository. The default topic is
-.BR overview ,
-which prints
-.IR https://github.com/knowledgeislands/tools-ki .
-The other supported topics are
+Print canonical documentation locations without opening a browser, fetching
+content, or discovering a repository. With no topic, it prints every
+available location with an explanatory prefix. The supported topics are
+.B overview
+for
+.IR https://knowledgeislands.info/tooling/cli/ ,
+.B site
+for
+.IR https://knowledgeislands.info/ ,
 .B manual
 for
 .IR https://github.com/knowledgeislands/tools-ki/blob/main/man/ki.1
