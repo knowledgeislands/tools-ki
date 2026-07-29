@@ -5,7 +5,7 @@ theme: cli
 horizon: next
 status: open
 blocks: []
-blocked-by: [KI-TOOL-CLI-006]
+blocked-by: []
 baseline-ref: null
 ---
 
@@ -56,7 +56,7 @@ Malformed or unsafe work-item files fail only their repository result after targ
 
 ## Dependencies / blocks
 
-CLI-006 and CLI-004 are done, so their shared repository selector is available for this item. CLI-003 does not block CLI-004: workspace selection is independently delivered and CLI-003 consumes it only when available.
+The shared repository selector is available for this item. CLI-003 does not block workspace selection: it consumes an already-delivered selector only when available.
 
 ## Discussion
 
