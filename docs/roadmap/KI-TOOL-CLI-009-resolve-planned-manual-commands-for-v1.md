@@ -29,6 +29,7 @@ The source currently registers none of these commands. The manual and changelog 
 2. Define each command’s exact input, local data sources, output, error handling, and mutation boundary; obtain review before implementation.
 3. Implement the approved contracts with black-box CLI tests and update help, completions, manual, and user guides.
 4. Render and inspect the manual, then verify the runtime exposes each command without any `*`-prefixed planned interface.
+5. Perform a post-implementation CLI-surface audit: compare command registration, root and command help, completion inventory, documentation, and black-box contracts against the intended V1 command inventory. Record and resolve every discrepancy before acceptance.
 
 ## Files touched
 
@@ -41,6 +42,8 @@ The source currently registers none of these commands. The manual and changelog 
 2. `bun run test:coverage`
 3. `mandoc -Tutf8 man/ki.1 | col -b` renders the intended V1 manual.
 4. `rg '\\\*ki (search|docs)|unreleased development surface' man/ki.1` has no matches.
+
+5. The post-implementation CLI-surface audit finds no undocumented command, documented-but-unregistered command, stale completion, or missing black-box command contract.
 
 ## Dependencies / blocks
 
