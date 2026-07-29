@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-006
 title: Add multi-repository invocations
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: [KI-TOOL-CLI-003]
 blocked-by: []
-baseline-ref: null
+baseline-ref: 3780dec701eace7277c0cda203712949acab777a
 ---
 
 ## Context
