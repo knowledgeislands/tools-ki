@@ -12,7 +12,7 @@ The seed delivery established the `ki` command channel. The active TypeScript co
 
 ## Acquire a local ChatGPT capture
 
-Prepare a capture using the [controlled local-capture format](docs/guides/user/chatgpt-local-capture.md), then import it into a new output directory:
+Prepare a capture using the [controlled local-capture format](https://knowledgeislands.info/guidance/cli/chatgpt-local-capture/), then import it into a new output directory:
 
 ```sh
 ki acquire chatgpt import ./capture --output ./conversation.kep
@@ -26,7 +26,7 @@ Use `--dry-run` to validate without creating output. The command is local only: 
 
 Use a harness identifier such as `example/harness`.
 
-For target forms and the explicit activation boundary, read the [capability lifecycle guide](docs/guides/user/capability-lifecycle.md).
+For the installation and activation boundary, read the [capability lifecycle guide](https://knowledgeislands.info/guidance/cli/capability-lifecycle/).
 
 ## Update verified installations
 
@@ -34,7 +34,7 @@ For target forms and the explicit activation boundary, read the [capability life
 
 `ki repo upgrade` refreshes the uniquely resolved providers declared by one KI repository.
 
-Neither command changes user or repository skill activation; read the [update and upgrade guide](docs/guides/user/update-upgrade.md) for target selection and ownership boundaries.
+Neither command changes user or repository skill activation; read the [update and upgrade guide](https://knowledgeislands.info/guidance/cli/update-upgrade/) for target selection and ownership boundaries.
 
 ## Install
 
@@ -50,7 +50,7 @@ The installer carries the pinned public key and verifies the release's Ed25519-s
 
 The Homebrew tap will move to these same release artifacts after that first immutable release.
 
-`install.sh --link` is exclusively for development from a local checkout. Read the [local development guide](docs/guides/developer/local-development.md) for that path.
+`install.sh --link` is exclusively for development from a local checkout. Read the [local development guide](docs/developer/local-development.md) for that path.
 
 The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
@@ -62,6 +62,6 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 `ki docs` prints labelled public CLI, site, manual, and roadmap locations; `ki docs [overview|site|manual|roadmap]` prints one location. It never opens a browser or fetches content.
 
-The [local utility commands guide](docs/guides/user/local-commands.md) defines their precise behavior and output.
+The [local utility commands guide](https://knowledgeislands.info/guidance/cli/local-commands/) explains their local-only behaviour and safety boundaries. The installed `ki help` and tracked manual remain authoritative for exact command grammar.
 
 See the [roadmap](ROADMAP.md).
