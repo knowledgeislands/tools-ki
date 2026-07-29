@@ -54,6 +54,14 @@ Repository-scoped commands will accept `--workspace <group>` and resolve that na
 
 CLI-004 has no blocking roadmap dependency. It extends the target-set selector from CLI-006 and provides a reusable workspace selector that CLI-003 may consume for inventory later.
 
+## Delegation
+
+One mechanical implementation lane may edit the workspace parser, target resolver, workspace command, registration, catalogue, and black-box CLI contracts. It uses `gpt-5.6-terra` as the minimum viable model because the contract is locked and the work is implementation-heavy.
+
+Locked decisions: direct-CWD regular `.ki-workspace.toml`; `schema = 1`; named groups and a required default; workspace-relative paths or patterns; explicit `--repo` and `--workspace` conflict; fallback order workspace default, `.mgitconfig`, then normal discovery; workspace management is the only mutable surface.
+
+Escalate any question about public command spelling, TOML grammar beyond the locked shape, output wording that affects compatibility, or a need to change unrelated command semantics. Definition of done: the bounded files implement that contract, focused black-box tests pass, and the worker reports changed files plus uncommitted verification output. The orchestrator reviews the diff, runs the full gate, and owns integration and acceptance.
+
 ## Discussion
 
 ### Workspace ownership
