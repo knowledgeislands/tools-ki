@@ -5,7 +5,7 @@ import { KiError } from '../core/errors.ts'
 import { discoverInstalledHarnesses, type InstalledHarness } from '../core/harness.ts'
 import { installerEnvironment, requireCurrentInstallerReceipt } from '../core/installation.ts'
 import { installHarness, readHarnessRegistry } from '../core/registry.ts'
-import { resolveRepository } from '../core/repository.ts'
+import { resolveRepositoryTargets } from '../core/repository.ts'
 import { resolveDeclaredSkills } from '../core/resolution.ts'
 
 const retainedCapabilities = (harness: InstalledHarness): readonly string[] => harness.capabilities.map((capability) => capability.name)
@@ -65,23 +65,24 @@ export const createUpdateCommand = (context: KiContext): Command =>
       context.stdout.write(`${lines.join('\n')}\n`)
     })
 
-export const createUpgradeCommand = (context: KiContext, selectedRepository: () => string | undefined): Command =>
-  new Command('upgrade').description('refresh uniquely resolved capabilities declared by one KI repository').action(async () => {
-    const repository = await resolveRepository({
-      repository: selectedRepository(),
+export const createUpgradeCommand = (context: KiContext, selectedRepositories: () => readonly string[]): Command =>
+  new Command('upgrade').description('refresh uniquely resolved capabilities declared by one or more KI repositories').action(async () => {
+    const repositories = await resolveRepositoryTargets({
+      repositories: selectedRepositories(),
       workingDirectory: context.workingDirectory,
       homeDirectory: context.homeDirectory
     })
     const harnesses = await discoverInstalledHarnesses(context.paths.data)
-    const skills = resolveDeclaredSkills(await readDeclaredSkills(repository.configuration), harnesses)
-    const selected = [...new Map(skills.map((skill) => [skill.harness.id, skill.harness])).values()]
     const lines = ['ki repo upgrade']
-    if (!selected.length) {
-      lines.push('No declared capabilities.')
-      context.stdout.write(`${lines.join('\n')}\n`)
-      return
+    for (const repository of repositories) {
+      const skills = resolveDeclaredSkills(await readDeclaredSkills(repository.configuration), harnesses)
+      const selected = [...new Map(skills.map((skill) => [skill.harness.id, skill.harness])).values()]
+      if (!selected.length) {
+        lines.push('No declared capabilities.')
+        continue
+      }
+      const refreshed = await refreshHarnesses(context, selected)
+      lines.push(`Repository: ${repository.root}`, 'Providers:', ...refreshed.map((line) => `  ${line}`))
     }
-    const refreshed = await refreshHarnesses(context, selected)
-    lines.push(`Repository: ${repository.root}`, 'Providers:', ...refreshed.map((line) => `  ${line}`))
     context.stdout.write(`${lines.join('\n')}\n`)
   })

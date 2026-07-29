@@ -6,7 +6,7 @@ import type { KiContext } from '../context.ts'
 import { readDeclaredSkills } from '../core/configuration.ts'
 import { KiError } from '../core/errors.ts'
 import { discoverInstalledHarnesses } from '../core/harness.ts'
-import { resolveRepository } from '../core/repository.ts'
+import { resolveRepositoryTargets } from '../core/repository.ts'
 import { type ResolvedSkill, resolveDeclaredSkills } from '../core/resolution.ts'
 import {
   detectFixed,
@@ -53,15 +53,19 @@ const runCommands = async (
   }
 }
 
-const resolveSkills = async (context: KiContext, options: { repo?: string; skill?: string }) => {
-  const repository = await resolveRepository({
-    repository: options.repo,
+const resolveSkills = async (context: KiContext, options: { repositories: readonly string[]; skill?: string }) => {
+  const repositories = await resolveRepositoryTargets({
+    repositories: options.repositories,
     workingDirectory: context.workingDirectory,
     homeDirectory: context.homeDirectory
   })
-  const declarations = await readDeclaredSkills(repository.configuration)
   const harnesses = await discoverInstalledHarnesses(context.paths.data)
-  return { repository, skills: resolveDeclaredSkills(declarations, harnesses, options.skill) }
+  return Promise.all(
+    repositories.map(async (repository) => ({
+      repository,
+      skills: resolveDeclaredSkills(await readDeclaredSkills(repository.configuration), harnesses, options.skill)
+    }))
+  )
 }
 
 const FALLBACK_TERMINAL_COLUMNS = 80
@@ -433,28 +437,34 @@ const renderReports = (
 }
 
 export const createRepoCommand = (context: KiContext): Command => {
-  const command = new Command('repo').description('run operations for one KI repository').option('--repo <path>', 'repository root')
-  const selectedRepository = (): string | undefined => command.opts<{ repo?: string }>().repo
+  const command = new Command('repo')
+    .description('run operations for one or more KI repositories')
+    .option(
+      '--repo <path-or-pattern>',
+      'repository root or pattern',
+      (value: string, previous: readonly string[] = []) => [...previous, value],
+      []
+    )
+  const selectedRepositories = (): readonly string[] => command.opts<{ repo: readonly string[] }>().repo
   return command
-    .addCommand(createRepoDiagCommand(context, selectedRepository))
-    .addCommand(createRepoSkillCommand(context, selectedRepository))
-    .addCommand(createUpgradeCommand(context, selectedRepository))
+    .addCommand(createRepoDiagCommand(context, selectedRepositories))
+    .addCommand(createRepoSkillCommand(context, selectedRepositories))
+    .addCommand(createUpgradeCommand(context, selectedRepositories))
     .addCommand(
       new Command('educate')
         .description('explain maintenance for declared skills')
         .option('--skill <capability>', 'one declared resolved skill to explain')
         .action(async (options: { skill?: string }) => {
-          const { skills } = await resolveSkills(context, { ...options, repo: selectedRepository() })
-          const educations = await runWithProgress(context, 'educate', skills, (skill) => educateSkill(skill), {
-            progress: 'auto',
-            progressStyle: 'single',
-            reporterLevels: []
-          })
-          if (!educations.length) {
-            context.stdout.write('ki repo educate: no declared skills\n')
-            return
+          const selected = await resolveSkills(context, { ...options, repositories: selectedRepositories() })
+          for (const { skills } of selected) {
+            const educations = await runWithProgress(context, 'educate', skills, (skill) => educateSkill(skill), {
+              progress: 'auto',
+              progressStyle: 'single',
+              reporterLevels: []
+            })
+            if (!educations.length) context.stdout.write('ki repo educate: no declared skills\n')
+            else context.stdout.write(`${educations.flatMap(renderEducation).join('\n')}\n`)
           }
-          context.stdout.write(`${educations.flatMap(renderEducation).join('\n')}\n`)
         })
     )
     .addCommand(
@@ -466,31 +476,35 @@ export const createRepoCommand = (context: KiContext): Command => {
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN)')
         .action(async (options: { skill?: string; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
           const output = operationOptions('audit', options)
-          const { repository, skills } = await resolveSkills(context, { ...options, repo: selectedRepository() })
-          const results = await runWithProgress(
-            context,
-            'audit',
-            skills,
-            async (skill, onItemComplete) => ({
-              skill,
-              audit: await runSkillAudit(
-                { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
+          const selected = await resolveSkills(context, { ...options, repositories: selectedRepositories() })
+          let failed = false
+          for (const { repository, skills } of selected) {
+            const results = await runWithProgress(
+              context,
+              'audit',
+              skills,
+              async (skill, onItemComplete) => ({
                 skill,
-                (item) => onItemComplete(item.code)
-              )
-            }),
-            output
-          )
-          const findings = results.flatMap(({ audit }) => audit.findings)
-          if (!findings.length) context.stdout.write(`ki repo audit: clean (${skills.length} skills)\n`)
-          renderReports(
-            context,
-            repository.root,
-            'audit',
-            results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
-            output.reporterLevels
-          )
-          if (findings.some((finding) => finding.level === 'fail')) throw new KiError('repository audit found failures', 1)
+                audit: await runSkillAudit(
+                  { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
+                  skill,
+                  (item) => onItemComplete(item.code)
+                )
+              }),
+              output
+            )
+            const findings = results.flatMap(({ audit }) => audit.findings)
+            if (!findings.length) context.stdout.write(`ki repo audit: clean (${skills.length} skills)\n`)
+            renderReports(
+              context,
+              repository.root,
+              'audit',
+              results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
+              output.reporterLevels
+            )
+            failed ||= findings.some((finding) => finding.level === 'fail')
+          }
+          if (failed) throw new KiError('repository audit found failures', 1)
         })
     )
     .addCommand(
@@ -504,101 +518,103 @@ export const createRepoCommand = (context: KiContext): Command => {
         .action(
           async (options: { skill?: string; dryRun?: boolean; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
             const output = operationOptions('conform', options)
-            const { repository, skills } = await resolveSkills(context, { ...options, repo: selectedRepository() })
-            const conformed = await runWithProgress(
-              context,
-              'conform',
-              skills,
-              async (skill, onItemComplete) => ({
-                skill: skill.skill,
-                prepared: skill,
-                conform: await runSkillConform(
-                  { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
-                  skill,
-                  (item) => onItemComplete(item.code)
-                )
-              }),
-              output
-            )
-            const findings = conformed.flatMap(({ conform }) => conform.findings)
-            const repositoryWrites = await prepareWrites(
-              repository.root,
-              conformed.filter(({ conform }) => conform.scope.kind === 'repository').flatMap(({ conform }) => conform.writes)
-            )
-            const scopedUserWrites = conformed.flatMap(({ conform }) => {
-              const scope = conform.scope
-              if (scope.kind !== 'user-home') return []
-              return conform.writes.map((write) => ({ write, scope: { paths: scope.paths } }))
-            })
-            const userWrites = await prepareScopedWrites(context.homeDirectory, scopedUserWrites)
-            const writes = [...repositoryWrites, ...userWrites]
-            const commands = conformed.flatMap(({ conform }) => conform.commands)
-            if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
-              throw new KiError('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted', 1)
-            for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
-            for (const command of commands) context.stdout.write(`${options.dryRun ? 'would run' : 'run'} ${renderCommand(command)}\n`)
-            if (findings.some((finding) => finding.level === 'fail')) {
-              renderReports(
+            const selected = await resolveSkills(context, { ...options, repositories: selectedRepositories() })
+            for (const { repository, skills } of selected) {
+              const conformed = await runWithProgress(
                 context,
-                repository.root,
                 'conform',
-                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
-                output.reporterLevels
-              )
-              throw new KiError('repository conform found failures', 1)
-            }
-            let publicationError: unknown
-            try {
-              await publishWrites(writes, Boolean(options.dryRun))
-            } catch (error) {
-              publicationError = error
-            }
-            if (options.dryRun) {
-              renderReports(
-                context,
-                repository.root,
-                'conform',
-                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
-                output.reporterLevels
-              )
-              if (publicationError) throw publicationError
-              return
-            }
-            if (!publicationError) await runCommands(repository.root, commands)
-            const reaudited = await runPreparedWithProgress(
-              context,
-              're-audit',
-              conformed.map(({ prepared }) => prepared),
-              async (skill, onItemComplete) => {
-                const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
-                // The re-audit selection is derived directly from conformed above; this only
-                // protects a future refactor from pairing an audit with the wrong conform set.
-                /* v8 ignore next */
-                if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
-                return {
+                skills,
+                async (skill, onItemComplete) => ({
+                  skill: skill.skill,
                   prepared: skill,
-                  conform: previous.conform,
-                  audit: await runSkillAudit(
+                  conform: await runSkillConform(
                     { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
                     skill,
                     (item) => onItemComplete(item.code)
                   )
-                }
-              },
-              output
-            )
-            const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
-            const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
-            renderReports(
-              context,
-              repository.root,
-              'conform',
-              reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
-              output.reporterLevels
-            )
-            if (publicationError) throw publicationError
-            if (auditFindings.some((finding) => finding.level === 'fail'))
-              throw new KiError('repository conform re-audit found failures', 1)
+                }),
+                output
+              )
+              const findings = conformed.flatMap(({ conform }) => conform.findings)
+              const repositoryWrites = await prepareWrites(
+                repository.root,
+                conformed.filter(({ conform }) => conform.scope.kind === 'repository').flatMap(({ conform }) => conform.writes)
+              )
+              const scopedUserWrites = conformed.flatMap(({ conform }) => {
+                const scope = conform.scope
+                if (scope.kind !== 'user-home') return []
+                return conform.writes.map((write) => ({ write, scope: { paths: scope.paths } }))
+              })
+              const userWrites = await prepareScopedWrites(context.homeDirectory, scopedUserWrites)
+              const writes = [...repositoryWrites, ...userWrites]
+              const commands = conformed.flatMap(({ conform }) => conform.commands)
+              if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
+                throw new KiError('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted', 1)
+              for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
+              for (const command of commands) context.stdout.write(`${options.dryRun ? 'would run' : 'run'} ${renderCommand(command)}\n`)
+              if (findings.some((finding) => finding.level === 'fail')) {
+                renderReports(
+                  context,
+                  repository.root,
+                  'conform',
+                  conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
+                  output.reporterLevels
+                )
+                throw new KiError('repository conform found failures', 1)
+              }
+              let publicationError: unknown
+              try {
+                await publishWrites(writes, Boolean(options.dryRun))
+              } catch (error) {
+                publicationError = error
+              }
+              if (options.dryRun) {
+                renderReports(
+                  context,
+                  repository.root,
+                  'conform',
+                  conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
+                  output.reporterLevels
+                )
+                if (publicationError) throw publicationError
+                continue
+              }
+              if (!publicationError) await runCommands(repository.root, commands)
+              const reaudited = await runPreparedWithProgress(
+                context,
+                're-audit',
+                conformed.map(({ prepared }) => prepared),
+                async (skill, onItemComplete) => {
+                  const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
+                  // The re-audit selection is derived directly from conformed above; this only
+                  // protects a future refactor from pairing an audit with the wrong conform set.
+                  /* v8 ignore next */
+                  if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
+                  return {
+                    prepared: skill,
+                    conform: previous.conform,
+                    audit: await runSkillAudit(
+                      { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
+                      skill,
+                      (item) => onItemComplete(item.code)
+                    )
+                  }
+                },
+                output
+              )
+              const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
+              const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
+              renderReports(
+                context,
+                repository.root,
+                'conform',
+                reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
+                output.reporterLevels
+              )
+              if (publicationError) throw publicationError
+              if (auditFindings.some((finding) => finding.level === 'fail'))
+                throw new KiError('repository conform re-audit found failures', 1)
+            }
           }
         )
     )

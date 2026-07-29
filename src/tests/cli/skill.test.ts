@@ -414,5 +414,23 @@ ids = []
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('example/harness:ki-d does not provide a rubric catalogue')
     })
+
+    test('activates a repository skill in every preflighted target', async () => {
+      const box = await sandbox()
+      await bootstrapClaudeCode(box)
+      const configuration = '["example/harness:ki-repo"]\nsupported_runtimes = ["claude-code"]\n'
+      await box.root.write('first/.ki-config.toml', configuration)
+      await box.root.write('second/.ki-config.toml', configuration)
+      const first = await realpath(`${box.root.path}/first`)
+      const second = await realpath(`${box.root.path}/second`)
+
+      const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'skill', 'add', 'ki-example'])
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain(`linked ki-example into ${first} for claude-code`)
+      expect(result.output).toContain(`linked ki-example into ${second} for claude-code`)
+      expect(await box.root.isSymlink('first/.claude/skills/ki-example')).toBe(true)
+      expect(await box.root.isSymlink('second/.claude/skills/ki-example')).toBe(true)
+    })
   })
 })

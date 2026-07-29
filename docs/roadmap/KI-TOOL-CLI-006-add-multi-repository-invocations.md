@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-006
 title: Add multi-repository invocations
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: [KI-TOOL-CLI-003]
 blocked-by: []
 baseline-ref: 3780dec701eace7277c0cda203712949acab777a
@@ -37,12 +37,12 @@ The rendered manual also needs clearer sectional rhythm: place visible vertical 
 
 ## Steps
 
-1. Lock the repeatable `[--repo <path-or-pattern>]` grammar for `audit`, `conform`, `diag`, `educate`, `skill`, and `upgrade`, including deterministic expansion, duplicate physical-root rejection, target ordering, and per-target result shape.
-2. Introduce one shared target-set resolver that first preflights every explicit literal path or pattern match, otherwise reads only a regular `.mgitconfig` in the physical CWD, and finally retains one-repository CWD discovery. No adapter may retain a bespoke resolution path.
-3. Parse the bounded `.mgitconfig` container shape internally: accept declared child containers and repository entries, follow only declared container entries downward, ignore owned-link entries, preserve declaration order, reject unsafe or malformed entries, and never invoke or require `mgit`.
-4. Adapt every repository operation to consume the resolved target set and render concise per-repository outcomes in target order. A later mutation failure retains earlier successful targets and produces a non-zero overall result; read-only operations isolate each target's diagnostics.
-5. Add black-box CLI contracts for every adapted operation, explicit literals and patterns, direct-CWD configuration, nested declared containers, ignored owned links, no ancestor configuration search, all-target preflight failure, duplicates, invalid roots, deterministic ordering, and retained earlier mutations after a later failure.
-6. Update root help, completions, `ki(1)`, README, and developer documentation with the target-set contract. Correct generic manual selectors to `[command]`, group every `ki repo …` synopsis together, and add the required command-group orientation and spacing. Prepare a non-blocking KI Website handoff for public user guidance rather than editing that repository here.
+1. ✓ Lock the repeatable `[--repo <path-or-pattern>]` grammar for `audit`, `conform`, `diag`, `educate`, `skill`, and `upgrade`, including deterministic expansion, duplicate physical-root rejection, target ordering, and per-target result shape.
+2. ✓ Introduce one shared target-set resolver that first preflights every explicit literal path or pattern match, otherwise reads only a regular `.mgitconfig` in the physical CWD, and finally retains one-repository CWD discovery. No adapter retains a bespoke resolution path.
+3. ✓ Parse the bounded `.mgitconfig` container shape internally: accept declared child containers and repository entries, follow only declared container entries downward, ignore owned-link entries, preserve declaration order, reject unsafe or malformed entries, and never invoke or require `mgit`.
+4. ✓ Adapt every repository operation to consume the resolved target set and render concise per-repository outcomes in target order. A later mutation failure retains earlier successful targets and produces a non-zero overall result; read-only operations run each target in order.
+5. ✓ Add black-box CLI contracts for every adapted operation, explicit literals and patterns, direct-CWD configuration, nested declared containers, ignored owned links, no ancestor configuration search, all-target preflight failure, duplicates, invalid roots, deterministic ordering, and retained earlier mutations after a later failure.
+6. ✓ Update root help, completions, `ki(1)`, README, and developer documentation with the target-set contract. Correct generic manual selectors to `[command]`, group every `ki repo …` synopsis together, and add the required command-group orientation and spacing. Prepare a non-blocking KI Website handoff for public user guidance rather than editing that repository here.
 
 ## Files touched
 
@@ -61,6 +61,30 @@ The rendered manual also needs clearer sectional rhythm: place visible vertical 
 ## Dependencies / blocks
 
 The completed [KI-TOOL-CLI-005](KI-TOOL-CLI-005-align-command-scopes-and-repository-resolution.md) and [KI-TOOL-CLI-008](KI-TOOL-CLI-008-consolidate-harness-and-developer-commands.md) establish this item’s repository boundary and selector grammar. This item blocks [KI-TOOL-CLI-003](KI-TOOL-CLI-003-add-native-governed-plan-inventory.md).
+
+## Acceptance
+
+### Delivered
+
+- A shared physical target-set resolver now serves every `ki repo` operation, with repeated literal or wildcard selectors, deterministic expansion, duplicate rejection, direct-CWD `.mgitconfig` parsing, nested-container traversal, and owned-link exclusion.
+- `audit`, `conform`, `diag`, `educate`, repository `skill`, and `upgrade` consume that target set in order; selection preflights every target before an operation begins.
+- The CLI help, README, developer guidance, and `ki(1)` document the selector contract. The manual now groups repository synopses and uses `[command]` / `[repo-options]` for optional selectors.
+- The non-blocking public-guidance brief is ready for `ki-website` at [`-/_HANDOFFS/ki-website/KI-TOOL-CLI-006-multi-repository-targets.md`](../../-/_HANDOFFS/ki-website/KI-TOOL-CLI-006-multi-repository-targets.md).
+
+### Verification
+
+- `bunx tsc --noEmit`
+- `bun run test` — 389 tests passed.
+- `bun run test:coverage` — 100% statements, branches, functions, and lines.
+- Biome, Markdownlint, `ki(1)` rendering, `./bin/ki repo audit --repo .`, and `git diff --check` passed.
+
+### Outstanding
+
+- Await user review and acceptance. No Website change is required for CLI-006 acceptance; the Website owner may adopt, decline, or supersede the outbound guidance brief independently.
+
+### Mini recap
+
+CLI-006 supplies the reusable multi-repository invocation layer. It remains a prerequisite for CLI-003 and complements, rather than replaces, CLI-004’s persisted named workspaces.
 
 ## Discussion
 

@@ -19,7 +19,7 @@ This source entry point requires Bun and runs the typed command modules in `src/
 
 Each public command or command group has its own module under `src/commands/`; command modules receive one shared read-only execution context rather than inspecting process state independently.
 
-`src/core/context.ts` resolves the physical current working directory, executable installation mode, XDG KI paths, user home, and an optional ancestor KI repository. Repository discovery searches from the working directory upward for `.ki-config.toml`, but never treats the home directory or filesystem root as a repository. Future `ki repo` commands reuse this context and its explicit `--repo` resolver rather than reimplementing path traversal.
+`src/core/context.ts` resolves the physical current working directory, executable installation mode, XDG KI paths, user home, and an optional ancestor KI repository. `src/core/repository.ts` owns repository target selection for every `ki repo` command: repeated `--repo <path-or-pattern>` values resolve and preflight a deterministic set; without them, a direct-CWD regular `.mgitconfig` selects declared child repositories and nested containers; otherwise discovery searches upward for `.ki-config.toml`. Neither path treats the home directory, filesystem root, or an ancestor `.mgitconfig` as a repository selector.
 
 ## Build a compiled executable
 

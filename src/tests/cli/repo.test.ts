@@ -2412,4 +2412,92 @@ ki-depends-on: ${list}
       )
     })
   })
+
+  describe('multi-repository target sets', () => {
+    test('runs audit independently for every preflighted explicit target', async () => {
+      const box = await sandbox()
+      await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.write('second/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+      const first = await realpath(`${box.root.path}/first`)
+      const second = await realpath(`${box.root.path}/second`)
+
+      const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'audit'])
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output.match(/ki repo audit: clean \(1 skills\)/g)).toHaveLength(2)
+    })
+
+    test('conforms every explicit target independently after all targets preflight', async () => {
+      const box = await sandbox()
+      await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.write('second/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'MARK-1', title: 'Marker', level: 'FAIL', phase: 'PRIMARY',
+          audit: async ({ repository }) => {
+            const { existsSync } = await import('node:fs')
+            return existsSync(repository + '/marker.txt') ? [{ status: 'PASS', message: 'present' }] : [{ status: 'VIOLATION', message: 'missing' }]
+          },
+          conform: async () => ({ writes: [{ path: 'marker.txt', content: 'ok\\n', create: true }] })
+        }] }]`)
+      })
+      const first = await realpath(`${box.root.path}/first`)
+      const second = await realpath(`${box.root.path}/second`)
+
+      const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'conform'])
+
+      expect(result.exitCode).toBe(0)
+      await expect(box.root.read('first/marker.txt')).resolves.toBe('ok\n')
+      await expect(box.root.read('second/marker.txt')).resolves.toBe('ok\n')
+    })
+
+    test('does not mutate an earlier target when a later target fails preflight', async () => {
+      const box = await sandbox()
+      await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.mkdir('not-a-repository')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'MARK-1', title: 'Marker', level: 'FAIL', phase: 'PRIMARY',
+          audit: async ({ repository }) => {
+            const { existsSync } = await import('node:fs')
+            return existsSync(repository + '/marker.txt') ? [{ status: 'PASS', message: 'present' }] : [{ status: 'VIOLATION', message: 'missing' }]
+          },
+          conform: async () => ({ writes: [{ path: 'marker.txt', content: 'ok\\n', create: true }] })
+        }] }]`)
+      })
+      const first = await realpath(`${box.root.path}/first`)
+
+      const result = await box.run(['ki', 'repo', '--repo', first, '--repo', `${box.root.path}/not-a-repository`, 'conform'])
+
+      expect(result).toEqual({ exitCode: 2, output: 'ki: error: --repo must name a repository containing .ki-config.toml\n' })
+      await expect(lstat(`${first}/marker.txt`)).rejects.toThrow()
+    })
+
+    test('retains an earlier mutation when a later selected target fails', async () => {
+      const box = await sandbox()
+      await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.write('second/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'MARK-1', title: 'Marker', level: 'FAIL', phase: 'PRIMARY',
+          audit: async ({ repository }) => {
+            const { existsSync } = await import('node:fs')
+            return existsSync(repository + '/marker.txt') ? [{ status: 'PASS', message: 'present' }] : [{ status: 'VIOLATION', message: 'missing' }]
+          },
+          conform: async ({ repository }) => ({ writes: repository.endsWith('/second')
+            ? [{ path: 'missing.txt', content: 'nope\\n' }]
+            : [{ path: 'marker.txt', content: 'ok\\n', create: true }] })
+        }] }]`)
+      })
+      const first = await realpath(`${box.root.path}/first`)
+      const second = await realpath(`${box.root.path}/second`)
+
+      const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'conform'])
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('direct conform write target missing.txt must be an existing regular file')
+      await expect(box.root.read('first/marker.txt')).resolves.toBe('ok\n')
+    })
+  })
 })

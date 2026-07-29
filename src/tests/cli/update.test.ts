@@ -207,6 +207,16 @@ describe('[ki update and upgrade]', () => {
     expect(result).toEqual({ exitCode: 0, output: 'ki repo upgrade\nNo declared capabilities.\n' })
   })
 
+  test('reports every explicitly selected repository during an upgrade', async () => {
+    const box = await sandbox()
+    await box.root.write('first/.ki-config.toml', '')
+    await box.root.write('second/.ki-config.toml', '')
+
+    const result = await box.run(['ki', 'repo', '--repo', `${box.root.path}/first`, '--repo', `${box.root.path}/second`, 'upgrade'])
+
+    expect(result).toEqual({ exitCode: 0, output: 'ki repo upgrade\nNo declared capabilities.\nNo declared capabilities.\n' })
+  })
+
   test('refuses upgrade outside a repository and uses the declared repository provider', async () => {
     const outside = await sandbox()
     const missingRepository = await outside.run('ki repo upgrade')

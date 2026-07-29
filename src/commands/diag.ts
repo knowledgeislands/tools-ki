@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
-import { resolveRepository } from '../core/repository.ts'
+import { resolveRepositoryTargets } from '../core/repository.ts'
 import { KI_VERSION } from '../version.ts'
 
 const field = (label: string, value: string): string => `  ${label.padEnd(14)}${value}`
@@ -44,14 +44,18 @@ export const createDiagCommand = (context: KiContext): Command =>
     context.stdout.write(`${lines.join('\n')}\n`)
   })
 
-export const createRepoDiagCommand = (context: KiContext, selectedRepository: () => string | undefined): Command =>
-  new Command('diag').description('report one KI repository resolution').action(async () => {
-    const repo = selectedRepository()
-    const repository = await resolveRepository({
-      repository: repo,
+export const createRepoDiagCommand = (context: KiContext, selectedRepositories: () => readonly string[]): Command =>
+  new Command('diag').description('report one or more KI repository resolutions').action(async () => {
+    const selected = selectedRepositories()
+    const repositories = await resolveRepositoryTargets({
+      repositories: selected,
       workingDirectory: context.workingDirectory,
       homeDirectory: context.homeDirectory
     })
-    const source = repo ? `explicit path ${repo}` : 'current working directory'
-    context.stdout.write(`ki repo diag\nRepository: ${repository.root}\nConfiguration: ${repository.configuration}\nSource: ${source}\n`)
+    const source =
+      selected.length === 1 ? `explicit path ${selected[0]}` : selected.length ? 'explicit target set' : 'current working directory'
+    const reports = repositories.map(
+      (repository) => `Repository: ${repository.root}\nConfiguration: ${repository.configuration}\nSource: ${source}`
+    )
+    context.stdout.write(`ki repo diag\n${reports.join('\n\n')}\n`)
   })

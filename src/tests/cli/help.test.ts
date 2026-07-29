@@ -32,7 +32,7 @@ describe('[ki help]', () => {
     expect(reinstall.output).toContain('inactive installed harness')
     expect(uninstall.output).toContain('installed non-canonical harness')
     expect(update.output).toContain('installer-managed CLI')
-    expect(upgrade.output).toContain('one KI repository')
+    expect(upgrade.output).toContain('one or more KI repositories')
     expect(missing.output).toContain('report desired capabilities without an installed provider')
     expect(search.output).toContain('search verified installed harness capabilities')
     expect(cleanup.output).toContain('report eligible KI-managed stale state')

@@ -92,6 +92,98 @@ ids = ["example:skill", "example:skill"]
     })
   })
 
+  test('resolves repeated explicit repository targets in supplied order', async () => {
+    const box = await sandbox()
+    await box.project.write('first/.ki-config.toml', '# first\n')
+    await box.project.write('second/.ki-config.toml', '# second\n')
+    const first = await realpath(`${box.project.path}/first`)
+    const second = await realpath(`${box.project.path}/second`)
+
+    const diag = await box.run(['ki', 'repo', '--repo', second, '--repo', first, 'diag'])
+
+    expect(diag).toEqual({
+      exitCode: 0,
+      output: `ki repo diag\nRepository: ${second}\nConfiguration: ${second}/.ki-config.toml\nSource: explicit target set\n\nRepository: ${first}\nConfiguration: ${first}/.ki-config.toml\nSource: explicit target set\n`
+    })
+  })
+
+  test('expands explicit repository patterns in deterministic order and rejects unmatched or duplicate targets', async () => {
+    const box = await sandbox()
+    await box.project.write('repos/b/.ki-config.toml', '# b\n')
+    await box.project.write('repos/a/.ki-config.toml', '# a\n')
+    await box.project.write('repos/a/nested/.ki-config.toml', '# nested\n')
+    await box.project.mkdir('empty')
+    const pattern = `${box.project.path}/repos/*`
+    const first = await realpath(`${box.project.path}/repos/a`)
+    const second = await realpath(`${box.project.path}/repos/b`)
+
+    const diag = await box.run(['ki', 'repo', '--repo', pattern, 'diag'])
+    const unmatched = await box.run(['ki', 'repo', '--repo', `${box.project.path}/missing/*`, 'diag'])
+    const empty = await box.run(['ki', 'repo', '--repo', `${box.project.path}/empty/*`, 'diag'])
+    const duplicate = await box.run(['ki', 'repo', '--repo', first, '--repo', first, 'diag'])
+
+    expect(diag.output.indexOf(`Repository: ${first}`)).toBeLessThan(diag.output.indexOf(`Repository: ${second}`))
+    expect(unmatched).toEqual({
+      exitCode: 2,
+      output: `ki: error: --repo pattern ${box.project.path}/missing/* has no existing directory\n`
+    })
+    expect(empty).toEqual({ exitCode: 2, output: `ki: error: --repo pattern ${box.project.path}/empty/* matched no repositories\n` })
+    expect(duplicate).toEqual({ exitCode: 2, output: `ki: error: --repo selects duplicate repository ${first}\n` })
+  })
+
+  test('matches recursive and single-character repository patterns from the current working directory', async () => {
+    const box = await sandbox()
+    await box.project.write('repos/a/.ki-config.toml', '# a\n')
+    await box.project.write('repos/a/nested/.ki-config.toml', '# nested\n')
+    await box.project.write('repos/b/.ki-config.toml', '# b\n')
+    const root = await realpath(box.project.path)
+    const recursive = await box.run(['ki', 'repo', '--repo', 'repos/**', 'diag'])
+    const singleCharacter = await box.run(['ki', 'repo', '--repo', 'repos/?', 'diag'])
+
+    expect(recursive.output).toContain(`Repository: ${root}/repos/a\n`)
+    expect(recursive.output).toContain(`Repository: ${root}/repos/a/nested\n`)
+    expect(recursive.output).toContain(`Repository: ${root}/repos/b\n`)
+    expect(singleCharacter.output).toContain(`Repository: ${root}/repos/a\n`)
+    expect(singleCharacter.output).toContain(`Repository: ${root}/repos/b\n`)
+    expect(singleCharacter.output).not.toContain('nested')
+  })
+
+  test('resolves only direct-CWD declared .mgitconfig entries and follows nested containers', async () => {
+    const box = await sandbox()
+    await box.project.write('.mgitconfig', 'standard first -> https://example.test/first.git\nnested group\nowned-link ignored\n')
+    await box.project.write('first/.ki-config.toml', '# first\n')
+    await box.project.write('group/.mgitconfig', 'bare second\n')
+    await box.project.write('group/second/.ki-config.toml', '# second\n')
+    const first = await realpath(`${box.project.path}/first`)
+    const second = await realpath(`${box.project.path}/group/second`)
+
+    const diag = await box.run('ki repo diag')
+
+    expect(diag.exitCode).toBe(0)
+    expect(diag.output).toContain(`Repository: ${first}`)
+    expect(diag.output).toContain(`Repository: ${second}`)
+    expect(diag.output).not.toContain('ignored')
+  })
+
+  test('rejects malformed direct-CWD .mgitconfig entries without searching an ancestor configuration', async () => {
+    const box = await sandbox()
+    await box.project.write('.mgitconfig', 'standard ../escape\n')
+    await box.project.write('child/.ki-config.toml', '# child\n')
+    await box.project.mkdir('child/nested')
+
+    const malformed = await box.run('ki repo diag')
+    box.cd('child/nested')
+    const nested = await box.run('ki repo diag')
+    const child = await realpath(`${box.project.path}/child`)
+
+    expect(malformed.exitCode).toBe(2)
+    expect(malformed.output).toContain('invalid .mgitconfig entry')
+    expect(nested).toEqual({
+      exitCode: 0,
+      output: `ki repo diag\nRepository: ${child}\nConfiguration: ${child}/.ki-config.toml\nSource: current working directory\n`
+    })
+  })
+
   test('refuses repository diagnostics outside a KI repository', async () => {
     const box = await sandbox()
     await box.project.mkdir('scratch')
