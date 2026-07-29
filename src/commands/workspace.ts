@@ -32,9 +32,7 @@ export const createWorkspaceCommand = (context: KiContext): Command =>
         .argument('<group>', 'workspace group name')
         .action(async (group: string) => {
           const selected = await workspaceGroup(context.workingDirectory, group)
-          context.stdout.write(
-            `ki workspace show ${selected.name}\n${selected.repositories.map((repository) => `  ${repository}`).join('\n')}\n`
-          )
+          context.stdout.write(`ki workspace show ${selected.name}\n${selected.repositories.map((repository) => `  ${repository}`).join('\n')}\n`)
         })
     )
     .addCommand(

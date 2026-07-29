@@ -53,9 +53,7 @@ const parseWorkspaceConfiguration = (contents: string): WorkspaceConfiguration =
   if (document.schema !== 1) throw workspaceError('schema must equal 1')
   if (typeof document.default !== 'string' || !document.default) throw workspaceError('must declare a default group')
   if (!isRecord(document.groups)) throw workspaceError('must declare named groups')
-  const groups = Object.fromEntries(
-    Object.entries(document.groups).map(([name, group]) => [workspaceGroupName(name), groupSelectors(name, group)])
-  )
+  const groups = Object.fromEntries(Object.entries(document.groups).map(([name, group]) => [workspaceGroupName(name), groupSelectors(name, group)]))
   workspaceGroupName(document.default)
   if (!Object.hasOwn(groups, document.default)) throw workspaceError(`default group ${document.default} is not declared`)
   return { schema: 1, default: document.default, groups }
@@ -76,10 +74,7 @@ export const workspaceConfigurationExists = async (directory: string): Promise<b
   return true
 }
 
-export const workspaceGroup = async (
-  directory: string,
-  name?: string
-): Promise<{ readonly name: string; readonly repositories: readonly string[] }> => {
+export const workspaceGroup = async (directory: string, name?: string): Promise<{ readonly name: string; readonly repositories: readonly string[] }> => {
   const configuration = await readWorkspaceConfiguration(directory)
   const selected = name ?? configuration.default
   const repositories = configuration.groups[selected]

@@ -42,10 +42,7 @@ const runCommand = async (
     child.on('close', (exitCode) => resolve({ exitCode: exitCode ?? 1, stdout, stderr }))
   })
 
-const runCommands = async (
-  repository: string,
-  commands: readonly { readonly program: string; readonly arguments: readonly string[] }[]
-): Promise<void> => {
+const runCommands = async (repository: string, commands: readonly { readonly program: string; readonly arguments: readonly string[] }[]): Promise<void> => {
   for (const command of commands) {
     const { exitCode, stdout, stderr } = await runCommand(repository, command)
     if (exitCode === 0) continue
@@ -188,9 +185,7 @@ const createProgressTracker = (
         columns
       )}${final || context.stderr.isTTY !== true ? '\n' : ''}`
     )
-  const states = new Map<string, MultiProgressState>(
-    skillNames.map((skill) => [skill, { complete: 0, total: 0, planned: false, status: 'loading' }])
-  )
+  const states = new Map<string, MultiProgressState>(skillNames.map((skill) => [skill, { complete: 0, total: 0, planned: false, status: 'loading' }]))
   const progressState = (skill: string): MultiProgressState => {
     const state = states.get(skill)
     // Every caller uses the fixed skill list used to initialise this tracker; this only protects a future refactor.
@@ -227,8 +222,7 @@ const createProgressTracker = (
     planned: (skills) => {
       const itemTotal = skills.reduce((count, skill) => count + skill.items.length, 0)
       total = itemTotal
-      for (const skill of skills)
-        states.set(skill.skill.declaration.name, { complete: 0, total: skill.items.length, planned: true, status: 'pending' })
+      for (const skill of skills) states.set(skill.skill.declaration.name, { complete: 0, total: skill.items.length, planned: true, status: 'pending' })
       render(`${complete}/${total} ${total === 0 ? 100 : 0}% starting`)
     },
     item: (skill, code) => {
@@ -325,9 +319,7 @@ const renderEducation = (education: Awaited<ReturnType<typeof educateSkill>>): s
     `    ${family.description}`,
     `    Standard: ${family.standard}`,
     ...family.items.flatMap((item) => {
-      const aspects = [...(item.mechanical ? [item.mechanical.heuristic ? 'M-heuristic' : 'M'] : []), ...(item.judgment ? ['J'] : [])].join(
-        ' + '
-      )
+      const aspects = [...(item.mechanical ? [item.mechanical.heuristic ? 'M-heuristic' : 'M'] : []), ...(item.judgment ? ['J'] : [])].join(' + ')
       return [
         `    ${item.code} [${aspects}]: ${item.title}`,
         `      ${item.description}`,
@@ -419,34 +411,23 @@ const renderReports = (
     context.stdout.write(`${completion(findings)}\n`)
   }
 
-  const findings = reportFindings.flatMap(({ report, findings: entries }) =>
-    entries.map((finding) => ({ finding, skill: report.skill.skill.identity }))
-  )
+  const findings = reportFindings.flatMap(({ report, findings: entries }) => entries.map((finding) => ({ finding, skill: report.skill.skill.identity })))
   const visible = findings.filter(({ finding }) => reporterLevels.includes(finding.level))
   const count = (level: ReporterLevel): number => findings.filter(({ finding }) => finding.level === level).length
   const judgmentUnevaluated = reports.reduce((total, report) => total + judgmentItemCount(report.skill), 0)
   context.stdout.write('\n==> recap\n')
   if (!visible.length) {
-    const label = findings.length
-      ? `no ${reporterLevels.map((level) => level.toUpperCase().replace('-', '_')).join(' / ')} findings`
-      : 'no findings'
+    const label = findings.length ? `no ${reporterLevels.map((level) => level.toUpperCase().replace('-', '_')).join(' / ')} findings` : 'no findings'
     context.stdout.write(`  ✅ ${label} across ${operation === 'audit' ? 'audited' : 'conformed'} skills\n`)
   } else for (const { finding, skill } of visible) context.stdout.write(`${formatFinding(finding, skill, false)}\n`)
   const icon = count('fail') ? REPORT_ICON.fail : count('warn') ? REPORT_ICON.warn : REPORT_ICON.fixed
-  context.stdout.write(
-    `  ${icon} totals: FAIL=${count('fail')} WARN=${count('warn')} FIXED=${count('fixed')} JUDGMENT_UNEVALUATED=${judgmentUnevaluated}\n`
-  )
+  context.stdout.write(`  ${icon} totals: FAIL=${count('fail')} WARN=${count('warn')} FIXED=${count('fixed')} JUDGMENT_UNEVALUATED=${judgmentUnevaluated}\n`)
 }
 
 export const createRepoCommand = (context: KiContext): Command => {
   const command = new Command('repo')
     .description('run operations for one or more KI repositories')
-    .option(
-      '--repo <path-or-pattern>',
-      'repository root or pattern',
-      (value: string, previous: readonly string[] = []) => [...previous, value],
-      []
-    )
+    .option('--repo <path-or-pattern>', 'repository root or pattern', (value: string, previous: readonly string[] = []) => [...previous, value], [])
     .option('--workspace <group>', 'workspace group from .ki-workspace.toml in the current directory')
   const selectedRepositories = (): { readonly repositories: readonly string[]; readonly workspace?: string } => {
     const options = command.opts<{ repo: readonly string[]; workspace?: string }>()
@@ -492,10 +473,8 @@ export const createRepoCommand = (context: KiContext): Command => {
               skills,
               async (skill, onItemComplete) => ({
                 skill,
-                audit: await runSkillAudit(
-                  { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
-                  skill,
-                  (item) => onItemComplete(item.code)
+                audit: await runSkillAudit({ kind: 'repository', repository: repository.root, userHome: context.homeDirectory }, skill, (item) =>
+                  onItemComplete(item.code)
                 )
               }),
               output
@@ -522,107 +501,100 @@ export const createRepoCommand = (context: KiContext): Command => {
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
         .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN,FIXED)')
-        .action(
-          async (options: { skill?: string; dryRun?: boolean; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
-            const output = operationOptions('conform', options)
-            const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
-            for (const { repository, skills } of selected) {
-              const conformed = await runWithProgress(
-                context,
-                'conform',
-                skills,
-                async (skill, onItemComplete) => ({
-                  skill: skill.skill,
-                  prepared: skill,
-                  conform: await runSkillConform(
-                    { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
-                    skill,
-                    (item) => onItemComplete(item.code)
-                  )
-                }),
-                output
-              )
-              const findings = conformed.flatMap(({ conform }) => conform.findings)
-              const repositoryWrites = await prepareWrites(
-                repository.root,
-                conformed.filter(({ conform }) => conform.scope.kind === 'repository').flatMap(({ conform }) => conform.writes)
-              )
-              const scopedUserWrites = conformed.flatMap(({ conform }) => {
-                const scope = conform.scope
-                if (scope.kind !== 'user-home') return []
-                return conform.writes.map((write) => ({ write, scope: { paths: scope.paths } }))
-              })
-              const userWrites = await prepareScopedWrites(context.homeDirectory, scopedUserWrites)
-              const writes = [...repositoryWrites, ...userWrites]
-              const commands = conformed.flatMap(({ conform }) => conform.commands)
-              if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
-                throw new KiError('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted', 1)
-              for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
-              for (const command of commands) context.stdout.write(`${options.dryRun ? 'would run' : 'run'} ${renderCommand(command)}\n`)
-              if (findings.some((finding) => finding.level === 'fail')) {
-                renderReports(
-                  context,
-                  repository.root,
-                  'conform',
-                  conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
-                  output.reporterLevels
+        .action(async (options: { skill?: string; dryRun?: boolean; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
+          const output = operationOptions('conform', options)
+          const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
+          for (const { repository, skills } of selected) {
+            const conformed = await runWithProgress(
+              context,
+              'conform',
+              skills,
+              async (skill, onItemComplete) => ({
+                skill: skill.skill,
+                prepared: skill,
+                conform: await runSkillConform({ kind: 'repository', repository: repository.root, userHome: context.homeDirectory }, skill, (item) =>
+                  onItemComplete(item.code)
                 )
-                throw new KiError('repository conform found failures', 1)
-              }
-              let publicationError: unknown
-              try {
-                await publishWrites(writes, Boolean(options.dryRun))
-              } catch (error) {
-                publicationError = error
-              }
-              if (options.dryRun) {
-                renderReports(
-                  context,
-                  repository.root,
-                  'conform',
-                  conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
-                  output.reporterLevels
-                )
-                if (publicationError) throw publicationError
-                continue
-              }
-              if (!publicationError) await runCommands(repository.root, commands)
-              const reaudited = await runPreparedWithProgress(
-                context,
-                're-audit',
-                conformed.map(({ prepared }) => prepared),
-                async (skill, onItemComplete) => {
-                  const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
-                  // The re-audit selection is derived directly from conformed above; this only
-                  // protects a future refactor from pairing an audit with the wrong conform set.
-                  /* v8 ignore next */
-                  if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
-                  return {
-                    prepared: skill,
-                    conform: previous.conform,
-                    audit: await runSkillAudit(
-                      { kind: 'repository', repository: repository.root, userHome: context.homeDirectory },
-                      skill,
-                      (item) => onItemComplete(item.code)
-                    )
-                  }
-                },
-                output
-              )
-              const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
-              const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
+              }),
+              output
+            )
+            const findings = conformed.flatMap(({ conform }) => conform.findings)
+            const repositoryWrites = await prepareWrites(
+              repository.root,
+              conformed.filter(({ conform }) => conform.scope.kind === 'repository').flatMap(({ conform }) => conform.writes)
+            )
+            const scopedUserWrites = conformed.flatMap(({ conform }) => {
+              const scope = conform.scope
+              if (scope.kind !== 'user-home') return []
+              return conform.writes.map((write) => ({ write, scope: { paths: scope.paths } }))
+            })
+            const userWrites = await prepareScopedWrites(context.homeDirectory, scopedUserWrites)
+            const writes = [...repositoryWrites, ...userWrites]
+            const commands = conformed.flatMap(({ conform }) => conform.commands)
+            if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
+              throw new KiError('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted', 1)
+            for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
+            for (const command of commands) context.stdout.write(`${options.dryRun ? 'would run' : 'run'} ${renderCommand(command)}\n`)
+            if (findings.some((finding) => finding.level === 'fail')) {
               renderReports(
                 context,
                 repository.root,
                 'conform',
-                reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
+                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
+                output.reporterLevels
+              )
+              throw new KiError('repository conform found failures', 1)
+            }
+            let publicationError: unknown
+            try {
+              await publishWrites(writes, Boolean(options.dryRun))
+            } catch (error) {
+              publicationError = error
+            }
+            if (options.dryRun) {
+              renderReports(
+                context,
+                repository.root,
+                'conform',
+                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
               )
               if (publicationError) throw publicationError
-              if (auditFindings.some((finding) => finding.level === 'fail'))
-                throw new KiError('repository conform re-audit found failures', 1)
+              continue
             }
+            if (!publicationError) await runCommands(repository.root, commands)
+            const reaudited = await runPreparedWithProgress(
+              context,
+              're-audit',
+              conformed.map(({ prepared }) => prepared),
+              async (skill, onItemComplete) => {
+                const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
+                // The re-audit selection is derived directly from conformed above; this only
+                // protects a future refactor from pairing an audit with the wrong conform set.
+                /* v8 ignore next */
+                if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
+                return {
+                  prepared: skill,
+                  conform: previous.conform,
+                  audit: await runSkillAudit({ kind: 'repository', repository: repository.root, userHome: context.homeDirectory }, skill, (item) =>
+                    onItemComplete(item.code)
+                  )
+                }
+              },
+              output
+            )
+            const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
+            const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
+            renderReports(
+              context,
+              repository.root,
+              'conform',
+              reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
+              output.reporterLevels
+            )
+            if (publicationError) throw publicationError
+            if (auditFindings.some((finding) => finding.level === 'fail')) throw new KiError('repository conform re-audit found failures', 1)
           }
-        )
+        })
     )
 }

@@ -20,8 +20,7 @@ import { prepareRubricPublication } from '../core/rubric-publication.ts'
 import { loadRubricDefinition } from '../core/runtime-loader.ts'
 import { prepareWrites, publishWrites } from '../core/transaction.ts'
 
-const configured = (context: KiContext) =>
-  configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config })
+const configured = (context: KiContext) => configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config })
 
 const isDevLinkedHarness = async (harnessRoot: string): Promise<boolean> => {
   /* v8 ignore next -- discovery already required this directory; this protects concurrent mutation. */
@@ -41,8 +40,7 @@ const createRubricCommand = (context: KiContext): Command =>
       if (options.write) {
         if (!(await isDevLinkedHarness(resolved.harness.root)))
           throw new KiError(`${resolved.identity} is an installed payload; run ki dev local on before writing its rubric catalogue`, 1)
-        if (publication.evidence.state !== 'in-sync')
-          await publishWrites(await prepareWrites(publication.publicationRoot, [publication.proposal()]), false)
+        if (publication.evidence.state !== 'in-sync') await publishWrites(await prepareWrites(publication.publicationRoot, [publication.proposal()]), false)
         context.stdout.write(`write ${publication.displayTarget}\n`)
         return
       }
@@ -51,9 +49,7 @@ const createRubricCommand = (context: KiContext): Command =>
         return
       }
       const reason = publication.evidence.state === 'missing' ? 'is missing' : 'is stale'
-      context.stdout.write(
-        `ki dev skill rubric: ${resolved.identity} references/rubric.md ${reason}; run with --write from a dev-linked harness\n`
-      )
+      context.stdout.write(`ki dev skill rubric: ${resolved.identity} references/rubric.md ${reason}; run with --write from a dev-linked harness\n`)
       throw new KiError(`${resolved.identity} references/rubric.md ${reason}`, 1)
     })
 
@@ -95,9 +91,7 @@ export const createDevCommand = (context: KiContext): Command => {
       const projections = await installBootstrapSkills(local.skills, agents, { replace: true })
       const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents, harness)
       context.stdout.write(`development harness enabled ${harness}\n`)
-      context.stdout.write(
-        `refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
-      )
+      context.stdout.write(`refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`)
       reportProjections(context, projections)
     })
   local
@@ -115,9 +109,7 @@ export const createDevCommand = (context: KiContext): Command => {
       context.stdout.write(
         `development harness disabled; canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`
       )
-      context.stdout.write(
-        `refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
-      )
+      context.stdout.write(`refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`)
       reportProjections(context, projections)
     })
   command.addCommand(new Command('skill').description('development-only skill operations').addCommand(createRubricCommand(context)))

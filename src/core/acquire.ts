@@ -27,8 +27,7 @@ export const tarSize = (archive: Uint8Array, start: number): number => {
   return size
 }
 
-export const zeroBlock = (archive: Uint8Array, offset: number): boolean =>
-  archive.subarray(offset, offset + 512).every((byte) => byte === 0)
+export const zeroBlock = (archive: Uint8Array, offset: number): boolean => archive.subarray(offset, offset + 512).every((byte) => byte === 0)
 
 interface ParsedTarEntry {
   readonly payloadPath: string

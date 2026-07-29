@@ -7,16 +7,7 @@ import type { AgentDescriptor } from './types.ts'
 
 export const agentDescriptors = [claudeCode, chatgptCodex] as const satisfies readonly AgentDescriptor[]
 
-export const bootstrapUserSkills = [
-  'ki-bootstrap',
-  'ki-delegate',
-  'ki-next',
-  'ki-plan',
-  'ki-implement',
-  'ki-accept',
-  'ki-batch',
-  'ki-recap'
-] as const
+export const bootstrapUserSkills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-implement', 'ki-accept', 'ki-batch', 'ki-recap'] as const
 
 export interface InstalledAgent {
   readonly descriptor: AgentDescriptor
@@ -57,8 +48,7 @@ export interface UserConfigurationInspection {
   readonly errors: readonly string[]
 }
 
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
+export const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
 export const physicalDirectory = async (path: string): Promise<boolean> => {
   const state = await lstat(path).catch(() => undefined)

@@ -23,9 +23,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
       })
       const agents = configuration.agents
       if (configuration.disposition === 'created') {
-        context.stdout.write(
-          `created KI agent configuration for ${agents.map((agent) => agent.descriptor.id).join(', ') || 'no detected agents'}\n`
-        )
+        context.stdout.write(`created KI agent configuration for ${agents.map((agent) => agent.descriptor.id).join(', ') || 'no detected agents'}\n`)
       }
       if (configuration.disposition === 'refreshed') {
         context.stdout.write(`refreshed KI agents: ${agents.map((agent) => agent.descriptor.id).join(', ') || 'none'}\n`)
@@ -33,16 +31,12 @@ export const createBootstrapCommand = (context: KiContext): Command =>
       const installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
       // Fixture archives cannot match the pinned canonical SHA-256; its fresh-install presentation is release-only.
       /* v8 ignore next */
-      context.stdout.write(
-        `canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`
-      )
+      context.stdout.write(`canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`)
       const skills = await installedBootstrapSkillSources(context.paths.data)
       const projections = await installBootstrapSkills(skills, agents)
       if (options.refresh) {
         const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents)
-        context.stdout.write(
-          `refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
-        )
+        context.stdout.write(`refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`)
       } else {
         await clearLocalBootstrapHarness(context.paths.config)
         await setConfiguredUserSkills(

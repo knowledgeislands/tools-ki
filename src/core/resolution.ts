@@ -73,10 +73,7 @@ export const resolveDeclaredSkills = (
   const resolved = declarations.map((declaration) => {
     const harness = harnesses.find((candidate) => candidate.id === declaration.harness)
     if (!harness) {
-      throw new KiError(
-        `declared skill ${declaration.identity} requires installed harness ${declaration.harness}; install it before auditing`,
-        1
-      )
+      throw new KiError(`declared skill ${declaration.identity} requires installed harness ${declaration.harness}; install it before auditing`, 1)
     }
     const capability = harness.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === declaration.name)
     if (!capability) throw new KiError(`installed harness ${declaration.harness} does not provide declared skill ${declaration.name}`, 1)

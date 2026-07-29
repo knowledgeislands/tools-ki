@@ -79,8 +79,7 @@ const distinctScopedWrites = (writes: readonly ScopedNativeWrite[]): readonly Sc
 
 const inspectWriteTarget = async (repository: string, path: string, absolutePath: string): Promise<FileIdentity> => {
   const state = await lstat(absolutePath).catch(() => undefined)
-  if (!state?.isFile() || state.isSymbolicLink())
-    throw new KiError(`direct conform write target ${path} must be an existing regular file`, 1)
+  if (!state?.isFile() || state.isSymbolicLink()) throw new KiError(`direct conform write target ${path} must be an existing regular file`, 1)
   const physicalPath = await realpath(absolutePath)
   if (!isContained(repository, physicalPath)) throw new KiError(`direct conform write target ${path} escapes the repository`, 1)
   return { dev: state.dev, ino: state.ino }
@@ -93,20 +92,17 @@ const inspectCreateTarget = async (repository: string, path: string, absolutePat
   while (true) {
     const parentState = await lstat(parent).catch(() => undefined)
     if (parentState) {
-      if (!parentState.isDirectory() || parentState.isSymbolicLink())
-        throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+      if (!parentState.isDirectory() || parentState.isSymbolicLink()) throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
       // A concurrent deletion after lstat is not reachable through one CLI invocation.
       /* v8 ignore next */
       const physicalParent = await realpath(parent).catch(() => undefined)
       /* v8 ignore next -- A physical existing parent was validated above; only a concurrent replacement can violate this. */
-      if (!physicalParent || !isContained(repository, physicalParent))
-        throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+      if (!physicalParent || !isContained(repository, physicalParent)) throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
       return
     }
     const next = dirname(parent)
     /* v8 ignore next -- A safe relative target starts below the repository, so ascent cannot escape without a concurrent replacement. */
-    if (next === parent || !isContained(repository, next))
-      throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+    if (next === parent || !isContained(repository, next)) throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
     parent = next
   }
 }
@@ -133,16 +129,11 @@ const ensureCreateParent = async (repository: string, path: string, absolutePath
     /* v8 ignore next */
     const physicalDirectory = await realpath(current).catch(() => undefined)
     /* v8 ignore next -- Current was validated as a contained physical directory above. */
-    if (!physicalDirectory || !isContained(repository, physicalDirectory))
-      throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
+    if (!physicalDirectory || !isContained(repository, physicalDirectory)) throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
   }
 }
 
-export const prepareWrites = async (
-  repository: string,
-  writes: readonly NativeWrite[],
-  scope?: WriteScope
-): Promise<readonly PreparedWrite[]> =>
+export const prepareWrites = async (repository: string, writes: readonly NativeWrite[], scope?: WriteScope): Promise<readonly PreparedWrite[]> =>
   prepareScopedWrites(
     repository,
     distinctWrites(writes).map((write) => ({ write, scope: scope ?? { paths: [] } })),

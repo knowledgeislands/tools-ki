@@ -31,8 +31,7 @@ describe('[ki list]', () => {
 
     expect(result).toEqual({
       exitCode: 0,
-      output:
-        'ki list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\n'
+      output: 'ki list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
   })

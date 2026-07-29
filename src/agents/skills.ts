@@ -71,17 +71,12 @@ const installedSkillSource = async (
 }> => {
   const harnesses = await discoverInstalledHarnesses(dataDirectory)
   const matches = harnesses.flatMap((harness) =>
-    harness.capabilities
-      .filter((capability) => capability.kind === 'skill' && capability.name === name)
-      .map((capability) => ({ harness, capability }))
+    harness.capabilities.filter((capability) => capability.kind === 'skill' && capability.name === name).map((capability) => ({ harness, capability }))
   )
   const [match] = matches
   if (!match) throw new KiError(`no installed harness provides skill ${name}`, 1)
   if (matches.length > 1) throw new KiError(`skill ${name} is provided by multiple installed harnesses`, 1)
-  const source = await requiredPhysicalDirectory(
-    join(match.harness.root, match.capability.source),
-    `installed harness ${match.harness.id} ${name} skill`
-  )
+  const source = await requiredPhysicalDirectory(join(match.harness.root, match.capability.source), `installed harness ${match.harness.id} ${name} skill`)
   return { skill: { name, source, supportedRuntimes: match.capability.supportedRuntimes }, harness: match.harness.id }
 }
 
@@ -101,9 +96,7 @@ export const addUserSkill = async (options: {
   for (const agent of compatible) await linkManagedSkill(agent, { scope: 'user' }, resolved.skill, options.replace)
   const identity = `${resolved.harness}:${resolved.skill.name}`
   const current = (await inspectUserConfiguration(options.configurationDirectory)).skills
-  const next = [...current.filter((entry) => skillNameOf(entry) !== resolved.skill.name), identity].sort((left, right) =>
-    left.localeCompare(right)
-  )
+  const next = [...current.filter((entry) => skillNameOf(entry) !== resolved.skill.name), identity].sort((left, right) => left.localeCompare(right))
   await setConfiguredUserSkills(options.configurationDirectory, options.homeDirectory, next)
   return { skill: resolved.skill.name, agents: compatible.map((agent) => agent.descriptor.id) }
 }
@@ -141,12 +134,9 @@ export const addRepoSkill = async (options: {
   const agents = await configuredAgents({ homeDirectory: options.homeDirectory, configurationDirectory: options.configurationDirectory })
   const resolved = await installedSkillSource(options.dataDirectory, options.skill)
   const runtimes = await repositorySupportedRuntimes(location.configuration)
-  const compatible = agents.filter(
-    (agent) => runtimes.includes(runtimeForAgent(agent)) && compatibleWithSkill(agent, resolved.skill.supportedRuntimes)
-  )
+  const compatible = agents.filter((agent) => runtimes.includes(runtimeForAgent(agent)) && compatibleWithSkill(agent, resolved.skill.supportedRuntimes))
   if (compatible.length === 0) throw new KiError(`skill ${resolved.skill.name} is incompatible with this repository's configured agents`, 1)
-  for (const agent of compatible)
-    await linkManagedSkill(agent, { scope: 'repo', repository: location.root }, resolved.skill, options.replace)
+  for (const agent of compatible) await linkManagedSkill(agent, { scope: 'repo', repository: location.root }, resolved.skill, options.replace)
   await declareRepositorySkill(location.configuration, `${resolved.harness}:${resolved.skill.name}`)
   return { skill: resolved.skill.name, repository: location.root, agents: compatible.map((agent) => agent.descriptor.id) }
 }

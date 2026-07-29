@@ -159,8 +159,7 @@ const loadCapture = async (captureArgument: string): Promise<Capture> => {
   const allowedEntries = new Set(['capture.toml', 'originals', 'records', 'assets', 'relationships'])
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (!allowedEntries.has(entry.name)) throw operationalError('capture-directory contains an unsupported top-level entry')
-    if (entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory()))
-      throw operationalError('capture-directory contains an unsupported file type')
+    if (entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory())) throw operationalError('capture-directory contains an unsupported file type')
   }
   const originals = join(directory, 'originals')
   const records = join(directory, 'records')
@@ -281,13 +280,9 @@ const writeKep = async (capture: Capture, payload: Payload, output: string): Pro
 const emitResult = (context: KiContext, capture: Capture, payload: Payload, output: string, options: ImportOptions): void => {
   context.stdout.write(`${options.dryRun ? 'KEP plan' : 'KEP created'}: ${output}\n`)
   context.stdout.write(`Package: ${payload.packageId}\n`)
-  context.stdout.write(
-    `Inventory: ${capture.recordCount} records, ${capture.assetCount} assets, ${capture.relationshipCount} relationships\n`
-  )
+  context.stdout.write(`Inventory: ${capture.recordCount} records, ${capture.assetCount} assets, ${capture.relationshipCount} relationships\n`)
   context.stdout.write(`Omissions: ${JSON.stringify(capture.metadata.omissions)}\n`)
-  context.stdout.write(
-    'Limitations: local user-provided capture only; no browser, network, credentials, repository discovery, or knowledge extraction.\n'
-  )
+  context.stdout.write('Limitations: local user-provided capture only; no browser, network, credentials, repository discovery, or knowledge extraction.\n')
   if (options.dryRun) context.stdout.write('Dry run: no files written.\n')
 }
 

@@ -233,11 +233,7 @@ ids = []
       expect(unsupported.output).toContain('may contain only claude-code or codex')
       expect(repeated.output).toContain('repeats a runtime')
       expect(invalidToml.output).toContain('.ki-config.toml must be valid TOML')
-      expect(
-        [missing, malformed, unsupported, repeated, invalidToml].every(
-          (result) => !result.declared.includes('["example/harness:ki-example"]')
-        )
-      ).toBe(true)
+      expect([missing, malformed, unsupported, repeated, invalidToml].every((result) => !result.declared.includes('["example/harness:ki-example"]'))).toBe(true)
     })
 
     test('intersects repository and skill runtimes before linking or declaring', async () => {
@@ -404,10 +400,7 @@ ids = []
       await box.data.write('ki/harnesses/example/harness/skills/ki-b/SKILL.md', '---\nname: ki-b\nki-depends-on: [ki-d]\n---\n')
       await box.data.write('ki/harnesses/example/harness/skills/ki-c/SKILL.md', '---\nname: ki-c\nki-depends-on: [ki-d]\n---\n')
       await box.data.write('ki/harnesses/example/harness/skills/ki-d/SKILL.md', '---\nname: ki-d\nki-depends-on: []\n---\n')
-      await box.project.write(
-        '.ki-config.toml',
-        '["example/harness:ki-a"]\n["example/harness:ki-b"]\n["example/harness:ki-c"]\n["example/harness:ki-d"]\n'
-      )
+      await box.project.write('.ki-config.toml', '["example/harness:ki-a"]\n["example/harness:ki-b"]\n["example/harness:ki-c"]\n["example/harness:ki-d"]\n')
 
       const result = await box.run(`ki repo --repo ${box.project.path} audit --skill ki-a`)
 

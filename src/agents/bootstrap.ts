@@ -27,17 +27,12 @@ const bootstrapSkillSources = async (
     })
   )
 
-export const installedBootstrapSkillSources = async (
-  dataDirectory: string,
-  identifier = canonicalHarnessIdentifier
-): Promise<readonly ManagedUserSkill[]> => {
+export const installedBootstrapSkillSources = async (dataDirectory: string, identifier = canonicalHarnessIdentifier): Promise<readonly ManagedUserSkill[]> => {
   const harness = await readInstalledHarness(dataDirectory, identifier)
   return bootstrapSkillSources(harness, `installed harness ${identifier}`)
 }
 
-export const localBootstrapHarness = async (
-  harnessDirectory: string
-): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
+export const localBootstrapHarness = async (harnessDirectory: string): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
   const harness = await requiredPhysicalDirectory(resolve(harnessDirectory), 'local harness')
   const skills: ManagedUserSkill[] = []
   for (const name of bootstrapUserSkills) {

@@ -118,9 +118,7 @@ export const createDoctorCommand = (context: KiContext): Command =>
         const resolved = installed
           .flatMap((harness) => harness.capabilities.map((candidate) => ({ harness, capability: candidate })))
           .find(({ harness, capability }) => identity === `${harness.id}:${capability.name}`)
-        const compatibleAgents = resolved
-          ? agents.filter((agent) => compatibleWithSkill(agent, resolved.capability.supportedRuntimes))
-          : agents
+        const compatibleAgents = resolved ? agents.filter((agent) => compatibleWithSkill(agent, resolved.capability.supportedRuntimes)) : agents
         if (compatibleAgents.length === 0) {
           checks.push({ status: 'fail', label: `User skill ${name}`, detail: 'no compatible configured agent' })
           continue

@@ -14,9 +14,7 @@ const userConfiguration = (release?: { readonly id: string; readonly sha256: str
     '',
     '[harnesses]',
     'ids = []',
-    ...(release
-      ? ['', `releases = [{ id = "${release.id}", url = "https://releases.example.test/harness.tgz", sha256 = "${release.sha256}" }]`]
-      : []),
+    ...(release ? ['', `releases = [{ id = "${release.id}", url = "https://releases.example.test/harness.tgz", sha256 = "${release.sha256}" }]`] : []),
     '',
     '[skills]',
     ''
@@ -133,8 +131,7 @@ describe('[ki harness lifecycle]', () => {
 
     expect(reinstalled).toEqual({
       exitCode: 1,
-      output:
-        'ki: error: the canonical harness knowledgeislands/ki-agentic-harness is development-linked; run ki dev local off before reinstalling\n'
+      output: 'ki: error: the canonical harness knowledgeislands/ki-agentic-harness is development-linked; run ki dev local off before reinstalling\n'
     })
     expect(removed).toEqual({
       exitCode: 1,

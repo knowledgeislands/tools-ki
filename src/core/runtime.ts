@@ -113,8 +113,7 @@ const validateRubricSession = (value: unknown, definition: SkillRubricDefinition
     if (!Array.isArray(families) || families.some((family) => typeof family !== 'string' || !familyCodes.has(family)))
       throw new KiError(`${identity} rubric subject ${index} families must name only declared rubric families`, 1)
     if (new Set(families).size !== families.length) throw new KiError(`${identity} rubric subject ${index} repeats a family`, 1)
-    if (label !== undefined && typeof label !== 'string')
-      throw new KiError(`${identity} rubric subject ${index} has an invalid subject label`, 1)
+    if (label !== undefined && typeof label !== 'string') throw new KiError(`${identity} rubric subject ${index} has an invalid subject label`, 1)
     return {
       context: context as RubricSubject<unknown>['context'],
       families: families as string[],
@@ -134,8 +133,7 @@ const validateOutcome = (value: unknown, item: PreparedRubricItem, index: number
   if (status !== 'PASS' && status !== 'VIOLATION' && status !== 'NOT_APPLICABLE' && status !== 'INFO')
     throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid status`, 1)
   if (typeof message !== 'string' || !message) throw new KiError(`rubric item ${code} audit outcome ${index} must have a message`, 1)
-  if (subject !== undefined && typeof subject !== 'string')
-    throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
+  if (subject !== undefined && typeof subject !== 'string') throw new KiError(`rubric item ${code} audit outcome ${index} has an invalid subject`, 1)
   if (level !== undefined) {
     if (status !== 'VIOLATION') throw new KiError(`rubric item ${code} audit outcome ${index} sets a level outside VIOLATION`, 1)
     if ((level !== 'FAIL' && level !== 'WARN') || (level !== mechanical.level && !mechanical.overrideLevels?.includes(level)))
@@ -164,8 +162,7 @@ export const validateConformProposal = (
     const { path, content, create } = write
     if (typeof path !== 'string' || typeof content !== 'string')
       throw new KiError(`${identity} rubric session proposal write ${index} must have string path and content`, 1)
-    if (create !== undefined && typeof create !== 'boolean')
-      throw new KiError(`${identity} rubric session proposal write ${index} create must be boolean`, 1)
+    if (create !== undefined && typeof create !== 'boolean') throw new KiError(`${identity} rubric session proposal write ${index} create must be boolean`, 1)
     return create ? { path, content, create } : { path, content }
   })
   const validatedCommands = commands.map((command, index) => {
@@ -202,8 +199,7 @@ const orderedMechanicalItems = (definition: SkillRubricDefinition<unknown>): rea
   return entries
     .slice()
     .sort((left, right) => {
-      const phaseDelta =
-        RUBRIC_PHASES.indexOf(left.item.item.mechanical.audit.phase) - RUBRIC_PHASES.indexOf(right.item.item.mechanical.audit.phase)
+      const phaseDelta = RUBRIC_PHASES.indexOf(left.item.item.mechanical.audit.phase) - RUBRIC_PHASES.indexOf(right.item.item.mechanical.audit.phase)
       if (phaseDelta !== 0) return phaseDelta
       if (left.familyIndex !== right.familyIndex) return left.familyIndex - right.familyIndex
       return left.itemIndex - right.itemIndex
@@ -281,8 +277,7 @@ const auditSkill = async (
   const publication: RubricPublication = {
     ...preparedPublication.evidence,
     propose: () => {
-      if (mode !== 'conform' || !publicationDraft.conforming)
-        throw new KiError('rubric publication can be proposed only from a conform action', 1)
+      if (mode !== 'conform' || !publicationDraft.conforming) throw new KiError('rubric publication can be proposed only from a conform action', 1)
       publicationDraft.write = preparedPublication.proposal()
     }
   }

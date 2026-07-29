@@ -50,11 +50,7 @@ export const resolveRepository = async (options: {
     if (discovered) return discovered
     throw new KiError('no KI repository found from the current working directory', 2)
   }
-  return targetFromDirectory(
-    options.repository,
-    '--repo must be an existing directory',
-    '--repo must name a repository containing .ki-config.toml'
-  )
+  return targetFromDirectory(options.repository, '--repo must be an existing directory', '--repo must name a repository containing .ki-config.toml')
 }
 
 const hasPattern = (value: string): boolean => /[*?]/.test(value)
@@ -94,11 +90,7 @@ const expandPattern = async (value: string, workingDirectory: string, source = '
   return (await walkDirectories(base)).filter((directory) => expression.test(directory))
 }
 
-const targetFromDirectory = async (
-  directory: string,
-  directoryMessage: string,
-  configurationMessage = directoryMessage
-): Promise<RepositoryLocation> => {
+const targetFromDirectory = async (directory: string, directoryMessage: string, configurationMessage = directoryMessage): Promise<RepositoryLocation> => {
   const root = await physicalDirectory(directory, directoryMessage)
   const configuration = join(root, CONFIGURATION_FILE)
   if (!(await isConfigurationFile(configuration))) throw new KiError(configurationMessage, 2)
@@ -138,9 +130,7 @@ const repositoriesFromMgitConfiguration = async (directory: string): Promise<rea
     if (entry.kind === 'owned-link') continue
     const child = join(directory, entry.path)
     if (entry.kind === 'nested')
-      targets.push(
-        ...(await repositoriesFromMgitConfiguration(await physicalDirectory(child, `invalid nested .mgitconfig target ${entry.path}`)))
-      )
+      targets.push(...(await repositoriesFromMgitConfiguration(await physicalDirectory(child, `invalid nested .mgitconfig target ${entry.path}`))))
     else targets.push(await targetFromDirectory(child, `invalid .mgitconfig repository target ${entry.path}`))
   }
   return targets

@@ -242,8 +242,7 @@ export const installCanonicalHarness = async (
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
   installHarness(configurationDirectory, dataDirectory, canonicalHarnessIdentifier, fetcher)
 
-const canonicalHarnessDirectory = (dataDirectory: string): string =>
-  join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
+const canonicalHarnessDirectory = (dataDirectory: string): string => join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
 
 export const canonicalHarnessDevelopmentEnabled = async (dataDirectory: string): Promise<boolean> => {
   const state = await lstat(join(canonicalHarnessDirectory(dataDirectory), 'skills')).catch(() => undefined)
@@ -259,9 +258,7 @@ const localPayloadDirectory = async (local: string, payload: (typeof payloadRoot
 export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, local: string): Promise<string> => {
   const harness = await realpath(resolve(local))
   await physicalDirectory(harness, 'local harness')
-  const sources = new Map(
-    await Promise.all(payloadRoots.map(async (payload) => [payload, await localPayloadDirectory(harness, payload)] as const))
-  )
+  const sources = new Map(await Promise.all(payloadRoots.map(async (payload) => [payload, await localPayloadDirectory(harness, payload)] as const)))
   const destination = canonicalHarnessDirectory(dataDirectory)
   await ensureDirectory(join(dataDirectory, 'harnesses'), 'installed harnesses directory')
   await ensureDirectory(dirname(destination), 'installed harness owner knowledgeislands')
@@ -310,8 +307,7 @@ const canonicalDevelopmentProjection = async (dataDirectory: string): Promise<bo
   )
 }
 
-export const isCanonicalHarnessDevelopmentLinked = (dataDirectory: string): Promise<boolean> =>
-  canonicalDevelopmentProjection(dataDirectory)
+export const isCanonicalHarnessDevelopmentLinked = (dataDirectory: string): Promise<boolean> => canonicalDevelopmentProjection(dataDirectory)
 
 export const disableCanonicalHarnessDevelopment = async (dataDirectory: string): Promise<boolean> => {
   const destination = canonicalHarnessDirectory(dataDirectory)
@@ -346,9 +342,7 @@ export const uninstallHarness = async (dataDirectory: string, identifier: string
   const entries = await readdir(destination, { withFileTypes: true })
   if (
     !entries.length ||
-    entries.some(
-      (entry) => !payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) || !entry.isDirectory() || entry.isSymbolicLink()
-    )
+    entries.some((entry) => !payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) || !entry.isDirectory() || entry.isSymbolicLink())
   ) {
     throw new KiError(`installed harness ${identifier} has unrecognised state and will not be removed`, 1)
   }

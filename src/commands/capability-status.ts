@@ -26,8 +26,7 @@ export const createOutdatedCommand = (context: KiContext): Command =>
       lines.push('No comparable newer release evidence.')
       lines.push('Unavailable release evidence:')
       for (const entry of status.outdatedEvidenceGaps) {
-        const reason =
-          entry.reason === 'no-configured-release' ? 'no configured immutable release' : 'installed release provenance is not recorded'
+        const reason = entry.reason === 'no-configured-release' ? 'no configured immutable release' : 'installed release provenance is not recorded'
         lines.push(`  ${entry.harness}: ${reason}`)
       }
     }

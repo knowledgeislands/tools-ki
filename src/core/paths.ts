@@ -14,8 +14,7 @@ export type Environment = NodeJS.ProcessEnv & { HOME?: string; USERPROFILE?: str
 
 export const userHome = (environment: Environment): string => environment.HOME ?? environment.USERPROFILE ?? ''
 
-const xdg = (environment: Environment, name: string, fallback: string): string =>
-  environment[name] || resolve(userHome(environment), fallback)
+const xdg = (environment: Environment, name: string, fallback: string): string => environment[name] || resolve(userHome(environment), fallback)
 
 const kiPath = (environment: Environment, kiName: string, xdgName: string, fallback: string): string =>
   environment[kiName] || resolve(xdg(environment, xdgName, fallback), 'ki')

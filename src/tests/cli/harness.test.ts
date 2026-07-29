@@ -155,11 +155,7 @@ describe('[ki harness]', () => {
         `[harnesses]\nreleases = [{ id = "not-an-identifier", url = "https://releases.example.test/archive.tar.gz", sha256 = "${'a'.repeat(64)}" }]\n`,
         'harnesses[0] id must be an owner/name identifier'
       ],
-      [
-        'a release without a URL',
-        `[harnesses]\nreleases = [{ id = "example/harness", sha256 = "${'a'.repeat(64)}" }]\n`,
-        'harnesses[0] must declare url'
-      ],
+      ['a release without a URL', `[harnesses]\nreleases = [{ id = "example/harness", sha256 = "${'a'.repeat(64)}" }]\n`, 'harnesses[0] must declare url'],
       [
         'a release using HTTP',
         `[harnesses]\nreleases = [{ id = "example/harness", url = "http://releases.example.test/archive.tar.gz", sha256 = "${'a'.repeat(64)}" }]\n`,
@@ -171,11 +167,7 @@ describe('[ki harness]', () => {
         'harnesses[0] must declare sha256'
       ],
       ['a releases value that is not an array', '[harnesses]\nreleases = "example/harness"\n', 'must be an array of release entries'],
-      [
-        'no configured release for the requested harness',
-        '[harnesses]\nreleases = []\n',
-        'is not configured in the immutable release registry'
-      ],
+      ['no configured release for the requested harness', '[harnesses]\nreleases = []\n', 'is not configured in the immutable release registry'],
       [
         'repeated release identifiers',
         `[harnesses]\nreleases = [{ id = "example/harness", url = "https://releases.example.test/one.tar.gz", sha256 = "${'a'.repeat(64)}" }, { id = "example/harness", url = "https://releases.example.test/two.tar.gz", sha256 = "${'b'.repeat(64)}" }]\n`,
@@ -647,11 +639,7 @@ releases = [
     test.each([
       ['a missing skill name', '---\nki-depends-on: []\n---\n', 'must declare name'],
       ['an ignored frontmatter line', '---\nnot metadata\nki-depends-on: []\n---\n', 'must declare name'],
-      [
-        'an invalid dependency declaration',
-        '---\nname: ki-example\nki-depends-on: ki-other\n---\n',
-        'must declare ki-depends-on as a flow list'
-      ],
+      ['an invalid dependency declaration', '---\nname: ki-example\nki-depends-on: ki-other\n---\n', 'must declare ki-depends-on as a flow list'],
       ['a repeated dependency', '---\nname: ki-example\nki-depends-on: [ki-other, ki-other]\n---\n', 'repeats a dependency'],
       [
         'an empty runtime list',
@@ -663,11 +651,7 @@ releases = [
         '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n',
         'must declare ki-supported-runtimes using only claude-code or codex'
       ],
-      [
-        'a repeated runtime',
-        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex, codex]\n---\n',
-        'repeats a supported runtime'
-      ]
+      ['a repeated runtime', '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex, codex]\n---\n', 'repeats a supported runtime']
     ])('rejects %s in installed skill frontmatter', async (_case, skill, expected) => {
       const box = await sandbox()
       await box.setupExampleHarness()

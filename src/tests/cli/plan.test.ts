@@ -87,10 +87,7 @@ describe('[ki repo plan]', () => {
   test('isolates missing, malformed, invalid-status, and unsafe roadmap entries', async () => {
     const box = await sandbox()
     await box.project.write('valid/.ki-config.toml', '# valid\n')
-    await box.project.write(
-      'valid/docs/roadmap/KI-TOOL-CLI-003-inspect.md',
-      item({ blocks: '[KI-TOOL-CLI-010]', 'transferred-from': 'example/source' })
-    )
+    await box.project.write('valid/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item({ blocks: '[KI-TOOL-CLI-010]', 'transferred-from': 'example/source' }))
     await box.project.write('missing/.ki-config.toml', '# missing\n')
     await box.project.write('invalid-status/.ki-config.toml', '# invalid-status\n')
     await box.project.write('invalid-status/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item({ status: 'closed' }))
@@ -102,27 +99,12 @@ describe('[ki repo plan]', () => {
     const invalidStatus = await realpath(`${box.project.path}/invalid-status`)
     const unsafe = await realpath(`${box.project.path}/unsafe`)
 
-    const result = await box.run([
-      'ki',
-      'repo',
-      '--repo',
-      valid,
-      '--repo',
-      missing,
-      '--repo',
-      invalidStatus,
-      '--repo',
-      unsafe,
-      'plan',
-      'list'
-    ])
+    const result = await box.run(['ki', 'repo', '--repo', valid, '--repo', missing, '--repo', invalidStatus, '--repo', unsafe, 'plan', 'list'])
     const invalidFormat = await box.run('ki repo --repo valid plan list --format yaml')
 
     expect(result.output).toContain(`Repository: ${valid}\nItems:\n  KI-TOOL-CLI-003 [next/open] Inspect governed work`)
     expect(result.output).toContain(`Repository: ${missing}\nDiagnostic: repository ${missing} has no physical docs/roadmap directory`)
-    expect(result.output).toContain(
-      `Repository: ${invalidStatus}\nDiagnostic: work item KI-TOOL-CLI-003-inspect.md has an invalid lifecycle status`
-    )
+    expect(result.output).toContain(`Repository: ${invalidStatus}\nDiagnostic: work item KI-TOOL-CLI-003-inspect.md has an invalid lifecycle status`)
     expect(result.output).toContain(`Repository: ${unsafe}\nDiagnostic: work item KI-TOOL-CLI-003-inspect.md must be a regular file`)
     expect(invalidFormat).toEqual({ exitCode: 2, output: 'ki: error: --format accepts text or json\n' })
   })

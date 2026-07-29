@@ -24,8 +24,7 @@ const qualifiedSkill = (identity: string): { readonly harness: string; readonly 
 
 const looksLikeSkill = (name: string): boolean => name.startsWith('ki-') || name.includes(':')
 
-const declarationError = (identity: string): KiError =>
-  new KiError(`declared skill ${identity} must use a qualified <harness-id>:<skill-name> TOML table`, 1)
+const declarationError = (identity: string): KiError => new KiError(`declared skill ${identity} must use a qualified <harness-id>:<skill-name> TOML table`, 1)
 
 export const readDeclaredSkills = async (configurationPath: string): Promise<readonly DeclaredSkill[]> => {
   let parsed: unknown

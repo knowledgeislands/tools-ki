@@ -21,11 +21,7 @@ export const createDiagCommand = (context: KiContext): Command =>
       field('File', configuration.path)
     ]
     if (configuration.state !== 'missing') {
-      const localMode = configuration.local
-        ? (await canonicalHarnessDevelopmentEnabled(context.paths.data))
-          ? 'on'
-          : 'off'
-        : 'not configured'
+      const localMode = configuration.local ? ((await canonicalHarnessDevelopmentEnabled(context.paths.data)) ? 'on' : 'off') : 'not configured'
       lines.push(
         field(`Agents (${configuration.agents.length})`, configuration.agents.join(', ') || 'none'),
         field(`Harnesses (${configuration.harnesses.length})`, configuration.harnesses.join(', ') || 'none'),
@@ -70,8 +66,6 @@ export const createRepoDiagCommand = (
         : selected.repositories.length
           ? 'explicit target set'
           : 'current working directory'
-    const reports = repositories.map(
-      (repository) => `Repository: ${repository.root}\nConfiguration: ${repository.configuration}\nSource: ${source}`
-    )
+    const reports = repositories.map((repository) => `Repository: ${repository.root}\nConfiguration: ${repository.configuration}\nSource: ${source}`)
     context.stdout.write(`ki repo diag\n${reports.join('\n\n')}\n`)
   })

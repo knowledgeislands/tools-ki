@@ -25,10 +25,7 @@ export interface HarnessArchive {
   readonly sha256: string
 }
 
-export const makeHarnessArchive = (
-  files: Readonly<Record<string, ArchiveEntry>>,
-  { terminatingBlocks = true }: ArchiveOptions = {}
-): HarnessArchive => {
+export const makeHarnessArchive = (files: Readonly<Record<string, ArchiveEntry>>, { terminatingBlocks = true }: ArchiveOptions = {}): HarnessArchive => {
   const chunks: Uint8Array[] = []
   for (const [path, entry] of Object.entries(files)) {
     const contents = typeof entry === 'string' ? entry : (entry.contents ?? '')

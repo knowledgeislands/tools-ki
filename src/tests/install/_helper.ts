@@ -27,10 +27,7 @@ export interface ReleaseFixture {
 export interface InstallSandbox {
   readonly path: string
   readonly installer: string
-  readonly exec: (
-    command: readonly [string, ...string[]],
-    options?: { readonly environment?: Record<string, string | undefined> }
-  ) => Promise<CommandResult>
+  readonly exec: (command: readonly [string, ...string[]], options?: { readonly environment?: Record<string, string | undefined> }) => Promise<CommandResult>
   readonly release: (options?: {
     readonly version?: string
     readonly target?: 'darwin-arm64' | 'darwin-x64' | 'linux-x64'
@@ -90,9 +87,7 @@ export const installSandbox = async (): Promise<InstallSandbox> => {
     await executeFile('tar', ['-C', archiveRoot, '-czf', join(content, asset), 'ki', 'man/ki.1'])
     if (corruptArchive) await writeFile(join(content, asset), 'not a tar archive')
     await Promise.all(
-      targets
-        .filter((candidate) => candidate !== target)
-        .map((candidate) => copyFile(join(content, asset), join(content, `ki-${version}-${candidate}.tar.gz`)))
+      targets.filter((candidate) => candidate !== target).map((candidate) => copyFile(join(content, asset), join(content, `ki-${version}-${candidate}.tar.gz`)))
     )
     const hash = String((await executeFile('shasum', ['-a', '256', join(content, asset)])).stdout).split(/\s+/)[0]
     const canonicalManifest = `format=ki-release-checksums-v1\nversion=${version}\n${targets

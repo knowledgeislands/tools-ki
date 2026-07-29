@@ -42,8 +42,7 @@ const frontmatter = (contents: string, file: string): Readonly<WorkItemFields> =
     const entry = /^([a-z-]+): (.+)$/.exec(line)
     if (!entry?.[1] || entry[2] === undefined) throw itemError(file, 'frontmatter must contain simple key-value fields')
     const [, key, value] = entry
-    if (!allowedFields.has(key as WorkItemField) || Object.hasOwn(fields, key))
-      throw itemError(file, `has unsupported or repeated field ${key}`)
+    if (!allowedFields.has(key as WorkItemField) || Object.hasOwn(fields, key)) throw itemError(file, `has unsupported or repeated field ${key}`)
     fields[key as WorkItemField] = value
   }
   for (const field of requiredFields) if (!fields[field]) throw itemError(file, `must declare ${field}`)
@@ -65,8 +64,7 @@ const readItem = async (directory: string, file: string): Promise<WorkItem> => {
   if (fields.horizon === 'future' ? fields.candidate !== 'true' : fields.candidate !== undefined)
     throw itemError(file, 'must use candidate: true only for future items')
   const baseline = fields['baseline-ref']
-  if (baseline !== 'null' && !/^[a-f0-9]{40}$/.test(baseline as string))
-    throw itemError(file, 'baseline-ref must be null or a full commit ID')
+  if (baseline !== 'null' && !/^[a-f0-9]{40}$/.test(baseline as string)) throw itemError(file, 'baseline-ref must be null or a full commit ID')
   return {
     id,
     title: fields.title as string,
@@ -84,8 +82,7 @@ const readItem = async (directory: string, file: string): Promise<WorkItem> => {
 export const readWorkItems = async (repository: string): Promise<readonly WorkItem[]> => {
   const directory = join(repository, ROADMAP_DIRECTORY)
   const state = await lstat(directory).catch(() => undefined)
-  if (!state?.isDirectory() || state.isSymbolicLink())
-    throw new KiError(`repository ${repository} has no physical docs/roadmap directory`, 2)
+  if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError(`repository ${repository} has no physical docs/roadmap directory`, 2)
   const entries = await readdir(directory)
   const items = await Promise.all(entries.filter((entry) => entry.endsWith('.md')).map((entry) => readItem(directory, entry)))
   return items.sort((left, right) => left.id.localeCompare(right.id))

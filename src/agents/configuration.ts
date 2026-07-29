@@ -164,8 +164,7 @@ export const inspectUserConfiguration = async (configurationDirectory: string): 
       if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) errors.push(`harnesses[${index}] sha256 must be lowercase SHA-256`)
     }
   }
-  const localSection =
-    configuration.local === undefined ? undefined : (inspectSection(configuration.local, 'local', errors) as LocalSection)
+  const localSection = configuration.local === undefined ? undefined : (inspectSection(configuration.local, 'local', errors) as LocalSection)
   if (localSection) {
     for (const key of Object.keys(localSection)) {
       if (key !== 'path') warnings.push(`local has unrecognised key ${key}`)
@@ -176,10 +175,7 @@ export const inspectUserConfiguration = async (configurationDirectory: string): 
   return { path, state: errors.length ? 'invalid' : 'valid', agents, harnesses, skills, local, warnings, errors }
 }
 
-export const readConfiguration = async (
-  configurationDirectory: string,
-  homeDirectory: string
-): Promise<readonly InstalledAgent[] | undefined> => {
+export const readConfiguration = async (configurationDirectory: string, homeDirectory: string): Promise<readonly InstalledAgent[] | undefined> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
   const state = await lstat(path).catch(() => undefined)
   if (!state) return undefined
@@ -195,8 +191,7 @@ export const readConfiguration = async (
   if (!isRecord(parsed)) throw new KiError('agent configuration must use schema 1', 1)
   const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown; local?: unknown }
   const agentSection = isRecord(configuration.agents) ? (configuration.agents as StringListSection) : undefined
-  const localSection =
-    configuration.local === undefined ? undefined : isRecord(configuration.local) ? (configuration.local as LocalSection) : null
+  const localSection = configuration.local === undefined ? undefined : isRecord(configuration.local) ? (configuration.local as LocalSection) : null
   if (
     configuration.schema !== 1 ||
     !agentSection ||
@@ -233,18 +228,10 @@ export const clearLocalBootstrapHarness = async (configurationDirectory: string)
 export const setLocalBootstrapHarness = async (configurationDirectory: string, homeDirectory: string, local: string): Promise<void> => {
   const agents = await configuredAgents({ homeDirectory, configurationDirectory })
   const inspection = await inspectUserConfiguration(configurationDirectory)
-  await writeFile(
-    bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(agents, inspection.harnesses, inspection.skills, local),
-    'utf8'
-  )
+  await writeFile(bootstrapConfigurationPath(configurationDirectory), renderConfiguration(agents, inspection.harnesses, inspection.skills, local), 'utf8')
 }
 
-export const setConfiguredUserSkills = async (
-  configurationDirectory: string,
-  homeDirectory: string,
-  skills: readonly string[]
-): Promise<void> => {
+export const setConfiguredUserSkills = async (configurationDirectory: string, homeDirectory: string, skills: readonly string[]): Promise<void> => {
   const agents = await configuredAgents({ homeDirectory, configurationDirectory })
   const inspection = await inspectUserConfiguration(configurationDirectory)
   await writeFile(

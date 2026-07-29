@@ -17,16 +17,14 @@ const activeRemovalActions = async (context: KiContext, harness: InstalledHarnes
   const user = await inspectUserConfiguration(context.paths.config)
   for (const declaration of user.skills) {
     const prefix = `${harness.id}:`
-    if (declaration.startsWith(prefix) && names.has(declaration.slice(prefix.length)))
-      active.push(`ki skill remove ${declaration.slice(prefix.length)}`)
+    if (declaration.startsWith(prefix) && names.has(declaration.slice(prefix.length))) active.push(`ki skill remove ${declaration.slice(prefix.length)}`)
   }
   return active
 }
 
 const requireInactive = async (context: KiContext, harness: InstalledHarness, action: 'reinstall' | 'uninstall'): Promise<void> => {
   const removals = await activeRemovalActions(context, harness)
-  if (removals.length)
-    throw new KiError(`cannot ${action} ${harness.id} while it has active skills; run ${removals.join(' and ')} first`, 1)
+  if (removals.length) throw new KiError(`cannot ${action} ${harness.id} while it has active skills; run ${removals.join(' and ')} first`, 1)
 }
 
 export const createHarnessCommand = (context: KiContext): Command =>

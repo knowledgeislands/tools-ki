@@ -1140,10 +1140,7 @@ export default {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
       await box.setupExampleHarness({
-        rubric: rubric('[]').replace(
-          "concern: 'test governance',",
-          "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
-        )
+        rubric: rubric('[]').replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
       })
       await rm(box.home.path, { recursive: true })
 
@@ -1167,10 +1164,7 @@ export default {
         ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
       await box.setupExampleHarness({ rubric: userHomeRubric('ki-example', 'EXAMPLE-1') })
       await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
-      await box.data.write(
-        'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
-        userHomeRubric('ki-extra', 'EXTRA-1')
-      )
+      await box.data.write('ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts', userHomeRubric('ki-extra', 'EXTRA-1'))
 
       const result = await box.run('ki repo conform')
 
@@ -1194,10 +1188,7 @@ export default {
         ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
       await box.setupExampleHarness({ rubric: userHomeRubric('ki-example', 'EXAMPLE-1', 'first\\n') })
       await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
-      await box.data.write(
-        'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
-        userHomeRubric('ki-extra', 'EXTRA-1', 'second\\n')
-      )
+      await box.data.write('ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts', userHomeRubric('ki-extra', 'EXTRA-1', 'second\\n'))
 
       const result = await box.run('ki repo conform')
 
@@ -1347,9 +1338,7 @@ export default {
       const result = await box.run('ki repo conform')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain(
-        'direct subprocess conform failed: "node" "-e" "process.stdout.write(\'detail\'); process.exit(3)"\ndetail'
-      )
+      expect(result.output).toContain('direct subprocess conform failed: "node" "-e" "process.stdout.write(\'detail\'); process.exit(3)"\ndetail')
     })
 
     test('combines stdout and stderr from a failed subprocess conform', async () => {
@@ -1841,8 +1830,7 @@ export default {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
       await box.setupExampleHarness({
-        rubric:
-          rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', level: 'WARN', message: 'x' }] }] }]`)
       })
 
@@ -1856,8 +1844,7 @@ export default {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
       await box.setupExampleHarness({
-        rubric:
-          rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'INFO', level: 'WARN', message: 'x' }] }] }]`)
       })
 
@@ -1918,27 +1905,18 @@ export default {
       ['a non-boolean create flag', `{ writes: [{ path: 'governed.txt', content: 'x', create: 'yes' }] }`, 'create must be boolean'],
       ['a non-array commands field', `{ writes: [], commands: 'not an array' }`, 'proposal commands must be an array'],
       ['a non-table command', `{ writes: [], commands: [null] }`, 'command 0 must have a program and arguments'],
-      [
-        'an invalid command program',
-        `{ writes: [], commands: [{ program: '../false', arguments: [] }] }`,
-        'command 0 must have a program and arguments'
-      ],
+      ['an invalid command program', `{ writes: [], commands: [{ program: '../false', arguments: [] }] }`, 'command 0 must have a program and arguments'],
       [
         'a command argument with a NUL byte',
         `{ writes: [], commands: [{ program: 'false', arguments: ['a\\0b'] }] }`,
         'arguments must be strings without NUL bytes'
       ],
-      [
-        'a non-string command argument',
-        `{ writes: [], commands: [{ program: 'false', arguments: [1] }] }`,
-        'arguments must be strings without NUL bytes'
-      ]
+      ['a non-string command argument', `{ writes: [], commands: [{ program: 'false', arguments: [1] }] }`, 'arguments must be strings without NUL bytes']
     ])('rejects %s in a conform proposal', async (_case, proposal, expected) => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
       await box.setupExampleHarness({
-        rubric:
-          rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'x' }], conform: async () => (${proposal}) }] }]`)
       })
 
@@ -2036,10 +2014,7 @@ export default {
     test('orders mechanical items across families by phase, then family, then item position', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
-      const item = (
-        code: string,
-        phase: string
-      ) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
+      const item = (code: string, phase: string) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
         audit: async () => [{ status: 'INFO', message: '${code}' }] }`
       await box.setupExampleHarness({
         rubric: rubric(`[
@@ -2244,10 +2219,7 @@ export default {
   })
 
   describe('skill resolution', () => {
-    const installSkillsHarness = async (
-      data: SandboxArea,
-      specs: readonly { readonly name: string; readonly deps: readonly string[] }[]
-    ): Promise<void> => {
+    const installSkillsHarness = async (data: SandboxArea, specs: readonly { readonly name: string; readonly deps: readonly string[] }[]): Promise<void> => {
       for (const { name, deps } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
         const list = `[${deps.join(', ')}]`

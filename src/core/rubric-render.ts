@@ -31,9 +31,7 @@ export const renderRubricMarkdown = (definition: SkillRubricDefinition<unknown>)
   const families = definition.families
     .map(
       (family) =>
-        `## ${family.code} — ${family.title}\n\n→ [standard](${family.standard})\n\n${family.description}\n\n${family.items
-          .map(renderItem)
-          .join('\n')}`
+        `## ${family.code} — ${family.title}\n\n→ [standard](${family.standard})\n\n${family.description}\n\n${family.items.map(renderItem).join('\n')}`
     )
     .join('\n\n')
 
