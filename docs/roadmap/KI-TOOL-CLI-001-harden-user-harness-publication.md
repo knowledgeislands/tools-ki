@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-001
 title: Harden user harness installation and runtime skill publication
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: b99387b600abd0041e1253b2a09429a855b1e2db
@@ -72,3 +72,7 @@ None. Compatible-harness hook state remains intentionally outside bootstrap and 
 ### Mini recap
 
 The direct publication boundary is safe when an unmanaged core-skill link is present: refusal is preferable to silent replacement. No follow-up route is proposed.
+
+## Done
+
+Accepted by the user on 2026-07-29. Core-skill publication now preserves foreign links rather than replacing them silently. No residual concern or follow-up is intended.
