@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-005
 title: Align command scopes and repository resolution
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: [KI-TOOL-CLI-006]
 blocked-by: []
 baseline-ref: e659bea937732687809c1fa84344ab7822205551
@@ -119,4 +119,8 @@ Repeatable multi-repository invocation remains deliberately deferred to [KI-TOOL
 
 ### Mini recap
 
-CLI-005 is ready for explicit acceptance. It has not been marked done or pruned.
+KI-TOOL-CLI-005 was ready for explicit acceptance. It had not been marked done or pruned at the time of this acceptance packet.
+
+## Done
+
+Accepted by the user on 2026-07-29 after review of the recorded delivery and verification evidence.
