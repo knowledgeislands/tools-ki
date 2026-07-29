@@ -5,7 +5,7 @@ theme: cli
 horizon: next
 status: open
 blocks: [KI-TOOL-CLI-003]
-blocked-by: [KI-TOOL-CLI-005, KI-TOOL-CLI-008]
+blocked-by: []
 baseline-ref: null
 ---
 
@@ -59,4 +59,4 @@ The rendered manual also needs clearer sectional rhythm: place visible vertical 
 
 ## Dependencies / blocks
 
-This item is blocked by [KI-TOOL-CLI-005](KI-TOOL-CLI-005-align-command-scopes-and-repository-resolution.md) and [KI-TOOL-CLI-008](KI-TOOL-CLI-008-consolidate-harness-and-developer-commands.md). It blocks [KI-TOOL-CLI-003](KI-TOOL-CLI-003-add-native-governed-plan-inventory.md).
+The completed [KI-TOOL-CLI-005](KI-TOOL-CLI-005-align-command-scopes-and-repository-resolution.md) and [KI-TOOL-CLI-008](KI-TOOL-CLI-008-consolidate-harness-and-developer-commands.md) establish this item’s repository boundary and selector grammar. This item blocks [KI-TOOL-CLI-003](KI-TOOL-CLI-003-add-native-governed-plan-inventory.md).
