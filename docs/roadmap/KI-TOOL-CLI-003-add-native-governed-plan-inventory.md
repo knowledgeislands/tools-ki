@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-003
 title: Add native governed-work inspection commands
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: c378a72eeaac094be40962080da3264dfdfd0542
@@ -19,13 +19,13 @@ This item does not implement lifecycle transitions, confirmation prompts, creati
 
 ## Current state
 
-`ki repo` now resolves explicit, workspace, and direct-CWD repository target sets through one shared resolver, but exposes no native work-item inventory. Canonical governed work is open-only and lives in physical regular Markdown files directly below `docs/roadmap/`; the harness owns their format and lifecycle.
+`ki repo` now resolves explicit, workspace, and direct-CWD repository target sets through one shared resolver, but exposes no native work-item inventory. Canonical governed work lives in physical regular Markdown files directly below `docs/roadmap/`; its lifecycle status is independent of its open roadmap scope, and the harness owns both format and lifecycle.
 
 The inventory needs a deliberately read-only parser and result model that can consume any resolved repository target set, including KI-owned workspace groups.
 
 ### Inventory contract
 
-`ki repo plan list` will consume the existing resolved target set and default to deterministic text output grouped by repository. Each open item will expose its identifier, title, theme, horizon, status, dependency identifiers, and baseline reference. `list` is the complete initial native inspection surface; any later command must earn a separate authority and confirmation design.
+`ki repo plan list` will consume the existing resolved target set and default to deterministic text output grouped by repository. Each governed item will expose its identifier, title, theme, horizon, lifecycle status, dependency identifiers, baseline reference, and the Future candidate flag where required. `list` is the complete initial native inspection surface; any later command must earn a separate authority and confirmation design.
 
 `--format json` will emit the same stable fields in one object containing ordered repository results and isolated diagnostics. `--horizon <value>` and `--status <value>` will filter items before rendering; an empty successful result remains distinct from a malformed work-item diagnostic.
 
@@ -33,13 +33,13 @@ Malformed or unsafe work-item files fail only their repository result after targ
 
 ## Steps
 
-1. Add a contained, read-only inventory module that enumerates only physical regular Markdown files directly below a selected repository's `docs/roadmap/`, refusing symbolic links, non-files, and path escapes before reading them.
-2. Parse only the canonical frontmatter subset (`id`, `title`, `theme`, `horizon`, `status`, `blocks`, `blocked-by`, `baseline-ref`, and optional `transferred-from`), validate identity and lifecycle values, and derive an immutable item model without introducing a general YAML parser or mutating any work item.
-3. Add `ki repo plan list [--format text|json] [--horizon <value>] [--status <value>]`, reusing `resolveRepositoryTargets()`. Sort repository results by selected-target order and items by identifier; filter before rendering; render one stable JSON document or deterministic grouped text.
-4. Preserve selection's all-or-nothing preflight, then isolate each selected repository's missing roadmap directory, malformed item, non-open record, or unsafe entry as that repository's diagnostic while other selected repositories still return their inventories.
-5. Register the repository `plan` group and its initial `list` subcommand in root help and generated completions, retaining the `ki-plan` skill as the sole lifecycle owner.
-6. Add black-box contracts for open items, exact text and JSON schemas, filters, empty inventories, malformed, non-open, and unsafe files, workspace and explicit target sets, and independent multi-target results.
-7. Update `ki(1)`, README, and developer guidance with the inventory/lifecycle boundary, and prepare the non-blocking public-guidance handoff for `ki-website`.
+1. ✓ Add a contained, read-only inventory module that enumerates only physical regular Markdown files directly below a selected repository's `docs/roadmap/`, refusing symbolic links, non-files, and path escapes before reading them.
+2. ✓ Parse only the canonical frontmatter subset (`id`, `title`, `theme`, `horizon`, `status`, `candidate`, `blocks`, `blocked-by`, `baseline-ref`, and optional `transferred-from`), validate identity and lifecycle values, and derive an immutable item model without introducing a general YAML parser or mutating any work item.
+3. ✓ Add `ki repo plan list [--format text|json] [--horizon <value>] [--status <value>]`, reusing `resolveRepositoryTargets()`. Sort repository results by selected-target order and items by identifier; filter before rendering; render one stable JSON document or deterministic grouped text.
+4. ✓ Preserve selection's all-or-nothing preflight, then isolate each selected repository's missing roadmap directory, malformed item, invalid lifecycle status, or unsafe entry as that repository's diagnostic while other selected repositories still return their inventories.
+5. ✓ Register the repository `plan` group and its initial `list` subcommand in root help and generated completions, retaining the `ki-plan` skill as the sole lifecycle owner.
+6. ✓ Add black-box contracts for lifecycle statuses, exact text and JSON schemas, filters, empty inventories, malformed and unsafe files, workspace and explicit target sets, and independent multi-target results.
+7. ✓ Update `ki(1)`, README, and developer guidance with the inventory/lifecycle boundary, and prepare the non-blocking public-guidance handoff for `ki-website`.
 
 ## Files touched
 
@@ -62,15 +62,42 @@ The shared repository selector is available for this item. CLI-003 does not bloc
 
 No worker dispatch is authorised by this shaping record. If implementation is delegated after readiness, the plan must first record a cold-agent-ready brief for each bounded worker: locked and escalated decisions, explicit minimum-viable per-spawn model, file scope, pass/fail definition of done, verification gate, completion checkpoint, and dependency-ordered rounds. The orchestrator retains public output-contract judgment, reviews every diff, and runs the final gate.
 
+## Acceptance
+
+### Delivered
+
+`ki repo plan list` is now a native, read-only repository command with text and JSON output plus horizon and lifecycle-status filters.
+
+### Summary of changes
+
+The command reuses repository and workspace target selection, inventories direct physical roadmap files through a narrow canonical-frontmatter parser, and reports each selected repository independently. It accepts the standard lifecycle and Future candidate semantics without changing work-item state. Help, completions, the manual, README, developer guidance, changelog, and a non-blocking KI Website handoff now expose the command surface and its authority boundary.
+
+### Verification
+
+- `bunx biome check src/commands/catalogue.ts src/commands/repo.ts src/commands/plan.ts src/core/work-items.ts src/tests/cli/completions.test.ts src/tests/cli/help.test.ts src/tests/cli/plan.test.ts`
+- `bunx tsc --noEmit`
+- `bun run test:coverage` — 405 tests passed; statements, branches, functions, and lines are all 100%.
+- `./bin/ki repo audit --repo .`
+- `mandoc -T lint man/ki.1`, Markdown formatting and linting, and `git diff --check`.
+- A direct `./bin/ki repo plan list --format json` smoke test reports this repository's in-progress item and its Future candidate records.
+
+### Outstanding concerns
+
+None. Future lifecycle operations remain deliberately out of scope and require their own authority and confirmation design.
+
+### Mini recap
+
+CLI-003 is ready for explicit user acceptance; no lifecycle transition or pruning has been performed by the new command.
+
 ## Discussion
 
 ### Authority boundary
 
-`ki repo plan list` reads and validates canonical work items but does not create, transition, accept, prune, or otherwise own their lifecycle. Harness-owned work-item semantics remain the source of truth; malformed items must be isolated as diagnostics rather than normalised or repaired by the inventory command.
+`ki repo plan list` reads and validates canonical work items across their valid lifecycle statuses but does not create, transition, accept, prune, or otherwise own that lifecycle. Harness-owned work-item semantics remain the source of truth; malformed items must be isolated as diagnostics rather than normalised or repaired by the inventory command.
 
 ### Result contract
 
-The contract uses text by default and JSON only through an explicit `--format json`. It must distinguish an empty inventory from a repository whose malformed, non-open, or unsafe item prevents one result from being read.
+The contract uses text by default and JSON only through an explicit `--format json`. It must distinguish an empty inventory from a repository whose malformed, invalid-status, or unsafe item prevents one result from being read.
 
 ### Parsing boundary
 

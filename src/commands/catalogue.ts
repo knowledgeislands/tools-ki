@@ -20,4 +20,4 @@ export const rootCommandNames = [
   'workspace'
 ] as const
 
-export const repoCommandNames = ['audit', 'conform', 'diag', 'educate', 'skill', 'upgrade'] as const
+export const repoCommandNames = ['audit', 'conform', 'diag', 'educate', 'plan', 'skill', 'upgrade'] as const

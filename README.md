@@ -54,6 +54,14 @@ ki repo diag
 ki repo --workspace release audit
 ```
 
+## Inspect governed work
+
+`ki repo plan list` reads the canonical work-item records in selected repositories without changing their lifecycle.
+
+It groups deterministic text output by repository; use `--format json` for the same fields in one stable JSON document, and use `--horizon <value>` or `--status <value>` to filter records.
+
+Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report. The command never creates, transitions, accepts, prunes, or repairs work items; the harness process skills remain their lifecycle authority.
+
 ## Install
 
 After the first immutable release, download `install.sh` from an exact released tag, inspect it, then run it with that tag:

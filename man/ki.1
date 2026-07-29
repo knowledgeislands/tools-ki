@@ -113,6 +113,9 @@ Run registered native repository audits.
 .B ki repo [repo-options] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Apply registered native repository repairs.
 .TP
+.B ki repo [repo-options] plan list [--format <text|json>] [--horizon <horizon>] [--status <status>]
+List governed work items without changing their lifecycle.
+.TP
 .B ki repo [repo-options] educate [--skill <skill>]
 Explain the registered repository maintenance catalogue.
 .TP
@@ -378,6 +381,15 @@ validates every complete write set and reports the affected paths without
 changing the repository. Publication refuses unsafe, changed, duplicate, or
 symbolic-link targets.
 Conform uses the same progress controls and reporter-level vocabulary as audit, names both the target and supplier for every skill, and renders FAIL, WARN, and FIXED findings by default while retaining every terminal per-skill result.
+.TP
+.B ki repo [repo-options] plan list [--format <text|json>] [--horizon <horizon>] [--status <status>]
+List canonical governed work items from every selected repository without changing
+their lifecycle. The default text output groups ordered items by repository;
+\fB--format json\fR emits the same fields in one stable object. \fB--horizon\fR
+and \fB--status\fR filter before rendering. A missing roadmap directory or
+malformed or unsafe item is an isolated diagnostic for that repository; other
+selected repositories still report. The command never creates, transitions,
+accepts, prunes, or repairs a work item.
 .TP
 .B ki repo [repo-options] educate [--skill <skill>]
 Explain each selected repository's declared capabilities and their recommended

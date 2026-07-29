@@ -55,6 +55,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki repo audit`
 - `ki repo conform`
+- `ki repo plan list`
 - `ki repo educate`
 - `ki repo skill add`
 - `ki repo skill remove`

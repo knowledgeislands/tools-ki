@@ -21,6 +21,7 @@ import {
 } from '../core/runtime.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../core/transaction.ts'
 import { createRepoDiagCommand } from './diag.ts'
+import { createRepoPlanCommand } from './plan.ts'
 import { createRepoSkillCommand } from './skill.ts'
 import { createUpgradeCommand } from './update.ts'
 
@@ -453,6 +454,7 @@ export const createRepoCommand = (context: KiContext): Command => {
   }
   return command
     .addCommand(createRepoDiagCommand(context, selectedRepositories))
+    .addCommand(createRepoPlanCommand(context, selectedRepositories))
     .addCommand(createRepoSkillCommand(context, selectedRepositories))
     .addCommand(createUpgradeCommand(context, selectedRepositories))
     .addCommand(

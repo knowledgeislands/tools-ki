@@ -42,6 +42,8 @@ Each public command or command group has its own module under `src/commands/`; c
 
 `src/commands/workspace.ts` owns the KI-only `ki workspace init`, `list`, `show`, `add`, and `remove` lifecycle. Its `.ki-workspace.toml` file has `schema = 1`, a required default group, and named ordered `repositories` arrays; the workspace command is the only surface that mutates this file.
 
+`src/commands/plan.ts` and `src/core/work-items.ts` provide the read-only `ki repo plan list` inventory. They reuse the shared repository target set, accept only direct physical regular Markdown work-item files, parse the narrow canonical frontmatter contract, and isolate an inventory diagnostic to its selected repository. They do not create, transition, accept, prune, or repair roadmap records; those lifecycle operations remain owned by harness process skills.
+
 ## Build a compiled executable
 
 Build and run a standalone executable for the current platform without changing any installation:
