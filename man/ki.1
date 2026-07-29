@@ -86,25 +86,25 @@ Use \fB--repo\fR to resolve only the supplied repository root.
 \&
 .PP
 .TP
-.B ki repo [--repo <path>] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
+.B ki repo [<repo-options>] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run registered native repository audits.
 .TP
-.B ki repo [--repo <path>] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
+.B ki repo [<repo-options>] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Apply registered native repository repairs.
 .TP
-.B ki repo [--repo <path>] educate [--skill <skill>]
+.B ki repo [<repo-options>] educate [--skill <skill>]
 Explain the registered repository maintenance catalogue.
 .TP
-.B ki repo [--repo <path>] skill add <skill> [--replace]
+.B ki repo [<repo-options>] skill add <skill> [--replace]
 Link and declare a harness skill in one repository.
 .TP
-.B ki repo [--repo <path>] skill remove <skill>
+.B ki repo [<repo-options>] skill remove <skill>
 Remove a KI-managed repository skill link and declaration.
 .TP
-.B ki repo [--repo <path>] upgrade
+.B ki repo [<repo-options>] upgrade
 Refresh uniquely resolved capabilities declared by one KI repository.
 .TP
-.B ki repo [--repo <path>] diag
+.B ki repo [<repo-options>] diag
 Show one repository resolution.
 .SS Harness management
 \&
@@ -276,7 +276,7 @@ one repository from the current working directory.
 Use these commands to inspect and maintain declared capabilities, diagnose a
 selected repository, and manage its skill links.
 .TP
-.B ki repo [--repo <path>] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
+.B ki repo [<repo-options>] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run the native read-only operations registered by the selected repository's
 declared capabilities. The host verifies every selected harness inventory and
 integrity-covered operation before importing it in process; it never dispatches
@@ -285,28 +285,28 @@ Progress defaults to \fBauto\fR, which follows stderr's TTY state; \fBalways\fR 
 Use \fB--progress-style multi\fR for stable per-skill rows.
 Each per-skill result names the assessed repository first and its supplying harness skill in brackets. Audit renders FAIL and WARN findings by default, but always shows a terminal per-skill result so a clean assessment is visible; \fB--reporter-levels\fR accepts a case-insensitive comma-separated selection from FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS, or \fBall\fR.
 .TP
-.B ki repo [--repo <path>] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
+.B ki repo [<repo-options>] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Plan and apply the same capabilities' safe writes, then re-audit. A dry run
 validates every complete write set and reports the affected paths without
 changing the repository. Publication refuses unsafe, changed, duplicate, or
 symbolic-link targets.
 Conform uses the same progress controls and reporter-level vocabulary as audit, names both the target and supplier for every skill, and renders FAIL, WARN, and FIXED findings by default while retaining every terminal per-skill result.
 .TP
-.B ki repo [--repo <path>] educate [--skill <skill>]
+.B ki repo [<repo-options>] educate [--skill <skill>]
 Explain the selected repository's declared capabilities and their recommended
 maintenance actions without changing repository state.
 .TP
-.B ki repo [--repo <path>] skill add <skill> [--replace]
+.B ki repo [<repo-options>] skill add <skill> [--replace]
 Add a registered skill in one selected repository.
 .TP
-.B ki repo [--repo <path>] skill remove <skill>
+.B ki repo [<repo-options>] skill remove <skill>
 Remove a KI-managed repository skill link and declaration.
 .TP
-.B ki repo [--repo <path>] upgrade
+.B ki repo [<repo-options>] upgrade
 Refresh uniquely resolved harness providers declared by one KI repository. It
 changes neither user nor repository skill activation.
 .TP
-.B ki repo [--repo <path>] diag
+.B ki repo [<repo-options>] diag
 Resolve exactly one KI repository. Without \fB--repo\fR, KI discovers from the
 current working directory; with it, KI resolves only the supplied path.
 .SS Harness management
