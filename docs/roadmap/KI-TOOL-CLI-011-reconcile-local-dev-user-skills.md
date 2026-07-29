@@ -12,7 +12,7 @@ transferred-from: 'knowledgeislands/ki-agentic-harness@92d5b263'
 
 ## Context
 
-`ki dev on /Users/krisbrown/workspaces/kis/knowledgeislands/ki-agentic-harness` correctly records the local checkout in `~/.config/ki/config.toml`, and `ki diag` reports that local source.
+`ki dev local on /Users/krisbrown/workspaces/kis/knowledgeislands/ki-agentic-harness` currently combines selecting a local checkout with activating it, and records that checkout in `~/.config/ki/config.toml`.
 
 However, the managed runtime links remain pointed at an older temporary harness payload:
 
@@ -26,11 +26,11 @@ The user configuration also still records only the former five core process skil
 
 As a result, a runtime may load old skill content even though `ki diag` claims local development mode is active.
 
-Local development mode must make the managed user skills and their configuration agree with its reported local harness source.
+Local development mode needs an explicit configured source and a distinct active state, so managed user skills, configuration, diagnostics, and health checks agree on the selected local harness.
 
 ## Boundary
 
-This item concerns KI-managed user-skill reconciliation for `ki dev on` and its idempotent re-run.
+This item concerns KI-managed user-skill reconciliation for `ki dev local set`, `on`, and `off`, including idempotent re-activation.
 
 It does not change harness acquisition, release installation, repository-declared governance, foreign user skills, or the semantics of the process skills themselves.
 
@@ -38,33 +38,39 @@ It must not add a compatibility fallback between local and installed payloads: o
 
 ## Current state
 
-`ki dev local on` already validates the local checkout through `localBootstrapHarness()`, which returns both the physical harness root and the current managed core skill sources.
+`ki dev local on <path>` already validates the local checkout through `localBootstrapHarness()`, which returns both the physical harness root and the current managed core skill sources.
 
 It then enables the canonical payload projection but discards those validated local sources, instead reading `installedBootstrapSkillSources()` and calling `installBootstrapSkills()` without replacement.
 
 Existing managed links therefore remain pointed at their former installed source, and `refreshUserConfiguration()` discovers that stale set when it rewrites `config.toml`.
 
+The existing `local.path` configuration value cannot yet distinguish a remembered local checkout from an active local projection. `ki diag` prints only the path, while `ki doctor` confirms merely that a managed user skill is a symlink, not that it resolves to the expected source.
+
 ## Steps
 
-1. Make `ki dev local on` project the already-validated local managed core skill sources into every configured runtime, re-pointing only recognised KI-managed links so each link resolves to the active local checkout.
-2. Refresh user configuration only after that reconciliation, ensuring the recorded managed-skill inventory and local-source declaration match the links actually installed.
-3. Preserve foreign filesystem entries and unfamiliar links as fail-closed errors; an idempotent re-run against the same local checkout reports no unnecessary change while retaining the local targets.
-4. Add black-box CLI contracts starting from stale managed links: assert `ki diag`, configuration, and every configured runtime link all resolve to the local source; repeat `ki dev local on` and prove idempotence.
-5. Update local-development guidance with the reconciliation contract and run the full type, CLI, coverage, and repository-governance gates.
+1. Replace the path-taking activation grammar with `ki dev local set <local-harness-path>`, which validates and persists one physical local harness source without changing its active projection.
+2. Make argument-free `ki dev local on` require that configured source, enable the canonical local payload projection, and re-point every recognised KI-managed core user-skill link to the already-validated local source on every run.
+3. Make `ki dev local off` restore the verified canonical harness and re-point every managed core user-skill link to its installed canonical source while retaining the configured local path for a later `on`.
+4. Preserve foreign filesystem entries and unfamiliar links as fail-closed errors. An idempotent `on` against the configured source must still reconcile every managed link rather than trusting a prior projection.
+5. Extend `ki diag` to report whether local development is not configured, configured but off, or on, without treating link health as a diagnostic concern.
+6. Extend `ki doctor` to validate active local-mode managed link targets and report missing, broken, or wrong-target links as failures; retain the existing canonical-harness checks while local mode is off.
+7. Add black-box CLI contracts for set/on/off, stale-link reconciliation, canonical restoration, idempotent re-activation, diagnostic state, and doctor failures across every configured runtime.
+8. Update root help, completions, `ki(1)`, and local-development guidance with the set/on/off lifecycle, then run the full type, CLI, coverage, and repository-governance gates.
 
 ## Files touched
 
-- `src/commands/dev.ts` and the focused agent bootstrap/linking helpers required to preserve managed-link ownership checks
-- `src/tests/cli/dev.test.ts` and any shared CLI sandbox fixture needed to represent stale managed links safely
-- `docs/developer/local-development.md`
+- `src/commands/dev.ts`, `src/commands/diag.ts`, `src/commands/doctor.ts`, and command registration/completions
+- focused agent configuration, bootstrap, and linking helpers required to preserve local-source state and managed-link ownership checks
+- `src/tests/cli/dev.test.ts`, `src/tests/cli/diag.test.ts`, `src/tests/cli/doctor.test.ts`, and any shared CLI sandbox fixture needed to represent stale managed links safely
+- `man/ki.1`, README, and `docs/developer/local-development.md`
 
 ## Verify
 
 1. `bunx tsc --noEmit`
-2. `bunx vitest run src/tests/cli/dev.test.ts`
+2. `bunx vitest run src/tests/cli/dev.test.ts src/tests/cli/diag.test.ts src/tests/cli/doctor.test.ts`
 3. `bun run test:coverage`
 4. `./bin/ki repo audit --repo .`
-5. The CLI contract proves that every managed local-development skill link, `ki diag`, and `config.toml` identify one local source before and after an idempotent re-run.
+5. The CLI contract proves that `set` preserves a physical source without activation, `on` reconciles every configured runtime to it, `off` restores every one to the installed canonical source while preserving the saved source, and `diag` / `doctor` report mode and health accurately.
 
 ## Dependencies / blocks
 
@@ -80,7 +86,11 @@ The canonical source was at `knowledgeislands/ki-agentic-harness@92d5b263`; `ki 
 
 ### Intended contract
 
-`ki dev on <path>` should validate the local harness and reconcile every KI-managed core user skill from that local source into each configured detected runtime.
+`ki dev local set <path>` should validate and remember the physical local harness without changing active links.
+
+`ki dev local on` should activate that remembered source and reconcile every KI-managed core user skill into each configured runtime.
+
+`ki dev local off` should restore the verified canonical harness and every managed core user-skill link, while retaining the remembered local source for a later activation.
 
 It should update the recorded managed-skill inventory from the current source, be safe to repeat, preserve foreign entries, and report the source actually linked.
 
@@ -91,6 +101,12 @@ Use the existing black-box CLI sandbox contract.
 Start from a managed old payload, enable local mode against a fixture harness containing the current core skill set, then assert that `ki diag`, `config.toml`, and every managed runtime link agree on the local source.
 
 Repeat the command and assert idempotence.
+
+### Diagnostic and health boundary
+
+`ki diag` owns concise state reporting: no configured source, a configured source that is off, or an active local projection.
+
+`ki doctor` owns link health. When local mode is on, it must compare every managed link's physical target to the expected local source and fail on an absent, dangling, or wrong-target link. When local mode is off, the same managed links must resolve to the verified canonical installed source.
 
 ### Direct promotion rationale
 
