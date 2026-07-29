@@ -40,6 +40,8 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 #### Repository management
 
+- `ki repo --repo <path-or-pattern>`
+- `ki repo --workspace <group>`
 - `ki repo audit`
 - `ki repo conform`
 - `ki repo educate`
@@ -47,6 +49,14 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo skill remove`
 - `ki repo upgrade`
 - `ki repo diag`
+
+#### Workspace management
+
+- `ki workspace init`
+- `ki workspace list`
+- `ki workspace show <group>`
+- `ki workspace add <group> <path-or-pattern>`
+- `ki workspace remove <group> <path-or-pattern>`
 
 #### Harness management
 
@@ -62,6 +72,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 #### Development
 
+- `ki dev local set <local-harness-path>`
 - `ki dev local on`
 - `ki dev local off`
 - `ki dev skill rubric`
