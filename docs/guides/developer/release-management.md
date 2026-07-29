@@ -87,3 +87,17 @@ bash ./install.sh vX.Y.Z
 ```
 
 After the first verified release, update the Homebrew tap and the KI Website install redirect in their owning repositories.
+
+## Release-please assessment
+
+Do not introduce release-please before the V1 baseline has been released.
+
+A no-write `release-please@16.18.0 release-pr --dry-run` against the `v0.2.11` release proposed `v0.3.0` and generated notes from the accumulated 0.x commit history.
+
+That conflicts with this repository's deliberate V1-only changelog baseline.
+
+Its PR-only mode also creates neither a GitHub Release nor a tag, so it cannot replace the manually tagged, signed, immutable release path.
+
+Re-evaluate after the verified `v1.0.0` release if a manually dispatched, PR-only changelog and version-bump workflow would still be useful.
+
+Any future trial must retain the existing signing, immutability, clean-install verification, and downstream Homebrew handoff.

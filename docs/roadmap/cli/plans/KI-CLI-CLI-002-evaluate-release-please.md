@@ -14,15 +14,15 @@ The CLI currently uses a manually dispatched signed-release workflow, direct-mai
 
 ## Current state
 
-`.github/workflows/release.yml` validates a requested version, packages signed artifacts, publishes an immutable GitHub release, and verifies a clean installation. The repository maintains release-management guidance and a changelog, but has not trialled release-please's release-PR and Conventional Commit model against that workflow.
+`.github/workflows/release.yml` validates a requested tag, packages signed artifacts, publishes an immutable GitHub release, and verifies a clean installation. A no-write `release-please@16.18.0 release-pr --dry-run` against the published `v0.2.11` baseline proposed a `v0.3.0` release PR from the accumulated 0.x history. That output conflicts with the deliberate V1-only changelog baseline. Release-please's PR-only mode neither publishes a GitHub Release nor creates a tag, so it does not replace the existing signed release gate. The evidence-based recommendation is to defer any retained configuration until after the verified `v1.0.0` release.
 
 ## Steps
 
-1. Inventory the existing release workflow, version/changelog records, installer evidence, and Homebrew handoff points as the comparison baseline.
-2. Design a reversible release-please trial that preserves the signed-artifact workflow, direct-main practice, and release-environment controls.
-3. Add the minimum trial configuration and workflow wiring, without making release-please the only release route or changing the `ki-tools` standard.
-4. Exercise the proposed release-PR path against representative Conventional Commit history and verify that versioning, notes, tags, artifacts, installer evidence, and Homebrew follow-up remain explicit.
-5. Record the evidence-based recommendation to adopt, revise, or remove the trial and update release guidance accordingly.
+1. ✓ Inventory the existing release workflow, version/changelog records, installer evidence, and Homebrew handoff points as the comparison baseline.
+2. ✓ Design the only compatible trial shape: manual dispatch, release-PR only, and no release or tag creation; retain the existing signing and release-environment boundary.
+3. ✓ Do not retain trial configuration before V1: a working workflow would invite an invalid 0.x release PR and cannot improve the V1 baseline.
+4. ✓ Exercise the release-PR path through `release-please@16.18.0`'s no-write CLI mode. It proposed `v0.3.0` from 39 commits after `v0.2.11`, confirmed no tag or artifact action, and exposed the changelog conflict.
+5. ✓ Record the recommendation to defer release-please until after the verified `v1.0.0` release; release-management guidance now states the rationale and the preservation conditions for any future trial.
 
 ## Files touched
 
