@@ -2,9 +2,8 @@
 id: KI-TOOL-CLI-012
 title: Audit and enforce CLI structural consistency
 theme: cli
-horizon: future
-status: open
-candidate: true
+horizon: next
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -17,6 +16,38 @@ Perform one behaviour-preserving consistency pass over the `ki` command tree, mo
 ## Boundary
 
 Do not add product commands, cleanup deletion, or vendoring behaviour; redesign Commander or `KiContext`; replace CLI-contract tests with internal unit tests; or treat installer tests as CLI unit tests. Preserve public output and exit semantics except for explicitly approved corrections to stale inventory or order. Refactor by concern rather than an arbitrary line-count target.
+
+## Current state
+
+The public CLI is complete enough to verify but has no single enforced command-tree contract. Runtime registration, root completion catalogues, help, the manual, and the changelog can change independently. The manual and changelog provide the deliberately purpose-oriented public presentation; root and repository shell completions are alphabetically ordered for lookup. `repo.ts` and `acquire.ts` combine Commander bindings with domain orchestration, while `repo.test.ts` combines unrelated CLI contracts. Tests conventionally use the sandbox and `run(args, context)` seam, but only an import discipline prevents future internal product-unit tests.
+
+## Steps
+
+1. [ ] Make runtime registration consume a typed root-command inventory and retain purposeful public command order, while keeping completion candidates alphabetical.
+2. [ ] Add CLI-driven inventory contracts for root and repository commands, root and repository completions, and the corresponding man-page and changelog command surfaces.
+3. [ ] Extract repository-operation and local ChatGPT capture domain orchestration from Commander bindings; split the repository CLI contract suite by public command area without changing outputs or on-disk effects.
+4. [ ] Add a test-source guard which permits only the shared CLI harness to import product code, reconcile filesystem fault injection with the documented sanctioned cases, and correct the developer-documentation path drift.
+5. [ ] Audit coverage suppressions and exports, remove only unreachable dead code or unjustified suppressions, and retain narrowly justified future-proofing guards.
+6. [ ] Run the full CLI, coverage, type, formatting, Markdown, man-page, dead-export, and repository-governance gates; prepare an acceptance packet.
+
+## Files touched
+
+- `src/cli.ts` and `src/commands/catalogue.ts`, with a focused root-command registration module as needed.
+- `src/commands/repo.ts`, `src/commands/acquire.ts`, and focused domain modules beneath `src/core/`.
+- `src/tests/cli/`, including the shared harness and split public command-contract suites.
+- `docs/developer/local-development.md`, `man/ki.1`, `CHANGELOG.md`, and this work item.
+- `vitest.config.ts` or a focused test-policy configuration only if required by the guard.
+
+## Verify
+
+- `bun run test` passes with 100% statements, branches, functions, and lines over product TypeScript.
+- `bunx tsc --noEmit`, `bunx biome check .`, and `bunx knip --include exports --reporter compact` pass.
+- `ki repo audit --skill ki-engineering --repo .`, `ki repo audit --skill ki-authoring --repo .`, and `ki repo audit --skill ki-roadmap --repo .` report no FAIL or WARN findings.
+- `prettier --check` and `markdownlint-cli2` pass for changed Markdown, and `mandoc -T lint man/ki.1` passes.
+
+## Dependencies / blocks
+
+No roadmap dependency blocks this item. Its tests must preserve the existing public contract: all command behaviour continues to run through the sandbox and `run(args, context)`, and the existing transaction fault-injection exceptions remain the only direct filesystem mock cases unless an injected capability replaces them.
 
 ## Discussion
 
@@ -39,13 +70,11 @@ Two command modules currently carry substantial domain orchestration behind thei
 - Run the dead-export check and include its clean result in acceptance evidence.
 - Correct architecture-documentation drift discovered during the audit.
 
-### Promotion condition
+### Ordering and contract decisions
 
-Promote this item before another public command is added, or when either managed cleanup or cross-repository vendoring begins implementation and would extend the command surface. Re-evaluate the condition after the current direct doctor and bootstrap corrections settle; the known inventory drift and missing mechanical test-boundary guard are evidence that a consistency pass will soon be warranted.
+The man page and changelog are the canonical purpose-oriented presentation, and runtime root help follows that order. Root and first-level `ki repo` shell completions remain alphabetical for lookup. The consistency test compares their full command memberships rather than requiring those two user interfaces to share one order. Completion coverage stops at those existing public depths: deeper dynamic operands are not a stable completion catalogue yet.
 
-### Open decisions
-
-Choose whether canonical command order follows purpose-oriented manual presentation, alphabetical completion order, or runtime registration. Decide whether nested completion coverage should extend beyond the current root and first-level repository surface. Decide whether the test-boundary guard remains local to `tools-ki` or becomes a reusable `ki-tools` governance criterion, and whether the publication filesystem mock is sanctioned or removed through an injected capability.
+The test-boundary guard is local to `tools-ki`, because it protects this executable's in-process seam rather than a general toolchain rule. The publication `lstat` mock is removed in favour of an injected filesystem capability, leaving the two AGENTS.md-sanctioned acquisition-transaction and conform-transaction failure tests as the only filesystem module mocks.
 
 ### Relationship to other future work
 
