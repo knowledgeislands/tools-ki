@@ -76,6 +76,8 @@ The existing `local.path` configuration value cannot yet distinguish a remembere
 
 CLI-011 has no blocking roadmap dependency. It transfers implementation evidence from `knowledgeislands/ki-agentic-harness@92d5b263` but remains owned and independently executable in `tools-ki`.
 
+## Acceptance
+
 ### Delivered
 
 - `ki dev local set <path>` validates and remembers a local harness while mode remains off.
