@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-011
 title: Reconcile managed user skills in local development mode
 theme: cli
 horizon: next
-status: open
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
