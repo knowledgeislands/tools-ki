@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-003
 title: Add native governed-work inspection commands
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: c378a72eeaac094be40962080da3264dfdfd0542
@@ -88,6 +88,10 @@ None. Future lifecycle operations remain deliberately out of scope and require t
 ### Mini recap
 
 CLI-003 is ready for explicit user acceptance; no lifecycle transition or pruning has been performed by the new command.
+
+## Done
+
+Accepted by the user on 2026-07-29. This retained terminal record is eligible for pruning only through an explicit path or glob selection.
 
 ## Discussion
 
