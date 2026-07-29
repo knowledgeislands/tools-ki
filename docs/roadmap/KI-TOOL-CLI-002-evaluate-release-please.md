@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-002
 title: Evaluate release-please for KI CLI releases
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: b99387b600abd0041e1253b2a09429a855b1e2db
@@ -74,3 +74,7 @@ Re-evaluate release-please only after a verified `v1.0.0` release, and only as a
 ### Mini recap
 
 The current release-please output is incompatible with the V1-only changelog baseline and cannot replace the signed release workflow. The re-evaluation condition is explicit rather than a standing implementation commitment.
+
+## Done
+
+Accepted by the user on 2026-07-29. The release-please evaluation is complete; re-evaluate only after a verified `v1.0.0` release. No residual concern is present in the current release workflow.
