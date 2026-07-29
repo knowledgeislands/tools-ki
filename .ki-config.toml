@@ -9,7 +9,7 @@ visibility = "public"
 ["knowledgeislands/ki-agentic-harness:ki-engineering"]
 
 ["knowledgeislands/ki-agentic-harness:ki-roadmap"]
-repo_code = "KI-CLI"
+repo_code = "KI-TOOL"
 
 ["knowledgeislands/ki-agentic-harness:ki-decision-records"]
 
