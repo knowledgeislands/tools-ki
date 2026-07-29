@@ -25,9 +25,9 @@ describe('[ki workspace]', () => {
     )
   })
 
-  test('uses the direct-CWD workspace default before .mgitconfig and resolves groups relative to it', async () => {
+  test('uses the direct-CWD workspace default before .mgit-config.toml and resolves groups relative to it', async () => {
     const box = await sandbox()
-    await box.project.write('.mgitconfig', 'bare ignored\n')
+    await box.project.write('.mgit-config.toml', 'version = 1\n')
     await box.project.write(
       '.ki-workspace.toml',
       'schema = 1\ndefault = "platform"\n\n[groups.platform]\nrepositories = ["repos/*"]\n\n[groups.release]\nrepositories = ["release"]\n'

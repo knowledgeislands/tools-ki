@@ -354,10 +354,11 @@ Select one named group from a regular direct-CWD \fB.ki-workspace.toml\fR.
 This option and \fB--repo\fR are mutually exclusive. Workspace paths and
 patterns resolve from that file's physical directory. With neither selector,
 KI uses the workspace default group when that direct-CWD file exists, before
-checking a regular direct-CWD \fB.mgitconfig\fR. It never searches ancestor
-directories for either configuration or invokes \fBmgit\fR. Without a
-direct-CWD configuration, KI discovers one repository from the current
-working directory.
+checking a regular direct-CWD \fB.mgit-config.toml\fR. KI follows standard
+members, nested members' \fBmain/\fR checkouts, and \fBdir\fR containers; it
+ignores mGit symlinks and bare stores. It never searches ancestor directories
+for either configuration or invokes \fBmgit\fR. Without a direct-CWD
+configuration, KI discovers one repository from the current working directory.
 .SS Repository management
 \&
 .PP
@@ -407,9 +408,9 @@ changes neither user nor repository skill activation.
 .TP
 .B ki repo [repo-options] diag
 Resolve every selected KI repository. Without an explicit selector, KI uses a
-direct-CWD workspace default, then direct-CWD \fB.mgitconfig\fR, or discovers
-from the current working directory; with a selector, KI resolves only the
-supplied target set.
+direct-CWD workspace default, then direct-CWD \fB.mgit-config.toml\fR members,
+or discovers from the current working directory; with a selector, KI resolves
+only the supplied target set.
 .SS Harness management
 \&
 .PP

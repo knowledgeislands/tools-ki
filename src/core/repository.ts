@@ -1,10 +1,11 @@
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
+import { parse } from 'smol-toml'
 import { KiError } from './errors.ts'
 import { workspaceConfigurationExists, workspaceGroup } from './workspace.ts'
 
 const CONFIGURATION_FILE = '.ki-config.toml'
-const MGIT_CONFIGURATION_FILE = '.mgitconfig'
+const MGIT_CONFIGURATION_FILE = '.mgit-config.toml'
 
 export interface RepositoryLocation {
   readonly root: string
@@ -100,25 +101,49 @@ const targetFromDirectory = async (directory: string, directoryMessage: string, 
 const safeEntryPath = (value: string): boolean =>
   Boolean(value) && !isAbsolute(value) && !value.split(/[\\/]/).some((part) => !part || part === '.' || part === '..')
 
-type MgitEntryKind = 'bare' | 'nested' | 'owned-link' | 'standard'
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+type MgitEntryKind = 'bare' | 'dir' | 'nested' | 'standard'
 
 interface MgitEntry {
   readonly kind: MgitEntryKind
   readonly path: string
 }
 
+interface MgitDocument {
+  readonly version?: unknown
+  readonly members?: unknown
+}
+
+interface MgitMemberDocument {
+  readonly type?: unknown
+  readonly source?: unknown
+}
+
+const mgitError = (configuration: string, message: string): KiError => new KiError(`${configuration} ${message}`, 2)
+
 const parseMgitConfiguration = (contents: string, configuration: string): readonly MgitEntry[] => {
-  const entries: MgitEntry[] = []
-  for (const raw of contents.split('\n')) {
-    const line = raw.trim()
-    if (!line || line.startsWith('#')) continue
-    const match = /^(standard|nested|bare|owned-link)\s+([^\s]+)(?:\s+->\s+\S+)?$/.exec(line)
-    const kind = match?.[1]
-    const path = match?.[2]
-    if (!kind || !path || !safeEntryPath(path)) throw new KiError(`invalid .mgitconfig entry in ${configuration}: ${raw}`, 2)
-    entries.push({ kind: kind as MgitEntryKind, path })
+  let parsed: unknown
+  try {
+    parsed = parse(contents)
+  } catch {
+    throw mgitError(configuration, 'must be valid TOML')
   }
-  return entries
+  /* v8 ignore next -- a TOML document always parses to a table. */
+  if (!isRecord(parsed)) throw mgitError(configuration, 'must be a table')
+  const document = parsed as MgitDocument
+  if (document.version !== 1) throw mgitError(configuration, 'version must equal 1')
+  if (document.members === undefined) return []
+  if (!isRecord(document.members)) throw mgitError(configuration, 'members must be a table')
+  return Object.entries(document.members).map(([path, value]) => {
+    const member = value as MgitMemberDocument
+    if (!safeEntryPath(path) || !isRecord(value)) throw mgitError(configuration, `has invalid member ${path}`)
+    if (typeof member.source !== 'undefined' && (typeof member.source !== 'string' || !member.source))
+      throw mgitError(configuration, `member ${path} must use a non-empty source string`)
+    if (member.type !== 'standard' && member.type !== 'nested' && member.type !== 'bare' && member.type !== 'dir')
+      throw mgitError(configuration, `member ${path} has an unsupported type`)
+    return { kind: member.type, path }
+  })
 }
 
 const repositoriesFromMgitConfiguration = async (directory: string): Promise<readonly RepositoryLocation[]> => {
@@ -127,11 +152,16 @@ const repositoriesFromMgitConfiguration = async (directory: string): Promise<rea
   const entries = parseMgitConfiguration(contents, configuration)
   const targets: RepositoryLocation[] = []
   for (const entry of entries) {
-    if (entry.kind === 'owned-link') continue
+    if (entry.kind === 'bare') continue
     const child = join(directory, entry.path)
-    if (entry.kind === 'nested')
-      targets.push(...(await repositoriesFromMgitConfiguration(await physicalDirectory(child, `invalid nested .mgitconfig target ${entry.path}`))))
-    else targets.push(await targetFromDirectory(child, `invalid .mgitconfig repository target ${entry.path}`))
+    if (entry.kind === 'dir')
+      targets.push(
+        ...(await repositoriesFromMgitConfiguration(await physicalDirectory(child, `invalid ${MGIT_CONFIGURATION_FILE} directory target ${entry.path}`)))
+      )
+    else {
+      const checkout = entry.kind === 'nested' ? join(child, 'main') : child
+      targets.push(await targetFromDirectory(checkout, `invalid ${MGIT_CONFIGURATION_FILE} repository target ${entry.path}`))
+    }
   }
   return targets
 }
@@ -194,6 +224,6 @@ export const resolveRepositoryTargets = async (options: {
     return distinctTargets(targets, `workspace group ${selected.name}`)
   }
   const configuration = join(working, MGIT_CONFIGURATION_FILE)
-  if (await isRegularFile(configuration)) return distinctTargets(await repositoriesFromMgitConfiguration(working), '.mgitconfig')
+  if (await isRegularFile(configuration)) return distinctTargets(await repositoriesFromMgitConfiguration(working), MGIT_CONFIGURATION_FILE)
   return [await resolveRepository({ workingDirectory: options.workingDirectory, homeDirectory: options.homeDirectory })]
 }

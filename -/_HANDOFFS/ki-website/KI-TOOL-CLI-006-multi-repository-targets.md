@@ -14,7 +14,7 @@ Explain that every `ki repo` operation accepts repeated `--repo <path-or-pattern
 
 Literal paths and patterns resolve physical KI repository roots in deterministic order; an unmatched pattern, invalid root, or duplicate physical root rejects the request before any operation begins.
 
-Without `--repo`, `ki` checks only the physical current working directory for a regular `.mgitconfig`, follows its declared repository and nested-container entries downward, ignores owned links, and never invokes `mgit` or searches ancestor directories for this configuration.
+Without `--repo`, `ki` checks only the physical current working directory for a regular `.mgit-config.toml`, follows its `members` table through standard repositories, nested `main/` checkouts, and `dir` containers, ignores mGit `symlinks` and bare stores, and never invokes `mgit` or searches ancestor directories for this configuration.
 
 Without a direct-CWD configuration, `ki` retains ordinary single-repository CWD discovery.
 

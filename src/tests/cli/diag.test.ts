@@ -148,26 +148,32 @@ ids = ["example:skill", "example:skill"]
     expect(singleCharacter.output).not.toContain('nested')
   })
 
-  test('resolves only direct-CWD declared .mgitconfig entries and follows nested containers', async () => {
+  test('resolves only direct-CWD declared .mgit-config.toml members and follows nested containers', async () => {
     const box = await sandbox()
-    await box.project.write('.mgitconfig', 'standard first -> https://example.test/first.git\nnested group\nowned-link ignored\n')
+    await box.project.write(
+      '.mgit-config.toml',
+      'version = 1\n\n[members."first"]\ntype = "standard"\nsource = "https://example.test/first.git"\n\n[members."group"]\ntype = "dir"\n\n[members."nested"]\ntype = "nested"\n\n[members."archive.git"]\ntype = "bare"\n\n[symlinks]\n"ignored" = "../outside"\n'
+    )
     await box.project.write('first/.ki-config.toml', '# first\n')
-    await box.project.write('group/.mgitconfig', 'bare second\n')
+    await box.project.write('group/.mgit-config.toml', 'version = 1\n\n[members."second"]\ntype = "standard"\n')
     await box.project.write('group/second/.ki-config.toml', '# second\n')
+    await box.project.write('nested/main/.ki-config.toml', '# nested\n')
     const first = await realpath(`${box.project.path}/first`)
     const second = await realpath(`${box.project.path}/group/second`)
+    const nested = await realpath(`${box.project.path}/nested/main`)
 
     const diag = await box.run('ki repo diag')
 
     expect(diag.exitCode).toBe(0)
     expect(diag.output).toContain(`Repository: ${first}`)
     expect(diag.output).toContain(`Repository: ${second}`)
+    expect(diag.output).toContain(`Repository: ${nested}`)
     expect(diag.output).not.toContain('ignored')
   })
 
-  test('rejects malformed direct-CWD .mgitconfig entries without searching an ancestor configuration', async () => {
+  test('rejects malformed direct-CWD .mgit-config.toml entries without searching an ancestor configuration', async () => {
     const box = await sandbox()
-    await box.project.write('.mgitconfig', 'standard ../escape\n')
+    await box.project.write('.mgit-config.toml', 'version = 1\n\n[members."../escape"]\ntype = "standard"\n')
     await box.project.write('child/.ki-config.toml', '# child\n')
     await box.project.mkdir('child/nested')
 
@@ -177,11 +183,31 @@ ids = ["example:skill", "example:skill"]
     const child = await realpath(`${box.project.path}/child`)
 
     expect(malformed.exitCode).toBe(2)
-    expect(malformed.output).toContain('invalid .mgitconfig entry')
+    expect(malformed.output).toContain('has invalid member ../escape')
     expect(nested).toEqual({
       exitCode: 0,
       output: `ki repo diag\nRepository: ${child}\nConfiguration: ${child}/.ki-config.toml\nSource: current working directory\n`
     })
+  })
+
+  test('validates direct-CWD .mgit-config.toml syntax and member declarations', async () => {
+    const box = await sandbox()
+    const cases: readonly [string, string, number, string][] = [
+      ['empty manifest', 'version = 1\n', 0, 'ki repo diag\n'],
+      ['invalid TOML', 'version = [\n', 2, 'must be valid TOML'],
+      ['unsupported version', '[members."repo"]\ntype = "standard"\n', 2, 'version must equal 1'],
+      ['non-table members', 'version = 1\nmembers = []\n', 2, 'members must be a table'],
+      ['invalid source', 'version = 1\n\n[members."repo"]\ntype = "standard"\nsource = 1\n', 2, 'must use a non-empty source string'],
+      ['unsupported type', 'version = 1\n\n[members."repo"]\ntype = "unknown"\n', 2, 'has an unsupported type']
+    ]
+
+    for (const [, contents, exitCode, expected] of cases) {
+      await box.project.write('.mgit-config.toml', contents)
+      const result = await box.run('ki repo diag')
+
+      expect(result.exitCode).toBe(exitCode)
+      expect(result.output).toContain(expected)
+    }
   })
 
   test('refuses repository diagnostics outside a KI repository', async () => {

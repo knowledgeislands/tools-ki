@@ -18,7 +18,7 @@ Users initialise and maintain it with `ki workspace init`, `list`, `show <group>
 
 Every `ki repo` command accepts either repeated `--repo <path-or-pattern>` selectors or one `--workspace <group>` selector; the options are mutually exclusive.
 
-Without either selector, the direct-CWD workspace default is selected before a direct-CWD `.mgitconfig`; then ordinary one-repository discovery remains the fallback.
+Without either selector, the direct-CWD workspace default is selected before a direct-CWD `.mgit-config.toml`; then ordinary one-repository discovery remains the fallback.
 
 Workspace paths and patterns resolve from the workspace directory, validation fails for malformed files, invalid members, unmatched patterns, and duplicate physical roots, and KI never searches ancestor directories for a workspace or `mgit` configuration.
 
