@@ -33,7 +33,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
       /* v8 ignore next */
       context.stdout.write(`canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`)
       const skills = await installedBootstrapSkillSources(context.paths.data)
-      const projections = await installBootstrapSkills(skills, agents)
+      const projections = await installBootstrapSkills(skills, agents, { replace: options.refresh })
       if (options.refresh) {
         const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents)
         context.stdout.write(`refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`)

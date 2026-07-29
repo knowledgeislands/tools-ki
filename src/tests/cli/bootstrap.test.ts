@@ -105,7 +105,7 @@ ids = [
     expect(config).toContain(expectedAgentsSection)
   })
 
-  test('refuses to replace a foreign core-skill link during bootstrap', async () => {
+  test('refuses to replace a foreign core-skill link during bootstrap but reconciles it on refresh', async () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
     const foreign = await box.root.mkdir('foreign-core-skill')
@@ -114,10 +114,13 @@ ids = [
     await symlink(foreign, target, 'dir')
 
     const result = await box.run('ki bootstrap')
+    const refreshed = await box.run('ki bootstrap --refresh')
+    const source = join(box.data.path, 'ki', 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'skills', 'keystone', 'ki-bootstrap')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('ki-bootstrap skill points elsewhere; pass --replace to re-point')
-    expect(await realpath(target)).toBe(await realpath(foreign))
+    expect(refreshed.exitCode).toBe(0)
+    expect(await realpath(target)).toBe(await realpath(source))
   })
 
   test('rejects an existing configuration file that is not valid TOML', async () => {
