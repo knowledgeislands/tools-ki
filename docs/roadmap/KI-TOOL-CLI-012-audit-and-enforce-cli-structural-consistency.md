@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-012
 title: Audit and enforce CLI structural consistency
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: b6f26242010d1e605279e7aaf339ae1746c9732c
@@ -74,6 +74,10 @@ None. Deeper completion candidates remain deliberately out of scope until they a
 ### Mini recap
 
 The CLI remains behaviour-compatible while its public command inventory, test boundary, and domain boundaries are mechanically guarded. This item is ready for explicit acceptance review.
+
+## Done
+
+Accepted by the repository owner on 2026-07-29. This retained completion record is eligible for the explicitly requested prune immediately following closure.
 
 ## Discussion
 
