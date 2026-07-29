@@ -12,6 +12,19 @@ describe('[ki doctor]', () => {
     expect(doctor.exitCode).toBe(1)
   })
 
+  test('reports direct-CWD legacy .ki-meta and .ki structures without repository discovery', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.project.mkdir('.ki-meta')
+    await box.project.mkdir('.ki')
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).toContain('✗ Legacy repository state: .ki-meta/, .ki/ detected; remove after migrating to .ki-config.toml')
+    expect(doctor.exitCode).toBe(1)
+  })
+
   test('reports broken environment with invalid config and missing harness', async () => {
     const box = await sandbox()
     const invalidConfig = `schema = 2

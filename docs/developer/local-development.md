@@ -30,7 +30,7 @@ ki dev local off
 
 `off` restores the verified canonical harness and reprojects those links to it, while retaining the remembered checkout for the next `on`.
 
-Use `ki diag` to see the remembered source and whether local mode is off or on; use `ki doctor` to identify missing, broken, or wrong-target managed links while mode is on.
+Use `ki diag` to see the remembered source and whether local mode is off or on; use `ki doctor` to identify missing, broken, or wrong-target managed links while mode is on, and direct-CWD legacy `.ki-meta/` or `.ki/` directories.
 
 ## Command structure
 

@@ -29,6 +29,17 @@ const physicalDirectory = async (path: string): Promise<boolean> => {
   return Boolean(state?.isDirectory() && !state.isSymbolicLink())
 }
 
+const legacyRepositoryStructures = async (directory: string): Promise<readonly string[]> => {
+  const structures = ['.ki-meta', '.ki'] as const
+  const present = await Promise.all(
+    structures.map(async (structure) => ({
+      structure,
+      present: await physicalDirectory(join(directory, structure))
+    }))
+  )
+  return present.filter((entry) => entry.present).map((entry) => entry.structure)
+}
+
 const managedSkillName = (identity: string): string | undefined => {
   const separator = identity.indexOf(':')
   return separator > 0 && separator < identity.length - 1 ? identity.slice(separator + 1) : undefined
@@ -48,9 +59,17 @@ const report = (context: KiContext, checks: readonly DoctorCheck[]): void => {
 }
 
 export const createDoctorCommand = (context: KiContext): Command =>
-  new Command('doctor').description('check ki configuration, agents, harnesses, and user skills').action(async () => {
+  new Command('doctor').description('check KI configuration, agents, harnesses, user skills, and direct-CWD legacy state').action(async () => {
     const configuration = await inspectUserConfiguration(context.paths.config)
     const checks: DoctorCheck[] = []
+    const legacy = await legacyRepositoryStructures(context.workingDirectory)
+    if (legacy.length) {
+      checks.push({
+        status: 'fail',
+        label: 'Legacy repository state',
+        detail: `${legacy.map((structure) => `${structure}/`).join(', ')} detected; remove after migrating to .ki-config.toml`
+      })
+    }
     if (configuration.state === 'valid') {
       checks.push({ status: 'pass', label: 'Configuration', detail: configuration.path })
     } else if (configuration.state === 'missing') {
