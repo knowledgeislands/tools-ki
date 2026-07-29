@@ -10,6 +10,7 @@ import {
   localBootstrapHarness
 } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
+import { readDeclaredSkills } from '../core/configuration.ts'
 import { KiExit } from '../core/errors.ts'
 import { discoverInstalledHarnesses, type InstalledHarness } from '../core/harness.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../core/registry.ts'
@@ -38,6 +39,19 @@ const legacyRepositoryStructures = async (directory: string): Promise<readonly s
     }))
   )
   return present.filter((entry) => entry.present).map((entry) => entry.structure)
+}
+
+const repositoryConfigurationCheck = async (directory: string): Promise<DoctorCheck | undefined> => {
+  const path = join(directory, '.ki-config.toml')
+  const state = await lstat(path).catch(() => undefined)
+  if (!state) return undefined
+  if (!state.isFile() || state.isSymbolicLink()) return { status: 'fail', label: 'Repository configuration', detail: '.ki-config.toml must be a regular file' }
+  try {
+    const declarations = await readDeclaredSkills(path)
+    return { status: 'pass', label: 'Repository configuration', detail: `${declarations.length} declared skills` }
+  } catch (error) {
+    return { status: 'fail', label: 'Repository configuration', detail: (error as Error).message }
+  }
 }
 
 const managedSkillName = (identity: string): string | undefined => {
@@ -70,6 +84,8 @@ export const createDoctorCommand = (context: KiContext): Command =>
         detail: `${legacy.map((structure) => `${structure}/`).join(', ')} detected; remove after migrating to .ki-config.toml`
       })
     }
+    const repositoryConfiguration = await repositoryConfigurationCheck(context.workingDirectory)
+    if (repositoryConfiguration) checks.push(repositoryConfiguration)
     if (configuration.state === 'valid') {
       checks.push({ status: 'pass', label: 'Configuration', detail: configuration.path })
     } else if (configuration.state === 'missing') {

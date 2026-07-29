@@ -25,6 +25,29 @@ describe('[ki doctor]', () => {
     expect(doctor.exitCode).toBe(1)
   })
 
+  test('validates a direct-CWD repository configuration without resolving skills or repositories', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.project.write('.ki-config.toml', '# valid\n')
+
+    const valid = await box.run('ki doctor')
+    await box.project.write('.ki-config.toml', '[ki-repo]\n')
+    const legacyDeclaration = await box.run('ki doctor')
+    await rm(`${box.project.path}/.ki-config.toml`)
+    await box.project.mkdir('.ki-config.toml')
+    const directory = await box.run('ki doctor')
+    await rm(`${box.project.path}/.ki-config.toml`, { recursive: true })
+    await box.root.write('linked-config.toml', '# config\n')
+    await symlink(`${box.root.path}/linked-config.toml`, `${box.project.path}/.ki-config.toml`)
+    const symbolic = await box.run('ki doctor')
+
+    expect(valid).toEqual({ exitCode: 0, output: expect.stringContaining('✓ Repository configuration: 0 declared skills') })
+    expect(legacyDeclaration.output).toContain('✗ Repository configuration: declared skill ki-repo must use a qualified <harness-id>:<skill-name> TOML table')
+    expect(directory.output).toContain('✗ Repository configuration: .ki-config.toml must be a regular file')
+    expect(symbolic.output).toContain('✗ Repository configuration: .ki-config.toml must be a regular file')
+  })
+
   test('reports broken environment with invalid config and missing harness', async () => {
     const box = await sandbox()
     const invalidConfig = `schema = 2

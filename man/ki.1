@@ -61,7 +61,7 @@ Show installation mode, paths, and user configuration.
 .TP
 .B ki doctor
 Check user configuration, agents, harnesses, user-skill links, and direct-CWD
-legacy KI state.
+legacy KI state and configuration.
 .TP
 .B ki docs [topic]
 Print canonical KI documentation locations.
@@ -278,8 +278,9 @@ configuration without changing state.
 Check the user configuration, configured agent skill directories, installed
 harnesses, and configured KI user-skill links without changing state. It also
 reports direct-CWD legacy \fB.ki-meta/\fR and \fB.ki/\fR directories, without
-searching for or operating on a repository. A failing check produces a non-zero
-exit status after the complete report.
+searching for or operating on a repository. It validates a regular direct-CWD
+\fB.ki-config.toml\fR declaration without resolving its providers. A failing
+check produces a non-zero exit status after the complete report.
 .TP
 .B ki docs [topic]
 Print canonical documentation locations without opening a browser, fetching

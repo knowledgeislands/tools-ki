@@ -84,7 +84,7 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 `ki search <query>` searches only verified installed harness capabilities, without contacting a registry or discovering a repository.
 
-`ki cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories without searching for or operating on a repository.
+`ki cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories and validates a regular direct-CWD `.ki-config.toml`, without searching for or operating on a repository.
 
 `ki docs` prints labelled public CLI, site, manual, and roadmap locations; `ki docs [overview|site|manual|roadmap]` prints one location. It never opens a browser or fetches content.
 
