@@ -1,10 +1,18 @@
-import { lstat } from 'node:fs/promises'
+import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Command } from 'commander'
-import { agentSkillDirectory, compatibleWithSkill, configuredAgents, inspectUserConfiguration } from '../agents/index.ts'
+import {
+  agentSkillDirectory,
+  compatibleWithSkill,
+  configuredAgents,
+  type InstalledAgent,
+  inspectUserConfiguration,
+  localBootstrapHarness
+} from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
 import { KiExit } from '../core/errors.ts'
 import { discoverInstalledHarnesses, type InstalledHarness } from '../core/harness.ts'
+import { canonicalHarnessDevelopmentEnabled } from '../core/registry.ts'
 
 type CheckStatus = 'pass' | 'fail' | 'skip'
 
@@ -24,6 +32,13 @@ const physicalDirectory = async (path: string): Promise<boolean> => {
 const managedSkillName = (identity: string): string | undefined => {
   const separator = identity.indexOf(':')
   return separator > 0 && separator < identity.length - 1 ? identity.slice(separator + 1) : undefined
+}
+
+const managedLink = async (agent: InstalledAgent, name: string): Promise<{ readonly link: boolean; readonly target?: string }> => {
+  const path = join(agentSkillDirectory(agent, 'user'), name)
+  const state = await lstat(path).catch(() => undefined)
+  if (!state?.isSymbolicLink()) return { link: false }
+  return { link: true, target: await realpath(path).catch(() => undefined) }
 }
 
 const report = (context: KiContext, checks: readonly DoctorCheck[]): void => {
@@ -71,6 +86,17 @@ export const createDoctorCommand = (context: KiContext): Command =>
         report(context, checks)
         return
       }
+      const activeLocal = Boolean(configuration.local) && (await canonicalHarnessDevelopmentEnabled(context.paths.data))
+      const localSources = new Map<string, string>()
+      if (activeLocal && configuration.local) {
+        try {
+          const local = await localBootstrapHarness(configuration.local)
+          for (const skill of local.skills) localSources.set(skill.name, skill.source)
+          checks.push({ status: 'pass', label: 'Local development', detail: `active ${local.harness}` })
+        } catch (error) {
+          checks.push({ status: 'fail', label: 'Local development', detail: (error as Error).message })
+        }
+      }
       for (const agent of agents) {
         const skills = agentSkillDirectory(agent, 'user')
         const ready = (await physicalDirectory(agent.home)) && (await physicalDirectory(skills))
@@ -89,23 +115,35 @@ export const createDoctorCommand = (context: KiContext): Command =>
           checks.push({ status: 'fail', label: `User skill ${identity}`, detail: 'invalid identity' })
           continue
         }
-        const capability = installed
-          .flatMap((harness) => harness.capabilities.map((candidate) => ({ harness: harness.id, capability: candidate })))
-          .find(({ harness, capability: candidate }) => identity === `${harness}:${candidate.name}`)?.capability
-        const compatibleAgents = capability ? agents.filter((agent) => compatibleWithSkill(agent, capability.supportedRuntimes)) : agents
+        const resolved = installed
+          .flatMap((harness) => harness.capabilities.map((candidate) => ({ harness, capability: candidate })))
+          .find(({ harness, capability }) => identity === `${harness.id}:${capability.name}`)
+        const compatibleAgents = resolved
+          ? agents.filter((agent) => compatibleWithSkill(agent, resolved.capability.supportedRuntimes))
+          : agents
         if (compatibleAgents.length === 0) {
           checks.push({ status: 'fail', label: `User skill ${name}`, detail: 'no compatible configured agent' })
           continue
         }
-        const absent = await Promise.all(
-          compatibleAgents.map(
-            async (agent) => !(await lstat(join(agentSkillDirectory(agent, 'user'), name)).catch(() => undefined))?.isSymbolicLink()
-          )
-        )
+        const links = await Promise.all(compatibleAgents.map((agent) => managedLink(agent, name)))
+        const expected =
+          localSources.get(name) ??
+          (resolved
+            ? await realpath(join(resolved.harness.root, resolved.capability.source)).catch(
+                /* v8 ignore next -- Discovery verifies this physical source; only concurrent filesystem mutation can make it unavailable here. */
+                () => undefined
+              )
+            : undefined)
+        const absent = links.some(({ link }) => !link)
+        const wrongTarget = Boolean(expected) && links.some(({ target }) => target !== expected)
         checks.push({
-          status: absent.some(Boolean) ? 'fail' : 'pass',
+          status: absent || wrongTarget ? 'fail' : 'pass',
           label: `User skill ${name}`,
-          detail: absent.some(Boolean) ? 'not linked for every compatible configured agent' : 'linked'
+          detail: absent
+            ? 'not linked for every compatible configured agent'
+            : wrongTarget
+              ? `link target does not match ${activeLocal ? 'local development' : 'installed harness'} source`
+              : 'linked'
         })
       }
     }

@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
+import { canonicalHarnessDevelopmentEnabled } from '../core/registry.ts'
 import { resolveRepositoryTargets } from '../core/repository.ts'
 import { KI_VERSION } from '../version.ts'
 
@@ -20,11 +21,17 @@ export const createDiagCommand = (context: KiContext): Command =>
       field('File', configuration.path)
     ]
     if (configuration.state !== 'missing') {
+      const localMode = configuration.local
+        ? (await canonicalHarnessDevelopmentEnabled(context.paths.data))
+          ? 'on'
+          : 'off'
+        : 'not configured'
       lines.push(
         field(`Agents (${configuration.agents.length})`, configuration.agents.join(', ') || 'none'),
         field(`Harnesses (${configuration.harnesses.length})`, configuration.harnesses.join(', ') || 'none'),
         field(`Skills (${configuration.skills.length})`, configuration.skills.join(', ') || 'none'),
-        field('Local source', configuration.local ?? 'none')
+        field('Local source', configuration.local ?? 'none'),
+        field('Local mode', localMode)
       )
     } else lines.push(field('Action', 'run ki bootstrap'))
     lines.push(

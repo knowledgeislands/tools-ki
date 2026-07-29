@@ -9,7 +9,13 @@ export {
   localBootstrapHarness,
   refreshUserConfiguration
 } from './bootstrap.ts'
-export { configuredAgents, inspectUserConfiguration, setConfiguredUserSkills, setLocalBootstrapHarness } from './configuration.ts'
+export {
+  clearLocalBootstrapHarness,
+  configuredAgents,
+  inspectUserConfiguration,
+  setConfiguredUserSkills,
+  setLocalBootstrapHarness
+} from './configuration.ts'
 export { agentSkillDirectory } from './detection.ts'
 export type { InstalledAgent } from './internal.ts'
 export { compatibleWithSkill } from './runtimes.ts'

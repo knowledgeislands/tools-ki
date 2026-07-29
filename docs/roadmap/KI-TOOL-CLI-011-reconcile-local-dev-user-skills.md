@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-011
 title: Reconcile managed user skills in local development mode
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: 281b2d42cbaeab569e42adefcee6f4bde4a835bb
@@ -75,6 +75,35 @@ The existing `local.path` configuration value cannot yet distinguish a remembere
 ## Dependencies / blocks
 
 CLI-011 has no blocking roadmap dependency. It transfers implementation evidence from `knowledgeislands/ki-agentic-harness@92d5b263` but remains owned and independently executable in `tools-ki`.
+
+### Delivered
+
+- `ki dev local set <path>` validates and remembers a local harness while mode remains off.
+- Argument-free `ki dev local on` activates the remembered source and reconciles all eight managed core user-skill links on every run.
+- `ki dev local off` restores and reprojects the canonical harness while retaining the remembered source.
+- `ki diag` reports the source and `not configured`, `off`, or `on` mode; `ki doctor` checks local-mode targets, including missing, dangling, and wrong-target links.
+
+### Summary of changes
+
+The local source is now retained in configuration independently of whether its canonical payload projection is active.
+
+Activation uses the validated local skill sources directly and replaces stale managed links; deactivation uses installed canonical sources and preserves the saved local path.
+
+The CLI help, `ki(1)`, README, and local-development guide document the `set` / `on` / `off` lifecycle.
+
+### Verification
+
+- `bunx tsc --noEmit`
+- `bun run test:coverage` — 396 passing tests, 100% statements, branches, functions, and lines.
+- `./bin/ki repo audit --repo .` — 0 FAIL, 0 WARN.
+
+### Outstanding concerns
+
+`off` restores the verified canonical archive through the existing acquisition path, so a network or archive-acquisition failure leaves the canonical payload unavailable; the saved local source remains intact for a later retry.
+
+### Mini recap
+
+The user-visible local-development lifecycle is now explicit and recoverable: choose a source, switch it on, and switch it off to return managed links to the verified canonical harness.
 
 ## Discussion
 

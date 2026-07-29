@@ -4,15 +4,17 @@ import { Command } from 'commander'
 import type { InstalledAgent } from '../agents/index.ts'
 import {
   configuredAgents,
+  inspectUserConfiguration,
   installBootstrapSkills,
   installedBootstrapSkillSources,
   localBootstrapHarness,
-  refreshUserConfiguration
+  refreshUserConfiguration,
+  setLocalBootstrapHarness
 } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
 import { KiError } from '../core/errors.ts'
 import { discoverInstalledHarnesses } from '../core/harness.ts'
-import { enableCanonicalHarnessDevelopment, restoreCanonicalHarness } from '../core/registry.ts'
+import { canonicalHarnessDevelopmentEnabled, enableCanonicalHarnessDevelopment, restoreCanonicalHarness } from '../core/registry.ts'
 import { resolveInstalledSkill } from '../core/resolution.ts'
 import { prepareRubricPublication } from '../core/rubric-publication.ts'
 import { loadRubricDefinition } from '../core/runtime-loader.ts'
@@ -70,14 +72,27 @@ export const createDevCommand = (context: KiContext): Command => {
   const command = new Command('dev').description('switch the canonical harness between a local checkout and its verified archive')
   const local = command.command('local').description('manage the canonical local development harness')
   local
-    .command('on <local-harness-path>')
-    .description('link the canonical harness payload to a local harness checkout')
+    .command('set <local-harness-path>')
+    .description('validate and remember a local harness checkout without enabling it')
     .action(async (path: string) => {
+      if (await canonicalHarnessDevelopmentEnabled(context.paths.data))
+        throw new KiError('local development is active; run ki dev local off before setting a new source', 1)
       const local = await localBootstrapHarness(path)
       const agents = await configured(context)
+      await setLocalBootstrapHarness(context.paths.config, context.homeDirectory, local.harness)
+      context.stdout.write(`development harness set ${local.harness}\n`)
+      context.stdout.write(`configured ${agents.length} agents\n`)
+    })
+  local
+    .command('on')
+    .description('link the canonical harness payload to the configured local harness checkout')
+    .action(async () => {
+      const configuration = await inspectUserConfiguration(context.paths.config)
+      if (!configuration.local) throw new KiError('no local development source is configured; run ki dev local set <path>', 1)
+      const local = await localBootstrapHarness(configuration.local)
+      const agents = await configured(context)
       const harness = await enableCanonicalHarnessDevelopment(context.paths.data, local.harness)
-      const skills = await installedBootstrapSkillSources(context.paths.data)
-      const projections = await installBootstrapSkills(skills, agents)
+      const projections = await installBootstrapSkills(local.skills, agents, { replace: true })
       const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents, harness)
       context.stdout.write(`development harness enabled ${harness}\n`)
       context.stdout.write(
@@ -90,10 +105,11 @@ export const createDevCommand = (context: KiContext): Command => {
     .description('restore the verified canonical harness archive')
     .action(async () => {
       const agents = await configured(context)
+      const configuration = await inspectUserConfiguration(context.paths.config)
       const installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
       const skills = await installedBootstrapSkillSources(context.paths.data)
-      const projections = await installBootstrapSkills(skills, agents)
-      const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents)
+      const projections = await installBootstrapSkills(skills, agents, { replace: true })
+      const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents, configuration.local ?? undefined)
       // Fixture archives cannot match the pinned canonical SHA-256; its fresh-install presentation is release-only.
       /* v8 ignore next */
       context.stdout.write(

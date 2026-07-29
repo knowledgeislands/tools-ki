@@ -134,8 +134,11 @@ Create a deterministic Knowledge Export Package from a local ChatGPT capture.
 \&
 .PP
 .TP
-.B ki dev local on <local-harness-path>
-Switch the canonical harness to a local checkout.
+.B ki dev local set <local-harness-path>
+Validate and remember a local checkout without enabling it.
+.TP
+.B ki dev local on
+Switch the canonical harness to the remembered local checkout.
 .TP
 .B ki dev local off
 Restore the verified canonical harness archive.
@@ -390,8 +393,9 @@ discover a repository, or extract reusable knowledge.
 Use these commands to switch the canonical harness between its verified archive
 and a local development checkout.
 .TP
-.B ki dev local on <local-harness-path>
-Switch the canonical harness to a local checkout for development. The checkout
+.B ki dev local set <local-harness-path>
+Validate and remember a local checkout without changing the active canonical
+payload or managed user-skill links. The checkout
 must contain the core bootstrap skill at
 .IR skills/keystone/ki-bootstrap/SKILL.md
 and physical
@@ -399,16 +403,21 @@ and physical
 .IR subagents ,
 and
 .IR hooks
-payload directories. KI replaces only the canonical harness's managed payload
-directories with links to that checkout, records the local path in
+payload directories.
+.TP
+.B ki dev local on
+Enable the remembered local checkout for development. KI replaces only the
+canonical harness's managed payload directories with links to that checkout,
+records the local path in
 .BR [local].path ,
-and repoints the five core user skills.
+and reconciles all eight managed core user-skill links to that source on every
+run.
 .TP
 .B ki dev local off
 Remove that recognised local payload projection, reinstall the verified
-canonical archive, clear
+canonical archive, retain
 .BR [local].path ,
-and repoint the five core user skills to the restored archive.
+and reconcile all eight managed core user-skill links to the restored archive.
 .TP
 .B ki dev skill rubric <skill> [--write]
 Check or regenerate a skill's rubric catalogue.

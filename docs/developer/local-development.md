@@ -13,6 +13,25 @@ Run the checkout without changing any installation:
 
 This source entry point requires Bun and runs the typed command modules in `src/` directly.
 
+## Develop a compatible harness locally
+
+Keep a local harness source separate from its active projection:
+
+```sh
+ki dev local set /path/to/ki-agentic-harness
+ki dev local on
+# make and test harness changes
+ki dev local off
+```
+
+`set` validates and remembers the physical checkout without changing the installed canonical harness or managed user-skill links.
+
+`on` activates the remembered checkout and reconciles every KI-managed core user-skill link to its current local source on every invocation.
+
+`off` restores the verified canonical harness and reprojects those links to it, while retaining the remembered checkout for the next `on`.
+
+Use `ki diag` to see the remembered source and whether local mode is off or on; use `ki doctor` to identify missing, broken, or wrong-target managed links while mode is on.
+
 ## Command structure
 
 `src/cli.ts` owns only command assembly, help routing, and exit-code rendering.

@@ -251,6 +251,25 @@ extra = true
     expect(diag.output).not.toContain('Errors')
     expect(diag.output).toContain('Agents')
     expect(diag.output).toContain('Harnesses')
+    expect(diag.output).toContain('Local source  none')
+    expect(diag.output).toContain('Local mode    not configured')
+  })
+
+  test('reports a remembered local source as off, then on when its projection is active', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
+
+    const off = await box.run('ki diag')
+    await box.run('ki dev local on')
+    const on = await box.run('ki diag')
+
+    expect(off.output).toContain(`Local source  ${harnessPath}`)
+    expect(off.output).toContain('Local mode    off')
+    expect(on.output).toContain(`Local source  ${harnessPath}`)
+    expect(on.output).toContain('Local mode    on')
   })
 
   test('reports scalar sections and an invalid local section as configuration errors', async () => {

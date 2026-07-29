@@ -1,11 +1,11 @@
 import { Command } from 'commander'
 import {
+  clearLocalBootstrapHarness,
   configureBootstrapAgents,
   installBootstrapSkills,
   installedBootstrapSkillSources,
   refreshUserConfiguration,
-  setConfiguredUserSkills,
-  setLocalBootstrapHarness
+  setConfiguredUserSkills
 } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
 import { canonicalHarnessIdentifier } from '../core/harness.ts'
@@ -44,7 +44,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
           `refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
         )
       } else {
-        await setLocalBootstrapHarness(context.paths.config)
+        await clearLocalBootstrapHarness(context.paths.config)
         await setConfiguredUserSkills(
           context.paths.config,
           context.homeDirectory,

@@ -223,11 +223,21 @@ export const configuredAgents = async (options: {
   return configured
 }
 
-export const setLocalBootstrapHarness = async (configurationDirectory: string): Promise<void> => {
+export const clearLocalBootstrapHarness = async (configurationDirectory: string): Promise<void> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
   const contents = await readFile(path, 'utf8')
   const expression = /(?:^|\n)\[local\]\npath\s*=.*(?:\n|$)/m
   await writeFile(path, contents.replace(expression, ''), 'utf8')
+}
+
+export const setLocalBootstrapHarness = async (configurationDirectory: string, homeDirectory: string, local: string): Promise<void> => {
+  const agents = await configuredAgents({ homeDirectory, configurationDirectory })
+  const inspection = await inspectUserConfiguration(configurationDirectory)
+  await writeFile(
+    bootstrapConfigurationPath(configurationDirectory),
+    renderConfiguration(agents, inspection.harnesses, inspection.skills, local),
+    'utf8'
+  )
 }
 
 export const setConfiguredUserSkills = async (

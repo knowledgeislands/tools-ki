@@ -5,7 +5,7 @@
 // it, rather than a shared registry that a concurrent test could sweep prematurely.
 //
 // <mkdtemp>/                  (root — content outside the four areas below)
-// │   └── dev/                (a local checkout, once `ki dev local on` runs against it — populated by setupLocalCanonicalHarness())
+// │   └── dev/                (a local checkout selected by `ki dev local set` — populated by setupLocalCanonicalHarness())
 // │       └── knowledgeislands/
 // │           └── ki-agentic-harness/   (skills/, subagents/, hooks/ are real, never symlinks — `ki dev local on` validates each root)
 // │               ├── skills/
@@ -118,9 +118,9 @@ const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
   writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
 
 // The same fixture, but written under an arbitrary local directory rather than the
-// installed-harness data root — for exercising `ki dev local on <path>` against a local
+// installed-harness data root — for exercising `ki dev local set <path>` against a local
 // development checkout instead of an installed harness. Returns the checkout's real
-// path, since callers always need it to build the `ki dev local on <path>` invocation.
+// path, since callers select it through `ki dev local set <path>` before enabling it.
 const setupLocalCanonicalHarness = async (root: SandboxArea, relativePath: string): Promise<string> => {
   await writeBootstrapHarness(root, relativePath)
   return realpath(join(root.path, relativePath))

@@ -1,3 +1,4 @@
+import { rm, symlink, unlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
@@ -206,5 +207,55 @@ harness = "example/harness"
       exitCode: 0,
       output: expect.not.stringContaining('✗')
     })
+  })
+
+  test('reports a wrong managed user-skill target while local development is active', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/current/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run('ki dev local on')
+    const link = `${box.home.path}/.claude/skills/ki-recap`
+    await unlink(link)
+    await symlink(`${box.root.path}/missing-ki-recap`, link, 'dir')
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).toContain(`✓ Local development: active ${harnessPath}`)
+    expect(doctor.output).toContain('✗ User skill ki-recap: link target does not match local development source')
+    expect(doctor.exitCode).toBe(1)
+  })
+
+  test('reports a broken remembered source while local development is active', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run('ki dev local on')
+    await rm(`${harnessPath}/skills/process/ki-recap/SKILL.md`)
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).toContain('✗ Local development: local harness must contain skills/process/ki-recap/SKILL.md')
+    expect(doctor.exitCode).toBe(1)
+  })
+
+  test('checks installed sources when a remembered local source is off', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
+    const link = `${box.home.path}/.claude/skills/ki-recap`
+    await unlink(link)
+    await symlink(`${harnessPath}/skills/process/ki-recap`, link, 'dir')
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).not.toContain('Local development')
+    expect(doctor.output).toContain('✗ User skill ki-recap: link target does not match installed harness source')
+    expect(doctor.exitCode).toBe(1)
   })
 })

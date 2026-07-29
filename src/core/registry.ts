@@ -245,6 +245,11 @@ export const installCanonicalHarness = async (
 const canonicalHarnessDirectory = (dataDirectory: string): string =>
   join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
 
+export const canonicalHarnessDevelopmentEnabled = async (dataDirectory: string): Promise<boolean> => {
+  const state = await lstat(join(canonicalHarnessDirectory(dataDirectory), 'skills')).catch(() => undefined)
+  return Boolean(state?.isSymbolicLink())
+}
+
 const localPayloadDirectory = async (local: string, payload: (typeof payloadRoots)[number]): Promise<string> => {
   const source = resolve(local, payload)
   await physicalDirectory(source, `local harness ${payload} directory`)

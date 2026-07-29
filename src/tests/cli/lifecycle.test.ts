@@ -125,7 +125,8 @@ describe('[ki harness lifecycle]', () => {
     await box.setupCanonicalHarness()
     await box.config.write('ki/config.toml', userConfiguration())
     const local = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
-    expect((await box.run(`ki dev local on ${local}`)).exitCode).toBe(0)
+    expect((await box.run(`ki dev local set ${local}`)).exitCode).toBe(0)
+    expect((await box.run('ki dev local on')).exitCode).toBe(0)
 
     const reinstalled = await box.run('ki harness reinstall knowledgeislands/ki-agentic-harness')
     const removed = await box.run('ki harness uninstall knowledgeislands/ki-agentic-harness')

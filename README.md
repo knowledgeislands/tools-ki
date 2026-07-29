@@ -58,7 +58,7 @@ The installer carries the pinned public key and verifies the release's Ed25519-s
 
 The Homebrew tap will move to these same release artifacts after that first immutable release.
 
-`install.sh --link` is exclusively for development from a local checkout. Read the [local development guide](docs/developer/local-development.md) for that path.
+`install.sh --link` is exclusively for development from a local checkout. Read the [local development guide](docs/developer/local-development.md) for that path and the `ki dev local set` / `on` / `off` lifecycle.
 
 The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
