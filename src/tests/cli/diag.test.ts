@@ -84,7 +84,7 @@ ids = ["example:skill", "example:skill"]
     const supplied = `${box.project.path}/repo`
     const root = await realpath(supplied)
 
-    const diag = await box.run(`ki repo diag --repo ${supplied}`)
+    const diag = await box.run(`ki repo --repo ${supplied} diag`)
 
     expect(diag).toEqual({
       exitCode: 0,

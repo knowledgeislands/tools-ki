@@ -11,7 +11,7 @@ export type { Fetcher } from './acquire.ts'
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const sha256 = /^[a-f0-9]{64}$/
 const payloadRoots = ['skills', 'subagents', 'hooks'] as const
-// The first canonical archive used `agents/`; `ki dev on` may replace that
+// The first canonical archive used `agents/`; `ki dev local on` may replace that
 // recognised retired layout with the current `subagents/` projection.
 const retiredCanonicalPayloadRoots = ['agents'] as const
 
@@ -22,8 +22,6 @@ export interface HarnessRelease {
 }
 
 export interface HarnessInstallationOptions {
-  /** A capability the verified payload must expose before it can be published. */
-  readonly requiredCapability?: string
   /** Capabilities the replacement must retain, so active projections remain valid. */
   readonly requiredCapabilities?: readonly string[]
   /** Replace an existing verified harness only after the replacement is fully inspected. */
@@ -178,7 +176,7 @@ export const recordInstalledHarness = async (configurationDirectory: string, ide
 }
 
 const requireCapabilities = (harness: InstalledHarness, options: HarnessInstallationOptions): void => {
-  const required = new Set([...(options.requiredCapabilities ?? []), ...(options.requiredCapability ? [options.requiredCapability] : [])])
+  const required = new Set(options.requiredCapabilities ?? [])
   for (const capability of required) {
     if (!harness.capabilities.some((candidate) => candidate.name === capability)) {
       throw new KiError(`harness ${harness.id} does not provide skill ${capability}`, 1)
@@ -327,7 +325,10 @@ export const restoreCanonicalHarness = async (
 }
 
 export const uninstallHarness = async (dataDirectory: string, identifier: string): Promise<void> => {
+  // The public command validates both conditions before calling this filesystem primitive; retain its defensive core guard.
+  /* v8 ignore next -- no public CLI path can bypass the command validation. */
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
+  /* v8 ignore next -- no public CLI path can bypass the command validation. */
   if (identifier === canonicalHarnessIdentifier) throw new KiError(`the canonical harness ${identifier} cannot be uninstalled`, 1)
 
   await readInstalledHarness(dataDirectory, identifier)

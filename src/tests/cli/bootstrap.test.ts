@@ -234,7 +234,7 @@ ids = ["claude-code"]
     await box.project.write('.ki-config.toml', '["example/harness:ki-repo"]\nsupported_runtimes = ["claude-code"]\n')
     await box.run('ki bootstrap')
 
-    const added = await box.run(`ki repo skill add ki-example --repo ${box.project.path}`)
+    const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
 
     expect(added.exitCode).toBe(0)
     expect(added.output).toContain('ki repo skill add: linked ki-example into ')

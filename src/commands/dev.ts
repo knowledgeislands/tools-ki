@@ -1,3 +1,5 @@
+import { lstat } from 'node:fs/promises'
+import { join } from 'node:path'
 import { Command } from 'commander'
 import type { InstalledAgent } from '../agents/index.ts'
 import {
@@ -8,10 +10,50 @@ import {
   refreshUserConfiguration
 } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
+import { KiError } from '../core/errors.ts'
+import { discoverInstalledHarnesses } from '../core/harness.ts'
 import { enableCanonicalHarnessDevelopment, restoreCanonicalHarness } from '../core/registry.ts'
+import { resolveInstalledSkill } from '../core/resolution.ts'
+import { prepareRubricPublication } from '../core/rubric-publication.ts'
+import { loadRubricDefinition } from '../core/runtime-loader.ts'
+import { prepareWrites, publishWrites } from '../core/transaction.ts'
 
 const configured = (context: KiContext) =>
   configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config })
+
+const isDevLinkedHarness = async (harnessRoot: string): Promise<boolean> => {
+  /* v8 ignore next -- discovery already required this directory; this protects concurrent mutation. */
+  const state = await lstat(join(harnessRoot, 'skills')).catch(() => undefined)
+  /* v8 ignore next -- lstat can only return a stat object or undefined. */
+  return state?.isSymbolicLink() ?? false
+}
+
+const createRubricCommand = (context: KiContext): Command =>
+  new Command('rubric')
+    .description("render a skill's generated rubric catalogue, or verify it against references/rubric.md")
+    .argument('<skill>', 'skill capability name whose rubric to render')
+    .option('--write', 'publish the rendered catalogue to references/rubric.md (dev-linked harness installs only)')
+    .action(async (skill: string, options: { write?: boolean }) => {
+      const resolved = resolveInstalledSkill(await discoverInstalledHarnesses(context.paths.data), skill)
+      const publication = await prepareRubricPublication(resolved, await loadRubricDefinition(resolved))
+      if (options.write) {
+        if (!(await isDevLinkedHarness(resolved.harness.root)))
+          throw new KiError(`${resolved.identity} is an installed payload; run ki dev local on before writing its rubric catalogue`, 1)
+        if (publication.evidence.state !== 'in-sync')
+          await publishWrites(await prepareWrites(publication.publicationRoot, [publication.proposal()]), false)
+        context.stdout.write(`write ${publication.displayTarget}\n`)
+        return
+      }
+      if (publication.evidence.state === 'in-sync') {
+        context.stdout.write(`ki dev skill rubric: ${resolved.identity} references/rubric.md is in sync\n`)
+        return
+      }
+      const reason = publication.evidence.state === 'missing' ? 'is missing' : 'is stale'
+      context.stdout.write(
+        `ki dev skill rubric: ${resolved.identity} references/rubric.md ${reason}; run with --write from a dev-linked harness\n`
+      )
+      throw new KiError(`${resolved.identity} references/rubric.md ${reason}`, 1)
+    })
 
 const reportProjections = (
   context: KiContext,
@@ -26,8 +68,9 @@ const reportProjections = (
 
 export const createDevCommand = (context: KiContext): Command => {
   const command = new Command('dev').description('switch the canonical harness between a local checkout and its verified archive')
-  command
-    .command('on <path>')
+  const local = command.command('local').description('manage the canonical local development harness')
+  local
+    .command('on <local-harness-path>')
     .description('link the canonical harness payload to a local harness checkout')
     .action(async (path: string) => {
       const local = await localBootstrapHarness(path)
@@ -42,7 +85,7 @@ export const createDevCommand = (context: KiContext): Command => {
       )
       reportProjections(context, projections)
     })
-  command
+  local
     .command('off')
     .description('restore the verified canonical harness archive')
     .action(async () => {
@@ -61,5 +104,6 @@ export const createDevCommand = (context: KiContext): Command => {
       )
       reportProjections(context, projections)
     })
+  command.addCommand(new Command('skill').description('development-only skill operations').addCommand(createRubricCommand(context)))
   return command
 }

@@ -65,26 +65,23 @@ export const createUpdateCommand = (context: KiContext): Command =>
       context.stdout.write(`${lines.join('\n')}\n`)
     })
 
-export const createUpgradeCommand = (context: KiContext): Command =>
-  new Command('upgrade')
-    .description('refresh uniquely resolved capabilities declared by one KI repository')
-    .option('--repo <path>', 'repository root (defaults to the discovered KI repository)')
-    .action(async (options: { repo?: string }) => {
-      const repository = await resolveRepository({
-        repository: options.repo,
-        workingDirectory: context.workingDirectory,
-        homeDirectory: context.homeDirectory
-      })
-      const harnesses = await discoverInstalledHarnesses(context.paths.data)
-      const skills = resolveDeclaredSkills(await readDeclaredSkills(repository.configuration), harnesses)
-      const selected = [...new Map(skills.map((skill) => [skill.harness.id, skill.harness])).values()]
-      const lines = ['ki repo upgrade']
-      if (!selected.length) {
-        lines.push('No declared capabilities.')
-        context.stdout.write(`${lines.join('\n')}\n`)
-        return
-      }
-      const refreshed = await refreshHarnesses(context, selected)
-      lines.push(`Repository: ${repository.root}`, 'Providers:', ...refreshed.map((line) => `  ${line}`))
-      context.stdout.write(`${lines.join('\n')}\n`)
+export const createUpgradeCommand = (context: KiContext, selectedRepository: () => string | undefined): Command =>
+  new Command('upgrade').description('refresh uniquely resolved capabilities declared by one KI repository').action(async () => {
+    const repository = await resolveRepository({
+      repository: selectedRepository(),
+      workingDirectory: context.workingDirectory,
+      homeDirectory: context.homeDirectory
     })
+    const harnesses = await discoverInstalledHarnesses(context.paths.data)
+    const skills = resolveDeclaredSkills(await readDeclaredSkills(repository.configuration), harnesses)
+    const selected = [...new Map(skills.map((skill) => [skill.harness.id, skill.harness])).values()]
+    const lines = ['ki repo upgrade']
+    if (!selected.length) {
+      lines.push('No declared capabilities.')
+      context.stdout.write(`${lines.join('\n')}\n`)
+      return
+    }
+    const refreshed = await refreshHarnesses(context, selected)
+    lines.push(`Repository: ${repository.root}`, 'Providers:', ...refreshed.map((line) => `  ${line}`))
+    context.stdout.write(`${lines.join('\n')}\n`)
+  })

@@ -432,19 +432,19 @@ const renderReports = (
   )
 }
 
-export const createRepoCommand = (context: KiContext): Command =>
-  new Command('repo')
-    .description('run operations for one KI repository')
-    .addCommand(createRepoDiagCommand(context))
-    .addCommand(createRepoSkillCommand(context))
-    .addCommand(createUpgradeCommand(context))
+export const createRepoCommand = (context: KiContext): Command => {
+  const command = new Command('repo').description('run operations for one KI repository').option('--repo <path>', 'repository root')
+  const selectedRepository = (): string | undefined => command.opts<{ repo?: string }>().repo
+  return command
+    .addCommand(createRepoDiagCommand(context, selectedRepository))
+    .addCommand(createRepoSkillCommand(context, selectedRepository))
+    .addCommand(createUpgradeCommand(context, selectedRepository))
     .addCommand(
       new Command('educate')
         .description('explain maintenance for declared skills')
-        .option('--repo <path>', 'repository root to explain')
         .option('--skill <capability>', 'one declared resolved skill to explain')
-        .action(async (options: { repo?: string; skill?: string }) => {
-          const { skills } = await resolveSkills(context, options)
+        .action(async (options: { skill?: string }) => {
+          const { skills } = await resolveSkills(context, { ...options, repo: selectedRepository() })
           const educations = await runWithProgress(context, 'educate', skills, (skill) => educateSkill(skill), {
             progress: 'auto',
             progressStyle: 'single',
@@ -460,14 +460,13 @@ export const createRepoCommand = (context: KiContext): Command =>
     .addCommand(
       new Command('audit')
         .description('run registered audit operations for declared skills')
-        .option('--repo <path>', 'repository root to audit')
         .option('--skill <capability>', 'one declared resolved skill to audit')
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
         .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN)')
-        .action(async (options: { repo?: string; skill?: string; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
+        .action(async (options: { skill?: string; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
           const output = operationOptions('audit', options)
-          const { repository, skills } = await resolveSkills(context, options)
+          const { repository, skills } = await resolveSkills(context, { ...options, repo: selectedRepository() })
           const results = await runWithProgress(
             context,
             'audit',
@@ -497,23 +496,15 @@ export const createRepoCommand = (context: KiContext): Command =>
     .addCommand(
       new Command('conform')
         .description('apply registered conform operations for declared skills')
-        .option('--repo <path>', 'repository root to conform')
         .option('--skill <capability>', 'one declared resolved skill to conform')
         .option('--dry-run', 'validate and report without writing')
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
         .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN,FIXED)')
         .action(
-          async (options: {
-            repo?: string
-            skill?: string
-            dryRun?: boolean
-            progress?: string
-            progressStyle?: string
-            reporterLevels?: string
-          }) => {
+          async (options: { skill?: string; dryRun?: boolean; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
             const output = operationOptions('conform', options)
-            const { repository, skills } = await resolveSkills(context, options)
+            const { repository, skills } = await resolveSkills(context, { ...options, repo: selectedRepository() })
             const conformed = await runWithProgress(
               context,
               'conform',
@@ -611,3 +602,4 @@ export const createRepoCommand = (context: KiContext): Command =>
           }
         )
     )
+}

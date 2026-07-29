@@ -22,9 +22,9 @@ Use `--dry-run` to validate without creating output. The command is local only: 
 
 ## Manage installed capabilities
 
-`ki install`, `ki reinstall`, and `ki uninstall` manage verified harness payloads without activating or deactivating skills.
+`ki harness install`, `ki harness reinstall`, and `ki harness uninstall` manage verified harness payloads without activating or deactivating skills.
 
-Use a harness identifier such as `example/harness`, a supplier-qualified skill such as `example/harness:ki-example`, or an already-installed bare skill name when exactly one harness supplies it.
+Use a harness identifier such as `example/harness`.
 
 For target forms and the explicit activation boundary, read the [capability lifecycle guide](docs/guides/user/capability-lifecycle.md).
 
@@ -52,6 +52,6 @@ The Homebrew tap will move to these same release artifacts after that first immu
 
 `install.sh --link` is exclusively for development from a local checkout. Read the [local development guide](docs/guides/developer/local-development.md) for that path.
 
-The tracked [ki(1) manual](man/ki.1) distinguishes the current command surface from planned alternatives.
+The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 See the [roadmap](ROADMAP.md).

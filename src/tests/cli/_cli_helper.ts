@@ -5,9 +5,9 @@
 // it, rather than a shared registry that a concurrent test could sweep prematurely.
 //
 // <mkdtemp>/                  (root — content outside the four areas below)
-// │   └── dev/                (a local checkout, once `ki dev on` runs against it — populated by setupLocalCanonicalHarness())
+// │   └── dev/                (a local checkout, once `ki dev local on` runs against it — populated by setupLocalCanonicalHarness())
 // │       └── knowledgeislands/
-// │           └── ki-agentic-harness/   (skills/, subagents/, hooks/ are real, never symlinks — `ki dev on` validates each root)
+// │           └── ki-agentic-harness/   (skills/, subagents/, hooks/ are real, never symlinks — `ki dev local on` validates each root)
 // │               ├── skills/
 // │               ├── subagents/
 // │               └── hooks/
@@ -17,7 +17,7 @@
 // ├── data/                   ($XDG_DATA_HOME — installed harnesses/skills project here)
 // │   └── ki/harnesses/
 // │       └── knowledgeislands/
-// │           └── ki-agentic-harness/   (installed mode: real, from the archive. After `ki dev on`: symlinked to root/dev/.../<payload>)
+// │           └── ki-agentic-harness/   (installed mode: real, from the archive. After `ki dev local on`: symlinked to root/dev/.../<payload>)
 // │               ├── skills/
 // │               ├── subagents/
 // │               └── hooks/
@@ -109,9 +109,9 @@ const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
   writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
 
 // The same fixture, but written under an arbitrary local directory rather than the
-// installed-harness data root — for exercising `ki dev on <path>` against a local
+// installed-harness data root — for exercising `ki dev local on <path>` against a local
 // development checkout instead of an installed harness. Returns the checkout's real
-// path, since callers always need it to build the `ki dev on <path>` invocation.
+// path, since callers always need it to build the `ki dev local on <path>` invocation.
 const setupLocalCanonicalHarness = async (root: SandboxArea, relativePath: string): Promise<string> => {
   await writeBootstrapHarness(root, relativePath)
   return realpath(join(root.path, relativePath))

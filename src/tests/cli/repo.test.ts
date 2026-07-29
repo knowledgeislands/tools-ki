@@ -279,7 +279,7 @@ describe('[ki repo]', () => {
       await box.project.write('.ki-config.toml', '["example/harness:ki-website"]\n["example/harness:ki-website-cloudflare"]\n')
       await setupPrefixCollisionHarness(box.data)
 
-      const result = await box.run(`ki repo audit --repo ${box.project.path} --skill ki-website`)
+      const result = await box.run(`ki repo --repo ${box.project.path} audit --skill ki-website`)
 
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-website] audit`)
@@ -609,7 +609,7 @@ export default {
       await box.project.write('.ki-config.toml', '["example/harness:ki-website"]\n["example/harness:ki-website-cloudflare"]\n')
       await setupPrefixCollisionHarness(box.data)
 
-      const result = await box.run(`ki repo conform --repo ${box.project.path} --skill ki-website`)
+      const result = await box.run(`ki repo --repo ${box.project.path} conform --skill ki-website`)
 
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('write website.txt')

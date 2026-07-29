@@ -53,6 +53,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki harness info`
 - `ki harness list`
 - `ki harness install`
+- `ki harness reinstall`
 - `ki harness uninstall`
 
 #### Acquisition
