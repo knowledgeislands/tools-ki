@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-011
 title: Reconcile managed user skills in local development mode
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 281b2d42cbaeab569e42adefcee6f4bde4a835bb
@@ -106,6 +106,10 @@ The CLI help, `ki(1)`, README, and local-development guide document the `set` / 
 ### Mini recap
 
 The user-visible local-development lifecycle is now explicit and recoverable: choose a source, switch it on, and switch it off to return managed links to the verified canonical harness.
+
+## Done
+
+Accepted by the user on 2026-07-29. The completed record is retained pending a separately confirmed prune.
 
 ## Discussion
 

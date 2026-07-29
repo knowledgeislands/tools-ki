@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-006
 title: Add multi-repository invocations
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: [KI-TOOL-CLI-003]
 blocked-by: []
 baseline-ref: 3780dec701eace7277c0cda203712949acab777a
@@ -85,6 +85,10 @@ The completed [KI-TOOL-CLI-005](KI-TOOL-CLI-005-align-command-scopes-and-reposit
 ### Mini recap
 
 CLI-006 supplies the reusable multi-repository invocation layer. It remains a prerequisite for CLI-003 and complements, rather than replaces, CLI-004’s persisted named workspaces.
+
+## Done
+
+Accepted by the user on 2026-07-29. The completed record is retained pending a separately confirmed prune.
 
 ## Discussion
 
