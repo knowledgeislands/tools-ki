@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-008
 title: Reconcile implementation with the documented V1 CLI surface
 theme: cli
 horizon: blocking
-status: acceptance
+status: done
 blocks: [KI-TOOL-CLI-006]
 blocked-by: []
 baseline-ref: 84c88ca5ed39f8e2af5b42874a417aba6020095b
@@ -114,3 +114,7 @@ KI-TOOL-CLI-009 remains in progress. Its V1 command names are documented, but sa
 ### Mini recap
 
 The V1 command tree is ready for acceptance. This item leaves no compatibility aliases for retired lifecycle or development paths, and it keeps the next multi-repository item behind the settled shared repository-selector boundary.
+
+## Done
+
+Accepted by the user on 2026-07-29 after review of the recorded delivery and verification evidence.
