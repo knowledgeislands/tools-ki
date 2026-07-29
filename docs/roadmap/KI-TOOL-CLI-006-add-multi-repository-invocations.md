@@ -29,6 +29,10 @@ This item does not persist named workspaces, add multi-repository support to use
 
 The `mgit` comparison is behavioural only: KI owns its parser, grammar, diagnostics, and operation semantics and does not invoke or require the `mgit` executable.
 
+### Man-page notation
+
+KI-TOOL-CLI-006 also corrects the `ki(1)` synopsis grammar while documenting repository target selection. Generic optional command selectors use `[command]`, as in `ki [command]` and `ki help [command]`; angle brackets remain for required user-supplied values such as `<path>`, `<skill>`, and `<shell>`.
+
 ## Steps
 
 1. Define repeatable `[--repo <path-or-pattern>]` grammar, deterministic pattern expansion, duplicate handling, and target ordering for every `ki repo` operation.
@@ -36,7 +40,7 @@ The `mgit` comparison is behavioural only: KI owns its parser, grammar, diagnost
 3. Parse the bounded `.mgitconfig` container shape internally: accept declared child containers and repository entries, ignore owned-link entries, preserve declaration order, reject unsafe or malformed entries, and never invoke or require `mgit`.
 4. Refactor repository operations to run resolved targets in supplied or declared order with concise per-repository reporting. For mutations, retain earlier successful targets when a later target fails and return a non-zero overall result.
 5. Add black-box CLI contracts for explicit multi-target audit, conform, diag, skill activation, and upgrade; direct-CWD `.mgitconfig` resolution; pattern matching; preflight failure; and duplicate or invalid target diagnostics.
-6. Update help, completions, `ki(1)`, README, and user documentation to explain repository target-set detection, repeated `[--repo <path-or-pattern>]` syntax, direct-CWD `.mgitconfig` behaviour, no ancestor configuration search, and incremental mutation behaviour.
+6. Update help, completions, `ki(1)`, README, and user documentation to explain repository target-set detection, repeated `[--repo <path-or-pattern>]` syntax, direct-CWD `.mgitconfig` behaviour, no ancestor configuration search, and incremental mutation behaviour. Correct generic man-page command selectors to `[command]` while retaining angle brackets for required user-supplied values.
 
 ## Files touched
 
