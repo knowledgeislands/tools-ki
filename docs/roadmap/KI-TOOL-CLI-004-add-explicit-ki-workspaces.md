@@ -68,6 +68,12 @@ Escalate any question about public command spelling, TOML grammar beyond the loc
 
 A workspace is a named KI-owned definition of physical KI repository roots, not a replacement for Git discovery, `mgit`, or an ambient-directory scan. A direct-CWD workspace file is authoritative only for its declared default or an explicit group; no ancestor configuration silently changes a repository command's meaning.
 
+### Workspace file shape
+
+The workspace file uses a small, inspectable TOML shape: `schema = 1`, `default = "<group>"`, and one `[groups.<name>]` table with an ordered `repositories` array. Group entries may be literal relative paths or the same deterministic patterns accepted by `--repo`; they resolve from the workspace file's physical directory, never from an ambient ancestor.
+
+Group names, references, duplicate physical roots, malformed TOML, an absent default, and a workspace file that is not a regular file are validation failures. No command normalises a hand-edited file or silently removes an unavailable member.
+
 ### Selector precedence
 
 An explicit `--repo` or `--workspace` makes a caller's intent unambiguous, so the two selectors are rejected together rather than silently applying one. Without either selector, the direct-CWD `.ki-workspace.toml` default comes before direct-CWD `.mgitconfig`; ordinary repository discovery remains the final fallback.
@@ -75,6 +81,8 @@ An explicit `--repo` or `--workspace` makes a caller's intent unambiguous, so th
 ### Command boundary
 
 Workspace management is the only mutable surface in this item. Every `ki repo` operation remains responsible for its own behaviour after selection; workspace selection changes neither operation semantics nor lifecycle ownership. When CLI-003 introduces plan inventory, `ki repo --workspace <group> plan list` will follow from this shared selector without another aggregate implementation.
+
+`ki workspace init` creates the initial file; `list` and `show` inspect it; `add` and `remove` make explicit, minimal group membership edits. Those commands work from the workspace directory and do not require any selected member to be the current repository.
 
 ### Dependency boundary
 

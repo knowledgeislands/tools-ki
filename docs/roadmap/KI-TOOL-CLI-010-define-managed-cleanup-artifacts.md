@@ -24,10 +24,18 @@ This item does not change V1's non-mutating cleanup report, infer ownership from
 
 Any candidate artifact format must identify its creating KI operation, version, exact owned paths, and lifecycle state. Cleanup may rely only on that persisted record, never on a filename pattern, cache location, or resemblance to a transaction directory.
 
+The first design must also establish where the record lives, whether it is written atomically with its artifact, and how a later KI release establishes backwards-compatible reader behaviour without treating an unknown record as deletable state.
+
 ### Staleness and recovery evidence
 
 The design must define positive staleness evidence, concurrent-operation exclusion, interruption recovery, and deterministic dry-run reporting before it can authorise a deletion. A missing or malformed ownership record is a refusal condition, not an invitation to infer intent.
 
+Evidence should distinguish a completed artifact eligible for cleanup from an operation that is still live, interrupted but recoverable, manually altered, or outside KI ownership. A cleanup report needs to name each refusal reason so an operator can make a deliberate recovery decision rather than retrying blind.
+
+### Candidate first deliverable
+
+The first executable outcome is a versioned manifest and a read-only `ki cleanup` report over one concrete KI-created artifact family. It must prove containment before any delete verb is proposed, and its test fixture must cover interrupted writes, lock contention, foreign files, symlinks, malformed manifests, and a repeatable dry run.
+
 ### Promotion condition
 
-Shape this item when a KI operation first needs to persist a versioned, recoverable managed artifact. Until then, V1's explicit no-op cleanup result remains the correct safety boundary.
+Promote this item when a KI operation first needs to persist a versioned, recoverable managed artifact and can name its producer, owned paths, lifetime, and recovery owner. Until then, V1's explicit no-op cleanup result remains the correct safety boundary.
