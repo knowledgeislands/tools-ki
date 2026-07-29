@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-012
 title: Audit and enforce CLI structural consistency
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: b6f26242010d1e605279e7aaf339ae1746c9732c
 ---
 
 ## Context
