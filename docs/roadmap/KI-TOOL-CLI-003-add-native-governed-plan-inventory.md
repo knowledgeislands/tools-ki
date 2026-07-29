@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-003
 title: Add native governed-work inspection commands
 theme: cli
 horizon: next
-status: open
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
