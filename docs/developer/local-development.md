@@ -74,7 +74,7 @@ Release signing, protected GitHub environment configuration, and publication are
 
 ## Read the manual
 
-The tracked manual is [ki(1)](../../../man/ki.1). Preview it from a checkout with:
+The tracked manual is [ki(1)](../../man/ki.1). Preview it from a checkout with:
 
 ```sh
 man -l man/ki.1
