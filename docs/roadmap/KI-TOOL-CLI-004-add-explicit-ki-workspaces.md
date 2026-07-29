@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-004
 title: Add explicit KI workspaces
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: c2ac480f5553eca0754d315a1528eed7dff14957
@@ -21,7 +21,7 @@ This item does not recursively scan ambient folders, replace Git or `mgit`, sear
 
 ## Current state
 
-The CLI has no persisted workspace definition. `KI-TOOL-CLI-006` owns the reusable target-set resolver; CLI-004 extends that resolver with KI-owned workspace selection before CLI-003 adds a plan-inventory command that can consume it.
+The CLI now has a persisted KI-owned workspace definition and workspace selection for every `ki repo` operation. `KI-TOOL-CLI-006` supplied the reusable target-set resolver; CLI-004 extends it with named direct-CWD workspace selection that CLI-003 may consume for inventory.
 
 ### Workspace and selection contract
 
@@ -87,7 +87,11 @@ Escalate any question about public command spelling, TOML grammar beyond the loc
 
 ### Mini recap
 
-CLI-004 adds KI-owned, explicit repository workspaces on top of CLI-006's shared physical target resolver. It is ready for user acceptance and remains an enabling selector for CLI-003's future governed-work inventory.
+CLI-004 adds KI-owned, explicit repository workspaces on top of CLI-006's shared physical target resolver. It is accepted and remains an enabling selector for CLI-003's future governed-work inventory.
+
+## Done
+
+Accepted by the user on 2026-07-29. The completed record is retained pending a separately confirmed prune.
 
 ## Discussion
 

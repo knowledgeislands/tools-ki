@@ -54,7 +54,7 @@ Malformed or unsafe work-item files fail only their repository result after targ
 
 ## Dependencies / blocks
 
-This item is blocked by [KI-TOOL-CLI-006](KI-TOOL-CLI-006-add-multi-repository-invocations.md). It blocks [KI-TOOL-CLI-004](KI-TOOL-CLI-004-add-explicit-ki-workspaces.md).
+This item is blocked by [KI-TOOL-CLI-006](KI-TOOL-CLI-006-add-multi-repository-invocations.md). It does not block CLI-004: workspace selection is independently delivered and CLI-003 consumes it only when available.
 
 ## Discussion
 
