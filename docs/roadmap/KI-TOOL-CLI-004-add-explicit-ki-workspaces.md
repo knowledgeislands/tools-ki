@@ -33,7 +33,7 @@ The CLI has no persisted workspace definition or aggregate work-item view. `KI-T
 
 - `src/commands/`, `src/core/`, configuration/path modules, registration, and completions
 - `src/tests/cli/` workspace and aggregate inventory contracts
-- `man/ki.1`, README, and user documentation
+- `man/ki.1`, README, developer documentation, and a non-blocking KI Website handoff for public user guidance
 
 ## Verify
 
@@ -45,3 +45,17 @@ The CLI has no persisted workspace definition or aggregate work-item view. `KI-T
 ## Dependencies / blocks
 
 This item is blocked by [KI-TOOL-CLI-003](KI-TOOL-CLI-003-add-native-governed-plan-inventory.md).
+
+## Discussion
+
+### Workspace ownership
+
+A workspace is a named user-owned definition of physical KI repository roots, not a replacement for Git discovery or an ambient-directory scan. Its storage, name grammar, duplicate policy, and removal semantics must be explicit before implementation.
+
+### Aggregate boundary
+
+The aggregate operation reuses CLI-003's inventory representation and runs read-only. A missing, invalid, or unavailable member produces an isolated diagnostic; it neither removes the member from the workspace nor prevents independent members from being reported.
+
+### Dependency boundary
+
+CLI-003 supplies the inventory contract and CLI-006 supplies multi-target resolution. This item should add persistence and named coordination only after both contracts are delivered.

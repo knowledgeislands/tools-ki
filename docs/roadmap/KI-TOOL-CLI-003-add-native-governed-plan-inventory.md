@@ -33,7 +33,7 @@ This item does not implement lifecycle transitions or aggregate multiple reposit
 
 - `src/commands/`, `src/core/`, registration, and completion modules
 - `src/tests/cli/` inventory fixtures and contracts
-- `man/ki.1`, README, and user documentation
+- `man/ki.1`, README, developer documentation, and a non-blocking KI Website handoff for public user guidance
 
 ## Verify
 
@@ -45,3 +45,17 @@ This item does not implement lifecycle transitions or aggregate multiple reposit
 ## Dependencies / blocks
 
 This item is blocked by [KI-TOOL-CLI-006](KI-TOOL-CLI-006-add-multi-repository-invocations.md). It blocks [KI-TOOL-CLI-004](KI-TOOL-CLI-004-add-explicit-ki-workspaces.md).
+
+## Discussion
+
+### Authority boundary
+
+`ki repo plan list` reads and validates canonical work items but does not create, transition, accept, prune, or otherwise own their lifecycle. Harness-owned work-item semantics remain the source of truth; malformed items must be isolated as diagnostics rather than normalised or repaired by the inventory command.
+
+### Result contract
+
+The contract must name a stable human-readable layout, one machine-readable representation, the fields derived from each item, filters, ordering, and the successful empty result. It must distinguish an empty inventory from a repository whose malformed item prevents one result from being read.
+
+### Dependency boundary
+
+This item consumes CLI-006's target-set resolver and per-target reporting model. It must not add its own multi-repository selection or failure-isolation path.

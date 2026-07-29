@@ -37,18 +37,19 @@ The rendered manual also needs clearer sectional rhythm: place visible vertical 
 
 ## Steps
 
-1. Define repeatable `[--repo <path-or-pattern>]` grammar, deterministic pattern expansion, duplicate handling, and target ordering for every `ki repo` operation.
-2. Implement a shared multi-target resolver that preflights every explicit root or pattern match before operations begin, and that uses only a direct-CWD `.mgitconfig` for no-option downward target resolution before falling back to one-repository CWD discovery.
-3. Parse the bounded `.mgitconfig` container shape internally: accept declared child containers and repository entries, ignore owned-link entries, preserve declaration order, reject unsafe or malformed entries, and never invoke or require `mgit`.
-4. Refactor repository operations to run resolved targets in supplied or declared order with concise per-repository reporting. For mutations, retain earlier successful targets when a later target fails and return a non-zero overall result.
-5. Add black-box CLI contracts for explicit multi-target audit, conform, diag, skill activation, and upgrade; direct-CWD `.mgitconfig` resolution; pattern matching; preflight failure; and duplicate or invalid target diagnostics.
-6. Update help, completions, `ki(1)`, README, and user documentation to explain repository target-set detection, repeated `[--repo <path-or-pattern>]` syntax, direct-CWD `.mgitconfig` behaviour, no ancestor configuration search, and incremental mutation behaviour. Correct generic man-page command selectors to `[command]` while retaining angle brackets for required user-supplied values. Group all `ki repo …` entries together in a dedicated `SYNOPSIS` block. Improve the rendered manual's command-group orientation and visible spacing after headings and before command lists.
+1. Lock the repeatable `[--repo <path-or-pattern>]` grammar for `audit`, `conform`, `diag`, `educate`, `skill`, and `upgrade`, including deterministic expansion, duplicate physical-root rejection, target ordering, and per-target result shape.
+2. Introduce one shared target-set resolver that first preflights every explicit literal path or pattern match, otherwise reads only a regular `.mgitconfig` in the physical CWD, and finally retains one-repository CWD discovery. No adapter may retain a bespoke resolution path.
+3. Parse the bounded `.mgitconfig` container shape internally: accept declared child containers and repository entries, follow only declared container entries downward, ignore owned-link entries, preserve declaration order, reject unsafe or malformed entries, and never invoke or require `mgit`.
+4. Adapt every repository operation to consume the resolved target set and render concise per-repository outcomes in target order. A later mutation failure retains earlier successful targets and produces a non-zero overall result; read-only operations isolate each target's diagnostics.
+5. Add black-box CLI contracts for every adapted operation, explicit literals and patterns, direct-CWD configuration, nested declared containers, ignored owned links, no ancestor configuration search, all-target preflight failure, duplicates, invalid roots, deterministic ordering, and retained earlier mutations after a later failure.
+6. Update root help, completions, `ki(1)`, README, and developer documentation with the target-set contract. Correct generic manual selectors to `[command]`, group every `ki repo …` synopsis together, and add the required command-group orientation and spacing. Prepare a non-blocking KI Website handoff for public user guidance rather than editing that repository here.
 
 ## Files touched
 
-- `src/commands/`, repository-resolution modules, and command registration/completions
+- `src/commands/repo.ts`, `src/commands/diag.ts`, `src/commands/skill.ts`, `src/commands/update.ts`, and command registration/completions
+- `src/core/repository.ts` and a focused target-set or bounded configuration-parser module where separation improves containment
 - `src/tests/cli/` multi-target repository contracts
-- `man/ki.1`, README, and user documentation
+- `man/ki.1`, README, developer documentation, and a non-blocking KI Website handoff for public user guidance
 
 ## Verify
 
@@ -60,3 +61,21 @@ The rendered manual also needs clearer sectional rhythm: place visible vertical 
 ## Dependencies / blocks
 
 The completed [KI-TOOL-CLI-005](KI-TOOL-CLI-005-align-command-scopes-and-repository-resolution.md) and [KI-TOOL-CLI-008](KI-TOOL-CLI-008-consolidate-harness-and-developer-commands.md) establish this item’s repository boundary and selector grammar. This item blocks [KI-TOOL-CLI-003](KI-TOOL-CLI-003-add-native-governed-plan-inventory.md).
+
+## Discussion
+
+### Target-set authority
+
+The target-set resolver is the sole authority for repository selection across every `ki repo` operation. It returns already preflighted physical roots in deterministic order, so command adapters can focus on their operation rather than repeating path, pattern, or configuration logic.
+
+### Bounded configuration grammar
+
+The comparison to `mgit` is behavioural, not an integration. KI recognises only the declared repository and container forms it needs, ignores owned links, follows only declared containers downward, and treats a direct-CWD regular `.mgitconfig` as the only implicit aggregate selector. URLs and ambient ancestor configuration do not participate in target discovery.
+
+### Failure and mutation model
+
+Explicit target requests are all-or-nothing at selection time: one unmatched pattern, invalid root, or duplicate rejects the entire request before any operation begins. After a valid set is selected, each target runs independently in order; mutation operations retain earlier successes when a later target fails, while read-only operations report isolated diagnostics.
+
+### Documentation ownership
+
+The executable's help, completion, README, manual, and developer guidance remain in this repository. Public end-user explanation belongs to `ki-website`; the implementation records a non-blocking handoff there without editing its content or changing that repository's priority.
