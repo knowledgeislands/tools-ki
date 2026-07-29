@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-001
 title: Harden user harness installation and runtime skill publication
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: b99387b600abd0041e1253b2a09429a855b1e2db
@@ -44,3 +44,31 @@ Bootstrap and `ki dev` use the in-process `installBootstrapSkills` boundary. The
 ## Dependencies / blocks
 
 This item has no dependency or downstream block.
+
+## Acceptance
+
+### Delivered
+
+- Bootstrap and `ki dev` retain the in-process `installBootstrapSkills` publication boundary.
+- Bootstrap and development re-projection refuse to replace a foreign core-skill link.
+- Black-box coverage proves that bootstrap preserves a foreign core-skill link.
+
+### Summary of changes
+
+Foreign core-skill links are preserved instead of being silently replaced during bootstrap or development re-projection. The primary changes are in `src/commands/bootstrap.ts`, `src/commands/dev.ts`, and `src/tests/cli/bootstrap.test.ts`.
+
+### Verification
+
+- `bun run test` — 24 test files and 378 tests passed.
+- `bun run test:coverage` — 24 test files and 378 tests passed; statements, branches, functions, and lines each reached 100% coverage.
+- `./bin/ki repo audit --repo .` — passed with no FAIL or WARN findings.
+
+Verification was re-run at `8d20ce35f9ad4ce5918feb5b5c3baee28c8afb6c`.
+
+### Outstanding concerns
+
+None. Compatible-harness hook state remains intentionally outside bootstrap and development projection.
+
+### Mini recap
+
+The direct publication boundary is safe when an unmanaged core-skill link is present: refusal is preferable to silent replacement. No follow-up route is proposed.
