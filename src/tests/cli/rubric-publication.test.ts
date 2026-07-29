@@ -1,33 +1,7 @@
-import { rm, symlink } from 'node:fs/promises'
+import { lstat, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
-
-const publicationLstatFailure = vi.hoisted(() => ({ suffix: undefined as string | undefined, calls: 0, after: 0 }))
-
-vi.mock('node:fs/promises', async (importOriginal) => {
-  const original = await importOriginal<typeof import('node:fs/promises')>()
-  return {
-    ...original,
-    lstat: (...arguments_: Parameters<typeof original.lstat>) => {
-      const [path] = arguments_
-      if (publicationLstatFailure.suffix && String(path).endsWith(publicationLstatFailure.suffix)) {
-        publicationLstatFailure.calls += 1
-        if (publicationLstatFailure.calls === publicationLstatFailure.after) {
-          const error = Object.assign(new Error('publication lstat failure'), { code: 'EACCES' })
-          return Promise.reject(error)
-        }
-      }
-      return original.lstat(...arguments_)
-    }
-  }
-})
-
-afterEach(() => {
-  publicationLstatFailure.suffix = undefined
-  publicationLstatFailure.calls = 0
-  publicationLstatFailure.after = 0
-})
 
 const publicationRubric = `
 export default {
@@ -194,11 +168,14 @@ describe('[ki generated rubric publication]', () => {
     const box = await sandbox()
     await projectLinkedHarness(box)
     await box.project.write('skills/ki-example/references/rubric.md', 'stale publication\n')
-    publicationLstatFailure.suffix = '/skills/ki-example/references/rubric.md'
-    publicationLstatFailure.after = 1
+    const suffix = '/skills/ki-example/references/rubric.md'
+    const failingLstat = (async (path, options) => {
+      if (String(path).endsWith(suffix)) throw Object.assign(new Error('publication lstat failure'), { code: 'EACCES' })
+      return lstat(path, options)
+    }) as typeof lstat
+    box.setLstat(failingLstat)
 
     await expect(box.run('ki repo audit')).rejects.toThrow('publication lstat failure')
-    expect(publicationLstatFailure.calls).toBe(1)
   })
 
   test('uses byte-identical publication bytes for standalone rendering and repository conform', async () => {

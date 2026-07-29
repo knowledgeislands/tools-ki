@@ -3,7 +3,7 @@
 // violated items into host-owned guarded publication (see ./transaction.ts). Judgment items
 // are catalogue data only; the runtime never executes them.
 
-import { lstat, realpath } from 'node:fs/promises'
+import { type lstat, realpath } from 'node:fs/promises'
 import { KiError } from './errors.ts'
 import type { ResolvedSkill } from './resolution.ts'
 import {
@@ -26,6 +26,7 @@ export interface RepositoryRuntimeScope {
   readonly kind: 'repository'
   readonly repository: string
   readonly userHome: string
+  readonly lstat: typeof lstat
 }
 
 export type RuntimeScope = RepositoryRuntimeScope
@@ -268,11 +269,11 @@ const auditSkill = async (
   const { skill, definition, items: plannedItems } = prepared
   const definitionScope = definition.scope as RubricScope
   if (definitionScope.kind === 'user-home') {
-    const state = await lstat(scope.userHome).catch(() => undefined)
+    const state = await scope.lstat(scope.userHome).catch(() => undefined)
     if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError('user home must be an existing physical directory', 1)
     scope = { ...scope, userHome: await realpath(scope.userHome) }
   }
-  const preparedPublication = await prepareRubricPublication(skill, definition, scope.repository)
+  const preparedPublication = await prepareRubricPublication(skill, definition, scope.repository, scope.lstat)
   const publicationDraft: { write?: NativeWrite; conforming: boolean } = { conforming: false }
   const publication: RubricPublication = {
     ...preparedPublication.evidence,

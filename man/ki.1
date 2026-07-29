@@ -5,10 +5,8 @@
 ki \- Knowledge Islands command-line interface
 .SH SYNOPSIS
 \&
-.PP
 .SS General
 \&
-.PP
 .TP
 .B ki [command]
 Run a KI command, or print root help when no command is supplied.
@@ -17,7 +15,6 @@ Run a KI command, or print root help when no command is supplied.
 Print root or command-specific help.
 .SS Global options
 \&
-.PP
 .TP
 .B --help, -h
 Print help for KI or the selected command.
@@ -26,7 +23,6 @@ Print help for KI or the selected command.
 Print the CLI version.
 .SS Installation
 \&
-.PP
 .TP
 .B ki bootstrap [--refresh]
 Detect agents, install the canonical harness, and install core user skills.
@@ -51,7 +47,6 @@ Search verified installed local harness capabilities.
 Report eligible KI-managed stale state.
 .SS Diagnostics
 \&
-.PP
 .TP
 .B ki version
 Print the CLI version.
@@ -67,7 +62,6 @@ legacy KI state and configuration.
 Print canonical KI documentation locations.
 .SS User management
 \&
-.PP
 .TP
 .B ki list
 List verified installed harnesses and capabilities with declared user skills.
@@ -79,7 +73,6 @@ Link a harness skill into configured user agent skill spaces.
 Remove a KI-managed user skill link.
 .SS Workspace management
 \&
-.PP
 .TP
 .B ki workspace init
 Create a direct-CWD \fB.ki-workspace.toml\fR.
@@ -97,16 +90,15 @@ Add a member to one workspace group.
 Remove a member from one workspace group.
 .SS Repository options
 \&
-.PP
 .TP
 .B ki repo [--repo <path-or-pattern>]... [command]
-Use repeated \fB--repo\fR options to select explicit repository roots or patterns.
+Use repeated \fB--repo\fR options to select explicit repository roots or
+patterns.
 .TP
 .B ki repo [--workspace <group>] [command]
 Use one named group from the direct-CWD KI workspace.
 .SS Repository management
 \&
-.PP
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run registered native repository audits.
@@ -133,7 +125,6 @@ Refresh uniquely resolved capabilities declared by selected KI repositories.
 Show selected repository resolutions.
 .SS Harness management
 \&
-.PP
 .TP
 .B ki harness info <harness-id>
 Inspect one installed harness and its capabilities.
@@ -151,13 +142,11 @@ Replace one inactive installed harness with a verified archive.
 Remove one installed non-canonical harness.
 .SS Acquisition
 \&
-.PP
 .TP
 .B ki acquire chatgpt import <capture-directory> --output <kep-directory> [--dry-run]
 Create a deterministic Knowledge Export Package from a local ChatGPT capture.
 .SS Development
 \&
-.PP
 .TP
 .B ki dev local set <local-harness-path>
 Validate and remember a local checkout without enabling it.
@@ -376,21 +365,30 @@ Run the native read-only operations registered by each selected repository's
 declared capabilities. The host verifies every selected harness inventory and
 integrity-covered operation before importing it in process; it never dispatches
 repository-vendored runners.
-Progress defaults to \fBauto\fR, which follows stderr's TTY state; \fBalways\fR also renders deterministic progress in redirected output, and \fBnever\fR suppresses it.
+Progress defaults to \fBauto\fR, which follows stderr's TTY state; \fBalways\fR
+also renders deterministic progress in redirected output, and \fBnever\fR
+suppresses it.
 Use \fB--progress-style multi\fR for stable per-skill rows.
-Each per-skill result names the assessed repository first and its supplying harness skill in brackets. Audit renders FAIL and WARN findings by default, but always shows a terminal per-skill result so a clean assessment is visible; \fB--reporter-levels\fR accepts a case-insensitive comma-separated selection from FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS, or \fBall\fR.
+Each per-skill result names the assessed repository first and its supplying
+harness skill in brackets. Audit renders FAIL and WARN findings by default, but
+always shows a terminal per-skill result so a clean assessment is visible;
+\fB--reporter-levels\fR accepts a case-insensitive comma-separated selection
+from FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS, or \fBall\fR.
 .TP
 .B ki repo [repo-options] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Plan and apply the same capabilities' safe writes, then re-audit. A dry run
 validates every complete write set and reports the affected paths without
 changing the repository. Publication refuses unsafe, changed, duplicate, or
 symbolic-link targets.
-Conform uses the same progress controls and reporter-level vocabulary as audit, names both the target and supplier for every skill, and renders FAIL, WARN, and FIXED findings by default while retaining every terminal per-skill result.
+Conform uses the same progress controls and reporter-level vocabulary as audit,
+names both the target and supplier for every skill, and renders FAIL, WARN, and
+FIXED findings by default while retaining every terminal per-skill result.
 .TP
 .B ki repo [repo-options] plan list [--format <text|json>] [--horizon <horizon>] [--status <status>]
-List canonical governed work items from every selected repository without changing
-their lifecycle. The default text output groups ordered items by repository;
-\fB--format json\fR emits the same fields in one stable object. \fB--horizon\fR
+List canonical governed work items from every selected repository without
+changing their lifecycle. The default text output groups ordered items by
+repository; \fB--format json\fR emits the same fields in one stable object.
+\fB--horizon\fR
 and \fB--status\fR filter before rendering. A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
 selected repositories still report. The command never creates, transitions,
@@ -404,11 +402,12 @@ maintenance actions without changing repository state.
 Add a registered skill in each selected repository.
 .TP
 .B ki repo [repo-options] skill remove <skill>
-Remove a KI-managed repository skill link and declaration from each selected repository.
+Remove a KI-managed repository skill link and declaration from each selected
+repository.
 .TP
 .B ki repo [repo-options] upgrade
-Refresh uniquely resolved harness providers declared by each selected KI repository. It
-changes neither user nor repository skill activation.
+Refresh uniquely resolved harness providers declared by each selected KI
+repository. It changes neither user nor repository skill activation.
 .TP
 .B ki repo [repo-options] diag
 Resolve every selected KI repository. Without an explicit selector, KI uses a
@@ -440,9 +439,9 @@ first be restored with
 when it is development-linked.
 .TP
 .B ki harness uninstall <harness-id>
-Remove one non-canonical harness with only recognised payload directories. The canonical harness
-cannot be removed, and a harness that supplies active user skills cannot be
-removed. A successful removal deletes its identifier from
+Remove one non-canonical harness with only recognised payload directories. The
+canonical harness cannot be removed, and a harness that supplies active user
+skills cannot be removed. A successful removal deletes its identifier from
 .BR [harnesses].ids .
 .SS Acquisition
 \&
@@ -532,7 +531,6 @@ directly when comparing it with Homebrew's installed executable. The linked
 source mode requires Bun; a verified release executable does not.
 .SH EXIT STATUS
 \&
-.PP
 .TP
 .B 0
 The command completed successfully.

@@ -15,8 +15,8 @@ const containedRelativePath = (root: string, target: string): string | undefined
   return path
 }
 
-const readPublication = async (target: string): Promise<string | undefined> => {
-  const state = await lstat(target).catch((error: unknown) => {
+const readPublication = async (target: string, stat: typeof lstat): Promise<string | undefined> => {
+  const state = await stat(target).catch((error: unknown) => {
     if (missingFile(error)) return undefined
     throw error
   })
@@ -40,11 +40,12 @@ export interface PreparedRubricPublication {
 export const prepareRubricPublication = async (
   skill: ResolvedSkill,
   definition: SkillRubricDefinition<unknown>,
-  publicationRoot?: string
+  publicationRoot?: string,
+  stat: typeof lstat = lstat
 ): Promise<PreparedRubricPublication> => {
   const source = await realpath(join(skill.harness.root, skill.capability.source))
   const target = join(source, publicationPath)
-  const existing = await readPublication(target)
+  const existing = await readPublication(target, stat)
   const rendered = renderRubricMarkdown(definition)
   const root = publicationRoot === undefined ? source : await realpath(publicationRoot)
   const writePath = containedRelativePath(root, target)

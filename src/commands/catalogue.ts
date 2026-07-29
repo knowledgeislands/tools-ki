@@ -3,9 +3,9 @@ export const rootCommandNames = [
   'bootstrap',
   'cleanup',
   'completions',
+  'dev',
   'diag',
   'docs',
-  'dev',
   'doctor',
   'harness',
   'help',
@@ -20,4 +20,35 @@ export const rootCommandNames = [
   'workspace'
 ] as const
 
+/**
+ * Purpose-oriented order used by root help and the human-facing command
+ * inventories. Shell completions deliberately use `rootCommandNames` instead:
+ * alphabetical candidates are easier to scan while completing.
+ */
+export const rootHelpCommandNames = [
+  'help',
+  'bootstrap',
+  'completions',
+  'outdated',
+  'missing',
+  'update',
+  'search',
+  'cleanup',
+  'version',
+  'diag',
+  'doctor',
+  'docs',
+  'list',
+  'skill',
+  'workspace',
+  'repo',
+  'harness',
+  'acquire',
+  'dev'
+] as const
+
+export type RootCommandName = (typeof rootCommandNames)[number]
+
 export const repoCommandNames = ['audit', 'conform', 'diag', 'educate', 'plan', 'skill', 'upgrade'] as const
+
+export const repoHelpCommandNames = ['audit', 'conform', 'plan', 'educate', 'skill', 'upgrade', 'diag'] as const

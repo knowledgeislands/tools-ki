@@ -36,7 +36,7 @@ const createRubricCommand = (context: KiContext): Command =>
     .option('--write', 'publish the rendered catalogue to references/rubric.md (dev-linked harness installs only)')
     .action(async (skill: string, options: { write?: boolean }) => {
       const resolved = resolveInstalledSkill(await discoverInstalledHarnesses(context.paths.data), skill)
-      const publication = await prepareRubricPublication(resolved, await loadRubricDefinition(resolved))
+      const publication = await prepareRubricPublication(resolved, await loadRubricDefinition(resolved), undefined, context.lstat)
       if (options.write) {
         if (!(await isDevLinkedHarness(resolved.harness.root)))
           throw new KiError(`${resolved.identity} is an installed payload; run ki dev local on before writing its rubric catalogue`, 1)

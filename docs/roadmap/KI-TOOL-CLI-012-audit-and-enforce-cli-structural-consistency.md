@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-012
 title: Audit and enforce CLI structural consistency
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: b6f26242010d1e605279e7aaf339ae1746c9732c
@@ -23,12 +23,12 @@ The public CLI is complete enough to verify but has no single enforced command-t
 
 ## Steps
 
-1. [ ] Make runtime registration consume a typed root-command inventory and retain purposeful public command order, while keeping completion candidates alphabetical.
-2. [ ] Add CLI-driven inventory contracts for root and repository commands, root and repository completions, and the corresponding man-page and changelog command surfaces.
-3. [ ] Extract repository-operation and local ChatGPT capture domain orchestration from Commander bindings; split the repository CLI contract suite by public command area without changing outputs or on-disk effects.
-4. [ ] Add a test-source guard which permits only the shared CLI harness to import product code, reconcile filesystem fault injection with the documented sanctioned cases, and correct the developer-documentation path drift.
-5. [ ] Audit coverage suppressions and exports, remove only unreachable dead code or unjustified suppressions, and retain narrowly justified future-proofing guards.
-6. [ ] Run the full CLI, coverage, type, formatting, Markdown, man-page, dead-export, and repository-governance gates; prepare an acceptance packet.
+1. [x] Make runtime registration consume a typed root-command inventory and retain purposeful public command order, while keeping completion candidates alphabetical.
+2. [x] Add CLI-driven inventory contracts for root and repository commands, root and repository completions, and the corresponding man-page and changelog command surfaces.
+3. [x] Extract repository-operation and local ChatGPT capture domain orchestration from Commander bindings; split the repository CLI contract suite by public command area without changing outputs or on-disk effects.
+4. [x] Add a test-source guard which permits only the shared CLI harness to import product code, reconcile filesystem fault injection with the documented sanctioned cases, and correct the developer-documentation path drift.
+5. [x] Audit coverage suppressions and exports, remove only unreachable dead code or unjustified suppressions, and retain narrowly justified future-proofing guards.
+6. [x] Run the full CLI, coverage, type, formatting, Markdown, man-page, dead-export, and repository-governance gates; prepare an acceptance packet.
 
 ## Files touched
 
@@ -48,6 +48,32 @@ The public CLI is complete enough to verify but has no single enforced command-t
 ## Dependencies / blocks
 
 No roadmap dependency blocks this item. Its tests must preserve the existing public contract: all command behaviour continues to run through the sandbox and `run(args, context)`, and the existing transaction fault-injection exceptions remain the only direct filesystem mock cases unless an injected capability replaces them.
+
+## Acceptance
+
+### Delivered
+
+The root CLI now registers from a typed inventory. Root help follows the purpose-oriented manual and changelog sequence, while root and first-level repository shell completions use an alphabetic lookup sequence. CLI-driven contracts compare the full runtime tree, both completion scripts, and the tracked public inventories.
+
+### Summary of changes
+
+Commander bindings for acquisition and repository operations are thin. KEP acquisition, repository operation orchestration, reporting/progress, and subprocess execution now have focused core modules. The oversized repository contract suite is split by public command area, and a mechanical import guard keeps test entry through the shared CLI sandbox. The publication metadata-read fault is injected at the context boundary, removing its filesystem module mock; only the two documented transaction mock cases remain. The developer document path and man-page lint structure are corrected.
+
+### Verification
+
+- `bun run test` passed: 411 tests.
+- `bunx vitest run --coverage` passed: 411 tests and 100% statements, branches, functions, and lines.
+- `bunx tsc --noEmit`, `bunx biome check .`, and `bunx knip --include exports --reporter compact` passed.
+- Focused `ki-engineering`, `ki-authoring`, and `ki-roadmap` audits reported no FAIL or WARN findings.
+- Prettier, markdownlint, `mandoc -T lint man/ki.1`, and `git diff --check` passed.
+
+### Outstanding concerns
+
+None. Deeper completion candidates remain deliberately out of scope until they are a stable public catalogue.
+
+### Mini recap
+
+The CLI remains behaviour-compatible while its public command inventory, test boundary, and domain boundaries are mechanically guarded. This item is ready for explicit acceptance review.
 
 ## Discussion
 

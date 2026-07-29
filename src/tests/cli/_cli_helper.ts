@@ -131,6 +131,7 @@ export interface Sandbox {
   readonly setEnv: (environment: Record<string, string | undefined>) => void
   readonly setFetcher: (fetcher: Fetcher) => void
   readonly setRunner: (runner: Runner) => void
+  readonly setLstat: (lstat: typeof import('node:fs/promises').lstat) => void
   readonly cd: (relativePath: string) => void
   readonly run: (
     command: string | readonly string[],
@@ -141,6 +142,7 @@ export interface Sandbox {
       readonly fetcher?: 'default'
       readonly runner?: 'default'
       readonly executable?: string
+      readonly stdoutFailure?: Error
     }
   ) => Promise<CommandResult>
 }
@@ -167,6 +169,7 @@ const create = async (): Promise<Sandbox> => {
   let runner: Runner = async () => {
     throw new Error('sandbox runner not configured; call setRunner() before running a command that invokes an installer')
   }
+  let stat: typeof lstat | undefined
 
   const setEnv = (environment: Record<string, string | undefined>): void => {
     environmentOverrides = { ...environmentOverrides, ...environment }
@@ -176,6 +179,9 @@ const create = async (): Promise<Sandbox> => {
   }
   const setRunner = (next: Runner): void => {
     runner = next
+  }
+  const setLstat = (next: typeof lstat): void => {
+    stat = next
   }
   const cd = (relativePath: string): void => {
     workingDirectory = join(workingDirectory, relativePath)
@@ -197,10 +203,12 @@ const create = async (): Promise<Sandbox> => {
       readonly fetcher?: 'default'
       readonly runner?: 'default'
       readonly executable?: string
+      readonly stdoutFailure?: Error
     }
   ): Promise<CommandResult> => {
     let output = ''
     const write = (chunk: string): void => {
+      if (options?.stdoutFailure) throw options.stdoutFailure
       output += chunk
     }
     const executable = options?.executable ?? executablePath
@@ -212,6 +220,7 @@ const create = async (): Promise<Sandbox> => {
       environment: { ...env, ...environmentOverrides, _: executable },
       ...(options?.fetcher === 'default' ? {} : { fetcher: (input, init) => fetcher(input, init) }),
       ...(options?.runner === 'default' ? {} : { runner }),
+      ...(stat === undefined ? {} : { lstat: stat }),
       now: options?.now
     })
     const tokens = typeof command === 'string' ? command.split(' ').filter(Boolean) : [...command]
@@ -237,6 +246,7 @@ const create = async (): Promise<Sandbox> => {
     setEnv,
     setFetcher,
     setRunner,
+    setLstat,
     cd,
     run
   }

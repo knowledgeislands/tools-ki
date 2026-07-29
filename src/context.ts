@@ -1,4 +1,4 @@
-import { realpath } from 'node:fs/promises'
+import { lstat, realpath } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import type { Fetcher } from './core/acquire.ts'
 import type { Output } from './core/output.ts'
@@ -17,6 +17,8 @@ export interface KiContext {
   readonly paths: KiPaths
   readonly fetcher: Fetcher
   readonly runner: Runner
+  /** Injectable filesystem metadata read for CLI-bound fault injection. */
+  readonly lstat: typeof lstat
   /** Injectable wall clock for user-facing elapsed-time reporting. */
   readonly now: () => number
 }
@@ -29,6 +31,7 @@ export interface ContextOptions {
   readonly environment: Environment
   readonly fetcher?: Fetcher
   readonly runner?: Runner
+  readonly lstat?: typeof lstat
   readonly now?: () => number
 }
 
@@ -46,6 +49,7 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
     paths: resolveKiPaths(options.environment),
     fetcher: options.fetcher ?? fetch,
     runner: options.runner ?? runCommand,
+    lstat: options.lstat ?? lstat,
     now: options.now ?? Date.now
   }
 }
