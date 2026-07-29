@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-009
 title: Resolve planned manual commands for V1
 theme: cli
 horizon: blocking
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 84c88ca5ed39f8e2af5b42874a417aba6020095b
@@ -98,3 +98,7 @@ The cleanup command intentionally has no deletion target until KI introduces an 
 ### Mini recap
 
 The V1 command inventory is implemented and aligned. KI-TOOL-CLI-009 is ready for acceptance review.
+
+## Done
+
+Accepted by the user on 2026-07-29 after review of the recorded delivery and verification evidence.
