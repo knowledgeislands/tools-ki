@@ -7,7 +7,7 @@ import type { AgentDescriptor } from './types.ts'
 
 export const agentDescriptors = [claudeCode, chatgptCodex] as const satisfies readonly AgentDescriptor[]
 
-export const bootstrapUserSkills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-implement', 'ki-accept', 'ki-batch', 'ki-recap'] as const
+export const bootstrapUserSkills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap'] as const
 
 export interface InstalledAgent {
   readonly descriptor: AgentDescriptor

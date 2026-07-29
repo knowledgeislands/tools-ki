@@ -48,7 +48,7 @@ const agentConfig: Record<AgentId, { home: string }> = {
 // A fixture shaped exactly like the real canonical knowledgeislands/ki-agentic-harness
 // (its specific skill names and keystone/process grouping), because `ki bootstrap`/`ki
 // dev` hardcode expectations about that identity rather than accepting any harness.
-const bootstrapHarnessSkills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-implement', 'ki-accept', 'ki-batch', 'ki-recap'] as const
+const bootstrapHarnessSkills = ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-recap'] as const
 
 // This tools-ki checkout's own `bin/ki` — never spawned (run() drives the CLI in-process),
 // only used to populate `executable`/`_` in the synthetic context so commands that inspect
