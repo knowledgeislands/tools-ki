@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-002
 title: Evaluate release-please for KI CLI releases
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: b99387b600abd0041e1253b2a09429a855b1e2db
@@ -31,7 +31,7 @@ The existing release workflow validates an exact tag, packages signed artifacts,
 
 ## Files touched
 
-- `docs/guides/developer/release-management.md`
+- `docs/developer/release-management.md`
 - `CHANGELOG.md`
 - `.github/workflows/` only if a post-V1 trial is later approved
 
@@ -45,3 +45,32 @@ The existing release workflow validates an exact tag, packages signed artifacts,
 ## Dependencies / blocks
 
 This item has no dependency or downstream block.
+
+## Acceptance
+
+### Delivered
+
+- Assessed release-please in no-write, PR-only mode against the existing release workflow.
+- Recorded the incompatible pre-V1 result and the decision to defer release-please until after verified `v1.0.0`.
+- Retained the manually dispatched signed, immutable release and clean-install verification boundaries.
+
+### Summary of changes
+
+The assessment and deferral are recorded in `docs/developer/release-management.md` and `CHANGELOG.md`. No workflow, publisher, tag, or release configuration changed.
+
+### Verification
+
+- `bun run test` — 24 test files and 378 tests passed.
+- `bun run test:coverage` — 24 test files and 378 tests passed; statements, branches, functions, and lines each reached 100% coverage.
+- `./bin/ki repo audit --repo .` — passed with no FAIL or WARN findings.
+- `.github/workflows/release.yml` retains signed-manifest publication, immutable-release validation, and exact immutable-release installation and bootstrap verification.
+
+Verification was re-run at `4668429b42d75403fdd2f35e5c5050c7f93b2bb0`.
+
+### Outstanding concerns
+
+Re-evaluate release-please only after a verified `v1.0.0` release, and only as a manually dispatched, PR-only version and changelog workflow that leaves the existing release path intact.
+
+### Mini recap
+
+The current release-please output is incompatible with the V1-only changelog baseline and cannot replace the signed release workflow. The re-evaluation condition is explicit rather than a standing implementation commitment.
