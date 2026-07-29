@@ -38,11 +38,14 @@ describe('[ki dev]', () => {
       expect(result).toEqual({
         exitCode: 0,
         output: `development harness enabled ${harnessPath}
-refreshed ki configuration: 1 agents, 1 harnesses, 5 skills
+refreshed ki configuration: 1 agents, 1 harnesses, 8 skills
 ki-bootstrap for chatgpt-codex already installed
 ki-delegate for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
+ki-implement for chatgpt-codex already installed
+ki-accept for chatgpt-codex already installed
+ki-batch for chatgpt-codex already installed
 ki-recap for chatgpt-codex already installed
 `
       })
@@ -63,10 +66,19 @@ ids = [
 
 [skills]
 
+[skills.ki-accept]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-batch]
+harness = "knowledgeislands/ki-agentic-harness"
+
 [skills.ki-bootstrap]
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-delegate]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-implement]
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-next]
@@ -113,11 +125,14 @@ path = ${JSON.stringify(harnessPath)}
       expect(off).toEqual({
         exitCode: 0,
         output: `development harness disabled; canonical harness already installed\tarchive 021060d6ab1dc17300d1b54bfd7a504d5f80c117b9b670669e450c12ccebddf0
-refreshed ki configuration: 1 agents, 1 harnesses, 5 skills
+refreshed ki configuration: 1 agents, 1 harnesses, 8 skills
 ki-bootstrap for claude-code already installed
 ki-delegate for claude-code already installed
 ki-next for claude-code already installed
 ki-plan for claude-code already installed
+ki-implement for claude-code already installed
+ki-accept for claude-code already installed
+ki-batch for claude-code already installed
 ki-recap for claude-code already installed
 `
       })

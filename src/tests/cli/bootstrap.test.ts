@@ -21,6 +21,9 @@ ki-bootstrap for chatgpt-codex installed
 ki-delegate for chatgpt-codex installed
 ki-next for chatgpt-codex installed
 ki-plan for chatgpt-codex installed
+ki-implement for chatgpt-codex installed
+ki-accept for chatgpt-codex installed
+ki-batch for chatgpt-codex installed
 ki-recap for chatgpt-codex installed
 `
     })
@@ -31,6 +34,9 @@ ki-bootstrap for chatgpt-codex already installed
 ki-delegate for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
+ki-implement for chatgpt-codex already installed
+ki-accept for chatgpt-codex already installed
+ki-batch for chatgpt-codex already installed
 ki-recap for chatgpt-codex already installed
 `
     })
@@ -38,11 +44,14 @@ ki-recap for chatgpt-codex already installed
       exitCode: 0,
       output: `refreshed KI agents: chatgpt-codex
 canonical harness already installed\tarchive 021060d6ab1dc17300d1b54bfd7a504d5f80c117b9b670669e450c12ccebddf0
-refreshed ki configuration: 1 agents, 1 harnesses, 5 skills
+refreshed ki configuration: 1 agents, 1 harnesses, 8 skills
 ki-bootstrap for chatgpt-codex already installed
 ki-delegate for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
+ki-implement for chatgpt-codex already installed
+ki-accept for chatgpt-codex already installed
+ki-batch for chatgpt-codex already installed
 ki-recap for chatgpt-codex already installed
 `
     })
@@ -65,10 +74,19 @@ ids = [
 
 [skills]
 
+[skills.ki-accept]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-batch]
+harness = "knowledgeislands/ki-agentic-harness"
+
 [skills.ki-bootstrap]
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-delegate]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-implement]
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-next]
@@ -283,7 +301,7 @@ ids = ["claude-code"]
     const config = await box.config.read('ki/config.toml')
 
     expect(refreshed.exitCode).toBe(0)
-    expect(refreshed.output).toContain('refreshed ki configuration: 1 agents, 2 harnesses, 5 skills')
+    expect(refreshed.output).toContain('refreshed ki configuration: 1 agents, 2 harnesses, 8 skills')
     expect(config).not.toContain('[skills.ki-example]')
   })
 })
