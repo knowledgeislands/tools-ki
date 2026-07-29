@@ -76,15 +76,6 @@ Link a harness skill into configured user agent skill spaces.
 .TP
 .B ki skill remove <skill>
 Remove a KI-managed user skill link.
-.SS Repository options
-\&
-.PP
-.TP
-.B ki repo [--repo <path-or-pattern>]... [command]
-Use repeated \fB--repo\fR options to select explicit repository roots or patterns.
-.TP
-.B ki repo [--workspace <group>] [command]
-Use one named group from the direct-CWD KI workspace.
 .SS Workspace management
 \&
 .PP
@@ -103,6 +94,15 @@ Add a member to one workspace group.
 .TP
 .B ki workspace remove <group> <path-or-pattern>
 Remove a member from one workspace group.
+.SS Repository options
+\&
+.PP
+.TP
+.B ki repo [--repo <path-or-pattern>]... [command]
+Use repeated \fB--repo\fR options to select explicit repository roots or patterns.
+.TP
+.B ki repo [--workspace <group>] [command]
+Use one named group from the direct-CWD KI workspace.
 .SS Repository management
 \&
 .PP
@@ -308,29 +308,6 @@ Add a registered skill in configured user agent skill spaces.
 .TP
 .B ki skill remove <skill>
 Remove a KI-managed user skill link.
-.SS Repository options
-\&
-.PP
-Use this shared option with any
-.B ki repo
-command to select one or more repositories. It appears after
-.B ki repo
-and before the command.
-.TP
-.B --repo <path-or-pattern>
-Repeat this option to select literal repository roots or patterns in supplied
-order. KI resolves every target physically before an operation begins and
-rejects unmatched patterns, invalid roots, and duplicate physical roots.
-.TP
-.B --workspace <group>
-Select one named group from a regular direct-CWD \fB.ki-workspace.toml\fR.
-This option and \fB--repo\fR are mutually exclusive. Workspace paths and
-patterns resolve from that file's physical directory. With neither selector,
-KI uses the workspace default group when that direct-CWD file exists, before
-checking a regular direct-CWD \fB.mgitconfig\fR. It never searches ancestor
-directories for either configuration or invokes \fBmgit\fR. Without a
-direct-CWD configuration, KI discovers one repository from the current
-working directory.
 .SS Workspace management
 \&
 .PP
@@ -355,6 +332,29 @@ needed.
 .TP
 .B ki workspace remove <group> <path-or-pattern>
 Remove one existing path or pattern from a named group.
+.SS Repository options
+\&
+.PP
+Use this shared option with any
+.B ki repo
+command to select one or more repositories. It appears after
+.B ki repo
+and before the command.
+.TP
+.B --repo <path-or-pattern>
+Repeat this option to select literal repository roots or patterns in supplied
+order. KI resolves every target physically before an operation begins and
+rejects unmatched patterns, invalid roots, and duplicate physical roots.
+.TP
+.B --workspace <group>
+Select one named group from a regular direct-CWD \fB.ki-workspace.toml\fR.
+This option and \fB--repo\fR are mutually exclusive. Workspace paths and
+patterns resolve from that file's physical directory. With neither selector,
+KI uses the workspace default group when that direct-CWD file exists, before
+checking a regular direct-CWD \fB.mgitconfig\fR. It never searches ancestor
+directories for either configuration or invokes \fBmgit\fR. Without a
+direct-CWD configuration, KI discovers one repository from the current
+working directory.
 .SS Repository management
 \&
 .PP
