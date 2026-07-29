@@ -134,7 +134,7 @@ export interface Sandbox {
   readonly setRunner: (runner: Runner) => void
   readonly cd: (relativePath: string) => void
   readonly run: (
-    command: string,
+    command: string | readonly string[],
     options?: {
       readonly interactive?: boolean
       readonly columns?: number
@@ -190,7 +190,7 @@ const create = async (): Promise<Sandbox> => {
   // as typed at a shell, `ki ...`, so the literal command a test asserts against is
   // unambiguous at the call site.
   const run = async (
-    command: string,
+    command: string | readonly string[],
     options?: {
       readonly interactive?: boolean
       readonly columns?: number
@@ -215,7 +215,7 @@ const create = async (): Promise<Sandbox> => {
       ...(options?.runner === 'default' ? {} : { runner }),
       now: options?.now
     })
-    const tokens = command.split(' ').filter(Boolean)
+    const tokens = typeof command === 'string' ? command.split(' ').filter(Boolean) : [...command]
     if (tokens[0] !== 'ki') throw new Error(`sandbox run() commands must start with "ki": ${command}`)
     return { exitCode: await runCli(tokens.slice(1), context), output }
   }

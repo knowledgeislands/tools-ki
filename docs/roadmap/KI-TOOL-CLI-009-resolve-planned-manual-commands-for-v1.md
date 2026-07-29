@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-009
 title: Resolve planned manual commands for V1
 theme: cli
 horizon: blocking
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: 84c88ca5ed39f8e2af5b42874a417aba6020095b
@@ -21,7 +21,7 @@ Do not broaden these commands into external marketplace search, browser automati
 
 ## Current state
 
-The source currently registers none of these commands. The manual and changelog now name them as intended V1 commands; implementation follows the reviewed local capability-search, managed-cleanup, and documentation-routing contracts below.
+The source registers all three commands. The manual, changelog, runtime help, completions, README, user guide, and black-box contracts now use the same V1 command inventory and local-first boundaries.
 
 ## Steps
 
@@ -69,3 +69,32 @@ This item is independent of KI-TOOL-CLI-008’s code changes, but both must comp
 ### Worker brief
 
 - **CLI-009 local commands** — class: mechanical; minimum model: `gpt-5.6-terra` at high reasoning, because the worker must integrate three public commands with strict local boundaries and preserve 100% black-box coverage. Scope: `src/cli.ts`, `src/commands/`, focused `src/core/` helpers only when needed, `src/tests/cli/`, `man/ki.1`, README, and user guides. Do not edit roadmap files, `CHANGELOG.md`, unrelated command paths, or any other repository. Done: all three commands are registered, appear in root help and completion output, implement every locked contract, and have black-box CLI tests; the manual and user documentation state the same contracts. Verification: run focused tests, `bun run test:coverage`, `bunx tsc --noEmit`, `bunx @biomejs/biome check` on changed TypeScript, `mandoc -Tutf8 man/ki.1 | col -b`, and `git diff --check`. Checkpoint: report files changed, exact command outputs exercised, verification output, and any escalation. Do not commit.
+
+## Acceptance
+
+### Delivered
+
+- Added `ki search <query>` for deterministic case-insensitive search across verified installed harness identifiers, capability kinds, and capability names.
+- Added `ki cleanup` as an explicit non-mutating report until KI persists a versioned, owned stale-artifact format.
+- Added `ki docs [overview|manual|roadmap]` to print fixed canonical documentation URLs without opening a browser or fetching content.
+- Added root registration, help, Bash and Zsh completion inventory, user guide coverage, and black-box CLI contracts for all three commands.
+
+### Summary of changes
+
+The documented V1 commands are now real local-first commands. Search never uses repository or network state, cleanup makes no inferred deletion, and documentation routing is deterministic and read-only.
+
+### Verification
+
+- `bun run test:coverage` — 24 files and 378 tests passed; statements, branches, functions, and lines are each 100% covered.
+- `bunx tsc --noEmit`, `bunx @biomejs/biome check src/cli.ts src/commands src/tests/cli`, and `git diff --check` passed.
+- `mandoc -Tutf8 man/ki.1 | col -b` rendered the manual successfully.
+- `./bin/ki repo audit --repo .` passed with no findings.
+- The post-implementation CLI-surface audit confirmed registration, root help, Bash completion inventory, manual, README, user guide, and black-box contracts all include `ki search`, `ki cleanup`, and `ki docs`; no planned `*` form remains.
+
+### Outstanding concerns
+
+The cleanup command intentionally has no deletion target until KI introduces an explicit persisted, versioned ownership and staleness format. Any future deletion behaviour requires a separate reviewed item.
+
+### Mini recap
+
+The V1 command inventory is implemented and aligned. KI-TOOL-CLI-009 is ready for acceptance review.

@@ -1,8 +1,10 @@
 export const rootCommandNames = [
   'acquire',
   'bootstrap',
+  'cleanup',
   'completions',
   'diag',
+  'docs',
   'dev',
   'doctor',
   'harness',
@@ -11,6 +13,7 @@ export const rootCommandNames = [
   'missing',
   'outdated',
   'repo',
+  'search',
   'skill',
   'update',
   'version'

@@ -44,11 +44,11 @@ Report desired user capabilities that have no installed provider.
 .B ki update [--cli]
 Update an installer-managed CLI and refresh installed configured harnesses.
 .TP
-.B ki search
-Search the available capability set.
+.B ki search <query>
+Search verified installed local harness capabilities.
 .TP
 .B ki cleanup
-Remove managed stale state.
+Report eligible KI-managed stale state.
 .SS Diagnostics
 \&
 .PP
@@ -62,8 +62,8 @@ Show installation mode, paths, and user configuration.
 .B ki doctor
 Check user configuration, agents, harnesses, and user-skill links.
 .TP
-.B ki docs
-Open or print the appropriate KI documentation location.
+.B ki docs [topic]
+Print a canonical KI documentation URL.
 .SS User management
 \&
 .PP
@@ -218,11 +218,20 @@ Use
 to require that executable target. Linked development and externally managed
 executables, including Homebrew installations, are not self-updated.
 .TP
-.B ki search
-Search the available capability set.
+.B ki search <query>
+Search only verified installed local harness capabilities. The required
+non-empty query matches case-insensitively against a harness identifier,
+capability kind, or capability name. Results are sorted by harness identifier,
+capability kind, and capability name. The command neither discovers a
+repository nor consults a registry or the network. When no capability matches,
+it succeeds and reports that no matching installed capabilities exist.
 .TP
 .B ki cleanup
-Remove managed stale state.
+Report only stale artefacts in a persisted, versioned KI-owned format. V1 has
+no such format, so this command reports that no eligible managed stale state
+exists and changes no files. It does not infer that cache contents,
+transaction-looking directories, unconfigured harnesses, links, or unknown
+files are stale.
 .SS Diagnostics
 \&
 .PP
@@ -241,8 +250,21 @@ Check the user configuration, configured agent skill directories, installed
 harnesses, and configured KI user-skill links without changing state. A failing
 check produces a non-zero exit status after the complete report.
 .TP
-.B ki docs
-Open or print the appropriate KI documentation location.
+.B ki docs [topic]
+Print a canonical documentation URL without opening a browser, fetching
+content, or discovering a repository. The default topic is
+.BR overview ,
+which prints
+.IR https://github.com/knowledgeislands/tools-ki .
+The other supported topics are
+.B manual
+for
+.IR https://github.com/knowledgeislands/tools-ki/blob/main/man/ki.1
+and
+.B roadmap
+for
+.IR https://github.com/knowledgeislands/tools-ki/blob/main/ROADMAP.md .
+Any other topic is invalid command grammar.
 .SS User management
 \&
 .PP

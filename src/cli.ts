@@ -2,14 +2,17 @@ import { Command, CommanderError } from 'commander'
 import { createAcquireCommand } from './commands/acquire.ts'
 import { createBootstrapCommand } from './commands/bootstrap.ts'
 import { createMissingCommand, createOutdatedCommand } from './commands/capability-status.ts'
+import { createCleanupCommand } from './commands/cleanup.ts'
 import { createCompletionsCommand } from './commands/completions.ts'
 import { createDevCommand } from './commands/dev.ts'
 import { createDiagCommand } from './commands/diag.ts'
+import { createDocsCommand } from './commands/docs.ts'
 import { createDoctorCommand } from './commands/doctor.ts'
 import { createHarnessCommand } from './commands/harness.ts'
 import { createHelpCommand } from './commands/help.ts'
 import { createListCommand } from './commands/list.ts'
 import { createRepoCommand } from './commands/repo.ts'
+import { createSearchCommand } from './commands/search.ts'
 import { createSkillCommand } from './commands/skill.ts'
 import { createUpdateCommand } from './commands/update.ts'
 import { createVersionCommand } from './commands/version.ts'
@@ -24,15 +27,18 @@ export const createProgram = (context: KiContext): Command => {
     .version(KI_VERSION, '-V, --version', 'print the CLI version')
 
   program.addCommand(createCompletionsCommand(context))
+  program.addCommand(createCleanupCommand(context))
   program.addCommand(createBootstrapCommand(context))
   program.addCommand(createDevCommand(context))
   program.addCommand(createDiagCommand(context))
+  program.addCommand(createDocsCommand(context))
   program.addCommand(createDoctorCommand(context))
   program.addCommand(createHarnessCommand(context))
   program.addCommand(createListCommand(context))
   program.addCommand(createMissingCommand(context))
   program.addCommand(createOutdatedCommand(context))
   program.addCommand(createRepoCommand(context))
+  program.addCommand(createSearchCommand(context))
   program.addCommand(createSkillCommand(context))
   program.addCommand(createVersionCommand(context))
   program.addCommand(createUpdateCommand(context))

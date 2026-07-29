@@ -54,4 +54,14 @@ The Homebrew tap will move to these same release artifacts after that first immu
 
 The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
+## Find local capabilities and documentation
+
+`ki search <query>` searches only verified installed harness capabilities, without contacting a registry or discovering a repository.
+
+`ki cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files.
+
+`ki docs [overview|manual|roadmap]` prints a canonical public documentation URL and never opens a browser or fetches content.
+
+The [local utility commands guide](docs/guides/user/local-commands.md) defines their precise behavior and output.
+
 See the [roadmap](ROADMAP.md).
