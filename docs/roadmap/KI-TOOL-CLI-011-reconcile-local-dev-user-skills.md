@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-011
 title: Reconcile managed user skills in local development mode
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 281b2d42cbaeab569e42adefcee6f4bde4a835bb
 transferred-from: 'knowledgeislands/ki-agentic-harness@92d5b263'
 ---
 
