@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-004
 title: Add explicit KI workspaces
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: c2ac480f5553eca0754d315a1528eed7dff14957
 ---
 
 ## Context
