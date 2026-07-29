@@ -23,11 +23,13 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki outdated`
 - `ki repo audit`
 - `ki repo conform`
+- `ki repo diag`
+- `ki repo skill`
+- `ki repo upgrade`
 - `ki reinstall`
 - `ki skill`
 - `ki uninstall`
 - `ki update`
-- `ki upgrade`
 - `ki version`
 
 ### Distribution baseline

@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
+import { resolveRepository } from '../core/repository.ts'
 import { KI_VERSION } from '../version.ts'
 
 const field = (label: string, value: string): string => `  ${label.padEnd(14)}${value}`
@@ -13,7 +14,6 @@ export const createDiagCommand = (context: KiContext): Command =>
       field('Version', KI_VERSION),
       field('Installation', context.installation),
       field('Executable', context.executable),
-      field('Repository', context.repository?.root ?? 'none'),
       '',
       'Configuration',
       field('Status', configuration.state),
@@ -43,3 +43,17 @@ export const createDiagCommand = (context: KiContext): Command =>
     }
     context.stdout.write(`${lines.join('\n')}\n`)
   })
+
+export const createRepoDiagCommand = (context: KiContext): Command =>
+  new Command('diag')
+    .description('report one KI repository resolution')
+    .option('--repo <path>', 'repository root (defaults to the discovered KI repository)')
+    .action(async (options: { repo?: string }) => {
+      const repository = await resolveRepository({
+        repository: options.repo,
+        workingDirectory: context.workingDirectory,
+        homeDirectory: context.homeDirectory
+      })
+      const source = options.repo ? `explicit path ${options.repo}` : 'current working directory'
+      context.stdout.write(`ki repo diag\nRepository: ${repository.root}\nConfiguration: ${repository.configuration}\nSource: ${source}\n`)
+    })

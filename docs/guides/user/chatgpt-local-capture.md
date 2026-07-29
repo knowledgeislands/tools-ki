@@ -50,4 +50,4 @@ Every referenced record and asset must exist. `conversation-order` positions are
 
 The importer copies originals and assets byte-for-byte, places records below `source/records/`, normalises relationship record paths below `source/records/`, and creates the KIS-0002 `kep.toml` plus lexicographically ordered SHA-256 checksums. Repeating an import with identical capture content produces byte-identical KEP payloads and the same `kep:sha256:` identity.
 
-Use `--dry-run` to validate and report the proposed package without creating the output directory. Use `--json` when an automated caller needs the versioned result record.
+Use `--dry-run` to validate and report the proposed package without creating the output directory.

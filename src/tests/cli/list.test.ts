@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
 describe('[ki list]', () => {
-  test('lists installed capabilities and declared user and repository skills without mutating state', async () => {
+  test('lists installed capabilities and declared user skills without inspecting the current repository', async () => {
     const box = await sandbox()
     await box.setupExampleHarness()
     await box.config.write(
@@ -24,7 +24,7 @@ describe('[ki list]', () => {
         ''
       ].join('\n')
     )
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n\n["example/harness:ki-a"]\n')
+    await box.project.write('.ki-config.toml', '[ki-example\n')
     const configuration = await box.config.read('ki/config.toml')
 
     const result = await box.run('ki list')
@@ -32,12 +32,12 @@ describe('[ki list]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        'ki list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\nRepository skills:\n  example/harness:ki-a\n  example/harness:ki-example\n'
+        'ki list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
   })
 
-  test('renders explicit empty sections and omits repository activation outside a repository', async () => {
+  test('renders explicit empty sections', async () => {
     const box = await sandbox()
 
     const result = await box.run('ki list')
@@ -45,7 +45,7 @@ describe('[ki list]', () => {
     expect(result).toEqual({ exitCode: 0, output: 'ki list\nInstalled harnesses:\n  none\nUser skills:\n  none\n' })
   })
 
-  test('rejects arguments and invalid user or repository declarations', async () => {
+  test('rejects arguments and invalid user configuration without inspecting repository declarations', async () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '[ki-example\n')
     const grammar = await box.run('ki list unexpected')
@@ -59,7 +59,7 @@ describe('[ki list]', () => {
       output:
         "error: too many arguments for 'list'. Expected 0 arguments but got 1.\n\nUsage: ki list [options]\n\nlist installed harness capabilities and declared skills\n\nOptions:\n  -h, --help  display help for command\n"
     })
-    expect(invalidDeclaration).toEqual({ exitCode: 1, output: 'ki: error: .ki-config.toml must be valid TOML\n' })
+    expect(invalidDeclaration).toEqual({ exitCode: 0, output: 'ki list\nInstalled harnesses:\n  none\nUser skills:\n  none\n' })
     expect(invalidConfiguration).toEqual({
       exitCode: 1,
       output: 'ki: error: ki configuration is invalid: configuration must be valid TOML\n'

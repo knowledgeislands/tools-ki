@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-005
 title: Align command scopes and repository resolution
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: [KI-TOOL-CLI-006]
 blocked-by: []
 baseline-ref: e659bea937732687809c1fa84344ab7822205551
@@ -68,13 +68,13 @@ Man-page notation is part of this item:
 
 ## Steps
 
-1. Define and register the final grammar: `ki skill add <skill>`, `ki skill remove <skill>`, `ki repo skill add <skill>`, `ki repo skill remove <skill>`, `ki repo upgrade`, and `ki repo diag [--repo <path>]`; remove superseded paths with no compatibility aliases.
-2. Make the base context repository-neutral. Implement single-target repository resolution: no option discovers from CWD, and `[--repo <path>]` validates only that exact physical root.
-3. Refactor every `ki repo` operation to use the shared single-target boundary and report the resolved repository consistently.
-4. Keep `ki diag` user-only and move repository diagnostics to `ki repo diag`. Remove ambient repository reads from user commands, including capability status/listing and lifecycle guards.
-5. Retain `--dry-run` only on `ki acquire chatgpt import` and `ki repo conform`. Remove lifecycle, harness, update, and upgrade dry-run flags plus both `--json` flags.
-6. Add black-box contracts for command grammar, exact-path and CWD resolution, no repository discovery by user commands, diagnostic separation, and removed flags.
-7. Update help, completions, the full `ki(1)` synopsis and command reference, README, guides, and the V1 command baseline using `<required-argument>` and `[optional-argument]` syntax consistently; run complete verification and audit.
+1. [x] Define and register the final grammar: `ki skill add <skill>`, `ki skill remove <skill>`, `ki repo skill add <skill>`, `ki repo skill remove <skill>`, `ki repo upgrade`, and `ki repo diag [--repo <path>]`; remove superseded paths with no compatibility aliases.
+2. [x] Make the base context repository-neutral. Implement single-target repository resolution: no option discovers from CWD, and `[--repo <path>]` validates only that exact physical root.
+3. [x] Refactor every `ki repo` operation to use the shared single-target boundary and report the resolved repository consistently.
+4. [x] Keep `ki diag` user-only and move repository diagnostics to `ki repo diag`. Remove ambient repository reads from user commands, including capability status/listing and lifecycle guards.
+5. [x] Retain `--dry-run` only on `ki acquire chatgpt import` and `ki repo conform`. Remove lifecycle, harness, update, and upgrade dry-run flags plus both `--json` flags.
+6. [x] Add black-box contracts for command grammar, exact-path and CWD resolution, no repository discovery by user commands, diagnostic separation, and removed flags.
+7. [x] Update help, completions, the full `ki(1)` synopsis and command reference, README, guides, and the V1 command baseline using `<required-argument>` and `[optional-argument]` syntax consistently; run complete verification and audit.
 
 ## Files touched
 
@@ -93,3 +93,30 @@ Man-page notation is part of this item:
 ## Dependencies / blocks
 
 This item blocks [KI-TOOL-CLI-006](KI-TOOL-CLI-006-add-multi-repository-invocations.md). It has no external dependency.
+
+## Acceptance
+
+### Delivered
+
+The final user and repository command scopes, repository-neutral context, scoped diagnostics, streamlined option surface, and aligned documentation are implemented.
+
+### Summary of changes
+
+- Moved user skills to `ki skill add|remove <skill>` and repository skills to `ki repo skill add|remove <skill>`; moved upgrade to `ki repo upgrade` and added `ki repo diag`.
+- Removed ambient repository discovery from user commands and retained exact single-repository resolution only for `ki repo` operations.
+- Retired the selected lifecycle, harness, update, upgrade, and JSON preview options; retained dry-run only for local KEP import and repository conform.
+- Updated help, completions, README, user guides, `ki(1)`, the architecture record, and the V1 changelog baseline.
+
+### Verification
+
+- `bun run test:coverage` — 377 tests passed; statements, branches, functions, and lines are all 100%.
+- `bunx biome check .` — passed.
+- `./bin/ki repo audit --repo .` — passed with no FAIL or WARN findings.
+
+### Outstanding concerns
+
+Repeatable multi-repository invocation remains deliberately deferred to [KI-TOOL-CLI-006](KI-TOOL-CLI-006-add-multi-repository-invocations.md).
+
+### Mini recap
+
+CLI-005 is ready for explicit acceptance. It has not been marked done or pruned.

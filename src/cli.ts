@@ -12,7 +12,7 @@ import { createLifecycleCommands } from './commands/lifecycle.ts'
 import { createListCommand } from './commands/list.ts'
 import { createRepoCommand } from './commands/repo.ts'
 import { createSkillCommand } from './commands/skill.ts'
-import { createUpdateCommand, createUpgradeCommand } from './commands/update.ts'
+import { createUpdateCommand } from './commands/update.ts'
 import { createVersionCommand } from './commands/version.ts'
 import type { KiContext } from './context.ts'
 import { KiError, KiExit } from './core/errors.ts'
@@ -38,7 +38,6 @@ export const createProgram = (context: KiContext): Command => {
   program.addCommand(createSkillCommand(context))
   program.addCommand(createVersionCommand(context))
   program.addCommand(createUpdateCommand(context))
-  program.addCommand(createUpgradeCommand(context))
   program.addCommand(createAcquireCommand(context))
   program.addCommand(createHelpCommand(program))
   // Commander does not inherit these settings by subcommands added with addCommand,

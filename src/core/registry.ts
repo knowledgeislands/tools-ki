@@ -326,11 +326,7 @@ export const restoreCanonicalHarness = async (
   return installCanonicalHarness(configurationDirectory, dataDirectory, fetcher)
 }
 
-export const uninstallHarness = async (
-  dataDirectory: string,
-  identifier: string,
-  dryRun = false
-): Promise<{ readonly uninstalled: boolean }> => {
+export const uninstallHarness = async (dataDirectory: string, identifier: string): Promise<void> => {
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   if (identifier === canonicalHarnessIdentifier) throw new KiError(`the canonical harness ${identifier} cannot be uninstalled`, 1)
 
@@ -350,14 +346,12 @@ export const uninstallHarness = async (
   ) {
     throw new KiError(`installed harness ${identifier} has unrecognised state and will not be removed`, 1)
   }
-  if (dryRun) return { uninstalled: false }
-
   const removal = join(ownerDirectory, `.uninstall-${randomUUID()}`)
   await rename(destination, removal)
   try {
     await inspectHarnessRoot(removal, identifier)
     await rm(removal, { recursive: true, force: true })
-    return { uninstalled: true }
+    return
     /* v8 ignore start -- Recovery needs a filesystem failure or replacement after the successful rename; no single CLI input can cause it. */
   } catch (error) {
     await rename(removal, destination).catch(() => undefined)

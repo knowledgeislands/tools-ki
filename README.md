@@ -18,7 +18,7 @@ Prepare a capture using the [controlled local-capture format](docs/guides/user/c
 ki acquire chatgpt import ./capture --output ./conversation.kep
 ```
 
-Use `--dry-run` to validate without creating output, or `--json` for a versioned machine-readable result. The command is local only: it does not contact ChatGPT, automate a browser, read credentials, discover a repository, or extract knowledge.
+Use `--dry-run` to validate without creating output. The command is local only: it does not contact ChatGPT, automate a browser, read credentials, discover a repository, or extract knowledge.
 
 ## Manage installed capabilities
 
@@ -26,13 +26,13 @@ Use `--dry-run` to validate without creating output, or `--json` for a versioned
 
 Use a harness identifier such as `example/harness`, a supplier-qualified skill such as `example/harness:ki-example`, or an already-installed bare skill name when exactly one harness supplies it.
 
-For target forms, dry-run behavior, and the explicit activation boundary, read the [capability lifecycle guide](docs/guides/user/capability-lifecycle.md).
+For target forms and the explicit activation boundary, read the [capability lifecycle guide](docs/guides/user/capability-lifecycle.md).
 
 ## Update verified installations
 
 `ki update` refreshes installed harnesses with configured immutable releases and updates the executable only when a verified installer receipt proves that it owns the running regular installation.
 
-`ki upgrade` refreshes the uniquely resolved providers declared by the current KI repository.
+`ki repo upgrade` refreshes the uniquely resolved providers declared by one KI repository.
 
 Neither command changes user or repository skill activation; read the [update and upgrade guide](docs/guides/user/update-upgrade.md) for target selection and ownership boundaries.
 
@@ -54,4 +54,4 @@ The Homebrew tap will move to these same release artifacts after that first immu
 
 The tracked [ki(1) manual](man/ki.1) distinguishes the current command surface from planned alternatives.
 
-See the [roadmap](docs/roadmap/cli/ROADMAP.md).
+See the [roadmap](ROADMAP.md).

@@ -3,17 +3,20 @@
 ki \- Knowledge Islands command-line interface
 .SH SYNOPSIS
 .TP
-.B ki [command]
+.B ki [<command>]
 Run a KI command, or print root help when no command is supplied.
 .TP
-.B ki help [command]
+.B ki help [<command>]
 Print root or command-specific help.
 .TP
-.B ki completions shell
+.B ki completions <shell>
 Print Bash or Zsh completion source.
 .TP
 .B ki diag
 Show installation mode, paths, and user configuration.
+.TP
+.B ki repo diag [--repo <path>]
+Show one repository resolution.
 .TP
 .B ki doctor
 Check user configuration, agents, harnesses, and user-skill links.
@@ -36,7 +39,7 @@ Print the CLI version.
 .B ki bootstrap [--refresh]
 Detect agents, install the canonical harness, and install core user skills.
 .TP
-.B ki dev on local-harness-path
+.B ki dev on <local-harness-path>
 Switch the canonical harness to a local checkout.
 .TP
 .B ki dev off
@@ -45,58 +48,58 @@ Restore the verified canonical harness archive.
 .B ki harness list
 List installed compatible harnesses.
 .TP
-.B ki harness info harness-id [--json]
+.B ki harness info <harness-id>
 Inspect one installed harness and its capabilities.
 .TP
-.B ki harness install harness-id
+.B ki harness install <harness-id>
 Install one configured compatible harness.
 .TP
-.B ki harness uninstall harness-id [--dry-run]
+.B ki harness uninstall <harness-id>
 Remove one installed non-canonical harness.
 .TP
-.B ki install target [--dry-run]
+.B ki install <target>
 Install one configured harness or supplier-qualified capability without
 activating it.
 .TP
-.B ki reinstall target [--dry-run]
+.B ki reinstall <target>
 Replace one installed configured harness or capability with a verified archive
 without activating it.
 .TP
-.B ki uninstall target [--dry-run]
+.B ki uninstall <target>
 Remove one installed non-canonical harness or capability without changing
 activation.
 .TP
-.B ki update [--dry-run] [--cli]
+.B ki update [--cli]
 Update an installer-managed CLI and refresh installed configured harnesses.
 .TP
-.B ki upgrade [--dry-run]
+.B ki repo upgrade [--repo <path>]
 Refresh uniquely resolved capabilities declared by the current repository.
 .TP
-.B ki skill user add skill [--replace]
+.B ki skill add <skill> [--replace]
 Link a harness skill into configured user agent skill spaces.
 .TP
-.B ki skill user remove skill
+.B ki skill remove <skill>
 Remove a KI-managed user skill link.
 .TP
-.B ki skill repo add skill [--repo path] [--replace]
+.B ki repo skill add <skill> [--repo <path>] [--replace]
 Link and declare a harness skill in one repository.
 .TP
-.B ki skill repo remove skill [--repo path]
+.B ki repo skill remove <skill> [--repo <path>]
 Remove a KI-managed repository skill link and declaration.
 .TP
-.B ki skill rubric skill [--write]
+.B ki skill rubric <skill> [--write]
 Check or regenerate a skill's rubric catalogue.
 .TP
-.B ki repo audit [--repo path] [--skill skill] [--progress auto|always|never] [--progress-style single|multi] [--reporter-levels levels|all]
+.B ki repo audit [--repo <path>] [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run registered native repository audits.
 .TP
-.B ki repo educate [--repo path] [--skill skill]
+.B ki repo educate [--repo <path>] [--skill <skill>]
 Explain the registered repository maintenance catalogue.
 .TP
-.B ki repo conform [--repo path] [--skill skill] [--dry-run] [--progress auto|always|never] [--progress-style single|multi] [--reporter-levels levels|all]
+.B ki repo conform [--repo <path>] [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Apply registered native repository repairs.
 .TP
-.B ki acquire chatgpt import capture-directory --output kep-directory [--dry-run] [--json]
+.B ki acquire chatgpt import <capture-directory> --output <kep-directory> [--dry-run]
 Create a deterministic Knowledge Export Package from a local ChatGPT capture.
 .SH DESCRIPTION
 .B ki
@@ -114,7 +117,7 @@ They are not available in this build, do not appear in
 or completion output, and may change before release.
 .SS Repository maintenance
 .TP
-.B ki repo audit [--repo \fIpath\fR] [--skill \fIskill\fR] [--progress \fIauto|always|never\fR] [--progress-style \fIsingle|multi\fR] [--reporter-levels \fIlevels|all\fR]
+.B ki repo audit [--repo <path>] [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run the native read-only operations registered by the selected repository's
 declared capabilities. The host verifies every selected harness inventory and
 integrity-covered operation before importing it in process; it never dispatches
@@ -123,16 +126,22 @@ Progress defaults to \fBauto\fR, which follows stderr's TTY state; \fBalways\fR 
 Use \fB--progress-style multi\fR for stable per-skill rows.
 Each per-skill result names the assessed repository first and its supplying harness skill in brackets. Audit renders FAIL and WARN findings by default, but always shows a terminal per-skill result so a clean assessment is visible; \fB--reporter-levels\fR accepts a case-insensitive comma-separated selection from FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS, or \fBall\fR.
 .TP
-.B ki repo conform [--repo \fIpath\fR] [--skill \fIskill\fR] [--dry-run] [--progress \fIauto|always|never\fR] [--progress-style \fIsingle|multi\fR] [--reporter-levels \fIlevels|all\fR]
+.B ki repo conform [--repo <path>] [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Plan and apply the same capabilities' safe writes, then re-audit. A dry run
 validates every complete write set and reports the affected paths without
 changing the repository. Publication refuses unsafe, changed, duplicate, or
 symbolic-link targets.
 Conform uses the same progress controls and reporter-level vocabulary as audit, names both the target and supplier for every skill, and renders FAIL, WARN, and FIXED findings by default while retaining every terminal per-skill result.
 .TP
-.B ki repo educate [--repo \fIpath\fR] [--skill \fIskill\fR]
+.B ki repo educate [--repo <path>] [--skill <skill>]
 Explain the selected repository's declared capabilities and their recommended
 maintenance actions without changing repository state.
+.TP
+.B ki repo diag [--repo <path>]
+Resolve exactly one KI repository. Without B--repoR, KI discovers from the current working directory; with it, KI resolves only the supplied path.
+.TP
+.B ki repo upgrade [--repo <path>]
+Refresh uniquely resolved harness providers declared by one KI repository. It changes neither user nor repository skill activation.
 .SS Diagnostics
 .TP
 .B help [command]
@@ -179,34 +188,29 @@ configuration is reused without replacement. Pass
 to redetect every supported runtime and rebuild the user configuration's
 agents, installed harnesses, and KI-managed user skill links.
 .TP
-.B list
-List verified installed harnesses and their capabilities, declared user skills,
-and declared repository skills when the current working directory resolves to a
-KI repository. The command does not fetch or change state.
+.B ki list
+List verified installed harnesses and their capabilities with declared user skills. The command does not fetch, discover a repository, or change state.
 .TP
-.B ki install \fItarget\fR [--dry-run]
+.B ki install <target>
 Install a configured harness, or a capability qualified as
 .IR harness-id:skill .
 An unqualified skill is accepted only when exactly one installed harness
-provides it. Install never activates a skill. A dry run validates configured
-immutable acquisition evidence without downloading or changing state.
+provides it. Install never activates a skill.
 .TP
-.B ki reinstall \fItarget\fR [--dry-run]
+.B ki reinstall <target>
 Replace an installed configured harness only after the replacement archive is
 verified and inspected. Reinstall never activates a skill and refuses a
-harness that supplies active user skills or skills declared by the current
-repository. A dry run performs those checks without changing state.
+harness that supplies active user skills.
 .TP
-.B ki uninstall \fItarget\fR [--dry-run]
+.B ki uninstall <target>
 Remove an installed non-canonical harness after ownership and activation
 checks. The canonical harness cannot be removed. Uninstall never deactivates
-skills: remove affected declarations with
-.B ki skill user remove
-or
-.B ki skill repo remove
-first.
+skills: remove affected user declarations with
+.B ki skill remove
+first. Repository declarations are managed independently with
+.B ki repo skill remove .
 .TP
-.B ki update [--dry-run] [--cli]
+.B ki update [--cli]
 Refresh installed configured harnesses. The executable updates only when a
 verified installer receipt proves that it owns the running regular executable.
 Use
@@ -214,16 +218,12 @@ Use
 to require that executable target. Linked development and externally managed
 executables, including Homebrew installations, are not self-updated.
 .TP
-.B ki upgrade [--dry-run]
-Refresh the uniquely resolved harness providers declared by the current
-repository. It changes neither user nor repository skill activation, and
-refuses an ambiguous, unavailable, or capability-removing replacement.
 .TP
 .B *ki search|cleanup
 Search the available capability set or remove managed stale state.
 .SS Harness management
 .TP
-.B ki harness info \fIharness-id\fR [--json]
+.B ki harness info <harness-id>
 Inspect one user-installed compatible harness and its capability
 inventory without changing user state.
 .TP
@@ -234,21 +234,26 @@ List compatible harnesses already installed.
 Install a harness from which capabilities, such as skills and subagents, can
 be added.
 .TP
-.B ki harness uninstall \fIharness-id\fR [--dry-run]
+.B ki harness uninstall <harness-id>
 Remove one non-canonical harness with only recognised payload directories. The canonical harness
-cannot be removed; a dry run verifies that a non-canonical harness can be removed without
-changing user state. A successful removal deletes its identifier from
+cannot be removed. A successful removal deletes its identifier from
 .BR [harnesses].ids .
 .SS Skills management
 .TP
-.B ki skill repo add|remove \fIskill\fR
-Add or remove a registered skill in one selected repository.
+.B ki repo skill add <skill> [--repo <path>] [--replace]
+Add a registered skill in one selected repository.
 .TP
-.B ki skill user add|remove \fIskill\fR
-Add or remove a registered skill in configured user agent skill spaces.
+.B ki repo skill remove <skill> [--repo <path>]
+Remove a KI-managed repository skill link and declaration.
+.TP
+.B ki skill add <skill> [--replace]
+Add a registered skill in configured user agent skill spaces.
+.TP
+.B ki skill remove <skill>
+Remove a KI-managed user skill link.
 .SS Acquisition
 .TP
-.B acquire chatgpt import \fIcapture-directory\fR --output \fIkep-directory\fR [--dry-run] [--json]
+.B ki acquire chatgpt import <capture-directory> --output <kep-directory> [--dry-run]
 Validate a user-prepared local ChatGPT capture and create a deterministic
 Knowledge Export Package (KEP).
 The command does not control a browser, contact ChatGPT, read credentials,

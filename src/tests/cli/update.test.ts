@@ -48,13 +48,8 @@ describe('[ki update and upgrade]', () => {
     await box.root.write('ki.1', '.TH KI 1\n')
     await box.home.write('.local/state/ki/installation.toml', receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`))
 
-    const dryRun = await box.run('ki update --cli --dry-run')
     const updated = await box.run('ki update --cli', { runner: 'default' })
 
-    expect(dryRun).toEqual({
-      exitCode: 0,
-      output: `ki update\nCLI executable: would update with ${box.root.path}/installer.sh\n`
-    })
     expect(updated).toEqual({ exitCode: 0, output: 'ki update\nCLI executable: updated with the verified installer\n' })
   })
 
@@ -171,10 +166,8 @@ describe('[ki update and upgrade]', () => {
     await box.config.write('ki/config.toml', configuration(payload.sha256))
     box.setFetcher(async () => new Response(payload.payload))
 
-    const dryRun = await box.run('ki update --dry-run')
     const updated = await box.run('ki update')
 
-    expect(dryRun.output).toContain('example/harness: would refresh')
     expect(updated.output).toContain(`example/harness: refreshed archive ${payload.sha256}`)
     expect(await box.data.read('ki/harnesses/example/harness/skills/example/SKILL.md')).toBe(skill)
   })
@@ -199,11 +192,8 @@ describe('[ki update and upgrade]', () => {
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
     box.setFetcher(async () => new Response(payload.payload))
 
-    const dryRun = await box.run('ki upgrade --dry-run')
-    const upgraded = await box.run('ki upgrade')
+    const upgraded = await box.run('ki repo upgrade')
 
-    expect(dryRun.output).toContain('Repository:')
-    expect(dryRun.output).toContain('example/harness: would refresh')
     expect(upgraded.output).toContain(`example/harness: refreshed archive ${payload.sha256}`)
     expect(await box.data.read('ki/harnesses/example/harness/skills/example/SKILL.md')).toBe(skill)
   })
@@ -212,20 +202,20 @@ describe('[ki update and upgrade]', () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '')
 
-    const result = await box.run('ki upgrade')
+    const result = await box.run('ki repo upgrade')
 
-    expect(result).toEqual({ exitCode: 0, output: 'ki upgrade\nNo declared capabilities.\n' })
+    expect(result).toEqual({ exitCode: 0, output: 'ki repo upgrade\nNo declared capabilities.\n' })
   })
 
   test('refuses upgrade outside a repository and uses the declared repository provider', async () => {
     const outside = await sandbox()
-    const missingRepository = await outside.run('ki upgrade')
+    const missingRepository = await outside.run('ki repo upgrade')
 
     const box = await sandbox()
     await box.setupExampleHarness()
     await box.data.write('ki/harnesses/other/harness/skills/example/SKILL.md', skill)
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
-    const declared = await box.run('ki upgrade')
+    const declared = await box.run('ki repo upgrade')
 
     expect(missingRepository).toEqual({ exitCode: 2, output: 'ki: error: no KI repository found from the current working directory\n' })
     expect(declared.output).toContain('example/harness: unavailable (no configured immutable release)')
@@ -239,7 +229,7 @@ describe('[ki update and upgrade]', () => {
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
     box.setFetcher(async () => new Response(payload.payload))
 
-    const result = await box.run('ki upgrade')
+    const result = await box.run('ki repo upgrade')
 
     expect(result).toEqual({ exitCode: 1, output: 'ki: error: harness example/harness does not provide skill ki-example\n' })
     expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)

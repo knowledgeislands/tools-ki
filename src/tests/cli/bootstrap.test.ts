@@ -234,10 +234,10 @@ ids = ["claude-code"]
     await box.project.write('.ki-config.toml', '["example/harness:ki-repo"]\nsupported_runtimes = ["claude-code"]\n')
     await box.run('ki bootstrap')
 
-    const added = await box.run(`ki skill repo add ki-example --repo ${box.project.path}`)
+    const added = await box.run(`ki repo skill add ki-example --repo ${box.project.path}`)
 
     expect(added.exitCode).toBe(0)
-    expect(added.output).toContain('ki skill repo add: linked ki-example into ')
+    expect(added.output).toContain('ki repo skill add: linked ki-example into ')
     expect(added.output).toContain(' for claude-code\n')
     expect(await box.project.isSymlink('.claude/skills/ki-example')).toBe(true)
   })
@@ -272,7 +272,7 @@ ids = ["claude-code"]
     await box.setupAgentHome('claude-code')
     await box.setupExampleHarness()
     await box.run('ki bootstrap')
-    await box.run('ki skill user add ki-example')
+    await box.run('ki skill add ki-example')
     const skillDirectory = join(box.home.path, '.claude', 'skills')
     const target = join(skillDirectory, 'ki-example')
     await unlink(target)

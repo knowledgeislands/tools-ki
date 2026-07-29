@@ -12,7 +12,7 @@ describe('[ki missing and ki outdated]', () => {
     expect(outdated).toEqual({ exitCode: 0, output: 'ki outdated\nNo installed harnesses.\n' })
   })
 
-  test('reports missing user and CWD-resolved repository skills without mutating configuration', async () => {
+  test('reports missing user skills without inspecting the current repository', async () => {
     const box = await sandbox()
     await box.config.write(
       'ki/config.toml',
@@ -27,40 +27,22 @@ describe('[ki missing and ki outdated]', () => {
         '',
         '[skills.ki-user]',
         'harness = "example/harness"',
+        '',
+        '[skills.ki-other]',
+        'harness = "example/harness"',
         ''
       ].join('\n')
     )
-    await box.project.write('.ki-config.toml', '["example/harness:ki-repository"]\n')
+    await box.project.write('.ki-config.toml', '[ki-repository\n')
     const configuration = await box.config.read('ki/config.toml')
 
     const result = await box.run('ki missing')
 
     expect(result).toEqual({
       exitCode: 0,
-      output: 'ki missing\nMissing capabilities:\n  repository skill example/harness:ki-repository\n  user skill example/harness:ki-user\n'
+      output: 'ki missing\nMissing capabilities:\n  user skill example/harness:ki-other\n  user skill example/harness:ki-user\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
-  })
-
-  test('uses the declared repository provider even when another provides the same skill', async () => {
-    const box = await sandbox()
-    await box.config.write('ki/config.toml', 'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n')
-    await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/example/harness/skills/ki-a/SKILL.md', '---\nname: ki-a\nki-depends-on: []\n---\n')
-    await box.data.write('ki/harnesses/example/harness/skills/ki-only/SKILL.md', '---\nname: ki-only\nki-depends-on: []\n---\n')
-    await box.data.write('ki/harnesses/other/harness/skills/ki-a/SKILL.md', '---\nname: ki-a\nki-depends-on: []\n---\n')
-    await box.data.write('ki/harnesses/other/harness/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
-    await box.project.write(
-      '.ki-config.toml',
-      '["example/harness:ki-example"]\n\n["example/harness:ki-a"]\n\n["example/harness:ki-only"]\n'
-    )
-
-    const result = await box.run('ki missing')
-
-    expect(result).toEqual({
-      exitCode: 0,
-      output: 'ki missing\nNo missing capabilities.\n'
-    })
   })
 
   test('reports unavailable release evidence rather than claiming unrecorded harnesses are current', async () => {

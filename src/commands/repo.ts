@@ -20,6 +20,9 @@ import {
   runSkillConform
 } from '../core/runtime.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../core/transaction.ts'
+import { createRepoDiagCommand } from './diag.ts'
+import { createRepoSkillCommand } from './skill.ts'
+import { createUpgradeCommand } from './update.ts'
 
 const renderCommand = (command: { readonly program: string; readonly arguments: readonly string[] }): string =>
   [command.program, ...command.arguments].map((argument) => JSON.stringify(argument)).join(' ')
@@ -432,6 +435,9 @@ const renderReports = (
 export const createRepoCommand = (context: KiContext): Command =>
   new Command('repo')
     .description('run operations for one KI repository')
+    .addCommand(createRepoDiagCommand(context))
+    .addCommand(createRepoSkillCommand(context))
+    .addCommand(createUpgradeCommand(context))
     .addCommand(
       new Command('educate')
         .description('explain maintenance for declared skills')

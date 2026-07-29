@@ -24,19 +24,15 @@ A bare skill with more than one installed provider is rejected as ambiguous; sel
 
 `ki uninstall <target>` removes an installed non-canonical harness whose recognised payload belongs to KI.
 
-Every command accepts `--dry-run`.
-
-Install dry runs validate the immutable registry target without downloading or writing state.
-
-Reinstall and uninstall dry runs perform their ownership and activation checks without changing state.
+Lifecycle commands apply their requested change immediately after validation; only `ki acquire chatgpt import` and `ki repo conform` provide a dry-run preview.
 
 ## Activation boundary
 
-Use `ki skill user add` or `ki skill repo add` to activate an installed skill.
+Use `ki skill add` or `ki repo skill add` to activate an installed skill.
 
-`ki reinstall` and `ki uninstall` refuse a harness that supplies active user skills or skills declared by the current repository.
+`ki reinstall` and `ki uninstall` refuse a harness that supplies active user skills.
 
-Remove those declarations first with the corresponding `ki skill user remove` or `ki skill repo remove` command, then repeat the lifecycle command.
+Remove user declarations first with `ki skill remove`, then repeat the lifecycle command. Repository declarations are managed independently with `ki repo skill remove`.
 
 The canonical `knowledgeislands/ki-agentic-harness` cannot be uninstalled.
 

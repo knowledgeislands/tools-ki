@@ -132,7 +132,7 @@ harness = "example/harness"
       '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
     )
     await box.run('ki bootstrap')
-    await box.run('ki skill user add ki-example')
+    await box.run('ki skill add ki-example')
 
     const doctor = await box.run('ki doctor')
 

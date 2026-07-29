@@ -62,15 +62,15 @@ describe('[ki acquire chatgpt import]', () => {
     expect(kepToml).toContain('relationships = 2')
   })
 
-  test('reports a dry run without writing and a versioned JSON result', async () => {
+  test('reports a dry run without writing', async () => {
     const box = await sandbox()
     const capture = await makeCapture(box.root.path)
     const output = join(box.root.path, 'dry-run.kep')
-    const result = await box.run(`ki acquire chatgpt import ${capture.path} --output ${output} --dry-run --json`)
+    const result = await box.run(`ki acquire chatgpt import ${capture.path} --output ${output} --dry-run`)
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('"status":"dry-run"')
-    expect(result.output).toContain('"limitations"')
+    expect(result.output).toContain('KEP plan:')
+    expect(result.output).toContain('Dry run: no files written.')
     expect(
       await lstat(output)
         .then(() => true)

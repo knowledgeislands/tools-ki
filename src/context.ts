@@ -4,7 +4,6 @@ import type { Fetcher } from './core/acquire.ts'
 import type { Output } from './core/output.ts'
 import type { Environment, KiInstallationMode, KiPaths } from './core/paths.ts'
 import { installationMode, resolveKiPaths, userHome } from './core/paths.ts'
-import { discoverRepository, type RepositoryLocation } from './core/repository.ts'
 import { type Runner, runCommand } from './core/runner.ts'
 
 export interface KiContext {
@@ -16,7 +15,6 @@ export interface KiContext {
   readonly environment: Environment
   readonly homeDirectory: string
   readonly paths: KiPaths
-  readonly repository: RepositoryLocation | null
   readonly fetcher: Fetcher
   readonly runner: Runner
   /** Injectable wall clock for user-facing elapsed-time reporting. */
@@ -46,7 +44,6 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
     environment: options.environment,
     homeDirectory,
     paths: resolveKiPaths(options.environment),
-    repository: await discoverRepository(workingDirectory, homeDirectory),
     fetcher: options.fetcher ?? fetch,
     runner: options.runner ?? runCommand,
     now: options.now ?? Date.now

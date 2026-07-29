@@ -1,4 +1,4 @@
-import { symlink } from 'node:fs/promises'
+import { realpath, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
@@ -51,7 +51,7 @@ ids = ["example:skill", "example:skill"]
     expect(human.output).toContain('Errors\n  - schema must equal 1')
   })
 
-  test('resolves the ancestor KI repository from a nested working directory', async () => {
+  test('does not discover a repository for user diagnostics', async () => {
     const box = await sandbox()
     await box.project.mkdir('repo/src/nested')
     await box.project.write('repo/.ki-config.toml', '# repo\n')
@@ -59,17 +59,47 @@ ids = ["example:skill", "example:skill"]
     box.cd('repo/src/nested')
     const diag = await box.run('ki diag')
 
-    expect(diag.output).toMatch(/Repository\s+.+repo/)
+    expect(diag.output).not.toContain('Repository')
   })
 
-  test('reports no repository outside a KI repository', async () => {
+  test('reports repository resolution separately', async () => {
+    const box = await sandbox()
+    await box.project.mkdir('repo/src/nested')
+    await box.project.write('repo/.ki-config.toml', '# repo\n')
+
+    box.cd('repo/src/nested')
+    const diag = await box.run('ki repo diag')
+    const root = await realpath(`${box.project.path}/repo`)
+
+    expect(diag).toEqual({
+      exitCode: 0,
+      output: `ki repo diag\nRepository: ${root}\nConfiguration: ${root}/.ki-config.toml\nSource: current working directory\n`
+    })
+  })
+
+  test('resolves only the explicit repository path', async () => {
+    const box = await sandbox()
+    await box.project.mkdir('repo')
+    await box.project.write('repo/.ki-config.toml', '# repo\n')
+    const supplied = `${box.project.path}/repo`
+    const root = await realpath(supplied)
+
+    const diag = await box.run(`ki repo diag --repo ${supplied}`)
+
+    expect(diag).toEqual({
+      exitCode: 0,
+      output: `ki repo diag\nRepository: ${root}\nConfiguration: ${root}/.ki-config.toml\nSource: explicit path ${supplied}\n`
+    })
+  })
+
+  test('refuses repository diagnostics outside a KI repository', async () => {
     const box = await sandbox()
     await box.project.mkdir('scratch')
 
     box.cd('scratch')
-    const diag = await box.run('ki diag')
+    const diag = await box.run('ki repo diag')
 
-    expect(diag.output).toContain('Repository    none')
+    expect(diag).toEqual({ exitCode: 2, output: 'ki: error: no KI repository found from the current working directory\n' })
   })
 
   test('rejects a configuration file that is a symlink rather than a regular file', async () => {

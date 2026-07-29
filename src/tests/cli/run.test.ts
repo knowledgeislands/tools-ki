@@ -16,7 +16,6 @@ describe('runCli()', () => {
       homeDirectory: '/unused',
       environment: {},
       paths: { data: '/unused', config: '/unused', cache: '/unused', state: '/unused' },
-      repository: null,
       fetcher: () => Promise.reject(new Error('sandbox fetcher unused')),
       runner: async () => ({ exitCode: 0, output: '' }),
       now: () => 0

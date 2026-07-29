@@ -13,10 +13,10 @@ export const rootCommandNames = [
   'outdated',
   'repo',
   'reinstall',
+  'skill',
   'uninstall',
   'update',
-  'upgrade',
   'version'
 ] as const
 
-export const repoCommandNames = ['educate', 'audit', 'conform'] as const
+export const repoCommandNames = ['audit', 'conform', 'diag', 'educate', 'skill', 'upgrade'] as const

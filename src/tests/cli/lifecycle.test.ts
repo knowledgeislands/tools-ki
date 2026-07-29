@@ -67,13 +67,11 @@ describe('[ki lifecycle]', () => {
     await box.setupExampleHarness()
 
     const existing = await box.run('ki install ki-example')
-    const dryExisting = await box.run('ki install ki-example --dry-run')
     const absent = await box.run('ki install ki-missing')
     await box.data.write('ki/harnesses/other/harness/skills/other/SKILL.md', skill())
     const ambiguous = await box.run('ki uninstall ki-example')
 
     expect(existing).toEqual({ exitCode: 0, output: 'example/harness is already installed\n' })
-    expect(dryExisting).toEqual({ exitCode: 0, output: 'example/harness is already installed\n' })
     expect(absent).toEqual({
       exitCode: 1,
       output: 'ki: error: skill ki-missing is not installed; use <harness-id>:ki-missing to acquire a configured supplier\n'
@@ -93,15 +91,16 @@ describe('[ki lifecycle]', () => {
     expect(result).toEqual({ exitCode: 1, output: 'ki: error: harness example/harness does not provide skill ki-missing\n' })
   })
 
-  test('validates dry-run installs without downloading or changing state', async () => {
+  test('rejects retired lifecycle dry-run options', async () => {
     const box = await sandbox()
-    const archive = configuredArchive()
-    await box.config.write('ki/config.toml', userConfiguration({ id: 'example/harness', sha256: archive.sha256 }))
+    const install = await box.run('ki install example/harness --dry-run')
+    const reinstall = await box.run('ki reinstall example/harness --dry-run')
+    const uninstall = await box.run('ki uninstall example/harness --dry-run')
 
-    const result = await box.run('ki install example/harness:ki-example --dry-run')
-
-    expect(result).toEqual({ exitCode: 0, output: 'would install example/harness\n' })
-    await expect(lstat(`${box.data.path}/ki/harnesses`)).rejects.toThrow()
+    for (const result of [install, reinstall, uninstall]) {
+      expect(result.exitCode).toBe(2)
+      expect(result.output).toContain("unknown option '--dry-run'")
+    }
   })
 
   test('replaces an inactive installed harness only with a newly verified archive', async () => {
@@ -111,10 +110,8 @@ describe('[ki lifecycle]', () => {
     await box.config.write('ki/config.toml', userConfiguration({ id: 'example/harness', sha256: archive.sha256 }))
     box.setFetcher(async () => new Response(archive.payload))
 
-    const dryRun = await box.run('ki reinstall example/harness:ki-example --dry-run')
     const reinstalled = await box.run('ki reinstall ki-example')
 
-    expect(dryRun).toEqual({ exitCode: 0, output: 'would reinstall example/harness\n' })
     expect(reinstalled).toEqual({ exitCode: 0, output: `reinstalled example/harness\tarchive ${archive.sha256}\n` })
     expect(await box.data.read('ki/harnesses/example/harness/skills/example/SKILL.md')).toBe(skill())
   })
@@ -148,16 +145,16 @@ describe('[ki lifecycle]', () => {
 
     expect(reinstalled).toEqual({
       exitCode: 1,
-      output: 'ki: error: cannot reinstall example/harness while it has active skills; run ki skill user remove ki-example first\n'
+      output: 'ki: error: cannot reinstall example/harness while it has active skills; run ki skill remove ki-example first\n'
     })
     expect(removed).toEqual({
       exitCode: 1,
-      output: 'ki: error: cannot uninstall example/harness while it has active skills; run ki skill user remove ki-example first\n'
+      output: 'ki: error: cannot uninstall example/harness while it has active skills; run ki skill remove ki-example first\n'
     })
     expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill())
   })
 
-  test('refuses lifecycle removal while a current repository declares a supplied skill', async () => {
+  test('does not inspect the current repository while removing an inactive harness', async () => {
     const box = await sandbox()
     await box.setupExampleHarness()
     await box.config.write('ki/config.toml', userConfiguration())
@@ -165,10 +162,7 @@ describe('[ki lifecycle]', () => {
 
     const result = await box.run('ki uninstall example/harness')
 
-    expect(result).toEqual({
-      exitCode: 1,
-      output: 'ki: error: cannot uninstall example/harness while it has active skills; run ki skill repo remove ki-example first\n'
-    })
+    expect(result).toEqual({ exitCode: 0, output: 'uninstalled example/harness\n' })
   })
 
   test('allows removal when invalid user and repository declarations do not name a supplied capability', async () => {
@@ -199,12 +193,10 @@ describe('[ki lifecycle]', () => {
   test('removes inactive non-canonical harnesses without changing activation and protects the canonical harness', async () => {
     const box = await sandbox()
     await box.setupExampleHarness()
-    const dryRun = await box.run('ki uninstall example/harness --dry-run')
     const removed = await box.run('ki uninstall example/harness:ki-example')
     await box.setupCanonicalHarness()
     const canonical = await box.run('ki uninstall knowledgeislands/ki-agentic-harness')
 
-    expect(dryRun).toEqual({ exitCode: 0, output: 'would uninstall example/harness\n' })
     expect(removed).toEqual({ exitCode: 0, output: 'uninstalled example/harness\n' })
     await expect(lstat(`${box.data.path}/ki/harnesses/example/harness`)).rejects.toThrow()
     expect(canonical).toEqual({
@@ -242,7 +234,7 @@ describe('[ki lifecycle]', () => {
     const local = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     const enabled = await box.run(`ki dev on ${local}`)
 
-    const result = await box.run('ki reinstall knowledgeislands/ki-agentic-harness --dry-run')
+    const result = await box.run('ki reinstall knowledgeislands/ki-agentic-harness')
 
     expect(enabled.exitCode).toBe(0)
     expect(result).toEqual({

@@ -1,11 +1,9 @@
 import { inspectUserConfiguration } from '../agents/index.ts'
-import { type DeclaredSkill, readDeclaredSkills } from './configuration.ts'
 import { KiError } from './errors.ts'
 import { discoverInstalledHarnesses, type InstalledHarness } from './harness.ts'
 import { readHarnessRegistry } from './registry.ts'
 
 export interface MissingCapability {
-  readonly scope: 'user' | 'repository'
   readonly name: string
 }
 
@@ -25,23 +23,16 @@ const identities = (harnesses: readonly InstalledHarness[]): ReadonlySet<string>
 export const collectCapabilityStatus = async (options: {
   readonly configurationDirectory: string
   readonly dataDirectory: string
-  readonly repositoryConfiguration?: string
 }): Promise<CapabilityStatus> => {
-  const [configuration, harnesses, repositorySkills] = await Promise.all([
+  const [configuration, harnesses] = await Promise.all([
     inspectUserConfiguration(options.configurationDirectory),
-    discoverInstalledHarnesses(options.dataDirectory),
-    options.repositoryConfiguration ? readDeclaredSkills(options.repositoryConfiguration) : Promise.resolve<readonly DeclaredSkill[]>([])
+    discoverInstalledHarnesses(options.dataDirectory)
   ])
   if (configuration.state === 'invalid') throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
   const registry = await readHarnessRegistry(options.configurationDirectory)
 
   const installed = identities(harnesses)
-  const missing: MissingCapability[] = configuration.skills
-    .filter((identity) => !installed.has(identity))
-    .map((name) => ({ scope: 'user', name }))
-  for (const skill of repositorySkills) {
-    if (!installed.has(skill.identity)) missing.push({ scope: 'repository', name: skill.identity })
-  }
+  const missing: MissingCapability[] = configuration.skills.filter((identity) => !installed.has(identity)).map((name) => ({ name }))
   const configured = new Set(registry.map((release) => release.id))
   const outdatedEvidenceGaps = harnesses
     .map(({ id }) => ({
@@ -50,7 +41,7 @@ export const collectCapabilityStatus = async (options: {
     }))
     .sort((left, right) => left.harness.localeCompare(right.harness))
   return {
-    missing: missing.sort((left, right) => `${left.scope}:${left.name}`.localeCompare(`${right.scope}:${right.name}`)),
+    missing: missing.sort((left, right) => left.name.localeCompare(right.name)),
     outdatedEvidenceGaps
   }
 }

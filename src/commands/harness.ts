@@ -36,8 +36,7 @@ export const createHarnessCommand = (context: KiContext): Command =>
       new Command('info')
         .description('inspect one installed harness')
         .argument('<harness-id>', 'installed harness identifier')
-        .option('--json', 'emit a versioned JSON result')
-        .action(async (identifier: string, options: { json?: boolean }) => {
+        .action(async (identifier: string) => {
           const harness = await readInstalledHarness(context.paths.data, identifier)
           const capabilities = harness.capabilities.map(({ kind, name, source, dependsOn, rubricModule }) => ({
             kind,
@@ -46,10 +45,6 @@ export const createHarnessCommand = (context: KiContext): Command =>
             depends_on: dependsOn,
             rubric_module: rubricModule ?? null
           }))
-          if (options.json) {
-            context.stdout.write(`${JSON.stringify({ version: 1, harness: { id: harness.id, capabilities } })}\n`)
-            return
-          }
           context.stdout.write(`${harness.id}\ncapabilities: ${capabilities.length}\n`)
           for (const capability of capabilities) context.stdout.write(`  ${capability.kind} ${capability.name}\n`)
         })
@@ -58,10 +53,9 @@ export const createHarnessCommand = (context: KiContext): Command =>
       new Command('uninstall')
         .description('remove one installed non-canonical harness')
         .argument('<harness-id>', 'installed non-canonical harness identifier')
-        .option('--dry-run', 'verify that the harness can be removed without changing state')
-        .action(async (identifier: string, options: { dryRun?: boolean }) => {
-          const result = await uninstallHarness(context.paths.data, identifier, options.dryRun)
-          if (result.uninstalled) await recordInstalledHarness(context.paths.config, identifier, false)
-          context.stdout.write(result.uninstalled ? `uninstalled ${identifier}\n` : `would uninstall ${identifier}\n`)
+        .action(async (identifier: string) => {
+          await uninstallHarness(context.paths.data, identifier)
+          await recordInstalledHarness(context.paths.config, identifier, false)
+          context.stdout.write(`uninstalled ${identifier}\n`)
         })
     )

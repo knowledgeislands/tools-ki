@@ -52,13 +52,16 @@ describe('[ki harness]', () => {
       expect(info.output).toContain('  skill ki-example\n')
     })
 
-    test('inspects one non-canonical harness in JSON form', async () => {
+    test('rejects the retired JSON output option', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
-      const json = await box.run('ki harness info example/harness --json')
+      const result = await box.run('ki harness info example/harness --json')
 
-      expect(json.exitCode).toBe(0)
-      expect(json.output).toContain('"depends_on":[]')
+      expect(result).toEqual({
+        exitCode: 2,
+        output:
+          "error: unknown option '--json'\n\nUsage: ki harness info [options] <harness-id>\n\ninspect one installed harness\n\nArguments:\n  harness-id  installed harness identifier\n\nOptions:\n  -h, --help  display help for command\n"
+      })
     })
 
     test('rejects an invalid installed harness identifier before reading its path', async () => {
@@ -79,7 +82,7 @@ describe('[ki harness]', () => {
       expect(result).toEqual({ exitCode: 2, output: 'ki: error: harness identifier must be an owner/name identifier\n' })
     })
 
-    test('removes one non-canonical harness, honoring a dry run first, and un-records it', async () => {
+    test('removes one non-canonical harness and un-records it', async () => {
       const box = await sandbox()
       await mkdir(`${box.config.path}/ki`, { recursive: true })
       await writeFile(
@@ -87,11 +90,9 @@ describe('[ki harness]', () => {
         ['schema = 1', '', '[harnesses]', 'ids = [', '  "example/harness",', ']', 'releases = []', ''].join('\n')
       )
       await box.setupExampleHarness()
-      const dryRun = await box.run('ki harness uninstall example/harness --dry-run')
       const removed = await box.run('ki harness uninstall example/harness')
       const config = await box.config.read('ki/config.toml')
 
-      expect(dryRun.output).toContain('would uninstall example/harness')
       expect(removed.output).toContain('uninstalled example/harness')
       await expect(lstat(`${box.data.path}/ki/harnesses/example/harness`)).rejects.toThrow()
       expect(config).toContain('[harnesses]\nids = [\n]\nreleases = []')

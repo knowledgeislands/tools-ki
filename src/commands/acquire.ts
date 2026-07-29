@@ -34,7 +34,6 @@ interface Payload {
 interface ImportOptions {
   readonly output: string
   readonly dryRun?: boolean
-  readonly json?: boolean
 }
 
 const digest = (value: string | Uint8Array): string => createHash('sha256').update(value).digest('hex')
@@ -280,28 +279,6 @@ const writeKep = async (capture: Capture, payload: Payload, output: string): Pro
 }
 
 const emitResult = (context: KiContext, capture: Capture, payload: Payload, output: string, options: ImportOptions): void => {
-  const status = options.dryRun ? 'dry-run' : 'created'
-  if (options.json) {
-    context.stdout.write(
-      `${JSON.stringify({
-        version: 1,
-        status,
-        output,
-        package_id: payload.packageId,
-        records: capture.recordCount,
-        assets: capture.assetCount,
-        relationships: capture.relationshipCount,
-        omissions: capture.metadata.omissions,
-        limitations: [
-          'local-user-provided-capture',
-          'no-browser-or-network-access',
-          'no-credential-or-repository-access',
-          'no-knowledge-extraction'
-        ]
-      })}\n`
-    )
-    return
-  }
   context.stdout.write(`${options.dryRun ? 'KEP plan' : 'KEP created'}: ${output}\n`)
   context.stdout.write(`Package: ${payload.packageId}\n`)
   context.stdout.write(
@@ -331,7 +308,6 @@ export const createAcquireCommand = (context: KiContext): Command => {
     .argument('<capture-directory>')
     .requiredOption('--output <kep-directory>', 'new output directory for the KEP')
     .option('--dry-run', 'validate and report without writing')
-    .option('--json', 'emit a versioned JSON result')
     .action((captureDirectory: string, options: ImportOptions) => importCapture(context, captureDirectory, options))
 
   const chatgpt = new Command('chatgpt').description('local ChatGPT capture acquisition').addCommand(importer)
