@@ -38,18 +38,6 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki skill add`
 - `ki skill remove`
 
-#### Repository management
-
-- `ki repo --repo <path-or-pattern>`
-- `ki repo --workspace <group>`
-- `ki repo audit`
-- `ki repo conform`
-- `ki repo educate`
-- `ki repo skill add`
-- `ki repo skill remove`
-- `ki repo upgrade`
-- `ki repo diag`
-
 #### Workspace management
 
 - `ki workspace init`
@@ -57,6 +45,21 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki workspace show <group>`
 - `ki workspace add <group> <path-or-pattern>`
 - `ki workspace remove <group> <path-or-pattern>`
+
+#### Repository options
+
+- `ki repo --repo <path-or-pattern>`
+- `ki repo --workspace <group>`
+
+#### Repository management
+
+- `ki repo audit`
+- `ki repo conform`
+- `ki repo educate`
+- `ki repo skill add`
+- `ki repo skill remove`
+- `ki repo upgrade`
+- `ki repo diag`
 
 #### Harness management
 
