@@ -51,7 +51,7 @@
   "scripts": {
     "build": "bun build --compile --outfile dist/ki src/main.ts",
     "clean": "rm -rf dist node_modules",
-    "lint:man": "mandoc -T lint man/ki.1",
+    "ki:lint-man": "mandoc -T lint man/ki.1",
     "prepare": "husky",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
