@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-005
 title: Align command scopes and repository resolution
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: [KI-TOOL-CLI-006]
 blocked-by: []
-baseline-ref: null
+baseline-ref: e659bea937732687809c1fa84344ab7822205551
 ---
 
 ## Context
