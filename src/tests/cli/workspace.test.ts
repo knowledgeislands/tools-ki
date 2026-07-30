@@ -5,12 +5,27 @@ import { sandbox } from './_cli_helper.ts'
 const metadata = (repoCode: string, title: string, description: string): string =>
   `["knowledgeislands/ki-agentic-harness:ki-repo"]\ntitle = "${title}"\ndescription = "${description}"\nrepo_code = "${repoCode}"\n`
 
-const workspace = (members: string, options: { readonly name?: string; readonly extra?: string } = {}): string => {
-  const name = options.name ?? 'default'
-  return `schema = 1\ndefault = "${name}"\n\n[groups.${name}]\nmembers = [${members}]\n${options.extra ?? ''}`
+interface WorkspaceMemberFixture {
+  readonly type: 'repository' | 'workspace'
+  readonly path: string
 }
 
-const member = (type: 'repository' | 'workspace', path: string): string => `{ type = "${type}", path = "${path}" }`
+const renderGroup = (name: string, members: readonly WorkspaceMemberFixture[]): string =>
+  members.length
+    ? members
+        .slice()
+        .sort((left, right) => left.path.localeCompare(right.path))
+        .flatMap((item) => [`[groups.${name}.members.${JSON.stringify(item.path)}]`, `kind = ${JSON.stringify(item.type)}`])
+        .join('\n\n')
+    : `[groups.${name}]`
+
+const workspace = (members: string, options: { readonly name?: string; readonly extra?: string } = {}): string => {
+  const name = options.name ?? 'default'
+  const entries = members ? (JSON.parse(`[${members}]`) as readonly WorkspaceMemberFixture[]) : []
+  return `schema = 1\ndefault = "${name}"\n\n${renderGroup(name, entries)}\n${options.extra ?? ''}`
+}
+
+const member = (type: 'repository' | 'workspace', path: string): string => JSON.stringify({ type, path })
 
 describe('[ki workspace]', () => {
   test('retains the empty init flow and manages typed repository members', async () => {
@@ -38,7 +53,7 @@ describe('[ki workspace]', () => {
       output: 'ki workspace show default\n  repository repo\n'
     })
     expect(removed).toEqual({ exitCode: 0, output: 'ki workspace remove: removed repo from default\n' })
-    expect(await box.project.read('.ki-workspace.toml')).toBe('schema = 1\ndefault = "default"\n\n[groups.default]\nmembers = []\n')
+    expect(await box.project.read('.ki-workspace.toml')).toBe('schema = 1\ndefault = "default"\n\n[groups.default]\n')
   })
 
   test('registers a deterministic physical hierarchy, preserves custom groups, and stops at repository leaves', async () => {
@@ -47,12 +62,12 @@ describe('[ki workspace]', () => {
       '.ki-workspace.toml',
       workspace(member('repository', 'stale'), {
         name: 'all',
-        extra: `\n[groups.release]\nmembers = [${member('repository', 'direct')}]\n`
+        extra: '\n[groups.release]\n\n[groups.release.members."direct"]\nkind = "repository"\n'
       })
     )
     await box.project.write('direct/.ki-config.toml', metadata('DIRECT', 'Direct', 'Direct leaf.'))
     await box.project.mkdir('direct/inside')
-    await box.project.write('nested/.ki-workspace.toml', workspace('', { extra: '\n[groups.keep]\nmembers = []\n' }))
+    await box.project.write('nested/.ki-workspace.toml', workspace('', { extra: '\n[groups.keep]\n' }))
     await box.project.write('nested/repo/.ki-config.toml', metadata('NESTED', 'Nested', 'Nested leaf.'))
     await box.project.mkdir('empty')
     await box.project.mkdir('.git/objects/pack')
@@ -73,23 +88,22 @@ describe('[ki workspace]', () => {
       'schema = 1\n' +
         'default = "all"\n' +
         '\n' +
-        '[groups.all]\n' +
-        `members = [${member('repository', 'direct')}, ${member('workspace', 'empty')}, ${member('workspace', 'nested')}]\n` +
+        '[groups.all.members."direct"]\n' +
+        'kind = "repository"\n' +
         '\n' +
-        '[groups.release]\n' +
-        `members = [${member('repository', 'direct')}]\n`
+        '[groups.all.members."empty"]\n' +
+        'kind = "workspace"\n' +
+        '\n' +
+        '[groups.all.members."nested"]\n' +
+        'kind = "workspace"\n' +
+        '\n' +
+        '[groups.release.members."direct"]\n' +
+        'kind = "repository"\n'
     )
     expect(await box.project.read('nested/.ki-workspace.toml')).toBe(
-      'schema = 1\n' +
-        'default = "default"\n' +
-        '\n' +
-        '[groups.default]\n' +
-        `members = [${member('repository', 'repo')}]\n` +
-        '\n' +
-        '[groups.keep]\n' +
-        'members = []\n'
+      'schema = 1\n' + 'default = "default"\n' + '\n' + '[groups.default.members."repo"]\n' + 'kind = "repository"\n' + '\n' + '[groups.keep]\n'
     )
-    expect(await box.project.read('empty/.ki-workspace.toml')).toBe('schema = 1\ndefault = "default"\n\n[groups.default]\nmembers = []\n')
+    expect(await box.project.read('empty/.ki-workspace.toml')).toBe('schema = 1\ndefault = "default"\n\n[groups.default]\n')
     await expect(lstat(`${box.project.path}/direct/.ki-workspace.toml`)).rejects.toThrow()
     await expect(lstat(`${box.project.path}/direct/inside/.ki-workspace.toml`)).rejects.toThrow()
     await expect(lstat(`${box.project.path}/.git/.ki-workspace.toml`)).rejects.toThrow()
@@ -165,7 +179,7 @@ describe('[ki workspace]', () => {
   test('rejects malformed, escaping, and symbolic-link members deterministically', async () => {
     const box = await sandbox()
     const root = await realpath(box.project.path)
-    await box.project.write('.ki-workspace.toml', workspace('{ type = "unknown", path = "repo" }'))
+    await box.project.write('.ki-workspace.toml', 'schema = 1\ndefault = "default"\n\n[groups.default]\n\n[groups.default.members.repo]\nkind = "unknown"\n')
     const unsupported = await box.run('ki workspace list')
     await box.project.write('.ki-workspace.toml', workspace(member('repository', '../outside')))
     const escaping = await box.run('ki repo plan list')
@@ -178,7 +192,7 @@ describe('[ki workspace]', () => {
 
     expect(unsupported).toEqual({
       exitCode: 2,
-      output: `ki: error: ${root}/.ki-workspace.toml group default member has unsupported type\n`
+      output: `ki: error: ${root}/.ki-workspace.toml group default member repo has unsupported kind\n`
     })
     expect(escaping).toEqual({
       exitCode: 2,
@@ -268,13 +282,21 @@ describe('[ki workspace]', () => {
       ['not valid = [\n', 'must be valid TOML'],
       ['schema = 1\n', 'must declare a default group'],
       ['schema = 1\ndefault = "default"\n', 'must declare named groups'],
-      ['schema = 1\ndefault = "missing"\n\n[groups.default]\nmembers = []\n', 'default group missing is not declared'],
-      ['schema = 1\ndefault = "invalid.group"\n\n[groups."invalid.group"]\nmembers = []\n', 'group name invalid.group must use letters'],
-      ['schema = 1\ndefault = "default"\n\n[groups]\ndefault = 1\n', 'group default must declare a members array'],
-      ['schema = 1\ndefault = "default"\n\n[groups.default]\nmembers = [1]\n', 'group default members must be tables'],
+      ['schema = 1\ndefault = "missing"\n\n[groups.other]\n', 'default group missing is not declared'],
+      ['schema = 1\ndefault = "invalid.group"\n\n[groups."invalid.group"]\n', 'group name invalid.group must use letters'],
+      ['schema = 1\ndefault = "default"\n\n[groups]\ndefault = 1\n', 'group default must be a table'],
+      ['schema = 1\ndefault = "default"\n\n[groups.default]\nmembers = [1]\n', 'group default members must be a map'],
       ['schema = 1\ndefault = "default"\n\n[groups.default]\nrepositories = ["repo"]\n', 'group default must not declare repositories; use typed members'],
-      [workspace('{ type = "repository" }'), 'group default member path must be a non-empty string'],
-      [workspace('{ type = "workspace", path = "nested/*" }'), 'workspace member nested/* must not use a pattern']
+      ['schema = 1\ndefault = "default"\n\n[groups.default.members]\nrepo = 1\n', 'group default member repo must be a table'],
+      ['schema = 1\ndefault = "default"\n\n[groups.default.members."" ]\nkind = "repository"\n', 'group default member path must be a non-empty string'],
+      [
+        'schema = 1\ndefault = "default"\n\n[groups.default]\n\n[groups.default.members.repo]\nkind = "unknown"\n',
+        'group default member repo has unsupported kind'
+      ],
+      [
+        'schema = 1\ndefault = "default"\n\n[groups.default]\n\n[groups.default.members."nested/*"]\nkind = "workspace"\n',
+        'workspace member nested/* must not use a pattern'
+      ]
     ] as const
 
     const missing = await box.run('ki workspace list')

@@ -44,8 +44,7 @@ interface WorkspaceGroupDocument {
 }
 
 interface WorkspaceMemberDocument {
-  readonly type?: unknown
-  readonly path?: unknown
+  readonly kind?: unknown
 }
 
 interface RegistrationContainer {
@@ -79,15 +78,20 @@ const memberPath = (directory: string, group: string, value: unknown): string =>
 const groupMembers = (directory: string, name: string, value: unknown): readonly WorkspaceMember[] => {
   const group = value as WorkspaceGroupDocument
   if (isRecord(value) && Object.hasOwn(group, 'repositories')) throw workspaceError(directory, `group ${name} must not declare repositories; use typed members`)
-  if (!isRecord(value) || !Array.isArray(group.members)) throw workspaceError(directory, `group ${name} must declare a members array`)
-  return group.members.map((entry) => {
-    const member = entry as WorkspaceMemberDocument
-    if (!isRecord(entry)) throw workspaceError(directory, `group ${name} members must be tables`)
-    if (member.type !== 'repository' && member.type !== 'workspace') throw workspaceError(directory, `group ${name} member has unsupported type`)
-    const path = memberPath(directory, name, member.path)
-    if (member.type === 'workspace' && hasPattern(path)) throw workspaceError(directory, `group ${name} workspace member ${path} must not use a pattern`)
-    return { type: member.type, path }
-  })
+  if (!isRecord(value)) throw workspaceError(directory, `group ${name} must be a table`)
+  if (group.members === undefined) return []
+  if (!isRecord(group.members)) throw workspaceError(directory, `group ${name} members must be a map`)
+  return Object.entries(group.members)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([path, entry]) => {
+      const member = entry as WorkspaceMemberDocument
+      if (!isRecord(entry)) throw workspaceError(directory, `group ${name} member ${path} must be a table`)
+      if (member.kind !== 'repository' && member.kind !== 'workspace') throw workspaceError(directory, `group ${name} member ${path} has unsupported kind`)
+      const safePath = memberPath(directory, name, path)
+      if (member.kind === 'workspace' && hasPattern(safePath))
+        throw workspaceError(directory, `group ${name} workspace member ${safePath} must not use a pattern`)
+      return { type: member.kind, path: safePath }
+    })
 }
 
 const parseWorkspaceConfiguration = (contents: string, directory: string): WorkspaceConfiguration => {
@@ -134,15 +138,20 @@ export const workspaceGroup = async (directory: string, name?: string): Promise<
   return { name: selected, members }
 }
 
-const renderMember = (member: WorkspaceMember): string => `{ type = ${JSON.stringify(member.type)}, path = ${JSON.stringify(member.path)} }`
-
 const renderWorkspaceConfiguration = (configuration: WorkspaceConfiguration): string =>
   [
     'schema = 1',
     `default = ${JSON.stringify(configuration.default)}`,
     ...Object.entries(configuration.groups)
       .sort(([left], [right]) => left.localeCompare(right))
-      .flatMap(([name, members]) => ['', `[groups.${name}]`, `members = [${members.map(renderMember).join(', ')}]`]),
+      .flatMap(([name, members]) =>
+        members.length
+          ? members
+              .slice()
+              .sort((left, right) => left.path.localeCompare(right.path))
+              .flatMap((member) => ['', `[groups.${name}.members.${JSON.stringify(member.path)}]`, `kind = ${JSON.stringify(member.type)}`])
+          : ['', `[groups.${name}]`]
+      ),
     ''
   ].join('\n')
 

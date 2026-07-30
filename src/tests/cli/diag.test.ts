@@ -85,7 +85,7 @@ ids = ["example:skill", "example:skill"]
 
   test('does not expand a direct workspace or mGit container for diagnostics', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-workspace.toml', 'schema = 1\ndefault = "default"\n\n[groups.default]\nmembers = []\n')
+    await box.project.write('.ki-workspace.toml', 'schema = 1\ndefault = "default"\n\n[groups.default]\n[groups.default.members]\n')
     await box.project.write('.mgit-config.toml', 'version = 1\n')
 
     const diag = await box.run('ki diag')

@@ -341,11 +341,12 @@ Remove a KI-managed user skill link.
 Use these commands from a workspace directory to manage KI-owned named
 repository groups without requiring the directory itself to be a KI repository.
 The regular \fB.ki-workspace.toml\fR file has schema version 1, a required
-default group, and ordered typed \fBmembers\fR entries. Each entry contains a
-\fBtype\fR of \fBrepository\fR or \fBworkspace\fR and a relative \fBpath\fR.
-Repository paths may contain patterns; workspace paths may not. Nested
+default group, and a typed \fBmembers\fR map. Each relative path key names a
+table containing \fBkind\fR, either \fBrepository\fR or \fBworkspace\fR.
+Repository path keys may contain patterns; workspace path keys may not. Nested
 workspace members recursively expand their default groups. Other schema
-versions and the historical flat \fBrepositories\fR group form are rejected.
+versions and historical array or flat \fBrepositories\fR group forms are
+rejected.
 .TP
 .B ki workspace init
 Create the initial workspace file with an empty \fBdefault\fR group.
@@ -361,14 +362,14 @@ List every group with local and effective repository counts, marking the
 default and reporting each repository's direct or nested origin.
 .TP
 .B ki workspace show <group>
-Print the ordered members of one group.
+Print the path-keyed members of one group in deterministic order.
 .TP
 .B ki workspace add <group> <path-or-pattern>
-Append one typed repository path or pattern to a named group's ordered members.
+Add one typed repository path or pattern to a named group's members map.
 A new named group is created when needed.
 .TP
 .B ki workspace remove <group> <path-or-pattern>
-Remove one existing typed repository path or pattern from a named group.
+Remove one existing typed repository path or pattern from a named group map.
 .SS Repository options
 \&
 .PP
