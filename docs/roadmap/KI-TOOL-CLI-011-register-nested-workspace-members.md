@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-011
 title: Register nested workspace members
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: f2d8e6d5de158ab32009c83b7091359865f54e65
@@ -55,6 +55,14 @@ No external dependency. `MGIT-CLI-001` is a related, non-blocking cross-reposito
 ## Delegation
 
 One fresh serial implementation worker (`gpt-5.6-sol`, high reasoning) owns the workspace command, resolver, tests, and documentation. Locked: post-order physical traversal; regular repository declarations are leaves; no symbolic links; only default groups change; nested workspaces remain typed members. Escalate any configuration-schema choice that cannot represent these locked semantics without a compatibility path. Done means the stated CLI-contract matrix passes, followed by the full suite, typecheck, style check, and roadmap audit. The worker returns before commit; the orchestrator reviews the diff and gates verification.
+
+## Acceptance
+
+Delivered `ki workspace register` and schema-2 typed workspace members from baseline `f2d8e6d5de158ab32009c83b7091359865f54e65` through implementation commit `93d979e`. Registration is physical, post-order, preflighted, symlink-safe, and excludes Git metadata; repository leaves terminate traversal. Recursive expansion powers both repository selection and workspace listing, with containment, cycle, duplicate, and metadata diagnostics. `workspace init` remains available and custom groups remain preserved.
+
+Verified with `bun run test --coverage` (429 tests; 100% statements, branches, functions, and lines), `bunx tsc --noEmit`, `bunx biome check`, `bunx markdownlint-cli2 README.md docs/developer/local-development.md`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .`.
+
+No mGit group support, compatibility fallback for schema 1, push, release, or closure is included. Review this acceptance packet before `ki-accept` transitions the item further.
 
 ## Discussion
 
