@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-012
 title: Make bootstrap failure local-mode safe
 theme: cli
 horizon: blocking
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: 887fbfae8bab1b5a4d121110e1ee3b0dcf4bedae
@@ -53,6 +53,18 @@ This is a Blocking local-mode reliability fix with no work-item dependency. It d
 ## Delegation
 
 One fresh serial implementation worker (`gpt-5.6-sol`, high reasoning) owns bootstrap, registry, Doctor, and their CLI tests. Locked: preserve the eight-skill contract and leave all four state surfaces coherent after every successful or failed transition. Escalate any solution that requires weakening archive validation, changing default local-mode policy, or recovering by deleting user-owned content. Done means focused failure-injection and transition tests pass, then the full suite, typecheck, style check, and roadmap audit pass. The worker stops before commit for orchestrator review.
+
+## Acceptance
+
+Delivered in `dcdb1bc fix(bootstrap): preserve local mode on failure`.
+
+- Canonical restoration stages and validates its exact eight-skill inventory before replacing an active local projection; bootstrap rolls configuration and managed links back if a later transition step fails.
+- `bootstrap --refresh` now preserves both remembered `[local]` and `[repositories]` settings, and Doctor reports an unresolvable configured source as a failure.
+- CLI coverage exercises archive failure during active local mode, repeated local/on/off failure cycles, managed-link rollback, and the unresolved-source Doctor diagnostic.
+
+Verified with `bun run test --coverage` (434 passing; 100% statements, branches, functions, and lines), `bunx tsc --noEmit`, `bunx biome check`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .`.
+
+No release, push, or lifecycle closure has been performed.
 
 ## Discussion
 
