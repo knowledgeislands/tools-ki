@@ -47,6 +47,10 @@ The root CLI assembles independent `skill` and `repo skill` command trees throug
 
 This is a Blocking CLI correctness issue with no work-item dependency. It does not block `KI-TOOL-CLI-011` or `KI-TOOL-CLI-012`, whose workspace and bootstrap behaviours are independent. `KI-TOOL-CLI-015` relies on this common parser boundary to reject its deliberately unsupported `ki diag --repo` and `ki repair --workspace` forms.
 
+## Delegation
+
+One fresh serial mechanical worker (`gpt-5.6-terra`, medium reasoning) owns the parser boundary and its CLI tests. Locked: invalid subcommands and options fail non-zero before the affected help; valid help and command dispatch remain unchanged; only the documented reversed-order hint is permitted. Escalate any Commander limitation that would require accepting an invalid spelling or alter valid grammar. Done means root and nested unknown token/option cases pass with and without `-h`, then the full suite, typecheck, style check, and roadmap audit pass. The worker stops before commit for review.
+
 ## Discussion
 
 ### Reproduced input

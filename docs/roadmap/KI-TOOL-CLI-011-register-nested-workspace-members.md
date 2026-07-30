@@ -52,6 +52,10 @@ This item does not follow symbolic links, traverse beneath a repository leaf, cr
 
 No external dependency. `MGIT-CLI-001` is a related, non-blocking cross-repository candidate: it may adopt analogous named-group selection independently, but KI workspace recursion must not wait on it.
 
+## Delegation
+
+One fresh serial implementation worker (`gpt-5.6-sol`, high reasoning) owns the workspace command, resolver, tests, and documentation. Locked: post-order physical traversal; regular repository declarations are leaves; no symbolic links; only default groups change; nested workspaces remain typed members. Escalate any configuration-schema choice that cannot represent these locked semantics without a compatibility path. Done means the stated CLI-contract matrix passes, followed by the full suite, typecheck, style check, and roadmap audit. The worker returns before commit; the orchestrator reviews the diff and gates verification.
+
 ## Discussion
 
 ### Membership model

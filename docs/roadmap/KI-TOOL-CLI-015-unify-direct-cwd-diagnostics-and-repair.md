@@ -60,6 +60,10 @@ This item does not make repair a general configuration generator, change bootstr
 
 This is a Blocking command-topology and repository-projection-health gap. It is independent of workspace registration (`KI-TOOL-CLI-011`), bootstrap rollback (`KI-TOOL-CLI-012`), parser diagnostics (`KI-TOOL-CLI-013`), and repository initialization (`KI-TOOL-CLI-014`), but must settle the top-level diagnostic/repair contract before a separate repository repair command is added.
 
+## Delegation
+
+One fresh serial implementation worker (`gpt-5.6-sol`, high reasoning) owns direct-CWD diagnostics, repair, projections, tests, and documentation after CLI-013 and CLI-014 have landed. Locked: no selectors or discovery; direct regular declaration only; repair reconciles only proven KI-managed links and never adopts foreign content; diagnostics remain read-only. Escalate any proposed global repair action that is not already proven by a diagnostic or requires creating/guessing configuration. Done means the direct-CWD, rejection, projection, repair, dry-run, and documentation contract passes, followed by the full suite, typecheck, style check, roff lint, and roadmap audit. The worker stops before commit for review.
+
 ## Discussion
 
 ### Direct-CWD means direct

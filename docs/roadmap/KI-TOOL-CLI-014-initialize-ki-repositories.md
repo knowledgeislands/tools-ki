@@ -52,6 +52,10 @@ This item does not run `git init`, infer a repository declaration from ambient f
 
 This is a Blocking repository-onboarding gap with no work-item dependency. It does not block the independent workspace, bootstrap, or parser-diagnostic items, but it should take precedence when a user cannot create a KI declaration through the public CLI.
 
+## Delegation
+
+One fresh serial implementation worker (`gpt-5.6-sol`, high reasoning) owns repository initialization, registry transaction handling, CLI tests, and public documentation. Locked: target an existing physical Git repository; require explicit identity metadata; never run `git init`, overwrite a declaration, infer identity, or activate skills. Escalate any metadata grammar, transaction, or interactive-flow decision that cannot be expressed as a deterministic explicit CLI contract. Done means all stated initialization and recovery cases pass, followed by the full suite, typecheck, style check, roff lint, and roadmap audit. The worker stops before commit for review.
+
 ## Discussion
 
 ### Identity ownership

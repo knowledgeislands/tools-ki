@@ -50,6 +50,10 @@ This item does not change the eight-skill bootstrap contract, silently accept an
 
 This is a Blocking local-mode reliability fix with no work-item dependency. It does not block the independently Ready workspace-registration feature, but it should take precedence when working on local-development lifecycle safety.
 
+## Delegation
+
+One fresh serial implementation worker (`gpt-5.6-sol`, high reasoning) owns bootstrap, registry, Doctor, and their CLI tests. Locked: preserve the eight-skill contract and leave all four state surfaces coherent after every successful or failed transition. Escalate any solution that requires weakening archive validation, changing default local-mode policy, or recovering by deleting user-owned content. Done means focused failure-injection and transition tests pass, then the full suite, typecheck, style check, and roadmap audit pass. The worker stops before commit for orchestrator review.
+
 ## Discussion
 
 ### Failure sequence
