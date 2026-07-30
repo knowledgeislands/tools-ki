@@ -135,9 +135,12 @@ ids = [
     expect(doctor.exitCode).toBe(1)
   })
 
-  test('reports a configured skill whose link is absent', async () => {
+  test('reports a configured skill whose active source cannot be resolved', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
+    const linked = await box.root.mkdir('linked-but-unresolved')
+    await box.home.mkdir('.claude/skills')
+    await symlink(linked, `${box.home.path}/.claude/skills/ki-example`, 'dir')
     await box.config.write(
       'ki/config.toml',
       `schema = 1
@@ -155,7 +158,19 @@ harness = "example/harness"
 
     const doctor = await box.run('ki doctor')
 
-    expect(doctor.output).toContain('✗ User skill ki-example: not linked for every compatible configured agent')
+    expect(doctor.output).toContain('✗ User skill ki-example: configured skill cannot be resolved from the active source example/harness')
+    expect(doctor.exitCode).toBe(1)
+  })
+
+  test('reports a configured skill whose resolved link is absent', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await unlink(`${box.home.path}/.claude/skills/ki-recap`)
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).toContain('✗ User skill ki-recap: not linked for every compatible configured agent')
     expect(doctor.exitCode).toBe(1)
   })
 
@@ -293,6 +308,22 @@ harness = "example/harness"
     const doctor = await box.run('ki doctor')
 
     expect(doctor.output).toContain('✗ Local development: local harness must contain skills/process/ki-recap/SKILL.md')
+    expect(doctor.exitCode).toBe(1)
+  })
+
+  test('checks local sources even when the installed harness inventory is unavailable', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run('ki dev local on')
+    await box.data.write('ki/harnesses/not-a-directory', 'x')
+
+    const doctor = await box.run('ki doctor')
+
+    expect(doctor.output).toContain('✗ Harness inventory: installed harnesses directory contains an unsafe owner entry')
+    expect(doctor.output).toContain('✓ User skill ki-recap: linked')
     expect(doctor.exitCode).toBe(1)
   })
 

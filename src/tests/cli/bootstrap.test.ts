@@ -128,10 +128,12 @@ ids = [
     expect(config).toContain(expectedAgentsSection)
   })
 
-  test('preserves registered local repositories while refreshing configuration', async () => {
+  test('preserves registered local and repository settings while refreshing configuration', async () => {
     const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('chatgpt-codex')
     await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
     const repository = await realpath(box.project.path)
     const existing = await box.config.read('ki/config.toml')
     await box.config.write('ki/config.toml', `${existing}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`)
@@ -139,6 +141,7 @@ ids = [
     const refreshed = await box.run('ki bootstrap --refresh')
 
     expect(refreshed.exitCode).toBe(0)
+    expect(await box.config.read('ki/config.toml')).toContain(`[local]\npath = ${JSON.stringify(harnessPath)}\n`)
     expect(await box.config.read('ki/config.toml')).toContain(`[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]`)
   })
 
@@ -153,11 +156,30 @@ ids = [
     const result = await box.run('ki bootstrap')
     const refreshed = await box.run('ki bootstrap --refresh')
     const source = join(box.data.path, 'ki', 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'skills', 'keystone', 'ki-bootstrap')
+    await unlink(target)
+    await symlink(join(box.root.path, 'missing-core-skill'), target, 'dir')
+    const repairedDangling = await box.run('ki bootstrap --refresh')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('ki-bootstrap skill points elsewhere; pass --replace to re-point')
     expect(refreshed.exitCode).toBe(0)
+    expect(repairedDangling.exitCode).toBe(0)
     expect(await realpath(target)).toBe(await realpath(source))
+  })
+
+  test('creates a complete refresh configuration when none exists and refuses a foreign core-skill directory', async () => {
+    const fresh = await sandbox()
+    await fresh.setupAgentHome('chatgpt-codex')
+    const refreshed = await fresh.run('ki bootstrap --refresh')
+
+    const foreign = await sandbox()
+    await foreign.setupAgentHome('chatgpt-codex')
+    await foreign.home.mkdir('.agents/skills/ki-bootstrap')
+    const refused = await foreign.run('ki bootstrap --refresh')
+
+    expect(refreshed.exitCode).toBe(0)
+    expect(await fresh.config.read('ki/config.toml')).toContain('[harnesses]')
+    expect(refused.output).toContain('chatgpt-codex ki-bootstrap skill is not KI-managed')
   })
 
   test('rejects an existing configuration file that is not valid TOML', async () => {
@@ -303,8 +325,37 @@ ids = ["claude-code"]
     expect(bootstrapped).toEqual({
       exitCode: 1,
       output:
-        'created KI agent configuration for no detected agents\ncanonical harness already installed\tarchive 021060d6ab1dc17300d1b54bfd7a504d5f80c117b9b670669e450c12ccebddf0\nki: error: installed harness knowledgeislands/ki-agentic-harness does not provide ki-implement\n'
+        'created KI agent configuration for no detected agents\nki: error: canonical harness is incomplete: missing required bootstrap skill ki-implement\n'
     })
+  })
+
+  test('keeps an active local projection coherent when archive bootstrap fails', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run('ki dev local on')
+    const configuration = await box.config.read('ki/config.toml')
+    await box.setupAgentHome('chatgpt-codex')
+    box.setFetcher(async () => {
+      throw new Error('offline')
+    })
+
+    const bootstrapped = await box.run('ki bootstrap --refresh')
+    const doctor = await box.run('ki doctor')
+
+    expect(bootstrapped.exitCode).toBe(1)
+    expect(bootstrapped.output).toContain('could not download configured harness knowledgeislands/ki-agentic-harness')
+    expect(bootstrapped.output).not.toContain('skill points elsewhere')
+    expect(await box.config.read('ki/config.toml')).toBe(configuration)
+    for (const payload of ['skills', 'subagents', 'hooks']) {
+      expect(await box.data.isSymlink(`ki/harnesses/knowledgeislands/ki-agentic-harness/${payload}`)).toBe(true)
+    }
+    expect(await realpath(`${box.home.path}/.claude/skills/ki-bootstrap`)).toBe(`${harnessPath}/skills/keystone/ki-bootstrap`)
+    expect(doctor.exitCode).toBe(0)
+    expect(doctor.output).toContain(`✓ Local development: active ${harnessPath}`)
+    expect(doctor.output).not.toContain('✗')
   })
 
   test('refresh ignores a dangling managed link and a non-link skill entry', async () => {

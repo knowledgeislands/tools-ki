@@ -164,7 +164,7 @@ ki-recap for claude-code already installed
       })
     })
 
-    test('removes a recognised development projection before attempting canonical restoration', async () => {
+    test('preserves a recognised development projection when canonical restoration fails', async () => {
       const box = await sandbox()
       const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
       await box.setupAgentHome('claude-code')
@@ -178,7 +178,30 @@ ki-recap for claude-code already installed
 
       expect(off.exitCode).toBe(1)
       expect(off.output).toContain('could not download configured harness knowledgeislands/ki-agentic-harness')
-      await expect(lstat(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`)).rejects.toThrow()
+      expect((await lstat(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills`)).isSymbolicLink()).toBe(true)
+    })
+
+    test('keeps repeated local on and failed off transitions coherent', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('claude-code')
+      await box.run('ki bootstrap')
+      await enableLocal(box, harnessPath)
+      box.setFetcher(async () => {
+        throw new Error('offline')
+      })
+
+      const firstOff = await box.run('ki dev local off')
+      const secondOn = await box.run('ki dev local on')
+      const secondOff = await box.run('ki dev local off')
+      const doctor = await box.run('ki doctor')
+
+      expect(firstOff.exitCode).toBe(1)
+      expect(secondOn.exitCode).toBe(0)
+      expect(secondOff.exitCode).toBe(1)
+      expect(await realpath(`${box.home.path}/.claude/skills/ki-recap`)).toBe(`${harnessPath}/skills/process/ki-recap`)
+      expect(doctor.exitCode).toBe(0)
+      expect(doctor.output).not.toContain('✗')
     })
 
     test('attempts canonical restoration when its development destination is already absent', async () => {

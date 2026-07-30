@@ -1,3 +1,5 @@
+import { readFile, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { Command } from 'commander'
 import {
   clearLocalBootstrapHarness,
@@ -5,18 +7,26 @@ import {
   inspectUserConfiguration,
   installBootstrapSkills,
   installedBootstrapSkillSources,
+  localBootstrapHarness,
   refreshUserConfiguration,
   setConfiguredUserSkills
 } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
 import { canonicalHarnessIdentifier } from '../core/harness.ts'
-import { restoreCanonicalHarness } from '../core/registry.ts'
+import { canonicalHarnessDevelopmentEnabled, restoreCanonicalHarness } from '../core/registry.ts'
 
 export const createBootstrapCommand = (context: KiContext): Command =>
   new Command('bootstrap')
     .description('configure detected agents and install KI core user skills')
     .option('--refresh', 'reconcile agents, harnesses, and skills from installed state')
     .action(async (options: { refresh?: boolean }) => {
+      const previous = await inspectUserConfiguration(context.paths.config)
+      const configurationPath = join(context.paths.config, 'config.toml')
+      const previousConfiguration = previous.state === 'valid' ? await readFile(configurationPath, 'utf8') : undefined
+      const activeLocal =
+        previous.local !== null && (await canonicalHarnessDevelopmentEnabled(context.paths.data, previous.local))
+          ? await localBootstrapHarness(previous.local)
+          : undefined
       const configuration = await configureBootstrapAgents({
         homeDirectory: context.homeDirectory,
         configurationDirectory: context.paths.config,
@@ -29,16 +39,12 @@ export const createBootstrapCommand = (context: KiContext): Command =>
       if (configuration.disposition === 'refreshed') {
         context.stdout.write(`refreshed KI agents: ${agents.map((agent) => agent.descriptor.id).join(', ') || 'none'}\n`)
       }
-      const installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
-      // Fixture archives cannot match the pinned canonical SHA-256; its fresh-install presentation is release-only.
-      /* v8 ignore next */
-      context.stdout.write(`canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`)
-      const skills = await installedBootstrapSkillSources(context.paths.data)
-      const projections = await installBootstrapSkills(skills, agents, { replace: options.refresh })
-      if (options.refresh) {
-        const refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents)
-        context.stdout.write(`refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`)
-      } else {
+      let refreshed: Awaited<ReturnType<typeof refreshUserConfiguration>> | undefined
+      const reconcileConfiguration = async (skills: Awaited<ReturnType<typeof installedBootstrapSkillSources>>): Promise<void> => {
+        if (options.refresh) {
+          refreshed = await refreshUserConfiguration(context.paths.config, context.paths.data, agents, previous.local ?? undefined)
+          return
+        }
         await clearLocalBootstrapHarness(context.paths.config)
         const selected = new Map<string, string>(
           (await inspectUserConfiguration(context.paths.config)).skills.map((identity) => [identity.slice(identity.lastIndexOf(':') + 1), identity] as const)
@@ -49,6 +55,46 @@ export const createBootstrapCommand = (context: KiContext): Command =>
           context.homeDirectory,
           [...selected.values()].sort((left, right) => left.localeCompare(right))
         )
+      }
+
+      let installation: Awaited<ReturnType<typeof restoreCanonicalHarness>>
+      let projections: Awaited<ReturnType<typeof installBootstrapSkills>>
+      if (activeLocal) {
+        const skills = await installedBootstrapSkillSources(context.paths.data, canonicalHarnessIdentifier, { preserveHarnessRoot: true })
+        let restored: Awaited<ReturnType<typeof restoreCanonicalHarness>> | undefined
+        try {
+          projections = await installBootstrapSkills(skills, agents, {
+            replace: true,
+            finalize: async () => {
+              await reconcileConfiguration(skills)
+              restored = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
+            }
+          })
+        } catch (error) {
+          // Active-local transitions always start from a valid configuration snapshot.
+          /* v8 ignore next -- The guard protects a future change to active-local detection. */
+          if (previousConfiguration === undefined) throw error
+          await writeFile(configurationPath, previousConfiguration, 'utf8')
+          throw error
+        }
+        // installBootstrapSkills only returns after its finalize callback has completed.
+        /* v8 ignore next -- The guard protects a future change to that callback contract. */
+        if (!restored) throw new Error('canonical harness restoration did not complete')
+        /* v8 ignore next -- Fixture archives cannot match the pinned canonical SHA-256; active-local success is release-only. */
+        installation = restored
+      } else {
+        installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
+        const skills = await installedBootstrapSkillSources(context.paths.data)
+        projections = await installBootstrapSkills(skills, agents, {
+          replace: options.refresh,
+          finalize: () => reconcileConfiguration(skills)
+        })
+      }
+      // Fixture archives cannot match the pinned canonical SHA-256; its fresh-install presentation is release-only.
+      /* v8 ignore next */
+      context.stdout.write(`canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`)
+      if (refreshed) {
+        context.stdout.write(`refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`)
       }
       for (const { agent, skill, installed } of projections) {
         context.stdout.write(`${skill} for ${agent.descriptor.id} ${installed ? 'installed' : 'already installed'}\n`)

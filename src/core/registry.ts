@@ -24,6 +24,8 @@ export interface HarnessRelease {
 export interface HarnessInstallationOptions {
   /** Capabilities the replacement must retain, so active projections remain valid. */
   readonly requiredCapabilities?: readonly string[]
+  /** Give canonical bootstrap inventory failures their actionable archive diagnostic. */
+  readonly requiredCapabilitiesContext?: 'canonical-bootstrap'
   /** Replace an existing verified harness only after the replacement is fully inspected. */
   readonly replace?: boolean
 }
@@ -179,6 +181,9 @@ const requireCapabilities = (harness: InstalledHarness, options: HarnessInstalla
   const required = new Set(options.requiredCapabilities ?? [])
   for (const capability of required) {
     if (!harness.capabilities.some((candidate) => candidate.name === capability)) {
+      if (options.requiredCapabilitiesContext === 'canonical-bootstrap') {
+        throw new KiError(`canonical harness is incomplete: missing required bootstrap skill ${capability}`, 1)
+      }
       throw new KiError(`harness ${harness.id} does not provide skill ${capability}`, 1)
     }
   }
@@ -234,13 +239,6 @@ export const installHarness = async (
     throw error
   }
 }
-
-export const installCanonicalHarness = async (
-  configurationDirectory: string,
-  dataDirectory: string,
-  fetcher: Fetcher
-): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
-  installHarness(configurationDirectory, dataDirectory, canonicalHarnessIdentifier, fetcher)
 
 const canonicalHarnessDirectory = (dataDirectory: string): string => join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
 
@@ -323,21 +321,16 @@ export const canonicalHarnessDevelopmentEnabled = async (dataDirectory: string, 
   return links.every(Boolean)
 }
 
-export const disableCanonicalHarnessDevelopment = async (dataDirectory: string): Promise<boolean> => {
-  const destination = canonicalHarnessDirectory(dataDirectory)
-  if (!(await canonicalDevelopmentProjection(dataDirectory))) return false
-  await rm(destination, { recursive: true })
-  return true
-}
-
 export const restoreCanonicalHarness = async (
   configurationDirectory: string,
   dataDirectory: string,
   fetcher: Fetcher
-): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> => {
-  await disableCanonicalHarnessDevelopment(dataDirectory)
-  return installCanonicalHarness(configurationDirectory, dataDirectory, fetcher)
-}
+): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
+  installHarness(configurationDirectory, dataDirectory, canonicalHarnessIdentifier, fetcher, {
+    replace: await canonicalDevelopmentProjection(dataDirectory),
+    requiredCapabilities: ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-implement', 'ki-accept', 'ki-batch', 'ki-recap'],
+    requiredCapabilitiesContext: 'canonical-bootstrap'
+  })
 
 export const uninstallHarness = async (dataDirectory: string, identifier: string): Promise<void> => {
   // The public command validates both conditions before calling this filesystem primitive; retain its defensive core guard.

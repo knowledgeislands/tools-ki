@@ -12,7 +12,7 @@ import {
 import type { KiContext } from '../context.ts'
 import { readDeclaredSkills } from '../core/configuration.ts'
 import { KiExit } from '../core/errors.ts'
-import { discoverInstalledHarnesses, type InstalledHarness } from '../core/harness.ts'
+import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness } from '../core/harness.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../core/registry.ts'
 
 type CheckStatus = 'pass' | 'fail' | 'skip'
@@ -155,22 +155,30 @@ export const createDoctorCommand = (context: KiContext): Command =>
         const resolved = installed
           .flatMap((harness) => harness.capabilities.map((candidate) => ({ harness, capability: candidate })))
           .find(({ harness, capability }) => identity === `${harness.id}:${capability.name}`)
-        const compatibleAgents = resolved ? agents.filter((agent) => compatibleWithSkill(agent, resolved.capability.supportedRuntimes)) : agents
-        if (compatibleAgents.length === 0) {
-          checks.push({ status: 'fail', label: `User skill ${name}`, detail: 'no compatible configured agent' })
-          continue
-        }
-        const links = await Promise.all(compatibleAgents.map((agent) => managedLink(agent, name)))
         const expected =
-          localSources.get(name) ??
+          (identity.startsWith(`${canonicalHarnessIdentifier}:`) ? localSources.get(name) : undefined) ??
           (resolved
             ? await realpath(join(resolved.harness.root, resolved.capability.source)).catch(
                 /* v8 ignore next -- Discovery verifies this physical source; only concurrent filesystem mutation can make it unavailable here. */
                 () => undefined
               )
             : undefined)
+        if (!expected) {
+          checks.push({
+            status: 'fail',
+            label: `User skill ${name}`,
+            detail: `configured skill cannot be resolved from the active source ${identity.slice(0, identity.indexOf(':'))}`
+          })
+          continue
+        }
+        const compatibleAgents = resolved ? agents.filter((agent) => compatibleWithSkill(agent, resolved.capability.supportedRuntimes)) : agents
+        if (compatibleAgents.length === 0) {
+          checks.push({ status: 'fail', label: `User skill ${name}`, detail: 'no compatible configured agent' })
+          continue
+        }
+        const links = await Promise.all(compatibleAgents.map((agent) => managedLink(agent, name)))
         const absent = links.some(({ link }) => !link)
-        const wrongTarget = Boolean(expected) && links.some(({ target }) => target !== expected)
+        const wrongTarget = links.some(({ target }) => target !== expected)
         checks.push({
           status: absent || wrongTarget ? 'fail' : 'pass',
           label: `User skill ${name}`,
