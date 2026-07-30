@@ -42,7 +42,7 @@ describe('[ki harness lifecycle]', () => {
     const qualified = await box.run('ki harness install example/harness:ki-example')
 
     expect(retired.exitCode).toBe(2)
-    expect(retired.output).toContain("unknown command 'install'")
+    expect(retired.output).toContain("ki: error: unknown subcommand 'install' for 'ki'")
     expect(qualified).toEqual({ exitCode: 2, output: 'ki: error: harness identifier must be an owner/name identifier\n' })
   })
 

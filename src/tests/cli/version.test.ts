@@ -7,9 +7,12 @@ describe('[ki version]', () => {
     const box = await sandbox()
     const version = await box.run('ki version')
     const optionVersion = await box.run('ki --version')
+    const versionWithHelp = await box.run('ki --version -h')
 
     expect(version.output).toBe(`ki ${packageMetadata.version}\n`)
     expect(optionVersion).toEqual({ exitCode: 0, output: `${packageMetadata.version}\n` })
+    expect(versionWithHelp.exitCode).toBe(0)
+    expect(versionWithHelp.output).not.toContain('ki: error:')
   })
 
   test('runs non-network commands with the production default fetcher', async () => {

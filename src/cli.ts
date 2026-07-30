@@ -4,6 +4,49 @@ import type { KiContext } from './context.ts'
 import { KiError, KiExit } from './core/errors.ts'
 import { KI_VERSION } from './version.ts'
 
+type ParserCommand = Command & {
+  _outputHelpIfRequested: (arguments_: readonly string[]) => void
+}
+
+const commandName = (command: Command): string => {
+  const names: string[] = []
+  let current: Command | null = command
+  while (current) {
+    names.push(current.name())
+    current = current.parent
+  }
+  return names.reverse().join(' ')
+}
+
+const parserError = (command: Command, text: string): string => {
+  const option = /^error: unknown option '([^']+)'\n$/.exec(text)
+  if (option) return `ki: error: unknown option '${option[1]}' for '${commandName(command)}'\n`
+
+  const subcommand = /^error: unknown command '([^']+)'\n$/.exec(text)
+  if (!subcommand) return text
+
+  const hint = commandName(command) === 'ki skill' && subcommand[1] === 'repo' ? 'Did you mean: ki repo skill …?\n' : ''
+  return `ki: error: unknown subcommand '${subcommand[1]}' for '${commandName(command)}'\n${hint}`
+}
+
+const unknownOption = (command: Command, arguments_: readonly string[]): string | undefined => {
+  const options = command.createHelp().visibleOptions(command)
+  for (const argument of arguments_) {
+    if (argument === '--') return undefined
+    // Commander keeps positional operands outside this unknown-option sequence.
+    /* v8 ignore next -- The guard protects a future Commander parser change. */
+    if (!argument.startsWith('-')) continue
+    const flag = argument.startsWith('--') ? argument.split('=', 1)[0] : argument
+    if (!options.some((option) => option.short === flag || option.long === flag)) return argument
+  }
+  return undefined
+}
+
+const unknownSubcommand = (command: Command): string | undefined => {
+  const [first] = command.args
+  return command.commands.length && first && !first.startsWith('-') ? first : undefined
+}
+
 export const createProgram = (context: KiContext): Command => {
   const program = new Command()
     .name('ki')
@@ -18,7 +61,21 @@ export const createProgram = (context: KiContext): Command => {
     command.helpCommand(false)
     command.exitOverride()
     command.showHelpAfterError()
-    command.configureOutput({ writeOut: (text) => context.stdout.write(text), writeErr: (text) => context.stderr.write(text) })
+    command.showSuggestionAfterError(false)
+    command.configureOutput({
+      writeOut: (text) => context.stdout.write(text),
+      writeErr: (text) => context.stderr.write(text),
+      outputError: (text, write) => write(parserError(command, text))
+    })
+    const parserCommand = command as ParserCommand
+    const outputHelpIfRequested = parserCommand._outputHelpIfRequested
+    parserCommand._outputHelpIfRequested = (arguments_) => {
+      const subcommand = unknownSubcommand(command)
+      if (subcommand) command.error(`error: unknown command '${subcommand}'`)
+      const option = unknownOption(command, arguments_)
+      if (option) command.error(`error: unknown option '${option}'`)
+      outputHelpIfRequested.call(command, arguments_)
+    }
     for (const child of command.commands) configureCommandTree(child)
   }
   configureCommandTree(program)

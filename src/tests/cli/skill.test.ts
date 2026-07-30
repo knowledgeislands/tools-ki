@@ -10,6 +10,35 @@ describe('[ki skill]', () => {
     await box.run('ki bootstrap')
   }
 
+  test('rejects unknown nested syntax before skill help while retaining valid help', async () => {
+    const box = await sandbox()
+    const subcommand = await box.run('ki skill repo')
+    const subcommandWithHelp = await box.run('ki skill repo -h')
+    const option = await box.run('ki skill --repo')
+    const shortOptionWithHelp = await box.run('ki skill -x -h')
+    const optionWithHelp = await box.run('ki skill add ki-example --repo -h')
+    const help = await box.run('ki skill -h')
+
+    for (const result of [subcommand, subcommandWithHelp]) {
+      expect(result.exitCode).toBe(2)
+      expect(result.output).toContain("ki: error: unknown subcommand 'repo' for 'ki skill'\nDid you mean: ki repo skill …?\n")
+      expect(result.output).toContain('Usage: ki skill [options] [command]')
+    }
+    expect(option.exitCode).toBe(2)
+    expect(option.output).toContain("ki: error: unknown option '--repo' for 'ki skill'\n")
+    expect(option.output).toContain('Usage: ki skill')
+    expect(shortOptionWithHelp.exitCode).toBe(2)
+    expect(shortOptionWithHelp.output).toContain("ki: error: unknown option '-x' for 'ki skill'\n")
+    expect(shortOptionWithHelp.output).toContain('Usage: ki skill')
+    expect(optionWithHelp.exitCode).toBe(2)
+    expect(optionWithHelp.output).toContain("ki: error: unknown option '--repo' for 'ki skill add'\n")
+    expect(optionWithHelp.output).toContain('Usage: ki skill add [options] <skill>')
+    expect(help.exitCode).toBe(0)
+    expect(help.output).toContain('Usage: ki skill [options] [command]')
+    expect(help.output).toContain('add [options] <skill>')
+    expect(help.output).not.toContain('ki: error:')
+  })
+
   describe('user scope', () => {
     test('activates portable and runtime-bound skills only for compatible configured agents', async () => {
       const portable = await sandbox()

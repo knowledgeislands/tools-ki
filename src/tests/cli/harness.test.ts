@@ -57,11 +57,9 @@ describe('[ki harness]', () => {
       await box.setupExampleHarness()
       const result = await box.run('ki harness info example/harness --json')
 
-      expect(result).toEqual({
-        exitCode: 2,
-        output:
-          "error: unknown option '--json'\n\nUsage: ki harness info [options] <harness-id>\n\ninspect one installed harness\n\nArguments:\n  harness-id  installed harness identifier\n\nOptions:\n  -h, --help  display help for command\n"
-      })
+      expect(result.exitCode).toBe(2)
+      expect(result.output).toContain("ki: error: unknown option '--json' for 'ki harness info'\n")
+      expect(result.output).toContain('Usage: ki harness info [options] <harness-id>')
     })
 
     test('rejects an invalid installed harness identifier before reading its path', async () => {
