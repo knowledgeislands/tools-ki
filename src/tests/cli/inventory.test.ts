@@ -13,6 +13,7 @@ const rootHelpCommands = [
   'cleanup',
   'version',
   'diag',
+  'repair',
   'doctor',
   'docs',
   'list',
@@ -25,7 +26,7 @@ const rootHelpCommands = [
 ]
 
 const rootCompletionCommands = [...rootHelpCommands].sort()
-const repoCommands = ['audit', 'conform', 'diag', 'educate', 'init', 'list', 'plan', 'register', 'skill', 'upgrade']
+const repoCommands = ['audit', 'conform', 'educate', 'init', 'list', 'plan', 'register', 'skill', 'upgrade']
 
 const commandNames = (output: string): string[] => output.split('\n').flatMap((line) => /^ {2}([a-z]+)(?:\s|$)/.exec(line)?.[1] ?? [])
 
@@ -38,7 +39,7 @@ describe('[ki command inventory]', () => {
     const bash = await box.run('ki completions bash')
 
     expect(commandNames(root.output)).toEqual(rootHelpCommands)
-    expect(commandNames(repository.output)).toEqual(['init', 'audit', 'conform', 'register', 'list', 'plan', 'educate', 'skill', 'upgrade', 'diag'])
+    expect(commandNames(repository.output)).toEqual(['init', 'audit', 'conform', 'register', 'list', 'plan', 'educate', 'skill', 'upgrade'])
     expect(zsh.output).toContain(`_values 'command' ${rootCompletionCommands.join(' ')}`)
     expect(zsh.output).toContain(`_values 'repository command' ${repoCommands.join(' ')}`)
     expect(bash.output).toContain(`compgen -W "${rootCompletionCommands.join(' ')} --help --version"`)

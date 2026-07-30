@@ -58,7 +58,8 @@ ki workspace add default 'repos/*'
 ki workspace register
 ki workspace list
 ki repo init --title 'Example repository' --description 'An explicit KI repository identity.' --repo-code EXAMPLE --runtime claude-code --runtime codex --visibility private
-ki repo diag
+ki diag
+ki repair --dry-run
 ki repo --workspace default audit
 ```
 
@@ -92,7 +93,7 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 `ki search <query>` searches only verified installed harness capabilities, without contacting a registry or discovering a repository.
 
-`ki cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories and validates a regular direct-CWD `.ki-config.toml`, without searching for or operating on a repository.
+`ki cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki diag` always reports global KI state and, only for a regular `.ki-config.toml` in the current directory itself, also reports declared repository skills and compatible local projections. `ki repair` follows the same direct-CWD boundary, records that physical root before later repository evaluation, and recreates only missing, dangling, or stale KI-managed projections; `--dry-run` changes nothing. Neither command accepts repository selectors, searches ancestors, expands workspaces or mGit, or follows a symbolic repository declaration. `ki doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories and validates a regular direct-CWD `.ki-config.toml`.
 
 `ki docs` prints labelled public CLI, site, manual, and roadmap locations; `ki docs [overview|site|manual|roadmap]` prints one location. It never opens a browser or fetches content.
 

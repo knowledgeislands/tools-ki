@@ -2,7 +2,6 @@ import { realpath, rm } from 'node:fs/promises'
 import { Command } from 'commander'
 import { configuredRepositoryWrite, inspectUserConfiguration } from '../agents/index.ts'
 import { repoHelpCommandNames } from '../commands/catalogue.ts'
-import { createRepoDiagCommand } from '../commands/diag.ts'
 import { createRepoPlanCommand } from '../commands/plan.ts'
 import { createRepoSkillCommand } from '../commands/skill.ts'
 import { createUpgradeCommand } from '../commands/update.ts'
@@ -73,7 +72,6 @@ export const createRepositoryOperations = (context: KiContext): Command => {
     return { repositories: options.repo, workspace: options.workspace }
   }
   command
-    .addCommand(createRepoDiagCommand(context, selectedRepositories))
     .addCommand(createRepoPlanCommand(context, selectedRepositories))
     .addCommand(createRepoSkillCommand(context, selectedRepositories))
     .addCommand(createUpgradeCommand(context, selectedRepositories))

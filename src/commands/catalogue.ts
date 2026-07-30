@@ -12,6 +12,7 @@ export const rootCommandNames = [
   'list',
   'missing',
   'outdated',
+  'repair',
   'repo',
   'search',
   'skill',
@@ -36,6 +37,7 @@ export const rootHelpCommandNames = [
   'cleanup',
   'version',
   'diag',
+  'repair',
   'doctor',
   'docs',
   'list',
@@ -49,6 +51,6 @@ export const rootHelpCommandNames = [
 
 export type RootCommandName = (typeof rootCommandNames)[number]
 
-export const repoCommandNames = ['audit', 'conform', 'diag', 'educate', 'init', 'list', 'plan', 'register', 'skill', 'upgrade'] as const
+export const repoCommandNames = ['audit', 'conform', 'educate', 'init', 'list', 'plan', 'register', 'skill', 'upgrade'] as const
 
-export const repoHelpCommandNames = ['init', 'audit', 'conform', 'register', 'list', 'plan', 'educate', 'skill', 'upgrade', 'diag'] as const
+export const repoHelpCommandNames = ['init', 'audit', 'conform', 'register', 'list', 'plan', 'educate', 'skill', 'upgrade'] as const

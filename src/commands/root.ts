@@ -13,6 +13,7 @@ import { createDoctorCommand } from './doctor.ts'
 import { createHarnessCommand } from './harness.ts'
 import { createHelpCommand } from './help.ts'
 import { createListCommand } from './list.ts'
+import { createRepairCommand } from './repair.ts'
 import { createRepoCommand } from './repo.ts'
 import { createSearchCommand } from './search.ts'
 import { createSkillCommand } from './skill.ts'
@@ -37,6 +38,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   missing: (context) => createMissingCommand(context),
   outdated: (context) => createOutdatedCommand(context),
   repo: (context) => createRepoCommand(context),
+  repair: (context) => createRepairCommand(context),
   search: (context) => createSearchCommand(context),
   skill: (context) => createSkillCommand(context),
   update: (context) => createUpdateCommand(context),

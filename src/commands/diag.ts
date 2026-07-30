@@ -1,14 +1,15 @@
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../agents/index.ts'
 import type { KiContext } from '../context.ts'
+import { KiExit } from '../core/errors.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../core/registry.ts'
-import { resolveRepositoryTargets } from '../core/repository.ts'
 import { KI_VERSION } from '../version.ts'
+import { inspectDirectRepositoryHealth } from './repository-health.ts'
 
 const field = (label: string, value: string): string => `  ${label.padEnd(14)}${value}`
 
 export const createDiagCommand = (context: KiContext): Command =>
-  new Command('diag').description('report CLI installation mode, paths, and configuration').action(async () => {
+  new Command('diag').description('report CLI installation mode, paths, configuration, and direct repository health').action(async () => {
     const configuration = await inspectUserConfiguration(context.paths.config)
     const lines = [
       'ki diag',
@@ -49,28 +50,8 @@ export const createDiagCommand = (context: KiContext): Command =>
     if (configuration.errors.length) {
       lines.push('', 'Errors', ...configuration.errors.map((error) => `  - ${error}`))
     }
+    const repository = await inspectDirectRepositoryHealth(context)
+    if (repository) lines.push('', 'Repository', ...repository.lines)
     context.stdout.write(`${lines.join('\n')}\n`)
-  })
-
-export const createRepoDiagCommand = (
-  context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly workspace?: string }
-): Command =>
-  new Command('diag').description('report one or more KI repository resolutions').action(async () => {
-    const selected = selectedRepositories()
-    const repositories = await resolveRepositoryTargets({
-      repositories: selected.repositories,
-      workspace: selected.workspace,
-      workingDirectory: context.workingDirectory,
-      homeDirectory: context.homeDirectory
-    })
-    const source = selected.workspace
-      ? `workspace group ${selected.workspace}`
-      : selected.repositories.length === 1
-        ? `explicit path ${selected.repositories[0]}`
-        : selected.repositories.length
-          ? 'explicit target set'
-          : 'current working directory'
-    const reports = repositories.map((repository) => `Repository: ${repository.root}\nConfiguration: ${repository.configuration}\nSource: ${source}`)
-    context.stdout.write(`ki repo diag\n${reports.join('\n\n')}\n`)
+    if (repository?.health === 'unrepairable') throw new KiExit(1)
   })

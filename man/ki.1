@@ -52,14 +52,14 @@ Report eligible KI-managed stale state.
 Print the CLI version.
 .TP
 .B ki diag
-Show installation mode, paths, and user configuration.
+Show global state and direct-CWD repository health.
+.TP
+.B ki repair [--dry-run]
+Reconcile proven KI-managed global and direct-CWD repository state.
 .TP
 .B ki doctor
 Check user configuration, agents, harnesses, user-skill links, and direct-CWD
 legacy KI state and configuration.
-.TP
-.B ki repo [repo-options] diag
-Show selected repository resolutions.
 .TP
 .B ki docs [topic]
 Print canonical KI documentation locations.
@@ -274,7 +274,21 @@ Print the CLI version.
 .TP
 .B ki diag
 Print the CLI version, installation mode, resolved paths, and user
-configuration without changing state.
+configuration without changing state. When the current directory itself has a
+regular \fB.ki-config.toml\fR, it also reports that one repository's declared
+skills and compatible agent projections. It never accepts selectors, searches
+ancestors, expands a workspace or mGit container, or follows a symbolic
+repository declaration.
+.TP
+.B ki repair [--dry-run]
+Reconcile only KI-managed state that KI can prove needs repair. It always
+reports global state and, for a regular direct-CWD \fB.ki-config.toml\fR,
+records that physical repository root before evaluating declarations and
+compatible skill projections. It may recreate missing, dangling, or stale
+KI-managed links but never creates a declaration, adds an undeclared skill,
+overwrites foreign content, guesses a provider or runtime, searches ancestors,
+or expands a workspace or mGit container. \fB--dry-run\fR reports the same
+actions without changing disk state.
 .TP
 .B ki doctor
 Check the user configuration, configured agent skill directories, installed
@@ -283,12 +297,6 @@ reports direct-CWD legacy \fB.ki-meta/\fR and \fB.ki/\fR directories, without
 searching for or operating on a repository. It validates a regular direct-CWD
 \fB.ki-config.toml\fR declaration without resolving its providers. A failing
 check produces a non-zero exit status after the complete report.
-.TP
-.B ki repo [repo-options] diag
-Resolve every selected KI repository without changing it. Without an explicit
-selector, KI uses a direct-CWD workspace default, then direct-CWD
-\fB.mgit-config.toml\fR members, or discovers from the current working
-directory; with a selector, KI resolves only the supplied target set.
 .TP
 .B ki docs [topic]
 Print canonical documentation locations without opening a browser, fetching

@@ -124,7 +124,7 @@ describe('[ki workspace]', () => {
     const zulu = await realpath(`${box.project.path}/z-repo`)
 
     const listed = await box.run('ki workspace list')
-    const operation = await box.run('ki repo diag')
+    const operation = await box.run('ki repo plan list')
 
     expect(listed).toEqual({
       exitCode: 0,
@@ -138,20 +138,19 @@ describe('[ki workspace]', () => {
     expect(operation.exitCode).toBe(0)
     expect(operation.output.indexOf(`Repository: ${alpha}`)).toBeLessThan(operation.output.indexOf(`Repository: ${beta}`))
     expect(operation.output.indexOf(`Repository: ${beta}`)).toBeLessThan(operation.output.indexOf(`Repository: ${zulu}`))
-    expect(operation.output.match(/Source: current working directory/g)).toHaveLength(3)
   })
 
   test('refuses nested workspace cycles and duplicate repository leaves before an operation starts', async () => {
     const cycleBox = await sandbox()
     await cycleBox.project.write('.ki-workspace.toml', workspace(member('workspace', 'nested')))
     await cycleBox.project.write('nested/.ki-workspace.toml', workspace(member('workspace', '..')))
-    const cycle = await cycleBox.run('ki repo diag')
+    const cycle = await cycleBox.run('ki repo plan list')
 
     const duplicateBox = await sandbox()
     await duplicateBox.project.write('.ki-workspace.toml', workspace(`${member('repository', 'repo')}, ${member('workspace', 'nested')}`))
     await duplicateBox.project.write('nested/.ki-workspace.toml', workspace(member('repository', '../repo')))
     await duplicateBox.project.write('repo/.ki-config.toml', metadata('REPO', 'Repository', 'Duplicate target.'))
-    const duplicate = await duplicateBox.run('ki repo diag')
+    const duplicate = await duplicateBox.run('ki repo plan list')
 
     expect(cycle).toEqual({
       exitCode: 2,
@@ -169,13 +168,13 @@ describe('[ki workspace]', () => {
     await box.project.write('.ki-workspace.toml', workspace('{ type = "unknown", path = "repo" }'))
     const unsupported = await box.run('ki workspace list')
     await box.project.write('.ki-workspace.toml', workspace(member('repository', '../outside')))
-    const escaping = await box.run('ki repo diag')
+    const escaping = await box.run('ki repo plan list')
     await box.root.write('outside/.ki-config.toml', metadata('OUT', 'Outside', 'Outside repository.'))
     await symlink(`${box.root.path}/outside`, `${box.project.path}/linked`)
     await box.project.write('.ki-workspace.toml', workspace(member('repository', 'linked')))
-    const linked = await box.run('ki repo diag')
+    const linked = await box.run('ki repo plan list')
     await box.project.write('.ki-workspace.toml', workspace(member('repository', '.')))
-    const selectingRoot = await box.run('ki repo diag')
+    const selectingRoot = await box.run('ki repo plan list')
 
     expect(unsupported).toEqual({
       exitCode: 2,
@@ -323,34 +322,34 @@ describe('[ki workspace]', () => {
     await symlink(`${box.root.path}/outside`, `${box.project.path}/repos/linked`)
 
     await box.project.write('.ki-workspace.toml', workspace(member('repository', 'repos/?')))
-    expect(await box.run('ki repo --repo repos/a --workspace default diag')).toEqual({
+    expect(await box.run('ki repo --repo repos/a --workspace default plan list')).toEqual({
       exitCode: 2,
       output: 'ki: error: --repo and --workspace cannot be used together\n'
     })
-    const immediate = await box.run('ki repo --workspace default diag')
+    const immediate = await box.run('ki repo --workspace default plan list')
     expect(immediate.exitCode).toBe(0)
-    expect(immediate.output).toContain('Source: workspace group default')
+    expect(immediate.output).toContain('Repository:')
     expect(immediate.output).not.toContain('linked')
 
     await box.project.write('.ki-workspace.toml', workspace(member('repository', 'repos/**/x?')))
-    const recursive = await box.run('ki repo diag')
+    const recursive = await box.run('ki repo plan list')
     expect(recursive.exitCode).toBe(0)
     expect(recursive.output).toContain('/repos/deep/x1')
 
     await box.project.write('.ki-workspace.toml', workspace(member('repository', 'repos/none*')))
-    expect(await box.run('ki repo diag')).toEqual({
+    expect(await box.run('ki repo plan list')).toEqual({
       exitCode: 2,
       output: 'ki: error: workspace group default repository repos/none* matched no repositories\n'
     })
 
     await box.project.write('.ki-workspace.toml', workspace(member('repository', 'missing')))
-    expect(await box.run('ki repo diag')).toEqual({
+    expect(await box.run('ki repo plan list')).toEqual({
       exitCode: 2,
       output: 'ki: error: workspace group default repository missing must be an existing physical directory\n'
     })
 
     await box.project.write('.ki-workspace.toml', workspace(member('repository', '*')))
-    const nonRepository = await box.run('ki repo diag')
+    const nonRepository = await box.run('ki repo plan list')
     expect(nonRepository.exitCode).toBe(2)
     expect(nonRepository.output).toContain('must contain a regular .ki-config.toml')
   })
@@ -376,7 +375,7 @@ describe('[ki workspace]', () => {
       exitCode: 2,
       output: `ki: error: ${unsafeRoot}/.ki-workspace.toml must be a regular file\n`
     })
-    expect(await unsafeBox.run('ki repo diag')).toEqual({
+    expect(await unsafeBox.run('ki repo plan list')).toEqual({
       exitCode: 2,
       output: `ki: error: ${unsafeRoot}/.ki-workspace.toml must be a regular file\n`
     })

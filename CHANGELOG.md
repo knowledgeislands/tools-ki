@@ -29,8 +29,8 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki version`
 - `ki diag`
+- `ki repair`
 - `ki doctor`
-- `ki repo diag`
 - `ki docs`
 
 #### User management
