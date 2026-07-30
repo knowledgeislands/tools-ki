@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-013
 title: Report unrecognised CLI syntax before help
 theme: cli
 horizon: blocking
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: 3bc6dabdc9be4a420f0f33a415ff6a63deb0f4ec
@@ -50,6 +50,18 @@ This is a Blocking CLI correctness issue with no work-item dependency. It does n
 ## Delegation
 
 One fresh serial mechanical worker (`gpt-5.6-terra`, medium reasoning) owns the parser boundary and its CLI tests. Locked: invalid subcommands and options fail non-zero before the affected help; valid help and command dispatch remain unchanged; only the documented reversed-order hint is permitted. Escalate any Commander limitation that would require accepting an invalid spelling or alter valid grammar. Done means root and nested unknown token/option cases pass with and without `-h`, then the full suite, typecheck, style check, and roadmap audit pass. The worker stops before commit for review.
+
+## Acceptance
+
+Delivered in `b0559e2 fix(cli): report invalid syntax before help`.
+
+- Root and nested parser errors now use `ki: error:` wording, a non-zero usage exit, and the affected command’s help, even when `-h` appears beside invalid syntax.
+- The only corrective hint is `ki skill repo` → `ki repo skill …?`; generic Commander suggestions are disabled.
+- Coverage covers root and nested unknown subcommands/options, options before and after help, valid declared options beside help, the option terminator, and valid version/help behaviour.
+
+Verified with `bun run test --coverage` (435 passing; 100% statements, branches, functions, and lines), `bunx tsc --noEmit`, `bunx biome check`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .`.
+
+No release, push, or lifecycle closure has been performed.
 
 ## Discussion
 
