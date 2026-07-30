@@ -340,13 +340,6 @@ Remove a KI-managed user skill link.
 .PP
 Use these commands from a workspace directory to manage KI-owned named
 repository groups without requiring the directory itself to be a KI repository.
-The regular \fB.ki-workspace.toml\fR file has schema version 1, a required
-default group, and a typed \fBmembers\fR map. Each relative path key names a
-table containing \fBkind\fR, either \fBrepository\fR or \fBworkspace\fR.
-Repository path keys may contain patterns; workspace path keys may not. Nested
-workspace members recursively expand their default groups. Other schema
-versions and historical array or flat \fBrepositories\fR group forms are
-rejected.
 .TP
 .B ki workspace init
 Create the initial workspace file with an empty \fBdefault\fR group.
@@ -565,6 +558,23 @@ $KI_STATE_HOME  | $XDG_STATE_HOME/ki  | ~/.local/state/ki
 Run
 .B ki diag
 to inspect the effective values.
+.SH FILES
+\&
+.TP
+.I .ki-workspace.toml
+Optional schema-1 workspace manifest in a non-repository container directory.
+It defines named groups of path-keyed repository and nested-workspace members.
+.PP
+The manifest has a required default group and a typed \fBmembers\fR map. Each
+relative path key names a table containing \fBkind\fR, either
+\fBrepository\fR or \fBworkspace\fR. Repository path keys may contain
+patterns; workspace path keys may not. Nested workspace members recursively
+expand their default groups. Other schema versions and historical array or flat
+\fBrepositories\fR group forms are rejected.
+.TP
+.I .ki-config.toml
+Required repository configuration at a KI repository root.
+It declares the repository identity, metadata, and provided skills.
 .SH DEVELOPMENT INSTALLATIONS
 \&
 .PP
