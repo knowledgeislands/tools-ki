@@ -23,10 +23,10 @@ The root CLI assembles independent `skill` and `repo skill` command trees throug
 
 ## Steps
 
-1. Define a shared CLI parser-error boundary that detects an unknown subcommand before emitting help and renders it through KI's normal error presentation with a non-zero usage exit code.
+1. Define a shared CLI parser-error boundary that detects an unknown subcommand before emitting help, renders it through KI's normal error presentation with a non-zero usage exit code, and then prints the affected command's help.
 2. Apply the boundary to nested command groups, beginning with `ki skill repo -h`, without swallowing valid help requests or changing valid command dispatch.
 3. Where useful, provide a deterministic corrective hint for a known reversed command order, such as `ki repo skill`.
-4. Add CLI-contract tests for unknown nested subcommands with and without `-h`, asserting explicit error text, exit code, no accidental success, and unchanged valid help output.
+4. Add CLI-contract tests for unknown nested subcommands with and without `-h`, asserting explicit error text and correction hint before the affected command's help, a non-zero exit code, and unchanged valid help output.
 
 ## Files touched
 
@@ -54,11 +54,14 @@ This is a Blocking CLI correctness issue with no work-item dependency. It does n
 
 ### Diagnostic contract
 
-An unrecognised command token is a usage error even if subsequent options request help. The command should name the invalid token and its parent command, retain a stable non-zero exit code, and avoid presenting parent help as a successful response. For the reproduced input, the contract is:
+An unrecognised command token is a usage error even if subsequent options request help. The command should name the invalid token and its parent command, retain a stable non-zero exit code, then print the affected command's help so the valid forms remain visible. For the reproduced input, the error prefix is:
 
 ```text
 ki: error: unknown subcommand 'repo' for 'ki skill'
 Did you mean: ki repo skill …?
+
+Usage: ki skill [options] [command]
+…
 ```
 
 A correction hint is helpful only where it is unambiguous and must not turn the invalid spelling into a supported compatibility path.
