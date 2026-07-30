@@ -11,13 +11,13 @@ baseline-ref: null
 
 ## Context
 
-Make `ki diag` and a new top-level `ki repair` the single local diagnostics-and-recovery surface. Both commands always consider user/global KI state; when, and only when, the current working directory itself contains `.ki-config.toml`, they additionally report or repair that one repository. This replaces the selected-target diagnostic command `ki repo diag` and avoids introducing `ki repo repair`.
+Make `ki diag` and a new top-level `ki repair` the single local diagnostics-and-recovery surface. Both commands always consider user/global KI state; when, and only when, the current working directory itself contains `.ki-config.toml`, they additionally report or repair that one repository. `ki repair` also attempts to register that direct physical root before evaluating whether later repair is possible. This replaces the selected-target diagnostic command `ki repo diag` and avoids introducing `ki repo repair`.
 
 ## Boundary
 
 Neither `ki diag` nor `ki repair` accepts `--repo`, `--workspace`, or another repository selector. They do not discover a declaration in an ancestor, expand a workspace or `.mgit-config.toml`, follow a symlink, or select multiple repositories. A directory without a direct `.ki-config.toml` receives only the global result and is not an error. Repository operations that intentionally address explicit or multiple targets remain under `ki repo`.
 
-This item does not make repair a general configuration generator, change bootstrap/local-mode recovery (`KI-TOOL-CLI-012`), make `ki repo init` implicit (`KI-TOOL-CLI-014`), or replace repository governance commands such as `ki repo audit` and `ki repo conform`.
+This item does not make repair a general configuration generator, change bootstrap/local-mode recovery (`KI-TOOL-CLI-012`), make `ki repo init` implicit (`KI-TOOL-CLI-014`), or replace repository governance commands such as `ki repo audit` and `ki repo conform`. Registration is inventory only: it does not turn a failing repository into a conformant one or bypass later repair diagnostics.
 
 ## Current state
 
@@ -27,8 +27,8 @@ This item does not make repair a general configuration generator, change bootstr
 
 1. Remove `ki repo diag` and fold its useful direct-CWD repository information into `ki diag`, following the global report with a clearly labelled repository section only when the current directory contains `.ki-config.toml`.
 2. Extend direct-CWD repository diagnostics to resolve every declared skill from the active provider and check the compatible repository-agent projection: each expected projection must be a non-dangling KI-managed symlink to the resolved skill source. Report malformed declarations, unresolved providers, missing projections, non-link/foreign entries, dangling links, stale targets, and incompatible runtime declarations deterministically.
-3. Add top-level `ki repair`. It first reconciles only KI-managed global state that its diagnostics can prove needs repair, then, when a direct-CWD repository declaration is present, reconciles declared resolved repository-skill projections for compatible runtimes. Provide `--dry-run`; never create a declaration, add undeclared skills, overwrite foreign non-link content, follow symlinks, or guess a missing provider or runtime.
-4. Establish the command result contract: `ki diag` is read-only and renders global results plus an optional direct repository section; `ki repair` renders global repair results plus an optional direct repository section, is a no-op when both scopes are healthy, and exits non-zero for unrepairable diagnostics after reporting them.
+3. Add top-level `ki repair`. It first reconciles only KI-managed global state that its diagnostics can prove needs repair, then, when a direct-CWD repository declaration is present, attempts to register that physical root before resolving the declaration or repository-skill projections. It then reconciles declared resolved repository-skill projections for compatible runtimes. Provide `--dry-run`; never create a declaration, add undeclared skills, overwrite foreign non-link content, follow symlinks, or guess a missing provider or runtime.
+4. Establish the command result contract: `ki diag` is read-only and renders global results plus an optional direct repository section; `ki repair` renders global repair results plus an optional direct repository section, records a direct physical KI root even when later diagnostics are unrepairable, is a no-op when both scopes are healthy, and exits non-zero for unrepairable diagnostics after reporting them.
 5. Add CLI-contract coverage for direct versus nested/ancestor declarations, no-repository CWD behaviour, selector rejection, workspace/mGit non-expansion, repository projection failures and successful repair, dry-run, foreign-entry protection, unresolved providers, and global-plus-repository output ordering.
 6. Update command inventory, completion scripts, README, manual, and changelog. Keep Diagnostics ahead of Development in the manual and validate the finished roff with `mandoc -Tlint man/ki.1`.
 
@@ -73,3 +73,7 @@ The commands must inspect `context.workingDirectory/.ki-config.toml`, not perfor
 ### Safe repair boundary
 
 Repair is reconciliation, not inference. It may recreate a missing or stale KI-managed link when the declaration, provider, runtime intersection, and expected source are all valid. It must stop with an actionable result for a malformed declaration, unavailable provider, unsupported runtime, foreign path, or any state where it cannot prove both ownership and the intended target. `--dry-run` must show precisely the actions it would take without changing disk state.
+
+### Registration boundary
+
+Registration is separate from repairability. When the direct CWD has a physical regular `.ki-config.toml`, `ki repair` records that root in the local registry before it interprets the declaration or projection state. A malformed or unavailable declaration therefore remains available for later audit and bulk work, while `ki diag` stays read-only and `--dry-run` changes nothing.
