@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-014
 title: Initialize KI repositories
 theme: cli
 horizon: blocking
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: 2e5f8a3e847b1c254c4a2537992f509dad0aefde
@@ -55,6 +55,18 @@ This is a Blocking repository-onboarding gap with no work-item dependency. It do
 ## Delegation
 
 One fresh serial implementation worker (`gpt-5.6-sol`, high reasoning) owns repository initialization, registry transaction handling, CLI tests, and public documentation. Locked: target an existing physical Git repository; require explicit identity metadata; never run `git init`, overwrite a declaration, infer identity, or activate skills. Escalate any metadata grammar, transaction, or interactive-flow decision that cannot be expressed as a deterministic explicit CLI contract. Done means all stated initialization and recovery cases pass, followed by the full suite, typecheck, style check, roff lint, and roadmap audit. The worker stops before commit for review.
+
+## Acceptance
+
+Delivered in `2bfb1ac feat(repo): initialize KI repositories`.
+
+- `ki repo init [directory]` requires explicit title, description, uppercase repo code, one or more supported runtimes, and public/private visibility for exactly one physical Git-worktree root.
+- The command creates the canonical qualified `ki-repo` declaration, registers the root locally, rejects selectors and existing/symlink/non-root/non-Git targets, and removes its new declaration if registry publication fails.
+- Help, completions, README, changelog, manual, and workspace metadata fixtures now use the same canonical declaration contract.
+
+Verified with `bun run test --coverage` (440 passing; 100% statements, branches, functions, and lines), `bunx tsc --noEmit`, `bunx biome check`, `bun run ki:tools:lint-man`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .`.
+
+No release, push, or lifecycle closure has been performed.
 
 ## Discussion
 
