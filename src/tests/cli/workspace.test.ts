@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
 const metadata = (repoCode: string, title: string, description: string): string =>
-  `[ki-repo]\ntitle = "${title}"\ndescription = "${description}"\nrepo_code = "${repoCode}"\n`
+  `["knowledgeislands/ki-agentic-harness:ki-repo"]\ntitle = "${title}"\ndescription = "${description}"\nrepo_code = "${repoCode}"\n`
 
 const workspace = (members: string, options: { readonly name?: string; readonly extra?: string } = {}): string => {
   const name = options.name ?? 'default'
@@ -201,7 +201,10 @@ describe('[ki workspace]', () => {
     await box.project.write('.ki-workspace.toml', workspace(member('repository', 'repo')))
     await box.project.write('repo/.ki-config.toml', '# missing metadata\n')
     const missing = await box.run('ki workspace list')
-    await box.project.write('repo/.ki-config.toml', '[ki-repo]\ntitle = "Repository"\ndescription = "Description."\nrepo_code = 1\n')
+    await box.project.write(
+      'repo/.ki-config.toml',
+      '["knowledgeislands/ki-agentic-harness:ki-repo"]\ntitle = "Repository"\ndescription = "Description."\nrepo_code = 1\n'
+    )
     const malformed = await box.run('ki workspace list')
 
     expect(missing).toEqual({
@@ -215,8 +218,8 @@ describe('[ki workspace]', () => {
 
     const metadataCases = [
       ['not valid = [\n', 'must be valid TOML'],
-      ['[ki-repo]\ndescription = "Description."\nrepo_code = "REPO"\n', '[ki-repo].title must be a non-empty string'],
-      ['[ki-repo]\ntitle = "Repository"\nrepo_code = "REPO"\n', '[ki-repo].description must be a non-empty string']
+      ['["knowledgeislands/ki-agentic-harness:ki-repo"]\ndescription = "Description."\nrepo_code = "REPO"\n', '[ki-repo].title must be a non-empty string'],
+      ['["knowledgeislands/ki-agentic-harness:ki-repo"]\ntitle = "Repository"\nrepo_code = "REPO"\n', '[ki-repo].description must be a non-empty string']
     ] as const
     for (const [contents, expected] of metadataCases) {
       await box.project.write('repo/.ki-config.toml', contents)

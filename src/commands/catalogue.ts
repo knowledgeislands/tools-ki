@@ -49,6 +49,6 @@ export const rootHelpCommandNames = [
 
 export type RootCommandName = (typeof rootCommandNames)[number]
 
-export const repoCommandNames = ['audit', 'conform', 'diag', 'educate', 'list', 'plan', 'register', 'skill', 'upgrade'] as const
+export const repoCommandNames = ['audit', 'conform', 'diag', 'educate', 'init', 'list', 'plan', 'register', 'skill', 'upgrade'] as const
 
-export const repoHelpCommandNames = ['audit', 'conform', 'register', 'list', 'plan', 'educate', 'skill', 'upgrade', 'diag'] as const
+export const repoHelpCommandNames = ['init', 'audit', 'conform', 'register', 'list', 'plan', 'educate', 'skill', 'upgrade', 'diag'] as const

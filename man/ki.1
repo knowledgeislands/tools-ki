@@ -104,6 +104,10 @@ Use one named group from the direct-CWD KI workspace.
 .SS Repository management
 \&
 .TP
+.B ki repo init [directory] --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>
+Create the explicit KI identity declaration for one existing Git repository
+and register its physical root locally.
+.TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run registered native repository audits.
 .TP
@@ -375,6 +379,19 @@ Use these commands to inspect and maintain declared capabilities and manage
 their skill links. Read-only operations isolate per-target diagnostics; a later
 mutation failure retains earlier successful targets and returns a non-zero
 result.
+.TP
+.B ki repo init [directory] --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>
+Initialize exactly one existing physical Git worktree root. With no
+\fIdirectory\fR, it uses the current directory; an explicit directory must be
+that worktree's root and must not be a symbolic link. Every identity value is
+required: \fB--title\fR, \fB--description\fR, a stable uppercase
+\fB--repo-code\fR, one or more \fB--runtime\fR values selected from
+\fBclaude-code\fR and \fBcodex\fR, and \fB--visibility public|private\fR.
+It atomically creates the minimal canonical \fBki-repo\fR declaration and
+registers the physical root in the local user configuration. It never runs
+\fBgit init\fR, guesses identity, activates repository skills, creates a
+workspace, accepts repository selectors, or overwrites an existing
+\fB.ki-config.toml\fR.
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run the native read-only operations registered by each selected repository's

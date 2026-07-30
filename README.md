@@ -50,11 +50,14 @@ Without an explicit selector or direct-CWD workspace, `ki` reads a regular direc
 
 After target selection, operations run in target order. Read-only operations isolate a target's diagnostic; mutations retain earlier successful targets if a later target fails and return a non-zero overall result. Use `ki repo register --repo <path-or-pattern>` to add selected physical KI roots to the local user registry without applying repairs. A local `ki repo conform` also records each selected root first, even when its declaration or later conformance checks fail, so the registry remains an inventory for repair and bulk maintenance rather than a compliance badge.
 
+To start a KI repository, run `ki repo init` in an existing Git worktree root, or name that root as its one argument. Supply `--title`, `--description`, `--repo-code`, one or more `--runtime` values (`claude-code` or `codex`), and `--visibility public|private`. Initialization creates only the canonical `ki-repo` declaration and registers that physical root locally; it never runs `git init`, guesses identity, activates skills, creates a workspace, or overwrites an existing declaration.
+
 ```sh
 ki workspace init
 ki workspace add default 'repos/*'
 ki workspace register
 ki workspace list
+ki repo init --title 'Example repository' --description 'An explicit KI repository identity.' --repo-code EXAMPLE --runtime claude-code --runtime codex --visibility private
 ki repo diag
 ki repo --workspace default audit
 ```

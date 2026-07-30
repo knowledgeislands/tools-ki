@@ -1,6 +1,26 @@
-import { realpath } from 'node:fs/promises'
-import { expect, test } from 'vitest'
+import { realpath, symlink } from 'node:fs/promises'
+import { afterEach, expect, test, vi } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
+
+// A real invocation cannot make the already-preflighted local configuration
+// replacement fail on demand. This narrow filesystem-boundary fault proves the
+// initializer removes its newly created declaration when registration fails.
+const registryWriteFailure = vi.hoisted(() => ({ path: undefined as string | undefined }))
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const original = await importOriginal<typeof import('node:fs/promises')>()
+  return {
+    ...original,
+    rename: (...arguments_: Parameters<typeof original.rename>) => {
+      if (registryWriteFailure.path && String(arguments_[1]) === registryWriteFailure.path) return Promise.reject(new Error('registry write failure'))
+      return original.rename(...arguments_)
+    }
+  }
+})
+
+afterEach(() => {
+  registryWriteFailure.path = undefined
+})
 
 const localConfiguration = `schema = 1
 
@@ -22,6 +42,151 @@ export default {
   families: []
 }
 `
+
+const gitRepositoryRunner = (root: string) => async (command: string, arguments_: readonly string[]) =>
+  command === 'git' && arguments_.join(' ') === `-C ${root} rev-parse --show-toplevel` ? { exitCode: 0, output: `${root}\n` } : { exitCode: 1, output: '' }
+
+const initialise = (box: Awaited<ReturnType<typeof sandbox>>, directory?: string) =>
+  box.run([
+    'ki',
+    'repo',
+    'init',
+    ...(directory ? [directory] : []),
+    '--title',
+    'Example repository',
+    '--description',
+    'Repository initialization contract.',
+    '--repo-code',
+    'EXAMPLE',
+    '--runtime',
+    'claude-code',
+    '--runtime',
+    'codex',
+    '--visibility',
+    'private'
+  ])
+
+test('initializes one explicit physical Git root and registers its complete KI identity', async () => {
+  const box = await sandbox()
+  await box.config.write('ki/config.toml', localConfiguration)
+  const root = await realpath(box.project.path)
+  box.setRunner(gitRepositoryRunner(root))
+
+  const result = await initialise(box)
+
+  expect(result).toEqual({ exitCode: 0, output: `write .ki-config.toml\nwrite config.toml\nki repo init: initialized ${root}\n` })
+  expect(await box.project.read('.ki-config.toml')).toEqual(
+    '["knowledgeislands/ki-agentic-harness:ki-repo"]\n' +
+      'title = "Example repository"\n' +
+      'description = "Repository initialization contract."\n' +
+      'repo_code = "EXAMPLE"\n' +
+      'supported_runtimes = ["claude-code", "codex"]\n' +
+      'visibility = "private"\n'
+  )
+  expect(await box.config.read('ki/config.toml')).toContain(`paths = [\n  ${JSON.stringify(root)},\n]`)
+})
+
+test('initializes an explicit directory but refuses non-root, linked, and already-declared targets', async () => {
+  const box = await sandbox()
+  await box.config.write('ki/config.toml', localConfiguration)
+  const repository = await box.root.mkdir('repository')
+  const nested = await box.root.mkdir('repository/nested')
+  const linked = `${box.root.path}/linked`
+  await symlink(repository, linked)
+  box.setRunner(async (command, arguments_) =>
+    command === 'git' && arguments_[0] === '-C' && arguments_[2] === 'rev-parse' ? { exitCode: 0, output: `${repository}\n` } : { exitCode: 1, output: '' }
+  )
+
+  const initialized = await initialise(box, repository)
+  const nestedTarget = await initialise(box, nested)
+  const linkedTarget = await initialise(box, linked)
+  const repeated = await initialise(box, repository)
+
+  expect(initialized.exitCode).toBe(0)
+  expect(nestedTarget).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target must be the Git repository root\n' })
+  expect(linkedTarget).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target must be an existing physical directory\n' })
+  expect(repeated).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target already has .ki-config.toml\n' })
+})
+
+test('refuses non-Git targets and invalid or incomplete explicit identity metadata before writing', async () => {
+  const box = await sandbox()
+  await box.config.write('ki/config.toml', localConfiguration)
+  box.setRunner(async () => ({ exitCode: 1, output: 'not a repository' }))
+
+  const nonGit = await initialise(box)
+  const missingTitle = await box.run('ki repo init --description description --repo-code EXAMPLE --runtime codex --visibility private')
+  const missingDescription = await box.run('ki repo init --title title --repo-code EXAMPLE --runtime codex --visibility private')
+  const missingCode = await box.run('ki repo init --title title --description description --runtime codex --visibility private')
+  const missingRuntime = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --visibility private')
+  const missingVisibility = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime codex')
+  const invalidCode = await box.run('ki repo init --title title --description description --repo-code example --runtime codex --visibility private')
+  const invalidRuntime = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime node --visibility private')
+  const repeatedRuntime = await box.run(
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime codex --runtime codex --visibility private'
+  )
+  const invalidVisibility = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime codex --visibility internal')
+  const selectors = await box.run(
+    'ki repo --repo ignored init --title title --description description --repo-code EXAMPLE --runtime codex --visibility private'
+  )
+
+  expect(nonGit).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target must be an existing Git repository\n' })
+  expect(missingTitle).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires --title\n' })
+  expect(missingDescription).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires --description\n' })
+  expect(missingCode).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires --repo-code\n' })
+  expect(missingRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires at least one --runtime\n' })
+  expect(missingVisibility).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires --visibility\n' })
+  expect(invalidCode).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --repo-code must be a stable uppercase identifier\n' })
+  expect(invalidRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime may contain only claude-code or codex\n' })
+  expect(repeatedRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime must not repeat a runtime\n' })
+  expect(invalidVisibility).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --visibility must be public or private\n' })
+  expect(selectors).toEqual({ exitCode: 2, output: 'ki: error: ki repo init does not accept --repo or --workspace\n' })
+  await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
+})
+
+test('initializes a public repository without rewriting an existing local registry entry', async () => {
+  const box = await sandbox()
+  const repository = await box.root.mkdir('registered-repository')
+  await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`)
+  box.setRunner(gitRepositoryRunner(repository))
+
+  const result = await box.run([
+    'ki',
+    'repo',
+    'init',
+    repository,
+    '--title',
+    'Public repository',
+    '--description',
+    'Already registered.',
+    '--repo-code',
+    'PUBLIC',
+    '--runtime',
+    'codex',
+    '--visibility',
+    'public'
+  ])
+
+  expect(result).toEqual({ exitCode: 0, output: `write .ki-config.toml\nki repo init: initialized ${repository}\n` })
+  expect(await box.root.read('registered-repository/.ki-config.toml')).toContain('visibility = "public"')
+})
+
+test('leaves no declaration when local registration cannot be prepared or published', async () => {
+  const box = await sandbox()
+  const root = await realpath(box.project.path)
+  box.setRunner(gitRepositoryRunner(root))
+
+  const unbootstrapped = await initialise(box)
+
+  expect(unbootstrapped).toEqual({ exitCode: 1, output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n' })
+  await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
+
+  await box.config.write('ki/config.toml', localConfiguration)
+  registryWriteFailure.path = await realpath(`${box.config.path}/ki/config.toml`)
+
+  await expect(initialise(box)).rejects.toThrow('registry write failure')
+  await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
+  expect(await box.config.read('ki/config.toml')).toEqual(localConfiguration)
+})
 
 test('audits, conforms, and lists the local ki-repo registry without discovering other paths', async () => {
   const box = await sandbox()

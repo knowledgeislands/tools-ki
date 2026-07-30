@@ -1,8 +1,10 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { parse } from 'smol-toml'
 import { KiError } from './errors.ts'
+import { type SupportedRuntime, supportedRuntimes } from './harness.ts'
 
 export const REPOSITORY_CONFIGURATION_FILE = '.ki-config.toml'
+export const REPOSITORY_SKILL_IDENTITY = 'knowledgeislands/ki-agentic-harness:ki-repo'
 
 export interface DeclaredSkill {
   readonly identity: string
@@ -15,6 +17,14 @@ export interface RepositoryMetadata {
   readonly title: string
   readonly description: string
   readonly repoCode: string
+}
+
+export interface RepositoryInitialisation {
+  readonly title: string
+  readonly description: string
+  readonly repoCode: string
+  readonly supportedRuntimes: readonly string[]
+  readonly visibility: string
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -34,13 +44,41 @@ export const readRepositoryMetadata = async (configurationPath: string): Promise
   }
   /* v8 ignore next -- a TOML document always parses to a table. */
   if (!isRecord(parsed)) throw new KiError(`${configurationPath} must be a table`, 2)
-  const metadata = parsed['ki-repo']
+  const metadata = parsed[REPOSITORY_SKILL_IDENTITY]
   if (!isRecord(metadata)) throw new KiError(`${configurationPath} must declare [ki-repo] metadata`, 2)
   return {
     title: metadataField(configurationPath, metadata, 'title'),
     description: metadataField(configurationPath, metadata, 'description'),
     repoCode: metadataField(configurationPath, metadata, 'repo_code')
   }
+}
+
+const initialisationField = (value: string | undefined, name: string): string => {
+  if (!value?.trim()) throw new KiError(`ki repo init requires --${name}`, 2)
+  return value
+}
+
+export const renderRepositoryConfiguration = (initialisation: RepositoryInitialisation): string => {
+  const title = initialisationField(initialisation.title, 'title')
+  const description = initialisationField(initialisation.description, 'description')
+  const repoCode = initialisationField(initialisation.repoCode, 'repo-code')
+  const visibility = initialisationField(initialisation.visibility, 'visibility')
+  if (!/^[A-Z][A-Z0-9-]{1,23}$/.test(repoCode)) throw new KiError('ki repo init --repo-code must be a stable uppercase identifier', 2)
+  if (!initialisation.supportedRuntimes.length) throw new KiError('ki repo init requires at least one --runtime', 2)
+  if (initialisation.supportedRuntimes.some((runtime) => !supportedRuntimes.includes(runtime as SupportedRuntime)))
+    throw new KiError('ki repo init --runtime may contain only claude-code or codex', 2)
+  if (new Set(initialisation.supportedRuntimes).size !== initialisation.supportedRuntimes.length)
+    throw new KiError('ki repo init --runtime must not repeat a runtime', 2)
+  if (visibility !== 'public' && visibility !== 'private') throw new KiError('ki repo init --visibility must be public or private', 2)
+  return [
+    `[${JSON.stringify(REPOSITORY_SKILL_IDENTITY)}]`,
+    `title = ${JSON.stringify(title)}`,
+    `description = ${JSON.stringify(description)}`,
+    `repo_code = ${JSON.stringify(repoCode)}`,
+    `supported_runtimes = [${initialisation.supportedRuntimes.map((runtime) => JSON.stringify(runtime)).join(', ')}]`,
+    `visibility = ${JSON.stringify(visibility)}`,
+    ''
+  ].join('\n')
 }
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/

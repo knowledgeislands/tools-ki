@@ -1,4 +1,4 @@
-import { realpath } from 'node:fs/promises'
+import { realpath, rm } from 'node:fs/promises'
 import { Command } from 'commander'
 import { configuredRepositoryWrite, inspectUserConfiguration } from '../agents/index.ts'
 import { repoHelpCommandNames } from '../commands/catalogue.ts'
@@ -7,10 +7,10 @@ import { createRepoPlanCommand } from '../commands/plan.ts'
 import { createRepoSkillCommand } from '../commands/skill.ts'
 import { createUpgradeCommand } from '../commands/update.ts'
 import type { KiContext } from '../context.ts'
-import { readDeclaredSkills } from './configuration.ts'
+import { REPOSITORY_CONFIGURATION_FILE, readDeclaredSkills, renderRepositoryConfiguration } from './configuration.ts'
 import { KiError } from './errors.ts'
 import { discoverInstalledHarnesses } from './harness.ts'
-import { resolveRepositoryTargets } from './repository.ts'
+import { resolveRepositoryInitialisationTarget, resolveRepositoryTargets } from './repository.ts'
 import { operationOptions, renderEducation, renderReports, runPreparedWithProgress, runWithProgress } from './repository-reporting.ts'
 import { renderRepositoryConformCommand, runRepositoryConformCommands } from './repository-subprocess.ts'
 import { resolveDeclaredSkills } from './resolution.ts'
@@ -77,6 +77,52 @@ export const createRepositoryOperations = (context: KiContext): Command => {
     .addCommand(createRepoPlanCommand(context, selectedRepositories))
     .addCommand(createRepoSkillCommand(context, selectedRepositories))
     .addCommand(createUpgradeCommand(context, selectedRepositories))
+    .addCommand(
+      new Command('init')
+        .description('initialize one existing Git repository with an explicit KI identity')
+        .argument('[directory]', 'existing Git repository root (default: current directory)')
+        .option('--title <title>', 'repository title')
+        .option('--description <description>', 'repository description')
+        .option('--repo-code <code>', 'stable uppercase repository identifier')
+        .option('--runtime <runtime>', 'supported runtime: claude-code or codex', (value: string, previous: readonly string[] = []) => [...previous, value], [])
+        .option('--visibility <visibility>', 'repository visibility: public or private')
+        .action(
+          async (
+            directory: string | undefined,
+            options: { title?: string; description?: string; repoCode?: string; runtime: readonly string[]; visibility?: string }
+          ) => {
+            const selection = selectedRepositories()
+            if (selection.repositories.length || selection.workspace) throw new KiError('ki repo init does not accept --repo or --workspace', 2)
+            const configuration = renderRepositoryConfiguration({
+              title: options.title ?? '',
+              description: options.description ?? '',
+              repoCode: options.repoCode ?? '',
+              supportedRuntimes: options.runtime,
+              visibility: options.visibility ?? ''
+            })
+            const repository = await resolveRepositoryInitialisationTarget({
+              directory,
+              workingDirectory: context.workingDirectory,
+              environment: context.environment,
+              runner: context.runner
+            })
+            // Resolve every write before changing state: a missing or invalid user
+            // configuration cannot leave a new repository declaration behind.
+            const registryWrite = await configuredRepositoryWrite(context.paths.config, repository.root)
+            const declarationWrites = await prepareWrites(repository.root, [{ path: REPOSITORY_CONFIGURATION_FILE, content: configuration, create: true }])
+            const registryWrites = registryWrite ? await prepareWrites(await realpath(context.paths.config), [registryWrite]) : []
+            await publishWrites(declarationWrites, false)
+            try {
+              await publishWrites(registryWrites, false)
+            } catch (error) {
+              await rm(repository.configuration)
+              throw error
+            }
+            for (const write of [...declarationWrites, ...registryWrites]) context.stdout.write(`write ${write.path}\n`)
+            context.stdout.write(`ki repo init: initialized ${repository.root}\n`)
+          }
+        )
+    )
     .addCommand(
       new Command('list').description('list KI repositories registered in the local user configuration').action(async () => {
         const configuration = await inspectUserConfiguration(context.paths.config)

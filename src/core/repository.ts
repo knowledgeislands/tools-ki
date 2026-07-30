@@ -3,6 +3,8 @@ import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import { parse } from 'smol-toml'
 import { REPOSITORY_CONFIGURATION_FILE } from './configuration.ts'
 import { KiError } from './errors.ts'
+import type { Environment } from './paths.ts'
+import type { Runner } from './runner.ts'
 import { resolveWorkspaceGroup, workspaceConfigurationExists } from './workspace.ts'
 
 const MGIT_CONFIGURATION_FILE = '.mgit-config.toml'
@@ -52,6 +54,25 @@ export const resolveRepository = async (options: {
     throw new KiError('no KI repository found from the current working directory', 2)
   }
   return targetFromDirectory(options.repository, '--repo must be an existing directory', '--repo must name a repository containing .ki-config.toml')
+}
+
+/** Resolves one physical Git worktree root without requiring a KI declaration. */
+export const resolveRepositoryInitialisationTarget = async (options: {
+  readonly directory?: string
+  readonly workingDirectory: string
+  readonly environment: Environment
+  readonly runner: Runner
+}): Promise<RepositoryLocation> => {
+  const requested = resolve(options.workingDirectory, options.directory ?? '.')
+  const root = await physicalDirectory(requested, 'ki repo init target must be an existing physical directory')
+  const git = await options.runner('git', ['-C', root, 'rev-parse', '--show-toplevel'], options.environment)
+  if (git.exitCode !== 0) throw new KiError('ki repo init target must be an existing Git repository', 2)
+  const reported = git.output.trim()
+  const gitRoot = await physicalDirectory(reported, 'ki repo init target must be an existing Git repository')
+  if (gitRoot !== root) throw new KiError('ki repo init target must be the Git repository root', 2)
+  const configuration = join(root, REPOSITORY_CONFIGURATION_FILE)
+  if (await lstat(configuration).catch(() => undefined)) throw new KiError(`ki repo init target already has ${REPOSITORY_CONFIGURATION_FILE}`, 2)
+  return { root, configuration }
 }
 
 const hasPattern = (value: string): boolean => /[*?]/.test(value)
