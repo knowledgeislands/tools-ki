@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-016
 title: Restore schema-one workspaces
 theme: cli
 horizon: blocking
-status: open
+status: ready
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 54715061a1e54e36828fec1537047677b3f28e0e
 ---
 
 ## Context
