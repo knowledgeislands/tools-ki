@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-014
 title: Initialize KI repositories
 theme: cli
 horizon: blocking
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 2e5f8a3e847b1c254c4a2537992f509dad0aefde
 ---
 
 ## Context
