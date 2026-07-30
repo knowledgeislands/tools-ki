@@ -27,6 +27,7 @@ This item does not change the eight-skill bootstrap contract, silently accept an
 2. Ensure bootstrap rejects or diagnoses incomplete archive core-skill inventory before declaring a successful archive transition, with actionable error output that distinguishes archive incompleteness from a local-link problem.
 3. Make `ki doctor` fail explicitly when a configured managed skill cannot be resolved from the active expected source, rather than treating the absence of an expected target as a linked pass.
 4. Add CLI-contract coverage for an active local harness followed by a failing bootstrap archive path, asserting the post-failure payload links, configuration, and user-skill targets remain consistent; cover the unresolved-skill Doctor diagnostic.
+5. Exercise the full local/installed transition matrix: repeated `dev local on` → `off` → `on` → `off` cycles, installed-harness refresh/reprojection, and failure at each transition boundary. Each successful or failed transition must leave one coherent mode—payload, managed user-skill links, configuration, and Doctor report agree on the same active source.
 
 ## Files touched
 
@@ -35,6 +36,7 @@ This item does not change the eight-skill bootstrap contract, silently accept an
 - `src/agents/bootstrap.ts`
 - `src/commands/doctor.ts`
 - `src/tests/cli/bootstrap.test.ts`
+- `src/tests/cli/dev.test.ts`
 - `src/tests/cli/doctor.test.ts`
 
 ## Verify
@@ -61,3 +63,7 @@ The failure boundary must be recoverable: either preflight every failure-prone a
 ### Doctor expectation
 
 Doctor must distinguish a link that matches a verifiable active source from a configured skill whose active source cannot provide the declared capability. The latter is an inventory/configuration failure, not a healthy link.
+
+### Transition matrix
+
+The local-development lifecycle has four externally visible state surfaces: the installed harness payload, managed user-skill links, the user configuration, and Doctor's resolved source. Tests must cover repeated local-to-installed and installed-to-local transitions, archive refreshes, and injected failures after each mutation boundary. No path may leave these surfaces describing different modes.
