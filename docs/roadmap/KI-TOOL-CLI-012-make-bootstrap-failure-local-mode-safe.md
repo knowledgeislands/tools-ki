@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-012
 title: Make bootstrap failure local-mode safe
 theme: cli
 horizon: blocking
-status: open
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null

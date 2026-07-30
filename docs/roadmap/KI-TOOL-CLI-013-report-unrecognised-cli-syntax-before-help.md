@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-013
 title: Report unrecognised CLI syntax before help
 theme: cli
 horizon: blocking
-status: open
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
