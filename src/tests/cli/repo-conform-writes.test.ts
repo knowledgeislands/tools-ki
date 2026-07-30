@@ -114,7 +114,7 @@ describe('[ki repo conform writes]', () => {
     const result = await box.run(`ki repo --repo ${box.project.path} conform --skill ki-website`)
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('write website.txt')
+    expect(result.output).toContain('applied write website.txt')
     expect(result.output).not.toContain('cloudflare.txt')
     await expect(box.project.read('website.txt')).resolves.toBe('ki-website\n')
     await expect(box.project.read('cloudflare.txt')).rejects.toThrow()
@@ -168,15 +168,51 @@ describe('[ki repo conform writes]', () => {
 
     const dryRun = await box.run('ki repo conform --dry-run')
     const beforeContent = await box.project.read('governed.txt')
-    expect(dryRun.output).toContain('would write governed.txt\n')
+    expect(dryRun.output).toContain('proposed write governed.txt\n')
     expect(dryRun.output).toContain('==> recap\n  ✅ no findings across conformed skills')
     expect(beforeContent).toBe('before\n')
 
     const conformed = await box.run('ki repo conform')
     const afterContent = await box.project.read('governed.txt')
-    expect(conformed.output).toContain('write governed.txt\n')
+    expect(conformed.output).toContain('applied write governed.txt\n')
     expect(conformed.output).toContain('✅ no findings across conformed skills')
     expect(afterContent).toBe('after\n')
+  })
+
+  test('holds every proposed write until every initial audit passes', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('safe.txt', 'before\n')
+    await box.setupExampleHarness({
+      rubric: rubric(`[{ code: 'F', title: 'Family', items: [
+        { kind: 'mechanical', code: 'EXAMPLE-1', title: 'Safe proposal', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'safe write is needed' }],
+          conform: async () => ({ writes: [{ path: 'safe.txt', content: 'after\\n' }] }) },
+        { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Blocking audit', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'unrelated license failure' }] }
+      ] }]`)
+    })
+
+    const dryRun = await box.run('ki repo conform --dry-run')
+
+    expect(dryRun.exitCode).toBe(1)
+    expect(dryRun.output).toContain('proposed write safe.txt')
+    expect(dryRun.output).toContain(
+      'repository conform dry run aborted before publication: no proposed conform changes were applied; blocking failure: repository conform found failures'
+    )
+    expect(dryRun.output).not.toContain('would apply write safe.txt')
+    expect(await box.project.read('safe.txt')).toBe('before\n')
+
+    const result = await box.run('ki repo conform')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('proposed write safe.txt')
+    expect(result.output).toContain('❌ fail  [Blocking audit (EXAMPLE-2)] — unrelated license failure')
+    expect(result.output).toContain(
+      'repository conform aborted before publication: no proposed conform changes were applied; blocking failure: repository conform found failures'
+    )
+    expect(result.output).not.toContain('applied write safe.txt')
+    expect(await box.project.read('safe.txt')).toBe('before\n')
   })
 
   test('deduplicates identical same-target conform proposals', async () => {
@@ -199,7 +235,7 @@ describe('[ki repo conform writes]', () => {
 
     const result = await box.run('ki repo conform --dry-run')
 
-    expect(result.output).toContain('would write governed.txt\n')
+    expect(result.output).toContain('proposed write governed.txt\n')
     expect(result.output).toContain('==> recap')
     expect(await box.project.read('governed.txt')).toBe('before\n')
   })
@@ -272,7 +308,7 @@ export default {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output.match(/^write governed\.txt$/gm)).toHaveLength(1)
+    expect(result.output.match(/^applied write governed\.txt$/gm)).toHaveLength(1)
     expect(await box.project.read('governed.txt')).toBe('start\nprimary\nnormalised\n')
   })
 
@@ -303,7 +339,7 @@ export default {
 
   // CLI-004 acceptance evidence (d): dry run is observational — repeating it changes
   // nothing (content or mtime) and produces byte-identical output each time; only the
-  // real conform differs, in its `write` (not `would write`) line and its actual effect.
+  // real conform differs in its applied-write line and its actual effect.
   test('a repeated dry run is byte-identical and touches nothing; only a real conform writes', async () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
@@ -317,7 +353,7 @@ export default {
     const afterDryRunsStat = await lstat(targetPath)
 
     expect(firstDryRun).toEqual(secondDryRun)
-    expect(firstDryRun.output).toContain('would write governed.txt\n')
+    expect(firstDryRun.output).toContain('proposed write governed.txt\n')
     expect(await box.project.read('governed.txt')).toBe('before\n')
     expect(afterDryRunsStat.mtimeMs).toBe(beforeStat.mtimeMs)
     expect(afterDryRunsStat.size).toBe(beforeStat.size)
@@ -325,7 +361,7 @@ export default {
     const conformed = await box.run('ki repo conform')
 
     expect(conformed.output).not.toBe(firstDryRun.output)
-    expect(conformed.output).toContain('write governed.txt\n')
+    expect(conformed.output).toContain('applied write governed.txt\n')
     expect(await box.project.read('governed.txt')).toBe('after\n')
   })
 
@@ -432,7 +468,8 @@ export default {
 
     expect(result).toEqual({
       exitCode: 0,
-      output: `write governed.txt
+      output: `proposed write governed.txt
+applied write governed.txt
 
 ==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] conform
   ✅ fixed [Example (EXAMPLE-1)] — conformed
@@ -505,11 +542,11 @@ export default {
     })
 
     const dryRun = await box.run('ki repo conform --dry-run')
-    expect(dryRun.output).toContain('would write created.txt\n')
+    expect(dryRun.output).toContain('proposed write created.txt\n')
     await expect(box.project.read('created.txt')).rejects.toThrow()
 
     const result = await box.run('ki repo conform')
-    expect(result.output).toContain('write created.txt\n')
+    expect(result.output).toContain('applied write created.txt\n')
     expect(result.output).toContain('✅ fixed [Example (EXAMPLE-1)] — created')
     await expect(box.project.read('created.txt')).resolves.toBe('created\n')
   })
@@ -634,7 +671,7 @@ export default {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('write .managed/setting.txt')
+    expect(result.output).toContain('applied write .managed/setting.txt')
     expect(await box.home.read('.managed/setting.txt')).toBe('after\n')
   })
 
@@ -671,7 +708,7 @@ export default {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output.match(/^write \.managed\/setting\.txt$/gm)).toHaveLength(1)
+    expect(result.output.match(/^applied write \.managed\/setting\.txt$/gm)).toHaveLength(1)
     expect(await box.home.read('.managed/setting.txt')).toBe('after\n')
   })
 })

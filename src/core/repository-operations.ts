@@ -216,9 +216,9 @@ export const createRepositoryOperations = (context: KiContext): Command => {
     )
     .addCommand(
       new Command('conform')
-        .description('apply registered conform operations for declared skills')
+        .description('stage registered conform operations and apply their writes after every initial audit passes')
         .option('--skill <capability>', 'one declared resolved skill to conform')
-        .option('--dry-run', 'validate and report without writing')
+        .option('--dry-run', 'validate staged writes and report without applying them')
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
         .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN,FIXED)')
@@ -274,8 +274,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             const commands = conformed.flatMap(({ conform }) => conform.commands)
             if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
               throw new KiError('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted', 1)
-            for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
-            for (const command of commands) context.stdout.write(`${options.dryRun ? 'would run' : 'run'} ${renderRepositoryConformCommand(command)}\n`)
+            for (const write of writes) context.stdout.write(`proposed write ${write.path}\n`)
+            for (const command of commands) context.stdout.write(`proposed run ${renderRepositoryConformCommand(command)}\n`)
             if (findings.some((finding) => finding.level === 'fail')) {
               renderReports(
                 context,
@@ -284,7 +284,10 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
               )
-              throw new KiError('repository conform found failures', 1)
+              throw new KiError(
+                `repository conform ${options.dryRun ? 'dry run ' : ''}aborted before publication: no proposed conform changes were applied; blocking failure: repository conform found failures`,
+                1
+              )
             }
             let publicationError: unknown
             try {
@@ -292,7 +295,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             } catch (error) {
               publicationError = error
             }
-            if (options.dryRun) {
+            if (publicationError) {
               renderReports(
                 context,
                 repository.root,
@@ -300,10 +303,23 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
               )
-              if (publicationError) throw publicationError
+              throw publicationError
+            }
+            if (options.dryRun) {
+              for (const write of writes) context.stdout.write(`would apply write ${write.path}\n`)
+              for (const command of commands) context.stdout.write(`would run ${renderRepositoryConformCommand(command)}\n`)
+              renderReports(
+                context,
+                repository.root,
+                'conform',
+                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
+                output.reporterLevels
+              )
               continue
             }
-            if (!publicationError) await runRepositoryConformCommands(repository.root, commands)
+            for (const write of writes) context.stdout.write(`applied write ${write.path}\n`)
+            for (const command of commands) context.stdout.write(`run ${renderRepositoryConformCommand(command)}\n`)
+            await runRepositoryConformCommands(repository.root, commands)
             const reaudited = await runPreparedWithProgress(
               context,
               're-audit',

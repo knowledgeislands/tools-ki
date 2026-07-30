@@ -424,10 +424,16 @@ always shows a terminal per-skill result so a clean assessment is visible;
 from FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS, or \fBall\fR.
 .TP
 .B ki repo [repo-options] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
-Plan and apply the same capabilities' safe writes, then re-audit. A dry run
-validates every complete write set and reports the affected paths without
-changing the repository. Publication refuses unsafe, changed, duplicate, or
-symbolic-link targets.
+Stage the same capabilities' safe writes, then apply them and re-audit. All
+selected initial audits must pass before the staged conform writes are
+published: a blocking finding aborts before publication, leaving every proposed
+conform write unapplied. Output labels proposed writes separately from writes
+applied after that gate; a dry run validates the complete staged write set and
+reports writes it would apply without changing the repository. This boundary
+does not include independent local registry updates; it also excludes later
+selected repositories, subprocess conforms, and rollback after publication has
+started. Publication refuses unsafe, changed, duplicate, or symbolic-link
+targets.
 Conform uses the same progress controls and reporter-level vocabulary as audit,
 names both the target and supplier for every skill, and renders FAIL, WARN, and
 FIXED findings by default while retaining every terminal per-skill result.

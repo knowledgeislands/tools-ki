@@ -358,7 +358,8 @@ export default {
 
     expect(result).toEqual({
       exitCode: 1,
-      output: 'run "node" "-e" "process.exit(3)"\nki: error: direct subprocess conform failed: "node" "-e" "process.exit(3)"\n'
+      output:
+        'proposed run "node" "-e" "process.exit(3)"\nrun "node" "-e" "process.exit(3)"\nki: error: direct subprocess conform failed: "node" "-e" "process.exit(3)"\n'
     })
   })
 
@@ -378,7 +379,7 @@ export default {
     expect(result).toEqual({
       exitCode: 1,
       output:
-        'run "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\nki: error: direct subprocess conform failed: "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\n'
+        'proposed run "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\nrun "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\nki: error: direct subprocess conform failed: "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\n'
     })
   })
 

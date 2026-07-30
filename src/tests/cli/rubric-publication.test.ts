@@ -97,12 +97,12 @@ describe('[ki generated rubric publication]', () => {
 
     const dryRun = await box.run('ki repo conform --dry-run')
     expect(dryRun.exitCode).toBe(0)
-    expect(dryRun.output).toContain(`would write ${target}`)
+    expect(dryRun.output).toContain(`would apply write ${target}`)
     await expect(box.project.read(target)).rejects.toThrow()
 
     const conformed = await box.run('ki repo conform')
     expect(conformed.exitCode).toBe(0)
-    expect(conformed.output).toContain(`write ${target}`)
+    expect(conformed.output).toContain(`applied write ${target}`)
     expect(conformed.output).toContain('fixed [Generated publication (EXAMPLE-PUB-1)]')
 
     const clean = await box.run('ki repo audit --reporter-levels all')
