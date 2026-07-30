@@ -40,7 +40,11 @@ Neither command changes user or repository skill activation; read the [update an
 
 Every `ki repo` operation accepts repeated `--repo <path-or-pattern>` options or one `--workspace <group>` option. The two explicit selectors are mutually exclusive. Literal paths and patterns resolve to physical KI repository roots in deterministic order; an unmatched pattern, invalid root, or duplicate root stops the operation before any target runs.
 
-Use `ki workspace init` in a workspace directory to create a KI-owned `.ki-workspace.toml`, then add ordered repository paths or patterns to named groups. A regular direct-CWD workspace file takes precedence when no selector is supplied: its default group is selected before a direct-CWD `.mgit-config.toml`. `--workspace <group>` selects a named group explicitly. Workspace members resolve relative to the workspace directory; KI never searches ancestor directories for a workspace or `mgit` configuration.
+Use `ki workspace init` in a workspace directory to create an empty KI-owned `.ki-workspace.toml`, then add ordered repository paths or patterns to named groups. Use `ki workspace register` to discover a physical directory hierarchy instead: it stops at every regular `.ki-config.toml` repository leaf, ignores symbolic links, and creates or refreshes each container workspace from the leaves and nested workspaces directly beneath it. Registration preflights the complete hierarchy before writing and changes only each file's default group, preserving every non-default group.
+
+Schema 2 workspace groups contain ordered typed `repository` and `workspace` members. A nested workspace member expands that workspace's default group recursively; all effective repository leaves must remain physically contained by the selecting workspace, with cycles and duplicates refused before an operation starts. `ki workspace list` reports local and effective counts plus the workspace-relative path, direct or nested origin, `repo_code`, title, and description from each leaf's `[ki-repo]` metadata.
+
+A regular direct-CWD workspace file takes precedence when no selector is supplied: its default group is selected before a direct-CWD `.mgit-config.toml`. `--workspace <group>` selects a named group explicitly. KI never searches ancestor directories for a workspace or `mgit` configuration.
 
 Without an explicit selector or direct-CWD workspace, `ki` reads a regular direct-CWD `.mgit-config.toml` and follows its `members` table through standard repositories, nested `main/` checkouts, and `dir` containers. It ignores mGit `symlinks` and bare stores, and never invokes `mgit`. Without a direct-CWD configuration, it retains single-repository discovery from the working directory.
 
@@ -49,9 +53,10 @@ After target selection, operations run in target order. Read-only operations iso
 ```sh
 ki workspace init
 ki workspace add default 'repos/*'
-ki workspace add release ../release-repositories/*
+ki workspace register
+ki workspace list
 ki repo diag
-ki repo --workspace release audit
+ki repo --workspace default audit
 ```
 
 ## Inspect governed work

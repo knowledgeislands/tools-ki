@@ -1,10 +1,13 @@
 import { Command } from 'commander'
 import type { KiContext } from '../context.ts'
+import { readRepositoryMetadata } from '../core/configuration.ts'
 import {
   addWorkspaceRepository,
   initialiseWorkspaceConfiguration,
   readWorkspaceConfiguration,
+  registerWorkspace,
   removeWorkspaceRepository,
+  resolveWorkspaceGroup,
   workspaceGroup
 } from '../core/workspace.ts'
 
@@ -18,12 +21,24 @@ export const createWorkspaceCommand = (context: KiContext): Command =>
       })
     )
     .addCommand(
+      new Command('register').description('discover and register nested KI workspace members').action(async () => {
+        const result = await registerWorkspace(context.workingDirectory)
+        context.stdout.write(`ki workspace register: registered ${result.repositories} repositories across ${result.workspaces} workspaces\n`)
+      })
+    )
+    .addCommand(
       new Command('list').description('list configured workspace groups').action(async () => {
         const configuration = await readWorkspaceConfiguration(context.workingDirectory)
-        const groups = Object.entries(configuration.groups)
-          .sort(([left], [right]) => left.localeCompare(right))
-          .map(([name, repositories]) => `  ${name}${name === configuration.default ? ' (default)' : ''}: ${repositories.length}`)
-        context.stdout.write(`ki workspace list\n${groups.join('\n')}\n`)
+        const lines = ['ki workspace list']
+        for (const [name, members] of Object.entries(configuration.groups).sort(([left], [right]) => left.localeCompare(right))) {
+          const selected = await resolveWorkspaceGroup(context.workingDirectory, name)
+          lines.push(`  ${name}${name === configuration.default ? ' (default)' : ''}: ${members.length} local, ${selected.repositories.length} effective`)
+          for (const repository of selected.repositories) {
+            const metadata = await readRepositoryMetadata(repository.configuration)
+            lines.push(`    ${repository.path} [${repository.origin}] ${metadata.repoCode} — ${metadata.title} — ${metadata.description}`)
+          }
+        }
+        context.stdout.write(`${lines.join('\n')}\n`)
       })
     )
     .addCommand(
@@ -32,7 +47,7 @@ export const createWorkspaceCommand = (context: KiContext): Command =>
         .argument('<group>', 'workspace group name')
         .action(async (group: string) => {
           const selected = await workspaceGroup(context.workingDirectory, group)
-          context.stdout.write(`ki workspace show ${selected.name}\n${selected.repositories.map((repository) => `  ${repository}`).join('\n')}\n`)
+          context.stdout.write(`ki workspace show ${selected.name}\n${selected.members.map((member) => `  ${member.type} ${member.path}`).join('\n')}\n`)
         })
     )
     .addCommand(

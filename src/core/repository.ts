@@ -1,10 +1,10 @@
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import { parse } from 'smol-toml'
+import { REPOSITORY_CONFIGURATION_FILE } from './configuration.ts'
 import { KiError } from './errors.ts'
-import { workspaceConfigurationExists, workspaceGroup } from './workspace.ts'
+import { resolveWorkspaceGroup, workspaceConfigurationExists } from './workspace.ts'
 
-const CONFIGURATION_FILE = '.ki-config.toml'
 const MGIT_CONFIGURATION_FILE = '.mgit-config.toml'
 
 export interface RepositoryLocation {
@@ -34,7 +34,7 @@ export const discoverRepository = async (workingDirectory: string, homeDirectory
   const home = await realpath(homeDirectory).catch(() => resolve(homeDirectory))
   let candidate = await realpath(workingDirectory)
   while (!isBoundary(candidate, home)) {
-    const configuration = join(candidate, CONFIGURATION_FILE)
+    const configuration = join(candidate, REPOSITORY_CONFIGURATION_FILE)
     if (await isConfigurationFile(configuration)) return { root: candidate, configuration }
     candidate = dirname(candidate)
   }
@@ -93,7 +93,7 @@ const expandPattern = async (value: string, workingDirectory: string, source = '
 
 const targetFromDirectory = async (directory: string, directoryMessage: string, configurationMessage = directoryMessage): Promise<RepositoryLocation> => {
   const root = await physicalDirectory(directory, directoryMessage)
-  const configuration = join(root, CONFIGURATION_FILE)
+  const configuration = join(root, REPOSITORY_CONFIGURATION_FILE)
   if (!(await isConfigurationFile(configuration))) throw new KiError(configurationMessage, 2)
   return { root, configuration }
 }
@@ -203,25 +203,8 @@ export const resolveRepositoryTargets = async (options: {
   }
   const working = await realpath(options.workingDirectory)
   if (options.workspace || (await workspaceConfigurationExists(working))) {
-    const selected = await workspaceGroup(working, options.workspace)
-    const targets: RepositoryLocation[] = []
-    for (const repository of selected.repositories) {
-      if (!hasPattern(repository)) {
-        targets.push(
-          await targetFromDirectory(
-            resolve(working, repository),
-            `workspace group ${selected.name} repository ${repository} must be an existing directory`,
-            `workspace group ${selected.name} repository ${repository} must name a repository containing .ki-config.toml`
-          )
-        )
-        continue
-      }
-      const matches = await expandPattern(repository, working, `workspace group ${selected.name}`)
-      if (!matches.length) throw new KiError(`workspace group ${selected.name} pattern ${repository} matched no repositories`, 2)
-      for (const match of matches)
-        targets.push(await targetFromDirectory(match, `workspace group ${selected.name} pattern ${repository} matched a non-KI directory`))
-    }
-    return distinctTargets(targets, `workspace group ${selected.name}`)
+    const selected = await resolveWorkspaceGroup(working, options.workspace)
+    return selected.repositories.map(({ root, configuration }) => ({ root, configuration }))
   }
   const configuration = join(working, MGIT_CONFIGURATION_FILE)
   if (await isRegularFile(configuration)) return distinctTargets(await repositoriesFromMgitConfiguration(working), MGIT_CONFIGURATION_FILE)

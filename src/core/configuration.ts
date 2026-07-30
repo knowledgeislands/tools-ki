@@ -2,6 +2,8 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { parse } from 'smol-toml'
 import { KiError } from './errors.ts'
 
+export const REPOSITORY_CONFIGURATION_FILE = '.ki-config.toml'
+
 export interface DeclaredSkill {
   readonly identity: string
   readonly harness: string
@@ -9,7 +11,37 @@ export interface DeclaredSkill {
   readonly configuration: Readonly<Record<string, unknown>>
 }
 
+export interface RepositoryMetadata {
+  readonly title: string
+  readonly description: string
+  readonly repoCode: string
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const metadataField = (configurationPath: string, metadata: Record<string, unknown>, name: string): string => {
+  const value = metadata[name]
+  if (typeof value !== 'string' || !value) throw new KiError(`${configurationPath} [ki-repo].${name} must be a non-empty string`, 2)
+  return value
+}
+
+export const readRepositoryMetadata = async (configurationPath: string): Promise<RepositoryMetadata> => {
+  let parsed: unknown
+  try {
+    parsed = parse(await readFile(configurationPath, 'utf8'))
+  } catch {
+    throw new KiError(`${configurationPath} must be valid TOML`, 2)
+  }
+  /* v8 ignore next -- a TOML document always parses to a table. */
+  if (!isRecord(parsed)) throw new KiError(`${configurationPath} must be a table`, 2)
+  const metadata = parsed['ki-repo']
+  if (!isRecord(metadata)) throw new KiError(`${configurationPath} must declare [ki-repo] metadata`, 2)
+  return {
+    title: metadataField(configurationPath, metadata, 'title'),
+    description: metadataField(configurationPath, metadata, 'description'),
+    repoCode: metadataField(configurationPath, metadata, 'repo_code')
+  }
+}
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const skillName = /^ki-[a-z0-9][a-z0-9-]*$/

@@ -35,7 +35,10 @@ describe('[ki repo plan]', () => {
         'baseline-ref': 'a'.repeat(40)
       })
     )
-    await box.project.write('.ki-workspace.toml', 'schema = 1\ndefault = "inventory"\n\n[groups.inventory]\nrepositories = ["repo"]\n')
+    await box.project.write(
+      '.ki-workspace.toml',
+      'schema = 2\ndefault = "inventory"\n\n[groups.inventory]\nmembers = [{ type = "repository", path = "repo" }]\n'
+    )
     const root = await realpath(`${box.project.path}/repo`)
 
     const text = await box.run('ki repo --repo repo plan list --horizon next --status open')
