@@ -229,13 +229,14 @@ test('registers a selected KI repository even when its declaration cannot resolv
 test('preserves and extends an existing local repository registry in deterministic order', async () => {
   const box = await sandbox()
   await box.project.write('.ki-config.toml', '[ki-repo]\n')
-  const earlier = await box.root.mkdir('earlier')
+  const later = await box.root.mkdir('z-later')
+  const earlier = await box.root.mkdir('a-earlier')
   const repository = await realpath(box.project.path)
-  await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = [\n  ${JSON.stringify(earlier)},\n]\n`)
+  await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = [\n  ${JSON.stringify(later)},\n  ${JSON.stringify(earlier)},\n]\n`)
 
   const registered = await box.run('ki repo register')
   const repeated = await box.run('ki repo register')
-  const expected = [earlier, repository].sort((left, right) => left.localeCompare(right))
+  const expected = [later, earlier, repository].sort((left, right) => left.localeCompare(right))
 
   expect(registered).toEqual({ exitCode: 0, output: `write config.toml\nki repo register: registered ${repository}\n` })
   expect(repeated).toEqual({ exitCode: 0, output: `ki repo register: already registered ${repository}\n` })
