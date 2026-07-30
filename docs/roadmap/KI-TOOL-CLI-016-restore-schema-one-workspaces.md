@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-016
 title: Make the current workspace model schema one
 theme: cli
 horizon: blocking
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: 54715061a1e54e36828fec1537047677b3f28e0e
+baseline-ref: 20c7ecdc0d9b0316e655186bfd3be24fb162a6cf
 ---
 
 ## Context
