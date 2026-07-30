@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-013
 title: Report unrecognised CLI syntax before help
 theme: cli
 horizon: blocking
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 3bc6dabdc9be4a420f0f33a415ff6a63deb0f4ec
@@ -62,6 +62,10 @@ Delivered in `b0559e2 fix(cli): report invalid syntax before help`.
 Verified with `bun run test --coverage` (435 passing; 100% statements, branches, functions, and lines), `bunx tsc --noEmit`, `bunx biome check`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .`.
 
 No release, push, or lifecycle closure has been performed.
+
+## Done
+
+Approved for closure and retained as completed history before explicit pruning on 2026-07-30.
 
 ## Discussion
 

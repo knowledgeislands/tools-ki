@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-014
 title: Initialize KI repositories
 theme: cli
 horizon: blocking
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 2e5f8a3e847b1c254c4a2537992f509dad0aefde
@@ -67,6 +67,10 @@ Delivered in `2bfb1ac feat(repo): initialize KI repositories`.
 Verified with `bun run test --coverage` (440 passing; 100% statements, branches, functions, and lines), `bunx tsc --noEmit`, `bunx biome check`, `bun run ki:tools:lint-man`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .`.
 
 No release, push, or lifecycle closure has been performed.
+
+## Done
+
+Approved for closure and retained as completed history before explicit pruning on 2026-07-30.
 
 ## Discussion
 

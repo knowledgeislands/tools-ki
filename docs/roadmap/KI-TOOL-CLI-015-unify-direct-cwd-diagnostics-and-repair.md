@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-015
 title: Unify direct-CWD diagnostics and repair
 theme: cli
 horizon: blocking
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 8183c56dc890095c15c18b8f2a32ab702a929c43
@@ -75,6 +75,10 @@ Delivered in `09b90c4 feat(cli): unify direct repository diagnostics and repair`
 Verified with `bun run test --coverage` (447 passing; 100% statements, branches, functions, and lines), `bunx tsc --noEmit`, `bunx biome check`, `bun run ki:tools:lint-man`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .`.
 
 No release, push, or lifecycle closure has been performed.
+
+## Done
+
+Approved for closure and retained as completed history before explicit pruning on 2026-07-30.
 
 ## Discussion
 

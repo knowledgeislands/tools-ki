@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-011
 title: Register nested workspace members
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: f2d8e6d5de158ab32009c83b7091359865f54e65
@@ -63,6 +63,10 @@ Delivered `ki workspace register` and schema-2 typed workspace members from base
 Verified with `bun run test --coverage` (429 tests; 100% statements, branches, functions, and lines), `bunx tsc --noEmit`, `bunx biome check`, `bunx markdownlint-cli2 README.md docs/developer/local-development.md`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .`.
 
 No mGit group support, compatibility fallback for schema 1, push, release, or closure is included. Review this acceptance packet before `ki-accept` transitions the item further.
+
+## Done
+
+Approved for closure and retained as completed history before explicit pruning on 2026-07-30.
 
 ## Discussion
 

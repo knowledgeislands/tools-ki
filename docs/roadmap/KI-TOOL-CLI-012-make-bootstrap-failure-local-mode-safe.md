@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-012
 title: Make bootstrap failure local-mode safe
 theme: cli
 horizon: blocking
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 887fbfae8bab1b5a4d121110e1ee3b0dcf4bedae
@@ -65,6 +65,10 @@ Delivered in `dcdb1bc fix(bootstrap): preserve local mode on failure`.
 Verified with `bun run test --coverage` (434 passing; 100% statements, branches, functions, and lines), `bunx tsc --noEmit`, `bunx biome check`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .`.
 
 No release, push, or lifecycle closure has been performed.
+
+## Done
+
+Approved for closure and retained as completed history before explicit pruning on 2026-07-30.
 
 ## Discussion
 
