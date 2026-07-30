@@ -1,4 +1,4 @@
-.TH KI 1 "2026-07-28" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-07-30" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -80,6 +80,9 @@ Remove a KI-managed user skill link.
 .TP
 .B ki workspace init
 Create a direct-CWD \fB.ki-workspace.toml\fR.
+.TP
+.B ki workspace register
+Discover and register nested KI workspace members.
 .TP
 .B ki workspace list
 List configured workspace groups.
@@ -338,24 +341,34 @@ Remove a KI-managed user skill link.
 Use these commands from a workspace directory to manage KI-owned named
 repository groups without requiring the directory itself to be a KI repository.
 The regular \fB.ki-workspace.toml\fR file has schema version 1, a required
-default group, and ordered repository path-or-pattern members. It is the only
-mutable workspace surface.
+default group, and ordered typed \fBmembers\fR entries. Each entry contains a
+\fBtype\fR of \fBrepository\fR or \fBworkspace\fR and a relative \fBpath\fR.
+Repository paths may contain patterns; workspace paths may not. Nested
+workspace members recursively expand their default groups. Other schema
+versions and the historical flat \fBrepositories\fR group form are rejected.
 .TP
 .B ki workspace init
 Create the initial workspace file with an empty \fBdefault\fR group.
 .TP
+.B ki workspace register
+Discover the physical directory hierarchy in deterministic post-order. A
+regular \fB.ki-config.toml\fR is a terminal repository leaf; symbolic links are
+ignored. Create or refresh each container workspace's default group with direct
+repository and nested-workspace members while preserving non-default groups.
+.TP
 .B ki workspace list
-List every group and its member count, marking the default.
+List every group with local and effective repository counts, marking the
+default and reporting each repository's direct or nested origin.
 .TP
 .B ki workspace show <group>
 Print the ordered members of one group.
 .TP
 .B ki workspace add <group> <path-or-pattern>
-Append one path or pattern to a named group. A new named group is created when
-needed.
+Append one typed repository path or pattern to a named group's ordered members.
+A new named group is created when needed.
 .TP
 .B ki workspace remove <group> <path-or-pattern>
-Remove one existing path or pattern from a named group.
+Remove one existing typed repository path or pattern from a named group.
 .SS Repository options
 \&
 .PP

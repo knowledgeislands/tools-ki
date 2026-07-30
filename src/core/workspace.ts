@@ -14,7 +14,7 @@ export interface WorkspaceMember {
 }
 
 export interface WorkspaceConfiguration {
-  readonly schema: 2
+  readonly schema: 1
   readonly default: string
   readonly groups: Readonly<Record<string, readonly WorkspaceMember[]>>
 }
@@ -40,6 +40,7 @@ interface WorkspaceDocument {
 
 interface WorkspaceGroupDocument {
   readonly members?: unknown
+  readonly repositories?: unknown
 }
 
 interface WorkspaceMemberDocument {
@@ -77,6 +78,7 @@ const memberPath = (directory: string, group: string, value: unknown): string =>
 
 const groupMembers = (directory: string, name: string, value: unknown): readonly WorkspaceMember[] => {
   const group = value as WorkspaceGroupDocument
+  if (isRecord(value) && Object.hasOwn(group, 'repositories')) throw workspaceError(directory, `group ${name} must not declare repositories; use typed members`)
   if (!isRecord(value) || !Array.isArray(group.members)) throw workspaceError(directory, `group ${name} must declare a members array`)
   return group.members.map((entry) => {
     const member = entry as WorkspaceMemberDocument
@@ -98,7 +100,7 @@ const parseWorkspaceConfiguration = (contents: string, directory: string): Works
   /* v8 ignore next -- a TOML document always parses to a table. */
   if (!isRecord(parsed)) throw workspaceError(directory, 'must be a table')
   const document = parsed as WorkspaceDocument
-  if (document.schema !== 2) throw workspaceError(directory, 'schema must equal 2')
+  if (document.schema !== 1) throw workspaceError(directory, 'schema must equal 1')
   if (typeof document.default !== 'string' || !document.default) throw workspaceError(directory, 'must declare a default group')
   if (!isRecord(document.groups)) throw workspaceError(directory, 'must declare named groups')
   const groups = Object.fromEntries(
@@ -106,7 +108,7 @@ const parseWorkspaceConfiguration = (contents: string, directory: string): Works
   )
   workspaceGroupName(directory, document.default)
   if (!Object.hasOwn(groups, document.default)) throw workspaceError(directory, `default group ${document.default} is not declared`)
-  return { schema: 2, default: document.default, groups }
+  return { schema: 1, default: document.default, groups }
 }
 
 export const readWorkspaceConfiguration = async (directory: string): Promise<WorkspaceConfiguration> => {
@@ -136,7 +138,7 @@ const renderMember = (member: WorkspaceMember): string => `{ type = ${JSON.strin
 
 const renderWorkspaceConfiguration = (configuration: WorkspaceConfiguration): string =>
   [
-    'schema = 2',
+    'schema = 1',
     `default = ${JSON.stringify(configuration.default)}`,
     ...Object.entries(configuration.groups)
       .sort(([left], [right]) => left.localeCompare(right))
@@ -152,7 +154,7 @@ export const initialiseWorkspaceConfiguration = async (directory: string): Promi
   const path = workspacePath(physical)
   const state = await lstat(path).catch(() => undefined)
   if (state) throw new KiError(`${WORKSPACE_CONFIGURATION_FILE} already exists in ${physical}`, 2)
-  await writeWorkspaceConfiguration(physical, { schema: 2, default: 'default', groups: { default: [] } })
+  await writeWorkspaceConfiguration(physical, { schema: 1, default: 'default', groups: { default: [] } })
   return path
 }
 
@@ -194,7 +196,7 @@ const preflightRegistration = async (directory: string, containers: Registration
   if (await isRegularRepository(directory)) return { type: 'repository', path: directory, repositories: 1 }
 
   const existing = await lstat(workspacePath(directory)).catch(() => undefined)
-  let configuration: WorkspaceConfiguration = { schema: 2, default: 'default', groups: { default: [] } }
+  let configuration: WorkspaceConfiguration = { schema: 1, default: 'default', groups: { default: [] } }
   if (existing) {
     if (!existing.isFile() || existing.isSymbolicLink()) throw workspaceError(directory, 'must be a regular file')
     configuration = parseWorkspaceConfiguration(await readFile(workspacePath(directory), 'utf8'), directory)

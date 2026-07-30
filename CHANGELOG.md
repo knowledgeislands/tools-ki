@@ -42,10 +42,12 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 #### Workspace management
 
 - `ki workspace init`
+- `ki workspace register`
 - `ki workspace list`
 - `ki workspace show <group>`
 - `ki workspace add <group> <path-or-pattern>`
 - `ki workspace remove <group> <path-or-pattern>`
+- `.ki-workspace.toml` uses the sole schema 1 typed-member model, including nested workspace recursion and physical post-order registration; other schemas and historical flat `repositories` groups are rejected.
 
 #### Repository options
 

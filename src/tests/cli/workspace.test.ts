@@ -7,7 +7,7 @@ const metadata = (repoCode: string, title: string, description: string): string 
 
 const workspace = (members: string, options: { readonly name?: string; readonly extra?: string } = {}): string => {
   const name = options.name ?? 'default'
-  return `schema = 2\ndefault = "${name}"\n\n[groups.${name}]\nmembers = [${members}]\n${options.extra ?? ''}`
+  return `schema = 1\ndefault = "${name}"\n\n[groups.${name}]\nmembers = [${members}]\n${options.extra ?? ''}`
 }
 
 const member = (type: 'repository' | 'workspace', path: string): string => `{ type = "${type}", path = "${path}" }`
@@ -38,7 +38,7 @@ describe('[ki workspace]', () => {
       output: 'ki workspace show default\n  repository repo\n'
     })
     expect(removed).toEqual({ exitCode: 0, output: 'ki workspace remove: removed repo from default\n' })
-    expect(await box.project.read('.ki-workspace.toml')).toBe('schema = 2\ndefault = "default"\n\n[groups.default]\nmembers = []\n')
+    expect(await box.project.read('.ki-workspace.toml')).toBe('schema = 1\ndefault = "default"\n\n[groups.default]\nmembers = []\n')
   })
 
   test('registers a deterministic physical hierarchy, preserves custom groups, and stops at repository leaves', async () => {
@@ -70,7 +70,7 @@ describe('[ki workspace]', () => {
     expect(listed.output).toContain('  all (default): 3 local, 2 effective')
     expect(listed.output).toContain('  release: 1 local, 1 effective')
     expect(await box.project.read('.ki-workspace.toml')).toBe(
-      'schema = 2\n' +
+      'schema = 1\n' +
         'default = "all"\n' +
         '\n' +
         '[groups.all]\n' +
@@ -80,7 +80,7 @@ describe('[ki workspace]', () => {
         `members = [${member('repository', 'direct')}]\n`
     )
     expect(await box.project.read('nested/.ki-workspace.toml')).toBe(
-      'schema = 2\n' +
+      'schema = 1\n' +
         'default = "default"\n' +
         '\n' +
         '[groups.default]\n' +
@@ -89,7 +89,7 @@ describe('[ki workspace]', () => {
         '[groups.keep]\n' +
         'members = []\n'
     )
-    expect(await box.project.read('empty/.ki-workspace.toml')).toBe('schema = 2\ndefault = "default"\n\n[groups.default]\nmembers = []\n')
+    expect(await box.project.read('empty/.ki-workspace.toml')).toBe('schema = 1\ndefault = "default"\n\n[groups.default]\nmembers = []\n')
     await expect(lstat(`${box.project.path}/direct/.ki-workspace.toml`)).rejects.toThrow()
     await expect(lstat(`${box.project.path}/direct/inside/.ki-workspace.toml`)).rejects.toThrow()
     await expect(lstat(`${box.project.path}/.git/.ki-workspace.toml`)).rejects.toThrow()
@@ -102,7 +102,7 @@ describe('[ki workspace]', () => {
     const original = workspace(member('repository', 'stale'))
     await box.project.write('.ki-workspace.toml', original)
     await box.project.mkdir('a')
-    await box.project.write('b/.ki-workspace.toml', 'schema = 2\ndefault = "default"\n')
+    await box.project.write('b/.ki-workspace.toml', 'schema = 1\ndefault = "default"\n')
 
     const result = await box.run('ki workspace register')
 
@@ -230,7 +230,7 @@ describe('[ki workspace]', () => {
   test('rejects incompatible schemas, invalid mutations, and non-regular workspace files', async () => {
     const box = await sandbox()
     const root = await realpath(box.project.path)
-    await box.project.write('.ki-workspace.toml', 'schema = 1\ndefault = "default"\n\n[groups.default]\nmembers = []\n')
+    await box.project.write('.ki-workspace.toml', 'schema = 2\ndefault = "default"\n\n[groups.default]\nmembers = []\n')
     const schema = await box.run('ki workspace list')
     await box.project.write('.ki-workspace.toml', workspace(member('workspace', 'nested')))
     const duplicate = await box.run('ki workspace add default repo')
@@ -244,7 +244,7 @@ describe('[ki workspace]', () => {
 
     expect(schema).toEqual({
       exitCode: 2,
-      output: `ki: error: ${root}/.ki-workspace.toml schema must equal 2\n`
+      output: `ki: error: ${root}/.ki-workspace.toml schema must equal 1\n`
     })
     expect(duplicate).toEqual({ exitCode: 0, output: 'ki workspace add: added repo to default\n' })
     expect(removeWorkspace).toEqual({
@@ -266,12 +266,13 @@ describe('[ki workspace]', () => {
     const root = await realpath(box.project.path)
     const cases = [
       ['not valid = [\n', 'must be valid TOML'],
-      ['schema = 2\n', 'must declare a default group'],
-      ['schema = 2\ndefault = "default"\n', 'must declare named groups'],
-      ['schema = 2\ndefault = "missing"\n\n[groups.default]\nmembers = []\n', 'default group missing is not declared'],
-      ['schema = 2\ndefault = "invalid.group"\n\n[groups."invalid.group"]\nmembers = []\n', 'group name invalid.group must use letters'],
-      ['schema = 2\ndefault = "default"\n\n[groups]\ndefault = 1\n', 'group default must declare a members array'],
-      ['schema = 2\ndefault = "default"\n\n[groups.default]\nmembers = [1]\n', 'group default members must be tables'],
+      ['schema = 1\n', 'must declare a default group'],
+      ['schema = 1\ndefault = "default"\n', 'must declare named groups'],
+      ['schema = 1\ndefault = "missing"\n\n[groups.default]\nmembers = []\n', 'default group missing is not declared'],
+      ['schema = 1\ndefault = "invalid.group"\n\n[groups."invalid.group"]\nmembers = []\n', 'group name invalid.group must use letters'],
+      ['schema = 1\ndefault = "default"\n\n[groups]\ndefault = 1\n', 'group default must declare a members array'],
+      ['schema = 1\ndefault = "default"\n\n[groups.default]\nmembers = [1]\n', 'group default members must be tables'],
+      ['schema = 1\ndefault = "default"\n\n[groups.default]\nrepositories = ["repo"]\n', 'group default must not declare repositories; use typed members'],
       [workspace('{ type = "repository" }'), 'group default member path must be a non-empty string'],
       [workspace('{ type = "workspace", path = "nested/*" }'), 'workspace member nested/* must not use a pattern']
     ] as const

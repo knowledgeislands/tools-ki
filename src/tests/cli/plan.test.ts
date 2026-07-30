@@ -37,7 +37,7 @@ describe('[ki repo plan]', () => {
     )
     await box.project.write(
       '.ki-workspace.toml',
-      'schema = 2\ndefault = "inventory"\n\n[groups.inventory]\nmembers = [{ type = "repository", path = "repo" }]\n'
+      'schema = 1\ndefault = "inventory"\n\n[groups.inventory]\nmembers = [{ type = "repository", path = "repo" }]\n'
     )
     const root = await realpath(`${box.project.path}/repo`)
 
