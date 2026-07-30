@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-016
 title: Make the current workspace model schema one
 theme: cli
 horizon: blocking
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: 20c7ecdc0d9b0316e655186bfd3be24fb162a6cf
@@ -58,6 +58,25 @@ This item supports only the latest schema 1. It does not retain a schema-2 parse
 ## Dependencies / blocks
 
 This is a Blocking workspace-format correction with no work-item dependency. It restores a truthful single schema before workspace-based repository operations can be relied upon.
+
+## Acceptance
+
+### Delivered boundary
+
+The current typed-member workspace model now accepts and emits only `schema = 1`; typed repository and nested-workspace members, recursive resolution, cycle and duplicate protection, physical post-order registration, and symlink exclusion remain unchanged. Schema 2 and historical flat `repositories` groups are explicitly rejected. The one discovered external workspace configuration, `/Users/krisbrown/workspaces/kit/knowledgeislands/.ki-workspace.toml`, was rewritten to the canonical empty typed-member schema-one form.
+
+### Evidence
+
+- Baseline: `20c7ecdc0d9b0316e655186bfd3be24fb162a6cf`.
+- Implementation: `d848077` (`fix(workspace): make current model schema one`).
+- `bun run test` — 34 files and 447 tests passed.
+- `bun run test:coverage` — 34 files and 447 tests passed; statements, branches, functions, and lines all 100%.
+- `bunx tsc --noEmit`, `bunx biome check`, `bun run ki:tools:lint-man`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .` passed.
+- From `/Users/krisbrown/workspaces/kit/knowledgeislands`, the development CLI completed `ki repo audit` against the migrated direct-CWD workspace.
+
+### Decisions and exclusions
+
+The schema number is intentionally rebased without preserving a runtime reader, fallback, or public migration command for schema 2 or the flat group shape. The external configuration rewrite is the complete currently discovered data migration. No mGit or non-workspace repository-selection semantics changed.
 
 ## Delegation
 
