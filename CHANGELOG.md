@@ -30,6 +30,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki version`
 - `ki diag`
 - `ki doctor`
+- `ki repo diag`
 - `ki docs`
 
 #### User management
@@ -61,7 +62,6 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo skill add`
 - `ki repo skill remove`
 - `ki repo upgrade`
-- `ki repo diag`
 
 #### Harness management
 

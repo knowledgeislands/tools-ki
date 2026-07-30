@@ -58,6 +58,9 @@ Show installation mode, paths, and user configuration.
 Check user configuration, agents, harnesses, user-skill links, and direct-CWD
 legacy KI state and configuration.
 .TP
+.B ki repo [repo-options] diag
+Show selected repository resolutions.
+.TP
 .B ki docs [topic]
 Print canonical KI documentation locations.
 .SS User management
@@ -124,9 +127,6 @@ Remove KI-managed repository skill links and declarations.
 .TP
 .B ki repo [repo-options] upgrade
 Refresh uniquely resolved capabilities declared by selected KI repositories.
-.TP
-.B ki repo [repo-options] diag
-Show selected repository resolutions.
 .SS Harness management
 \&
 .TP
@@ -257,8 +257,8 @@ files are stale.
 .SS Diagnostics
 \&
 .PP
-Use these commands to inspect the local KI installation, print command
-guidance, and diagnose user configuration without operating on a repository.
+Use these commands to inspect the local KI installation, user configuration,
+and repository state without changing it.
 .TP
 .B ki version
 Print the CLI version.
@@ -274,6 +274,12 @@ reports direct-CWD legacy \fB.ki-meta/\fR and \fB.ki/\fR directories, without
 searching for or operating on a repository. It validates a regular direct-CWD
 \fB.ki-config.toml\fR declaration without resolving its providers. A failing
 check produces a non-zero exit status after the complete report.
+.TP
+.B ki repo [repo-options] diag
+Resolve every selected KI repository without changing it. Without an explicit
+selector, KI uses a direct-CWD workspace default, then direct-CWD
+\fB.mgit-config.toml\fR members, or discovers from the current working
+directory; with a selector, KI resolves only the supplied target set.
 .TP
 .B ki docs [topic]
 Print canonical documentation locations without opening a browser, fetching
@@ -360,10 +366,10 @@ configuration, KI discovers one repository from the current working directory.
 .SS Repository management
 \&
 .PP
-Use these commands to inspect and maintain declared capabilities, diagnose
-selected repositories, and manage their skill links. Read-only operations
-isolate per-target diagnostics; a later mutation failure retains earlier
-successful targets and returns a non-zero result.
+Use these commands to inspect and maintain declared capabilities and manage
+their skill links. Read-only operations isolate per-target diagnostics; a later
+mutation failure retains earlier successful targets and returns a non-zero
+result.
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run the native read-only operations registered by each selected repository's
@@ -417,12 +423,6 @@ repository.
 .B ki repo [repo-options] upgrade
 Refresh uniquely resolved harness providers declared by each selected KI
 repository. It changes neither user nor repository skill activation.
-.TP
-.B ki repo [repo-options] diag
-Resolve every selected KI repository. Without an explicit selector, KI uses a
-direct-CWD workspace default, then direct-CWD \fB.mgit-config.toml\fR members,
-or discovers from the current working directory; with a selector, KI resolves
-only the supplied target set.
 .SS Harness management
 \&
 .PP
