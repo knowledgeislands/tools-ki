@@ -55,10 +55,11 @@ export const configureBootstrapAgents = async (options: {
   const state = await lstat(options.configurationDirectory).catch(() => undefined)
   if (state && (!state.isDirectory() || state.isSymbolicLink())) throw new KiError('ki configuration directory must be a directory', 1)
   const configured = options.refresh ? undefined : await readConfiguration(options.configurationDirectory, options.homeDirectory)
+  const existing = options.refresh ? await inspectUserConfiguration(options.configurationDirectory) : undefined
   const agents = options.refresh || !configured ? await detectAgents(options.homeDirectory) : configured
   if (!configured) {
     await mkdir(options.configurationDirectory, { recursive: true })
-    await writeFile(path, renderConfiguration(agents), { encoding: 'utf8' })
+    await writeFile(path, renderConfiguration(agents, [], [], undefined, existing?.repositories), { encoding: 'utf8' })
   }
   return { agents, disposition: options.refresh ? 'refreshed' : !configured ? 'created' : 'reused' }
 }

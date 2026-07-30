@@ -284,8 +284,6 @@ export const configuredRepositoryWrite = async (
   const contents = await readFile(path, 'utf8')
   const replacement = renderedRepositorySection([...inspection.repositories, repository].sort((left, right) => left.localeCompare(right)))
   const section = /(?:^|\n)\[repositories\]\n[\s\S]*?(?=\n\[[^\n]+\]|$)/
-  const content = section.test(contents)
-    ? contents.replace(section, (matched) => `${matched.startsWith('\n') ? '\n' : ''}${replacement}`)
-    : `${contents.trimEnd()}\n\n${replacement}\n`
+  const content = section.test(contents) ? contents.replace(section, `\n${replacement}`) : `${contents.trimEnd()}\n\n${replacement}\n`
   return { path: 'config.toml', content }
 }

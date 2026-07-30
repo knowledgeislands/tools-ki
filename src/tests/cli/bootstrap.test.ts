@@ -128,6 +128,20 @@ ids = [
     expect(config).toContain(expectedAgentsSection)
   })
 
+  test('preserves registered local repositories while refreshing configuration', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('chatgpt-codex')
+    await box.run('ki bootstrap')
+    const repository = await realpath(box.project.path)
+    const existing = await box.config.read('ki/config.toml')
+    await box.config.write('ki/config.toml', `${existing}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`)
+
+    const refreshed = await box.run('ki bootstrap --refresh')
+
+    expect(refreshed.exitCode).toBe(0)
+    expect(await box.config.read('ki/config.toml')).toContain(`[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]`)
+  })
+
   test('refuses to replace a foreign core-skill link during bootstrap but reconciles it on refresh', async () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')

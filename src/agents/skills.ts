@@ -39,7 +39,14 @@ export const linkManagedSkill = async (
   if (actual === expected) {
     // Development activation deliberately replaces an indirection through the
     // installed payload with a link directly to the local checkout.
-    if (!replace || (await readlink(target).catch(() => undefined)) === skill.source) return false
+    if (
+      !replace ||
+      (await readlink(target).catch(
+        /* v8 ignore next -- After lstat and realpath succeed, only concurrent filesystem replacement can make readlink fail. */
+        () => undefined
+      )) === skill.source
+    )
+      return false
   }
   if (!replace) throw new KiError(`${agentId} ${skill.name} skill points elsewhere; pass --replace to re-point`, 1)
   await unlink(target)
