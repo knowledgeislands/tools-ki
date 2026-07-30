@@ -4,7 +4,7 @@ import { grammarError } from '../core/errors.ts'
 import { repoCommandNames, rootCommandNames } from './catalogue.ts'
 
 export const createCompletionsCommand = (context: KiContext): Command =>
-  new Command('completions')
+  new Command('completion')
     .description('print Bash or Zsh completion source')
     .argument('<shell>', 'shell name: bash or zsh')
     .action((shell: string) => {
@@ -33,5 +33,5 @@ _ki "$@"
 `)
         return
       }
-      throw grammarError('completions shell must be bash or zsh')
+      throw grammarError('completion shell must be bash or zsh')
     })

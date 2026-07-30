@@ -18,7 +18,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 #### Installation
 
 - `ki bootstrap`
-- `ki completions <shell>`
+- `ki completion <shell>`
 - `ki outdated`
 - `ki missing`
 - `ki update`

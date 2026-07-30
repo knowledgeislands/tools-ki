@@ -39,7 +39,7 @@ Native operations are imported in process only after harness and inventory valid
 - `tools-ki` becomes the sole owner of registry layout, command grammar, physical repository resolution, reporting, activation, migration, and native execution.
 - The base harness and an organisation harness can coexist without merging their source trees or treating either checkout as installed state.
 - User commands do not resolve the CWD, while every `ki repo` command can discover one repository or use an explicit override.
-- The active implementation surface comprises `ki help`, `ki version`, `ki completions`, `ki acquire`, `ki bootstrap`, `ki dev`, `ki diag`, `ki doctor`, `ki harness`, `ki list`, `ki repo`, `ki skill`, and `ki update`. The intended V1 manual surface is reconciled with the implementation before release evidence is accepted.
+- The active implementation surface comprises `ki help`, `ki version`, `ki completion`, `ki acquire`, `ki bootstrap`, `ki dev`, `ki diag`, `ki doctor`, `ki harness`, `ki list`, `ki repo`, `ki skill`, and `ki update`. The intended V1 manual surface is reconciled with the implementation before release evidence is accepted.
 - Release and Homebrew delivery remain separate from harness registration and do not authorise a tag, publication, or push.
 
 ## References

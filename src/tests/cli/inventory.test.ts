@@ -5,7 +5,7 @@ import { sandbox } from './_cli_helper.ts'
 const rootHelpCommands = [
   'help',
   'bootstrap',
-  'completions',
+  'completion',
   'outdated',
   'missing',
   'update',
@@ -35,8 +35,8 @@ describe('[ki command inventory]', () => {
     const box = await sandbox()
     const root = await box.run('ki --help')
     const repository = await box.run('ki repo --help')
-    const zsh = await box.run('ki completions zsh')
-    const bash = await box.run('ki completions bash')
+    const zsh = await box.run('ki completion zsh')
+    const bash = await box.run('ki completion bash')
 
     expect(commandNames(root.output)).toEqual(rootHelpCommands)
     expect(commandNames(repository.output)).toEqual(['init', 'audit', 'conform', 'register', 'list', 'plan', 'educate', 'skill', 'upgrade'])

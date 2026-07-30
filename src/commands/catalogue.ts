@@ -2,7 +2,7 @@ export const rootCommandNames = [
   'acquire',
   'bootstrap',
   'cleanup',
-  'completions',
+  'completion',
   'dev',
   'diag',
   'docs',
@@ -29,7 +29,7 @@ export const rootCommandNames = [
 export const rootHelpCommandNames = [
   'help',
   'bootstrap',
-  'completions',
+  'completion',
   'outdated',
   'missing',
   'update',
