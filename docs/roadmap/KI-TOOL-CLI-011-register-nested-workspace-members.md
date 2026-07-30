@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-011
 title: Register nested workspace members
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: f2d8e6d5de158ab32009c83b7091359865f54e65
 ---
 
 ## Context
