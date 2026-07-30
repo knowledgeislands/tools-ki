@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-016
 title: Make the current workspace model schema one
 theme: cli
 horizon: blocking
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 20c7ecdc0d9b0316e655186bfd3be24fb162a6cf
@@ -73,6 +73,10 @@ The current typed-member workspace model now accepts and emits only `schema = 1`
 - `bun run test:coverage` — 34 files and 447 tests passed; statements, branches, functions, and lines all 100%.
 - `bunx tsc --noEmit`, `bunx biome check`, `bun run ki:tools:lint-man`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .` passed.
 - From `/Users/krisbrown/workspaces/kit/knowledgeislands`, the development CLI completed `ki repo audit` against the migrated direct-CWD workspace.
+
+## Done
+
+The repository owner approved closure on 2026-07-31 after the current tree re-passed the full test suite, 100% coverage gate, TypeScript check, Biome check, roff lint, diff check, and roadmap audit.
 
 ### Decisions and exclusions
 
