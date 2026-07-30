@@ -64,7 +64,7 @@ KI_CLI_INSTALL_DIR="$HOME/.local/ki-dev/bin" ./install.sh --link
 PATH="$HOME/.local/ki-dev/bin:$PATH" ki doctor
 ```
 
-`ki doctor` reports `installation: linked development checkout` when that link is running. The command runs `src/main.ts` through Bun and the `ki(1)` link follows subsequent manual edits; reinstall only when changing target directories or replacing the link with a release installation.
+`ki diag` reports `Installation  local` when that link is running. The command runs `src/main.ts` through Bun and the `ki(1)` link follows subsequent manual edits; reinstall only when changing target directories or replacing the link with a release installation.
 
 Set `KI_MAN_INSTALL_DIR` when the manual should be installed outside the default sibling `share/man/man1` directory.
 

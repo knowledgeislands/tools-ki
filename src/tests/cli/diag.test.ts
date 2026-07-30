@@ -1,4 +1,4 @@
-import { realpath, symlink } from 'node:fs/promises'
+import { realpath, rm, symlink, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
@@ -18,6 +18,16 @@ describe('[ki diag]', () => {
 
     expect(diag.output).toContain(`Executable    ${box.executable}`)
     expect(diag.output).toContain(`Data          ${missingHome}/data/ki`)
+  })
+
+  test('reports the entrypoint-proven installation mode', async () => {
+    const box = await sandbox()
+
+    const regular = await box.run('ki diag')
+    const local = await box.run('ki diag', { installation: 'local' })
+
+    expect(regular.output).toContain('Installation  regular')
+    expect(local.output).toContain('Installation  local')
   })
 
   test('resolves the user home from USERPROFILE when HOME is unset', async () => {
@@ -296,6 +306,67 @@ extra = true
     expect(off.output).toContain('Local mode    off')
     expect(on.output).toContain(`Local source  ${harnessPath}`)
     expect(on.output).toContain('Local mode    on')
+  })
+
+  test('does not report local mode as active when a canonical payload is not linked', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run('ki dev local on')
+    const hooks = 'ki/harnesses/knowledgeislands/ki-agentic-harness/hooks'
+    await unlink(`${box.data.path}/${hooks}`)
+    await box.data.mkdir(hooks)
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.output).toContain('Local mode    off')
+  })
+
+  test('does not report local mode as active when a canonical payload points at another checkout', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/current/knowledgeislands/ki-agentic-harness')
+    const otherHarnessPath = await box.setupLocalCanonicalHarness('dev/other/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run('ki dev local on')
+    const hooks = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/hooks`
+    await unlink(hooks)
+    await symlink(`${otherHarnessPath}/hooks`, hooks, 'dir')
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.output).toContain('Local mode    off')
+  })
+
+  test('does not report local mode as active when its source payload disappears', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run('ki dev local on')
+    await rm(`${harnessPath}/hooks`, { recursive: true })
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.output).toContain('Local mode    off')
+  })
+
+  test('does not report local mode as active when its configured source disappears', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run('ki dev local on')
+    await rm(harnessPath, { recursive: true })
+
+    const diag = await box.run('ki diag')
+
+    expect(diag.output).toContain('Local mode    off')
   })
 
   test('reports scalar sections and an invalid local section as configuration errors', async () => {

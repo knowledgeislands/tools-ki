@@ -30,6 +30,7 @@ import { onTestFinished } from 'vitest'
 import { run as runCli } from '../../cli.ts'
 import { createContext } from '../../context.ts'
 import type { Fetcher } from '../../core/acquire.ts'
+import type { KiInstallationMode } from '../../core/paths.ts'
 import type { Runner } from '../../core/runner.ts'
 
 // `ki bootstrap` detects the active agent from which of these home directories exists —
@@ -142,6 +143,7 @@ export interface Sandbox {
       readonly fetcher?: 'default'
       readonly runner?: 'default'
       readonly executable?: string
+      readonly installation?: KiInstallationMode
       readonly stdoutFailure?: Error
     }
   ) => Promise<CommandResult>
@@ -203,6 +205,7 @@ const create = async (): Promise<Sandbox> => {
       readonly fetcher?: 'default'
       readonly runner?: 'default'
       readonly executable?: string
+      readonly installation?: KiInstallationMode
       readonly stdoutFailure?: Error
     }
   ): Promise<CommandResult> => {
@@ -216,6 +219,7 @@ const create = async (): Promise<Sandbox> => {
       stdout: { write },
       stderr: { write, isTTY: options?.interactive, columns: options?.columns },
       executable,
+      installation: options?.installation,
       workingDirectory,
       environment: { ...env, ...environmentOverrides, _: executable },
       ...(options?.fetcher === 'default' ? {} : { fetcher: (input, init) => fetcher(input, init) }),

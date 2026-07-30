@@ -1,4 +1,4 @@
-import { lstat, mkdir, realpath, symlink, unlink } from 'node:fs/promises'
+import { lstat, mkdir, readlink, realpath, symlink, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { declareRepositorySkill, readDeclaredSkills, undeclareRepositorySkill } from '../core/configuration.ts'
 import { KiError } from '../core/errors.ts'
@@ -36,7 +36,11 @@ export const linkManagedSkill = async (
   if (!targetState.isSymbolicLink()) throw new KiError(`${agentId} ${skill.name} skill is not KI-managed`, 1)
   const actual = await realpath(target).catch(() => undefined)
   const expected = await realpath(skill.source)
-  if (actual === expected) return false
+  if (actual === expected) {
+    // Development activation deliberately replaces an indirection through the
+    // installed payload with a link directly to the local checkout.
+    if (!replace || (await readlink(target).catch(() => undefined)) === skill.source) return false
+  }
   if (!replace) throw new KiError(`${agentId} ${skill.name} skill points elsewhere; pass --replace to re-point`, 1)
   await unlink(target)
   await symlink(skill.source, target, 'dir')

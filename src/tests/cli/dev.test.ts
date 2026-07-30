@@ -1,4 +1,4 @@
-import { lstat, realpath, rename, rm, symlink, unlink } from 'node:fs/promises'
+import { lstat, readlink, realpath, rename, rm, symlink, unlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from './_cli_helper.ts'
 
@@ -47,11 +47,11 @@ describe('[ki dev]', () => {
         exitCode: 0,
         output: `development harness enabled ${harnessPath}
 refreshed ki configuration: 1 agents, 1 harnesses, 5 skills
-ki-bootstrap for chatgpt-codex already installed
-ki-delegate for chatgpt-codex already installed
-ki-next for chatgpt-codex already installed
-ki-plan for chatgpt-codex already installed
-ki-recap for chatgpt-codex already installed
+ki-bootstrap for chatgpt-codex installed
+ki-delegate for chatgpt-codex installed
+ki-next for chatgpt-codex installed
+ki-plan for chatgpt-codex installed
+ki-recap for chatgpt-codex installed
 `
       })
       const dataIsSymlink = await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness/skills')
@@ -91,6 +91,7 @@ path = ${JSON.stringify(harnessPath)}
 `
       expect(dataIsSymlink).toBe(true)
       expect(homeIsSymlink).toBe(true)
+      expect(await readlink(`${box.home.path}/.agents/skills/ki-bootstrap`)).toBe(`${harnessPath}/skills/keystone/ki-bootstrap`)
       expect(await realpath(`${box.home.path}/.agents/skills/ki-bootstrap`)).toBe(`${harnessPath}/skills/keystone/ki-bootstrap`)
       expect(config).toBe(expectedConfig)
     })
@@ -224,6 +225,23 @@ ki-recap for claude-code already installed
       const link = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/hooks`
       await unlink(link)
       await symlink(`${box.root.path}/missing-hooks`, link, 'dir')
+
+      const result = await box.run('ki dev local on')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('hooks link is unfamiliar')
+    })
+
+    test('refuses a canonical payload link that targets another local checkout', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/current/knowledgeislands/ki-agentic-harness')
+      const otherHarnessPath = await box.setupLocalCanonicalHarness('dev/other/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await enableLocal(box, harnessPath)
+      const link = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/hooks`
+      await unlink(link)
+      await symlink(`${otherHarnessPath}/hooks`, link, 'dir')
 
       const result = await box.run('ki dev local on')
 

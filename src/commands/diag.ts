@@ -21,7 +21,11 @@ export const createDiagCommand = (context: KiContext): Command =>
       field('File', configuration.path)
     ]
     if (configuration.state !== 'missing') {
-      const localMode = configuration.local ? ((await canonicalHarnessDevelopmentEnabled(context.paths.data)) ? 'on' : 'off') : 'not configured'
+      const localMode = configuration.local
+        ? (await canonicalHarnessDevelopmentEnabled(context.paths.data, configuration.local))
+          ? 'on'
+          : 'off'
+        : 'not configured'
       lines.push(
         field(`Agents (${configuration.agents.length})`, configuration.agents.join(', ') || 'none'),
         field(`Harnesses (${configuration.harnesses.length})`, configuration.harnesses.join(', ') || 'none'),

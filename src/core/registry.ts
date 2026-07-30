@@ -244,11 +244,6 @@ export const installCanonicalHarness = async (
 
 const canonicalHarnessDirectory = (dataDirectory: string): string => join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
 
-export const canonicalHarnessDevelopmentEnabled = async (dataDirectory: string): Promise<boolean> => {
-  const state = await lstat(join(canonicalHarnessDirectory(dataDirectory), 'skills')).catch(() => undefined)
-  return Boolean(state?.isSymbolicLink())
-}
-
 const localPayloadDirectory = async (local: string, payload: (typeof payloadRoots)[number]): Promise<string> => {
   const source = resolve(local, payload)
   await physicalDirectory(source, `local harness ${payload} directory`)
@@ -308,6 +303,25 @@ const canonicalDevelopmentProjection = async (dataDirectory: string): Promise<bo
 }
 
 export const isCanonicalHarnessDevelopmentLinked = (dataDirectory: string): Promise<boolean> => canonicalDevelopmentProjection(dataDirectory)
+
+// A partial projection is not an active local harness. With the configured source,
+// verify every payload link resolves to its expected local directory too.
+export const canonicalHarnessDevelopmentEnabled = async (dataDirectory: string, local?: string): Promise<boolean> => {
+  if (!(await canonicalDevelopmentProjection(dataDirectory))) return false
+  if (!local) return true
+  const harness = await realpath(resolve(local)).catch(() => undefined)
+  if (!harness) return false
+  const links = await Promise.all(
+    payloadRoots.map(async (payload) => {
+      const [source, target] = await Promise.all([
+        realpath(join(harness, payload)).catch(() => undefined),
+        realpath(join(canonicalHarnessDirectory(dataDirectory), payload)).catch(() => undefined)
+      ])
+      return Boolean(source && source === target)
+    })
+  )
+  return links.every(Boolean)
+}
 
 export const disableCanonicalHarnessDevelopment = async (dataDirectory: string): Promise<boolean> => {
   const destination = canonicalHarnessDirectory(dataDirectory)

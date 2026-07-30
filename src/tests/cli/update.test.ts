@@ -151,7 +151,7 @@ describe('[ki update and upgrade]', () => {
     const box = await sandbox()
     await symlink(box.executable, `${box.root.path}/linked-ki`)
 
-    const result = await box.run('ki update --cli', { executable: `${box.root.path}/linked-ki` })
+    const result = await box.run('ki update --cli', { executable: `${box.root.path}/linked-ki`, installation: 'local' })
 
     expect(result).toEqual({
       exitCode: 1,

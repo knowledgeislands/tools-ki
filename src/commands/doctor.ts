@@ -121,7 +121,7 @@ export const createDoctorCommand = (context: KiContext): Command =>
         report(context, checks)
         return
       }
-      const activeLocal = Boolean(configuration.local) && (await canonicalHarnessDevelopmentEnabled(context.paths.data))
+      const activeLocal = configuration.local ? await canonicalHarnessDevelopmentEnabled(context.paths.data, configuration.local) : false
       const localSources = new Map<string, string>()
       if (activeLocal && configuration.local) {
         try {
@@ -131,6 +131,8 @@ export const createDoctorCommand = (context: KiContext): Command =>
         } catch (error) {
           checks.push({ status: 'fail', label: 'Local development', detail: (error as Error).message })
         }
+      } else if (configuration.local && (await canonicalHarnessDevelopmentEnabled(context.paths.data))) {
+        checks.push({ status: 'fail', label: 'Local development', detail: 'canonical payload links do not match the configured local source' })
       }
       for (const agent of agents) {
         const skills = agentSkillDirectory(agent, 'user')
