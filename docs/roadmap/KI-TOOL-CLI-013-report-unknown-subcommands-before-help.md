@@ -54,4 +54,11 @@ This is a Blocking CLI correctness issue with no work-item dependency. It does n
 
 ### Diagnostic contract
 
-An unrecognised command token is a usage error even if subsequent options request help. The command should name the invalid token, retain a stable non-zero exit code, and avoid presenting parent help as a successful response. A correction hint is helpful only where it is unambiguous and must not turn the invalid spelling into a supported compatibility path.
+An unrecognised command token is a usage error even if subsequent options request help. The command should name the invalid token and its parent command, retain a stable non-zero exit code, and avoid presenting parent help as a successful response. For the reproduced input, the contract is:
+
+```text
+ki: error: unknown subcommand 'repo' for 'ki skill'
+Did you mean: ki repo skill …?
+```
+
+A correction hint is helpful only where it is unambiguous and must not turn the invalid spelling into a supported compatibility path.
