@@ -25,8 +25,8 @@ This item does not follow symbolic links, traverse beneath a repository leaf, cr
 
 1. Add `workspace register` alongside the retained empty-file `workspace init` flow. Define a versioned workspace-member representation that distinguishes direct repositories from nested workspace directories, creates a missing workspace file when needed, and updates the command surface, help, completions, and documentation coherently.
 2. Implement deterministic, physical post-order registration: ignore symbolic links, stop at a regular `.ki-config.toml`, write or refresh only each container's default group while preserving its named groups, and register each finished child as the appropriate direct-repository or nested-workspace member of its parent.
-3. Resolve nested workspace members recursively from the selecting workspace, using their default groups with physical containment checks, cycle diagnostics, and duplicate-repository refusal before a repository operation starts. Make `ki workspace list` use the same expansion and report each group's effective repository set rather than only its local direct-member count, followed by one concise deterministic line for every resolved repository leaf.
-4. Cover registration, recursive list reporting, and resolution through CLI-contract tests: nested containers, repository traversal boundaries, symlink exclusion, existing custom groups, deterministic output, malformed members, cycles, and duplicates.
+3. Resolve nested workspace members recursively from the selecting workspace, using their default groups with physical containment checks, cycle diagnostics, and duplicate-repository refusal before a repository operation starts. Make `ki workspace list` use the same expansion and report each group's effective repository set rather than only its local direct-member count, followed by one concise deterministic line for every resolved repository leaf using its `ki-repo` `repo_code`, title, and description.
+4. Cover registration, recursive list reporting, metadata display, and resolution through CLI-contract tests: nested containers, repository traversal boundaries, symlink exclusion, existing custom groups, deterministic output, malformed members, cycles, duplicates, and missing or malformed repository metadata.
 5. Update the README and local-development guide to state the recursive registration, list, and nested-workspace selection contract.
 
 ## Files touched
@@ -34,6 +34,7 @@ This item does not follow symbolic links, traverse beneath a repository leaf, cr
 - `src/commands/workspace.ts`
 - `src/core/workspace.ts`
 - `src/core/repository.ts`
+- `src/core/configuration.ts`
 - `src/tests/cli/workspace.test.ts`
 - `src/tests/cli/diag.test.ts`
 - `README.md`
@@ -59,7 +60,7 @@ Workspace membership needs an ordered, explicit distinction between a repository
 
 ### Effective inventory
 
-`ki workspace list` must use the same nested-member expansion as repository operations. Its group summary should distinguish local membership from the resolved effective repository count, then emit one concise deterministic line for every resolved repository leaf: its workspace-relative path and whether it was direct or reached through a nested workspace. This lets a user verify that a registered hierarchy selects the expected repositories without running an operation over them.
+`ki workspace list` must use the same nested-member expansion as repository operations. Its group summary should distinguish local membership from the resolved effective repository count, then emit one concise deterministic line for every resolved repository leaf: its workspace-relative path, whether it was direct or reached through a nested workspace, and its `ki-repo` `repo_code`, title, and description. This lets a user verify both the selected hierarchy and the identity of each repository without running an operation over it.
 
 ### Register ownership
 
