@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-015
 title: Unify direct-CWD diagnostics and repair
 theme: cli
 horizon: blocking
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: 8183c56dc890095c15c18b8f2a32ab702a929c43
@@ -63,6 +63,18 @@ This is a Blocking command-topology and repository-projection-health gap. It is 
 ## Delegation
 
 One fresh serial implementation worker (`gpt-5.6-sol`, high reasoning) owns direct-CWD diagnostics, repair, projections, tests, and documentation after CLI-013 and CLI-014 have landed. Locked: no selectors or discovery; direct regular declaration only; repair reconciles only proven KI-managed links and never adopts foreign content; diagnostics remain read-only. Escalate any proposed global repair action that is not already proven by a diagnostic or requires creating/guessing configuration. Done means the direct-CWD, rejection, projection, repair, dry-run, and documentation contract passes, followed by the full suite, typecheck, style check, roff lint, and roadmap audit. The worker stops before commit for review.
+
+## Acceptance
+
+Delivered in `09b90c4 feat(cli): unify direct repository diagnostics and repair`.
+
+- Retired `ki repo diag`; top-level `ki diag` now adds a read-only repository section only for a regular direct-CWD declaration and checks declared compatible projections.
+- Added `ki repair [--dry-run]`, which records a direct physical repository before evaluation and repairs only missing, dangling, or stale KI-managed projections; foreign entries and unresolvable declarations remain reported failures.
+- Both commands reject selectors and do not traverse ancestors, workspace, mGit, or symbolic declarations. Public help, completions, README, changelog, and manual reflect the topology.
+
+Verified with `bun run test --coverage` (447 passing; 100% statements, branches, functions, and lines), `bunx tsc --noEmit`, `bunx biome check`, `bun run ki:tools:lint-man`, `git diff --check`, and `ki repo audit --skill ki-roadmap --repo .`.
+
+No release, push, or lifecycle closure has been performed.
 
 ## Discussion
 
