@@ -1,4 +1,7 @@
 ["knowledgeislands/ki-agentic-harness:ki-repo"]
+title = "tools-ki"
+description = "Knowledge Islands command-line interface."
+repo_code = "KI-TOOL"
 supported_runtimes = ["claude-code", "codex"]
 visibility = "public"
 
@@ -9,8 +12,6 @@ visibility = "public"
 ["knowledgeislands/ki-agentic-harness:ki-engineering"]
 
 ["knowledgeislands/ki-agentic-harness:ki-roadmap"]
-repo_code = "KI-TOOL"
-
 ["knowledgeislands/ki-agentic-harness:ki-roadmap".themes]
 CLI = "cli"
 VENDOR = "cross-repository-vendoring"

@@ -2,7 +2,7 @@ import { lstat, mkdir, readdir, realpath, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type HarnessCapability, readInstalledHarness } from '../core/harness.ts'
-import { readConfiguration, renderConfiguration } from './configuration.ts'
+import { inspectUserConfiguration, readConfiguration, renderConfiguration } from './configuration.ts'
 import { detectAgents } from './detection.ts'
 import {
   type BootstrapConfiguration,
@@ -98,10 +98,11 @@ export const refreshUserConfiguration = async (
   local?: string
 ): Promise<{ readonly harnesses: number; readonly skills: number }> => {
   const installed = await discoverInstalledHarnesses(dataDirectory)
+  const existing = await inspectUserConfiguration(configurationDirectory)
   const harnesses = installed.map((harness) => harness.id).sort((left, right) => left.localeCompare(right))
   const localSkills = local ? (await localBootstrapHarness(local)).skills : []
   const skills = await discoverManagedUserSkills(agents, installed, localSkills)
-  await writeFile(bootstrapConfigurationPath(configurationDirectory), renderConfiguration(agents, harnesses, skills, local), {
+  await writeFile(bootstrapConfigurationPath(configurationDirectory), renderConfiguration(agents, harnesses, skills, local, existing.repositories), {
     encoding: 'utf8'
   })
   return { harnesses: harnesses.length, skills: skills.length }

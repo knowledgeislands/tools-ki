@@ -1,4 +1,6 @@
+import { realpath } from 'node:fs/promises'
 import { Command } from 'commander'
+import { configuredRepositoryWrite, inspectUserConfiguration } from '../agents/index.ts'
 import { repoHelpCommandNames } from '../commands/catalogue.ts'
 import { createRepoDiagCommand } from '../commands/diag.ts'
 import { createRepoPlanCommand } from '../commands/plan.ts'
@@ -14,6 +16,19 @@ import { renderRepositoryConformCommand, runRepositoryConformCommands } from './
 import { resolveDeclaredSkills } from './resolution.ts'
 import { detectFixed, educateSkill, runSkillAudit, runSkillConform } from './runtime.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from './transaction.ts'
+
+const localRepositoryRegistration = async (
+  context: KiContext,
+  repository: string,
+  skills: readonly { readonly declaration: { readonly name: string } }[]
+): Promise<string | undefined> => {
+  if (!skills.some((skill) => skill.declaration.name === 'ki-repo')) return undefined
+  const configuration = await inspectUserConfiguration(context.paths.config)
+  if (configuration.state === 'missing') return 'local KI configuration is missing; run `ki bootstrap` first'
+  if (configuration.state === 'invalid') return `local KI configuration is invalid: ${configuration.errors.join('; ')}`
+  if (!configuration.repositories.includes(repository)) return `local KI configuration does not register ${repository}`
+  return undefined
+}
 
 const resolveSkills = async (context: KiContext, options: { repositories: readonly string[]; workspace?: string; skill?: string }) => {
   const repositories = await resolveRepositoryTargets({
@@ -45,6 +60,16 @@ export const createRepositoryOperations = (context: KiContext): Command => {
     .addCommand(createRepoPlanCommand(context, selectedRepositories))
     .addCommand(createRepoSkillCommand(context, selectedRepositories))
     .addCommand(createUpgradeCommand(context, selectedRepositories))
+    .addCommand(
+      new Command('list').description('list KI repositories registered in the local user configuration').action(async () => {
+        const configuration = await inspectUserConfiguration(context.paths.config)
+        if (configuration.state === 'missing') throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
+        if (configuration.state === 'invalid') throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
+        context.stdout.write(
+          `ki repo list\n${configuration.repositories.length ? configuration.repositories.map((repository) => `  ${repository}`).join('\n') : '  none'}\n`
+        )
+      })
+    )
     .addCommand(
       new Command('educate')
         .description('explain maintenance for declared skills')
@@ -97,6 +122,11 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
               output.reporterLevels
             )
+            const registration = await localRepositoryRegistration(context, repository.root, skills)
+            if (registration) {
+              context.stdout.write(`❌ fail  [Local repository registration (REPO-REG-1)] — ${registration}\n`)
+              failed = true
+            }
             failed ||= findings.some((finding) => finding.level === 'fail')
           }
           if (failed) throw new KiError('repository audit found failures', 1)
@@ -140,7 +170,11 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               return conform.writes.map((write) => ({ write, scope: { paths: scope.paths } }))
             })
             const userWrites = await prepareScopedWrites(context.homeDirectory, scopedUserWrites)
-            const writes = [...repositoryWrites, ...userWrites]
+            const registryWrite = skills.some((skill) => skill.declaration.name === 'ki-repo')
+              ? await configuredRepositoryWrite(context.paths.config, repository.root)
+              : undefined
+            const registryWrites = registryWrite ? await prepareWrites(await realpath(context.paths.config), [registryWrite]) : []
+            const writes = [...repositoryWrites, ...userWrites, ...registryWrites]
             const commands = conformed.flatMap(({ conform }) => conform.commands)
             if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
               throw new KiError('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted', 1)

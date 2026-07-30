@@ -92,9 +92,9 @@ const area = (path: string): SandboxArea => {
 // Used to exercise the repo/harness/skill
 // commands against arbitrary rubric-definition behavior. Omitting `rubric` writes the skill
 // without a rubric module at all, for exercising skills that provide no native governance.
-const setupExampleHarness = async (data: SandboxArea, { rubric }: { rubric?: string } = {}): Promise<void> => {
-  const base = 'ki/harnesses/example/harness/skills/ki-example'
-  await data.write(`${base}/SKILL.md`, '---\nname: ki-example\nki-depends-on: []\n---\n')
+const setupExampleHarness = async (data: SandboxArea, { rubric, name = 'ki-example' }: { rubric?: string; name?: string } = {}): Promise<void> => {
+  const base = `ki/harnesses/example/harness/skills/${name}`
+  await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
   if (rubric !== undefined) await data.write(`${base}/scripts/rubric/items/index.ts`, rubric)
 }
 
@@ -125,7 +125,7 @@ export interface Sandbox {
   readonly project: SandboxArea
   readonly env: Record<string, string>
   readonly executable: string
-  readonly setupExampleHarness: (skill?: { readonly rubric?: string }) => Promise<void>
+  readonly setupExampleHarness: (skill?: { readonly rubric?: string; readonly name?: string }) => Promise<void>
   readonly setupCanonicalHarness: () => Promise<void>
   readonly setupLocalCanonicalHarness: (relativePath: string) => Promise<string>
   readonly setupAgentHome: (agentId: AgentId) => Promise<void>

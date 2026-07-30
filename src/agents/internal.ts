@@ -37,6 +37,10 @@ export interface LocalSection {
   readonly path?: unknown
 }
 
+export interface RepositoriesSection {
+  readonly paths?: unknown
+}
+
 export interface UserConfigurationInspection {
   readonly path: string
   readonly state: 'missing' | 'valid' | 'invalid'
@@ -44,6 +48,7 @@ export interface UserConfigurationInspection {
   readonly harnesses: readonly string[]
   readonly skills: readonly string[]
   readonly local: string | null
+  readonly repositories: readonly string[]
   readonly warnings: readonly string[]
   readonly errors: readonly string[]
 }

@@ -31,7 +31,8 @@ describe('[ki list]', () => {
 
     expect(result).toEqual({
       exitCode: 0,
-      output: 'ki list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\n'
+      output:
+        'ki list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\nRegistered repositories:\n  none\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
   })
@@ -41,7 +42,7 @@ describe('[ki list]', () => {
 
     const result = await box.run('ki list')
 
-    expect(result).toEqual({ exitCode: 0, output: 'ki list\nInstalled harnesses:\n  none\nUser skills:\n  none\n' })
+    expect(result).toEqual({ exitCode: 0, output: 'ki list\nInstalled harnesses:\n  none\nUser skills:\n  none\nRegistered repositories:\n  none\n' })
   })
 
   test('rejects arguments and invalid user configuration without inspecting repository declarations', async () => {
@@ -58,7 +59,10 @@ describe('[ki list]', () => {
       output:
         "error: too many arguments for 'list'. Expected 0 arguments but got 1.\n\nUsage: ki list [options]\n\nlist installed harness capabilities and declared skills\n\nOptions:\n  -h, --help  display help for command\n"
     })
-    expect(invalidDeclaration).toEqual({ exitCode: 0, output: 'ki list\nInstalled harnesses:\n  none\nUser skills:\n  none\n' })
+    expect(invalidDeclaration).toEqual({
+      exitCode: 0,
+      output: 'ki list\nInstalled harnesses:\n  none\nUser skills:\n  none\nRegistered repositories:\n  none\n'
+    })
     expect(invalidConfiguration).toEqual({
       exitCode: 1,
       output: 'ki: error: ki configuration is invalid: configuration must be valid TOML\n'

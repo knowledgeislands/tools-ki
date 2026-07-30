@@ -30,6 +30,7 @@ export const createDiagCommand = (context: KiContext): Command =>
         field(`Agents (${configuration.agents.length})`, configuration.agents.join(', ') || 'none'),
         field(`Harnesses (${configuration.harnesses.length})`, configuration.harnesses.join(', ') || 'none'),
         field(`Skills (${configuration.skills.length})`, configuration.skills.join(', ') || 'none'),
+        field(`Repositories (${configuration.repositories.length})`, configuration.repositories.join(', ') || 'none'),
         field('Local source', configuration.local ?? 'none'),
         field('Local mode', localMode)
       )

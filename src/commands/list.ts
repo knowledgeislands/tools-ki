@@ -17,5 +17,6 @@ export const createListCommand = (context: KiContext): Command =>
       lines.push(listed(harness.capabilities.map((capability) => `  ${capability.kind} ${capability.name}`)))
     }
     lines.push('User skills:', listed([...userConfiguration.skills].sort((left, right) => left.localeCompare(right))))
+    lines.push('Registered repositories:', listed(userConfiguration.repositories))
     context.stdout.write(`${lines.join('\n')}\n`)
   })
