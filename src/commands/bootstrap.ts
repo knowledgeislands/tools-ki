@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import {
   clearLocalBootstrapHarness,
   configureBootstrapAgents,
+  inspectUserConfiguration,
   installBootstrapSkills,
   installedBootstrapSkillSources,
   refreshUserConfiguration,
@@ -39,10 +40,14 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         context.stdout.write(`refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`)
       } else {
         await clearLocalBootstrapHarness(context.paths.config)
+        const selected = new Map<string, string>(
+          (await inspectUserConfiguration(context.paths.config)).skills.map((identity) => [identity.slice(identity.lastIndexOf(':') + 1), identity] as const)
+        )
+        for (const skill of skills) selected.set(skill.name, `${canonicalHarnessIdentifier}:${skill.name}`)
         await setConfiguredUserSkills(
           context.paths.config,
           context.homeDirectory,
-          skills.map((skill) => `${canonicalHarnessIdentifier}:${skill.name}`)
+          [...selected.values()].sort((left, right) => left.localeCompare(right))
         )
       }
       for (const { agent, skill, installed } of projections) {

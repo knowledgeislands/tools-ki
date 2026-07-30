@@ -7,9 +7,9 @@ import { detectAgents } from './detection.ts'
 import {
   type BootstrapConfiguration,
   bootstrapConfigurationPath,
-  bootstrapUserSkills,
   type InstalledAgent,
   type ManagedUserSkill,
+  minimumBootstrapUserSkills,
   requiredPhysicalDirectory,
   skillCapability
 } from './internal.ts'
@@ -20,7 +20,7 @@ const bootstrapSkillSources = async (
   description: string
 ): Promise<readonly ManagedUserSkill[]> =>
   Promise.all(
-    bootstrapUserSkills.map(async (name) => {
+    minimumBootstrapUserSkills.map(async (name) => {
       const capability = harness.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === name)
       if (!capability) throw new KiError(`${description} does not provide ${name}`, 1)
       return { name, source: await requiredPhysicalDirectory(join(harness.root, capability.source), `${description} ${name} skill`) }
@@ -35,7 +35,7 @@ export const installedBootstrapSkillSources = async (dataDirectory: string, iden
 export const localBootstrapHarness = async (harnessDirectory: string): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
   const harness = await requiredPhysicalDirectory(resolve(harnessDirectory), 'local harness')
   const skills: ManagedUserSkill[] = []
-  for (const name of bootstrapUserSkills) {
+  for (const name of minimumBootstrapUserSkills) {
     const source = join(harness, 'skills', name === 'ki-bootstrap' ? 'keystone' : 'process', name)
     const entry = await lstat(join(source, 'SKILL.md')).catch(() => undefined)
     if (!entry?.isFile() || entry.isSymbolicLink()) {

@@ -7,6 +7,10 @@ describe('[ki bootstrap]', () => {
   test('bootstraps without replacement and refreshes the detected installed inventory on request', async () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
+    await box.data.write(
+      'ki/harnesses/knowledgeislands/ki-agentic-harness/skills/governance/ki-authoring/SKILL.md',
+      '---\nname: ki-authoring\nki-depends-on: []\n---\n'
+    )
 
     const bootstrapped = await box.run('ki bootstrap')
     const repeated = await box.run('ki bootstrap')
@@ -21,6 +25,9 @@ ki-bootstrap for chatgpt-codex installed
 ki-delegate for chatgpt-codex installed
 ki-next for chatgpt-codex installed
 ki-plan for chatgpt-codex installed
+ki-implement for chatgpt-codex installed
+ki-accept for chatgpt-codex installed
+ki-batch for chatgpt-codex installed
 ki-recap for chatgpt-codex installed
 `
     })
@@ -31,6 +38,9 @@ ki-bootstrap for chatgpt-codex already installed
 ki-delegate for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
+ki-implement for chatgpt-codex already installed
+ki-accept for chatgpt-codex already installed
+ki-batch for chatgpt-codex already installed
 ki-recap for chatgpt-codex already installed
 `
     })
@@ -38,11 +48,14 @@ ki-recap for chatgpt-codex already installed
       exitCode: 0,
       output: `refreshed KI agents: chatgpt-codex
 canonical harness already installed\tarchive 021060d6ab1dc17300d1b54bfd7a504d5f80c117b9b670669e450c12ccebddf0
-refreshed ki configuration: 1 agents, 1 harnesses, 5 skills
+refreshed ki configuration: 1 agents, 1 harnesses, 8 skills
 ki-bootstrap for chatgpt-codex already installed
 ki-delegate for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
+ki-implement for chatgpt-codex already installed
+ki-accept for chatgpt-codex already installed
+ki-batch for chatgpt-codex already installed
 ki-recap for chatgpt-codex already installed
 `
     })
@@ -51,6 +64,7 @@ ki-recap for chatgpt-codex already installed
     expect(checked.output).toContain('✓ Agent chatgpt-codex: ready')
     expect(checked.output).not.toContain('✗')
     const config = await box.config.read('ki/config.toml')
+    expect(config).not.toContain('[skills.ki-authoring]')
     const expectedConfig = `schema = 1
 
 [agents]
@@ -65,10 +79,19 @@ ids = [
 
 [skills]
 
+[skills.ki-accept]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-batch]
+harness = "knowledgeislands/ki-agentic-harness"
+
 [skills.ki-bootstrap]
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-delegate]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-implement]
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-next]
@@ -259,14 +282,14 @@ ids = ["claude-code"]
   test('refuses an installed canonical harness missing a required bootstrap skill', async () => {
     const box = await sandbox()
     await box.setupCanonicalHarness()
-    await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills/process/ki-recap`, { recursive: true })
+    await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills/process/ki-implement`, { recursive: true })
 
     const bootstrapped = await box.run('ki bootstrap')
 
     expect(bootstrapped).toEqual({
       exitCode: 1,
       output:
-        'created KI agent configuration for no detected agents\ncanonical harness already installed\tarchive 021060d6ab1dc17300d1b54bfd7a504d5f80c117b9b670669e450c12ccebddf0\nki: error: installed harness knowledgeislands/ki-agentic-harness does not provide ki-recap\n'
+        'created KI agent configuration for no detected agents\ncanonical harness already installed\tarchive 021060d6ab1dc17300d1b54bfd7a504d5f80c117b9b670669e450c12ccebddf0\nki: error: installed harness knowledgeislands/ki-agentic-harness does not provide ki-implement\n'
     })
   })
 
@@ -286,7 +309,22 @@ ids = ["claude-code"]
     const config = await box.config.read('ki/config.toml')
 
     expect(refreshed.exitCode).toBe(0)
-    expect(refreshed.output).toContain('refreshed ki configuration: 1 agents, 2 harnesses, 5 skills')
+    expect(refreshed.output).toContain('refreshed ki configuration: 1 agents, 2 harnesses, 8 skills')
     expect(config).not.toContain('[skills.ki-example]')
+  })
+
+  test('keeps user skills beyond the minimum on bootstrap and refresh', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.setupExampleHarness()
+    await box.run('ki bootstrap')
+    const added = await box.run('ki skill add ki-example')
+
+    expect(added.exitCode).toBe(0)
+    await box.run('ki bootstrap')
+    expect(await box.config.read('ki/config.toml')).toContain('[skills.ki-example]')
+
+    await box.run('ki bootstrap --refresh')
+    expect(await box.config.read('ki/config.toml')).toContain('[skills.ki-example]')
   })
 })
