@@ -45,6 +45,20 @@ test('audits, conforms, and lists the local ki-repo registry without discovering
   expect((await box.run('ki repo audit')).output).toContain('ki repo audit: clean (1 skills)')
 })
 
+test('registers a selected KI repository even when its declaration cannot resolve', async () => {
+  const box = await sandbox()
+  await box.project.write('.ki-config.toml', '[ki-repo]\n')
+  await box.config.write('ki/config.toml', localConfiguration)
+
+  const dryRun = await box.run('ki repo register --dry-run')
+  const result = await box.run('ki repo register')
+  const repository = await realpath(box.project.path)
+
+  expect(dryRun).toEqual({ exitCode: 0, output: `would write config.toml\nki repo register: would register ${repository}\n` })
+  expect(result).toEqual({ exitCode: 0, output: `write config.toml\nki repo register: registered ${repository}\n` })
+  expect(await box.config.read('ki/config.toml')).toContain(`paths = [\n  ${JSON.stringify(repository)},\n]`)
+})
+
 test('rejects relative repository registry paths in user configuration', async () => {
   const box = await sandbox()
   await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = ["relative-repository"]\n`)

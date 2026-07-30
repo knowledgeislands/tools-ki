@@ -108,7 +108,12 @@ Use one named group from the direct-CWD KI workspace.
 Run registered native repository audits.
 .TP
 .B ki repo [repo-options] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
-Apply registered native repository repairs.
+Record the selected physical KI repository roots locally, then apply
+registered native repository repairs.
+.TP
+.B ki repo [repo-options] register [--dry-run]
+Record selected physical KI repository roots in the local user configuration
+without applying repository repairs.
 .TP
 .B ki repo list
 List KI repositories registered in the local user configuration.
@@ -394,6 +399,17 @@ symbolic-link targets.
 Conform uses the same progress controls and reporter-level vocabulary as audit,
 names both the target and supplier for every skill, and renders FAIL, WARN, and
 FIXED findings by default while retaining every terminal per-skill result.
+For a local invocation it records each selected physical root in the user
+registry before resolving declarations or evaluating findings. Registration is
+an inventory action, not evidence of conformance, so a failing repository
+remains available for later repair and bulk maintenance.
+.TP
+.B ki repo [repo-options] register [--dry-run]
+Record selected physical KI repository roots in the local user configuration
+without resolving their declarations or applying repository repairs. This is an
+explicit inventory action: it validates only that every selected target is a
+physical directory with a regular \fB.ki-config.toml\fR and preserves existing
+registry entries. It never searches outside the supplied target selection.
 .TP
 .B ki repo list
 List physical KI repository roots explicitly registered in the local user
