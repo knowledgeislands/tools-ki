@@ -351,7 +351,6 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
               output.reporterLevels
             )
-            if (publicationError) throw publicationError
             if (auditFindings.some((finding) => finding.level === 'fail')) throw new KiError('repository conform re-audit found failures', 1)
           }
         })
