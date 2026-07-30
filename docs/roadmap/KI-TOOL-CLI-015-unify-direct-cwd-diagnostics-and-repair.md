@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-015
 title: Unify direct-CWD diagnostics and repair
 theme: cli
 horizon: blocking
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 8183c56dc890095c15c18b8f2a32ab702a929c43
 ---
 
 ## Context
