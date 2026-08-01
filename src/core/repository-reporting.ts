@@ -54,6 +54,21 @@ export const operationOptions = (
   reporterLevels: parseReporterLevels(options.reporterLevels, operation)
 })
 
+/** Render repository identity immediately before a visible progress display begins. */
+export const renderRepositoryProgressSummary = (
+  context: KiContext,
+  operation: string,
+  repository: string,
+  skills: readonly { readonly identity: string }[],
+  options: OperationOptions
+): void => {
+  const progressEnabled = options.progress === 'always' || (options.progress === 'auto' && context.stderr.isTTY === true)
+  if (!progressEnabled) return
+  context.stdout.write(
+    `==> [${basename(repository)}] ${operation}\n  Repository: ${repository}\n  Skills: ${skills.map((skill) => skill.identity).join(', ')}\n`
+  )
+}
+
 const truncate = (text: string, width: number): string => {
   if (text.length <= width) return text
   if (width <= 0) return ''

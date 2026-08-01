@@ -247,6 +247,10 @@ describe('[ki repo]', () => {
       expect(never.output).not.toContain('\r\x1b[2K')
       expect(always.output).toContain('AUDIT')
       expect(always.output).not.toContain('\r\x1b[2K')
+      expect(always.output).toContain(
+        `==> [${basename(await projectRoot(box.project))}] audit\n  Repository: ${await projectRoot(box.project)}\n  Skills: example/harness:ki-example`
+      )
+      expect(always.output.indexOf(`==> [${basename(await projectRoot(box.project))}] audit`)).toBeLessThan(always.output.indexOf('AUDIT'))
       expect(multi.output).toContain('[ki-example]')
       expect(multiInteractive.output).toContain('\x1b[1A')
       expect(invalidProgress).toMatchObject({ exitCode: 2 })
@@ -336,13 +340,16 @@ describe('[ki repo]', () => {
 
       const result = await box.run('ki repo audit', { interactive: true, now })
       const [progressOutput = '', standardOutput] = result.output.split('ki repo audit: clean (2 skills)\n')
+      const header = `==> [${basename(await projectRoot(box.project))}] audit\n  Repository: ${await projectRoot(box.project)}\n  Skills: example/harness:ki-example, example/harness:ki-extra\n`
       const frames = progressOutput
+        .slice(header.length)
         .replace(/\n$/, '')
         .split('\r\x1b[2K')
         .filter(Boolean)
         .map((frame) => frame.replace('\n', ''))
 
       expect(result.exitCode).toBe(0)
+      expect(progressOutput.startsWith(header)).toBe(true)
       expect(standardOutput).toBe(`
 ==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
   ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0

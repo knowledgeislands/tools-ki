@@ -10,7 +10,14 @@ import { REPOSITORY_CONFIGURATION_FILE, readDeclaredSkills, renderRepositoryConf
 import { KiError } from './errors.ts'
 import { discoverInstalledHarnesses } from './harness.ts'
 import { resolveRepositoryInitialisationTarget, resolveRepositoryTargets } from './repository.ts'
-import { operationOptions, renderEducation, renderReports, runPreparedWithProgress, runWithProgress } from './repository-reporting.ts'
+import {
+  operationOptions,
+  renderEducation,
+  renderReports,
+  renderRepositoryProgressSummary,
+  runPreparedWithProgress,
+  runWithProgress
+} from './repository-reporting.ts'
 import { renderRepositoryConformCommand, runRepositoryConformCommands } from './repository-subprocess.ts'
 import { resolveDeclaredSkills } from './resolution.ts'
 import { detectFixed, educateSkill, runSkillAudit, runSkillConform } from './runtime.ts'
@@ -158,12 +165,10 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .option('--skill <capability>', 'one declared resolved skill to explain')
         .action(async (options: { skill?: string }) => {
           const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
-          for (const { skills } of selected) {
-            const educations = await runWithProgress(context, 'educate', skills, (skill) => educateSkill(skill), {
-              progress: 'auto',
-              progressStyle: 'single',
-              reporterLevels: []
-            })
+          for (const { repository, skills } of selected) {
+            const output = { progress: 'auto' as const, progressStyle: 'single' as const, reporterLevels: [] }
+            renderRepositoryProgressSummary(context, 'educate', repository.root, skills, output)
+            const educations = await runWithProgress(context, 'educate', skills, (skill) => educateSkill(skill), output)
             if (!educations.length) context.stdout.write('ki repo educate: no declared skills\n')
             else context.stdout.write(`${educations.flatMap(renderEducation).join('\n')}\n`)
           }
@@ -181,6 +186,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
           const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
           let failed = false
           for (const { repository, skills } of selected) {
+            renderRepositoryProgressSummary(context, 'audit', repository.root, skills, output)
             const results = await runWithProgress(
               context,
               'audit',
@@ -244,6 +250,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             /* v8 ignore next */
             if (!selected) throw new KiError('repository conform lost its selected repository before resolution', 1)
             const { skills } = selected
+            renderRepositoryProgressSummary(context, 'conform', repository.root, skills, output)
             const conformed = await runWithProgress(
               context,
               'conform',
