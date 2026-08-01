@@ -65,7 +65,7 @@ export const renderRepositoryProgressSummary = (
   const progressEnabled = options.progress === 'always' || (options.progress === 'auto' && context.stderr.isTTY === true)
   if (!progressEnabled) return
   context.stdout.write(
-    `==> [${basename(repository)}] ${operation}\n  Repository: ${repository}\n  Skills: ${skills.map((skill) => skill.identity).join(', ')}\n`
+    `==> [${basename(repository)}] ${operation}\n  Repository: ${repository}\n  Skills:\n${skills.map((skill) => `    - ${skill.identity}`).join('\n')}\n`
   )
 }
 
