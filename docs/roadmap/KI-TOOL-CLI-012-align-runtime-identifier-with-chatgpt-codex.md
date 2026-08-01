@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-012
 title: Align the runtime identifier with ChatGPT Codex
 theme: cli
 horizon: blocking
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: f657f40c7fcdd204ec17647a3540290ccdceaadf
@@ -34,11 +34,11 @@ Repository initialisation, repository configuration parsing, installed-harness f
 
 ## Steps
 
-1. Replace the CLI's canonical supported-runtime value and agent-to-runtime mapping with `chatgpt-codex`.
-2. Update repository configuration parsing, installed-harness frontmatter validation, and `ki repo init` validation, help, and generated TOML so only `chatgpt-codex` and `claude-code` are accepted.
-3. Migrate CLI test fixtures and assertions to the corrected value, adding contract coverage that rejects legacy `codex` with diagnostics naming the accepted replacement.
-4. Update the CLI's own `.ki-config.toml`, README, and manual-facing text without renaming unrelated Codex product concepts.
-5. Verify repository skill selection, diagnostics, and managed activation still select the detected `chatgpt-codex` agent and leave Claude Code behaviour unchanged.
+1. [x] Replace the CLI's canonical supported-runtime value and agent-to-runtime mapping with `chatgpt-codex`.
+2. [x] Update repository configuration parsing, installed-harness frontmatter validation, and `ki repo init` validation, help, and generated TOML so only `chatgpt-codex` and `claude-code` are accepted.
+3. [x] Migrate CLI test fixtures and assertions to the corrected value, adding contract coverage that rejects legacy `codex` with diagnostics naming the accepted replacement.
+4. [x] Update the CLI's own `.ki-config.toml`, README, and manual-facing text without renaming unrelated Codex product concepts.
+5. [x] Verify repository skill selection, diagnostics, and managed activation still select the detected `chatgpt-codex` agent and leave Claude Code behaviour unchanged.
 
 ## Files touched
 
@@ -59,6 +59,40 @@ Repository initialisation, repository configuration parsing, installed-harness f
 No internal prerequisite is known.
 
 This item is the CLI prerequisite for KI-HARNESS-RTP-005's migration of the portable runtime standard and fleet declarations. Repository roadmap dependency identifiers are local-only, so the cross-repository relationship remains explicit in this item, its `transferred-from` provenance, and the originating harness record.
+
+## Acceptance
+
+### Delivered
+
+The executable now treats `chatgpt-codex` as its canonical Codex runtime value in its supported-runtime set, agent mapping, repository configuration, skill frontmatter, and `ki repo init` contract.
+
+Legacy `codex` declarations are rejected with a direct instruction to use `chatgpt-codex`; unrelated Codex product and capability names remain unchanged.
+
+### Summary of changes
+
+Commit `535335c297c5ac2fdc539671cf480af66b437752` updates runtime parsing, agent matching, CLI help, repository initialisation, the local declaration, README guidance, and end-to-end fixtures.
+
+The contract tests now prove both the corrected activation path and the legacy rejection path.
+
+### Verification
+
+- `bunx vitest run src/tests/cli/harness.test.ts src/tests/cli/skill.test.ts src/tests/cli/repository-registry.test.ts src/tests/cli/diag.test.ts src/tests/cli/repair.test.ts src/tests/cli/doctor.test.ts` — 149 passed.
+- `bun run test` — 448 passed.
+- `bunx tsc --noEmit` — passed.
+- `bunx biome check src README.md` — passed.
+- `ki repo audit --skill ki-roadmap` — passed with no failures or warnings.
+
+### Outstanding concerns
+
+KI-HARNESS-RTP-005 still owns the corresponding portable standard, rubric, and fleet-declaration migration.
+
+Until that work is complete, repositories selected by the new CLI value may still be assessed by the old harness standard; this is a coordinated migration boundary, not a CLI fallback.
+
+### Mini recap
+
+The CLI now has one unambiguous runtime vocabulary: `claude-code` and `chatgpt-codex`.
+
+The accepted work is ready for explicit review; it deliberately does not close the originating harness item.
 
 ## Discussion
 
