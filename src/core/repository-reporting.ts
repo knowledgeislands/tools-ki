@@ -64,8 +64,17 @@ export const renderRepositoryProgressSummary = (
 ): void => {
   const progressEnabled = options.progress === 'always' || (options.progress === 'auto' && context.stderr.isTTY === true)
   if (!progressEnabled) return
+  const count = skills.length
+  const skillLines = skills.map((skill, index) => `│     ${index === count - 1 ? '╰─' : '├─'} ${skill.identity}`)
   context.stdout.write(
-    `==> [${basename(repository)}] ${operation}\n  Repository: ${repository}\n  Skills:\n${skills.map((skill) => `    - ${skill.identity}`).join('\n')}\n`
+    `${[
+      `╭─ KI REPOSITORY · ${operation.toUpperCase()}`,
+      `│  📁 ${basename(repository)}`,
+      `│     ${repository}`,
+      `│  ✦ ${count} skill${count === 1 ? '' : 's'} selected`,
+      ...skillLines,
+      `╰─ preparing ${operation}`
+    ].join('\n')}\n`
   )
 }
 
