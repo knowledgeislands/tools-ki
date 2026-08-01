@@ -53,21 +53,21 @@ describe('[ki skill]', () => {
       expect(await portable.home.isSymlink('.claude/skills/ki-example')).toBe(true)
       expect(await portable.home.isSymlink('.agents/skills/ki-example')).toBe(true)
 
-      const codex = await sandbox()
-      await codex.setupAgentHome('claude-code')
-      await codex.setupAgentHome('chatgpt-codex')
-      await codex.setupExampleHarness()
-      await codex.data.write(
+      const chatgptCodex = await sandbox()
+      await chatgptCodex.setupAgentHome('claude-code')
+      await chatgptCodex.setupAgentHome('chatgpt-codex')
+      await chatgptCodex.setupExampleHarness()
+      await chatgptCodex.data.write(
         'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
-        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
       )
-      await codex.run('ki bootstrap')
+      await chatgptCodex.run('ki bootstrap')
 
-      const codexAdded = await codex.run('ki skill add ki-example')
+      const chatgptCodexAdded = await chatgptCodex.run('ki skill add ki-example')
 
-      expect(codexAdded).toEqual({ exitCode: 0, output: 'ki skill add: linked ki-example for chatgpt-codex\n' })
-      await expect(lstat(join(codex.home.path, '.claude', 'skills', 'ki-example'))).rejects.toThrow()
-      expect(await codex.home.isSymlink('.agents/skills/ki-example')).toBe(true)
+      expect(chatgptCodexAdded).toEqual({ exitCode: 0, output: 'ki skill add: linked ki-example for chatgpt-codex\n' })
+      await expect(lstat(join(chatgptCodex.home.path, '.claude', 'skills', 'ki-example'))).rejects.toThrow()
+      expect(await chatgptCodex.home.isSymlink('.agents/skills/ki-example')).toBe(true)
     })
 
     test('refuses incompatible or invalid runtime metadata before mutating user state', async () => {
@@ -76,7 +76,7 @@ describe('[ki skill]', () => {
       await incompatible.setupExampleHarness()
       await incompatible.data.write(
         'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
-        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
       )
       await incompatible.run('ki bootstrap')
 
@@ -254,13 +254,15 @@ ids = []
       const missing = await run('[other]\nvalue = true\n')
       const malformed = await run('["example/harness:ki-repo"]\nsupported_runtimes = []\n')
       const unsupported = await run('["example/harness:ki-repo"]\nsupported_runtimes = ["other"]\n')
-      const repeated = await run('["example/harness:ki-repo"]\nsupported_runtimes = ["codex", "codex"]\n')
+      const repeated = await run('["example/harness:ki-repo"]\nsupported_runtimes = ["chatgpt-codex", "chatgpt-codex"]\n')
+      const retired = await run('["example/harness:ki-repo"]\nsupported_runtimes = ["codex"]\n')
       const invalidToml = await run('[ki-repo\n')
 
       expect(missing.output).toContain('must declare the repository runtime set')
       expect(malformed.output).toContain('must be a non-empty array')
-      expect(unsupported.output).toContain('may contain only claude-code or codex')
+      expect(unsupported.output).toContain('may contain only claude-code or chatgpt-codex')
       expect(repeated.output).toContain('repeats a runtime')
+      expect(retired.output).toContain('codex is retired; use chatgpt-codex')
       expect(invalidToml.output).toContain('.ki-config.toml must be valid TOML')
       expect([missing, malformed, unsupported, repeated, invalidToml].every((result) => !result.declared.includes('["example/harness:ki-example"]'))).toBe(true)
     })
@@ -272,9 +274,9 @@ ids = []
       await box.setupExampleHarness()
       await box.data.write(
         'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
-        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
       )
-      await box.project.write('.ki-config.toml', '["example/harness:ki-repo"]\nsupported_runtimes = ["codex"]\n')
+      await box.project.write('.ki-config.toml', '["example/harness:ki-repo"]\nsupported_runtimes = ["chatgpt-codex"]\n')
       await box.run('ki bootstrap')
 
       const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)

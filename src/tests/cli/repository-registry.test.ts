@@ -61,7 +61,7 @@ const initialise = (box: Awaited<ReturnType<typeof sandbox>>, directory?: string
     '--runtime',
     'claude-code',
     '--runtime',
-    'codex',
+    'chatgpt-codex',
     '--visibility',
     'private'
   ])
@@ -80,7 +80,7 @@ test('initializes one explicit physical Git root and registers its complete KI i
       'title = "Example repository"\n' +
       'description = "Repository initialization contract."\n' +
       'repo_code = "EXAMPLE"\n' +
-      'supported_runtimes = ["claude-code", "codex"]\n' +
+      'supported_runtimes = ["claude-code", "chatgpt-codex"]\n' +
       'visibility = "private"\n'
   )
   expect(await box.config.read('ki/config.toml')).toContain(`paths = [\n  ${JSON.stringify(root)},\n]`)
@@ -114,19 +114,22 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
   box.setRunner(async () => ({ exitCode: 1, output: 'not a repository' }))
 
   const nonGit = await initialise(box)
-  const missingTitle = await box.run('ki repo init --description description --repo-code EXAMPLE --runtime codex --visibility private')
-  const missingDescription = await box.run('ki repo init --title title --repo-code EXAMPLE --runtime codex --visibility private')
-  const missingCode = await box.run('ki repo init --title title --description description --runtime codex --visibility private')
+  const missingTitle = await box.run('ki repo init --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private')
+  const missingDescription = await box.run('ki repo init --title title --repo-code EXAMPLE --runtime chatgpt-codex --visibility private')
+  const missingCode = await box.run('ki repo init --title title --description description --runtime chatgpt-codex --visibility private')
   const missingRuntime = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --visibility private')
-  const missingVisibility = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime codex')
-  const invalidCode = await box.run('ki repo init --title title --description description --repo-code example --runtime codex --visibility private')
+  const missingVisibility = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex')
+  const invalidCode = await box.run('ki repo init --title title --description description --repo-code example --runtime chatgpt-codex --visibility private')
   const invalidRuntime = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime node --visibility private')
+  const retiredRuntime = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime codex --visibility private')
   const repeatedRuntime = await box.run(
-    'ki repo init --title title --description description --repo-code EXAMPLE --runtime codex --runtime codex --visibility private'
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --runtime chatgpt-codex --visibility private'
   )
-  const invalidVisibility = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime codex --visibility internal')
+  const invalidVisibility = await box.run(
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility internal'
+  )
   const selectors = await box.run(
-    'ki repo --repo ignored init --title title --description description --repo-code EXAMPLE --runtime codex --visibility private'
+    'ki repo --repo ignored init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private'
   )
 
   expect(nonGit).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target must be an existing Git repository\n' })
@@ -136,7 +139,8 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
   expect(missingRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires at least one --runtime\n' })
   expect(missingVisibility).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires --visibility\n' })
   expect(invalidCode).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --repo-code must be a stable uppercase identifier\n' })
-  expect(invalidRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime may contain only claude-code or codex\n' })
+  expect(invalidRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime may contain only claude-code or chatgpt-codex\n' })
+  expect(retiredRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime codex is retired; use chatgpt-codex\n' })
   expect(repeatedRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime must not repeat a runtime\n' })
   expect(invalidVisibility).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --visibility must be public or private\n' })
   expect(selectors).toEqual({ exitCode: 2, output: 'ki: error: ki repo init does not accept --repo or --workspace\n' })
@@ -161,7 +165,7 @@ test('initializes a public repository without rewriting an existing local regist
     '--repo-code',
     'PUBLIC',
     '--runtime',
-    'codex',
+    'chatgpt-codex',
     '--visibility',
     'public'
   ])

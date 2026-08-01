@@ -7,7 +7,7 @@ const repositoryConfiguration = `
 title = "Example"
 description = "Example repository."
 repo_code = "EXAMPLE"
-supported_runtimes = ["codex"]
+supported_runtimes = ["chatgpt-codex"]
 visibility = "private"
 
 ["example/harness:ki-example"]

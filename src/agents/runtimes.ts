@@ -5,7 +5,7 @@ import type { InstalledAgent } from './internal.ts'
 
 const agentRuntimes = {
   'claude-code': 'claude-code',
-  'chatgpt-codex': 'codex'
+  'chatgpt-codex': 'chatgpt-codex'
 } as const satisfies Record<string, SupportedRuntime>
 
 const repositoryRuntimeSet = (value: unknown): readonly SupportedRuntime[] => {
@@ -13,9 +13,9 @@ const repositoryRuntimeSet = (value: unknown): readonly SupportedRuntime[] => {
     throw new KiError('[ki-repo].supported_runtimes must be a non-empty array of runtime identifiers', 1)
   }
   const runtimes = value as string[]
-  if (runtimes.some((runtime) => !supportedRuntimes.includes(runtime as SupportedRuntime))) {
-    throw new KiError('[ki-repo].supported_runtimes may contain only claude-code or codex', 1)
-  }
+  if (runtimes.includes('codex')) throw new KiError('[ki-repo].supported_runtimes codex is retired; use chatgpt-codex', 1)
+  if (runtimes.some((runtime) => !supportedRuntimes.includes(runtime as SupportedRuntime)))
+    throw new KiError('[ki-repo].supported_runtimes may contain only claude-code or chatgpt-codex', 1)
   if (new Set(runtimes).size !== runtimes.length) throw new KiError('[ki-repo].supported_runtimes repeats a runtime', 1)
   return runtimes as readonly SupportedRuntime[]
 }

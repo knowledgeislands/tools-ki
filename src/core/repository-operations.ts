@@ -89,7 +89,12 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .option('--title <title>', 'repository title')
         .option('--description <description>', 'repository description')
         .option('--repo-code <code>', 'stable uppercase repository identifier')
-        .option('--runtime <runtime>', 'supported runtime: claude-code or codex', (value: string, previous: readonly string[] = []) => [...previous, value], [])
+        .option(
+          '--runtime <runtime>',
+          'supported runtime: claude-code or chatgpt-codex',
+          (value: string, previous: readonly string[] = []) => [...previous, value],
+          []
+        )
         .option('--visibility <visibility>', 'repository visibility: public or private')
         .action(
           async (

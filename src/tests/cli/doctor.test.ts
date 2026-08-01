@@ -181,7 +181,7 @@ harness = "example/harness"
     await box.setupExampleHarness()
     await box.data.write(
       'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
-      '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
+      '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
     )
     await box.run('ki bootstrap')
     await box.run('ki skill add ki-example')
@@ -198,7 +198,7 @@ harness = "example/harness"
     await box.setupExampleHarness()
     await box.data.write(
       'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
-      '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n'
+      '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
     )
     await box.config.write(
       'ki/config.toml',

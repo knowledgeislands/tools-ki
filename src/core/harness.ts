@@ -9,7 +9,7 @@ const payloadRoots = ['skills', 'subagents', 'hooks'] as const
 
 export const canonicalHarnessIdentifier = 'knowledgeislands/ki-agentic-harness'
 
-export const supportedRuntimes = ['claude-code', 'codex'] as const
+export const supportedRuntimes = ['claude-code', 'chatgpt-codex'] as const
 export type SupportedRuntime = (typeof supportedRuntimes)[number]
 
 export interface HarnessCapability {
@@ -71,9 +71,9 @@ const frontmatterSupportedRuntimes = (value: string | undefined, path: string): 
     .slice(1, -1)
     .split(',')
     .map((runtime) => runtime.trim())
-  if (runtimes.some((runtime) => !runtime || !supportedRuntimes.includes(runtime as SupportedRuntime))) {
-    throw new KiError(`${path} must declare ki-supported-runtimes using only claude-code or codex`, 1)
-  }
+  if (runtimes.includes('codex')) throw new KiError(`${path} declares retired runtime codex; use chatgpt-codex`, 1)
+  if (runtimes.some((runtime) => !runtime || !supportedRuntimes.includes(runtime as SupportedRuntime)))
+    throw new KiError(`${path} must declare ki-supported-runtimes using only claude-code or chatgpt-codex`, 1)
   if (new Set(runtimes).size !== runtimes.length) throw new KiError(`${path} repeats a supported runtime`, 1)
   return runtimes as readonly SupportedRuntime[]
 }

@@ -645,11 +645,15 @@ releases = [
         'must declare ki-supported-runtimes as a non-empty flow list'
       ],
       [
-        'an unsupported runtime',
-        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n',
-        'must declare ki-supported-runtimes using only claude-code or codex'
+        'a retired runtime',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex]\n---\n',
+        'declares retired runtime codex; use chatgpt-codex'
       ],
-      ['a repeated runtime', '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [codex, codex]\n---\n', 'repeats a supported runtime']
+      [
+        'a repeated runtime',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex, chatgpt-codex]\n---\n',
+        'repeats a supported runtime'
+      ]
     ])('rejects %s in installed skill frontmatter', async (_case, skill, expected) => {
       const box = await sandbox()
       await box.setupExampleHarness()

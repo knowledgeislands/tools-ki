@@ -2,7 +2,7 @@
 title = "tools-ki"
 description = "Knowledge Islands command-line interface."
 repo_code = "KI-TOOL"
-supported_runtimes = ["claude-code", "codex"]
+supported_runtimes = ["claude-code", "chatgpt-codex"]
 visibility = "public"
 
 ["knowledgeislands/ki-agentic-harness:ki-authoring"]
