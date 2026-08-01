@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-012
 title: Align the runtime identifier with ChatGPT Codex
 theme: cli
 horizon: blocking
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: f657f40c7fcdd204ec17647a3540290ccdceaadf
 transferred-from: KI-HARNESS-RTP-005
 ---
 
