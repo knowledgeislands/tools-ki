@@ -51,12 +51,12 @@
   "scripts": {
     "build": "bun build --compile --outfile dist/ki src/main.ts",
     "clean": "rm -rf dist node_modules",
+    "ki:deps:update": "bun update --latest",
     "ki:tools:lint-man": "mandoc -T lint man/ki.1",
     "prepare": "husky",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest",
-    "ki:deps:update": "bun update --latest"
+    "test:watch": "vitest"
   },
   "type": "module"
 }

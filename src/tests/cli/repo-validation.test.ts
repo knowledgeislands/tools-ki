@@ -1,6 +1,6 @@
 import { rm, symlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
-import { sandbox } from './_cli_helper.ts'
+import { type SandboxArea, sandbox } from './_cli_helper.ts'
 
 // Builds a full direct `scripts/rubric/items/index.ts` catalogue. Most tests use a
 // compact literal which this fixture expands into the real family/item contract;
