@@ -154,9 +154,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         const configuration = await inspectUserConfiguration(context.paths.config)
         if (configuration.state === 'missing') throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
         if (configuration.state === 'invalid') throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
-        context.stdout.write(
-          `ki repo list\n${configuration.repositories.length ? configuration.repositories.map((repository) => `  ${repository}`).join('\n') : '  none'}\n`
-        )
+        if (configuration.repositories.length) context.stdout.write(`${configuration.repositories.join('\n')}\n`)
       })
     )
     .addCommand(

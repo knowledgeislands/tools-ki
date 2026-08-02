@@ -212,7 +212,7 @@ test('audits, conforms, and lists the local ki-repo registry without discovering
   expect(conform.output).toContain('write config.toml')
   expect(repeatedConform.exitCode).toBe(0)
   expect(await box.config.read('ki/config.toml')).toContain(`paths = [\n  ${JSON.stringify(repository)},\n]`)
-  expect(listed).toEqual({ exitCode: 0, output: `ki repo list\n  ${repository}\n` })
+  expect(listed).toEqual({ exitCode: 0, output: `${repository}\n` })
   expect((await box.run('ki repo audit')).output).toContain('╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0')
 })
 
@@ -286,7 +286,16 @@ test('lists an explicitly empty local repository registry', async () => {
   const box = await sandbox()
   await box.config.write('ki/config.toml', localConfiguration)
 
-  expect(await box.run('ki repo list')).toEqual({ exitCode: 0, output: 'ki repo list\n  none\n' })
+  expect(await box.run('ki repo list')).toEqual({ exitCode: 0, output: '' })
+})
+
+test('lists registered repositories as a newline-delimited absolute-path stream', async () => {
+  const box = await sandbox()
+  const first = await box.root.mkdir('first')
+  const second = await box.root.mkdir('second')
+  await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = [${JSON.stringify(second)}, ${JSON.stringify(first)}]\n`)
+
+  expect(await box.run('ki repo list')).toEqual({ exitCode: 0, output: `${second}\n${first}\n` })
 })
 
 test('rejects relative repository registry paths in user configuration', async () => {
