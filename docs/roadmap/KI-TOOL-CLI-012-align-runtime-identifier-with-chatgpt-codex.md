@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-012
 title: Align the runtime identifier with ChatGPT Codex
 theme: cli
 horizon: blocking
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: f657f40c7fcdd204ec17647a3540290ccdceaadf
@@ -93,6 +93,10 @@ Until that work is complete, repositories selected by the new CLI value may stil
 The CLI now has one unambiguous runtime vocabulary: `claude-code` and `chatgpt-codex`.
 
 The accepted work is ready for explicit review; it deliberately does not close the originating harness item.
+
+## Done
+
+Accepted by the repository owner on 2026-08-02. The acceptance packet above records the delivered boundary, verification, and remaining cross-repository concern; `KI-HARNESS-RTP-005` remains open in the harness for its portable-standard and fleet-migration work.
 
 ## Discussion
 
