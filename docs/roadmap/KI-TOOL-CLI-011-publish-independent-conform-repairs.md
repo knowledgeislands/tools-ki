@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-011
 title: Publish independent conform repairs despite unrelated failures
 theme: cli
 horizon: blocking
-status: open
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -55,6 +55,16 @@ No known external prerequisite.
 This item blocks reliable incremental conformance for repositories with a mix of local drift and separately authorised live-settings work.
 
 ## Discussion
+
+### Approved delivery plan
+
+Approved by the repository owner on 2026-08-02:
+
+1. Associate every conform proposal with its declaring skill, initial audit evidence, and declared dependencies.
+2. Form publication groups from declared dependencies and shared write targets, retaining each group's complete write set.
+3. Publish only independently eligible direct-write groups; withhold failed, dependent, unsafe, overlapping, and command-backed groups while preserving a non-zero exit for unresolved failures.
+4. Make dry-run report the same applied-versus-withheld decision without mutating state.
+5. Cover the mixed local and user-home, overlap, dependency, unsafe-target, command, and external-failure contracts through the CLI seam.
 
 ### Publication boundary
 
