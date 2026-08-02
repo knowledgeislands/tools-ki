@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-011
 title: Pilot Feature Definitions for repository operations
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: e429d984bb6330faf7876d1b8e86c27b3971c1f5
 transferred-from: knowledgeislands/ki-agentic-harness:GOV-002
 ---
 
