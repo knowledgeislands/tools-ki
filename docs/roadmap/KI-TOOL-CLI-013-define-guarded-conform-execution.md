@@ -2,8 +2,8 @@
 id: KI-TOOL-CLI-013
 title: Define guarded conform execution and explicit override
 theme: cli
-horizon: soon
-status: open
+horizon: next
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -23,13 +23,32 @@ The operator-facing model needs explicit classes: safe conformances publish once
 
 No override may bypass containment, declared filesystem scope, dependency evidence, conflict detection, atomic direct-write publication, command failure handling, or failed re-audit. This item does not introduce a broad force-anything switch or weaken the existing guarded transaction contract.
 
-## Shaping
+## Current state
 
-Define one operator-facing classification for ordinary safe direct-write groups and one for guarded groups with command or external side effects. Preserve the existing failure-scoped grouping, transaction checks, dry-run reporting, and non-zero status for unresolved findings.
+Independent direct-write groups already publish despite unrelated failures. Eligible command-backed groups remain withheld whenever the selected initial audit contains a failure, although a wholly clean conform run executes and re-audits commands.
 
-The implementation must decide the exact opt-in surface for guarded execution; it must distinguish permission to attempt a guarded action from a successful completion. It must also define command output, post-action re-audit, and mixed-result reporting so an operator can see which groups were automatically applied, explicitly attempted, withheld, refused, or failed.
+## Steps
 
-No external repository dependency is known. Promotion to Next requires an agreed narrow authority model, a representative guarded-action fixture, and a testable completion/failure contract that does not treat a force flag as a bypass of core safety checks.
+- [ ] Add a `--allow-guarded` conform option and explain, in help and reports, that it authorizes an attempt rather than bypassing safety checks.
+- [ ] Preserve default withholding for command-backed groups during partial failures; with the option, execute only groups whose own evidence, scope, dependencies, and write preparation pass.
+- [ ] Keep dry-run side-effect-free, report guarded attempts distinctly, and re-audit after a successful guarded publication while retaining non-zero status for unresolved findings.
+- [ ] Add CLI contract coverage for default withholding, opted-in dry-run, successful guarded execution and re-audit, and failed guarded commands.
+
+## Files touched
+
+- `src/core/repository-operations.ts` and `src/core/conform-publication.ts`.
+- `src/tests/cli/repo-conform-writes.test.ts` and related conform fixtures.
+
+## Verify
+
+- `bunx vitest run src/tests/cli/repo-conform-writes.test.ts src/tests/cli/repo-conform-execution.test.ts`
+- `bun run test:coverage`
+- `bunx tsc --noEmit`
+- `bun src/main.ts repo audit --repo .`
+
+## Dependencies / blocks
+
+No external prerequisite. The option cannot override containment, declared scope, dependency evidence, conflict detection, guarded publication, command failures, or re-audit failures.
 
 ## Discussion
 
