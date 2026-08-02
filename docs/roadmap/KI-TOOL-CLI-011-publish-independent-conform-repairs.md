@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-011
 title: Publish independent conform repairs despite unrelated failures
 theme: cli
 horizon: blocking
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: 77a73a709ed99d553e2df58ddf991b8c50ffb699
@@ -53,6 +53,22 @@ The result reports useful proposed writes but leaves every independently safe lo
 No known external prerequisite.
 
 This item blocks reliable incremental conformance for repositories with a mix of local drift and separately authorised live-settings work.
+
+## Acceptance
+
+Delivered the failure-scoped conform publisher in `src/core/conform-publication.ts` and kept `src/core/repository-operations.ts` as the command orchestrator.
+
+Eligible direct-write groups now publish despite unrelated failures, including declared user-home writes; groups connected by a declared dependency or shared target remain indivisible.
+Groups with blocking evidence, invalid writes, or command actions are respectively withheld or refused, and a mixed result remains non-zero.
+Command-backed repair groups are deliberately excluded from partial publication because their side effects are outside the guarded write transaction.
+
+Baseline: `77a73a709ed99d553e2df58ddf991b8c50ffb699`.
+
+Delivery commit: `27148ee528d2698b1a9b2b681569be6e2a90a7e3`.
+
+Verification passed on 2026-08-02: `bunx tsc --noEmit`; `bun run test:coverage` (454 tests, 100% statements, branches, functions, and lines); `bunx biome check`; `bunx syncpack format --check`; and `bun src/main.ts repo audit --repo .` (11 selected skills, 0 failures).
+
+No external coordination, policy change, or follow-up handoff is required. No learning route is proposed.
 
 ## Discussion
 
