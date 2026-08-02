@@ -190,7 +190,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
           const output = operationOptions('audit', options)
           const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
           let failed = false
-          for (const { repository, skills } of selected) {
+          for (const [index, { repository, skills }] of selected.entries()) {
+            if (index) context.stdout.write('\n')
             renderRepositoryProgressSummary(context, 'audit', repository.root, skills, output)
             const results = await runWithProgress(
               context,

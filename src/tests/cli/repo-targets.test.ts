@@ -135,10 +135,11 @@ describe('[ki repo target sets]', () => {
       const first = await realpath(`${box.root.path}/first`)
       const second = await realpath(`${box.root.path}/second`)
 
-      const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'audit'])
+      const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'audit', '--progress', 'always'])
 
       expect(result.exitCode).toBe(0)
       expect(result.output.match(/ki repo audit: clean \(1 skills\)/g)).toHaveLength(2)
+      expect(result.output).toContain(`  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0\n\n╭─ KI REPOSITORY · AUDIT\n│  📁 second\n│     ${second}`)
     })
 
     test('conforms every explicit target independently after all targets preflight', async () => {
