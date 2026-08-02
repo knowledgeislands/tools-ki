@@ -1,0 +1,70 @@
+---
+id: KI-TOOL-CLI-012
+title: Add handoff route and estate commands
+theme: cli
+horizon: next
+status: open
+blocks: []
+blocked-by: []
+baseline-ref: null
+---
+
+## Goal
+
+Let KI users inspect and maintain the local side of trusted cross-repository work submissions through a clear, safe `ki handoffs` command surface.
+
+## Context
+
+The current Harness and CLI direct-super-trust bridge records work directly in each repository's roadmap. It establishes the immediate collaboration but provides no public commands for routes, submissions, estate visibility, or lifecycle observations.
+
+`KI-HARNESS-FND-009` is the immediate protocol work that will define the decision record and governance skill. This CLI item follows at once, implementing the host-side mechanics once that portable contract is published.
+
+## Boundary
+
+Do not make peer-repository writes, make acceptance decisions, infer acceptance from silence, or implement a remote interchange. Every command that changes state writes the current repository only; receiver judgment remains with `ki-next` and the receiving repository's roadmap process.
+
+## Current state
+
+`ki` knows the registered repository estate, but it has no handoff command group and no stable protocol for discovering a peer's declared route or submission state.
+
+The proposed public surface is `ki handoffs routes add`, `routes remove`, `routes list`, `routes check`, `new`, `receive`, `list`, `show`, `release`, and `prune`. Its exact arguments, output, metadata, and error contracts must come from the published `ki-handoffs` standard rather than being invented independently here.
+
+## Steps
+
+- [ ] Read the accepted `KI-HARNESS-FND-009` decision record and `ki-handoffs` standard; convert its portable contract into CLI command, output, and error cases without changing its authority model.
+- [ ] Implement local route declaration, removal, listing, and registered-estate route checks.
+- [ ] Implement local outbound creation, receiver-owned pull/receive, estate listing and display, sender release, and receiver-safe prune operations.
+- [ ] Add CLI contract tests for success, unreciprocated or broken routes, unknown handoffs, denied peer writes, lifecycle visibility, and pruning boundaries.
+- [ ] Publish the CLI evidence back to the Harness through the then-governed handoff process or another explicitly agreed direct bridge.
+
+## Files touched
+
+- CLI command registration and handoff command modules under `src/`
+- CLI integration tests under `src/tests/cli/`
+- User-facing command reference and release notes where required
+- This work item
+
+## Verify
+
+- Focused in-process CLI tests using the sandbox helper, asserting stdout, exit code, and on-disk effects
+- `bun run test`
+- `bunx tsc --noEmit`
+- A registered multi-repository fixture proves that every mutation is confined to the invoking repository and that peer state is read-only input.
+
+## Dependencies / blocks
+
+This item is Next because the route and estate commands are now an immediate priority. It must not enter implementation until `KI-HARNESS-FND-009` publishes the decision record and `ki-handoffs` contract; the current roadmap dependency fields are local-only, so this cross-repository blocker is recorded here and in the Harness item rather than in `blocked-by`.
+
+## Discussion
+
+### Host boundary
+
+The CLI is the public host for the command group and registered-repository resolution. It implements protocol-preserving mechanics, not the peer relationship's governance semantics; the Harness owns the portable submission contract and KI Specifications may later own normative interoperability material.
+
+### Local authority
+
+`routes add` and `routes remove` change only the current repository's declaration. `receive` means a receiver pulls a sender's outbound submission into its own inbound area after verifying the reciprocal route; it is deliberately not a sender-side delivery command. `release` removes only the sender's outbound record after the sender has acted on the observed response, and `prune` removes only an inbound record after that release is observable.
+
+### Future interchange
+
+Repositories without mutual visibility may later use a trusted interchange as a scoped transport. This item neither requires nor pre-commits that module; its local command and data contracts should leave room for it without treating it as a decision-maker.
