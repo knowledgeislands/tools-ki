@@ -650,6 +650,11 @@ releases = [
         'declares retired runtime codex; use chatgpt-codex'
       ],
       [
+        'an unsupported runtime',
+        '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [unknown-runtime]\n---\n',
+        'must declare ki-supported-runtimes using only claude-code or chatgpt-codex'
+      ],
+      [
         'a repeated runtime',
         '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex, chatgpt-codex]\n---\n',
         'repeats a supported runtime'

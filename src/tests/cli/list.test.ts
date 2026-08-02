@@ -57,7 +57,7 @@ describe('[ki list]', () => {
     expect(grammar).toEqual({
       exitCode: 2,
       output:
-        "error: too many arguments for 'list'. Expected 0 arguments but got 1.\n\nUsage: ki list [options]\n\nlist installed harness capabilities and declared skills\n\nOptions:\n  -h, --help  display help for command\n"
+        "error: too many arguments for 'list'. Expected 0 arguments but got 1: unexpected.\n\nUsage: ki list [options]\n\nlist installed harness capabilities and declared skills\n\nOptions:\n  -h, --help  display help for command\n"
     })
     expect(invalidDeclaration).toEqual({
       exitCode: 0,
