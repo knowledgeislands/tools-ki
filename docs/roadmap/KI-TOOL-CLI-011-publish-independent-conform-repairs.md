@@ -9,6 +9,10 @@ blocked-by: []
 baseline-ref: 77a73a709ed99d553e2df58ddf991b8c50ffb699
 ---
 
+## Goal
+
+Publish independently safe `ki repo conform` repairs even when unrelated selected audit findings remain unresolved.
+
 ## Context
 
 `ki repo conform` currently withholds every proposed repair when any selected audit finding fails.
@@ -29,11 +33,11 @@ The result reports useful proposed writes but leaves every independently safe lo
 
 ## Steps
 
-1. Define a failure-scoped publication model that associates each proposed repair with the audit evidence, dependencies, and declared scope required to publish it safely.
-2. Preserve atomic publication for writes that share a dependency or target, while allowing independent eligible repair groups to publish in the same invocation.
-3. Report every repair group as applied, withheld, or refused, with the exact blocking finding or safety condition.
-4. Update `ki repo conform --dry-run` to distinguish independently publishable proposals from withheld ones without mutating state.
-5. Add CLI contract tests for independent local and user-home writes, overlapping targets, dependency failures, unsafe writes, command failures, and mixed local/GitHub findings.
+- [x] Define a failure-scoped publication model that associates each proposed repair with the audit evidence, dependencies, and declared scope required to publish it safely.
+- [x] Preserve atomic publication for writes that share a dependency or target, while allowing independent eligible repair groups to publish in the same invocation.
+- [x] Report every repair group as applied, withheld, or refused, with the exact blocking finding or safety condition.
+- [x] Update `ki repo conform --dry-run` to distinguish independently publishable proposals from withheld ones without mutating state.
+- [x] Add CLI contract tests for independent local and user-home writes, overlapping targets, dependency failures, unsafe writes, command failures, and mixed local/GitHub findings.
 
 ## Files touched
 
