@@ -74,7 +74,7 @@ export const renderRepositoryProgressSummary = (
       `│  ✦ ${count} skill${count === 1 ? '' : 's'} selected`,
       ...skillLines,
       `╰─ preparing ${operation}`
-    ].join('\n')}\n`
+    ].join('\n')}\n\n`
   )
 }
 

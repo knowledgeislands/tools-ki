@@ -248,7 +248,7 @@ describe('[ki repo]', () => {
       expect(always.output).toContain('AUDIT')
       expect(always.output).not.toContain('\r\x1b[2K')
       expect(always.output).toContain(
-        `╭─ KI REPOSITORY · AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 1 skill selected\n│     ╰─ example/harness:ki-example\n╰─ preparing audit`
+        `╭─ KI REPOSITORY · AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 1 skill selected\n│     ╰─ example/harness:ki-example\n╰─ preparing audit\n\nAUDIT`
       )
       expect(always.output.indexOf('╭─ KI REPOSITORY · AUDIT')).toBeLessThan(always.output.indexOf('AUDIT      ['))
       expect(multi.output).toContain('[ki-example]')
@@ -340,7 +340,7 @@ describe('[ki repo]', () => {
 
       const result = await box.run('ki repo audit', { interactive: true, now })
       const [progressOutput = '', standardOutput] = result.output.split('ki repo audit: clean (2 skills)\n')
-      const header = `╭─ KI REPOSITORY · AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 2 skills selected\n│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra\n╰─ preparing audit\n`
+      const header = `╭─ KI REPOSITORY · AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 2 skills selected\n│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra\n╰─ preparing audit\n\n`
       const frames = progressOutput
         .slice(header.length)
         .replace(/\n$/, '')
