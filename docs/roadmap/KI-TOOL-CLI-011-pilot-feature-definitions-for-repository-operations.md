@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-011
 title: Pilot Feature Definitions for repository operations
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: e429d984bb6330faf7876d1b8e86c27b3971c1f5
@@ -80,6 +80,10 @@ This qualitative pilot does not measure elapsed maintenance time, and it intenti
 ### Mini recap
 
 The immutable baseline is `e429d984bb6330faf7876d1b8e86c27b3971c1f5`; the delivered corpus is committed in `c056c9b`. The owner approved acceptance after reviewing the named maintenance question.
+
+## Done
+
+The repository owner accepted this evidence-backed pilot on 2026-08-02. The completed record is retained pending the explicitly requested prune.
 
 ## Discussion
 
