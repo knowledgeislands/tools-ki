@@ -271,7 +271,7 @@ describe('[ki repo]', () => {
       const result = await box.run(`ki repo --repo ${box.project.path} audit --skill ki-website`)
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain(`╰─ ⚠️ example/harness:ki-website WARN · FAIL=0 WARN=1`)
+      expect(result.output).toContain(`╰─ ⚠️  example/harness:ki-website WARN · FAIL=0 WARN=1`)
       expect(result.output).not.toContain('ki-website-cloudflare')
     })
 

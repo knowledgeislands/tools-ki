@@ -343,7 +343,7 @@ export const renderAuditResults = (
     const last = index === reports.length - 1 && !registrationFailure
     const branch = last ? '╰─' : '├─'
     context.stdout.write(
-      `│  ${branch} ${REPORT_ICON[reportSummary.level].trimEnd()} ${report.skill.skill.identity} ${REPORT_LABEL[reportSummary.level].toUpperCase()} · FAIL=${reportSummary.fails} WARN=${reportSummary.warnings}\n`
+      `│  ${branch} ${REPORT_ICON[reportSummary.level]} ${report.skill.skill.identity} ${REPORT_LABEL[reportSummary.level].toUpperCase()} · FAIL=${reportSummary.fails} WARN=${reportSummary.warnings}\n`
     )
     const detailPrefix = `│  ${last ? '   ' : '│  '}`
     const visible = report.findings.filter((entry) => reporterLevels.includes(entry.level))
