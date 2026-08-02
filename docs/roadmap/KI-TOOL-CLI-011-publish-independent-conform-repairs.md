@@ -58,9 +58,7 @@ This item blocks reliable incremental conformance for repositories with a mix of
 
 Delivered the failure-scoped conform publisher in `src/core/conform-publication.ts` and kept `src/core/repository-operations.ts` as the command orchestrator.
 
-Eligible direct-write groups now publish despite unrelated failures, including declared user-home writes; groups connected by a declared dependency or shared target remain indivisible.
-Groups with blocking evidence, invalid writes, or command actions are respectively withheld or refused, and a mixed result remains non-zero.
-Command-backed repair groups are deliberately excluded from partial publication because their side effects are outside the guarded write transaction.
+Eligible direct-write groups now publish despite unrelated failures, including declared user-home writes; groups connected by a declared dependency or shared target remain indivisible. Groups with blocking evidence, invalid writes, or command actions are respectively withheld or refused, and a mixed result remains non-zero. Command-backed repair groups are deliberately excluded from partial publication because their side effects are outside the guarded write transaction.
 
 Baseline: `77a73a709ed99d553e2df58ddf991b8c50ffb699`.
 

@@ -356,11 +356,10 @@ export default {
 
     const result = await box.run('ki repo conform')
 
-    expect(result).toEqual({
-      exitCode: 1,
-      output:
-        'proposed run "node" "-e" "process.exit(3)"\nrun "node" "-e" "process.exit(3)"\nki: error: direct subprocess conform failed: "node" "-e" "process.exit(3)"\n'
-    })
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('╭─ KI REPO CONFORM')
+    expect(result.output).toContain('proposed run "node" "-e" "process.exit(3)"\nrun "node" "-e" "process.exit(3)"')
+    expect(result.output).toContain('ki: error: direct subprocess conform failed: "node" "-e" "process.exit(3)"')
   })
 
   test('reports a subprocess terminated by a signal as a failed conform', async () => {
@@ -376,11 +375,12 @@ export default {
 
     const result = await box.run('ki repo conform')
 
-    expect(result).toEqual({
-      exitCode: 1,
-      output:
-        'proposed run "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\nrun "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\nki: error: direct subprocess conform failed: "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\n'
-    })
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('╭─ KI REPO CONFORM')
+    expect(result.output).toContain(
+      'proposed run "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\nrun "node" "-e" "process.kill(process.pid, \'SIGTERM\')"'
+    )
+    expect(result.output).toContain('ki: error: direct subprocess conform failed: "node" "-e" "process.kill(process.pid, \'SIGTERM\')"')
   })
 
   test('rejects a malformed subprocess conform proposal before execution', async () => {

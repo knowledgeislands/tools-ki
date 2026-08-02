@@ -14,13 +14,14 @@ import { resolveRepositoryInitialisationTarget, resolveRepositoryTargets } from 
 import {
   type AuditRepositorySummary,
   auditProgressLine,
+  conformProgressLine,
   operationOptions,
   renderAuditFrameStart,
   renderAuditResults,
+  renderConformFrameStart,
   renderConformReports,
   renderEducation,
   renderMultiRepositoryAuditSummary,
-  renderRepositoryProgressSummary,
   runPreparedWithProgress,
   runWithProgress
 } from './repository-reporting.ts'
@@ -176,10 +177,9 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .option('--skill <capability>', 'one declared resolved skill to explain')
         .action(async (options: { skill?: string }) => {
           const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
-          for (const { repository, skills } of selected) {
+          for (const { skills } of selected) {
             const output = { progress: 'auto' as const, progressStyle: 'single' as const, reporterLevels: [] }
-            renderRepositoryProgressSummary(context, 'educate', repository.root, skills, output)
-            const educations = await runWithProgress(context, 'educate', skills, (skill) => educateSkill(skill), output)
+            const educations = await runWithProgress(context, skills, (skill) => educateSkill(skill), output)
             if (!educations.length) context.stdout.write('ki repo educate: no declared skills\n')
             else context.stdout.write(`${educations.flatMap(renderEducation).join('\n')}\n`)
           }
@@ -203,7 +203,6 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             try {
               const results = await runWithProgress(
                 context,
-                'audit',
                 skills,
                 async (skill, onItemComplete) => ({
                   skill,
@@ -267,10 +266,9 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             /* v8 ignore next */
             if (!selected) throw new KiError('repository conform lost its selected repository before resolution', 1)
             const { skills } = selected
-            renderRepositoryProgressSummary(context, 'conform', repository.root, skills, output)
+            renderConformFrameStart(context, repository.root, skills)
             const conformed = await runWithProgress(
               context,
-              'conform',
               skills,
               async (skill, onItemComplete) => ({
                 skill: skill.skill,
@@ -281,20 +279,19 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                   (item) => onItemComplete(item.code)
                 )
               }),
-              output
+              output,
+              conformProgressLine
             )
             const findings = conformed.flatMap(({ conform }) => conform.findings)
             const renderInitialReports = () =>
               renderConformReports(
                 context,
-                repository.root,
                 conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
               )
             const reAuditAndRender = async (): Promise<boolean> => {
               const reaudited = await runPreparedWithProgress(
                 context,
-                're-audit',
                 conformed.map(({ prepared }) => prepared),
                 async (skill, onItemComplete) => {
                   const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
@@ -312,13 +309,13 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                     )
                   }
                 },
-                output
+                output,
+                conformProgressLine
               )
               const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
               const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
               renderConformReports(
                 context,
-                repository.root,
                 reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
                 output.reporterLevels
               )

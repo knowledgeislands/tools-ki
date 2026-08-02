@@ -1,5 +1,5 @@
-import { lstat, realpath, rm, symlink } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { lstat, rm, symlink } from 'node:fs/promises'
+import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { type SandboxArea, sandbox } from './_cli_helper.ts'
 
@@ -65,8 +65,6 @@ export default {
 }
 `
 
-const projectRoot = (area: SandboxArea): Promise<string> => realpath(area.path)
-
 const setupPrefixCollisionHarness = async (data: SandboxArea): Promise<void> => {
   for (const { name, code, marker } of [
     { name: 'ki-website', code: 'WEB-1', marker: 'website.txt' },
@@ -125,10 +123,10 @@ describe('[ki repo conform writes]', () => {
     await box.data.write('ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts', rubric('[]', 'ki-extra'))
     const multiple = await box.run('ki repo conform --progress always')
 
-    expect(regular.output).toContain('╭─ KI REPOSITORY · CONFORM')
-    expect(regular.output).toContain('CONFORM    [')
+    expect(regular.output).toContain('╭─ KI REPO CONFORM')
+    expect(regular.output).toContain('├─ progress [')
     expect(narrow.output).toContain('\r\x1b[2K.')
-    expect(invalidWidth.output).toContain('CONFORM    [################################] 0/0 100% complete')
+    expect(invalidWidth.output).toContain('0/0 100% complete')
     expect(multiple.output).toContain('│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra')
   })
 
@@ -172,18 +170,10 @@ describe('[ki repo conform writes]', () => {
 
     const result = await box.run('ki repo conform')
 
-    expect(result).toEqual({
-      exitCode: 0,
-      output: `
-==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] conform
-  ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
-  ✅ pass  complete
-
-==> recap
-  ✅ no FAIL / WARN / FIXED findings across conformed skills
-  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
-`
-    })
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('╭─ KI REPO CONFORM')
+    expect(result.output).toContain('│  ╰─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0 FIXED=0')
+    expect(result.output).toContain('╰─ summary: PASS=1 WARN=0 FAIL=0 FIXED=0 · FINDINGS: FAIL=0 WARN=0 FIXED=0')
   })
 
   test('publishes a complete conform write set, supports dry-run, and re-audits', async () => {
@@ -195,14 +185,32 @@ describe('[ki repo conform writes]', () => {
     const dryRun = await box.run('ki repo conform --dry-run')
     const beforeContent = await box.project.read('governed.txt')
     expect(dryRun.output).toContain('proposed write governed.txt\n')
-    expect(dryRun.output).toContain('==> recap\n  ✅ no findings across conformed skills')
+    expect(dryRun.output).toContain('╰─ summary: PASS=1 WARN=0 FAIL=0 FIXED=0 · FINDINGS: FAIL=0 WARN=0 FIXED=0')
     expect(beforeContent).toBe('before\n')
 
     const conformed = await box.run('ki repo conform')
     const afterContent = await box.project.read('governed.txt')
     expect(conformed.output).toContain('applied write governed.txt\n')
-    expect(conformed.output).toContain('✅ no findings across conformed skills')
+    expect(conformed.output).toContain('╰─ summary: PASS=1 WARN=0 FAIL=0 FIXED=0 · FINDINGS: FAIL=0 WARN=0 FIXED=0')
     expect(afterContent).toBe('after\n')
+  })
+
+  test('nests multi-line conform findings beneath their skill result', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.setupExampleHarness({
+      rubric: rubric(`[{ code: 'F', title: 'Family', items: [
+        { kind: 'mechanical', code: 'EXAMPLE-1', title: 'First', level: 'WARN', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'first line\\ncontinued first line' }] },
+        { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Second', level: 'WARN', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'second line\\ncontinued second line' }] }
+      ] }]`)
+    })
+
+    const result = await box.run('ki repo conform')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('│  ╰─ ⚠️  example/harness:ki-example WARN · FAIL=0 WARN=2 FIXED=0')
+    expect(result.output).toContain('│     ├─ ⚠️  warn  [First (EXAMPLE-1)] — first line\n│     │         continued first line')
+    expect(result.output).toContain('│     ╰─ ⚠️  warn  [Second (EXAMPLE-2)] — second line\n│               continued second line')
   })
 
   test('withholds a proposal that shares a skill with its blocking audit', async () => {
@@ -399,7 +407,7 @@ describe('[ki repo conform writes]', () => {
     const result = await box.run('ki repo conform --dry-run')
 
     expect(result.output).toContain('proposed write governed.txt\n')
-    expect(result.output).toContain('==> recap')
+    expect(result.output).toContain('├─ results')
     expect(await box.project.read('governed.txt')).toBe('before\n')
   })
 
@@ -629,21 +637,11 @@ export default {
 
     const result = await box.run('ki repo conform')
 
-    expect(result).toEqual({
-      exitCode: 0,
-      output: `proposed write governed.txt
-applied write governed.txt
-
-==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] conform
-  ✅ fixed [Example (EXAMPLE-1)] — conformed
-  ✅ summary: FAIL=0 WARN=0 FIXED=1 JUDGMENT_UNEVALUATED=0
-  ✅ fixed complete
-
-==> recap
-  ✅ fixed example/harness:ki-example [Example (EXAMPLE-1)] — conformed
-  ✅ totals: FAIL=0 WARN=0 FIXED=1 JUDGMENT_UNEVALUATED=0
-`
-    })
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('proposed write governed.txt\napplied write governed.txt')
+    expect(result.output).toContain('│  ╰─ ✅ example/harness:ki-example FIXED · FAIL=0 WARN=0 FIXED=1')
+    expect(result.output).toContain('│     ╰─ ✅ fixed [Example (EXAMPLE-1)] — conformed')
+    expect(result.output).toContain('╰─ summary: PASS=0 WARN=0 FAIL=0 FIXED=1 · FINDINGS: FAIL=0 WARN=0 FIXED=1')
   })
 
   test('fails when re-audit after conform still finds the violation', async () => {
