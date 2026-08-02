@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-013
 title: Define guarded conform execution and explicit override
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: a0832e6bfcf41bc5ef6752c127a2559e04eb8a7b
 ---
 
 ## Goal
