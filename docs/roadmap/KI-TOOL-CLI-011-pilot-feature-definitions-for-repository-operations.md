@@ -34,10 +34,10 @@ The pilot area is `ki repo audit` only, with the stable `REPO-AUDIT` prefix. It 
 
 ## Steps
 
-- [ ] Map the as-built `ki repo audit` contract from `src/core/repository-operations.ts` to the focused CLI coverage, selecting only independently verifiable observable behaviours for the pilot.
-- [ ] Declare `ki-feature-definitions` in `.ki-config.toml`, create `docs/features/index.md`, and register `repository-audit.md` with the `REPO-AUDIT` prefix.
-- [ ] Author `docs/features/repository-audit.md` with numbered, as-built requirements and concrete `_Verify:_` hooks for repository and skill selection, audit verdict and finding reporting, output controls, and multi-repository summaries; place only unbuilt candidate behaviour in `## Gaps`.
-- [ ] Run the Feature Definitions audit and the focused audit CLI test suites before the full test suite.
+- [x] Map the as-built `ki repo audit` contract from `src/core/repository-operations.ts` to the focused CLI coverage, selecting only independently verifiable observable behaviours for the pilot.
+- [x] Declare `ki-feature-definitions` in `.ki-config.toml`, create `docs/features/index.md`, and register `repository-audit.md` with the `REPO-AUDIT` prefix.
+- [x] Author `docs/features/repository-audit.md` with numbered, as-built requirements and concrete `_Verify:_` hooks for repository and skill selection, audit verdict and finding reporting, output controls, and multi-repository summaries; place only unbuilt candidate behaviour in `## Gaps`.
+- [x] Run the Feature Definitions audit and the focused audit CLI test suites before the full test suite.
 - [ ] During acceptance review, have the repository owner use the corpus to answer: “When changing multi-repository audit failure reporting, which observable contract and focused CLI tests must change together?”
 - [ ] Record whether the corpus made that answer materially faster or clearer, including limitations, in this item's `Discussion`, then hand the durable evidence back to `knowledgeislands/ki-agentic-harness` item `KI-HARNESS-GOV-002` without proposing fleet rollout.
 
