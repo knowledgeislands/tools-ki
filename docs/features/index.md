@@ -28,6 +28,6 @@ Unbuilt or uncertain behaviour belongs in an area's unnumbered `## Gaps` section
 
 ## Areas
 
-| File                | Prefix       | Covers                                                        |
-| ------------------- | ------------ | ------------------------------------------------------------- |
+| File                | Prefix       | Covers                                                         |
+| ------------------- | ------------ | -------------------------------------------------------------- |
 | repository-audit.md | `REPO-AUDIT` | `ki repo audit` selection, results, output, and multi-repo use |

@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-011
 title: Pilot Feature Definitions for repository operations
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: e429d984bb6330faf7876d1b8e86c27b3971c1f5
@@ -38,8 +38,8 @@ The pilot area is `ki repo audit` only, with the stable `REPO-AUDIT` prefix. It 
 - [x] Declare `ki-feature-definitions` in `.ki-config.toml`, create `docs/features/index.md`, and register `repository-audit.md` with the `REPO-AUDIT` prefix.
 - [x] Author `docs/features/repository-audit.md` with numbered, as-built requirements and concrete `_Verify:_` hooks for repository and skill selection, audit verdict and finding reporting, output controls, and multi-repository summaries; place only unbuilt candidate behaviour in `## Gaps`.
 - [x] Run the Feature Definitions audit and the focused audit CLI test suites before the full test suite.
-- [ ] During acceptance review, have the repository owner use the corpus to answer: “When changing multi-repository audit failure reporting, which observable contract and focused CLI tests must change together?”
-- [ ] Record whether the corpus made that answer materially faster or clearer, including limitations, in this item's `Discussion`, then hand the durable evidence back to `knowledgeislands/ki-agentic-harness` item `KI-HARNESS-GOV-002` without proposing fleet rollout.
+- [x] During acceptance review, have the repository owner use the corpus to answer: “When changing multi-repository audit failure reporting, which observable contract and focused CLI tests must change together?”
+- [x] Record whether the corpus made that answer materially faster or clearer, including limitations, in this item's `Discussion`, then hand the durable evidence back to `knowledgeislands/ki-agentic-harness` item `KI-HARNESS-GOV-002` without proposing fleet rollout.
 
 ## Files touched
 
@@ -59,6 +59,28 @@ The pilot area is `ki repo audit` only, with the stable `REPO-AUDIT` prefix. It 
 
 No implementation dependency blocks planning. This item cannot become Ready until the pilot area's scope, prefix, named maintenance question, and owner review window are explicit.
 
+## Acceptance
+
+### Delivered
+
+The repository now declares `ki-feature-definitions` and contains the `REPO-AUDIT` Feature Definitions area for the bounded `ki repo audit` pilot.
+
+### Summary of changes
+
+`docs/features/index.md` registers the corpus and `docs/features/repository-audit.md` records seven as-built, independently verifiable requirements for repository and capability selection, reporting, output controls, failure status, and multi-repository summaries.
+
+### Verification
+
+`ki repo audit --skill ki-feature-definitions --repo .` and `ki repo audit --skill ki-roadmap --repo .` both passed. The focused repository-audit CLI suites and `bun run test` passed, with 458 tests passing in 34 files.
+
+### Outstanding concerns
+
+This qualitative pilot does not measure elapsed maintenance time, and it intentionally excludes `ki repo conform`, registration, initialization, and target-resolution edge cases. The outgoing handoff asks the harness to assess the result; it does not propose fleet rollout.
+
+### Mini recap
+
+The immutable baseline is `e429d984bb6330faf7876d1b8e86c27b3971c1f5`; the delivered corpus is committed in `c056c9b`. The owner approved acceptance after reviewing the named maintenance question.
+
 ## Discussion
 
 ### Pilot boundary
@@ -71,10 +93,10 @@ The feature corpus describes current observable behaviour. A behaviour that need
 
 ### Pilot evaluation
 
-The acceptance review is the evidence window for the named maintenance question: whether the new corpus identifies the relevant observable contract and focused tests for a multi-repository audit failure-reporting change faster or more clearly than reading source and tests alone. Record both a positive result and any limitation; the outcome informs the originating harness item but does not authorise fleet-wide adoption.
+The owner found the corpus materially clearer and faster for the named maintenance question. A multi-repository audit failure-reporting change maps directly to `REPO-AUDIT-006` and `REPO-AUDIT-007`, with their named `src/tests/cli/repo.test.ts` and `src/tests/cli/repo-targets.test.ts` verification hooks. The assessment is qualitative rather than timed, and target-resolution edge cases remain outside the pilot boundary.
 
 ### Origin and receiving ownership
 
 Origin: `knowledgeislands/ki-agentic-harness` — `KI-HARNESS-GOV-002`.
 
-This local record is the acceptance boundary for the pilot. Any later fleet decision remains with the harness item and requires its own evidence-backed review.
+The outgoing [evidence handoff](../../../-/_HANDOFFS/ki-agentic-harness/KI-TOOL-CLI-011-feature-definitions-pilot.md) asks the origin to assess the result. Any later fleet decision remains with the harness item and requires its own evidence-backed review.
