@@ -181,15 +181,15 @@ describe('[ki repo]', () => {
 
       expect(result).toEqual({
         exitCode: 0,
-        output: `
-==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
-  ℹ️  info  [Example (EXAMPLE-1)] — ok
-  ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=1
-  ✅ pass  complete
-
-==> recap
-  ℹ️  info  example/harness:ki-example [Example (EXAMPLE-1)] — ok
-  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=1
+        output: `╭─ KI REPO AUDIT
+│  📁 ${basename(await projectRoot(box.project))}
+│     ${await projectRoot(box.project)}
+│  ✦ 1 skill selected
+│     ╰─ example/harness:ki-example
+├─ results
+│  ╰─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0
+│     ╰─ ℹ️  info  [Example (EXAMPLE-1)] — ok
+╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
     })
@@ -222,6 +222,8 @@ describe('[ki repo]', () => {
       expect(all.output).toContain('ℹ️  info')
       expect(all.output).toContain('⚠️  warn')
       expect(all.output).toContain('❌ fail')
+      expect(all.output).toContain('│     ├─ ✅ pass')
+      expect(all.output).toContain('│     ╰─ ❌ fail')
       expect(warnings.output).toContain('warn evidence')
       expect(warnings.output).not.toContain('fail evidence')
       expect(warnings.output).toContain('FAIL=1 WARN=1')
@@ -245,12 +247,12 @@ describe('[ki repo]', () => {
       expect(help.output).toContain('--progress-style <style>')
       expect(help.output).toContain('--reporter-levels <levels>')
       expect(never.output).not.toContain('\r\x1b[2K')
-      expect(always.output).toContain('AUDIT')
+      expect(always.output).toContain('├─ progress')
       expect(always.output).not.toContain('\r\x1b[2K')
       expect(always.output).toContain(
-        `╭─ KI REPOSITORY · AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 1 skill selected\n│     ╰─ example/harness:ki-example\n╰─ preparing audit\n\nAUDIT`
+        `╭─ KI REPO AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 1 skill selected\n│     ╰─ example/harness:ki-example\n├─ progress [`
       )
-      expect(always.output.indexOf('╭─ KI REPOSITORY · AUDIT')).toBeLessThan(always.output.indexOf('AUDIT      ['))
+      expect(always.output.indexOf('╭─ KI REPO AUDIT')).toBeLessThan(always.output.indexOf('├─ progress ['))
       expect(multi.output).toContain('[ki-example]')
       expect(multiInteractive.output).toContain('\x1b[1A')
       expect(invalidProgress).toMatchObject({ exitCode: 2 })
@@ -269,7 +271,7 @@ describe('[ki repo]', () => {
       const result = await box.run(`ki repo --repo ${box.project.path} audit --skill ki-website`)
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-website] audit`)
+      expect(result.output).toContain(`╰─ ⚠️ example/harness:ki-website WARN · FAIL=0 WARN=1`)
       expect(result.output).not.toContain('ki-website-cloudflare')
     })
 
@@ -282,15 +284,14 @@ describe('[ki repo]', () => {
 
       expect(result).toEqual({
         exitCode: 0,
-        output: `ki repo audit: clean (1 skills)
-
-==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
-  ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
-  ✅ pass  complete
-
-==> recap
-  ✅ no findings across audited skills
-  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
+        output: `╭─ KI REPO AUDIT
+│  📁 ${basename(await projectRoot(box.project))}
+│     ${await projectRoot(box.project)}
+│  ✦ 1 skill selected
+│     ╰─ example/harness:ki-example
+├─ results
+│  ╰─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0
+╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
     })
@@ -303,8 +304,8 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain('AUDIT      [################################] 0/0 100% starting')
-      expect(result.output).toContain('AUDIT      [################################] 0/0 100% complete')
+      expect(result.output).toContain('├─ progress [###############################] 0/0 100% starting')
+      expect(result.output).toContain('├─ progress [###############################] 0/0 100% complete')
     })
 
     test('uses the fallback progress width when a TTY reports an invalid column count', async () => {
@@ -315,7 +316,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit', { interactive: true, columns: Number.NaN, now: () => 0 })
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain('AUDIT      [################################] 0/0 100% complete')
+      expect(result.output).toContain('├─ progress [###############################] 0/0 100% complete')
     })
 
     test('renders per-rubric progress with bounded three-column TTY status without changing non-interactive output', async () => {
@@ -339,8 +340,8 @@ describe('[ki repo]', () => {
       const now = (): number => times.shift() ?? 1_500
 
       const result = await box.run('ki repo audit', { interactive: true, now })
-      const [progressOutput = '', standardOutput] = result.output.split('ki repo audit: clean (2 skills)\n')
-      const header = `╭─ KI REPOSITORY · AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 2 skills selected\n│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra\n╰─ preparing audit\n\n`
+      const [progressOutput = '', standardOutput = ''] = result.output.split('\n├─ results\n')
+      const header = `╭─ KI REPO AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 2 skills selected\n│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra\n`
       const frames = progressOutput
         .slice(header.length)
         .replace(/\n$/, '')
@@ -350,28 +351,19 @@ describe('[ki repo]', () => {
 
       expect(result.exitCode).toBe(0)
       expect(progressOutput.startsWith(header)).toBe(true)
-      expect(standardOutput).toBe(`
-==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
-  ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
-  ✅ pass  complete
-
-==> [${basename(await projectRoot(box.project))}][example/harness:ki-extra] audit
-  ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
-  ✅ pass  complete
-
-==> recap
-  ✅ no findings across audited skills
-  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
+      expect(standardOutput).toBe(`│  ├─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0
+│  ╰─ ✅ example/harness:ki-extra PASS · FAIL=0 WARN=0
+╰─ summary: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `)
       expect(frames.map((frame) => frame.trimEnd())).toEqual([
-        'AUDIT      [>...............................] 0.0s loading 0/2 definitions',
-        'AUDIT      [>...............................] 1.3s loading 1/2 definitions',
-        'AUDIT      [>...............................] 1.5s loading 2/2 definitions',
-        'AUDIT      [................................] 0/3 0% starting',
-        'AUDIT      [##########......................] 1/3 33% ki-example EXAMPLE-1',
-        'AUDIT      [#####################...........] 2/3 67% ki-example EXAMPLE-2',
-        'AUDIT      [################################] 3/3 100% ki-extra EXTRA-1',
-        'AUDIT      [################################] 3/3 100% complete'
+        '├─ progress [>..............................] 0.0s loading 0/2 definitions',
+        '├─ progress [>..............................] 1.3s loading 1/2 definitions',
+        '├─ progress [>..............................] 1.5s loading 2/2 definitions',
+        '├─ progress [...............................] 0/3 0% starting',
+        '├─ progress [##########.....................] 1/3 33% ki-example EXAMPLE-1',
+        '├─ progress [####################...........] 2/3 67% ki-example EXAMPLE-2',
+        '├─ progress [###############################] 3/3 100% ki-extra EXTRA-1',
+        '├─ progress [###############################] 3/3 100% complete'
       ])
       expect(frames.every((frame) => frame.length === 80)).toBe(true)
 
@@ -386,19 +378,16 @@ describe('[ki repo]', () => {
       const nonInteractive = await box.run('ki repo audit')
       expect(nonInteractive).toEqual({
         exitCode: 0,
-        output: `ki repo audit: clean (2 skills)
-
-==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
-  ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
-  ✅ pass  complete
-
-==> [${basename(await projectRoot(box.project))}][example/harness:ki-extra] audit
-  ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
-  ✅ pass  complete
-
-==> recap
-  ✅ no findings across audited skills
-  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
+        output: `╭─ KI REPO AUDIT
+│  📁 ${basename(await projectRoot(box.project))}
+│     ${await projectRoot(box.project)}
+│  ✦ 2 skills selected
+│     ├─ example/harness:ki-example
+│     ╰─ example/harness:ki-extra
+├─ results
+│  ├─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0
+│  ╰─ ✅ example/harness:ki-extra PASS · FAIL=0 WARN=0
+╰─ summary: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
     })
@@ -407,7 +396,8 @@ describe('[ki repo]', () => {
       [Number.MIN_VALUE, ''],
       [1, '.'],
       [3, '...'],
-      [8, '0.0s ...']
+      [8, '0.0s ...'],
+      [13, '├─ progress .']
     ])('renders a safe abbreviated TTY progress frame at %p columns', async (columns, expected) => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
@@ -498,15 +488,15 @@ describe('[ki repo]', () => {
 
       expect(result).toEqual({
         exitCode: 0,
-        output: `
-==> [${basename(await projectRoot(box.project))}][example/harness:ki-example] audit
-  ℹ️  info  [Example (EXAMPLE-1)] some/file.ts — ok
-  ✅ summary: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
-  ✅ pass  complete
-
-==> recap
-  ℹ️  info  example/harness:ki-example [Example (EXAMPLE-1)] some/file.ts — ok
-  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0
+        output: `╭─ KI REPO AUDIT
+│  📁 ${basename(await projectRoot(box.project))}
+│     ${await projectRoot(box.project)}
+│  ✦ 1 skill selected
+│     ╰─ example/harness:ki-example
+├─ results
+│  ╰─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0
+│     ╰─ ℹ️  info  [Example (EXAMPLE-1)] some/file.ts — ok
+╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
     })
@@ -577,7 +567,7 @@ export default {
 
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('⚠️  warn  [Hybrid evidence (DIRECT-1)]')
-      expect(result.output).toContain('JUDGMENT_UNEVALUATED=1')
+      expect(result.output).toContain('╰─ summary: PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1')
     })
   })
 })

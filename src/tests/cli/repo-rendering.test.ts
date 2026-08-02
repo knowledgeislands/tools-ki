@@ -29,10 +29,13 @@ export default {
         level: 'FAIL',
         audit: {
           phase: 'PRIMARY',
-          run: () => [{
-            status: 'INFO',
-            message: 'default user model pinned: claude-fable-5\\u001b[1m; \\u001b]8;;https://example.test\\u0007linked\\u001b]8;;\\u0007'
-          }]
+          run: () => [
+            {
+              status: 'INFO',
+              message: 'default user model pinned: claude-fable-5\\u001b[1m; \\u001b]8;;https://example.test\\u0007linked\\u001b]8;;\\u0007\\nfirst continuation'
+            },
+            { status: 'INFO', message: 'second line\\nsecond continuation' }
+          ]
         }
       }
     }]
@@ -44,7 +47,9 @@ export default {
   const result = await box.run('ki repo audit --reporter-levels info')
 
   expect(result.exitCode).toBe(0)
-  expect(result.output.match(/default user model pinned: claude-fable-5; linked/g)).toHaveLength(2)
+  expect(result.output.match(/default user model pinned: claude-fable-5; linked/g)).toHaveLength(1)
+  expect(result.output).toContain('first continuation')
+  expect(result.output).toContain('second continuation')
   expect(result.output).not.toContain('\x1b')
   expect(result.output).not.toContain('[1m]')
 })

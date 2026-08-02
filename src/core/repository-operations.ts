@@ -11,9 +11,14 @@ import { KiError } from './errors.ts'
 import { discoverInstalledHarnesses } from './harness.ts'
 import { resolveRepositoryInitialisationTarget, resolveRepositoryTargets } from './repository.ts'
 import {
+  type AuditRepositorySummary,
+  auditProgressLine,
   operationOptions,
+  renderAuditFrameStart,
+  renderAuditResults,
+  renderConformReports,
   renderEducation,
-  renderReports,
+  renderMultiRepositoryAuditSummary,
   renderRepositoryProgressSummary,
   runPreparedWithProgress,
   runWithProgress
@@ -190,39 +195,44 @@ export const createRepositoryOperations = (context: KiContext): Command => {
           const output = operationOptions('audit', options)
           const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
           let failed = false
+          const summaries: AuditRepositorySummary[] = []
           for (const [index, { repository, skills }] of selected.entries()) {
             if (index) context.stdout.write('\n')
-            renderRepositoryProgressSummary(context, 'audit', repository.root, skills, output)
-            const results = await runWithProgress(
-              context,
-              'audit',
-              skills,
-              async (skill, onItemComplete) => ({
-                skill,
-                audit: await runSkillAudit(
-                  { kind: 'repository', repository: repository.root, userHome: context.homeDirectory, lstat: context.lstat },
+            renderAuditFrameStart(context, repository.root, skills)
+            try {
+              const results = await runWithProgress(
+                context,
+                'audit',
+                skills,
+                async (skill, onItemComplete) => ({
                   skill,
-                  (item) => onItemComplete(item.code)
+                  audit: await runSkillAudit(
+                    { kind: 'repository', repository: repository.root, userHome: context.homeDirectory, lstat: context.lstat },
+                    skill,
+                    (item) => onItemComplete(item.code)
+                  )
+                }),
+                output,
+                auditProgressLine
+              )
+              const findings = results.flatMap(({ audit }) => audit.findings)
+              const registration = await localRepositoryRegistration(context, repository.root, skills)
+              summaries.push(
+                renderAuditResults(
+                  context,
+                  repository.root,
+                  results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
+                  output.reporterLevels,
+                  registration
                 )
-              }),
-              output
-            )
-            const findings = results.flatMap(({ audit }) => audit.findings)
-            if (!findings.length) context.stdout.write(`ki repo audit: clean (${skills.length} skills)\n`)
-            renderReports(
-              context,
-              repository.root,
-              'audit',
-              results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
-              output.reporterLevels
-            )
-            const registration = await localRepositoryRegistration(context, repository.root, skills)
-            if (registration) {
-              context.stdout.write(`❌ fail  [Local repository registration (REPO-REG-1)] — ${registration}\n`)
-              failed = true
+              )
+              failed ||= Boolean(registration) || findings.some((finding) => finding.level === 'fail')
+            } catch (error) {
+              context.stdout.write('╰─ audit failed\n')
+              throw error
             }
-            failed ||= findings.some((finding) => finding.level === 'fail')
           }
+          if (summaries.length > 1) renderMultiRepositoryAuditSummary(context, summaries)
           if (failed) throw new KiError('repository audit found failures', 1)
         })
     )
@@ -290,10 +300,9 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             for (const write of writes) context.stdout.write(`proposed write ${write.path}\n`)
             for (const command of commands) context.stdout.write(`proposed run ${renderRepositoryConformCommand(command)}\n`)
             if (findings.some((finding) => finding.level === 'fail')) {
-              renderReports(
+              renderConformReports(
                 context,
                 repository.root,
-                'conform',
                 conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
               )
@@ -309,10 +318,9 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               publicationError = error
             }
             if (publicationError) {
-              renderReports(
+              renderConformReports(
                 context,
                 repository.root,
-                'conform',
                 conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
               )
@@ -321,10 +329,9 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             if (options.dryRun) {
               for (const write of writes) context.stdout.write(`would apply write ${write.path}\n`)
               for (const command of commands) context.stdout.write(`would run ${renderRepositoryConformCommand(command)}\n`)
-              renderReports(
+              renderConformReports(
                 context,
                 repository.root,
-                'conform',
                 conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
               )
@@ -357,10 +364,9 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             )
             const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
             const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
-            renderReports(
+            renderConformReports(
               context,
               repository.root,
-              'conform',
               reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
               output.reporterLevels
             )

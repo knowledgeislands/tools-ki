@@ -213,7 +213,7 @@ test('audits, conforms, and lists the local ki-repo registry without discovering
   expect(repeatedConform.exitCode).toBe(0)
   expect(await box.config.read('ki/config.toml')).toContain(`paths = [\n  ${JSON.stringify(repository)},\n]`)
   expect(listed).toEqual({ exitCode: 0, output: `ki repo list\n  ${repository}\n` })
-  expect((await box.run('ki repo audit')).output).toContain('ki repo audit: clean (1 skills)')
+  expect((await box.run('ki repo audit')).output).toContain('╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0')
 })
 
 test('registers a selected KI repository even when its declaration cannot resolve', async () => {

@@ -138,8 +138,43 @@ describe('[ki repo target sets]', () => {
       const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'audit', '--progress', 'always'])
 
       expect(result.exitCode).toBe(0)
-      expect(result.output.match(/ki repo audit: clean \(1 skills\)/g)).toHaveLength(2)
-      expect(result.output).toContain(`  ✅ totals: FAIL=0 WARN=0 FIXED=0 JUDGMENT_UNEVALUATED=0\n\n╭─ KI REPOSITORY · AUDIT\n│  📁 second\n│     ${second}`)
+      expect(result.output.match(/╭─ KI REPO AUDIT\n/g)).toHaveLength(2)
+      expect(result.output).toContain(`╭─ KI REPO AUDIT\n│  📁 second\n│     ${second}`)
+      expect(result.output).toContain(
+        `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✅ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n│  ╰─ ✅ second PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n╰─ totals: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0`
+      )
+    })
+
+    test('recaps every repository verdict and aggregate finding volume', async () => {
+      const box = await sandbox()
+      await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.write('second/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.write('third/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [
+          {
+            kind: 'mechanical', code: 'WARN-1', title: 'Warning', level: 'WARN', phase: 'PRIMARY',
+            audit: async ({ repository }) => repository.endsWith('/second') ? [{ status: 'VIOLATION', message: 'needs attention' }] : []
+          },
+          {
+            kind: 'mechanical', code: 'FAIL-1', title: 'Failure', level: 'FAIL', phase: 'PRIMARY',
+            audit: async ({ repository }) => repository.endsWith('/third') ? [{ status: 'VIOLATION', message: 'broken' }] : []
+          }
+        ] }]`)
+      })
+      const first = await realpath(`${box.root.path}/first`)
+      const second = await realpath(`${box.root.path}/second`)
+      const third = await realpath(`${box.root.path}/third`)
+
+      const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, '--repo', third, 'audit'])
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0')
+      expect(result.output).toContain('╰─ summary: PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1')
+      expect(result.output).toContain('╰─ summary: PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0')
+      expect(result.output).toContain(
+        `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✅ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n│  ├─ ⚠️  second PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1\n│  ╰─ ❌ third PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0\n╰─ totals: PASS=1 WARN=1 FAIL=1 · FINDINGS: FAIL=1 WARN=1`
+      )
     })
 
     test('conforms every explicit target independently after all targets preflight', async () => {

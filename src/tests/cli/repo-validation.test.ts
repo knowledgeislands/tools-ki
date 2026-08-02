@@ -1,7 +1,6 @@
-import { realpath, rm, symlink } from 'node:fs/promises'
-import { basename } from 'node:path'
+import { rm, symlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
-import { type SandboxArea, sandbox } from './_cli_helper.ts'
+import { sandbox } from './_cli_helper.ts'
 
 // Builds a full direct `scripts/rubric/items/index.ts` catalogue. Most tests use a
 // compact literal which this fixture expands into the real family/item contract;
@@ -64,8 +63,6 @@ export default {
   families
 }
 `
-
-const projectRoot = (area: SandboxArea): Promise<string> => realpath(area.path)
 
 const rubricWithSession = (session: string): string =>
   `
@@ -824,9 +821,7 @@ ki-depends-on: ${list}
       const result = await box.run('ki repo audit --reporter-levels info')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output.indexOf(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-foundation] audit`)).toBeLessThan(
-        result.output.indexOf(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-feature] audit`)
-      )
+      expect(result.output.indexOf('example/harness:ki-foundation')).toBeLessThan(result.output.indexOf('example/harness:ki-feature'))
       expect(result.output).toContain('[Order (R-1)] — ki-foundation')
       expect(result.output).toContain('[Order (R-1)] — ki-feature')
     })
@@ -850,9 +845,8 @@ ki-depends-on: ${list}
       await box.project.write('.ki-config.toml', declarations)
 
       const result = await box.run('ki repo audit --reporter-levels info')
-      const target = basename(await projectRoot(box.project))
       const positions = ['ki-b-independent', 'ki-y-foundation', 'ki-z-foundation', 'ki-a-feature'].map((name) =>
-        result.output.indexOf(`==> [${target}][example/harness:${name}] audit`)
+        result.output.indexOf(`example/harness:${name}`)
       )
 
       expect(result.exitCode).toBe(0)
@@ -934,8 +928,8 @@ ki-depends-on: ${list}
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain('[example/harness:ki-shared] audit')
-      expect(result.output).not.toContain('[other/harness:ki-shared] audit')
+      expect(result.output).toContain('example/harness:ki-shared')
+      expect(result.output).not.toContain('other/harness:ki-shared')
     })
 
     test('selecting one skill by --skill pulls in its declared dependency', async () => {
@@ -949,9 +943,7 @@ ki-depends-on: ${list}
       const result = await box.run('ki repo audit --skill example/harness:ki-feature --reporter-levels info')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output.indexOf(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-foundation] audit`)).toBeLessThan(
-        result.output.indexOf(`==> [${basename(await projectRoot(box.project))}][example/harness:ki-feature] audit`)
-      )
+      expect(result.output.indexOf('example/harness:ki-foundation')).toBeLessThan(result.output.indexOf('example/harness:ki-feature'))
     })
   })
 })

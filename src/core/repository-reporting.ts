@@ -18,6 +18,8 @@ interface OperationOptions {
   readonly reporterLevels: readonly ReporterLevel[]
 }
 
+type ProgressLineRenderer = (right: string, complete: number | undefined, total: number | undefined, columns: number) => string
+
 const REPORTER_LEVELS: readonly ReporterLevel[] = ['fail', 'warn', 'fixed', 'info', 'not-applicable', 'pass']
 
 const defaultReporterLevels = (operation: 'audit' | 'conform'): readonly ReporterLevel[] =>
@@ -108,6 +110,16 @@ const progressLine = (left: string, right: string, complete: number | undefined,
   return truncate(right, terminalWidth)
 }
 
+const framedAuditProgressLine: ProgressLineRenderer = (right, complete, total, columns) => {
+  const terminalWidth = Number.isFinite(columns) && columns > 0 ? Math.floor(columns) : FALLBACK_TERMINAL_COLUMNS
+  const prefix = '├─ progress '
+  if (terminalWidth <= prefix.length) return truncate(right, terminalWidth)
+  const remainingWidth = terminalWidth - prefix.length - 1
+  const barWidth = Math.min(100, Math.floor(remainingWidth / 2))
+  if (barWidth >= 3) return `${prefix}${progressBar(barWidth, complete, total)} ${truncate(right, remainingWidth - barWidth)}`.padEnd(terminalWidth)
+  return `${prefix}${truncate(right, Math.max(0, terminalWidth - prefix.length))}`
+}
+
 const elapsed = (milliseconds: number): string => `${(Math.max(0, milliseconds) / 1000).toFixed(1)}s`
 
 interface ProgressTracker {
@@ -129,7 +141,8 @@ const createProgressTracker = (
   context: KiContext,
   operation: string,
   options: OperationOptions,
-  skillNames: readonly string[]
+  skillNames: readonly string[],
+  lineRenderer: ProgressLineRenderer = (right, complete, total, columns) => progressLine(operation.toUpperCase(), right, complete, total, columns)
 ): ProgressTracker | undefined => {
   const enabled = options.progress === 'always' || (options.progress === 'auto' && context.stderr.isTTY === true)
   if (!enabled) return undefined
@@ -139,13 +152,9 @@ const createProgressTracker = (
   const columns = context.stderr.columns ?? FALLBACK_TERMINAL_COLUMNS
   const writeSingle = (right: string, final = false): void =>
     context.stderr.write(
-      `${context.stderr.isTTY === true ? '\r\x1b[2K' : ''}${progressLine(
-        operation.toUpperCase(),
-        right,
-        total === undefined ? undefined : complete,
-        total,
-        columns
-      )}${final || context.stderr.isTTY !== true ? '\n' : ''}`
+      `${context.stderr.isTTY === true ? '\r\x1b[2K' : ''}${lineRenderer(right, total === undefined ? undefined : complete, total, columns)}${
+        final || context.stderr.isTTY !== true ? '\n' : ''
+      }`
     )
   const states = new Map<string, MultiProgressState>(skillNames.map((skill) => [skill, { complete: 0, total: 0, planned: false, status: 'loading' }]))
   const progressState = (skill: string): MultiProgressState => {
@@ -159,13 +168,7 @@ const createProgressTracker = (
   const renderMulti = (): void => {
     const lines = skillNames.map((skill) => {
       const state = progressState(skill)
-      return progressLine(
-        operation.toUpperCase(),
-        `[${skill}] ${state.status}`,
-        state.planned ? state.complete : undefined,
-        state.planned ? state.total : undefined,
-        columns
-      )
+      return lineRenderer(`[${skill}] ${state.status}`, state.planned ? state.complete : undefined, state.planned ? state.total : undefined, columns)
     })
     if (context.stderr.isTTY === true && multiRendered) context.stderr.write(`\x1b[${lines.length}A`)
     context.stderr.write(lines.map((line) => `${context.stderr.isTTY === true ? '\r\x1b[2K' : ''}${line}\n`).join(''))
@@ -248,14 +251,16 @@ export const runWithProgress = async <Result>(
   operation: string,
   skills: readonly ResolvedSkill[],
   run: (skill: PreparedSkill, onItemComplete: (code: string) => void) => Promise<Result>,
-  options: OperationOptions
+  options: OperationOptions,
+  lineRenderer?: ProgressLineRenderer
 ): Promise<Result[]> => {
   const progress = skills.length
     ? createProgressTracker(
         context,
         operation,
         options,
-        skills.map((skill) => skill.declaration.name)
+        skills.map((skill) => skill.declaration.name),
+        lineRenderer
       )
     : undefined
   const prepared: PreparedSkill[] = []
@@ -271,6 +276,118 @@ export const runWithProgress = async <Result>(
   }
   return runPreparedWithProgress(context, operation, prepared, run, options, progress)
 }
+
+interface AuditSkillReport {
+  readonly skill: PreparedSkill
+  readonly findings: readonly Finding[]
+}
+
+export interface AuditRepositorySummary {
+  readonly repository: string
+  readonly passingSkills: number
+  readonly warningSkills: number
+  readonly failingSkills: number
+  readonly failingFindings: number
+  readonly warningFindings: number
+}
+
+const auditSkillSummary = (findings: readonly Finding[]): { readonly level: 'pass' | 'warn' | 'fail'; readonly fails: number; readonly warnings: number } => {
+  const fails = findings.filter((finding) => finding.level === 'fail').length
+  const warnings = findings.filter((finding) => finding.level === 'warn').length
+  return { level: fails ? 'fail' : warnings ? 'warn' : 'pass', fails, warnings }
+}
+
+const auditSummaryIcon = (summary: Pick<AuditRepositorySummary, 'failingSkills' | 'warningSkills'>): string =>
+  summary.failingSkills ? REPORT_ICON.fail : summary.warningSkills ? REPORT_ICON.warn : REPORT_ICON.pass
+
+/** Begin one framed audit report before its live progress stream starts. */
+export const renderAuditFrameStart = (context: KiContext, repository: string, skills: readonly { readonly identity: string }[]): void => {
+  const count = skills.length
+  const skillLines = skills.map((skill, index) => `│     ${index === count - 1 ? '╰─' : '├─'} ${skill.identity}`)
+  context.stdout.write(
+    `${[
+      '╭─ KI REPO AUDIT',
+      `│  📁 ${basename(repository)}`,
+      `│     ${repository}`,
+      `│  ✦ ${count} skill${count === 1 ? '' : 's'} selected`,
+      ...skillLines
+    ].join('\n')}\n`
+  )
+}
+
+/** Render the result portion and close one framed audit report. */
+export const renderAuditResults = (
+  context: KiContext,
+  repository: string,
+  reports: readonly AuditSkillReport[],
+  reporterLevels: readonly ReporterLevel[],
+  registrationFailure?: string
+): AuditRepositorySummary => {
+  const skillSummaries = reports.map((report) => auditSkillSummary(report.findings))
+  const failingFindings = skillSummaries.reduce((total, summary) => total + summary.fails, 0) + Number(Boolean(registrationFailure))
+  const warningFindings = skillSummaries.reduce((total, summary) => total + summary.warnings, 0)
+  const summary: AuditRepositorySummary = {
+    repository,
+    passingSkills: skillSummaries.filter((item) => item.level === 'pass').length,
+    warningSkills: skillSummaries.filter((item) => item.level === 'warn').length,
+    failingSkills: skillSummaries.filter((item) => item.level === 'fail').length + Number(Boolean(registrationFailure)),
+    failingFindings,
+    warningFindings
+  }
+  context.stdout.write('├─ results\n')
+  for (const [index, report] of reports.entries()) {
+    const reportSummary = skillSummaries[index]
+    // The aligned map above is fixed by reports.map(); preserve a guard for future changes.
+    /* v8 ignore next */
+    if (!reportSummary) throw new KiError(`audit report lost summary for ${report.skill.skill.identity}`, 1)
+    const last = index === reports.length - 1 && !registrationFailure
+    const branch = last ? '╰─' : '├─'
+    context.stdout.write(
+      `│  ${branch} ${REPORT_ICON[reportSummary.level].trimEnd()} ${report.skill.skill.identity} ${REPORT_LABEL[reportSummary.level].toUpperCase()} · FAIL=${reportSummary.fails} WARN=${reportSummary.warnings}\n`
+    )
+    const detailPrefix = `│  ${last ? '   ' : '│  '}`
+    const visible = report.findings.filter((entry) => reporterLevels.includes(entry.level))
+    for (const [findingIndex, finding] of visible.entries()) {
+      const findingLast = findingIndex === visible.length - 1
+      const findingBranch = findingLast ? '╰─' : '├─'
+      const [firstLine = '', ...continuation] = formatFinding(finding).replace(/^ {2}/, '').split('\n')
+      context.stdout.write(`${detailPrefix}${findingBranch} ${firstLine}\n`)
+      for (const line of continuation) context.stdout.write(`${detailPrefix}${findingLast ? '   ' : '│  '}   ${line}\n`)
+    }
+  }
+  if (registrationFailure)
+    context.stdout.write(`│  ╰─ ${REPORT_ICON.fail} local repository registration FAIL [Local repository registration (REPO-REG-1)] — ${registrationFailure}\n`)
+  context.stdout.write(
+    `╰─ summary: PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}\n`
+  )
+  return summary
+}
+
+/** Render one compact recap after every selected repository completed its audit. */
+export const renderMultiRepositoryAuditSummary = (context: KiContext, summaries: readonly AuditRepositorySummary[]): void => {
+  const totals = summaries.reduce(
+    (total, summary) => ({
+      passingSkills: total.passingSkills + summary.passingSkills,
+      warningSkills: total.warningSkills + summary.warningSkills,
+      failingSkills: total.failingSkills + summary.failingSkills,
+      failingFindings: total.failingFindings + summary.failingFindings,
+      warningFindings: total.warningFindings + summary.warningFindings
+    }),
+    { passingSkills: 0, warningSkills: 0, failingSkills: 0, failingFindings: 0, warningFindings: 0 }
+  )
+  context.stdout.write('\n╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n')
+  for (const [index, summary] of summaries.entries()) {
+    const branch = index === summaries.length - 1 ? '╰─' : '├─'
+    context.stdout.write(
+      `│  ${branch} ${auditSummaryIcon(summary)} ${basename(summary.repository)} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}\n`
+    )
+  }
+  context.stdout.write(
+    `╰─ totals: PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} · FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}\n`
+  )
+}
+
+export const auditProgressLine = framedAuditProgressLine
 
 export const renderEducation = (education: Awaited<ReturnType<typeof educateSkill>>): string[] => [
   education.identity,
@@ -357,17 +474,16 @@ const completion = (findings: readonly RenderedFinding[]): string => {
  * structured outcomes; this renderer keeps their item title and evidence subject intact
  * instead of making each harness ship a runner merely to format a report.
  */
-export const renderReports = (
+export const renderConformReports = (
   context: KiContext,
   repository: string,
-  operation: 'audit' | 'conform',
   reports: readonly SkillReport[],
   reporterLevels: readonly ReporterLevel[]
 ): void => {
   const reportFindings = reports.map((report) => ({ report, findings: withFixed(report) }))
   for (const { report, findings } of reportFindings) {
     const visible = findings.filter((finding) => reporterLevels.includes(finding.level))
-    context.stdout.write(`\n==> [${basename(repository)}][${report.skill.skill.identity}] ${operation}\n`)
+    context.stdout.write(`\n==> [${basename(repository)}][${report.skill.skill.identity}] conform\n`)
     for (const finding of visible) context.stdout.write(`${formatFinding(finding)}\n`)
     context.stdout.write(`${summary(findings, judgmentItemCount(report.skill))}\n`)
     context.stdout.write(`${completion(findings)}\n`)
@@ -380,7 +496,7 @@ export const renderReports = (
   context.stdout.write('\n==> recap\n')
   if (!visible.length) {
     const label = findings.length ? `no ${reporterLevels.map((level) => level.toUpperCase().replace('-', '_')).join(' / ')} findings` : 'no findings'
-    context.stdout.write(`  ✅ ${label} across ${operation === 'audit' ? 'audited' : 'conformed'} skills\n`)
+    context.stdout.write(`  ✅ ${label} across conformed skills\n`)
   } else for (const { finding, skill } of visible) context.stdout.write(`${formatFinding(finding, skill, false)}\n`)
   const icon = count('fail') ? REPORT_ICON.fail : count('warn') ? REPORT_ICON.warn : REPORT_ICON.fixed
   context.stdout.write(`  ${icon} totals: FAIL=${count('fail')} WARN=${count('warn')} FIXED=${count('fixed')} JUDGMENT_UNEVALUATED=${judgmentUnevaluated}\n`)

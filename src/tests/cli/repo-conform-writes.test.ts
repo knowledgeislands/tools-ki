@@ -106,6 +106,26 @@ describe('[ki repo conform writes]', () => {
     expect(result.output).toContain('FAIL,WARN,FIXED')
   })
 
+  test('renders a repository summary before conform progress at regular and narrow widths', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.setupExampleHarness({ rubric: rubric('[]') })
+
+    const regular = await box.run('ki repo conform --progress always')
+    const narrow = await box.run('ki repo conform --progress always', { interactive: true, columns: 1 })
+    const invalidWidth = await box.run('ki repo conform --progress always', { columns: Number.NaN })
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n["example/harness:ki-extra"]\n')
+    await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
+    await box.data.write('ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts', rubric('[]', 'ki-extra'))
+    const multiple = await box.run('ki repo conform --progress always')
+
+    expect(regular.output).toContain('╭─ KI REPOSITORY · CONFORM')
+    expect(regular.output).toContain('CONFORM    [')
+    expect(narrow.output).toContain('\r\x1b[2K.')
+    expect(invalidWidth.output).toContain('CONFORM    [################################] 0/0 100% complete')
+    expect(multiple.output).toContain('│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra')
+  })
+
   test('selects an exact capability when another conforming skill extends its name', async () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '["example/harness:ki-website"]\n["example/harness:ki-website-cloudflare"]\n')
@@ -685,7 +705,9 @@ applied write governed.txt
 
     const result = await box.run('ki repo audit')
 
-    expect(result).toEqual({ exitCode: 1, output: 'ki: error: user home must be an existing physical directory\n' })
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('╰─ audit failed')
+    expect(result.output).toContain('ki: error: user home must be an existing physical directory')
   })
 
   test('coalesces identical user-home writes proposed by separate skills', async () => {
