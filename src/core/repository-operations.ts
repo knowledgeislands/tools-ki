@@ -30,6 +30,15 @@ import { resolveDeclaredSkills } from './resolution.ts'
 import { detectFixed, educateSkill, runSkillAudit, runSkillConform } from './runtime.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from './transaction.ts'
 
+interface RepositoryConformOptions {
+  readonly skill?: string
+  readonly dryRun?: boolean
+  readonly allowGuarded?: boolean
+  readonly progress?: string
+  readonly progressStyle?: string
+  readonly reporterLevels?: string
+}
+
 const localRepositoryRegistration = async (
   context: KiContext,
   repository: string,
@@ -241,10 +250,11 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .description('stage registered conform operations and apply their writes after every initial audit passes')
         .option('--skill <capability>', 'one declared resolved skill to conform')
         .option('--dry-run', 'validate staged writes and report without applying them')
+        .option('--allow-guarded', 'attempt eligible command-backed conform groups during partial failures')
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
         .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN,FIXED)')
-        .action(async (options: { skill?: string; dryRun?: boolean; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
+        .action(async (options: RepositoryConformOptions) => {
           const output = operationOptions('conform', options)
           const repositories = await resolveRepositoryTargets({
             ...selectedRepositories(),
@@ -326,6 +336,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 repository: repository.root,
                 userHome: context.homeDirectory,
                 dryRun: Boolean(options.dryRun),
+                allowGuarded: Boolean(options.allowGuarded),
                 write: (value) => context.stdout.write(value)
               })
               if (published && !options.dryRun) await reAuditAndRender()

@@ -1,4 +1,4 @@
-import { renderRepositoryConformCommand } from './repository-subprocess.ts'
+import { renderRepositoryConformCommand, runRepositoryConformCommands } from './repository-subprocess.ts'
 import type { Finding, PreparedSkill, SkillConformResult } from './runtime.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from './transaction.ts'
 
@@ -18,6 +18,7 @@ export interface IndependentPublicationOptions {
   readonly repository: string
   readonly userHome: string
   readonly dryRun: boolean
+  readonly allowGuarded: boolean
   readonly write: (value: string) => void
 }
 
@@ -80,7 +81,7 @@ export const groupConformPublication = (entries: readonly ConformedSkill[]): rea
 /** Publishes only groups that remain safe after unrelated initial audit failures. */
 export const publishIndependentConformGroups = async (
   entries: readonly ConformedSkill[],
-  { repository, userHome, dryRun, write }: IndependentPublicationOptions
+  { repository, userHome, dryRun, allowGuarded, write }: IndependentPublicationOptions
 ): Promise<boolean> => {
   let published = false
   for (const group of groupConformPublication(entries)) {
@@ -99,8 +100,8 @@ export const publishIndependentConformGroups = async (
       write(`refused ${label}: user-home rubric conform actions must be guarded direct writes; conform commands are not permitted\n`)
       continue
     }
-    if (groupCommands.length) {
-      write(`withheld ${label}: command-backed conform repairs remain withheld while failures are unresolved\n`)
+    if (groupCommands.length && !allowGuarded) {
+      write(`withheld ${label}: command-backed conform repairs require --allow-guarded while failures are unresolved\n`)
       continue
     }
     try {
@@ -120,6 +121,20 @@ export const publishIndependentConformGroups = async (
       published ||= writes.length > 0
     } catch (error) {
       write(`refused ${label}: ${(error as Error).message}\n`)
+      continue
+    }
+    if (groupCommands.length && dryRun) {
+      for (const command of groupCommands) write(`would run guarded ${renderRepositoryConformCommand(command)}\n`)
+      continue
+    }
+    if (groupCommands.length) {
+      for (const command of groupCommands) write(`run guarded ${renderRepositoryConformCommand(command)}\n`)
+      try {
+        await runRepositoryConformCommands(repository, groupCommands)
+        published = true
+      } catch (error) {
+        write(`failed ${label}: ${(error as Error).message}\n`)
+      }
     }
   }
   return published

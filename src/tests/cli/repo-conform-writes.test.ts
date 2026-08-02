@@ -372,7 +372,7 @@ describe('[ki repo conform writes]', () => {
       'refused example/harness:ki-overlap-one, example/harness:ki-overlap-two: direct conform repeats write path shared.txt with different content'
     )
     expect(result.output).toContain('refused example/harness:ki-unsafe: direct conform write target unsafe.txt must be an existing regular file')
-    expect(result.output).toContain('withheld example/harness:ki-command: command-backed conform repairs remain withheld while failures are unresolved')
+    expect(result.output).toContain('withheld example/harness:ki-command: command-backed conform repairs require --allow-guarded while failures are unresolved')
     expect(result.output).toContain(
       'refused example/harness:ki-user-command: user-home rubric conform actions must be guarded direct writes; conform commands are not permitted'
     )
@@ -384,6 +384,75 @@ describe('[ki repo conform writes]', () => {
     expect(await box.project.read('shared.txt')).toBe('before\n')
     expect(await box.project.read('outside.txt')).toBe('before\n')
     expect(await box.home.read('.managed/setting.txt')).toBe('after\n')
+  })
+
+  test('runs an eligible guarded command only with explicit authority and re-audits it', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '["example/harness:ki-blocked"]\n["example/harness:ki-command"]\n')
+    await setupSkill(
+      box.data,
+      'ki-blocked',
+      [],
+      rubric(
+        `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'BLOCKED-1', title: 'Blocking audit', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'needs approval' }] }] }]`,
+        'ki-blocked'
+      )
+    )
+    await setupSkill(
+      box.data,
+      'ki-command',
+      [],
+      rubric(
+        `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'COMMAND-1', title: 'Command repair', level: 'FAIL', phase: 'PRIMARY', audit: async ({ repository }) => {
+        const { existsSync } = await import('node:fs')
+        return existsSync(repository + '/command.txt') ? [{ status: 'PASS', message: 'conformed' }] : [{ status: 'VIOLATION', message: 'command repair is needed' }]
+      }, conform: async () => ({ writes: [], commands: [{ program: 'node', arguments: ['-e', "require('node:fs').writeFileSync('command.txt', 'after')"] }] }) }] }]`,
+        'ki-command'
+      )
+    )
+
+    const withheld = await box.run('ki repo conform')
+    expect(withheld.exitCode).toBe(1)
+    expect(withheld.output).toContain('command-backed conform repairs require --allow-guarded')
+    await expect(box.project.read('command.txt')).rejects.toThrow()
+    const dryRun = await box.run('ki repo conform --allow-guarded --dry-run')
+    expect(dryRun.exitCode).toBe(1)
+    expect(dryRun.output).toContain(`would run guarded "node" "-e" "require('node:fs').writeFileSync('command.txt', 'after')"`)
+    await expect(box.project.read('command.txt')).rejects.toThrow()
+    const allowed = await box.run('ki repo conform --allow-guarded')
+    expect(allowed.exitCode).toBe(1)
+    expect(allowed.output).toContain(`run guarded "node" "-e" "require('node:fs').writeFileSync('command.txt', 'after')"`)
+    expect(allowed.output).toContain('✅ fixed [Command repair (COMMAND-1)] — conformed')
+    await expect(box.project.read('command.txt')).resolves.toBe('after')
+  })
+
+  test('reports a failed guarded command while retaining unresolved findings', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '["example/harness:ki-blocked"]\n["example/harness:ki-command"]\n')
+    await setupSkill(
+      box.data,
+      'ki-blocked',
+      [],
+      rubric(
+        `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'BLOCKED-1', title: 'Blocking audit', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'needs approval' }] }] }]`,
+        'ki-blocked'
+      )
+    )
+    await setupSkill(
+      box.data,
+      'ki-command',
+      [],
+      rubric(
+        `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'COMMAND-1', title: 'Command repair', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'command repair is needed' }], conform: async () => ({ writes: [], commands: [{ program: 'false', arguments: [] }] }) }] }]`,
+        'ki-command'
+      )
+    )
+
+    const result = await box.run('ki repo conform --allow-guarded')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('run guarded "false"')
+    expect(result.output).toContain('failed example/harness:ki-command: direct subprocess conform failed: "false"')
   })
 
   test('deduplicates identical same-target conform proposals', async () => {

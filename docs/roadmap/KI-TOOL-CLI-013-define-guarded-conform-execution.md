@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-013
 title: Define guarded conform execution and explicit override
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: a0832e6bfcf41bc5ef6752c127a2559e04eb8a7b
@@ -29,10 +29,10 @@ Independent direct-write groups already publish despite unrelated failures. Elig
 
 ## Steps
 
-- [ ] Add a `--allow-guarded` conform option and explain, in help and reports, that it authorizes an attempt rather than bypassing safety checks.
-- [ ] Preserve default withholding for command-backed groups during partial failures; with the option, execute only groups whose own evidence, scope, dependencies, and write preparation pass.
-- [ ] Keep dry-run side-effect-free, report guarded attempts distinctly, and re-audit after a successful guarded publication while retaining non-zero status for unresolved findings.
-- [ ] Add CLI contract coverage for default withholding, opted-in dry-run, successful guarded execution and re-audit, and failed guarded commands.
+- [x] Add a `--allow-guarded` conform option and explain, in help and reports, that it authorizes an attempt rather than bypassing safety checks.
+- [x] Preserve default withholding for command-backed groups during partial failures; with the option, execute only groups whose own evidence, scope, dependencies, and write preparation pass.
+- [x] Keep dry-run side-effect-free, report guarded attempts distinctly, and re-audit after a successful guarded publication while retaining non-zero status for unresolved findings.
+- [x] Add CLI contract coverage for default withholding, opted-in dry-run, successful guarded execution and re-audit, and failed guarded commands.
 
 ## Files touched
 
@@ -49,6 +49,28 @@ Independent direct-write groups already publish despite unrelated failures. Elig
 ## Dependencies / blocks
 
 No external prerequisite. The option cannot override containment, declared scope, dependency evidence, conflict detection, guarded publication, command failures, or re-audit failures.
+
+## Acceptance
+
+### Delivered
+
+Added `ki repo conform --allow-guarded`, a narrow opt-in that attempts eligible command-backed groups only when unrelated initial findings still fail.
+
+### Summary of changes
+
+Default partial-failure behaviour remains withholding for command-backed repairs. With explicit authority, dry runs report `would run guarded`; real runs report `run guarded`, execute only after the group passes its existing preparation, and re-audit after a successful publication. Command failures are reported without bypassing the unresolved failure status.
+
+### Verification
+
+`bunx vitest run src/tests/cli/repo-conform-writes.test.ts src/tests/cli/repo-conform-execution.test.ts` passed 44 tests. `bunx tsc --noEmit`, `bun run test:coverage` (457 tests; 100% statements, branches, functions, and lines), `bunx biome check`, `bunx syncpack format --check`, and `bun src/main.ts repo audit --repo .` passed.
+
+### Outstanding concerns
+
+None. User-home command conformances remain categorically refused, and the new flag does not weaken containment, scoped-write preparation, dependencies, command failure handling, or re-audit.
+
+### Mini recap
+
+The CLI now distinguishes automatically publishable direct writes from guarded command repairs while retaining a deliberately narrow operator override. This item is ready for user acceptance; it must not be closed or pruned until that acceptance is given.
 
 ## Discussion
 
