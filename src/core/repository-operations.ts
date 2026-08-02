@@ -7,6 +7,7 @@ import { createRepoSkillCommand } from '../commands/skill.ts'
 import { createUpgradeCommand } from '../commands/update.ts'
 import type { KiContext } from '../context.ts'
 import { REPOSITORY_CONFIGURATION_FILE, readDeclaredSkills, renderRepositoryConfiguration } from './configuration.ts'
+import { publishIndependentConformGroups } from './conform-publication.ts'
 import { KiError } from './errors.ts'
 import { discoverInstalledHarnesses } from './harness.ts'
 import { resolveRepositoryInitialisationTarget, resolveRepositoryTargets } from './repository.ts'
@@ -283,6 +284,60 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               output
             )
             const findings = conformed.flatMap(({ conform }) => conform.findings)
+            const renderInitialReports = () =>
+              renderConformReports(
+                context,
+                repository.root,
+                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
+                output.reporterLevels
+              )
+            const reAuditAndRender = async (): Promise<boolean> => {
+              const reaudited = await runPreparedWithProgress(
+                context,
+                're-audit',
+                conformed.map(({ prepared }) => prepared),
+                async (skill, onItemComplete) => {
+                  const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
+                  // The re-audit selection is derived directly from conformed above; this only
+                  // protects a future refactor from pairing an audit with the wrong conform set.
+                  /* v8 ignore next */
+                  if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
+                  return {
+                    prepared: skill,
+                    conform: previous.conform,
+                    audit: await runSkillAudit(
+                      { kind: 'repository', repository: repository.root, userHome: context.homeDirectory, lstat: context.lstat },
+                      skill,
+                      (item) => onItemComplete(item.code)
+                    )
+                  }
+                },
+                output
+              )
+              const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
+              const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
+              renderConformReports(
+                context,
+                repository.root,
+                reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
+                output.reporterLevels
+              )
+              return auditFindings.some((finding) => finding.level === 'fail')
+            }
+            if (findings.some((finding) => finding.level === 'fail')) {
+              const published = await publishIndependentConformGroups(conformed, {
+                repository: repository.root,
+                userHome: context.homeDirectory,
+                dryRun: Boolean(options.dryRun),
+                write: (value) => context.stdout.write(value)
+              })
+              if (published && !options.dryRun) await reAuditAndRender()
+              else renderInitialReports()
+              throw new KiError(
+                `repository conform ${options.dryRun ? 'dry run ' : ''}completed independent publication with unresolved groups; blocking failure: repository conform found failures`,
+                1
+              )
+            }
             const repositoryWrites = await prepareWrites(
               repository.root,
               conformed.filter(({ conform }) => conform.scope.kind === 'repository').flatMap(({ conform }) => conform.writes)
@@ -299,18 +354,6 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               throw new KiError('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted', 1)
             for (const write of writes) context.stdout.write(`proposed write ${write.path}\n`)
             for (const command of commands) context.stdout.write(`proposed run ${renderRepositoryConformCommand(command)}\n`)
-            if (findings.some((finding) => finding.level === 'fail')) {
-              renderConformReports(
-                context,
-                repository.root,
-                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
-                output.reporterLevels
-              )
-              throw new KiError(
-                `repository conform ${options.dryRun ? 'dry run ' : ''}aborted before publication: no proposed conform changes were applied; blocking failure: repository conform found failures`,
-                1
-              )
-            }
             let publicationError: unknown
             try {
               await publishWrites(writes, Boolean(options.dryRun))
@@ -318,59 +361,19 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               publicationError = error
             }
             if (publicationError) {
-              renderConformReports(
-                context,
-                repository.root,
-                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
-                output.reporterLevels
-              )
+              renderInitialReports()
               throw publicationError
             }
             if (options.dryRun) {
               for (const write of writes) context.stdout.write(`would apply write ${write.path}\n`)
               for (const command of commands) context.stdout.write(`would run ${renderRepositoryConformCommand(command)}\n`)
-              renderConformReports(
-                context,
-                repository.root,
-                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
-                output.reporterLevels
-              )
+              renderInitialReports()
               continue
             }
             for (const write of writes) context.stdout.write(`applied write ${write.path}\n`)
             for (const command of commands) context.stdout.write(`run ${renderRepositoryConformCommand(command)}\n`)
             await runRepositoryConformCommands(repository.root, commands)
-            const reaudited = await runPreparedWithProgress(
-              context,
-              're-audit',
-              conformed.map(({ prepared }) => prepared),
-              async (skill, onItemComplete) => {
-                const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
-                // The re-audit selection is derived directly from conformed above; this only
-                // protects a future refactor from pairing an audit with the wrong conform set.
-                /* v8 ignore next */
-                if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
-                return {
-                  prepared: skill,
-                  conform: previous.conform,
-                  audit: await runSkillAudit(
-                    { kind: 'repository', repository: repository.root, userHome: context.homeDirectory, lstat: context.lstat },
-                    skill,
-                    (item) => onItemComplete(item.code)
-                  )
-                }
-              },
-              output
-            )
-            const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
-            const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
-            renderConformReports(
-              context,
-              repository.root,
-              reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
-              output.reporterLevels
-            )
-            if (auditFindings.some((finding) => finding.level === 'fail')) throw new KiError('repository conform re-audit found failures', 1)
+            if (await reAuditAndRender()) throw new KiError('repository conform re-audit found failures', 1)
           }
         })
     )

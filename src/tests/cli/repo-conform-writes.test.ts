@@ -93,6 +93,12 @@ const setupPrefixCollisionHarness = async (data: SandboxArea): Promise<void> => 
   }
 }
 
+const setupSkill = async (data: SandboxArea, name: string, dependencies: readonly string[], definition: string): Promise<void> => {
+  const base = `ki/harnesses/example/harness/skills/${name}`
+  await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: [${dependencies.join(', ')}]\n---\n`)
+  await data.write(`${base}/scripts/rubric/items/index.ts`, definition)
+}
+
 describe('[ki repo conform writes]', () => {
   test('documents the shared output controls', async () => {
     const box = await sandbox()
@@ -199,7 +205,7 @@ describe('[ki repo conform writes]', () => {
     expect(afterContent).toBe('after\n')
   })
 
-  test('holds every proposed write until every initial audit passes', async () => {
+  test('withholds a proposal that shares a skill with its blocking audit', async () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
     await box.project.write('safe.txt', 'before\n')
@@ -218,7 +224,7 @@ describe('[ki repo conform writes]', () => {
     expect(dryRun.exitCode).toBe(1)
     expect(dryRun.output).toContain('proposed write safe.txt')
     expect(dryRun.output).toContain(
-      'repository conform dry run aborted before publication: no proposed conform changes were applied; blocking failure: repository conform found failures'
+      'withheld example/harness:ki-example: blocking example/harness:ki-example [Blocking audit (EXAMPLE-2)] — unrelated license failure'
     )
     expect(dryRun.output).not.toContain('would apply write safe.txt')
     expect(await box.project.read('safe.txt')).toBe('before\n')
@@ -229,10 +235,147 @@ describe('[ki repo conform writes]', () => {
     expect(result.output).toContain('proposed write safe.txt')
     expect(result.output).toContain('❌ fail  [Blocking audit (EXAMPLE-2)] — unrelated license failure')
     expect(result.output).toContain(
-      'repository conform aborted before publication: no proposed conform changes were applied; blocking failure: repository conform found failures'
+      'repository conform completed independent publication with unresolved groups; blocking failure: repository conform found failures'
     )
     expect(result.output).not.toContain('applied write safe.txt')
     expect(await box.project.read('safe.txt')).toBe('before\n')
+  })
+
+  test('publishes an independent repository repair while reporting a blocking failure', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '["example/harness:ki-blocked"]\n["example/harness:ki-safe"]\n')
+    await box.project.write('safe.txt', 'before\n')
+    await setupSkill(
+      box.data,
+      'ki-blocked',
+      [],
+      rubric(
+        `[{ code: 'F', title: 'Family', items: [{
+        kind: 'mechanical', code: 'BLOCKED-1', title: 'Blocking audit', level: 'FAIL', phase: 'PRIMARY',
+        audit: async () => [{ status: 'VIOLATION', message: 'external settings require approval' }]
+      }] }]`,
+        'ki-blocked'
+      )
+    )
+    await setupSkill(
+      box.data,
+      'ki-safe',
+      [],
+      rubric(
+        `[{ code: 'F', title: 'Family', items: [{
+        kind: 'mechanical', code: 'SAFE-1', title: 'Safe repair', level: 'FAIL', phase: 'PRIMARY',
+        audit: async ({ repository }) => {
+          const { readFile } = await import('node:fs/promises')
+          return (await readFile(repository + '/safe.txt', 'utf8')) === 'after\\n'
+            ? [{ status: 'PASS', message: 'conformed' }]
+            : [{ status: 'VIOLATION', message: 'safe repair is needed' }]
+        },
+        conform: async () => ({ writes: [{ path: 'safe.txt', content: 'after\\n' }] })
+      }] }]`,
+        'ki-safe'
+      )
+    )
+
+    const dryRun = await box.run('ki repo conform --dry-run')
+
+    expect(dryRun.exitCode).toBe(1)
+    expect(dryRun.output).toContain('would apply write safe.txt')
+    expect(dryRun.output).toContain('❌ fail  [Blocking audit (BLOCKED-1)] — external settings require approval')
+    expect(await box.project.read('safe.txt')).toBe('before\n')
+
+    const result = await box.run('ki repo conform')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('applied write safe.txt')
+    expect(result.output).toContain('✅ fixed [Safe repair (SAFE-1)] — conformed')
+    expect(result.output).toContain('❌ fail  [Blocking audit (BLOCKED-1)] — external settings require approval')
+    expect(await box.project.read('safe.txt')).toBe('after\n')
+  })
+
+  test('withholds dependent, overlapping, unsafe, and command-backed groups while publishing an unrelated repair', async () => {
+    const box = await sandbox()
+    await box.project.write(
+      '.ki-config.toml',
+      '["example/harness:ki-blocked"]\n["example/harness:ki-foundation"]\n["example/harness:ki-feature"]\n["example/harness:ki-overlap-one"]\n["example/harness:ki-overlap-two"]\n["example/harness:ki-unsafe"]\n["example/harness:ki-command"]\n["example/harness:ki-user-command"]\n["example/harness:ki-user-safe"]\n["example/harness:ki-safe"]\n'
+    )
+    await box.project.write('safe.txt', 'before\n')
+    await box.project.write('shared.txt', 'before\n')
+    await box.project.write('outside.txt', 'before\n')
+    await box.home.write('.managed/setting.txt', 'before\n')
+    await symlink(join(box.project.path, 'outside.txt'), join(box.project.path, 'unsafe.txt'))
+    const blocked = rubric(
+      `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'BLOCKED-1', title: 'Blocking audit', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'needs approval' }] }] }]`,
+      'ki-blocked'
+    )
+    const foundation = rubric(
+      `[{ code: 'F', title: 'Family', items: [
+        { kind: 'mechanical', code: 'FOUNDATION-1', title: 'Foundation audit', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'foundation is unresolved' }] },
+        { kind: 'mechanical', code: 'FOUNDATION-2', title: 'Foundation repair', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'foundation repair is needed' }], conform: async () => ({ writes: [{ path: 'foundation.txt', content: 'after\\n', create: true }] }) }
+      ] }]`,
+      'ki-foundation'
+    )
+    const feature = rubric(
+      `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'FEATURE-1', title: 'Dependent repair', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'feature repair is needed' }], conform: async () => ({ writes: [{ path: 'foundation.txt', content: 'after\\n', create: true }] }) }] }]`,
+      'ki-feature'
+    )
+    const overlap = (name: string, content: string) =>
+      rubric(
+        `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: '${name}-1', title: 'Overlapping repair', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'overlap repair is needed' }], conform: async () => ({ writes: [{ path: 'shared.txt', content: '${content}\\n' }] }) }] }]`,
+        name
+      )
+    const unsafe = rubric(
+      `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'UNSAFE-1', title: 'Unsafe repair', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'unsafe repair is needed' }], conform: async () => ({ writes: [{ path: 'unsafe.txt', content: 'after\\n' }] }) }] }]`,
+      'ki-unsafe'
+    )
+    const command = rubric(
+      `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'COMMAND-1', title: 'Command repair', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'command repair is needed' }], conform: async () => ({ writes: [], commands: [{ program: 'node', arguments: ['-e', "require('node:fs').writeFileSync('command.txt', 'after')"] }] }) }] }]`,
+      'ki-command'
+    )
+    const userCommand = rubric(
+      `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'USER-COMMAND-1', title: 'User command repair', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'user command repair is needed' }], conform: async () => ({ writes: [], commands: [{ program: 'false', arguments: [] }] }) }] }]`,
+      'ki-user-command'
+    ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+    const userSafe = rubric(
+      `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'USER-SAFE-1', title: 'User repair', level: 'WARN', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'user repair is needed' }], conform: async () => ({ writes: [{ path: '.managed/setting.txt', content: 'after\\n' }] }) }] }]`,
+      'ki-user-safe'
+    ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+    const safe = rubric(
+      `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'SAFE-1', title: 'Safe repair', level: 'FAIL', phase: 'PRIMARY', audit: async ({ repository }) => (await (await import('node:fs/promises')).readFile(repository + '/safe.txt', 'utf8')) === 'after\\n' ? [{ status: 'PASS', message: 'conformed' }] : [{ status: 'VIOLATION', message: 'safe repair is needed' }], conform: async () => ({ writes: [{ path: 'safe.txt', content: 'after\\n' }] }) }] }]`,
+      'ki-safe'
+    )
+    await setupSkill(box.data, 'ki-blocked', [], blocked)
+    await setupSkill(box.data, 'ki-foundation', [], foundation)
+    await setupSkill(box.data, 'ki-feature', ['ki-foundation'], feature)
+    await setupSkill(box.data, 'ki-overlap-one', [], overlap('ki-overlap-one', 'first'))
+    await setupSkill(box.data, 'ki-overlap-two', [], overlap('ki-overlap-two', 'second'))
+    await setupSkill(box.data, 'ki-unsafe', [], unsafe)
+    await setupSkill(box.data, 'ki-command', [], command)
+    await setupSkill(box.data, 'ki-user-command', [], userCommand)
+    await setupSkill(box.data, 'ki-user-safe', [], userSafe)
+    await setupSkill(box.data, 'ki-safe', [], safe)
+
+    const result = await box.run('ki repo conform')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain(
+      'withheld example/harness:ki-foundation, example/harness:ki-feature: blocking example/harness:ki-foundation [Foundation audit (FOUNDATION-1)]'
+    )
+    expect(result.output).toContain(
+      'refused example/harness:ki-overlap-one, example/harness:ki-overlap-two: direct conform repeats write path shared.txt with different content'
+    )
+    expect(result.output).toContain('refused example/harness:ki-unsafe: direct conform write target unsafe.txt must be an existing regular file')
+    expect(result.output).toContain('withheld example/harness:ki-command: command-backed conform repairs remain withheld while failures are unresolved')
+    expect(result.output).toContain(
+      'refused example/harness:ki-user-command: user-home rubric conform actions must be guarded direct writes; conform commands are not permitted'
+    )
+    expect(result.output).toContain('applied write safe.txt')
+    expect(result.output).toContain('applied write .managed/setting.txt')
+    await expect(box.project.read('foundation.txt')).rejects.toThrow()
+    await expect(box.project.read('command.txt')).rejects.toThrow()
+    expect(await box.project.read('safe.txt')).toBe('after\n')
+    expect(await box.project.read('shared.txt')).toBe('before\n')
+    expect(await box.project.read('outside.txt')).toBe('before\n')
+    expect(await box.home.read('.managed/setting.txt')).toBe('after\n')
   })
 
   test('deduplicates identical same-target conform proposals', async () => {
