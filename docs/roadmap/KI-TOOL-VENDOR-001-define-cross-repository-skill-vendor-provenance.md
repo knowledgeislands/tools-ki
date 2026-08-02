@@ -11,6 +11,10 @@ baseline-ref: null
 transferred-from: knowledgeislands/ki-agentic-harness:foundation-tooling
 ---
 
+## Goal
+
+Define a portable, verifiable provenance contract for sharing a module between KI harnesses.
+
 ## Context
 
 Define how one KI harness can declare and receive a shared module from another harness without relying on a nearby checkout or ambient filesystem path.
