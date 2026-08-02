@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-011
 title: Publish independent conform repairs despite unrelated failures
 theme: cli
 horizon: blocking
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 77a73a709ed99d553e2df58ddf991b8c50ffb699
 ---
 
 ## Context
