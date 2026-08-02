@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-013
 title: Define guarded conform execution and explicit override
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: a0832e6bfcf41bc5ef6752c127a2559e04eb8a7b
@@ -71,6 +71,10 @@ None. User-home command conformances remain categorically refused, and the new f
 ### Mini recap
 
 The CLI now distinguishes automatically publishable direct writes from guarded command repairs while retaining a deliberately narrow operator override. This item is ready for user acceptance; it must not be closed or pruned until that acceptance is given.
+
+## Done
+
+Accepted by the user on 2026-08-02. The completed record is retained pending the explicitly authorised prune below.
 
 ## Discussion
 
