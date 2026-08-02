@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-011
 title: Publish independent conform repairs despite unrelated failures
 theme: cli
 horizon: blocking
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 77a73a709ed99d553e2df58ddf991b8c50ffb699
@@ -71,6 +71,10 @@ Delivery commit: `27148ee528d2698b1a9b2b681569be6e2a90a7e3`.
 Verification passed on 2026-08-02: `bunx tsc --noEmit`; `bun run test:coverage` (454 tests, 100% statements, branches, functions, and lines); `bunx biome check`; `bunx syncpack format --check`; and `bun src/main.ts repo audit --repo .` (11 selected skills, 0 failures).
 
 No external coordination, policy change, or follow-up handoff is required. No learning route is proposed.
+
+## Done
+
+Accepted by the repository owner on 2026-08-02 after a fresh `bun run test:coverage` pass: 455 tests and 100% statements, branches, functions, and lines.
 
 ## Discussion
 
