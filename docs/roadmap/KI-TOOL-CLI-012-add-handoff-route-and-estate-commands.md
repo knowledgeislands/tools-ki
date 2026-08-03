@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-012
 title: Add handoff route and estate commands
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 6f6e63aa3120b71be1149027d89f0db866043ff7
 ---
 
 ## Goal
