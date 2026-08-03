@@ -1,5 +1,6 @@
 export const rootCommandNames = [
   'acquire',
+  'agora',
   'bootstrap',
   'cleanup',
   'completion',
@@ -36,6 +37,7 @@ export const rootHelpCommandNames = [
   'update',
   'search',
   'cleanup',
+  'agora',
   'version',
   'diag',
   'repair',

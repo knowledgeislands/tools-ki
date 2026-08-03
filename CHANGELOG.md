@@ -49,6 +49,13 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki workspace remove <group> <path-or-pattern>`
 - `.ki-workspace.toml` uses the sole schema 1 path-keyed typed-member map, including nested workspace recursion and physical post-order registration; other schemas and historical array or flat `repositories` groups are rejected.
 
+#### Agora management
+
+- `ki agora list`
+- `ki agora show <agora>`
+- `ki agora open <agora>`
+- `.ki-agora` profiles define named multi-project workspaces rendered as ordered Zed windows.
+
 #### Repository options
 
 - `ki repo --repo <path-or-pattern>`

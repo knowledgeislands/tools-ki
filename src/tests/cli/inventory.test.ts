@@ -11,6 +11,7 @@ const rootHelpCommands = [
   'update',
   'search',
   'cleanup',
+  'agora',
   'version',
   'diag',
   'repair',

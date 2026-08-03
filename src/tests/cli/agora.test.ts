@@ -1,0 +1,104 @@
+import { symlink } from 'node:fs/promises'
+import { join } from 'node:path'
+import { describe, expect, test } from 'vitest'
+import { sandbox } from './_cli_helper.ts'
+
+const profile = (projects = ''): string => `name = "Example"\ntool = "zed"${projects}\n`
+
+describe('[ki agora]', () => {
+  test('lists, shows, and opens an ordered Zed profile', async () => {
+    const box = await sandbox()
+    await box.home.write(
+      'workspaces/ki-agoras/example.ki-agora',
+      profile('\nprimary = "primary"\n\n[projects]\nzulu = "/zulu"\nprimary = "/primary"\nalpha = "/alpha"')
+    )
+    await box.home.write('workspaces/ki-agoras/zeta.ki-agora', profile())
+    await box.home.write('workspaces/ki-agoras/ignored.toml', profile())
+    const calls: string[] = []
+    box.setRunner(async (command, arguments_) => {
+      calls.push(`${command} ${arguments_.join(' ')}`)
+      return { exitCode: 0, output: '' }
+    })
+    expect(await box.run('ki agora list')).toEqual({
+      exitCode: 0,
+      output: 'ki agora list\n  example — Example (3 projects)\n  zeta — Example (0 projects)\n'
+    })
+    expect(await box.run('ki agora show example')).toEqual({
+      exitCode: 0,
+      output: 'ki agora show example\n  Example\n  tool zed\n  project /primary\n  project /alpha\n  project /zulu\n'
+    })
+    expect(await box.run('ki agora open example')).toEqual({ exitCode: 0, output: 'ki agora open example: opened 3 projects in Zed\n' })
+    expect(calls).toEqual(['zed -n /primary', 'zed -a /alpha', 'zed -a /zulu'])
+  })
+
+  test('reports an absent directory and supports empty profiles', async () => {
+    const box = await sandbox()
+    expect(await box.run('ki agora list')).toEqual({ exitCode: 0, output: 'ki agora list\n' })
+    await box.home.write('workspaces/ki-agoras/empty.ki-agora', profile())
+    expect(await box.run('ki agora show empty')).toEqual({ exitCode: 0, output: 'ki agora show empty\n  Example\n  tool zed\n' })
+    expect(await box.run('ki agora open empty')).toEqual({ exitCode: 2, output: 'ki: error: Agora empty has no projects\n' })
+  })
+
+  test('resolves explicit relative and absolute profile paths', async () => {
+    const box = await sandbox()
+    await box.project.write('relative.ki-agora', profile())
+    await box.home.write('absolute.ki-agora', profile())
+
+    expect(await box.run('ki agora show relative.ki-agora')).toEqual({ exitCode: 0, output: 'ki agora show relative\n  Example\n  tool zed\n' })
+    expect(await box.run(['ki', 'agora', 'show', join(box.home.path, 'absolute.ki-agora')])).toEqual({
+      exitCode: 0,
+      output: 'ki agora show absolute\n  Example\n  tool zed\n'
+    })
+  })
+
+  test('rejects missing and unsafe profile paths', async () => {
+    const box = await sandbox()
+    const directory = await box.home.mkdir('workspaces/ki-agoras/directory.ki-agora')
+    await box.home.write('workspaces/ki-agoras/target.ki-agora', profile())
+    const linked = join(box.home.path, 'workspaces/ki-agoras/linked.ki-agora')
+    await symlink(join(box.home.path, 'workspaces/ki-agoras/target.ki-agora'), linked)
+
+    expect((await box.run('ki agora show missing')).output).toContain('no Agora profile')
+    expect((await box.run(['ki', 'agora', 'show', directory])).output).toContain('must be a regular file')
+    expect((await box.run(['ki', 'agora', 'show', linked])).output).toContain('must be a regular file')
+  })
+
+  test('rejects malformed profile documents', async () => {
+    const box = await sandbox()
+    const cases = [
+      ['invalid-toml', 'name =', 'must be valid TOML'],
+      ['missing-name', 'tool = "zed"', 'name must be a non-empty string'],
+      ['empty-name', 'name = ""\ntool = "zed"', 'name must be a non-empty string'],
+      ['wrong-tool', 'name = "Example"\ntool = "other"', 'tool must equal "zed"'],
+      ['array-projects', 'name = "Example"\ntool = "zed"\n\n[[projects]]\npath = "/one"', 'projects must be a table'],
+      ['missing-primary', 'name = "Example"\ntool = "zed"\n\n[projects]\none = "/one"', 'primary must name one project'],
+      ['empty-primary', 'name = "Example"\ntool = "zed"\nprimary = ""\n\n[projects]\none = "/one"', 'primary must name one project'],
+      ['numeric-project', 'name = "Example"\ntool = "zed"\nprimary = "one"\n\n[projects]\none = 1', 'project one must be a non-empty path'],
+      ['empty-project', 'name = "Example"\ntool = "zed"\nprimary = "one"\n\n[projects]\none = ""', 'project one must be a non-empty path'],
+      ['relative-project', 'name = "Example"\ntool = "zed"\nprimary = "one"\n\n[projects]\none = "relative"', 'project one path must be absolute'],
+      ['unknown-primary', 'name = "Example"\ntool = "zed"\nprimary = "two"\n\n[projects]\none = "/one"', 'primary two is not declared in projects'],
+      [
+        'duplicate-projects',
+        'name = "Example"\ntool = "zed"\nprimary = "one"\n\n[projects]\none = "/same"\ntwo = "/same"',
+        'projects must not contain duplicate paths'
+      ]
+    ] as const
+
+    for (const [id, content, message] of cases) {
+      await box.home.write(`workspaces/ki-agoras/${id}.ki-agora`, `${content}\n`)
+      const result = await box.run(`ki agora show ${id}`)
+      expect(result.exitCode).toBe(2)
+      expect(result.output).toContain(message)
+    }
+  })
+
+  test('reports Zed launch failures with and without process output', async () => {
+    const box = await sandbox()
+    await box.home.write('workspaces/ki-agoras/example.ki-agora', profile('\nprimary = "one"\n\n[projects]\none = "/one"'))
+    box.setRunner(async () => ({ exitCode: 7, output: 'launch failed\n' }))
+    expect(await box.run('ki agora open example')).toEqual({ exitCode: 7, output: 'ki: error: could not open Agora example: launch failed\n' })
+
+    box.setRunner(async () => ({ exitCode: 8, output: '' }))
+    expect(await box.run('ki agora open example')).toEqual({ exitCode: 8, output: 'ki: error: could not open Agora example: zed failed\n' })
+  })
+})

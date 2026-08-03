@@ -1,6 +1,7 @@
 import type { Command } from 'commander'
 import type { KiContext } from '../context.ts'
 import { createAcquireCommand } from './acquire.ts'
+import { createAgoraCommand } from './agora.ts'
 import { createBootstrapCommand } from './bootstrap.ts'
 import { createMissingCommand, createOutdatedCommand } from './capability-status.ts'
 import { type RootCommandName, rootHelpCommandNames } from './catalogue.ts'
@@ -28,6 +29,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   acquire: (context) => createAcquireCommand(context),
   bootstrap: (context) => createBootstrapCommand(context),
   cleanup: (context) => createCleanupCommand(context),
+  agora: (context) => createAgoraCommand(context),
   completion: (context) => createCompletionsCommand(context),
   dev: (context) => createDevCommand(context),
   diag: (context) => createDiagCommand(context),
