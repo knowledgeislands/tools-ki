@@ -1,5 +1,5 @@
 # Outgoing handoffs
 
-This directory holds active outbound handoffs, grouped by receiving repository.
+This directory holds sender-owned cross-repository submissions, grouped by the receiver's canonical `owner/repo` identity.
 
-Each brief names its originating context, scope, constraints, receiving owner, and what that receiver owns. Remove it when the receiver's durable adoption, decline, or supersession is known.
+Only this repository writes or removes these outbound records. Retain each record until the receiver reports adopted, declined, or superseded; parked and clarify dispositions do not permit release.

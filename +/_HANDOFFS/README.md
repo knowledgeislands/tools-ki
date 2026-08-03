@@ -1,5 +1,5 @@
 # Incoming handoffs
 
-This directory holds active inbound handoffs awaiting a local disposition.
+This directory holds receiver-owned copies of active cross-repository submissions, grouped by the sender's canonical `owner/repo` identity.
 
-Each brief names its originating context, scope, constraints, receiving owner, and requested disposition. Adopt durable work into this repository's roadmap and, where needed, a plan; remove declined or superseded briefs.
+Only this repository may change receiver-local status, rationale, or adoption and supersession linkage. Sender provenance and payload remain unchanged. Prune an inbound copy only after an eligible sender release is observable.

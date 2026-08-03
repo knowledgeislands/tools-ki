@@ -20,6 +20,10 @@ VENDOR = "cross-repository-vendoring"
 
 ["knowledgeislands/ki-agentic-harness:ki-decision-records"]
 
+["knowledgeislands/ki-agentic-harness:ki-handoffs"]
+identity = "knowledgeislands/tools-ki"
+peers = ["knowledgeislands/ki-agentic-harness"]
+
 ["knowledgeislands/ki-agentic-harness:ki-tokenomics"]
 
 ["knowledgeislands/ki-agentic-harness:ki-housekeeping-claude"]
