@@ -32,9 +32,9 @@ The proposed public surface is `ki handoffs routes add`, `routes remove`, `route
 ## Steps
 
 - [ ] Preserve the agreed submission authority and reconcile the resulting CLI contract with the accepted `KI-HARNESS-FND-009` decision record and `ki-handoffs` standard before acceptance.
-- [ ] Implement local route declaration, removal, listing, and registered-estate route checks.
-- [ ] Implement local outbound creation, receiver-owned pull/receive, estate listing and display, sender release, and receiver-safe prune operations.
-- [ ] Add CLI contract tests for success, unreciprocated or broken routes, unknown handoffs, denied peer writes, lifecycle visibility, and pruning boundaries.
+- [x] Implement local route declaration, removal, listing, and registered-estate route checks.
+- [x] Implement local outbound creation, receiver-owned pull/receive, estate listing and display, sender release, and receiver-safe prune operations.
+- [x] Add CLI contract tests for success, unreciprocated or broken routes, unknown handoffs, denied peer writes, lifecycle visibility, and pruning boundaries.
 - [ ] Publish the CLI evidence back to the Harness through the then-governed handoff process or another explicitly agreed direct bridge.
 
 ## Files touched
@@ -68,3 +68,13 @@ The CLI is the public host for the command group and registered-repository resol
 ### Future interchange
 
 Repositories without mutual visibility may later use a trusted interchange as a scoped transport. This item neither requires nor pre-commits that module; its local command and data contracts should leave room for it without treating it as a decision-maker.
+
+### Implementation checkpoint
+
+The CLI implementation is available locally with `routes add|remove|list|check`, `new`, `receive`, `list`, `show`, `release`, and `prune`.
+
+It requires each participating repository to declare `ki-handoffs`, its canonical identity, and lexical peer list in `.ki-config.toml`; `routes add --identity` supplies that local configuration on first use.
+
+Sandbox contracts prove no command writes a peer repository, including the receiver-owned disposition between `receive` and `release`.
+
+The remaining acceptance work is reconciliation against the committed Harness `GDR-KI-HARNESS-005` and `ki-handoffs` release, then an explicitly agreed direct evidence handoff.

@@ -10,6 +10,7 @@ import { createDevCommand } from './dev.ts'
 import { createDiagCommand } from './diag.ts'
 import { createDocsCommand } from './docs.ts'
 import { createDoctorCommand } from './doctor.ts'
+import { createHandoffsCommand } from './handoffs.ts'
 import { createHarnessCommand } from './harness.ts'
 import { createHelpCommand } from './help.ts'
 import { createListCommand } from './list.ts'
@@ -33,6 +34,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   docs: (context) => createDocsCommand(context),
   doctor: (context) => createDoctorCommand(context),
   harness: (context) => createHarnessCommand(context),
+  handoffs: (context) => createHandoffsCommand(context),
   help: (_, program) => createHelpCommand(program),
   list: (context) => createListCommand(context),
   missing: (context) => createMissingCommand(context),

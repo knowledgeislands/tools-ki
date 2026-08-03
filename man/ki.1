@@ -156,6 +156,17 @@ Replace one inactive installed harness with a verified archive.
 .TP
 .B ki harness uninstall <harness-id>
 Remove one installed non-canonical harness.
+.SS Handoffs
+\&
+.TP
+.B ki handoffs routes add <owner/repository> [--identity <owner/repository>]
+Declare one local reciprocal handoff route.
+.TP
+.B ki handoffs routes remove|list|check
+Maintain or inspect local reciprocal handoff route declarations.
+.TP
+.B ki handoffs new|receive|list|show|release|prune
+Create, pull, inspect, release, or prune cross-repository handoff copies.
 .SS Acquisition
 \&
 .TP
@@ -507,6 +518,48 @@ Remove one non-canonical harness with only recognised payload directories. The
 canonical harness cannot be removed, and a harness that supplies active user
 skills cannot be removed. A successful removal deletes its identifier from
 .BR [harnesses].ids .
+.SS Handoffs
+\&
+.PP
+Use these commands with repositories that declare the portable
+\fBki-handoffs\fR capability and are present in the local registered repository
+estate. They preserve repository authority: every mutation writes only the
+current repository, a reciprocal route grants visibility rather than acceptance,
+and no command changes a peer roadmap.
+.TP
+.B ki handoffs routes add <owner/repository> [--identity <owner/repository>]
+Declare one local peer entry. The identity option is required only when the
+repository has not yet configured its canonical address.
+.TP
+.B ki handoffs routes remove <owner/repository>
+Remove one local peer entry.
+.TP
+.B ki handoffs routes list
+List local peer entries with their registered-estate state.
+.TP
+.B ki handoffs routes check [owner/repository]
+Check declared routes for reciprocal registered peer evidence.
+.TP
+.B ki handoffs new --to <owner/repository> --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
+Create one outbound submission in the current repository.
+.TP
+.B ki handoffs receive --from <owner/repository> [--id <handoff-id>]
+Pull eligible peer outbound submissions into the current repository as inbound
+copies with status \fBreceived\fR.
+.TP
+.B ki handoffs list [--direction inbound|outbound] [--status <status>] [--repo <owner/repository>]
+Read visible handoff copies in the registered estate.
+.TP
+.B ki handoffs show <handoff-id>
+Show every visible copy of a handoff.
+.TP
+.B ki handoffs release <handoff-id>
+Remove the current repository's outbound copy only after observing a terminal
+receiver disposition.
+.TP
+.B ki handoffs prune <handoff-id>
+Remove the current repository's terminal inbound copy only after sender release
+is observable.
 .SS Acquisition
 \&
 .PP
