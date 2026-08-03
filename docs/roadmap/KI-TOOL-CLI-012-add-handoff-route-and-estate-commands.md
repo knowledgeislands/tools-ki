@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-012
 title: Add trade route and estate commands
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: 6f6e63aa3120b71be1149027d89f0db866043ff7
@@ -36,7 +36,7 @@ The proposed public surface is `ki trades routes add`, `routes remove`, `routes 
 - [x] Implement local typed trade-route declaration, removal, listing, and registered-estate route checks against canonical GitHub homes.
 - [x] Implement local outbound creation, receiver-owned pull/receive, estate listing and display, sender release, and receiver-safe prune operations for work and knowledge records.
 - [x] Add CLI contract tests for typed-route success, one-sided or wrong-kind routes, unknown handoff records, denied peer writes, knowledge retention, lifecycle visibility, and pruning boundaries.
-- [ ] Publish the CLI evidence back to the Harness through the then-governed handoff process or another explicitly agreed direct bridge.
+- [x] Publish the CLI evidence back to the Harness through the then-governed handoff process or another explicitly agreed direct bridge.
 
 ## Files touched
 
@@ -55,6 +55,38 @@ The proposed public surface is `ki trades routes add`, `routes remove`, `routes 
 ## Dependencies / blocks
 
 This item is in progress and unblocked. `KI-HARNESS-FND-009` published its governance input through GDR-KI-HARNESS-005 and the `ki-handoffs` standard; the implementation preserves that authority model and requires a final evidence trade before acceptance.
+
+## Acceptance
+
+### Delivered
+
+The public host now exposes `ki trades` for typed directional `work` and `knowledge` routes over canonical HTTPS GitHub repository homes. It creates and mutates only local outbound or inbound handoff records, preserves receiver-owned disposition authority, and retains the `HND-` record identity and release-observed pruning model.
+
+The retired `ki handoffs` command and reciprocal `identity` / `peers` configuration have no compatibility path.
+
+### Summary of changes
+
+Commit `228f0e2916c49ab93495289824535cfd24c7f520` replaces the command, core, configuration, documentation, completion, inventory, and CLI contract footprints with the typed-trades implementation.
+
+The outbound work trade `HND-8bd351f1-b405-4882-8054-e6ab1bbcd3ff` carries the immutable implementation reference and authority boundary to `knowledgeislands/ki-agentic-harness` through the governed trade route.
+
+### Verification
+
+- `bun run test:coverage` — 476 tests passed; statements, branches, functions, and lines all reached 100%.
+- `bunx tsc --noEmit` — passed.
+- `bunx biome check .` — passed with one informational schema-version notice and no fixes.
+- `bunx markdownlint-cli2 CHANGELOG.md docs/roadmap/KI-TOOL-CLI-012-add-handoff-route-and-estate-commands.md` — passed.
+- `mandoc -T lint man/ki.1` — passed.
+- `git diff --check` — passed.
+- `ki trades routes check https://github.com/knowledgeislands/ki-agentic-harness --direction export --kind work` — active.
+
+### Outstanding concerns
+
+The Harness still owns receipt and disposition of the evidence trade and any resulting change to `KI-HARNESS-FND-009`. The outbound copy must remain until a terminal receiver disposition is observable; remote interchange remains outside this item.
+
+### Mini recap
+
+The immutable delivery baseline is `6f6e63aa3120b71be1149027d89f0db866043ff7`; the typed migration is committed in `228f0e2916c49ab93495289824535cfd24c7f520`. No peer repository was written, no compatibility shim was retained, and no learning requires a separate durable promotion route.
 
 ## Discussion
 
