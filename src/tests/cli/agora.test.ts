@@ -28,7 +28,7 @@ describe('[ki agora]', () => {
       output: 'ki agora show example\n  Example\n  tool zed\n  project /primary\n  project /alpha\n  project /zulu\n'
     })
     expect(await box.run('ki agora open example')).toEqual({ exitCode: 0, output: 'ki agora open example: opened 3 Zed projects\n' })
-    expect(calls).toEqual(['zed -n /primary', 'zed -e /alpha', 'zed -e /zulu'])
+    expect(calls).toEqual(['zed -n', 'zed -e /zulu', 'zed -e /alpha', 'zed -e /primary'])
   })
 
   test('reports an absent directory and supports empty profiles', async () => {
