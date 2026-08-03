@@ -84,10 +84,10 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki harness reinstall`
 - `ki harness uninstall`
 
-#### Handoffs
+#### Trades
 
-- `ki handoffs routes add|remove|list|check`
-- `ki handoffs new|receive|list|show|release|prune`
+- `ki trades routes add|remove|list|check`
+- `ki trades new|receive|list|show|release|prune`
 
 #### Acquisition
 

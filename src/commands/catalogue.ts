@@ -8,7 +8,6 @@ export const rootCommandNames = [
   'diag',
   'docs',
   'doctor',
-  'handoffs',
   'harness',
   'help',
   'list',
@@ -18,6 +17,7 @@ export const rootCommandNames = [
   'repo',
   'search',
   'skill',
+  'trades',
   'update',
   'version',
   'workspace'
@@ -48,7 +48,7 @@ export const rootHelpCommandNames = [
   'workspace',
   'repo',
   'harness',
-  'handoffs',
+  'trades',
   'acquire',
   'dev'
 ] as const

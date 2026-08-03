@@ -1,4 +1,5 @@
 ["knowledgeislands/ki-agentic-harness:ki-repo"]
+repository = "https://github.com/knowledgeislands/tools-ki"
 title = "tools-ki"
 description = "Knowledge Islands command-line interface."
 repo_code = "KI-TOOL"
@@ -21,8 +22,16 @@ VENDOR = "cross-repository-vendoring"
 ["knowledgeislands/ki-agentic-harness:ki-decision-records"]
 
 ["knowledgeislands/ki-agentic-harness:ki-handoffs"]
-identity = "knowledgeislands/tools-ki"
-peers = ["knowledgeislands/ki-agentic-harness"]
+["knowledgeislands/ki-agentic-harness:ki-handoffs".exports_to]
+knowledge = ["https://github.com/knowledgeislands/ki-website"]
+work = [
+  "https://github.com/knowledgeislands/ki-agentic-harness",
+  "https://github.com/knowledgeislands/ki-website",
+]
+
+["knowledgeislands/ki-agentic-harness:ki-handoffs".imports_from]
+knowledge = []
+work = ["https://github.com/knowledgeislands/ki-agentic-harness"]
 
 ["knowledgeislands/ki-agentic-harness:ki-tokenomics"]
 

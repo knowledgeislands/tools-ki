@@ -156,17 +156,17 @@ Replace one inactive installed harness with a verified archive.
 .TP
 .B ki harness uninstall <harness-id>
 Remove one installed non-canonical harness.
-.SS Handoffs
+.SS Trades
 \&
 .TP
-.B ki handoffs routes add <owner/repository> [--identity <owner/repository>]
-Declare one local reciprocal handoff route.
+.B ki trades routes add <repository> --direction export|import --kind work|knowledge
+Declare one local typed directional trade route.
 .TP
-.B ki handoffs routes remove|list|check
-Maintain or inspect local reciprocal handoff route declarations.
+.B ki trades routes remove|list|check
+Maintain or inspect local typed trade route declarations.
 .TP
-.B ki handoffs new|receive|list|show|release|prune
-Create, pull, inspect, release, or prune cross-repository handoff copies.
+.B ki trades new|receive|list|show|release|prune
+Create, pull, inspect, release, or prune cross-repository trade copies.
 .SS Agora management
 \&
 .TP
@@ -529,46 +529,46 @@ Remove one non-canonical harness with only recognised payload directories. The
 canonical harness cannot be removed, and a harness that supplies active user
 skills cannot be removed. A successful removal deletes its identifier from
 .BR [harnesses].ids .
-.SS Handoffs
+.SS Trades
 \&
 .PP
 Use these commands with repositories that declare the portable
 \fBki-handoffs\fR capability and are present in the local registered repository
 estate. They preserve repository authority: every mutation writes only the
-current repository, a reciprocal route grants visibility rather than acceptance,
-and no command changes a peer roadmap.
+current repository, a typed reciprocal route grants visibility rather than
+acceptance or retention, and no command changes a peer roadmap or knowledge.
 .TP
-.B ki handoffs routes add <owner/repository> [--identity <owner/repository>]
-Declare one local peer entry. The identity option is required only when the
-repository has not yet configured its canonical address.
+.B ki trades routes add <repository> --direction export|import --kind work|knowledge
+Declare one local typed route to a canonical HTTPS GitHub repository. Repository
+identity remains the required \fBrepository\fR value in the ki-repo table.
 .TP
-.B ki handoffs routes remove <owner/repository>
-Remove one local peer entry.
+.B ki trades routes remove <repository> --direction export|import --kind work|knowledge
+Remove one local typed route.
 .TP
-.B ki handoffs routes list
-List local peer entries with their registered-estate state.
+.B ki trades routes list
+List local typed routes with their registered-estate state.
 .TP
-.B ki handoffs routes check [owner/repository]
-Check declared routes for reciprocal registered peer evidence.
+.B ki trades routes check [repository] [--direction export|import] [--kind work|knowledge]
+Check declared routes for reciprocal registered-repository evidence by kind.
 .TP
-.B ki handoffs new --to <owner/repository> --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
-Create one outbound submission in the current repository.
+.B ki trades new --to <repository> --kind work|knowledge --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
+Create one outbound typed trade in the current repository.
 .TP
-.B ki handoffs receive --from <owner/repository> [--id <handoff-id>]
-Pull eligible peer outbound submissions into the current repository as inbound
+.B ki trades receive --from <repository> --kind work|knowledge [--id <trade-id>]
+Pull eligible outbound trades of one kind into the current repository as inbound
 copies with status \fBreceived\fR.
 .TP
-.B ki handoffs list [--direction inbound|outbound] [--status <status>] [--repo <owner/repository>]
-Read visible handoff copies in the registered estate.
+.B ki trades list [--direction inbound|outbound] [--status <status>] [--kind work|knowledge] [--repo <repository>]
+Read visible trade copies in the registered estate.
 .TP
-.B ki handoffs show <handoff-id>
-Show every visible copy of a handoff.
+.B ki trades show <trade-id>
+Show every visible copy of a trade.
 .TP
-.B ki handoffs release <handoff-id>
+.B ki trades release <trade-id>
 Remove the current repository's outbound copy only after observing a terminal
 receiver disposition.
 .TP
-.B ki handoffs prune <handoff-id>
+.B ki trades prune <trade-id>
 Remove the current repository's terminal inbound copy only after sender release
 is observable.
 .SS Acquisition

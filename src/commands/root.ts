@@ -11,7 +11,6 @@ import { createDevCommand } from './dev.ts'
 import { createDiagCommand } from './diag.ts'
 import { createDocsCommand } from './docs.ts'
 import { createDoctorCommand } from './doctor.ts'
-import { createHandoffsCommand } from './handoffs.ts'
 import { createHarnessCommand } from './harness.ts'
 import { createHelpCommand } from './help.ts'
 import { createListCommand } from './list.ts'
@@ -19,6 +18,7 @@ import { createRepairCommand } from './repair.ts'
 import { createRepoCommand } from './repo.ts'
 import { createSearchCommand } from './search.ts'
 import { createSkillCommand } from './skill.ts'
+import { createTradesCommand } from './trade-command.ts'
 import { createUpdateCommand } from './update.ts'
 import { createVersionCommand } from './version.ts'
 import { createWorkspaceCommand } from './workspace.ts'
@@ -36,7 +36,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   docs: (context) => createDocsCommand(context),
   doctor: (context) => createDoctorCommand(context),
   harness: (context) => createHarnessCommand(context),
-  handoffs: (context) => createHandoffsCommand(context),
+  trades: (context) => createTradesCommand(context),
   help: (_, program) => createHelpCommand(program),
   list: (context) => createListCommand(context),
   missing: (context) => createMissingCommand(context),

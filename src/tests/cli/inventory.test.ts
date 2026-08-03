@@ -22,7 +22,7 @@ const rootHelpCommands = [
   'workspace',
   'repo',
   'harness',
-  'handoffs',
+  'trades',
   'acquire',
   'dev'
 ]
