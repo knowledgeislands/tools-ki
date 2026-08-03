@@ -29,7 +29,7 @@ _ki() {
     _values 'repository command' ${repoCommandNames.join(' ')}
   fi
 }
-_ki "$@"
+compdef _ki ki
 `)
         return
       }
