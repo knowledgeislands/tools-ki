@@ -6,7 +6,7 @@ import { sandbox } from './_cli_helper.ts'
 const profile = (projects = ''): string => `name = "Example"\ntool = "zed"${projects}\n`
 
 describe('[ki agora]', () => {
-  test('lists, shows, and opens an ordered Zed profile', async () => {
+  test('lists, shows, and opens an ordered Zed profile in separate workspaces', async () => {
     const box = await sandbox()
     await box.home.write(
       'workspaces/ki-agoras/example.ki-agora',
@@ -27,8 +27,8 @@ describe('[ki agora]', () => {
       exitCode: 0,
       output: 'ki agora show example\n  Example\n  tool zed\n  project /primary\n  project /alpha\n  project /zulu\n'
     })
-    expect(await box.run('ki agora open example')).toEqual({ exitCode: 0, output: 'ki agora open example: opened 3 projects in Zed\n' })
-    expect(calls).toEqual(['zed -n /primary', 'zed -a /alpha', 'zed -a /zulu'])
+    expect(await box.run('ki agora open example')).toEqual({ exitCode: 0, output: 'ki agora open example: opened 3 Zed workspaces\n' })
+    expect(calls).toEqual(['zed -n /primary', 'zed -n /alpha', 'zed -n /zulu'])
   })
 
   test('reports an absent directory and supports empty profiles', async () => {
