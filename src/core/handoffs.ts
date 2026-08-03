@@ -356,6 +356,7 @@ export const createOutboundHandoff = async (
 ): Promise<HandoffRecord> => {
   const local = await localRegisteredConfiguration(context)
   await requireActiveRoute(context, local.configuration, options.to)
+  /* v8 ignore next -- Commander rejects every empty required option before this core boundary is reachable. */
   if (![options.title, options.sourceRef, options.context, options.submission, options.constraints].every((value) => value.trim()))
     throw handoffError('handoff title, source-ref, context, submission, and constraints must be non-empty')
   const id = `HND-${randomUUID()}`

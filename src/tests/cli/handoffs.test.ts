@@ -190,4 +190,103 @@ describe('[ki handoffs]', () => {
     expect(repeatedPeer.output).toContain('.peers must be unique and lexical')
     expect(premature).toEqual({ exitCode: 2, output: `ki: error: handoff ${id} cannot be pruned while receiver status is received\n` })
   })
+
+  test('surfaces malformed route and record evidence through CLI operations', async () => {
+    const { box } = await configuredPair()
+    await box.project.write('.ki-config.toml', '[not valid TOML\n')
+    const invalidToml = await box.run('ki handoffs routes list')
+    await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', []).replace('peers = []', 'peers = [1]'))
+    const invalidPeers = await box.run('ki handoffs routes list')
+    await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', ['example/receiver']))
+    const firstRoute = await box.run('ki handoffs routes add example/another')
+    const secondRoute = await box.run('ki handoffs routes add example/third')
+    await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', ['example/receiver']))
+    const created = await box.run([
+      'ki',
+      'handoffs',
+      'new',
+      '--to',
+      'example/receiver',
+      '--title',
+      'Title',
+      '--source-ref',
+      'SOURCE',
+      '--context',
+      'Context',
+      '--submission',
+      'Submission',
+      '--constraints',
+      'Constraints'
+    ])
+    const id = /HND-[0-9a-f-]+/u.exec(created.output)?.[0] as string
+    const outboundPath = `-/_HANDOFFS/example/receiver/${id}.md`
+    const outbound = await box.project.read(outboundPath)
+    await box.project.write(outboundPath, outbound.replace('title: "Title"', 'title: "Title'))
+    box.cd('receiver')
+    const malformedQuotedField = await box.run(['ki', 'handoffs', 'receive', '--from', 'example/source', '--id', id])
+    box.cd('..')
+    await box.project.write(outboundPath, outbound.replace('## Constraints\n\nConstraints', '## Constraints\n\n'))
+    box.cd('receiver')
+    const missingPayload = await box.run(['ki', 'handoffs', 'receive', '--from', 'example/source', '--id', id])
+    box.cd('..')
+    await box.project.write(outboundPath, outbound)
+    box.cd('receiver')
+    await box.run(['ki', 'handoffs', 'receive', '--from', 'example/source', '--id', id])
+    const inboundPath = `receiver/+/_HANDOFFS/example/source/${id}.md`
+    const inbound = await box.project.read(inboundPath)
+    await box.project.write(inboundPath, inbound.replace('status: received', 'status: parked'))
+    box.cd('..')
+    const missingRationale = await box.run(['ki', 'handoffs', 'release', id])
+    box.cd('receiver')
+    await box.project.write(inboundPath, inbound)
+    box.cd('..')
+    const receivedCannotRelease = await box.run(['ki', 'handoffs', 'release', id])
+
+    expect(invalidToml.output).toContain('must be valid TOML')
+    expect(invalidPeers.output).toContain('.peers must be a canonical address array')
+    expect(firstRoute.exitCode).toBe(0)
+    expect(secondRoute.exitCode).toBe(0)
+    expect(malformedQuotedField.output).toContain('has invalid handoff frontmatter')
+    expect(missingPayload.output).toContain('must carry non-empty Context, Submission, and Constraints sections')
+    expect(missingRationale.output).toContain('requires rationale for status parked')
+    expect(receivedCannotRelease).toEqual({ exitCode: 2, output: `ki: error: handoff ${id} cannot be released while receiver status is received\n` })
+  })
+
+  test('handles missing registered configuration and handoff paths without treating them as peer state', async () => {
+    const { box, source, receiver } = await configuredPair()
+    await box.config.write('ki/config.toml', localConfiguration([source, receiver, `${box.root.path}/missing`]))
+    const emptyEstate = await box.run('ki handoffs list')
+    const created = await box.run([
+      'ki',
+      'handoffs',
+      'new',
+      '--to',
+      'example/receiver',
+      '--title',
+      'Title',
+      '--source-ref',
+      'SOURCE',
+      '--context',
+      'Context',
+      '--submission',
+      'Submission',
+      '--constraints',
+      'Constraints'
+    ])
+    const id = /HND-[0-9a-f-]+/u.exec(created.output)?.[0] as string
+    const missingInbound = await box.run(['ki', 'handoffs', 'release', id])
+    const badDirection = await box.run('ki handoffs list --direction sideways')
+
+    expect(emptyEstate).toEqual({ exitCode: 0, output: 'ki handoffs list\n  none\n' })
+    expect(missingInbound).toEqual({ exitCode: 2, output: `ki: error: receiver has not recorded an inbound handoff ${id}\n` })
+    expect(badDirection).toEqual({ exitCode: 2, output: 'ki: error: --direction accepts inbound or outbound\n' })
+  })
+
+  test('reports an empty reciprocal sender directory without creating peer state', async () => {
+    const { box } = await configuredPair()
+    box.cd('receiver')
+    const result = await box.run('ki handoffs receive --from example/source')
+
+    expect(result).toEqual({ exitCode: 0, output: 'ki handoffs receive\n' })
+  })
 })
