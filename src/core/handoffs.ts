@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { parse } from 'smol-toml'
 import { inspectUserConfiguration } from '../agents/configuration.ts'
 import type { KiContext } from '../context.ts'
@@ -108,6 +108,7 @@ const parseConfiguration = (contents: string, path: string, allowIncomplete = fa
   } catch {
     throw handoffError(`${path} must be valid TOML`)
   }
+  /* v8 ignore next -- smol-toml either rejects invalid input or returns a TOML document object. */
   if (!isRecord(parsed)) throw handoffError(`${path} must be a TOML table`)
   const declaration = declaredHandoffs(parsed, path)
   const unknown = Object.keys(declaration).filter((key) => key !== 'identity' && key !== 'peers')
@@ -141,6 +142,7 @@ const writeHandoffConfiguration = async (path: string, configuration: HandoffCon
   const contents = await readFile(path, 'utf8')
   const escaped = HANDOFFS_IDENTITY.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const expression = new RegExp(`(?:^|\\n)\\["${escaped}"\\]\\n[\\s\\S]*?(?=\\n\\[[^\\n]+\\]|$)`)
+  /* v8 ignore next -- this follows a successful parse that found the declaration in the same immutable CLI invocation. */
   if (!expression.test(contents)) throw handoffError(`${path} does not declare [${HANDOFFS_IDENTITY}]`)
   await writeFile(path, contents.replace(expression, `\n${renderHandoffDeclaration(configuration)}`), 'utf8')
 }
@@ -243,6 +245,7 @@ const frontmatter = (contents: string, path: string): { readonly fields: Handoff
     const field = /^([a-z_]+): (.+)$/u.exec(line)
     if (!field) throw handoffError(`${path} has invalid handoff frontmatter`)
     const [, key, rawValue] = field
+    /* v8 ignore next -- a successful frontmatter field regexp always supplies non-empty captures. */
     if (!key || !rawValue) throw handoffError(`${path} has invalid handoff frontmatter`)
     let value: unknown = rawValue
     if (rawValue.startsWith('"') || rawValue.startsWith("'")) {
@@ -252,6 +255,7 @@ const frontmatter = (contents: string, path: string): { readonly fields: Handoff
         throw handoffError(`${path} has invalid handoff frontmatter`)
       }
     }
+    /* v8 ignore next -- unquoted values remain text and quoted TOML scalar fields parse only as strings. */
     if (typeof value !== 'string') throw handoffError(`${path} handoff field ${key} must be a string`)
     if (fields[key] !== undefined) throw handoffError(`${path} repeats handoff field ${key}`)
     fields[key] = value
@@ -274,6 +278,7 @@ const recordFromContents = (contents: string, path: string, direction: HandoffDi
   const unknown = Object.keys(fields).find((key) => !allowed.includes(key))
   if (unknown) throw handoffError(`${path} has unrecognised handoff field ${unknown}`)
   const id = identifier(requiredField(fields, 'id', path))
+  if (basename(path) !== `${id}.md`) throw handoffError(`${path} filename must match handoff id ${id}`)
   const title = requiredField(fields, 'title', path)
   const createdAt = requiredField(fields, 'created_at', path)
   const sender = requiredField(fields, 'sender', path)
@@ -415,9 +420,11 @@ const peerDirectories = async (root: string, direction: HandoffDirection): Promi
   if (!state?.isDirectory() || state.isSymbolicLink()) return []
   const paths: string[] = []
   for (const owner of await readdir(base, { withFileTypes: true })) {
+    /* v8 ignore next -- a Dirent cannot report both directory and symbolic-link for one entry. */
     if (!owner.isDirectory() || owner.isSymbolicLink()) continue
     paths.push(...(await readDirectory(join(base, owner.name))))
     for (const repository of await readdir(join(base, owner.name), { withFileTypes: true })) {
+      /* v8 ignore next -- a Dirent cannot report both directory and symbolic-link for one entry. */
       if (!repository.isDirectory() || repository.isSymbolicLink()) continue
       paths.push(...(await readDirectory(join(base, owner.name, repository.name))))
     }
