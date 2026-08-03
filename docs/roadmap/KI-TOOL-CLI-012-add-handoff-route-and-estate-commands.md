@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-012
 title: Add handoff route and estate commands
 theme: cli
 horizon: next
-status: open
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -17,7 +17,7 @@ Let KI users inspect and maintain the local side of trusted cross-repository wor
 
 The current Harness and CLI direct-super-trust bridge records work directly in each repository's roadmap. It establishes the immediate collaboration but provides no public commands for routes, submissions, estate visibility, or lifecycle observations.
 
-`KI-HARNESS-FND-009` is the immediate protocol work that will define the decision record and governance skill. This CLI item follows at once, implementing the host-side mechanics once that portable contract is published.
+`KI-HARNESS-FND-009` is parallel governance work that will publish the portable contract. This CLI item owns the executable delivery now; it will preserve the agreed authority model and reconcile its user-facing contract with the Harness record before acceptance.
 
 ## Boundary
 
@@ -27,11 +27,11 @@ Do not make peer-repository writes, make acceptance decisions, infer acceptance 
 
 `ki` knows the registered repository estate, but it has no handoff command group and no stable protocol for discovering a peer's declared route or submission state.
 
-The proposed public surface is `ki handoffs routes add`, `routes remove`, `routes list`, `routes check`, `new`, `receive`, `list`, `show`, `release`, and `prune`. Its exact arguments, output, metadata, and error contracts must come from the published `ki-handoffs` standard rather than being invented independently here.
+The proposed public surface is `ki handoffs routes add`, `routes remove`, `routes list`, `routes check`, `new`, `receive`, `list`, `show`, `release`, and `prune`. It implements the agreed local-only authority, reciprocal-route, owner/repo layout, `HND-...` identity, receiver-status, and sender-release model; the Harness contract is a compatibility and acceptance input, not an execution blocker.
 
 ## Steps
 
-- [ ] Read the accepted `KI-HARNESS-FND-009` decision record and `ki-handoffs` standard; convert its portable contract into CLI command, output, and error cases without changing its authority model.
+- [ ] Preserve the agreed submission authority and reconcile the resulting CLI contract with the accepted `KI-HARNESS-FND-009` decision record and `ki-handoffs` standard before acceptance.
 - [ ] Implement local route declaration, removal, listing, and registered-estate route checks.
 - [ ] Implement local outbound creation, receiver-owned pull/receive, estate listing and display, sender release, and receiver-safe prune operations.
 - [ ] Add CLI contract tests for success, unreciprocated or broken routes, unknown handoffs, denied peer writes, lifecycle visibility, and pruning boundaries.
@@ -53,7 +53,7 @@ The proposed public surface is `ki handoffs routes add`, `routes remove`, `route
 
 ## Dependencies / blocks
 
-This item is Next because the route and estate commands are now an immediate priority. It must not enter implementation until `KI-HARNESS-FND-009` publishes the decision record and `ki-handoffs` contract; the current roadmap dependency fields are local-only, so this cross-repository blocker is recorded here and in the Harness item rather than in `blocked-by`.
+This item is Next and ready for implementation. `KI-HARNESS-FND-009` is a parallel governance input; the CLI must preserve the agreed authority model and reconcile its public contract before acceptance, but it is not blocked from beginning the local implementation.
 
 ## Discussion
 
