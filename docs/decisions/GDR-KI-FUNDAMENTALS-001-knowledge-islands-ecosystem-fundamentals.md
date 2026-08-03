@@ -13,25 +13,33 @@ shared_record: true
 
 ## Context
 
-Knowledge Islands is expressed through five primary repositories with different kinds of authority. Without an explicit shared boundary, philosophy can be mistaken for tooling, a CLI implementation can accidentally define a skill or portable standard, normative specifications can be treated as explanatory publication, and vendored website material can become an untraceable parallel source.
+Knowledge Islands is expressed through six primary repositories with different kinds of authority. Without an explicit shared boundary, philosophy can be mistaken for engineering practice or tooling, a CLI implementation can accidentally define a skill or portable standard, normative specifications can be treated as explanatory publication, and vendored website material can become an untraceable parallel source.
 
 ## Decision
 
-The five primary repositories have distinct authority:
+The six primary repositories have distinct authority:
 
 - `ki-arcadia-principal` is the canonical source of the Knowledge Islands philosophy and conceptual model. It develops and proves the approach without mandating a particular tooling implementation.
+- `ki-techne-principal` is the canonical source of the Knowledge Islands engineering discipline. It translates the philosophy into engineering architecture, operating models, workflows, technology posture, and implementation patterns; it informs implementation repositories without owning their executable behaviour or portable normative contracts.
 - `ki-agentic-harness` is the canonical source of reusable agentic capabilities and compatible harnesses. A capability is a typed published harness member: a skill, agent, MCP server, hook, eval, or future registered kind. The harness defines capability content and semantics; it does not implement the public `ki` executable or originate normative portable contracts.
 - `tools-ki` is the canonical source of the `ki` executable platform. It implements harness installation, capability inventory and activation, repository resolution, registered native operation hosting, reporting, migration, and public command grammar. It consumes compatible harness artifacts but does not own their standards or define portable normative contracts.
 - `ki-specifications` is the canonical source of normative portable contracts, including KIPs, KIS documents, schemas, templates, conformance rules, reference examples, and portable capability identity and inventory contracts. It formalises proven concepts and implementation evidence; an Active KIS governs implementations that claim conformance within its scope.
-- `ki-website` is the autonomous public publication layer. It owns public user-guide prose and routes, and vendors source-labelled material from the other four repositories so it can build and deploy independently, but publication never transfers canonical ownership.
+- `ki-website` is the autonomous public publication layer. It owns public user-guide prose and routes, and vendors source-labelled material from the other five repositories so it can build and deploy independently, but publication never transfers canonical ownership.
 
 The authority and publication structure is:
 
 ```text
 ki-arcadia-principal
+|-- informs -------------------> ki-techne-principal
 |-- informs -------------------> ki-agentic-harness
 |-- informs -------------------> tools-ki
 |-- informs -------------------> ki-specifications
+`-- publishes through --------> ki-website
+
+ki-techne-principal
+|-- informs engineering ------> ki-agentic-harness
+|-- informs engineering ------> tools-ki
+|-- informs engineering ------> ki-specifications
 `-- publishes through --------> ki-website
 
 ki-agentic-harness
@@ -52,17 +60,18 @@ ki-specifications
 
 `homebrew-tap` is a delivery repository for package-manager formulae, not a primary ecosystem authority. It implements the release transport owned by `tools-ki`.
 
-This file is copied verbatim into `ki-arcadia-principal`, `ki-agentic-harness`, `tools-ki`, `ki-specifications`, and `ki-website`; the five paths are one shared record, not repository-specific variants. Any proposed modification must consider its effect on all five repositories and update every copy coherently. Temporary drift is permitted only during a choreographed rollout that identifies the outstanding copies explicitly.
+This file is copied verbatim into `ki-arcadia-principal`, `ki-techne-principal`, `ki-agentic-harness`, `tools-ki`, `ki-specifications`, and `ki-website`; the six paths are one shared record, not repository-specific variants. Any proposed modification must consider its effect on all six repositories and update every copy coherently. Temporary drift is permitted only during a choreographed rollout that identifies the outstanding copies explicitly.
 
 Cross-repository work is choreographed rather than centrally orchestrated. Each repository owns its priorities, plans, workspace, verification, and commits. A repository may place a concrete handoff in another repository's Stream or roadmap, naming its origin and whether it blocks or is blocked by the local item. Work should remain non-blocking and independently executable unless a genuine prerequisite requires otherwise.
 
 ## Consequences
 
 - Changes to philosophy and conceptual model begin in Arcadia Principal.
+- Engineering practice begins in Techne Principal, applying Arcadia's philosophy without displacing it or defining the executable or portable contract of another repository.
 - Reusable agentic capabilities begin in the harness after the underlying pattern is established.
 - A compatible harness publishes typed capabilities. Capability kinds retain their own content standards, while shared identity, inventory, installation, and activation contracts are settled across the harness, `tools-ki`, and Specifications.
 - The CLI platform begins in `tools-ki`; the harness and `tools-ki` jointly supply implementation evidence to Specifications without either repository becoming the normative source.
 - Specifications receive conceptual input from Arcadia and implementation evidence from the harness and `tools-ki`; applicable Active specifications then constrain conforming implementations.
-- The website can publish all four source repositories while remaining independently deployable and non-authoritative.
+- The website can publish all five source repositories while remaining independently deployable and non-authoritative.
 - The Website owns the public tooling guide under `/tooling/`. `tools-ki` owns executable behaviour and delivery, while the harness owns the reusable capability artefacts it publishes.
 - Every primary repository states its place in this ecosystem near the top of its README and carries the shared progress, commit, and choreography conventions in runtime-neutral guidance.
