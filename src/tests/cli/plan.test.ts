@@ -35,17 +35,14 @@ describe('[ki repo plan]', () => {
         'baseline-ref': 'a'.repeat(40)
       })
     )
-    await box.project.write(
-      '.ki-workspace.toml',
-      'schema = 1\ndefault = "inventory"\n\n[groups.inventory]\n\n[groups.inventory.members.repo]\nkind = "repository"\n'
-    )
     const root = await realpath(`${box.project.path}/repo`)
+    await box.config.write('ki/agoras/inventory.ki-agora', `name = "Inventory"\ntool = "zed"\nprimary = "repo"\n\n[projects]\nrepo = ${JSON.stringify(root)}\n`)
 
     const text = await box.run('ki repo --repo repo plan list --horizon next --status open')
     const json = await box.run('ki repo --repo repo plan list --format json')
     const accepted = await box.run('ki repo --repo repo plan list --status acceptance')
     const empty = await box.run('ki repo --repo repo plan list --horizon blocking')
-    const workspace = await box.run('ki repo --workspace inventory plan list --status acceptance')
+    const agora = await box.run('ki repo --agora inventory plan list --status acceptance')
 
     expect(text).toEqual({
       exitCode: 0,
@@ -83,7 +80,7 @@ describe('[ki repo plan]', () => {
     })
     expect(accepted.output).toContain('KI-TOOL-CLI-010 [future/acceptance] Cleanup')
     expect(accepted.output).not.toContain('KI-TOOL-CLI-003')
-    expect(workspace.output).toContain('KI-TOOL-CLI-010 [future/acceptance] Cleanup')
+    expect(agora.output).toContain('KI-TOOL-CLI-010 [future/acceptance] Cleanup')
     expect(empty.output).toContain('Items: none')
   })
 

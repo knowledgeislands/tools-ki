@@ -104,4 +104,29 @@ describe('[ki agora]', () => {
     box.setRunner(async (_command, arguments_) => (arguments_[0] === '-n' ? { exitCode: 0, output: '' } : { exitCode: 10, output: '' }))
     expect(await box.run('ki agora open example')).toEqual({ exitCode: 10, output: 'ki: error: could not open Agora example: zed failed\n' })
   })
+
+  test('creates, mutates, discovers, and selects named global repository profiles', async () => {
+    const box = await sandbox()
+    await box.project.write('first/.ki-config.toml', '# first\n')
+    await box.project.write('second/.ki-config.toml', '# second\n')
+    await box.project.write('nested/third/.ki-config.toml', '# third\n')
+    const first = await box.project.mkdir('first')
+    const second = await box.project.mkdir('second')
+    const third = await box.project.mkdir('nested/third')
+
+    expect(await box.run('ki agora create inventory')).toEqual({ exitCode: 0, output: 'ki agora create: created inventory\n' })
+    expect(await box.run('ki agora add inventory first')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 1 projects\n' })
+    expect(await box.run('ki agora add inventory second')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 2 projects\n' })
+    expect(await box.run('ki repo --agora inventory plan list')).toEqual({
+      exitCode: 0,
+      output: `ki repo plan list\nRepository: ${first}\nDiagnostic: repository ${first} has no physical docs/roadmap directory\nRepository: ${second}\nDiagnostic: repository ${second} has no physical docs/roadmap directory\n`
+    })
+    expect(await box.run('ki agora remove inventory first')).toEqual({ exitCode: 0, output: 'ki agora remove: inventory now has 1 projects\n' })
+    expect(await box.run('ki agora create discovered')).toEqual({ exitCode: 0, output: 'ki agora create: created discovered\n' })
+    expect(await box.run('ki agora discover discovered nested')).toEqual({ exitCode: 0, output: 'ki agora discover: discovered now has 1 projects\n' })
+    expect(await box.run('ki agora show discovered')).toEqual({
+      exitCode: 0,
+      output: `ki agora show discovered\n  discovered\n  tool zed\n  project ${third}\n`
+    })
+  })
 })

@@ -10,7 +10,7 @@ import { inspectRepositoryHealth } from './repository-health.ts'
 
 export const createRepairCommand = (
   context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly workspace?: string }
+  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
 ): Command =>
   new Command('repair')
     .description('reconcile proven KI-managed projections in selected repositories')
@@ -22,6 +22,7 @@ export const createRepairCommand = (
       if (global.state === 'invalid') throw new KiError(`local KI configuration is invalid: ${global.errors.join('; ')}`, 1)
       const repositories = await resolveRepositoryTargets({
         ...selectedRepositories(),
+        configurationDirectory: context.paths.config,
         workingDirectory: context.workingDirectory,
         homeDirectory: context.homeDirectory
       })

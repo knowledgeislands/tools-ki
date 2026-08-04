@@ -46,31 +46,26 @@ Use `ki agora list`, `ki agora show <name>`, and `ki agora open <name>` to inspe
 
 ## Select repository targets
 
-Every `ki repo` operation accepts repeated `--repo <path-or-pattern>` options or one `--workspace <group>` option. The two explicit selectors are mutually exclusive. Literal paths and patterns resolve to physical KI repository roots in deterministic order; an unmatched pattern, invalid root, or duplicate root stops the operation before any target runs.
+Every `ki repo` operation accepts repeated `--repo <path-or-pattern>` options or one `--agora <name>` option. The two explicit selectors are mutually exclusive. Literal paths and patterns resolve to physical KI repository roots in deterministic order; an unmatched pattern, invalid root, or duplicate root stops the operation before any target runs.
 
-Use `ki workspace init` in a workspace directory to create an empty KI-owned `.ki-workspace.toml`, then add repository paths or patterns to named groups. Use `ki workspace register` to discover a physical directory hierarchy instead: it stops at every regular `.ki-config.toml` repository leaf, ignores symbolic links, and creates or refreshes each container workspace from the leaves and nested workspaces directly beneath it. Registration preflights the complete hierarchy before writing and changes only each file's default group, preserving every non-default group.
+An Agora is a named user-level collection of physical projects stored at `$XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora`. Use `ki agora create <name>` to create one, `ki agora add <name> <directory>` to add a project, and `ki agora discover <name> <directory>` to add every KI repository discovered below a physical directory. `ki agora remove <name> <project>` removes a project by its profile name, while `list`, `show`, and `open` inspect or open a profile.
 
-Schema 1 is the sole workspace format. Each group maps a relative member path to a table with `kind = "repository"` or `kind = "workspace"`; repository paths may be patterns, while workspace paths may not. A nested workspace member expands that workspace's default group recursively; all effective repository leaves must remain physically contained by the selecting workspace, with cycles and duplicates refused before an operation starts. `ki workspace list` reports local and effective counts plus the workspace-relative path, direct or nested origin, `repo_code`, title, and description from each leaf's `[ki-repo]` metadata. Other schema versions and historical array or flat `repositories` group forms are rejected.
-
-A regular direct-CWD workspace file takes precedence when no selector is supplied: its default group is selected before a direct-CWD `.mgit-config.toml`. `--workspace <group>` selects a named group explicitly. KI never searches ancestor directories for a workspace or `mgit` configuration.
-
-Without an explicit selector or direct-CWD workspace, `ki` reads a regular direct-CWD `.mgit-config.toml` and follows its `members` table through standard repositories, nested `main/` checkouts, and `dir` containers. It ignores mGit `symlinks` and bare stores, and never invokes `mgit`. Without a direct-CWD configuration, it retains single-repository discovery from the working directory.
+`ki repo --agora <name>` selects the profile's projects and requires each selected project to be a physical KI repository. Without an explicit selector, `ki` reads a regular direct-CWD `.mgit-config.toml` and follows its `members` table through standard repositories, nested `main/` checkouts, and `dir` containers. It ignores mGit `symlinks` and bare stores, and never invokes `mgit`. Without a direct-CWD configuration, it retains single-repository discovery from the working directory.
 
 After target selection, operations run in target order. Read-only operations isolate a target's diagnostic; mutations retain earlier successful targets if a later target fails and return a non-zero overall result. Use `ki registry add --repo <path-or-pattern>` to add selected physical KI roots to the local user registry without applying repairs. A local `ki repo conform` also records each selected root first, even when its declaration or later conformance checks fail, so the registry remains an inventory for repair and bulk maintenance rather than a compliance badge.
 
 For each selected repository, `ki repo conform` collects safe write proposals and completes every initial audit before publishing any of those proposals. A failing initial audit aborts that repository's conform publication: no proposed conform write is applied. Its output says `proposed write` while the set is staged and `applied write` only after publication; `--dry-run` validates the staged set and then says `would apply write`, without mutation. This boundary does not include the independent local registry update above, later selected repositories, subprocess conforms, or rollback after publication has started.
 
-To start a KI repository, run `ki repo init` in an existing Git worktree root, or name that root as its one argument. Supply `--title`, `--description`, `--repo-code`, one or more `--runtime` values (`claude-code` or `chatgpt-codex`), and `--visibility public|private`. Initialization creates only the canonical `ki-repo` declaration and registers that physical root locally; it never runs `git init`, guesses identity, activates skills, creates a workspace, or overwrites an existing declaration.
+To start a KI repository, run `ki repo init` in an existing Git worktree root, or name that root as its one argument. Supply `--title`, `--description`, `--repo-code`, one or more `--runtime` values (`claude-code` or `chatgpt-codex`), and `--visibility public|private`. Initialization creates only the canonical `ki-repo` declaration and registers that physical root locally; it never runs `git init`, guesses identity, activates skills, creates an Agora, or overwrites an existing declaration.
 
 ```sh
-ki workspace init
-ki workspace add default 'repos/*'
-ki workspace register
-ki workspace list
+ki agora create inventory
+ki agora discover inventory ./repos
+ki agora list
 ki repo init --title 'Example repository' --description 'An explicit KI repository identity.' --repo-code EXAMPLE --runtime claude-code --runtime chatgpt-codex --visibility private
 ki manage diag
 ki repo repair --dry-run
-ki repo --workspace default audit
+ki repo --agora inventory audit
 ```
 
 ## Inspect governed work
@@ -103,7 +98,7 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 `ki manage search <query>` searches only verified installed harness capabilities, without contacting a registry or discovering a repository.
 
-`ki manage cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki manage diag` always reports global KI state and, only for a regular `.ki-config.toml` in the current directory itself, also reports declared repository skills and compatible local projections. `ki repo repair` uses the standard repository discovery, `--repo`, or `--workspace` selection rules; it records each selected physical root before repairing only missing, dangling, or stale KI-managed projections, and `--dry-run` changes nothing. `ki manage doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories and validates a regular direct-CWD `.ki-config.toml`.
+`ki manage cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki manage diag` always reports global KI state and, only for a regular `.ki-config.toml` in the current directory itself, also reports declared repository skills and compatible local projections. `ki repo repair` uses the standard repository discovery, `--repo`, or `--agora` selection rules; it records each selected physical root before repairing only missing, dangling, or stale KI-managed projections, and `--dry-run` changes nothing. `ki manage doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories and validates a regular direct-CWD `.ki-config.toml`.
 
 `ki manage docs` prints labelled public CLI, site, manual, and roadmap locations; `ki manage docs [overview|site|manual|roadmap]` prints one location. It never opens a browser or fetches content.
 

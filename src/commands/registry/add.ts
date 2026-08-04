@@ -13,6 +13,7 @@ export const createRegistryAddCommand = (context: KiContext, selectedRepositorie
     .action(async (options: { dryRun?: boolean }) => {
       const repositories = await resolveRepositoryTargets({
         ...selectedRepositories(),
+        configurationDirectory: context.paths.config,
         workingDirectory: context.workingDirectory,
         homeDirectory: context.homeDirectory
       })

@@ -66,26 +66,26 @@ Link a harness skill into configured user agent skill spaces.
 .TP
 .B ki skill remove <skill>
 Remove a KI-managed user skill link.
-.SS Workspace management
+.SS Agora management
 \&
 .TP
-.B ki workspace init
-Create a direct-CWD \fB.ki-workspace.toml\fR.
+.B ki agora create <name>
+Create an empty named Agora profile.
 .TP
-.B ki workspace register
-Discover and register nested KI workspace members.
+.B ki agora add <name> <directory>
+Add one physical project directory to an Agora profile.
 .TP
-.B ki workspace list
-List configured workspace groups.
+.B ki agora remove <name> <project>
+Remove one named project from an Agora profile.
 .TP
-.B ki workspace show <group>
-Show one workspace group.
+.B ki agora discover <name> <directory>
+Add KI repositories discovered beneath one physical directory.
 .TP
-.B ki workspace add <group> <path-or-pattern>
-Add a member to one workspace group.
+.B ki agora list
+List named Agora profiles.
 .TP
-.B ki workspace remove <group> <path-or-pattern>
-Remove a member from one workspace group.
+.B ki agora show|open <name>
+Show or open one Agora profile.
 .SS Repository options
 \&
 .TP
@@ -93,8 +93,8 @@ Remove a member from one workspace group.
 Use repeated \fB--repo\fR options to select explicit repository roots or
 patterns.
 .TP
-.B ki repo [--workspace <group>] [command]
-Use one named group from the direct-CWD KI workspace.
+.B ki repo [--agora <name>] [command]
+Use the physical KI repositories listed by one named Agora profile.
 .SS Repository management
 \&
 .TP
@@ -113,7 +113,7 @@ registered native repository repairs.
 Record selected physical KI repository roots, then reconcile only their
 proven KI-managed projections.
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--workspace <group>] add [--dry-run]
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
 Record selected physical KI repository roots in the local user register without
 applying repository repairs.
 .TP
@@ -162,21 +162,6 @@ Maintain or inspect local typed trade route declarations.
 .TP
 .B ki trade new|receive|list|show|release|prune
 Create, pull, inspect, release, or prune cross-repository trade copies.
-.SS Agora management
-\&
-Named profiles are read from
-.B $XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora
-(normally
-.BR ~/.config/ki/agoras ).
-.TP
-.B ki agora list
-List named Agora profiles.
-.TP
-.B ki agora show <agora>
-Show one Agora profile.
-.TP
-.B ki agora open <agora>
-Open one Agora's ordered project roster in Zed.
 .SS Acquisition
 \&
 .TP
@@ -339,34 +324,25 @@ Add a registered skill in configured user agent skill spaces.
 .TP
 .B ki skill remove <skill>
 Remove a KI-managed user skill link.
-.SS Workspace management
+.SS Agora management
 \&
 .PP
-Use these commands from a workspace directory to manage KI-owned named
-repository groups without requiring the directory itself to be a KI repository.
+Agora profiles are user-level named collections stored beneath
+\fB$XDG_CONFIG_HOME/ki/agoras\fR. They may be used to open their ordered
+project roster in Zed or select KI repositories for repository operations.
 .TP
-.B ki workspace init
-Create the initial workspace file with an empty \fBdefault\fR group.
+.B ki agora create <name>
+Create an empty profile named \fIname\fR.
 .TP
-.B ki workspace register
-Discover the physical directory hierarchy in deterministic post-order. A
-regular \fB.ki-config.toml\fR is a terminal repository leaf; symbolic links are
-ignored. Create or refresh each container workspace's default group with direct
-repository and nested-workspace members while preserving non-default groups.
+.B ki agora add <name> <directory>
+Add one existing physical directory, naming the project from its basename.
 .TP
-.B ki workspace list
-List every group with local and effective repository counts, marking the
-default and reporting each repository's direct or nested origin.
+.B ki agora remove <name> <project>
+Remove one project by its profile name.
 .TP
-.B ki workspace show <group>
-Print the path-keyed members of one group in deterministic order.
-.TP
-.B ki workspace add <group> <path-or-pattern>
-Add one typed repository path or pattern to a named group's members map.
-A new named group is created when needed.
-.TP
-.B ki workspace remove <group> <path-or-pattern>
-Remove one existing typed repository path or pattern from a named group map.
+.B ki agora discover <name> <directory>
+Walk an existing physical directory without following symbolic links and add
+every directory whose regular \fB.ki-config.toml\fR marks it as a KI repository.
 .SS Repository options
 \&
 .PP
@@ -381,16 +357,13 @@ Repeat this option to select literal repository roots or patterns in supplied
 order. KI resolves every target physically before an operation begins and
 rejects unmatched patterns, invalid roots, and duplicate physical roots.
 .TP
-.B --workspace <group>
-Select one named group from a regular direct-CWD \fB.ki-workspace.toml\fR.
-This option and \fB--repo\fR are mutually exclusive. Workspace paths and
-patterns resolve from that file's physical directory. With neither selector,
-KI uses the workspace default group when that direct-CWD file exists, before
-checking a regular direct-CWD \fB.mgit-config.toml\fR. KI follows standard
-members, nested members' \fBmain/\fR checkouts, and \fBdir\fR containers; it
-ignores mGit symlinks and bare stores. It never searches ancestor directories
-for either configuration or invokes \fBmgit\fR. Without a direct-CWD
-configuration, KI discovers one repository from the current working directory.
+.B --agora <name>
+Select every project listed by a named Agora profile. This option and
+\fB--repo\fR are mutually exclusive. Each project must be a physical KI
+repository. With neither selector, KI checks a regular direct-CWD
+\fB.mgit-config.toml\fR, then discovers one repository from the current
+working directory. It never searches ancestor directories for an mGit
+configuration or invokes \fBmgit\fR.
 .SS Repository management
 \&
 .PP
@@ -409,7 +382,7 @@ required: \fB--title\fR, \fB--description\fR, a stable uppercase
 It atomically creates the minimal canonical \fBki-repo\fR declaration and
 registers the physical root in the local user configuration. It never runs
 \fBgit init\fR, guesses identity, activates repository skills, creates a
-workspace, accepts repository selectors, or overwrites an existing
+Agora, accepts repository selectors, or overwrites an existing
 \fB.ki-config.toml\fR.
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
@@ -446,7 +419,7 @@ registry before resolving declarations or evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--workspace <group>] add [--dry-run]
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
 Record selected physical KI repository roots in the local user configuration
 without resolving their declarations or applying repository repairs. This is an
 explicit inventory action: it validates only that every selected target is a
@@ -621,16 +594,9 @@ to inspect the effective values.
 .SH FILES
 \&
 .TP
-.I .ki-workspace.toml
-Optional schema-1 workspace manifest in a non-repository container directory.
-It defines named groups of path-keyed repository and nested-workspace members.
-.PP
-The manifest has a required default group and a typed \fBmembers\fR map. Each
-relative path key names a table containing \fBkind\fR, either
-\fBrepository\fR or \fBworkspace\fR. Repository path keys may contain
-patterns; workspace path keys may not. Nested workspace members recursively
-expand their default groups. Other schema versions and historical array or flat
-\fBrepositories\fR group forms are rejected.
+.I $XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora
+Named user-level Agora profile. It contains a display name, the \fBzed\fR
+tool declaration, an optional primary project, and absolute project paths.
 .TP
 .I .ki-config.toml
 Required repository configuration at a KI repository root.

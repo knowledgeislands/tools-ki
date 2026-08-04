@@ -63,10 +63,11 @@ const localRepositoryRegistryWrites = async (context: KiContext, repository: str
   return registryWrite ? prepareWrites(await realpath(context.paths.config), [registryWrite]) : []
 }
 
-const resolveSkills = async (context: KiContext, options: { repositories: readonly string[]; workspace?: string; skill?: string }) => {
+const resolveSkills = async (context: KiContext, options: { repositories: readonly string[]; agora?: string; skill?: string }) => {
   const repositories = await resolveRepositoryTargets({
     repositories: options.repositories,
-    workspace: options.workspace,
+    agora: options.agora,
+    configurationDirectory: context.paths.config,
     workingDirectory: context.workingDirectory,
     homeDirectory: context.homeDirectory
   })
@@ -90,10 +91,10 @@ export const createRepositoryOperations = (context: KiContext): Command => {
   const command = new Command('repo')
     .description('run operations for one or more KI repositories')
     .option('--repo <path-or-pattern>', 'repository root or pattern', (value: string, previous: readonly string[] = []) => [...previous, value], [])
-    .option('--workspace <group>', 'workspace group from .ki-workspace.toml in the current directory')
-  const selectedRepositories = (): { readonly repositories: readonly string[]; readonly workspace?: string } => {
-    const options = command.opts<{ repo: readonly string[]; workspace?: string }>()
-    return { repositories: options.repo, workspace: options.workspace }
+    .option('--agora <name>', 'named Agora profile from XDG KI configuration')
+  const selectedRepositories = (): { readonly repositories: readonly string[]; readonly agora?: string } => {
+    const options = command.opts<{ repo: readonly string[]; agora?: string }>()
+    return { repositories: options.repo, agora: options.agora }
   }
   command
     .addCommand(createRepoPlanCommand(context, selectedRepositories))
@@ -120,7 +121,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             options: { title?: string; description?: string; repoCode?: string; runtime: readonly string[]; visibility?: string }
           ) => {
             const selection = selectedRepositories()
-            if (selection.repositories.length || selection.workspace) throw new KiError('ki repo init does not accept --repo or --workspace', 2)
+            if (selection.repositories.length || selection.agora) throw new KiError('ki repo init does not accept --repo or --agora', 2)
             const configuration = renderRepositoryConfiguration({
               title: options.title ?? '',
               description: options.description ?? '',
@@ -229,6 +230,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
           const output = operationOptions('conform', options)
           const repositories = await resolveRepositoryTargets({
             ...selectedRepositories(),
+            configurationDirectory: context.paths.config,
             workingDirectory: context.workingDirectory,
             homeDirectory: context.homeDirectory
           })

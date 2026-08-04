@@ -1,17 +1,17 @@
-export const rootCommandNames = ['acquire', 'agora', 'bootstrap', 'dev', 'harness', 'manage', 'registry', 'repo', 'skill', 'trade', 'workspace'] as const
+export const rootCommandNames = ['acquire', 'agora', 'bootstrap', 'dev', 'harness', 'manage', 'registry', 'repo', 'skill', 'trade'] as const
 
 /**
  * Purpose-oriented order used by root help and the human-facing command
  * inventories. Shell completions deliberately use `rootCommandNames` instead:
  * alphabetical candidates are easier to scan while completing.
  */
-export const rootHelpCommandNames = ['bootstrap', 'manage', 'agora', 'skill', 'workspace', 'repo', 'registry', 'harness', 'trade', 'acquire', 'dev'] as const
+export const rootHelpCommandNames = ['bootstrap', 'manage', 'agora', 'skill', 'repo', 'registry', 'harness', 'trade', 'acquire', 'dev'] as const
 
 export type RootCommandName = (typeof rootCommandNames)[number]
 
 export const rootCommandSummaries: Readonly<Record<RootCommandName, string>> = {
   acquire: 'import a local capture',
-  agora: 'manage workspace profiles',
+  agora: 'manage global repository and Zed profiles',
   bootstrap: 'configure KI for this user',
   dev: 'manage local harness development',
   harness: 'install and inspect harnesses',
@@ -19,8 +19,7 @@ export const rootCommandSummaries: Readonly<Record<RootCommandName, string>> = {
   repo: 'manage KI repositories',
   registry: 'manage the KI repository registry',
   skill: 'manage user skills',
-  trade: 'manage cross-repository trades',
-  workspace: 'manage repository workspace groups'
+  trade: 'manage cross-repository trades'
 }
 
 export const manageCommandNames = ['cleanup', 'completion', 'diag', 'docs', 'doctor', 'list', 'missing', 'outdated', 'search', 'update'] as const
@@ -38,6 +37,20 @@ export const manageCommandSummaries: Readonly<Record<ManageCommandName, string>>
   outdated: 'report comparable newer releases',
   search: 'search installed capabilities',
   update: 'update CLI and harnesses'
+}
+
+export const agoraCommandNames = ['add', 'create', 'discover', 'list', 'open', 'remove', 'show'] as const
+
+export type AgoraCommandName = (typeof agoraCommandNames)[number]
+
+export const agoraCommandSummaries: Readonly<Record<AgoraCommandName, string>> = {
+  add: 'add one project directory',
+  create: 'create an empty profile',
+  discover: 'discover KI repositories',
+  list: 'list named profiles',
+  open: 'open an ordered project roster',
+  remove: 'remove one named project',
+  show: 'show one profile'
 }
 
 export const repoCommandNames = ['audit', 'conform', 'educate', 'init', 'plan', 'repair', 'skill', 'upgrade'] as const

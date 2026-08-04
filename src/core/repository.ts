@@ -1,11 +1,11 @@
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import { parse } from 'smol-toml'
+import { resolveAgora } from './agora.ts'
 import { REPOSITORY_CONFIGURATION_FILE } from './configuration.ts'
 import { KiError } from './errors.ts'
 import type { Environment } from './paths.ts'
 import type { Runner } from './runner.ts'
-import { resolveWorkspaceGroup, workspaceConfigurationExists } from './workspace.ts'
 
 const MGIT_CONFIGURATION_FILE = '.mgit-config.toml'
 
@@ -27,7 +27,7 @@ const isConfigurationFile = async (path: string): Promise<boolean> => {
 /**
  * Inspects only the working directory itself.  This deliberately does not use
  * repository discovery: diagnostics and repair must never walk ancestors,
- * expand a workspace/mGit container, or accept a symbolic declaration.
+ * expand an mGit container, or accept a symbolic declaration.
  */
 export const directRepositoryLocation = async (workingDirectory: string): Promise<DirectRepositoryLocation> => {
   const root = await realpath(workingDirectory).catch(
@@ -222,11 +222,12 @@ const distinctTargets = (targets: readonly RepositoryLocation[], source: string)
 
 export const resolveRepositoryTargets = async (options: {
   readonly repositories: readonly string[]
-  readonly workspace?: string
+  readonly agora?: string
+  readonly configurationDirectory: string
   readonly workingDirectory: string
   readonly homeDirectory: string
 }): Promise<readonly RepositoryLocation[]> => {
-  if (options.repositories.length && options.workspace) throw new KiError('--repo and --workspace cannot be used together', 2)
+  if (options.repositories.length && options.agora) throw new KiError('--repo and --agora cannot be used together', 2)
   if (options.repositories.length) {
     const targets: RepositoryLocation[] = []
     for (const value of options.repositories) {
@@ -246,11 +247,21 @@ export const resolveRepositoryTargets = async (options: {
     }
     return distinctTargets(targets, '--repo')
   }
-  const working = await realpath(options.workingDirectory)
-  if (options.workspace || (await workspaceConfigurationExists(working))) {
-    const selected = await resolveWorkspaceGroup(working, options.workspace)
-    return selected.repositories.map(({ root, configuration }) => ({ root, configuration }))
+  if (options.agora) {
+    const selected = await resolveAgora(options.configurationDirectory, options.workingDirectory, options.agora)
+    if (!selected.projects.length) throw new KiError(`Agora ${selected.id} has no projects`, 2)
+    const targets = await Promise.all(
+      selected.projects.map((project) =>
+        targetFromDirectory(
+          project,
+          `Agora ${selected.id} project ${project} must be an existing physical directory`,
+          `Agora ${selected.id} project ${project} is not a KI repository`
+        )
+      )
+    )
+    return distinctTargets(targets, `Agora ${selected.id}`)
   }
+  const working = await realpath(options.workingDirectory)
   const configuration = join(working, MGIT_CONFIGURATION_FILE)
   if (await isRegularFile(configuration)) return distinctTargets(await repositoriesFromMgitConfiguration(working), MGIT_CONFIGURATION_FILE)
   return [await resolveRepository({ workingDirectory: options.workingDirectory, homeDirectory: options.homeDirectory })]

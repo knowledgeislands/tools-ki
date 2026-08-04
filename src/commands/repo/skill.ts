@@ -5,7 +5,7 @@ import { resolveRepositoryTargets } from '../../core/repository.ts'
 
 export const createRepoSkillCommand = (
   context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly workspace?: string }
+  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
 ): Command =>
   new Command('skill')
     .description('manage KI-managed skills in one or more repositories')
@@ -17,6 +17,7 @@ export const createRepoSkillCommand = (
         .action(async (skill: string, options: { replace?: boolean }) => {
           const repositories = await resolveRepositoryTargets({
             ...selectedRepositories(),
+            configurationDirectory: context.paths.config,
             workingDirectory: context.workingDirectory,
             homeDirectory: context.homeDirectory
           })
@@ -41,6 +42,7 @@ export const createRepoSkillCommand = (
         .action(async (skill: string) => {
           const repositories = await resolveRepositoryTargets({
             ...selectedRepositories(),
+            configurationDirectory: context.paths.config,
             workingDirectory: context.workingDirectory,
             homeDirectory: context.homeDirectory
           })

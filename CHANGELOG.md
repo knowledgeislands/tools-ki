@@ -38,27 +38,21 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki skill add`
 - `ki skill remove`
 
-#### Workspace management
-
-- `ki workspace init`
-- `ki workspace register`
-- `ki workspace list`
-- `ki workspace show <group>`
-- `ki workspace add <group> <path-or-pattern>`
-- `ki workspace remove <group> <path-or-pattern>`
-- `.ki-workspace.toml` uses the sole schema 1 path-keyed typed-member map, including nested workspace recursion and physical post-order registration; other schemas and historical array or flat `repositories` groups are rejected.
-
 #### Agora management
 
+- `ki agora create <name>`
+- `ki agora add <name> <directory>`
+- `ki agora remove <name> <project>`
+- `ki agora discover <name> <directory>`
 - `ki agora list`
 - `ki agora show <agora>`
 - `ki agora open <agora>`
-- `.ki-agora` profiles define named multi-project workspaces rendered as ordered Zed windows.
+- `$XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora` profiles define named user-level project collections for repository selection and ordered Zed windows.
 
 #### Repository options
 
 - `ki repo --repo <path-or-pattern>`
-- `ki repo --workspace <group>`
+- `ki repo --agora <name>`
 
 #### Repository management
 

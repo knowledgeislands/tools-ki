@@ -143,7 +143,7 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
   expect(retiredRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime codex is retired; use chatgpt-codex\n' })
   expect(repeatedRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime must not repeat a runtime\n' })
   expect(invalidVisibility).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --visibility must be public or private\n' })
-  expect(selectors).toEqual({ exitCode: 2, output: 'ki: error: ki repo init does not accept --repo or --workspace\n' })
+  expect(selectors).toEqual({ exitCode: 2, output: 'ki: error: ki repo init does not accept --repo or --agora\n' })
   await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
 })
 

@@ -2,6 +2,8 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
 import {
+  agoraCommandNames,
+  agoraCommandSummaries,
   manageCommandNames,
   manageCommandSummaries,
   registryCommandNames,
@@ -31,6 +33,10 @@ export const createCompletionsCommand = (context: KiContext): Command =>
     COMPREPLY=( $(compgen -W "${manageCommandNames.join(' ')}" -- "$current") )
     return
   fi
+  if [[ "\${COMP_WORDS[1]}" == agora && "\${COMP_CWORD}" -eq 2 ]]; then
+    COMPREPLY=( $(compgen -W "${agoraCommandNames.join(' ')}" -- "$current") )
+    return
+  fi
   if [[ "\${COMP_WORDS[1]}" == registry && "\${COMP_CWORD}" -eq 2 ]]; then
     COMPREPLY=( $(compgen -W "${registryCommandNames.join(' ')}" -- "$current") )
     return
@@ -44,6 +50,7 @@ complete -F _ki ki\n`)
         context.stdout.write(`#compdef ki
 zstyle ':completion:*:ki-commands' verbose yes
 zstyle ':completion:*:ki-management-commands' verbose yes
+zstyle ':completion:*:ki-agora-commands' verbose yes
 zstyle ':completion:*:ki-repository-commands' verbose yes
 zstyle ':completion:*:ki-registry-commands' verbose yes
 _ki() {
@@ -57,6 +64,9 @@ _ki() {
   elif (( CURRENT == 3 )) && [[ "$words[2]" == manage ]]; then
     commands=(${zshValues(manageCommandNames, manageCommandSummaries)})
     _describe -t ki-management-commands 'management command' commands
+  elif (( CURRENT == 3 )) && [[ "$words[2]" == agora ]]; then
+    commands=(${zshValues(agoraCommandNames, agoraCommandSummaries)})
+    _describe -t ki-agora-commands 'Agora command' commands
   elif (( CURRENT == 3 )) && [[ "$words[2]" == registry ]]; then
     commands=(${zshValues(registryCommandNames, registryCommandSummaries)})
     _describe -t ki-registry-commands 'registry command' commands

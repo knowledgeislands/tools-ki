@@ -15,7 +15,7 @@ const filterItems = (items: readonly WorkItem[], options: PlanOptions): readonly
 
 export const createRepoPlanCommand = (
   context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly workspace?: string }
+  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
 ): Command =>
   new Command('plan').description('inspect governed work items in one or more repositories').addCommand(
     new Command('list')
@@ -27,6 +27,7 @@ export const createRepoPlanCommand = (
         if (options.format && options.format !== 'text' && options.format !== 'json') throw new KiError('--format accepts text or json', 2)
         const repositories = await resolveRepositoryTargets({
           ...selectedRepositories(),
+          configurationDirectory: context.paths.config,
           workingDirectory: context.workingDirectory,
           homeDirectory: context.homeDirectory
         })
