@@ -14,6 +14,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki`
 - `ki --help`
+- `ki --version`
 
 #### Installation
 
@@ -21,7 +22,6 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 #### Local management
 
-- `ki --version`
 - `ki manage completion <shell>`
 - `ki manage outdated`
 - `ki manage missing`
