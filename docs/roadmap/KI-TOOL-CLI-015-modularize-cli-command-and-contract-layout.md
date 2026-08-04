@@ -11,7 +11,7 @@ baseline-ref: null
 
 ## Goal
 
-Make the command implementation and CLI-contract test layout mirror the public `ki` grammar, so each command family has a focused, discoverable home without changing the CLI contract.
+Make `src/commands/` and `src/tests/cli/` mirror the same public `ki` grammar, so each command family and its CLI contracts have matching, focused, discoverable homes without changing the CLI contract.
 
 ## Context
 
@@ -19,7 +19,7 @@ Make the command implementation and CLI-contract test layout mirror the public `
 
 The same flat area also contains cross-cutting command assembly in `root.ts`, command inventories in `catalogue.ts`, and the harness-only helper `harness-refresh.ts`.
 
-`src/tests/cli/` is similarly a large flat collection of command contracts and repository-operation scenarios, even where its test names already identify an unambiguous public command family.
+`src/tests/cli/` is similarly a large flat collection of command contracts and repository-operation scenarios, even where its test names already identify an unambiguous public command family and a matching command source directory already exists.
 
 ## Boundary
 
@@ -27,21 +27,23 @@ Preserve every public command name, option, output, completion candidate, exit c
 
 Do not introduce compatibility commands, alter command semantics, replace CLI contracts with unit tests of internal modules, or implement the separate recursive shell-completion scope in KI-TOOL-CLI-014.
 
+Only shared underscore-prefixed CLI test helpers may remain directly under `src/tests/cli/`; active contract suites must use the corresponding command-family or cross-cutting-operation directory.
+
 ## Current state
 
 The largest remaining flat command module is `src/commands/trade-command.ts`; `dev.ts`, `harness.ts`, and `bootstrap.ts` also combine command registration with domain helpers.
 
 `root.ts` assembles root factories from the flat modules, while `catalogue.ts` carries inventories and summaries for multiple command families.
 
-CLI tests use the required `run(args, context)` sandbox seam, but test files for root command families, repository operations, lifecycle behaviour, and command inventory remain peers in one directory rather than an ownership-oriented hierarchy.
+CLI tests use the required `run(args, context)` sandbox seam, but test files for root command families, repository operations, lifecycle behaviour, and command inventory remain peers in one directory rather than the same ownership-oriented hierarchy as `src/commands/`.
 
 ## Steps
 
-- [ ] Define the target source and test directory conventions from the public command grammar, including the explicit homes of root assembly, command catalogues, shared CLI test helpers, and cross-cutting repository-operation contracts.
+- [ ] Define one public-grammar directory convention shared by `src/commands/` and `src/tests/cli/`, including the explicit homes of root assembly, command catalogues, shared CLI test helpers, and cross-cutting repository-operation contracts.
 - [ ] Move each flat root command family into a focused directory with a narrow entry module and colocate helpers with their owning family, including `harness-refresh` under harness and the trade route and record operations under trade.
 - [ ] Split root assembly and command inventory data by their owning grammar surface while preserving the one authoritative public registration and completion inventory boundary.
-- [ ] Re-home CLI-contract tests beneath matching command-family or cross-cutting operation directories without changing the sandbox seam, fixture ownership, assertions, or coverage scope.
-- [ ] Update imports, developer documentation, and test discovery so no active flat command or CLI-contract test layout remains outside the agreed shared entry-point or helper locations.
+- [ ] Re-home every active CLI-contract suite beneath the same matching command-family or cross-cutting-operation directory used by its command source; only underscore-prefixed shared helpers remain at the test root.
+- [ ] Update imports, developer documentation, and test discovery so no active flat command or CLI-contract test suite remains outside the agreed mirrored source-and-test hierarchy.
 - [ ] Prove unchanged public grammar, outputs, completions, and error behaviour through focused contracts and the full repository gate.
 
 ## Files touched
@@ -71,6 +73,14 @@ It intentionally precedes KI-TOOL-CLI-014 so the recursive completion grammar la
 The public grammar, rather than a source-file historical accident, should decide where a command and its contract tests live.
 
 Each root command family should have one focused implementation home; command-family helpers remain there unless they are genuinely cross-cutting and have an explicit shared owner.
+
+### Mirrored test ownership
+
+The test hierarchy must use the same domain names and nesting as the command hierarchy, rather than merely grouping files by a loose test category.
+
+For example, the trade command family and its contracts live under matching `trade/` directories; existing `repo/`, `manage/`, `agora/`, and `registry/` source groups receive corresponding test groups.
+
+Only underscore-prefixed helpers remain directly below `src/tests/cli/`, because they support multiple domains rather than defining a public command.
 
 ### CLI contracts remain black-box tests
 
