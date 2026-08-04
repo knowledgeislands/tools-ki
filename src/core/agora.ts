@@ -17,7 +17,6 @@ export interface AgoraProfile {
 interface AgoraDocument {
   readonly name?: unknown
   readonly tool?: unknown
-  readonly primary?: unknown
   readonly projects?: unknown
 }
 
@@ -26,7 +25,6 @@ interface ManagedAgora {
   readonly id: string
   readonly name: string
   readonly projects: Readonly<Record<string, string>>
-  readonly primary?: string
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -45,11 +43,10 @@ const requireAgoraId = (value: string): string => {
 const profilePath = (configurationDirectory: string, id: string): string =>
   join(agoraDirectory(configurationDirectory), `${requireAgoraId(id)}${AGORA_EXTENSION}`)
 
-const orderedProjects = (projects: Readonly<Record<string, string>>, primary?: string): readonly string[] => {
-  const entries = Object.entries(projects).sort(([left], [right]) => left.localeCompare(right, 'en'))
-  const first = primary ? entries.find(([name]) => name === primary) : undefined
-  return first ? [first[1], ...entries.filter(([name]) => name !== primary).map(([, path]) => path)] : entries.map(([, path]) => path)
-}
+const orderedProjects = (projects: Readonly<Record<string, string>>): readonly string[] =>
+  Object.entries(projects)
+    .sort(([left], [right]) => left.localeCompare(right, 'en'))
+    .map(([, path]) => path)
 
 const readManagedAgora = async (path: string): Promise<ManagedAgora> => {
   const state = await lstat(path).catch(() => undefined)
@@ -63,18 +60,17 @@ const readManagedAgora = async (path: string): Promise<ManagedAgora> => {
   }
   if (typeof document.name !== 'string' || !document.name) throw profileError(path, 'name must be a non-empty string')
   if (document.tool !== 'zed') throw profileError(path, 'tool must equal "zed"')
+  if ('primary' in document) throw profileError(path, 'primary is no longer supported')
   if (document.projects === undefined) return { path, id: profileId(path), name: document.name, projects: {} }
   if (!isRecord(document.projects)) throw profileError(path, 'projects must be a table')
-  if (typeof document.primary !== 'string' || !document.primary) throw profileError(path, 'primary must name one project')
   const projects: Record<string, string> = {}
   for (const [name, entry] of Object.entries(document.projects)) {
     if (typeof entry !== 'string' || !entry) throw profileError(path, `project ${name} must be a non-empty path`)
     if (!isAbsolute(entry)) throw profileError(path, `project ${name} path must be absolute`)
     projects[name] = entry
   }
-  if (!Object.hasOwn(projects, document.primary)) throw profileError(path, `primary ${document.primary} is not declared in projects`)
   if (new Set(Object.values(projects)).size !== Object.keys(projects).length) throw profileError(path, 'projects must not contain duplicate paths')
-  return { path, id: profileId(path), name: document.name, primary: document.primary, projects }
+  return { path, id: profileId(path), name: document.name, projects }
 }
 
 const profileFromManaged = (profile: ManagedAgora): AgoraProfile => ({
@@ -82,7 +78,7 @@ const profileFromManaged = (profile: ManagedAgora): AgoraProfile => ({
   id: profile.id,
   name: profile.name,
   tool: 'zed',
-  projects: orderedProjects(profile.projects, profile.primary)
+  projects: orderedProjects(profile.projects)
 })
 
 const renderManagedAgora = (profile: Omit<ManagedAgora, 'path' | 'id'>): string => {
@@ -90,9 +86,7 @@ const renderManagedAgora = (profile: Omit<ManagedAgora, 'path' | 'id'>): string 
   return [
     `name = ${JSON.stringify(profile.name)}`,
     'tool = "zed"',
-    ...(entries.length
-      ? [`primary = ${JSON.stringify(profile.primary)}`, '', '[projects]', ...entries.map(([name, path]) => `${name} = ${JSON.stringify(path)}`)]
-      : []),
+    ...(entries.length ? ['', '[projects]', ...entries.map(([name, path]) => `${JSON.stringify(name)} = ${JSON.stringify(path)}`)] : []),
     ''
   ].join('\n')
 }
@@ -151,8 +145,7 @@ export const addAgoraProject = async (configurationDirectory: string, workingDir
   if (Object.hasOwn(profile.projects, name)) throw new KiError(`Agora ${id} already has a project named ${name}`, 2)
   if (Object.values(profile.projects).includes(path)) throw new KiError(`Agora ${id} already has project ${path}`, 2)
   const projects = { ...profile.projects, [name]: path }
-  const primary = profile.primary ?? name
-  const updated = { ...profile, projects, primary }
+  const updated = { ...profile, projects }
   await writeManagedAgora(updated)
   return profileFromManaged(updated)
 }
@@ -161,8 +154,7 @@ export const removeAgoraProject = async (configurationDirectory: string, id: str
   const profile = await managedAgora(configurationDirectory, id)
   if (!Object.hasOwn(profile.projects, name)) throw new KiError(`Agora ${id} has no project named ${name}`, 2)
   const projects = Object.fromEntries(Object.entries(profile.projects).filter(([project]) => project !== name))
-  const primary = profile.primary === name ? Object.keys(projects).sort((left, right) => left.localeCompare(right, 'en'))[0] : profile.primary
-  const updated = { ...profile, projects, ...(primary ? { primary } : {}) }
+  const updated = { ...profile, projects }
   await writeManagedAgora(updated)
   return profileFromManaged(updated)
 }
@@ -194,8 +186,7 @@ export const discoverAgoraProjects = async (configurationDirectory: string, work
     if (Object.hasOwn(projects, name) && projects[name] !== path) throw new KiError(`Agora ${id} already has a different project named ${name}`, 2)
     projects[name] = path
   }
-  const primary = profile.primary ?? projectName(discovered[0] ?? root)
-  const updated = { ...profile, projects, primary }
+  const updated = { ...profile, projects }
   await writeManagedAgora(updated)
   return profileFromManaged(updated)
 }

@@ -328,8 +328,8 @@ Remove a KI-managed user skill link.
 \&
 .PP
 Agora profiles are user-level named collections stored beneath
-\fB$XDG_CONFIG_HOME/ki/agoras\fR. They may be used to open their ordered
-project roster in Zed or select KI repositories for repository operations.
+\fB$XDG_CONFIG_HOME/ki/agoras\fR. Their project roster is ordered by project
+name for Zed and may select KI repositories for repository operations.
 .TP
 .B ki agora create <name>
 Create an empty profile named \fIname\fR.
@@ -596,7 +596,7 @@ to inspect the effective values.
 .TP
 .I $XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora
 Named user-level Agora profile. It contains a display name, the \fBzed\fR
-tool declaration, an optional primary project, and absolute project paths.
+tool declaration, and absolute project paths.
 .TP
 .I .ki-config.toml
 Required repository configuration at a KI repository root.

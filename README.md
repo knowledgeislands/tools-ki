@@ -42,7 +42,7 @@ Neither command changes user or repository skill activation; read the [update an
 
 Named Agora profiles live at `$XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora` (normally `~/.config/ki/agoras`).
 
-Use `ki agora list`, `ki agora show <name>`, and `ki agora open <name>` to inspect or open a profile's ordered Zed project roster.
+Use `ki agora list`, `ki agora show <name>`, and `ki agora open <name>` to inspect or open a profile's project-name ordered Zed roster.
 
 ## Select repository targets
 

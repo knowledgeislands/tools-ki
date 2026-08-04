@@ -36,7 +36,7 @@ describe('[ki repo plan]', () => {
       })
     )
     const root = await realpath(`${box.project.path}/repo`)
-    await box.config.write('ki/agoras/inventory.ki-agora', `name = "Inventory"\ntool = "zed"\nprimary = "repo"\n\n[projects]\nrepo = ${JSON.stringify(root)}\n`)
+    await box.config.write('ki/agoras/inventory.ki-agora', `name = "Inventory"\ntool = "zed"\n\n[projects]\nrepo = ${JSON.stringify(root)}\n`)
 
     const text = await box.run('ki repo --repo repo plan list --horizon next --status open')
     const json = await box.run('ki repo --repo repo plan list --format json')
