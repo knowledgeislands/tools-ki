@@ -42,8 +42,8 @@ describe('[ki command inventory]', () => {
 
     expect(commandNames(root.output)).toEqual(rootHelpCommands)
     expect(commandNames(repository.output)).toEqual(['init', 'audit', 'conform', 'register', 'list', 'plan', 'educate', 'skill', 'upgrade'])
-    expect(zsh.output).toContain(`_values 'command' ${rootCompletionCommands.join(' ')}`)
-    expect(zsh.output).toContain(`_values 'repository command' ${repoCommands.join(' ')}`)
+    for (const command of rootCompletionCommands) expect(zsh.output).toContain(`'${command}:`)
+    for (const command of repoCommands) expect(zsh.output).toContain(`'${command}:`)
     expect(bash.output).toContain(`compgen -W "${rootCompletionCommands.join(' ')} --help --version"`)
     expect(bash.output).toContain(`compgen -W "${repoCommands.join(' ')}"`)
   })

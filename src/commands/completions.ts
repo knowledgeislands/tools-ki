@@ -1,7 +1,10 @@
 import { Command } from 'commander'
 import type { KiContext } from '../context.ts'
 import { grammarError } from '../core/errors.ts'
-import { repoCommandNames, rootCommandNames } from './catalogue.ts'
+import { repoCommandNames, repoCommandSummaries, rootCommandNames, rootCommandSummaries } from './catalogue.ts'
+
+const zshValues = <Name extends string>(names: readonly Name[], summaries: Readonly<Record<Name, string>>): string =>
+  names.map((name) => `'${name}:${summaries[name]}'`).join(' ')
 
 export const createCompletionsCommand = (context: KiContext): Command =>
   new Command('completion')
@@ -22,11 +25,16 @@ complete -F _ki ki\n`)
       }
       if (shell === 'zsh') {
         context.stdout.write(`#compdef ki
+zstyle ':completion:*:ki-commands' verbose yes
+zstyle ':completion:*:ki-repository-commands' verbose yes
 _ki() {
+  local -a commands
   if (( CURRENT == 2 )); then
-    _values 'command' ${rootCommandNames.join(' ')}
+    commands=(${zshValues(rootCommandNames, rootCommandSummaries)})
+    _describe -t ki-commands 'command' commands
   elif (( CURRENT == 3 )) && [[ "$words[2]" == repo ]]; then
-    _values 'repository command' ${repoCommandNames.join(' ')}
+    commands=(${zshValues(repoCommandNames, repoCommandSummaries)})
+    _describe -t ki-repository-commands 'repository command' commands
   fi
 }
 compdef _ki ki
