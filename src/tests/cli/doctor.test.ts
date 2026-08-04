@@ -2,12 +2,12 @@ import { rm, symlink, unlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
-describe('[ki doctor]', () => {
+describe('[ki manage doctor]', () => {
   test('reports missing configuration in human form', async () => {
     const box = await sandbox()
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
-    expect(doctor.output).toContain('ki doctor\n  ✗ Configuration: missing; run ki bootstrap')
+    expect(doctor.output).toContain('ki manage doctor\n  ✗ Configuration: missing; run ki bootstrap')
     expect(doctor.output).not.toContain('ki: error:')
     expect(doctor.exitCode).toBe(1)
   })
@@ -19,7 +19,7 @@ describe('[ki doctor]', () => {
     await box.project.mkdir('.ki-meta')
     await box.project.mkdir('.ki')
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ Legacy repository state: .ki-meta/, .ki/ detected; remove after migrating to .ki-config.toml')
     expect(doctor.exitCode).toBe(1)
@@ -31,16 +31,16 @@ describe('[ki doctor]', () => {
     await box.run('ki bootstrap')
     await box.project.write('.ki-config.toml', '# valid\n')
 
-    const valid = await box.run('ki doctor')
+    const valid = await box.run('ki manage doctor')
     await box.project.write('.ki-config.toml', '[ki-repo]\n')
-    const legacyDeclaration = await box.run('ki doctor')
+    const legacyDeclaration = await box.run('ki manage doctor')
     await rm(`${box.project.path}/.ki-config.toml`)
     await box.project.mkdir('.ki-config.toml')
-    const directory = await box.run('ki doctor')
+    const directory = await box.run('ki manage doctor')
     await rm(`${box.project.path}/.ki-config.toml`, { recursive: true })
     await box.root.write('linked-config.toml', '# config\n')
     await symlink(`${box.root.path}/linked-config.toml`, `${box.project.path}/.ki-config.toml`)
-    const symbolic = await box.run('ki doctor')
+    const symbolic = await box.run('ki manage doctor')
 
     expect(valid).toEqual({ exitCode: 0, output: expect.stringContaining('✓ Repository configuration: 0 declared skills') })
     expect(legacyDeclaration.output).toContain('✗ Repository configuration: declared skill ki-repo must use a qualified <harness-id>:<skill-name> TOML table')
@@ -59,7 +59,7 @@ ids = ["nonexistent/harness"]
 `
     await box.config.write('ki/config.toml', invalidConfig)
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ Configuration')
     expect(doctor.output).toContain('✗ Harness inventory')
@@ -87,7 +87,7 @@ ids = [
 `
     )
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✓ Configuration')
     // Agent check should fail since home doesn't exist
@@ -102,7 +102,7 @@ ids = [
     // A non-directory entry directly under ki/harnesses is an unsafe owner entry.
     await box.data.write('ki/harnesses/not-a-directory', 'x')
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ Harness inventory: installed harnesses directory contains an unsafe owner entry')
     expect(doctor.exitCode).toBe(1)
@@ -128,7 +128,7 @@ ids = [
 `
     )
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ Agents: unknown agent unknown-agent; use claude-code or chatgpt-codex')
     expect(doctor.output).toContain('○ User skills: agents are unavailable')
@@ -156,7 +156,7 @@ harness = "example/harness"
 `
     )
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ User skill ki-example: configured skill cannot be resolved from the active source example/harness')
     expect(doctor.exitCode).toBe(1)
@@ -168,7 +168,7 @@ harness = "example/harness"
     await box.run('ki bootstrap')
     await unlink(`${box.home.path}/.claude/skills/ki-recap`)
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ User skill ki-recap: not linked for every compatible configured agent')
     expect(doctor.exitCode).toBe(1)
@@ -186,7 +186,7 @@ harness = "example/harness"
     await box.run('ki bootstrap')
     await box.run('ki skill add ki-example')
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✓ User skill ki-example: linked')
     expect(doctor.exitCode).toBe(0)
@@ -215,7 +215,7 @@ harness = "example/harness"
 `
     )
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ User skill ki-example: no compatible configured agent')
     expect(doctor.exitCode).toBe(1)
@@ -238,7 +238,7 @@ harness = "example/harness"
 `
     )
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor).toEqual({
       exitCode: 1,
@@ -252,7 +252,7 @@ harness = "example/harness"
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor).toEqual({
       exitCode: 0,
@@ -271,7 +271,7 @@ harness = "example/harness"
     await unlink(link)
     await symlink(`${box.root.path}/missing-ki-recap`, link, 'dir')
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain(`✓ Local development: active ${harnessPath}`)
     expect(doctor.output).toContain('✗ User skill ki-recap: link target does not match local development source')
@@ -290,7 +290,7 @@ harness = "example/harness"
     await unlink(link)
     await symlink(`${otherHarnessPath}/hooks`, link, 'dir')
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ Local development: canonical payload links do not match the configured local source')
     expect(doctor.exitCode).toBe(1)
@@ -305,7 +305,7 @@ harness = "example/harness"
     await box.run('ki dev local on')
     await rm(`${harnessPath}/skills/process/ki-recap/SKILL.md`)
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ Local development: local harness must contain skills/process/ki-recap/SKILL.md')
     expect(doctor.exitCode).toBe(1)
@@ -320,7 +320,7 @@ harness = "example/harness"
     await box.run('ki dev local on')
     await box.data.write('ki/harnesses/not-a-directory', 'x')
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ Harness inventory: installed harnesses directory contains an unsafe owner entry')
     expect(doctor.output).toContain('✓ User skill ki-recap: linked')
@@ -337,7 +337,7 @@ harness = "example/harness"
     await unlink(link)
     await symlink(`${harnessPath}/skills/process/ki-recap`, link, 'dir')
 
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).not.toContain('Local development')
     expect(doctor.output).toContain('✗ User skill ki-recap: link target does not match installed harness source')

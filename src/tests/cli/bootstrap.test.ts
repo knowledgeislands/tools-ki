@@ -15,7 +15,7 @@ describe('[ki bootstrap]', () => {
     const bootstrapped = await box.run('ki bootstrap')
     const repeated = await box.run('ki bootstrap')
     const refreshed = await box.run('ki bootstrap --refresh')
-    const checked = await box.run('ki doctor')
+    const checked = await box.run('ki manage doctor')
 
     expect(bootstrapped).toEqual({
       exitCode: 0,
@@ -343,7 +343,7 @@ ids = ["claude-code"]
     })
 
     const bootstrapped = await box.run('ki bootstrap --refresh')
-    const doctor = await box.run('ki doctor')
+    const doctor = await box.run('ki manage doctor')
 
     expect(bootstrapped.exitCode).toBe(1)
     expect(bootstrapped.output).toContain('could not download configured harness knowledgeislands/ki-agentic-harness')

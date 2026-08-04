@@ -8,12 +8,12 @@ import {
   type InstalledAgent,
   inspectUserConfiguration,
   localBootstrapHarness
-} from '../agents/index.ts'
-import type { KiContext } from '../context.ts'
-import { readDeclaredSkills } from '../core/configuration.ts'
-import { KiExit } from '../core/errors.ts'
-import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness } from '../core/harness.ts'
-import { canonicalHarnessDevelopmentEnabled } from '../core/registry.ts'
+} from '../../agents/index.ts'
+import type { KiContext } from '../../context.ts'
+import { readDeclaredSkills } from '../../core/configuration.ts'
+import { KiExit } from '../../core/errors.ts'
+import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness } from '../../core/harness.ts'
+import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
 
 type CheckStatus = 'pass' | 'fail' | 'skip'
 
@@ -67,7 +67,7 @@ const managedLink = async (agent: InstalledAgent, name: string): Promise<{ reado
 }
 
 const report = (context: KiContext, checks: readonly DoctorCheck[]): void => {
-  context.stdout.write(`ki doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
+  context.stdout.write(`ki manage doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
 
   if (checks.some((check) => check.status === 'fail')) throw new KiExit(1)
 }

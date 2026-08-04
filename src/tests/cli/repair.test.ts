@@ -23,15 +23,14 @@ const preparedRepository = async () => {
   return box
 }
 
-describe('[ki repair]', () => {
-  test('registers the direct physical root before repairing a missing compatible projection', async () => {
+describe('[ki repo repair]', () => {
+  test('registers the selected physical root before repairing a missing compatible projection', async () => {
     const box = await preparedRepository()
     const projection = `${box.project.path}/.agents/skills/ki-example`
 
-    const repair = await box.run('ki repair')
+    const repair = await box.run('ki repo repair')
 
     expect(repair.exitCode).toBe(0)
-    expect(repair.output.indexOf('Global')).toBeLessThan(repair.output.indexOf('Repository'))
     expect(repair.output).toContain('Registry: registered')
     expect(repair.output).toContain('  link ')
     expect((await lstat(projection)).isSymbolicLink()).toBe(true)
@@ -42,7 +41,7 @@ describe('[ki repair]', () => {
     const box = await preparedRepository()
     const projection = `${box.project.path}/.agents/skills/ki-example`
 
-    const repair = await box.run('ki repair --dry-run')
+    const repair = await box.run('ki repo repair --dry-run')
 
     expect(repair.exitCode).toBe(0)
     expect(repair.output).toContain('would register')
@@ -56,7 +55,7 @@ describe('[ki repair]', () => {
     const projection = `${box.project.path}/.agents/skills/ki-example`
     await box.project.write('.agents/skills/ki-example/file', 'foreign\n')
 
-    const repair = await box.run('ki repair')
+    const repair = await box.run('ki repo repair')
 
     expect(repair.exitCode).toBe(1)
     expect(repair.output).toContain('projection is not a KI-managed link')
@@ -70,9 +69,9 @@ describe('[ki repair]', () => {
     await box.project.mkdir('.agents/skills')
     await symlink(`${box.root.path}/old-skill`, projection, 'dir')
 
-    const repaired = await box.run('ki repair')
+    const repaired = await box.run('ki repo repair')
     await box.project.write('.ki-config.toml', repositoryConfiguration.replace('example/harness:ki-example', 'missing/harness:ki-missing'))
-    const unresolved = await box.run('ki repair')
+    const unresolved = await box.run('ki repo repair')
 
     expect(repaired.exitCode).toBe(0)
     expect(await readlink(projection)).not.toBe(`${box.root.path}/old-skill`)
@@ -80,56 +79,54 @@ describe('[ki repair]', () => {
     expect(unresolved.output).toContain('requires installed harness missing/harness')
   })
 
-  test('recreates a dangling projection and reports unsafe declarations', async () => {
+  test('recreates a dangling projection and refuses an unsafe declaration', async () => {
     const box = await preparedRepository()
     const projection = `${box.project.path}/.agents/skills/ki-example`
     await box.project.mkdir('.agents/skills')
     await symlink(`${box.root.path}/missing`, projection, 'dir')
 
-    const dangling = await box.run('ki repair')
+    const dangling = await box.run('ki repo repair')
     const unsafeBox = await sandbox()
     await unsafeBox.project.write('actual.toml', repositoryConfiguration)
     await symlink(`${unsafeBox.project.path}/actual.toml`, `${unsafeBox.project.path}/.ki-config.toml`)
-    const unsafe = await unsafeBox.run('ki repair')
+    await unsafeBox.run('ki bootstrap')
+    const unsafe = await unsafeBox.run('ki repo repair')
 
     expect(dangling.exitCode).toBe(0)
     expect((await lstat(projection)).isSymbolicLink()).toBe(true)
-    expect(unsafe.exitCode).toBe(1)
-    expect(unsafe.output).toContain('Repository: .ki-config.toml must be a regular file')
+    expect(unsafe).toEqual({ exitCode: 2, output: 'ki: error: no KI repository found from the current working directory\n' })
   })
 
-  test('does not select ancestor declarations and rejects selectors', async () => {
+  test('uses repository discovery by default and accepts explicit repository selectors', async () => {
     const box = await preparedRepository()
     await box.project.mkdir('child')
     box.cd('child')
 
-    const nested = await box.run('ki repair')
-    const selected = await box.run('ki repair --workspace default')
+    const nested = await box.run('ki repo repair')
+    const selected = await box.run(['ki', 'repo', '--repo', box.project.path, 'repair'])
 
     expect(nested.exitCode).toBe(0)
-    expect(nested.output).not.toContain('\nRepository\n')
-    expect(selected.exitCode).toBe(2)
-    expect(selected.output).toContain("ki: error: unknown option '--workspace' for 'ki repair'")
-    expect(selected.output).toContain('Usage: ki repair [options]')
+    expect(nested.output).toContain('Repository: ')
+    expect(selected.exitCode).toBe(0)
+    expect(selected.output).toContain('Repository: ')
   })
 
   test('reports an unbootstrapped global environment as unrepairable', async () => {
     const box = await sandbox()
 
-    const repair = await box.run('ki repair')
+    const repair = await box.run('ki repo repair')
 
-    expect(repair).toEqual({ exitCode: 1, output: 'ki repair\n\nGlobal\n  ✗ Configuration: missing; run ki bootstrap\n' })
+    expect(repair).toEqual({ exitCode: 1, output: 'ki: error: local KI configuration is missing; run ki bootstrap first\n' })
   })
 
   test('does not evaluate a direct repository when global configuration is invalid', async () => {
     const box = await preparedRepository()
     await box.config.write('ki/config.toml', 'schema = 1\n[agents\n')
 
-    const repair = await box.run('ki repair')
+    const repair = await box.run('ki repo repair')
 
     expect(repair.exitCode).toBe(1)
-    expect(repair.output).toContain('Configuration: configuration must be valid TOML')
-    expect(repair.output).toContain('\nRepository\n')
+    expect(repair.output).toContain('local KI configuration is invalid: configuration must be valid TOML')
   })
 
   test('reports a registry configuration it cannot safely extend', async () => {
@@ -137,7 +134,7 @@ describe('[ki repair]', () => {
     const existing = await box.config.read('ki/config.toml')
     await box.config.write('ki/config.toml', `${existing}\n[repositories]\npaths = []\nextra = true\n`)
 
-    const repair = await box.run('ki repair')
+    const repair = await box.run('ki repo repair')
 
     expect(repair.exitCode).toBe(1)
     expect(repair.output).toContain('Registry: ki configuration repositories section has unrecognised keys')

@@ -1,13 +1,13 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
-import { agentSkillDirectory, compatibleWithSkill, configuredAgents } from '../agents/index.ts'
-import type { InstalledAgent } from '../agents/internal.ts'
-import { repositorySupportedRuntimes, runtimeForAgent } from '../agents/runtimes.ts'
-import type { KiContext } from '../context.ts'
-import { readDeclaredSkills } from '../core/configuration.ts'
-import { discoverInstalledHarnesses } from '../core/harness.ts'
-import { directRepositoryLocation } from '../core/repository.ts'
-import { type ResolvedSkill, resolveDeclaredSkills } from '../core/resolution.ts'
+import { agentSkillDirectory, compatibleWithSkill, configuredAgents } from '../../agents/index.ts'
+import type { InstalledAgent } from '../../agents/internal.ts'
+import { repositorySupportedRuntimes, runtimeForAgent } from '../../agents/runtimes.ts'
+import type { KiContext } from '../../context.ts'
+import { readDeclaredSkills } from '../../core/configuration.ts'
+import { discoverInstalledHarnesses } from '../../core/harness.ts'
+import { directRepositoryLocation } from '../../core/repository.ts'
+import { type ResolvedSkill, resolveDeclaredSkills } from '../../core/resolution.ts'
 
 type Health = 'healthy' | 'repairable' | 'unrepairable'
 
@@ -25,6 +25,11 @@ export interface RepositoryHealth {
   readonly health: Health
   readonly lines: readonly string[]
   readonly projections: readonly RepositoryProjection[]
+}
+
+interface RepositoryLocation {
+  readonly root: string
+  readonly configuration: string
 }
 
 const stateDescription: Record<RepositoryProjection['state'], string> = {
@@ -54,11 +59,8 @@ const failure = (root: string, configuration: string, detail: string): Repositor
   projections: []
 })
 
-/** Inspect one direct physical declaration and every compatible repository projection. */
-export const inspectDirectRepositoryHealth = async (context: KiContext): Promise<RepositoryHealth | undefined> => {
-  const location = await directRepositoryLocation(context.workingDirectory)
-  if (location.kind === 'none') return undefined
-  if (location.kind === 'invalid') return failure(location.root, location.configuration, location.error)
+/** Inspect one resolved physical declaration and every compatible repository projection. */
+export const inspectRepositoryHealth = async (context: KiContext, location: RepositoryLocation): Promise<RepositoryHealth> => {
   try {
     const declarations = await readDeclaredSkills(location.configuration)
     const [harnesses, agents, runtimes] = await Promise.all([
@@ -96,4 +98,12 @@ export const inspectDirectRepositoryHealth = async (context: KiContext): Promise
   } catch (error) {
     return failure(location.root, location.configuration, (error as Error).message)
   }
+}
+
+/** Inspect one direct physical declaration and every compatible repository projection. */
+export const inspectDirectRepositoryHealth = async (context: KiContext): Promise<RepositoryHealth | undefined> => {
+  const location = await directRepositoryLocation(context.workingDirectory)
+  if (location.kind === 'none') return undefined
+  if (location.kind === 'invalid') return failure(location.root, location.configuration, location.error)
+  return inspectRepositoryHealth(context, location)
 }

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
-describe('[ki list]', () => {
+describe('[ki manage list]', () => {
   test('lists installed capabilities and declared user skills without inspecting the current repository', async () => {
     const box = await sandbox()
     await box.setupExampleHarness()
@@ -27,12 +27,12 @@ describe('[ki list]', () => {
     await box.project.write('.ki-config.toml', '[ki-example\n')
     const configuration = await box.config.read('ki/config.toml')
 
-    const result = await box.run('ki list')
+    const result = await box.run('ki manage list')
 
     expect(result).toEqual({
       exitCode: 0,
       output:
-        'ki list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\nRegistered repositories:\n  none\n'
+        'ki manage list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\nRegistered repositories:\n  none\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
   })
@@ -40,28 +40,28 @@ describe('[ki list]', () => {
   test('renders explicit empty sections', async () => {
     const box = await sandbox()
 
-    const result = await box.run('ki list')
+    const result = await box.run('ki manage list')
 
-    expect(result).toEqual({ exitCode: 0, output: 'ki list\nInstalled harnesses:\n  none\nUser skills:\n  none\nRegistered repositories:\n  none\n' })
+    expect(result).toEqual({ exitCode: 0, output: 'ki manage list\nInstalled harnesses:\n  none\nUser skills:\n  none\nRegistered repositories:\n  none\n' })
   })
 
   test('rejects arguments and invalid user configuration without inspecting repository declarations', async () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '[ki-example\n')
-    const grammar = await box.run('ki list unexpected')
-    const invalidDeclaration = await box.run('ki list')
+    const grammar = await box.run('ki manage list unexpected')
+    const invalidDeclaration = await box.run('ki manage list')
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
     await box.config.write('ki/config.toml', '[agents\n')
-    const invalidConfiguration = await box.run('ki list')
+    const invalidConfiguration = await box.run('ki manage list')
 
     expect(grammar).toEqual({
       exitCode: 2,
       output:
-        "error: too many arguments for 'list'. Expected 0 arguments but got 1: unexpected.\n\nUsage: ki list [options]\n\nlist installed harness capabilities and declared skills\n\nOptions:\n  -h, --help  display help for command\n"
+        "error: too many arguments for 'list'. Expected 0 arguments but got 1: unexpected.\n\nUsage: ki manage list [options]\n\nlist installed harness capabilities and declared skills\n\nOptions:\n  -h, --help  display help for command\n"
     })
     expect(invalidDeclaration).toEqual({
       exitCode: 0,
-      output: 'ki list\nInstalled harnesses:\n  none\nUser skills:\n  none\nRegistered repositories:\n  none\n'
+      output: 'ki manage list\nInstalled harnesses:\n  none\nUser skills:\n  none\nRegistered repositories:\n  none\n'
     })
     expect(invalidConfiguration).toEqual({
       exitCode: 1,

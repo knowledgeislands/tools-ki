@@ -202,7 +202,7 @@ test('audits, conforms, and lists the local ki-repo registry without discovering
   const dryRun = await box.run('ki repo conform --dry-run')
   const conform = await box.run('ki repo conform')
   const repeatedConform = await box.run('ki repo conform')
-  const listed = await box.run('ki register list')
+  const listed = await box.run('ki registry list')
   const repository = await realpath(box.project.path)
 
   expect(audit.exitCode).toBe(1)
@@ -222,11 +222,11 @@ test('registers a selected KI repository even when its declaration cannot resolv
   await box.config.write('ki/config.toml', localConfiguration)
 
   const repository = await realpath(box.project.path)
-  const dryRun = await box.run(['ki', 'register', '--repo', repository, 'add', '--dry-run'])
-  const result = await box.run(['ki', 'register', '--repo', repository, 'add'])
+  const dryRun = await box.run(['ki', 'registry', '--repo', repository, 'add', '--dry-run'])
+  const result = await box.run(['ki', 'registry', '--repo', repository, 'add'])
 
-  expect(dryRun).toEqual({ exitCode: 0, output: `would write config.toml\nki register add: would register ${repository}\n` })
-  expect(result).toEqual({ exitCode: 0, output: `write config.toml\nki register add: registered ${repository}\n` })
+  expect(dryRun).toEqual({ exitCode: 0, output: `would write config.toml\nki registry add: would register ${repository}\n` })
+  expect(result).toEqual({ exitCode: 0, output: `write config.toml\nki registry add: registered ${repository}\n` })
   expect(await box.config.read('ki/config.toml')).toContain(`paths = [\n  ${JSON.stringify(repository)},\n]`)
 })
 
@@ -238,12 +238,12 @@ test('preserves and extends an existing local repository registry in determinist
   const repository = await realpath(box.project.path)
   await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = [\n  ${JSON.stringify(later)},\n  ${JSON.stringify(earlier)},\n]\n`)
 
-  const registered = await box.run('ki register add')
-  const repeated = await box.run('ki register add')
+  const registered = await box.run('ki registry add')
+  const repeated = await box.run('ki registry add')
   const expected = [later, earlier, repository].sort((left, right) => left.localeCompare(right))
 
-  expect(registered).toEqual({ exitCode: 0, output: `write config.toml\nki register add: registered ${repository}\n` })
-  expect(repeated).toEqual({ exitCode: 0, output: `ki register add: already registered ${repository}\n` })
+  expect(registered).toEqual({ exitCode: 0, output: `write config.toml\nki registry add: registered ${repository}\n` })
+  expect(repeated).toEqual({ exitCode: 0, output: `ki registry add: already registered ${repository}\n` })
   expect(await box.config.read('ki/config.toml')).toContain(`paths = [\n${expected.map((path) => `  ${JSON.stringify(path)},`).join('\n')}\n]`)
 })
 
@@ -252,16 +252,16 @@ test('reports missing, invalid, and unsafe local registry configuration without 
   await box.setupExampleHarness({ name: 'ki-repo', rubric })
   await box.project.write('.ki-config.toml', '["example/harness:ki-repo"]\n')
 
-  const missingList = await box.run('ki register list')
+  const missingList = await box.run('ki registry list')
   const missingAudit = await box.run('ki repo audit')
   const missingConform = await box.run('ki repo conform')
-  const missingRegister = await box.run('ki register add')
+  const missingRegister = await box.run('ki registry add')
   await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = ["relative-repository"]\n`)
   const invalidAudit = await box.run('ki repo audit')
   const invalidConform = await box.run('ki repo conform')
-  const invalidRegister = await box.run('ki register add')
+  const invalidRegister = await box.run('ki registry add')
   await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = []\nextra = true\n`)
-  const warnedRegister = await box.run('ki register add')
+  const warnedRegister = await box.run('ki registry add')
 
   expect(missingList).toEqual({ exitCode: 1, output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n' })
   expect(missingAudit.output).toContain('local KI configuration is missing; run `ki bootstrap` first')
@@ -286,7 +286,7 @@ test('lists an explicitly empty local repository registry', async () => {
   const box = await sandbox()
   await box.config.write('ki/config.toml', localConfiguration)
 
-  expect(await box.run('ki register list')).toEqual({ exitCode: 0, output: '' })
+  expect(await box.run('ki registry list')).toEqual({ exitCode: 0, output: '' })
 })
 
 test('retires repository-scoped registry commands without a compatibility path', async () => {
@@ -302,14 +302,14 @@ test('lists registered repositories as a newline-delimited absolute-path stream'
   const second = await box.root.mkdir('second')
   await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = [${JSON.stringify(second)}, ${JSON.stringify(first)}]\n`)
 
-  expect(await box.run('ki register list')).toEqual({ exitCode: 0, output: `${second}\n${first}\n` })
+  expect(await box.run('ki registry list')).toEqual({ exitCode: 0, output: `${second}\n${first}\n` })
 })
 
 test('rejects relative repository registry paths in user configuration', async () => {
   const box = await sandbox()
   await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = ["relative-repository"]\n`)
 
-  const listed = await box.run('ki register list')
+  const listed = await box.run('ki registry list')
 
   expect(listed).toEqual({
     exitCode: 1,

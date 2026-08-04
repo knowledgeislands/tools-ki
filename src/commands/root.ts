@@ -1,57 +1,34 @@
 import type { Command } from 'commander'
 import type { KiContext } from '../context.ts'
-import { createRepositoryRegisterCommand } from '../core/repository-operations.ts'
 import { createAcquireCommand } from './acquire.ts'
-import { createAgoraCommand } from './agora.ts'
+import { createAgoraCommand } from './agora/index.ts'
 import { createBootstrapCommand } from './bootstrap.ts'
-import { createMissingCommand, createOutdatedCommand } from './capability-status.ts'
 import { type RootCommandName, rootHelpCommandNames } from './catalogue.ts'
-import { createCleanupCommand } from './cleanup.ts'
-import { createCompletionsCommand } from './completions.ts'
 import { createDevCommand } from './dev.ts'
-import { createDiagCommand } from './diag.ts'
-import { createDocsCommand } from './docs.ts'
-import { createDoctorCommand } from './doctor.ts'
 import { createHarnessCommand } from './harness.ts'
-import { createHelpCommand } from './help.ts'
-import { createListCommand } from './list.ts'
-import { createRepairCommand } from './repair.ts'
-import { createRepoCommand } from './repo.ts'
-import { createSearchCommand } from './search.ts'
+import { createManageCommand } from './manage/index.ts'
+import { createRegistryCommand } from './registry/index.ts'
+import { createRepositoryOperations } from './repo/index.ts'
 import { createSkillCommand } from './skill.ts'
 import { createTradesCommand } from './trade-command.ts'
-import { createUpdateCommand } from './update.ts'
-import { createVersionCommand } from './version.ts'
 import { createWorkspaceCommand } from './workspace.ts'
 
-type RootCommandFactory = (context: KiContext, program: Command) => Command
+type RootCommandFactory = (context: KiContext) => Command
 
 const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   acquire: (context) => createAcquireCommand(context),
   bootstrap: (context) => createBootstrapCommand(context),
-  cleanup: (context) => createCleanupCommand(context),
   agora: (context) => createAgoraCommand(context),
-  completion: (context) => createCompletionsCommand(context),
   dev: (context) => createDevCommand(context),
-  diag: (context) => createDiagCommand(context),
-  docs: (context) => createDocsCommand(context),
-  doctor: (context) => createDoctorCommand(context),
   harness: (context) => createHarnessCommand(context),
   trades: (context) => createTradesCommand(context),
-  help: (_, program) => createHelpCommand(program),
-  list: (context) => createListCommand(context),
-  missing: (context) => createMissingCommand(context),
-  outdated: (context) => createOutdatedCommand(context),
-  repo: (context) => createRepoCommand(context),
-  register: (context) => createRepositoryRegisterCommand(context),
-  repair: (context) => createRepairCommand(context),
-  search: (context) => createSearchCommand(context),
+  manage: (context) => createManageCommand(context),
+  repo: (context) => createRepositoryOperations(context),
+  registry: (context) => createRegistryCommand(context),
   skill: (context) => createSkillCommand(context),
-  update: (context) => createUpdateCommand(context),
-  version: (context) => createVersionCommand(context),
   workspace: (context) => createWorkspaceCommand(context)
 }
 
 export const addRootCommands = (program: Command, context: KiContext): void => {
-  for (const name of rootHelpCommandNames) program.addCommand(rootCommandFactories[name](context, program))
+  for (const name of rootHelpCommandNames) program.addCommand(rootCommandFactories[name](context))
 }

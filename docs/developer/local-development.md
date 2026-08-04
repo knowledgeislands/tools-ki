@@ -8,7 +8,7 @@ Run the checkout without changing any installation:
 
 ```sh
 ./bin/ki --help
-./bin/ki doctor
+./bin/ki manage doctor
 ```
 
 This source entry point requires Bun and runs the typed command modules in `src/` directly.
@@ -30,7 +30,7 @@ ki dev local off
 
 `off` restores the verified canonical harness and reprojects those links to it, while retaining the remembered checkout for the next `on`.
 
-Use `ki diag` to see the remembered source and whether local mode is off or on; use `ki doctor` to identify missing, broken, or wrong-target managed links while mode is on, direct-CWD legacy `.ki-meta/` or `.ki/` directories, and invalid direct-CWD `.ki-config.toml` declarations.
+Use `ki manage diag` to see the remembered source and whether local mode is off or on; use `ki manage doctor` to identify missing, broken, or wrong-target managed links while mode is on, direct-CWD legacy `.ki-meta/` or `.ki/` directories, and invalid direct-CWD `.ki-config.toml` declarations.
 
 ## Command structure
 
@@ -52,7 +52,7 @@ Build and run a standalone executable for the current platform without changing 
 
 ```sh
 bun run build
-./dist/ki doctor
+./dist/ki manage doctor
 ```
 
 The compiled executable contains the Bun runtime and its dependency graph, so it does not need Bun on `PATH`. Public installation is deliberately release-based: `install.sh` verifies a signed archive instead of copying a mutable local build.
@@ -63,10 +63,10 @@ Install a symbolic link to the current checkout into a dedicated development com
 
 ```sh
 KI_CLI_INSTALL_DIR="$HOME/.local/ki-dev/bin" ./install.sh --link
-PATH="$HOME/.local/ki-dev/bin:$PATH" ki doctor
+PATH="$HOME/.local/ki-dev/bin:$PATH" ki manage doctor
 ```
 
-`ki diag` reports `Installation  local` when that link is running. The command runs `src/main.ts` through Bun and the `ki(1)` link follows subsequent manual edits; reinstall only when changing target directories or replacing the link with a release installation.
+`ki manage diag` reports `Installation  local` when that link is running. The command runs `src/main.ts` through Bun and the `ki(1)` link follows subsequent manual edits; reinstall only when changing target directories or replacing the link with a release installation.
 
 Set `KI_MAN_INSTALL_DIR` when the manual should be installed outside the default sibling `share/man/man1` directory.
 

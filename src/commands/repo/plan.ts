@@ -1,8 +1,8 @@
 import { Command } from 'commander'
-import type { KiContext } from '../context.ts'
-import { KiError } from '../core/errors.ts'
-import { resolveRepositoryTargets } from '../core/repository.ts'
-import { readWorkItems, type WorkItem } from '../core/work-items.ts'
+import type { KiContext } from '../../context.ts'
+import { KiError } from '../../core/errors.ts'
+import { resolveRepositoryTargets } from '../../core/repository.ts'
+import { readWorkItems, type WorkItem } from '../../core/work-items.ts'
 
 interface PlanOptions {
   readonly format?: string

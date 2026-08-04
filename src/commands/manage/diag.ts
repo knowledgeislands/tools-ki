@@ -1,10 +1,10 @@
 import { Command } from 'commander'
-import { inspectUserConfiguration } from '../agents/index.ts'
-import type { KiContext } from '../context.ts'
-import { KiExit } from '../core/errors.ts'
-import { canonicalHarnessDevelopmentEnabled } from '../core/registry.ts'
-import { KI_VERSION } from '../version.ts'
-import { inspectDirectRepositoryHealth } from './repository-health.ts'
+import { inspectUserConfiguration } from '../../agents/index.ts'
+import type { KiContext } from '../../context.ts'
+import { KiExit } from '../../core/errors.ts'
+import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
+import { KI_VERSION } from '../../version.ts'
+import { inspectDirectRepositoryHealth } from '../repo/repository-health.ts'
 
 const field = (label: string, value: string): string => `  ${label.padEnd(14)}${value}`
 
@@ -12,7 +12,7 @@ export const createDiagCommand = (context: KiContext): Command =>
   new Command('diag').description('report CLI installation mode, paths, configuration, and direct repository health').action(async () => {
     const configuration = await inspectUserConfiguration(context.paths.config)
     const lines = [
-      'ki diag',
+      'ki manage diag',
       field('Version', KI_VERSION),
       field('Installation', context.installation),
       field('Executable', context.executable),

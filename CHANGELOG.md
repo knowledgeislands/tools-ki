@@ -13,29 +13,28 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 #### General
 
 - `ki`
-- `ki help`
+- `ki --help`
 
 #### Installation
 
 - `ki bootstrap`
-- `ki completion <shell>`
-- `ki outdated`
-- `ki missing`
-- `ki update`
-- `ki search`
-- `ki cleanup`
 
-#### Diagnostics
+#### Local management
 
-- `ki version`
-- `ki diag`
-- `ki repair`
-- `ki doctor`
-- `ki docs`
+- `ki --version`
+- `ki manage completion <shell>`
+- `ki manage outdated`
+- `ki manage missing`
+- `ki manage update`
+- `ki manage cleanup`
+- `ki manage diag`
+- `ki manage doctor`
+- `ki manage docs`
+- `ki manage list`
+- `ki manage search`
 
 #### User management
 
-- `ki list`
 - `ki skill add`
 - `ki skill remove`
 
@@ -69,15 +68,16 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo plan list`
 - `ki repo educate`
+- `ki repo repair`
 - `ki repo skill add`
 - `ki repo skill remove`
 - `ki repo upgrade`
 
 #### Repository register
 
-- `ki register add`
-- `ki register list`
-- Local `ki register add` records every selected physical KI repository root without applying repairs; `ki repo conform` does the same before evaluating its declaration or conformance findings.
+- `ki registry add`
+- `ki registry list`
+- Local `ki registry add` records every selected physical KI repository root without applying repairs; `ki repo conform` does the same before evaluating its declaration or conformance findings.
 
 #### Harness management
 

@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import type { KiContext } from '../context.ts'
-import { grammarError } from '../core/errors.ts'
+import type { KiContext } from '../../context.ts'
+import { grammarError } from '../../core/errors.ts'
 
 const documentationUrls = {
   overview: 'https://knowledgeislands.info/tooling/cli/',

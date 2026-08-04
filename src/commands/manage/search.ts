@@ -1,7 +1,7 @@
 import { Command } from 'commander'
-import type { KiContext } from '../context.ts'
-import { grammarError } from '../core/errors.ts'
-import { discoverInstalledHarnesses } from '../core/harness.ts'
+import type { KiContext } from '../../context.ts'
+import { grammarError } from '../../core/errors.ts'
+import { discoverInstalledHarnesses } from '../../core/harness.ts'
 
 interface CapabilityMatch {
   readonly harness: string
@@ -27,7 +27,7 @@ export const createSearchCommand = (context: KiContext): Command =>
         harness.capabilities.map((capability) => ({ harness: harness.id, kind: capability.kind, name: capability.name }))
       )
       const found = capabilities.filter((entry) => matches(query, entry)).sort(compareMatches)
-      const lines = [`ki search ${query}`]
+      const lines = [`ki manage search ${query}`]
       if (!found.length) lines.push('No matching installed capabilities.')
       else lines.push('Matching installed capabilities:', ...found.map((entry) => `  ${entry.harness} ${entry.kind} ${entry.name}`))
       context.stdout.write(`${lines.join('\n')}\n`)

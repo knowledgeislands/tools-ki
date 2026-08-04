@@ -10,9 +10,6 @@ ki \- Knowledge Islands command-line interface
 .TP
 .B ki [command]
 Run a KI command, or print root help when no command is supplied.
-.TP
-.B ki help [command]
-Print root or command-specific help.
 .SS Global options
 \&
 .TP
@@ -26,49 +23,43 @@ Print the CLI version.
 .TP
 .B ki bootstrap [--refresh]
 Detect agents, install the canonical harness, and install core user skills.
+.SS Local management
+\&
 .TP
-.B ki completion <shell>
+.B ki manage search <query>
+Search verified installed local harness capabilities.
+.TP
+.B ki manage completion <shell>
 Print Bash or Zsh completion source.
 .TP
-.B ki outdated
+.B ki manage outdated
 Report installed harnesses only when comparable newer release evidence is
 available; it names unavailable evidence rather than claiming freshness.
 .TP
-.B ki missing
+.B ki manage missing
 Report desired user capabilities that have no installed provider.
 .TP
-.B ki update [--cli]
+.B ki manage update [--cli]
 Update an installer-managed CLI and refresh installed configured harnesses.
 .TP
-.B ki search <query>
-Search verified installed local harness capabilities.
-.TP
-.B ki cleanup
+.B ki manage cleanup
 Report eligible KI-managed stale state.
-.SS Diagnostics
-\&
 .TP
-.B ki version
-Print the CLI version.
-.TP
-.B ki diag
+.B ki manage diag
 Show global state and direct-CWD repository health.
 .TP
-.B ki repair [--dry-run]
-Reconcile proven KI-managed global and direct-CWD repository state.
-.TP
-.B ki doctor
+.B ki manage doctor
 Check user configuration, agents, harnesses, user-skill links, and direct-CWD
 legacy KI state and configuration.
 .TP
-.B ki docs [topic]
+.B ki manage docs [topic]
 Print canonical KI documentation locations.
-.SS User management
-\&
 .TP
-.B ki list
+.B ki manage list
 List verified installed harnesses and capabilities with declared user skills and
 local registered repositories.
+.SS User management
+\&
 .TP
 .B ki skill add <skill> [--replace]
 Link a harness skill into configured user agent skill spaces.
@@ -118,11 +109,15 @@ Run registered native repository audits.
 Record the selected physical KI repository roots locally, then apply
 registered native repository repairs.
 .TP
-.B ki register [--repo <path-or-pattern>]... [--workspace <group>] add [--dry-run]
+.B ki repo [repo-options] repair [--dry-run]
+Record selected physical KI repository roots, then reconcile only their
+proven KI-managed projections.
+.TP
+.B ki registry [--repo <path-or-pattern>]... [--workspace <group>] add [--dry-run]
 Record selected physical KI repository roots in the local user register without
 applying repository repairs.
 .TP
-.B ki register list
+.B ki registry list
 List KI repositories registered in the local user register.
 .TP
 .B ki repo [repo-options] plan list [--format <text|json>] [--horizon <horizon>] [--status <status>]
@@ -215,13 +210,10 @@ available in the installed CLI.
 .SS General
 \&
 .PP
-Use these commands to invoke KI and obtain command-specific guidance.
+Use these commands to invoke KI; use \fB--help\fR for command-specific guidance.
 .TP
 .B ki [command]
 Run a KI command, or print root help when no command is supplied.
-.TP
-.B ki help [command]
-Print root or command-specific help.
 .SS Global options
 \&
 .PP
@@ -237,8 +229,7 @@ Print the CLI version.
 .SS Installation
 \&
 .PP
-Use these commands to bootstrap the user-managed KI environment, prepare shell
-completion, and inspect or refresh its installed state.
+Use this command to bootstrap the user-managed KI environment.
 .TP
 .B ki bootstrap
 Create the user-managed KI environment configuration from detected supported
@@ -255,26 +246,13 @@ configuration is reused without replacement. Pass
 .B --refresh
 to redetect every supported runtime and rebuild the user configuration's
 agents, installed harnesses, and KI-managed user skill links.
+.SS Local management
+\&
+.PP
+Use these commands to inspect the local KI installation, user configuration,
+and repository state without changing it.
 .TP
-.B ki completion <shell>
-Print Bash or Zsh completion source to standard output.
-.TP
-.B ki outdated
-Report installed harnesses only when comparable newer release evidence is
-available; it names unavailable evidence rather than claiming freshness.
-.TP
-.B ki missing
-Report desired user capabilities that have no installed provider.
-.TP
-.B ki update [--cli]
-Refresh installed configured harnesses. The executable updates only when a
-verified installer receipt proves that it owns the running regular executable.
-Use
-.B --cli
-to require that executable target. Linked development and externally managed
-executables, including Homebrew installations, are not self-updated.
-.TP
-.B ki search <query>
+.B ki manage search <query>
 Search only verified installed local harness capabilities. The required
 non-empty query matches case-insensitively against a harness identifier,
 capability kind, or capability name. Results are sorted by harness identifier,
@@ -282,22 +260,32 @@ capability kind, and capability name. The command neither discovers a
 repository nor consults a registry or the network. When no capability matches,
 it succeeds and reports that no matching installed capabilities exist.
 .TP
-.B ki cleanup
+.B ki manage completion <shell>
+Print Bash or Zsh completion source to standard output.
+.TP
+.B ki manage outdated
+Report installed harnesses only when comparable newer release evidence is
+available; it names unavailable evidence rather than claiming freshness.
+.TP
+.B ki manage missing
+Report desired user capabilities that have no installed provider.
+.TP
+.B ki manage update [--cli]
+Refresh installed configured harnesses. The executable updates only when a
+verified installer receipt proves that it owns the running regular executable.
+Use
+.B --cli
+to require that executable target. Linked development and externally managed
+executables, including Homebrew installations, are not self-updated.
+.TP
+.B ki manage cleanup
 Report only stale artefacts in a persisted, versioned KI-owned format. V1 has
 no such format, so this command reports that no eligible managed stale state
 exists and changes no files. It does not infer that cache contents,
 transaction-looking directories, unconfigured harnesses, links, or unknown
 files are stale.
-.SS Diagnostics
-\&
-.PP
-Use these commands to inspect the local KI installation, user configuration,
-and repository state without changing it.
 .TP
-.B ki version
-Print the CLI version.
-.TP
-.B ki diag
+.B ki manage diag
 Print the CLI version, installation mode, resolved paths, and user
 configuration without changing state. When the current directory itself has a
 regular \fB.ki-config.toml\fR, it also reports that one repository's declared
@@ -305,17 +293,7 @@ skills and compatible agent projections. It never accepts selectors, searches
 ancestors, expands a workspace or mGit container, or follows a symbolic
 repository declaration.
 .TP
-.B ki repair [--dry-run]
-Reconcile only KI-managed state that KI can prove needs repair. It always
-reports global state and, for a regular direct-CWD \fB.ki-config.toml\fR,
-records that physical repository root before evaluating declarations and
-compatible skill projections. It may recreate missing, dangling, or stale
-KI-managed links but never creates a declaration, adds an undeclared skill,
-overwrites foreign content, guesses a provider or runtime, searches ancestors,
-or expands a workspace or mGit container. \fB--dry-run\fR reports the same
-actions without changing disk state.
-.TP
-.B ki doctor
+.B ki manage doctor
 Check the user configuration, configured agent skill directories, installed
 harnesses, and configured KI user-skill links without changing state. It also
 reports direct-CWD legacy \fB.ki-meta/\fR and \fB.ki/\fR directories, without
@@ -323,7 +301,7 @@ searching for or operating on a repository. It validates a regular direct-CWD
 \fB.ki-config.toml\fR declaration without resolving its providers. A failing
 check produces a non-zero exit status after the complete report.
 .TP
-.B ki docs [topic]
+.B ki manage docs [topic]
 Print canonical documentation locations without opening a browser, fetching
 content, or discovering a repository. With no topic, it prints every
 available location with an explanatory prefix. The supported topics are
@@ -341,16 +319,16 @@ and
 for
 .IR https://github.com/knowledgeislands/tools-ki/blob/main/ROADMAP.md .
 Any other topic is invalid command grammar.
+.TP
+.B ki manage list
+List verified installed harnesses and their capabilities with declared user
+skills and local registered repositories. The command does not fetch, discover a
+repository, or change state.
 .SS User management
 \&
 .PP
 Use these commands to inspect installed capabilities and manage the skills
 declared in the user-managed KI environment.
-.TP
-.B ki list
-List verified installed harnesses and their capabilities with declared user
-skills and local registered repositories. The command does not fetch, discover a
-repository, or change state.
 .TP
 .B ki skill add <skill> [--replace]
 Add a registered skill in configured user agent skill spaces.
@@ -464,14 +442,14 @@ registry before resolving declarations or evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
 .TP
-.B ki register [--repo <path-or-pattern>]... [--workspace <group>] add [--dry-run]
+.B ki registry [--repo <path-or-pattern>]... [--workspace <group>] add [--dry-run]
 Record selected physical KI repository roots in the local user configuration
 without resolving their declarations or applying repository repairs. This is an
 explicit inventory action: it validates only that every selected target is a
 physical directory with a regular \fB.ki-config.toml\fR and preserves existing
 registry entries. It never searches outside the supplied target selection.
 .TP
-.B ki register list
+.B ki registry list
 List physical KI repository roots explicitly registered in the local user
 configuration, one absolute path per line. The command neither discovers
 repositories nor changes state.
@@ -489,6 +467,13 @@ accepts, prunes, or repairs a work item.
 .B ki repo [repo-options] educate [--skill <skill>]
 Explain each selected repository's declared capabilities and their recommended
 maintenance actions without changing repository state.
+.TP
+.B ki repo [repo-options] repair [--dry-run]
+Record each selected physical repository root in the local user register, then
+reconcile only missing, dangling, or stale KI-managed compatible projections.
+It never creates a declaration, adds an undeclared skill, overwrites foreign
+content, guesses a provider or runtime, or follows a symbolic declaration.
+\fB--dry-run\fR reports the same actions without changing disk state.
 .TP
 .B ki repo [repo-options] skill add <skill> [--replace]
 Add a registered skill in each selected repository.
@@ -627,7 +612,7 @@ $KI_CACHE_HOME  | $XDG_CACHE_HOME/ki  | ~/.cache/ki
 $KI_STATE_HOME  | $XDG_STATE_HOME/ki  | ~/.local/state/ki
 .fi
 Run
-.B ki diag
+.B ki manage diag
 to inspect the effective values.
 .SH FILES
 \&

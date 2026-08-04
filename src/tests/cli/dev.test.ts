@@ -194,7 +194,7 @@ ki-recap for claude-code already installed
       const firstOff = await box.run('ki dev local off')
       const secondOn = await box.run('ki dev local on')
       const secondOff = await box.run('ki dev local off')
-      const doctor = await box.run('ki doctor')
+      const doctor = await box.run('ki manage doctor')
 
       expect(firstOff.exitCode).toBe(1)
       expect(secondOn.exitCode).toBe(0)

@@ -1,16 +1,12 @@
 import { realpath, rm } from 'node:fs/promises'
 import { Command } from 'commander'
-import { configuredRepositoryWrite, inspectUserConfiguration } from '../agents/index.ts'
-import { repoHelpCommandNames } from '../commands/catalogue.ts'
-import { createRepoPlanCommand } from '../commands/plan.ts'
-import { createRepoSkillCommand } from '../commands/skill.ts'
-import { createUpgradeCommand } from '../commands/update.ts'
-import type { KiContext } from '../context.ts'
-import { REPOSITORY_CONFIGURATION_FILE, readDeclaredSkills, renderRepositoryConfiguration } from './configuration.ts'
-import { publishIndependentConformGroups } from './conform-publication.ts'
-import { KiError } from './errors.ts'
-import { discoverInstalledHarnesses } from './harness.ts'
-import { resolveRepositoryInitialisationTarget, resolveRepositoryTargets } from './repository.ts'
+import { configuredRepositoryWrite, inspectUserConfiguration } from '../../agents/index.ts'
+import type { KiContext } from '../../context.ts'
+import { REPOSITORY_CONFIGURATION_FILE, readDeclaredSkills, renderRepositoryConfiguration } from '../../core/configuration.ts'
+import { publishIndependentConformGroups } from '../../core/conform-publication.ts'
+import { KiError } from '../../core/errors.ts'
+import { discoverInstalledHarnesses } from '../../core/harness.ts'
+import { resolveRepositoryInitialisationTarget, resolveRepositoryTargets } from '../../core/repository.ts'
 import {
   type AuditRepositorySummary,
   auditProgressLine,
@@ -24,11 +20,16 @@ import {
   renderMultiRepositoryAuditSummary,
   runPreparedWithProgress,
   runWithProgress
-} from './repository-reporting.ts'
-import { renderRepositoryConformCommand, runRepositoryConformCommands } from './repository-subprocess.ts'
-import { resolveDeclaredSkills } from './resolution.ts'
-import { detectFixed, educateSkill, runSkillAudit, runSkillConform } from './runtime.ts'
-import { prepareScopedWrites, prepareWrites, publishWrites } from './transaction.ts'
+} from '../../core/repository-reporting.ts'
+import { renderRepositoryConformCommand, runRepositoryConformCommands } from '../../core/repository-subprocess.ts'
+import { resolveDeclaredSkills } from '../../core/resolution.ts'
+import { detectFixed, educateSkill, runSkillAudit, runSkillConform } from '../../core/runtime.ts'
+import { prepareScopedWrites, prepareWrites, publishWrites } from '../../core/transaction.ts'
+import { repoHelpCommandNames } from '../catalogue.ts'
+import { createRepoPlanCommand } from './plan.ts'
+import { createRepairCommand } from './repair.ts'
+import { createRepoSkillCommand } from './skill.ts'
+import { createUpgradeCommand } from './upgrade.ts'
 
 interface RepositoryConformOptions {
   readonly skill?: string
@@ -96,6 +97,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
   }
   command
     .addCommand(createRepoPlanCommand(context, selectedRepositories))
+    .addCommand(createRepairCommand(context, selectedRepositories))
     .addCommand(createRepoSkillCommand(context, selectedRepositories))
     .addCommand(createUpgradeCommand(context, selectedRepositories))
     .addCommand(
@@ -359,47 +361,6 @@ export const createRepositoryOperations = (context: KiContext): Command => {
     (left, right) =>
       repoHelpCommandNames.indexOf(left.name() as (typeof repoHelpCommandNames)[number]) -
       repoHelpCommandNames.indexOf(right.name() as (typeof repoHelpCommandNames)[number])
-  )
-  return command
-}
-
-export const createRepositoryRegisterCommand = (context: KiContext): Command => {
-  const command = new Command('register')
-    .description('manage the local KI repository register')
-    .option('--repo <path-or-pattern>', 'repository root or pattern', (value: string, previous: readonly string[] = []) => [...previous, value], [])
-    .option('--workspace <group>', 'workspace group from .ki-workspace.toml in the current directory')
-  const selectedRepositories = (): { readonly repositories: readonly string[]; readonly workspace?: string } => {
-    const options = command.opts<{ repo: readonly string[]; workspace?: string }>()
-    return { repositories: options.repo, workspace: options.workspace }
-  }
-  command.addCommand(
-    new Command('add')
-      .description('add explicitly selected local KI repository roots without applying repairs')
-      .option('--dry-run', 'report registrations without writing')
-      .action(async (options: { dryRun?: boolean }) => {
-        const repositories = await resolveRepositoryTargets({
-          ...selectedRepositories(),
-          workingDirectory: context.workingDirectory,
-          homeDirectory: context.homeDirectory
-        })
-        for (const repository of repositories) {
-          const registryWrite = await configuredRepositoryWrite(context.paths.config, repository.root)
-          const writes = registryWrite ? await prepareWrites(await realpath(context.paths.config), [registryWrite]) : []
-          for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
-          await publishWrites(writes, Boolean(options.dryRun))
-          context.stdout.write(
-            `ki register add: ${registryWrite ? (options.dryRun ? 'would register' : 'registered') : 'already registered'} ${repository.root}\n`
-          )
-        }
-      })
-  )
-  command.addCommand(
-    new Command('list').description('list KI repositories registered in the local user configuration').action(async () => {
-      const configuration = await inspectUserConfiguration(context.paths.config)
-      if (configuration.state === 'missing') throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
-      if (configuration.state === 'invalid') throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
-      if (configuration.repositories.length) context.stdout.write(`${configuration.repositories.join('\n')}\n`)
-    })
   )
   return command
 }
