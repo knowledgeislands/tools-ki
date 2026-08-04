@@ -77,7 +77,7 @@ const requireText = (value: string | undefined, option: string): string => {
 const routeState = (state: RouteState): string =>
   ({ active: 'active', 'missing-repository': 'missing repository', 'ambiguous-repository': 'ambiguous repository', nonreciprocal: 'nonreciprocal' })[state]
 
-export const createTradesCommand = (context: KiContext): Command => {
+export const createTradeCommand = (context: KiContext): Command => {
   const routes = new Command('routes').description('maintain local typed trade-route declarations')
   routes
     .addCommand(
@@ -90,7 +90,7 @@ export const createTradesCommand = (context: KiContext): Command => {
           const local = await localRegisteredRepository(context)
           const direction = routeDirection(options.direction)
           const result = await addTradeRoute(local.configuration, repository(peer, 'trade route repository'), direction, kind(options.kind))
-          context.stdout.write(`ki trades routes add: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`)
+          context.stdout.write(`ki trade routes add: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`)
         })
     )
     .addCommand(
@@ -103,14 +103,14 @@ export const createTradesCommand = (context: KiContext): Command => {
           const local = await localRegisteredConfiguration(context)
           const direction = routeDirection(options.direction)
           const result = await removeTradeRoute(local.repository.configuration, repository(peer, 'trade route repository'), direction, kind(options.kind))
-          context.stdout.write(`ki trades routes remove: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`)
+          context.stdout.write(`ki trade routes remove: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`)
         })
     )
     .addCommand(
       new Command('list').description('list locally declared typed trade routes and their estate state').action(async () => {
         const local = await localRegisteredConfiguration(context)
         const inspected = await inspectRoutes(context, local.configuration)
-        const lines = ['ki trades routes list', `Repository: ${local.configuration.repository}`, 'Routes:']
+        const lines = ['ki trade routes list', `Repository: ${local.configuration.repository}`, 'Routes:']
         lines.push(
           ...(inspected.length ? inspected.map((route) => `  ${route.direction} ${route.kind} ${route.repository} [${routeState(route.state)}]`) : ['  none'])
         )
@@ -134,14 +134,14 @@ export const createTradesCommand = (context: KiContext): Command => {
           )
           if (peer && !selected.length) throw grammarError(`trade route ${peer} is not declared locally`)
           const lines = [
-            'ki trades routes check',
+            'ki trade routes check',
             ...(selected.length ? selected.map((route) => `  ${route.direction} ${route.kind} ${route.repository}: ${routeState(route.state)}`) : ['  none'])
           ]
           context.stdout.write(`${lines.join('\n')}\n`)
         })
     )
 
-  const command = new Command('trades').description('submit and inspect typed cross-repository work and knowledge trades')
+  const command = new Command('trade').description('submit and inspect typed cross-repository work and knowledge trades')
   command.addCommand(routes)
   command.addCommand(
     new Command('new')
@@ -163,7 +163,7 @@ export const createTradesCommand = (context: KiContext): Command => {
           submission: requireText(options.submission, '--submission'),
           constraints: requireText(options.constraints, '--constraints')
         })
-        context.stdout.write(`ki trades new: created ${record.id} for ${record.receiver}\n`)
+        context.stdout.write(`ki trade new: created ${record.id} for ${record.receiver}\n`)
       })
   )
   command.addCommand(
@@ -179,7 +179,7 @@ export const createTradesCommand = (context: KiContext): Command => {
           kind(options.kind),
           options.id ? tradeId(options.id, '--id') : undefined
         )
-        const lines = ['ki trades receive', ...result.received.map((id) => `  received ${id}`), ...result.existing.map((id) => `  existing ${id}`)]
+        const lines = ['ki trade receive', ...result.received.map((id) => `  received ${id}`), ...result.existing.map((id) => `  existing ${id}`)]
         context.stdout.write(`${lines.join('\n')}\n`)
       })
   )
@@ -200,7 +200,7 @@ export const createTradesCommand = (context: KiContext): Command => {
         const selected = trades.filter(
           (trade) => (!options.status || trade.record.status === options.status) && (!options.kind || trade.record.kind === kind(options.kind))
         )
-        const lines = ['ki trades list']
+        const lines = ['ki trade list']
         lines.push(
           ...(selected.length
             ? selected.map(
@@ -219,7 +219,7 @@ export const createTradesCommand = (context: KiContext): Command => {
       .action(async (id: string) => {
         const selected = await locateTrades(context, { id: tradeId(id) })
         if (!selected.length) throw grammarError(`trade ${id} was not found in the registered repository estate`)
-        const lines = [`ki trades show ${id}`]
+        const lines = [`ki trade show ${id}`]
         for (const trade of selected) lines.push(`Repository: ${trade.repository} [${trade.direction}]`, trade.record.contents.trimEnd())
         context.stdout.write(`${lines.join('\n')}\n`)
       })
@@ -231,7 +231,7 @@ export const createTradesCommand = (context: KiContext): Command => {
       .action(async (id: string) => {
         const value = tradeId(id)
         await releaseTrade(context, value)
-        context.stdout.write(`ki trades release: released ${value}\n`)
+        context.stdout.write(`ki trade release: released ${value}\n`)
       })
   )
   command.addCommand(
@@ -241,7 +241,7 @@ export const createTradesCommand = (context: KiContext): Command => {
       .action(async (id: string) => {
         const value = tradeId(id)
         await pruneTrade(context, value)
-        context.stdout.write(`ki trades prune: pruned ${value}\n`)
+        context.stdout.write(`ki trade prune: pruned ${value}\n`)
       })
   )
   return command

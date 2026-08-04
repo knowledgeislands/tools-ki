@@ -1,11 +1,11 @@
-export const rootCommandNames = ['acquire', 'agora', 'bootstrap', 'dev', 'harness', 'manage', 'registry', 'repo', 'skill', 'trades', 'workspace'] as const
+export const rootCommandNames = ['acquire', 'agora', 'bootstrap', 'dev', 'harness', 'manage', 'registry', 'repo', 'skill', 'trade', 'workspace'] as const
 
 /**
  * Purpose-oriented order used by root help and the human-facing command
  * inventories. Shell completions deliberately use `rootCommandNames` instead:
  * alphabetical candidates are easier to scan while completing.
  */
-export const rootHelpCommandNames = ['bootstrap', 'manage', 'agora', 'skill', 'workspace', 'repo', 'registry', 'harness', 'trades', 'acquire', 'dev'] as const
+export const rootHelpCommandNames = ['bootstrap', 'manage', 'agora', 'skill', 'workspace', 'repo', 'registry', 'harness', 'trade', 'acquire', 'dev'] as const
 
 export type RootCommandName = (typeof rootCommandNames)[number]
 
@@ -19,7 +19,7 @@ export const rootCommandSummaries: Readonly<Record<RootCommandName, string>> = {
   repo: 'manage KI repositories',
   registry: 'manage the KI repository registry',
   skill: 'manage user skills',
-  trades: 'manage cross-repository trades',
+  trade: 'manage cross-repository trades',
   workspace: 'manage repository workspace groups'
 }
 

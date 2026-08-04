@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from './_cli_helper.ts'
 
-const rootHelpCommands = ['bootstrap', 'manage', 'agora', 'skill', 'workspace', 'repo', 'registry', 'harness', 'trades', 'acquire', 'dev']
+const rootHelpCommands = ['bootstrap', 'manage', 'agora', 'skill', 'workspace', 'repo', 'registry', 'harness', 'trade', 'acquire', 'dev']
 
 const rootCompletionCommands = [...rootHelpCommands].sort()
 const manageCommands = ['cleanup', 'completion', 'diag', 'docs', 'doctor', 'list', 'missing', 'outdated', 'search', 'update']

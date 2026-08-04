@@ -15,11 +15,11 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain("_describe -t ki-registry-commands 'registry command' commands")
     expect(zsh.output).toContain("commands=('acquire:import a local capture' 'agora:manage workspace profiles' 'bootstrap:configure KI for this user'")
     expect(zsh.output).toContain("_describe -t ki-commands 'command' commands")
-    expect(zsh.output).toContain("'trades:manage cross-repository trades'")
+    expect(zsh.output).toContain("'trade:manage cross-repository trades'")
     expect(bash.output).toContain('compgen -W "audit conform educate init plan repair skill upgrade"')
     expect(bash.output).toContain('compgen -W "cleanup completion diag docs doctor list missing outdated search update"')
     expect(bash.output).toContain('compgen -W "add list"')
-    expect(bash.output).toContain('compgen -W "acquire agora bootstrap dev harness manage registry repo skill trades workspace --help --version"')
+    expect(bash.output).toContain('compgen -W "acquire agora bootstrap dev harness manage registry repo skill trade workspace --help --version"')
     expect(bash.output).toContain('complete -F _ki ki')
   })
 

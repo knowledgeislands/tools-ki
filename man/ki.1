@@ -154,13 +154,13 @@ Remove one installed non-canonical harness.
 .SS Trades
 \&
 .TP
-.B ki trades routes add <repository> --direction export|import --kind work|knowledge
+.B ki trade routes add <repository> --direction export|import --kind work|knowledge
 Declare one local typed directional trade route.
 .TP
-.B ki trades routes remove|list|check
+.B ki trade routes remove|list|check
 Maintain or inspect local typed trade route declarations.
 .TP
-.B ki trades new|receive|list|show|release|prune
+.B ki trade new|receive|list|show|release|prune
 Create, pull, inspect, release, or prune cross-repository trade copies.
 .SS Agora management
 \&
@@ -527,37 +527,37 @@ estate. They preserve repository authority: every mutation writes only the
 current repository, a typed reciprocal route grants visibility rather than
 acceptance or retention, and no command changes a peer roadmap or knowledge.
 .TP
-.B ki trades routes add <repository> --direction export|import --kind work|knowledge
+.B ki trade routes add <repository> --direction export|import --kind work|knowledge
 Declare one local typed route to a canonical HTTPS GitHub repository. Repository
 identity remains the required \fBrepository\fR value in the ki-repo table.
 .TP
-.B ki trades routes remove <repository> --direction export|import --kind work|knowledge
+.B ki trade routes remove <repository> --direction export|import --kind work|knowledge
 Remove one local typed route.
 .TP
-.B ki trades routes list
+.B ki trade routes list
 List local typed routes with their registered-estate state.
 .TP
-.B ki trades routes check [repository] [--direction export|import] [--kind work|knowledge]
+.B ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]
 Check declared routes for reciprocal registered-repository evidence by kind.
 .TP
-.B ki trades new --to <repository> --kind work|knowledge --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
+.B ki trade new --to <repository> --kind work|knowledge --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
 Create one outbound typed trade in the current repository.
 .TP
-.B ki trades receive --from <repository> --kind work|knowledge [--id <trade-id>]
+.B ki trade receive --from <repository> --kind work|knowledge [--id <trade-id>]
 Pull eligible outbound trades of one kind into the current repository as inbound
 copies with status \fBreceived\fR.
 .TP
-.B ki trades list [--direction inbound|outbound] [--status <status>] [--kind work|knowledge] [--repo <repository>]
+.B ki trade list [--direction inbound|outbound] [--status <status>] [--kind work|knowledge] [--repo <repository>]
 Read visible trade copies in the registered estate.
 .TP
-.B ki trades show <trade-id>
+.B ki trade show <trade-id>
 Show every visible copy of a trade.
 .TP
-.B ki trades release <trade-id>
+.B ki trade release <trade-id>
 Remove the current repository's outbound copy only after observing a terminal
 receiver disposition.
 .TP
-.B ki trades prune <trade-id>
+.B ki trade prune <trade-id>
 Remove the current repository's terminal inbound copy only after sender release
 is observable.
 .SS Acquisition

@@ -89,8 +89,8 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 #### Trades
 
-- `ki trades routes add|remove|list|check`
-- `ki trades new|receive|list|show|release|prune`
+- `ki trade routes add|remove|list|check`
+- `ki trade new|receive|list|show|release|prune`
 
 #### Acquisition
 
