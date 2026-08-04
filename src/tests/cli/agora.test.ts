@@ -100,5 +100,11 @@ describe('[ki agora]', () => {
 
     box.setRunner(async () => ({ exitCode: 8, output: '' }))
     expect(await box.run('ki agora open example')).toEqual({ exitCode: 8, output: 'ki: error: could not open Agora example: zed failed\n' })
+
+    box.setRunner(async (_command, arguments_) => (arguments_[0] === '-n' ? { exitCode: 0, output: '' } : { exitCode: 9, output: 'project failed\n' }))
+    expect(await box.run('ki agora open example')).toEqual({ exitCode: 9, output: 'ki: error: could not open Agora example: project failed\n' })
+
+    box.setRunner(async (_command, arguments_) => (arguments_[0] === '-n' ? { exitCode: 0, output: '' } : { exitCode: 10, output: '' }))
+    expect(await box.run('ki agora open example')).toEqual({ exitCode: 10, output: 'ki: error: could not open Agora example: zed failed\n' })
   })
 })
