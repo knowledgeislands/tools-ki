@@ -88,7 +88,7 @@ The Harness still owns receipt and disposition of the evidence trade and any res
 
 The immutable delivery baseline is `6f6e63aa3120b71be1149027d89f0db866043ff7`; the typed migration is committed in `228f0e2916c49ab93495289824535cfd24c7f520`. No peer repository was written, no compatibility shim was retained, and no learning requires a separate durable promotion route.
 
-### Closure
+## Done
 
 On 2026-08-04, the user explicitly accepted this evidence packet and approved terminal closure as `done`.
 
