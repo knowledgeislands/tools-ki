@@ -101,6 +101,7 @@ describe('[ki trades]', () => {
     expect(checked).toEqual({ exitCode: 0, output: `ki trades routes check\n  export work ${receiverHome}: active\n` })
     expect(removed).toEqual({ exitCode: 0, output: `ki trades routes remove: export work ${sourceHome} -> ${receiverHome}\n` })
     expect(await box.project.read('.ki-config.toml')).toContain(`repository = "${sourceHome}"`)
+    expect(await box.project.read('receiver/.ki-config.toml')).toContain(`work = ["${sourceHome}"]`)
   })
 
   test('creates, receives, displays, releases, and prunes a work trade while each command writes only its local repository', async () => {
@@ -169,6 +170,7 @@ describe('[ki trades]', () => {
 
     const nonreciprocal = await box.run(newTrade('work'))
     const missingKind = await box.run(['ki', 'trades', 'new', '--to', receiverHome])
+    const missingDirection = await box.run(['ki', 'trades', 'routes', 'add', receiverHome, '--kind', 'work'])
     const malformedRepository = await box.run('ki trades routes add example/receiver --direction export --kind work')
     const malformedKind = await box.run(`ki trades routes add ${receiverHome} --direction export --kind other`)
     const emptyTitle = await box.run([...newTrade('work').slice(0, 8), '   ', ...newTrade('work').slice(9)])
@@ -178,6 +180,7 @@ describe('[ki trades]', () => {
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
     expect((await box.run(newTrade('work'))).output).toContain('is not declared locally')
     expect(missingKind.exitCode).toBe(2)
+    expect(missingDirection.exitCode).toBe(2)
     expect(malformedRepository).toEqual({ exitCode: 2, output: 'ki: error: trade route repository must use canonical HTTPS GitHub repository form\n' })
     expect(malformedKind).toEqual({ exitCode: 2, output: 'ki: error: --kind accepts work or knowledge\n' })
     expect(emptyTitle.output).toContain('--title is required and must be non-empty')
@@ -323,6 +326,9 @@ describe('[ki trades]', () => {
     expect(missing.output).toContain('was not found')
     const wrongId = 'HND-00000000-0000-0000-0000-000000000000'
     await box.project.write(`-/_HANDOFFS/example/receiver/${wrongId}.md`, outbound)
+    box.cd('..')
+    expect((await box.run('ki trades list')).output).toContain(`filename must match trade id ${id}`)
+    box.cd('receiver')
     expect((await box.run(['ki', 'trades', 'receive', '--from', sourceHome, '--kind', 'work', '--id', wrongId])).output).toContain(
       `filename must match trade id ${id}`
     )
@@ -365,6 +371,17 @@ describe('[ki trades]', () => {
     expect((await box.run('ki trades routes list')).output).toContain('current KI repository is not registered')
     await box.config.write('ki/config.toml', localConfiguration([source]))
     expect((await box.run('ki trades routes list')).exitCode).toBe(0)
+  })
+
+  test('ignores missing registered roots and missing trade paths without treating them as peer state', async () => {
+    const { box, source, receiver } = await configuredPair()
+    await box.config.write('ki/config.toml', localConfiguration([source, receiver, `${box.root.path}/missing`]))
+
+    expect(await box.run('ki trades list')).toEqual({ exitCode: 0, output: 'ki trades list\n  none\n' })
+    const created = await box.run(newTrade('work'))
+    const id = /HND-[0-9a-f-]+/u.exec(created.output)?.[0] as string
+
+    expect((await box.run(['ki', 'trades', 'release', id])).output).toContain('receiver has not recorded an inbound trade')
   })
 
   test('validates receiver-only status fields, payload immutability, and lifecycle evidence', async () => {
