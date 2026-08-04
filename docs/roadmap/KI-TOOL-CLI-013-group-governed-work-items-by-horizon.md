@@ -1,9 +1,9 @@
 ---
 id: KI-TOOL-CLI-013
-title: Group governed work-item text output by horizon
+title: Group roadmap text output by horizon
 theme: cli
 horizon: next
-status: open
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -11,34 +11,39 @@ baseline-ref: null
 
 ## Goal
 
-Let users scan `ki repo plan list` text output in its planning order: the most immediate horizon first, then work at the same horizon from completed through open.
+Let users scan `ki repo roadmap list` text output in its planning order: the most immediate horizon first, then work at the same horizon from completed through open.
 
 ## Context
 
-`ki repo plan list` currently renders one flat, identifier-ordered list for each selected repository. That makes the command deterministic but obscures the priority model already carried by each work item's `horizon` and lifecycle `status` fields.
+`ki repo plan list` currently renders one flat, identifier-ordered list for each selected repository. The public command should instead be `ki repo roadmap list`, which names the resource it inspects. Its text view should make the priority model already carried by each work item's `horizon` and lifecycle `status` fields visible without changing the stable JSON interface.
 
 The human-readable output should group items by the standard horizon order: `blocking`, `next`, `soon`, `waiting-for`, `parked`, then `future`. Within each displayed horizon, items should follow lifecycle order: `done`, `acceptance`, `in-progress`, `ready`, then `open`; items with equal horizon and status remain ordered by identifier.
 
 ## Boundary
 
-Do not change the canonical work-item schema, lifecycle semantics, filtering options, repository selection, or the JSON output contract. Do not infer a priority beyond the horizon and status already declared by the owning repository.
+Do not change the canonical work-item schema, lifecycle semantics, filtering options, repository selection, or the JSON output contract. Do not infer a priority beyond the horizon and status already declared by the owning repository. Retire `ki repo plan list` without a compatibility path.
 
 ## Current state
 
-`src/commands/plan.ts` reads and filters canonical work items, then renders the text output in the order supplied by `readWorkItems`. The command's tests cover filtering, JSON output, empty results, and diagnostics, but not grouping the text output by planning horizon or lifecycle state.
+`src/commands/repo/plan.ts` reads and filters canonical work items, then renders the text output in the order supplied by `readWorkItems`. The command's tests cover filtering, JSON output, empty results, and diagnostics, but not grouping the text output by planning horizon or lifecycle state. The root catalogue, help, completions, changelog, and manual still call this inspection surface `plan`.
 
 ## Steps
 
+- [ ] Replace the public `ki repo plan list` namespace with `ki repo roadmap list` and remove the former grammar from root wiring, help, completions, and catalogue inventory.
 - [ ] Define one deterministic text-ordering helper using the six canonical horizons and five lifecycle statuses, with identifier ordering as the final tie-breaker.
 - [ ] Render non-empty text inventories as ordered horizon groups within each repository while preserving repository order, diagnostics, and `Items: none` behavior.
 - [ ] Preserve the existing filtered and JSON behavior; a filter narrows the inventory before text grouping rather than introducing a second selection rule.
-- [ ] Add CLI-contract tests covering all horizons, lifecycle ordering, identifier tie-breaking, filtered output, empty output, and unchanged JSON serialization.
-- [ ] Update public command documentation and the man page to describe the grouped text output and stable JSON boundary.
+- [ ] Add CLI-contract tests covering the retired `plan` grammar, all horizons, lifecycle ordering, identifier tie-breaking, filtered output, empty output, and unchanged JSON serialization.
+- [ ] Update public command documentation and the man page to describe the `roadmap` namespace, grouped text output, and stable JSON boundary.
 
 ## Files touched
 
-- `src/commands/plan.ts`
+- `src/commands/repo/plan.ts`
+- `src/commands/repo/index.ts`
+- `src/commands/catalogue.ts`
 - `src/tests/cli/plan.test.ts`
+- `src/tests/cli/inventory.test.ts`
+- `src/tests/cli/completions.test.ts`
 - `README.md`
 - `man/ki.1`
 - This roadmap item
@@ -48,8 +53,9 @@ Do not change the canonical work-item schema, lifecycle semantics, filtering opt
 - `bunx vitest run src/tests/cli/plan.test.ts`
 - `bun run test`
 - `bunx tsc --noEmit`
-- `ki repo plan list --repo <fixture-or-repository>` emits the six horizons in canonical order, lifecycle states from `done` through `open`, and identifier order for ties.
-- `ki repo plan list --repo <fixture-or-repository> --format json` preserves its current document shape and item order contract.
+- `ki repo roadmap list --repo <fixture-or-repository>` emits the six horizons in canonical order, lifecycle states from `done` through `open`, and identifier order for ties.
+- `ki repo roadmap list --repo <fixture-or-repository> --format json` preserves its current document shape and item order contract.
+- `ki repo plan list` is rejected as retired syntax.
 
 ## Dependencies / blocks
 
