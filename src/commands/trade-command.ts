@@ -65,7 +65,7 @@ const routeDirection = (value: string | undefined): RouteDirection => {
 }
 
 const tradeId = (value: string | undefined, option = 'trade id'): string => {
-  if (!value || !isTradeIdentifier(value)) throw grammarError(`${option} must use HND- followed by a lower-case UUID`)
+  if (!value || !isTradeIdentifier(value)) throw grammarError(`${option} must use TRD- followed by a lower-case UUID`)
   return value
 }
 

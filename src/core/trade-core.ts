@@ -8,11 +8,11 @@ import { REPOSITORY_CONFIGURATION_FILE } from './configuration.ts'
 import { KiError } from './errors.ts'
 import { type RepositoryLocation, resolveRepository } from './repository.ts'
 
-const HANDOFFS_TABLE = 'knowledgeislands/ki-agentic-harness:ki-handoffs'
+const TRADES_TABLE = 'knowledgeislands/ki-agentic-harness:ki-trades'
 const REPOSITORY_TABLE = 'knowledgeislands/ki-agentic-harness:ki-repo'
 const addressExpression = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
 const repositoryExpression = /^https:\/\/github\.com\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)$/
-const identifierExpression = /^HND-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+const identifierExpression = /^TRD-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const timestampExpression = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
 const tradeKinds = ['work', 'knowledge'] as const
 const receiverStatuses = ['received', 'adopted', 'retained', 'parked', 'clarify', 'declined', 'superseded'] as const
@@ -98,7 +98,7 @@ const addressParts = (address: string): readonly [string, string] => {
 }
 
 const identifier = (value: string): string => {
-  if (!isTradeIdentifier(value)) throw tradeError('trade id must use HND- followed by a lower-case UUID')
+  if (!isTradeIdentifier(value)) throw tradeError('trade id must use TRD- followed by a lower-case UUID')
   return value
 }
 
@@ -111,18 +111,18 @@ const parseRoutes = (
 ): Readonly<Record<TradeKind, readonly string[]>> => {
   const value = declaration[key]
   if (value === undefined && allowIncomplete) return { work: [], knowledge: [] }
-  if (!isRecord(value)) throw tradeError(`${path} [${HANDOFFS_TABLE}].${key} must be a table`)
+  if (!isRecord(value)) throw tradeError(`${path} [${TRADES_TABLE}].${key} must be a table`)
   const unknown = Object.keys(value).find((candidate) => !tradeKinds.includes(candidate as TradeKind))
-  if (unknown) throw tradeError(`${path} [${HANDOFFS_TABLE}].${key} has unrecognised trade kind ${unknown}`)
+  if (unknown) throw tradeError(`${path} [${TRADES_TABLE}].${key} has unrecognised trade kind ${unknown}`)
   const routes: Record<TradeKind, readonly string[]> = { work: [], knowledge: [] }
   for (const kind of tradeKinds) {
     const values = value[kind]
     if (!Array.isArray(values) || values.some((route) => typeof route !== 'string' || !isTradeRepository(route)))
-      throw tradeError(`${path} [${HANDOFFS_TABLE}].${key}.${kind} must be a canonical HTTPS GitHub repository URL array`)
+      throw tradeError(`${path} [${TRADES_TABLE}].${key}.${kind} must be a canonical HTTPS GitHub repository URL array`)
     const entries = values as string[]
-    if (entries.includes(repository)) throw tradeError(`${path} [${HANDOFFS_TABLE}].${key}.${kind} must not contain the local repository`)
+    if (entries.includes(repository)) throw tradeError(`${path} [${TRADES_TABLE}].${key}.${kind} must not contain the local repository`)
     if (new Set(entries).size !== entries.length || entries.some((entry, index) => index > 0 && entry.localeCompare(entries[index - 1] as string) <= 0))
-      throw tradeError(`${path} [${HANDOFFS_TABLE}].${key}.${kind} must be unique and lexical`)
+      throw tradeError(`${path} [${TRADES_TABLE}].${key}.${kind} must be unique and lexical`)
     routes[kind] = entries
   }
   return routes
@@ -141,10 +141,10 @@ const parseConfiguration = (contents: string, path: string, allowIncomplete = fa
   if (!hasRepository(repositoryDeclaration) || typeof repositoryDeclaration.repository !== 'string' || !isTradeRepository(repositoryDeclaration.repository))
     throw tradeError(`${path} [${REPOSITORY_TABLE}].repository must use canonical HTTPS GitHub repository form`)
   const repository = repositoryDeclaration.repository
-  const declaration = parsed[HANDOFFS_TABLE]
-  if (!isRecord(declaration)) throw tradeError(`${path} does not declare [${HANDOFFS_TABLE}]`)
+  const declaration = parsed[TRADES_TABLE]
+  if (!isRecord(declaration)) throw tradeError(`${path} does not declare [${TRADES_TABLE}]`)
   const unknown = Object.keys(declaration).find((key) => key !== 'exports_to' && key !== 'imports_from')
-  if (unknown) throw tradeError(`${path} [${HANDOFFS_TABLE}] has unrecognised key ${unknown}`)
+  if (unknown) throw tradeError(`${path} [${TRADES_TABLE}] has unrecognised key ${unknown}`)
   return {
     repository,
     identity: repositoryIdentity(repository),
@@ -162,21 +162,21 @@ const renderRoutes = (routes: Readonly<Record<TradeKind, readonly string[]>>): r
 
 const renderTradeDeclaration = (configuration: TradeConfiguration): string =>
   [
-    `[${JSON.stringify(HANDOFFS_TABLE)}.exports_to]`,
+    `[${JSON.stringify(TRADES_TABLE)}.exports_to]`,
     ...renderRoutes(configuration.exportsTo),
     '',
-    `[${JSON.stringify(HANDOFFS_TABLE)}.imports_from]`,
+    `[${JSON.stringify(TRADES_TABLE)}.imports_from]`,
     ...renderRoutes(configuration.importsFrom)
   ].join('\n')
 
 const writeTradeConfiguration = async (path: string, configuration: TradeConfiguration): Promise<void> => {
   const contents = await readFile(path, 'utf8')
   const headers = [...contents.matchAll(/^\[([^\n]+)\]$/gmu)]
-  const table = JSON.stringify(HANDOFFS_TABLE)
+  const table = JSON.stringify(TRADES_TABLE)
   const isOwnedHeader = (header: string | undefined): boolean => header === table || Boolean(header?.startsWith(`${table}.`))
   const owned = headers.filter((header) => isOwnedHeader(header[1]))
   const start = owned[0]?.index
-  if (start === undefined) throw tradeError(`${path} does not declare [${HANDOFFS_TABLE}] route tables`)
+  if (start === undefined) throw tradeError(`${path} does not declare [${TRADES_TABLE}] route tables`)
   const end = headers.find((header) => (header.index as number) > start && !isOwnedHeader(header[1]))?.index ?? contents.length
   await writeFile(path, `${contents.slice(0, start)}${renderTradeDeclaration(configuration)}\n\n${contents.slice(end)}`, 'utf8')
 }
@@ -388,7 +388,7 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
 
 const tradePath = (root: string, direction: TradeDirection, peer: string, id: string): string => {
   const [owner, repository] = addressParts(peer)
-  return join(root, direction === 'inbound' ? '+' : '-', '_HANDOFFS', owner, repository, `${identifier(id)}.md`)
+  return join(root, direction === 'inbound' ? '+' : '-', '_TRADES', owner, repository, `${identifier(id)}.md`)
 }
 
 const outboundContents = (
@@ -437,7 +437,7 @@ export const createOutboundTrade = async (
   /* v8 ignore next 2 -- public CLI grammar rejects every empty authored field before invoking the core operation. */
   if (![options.title, options.sourceRef, options.context, options.submission, options.constraints].every((value) => value.trim()))
     throw tradeError('trade title, source-ref, context, submission, and constraints must be non-empty')
-  const id = `HND-${randomUUID()}`
+  const id = `TRD-${randomUUID()}`
   const createdAt = new Date(context.now()).toISOString().replace(/\.\d{3}Z$/u, 'Z')
   const contents = outboundContents({ id, createdAt, sender: local.configuration.identity, receiver: receiver.configuration.identity, ...options })
   const path = tradePath(local.repository.root, 'outbound', receiver.configuration.identity, id)
@@ -462,7 +462,7 @@ export const receiveTrades = async (
 ): Promise<{ readonly received: readonly string[]; readonly existing: readonly string[] }> => {
   const local = await localRegisteredConfiguration(context)
   const sender = await requireActiveRoute(context, local.configuration, repository, 'import', kind)
-  const directory = tradePath(sender.root, 'outbound', local.configuration.identity, 'HND-00000000-0000-0000-0000-000000000000').replace(/HND-[^/]+\.md$/u, '')
+  const directory = tradePath(sender.root, 'outbound', local.configuration.identity, 'TRD-00000000-0000-0000-0000-000000000000').replace(/TRD-[^/]+\.md$/u, '')
   const paths = await readDirectory(directory)
   const selected = requestedId ? paths.filter((path) => path.endsWith(`${identifier(requestedId)}.md`)) : paths
   if (requestedId && !selected.length) throw tradeError(`outbound trade ${requestedId} was not found for ${local.configuration.repository}`)
@@ -485,7 +485,7 @@ export const receiveTrades = async (
 }
 
 const peerDirectories = async (root: string, direction: TradeDirection): Promise<readonly string[]> => {
-  const base = join(root, direction === 'inbound' ? '+' : '-', '_HANDOFFS')
+  const base = join(root, direction === 'inbound' ? '+' : '-', '_TRADES')
   const state = await lstat(base).catch(() => undefined)
   if (!state?.isDirectory()) return []
   const paths: string[] = []
