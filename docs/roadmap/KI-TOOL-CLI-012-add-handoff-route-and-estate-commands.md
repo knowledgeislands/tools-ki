@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-012
 title: Add trade route and estate commands
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 6f6e63aa3120b71be1149027d89f0db866043ff7
@@ -87,6 +87,12 @@ The Harness still owns receipt and disposition of the evidence trade and any res
 ### Mini recap
 
 The immutable delivery baseline is `6f6e63aa3120b71be1149027d89f0db866043ff7`; the typed migration is committed in `228f0e2916c49ab93495289824535cfd24c7f520`. No peer repository was written, no compatibility shim was retained, and no learning requires a separate durable promotion route.
+
+### Closure
+
+On 2026-08-04, the user explicitly accepted this evidence packet and approved terminal closure as `done`.
+
+The local `ki-handoffs` to `ki-trades` capability-declaration reconciliation is an explicitly approved separate follow-up; it does not change this item's delivered host-command boundary or closure decision.
 
 ## Discussion
 
