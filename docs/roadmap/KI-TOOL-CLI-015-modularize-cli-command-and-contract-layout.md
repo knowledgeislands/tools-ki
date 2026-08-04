@@ -39,12 +39,12 @@ CLI tests use the required `run(args, context)` sandbox seam, but test files for
 
 ## Steps
 
-- [ ] Define one public-grammar directory convention shared by `src/commands/` and `src/tests/cli/`, including the explicit homes of root assembly, command catalogues, shared CLI test helpers, and cross-cutting repository-operation contracts.
-- [ ] Move each flat root command family into a focused directory with a narrow entry module and colocate helpers with their owning family, including `harness-refresh` under harness and the trade route and record operations under trade.
-- [ ] Split root assembly and command inventory data by their owning grammar surface while preserving the one authoritative public registration and completion inventory boundary.
-- [ ] Re-home every active CLI-contract suite beneath the same matching command-family or cross-cutting-operation directory used by its command source; only underscore-prefixed shared helpers remain at the test root.
-- [ ] Update imports, developer documentation, and test discovery so no active flat command or CLI-contract test suite remains outside the agreed mirrored source-and-test hierarchy.
-- [ ] Prove unchanged public grammar, outputs, completions, and error behaviour through focused contracts and the full repository gate.
+- [ ] Establish and record a clean `bun run test:coverage` baseline before changing either source or test layout.
+- [ ] Define the public-grammar directory convention for the test hierarchy, then re-home every active CLI-contract suite beneath the matching command-family or cross-cutting-operation directory; only underscore-prefixed shared helpers remain at the test root.
+- [ ] Run `bun run test:coverage` after the test-only refactor and stop if any metric falls below the enforced 100% threshold.
+- [ ] Apply the same directory convention to `src/commands/`: move each flat root command family into a focused directory with a narrow entry module, colocate `harness-refresh` under harness and trade route and record operations under trade, and split root assembly and command inventory data by their owning grammar surface.
+- [ ] Run `bun run test:coverage` again after the command-source refactor and stop if any metric falls below the enforced 100% threshold.
+- [ ] Update imports, developer documentation, and test discovery; prove unchanged public grammar, outputs, completions, and error behaviour through focused contracts and the final repository gate.
 
 ## Files touched
 
@@ -56,7 +56,7 @@ CLI tests use the required `run(args, context)` sandbox seam, but test files for
 ## Verify
 
 - Focused CLI-contract suites for every moved command family and cross-cutting repository operation pass through `run(args, context)`.
-- `bun run test:coverage` retains the repository's enforced 100% thresholds.
+- `bun run test:coverage` passes at the baseline, after the test-only move, and after the command-source refactor, retaining the repository's enforced 100% thresholds at every checkpoint.
 - `bunx tsc --noEmit`, `bunx biome check .`, Markdown lint, and man-page checks pass.
 - `ki --help`, every root command-family `--help`, `ki manage completion bash`, and `ki manage completion zsh` preserve their current grammar and completion inventories.
 
