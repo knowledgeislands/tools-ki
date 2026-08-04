@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-015
 title: Modularize CLI command and contract layout
 theme: cli
 horizon: next
-status: open
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
