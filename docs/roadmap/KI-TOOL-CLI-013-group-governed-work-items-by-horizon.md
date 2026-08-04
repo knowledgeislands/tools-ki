@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-013
 title: Group roadmap text output by horizon
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: e94e78089a507f1da3ea4faf7305ad6dd6875db4
@@ -29,12 +29,12 @@ Do not change the canonical work-item schema, lifecycle semantics, filtering opt
 
 ## Steps
 
-- [ ] Replace the public `ki repo plan list` namespace with `ki repo roadmap list` and remove the former grammar from root wiring, help, completions, and catalogue inventory.
-- [ ] Define one deterministic text-ordering helper using the six canonical horizons and five lifecycle statuses, with identifier ordering as the final tie-breaker.
-- [ ] Render non-empty text inventories as ordered horizon groups within each repository while preserving repository order, diagnostics, and `Items: none` behavior.
-- [ ] Preserve the existing filtered and JSON behavior; a filter narrows the inventory before text grouping rather than introducing a second selection rule.
-- [ ] Add CLI-contract tests covering the retired `plan` grammar, all horizons, lifecycle ordering, identifier tie-breaking, filtered output, empty output, and unchanged JSON serialization.
-- [ ] Update public command documentation and the man page to describe the `roadmap` namespace, grouped text output, and stable JSON boundary.
+- [x] Replace the public `ki repo plan list` namespace with `ki repo roadmap list` and remove the former grammar from root wiring, help, completions, and catalogue inventory.
+- [x] Define one deterministic text-ordering helper using the six canonical horizons and five lifecycle statuses, with identifier ordering as the final tie-breaker.
+- [x] Render non-empty text inventories as ordered horizon groups within each repository while preserving repository order, diagnostics, and `Items: none` behavior.
+- [x] Preserve the existing filtered and JSON behavior; a filter narrows the inventory before text grouping rather than introducing a second selection rule.
+- [x] Add CLI-contract tests covering the retired `plan` grammar, all horizons, lifecycle ordering, identifier tie-breaking, filtered output, empty output, and unchanged JSON serialization.
+- [x] Update public command documentation and the man page to describe the `roadmap` namespace, grouped text output, and stable JSON boundary.
 
 ## Files touched
 
@@ -60,6 +60,34 @@ Do not change the canonical work-item schema, lifecycle semantics, filtering opt
 ## Dependencies / blocks
 
 This is a self-contained rendering change. It does not block or depend on another current roadmap item.
+
+## Acceptance
+
+### Delivered
+
+`ki repo roadmap list` replaces `ki repo plan list` without a compatibility command.
+
+Text output now groups each repository's non-empty work inventory by canonical horizon and then lifecycle status, with the identifier as the final tie-breaker.
+
+`--horizon` and `--status` filter before this grouping; `--format json` retains its former stable, identifier-ordered document shape.
+
+### Evidence
+
+The immutable baseline is `e94e78089a507f1da3ea4faf7305ad6dd6875db4`.
+
+Delivery is committed in `9df88608a7e39ee34759f9bee46aa2b9c56bd559`.
+
+### Verification
+
+- Focused CLI contracts for roadmap, inventory, completions, repository targets, Agora selection, and help passed.
+- `bun run test:coverage` passed with the repository's enforced 100% coverage thresholds.
+- `bunx tsc --noEmit`, `bunx biome check`, Markdown lint, `mandoc -Tlint man/ki.1`, and `git diff --check` passed.
+- `ki repo roadmap list --repo .` rendered the grouped local inventory; its JSON mode retained the stable document shape; `ki repo plan list` was rejected as an unknown subcommand.
+- `ki repo audit --skill ki-roadmap --repo .` and `ki repo audit --skill ki-trades --repo .` passed.
+
+### Outstanding concerns
+
+None. This item does not introduce a lifecycle transition or schema change, and the machine-readable JSON contract remains unchanged.
 
 ## Discussion
 
