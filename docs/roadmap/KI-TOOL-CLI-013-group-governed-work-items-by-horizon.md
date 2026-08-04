@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-013
 title: Group roadmap text output by horizon
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: e94e78089a507f1da3ea4faf7305ad6dd6875db4
@@ -88,6 +88,10 @@ Delivery is committed in `9df88608a7e39ee34759f9bee46aa2b9c56bd559`.
 ### Outstanding concerns
 
 None. This item does not introduce a lifecycle transition or schema change, and the machine-readable JSON contract remains unchanged.
+
+## Done
+
+On 2026-08-05, the user explicitly accepted this evidence packet and approved terminal closure as `done`.
 
 ## Discussion
 
