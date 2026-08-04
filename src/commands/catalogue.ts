@@ -53,7 +53,7 @@ export const agoraCommandSummaries: Readonly<Record<AgoraCommandName, string>> =
   show: 'show one profile'
 }
 
-export const repoCommandNames = ['audit', 'conform', 'educate', 'init', 'plan', 'repair', 'skill', 'upgrade'] as const
+export const repoCommandNames = ['audit', 'conform', 'educate', 'init', 'roadmap', 'repair', 'skill', 'upgrade'] as const
 
 export type RepoCommandName = (typeof repoCommandNames)[number]
 
@@ -62,13 +62,13 @@ export const repoCommandSummaries: Readonly<Record<RepoCommandName, string>> = {
   conform: 'apply approved local repairs',
   educate: 'explain declared skill maintenance',
   init: 'initialize one KI repository',
-  plan: 'inspect governed work items',
+  roadmap: 'inspect governed work items',
   repair: 'reconcile proven managed state',
   skill: 'manage repository skills',
   upgrade: 'refresh declared capabilities'
 }
 
-export const repoHelpCommandNames = ['init', 'audit', 'conform', 'plan', 'educate', 'repair', 'skill', 'upgrade'] as const
+export const repoHelpCommandNames = ['init', 'audit', 'conform', 'roadmap', 'educate', 'repair', 'skill', 'upgrade'] as const
 
 export const registryCommandNames = ['add', 'list'] as const
 

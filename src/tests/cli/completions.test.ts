@@ -20,7 +20,7 @@ describe('[ki manage completion]', () => {
     )
     expect(zsh.output).toContain("_describe -t ki-commands 'command' commands")
     expect(zsh.output).toContain("'trade:manage cross-repository trades'")
-    expect(bash.output).toContain('compgen -W "audit conform educate init plan repair skill upgrade"')
+    expect(bash.output).toContain('compgen -W "audit conform educate init roadmap repair skill upgrade"')
     expect(bash.output).toContain('compgen -W "cleanup completion diag docs doctor list missing outdated search update"')
     expect(bash.output).toContain('compgen -W "add create discover list open remove show"')
     expect(bash.output).toContain('compgen -W "add list"')

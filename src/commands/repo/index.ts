@@ -26,8 +26,8 @@ import { resolveDeclaredSkills } from '../../core/resolution.ts'
 import { detectFixed, educateSkill, runSkillAudit, runSkillConform } from '../../core/runtime.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../../core/transaction.ts'
 import { repoHelpCommandNames } from '../catalogue.ts'
-import { createRepoPlanCommand } from './plan.ts'
 import { createRepairCommand } from './repair.ts'
+import { createRepoRoadmapCommand } from './roadmap.ts'
 import { createRepoSkillCommand } from './skill.ts'
 import { createUpgradeCommand } from './upgrade.ts'
 
@@ -97,7 +97,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
     return { repositories: options.repo, agora: options.agora }
   }
   command
-    .addCommand(createRepoPlanCommand(context, selectedRepositories))
+    .addCommand(createRepoRoadmapCommand(context, selectedRepositories))
     .addCommand(createRepairCommand(context, selectedRepositories))
     .addCommand(createRepoSkillCommand(context, selectedRepositories))
     .addCommand(createUpgradeCommand(context, selectedRepositories))

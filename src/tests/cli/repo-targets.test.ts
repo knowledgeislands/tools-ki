@@ -66,7 +66,7 @@ export default {
 `
 describe('[ki repo target sets]', () => {
   describe('multi-repository target sets', () => {
-    test('expands literal and glob selections through supported plan listing', async () => {
+    test('expands literal and glob selections through supported roadmap listing', async () => {
       const box = await sandbox()
       await box.project.write('repos/a/.ki-config.toml', '# a\n')
       await box.project.write('repos/a/nested/.ki-config.toml', '# nested\n')
@@ -74,13 +74,13 @@ describe('[ki repo target sets]', () => {
       await box.project.mkdir('empty')
       const root = await realpath(box.project.path)
 
-      const immediate = await box.run(['ki', 'repo', '--repo', 'repos/a', 'plan', 'list'])
-      const recursive = await box.run(['ki', 'repo', '--repo', 'repos/**', 'plan', 'list'])
-      const absolute = await box.run(['ki', 'repo', '--repo', `${box.project.path}/repos/?`, 'plan', 'list'])
-      const character = await box.run(['ki', 'repo', '--repo', 'repos/?', 'plan', 'list'])
-      const missingBase = await box.run(['ki', 'repo', '--repo', 'missing/*', 'plan', 'list'])
-      const unmatched = await box.run(['ki', 'repo', '--repo', 'empty/*', 'plan', 'list'])
-      const duplicate = await box.run(['ki', 'repo', '--repo', 'repos/a', '--repo', 'repos/a', 'plan', 'list'])
+      const immediate = await box.run(['ki', 'repo', '--repo', 'repos/a', 'roadmap', 'list'])
+      const recursive = await box.run(['ki', 'repo', '--repo', 'repos/**', 'roadmap', 'list'])
+      const absolute = await box.run(['ki', 'repo', '--repo', `${box.project.path}/repos/?`, 'roadmap', 'list'])
+      const character = await box.run(['ki', 'repo', '--repo', 'repos/?', 'roadmap', 'list'])
+      const missingBase = await box.run(['ki', 'repo', '--repo', 'missing/*', 'roadmap', 'list'])
+      const unmatched = await box.run(['ki', 'repo', '--repo', 'empty/*', 'roadmap', 'list'])
+      const duplicate = await box.run(['ki', 'repo', '--repo', 'repos/a', '--repo', 'repos/a', 'roadmap', 'list'])
 
       expect(immediate.output).toContain(`Repository: ${root}/repos/a`)
       expect(recursive.output).toContain(`Repository: ${root}/repos/a/nested`)
@@ -91,7 +91,7 @@ describe('[ki repo target sets]', () => {
       expect(duplicate.output).toContain('selects duplicate repository')
     })
 
-    test('expands mGit standard, nested, and container members through supported plan listing', async () => {
+    test('expands mGit standard, nested, and container members through supported roadmap listing', async () => {
       const box = await sandbox()
       await box.project.write(
         '.mgit-config.toml',
@@ -102,7 +102,7 @@ describe('[ki repo target sets]', () => {
       await box.project.write('group/second/.ki-config.toml', '# second\n')
       await box.project.write('nested/main/.ki-config.toml', '# nested\n')
 
-      const result = await box.run('ki repo plan list')
+      const result = await box.run('ki repo roadmap list')
 
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('Repository:')
@@ -110,7 +110,7 @@ describe('[ki repo target sets]', () => {
       expect(result.output).toContain('/nested/main')
     })
 
-    test('reports every malformed mGit selection through supported plan listing', async () => {
+    test('reports every malformed mGit selection through supported roadmap listing', async () => {
       const box = await sandbox()
       const documents: readonly [string, number][] = [
         ['version = 1\n', 0],
@@ -124,7 +124,7 @@ describe('[ki repo target sets]', () => {
 
       for (const [document, exitCode] of documents) {
         await box.project.write('.mgit-config.toml', document)
-        expect((await box.run('ki repo plan list')).exitCode).toBe(exitCode)
+        expect((await box.run('ki repo roadmap list')).exitCode).toBe(exitCode)
       }
     })
     test('runs audit independently for every preflighted explicit target', async () => {

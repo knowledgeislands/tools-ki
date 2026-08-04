@@ -42,7 +42,7 @@ Each public command or command group has its own module under `src/commands/`; c
 
 `src/commands/agora/` and `src/core/agora.ts` own the user-level Agora lifecycle. `ki agora create`, `add`, `remove`, `discover`, `list`, `show`, and `open` manage named `.ki-agora` documents under the XDG KI configuration directory. Discovery walks physical directories without following symbolic links, stops at regular `.ki-config.toml` repository roots, and adds the discovered roots to the selected profile.
 
-`src/commands/plan.ts` and `src/core/work-items.ts` provide the read-only `ki repo plan list` inventory. They reuse the shared repository target set, accept only direct physical regular Markdown work-item files, parse the narrow canonical frontmatter contract, and isolate an inventory diagnostic to its selected repository. They do not create, transition, accept, prune, or repair roadmap records; those lifecycle operations remain owned by harness process skills.
+`src/commands/repo/roadmap.ts` and `src/core/work-items.ts` provide the read-only `ki repo roadmap list` inventory. They reuse the shared repository target set, accept only direct physical regular Markdown work-item files, parse the narrow canonical frontmatter contract, and isolate an inventory diagnostic to its selected repository. They do not create, transition, accept, prune, or repair roadmap records; those lifecycle operations remain owned by harness process skills.
 
 ## Build a compiled executable
 

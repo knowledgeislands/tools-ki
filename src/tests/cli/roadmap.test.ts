@@ -19,7 +19,7 @@ const item = (overrides: Record<string, string> = {}): string => {
     .join('\n')}\n---\n\n## Context\n\nTest item.\n\n## Boundary\n\nNone.\n\n## Discussion\n\n### Test\n\nTest.\n`
 }
 
-describe('[ki repo plan]', () => {
+describe('[ki repo roadmap]', () => {
   test('lists and filters ordered governed work items in text and JSON', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki-config.toml', '# repo\n')
@@ -38,15 +38,15 @@ describe('[ki repo plan]', () => {
     const root = await realpath(`${box.project.path}/repo`)
     await box.config.write('ki/agoras/inventory.ki-agora', `name = "Inventory"\ntool = "zed"\n\n[projects]\nrepo = ${JSON.stringify(root)}\n`)
 
-    const text = await box.run('ki repo --repo repo plan list --horizon next --status open')
-    const json = await box.run('ki repo --repo repo plan list --format json')
-    const accepted = await box.run('ki repo --repo repo plan list --status acceptance')
-    const empty = await box.run('ki repo --repo repo plan list --horizon blocking')
-    const agora = await box.run('ki repo --agora inventory plan list --status acceptance')
+    const text = await box.run('ki repo --repo repo roadmap list --horizon next --status open')
+    const json = await box.run('ki repo --repo repo roadmap list --format json')
+    const accepted = await box.run('ki repo --repo repo roadmap list --status acceptance')
+    const empty = await box.run('ki repo --repo repo roadmap list --horizon blocking')
+    const agora = await box.run('ki repo --agora inventory roadmap list --status acceptance')
 
     expect(text).toEqual({
       exitCode: 0,
-      output: `ki repo plan list\nRepository: ${root}\nItems:\n  KI-TOOL-CLI-003 [next/open] Inspect governed work\n`
+      output: `ki repo roadmap list\nRepository: ${root}\nItems:\n  next:\n    KI-TOOL-CLI-003 [next/open] Inspect governed work\n`
     })
     expect(JSON.parse(json.output)).toEqual({
       repositories: [
@@ -99,14 +99,42 @@ describe('[ki repo plan]', () => {
     const invalidStatus = await realpath(`${box.project.path}/invalid-status`)
     const unsafe = await realpath(`${box.project.path}/unsafe`)
 
-    const result = await box.run(['ki', 'repo', '--repo', valid, '--repo', missing, '--repo', invalidStatus, '--repo', unsafe, 'plan', 'list'])
-    const invalidFormat = await box.run('ki repo --repo valid plan list --format yaml')
+    const result = await box.run(['ki', 'repo', '--repo', valid, '--repo', missing, '--repo', invalidStatus, '--repo', unsafe, 'roadmap', 'list'])
+    const invalidFormat = await box.run('ki repo --repo valid roadmap list --format yaml')
 
-    expect(result.output).toContain(`Repository: ${valid}\nItems:\n  KI-TOOL-CLI-003 [next/open] Inspect governed work`)
+    expect(result.output).toContain(`Repository: ${valid}\nItems:\n  next:\n    KI-TOOL-CLI-003 [next/open] Inspect governed work`)
     expect(result.output).toContain(`Repository: ${missing}\nDiagnostic: repository ${missing} has no physical docs/roadmap directory`)
     expect(result.output).toContain(`Repository: ${invalidStatus}\nDiagnostic: work item KI-TOOL-CLI-003-inspect.md has an invalid lifecycle status`)
     expect(result.output).toContain(`Repository: ${unsafe}\nDiagnostic: work item KI-TOOL-CLI-003-inspect.md must be a regular file`)
     expect(invalidFormat).toEqual({ exitCode: 2, output: 'ki: error: --format accepts text or json\n' })
+  })
+
+  test('orders non-empty text output by horizon, lifecycle, then identifier', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki-config.toml', '# repo\n')
+    const items = [
+      ['KI-TOOL-CLI-006', 'Blocking open', 'blocking', 'open'],
+      ['KI-TOOL-CLI-005', 'Blocking done', 'blocking', 'done'],
+      ['KI-TOOL-CLI-014', 'Next open', 'next', 'open'],
+      ['KI-TOOL-CLI-013', 'Next ready', 'next', 'ready'],
+      ['KI-TOOL-CLI-012', 'Next in progress', 'next', 'in-progress'],
+      ['KI-TOOL-CLI-011', 'Next acceptance', 'next', 'acceptance'],
+      ['KI-TOOL-CLI-010', 'Next done later', 'next', 'done'],
+      ['KI-TOOL-CLI-009', 'Next done first', 'next', 'done'],
+      ['KI-TOOL-CLI-015', 'Soon', 'soon', 'open'],
+      ['KI-TOOL-CLI-016', 'Waiting', 'waiting-for', 'open'],
+      ['KI-TOOL-CLI-017', 'Parked', 'parked', 'open'],
+      ['KI-TOOL-CLI-018', 'Future', 'future', 'open']
+    ] as const
+    for (const [id, title, horizon, status] of items) {
+      await box.project.write(`repo/docs/roadmap/${id}-item.md`, item({ id, title, horizon, status, ...(horizon === 'future' ? { candidate: 'true' } : {}) }))
+    }
+
+    const result = await box.run('ki repo --repo repo roadmap list')
+
+    expect(result.output).toMatch(
+      /blocking:\n {4}KI-TOOL-CLI-005 \[blocking\/done\].*\n {4}KI-TOOL-CLI-006 \[blocking\/open\].*\n {2}next:\n {4}KI-TOOL-CLI-009 \[next\/done\].*\n {4}KI-TOOL-CLI-010 \[next\/done\].*\n {4}KI-TOOL-CLI-011 \[next\/acceptance\].*\n {4}KI-TOOL-CLI-012 \[next\/in-progress\].*\n {4}KI-TOOL-CLI-013 \[next\/ready\].*\n {4}KI-TOOL-CLI-014 \[next\/open\].*\n {2}soon:\n {4}KI-TOOL-CLI-015 \[soon\/open\].*\n {2}waiting-for:\n {4}KI-TOOL-CLI-016 \[waiting-for\/open\].*\n {2}parked:\n {4}KI-TOOL-CLI-017 \[parked\/open\].*\n {2}future:\n {4}KI-TOOL-CLI-018 \[future\/open\]/
+    )
   })
 
   test('rejects every malformed canonical frontmatter shape', async () => {
@@ -127,8 +155,14 @@ describe('[ki repo plan]', () => {
       const repository = `repo-${index}`
       await box.project.write(`${repository}/.ki-config.toml`, '# repo\n')
       await box.project.write(`${repository}/docs/roadmap/${name}`, contents)
-      const result = await box.run(`ki repo --repo ${repository} plan list`)
+      const result = await box.run(`ki repo --repo ${repository} roadmap list`)
       expect(result.output).toContain(message)
     }
+  })
+
+  test('rejects the retired plan namespace', async () => {
+    const box = await sandbox()
+
+    expect((await box.run('ki repo plan list')).exitCode).toBe(2)
   })
 })

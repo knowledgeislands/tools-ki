@@ -7,7 +7,7 @@ const rootHelpCommands = ['bootstrap', 'manage', 'agora', 'skill', 'repo', 'regi
 const rootCompletionCommands = [...rootHelpCommands].sort()
 const manageCommands = ['cleanup', 'completion', 'diag', 'docs', 'doctor', 'list', 'missing', 'outdated', 'search', 'update']
 const agoraCommands = ['create', 'add', 'remove', 'discover', 'list', 'show', 'open']
-const repoCommands = ['audit', 'conform', 'educate', 'init', 'plan', 'repair', 'skill', 'upgrade']
+const repoCommands = ['audit', 'conform', 'educate', 'init', 'roadmap', 'repair', 'skill', 'upgrade']
 const registryCommands = ['add', 'list']
 
 const commandNames = (output: string): string[] => output.split('\n').flatMap((line) => /^ {2}([a-z]+)(?:\s|$)/.exec(line)?.[1] ?? [])
@@ -26,7 +26,7 @@ describe('[ki command inventory]', () => {
     expect(commandNames(root.output)).toEqual(rootHelpCommands)
     expect(commandNames(manage.output)).toEqual(manageCommands)
     expect(commandNames(agora.output)).toEqual(agoraCommands)
-    expect(commandNames(repository.output)).toEqual(['init', 'audit', 'conform', 'plan', 'educate', 'repair', 'skill', 'upgrade'])
+    expect(commandNames(repository.output)).toEqual(['init', 'audit', 'conform', 'roadmap', 'educate', 'repair', 'skill', 'upgrade'])
     expect(commandNames(registry.output)).toEqual(registryCommands)
     for (const command of rootCompletionCommands) expect(zsh.output).toContain(`'${command}:`)
     for (const command of manageCommands) expect(zsh.output).toContain(`'${command}:`)
