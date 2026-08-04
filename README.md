@@ -38,6 +38,12 @@ For the installation and activation boundary, read the [capability lifecycle gui
 
 Neither command changes user or repository skill activation; read the [update and upgrade guide](https://knowledgeislands.info/guidance/cli/update-upgrade/) for target selection and ownership boundaries.
 
+## Agora profiles
+
+Named Agora profiles live at `$XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora` (normally `~/.config/ki/agoras`).
+
+Use `ki agora list`, `ki agora show <name>`, and `ki agora open <name>` to inspect or open a profile's ordered Zed project roster.
+
 ## Select repository targets
 
 Every `ki repo` operation accepts repeated `--repo <path-or-pattern>` options or one `--workspace <group>` option. The two explicit selectors are mutually exclusive. Literal paths and patterns resolve to physical KI repository roots in deterministic order; an unmatched pattern, invalid root, or duplicate root stops the operation before any target runs.

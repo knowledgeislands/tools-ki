@@ -8,7 +8,7 @@ export const createAgoraOpenCommand = (context: KiContext): Command =>
     .description('open one Agora profile')
     .argument('<agora>', 'Agora name or profile path')
     .action(async (value: string) => {
-      const profile = await resolveAgora(context.homeDirectory, context.workingDirectory, value)
+      const profile = await resolveAgora(context.paths.config, context.workingDirectory, value)
       if (!profile.projects[0]) throw new KiError(`Agora ${profile.id} has no projects`, 2)
       const window = await context.runner('zed', ['-n'], context.environment)
       if (window.exitCode) throw new KiError(`could not open Agora ${profile.id}: ${window.output.trim() || 'zed failed'}`, window.exitCode)

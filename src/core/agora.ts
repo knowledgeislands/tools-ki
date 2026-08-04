@@ -17,7 +17,7 @@ interface AgoraDocument {
   readonly projects?: unknown
 }
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
-export const agoraDirectory = (homeDirectory: string): string => join(homeDirectory, 'workspaces', 'ki-agoras')
+export const agoraDirectory = (configurationDirectory: string): string => join(configurationDirectory, 'agoras')
 const profileError = (path: string, message: string): KiError => new KiError(`${path} ${message}`, 2)
 const profileId = (path: string): string => path.slice(path.lastIndexOf('/') + 1, -AGORA_EXTENSION.length)
 const readProfile = async (path: string): Promise<AgoraProfile> => {
@@ -48,8 +48,8 @@ const readProfile = async (path: string): Promise<AgoraProfile> => {
   if (new Set(projects).size !== projects.length) throw profileError(path, 'projects must not contain duplicate paths')
   return { path, id: profileId(path), name: document.name, tool: 'zed', projects }
 }
-export const listAgoras = async (homeDirectory: string): Promise<readonly AgoraProfile[]> => {
-  const directory = agoraDirectory(homeDirectory)
+export const listAgoras = async (configurationDirectory: string): Promise<readonly AgoraProfile[]> => {
+  const directory = agoraDirectory(configurationDirectory)
   const entries = await readdir(directory, { withFileTypes: true }).catch(() => undefined)
   if (!entries) return []
   return Promise.all(
@@ -59,11 +59,11 @@ export const listAgoras = async (homeDirectory: string): Promise<readonly AgoraP
       .map((entry) => readProfile(join(directory, entry.name)))
   )
 }
-export const resolveAgora = async (homeDirectory: string, workingDirectory: string, value: string): Promise<AgoraProfile> =>
+export const resolveAgora = async (configurationDirectory: string, workingDirectory: string, value: string): Promise<AgoraProfile> =>
   readProfile(
     isAbsolute(value)
       ? resolve(value)
       : value.endsWith(AGORA_EXTENSION)
         ? resolve(workingDirectory, value)
-        : join(agoraDirectory(homeDirectory), `${value}${AGORA_EXTENSION}`)
+        : join(agoraDirectory(configurationDirectory), `${value}${AGORA_EXTENSION}`)
   )

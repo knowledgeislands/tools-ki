@@ -4,7 +4,7 @@ import { listAgoras } from '../../core/agora.ts'
 
 export const createAgoraListCommand = (context: KiContext): Command =>
   new Command('list').description('list available Agora profiles').action(async () => {
-    const profiles = await listAgoras(context.homeDirectory)
+    const profiles = await listAgoras(context.paths.config)
     context.stdout.write(
       `ki agora list${profiles.length ? `\n${profiles.map((profile) => `  ${profile.id} — ${profile.name} (${profile.projects.length} projects)`).join('\n')}` : ''}\n`
     )

@@ -8,12 +8,9 @@ const profile = (projects = ''): string => `name = "Example"\ntool = "zed"${proj
 describe('[ki agora]', () => {
   test('lists, shows, and opens an ordered Zed profile as projects in one window', async () => {
     const box = await sandbox()
-    await box.home.write(
-      'workspaces/ki-agoras/example.ki-agora',
-      profile('\nprimary = "primary"\n\n[projects]\nzulu = "/zulu"\nprimary = "/primary"\nalpha = "/alpha"')
-    )
-    await box.home.write('workspaces/ki-agoras/zeta.ki-agora', profile())
-    await box.home.write('workspaces/ki-agoras/ignored.toml', profile())
+    await box.config.write('ki/agoras/example.ki-agora', profile('\nprimary = "primary"\n\n[projects]\nzulu = "/zulu"\nprimary = "/primary"\nalpha = "/alpha"'))
+    await box.config.write('ki/agoras/zeta.ki-agora', profile())
+    await box.config.write('ki/agoras/ignored.toml', profile())
     const calls: string[] = []
     box.setRunner(async (command, arguments_) => {
       calls.push(`${command} ${arguments_.join(' ')}`)
@@ -34,7 +31,7 @@ describe('[ki agora]', () => {
   test('reports an absent directory and supports empty profiles', async () => {
     const box = await sandbox()
     expect(await box.run('ki agora list')).toEqual({ exitCode: 0, output: 'ki agora list\n' })
-    await box.home.write('workspaces/ki-agoras/empty.ki-agora', profile())
+    await box.config.write('ki/agoras/empty.ki-agora', profile())
     expect(await box.run('ki agora show empty')).toEqual({ exitCode: 0, output: 'ki agora show empty\n  Example\n  tool zed\n' })
     expect(await box.run('ki agora open empty')).toEqual({ exitCode: 2, output: 'ki: error: Agora empty has no projects\n' })
   })
@@ -53,10 +50,10 @@ describe('[ki agora]', () => {
 
   test('rejects missing and unsafe profile paths', async () => {
     const box = await sandbox()
-    const directory = await box.home.mkdir('workspaces/ki-agoras/directory.ki-agora')
-    await box.home.write('workspaces/ki-agoras/target.ki-agora', profile())
-    const linked = join(box.home.path, 'workspaces/ki-agoras/linked.ki-agora')
-    await symlink(join(box.home.path, 'workspaces/ki-agoras/target.ki-agora'), linked)
+    const directory = await box.config.mkdir('ki/agoras/directory.ki-agora')
+    await box.config.write('ki/agoras/target.ki-agora', profile())
+    const linked = join(box.config.path, 'ki/agoras/linked.ki-agora')
+    await symlink(join(box.config.path, 'ki/agoras/target.ki-agora'), linked)
 
     expect((await box.run('ki agora show missing')).output).toContain('no Agora profile')
     expect((await box.run(['ki', 'agora', 'show', directory])).output).toContain('must be a regular file')
@@ -85,7 +82,7 @@ describe('[ki agora]', () => {
     ] as const
 
     for (const [id, content, message] of cases) {
-      await box.home.write(`workspaces/ki-agoras/${id}.ki-agora`, `${content}\n`)
+      await box.config.write(`ki/agoras/${id}.ki-agora`, `${content}\n`)
       const result = await box.run(`ki agora show ${id}`)
       expect(result.exitCode).toBe(2)
       expect(result.output).toContain(message)
@@ -94,7 +91,7 @@ describe('[ki agora]', () => {
 
   test('reports Zed launch failures with and without process output', async () => {
     const box = await sandbox()
-    await box.home.write('workspaces/ki-agoras/example.ki-agora', profile('\nprimary = "one"\n\n[projects]\none = "/one"'))
+    await box.config.write('ki/agoras/example.ki-agora', profile('\nprimary = "one"\n\n[projects]\none = "/one"'))
     box.setRunner(async () => ({ exitCode: 7, output: 'launch failed\n' }))
     expect(await box.run('ki agora open example')).toEqual({ exitCode: 7, output: 'ki: error: could not open Agora example: launch failed\n' })
 
