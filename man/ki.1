@@ -95,15 +95,6 @@ patterns.
 .TP
 .B ki repo [--agora <name>] [command]
 Use the physical KI repositories listed by one named Agora profile.
-.SS Registry management
-\&
-.TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
-Record selected physical KI repository roots in the local user register without
-applying repository repairs.
-.TP
-.B ki registry list
-List KI repositories registered in the local user register.
 .SS Repository management
 \&
 .TP
@@ -137,6 +128,15 @@ Remove KI-managed repository skill links and declarations.
 .TP
 .B ki repo [repo-options] upgrade
 Refresh uniquely resolved capabilities declared by selected KI repositories.
+.SS Registry management
+\&
+.TP
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
+Record selected physical KI repository roots in the local user register without
+applying repository repairs.
+.TP
+.B ki registry list
+List KI repositories registered in the local user register.
 .SS Harness management
 \&
 .TP
@@ -367,24 +367,6 @@ repository. With neither selector, KI checks a regular direct-CWD
 \fB.mgit-config.toml\fR, then discovers one repository from the current
 working directory. It never searches ancestor directories for an mGit
 configuration or invokes \fBmgit\fR.
-.SS Registry management
-\&
-.PP
-Use these root-level commands to record and list physical KI repository roots
-in the local user configuration. Registry membership is an inventory, not a
-repository-operation or conformance verdict.
-.TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
-Record selected physical KI repository roots in the local user configuration
-without resolving their declarations or applying repository repairs. This is an
-explicit inventory action: it validates only that every selected target is a
-physical directory with a regular \fB.ki-config.toml\fR and preserves existing
-registry entries. It never searches outside the supplied target selection.
-.TP
-.B ki registry list
-List physical KI repository roots explicitly registered in the local user
-configuration, one absolute path per line. The command neither discovers
-repositories nor changes state.
 .SS Repository management
 \&
 .PP
@@ -473,6 +455,24 @@ repository.
 .B ki repo [repo-options] upgrade
 Refresh uniquely resolved harness providers declared by each selected KI
 repository. It changes neither user nor repository skill activation.
+.SS Registry management
+\&
+.PP
+Use these root-level commands to record and list physical KI repository roots
+in the local user configuration. Registry membership is an inventory, not a
+repository-operation or conformance verdict.
+.TP
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
+Record selected physical KI repository roots in the local user configuration
+without resolving their declarations or applying repository repairs. This is an
+explicit inventory action: it validates only that every selected target is a
+physical directory with a regular \fB.ki-config.toml\fR and preserves existing
+registry entries. It never searches outside the supplied target selection.
+.TP
+.B ki registry list
+List physical KI repository roots explicitly registered in the local user
+configuration, one absolute path per line. The command neither discovers
+repositories nor changes state.
 .SS Harness management
 \&
 .PP
