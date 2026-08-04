@@ -1,5 +1,6 @@
 import type { Command } from 'commander'
 import type { KiContext } from '../context.ts'
+import { createRepositoryRegisterCommand } from '../core/repository-operations.ts'
 import { createAcquireCommand } from './acquire.ts'
 import { createAgoraCommand } from './agora.ts'
 import { createBootstrapCommand } from './bootstrap.ts'
@@ -42,6 +43,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   missing: (context) => createMissingCommand(context),
   outdated: (context) => createOutdatedCommand(context),
   repo: (context) => createRepoCommand(context),
+  register: (context) => createRepositoryRegisterCommand(context),
   repair: (context) => createRepairCommand(context),
   search: (context) => createSearchCommand(context),
   skill: (context) => createSkillCommand(context),

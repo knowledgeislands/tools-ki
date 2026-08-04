@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../context.ts'
 import { grammarError } from '../core/errors.ts'
-import { repoCommandNames, repoCommandSummaries, rootCommandNames, rootCommandSummaries } from './catalogue.ts'
+import { registerCommandNames, registerCommandSummaries, repoCommandNames, repoCommandSummaries, rootCommandNames, rootCommandSummaries } from './catalogue.ts'
 
 const zshValues = <Name extends string>(names: readonly Name[], summaries: Readonly<Record<Name, string>>): string =>
   names.map((name) => `'${name}:${summaries[name]}'`).join(' ')
@@ -18,6 +18,10 @@ export const createCompletionsCommand = (context: KiContext): Command =>
     COMPREPLY=( $(compgen -W "${repoCommandNames.join(' ')}" -- "$current") )
     return
   fi
+  if [[ "\${COMP_WORDS[1]}" == register && "\${COMP_CWORD}" -eq 2 ]]; then
+    COMPREPLY=( $(compgen -W "${registerCommandNames.join(' ')}" -- "$current") )
+    return
+  fi
   COMPREPLY=( $(compgen -W "${[...rootCommandNames, '--help', '--version'].join(' ')}" -- "$current") )
 }
 complete -F _ki ki\n`)
@@ -27,6 +31,7 @@ complete -F _ki ki\n`)
         context.stdout.write(`#compdef ki
 zstyle ':completion:*:ki-commands' verbose yes
 zstyle ':completion:*:ki-repository-commands' verbose yes
+zstyle ':completion:*:ki-register-commands' verbose yes
 _ki() {
   local -a commands
   if (( CURRENT == 2 )); then
@@ -35,6 +40,9 @@ _ki() {
   elif (( CURRENT == 3 )) && [[ "$words[2]" == repo ]]; then
     commands=(${zshValues(repoCommandNames, repoCommandSummaries)})
     _describe -t ki-repository-commands 'repository command' commands
+  elif (( CURRENT == 3 )) && [[ "$words[2]" == register ]]; then
+    commands=(${zshValues(registerCommandNames, registerCommandSummaries)})
+    _describe -t ki-register-commands 'register command' commands
   fi
 }
 compdef _ki ki

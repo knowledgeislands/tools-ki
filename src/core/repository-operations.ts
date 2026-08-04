@@ -150,35 +150,6 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         )
     )
     .addCommand(
-      new Command('list').description('list KI repositories registered in the local user configuration').action(async () => {
-        const configuration = await inspectUserConfiguration(context.paths.config)
-        if (configuration.state === 'missing') throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
-        if (configuration.state === 'invalid') throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
-        if (configuration.repositories.length) context.stdout.write(`${configuration.repositories.join('\n')}\n`)
-      })
-    )
-    .addCommand(
-      new Command('register')
-        .description('register explicitly selected local KI repository roots without applying repairs')
-        .option('--dry-run', 'report registrations without writing')
-        .action(async (options: { dryRun?: boolean }) => {
-          const repositories = await resolveRepositoryTargets({
-            ...selectedRepositories(),
-            workingDirectory: context.workingDirectory,
-            homeDirectory: context.homeDirectory
-          })
-          for (const repository of repositories) {
-            const registryWrite = await configuredRepositoryWrite(context.paths.config, repository.root)
-            const writes = registryWrite ? await prepareWrites(await realpath(context.paths.config), [registryWrite]) : []
-            for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
-            await publishWrites(writes, Boolean(options.dryRun))
-            context.stdout.write(
-              `ki repo register: ${registryWrite ? (options.dryRun ? 'would register' : 'registered') : 'already registered'} ${repository.root}\n`
-            )
-          }
-        })
-    )
-    .addCommand(
       new Command('educate')
         .description('explain maintenance for declared skills')
         .option('--skill <capability>', 'one declared resolved skill to explain')
@@ -388,6 +359,47 @@ export const createRepositoryOperations = (context: KiContext): Command => {
     (left, right) =>
       repoHelpCommandNames.indexOf(left.name() as (typeof repoHelpCommandNames)[number]) -
       repoHelpCommandNames.indexOf(right.name() as (typeof repoHelpCommandNames)[number])
+  )
+  return command
+}
+
+export const createRepositoryRegisterCommand = (context: KiContext): Command => {
+  const command = new Command('register')
+    .description('manage the local KI repository register')
+    .option('--repo <path-or-pattern>', 'repository root or pattern', (value: string, previous: readonly string[] = []) => [...previous, value], [])
+    .option('--workspace <group>', 'workspace group from .ki-workspace.toml in the current directory')
+  const selectedRepositories = (): { readonly repositories: readonly string[]; readonly workspace?: string } => {
+    const options = command.opts<{ repo: readonly string[]; workspace?: string }>()
+    return { repositories: options.repo, workspace: options.workspace }
+  }
+  command.addCommand(
+    new Command('add')
+      .description('add explicitly selected local KI repository roots without applying repairs')
+      .option('--dry-run', 'report registrations without writing')
+      .action(async (options: { dryRun?: boolean }) => {
+        const repositories = await resolveRepositoryTargets({
+          ...selectedRepositories(),
+          workingDirectory: context.workingDirectory,
+          homeDirectory: context.homeDirectory
+        })
+        for (const repository of repositories) {
+          const registryWrite = await configuredRepositoryWrite(context.paths.config, repository.root)
+          const writes = registryWrite ? await prepareWrites(await realpath(context.paths.config), [registryWrite]) : []
+          for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
+          await publishWrites(writes, Boolean(options.dryRun))
+          context.stdout.write(
+            `ki register add: ${registryWrite ? (options.dryRun ? 'would register' : 'registered') : 'already registered'} ${repository.root}\n`
+          )
+        }
+      })
+  )
+  command.addCommand(
+    new Command('list').description('list KI repositories registered in the local user configuration').action(async () => {
+      const configuration = await inspectUserConfiguration(context.paths.config)
+      if (configuration.state === 'missing') throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
+      if (configuration.state === 'invalid') throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
+      if (configuration.repositories.length) context.stdout.write(`${configuration.repositories.join('\n')}\n`)
+    })
   )
   return command
 }

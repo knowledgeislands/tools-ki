@@ -118,12 +118,12 @@ Run registered native repository audits.
 Record the selected physical KI repository roots locally, then apply
 registered native repository repairs.
 .TP
-.B ki repo [repo-options] register [--dry-run]
-Record selected physical KI repository roots in the local user configuration
-without applying repository repairs.
+.B ki register [--repo <path-or-pattern>]... [--workspace <group>] add [--dry-run]
+Record selected physical KI repository roots in the local user register without
+applying repository repairs.
 .TP
-.B ki repo list
-List KI repositories registered in the local user configuration.
+.B ki register list
+List KI repositories registered in the local user register.
 .TP
 .B ki repo [repo-options] plan list [--format <text|json>] [--horizon <horizon>] [--status <status>]
 List governed work items without changing their lifecycle.
@@ -464,14 +464,14 @@ registry before resolving declarations or evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
 .TP
-.B ki repo [repo-options] register [--dry-run]
+.B ki register [--repo <path-or-pattern>]... [--workspace <group>] add [--dry-run]
 Record selected physical KI repository roots in the local user configuration
 without resolving their declarations or applying repository repairs. This is an
 explicit inventory action: it validates only that every selected target is a
 physical directory with a regular \fB.ki-config.toml\fR and preserves existing
 registry entries. It never searches outside the supplied target selection.
 .TP
-.B ki repo list
+.B ki register list
 List physical KI repository roots explicitly registered in the local user
 configuration, one absolute path per line. The command neither discovers
 repositories nor changes state.

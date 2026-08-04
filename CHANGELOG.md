@@ -66,15 +66,18 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo init`
 - `ki repo audit`
 - `ki repo conform`
-- `ki repo register`
-- `ki repo list`
-- Local `ki repo register` records every selected physical KI repository root without applying repairs; `ki repo conform` does the same before evaluating its declaration or conformance findings.
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo plan list`
 - `ki repo educate`
 - `ki repo skill add`
 - `ki repo skill remove`
 - `ki repo upgrade`
+
+#### Repository register
+
+- `ki register add`
+- `ki register list`
+- Local `ki register add` records every selected physical KI repository root without applying repairs; `ki repo conform` does the same before evaluating its declaration or conformance findings.
 
 #### Harness management
 
