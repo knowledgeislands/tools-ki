@@ -54,6 +54,12 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo --repo <path-or-pattern>`
 - `ki repo --agora <name>`
 
+#### Registry management
+
+- `ki registry add`
+- `ki registry list`
+- Local `ki registry add` records every selected physical KI repository root without applying repairs; `ki repo conform` does the same before evaluating its declaration or conformance findings.
+
 #### Repository management
 
 - `ki repo init`
@@ -66,12 +72,6 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo skill add`
 - `ki repo skill remove`
 - `ki repo upgrade`
-
-#### Repository register
-
-- `ki registry add`
-- `ki registry list`
-- Local `ki registry add` records every selected physical KI repository root without applying repairs; `ki repo conform` does the same before evaluating its declaration or conformance findings.
 
 #### Harness management
 

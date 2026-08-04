@@ -61,6 +61,10 @@ describe('[ki command inventory]', () => {
 
     for (const command of agoraCommands) expect(manual).toContain(command === 'open' ? '.B ki agora show|open <name>' : `.B ki agora ${command}`)
     expect(manual.indexOf('.SS Agora management')).toBeLessThan(manual.indexOf('.SS Repository options'))
+    expect(manual.indexOf('.SS Repository options')).toBeLessThan(manual.indexOf('.SS Registry management'))
+    expect(manual.indexOf('.SS Registry management')).toBeLessThan(manual.indexOf('.SS Repository management'))
     expect(changelog.indexOf('#### Agora management')).toBeLessThan(changelog.indexOf('#### Repository options'))
+    expect(changelog.indexOf('#### Repository options')).toBeLessThan(changelog.indexOf('#### Registry management'))
+    expect(changelog.indexOf('#### Registry management')).toBeLessThan(changelog.indexOf('#### Repository management'))
   })
 })
