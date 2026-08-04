@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-013
 title: Group roadmap text output by horizon
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: e94e78089a507f1da3ea4faf7305ad6dd6875db4
 ---
 
 ## Goal
