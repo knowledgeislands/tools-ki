@@ -2,9 +2,8 @@
 id: KI-TOOL-CLI-019
 title: Establish KI self
 theme: cli
-horizon: future
-status: draft
-candidate: true
+horizon: now
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -27,6 +26,32 @@ This item does not replace always-loaded contribution instructions, promote loca
 `ki-self` is repository-local governance, not a process skill and not a second instruction file. `AGENTS.md` and runtime instruction files remain the operational contract that applies to every contribution. `ki-self` owns the narrower set of durable, inspectable requirements that are specific to this CLI host, including a rubric with named criteria, evidence surfaces, and judgment boundaries.
 
 The source must remain committed in this repository. A runtime projection is derived state, not a copied or independently authored skill. The portable discovery, projection, native audit/conform execution, and rubric-publication lifecycle remain for the harness to formalise.
+
+## Current state
+
+The first committed local source and rubric were removed immediately after their initial creation, while this item retained its required shape. The repository therefore has an explicit design but no local source that can carry its reviewed governance.
+
+## Steps
+
+- [ ] Restore the committed `ki-self` source and its initial bootstrap and repair rubric.
+- [ ] Add the stable local boundary for framed human-facing CLI reports, including the deliberately plain interfaces it excludes.
+- [ ] Reconcile this item's claims with the harness handoff and record delivery evidence for review.
+
+## Files touched
+
+- `.agents/skills/ki-self/SKILL.md`
+- `.agents/skills/ki-self/references/rubric.md`
+- `docs/roadmap/KI-TOOL-CLI-019-establish-ki-self-standards.md`
+
+## Verify
+
+- `ki repo audit --skill ki-roadmap --repo .`
+- `bunx prettier --check .agents/skills/ki-self/SKILL.md .agents/skills/ki-self/references/rubric.md docs/roadmap/KI-TOOL-CLI-019-establish-ki-self-standards.md`
+- `git diff --check`
+
+## Dependencies / blocks
+
+The local source and its readable rubric do not depend on native host execution. [TRD-af376594](../../-/_TRADES/knowledgeislands/ki-agentic-harness/TRD-af376594.md) remains the separate harness-owned request for portable discovery, projection, native audit/conform execution, and rubric publication.
 
 ## Initial rubric coverage
 
@@ -54,6 +79,10 @@ The first `ki-self` rubric must define and check the following concerns.
 ### Ownership boundary
 
 Inventory the standards currently expected by this repository, classify each as portable or repository-specific, and record the latter in `ki-self`. Keep `ki-tools` focused on standards that are demonstrably useful across compatible CLI repositories. Treat an existing local convention as evidence to evaluate, not automatic justification for a new general rule.
+
+### Delivery approval
+
+The user selected this item for immediate delivery on 2026-08-06, after reviewing the removal of the initial local source. The delivery is deliberately documentation-governance only: it restores the committed source and makes its evidence boundary explicit; it does not claim native `ki repo audit --skill ki-self` support before the harness accepts the separate trade.
 
 ### First application
 
