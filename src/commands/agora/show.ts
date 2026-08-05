@@ -8,7 +8,15 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
     .argument('<agora>', 'Agora name or profile path')
     .action(async (value: string) => {
       const profile = await resolveAgora(context.paths.config, context.workingDirectory, value)
-      context.stdout.write(
-        `ki agora show ${profile.id}\n  ${profile.name}\n  tool ${profile.tool}\n${profile.projects.map((project) => `  project ${project}`).join('\n')}${profile.projects.length ? '\n' : ''}`
-      )
+      const lines = [
+        '╭─ KI AGORA',
+        `├─ ${profile.id}`,
+        `│  ├─ name: ${profile.name}`,
+        `│  ╰─ tool: ${profile.tool}`,
+        `├─ projects (${profile.projects.length})`
+      ]
+      if (!profile.projects.length) lines.push('│  ╰─ none')
+      else lines.push(...profile.projects.map((project, index) => `│  ${index === profile.projects.length - 1 ? '╰─' : '├─'} ${project}`))
+      lines.push(`╰─ summary: PROJECTS=${profile.projects.length}`)
+      context.stdout.write(`${lines.join('\n')}\n`)
     })

@@ -18,11 +18,12 @@ describe('[ki agora]', () => {
     })
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 0,
-      output: 'ki agora list\n  example — Example (3 projects)\n  zeta — Example (0 projects)\n'
+      output: '╭─ KI AGORAS\n├─ profiles (2)\n│  ├─ example — Example (3 projects)\n│  ╰─ zeta — Example (0 projects)\n╰─ summary: PROFILES=2 PROJECTS=3\n'
     })
     expect(await box.run('ki agora show example')).toEqual({
       exitCode: 0,
-      output: 'ki agora show example\n  Example\n  tool zed\n  project /alpha\n  project /primary\n  project /zulu\n'
+      output:
+        '╭─ KI AGORA\n├─ example\n│  ├─ name: Example\n│  ╰─ tool: zed\n├─ projects (3)\n│  ├─ /alpha\n│  ├─ /primary\n│  ╰─ /zulu\n╰─ summary: PROJECTS=3\n'
     })
     expect(await box.run('ki agora open example')).toEqual({ exitCode: 0, output: 'ki agora open example: opened 3 Zed projects\n' })
     expect(calls).toEqual(['zed -n', 'zed -e /zulu', 'zed -e /primary', 'zed -e /alpha'])
@@ -30,9 +31,15 @@ describe('[ki agora]', () => {
 
   test('reports an absent directory and supports empty profiles', async () => {
     const box = await sandbox()
-    expect(await box.run('ki agora list')).toEqual({ exitCode: 0, output: 'ki agora list\n' })
+    expect(await box.run('ki agora list')).toEqual({
+      exitCode: 0,
+      output: '╭─ KI AGORAS\n├─ profiles (0)\n│  ╰─ none\n╰─ summary: PROFILES=0 PROJECTS=0\n'
+    })
     await box.config.write('ki/agoras/empty.ki-agora', profile())
-    expect(await box.run('ki agora show empty')).toEqual({ exitCode: 0, output: 'ki agora show empty\n  Example\n  tool zed\n' })
+    expect(await box.run('ki agora show empty')).toEqual({
+      exitCode: 0,
+      output: '╭─ KI AGORA\n├─ empty\n│  ├─ name: Example\n│  ╰─ tool: zed\n├─ projects (0)\n│  ╰─ none\n╰─ summary: PROJECTS=0\n'
+    })
     expect(await box.run('ki agora open empty')).toEqual({ exitCode: 2, output: 'ki: error: Agora empty has no projects\n' })
     expect(await box.run('ki repo --agora empty roadmap list')).toEqual({ exitCode: 2, output: 'ki: error: Agora empty has no projects\n' })
   })
@@ -42,10 +49,13 @@ describe('[ki agora]', () => {
     await box.project.write('relative.ki-agora', profile())
     await box.home.write('absolute.ki-agora', profile())
 
-    expect(await box.run('ki agora show relative.ki-agora')).toEqual({ exitCode: 0, output: 'ki agora show relative\n  Example\n  tool zed\n' })
+    expect(await box.run('ki agora show relative.ki-agora')).toEqual({
+      exitCode: 0,
+      output: '╭─ KI AGORA\n├─ relative\n│  ├─ name: Example\n│  ╰─ tool: zed\n├─ projects (0)\n│  ╰─ none\n╰─ summary: PROJECTS=0\n'
+    })
     expect(await box.run(['ki', 'agora', 'show', join(box.home.path, 'absolute.ki-agora')])).toEqual({
       exitCode: 0,
-      output: 'ki agora show absolute\n  Example\n  tool zed\n'
+      output: '╭─ KI AGORA\n├─ absolute\n│  ├─ name: Example\n│  ╰─ tool: zed\n├─ projects (0)\n│  ╰─ none\n╰─ summary: PROJECTS=0\n'
     })
   })
 
@@ -136,7 +146,7 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora discover discovered nested')).toEqual({ exitCode: 0, output: 'ki agora discover: discovered now has 1 projects\n' })
     expect(await box.run('ki agora show discovered')).toEqual({
       exitCode: 0,
-      output: `ki agora show discovered\n  discovered\n  tool zed\n  project ${third}\n`
+      output: `╭─ KI AGORA\n├─ discovered\n│  ├─ name: discovered\n│  ╰─ tool: zed\n├─ projects (1)\n│  ╰─ ${third}\n╰─ summary: PROJECTS=1\n`
     })
     await box.config.write('ki/agoras/duplicate.ki-agora', profile(`\n[projects]\nalias = ${JSON.stringify(first)}`))
     expect((await box.run('ki agora add duplicate first')).output).toContain(`Agora duplicate already has project ${first}`)

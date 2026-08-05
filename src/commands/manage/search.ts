@@ -27,8 +27,9 @@ export const createSearchCommand = (context: KiContext): Command =>
         harness.capabilities.map((capability) => ({ harness: harness.id, kind: capability.kind, name: capability.name }))
       )
       const found = capabilities.filter((entry) => matches(query, entry)).sort(compareMatches)
-      const lines = [`ki manage search ${query}`]
-      if (!found.length) lines.push('No matching installed capabilities.')
-      else lines.push('Matching installed capabilities:', ...found.map((entry) => `  ${entry.harness} ${entry.kind} ${entry.name}`))
+      const lines = ['╭─ KI MANAGE SEARCH', `│  query: ${query}`, `├─ matches (${found.length})`]
+      if (!found.length) lines.push('│  ╰─ none')
+      else lines.push(...found.map((entry, index) => `│  ${index === found.length - 1 ? '╰─' : '├─'} ${entry.harness} ${entry.kind} ${entry.name}`))
+      lines.push(`╰─ summary: MATCHES=${found.length}`)
       context.stdout.write(`${lines.join('\n')}\n`)
     })

@@ -8,8 +8,9 @@ export const createMissingCommand = (context: KiContext): Command =>
       configurationDirectory: context.paths.config,
       dataDirectory: context.paths.data
     })
-    const lines = ['ki manage missing']
-    if (!status.missing.length) lines.push('No missing capabilities.')
-    else lines.push('Missing capabilities:', ...status.missing.map((entry) => `  user skill ${entry.name}`))
+    const lines = ['╭─ KI MANAGE MISSING', `├─ capabilities (${status.missing.length})`]
+    if (!status.missing.length) lines.push('│  ╰─ none')
+    else lines.push(...status.missing.map((entry, index) => `│  ${index === status.missing.length - 1 ? '╰─' : '├─'} user skill ${entry.name}`))
+    lines.push(`╰─ summary: MISSING=${status.missing.length}`)
     context.stdout.write(`${lines.join('\n')}\n`)
   })

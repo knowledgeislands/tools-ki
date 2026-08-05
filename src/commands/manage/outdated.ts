@@ -8,15 +8,15 @@ export const createOutdatedCommand = (context: KiContext): Command =>
       configurationDirectory: context.paths.config,
       dataDirectory: context.paths.data
     })
-    const lines = ['ki manage outdated']
-    if (!status.outdatedEvidenceGaps.length) lines.push('No installed harnesses.')
-    else {
-      lines.push('No comparable newer release evidence.')
-      lines.push('Unavailable release evidence:')
-      for (const entry of status.outdatedEvidenceGaps) {
-        const reason = entry.reason === 'no-configured-release' ? 'no configured immutable release' : 'installed release provenance is not recorded'
-        lines.push(`  ${entry.harness}: ${reason}`)
-      }
-    }
+    const lines = ['╭─ KI MANAGE OUTDATED', `├─ evidence gaps (${status.outdatedEvidenceGaps.length})`]
+    if (!status.outdatedEvidenceGaps.length) lines.push('│  ╰─ none')
+    else
+      lines.push(
+        ...status.outdatedEvidenceGaps.map((entry, index) => {
+          const reason = entry.reason === 'no-configured-release' ? 'no configured immutable release' : 'installed release provenance is not recorded'
+          return `│  ${index === status.outdatedEvidenceGaps.length - 1 ? '╰─' : '├─'} ${entry.harness}: ${reason}`
+        })
+      )
+    lines.push(`╰─ summary: EVIDENCE_GAPS=${status.outdatedEvidenceGaps.length}`)
     context.stdout.write(`${lines.join('\n')}\n`)
   })

@@ -111,7 +111,10 @@ describe('[ki trade]', () => {
     expect(listed.output).toContain('│  ├─ export\n│  │  ├─ work')
     expect(listed.output).toContain('│  │  ╰─ knowledge')
     expect(listed.output).toContain('│  ╰─ import')
-    expect(checked).toEqual({ exitCode: 0, output: `ki trade routes check\n  export work ${receiverHome}: active\n` })
+    expect(checked).toEqual({
+      exitCode: 0,
+      output: `╭─ KI TRADE ROUTE CHECK\n├─ routes (1)\n│  ╰─ export work ${receiverHome}: active\n╰─ summary: ROUTES=1 ACTIVE=1\n`
+    })
     expect(removed).toEqual({ exitCode: 0, output: `ki trade routes remove: export work ${sourceHome} -> ${receiverHome}\n` })
     expect(removedExportKnowledge).toEqual({ exitCode: 0, output: `ki trade routes remove: export knowledge ${sourceHome} -> ${receiverHome}\n` })
     expect(removedImport).toEqual({ exitCode: 0, output: `ki trade routes remove: import knowledge ${sourceHome} -> ${receiverHome}\n` })
@@ -249,7 +252,10 @@ describe('[ki trade]', () => {
       exitCode: 0,
       output: `╭─ KI TRADE ROUTES\n│  📁 example/source\n│     ${sourceHome}\n│  ✦ 0 routes\n├─ results\n│  ╰─ routes: none\n╰─ summary: ROUTES=0\n`
     })
-    expect(await box.run('ki trade routes check')).toEqual({ exitCode: 0, output: 'ki trade routes check\n  none\n' })
+    expect(await box.run('ki trade routes check')).toEqual({
+      exitCode: 0,
+      output: '╭─ KI TRADE ROUTE CHECK\n├─ routes (0)\n│  ╰─ none\n╰─ summary: ROUTES=0 ACTIVE=0\n'
+    })
 
     await box.project.write('.ki-config.toml', '[not valid TOML\n')
     expect((await box.run('ki trade routes list')).output).toContain('must be valid TOML')

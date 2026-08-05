@@ -14,7 +14,7 @@ describe('[ki local utility commands]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        'ki manage search SKILL\nMatching installed capabilities:\n  example/harness skill ki-example\n  knowledgeislands/ki-agentic-harness skill ki-accept\n  knowledgeislands/ki-agentic-harness skill ki-batch\n  knowledgeislands/ki-agentic-harness skill ki-bootstrap\n  knowledgeislands/ki-agentic-harness skill ki-delegate\n  knowledgeislands/ki-agentic-harness skill ki-implement\n  knowledgeislands/ki-agentic-harness skill ki-next\n  knowledgeislands/ki-agentic-harness skill ki-plan\n  knowledgeislands/ki-agentic-harness skill ki-recap\n'
+        '╭─ KI MANAGE SEARCH\n│  query: SKILL\n├─ matches (8)\n│  ├─ example/harness skill ki-example\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-accept\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-batch\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-bootstrap\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-implement\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-next\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-plan\n│  ╰─ knowledgeislands/ki-agentic-harness skill ki-recap\n╰─ summary: MATCHES=8\n'
     })
     expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(example)
   })
@@ -28,9 +28,9 @@ describe('[ki local utility commands]', () => {
 
     expect(identifier).toEqual({
       exitCode: 0,
-      output: 'ki manage search EXAMPLE/HARNESS\nMatching installed capabilities:\n  example/harness skill ki-example\n'
+      output: '╭─ KI MANAGE SEARCH\n│  query: EXAMPLE/HARNESS\n├─ matches (1)\n│  ╰─ example/harness skill ki-example\n╰─ summary: MATCHES=1\n'
     })
-    expect(absent).toEqual({ exitCode: 0, output: 'ki manage search absent\nNo matching installed capabilities.\n' })
+    expect(absent).toEqual({ exitCode: 0, output: '╭─ KI MANAGE SEARCH\n│  query: absent\n├─ matches (0)\n│  ╰─ none\n╰─ summary: MATCHES=0\n' })
   })
 
   test('rejects missing, empty, additional, and option search arguments', async () => {
@@ -55,7 +55,7 @@ describe('[ki local utility commands]', () => {
 
     const result = await box.run('ki manage cleanup')
 
-    expect(result).toEqual({ exitCode: 0, output: 'ki manage cleanup\nNo eligible managed stale state.\n' })
+    expect(result).toEqual({ exitCode: 0, output: '╭─ KI MANAGE CLEANUP\n├─ eligible (0)\n│  ╰─ none\n╰─ summary: ELIGIBLE=0\n' })
     expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)
     expect(await box.data.read('ki/unknown-state')).toBe(unknown)
   })

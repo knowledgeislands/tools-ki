@@ -8,8 +8,8 @@ describe('[ki manage missing and ki manage outdated]', () => {
     const missing = await box.run('ki manage missing')
     const outdated = await box.run('ki manage outdated')
 
-    expect(missing).toEqual({ exitCode: 0, output: 'ki manage missing\nNo missing capabilities.\n' })
-    expect(outdated).toEqual({ exitCode: 0, output: 'ki manage outdated\nNo installed harnesses.\n' })
+    expect(missing).toEqual({ exitCode: 0, output: '╭─ KI MANAGE MISSING\n├─ capabilities (0)\n│  ╰─ none\n╰─ summary: MISSING=0\n' })
+    expect(outdated).toEqual({ exitCode: 0, output: '╭─ KI MANAGE OUTDATED\n├─ evidence gaps (0)\n│  ╰─ none\n╰─ summary: EVIDENCE_GAPS=0\n' })
   })
 
   test('reports missing user skills without inspecting the current repository', async () => {
@@ -40,7 +40,8 @@ describe('[ki manage missing and ki manage outdated]', () => {
 
     expect(result).toEqual({
       exitCode: 0,
-      output: 'ki manage missing\nMissing capabilities:\n  user skill example/harness:ki-other\n  user skill example/harness:ki-user\n'
+      output:
+        '╭─ KI MANAGE MISSING\n├─ capabilities (2)\n│  ├─ user skill example/harness:ki-other\n│  ╰─ user skill example/harness:ki-user\n╰─ summary: MISSING=2\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
   })
@@ -55,7 +56,7 @@ describe('[ki manage missing and ki manage outdated]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        'ki manage outdated\nNo comparable newer release evidence.\nUnavailable release evidence:\n  example/harness: no configured immutable release\n  knowledgeislands/ki-agentic-harness: installed release provenance is not recorded\n'
+        '╭─ KI MANAGE OUTDATED\n├─ evidence gaps (2)\n│  ├─ example/harness: no configured immutable release\n│  ╰─ knowledgeislands/ki-agentic-harness: installed release provenance is not recorded\n╰─ summary: EVIDENCE_GAPS=2\n'
     })
   })
 

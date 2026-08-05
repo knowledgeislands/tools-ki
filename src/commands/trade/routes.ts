@@ -94,10 +94,17 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
               (!options.kind || route.kind === kind(options.kind))
           )
           if (peer && !selected.length) throw grammarError(`trade route ${peer} is not declared locally`)
-          const lines = [
-            'ki trade routes check',
-            ...(selected.length ? selected.map((route) => `  ${route.direction} ${route.kind} ${route.repository}: ${routeState(route.state)}`) : ['  none'])
-          ]
+          const active = selected.filter((route) => route.state === 'active').length
+          const lines = ['╭─ KI TRADE ROUTE CHECK', `├─ routes (${selected.length})`]
+          if (!selected.length) lines.push('│  ╰─ none')
+          else
+            lines.push(
+              ...selected.map(
+                (route, index) =>
+                  `│  ${index === selected.length - 1 ? '╰─' : '├─'} ${route.direction} ${route.kind} ${route.repository}: ${routeState(route.state)}`
+              )
+            )
+          lines.push(`╰─ summary: ROUTES=${selected.length} ACTIVE=${active}`)
           context.stdout.write(`${lines.join('\n')}\n`)
         })
     )
