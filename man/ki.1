@@ -160,11 +160,32 @@ Remove one installed non-canonical harness.
 .B ki trade routes add <repository> --direction export|import --kind work|knowledge
 Declare one local typed directional trade route.
 .TP
-.B ki trade routes remove|list|check
-Maintain or inspect local typed trade route declarations.
+.B ki trade routes remove <repository> --direction export|import --kind work|knowledge
+Remove one local typed trade route.
 .TP
-.B ki trade new|receive|list|show|release|prune
-Create, pull, inspect, release, or prune cross-repository trade copies.
+.B ki trade routes list
+List local typed trade routes and their registered-estate state.
+.TP
+.B ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]
+Check local typed trade routes against the registered repository estate.
+.TP
+.B ki trade new --to <repository> --kind work|knowledge --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
+Create one local outbound typed trade.
+.TP
+.B ki trade receive --from <repository> --kind work|knowledge [--id <trade-id>]
+Pull eligible outbound trades from a reciprocal sender.
+.TP
+.B ki trade list [--direction inbound|outbound] [--status <status>] [--kind work|knowledge] [--repo <repository>]
+List visible trade copies in the registered repository estate.
+.TP
+.B ki trade show <trade-id>
+Show every visible copy of one trade.
+.TP
+.B ki trade release <trade-id>
+Release one local outbound trade after a terminal receiver disposition.
+.TP
+.B ki trade prune <trade-id>
+Prune one local terminal inbound trade after sender release is observable.
 .SS Acquisition
 \&
 .TP

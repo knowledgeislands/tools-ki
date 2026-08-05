@@ -60,7 +60,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo audit`
 - `ki repo conform`
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
-- `ki repo roadmap list` (framed horizon- and lifecycle-grouped text inventory)
+- `ki repo roadmap list` (framed horizon- and lifecycle-grouped text inventory with per-repository inbound and outbound trade context)
 - `ki repo educate`
 - `ki repo repair`
 - `ki repo skill add`
@@ -83,8 +83,16 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 #### Trades
 
-- `ki trade routes add|remove|list|check`
-- `ki trade new|receive|list|show|release|prune`
+- `ki trade routes add`
+- `ki trade routes remove`
+- `ki trade routes list` (framed local route inventory)
+- `ki trade routes check`
+- `ki trade new`
+- `ki trade receive`
+- `ki trade list` (framed registered-estate inventory)
+- `ki trade show`
+- `ki trade release`
+- `ki trade prune`
 
 #### Acquisition
 

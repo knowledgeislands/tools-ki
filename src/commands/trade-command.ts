@@ -77,6 +77,70 @@ const requireText = (value: string | undefined, option: string): string => {
 const routeState = (state: RouteState): string =>
   ({ active: 'active', 'missing-repository': 'missing repository', 'ambiguous-repository': 'ambiguous repository', nonreciprocal: 'nonreciprocal' })[state]
 
+const count = (value: number, noun: string): string => `${value} ${noun}${value === 1 ? '' : 's'}`
+
+const renderRouteList = (local: Awaited<ReturnType<typeof localRegisteredConfiguration>>, inspected: Awaited<ReturnType<typeof inspectRoutes>>): string => {
+  const lines = [
+    '╭─ KI TRADE ROUTES',
+    `│  📁 ${local.configuration.identity}`,
+    `│     ${local.configuration.repository}`,
+    `│  ✦ ${count(inspected.length, 'route')}`,
+    '├─ results'
+  ]
+  if (!inspected.length) lines.push('│  ╰─ routes: none')
+  else {
+    const directions = ['export', 'import'] as const
+    const groups = directions.flatMap((direction) => {
+      const routes = inspected.filter((route) => route.direction === direction)
+      return routes.length ? [{ direction, routes }] : []
+    })
+    lines.push(
+      ...groups.flatMap(({ direction, routes }, groupIndex) => {
+        const lastGroup = groupIndex === groups.length - 1
+        const itemPrefix = `│  ${lastGroup ? '   ' : '│  '}`
+        return [
+          `│  ${lastGroup ? '╰─' : '├─'} ${direction}`,
+          ...routes.map(
+            (route, routeIndex) =>
+              `${itemPrefix}${routeIndex === routes.length - 1 ? '╰─' : '├─'} ${route.kind} ${route.repository} [${routeState(route.state)}]`
+          )
+        ]
+      })
+    )
+  }
+  lines.push(`╰─ summary: ROUTES=${inspected.length}`)
+  return lines.join('\n')
+}
+
+const renderTradeList = (trades: Awaited<ReturnType<typeof locateTrades>>): string => {
+  const lines = ['╭─ KI TRADES', `│  ✦ ${count(trades.length, 'trade')}`, '├─ results']
+  if (!trades.length) lines.push('│  ╰─ trades: none')
+  else {
+    const directions = ['inbound', 'outbound'] as const
+    const groups = directions.flatMap((direction) => {
+      const located = trades.filter((trade) => trade.direction === direction)
+      return located.length ? [{ direction, trades: located }] : []
+    })
+    lines.push(
+      ...groups.flatMap(({ direction, trades: group }, groupIndex) => {
+        const lastGroup = groupIndex === groups.length - 1
+        const itemPrefix = `│  ${lastGroup ? '   ' : '│  '}`
+        return [
+          `│  ${lastGroup ? '╰─' : '├─'} ${direction}`,
+          ...group.map(
+            (trade, tradeIndex) =>
+              `${itemPrefix}${tradeIndex === group.length - 1 ? '╰─' : '├─'} ${trade.repository} ${trade.record.id} [${trade.record.kind}${trade.record.status ? `, ${trade.record.status}` : ''}] ${trade.record.title}`
+          )
+        ]
+      })
+    )
+  }
+  lines.push(
+    `╰─ summary: TRADES=${trades.length} INBOUND=${trades.filter((trade) => trade.direction === 'inbound').length} OUTBOUND=${trades.filter((trade) => trade.direction === 'outbound').length}`
+  )
+  return lines.join('\n')
+}
+
 export const createTradeCommand = (context: KiContext): Command => {
   const routes = new Command('routes').description('maintain local typed trade-route declarations')
   routes
@@ -110,11 +174,7 @@ export const createTradeCommand = (context: KiContext): Command => {
       new Command('list').description('list locally declared typed trade routes and their estate state').action(async () => {
         const local = await localRegisteredConfiguration(context)
         const inspected = await inspectRoutes(context, local.configuration)
-        const lines = ['ki trade routes list', `Repository: ${local.configuration.repository}`, 'Routes:']
-        lines.push(
-          ...(inspected.length ? inspected.map((route) => `  ${route.direction} ${route.kind} ${route.repository} [${routeState(route.state)}]`) : ['  none'])
-        )
-        context.stdout.write(`${lines.join('\n')}\n`)
+        context.stdout.write(`${renderRouteList(local, inspected)}\n`)
       })
     )
     .addCommand(
@@ -200,16 +260,7 @@ export const createTradeCommand = (context: KiContext): Command => {
         const selected = trades.filter(
           (trade) => (!options.status || trade.record.status === options.status) && (!options.kind || trade.record.kind === kind(options.kind))
         )
-        const lines = ['ki trade list']
-        lines.push(
-          ...(selected.length
-            ? selected.map(
-                (trade) =>
-                  `  ${trade.repository} ${trade.direction} ${trade.record.id} [${trade.record.kind}${trade.record.status ? `, ${trade.record.status}` : ''}] ${trade.record.title}`
-              )
-            : ['  none'])
-        )
-        context.stdout.write(`${lines.join('\n')}\n`)
+        context.stdout.write(`${renderTradeList(selected)}\n`)
       })
   )
   command.addCommand(

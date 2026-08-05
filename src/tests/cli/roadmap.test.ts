@@ -46,7 +46,7 @@ describe('[ki repo roadmap]', () => {
 
     expect(text).toEqual({
       exitCode: 0,
-      output: `╭─ KI REPO ROADMAP\n│  📁 repo\n│     ${root}\n│  ✦ 1 item\n├─ results\n│  ╰─ next\n│     ╰─ KI-TOOL-CLI-003 [open] Inspect governed work\n╰─ summary: ITEMS=1 HORIZONS=1\n`
+      output: `╭─ KI REPO ROADMAP\n│  📁 repo\n│     ${root}\n│  ✦ 1 item\n├─ results\n│  ╰─ next\n│     ╰─ KI-TOOL-CLI-003 [open] Inspect governed work\n├─ trades\n│  ╰─ ❌ unavailable: ki environment is not bootstrapped; run \`ki bootstrap\` first\n╰─ summary: ITEMS=1 HORIZONS=1 TRADES=unavailable\n`
     })
     expect(accepted.output).toContain('KI-TOOL-CLI-010 [acceptance] Cleanup')
     expect(accepted.output).not.toContain('KI-TOOL-CLI-003')
@@ -128,6 +128,47 @@ describe('[ki repo roadmap]', () => {
       expect(index).toBeGreaterThan(previous)
       previous = index
     }
+  })
+
+  test('includes registered inbound and outbound trade context for each selected repository', async () => {
+    const box = await sandbox()
+    const source = await box.project.mkdir('source')
+    const receiver = await box.project.mkdir('receiver')
+    const sourceHome = 'https://github.com/example/source'
+    const receiverHome = 'https://github.com/example/receiver'
+    const id = 'TRD-00000000-0000-0000-0000-000000000000'
+    const configuration = (repository: string, exportsTo: readonly string[], importsFrom: readonly string[]): string =>
+      [
+        '["knowledgeislands/ki-agentic-harness:ki-repo"]',
+        `repository = ${JSON.stringify(repository)}`,
+        '',
+        '["knowledgeislands/ki-agentic-harness:ki-trades".exports_to]',
+        `work = [${exportsTo.map((route) => JSON.stringify(route)).join(', ')}]`,
+        'knowledge = []',
+        '',
+        '["knowledgeislands/ki-agentic-harness:ki-trades".imports_from]',
+        `work = [${importsFrom.map((route) => JSON.stringify(route)).join(', ')}]`,
+        'knowledge = []',
+        ''
+      ].join('\n')
+    const record = (status = ''): string =>
+      `---\nid: ${id}\ntitle: Trade-aware planning\ncreated_at: 2026-08-05T12:00:00Z\nsender: example/source\nreceiver: example/receiver\nkind: work\nsource_ref: KI-TOOL-CLI-012${status}\n---\n# ${id}: Trade-aware planning\n\n## Context\n\nTrade context.\n\n## Submission\n\nShow trades with roadmap work.\n\n## Constraints\n\nRemain read-only.\n`
+    await box.project.write('source/.ki-config.toml', configuration(sourceHome, [receiverHome], []))
+    await box.project.write('receiver/.ki-config.toml', configuration(receiverHome, [], [sourceHome]))
+    await box.project.write('source/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
+    await box.project.write(`source/-/_TRADES/example/receiver/${id}.md`, record())
+    await box.project.write(`receiver/+/_TRADES/example/source/${id}.md`, record('\nstatus: received'))
+    await box.config.write(
+      'ki/config.toml',
+      `schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = [${JSON.stringify(source)}, ${JSON.stringify(receiver)}]\n`
+    )
+
+    const result = await box.run('ki repo --repo source --repo receiver roadmap list')
+
+    expect(result.output).toContain(`│  ╰─ outbound\n│     ╰─ ${id} [work] Trade-aware planning`)
+    expect(result.output).toContain(`│  ╰─ inbound\n│     ╰─ ${id} [work, received] Trade-aware planning`)
+    expect(result.output).toContain('TRADES=1 INBOUND=0 OUTBOUND=1')
+    expect(result.output).toContain('TRADES=1 INBOUND=1 OUTBOUND=0')
   })
 
   test('rejects every malformed canonical frontmatter shape', async () => {

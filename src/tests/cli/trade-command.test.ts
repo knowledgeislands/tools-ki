@@ -97,7 +97,10 @@ describe('[ki trade]', () => {
     const removed = await box.run(['ki', 'trade', 'routes', 'remove', receiverHome, '--direction', 'export', '--kind', 'work'])
 
     expect(added).toEqual({ exitCode: 0, output: `ki trade routes add: export work ${sourceHome} -> ${receiverHome}\n` })
-    expect(listed).toEqual({ exitCode: 0, output: `ki trade routes list\nRepository: ${sourceHome}\nRoutes:\n  export work ${receiverHome} [active]\n` })
+    expect(listed).toEqual({
+      exitCode: 0,
+      output: `╭─ KI TRADE ROUTES\n│  📁 example/source\n│     ${sourceHome}\n│  ✦ 1 route\n├─ results\n│  ╰─ export\n│     ╰─ work ${receiverHome} [active]\n╰─ summary: ROUTES=1\n`
+    })
     expect(checked).toEqual({ exitCode: 0, output: `ki trade routes check\n  export work ${receiverHome}: active\n` })
     expect(removed).toEqual({ exitCode: 0, output: `ki trade routes remove: export work ${sourceHome} -> ${receiverHome}\n` })
     expect(await box.project.read('.ki-config.toml')).toContain(`repository = "${sourceHome}"`)
@@ -127,7 +130,10 @@ describe('[ki trade]', () => {
 
     expect(created.output).toBe(`ki trade new: created ${id} for example/receiver\n`)
     expect(received).toEqual({ exitCode: 0, output: `ki trade receive\n  received ${id}\n` })
-    expect(listed).toEqual({ exitCode: 0, output: `ki trade list\n  ${receiverHome} inbound ${id} [work, adopted] Route contract\n` })
+    expect(listed).toEqual({
+      exitCode: 0,
+      output: `╭─ KI TRADES\n│  ✦ 1 trade\n├─ results\n│  ╰─ inbound\n│     ╰─ ${receiverHome} ${id} [work, adopted] Route contract\n╰─ summary: TRADES=1 INBOUND=1 OUTBOUND=0\n`
+    })
     expect(shown.output).toContain(`Repository: ${sourceHome} [outbound]\n${outbound.trimEnd()}`)
     expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
     expect(pruned).toEqual({ exitCode: 0, output: `ki trade prune: pruned ${id}\n` })
@@ -199,7 +205,7 @@ describe('[ki trade]', () => {
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
     expect(await box.run('ki trade routes list')).toEqual({
       exitCode: 0,
-      output: `ki trade routes list\nRepository: ${sourceHome}\nRoutes:\n  none\n`
+      output: `╭─ KI TRADE ROUTES\n│  📁 example/source\n│     ${sourceHome}\n│  ✦ 0 routes\n├─ results\n│  ╰─ routes: none\n╰─ summary: ROUTES=0\n`
     })
     expect(await box.run('ki trade routes check')).toEqual({ exitCode: 0, output: 'ki trade routes check\n  none\n' })
 
@@ -261,7 +267,10 @@ describe('[ki trade]', () => {
 
   test('covers import-route mutation and command filters without changing peer configuration', async () => {
     const { box } = await configuredPair()
-    expect(await box.run('ki trade list')).toEqual({ exitCode: 0, output: 'ki trade list\n  none\n' })
+    expect(await box.run('ki trade list')).toEqual({
+      exitCode: 0,
+      output: '╭─ KI TRADES\n│  ✦ 0 trades\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 INBOUND=0 OUTBOUND=0\n'
+    })
     expect(await box.run('ki trade show TRD-00000000-0000-0000-0000-000000000000')).toEqual({
       exitCode: 2,
       output: 'ki: error: trade TRD-00000000-0000-0000-0000-000000000000 was not found in the registered repository estate\n'
@@ -376,7 +385,10 @@ describe('[ki trade]', () => {
     const { box, source, receiver } = await configuredPair()
     await box.config.write('ki/config.toml', localConfiguration([source, receiver, `${box.root.path}/missing`]))
 
-    expect(await box.run('ki trade list')).toEqual({ exitCode: 0, output: 'ki trade list\n  none\n' })
+    expect(await box.run('ki trade list')).toEqual({
+      exitCode: 0,
+      output: '╭─ KI TRADES\n│  ✦ 0 trades\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 INBOUND=0 OUTBOUND=0\n'
+    })
     const created = await box.run(newTrade('work'))
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
 
