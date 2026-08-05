@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-010
 title: Define managed cleanup artifacts
 theme: cli
 horizon: future
-status: open
+status: draft
 candidate: true
 blocks: []
 blocked-by: []

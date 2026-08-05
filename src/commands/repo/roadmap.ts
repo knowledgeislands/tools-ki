@@ -20,7 +20,7 @@ interface RoadmapResult {
 }
 
 const horizonOrder = workItemHorizons
-const statusOrder = ['done', 'acceptance', 'in-progress', 'ready', 'open'] as const
+const statusOrder = ['done', 'awaiting-review', 'in-progress', 'ready', 'draft'] as const
 
 const filterItems = (items: readonly WorkItem[], options: RoadmapOptions): readonly WorkItem[] =>
   items.filter((item) => (!options.horizon || item.horizon === options.horizon) && (!options.status || item.status === options.status))
@@ -120,7 +120,7 @@ const moveHorizon = (item: WorkItem, operation: 'promote' | 'demote', requested?
   if (requested !== undefined && target === -1) throw new KiError(`roadmap ${operation} horizon must be one of ${horizonOrder.join(', ')}`, 2)
   if (target < 0 || target >= horizonOrder.length) throw new KiError(`work item ${item.id} is already at the ${operation} limit`, 2)
   if ((operation === 'promote' && target >= current) || (operation === 'demote' && target <= current))
-    throw new KiError(`roadmap ${operation} must move ${item.id} ${operation === 'promote' ? 'toward blocking' : 'toward future'}`, 2)
+    throw new KiError(`roadmap ${operation} must move ${item.id} ${operation === 'promote' ? 'toward now' : 'toward future'}`, 2)
   return horizonOrder[target] as WorkItemHorizon
 }
 
@@ -194,9 +194,9 @@ export const createRepoRoadmapCommand = (
     )
     .addCommand(
       new Command('promote')
-        .description('move one work item toward blocking')
+        .description('move one work item toward now')
         .argument('<id>', 'canonical work-item identifier')
-        .argument('[horizon]', 'direct destination horizon toward blocking')
+        .argument('[horizon]', 'direct destination horizon toward now')
         .action(async (id: string, horizon: string | undefined) => {
           const repository = await oneMutationTarget(context, selectedRepositories, 'promote')
           const item = await selectedItem(repository.root, id)

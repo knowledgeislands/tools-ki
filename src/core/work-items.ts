@@ -10,12 +10,12 @@ type WorkItemField = RequiredField | 'candidate' | 'transferred-from'
 type WorkItemFields = Partial<Record<WorkItemField, string>>
 
 const allowedFields = new Set<WorkItemField>([...requiredFields, 'candidate', 'transferred-from'])
-export const workItemHorizons = ['blocking', 'next', 'soon', 'waiting-for', 'parked', 'future'] as const
+export const workItemHorizons = ['now', 'next', 'soon', 'waiting-for', 'parked', 'future'] as const
 export type WorkItemHorizon = (typeof workItemHorizons)[number]
 const horizons = new Set<WorkItemHorizon>(workItemHorizons)
-const statuses = new Set<WorkItemStatus>(['open', 'ready', 'in-progress', 'acceptance', 'done'])
+const statuses = new Set<WorkItemStatus>(['draft', 'ready', 'in-progress', 'awaiting-review', 'done'])
 
-export type WorkItemStatus = 'open' | 'ready' | 'in-progress' | 'acceptance' | 'done'
+export type WorkItemStatus = 'draft' | 'ready' | 'in-progress' | 'awaiting-review' | 'done'
 
 export interface WorkItem {
   readonly id: string

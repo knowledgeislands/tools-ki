@@ -8,7 +8,7 @@ const item = (overrides: Record<string, string> = {}): string => {
     title: 'Inspect governed work',
     theme: 'cli',
     horizon: 'next',
-    status: 'open',
+    status: 'draft',
     blocks: '[]',
     'blocked-by': '[]',
     'baseline-ref': 'null',
@@ -30,7 +30,7 @@ describe('[ki repo roadmap]', () => {
         id: 'KI-TOOL-CLI-010',
         title: 'Cleanup',
         horizon: 'future',
-        status: 'acceptance',
+        status: 'awaiting-review',
         candidate: 'true',
         'baseline-ref': 'a'.repeat(40)
       })
@@ -38,19 +38,19 @@ describe('[ki repo roadmap]', () => {
     const root = await realpath(`${box.project.path}/repo`)
     await box.config.write('ki/agoras/inventory.ki-agora', `name = "Inventory"\ntool = "zed"\n\n[projects]\nrepo = ${JSON.stringify(root)}\n`)
 
-    const text = await box.run('ki repo --repo repo roadmap list --horizon next --status open')
-    const accepted = await box.run('ki repo --repo repo roadmap list --status acceptance')
-    const empty = await box.run('ki repo --repo repo roadmap list --horizon blocking')
-    const agora = await box.run('ki repo --agora inventory roadmap list --status acceptance')
+    const text = await box.run('ki repo --repo repo roadmap list --horizon next --status draft')
+    const accepted = await box.run('ki repo --repo repo roadmap list --status awaiting-review')
+    const empty = await box.run('ki repo --repo repo roadmap list --horizon now')
+    const agora = await box.run('ki repo --agora inventory roadmap list --status awaiting-review')
     const format = await box.run('ki repo --repo repo roadmap list --format json')
 
     expect(text).toEqual({
       exitCode: 0,
-      output: `╭─ KI REPO ROADMAP\n│  📁 repo\n│     ${root}\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [open] Inspect governed work\n├─ trades (0)\n│  ╰─ ❌ unavailable: ki environment is not bootstrapped; run \`ki bootstrap\` first\n╰─ summary: ITEMS=1 HORIZONS=1 TRADES=unavailable\n`
+      output: `╭─ KI REPO ROADMAP\n│  📁 repo\n│     ${root}\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ╰─ ❌ unavailable: ki environment is not bootstrapped; run \`ki bootstrap\` first\n╰─ summary: ITEMS=1 HORIZONS=1 TRADES=unavailable\n`
     })
-    expect(accepted.output).toContain('KI-TOOL-CLI-010 [acceptance] Cleanup')
+    expect(accepted.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
     expect(accepted.output).not.toContain('KI-TOOL-CLI-003')
-    expect(agora.output).toContain('KI-TOOL-CLI-010 [acceptance] Cleanup')
+    expect(agora.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
     expect(empty.output).toContain('│  ╰─ items: none')
     expect(format.exitCode).toBe(2)
     expect(format.output).toContain("unknown option '--format' for 'ki repo roadmap list'")
@@ -74,7 +74,7 @@ describe('[ki repo roadmap]', () => {
     const result = await box.run(['ki', 'repo', '--repo', valid, '--repo', missing, '--repo', invalidStatus, '--repo', unsafe, 'roadmap', 'list'])
     const retiredFormat = await box.run('ki repo --repo valid roadmap list --format yaml')
 
-    expect(result.output).toContain(`│     ${valid}\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [open] Inspect governed work`)
+    expect(result.output).toContain(`│     ${valid}\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work`)
     expect(result.output).toContain(`│  ╰─ ❌ repository ${missing} has no physical docs/roadmap directory`)
     expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md has an invalid lifecycle status`)
     expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md must be a regular file`)
@@ -86,18 +86,18 @@ describe('[ki repo roadmap]', () => {
     const box = await sandbox()
     await box.project.write('repo/.ki-config.toml', '# repo\n')
     const items = [
-      ['KI-TOOL-CLI-006', 'Blocking open', 'blocking', 'open'],
-      ['KI-TOOL-CLI-005', 'Blocking done', 'blocking', 'done'],
-      ['KI-TOOL-CLI-014', 'Next open', 'next', 'open'],
+      ['KI-TOOL-CLI-006', 'Blocking draft', 'now', 'draft'],
+      ['KI-TOOL-CLI-005', 'Blocking done', 'now', 'done'],
+      ['KI-TOOL-CLI-014', 'Next draft', 'next', 'draft'],
       ['KI-TOOL-CLI-013', 'Next ready', 'next', 'ready'],
       ['KI-TOOL-CLI-012', 'Next in progress', 'next', 'in-progress'],
-      ['KI-TOOL-CLI-011', 'Next acceptance', 'next', 'acceptance'],
+      ['KI-TOOL-CLI-011', 'Next awaiting-review', 'next', 'awaiting-review'],
       ['KI-TOOL-CLI-010', 'Next done later', 'next', 'done'],
       ['KI-TOOL-CLI-009', 'Next done first', 'next', 'done'],
-      ['KI-TOOL-CLI-015', 'Soon', 'soon', 'open'],
-      ['KI-TOOL-CLI-016', 'Waiting', 'waiting-for', 'open'],
-      ['KI-TOOL-CLI-017', 'Parked', 'parked', 'open'],
-      ['KI-TOOL-CLI-018', 'Future', 'future', 'open']
+      ['KI-TOOL-CLI-015', 'Soon', 'soon', 'draft'],
+      ['KI-TOOL-CLI-016', 'Waiting', 'waiting-for', 'draft'],
+      ['KI-TOOL-CLI-017', 'Parked', 'parked', 'draft'],
+      ['KI-TOOL-CLI-018', 'Future', 'future', 'draft']
     ] as const
     for (const [id, title, horizon, status] of items) {
       await box.project.write(`repo/docs/roadmap/${id}-item.md`, item({ id, title, horizon, status, ...(horizon === 'future' ? { candidate: 'true' } : {}) }))
@@ -106,21 +106,21 @@ describe('[ki repo roadmap]', () => {
     const result = await box.run('ki repo --repo repo roadmap list')
 
     const expectedOrder = [
-      '│  ├─ blocking',
+      '│  ├─ now',
       '│  │  ├─ KI-TOOL-CLI-005 [done] Blocking done',
-      '│  │  ╰─ KI-TOOL-CLI-006 [open] Blocking open',
+      '│  │  ╰─ KI-TOOL-CLI-006 [draft] Blocking draft',
       '│  ├─ next',
       '│  │  ├─ KI-TOOL-CLI-009 [done] Next done first',
       '│  │  ├─ KI-TOOL-CLI-010 [done] Next done later',
-      '│  │  ├─ KI-TOOL-CLI-011 [acceptance] Next acceptance',
+      '│  │  ├─ KI-TOOL-CLI-011 [awaiting-review] Next awaiting-review',
       '│  │  ├─ KI-TOOL-CLI-012 [in-progress] Next in progress',
       '│  │  ├─ KI-TOOL-CLI-013 [ready] Next ready',
-      '│  │  ╰─ KI-TOOL-CLI-014 [open] Next open',
+      '│  │  ╰─ KI-TOOL-CLI-014 [draft] Next draft',
       '│  ├─ soon',
       '│  ├─ waiting-for',
       '│  ├─ parked',
       '│  ╰─ future',
-      '│     ╰─ KI-TOOL-CLI-018 [open] Future'
+      '│     ╰─ KI-TOOL-CLI-018 [draft] Future'
     ]
     let previous = -1
     for (const line of expectedOrder) {
@@ -210,14 +210,14 @@ describe('[ki repo roadmap]', () => {
     const result = await box.run('ki repo --repo repo roadmap list')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('KI-TOOL-CLI-003 [open] Inspect governed work')
+    expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
   })
 
   test('prunes only completed items across selected repositories after every target is valid', async () => {
     const box = await sandbox()
     await box.project.write('first/.ki-config.toml', '# first\n')
     await box.project.write('first/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
-    await box.project.write('first/docs/roadmap/KI-TOOL-CLI-004-open.md', item({ id: 'KI-TOOL-CLI-004' }))
+    await box.project.write('first/docs/roadmap/KI-TOOL-CLI-004-draft.md', item({ id: 'KI-TOOL-CLI-004' }))
     await box.project.write('second/.ki-config.toml', '# second\n')
     await box.project.write('second/docs/roadmap/KI-TOOL-CLI-005-done.md', item({ id: 'KI-TOOL-CLI-005', status: 'done' }))
     const first = await realpath(`${box.project.path}/first`)
@@ -243,7 +243,7 @@ describe('[ki repo roadmap]', () => {
     })
     await expect(box.project.read('first/docs/roadmap/KI-TOOL-CLI-003-done.md')).rejects.toThrow()
     await expect(box.project.read('second/docs/roadmap/KI-TOOL-CLI-005-done.md')).rejects.toThrow()
-    await expect(box.project.read('first/docs/roadmap/KI-TOOL-CLI-004-open.md')).resolves.toContain('status: open')
+    await expect(box.project.read('first/docs/roadmap/KI-TOOL-CLI-004-draft.md')).resolves.toContain('status: draft')
     expect(empty).toEqual({ exitCode: 0, output: 'ki repo roadmap prune: no done work items\n' })
 
     await box.project.write('invalid/.ki-config.toml', '# invalid\n')
@@ -266,7 +266,7 @@ describe('[ki repo roadmap]', () => {
       'repo/docs/roadmap/KI-TOOL-CLI-004-future.md',
       item({ id: 'KI-TOOL-CLI-004', title: 'Future item', horizon: 'future', candidate: 'true' })
     )
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-005-blocking.md', item({ id: 'KI-TOOL-CLI-005', horizon: 'blocking' }))
+    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-005-now.md', item({ id: 'KI-TOOL-CLI-005', horizon: 'now' }))
     await box.project.write('other/.ki-config.toml', '# other\n')
     await box.project.write('other/docs/roadmap/KI-TOOL-CLI-003-item.md', item())
     const root = await realpath(`${box.project.path}/repo`)
@@ -285,8 +285,8 @@ describe('[ki repo roadmap]', () => {
     const missing = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-999')
     const multiple = await box.run(['ki', 'repo', '--repo', root, '--repo', other, 'roadmap', 'promote', 'KI-TOOL-CLI-003'])
 
-    expect(promote).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-CLI-003 next -> blocking\n' })
-    expect(demoteDirect).toEqual({ exitCode: 0, output: 'ki repo roadmap demote: KI-TOOL-CLI-003 blocking -> future\n' })
+    expect(promote).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-CLI-003 next -> now\n' })
+    expect(demoteDirect).toEqual({ exitCode: 0, output: 'ki repo roadmap demote: KI-TOOL-CLI-003 now -> future\n' })
     expect(promoteDirect).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-CLI-004 future -> next\n' })
     expect(promoted).toContain('horizon: next')
     expect(promoted).not.toContain('candidate: true')
@@ -294,7 +294,7 @@ describe('[ki repo roadmap]', () => {
     expect(demoted).toContain('## Discussion\n\n### Test\n\nTest.\n')
     expect(demoted).toContain('candidate: body content remains.')
     expect(unknown.output).toContain('roadmap promote horizon must be one of')
-    expect(backwards.output).toContain('roadmap promote must move KI-TOOL-CLI-003 toward blocking')
+    expect(backwards.output).toContain('roadmap promote must move KI-TOOL-CLI-003 toward now')
     expect(same.output).toContain('roadmap demote must move KI-TOOL-CLI-004 toward future')
     expect(promoteLimit.output).toContain('work item KI-TOOL-CLI-005 is already at the promote limit')
     expect(demoteLimit.output).toContain('work item KI-TOOL-CLI-003 is already at the demote limit')

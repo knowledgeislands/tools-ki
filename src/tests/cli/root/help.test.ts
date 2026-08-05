@@ -47,7 +47,7 @@ describe('[ki --help]', () => {
     expect(roadmap.output).toContain('list governed work items')
     expect(roadmapPrune.output).toContain('delete completed governed work items')
     expect(roadmapPrune.output).toContain('[id]')
-    expect(roadmapPromote.output).toContain('move one work item toward blocking')
+    expect(roadmapPromote.output).toContain('move one work item toward now')
     expect(roadmapDemote.output).toContain('move one work item toward future')
     expect(missing.output).toContain('report desired capabilities without an installed provider')
     expect(search.output).toContain('search verified installed harness capabilities')

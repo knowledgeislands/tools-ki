@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-014
 title: Complete CLI completions
 theme: cli
 horizon: next
-status: open
+status: draft
 blocks: []
 blocked-by: [KI-TOOL-CLI-016]
 baseline-ref: null
