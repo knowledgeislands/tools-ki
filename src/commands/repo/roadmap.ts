@@ -45,25 +45,19 @@ const renderTradeContext = (trades: readonly LocatedTrade[], diagnostic?: string
     ['import', 'inbound'],
     ['export', 'outbound']
   ] as const
-  const kinds = ['work', 'knowledge'] as const
   return directions.flatMap(([label, direction], directionIndex) => {
     const selected = trades.filter((trade) => trade.direction === direction)
     const lastDirection = directionIndex === directions.length - 1
+    const itemPrefix = `│  ${lastDirection ? '   ' : '│  '}`
     return [
       `│  ${lastDirection ? '╰─' : '├─'} ${label} (${selected.length})`,
-      ...kinds.flatMap((kind, kindIndex) => {
-        const group = selected.filter((trade) => trade.record.kind === kind)
-        const lastKind = kindIndex === kinds.length - 1
-        const prefix = `│  ${lastDirection ? '   ' : '│  '}`
-        return [
-          `${prefix}${lastKind ? '╰─' : '├─'} ${kind} (${group.length})`,
-          ...group.map((trade, tradeIndex) => {
-            // The trade parser supplies sent when a sender record has no explicit disposition.
-            /* v8 ignore next */
-            const status = trade.record.status ?? 'sent'
-            return `${prefix}${lastKind ? '   ' : '│  '}${tradeIndex === group.length - 1 ? '╰─' : '├─'} ${trade.record.id} [${status}] ${trade.record.title}`
-          })
-        ]
+      ...selected.map((trade, tradeIndex) => {
+        // The trade parser supplies sent when a sender record has no explicit disposition.
+        /* v8 ignore next */
+        const status = trade.record.status ?? 'sent'
+        const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
+        const peer = direction === 'outbound' ? `→ ${trade.record.receiver}` : `← ${trade.record.sender}`
+        return `${itemPrefix}${tradeIndex === selected.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${peer} [${status}] ${trade.record.title}`
       })
     ]
   })

@@ -146,10 +146,10 @@ describe('[ki trade]', () => {
     expect(received).toEqual({ exitCode: 0, output: `ki trade receive\n  received ${id}\n` })
     expect(listed).toEqual({
       exitCode: 0,
-      output: `╭─ KI TRADES\n│  ✦ 1 trade\n├─ results\n│  ╰─ import\n│     ╰─ ${receiverHome} ${id} [work, adopted] Route contract\n╰─ summary: TRADES=1 IMPORTS=1 EXPORTS=0\n`
+      output: `╭─ KI TRADES\n│  ✦ 1 trade\n├─ results\n│  ╰─ import\n│     ╰─ ⚒ ${id} ← example/source [adopted] Route contract\n╰─ summary: TRADES=1 IMPORTS=1 EXPORTS=0\n`
     })
     expect(allListed.output).toContain(
-      `│  ├─ import\n│  │  ╰─ ${receiverHome} ${id} [work, adopted] Route contract\n│  ╰─ export\n│     ╰─ ${sourceHome} ${id} [work] Route contract`
+      `│  ├─ import\n│  │  ╰─ ⚒ ${id} ← example/source [adopted] Route contract\n│  ╰─ export\n│     ╰─ ⚒ ${id} → example/receiver [sent] Route contract`
     )
     expect(shown.output).toContain(`Repository: ${sourceHome} [export]\n${outbound.trimEnd()}`)
     expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
@@ -402,7 +402,7 @@ describe('[ki trade]', () => {
     box.cd('..')
     const shown = await box.run(['ki', 'trade', 'show', firstId])
 
-    expect(outboundList.output).toContain(`[work] Route contract`)
+    expect(outboundList.output).toContain(`⚒ ${firstId} → example/receiver [sent] Route contract`)
     expect(received.output).toContain(`received ${firstId}`)
     expect(received.output).toContain(`received ${secondId}`)
     expect(repeated.output).toContain(`existing ${firstId}`)

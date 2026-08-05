@@ -37,18 +37,20 @@ const renderTradeList = (trades: Awaited<ReturnType<typeof locateTrades>>): stri
     ] as const
     const groups = directions.flatMap(([label, direction]) => {
       const located = trades.filter((trade) => trade.direction === direction)
-      return located.length ? [{ label, trades: located }] : []
+      return located.length ? [{ label, direction, trades: located }] : []
     })
     lines.push(
-      ...groups.flatMap(({ label, trades: group }, groupIndex) => {
+      ...groups.flatMap(({ label, direction, trades: group }, groupIndex) => {
         const lastGroup = groupIndex === groups.length - 1
         const itemPrefix = `│  ${lastGroup ? '   ' : '│  '}`
         return [
           `│  ${lastGroup ? '╰─' : '├─'} ${label}`,
-          ...group.map(
-            (trade, tradeIndex) =>
-              `${itemPrefix}${tradeIndex === group.length - 1 ? '╰─' : '├─'} ${trade.repository} ${trade.record.id} [${trade.record.kind}${trade.record.status ? `, ${trade.record.status}` : ''}] ${trade.record.title}`
-          )
+          ...group.map((trade, tradeIndex) => {
+            const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
+            const peer = direction === 'outbound' ? `→ ${trade.record.receiver}` : `← ${trade.record.sender}`
+            const status = trade.record.status ?? 'sent'
+            return `${itemPrefix}${tradeIndex === group.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${peer} [${status}] ${trade.record.title}`
+          })
         ]
       })
     )
