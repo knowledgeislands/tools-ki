@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-015
 title: Modularize CLI command and contract layout
 theme: cli
 horizon: next
-status: in-progress
+status: acceptance
 blocks: []
 blocked-by: []
 baseline-ref: b52f39da94975be86185855510e2a7c8cc79dd62
@@ -66,11 +66,11 @@ This is a self-contained structural refactor.
 
 It intentionally precedes KI-TOOL-CLI-014 so the recursive completion grammar lands on a stable command and test ownership layout.
 
-## Acceptance evidence
+## Acceptance
 
 The completed boundary moves active CLI-contract suites and command implementations into matching public-grammar directories without changing the public CLI contract.
 
-The immutable baseline is `b52f39da94975be86185855510e2a7c8cc79dd62`; the test-only phase is committed as `c70d929`.
+The immutable baseline is `b52f39da94975be86185855510e2a7c8cc79dd62`; the test-only phase is committed as `c70d929` and the command-source phase as `e277053`.
 
 `bun run test:coverage`, `bunx tsc --noEmit`, Biome, Markdown lint, `mandoc -Tlint man/ki.1`, and `git diff --check` passed after integrating the command-source move and trade split.
 
