@@ -190,10 +190,13 @@ extra = true
     expect(diag.output).toContain('Status        valid')
     expect(diag.output).not.toContain('Warnings')
     expect(diag.output).not.toContain('Errors')
-    expect(diag.output).toContain('Agents')
-    expect(diag.output).toContain('Harnesses')
-    expect(diag.output).toContain('Local source  none')
-    expect(diag.output).toContain('Local mode    not configured')
+    expect(diag.output).toContain('├─ agents (1)\n│  │  ╰─ claude-code')
+    expect(diag.output).toContain('├─ harnesses (0)\n│  │  ╰─ none')
+    expect(diag.output).toContain('├─ skills (7)')
+    expect(diag.output).toContain('│  │  ╰─ knowledgeislands/ki-agentic-harness:ki-recap')
+    expect(diag.output).toContain('├─ repositories (0)\n│  │  ╰─ none')
+    expect(diag.output).toContain('source: none')
+    expect(diag.output).toContain('mode: not configured')
   })
 
   test('reports a remembered local source as off, then on when its projection is active', async () => {
@@ -207,10 +210,10 @@ extra = true
     await box.run('ki dev local on')
     const on = await box.run('ki manage diag')
 
-    expect(off.output).toContain(`Local source  ${harnessPath}`)
-    expect(off.output).toContain('Local mode    off')
-    expect(on.output).toContain(`Local source  ${harnessPath}`)
-    expect(on.output).toContain('Local mode    on')
+    expect(off.output).toContain(`source: ${harnessPath}`)
+    expect(off.output).toContain('mode: off')
+    expect(on.output).toContain(`source: ${harnessPath}`)
+    expect(on.output).toContain('mode: on')
   })
 
   test('does not report local mode as active when a canonical payload is not linked', async () => {
@@ -226,7 +229,7 @@ extra = true
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain('Local mode    off')
+    expect(diag.output).toContain('mode: off')
   })
 
   test('does not report local mode as active when a canonical payload points at another checkout', async () => {
@@ -243,7 +246,7 @@ extra = true
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain('Local mode    off')
+    expect(diag.output).toContain('mode: off')
   })
 
   test('does not report local mode as active when its source payload disappears', async () => {
@@ -257,7 +260,7 @@ extra = true
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain('Local mode    off')
+    expect(diag.output).toContain('mode: off')
   })
 
   test('does not report local mode as active when its configured source disappears', async () => {
@@ -271,7 +274,7 @@ extra = true
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain('Local mode    off')
+    expect(diag.output).toContain('mode: off')
   })
 
   test('reports scalar sections and an invalid local section as configuration errors', async () => {
