@@ -66,26 +66,6 @@ Link a harness skill into configured user agent skill spaces.
 .TP
 .B ki skill remove <skill>
 Remove a KI-managed user skill link.
-.SS Agora management
-\&
-.TP
-.B ki agora create <name>
-Create an empty named Agora profile.
-.TP
-.B ki agora add <name> <directory>
-Add one physical project directory to an Agora profile.
-.TP
-.B ki agora remove <name> <project>
-Remove one named project from an Agora profile.
-.TP
-.B ki agora discover <name> <directory>
-Add KI repositories discovered beneath one physical directory.
-.TP
-.B ki agora list
-List named Agora profiles.
-.TP
-.B ki agora show|open <name>
-Show or open one Agora profile.
 .SS Repository options
 \&
 .TP
@@ -173,7 +153,7 @@ Check local typed trade routes against the registered repository estate.
 Create one local export typed trade.
 .TP
 .B ki trade receive --from <repository> --kind work|knowledge [--id <trade-id>]
-Pull eligible outbound trades from a reciprocal sender.
+Import eligible export trades from a reciprocal sender.
 .TP
 .B ki trade list [--direction import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]
 List visible trade copies in the registered repository estate.
@@ -182,10 +162,33 @@ List visible trade copies in the registered repository estate.
 Show every visible copy of one trade.
 .TP
 .B ki trade release <trade-id>
-Release one local outbound trade after a terminal receiver disposition.
+Release one local export trade after a terminal receiver disposition.
 .TP
 .B ki trade prune <trade-id>
-Prune one local terminal inbound trade after sender release is observable.
+Prune one local terminal import trade after sender release is observable.
+.SS Agora management
+\&
+.TP
+.B ki agora create <name>
+Create an empty named Agora profile.
+.TP
+.B ki agora add <name> <directory>
+Add one physical project directory to an Agora profile.
+.TP
+.B ki agora remove <name> <project>
+Remove one named project from an Agora profile.
+.TP
+.B ki agora discover <name> <directory>
+Add KI repositories discovered beneath one physical directory.
+.TP
+.B ki agora list
+List named Agora profiles.
+.TP
+.B ki agora show <name>
+Show one Agora profile.
+.TP
+.B ki agora open <name>
+Open one Agora profile.
 .SS Acquisition
 \&
 .TP
@@ -348,25 +351,6 @@ Add a registered skill in configured user agent skill spaces.
 .TP
 .B ki skill remove <skill>
 Remove a KI-managed user skill link.
-.SS Agora management
-\&
-.PP
-Agora profiles are user-level named collections stored beneath
-\fB$XDG_CONFIG_HOME/ki/agoras\fR. Their project roster is ordered by project
-name for Zed and may select KI repositories for repository operations.
-.TP
-.B ki agora create <name>
-Create an empty profile named \fIname\fR.
-.TP
-.B ki agora add <name> <directory>
-Add one existing physical directory, naming the project from its basename.
-.TP
-.B ki agora remove <name> <project>
-Remove one project by its profile name.
-.TP
-.B ki agora discover <name> <directory>
-Walk an existing physical directory without following symbolic links and add
-every directory whose regular \fB.ki-config.toml\fR marks it as a KI repository.
 .SS Repository options
 \&
 .PP
@@ -548,7 +532,7 @@ Check declared routes for reciprocal registered-repository evidence by kind.
 Create one export typed trade in the current repository.
 .TP
 .B ki trade receive --from <repository> --kind work|knowledge [--id <trade-id>]
-Pull eligible outbound trades of one kind into the current repository as inbound
+Import eligible export trades of one kind into the current repository as import
 copies with status \fBreceived\fR.
 .TP
 .B ki trade list [--direction import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]
@@ -564,6 +548,25 @@ receiver disposition.
 .B ki trade prune <trade-id>
 Remove the current repository's terminal import copy only after sender release
 is observable.
+.SS Agora management
+\&
+.PP
+Agora profiles are user-level named collections stored beneath
+\fB$XDG_CONFIG_HOME/ki/agoras\fR. Their project roster is ordered by project
+name for Zed and may select KI repositories for repository operations.
+.TP
+.B ki agora create <name>
+Create an empty profile named \fIname\fR.
+.TP
+.B ki agora add <name> <directory>
+Add one existing physical directory, naming the project from its basename.
+.TP
+.B ki agora remove <name> <project>
+Remove one project by its profile name.
+.TP
+.B ki agora discover <name> <directory>
+Walk an existing physical directory without following symbolic links and add
+every directory whose regular \fB.ki-config.toml\fR marks it as a KI repository.
 .SS Acquisition
 \&
 .PP
