@@ -45,7 +45,7 @@ describe('[ki repo roadmap]', () => {
     const format = await box.run('ki repo --repo repo roadmap list --format json')
 
     expect(text).toEqual({
-      exitCode: 0,
+      exitCode: 1,
       output: `╭─ KI REPO ROADMAP\n│  📁 repo\n│     ${root}\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ╰─ ❌ unavailable: ki environment is not bootstrapped; run \`ki bootstrap\` first\n╰─ summary: ITEMS=1 HORIZONS=1 TRADES=unavailable\n`
     })
     expect(accepted.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
@@ -78,6 +78,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain(`│  ╰─ ❌ repository ${missing} has no physical docs/roadmap directory`)
     expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md has an invalid lifecycle status`)
     expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md must be a regular file`)
+    expect(result.exitCode).toBe(1)
     expect(retiredFormat.exitCode).toBe(2)
     expect(retiredFormat.output).toContain("unknown option '--format' for 'ki repo roadmap list'")
   })
@@ -156,6 +157,7 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('source/.ki-config.toml', configuration(sourceHome, [receiverHome], []))
     await box.project.write('receiver/.ki-config.toml', configuration(receiverHome, [], [sourceHome]))
     await box.project.write('source/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
+    await box.project.write('receiver/docs/roadmap/KI-TOOL-CLI-004-inspect.md', item({ id: 'KI-TOOL-CLI-004' }))
     await box.project.write(`source/-/_TRADES/example/receiver/${id}.md`, record(id, 'work'))
     await box.project.write(`receiver/+/_TRADES/example/source/${id}.md`, record(id, 'work', '\nstatus: received'))
     await box.project.write('source/-/_TRADES/example/receiver/TRD-00000002.md', record('TRD-00000002', 'work'))
@@ -177,6 +179,8 @@ describe('[ki repo roadmap]', () => {
     )
     expect(result.output).toContain('TRADES=3 IMPORTS=0 EXPORTS=3')
     expect(result.output).toContain('TRADES=3 IMPORTS=3 EXPORTS=0')
+    expect(result.exitCode).toBe(0)
+
   })
 
   test('rejects every malformed canonical frontmatter shape', async () => {
@@ -198,6 +202,7 @@ describe('[ki repo roadmap]', () => {
       await box.project.write(`${repository}/.ki-config.toml`, '# repo\n')
       await box.project.write(`${repository}/docs/roadmap/${name}`, contents)
       const result = await box.run(`ki repo --repo ${repository} roadmap list`)
+      expect(result.exitCode).toBe(1)
       expect(result.output).toContain(message)
     }
   })
@@ -209,7 +214,7 @@ describe('[ki repo roadmap]', () => {
 
     const result = await box.run('ki repo --repo repo roadmap list')
 
-    expect(result.exitCode).toBe(0)
+    expect(result.exitCode).toBe(1)
     expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
   })
 

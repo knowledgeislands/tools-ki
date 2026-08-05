@@ -1,7 +1,7 @@
 import { basename } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { KiError } from '../../core/errors.ts'
+import { KiError, KiExit } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { type LocatedTrade, locateTrades } from '../../core/trade-core.ts'
 import { pruneDoneWorkItems, readWorkItems, updateWorkItemHorizon, type WorkItem, type WorkItemHorizon, workItemHorizons } from '../../core/work-items.ts'
@@ -173,6 +173,7 @@ export const createRepoRoadmapCommand = (
             })
           )
           context.stdout.write(`${results.map(renderTextResult).join('\n\n')}\n`)
+          if (results.some((result) => result.tradeDiagnostic || ('diagnostic' in result && result.diagnostic))) throw new KiExit(1)
         })
     )
     .addCommand(

@@ -448,8 +448,9 @@ lifecycle from \fBdone\fR through \fBdraft\fR, with identifiers breaking ties.
 \fB--horizon\fR
 and \fB--status\fR filter before rendering. A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
-selected repositories still report. The command never creates, transitions,
-accepts, prunes, or repairs a work item.
+selected repositories still report, and any roadmap or trade diagnostic makes
+the command exit with status 1 after rendering the inventory. The command
+never creates, transitions, accepts, prunes, or repairs a work item.
 .TP
 .B ki repo [repo-options] roadmap prune [id]
 Without an ID, delete every canonical work-item record whose lifecycle status

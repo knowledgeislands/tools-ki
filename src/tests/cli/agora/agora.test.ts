@@ -122,7 +122,7 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora add inventory second')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 2 projects\n' })
     expect(await box.run('ki agora add inventory dotted.project')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 3 projects\n' })
     const roadmap = await box.run('ki repo --agora inventory roadmap list')
-    expect(roadmap.exitCode).toBe(0)
+    expect(roadmap.exitCode).toBe(1)
     expect(roadmap.output).toContain(`│     ${dotted}\n├─ roadmap (0)`)
     expect(roadmap.output).toContain(`│     ${first}\n├─ roadmap (0)`)
     expect(roadmap.output).toContain(`│     ${second}\n├─ roadmap (0)`)

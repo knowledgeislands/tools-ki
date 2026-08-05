@@ -74,7 +74,7 @@ ki repo --agora inventory audit
 
 Its deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, its import and export trade context, diagnostics, and a compact summary. Use `--horizon <value>` or `--status <value>` to filter records before rendering.
 
-Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report.
+Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report; any such diagnostic makes the command exit with status `1`.
 
 `ki repo roadmap prune [id]` removes every canonical `done` record in the selected repository set when no ID is supplied. With an ID, it requires exactly one selected repository and removes only that named `done` record. `ki repo roadmap promote <id> [horizon]` and `ki repo roadmap demote <id> [horizon]` move one explicitly named item one horizon toward `now` or `future`, respectively; an optional destination permits a direct move only in that direction. These operations change only the canonical work-item file and preserve lifecycle status.
 
@@ -86,7 +86,7 @@ Creation, shaping, readiness, implementation, acceptance, and completion remain 
 
 `ki trade list` presents visible import and export trade records in the same form across the registered repository estate.
 
-`ki repo roadmap list` includes that record context for each selected repository, so planning work and incoming or outgoing trades can be scanned together without changing either lifecycle. If the local registered trade estate cannot be read, it reports that context as unavailable without preventing the roadmap inventory.
+`ki repo roadmap list` includes that record context for each selected repository, so planning work and incoming or outgoing trades can be scanned together without changing either lifecycle. If the local registered trade estate cannot be read, it reports that context as unavailable and exits with status `1` after rendering the inventory.
 
 ## Install
 

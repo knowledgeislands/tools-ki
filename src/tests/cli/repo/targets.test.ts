@@ -106,7 +106,7 @@ describe('[ki repo target sets]', () => {
 
       const result = await box.run('ki repo roadmap list')
 
-      expect(result.exitCode).toBe(0)
+      expect(result.exitCode).toBe(1)
       expect(result.output).toContain('╭─ KI REPO ROADMAP')
       expect(result.output).toContain('/group/second')
       expect(result.output).toContain('/nested/main')
