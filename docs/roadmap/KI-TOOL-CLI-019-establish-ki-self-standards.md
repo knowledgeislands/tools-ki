@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-019
 title: Establish KI self
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: 0939ffe4acef8144bbb041b10373c35cf1ed390a
@@ -33,9 +33,9 @@ The first committed local source and rubric were removed immediately after their
 
 ## Steps
 
-- [ ] Restore the committed `ki-self` source and its initial bootstrap and repair rubric.
-- [ ] Add the stable local boundary for framed human-facing CLI reports, including the deliberately plain interfaces it excludes.
-- [ ] Reconcile this item's claims with the harness handoff and record delivery evidence for review.
+- [x] Restore the committed `ki-self` source and its initial bootstrap and repair rubric.
+- [x] Add the stable local boundary for framed human-facing CLI reports, including the deliberately plain interfaces it excludes.
+- [x] Reconcile this item's claims with the harness handoff and record delivery evidence for review.
 
 ## Files touched
 
@@ -55,7 +55,7 @@ The local source and its readable rubric do not depend on native host execution.
 
 ## Initial rubric coverage
 
-The first `ki-self` rubric must define and check the following concerns.
+The first `ki-self` rubric defines and checks the following concerns.
 
 ### Bootstrap classifications
 
@@ -74,6 +74,38 @@ The first `ki-self` rubric must define and check the following concerns.
 - Use the rubric to classify local host concerns: bootstrap and projection management, native operation boundaries, output and release conventions, and other stable product rules.
 - Promote a requirement that applies across compatible repositories to its portable harness owner instead of growing `ki-self` into a catch-all instruction surface.
 
+## Review
+
+### Delivered
+
+Restored the committed [local `ki-self` source](../../.agents/skills/ki-self/SKILL.md) and [its rubric](../../.agents/skills/ki-self/references/rubric.md). The rubric now covers the bootstrap, repair, capability-discovery, and human-facing presentation boundaries that are specific to this CLI host.
+
+### Summary of changes
+
+- Re-established `ki-self` as committed repository-local governance rather than a replacement for `AGENTS.md`.
+- Defined a framed-tree contract for human-facing reports, with counts, state glyphs, and compact summaries.
+- Preserved deliberately plain output where a stream, canonical record, generated asset, or immediate receipt is the direct contract.
+- Retained the separate harness trade for portable lifecycle and native-operation support.
+
+### Verification
+
+- `ki repo audit --skill ki-roadmap --repo .` — pass.
+- `bunx prettier --check .agents/skills/ki-self/SKILL.md .agents/skills/ki-self/references/rubric.md docs/roadmap/KI-TOOL-CLI-019-establish-ki-self-standards.md` — pass.
+- `bunx vitest run src/tests/cli/manage/list.test.ts src/tests/cli/manage/diag.test.ts src/tests/cli/manage/repair.test.ts src/tests/cli/manage/update.test.ts src/tests/cli/agora/agora.test.ts src/tests/cli/repo/repo.test.ts src/tests/cli/repo/roadmap.test.ts src/tests/cli/trade/trade.test.ts` — 98 passed.
+- `git diff --check` — pass.
+
+### Outstanding concerns
+
+The repository-wide `ki-authoring` audit still finds pre-existing formatting drift in four unrelated trade records. This delivery leaves those records unchanged. The source is not yet a declared, installed harness capability; that remains owned by [TRD-af376594](../../-/_TRADES/knowledgeislands/ki-agentic-harness/TRD-af376594.md).
+
+### Post-change review
+
+The restored source is intentionally a readable local contract, not a claim that native `ki repo audit --skill ki-self` works today. The presentation rule is limited to established `tools-ki` interfaces and provides an explicit promotion boundary if another compatible CLI needs the same standard.
+
+### Mini recap
+
+The initial source was restored, its output-boundary application was completed, and the roadmap now accurately separates local governance from the harness-owned portable lifecycle.
+
 ## Discussion
 
 ### Ownership boundary
@@ -86,7 +118,7 @@ The user selected this item for immediate delivery on 2026-08-06, after reviewin
 
 ### First application
 
-Review the output conventions introduced for framed list and inspection commands alongside the remaining CLI presentation surfaces. Decide which parts are portable `ki-tools` guidance and which are specific to `tools-ki`, then extend the local rubric only where a stable evidence surface exists.
+The output conventions introduced for framed list and inspection commands are now recorded as local `ki-self` rules. The rubric distinguishes human-facing reports from stream, canonical-record, generated-asset, and action-receipt interfaces. A future cross-repository pattern belongs in `ki-tools`, not a larger local rubric.
 
 ### Portable lifecycle
 
