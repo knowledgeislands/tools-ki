@@ -105,7 +105,7 @@ const resolveTargets = async (context: KiContext, selectedRepositories: () => { 
 const oneMutationTarget = async (
   context: KiContext,
   selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string },
-  operation: 'promote' | 'demote'
+  operation: 'prune' | 'promote' | 'demote'
 ) => {
   const repositories = await resolveTargets(context, selectedRepositories)
   const repository = repositories[0]
@@ -176,15 +176,21 @@ export const createRepoRoadmapCommand = (
         })
     )
     .addCommand(
-      new Command('prune').description('delete completed governed work items').action(async () => {
-        const repositories = await resolveTargets(context, selectedRepositories)
-        await Promise.all(repositories.map((repository) => readWorkItems(repository.root)))
-        const removed = await Promise.all(repositories.map(async (repository) => ({ repository, items: await pruneDoneWorkItems(repository.root) })))
-        const entries = removed.flatMap(({ repository, items }) => items.map((item) => `${repository.root}: ${item.id} [done] ${item.title}`))
-        if (!entries.length) context.stdout.write('ki repo roadmap prune: no done work items\n')
-        else
-          context.stdout.write(`${entries.map((entry) => `pruned ${entry}`).join('\n')}\nki repo roadmap prune: removed ${entries.length} done work item(s)\n`)
-      })
+      new Command('prune')
+        .description('delete completed governed work items')
+        .argument('[id]', 'canonical completed work-item identifier')
+        .action(async (id: string | undefined) => {
+          const repositories =
+            id === undefined ? await resolveTargets(context, selectedRepositories) : [await oneMutationTarget(context, selectedRepositories, 'prune')]
+          await Promise.all(repositories.map((repository) => readWorkItems(repository.root)))
+          const removed = await Promise.all(repositories.map(async (repository) => ({ repository, items: await pruneDoneWorkItems(repository.root, id) })))
+          const entries = removed.flatMap(({ repository, items }) => items.map((item) => `${repository.root}: ${item.id} [done] ${item.title}`))
+          if (!entries.length) context.stdout.write('ki repo roadmap prune: no done work items\n')
+          else
+            context.stdout.write(
+              `${entries.map((entry) => `pruned ${entry}`).join('\n')}\nki repo roadmap prune: removed ${entries.length} done work item(s)\n`
+            )
+        })
     )
     .addCommand(
       new Command('promote')

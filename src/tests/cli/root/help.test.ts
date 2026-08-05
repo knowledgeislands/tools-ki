@@ -46,6 +46,7 @@ describe('[ki --help]', () => {
     expect(roadmapRoot.output).toContain('inspect and mechanically maintain governed work items')
     expect(roadmap.output).toContain('list governed work items')
     expect(roadmapPrune.output).toContain('delete completed governed work items')
+    expect(roadmapPrune.output).toContain('[id]')
     expect(roadmapPromote.output).toContain('move one work item toward blocking')
     expect(roadmapDemote.output).toContain('move one work item toward future')
     expect(missing.output).toContain('report desired capabilities without an installed provider')

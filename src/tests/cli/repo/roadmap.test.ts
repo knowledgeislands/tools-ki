@@ -223,12 +223,23 @@ describe('[ki repo roadmap]', () => {
     const first = await realpath(`${box.project.path}/first`)
     const second = await realpath(`${box.project.path}/second`)
 
+    const exact = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-003')
+    const notDone = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-004')
+    const missing = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-999')
+    const multiple = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'roadmap', 'prune', 'KI-TOOL-CLI-005'])
     const pruned = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'roadmap', 'prune'])
     const empty = await box.run('ki repo --repo first roadmap prune')
 
+    expect(exact).toEqual({
+      exitCode: 0,
+      output: `pruned ${first}: KI-TOOL-CLI-003 [done] Inspect governed work\nki repo roadmap prune: removed 1 done work item(s)\n`
+    })
+    expect(notDone).toEqual({ exitCode: 2, output: 'ki: error: work item KI-TOOL-CLI-004 must be done before pruning\n' })
+    expect(missing).toEqual({ exitCode: 2, output: `ki: error: repository ${first} must contain exactly one work item KI-TOOL-CLI-999\n` })
+    expect(multiple).toEqual({ exitCode: 2, output: 'ki: error: ki repo roadmap prune requires exactly one repository target\n' })
     expect(pruned).toEqual({
       exitCode: 0,
-      output: `pruned ${first}: KI-TOOL-CLI-003 [done] Inspect governed work\npruned ${second}: KI-TOOL-CLI-005 [done] Inspect governed work\nki repo roadmap prune: removed 2 done work item(s)\n`
+      output: `pruned ${second}: KI-TOOL-CLI-005 [done] Inspect governed work\nki repo roadmap prune: removed 1 done work item(s)\n`
     })
     await expect(box.project.read('first/docs/roadmap/KI-TOOL-CLI-003-done.md')).rejects.toThrow()
     await expect(box.project.read('second/docs/roadmap/KI-TOOL-CLI-005-done.md')).rejects.toThrow()
@@ -291,17 +302,20 @@ describe('[ki repo roadmap]', () => {
     expect(multiple.output).toContain('ki repo roadmap promote requires exactly one repository target')
   })
 
-  test('rejects ambiguous roadmap identifiers before changing a work item', async () => {
+  test('rejects ambiguous roadmap identifiers before changing or pruning a work item', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki-config.toml', '# repo\n')
     await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-first.md', item())
     await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-second.md', item({ title: 'Duplicate item' }))
 
     const result = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-003')
+    const prune = await box.run('ki repo --repo repo roadmap prune KI-TOOL-CLI-003')
 
     expect(result.exitCode).toBe(2)
     expect(result.output).toContain('must contain exactly one work item KI-TOOL-CLI-003')
+    expect(prune.output).toContain('must contain exactly one work item KI-TOOL-CLI-003')
     await expect(box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-first.md')).resolves.toContain('horizon: next')
+    await expect(box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-second.md')).resolves.toContain('horizon: next')
   })
 
   test('rejects the retired plan namespace', async () => {

@@ -138,9 +138,11 @@ export const updateWorkItemHorizon = async (repository: string, id: string, hori
   return { ...item, horizon, ...(horizon === 'future' ? { candidate: true } : {}) }
 }
 
-export const pruneDoneWorkItems = async (repository: string): Promise<readonly WorkItem[]> => {
+export const pruneDoneWorkItems = async (repository: string, id?: string): Promise<readonly WorkItem[]> => {
   const records = await readWorkItemRecords(repository)
-  const done = records.filter(({ item }) => item.status === 'done')
-  await Promise.all(done.map(({ path }) => rm(path)))
-  return done.map(({ item }) => item)
+  const selected = id === undefined ? records.filter(({ item }) => item.status === 'done') : records.filter(({ item }) => item.id === id)
+  if (id !== undefined && selected.length !== 1) throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
+  if (selected.some(({ item }) => item.status !== 'done')) throw new KiError(`work item ${id} must be done before pruning`, 2)
+  await Promise.all(selected.map(({ path }) => rm(path)))
+  return selected.map(({ item }) => item)
 }

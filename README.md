@@ -76,7 +76,7 @@ Its deterministic text output uses the same framed grouping style as repository 
 
 Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report.
 
-`ki repo roadmap prune` removes every canonical `done` record in the selected repository set and nothing else. `ki repo roadmap promote <id> [horizon]` and `ki repo roadmap demote <id> [horizon]` move one explicitly named item one horizon toward `blocking` or `future`, respectively; an optional destination permits a direct move only in that direction. These operations change only the canonical work-item file and preserve lifecycle status.
+`ki repo roadmap prune [id]` removes every canonical `done` record in the selected repository set when no ID is supplied. With an ID, it requires exactly one selected repository and removes only that named `done` record. `ki repo roadmap promote <id> [horizon]` and `ki repo roadmap demote <id> [horizon]` move one explicitly named item one horizon toward `blocking` or `future`, respectively; an optional destination permits a direct move only in that direction. These operations change only the canonical work-item file and preserve lifecycle status.
 
 Creation, shaping, readiness, implementation, acceptance, and completion remain harness-process and human-authority operations. The native commands do not infer those judgments from a trade or alter a peer repository.
 

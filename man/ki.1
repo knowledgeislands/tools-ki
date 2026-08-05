@@ -97,7 +97,7 @@ proven KI-managed projections.
 List governed work items in a framed deterministic horizon and lifecycle tree
 without changing their lifecycle.
 .TP
-.B ki repo [repo-options] roadmap prune
+.B ki repo [repo-options] roadmap prune [id]
 Delete completed canonical work-item records.
 .TP
 .B ki repo [repo-options] roadmap promote <id> [horizon]
@@ -447,12 +447,15 @@ malformed or unsafe item is an isolated diagnostic for that repository; other
 selected repositories still report. The command never creates, transitions,
 accepts, prunes, or repairs a work item.
 .TP
-.B ki repo [repo-options] roadmap prune
-Delete every canonical work-item record whose lifecycle status is exactly
+.B ki repo [repo-options] roadmap prune [id]
+Without an ID, delete every canonical work-item record whose lifecycle status
+is exactly
 .BR done
 from the selected repositories. It leaves every other lifecycle status,
 non-canonical file, and peer repository untouched. If no selected repository
-contains a completed record, it reports that no record was pruned.
+contains a completed record, it reports that no record was pruned. With an ID,
+require exactly one selected repository and delete only that named completed
+record.
 .TP
 .B ki repo [repo-options] roadmap promote <id> [horizon]
 Move exactly one selected repository's named work item one horizon toward
