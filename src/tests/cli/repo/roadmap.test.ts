@@ -181,6 +181,12 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('TRADES=3 IMPORTS=3 EXPORTS=0')
     expect(result.exitCode).toBe(0)
 
+    await box.project.write(`source/-/_TRADES/example/receiver/TRD-00000003.md`, record('TRD-00000003', 'work').replace('Trade context.', ''))
+
+    const bodyIncomplete = await box.run('ki repo --repo source roadmap list')
+
+    expect(bodyIncomplete.exitCode).toBe(0)
+    expect(bodyIncomplete.output).toContain('TRD-00000003 [sent] Trade-aware planning')
   })
 
   test('rejects every malformed canonical frontmatter shape', async () => {

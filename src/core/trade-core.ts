@@ -350,8 +350,6 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
   addressParts(recordSender)
   addressParts(receiver)
   if (!isTradeKind(kind)) throw tradeError(`${path} has invalid trade kind`)
-  if (!body.startsWith(`# ${id}: ${title}\n\n`) || !/## Context\n\n\S[\s\S]*?\n\n## Submission\n\n\S[\s\S]*?\n\n## Constraints\n\n\S/u.test(body))
-    throw tradeError(`${path} must carry non-empty Context, Submission, and Constraints sections`)
   const status = fields.status as ReceiverStatus | undefined
   if (direction === 'inbound') {
     if (!status || !receiverStatuses.includes(status)) throw tradeError(`${path} has invalid receiver status`)

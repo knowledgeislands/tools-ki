@@ -335,14 +335,22 @@ describe('[ki trade]', () => {
       [outbound.replace('created_at:', 'created_at: invalid #'), 'has invalid created_at timestamp'],
       [outbound.replace('sender: example/source', 'sender: Example/source'), 'trade record address must use canonical'],
       [outbound.replace('kind: work', 'kind: other'), 'has invalid trade kind'],
-      [outbound.replace('source_ref: "KI-TOOL-CLI-012"\n', ''), 'must declare non-empty trade field source_ref'],
-      [outbound.replace('## Constraints\n\nThe receiver retains local authority.', '## Constraints\n\n'), 'must carry non-empty Context']
+      [outbound.replace('source_ref: "KI-TOOL-CLI-012"\n', ''), 'must declare non-empty trade field source_ref']
     ]
 
     for (const [contents, message] of cases) {
       await box.project.write(path, contents)
       expect((await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work', '--id', id])).output).toContain(message)
     }
+
+    await box.project.write(
+      path,
+      outbound.replace('\n---\n#', '\n---\n\n#').replace('## Constraints\n\nThe receiver retains local authority.', '## Constraints\n\n')
+    )
+    expect(await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work', '--id', id])).toEqual({
+      exitCode: 0,
+      output: `ki trade receive\n  received ${id}\n`
+    })
 
     await box.project.write(path, outbound.replace('receiver: example/receiver', 'receiver: example/other'))
     expect((await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work', '--id', id])).output).toContain(
