@@ -786,14 +786,17 @@ describe('[ki repo validation]', () => {
   })
 
   describe('skill resolution', () => {
-    const installSkillsHarness = async (data: SandboxArea, specs: readonly { readonly name: string; readonly deps: readonly string[] }[]): Promise<void> => {
-      for (const { name, deps } of specs) {
+    const installSkillsHarness = async (
+      data: SandboxArea,
+      specs: readonly { readonly name: string; readonly deps: readonly string[]; readonly optionalDeps?: readonly string[] }[]
+    ): Promise<void> => {
+      for (const { name, deps, optionalDeps = [] } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
         const list = `[${deps.join(', ')}]`
         const skillMarkdown = `---
 name: ${name}
 ki-depends-on: ${list}
----
+${optionalDeps.length ? `ki-optional-depends-on: [${optionalDeps.join(', ')}]\n` : ''}---
 `
         await data.write(`${base}/SKILL.md`, skillMarkdown)
         await data.write(
@@ -866,6 +869,24 @@ ki-depends-on: ${list}
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('requires declared dependency ki-foundation')
+    })
+
+    test('loads an optional dependency only when it is declared', async () => {
+      const box = await sandbox()
+      await installSkillsHarness(box.data, [
+        { name: 'ki-delegation', deps: [] },
+        { name: 'ki-batch', deps: [], optionalDeps: ['ki-delegation'] }
+      ])
+      await box.project.write('.ki-config.toml', '["example/harness:ki-batch"]\n')
+
+      const absent = await box.run('ki repo audit --reporter-levels info')
+      await box.project.write('.ki-config.toml', '["example/harness:ki-batch"]\n["example/harness:ki-delegation"]\n')
+      const active = await box.run('ki repo audit --skill ki-batch --reporter-levels info')
+
+      expect(absent.exitCode).toBe(0)
+      expect(absent.output).toContain('[Order (R-1)] — ki-batch')
+      expect(active.exitCode).toBe(0)
+      expect(active.output.indexOf('example/harness:ki-delegation')).toBeLessThan(active.output.indexOf('example/harness:ki-batch'))
     })
 
     test('refuses a dependency cycle between declared skills', async () => {

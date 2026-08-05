@@ -26,7 +26,10 @@ const orderedSkills = (skills: readonly ResolvedSkill[]): readonly ResolvedSkill
   const remaining = new Map(
     [...skills]
       .sort((left, right) => left.declaration.name.localeCompare(right.declaration.name))
-      .map((skill) => [skill.declaration.name, { skill, dependencies: new Set(skill.capability.dependsOn) }])
+      .map((skill) => [
+        skill.declaration.name,
+        { skill, dependencies: new Set([...skill.capability.dependsOn, ...skill.capability.optionalDependsOn.filter((name) => byName.has(name))]) }
+      ])
   )
   const ordered: ResolvedSkill[] = []
   for (const [name, { dependencies }] of remaining) {
@@ -91,6 +94,10 @@ export const resolveDeclaredSkills = (
       const dependency = resolved.find((candidate) => candidate.declaration.name === dependencyName)
       // Dependency existence was already validated by orderedSkills() above, so dependency is always found here.
       /* v8 ignore next */
+      if (dependency) includeDependencies(dependency)
+    }
+    for (const dependencyName of skill.capability.optionalDependsOn) {
+      const dependency = resolved.find((candidate) => candidate.declaration.name === dependencyName)
       if (dependency) includeDependencies(dependency)
     }
   }

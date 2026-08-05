@@ -37,20 +37,19 @@ describe('[ki manage repair]', () => {
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
     const recap = `${box.home.path}/.claude/skills/ki-recap`
-    const delegate = `${box.home.path}/.claude/skills/ki-delegate`
     await unlink(recap)
     await symlink(`${box.root.path}/missing-recap`, recap, 'dir')
-    await unlink(delegate)
-    await box.home.write('.claude/skills/ki-delegate', 'user-owned\n')
+    await unlink(`${box.home.path}/.claude/skills/ki-next`)
+    await box.home.write('.claude/skills/ki-next', 'user-owned\n')
 
     const repair = await box.run('ki manage repair')
 
     expect(repair.exitCode).toBe(1)
     expect(repair.output).toContain('link ')
     expect(repair.output).toContain('ki-recap -> ')
-    expect(repair.output).toContain('User skill ki-delegate for claude-code: skill is not a symbolic link')
+    expect(repair.output).toContain('User skill ki-next for claude-code: skill is not a symbolic link')
     expect((await lstat(recap)).isSymbolicLink()).toBe(true)
-    expect((await lstat(delegate)).isFile()).toBe(true)
+    expect((await lstat(`${box.home.path}/.claude/skills/ki-next`)).isFile()).toBe(true)
   })
 
   test('reports missing and invalid configuration without changing it', async () => {

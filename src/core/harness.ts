@@ -17,6 +17,8 @@ export interface HarnessCapability {
   readonly name: string
   readonly source: string
   readonly dependsOn: readonly string[]
+  /** Optional capabilities to load first when they are active in the same scope. */
+  readonly optionalDependsOn: readonly string[]
   /** Runtime identifiers this skill supports; absent means portable across supported runtimes. */
   readonly supportedRuntimes?: readonly SupportedRuntime[]
   /** Payload-relative path to the skill's canonical `scripts/rubric/items/index.ts` catalogue, when it provides one. */
@@ -51,14 +53,20 @@ const frontmatter = (text: string, path: string): Record<string, string> => {
   )
 }
 
-const frontmatterDependencies = (value: string | undefined, path: string): readonly string[] => {
-  if (!value || !/^\[[^\]]*\]$/.test(value)) throw new KiError(`${path} must declare ki-depends-on as a flow list`, 1)
+const frontmatterDependencies = (
+  value: string | undefined,
+  path: string,
+  field: 'ki-depends-on' | 'ki-optional-depends-on',
+  required: boolean
+): readonly string[] => {
+  if (value === undefined && !required) return []
+  if (!value || !/^\[[^\]]*\]$/.test(value)) throw new KiError(`${path} must declare ${field} as a flow list`, 1)
   const dependencies = value
     .slice(1, -1)
     .split(',')
     .map((dependency) => dependency.trim())
     .filter(Boolean)
-  if (new Set(dependencies).size !== dependencies.length) throw new KiError(`${path} repeats a dependency`, 1)
+  if (new Set(dependencies).size !== dependencies.length) throw new KiError(`${path} repeats a ${required ? '' : 'optional '}dependency`, 1)
   return dependencies
 }
 
@@ -125,7 +133,8 @@ const discoverCapabilities = async (root: string, identifier: string): Promise<r
       kind: 'skill',
       name,
       source,
-      dependsOn: frontmatterDependencies(metadata['ki-depends-on'], file),
+      dependsOn: frontmatterDependencies(metadata['ki-depends-on'], file, 'ki-depends-on', true),
+      optionalDependsOn: frontmatterDependencies(metadata['ki-optional-depends-on'], file, 'ki-optional-depends-on', false),
       supportedRuntimes: frontmatterSupportedRuntimes(metadata['ki-supported-runtimes'], file),
       rubricModule
     })

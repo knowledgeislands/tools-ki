@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
+import { minimumBootstrapUserSkills } from '../agents/internal.ts'
 import { acquireVerifiedArchive, extractArchive, type Fetcher } from './acquire.ts'
 import { KiError } from './errors.ts'
 import { canonicalHarnessIdentifier, type InstalledHarness, inspectHarnessRoot, readInstalledHarness } from './harness.ts'
@@ -328,7 +329,7 @@ export const restoreCanonicalHarness = async (
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
   installHarness(configurationDirectory, dataDirectory, canonicalHarnessIdentifier, fetcher, {
     replace: await canonicalDevelopmentProjection(dataDirectory),
-    requiredCapabilities: ['ki-bootstrap', 'ki-delegate', 'ki-next', 'ki-plan', 'ki-implement', 'ki-accept', 'ki-batch', 'ki-recap'],
+    requiredCapabilities: minimumBootstrapUserSkills,
     requiredCapabilitiesContext: 'canonical-bootstrap'
   })
 
