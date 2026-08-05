@@ -1,0 +1,14 @@
+{
+  "show_wrap_guides": true,
+  "wrap_guides": [120],
+  "indent_guides": {
+    "coloring": "indent_aware"
+  },
+  "formatter": "prettier",
+  "colorize_brackets": true,
+  "format_on_save": "on",
+  "line_ending": "detect",
+  "remove_trailing_whitespace_on_save": true,
+  "ensure_final_newline_on_save": true,
+  "show_whitespaces": "trailing"
+}
