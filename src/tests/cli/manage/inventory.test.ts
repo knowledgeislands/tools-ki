@@ -59,10 +59,11 @@ describe('[ki command inventory]', () => {
     expect(manual).toContain('.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]')
     for (const command of registryCommands) expect(changelog).toContain(`\`ki registry ${command}`)
 
-    for (const command of agoraCommands) expect(manual).toContain(command === 'open' ? '.B ki agora show|open <name>' : `.B ki agora ${command}`)
-    expect(manual.indexOf('.SS Agora management')).toBeLessThan(manual.indexOf('.SS Repository options'))
+    for (const command of agoraCommands) expect(manual).toContain(`.B ki agora ${command}`)
     expect(manual.indexOf('.SS Repository options')).toBeLessThan(manual.indexOf('.SS Repository management'))
     expect(manual.indexOf('.SS Repository management')).toBeLessThan(manual.indexOf('.SS Registry management'))
+    expect(manual.indexOf('.SS Trades')).toBeLessThan(manual.indexOf('.SS Agora management'))
+    expect(manual.indexOf('.SS Agora management')).toBeLessThan(manual.indexOf('.SS Acquisition'))
     expect(changelog.indexOf('#### Agora management')).toBeLessThan(changelog.indexOf('#### Repository options'))
     expect(changelog.indexOf('#### Repository options')).toBeLessThan(changelog.indexOf('#### Repository management'))
     expect(changelog.indexOf('#### Repository management')).toBeLessThan(changelog.indexOf('#### Registry management'))
