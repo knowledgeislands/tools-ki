@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-019
 title: Establish KI self
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 0939ffe4acef8144bbb041b10373c35cf1ed390a
 ---
 
 ## Goal
