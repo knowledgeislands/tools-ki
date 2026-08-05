@@ -52,6 +52,9 @@ Show global state and direct-CWD repository health.
 Check user configuration, agents, harnesses, user-skill links, and direct-CWD
 legacy KI state and configuration.
 .TP
+.B ki manage repair [--dry-run]
+Reconcile configured KI-managed user skill projections.
+.TP
 .B ki manage docs [topic]
 Print canonical KI documentation locations.
 .TP
@@ -329,6 +332,15 @@ reports direct-CWD legacy \fB.ki-meta/\fR and \fB.ki/\fR directories, without
 searching for or operating on a repository. It validates a regular direct-CWD
 \fB.ki-config.toml\fR declaration without resolving its providers. A failing
 check produces a non-zero exit status after the complete report.
+.TP
+.B ki manage repair [--dry-run]
+Reconcile configured user-skill links from their installed or active local
+harness sources. It creates missing links and re-points stale or dangling
+symbolic links, but never changes configuration, installs a harness, removes
+legacy repository state, or repairs repository projections. It reports
+unavailable sources, incompatible agents, and unsafe non-symbolic-link entries
+for manual resolution. With \fB--dry-run\fR, it reports proposed links without
+changing state.
 .TP
 .B ki manage docs [topic]
 Print canonical documentation locations without opening a browser, fetching

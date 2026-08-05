@@ -29,6 +29,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki manage cleanup`
 - `ki manage diag`
 - `ki manage doctor`
+- `ki manage repair`
 - `ki manage docs`
 - `ki manage list`
 - `ki manage search`

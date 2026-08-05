@@ -28,6 +28,7 @@ describe('[ki --help]', () => {
     const search = await box.run('ki manage search --help')
     const cleanup = await box.run('ki manage cleanup --help')
     const docs = await box.run('ki manage docs --help')
+    const repair = await box.run('ki manage repair --help')
 
     expect(root.output).toContain('Usage: ki')
     expect(help.exitCode).toBe(0)
@@ -53,6 +54,7 @@ describe('[ki --help]', () => {
     expect(search.output).toContain('search verified installed harness capabilities')
     expect(cleanup.output).toContain('report eligible KI-managed stale state')
     expect(docs.output).toContain('print canonical KI documentation locations')
+    expect(repair.output).toContain('reconcile configured KI-managed user skill projections')
     expect(repository.output).toContain('educate')
     expect(repository.output).toContain('repair')
     expect(localSet.output).toContain('validate and remember a local harness checkout')

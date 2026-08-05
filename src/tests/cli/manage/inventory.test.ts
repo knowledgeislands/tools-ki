@@ -4,7 +4,7 @@ import { sandbox } from '../_cli_helper.ts'
 
 const rootHelpCommands = ['bootstrap', 'manage', 'agora', 'skill', 'repo', 'registry', 'harness', 'trade', 'acquire', 'dev']
 
-const manageCommands = ['cleanup', 'completion', 'diag', 'docs', 'doctor', 'list', 'missing', 'outdated', 'search', 'update']
+const manageCommands = ['cleanup', 'completion', 'diag', 'docs', 'doctor', 'list', 'missing', 'outdated', 'repair', 'search', 'update']
 const agoraCommands = ['create', 'add', 'remove', 'discover', 'list', 'show', 'open']
 const repoCommands = ['audit', 'conform', 'educate', 'init', 'roadmap', 'repair', 'skill', 'upgrade']
 const registryCommands = ['add', 'list']
