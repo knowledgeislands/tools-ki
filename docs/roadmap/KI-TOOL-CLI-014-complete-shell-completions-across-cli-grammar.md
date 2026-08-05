@@ -5,7 +5,7 @@ theme: cli
 horizon: next
 status: draft
 blocks: []
-blocked-by: [KI-TOOL-CLI-016]
+blocked-by: []
 baseline-ref: null
 ---
 
@@ -67,7 +67,7 @@ The CLI-015 modularisation places the relevant command families under `src/comma
 
 ## Dependencies / blocks
 
-CLI-015 is complete and established the command/test module boundaries used here. CLI-016 must first deliver the final roadmap subcommand grammar so this item can cover it without a follow-up completion gap. This item requires no compatibility aliases or peer-repository changes.
+CLI-015 is complete and established the command/test module boundaries used here. The completed CLI-016 roadmap-subcommand work established the grammar this item now covers; it is retained in Git history rather than as a live roadmap dependency. This item requires no compatibility aliases or peer-repository changes.
 
 ## Discussion
 

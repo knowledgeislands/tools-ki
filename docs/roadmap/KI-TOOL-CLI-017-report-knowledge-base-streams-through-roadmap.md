@@ -25,6 +25,30 @@ The command should identify a declared KI Knowledge Base and render its native p
 
 This item does not replace the Knowledge Base Streams lifecycle, invent flat Markdown work items for a Knowledge Base, mutate Focus or proposal Checklists, or alter the non-KB `docs/roadmap/` contract.
 
+## Current state
+
+`ki repo roadmap` currently reads only `docs/roadmap/` work items. Knowledge Bases intentionally use `Streams/`, so the command reports a missing repository-roadmap directory instead of their governed native forward-work structure.
+
+## Steps
+
+- [ ] Resolve the selected repository type from its declared KI configuration.
+- [ ] Render a Knowledge Base's Streams and Focus structure through the existing read-only roadmap command surface.
+- [ ] Add CLI contract coverage for both repository adapters and their diagnostics.
+
+## Files touched
+
+- `src/commands/repo/roadmap.ts` and supporting repository-type resolution.
+- `src/tests/cli/repo/roadmap.test.ts`.
+
+## Verify
+
+- `ki repo roadmap list` renders a declared Knowledge Base's Streams without requiring `docs/roadmap/`.
+- Existing non-KB roadmap output and read-only behaviour remain unchanged.
+
+## Dependencies / blocks
+
+This draft is independently shapeable; it has no active roadmap dependency.
+
 ## Discussion
 
 ### Repository type determines the planning source
