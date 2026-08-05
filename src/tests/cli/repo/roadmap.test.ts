@@ -159,11 +159,11 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('source/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
     await box.project.write('receiver/docs/roadmap/KI-TOOL-CLI-004-inspect.md', item({ id: 'KI-TOOL-CLI-004' }))
     await box.project.write(`source/-/_TRADES/example/receiver/${id}.md`, record(id, 'work'))
-    await box.project.write(`receiver/+/_TRADES/example/source/${id}.md`, record(id, 'work', '\nstatus: received'))
+    await box.project.write(`receiver/+/_TRADES/example/source/${id}.md`, record(id, 'work', '\ndecision_status: unconsidered'))
     await box.project.write('source/-/_TRADES/example/receiver/TRD-00000002.md', record('TRD-00000002', 'work'))
-    await box.project.write('receiver/+/_TRADES/example/source/TRD-00000002.md', record('TRD-00000002', 'work', '\nstatus: received'))
+    await box.project.write('receiver/+/_TRADES/example/source/TRD-00000002.md', record('TRD-00000002', 'work', '\ndecision_status: unconsidered'))
     await box.project.write('source/-/_TRADES/example/receiver/TRD-00000001.md', record('TRD-00000001', 'knowledge'))
-    await box.project.write('receiver/+/_TRADES/example/source/TRD-00000001.md', record('TRD-00000001', 'knowledge', '\nstatus: received'))
+    await box.project.write('receiver/+/_TRADES/example/source/TRD-00000001.md', record('TRD-00000001', 'knowledge', '\ndecision_status: unconsidered'))
     await box.config.write(
       'ki/config.toml',
       `schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = [${JSON.stringify(source)}, ${JSON.stringify(receiver)}]\n`
@@ -172,10 +172,10 @@ describe('[ki repo roadmap]', () => {
     const result = await box.run('ki repo --repo source --repo receiver roadmap list')
 
     expect(result.output).toContain(
-      `│  ╰─ export (3)\n│     ├─ ⚒ ${id} → example/receiver [sent] Trade-aware planning\n│     ├─ ◇ TRD-00000001 → example/receiver [sent] Trade-aware planning\n│     ╰─ ⚒ TRD-00000002 → example/receiver [sent] Trade-aware planning`
+      `│  ╰─ export (3)\n│     ├─ ⚒ ${id} → example/receiver [received · accepted · unconsidered] Trade-aware planning\n│     ├─ ◇ TRD-00000001 → example/receiver [received · accepted · unconsidered] Trade-aware planning\n│     ╰─ ⚒ TRD-00000002 → example/receiver [received · accepted · unconsidered] Trade-aware planning`
     )
     expect(result.output).toContain(
-      `│  ├─ import (3)\n│  │  ├─ ⚒ ${id} ← example/source [received] Trade-aware planning\n│  │  ├─ ◇ TRD-00000001 ← example/source [received] Trade-aware planning\n│  │  ╰─ ⚒ TRD-00000002 ← example/source [received] Trade-aware planning`
+      `│  ├─ import (3)\n│  │  ├─ ⚒ ${id} ← example/source [received · accepted · unconsidered] Trade-aware planning\n│  │  ├─ ◇ TRD-00000001 ← example/source [received · accepted · unconsidered] Trade-aware planning\n│  │  ╰─ ⚒ TRD-00000002 ← example/source [received · accepted · unconsidered] Trade-aware planning`
     )
     expect(result.output).toContain('TRADES=3 IMPORTS=0 EXPORTS=3')
     expect(result.output).toContain('TRADES=3 IMPORTS=3 EXPORTS=0')
@@ -186,7 +186,7 @@ describe('[ki repo roadmap]', () => {
     const bodyIncomplete = await box.run('ki repo --repo source roadmap list')
 
     expect(bodyIncomplete.exitCode).toBe(0)
-    expect(bodyIncomplete.output).toContain('⚒ TRD-00000003 → example/receiver [sent] Trade-aware planning')
+    expect(bodyIncomplete.output).toContain('⚒ TRD-00000003 → example/receiver [sent · unavailable] Trade-aware planning')
 
     await box.project.write('source/docs/roadmap/malformed.md', 'not a governed work item\n')
     const malformedRoadmap = await box.run('ki repo --repo source roadmap list')

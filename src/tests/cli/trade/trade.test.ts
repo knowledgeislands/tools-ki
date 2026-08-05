@@ -132,7 +132,10 @@ describe('[ki trade]', () => {
     const received = await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work', '--id', id])
     await box.project.write(
       `receiver/+/_TRADES/example/source/${id}.md`,
-      (await box.project.read(`receiver/+/_TRADES/example/source/${id}.md`)).replace('status: received', 'status: adopted\nadopted_as: "KI-RECEIVER-FND-001"')
+      (await box.project.read(`receiver/+/_TRADES/example/source/${id}.md`)).replace(
+        'decision_status: unconsidered',
+        'decision_status: adopted\nadopted_as: "KI-RECEIVER-FND-001"'
+      )
     )
     box.cd('..')
     const listed = await box.run(['ki', 'trade', 'list', '--repo', receiverHome, '--direction', 'import', '--status', 'adopted', '--kind', 'work'])
@@ -143,13 +146,13 @@ describe('[ki trade]', () => {
     const pruned = await box.run(['ki', 'trade', 'prune', id])
 
     expect(created.output).toBe(`ki trade new: created ${id} for example/receiver\n`)
-    expect(received).toEqual({ exitCode: 0, output: `ki trade receive\n  received ${id}\n` })
+    expect(received).toEqual({ exitCode: 0, output: `ki trade receive\n  accepted ${id}\n` })
     expect(listed).toEqual({
       exitCode: 0,
-      output: `╭─ KI TRADES\n│  ✦ 1 trade\n├─ results\n│  ╰─ import\n│     ╰─ ⚒ ${id} ← example/source [adopted] Route contract\n╰─ summary: TRADES=1 IMPORTS=1 EXPORTS=0\n`
+      output: `╭─ KI TRADES\n│  ✦ 1 trade\n├─ results\n│  ╰─ import\n│     ╰─ ⚒ ${id} ← example/source [received · accepted · adopted] Route contract\n╰─ summary: TRADES=1 IMPORTS=1 EXPORTS=0\n`
     })
     expect(allListed.output).toContain(
-      `│  ├─ import\n│  │  ╰─ ⚒ ${id} ← example/source [adopted] Route contract\n│  ╰─ export\n│     ╰─ ⚒ ${id} → example/receiver [sent] Route contract`
+      `│  ├─ import\n│  │  ╰─ ⚒ ${id} ← example/source [received · accepted · adopted] Route contract\n│  ╰─ export\n│     ╰─ ⚒ ${id} → example/receiver [received · accepted · adopted] Route contract`
     )
     expect(shown.output).toContain(`Repository: ${sourceHome} [export]\n${outbound.trimEnd()}`)
     expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
@@ -164,7 +167,10 @@ describe('[ki trade]', () => {
     box.cd('receiver')
     await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'knowledge', '--id', id])
     const path = `receiver/+/_TRADES/example/source/${id}.md`
-    await box.project.write(path, (await box.project.read(path)).replace('status: received', 'status: retained\nretained_as: "Knowledge/Local/Note"'))
+    await box.project.write(
+      path,
+      (await box.project.read(path)).replace('decision_status: unconsidered', 'decision_status: retained\nretained_as: "Knowledge/Local/Note"')
+    )
     box.cd('..')
     const released = await box.run(['ki', 'trade', 'release', id])
     box.cd('receiver')
@@ -181,7 +187,7 @@ describe('[ki trade]', () => {
     const invalidPath = `receiver/+/_TRADES/example/source/${invalidId}.md`
     await box.project.write(
       invalidPath,
-      (await box.project.read(invalidPath)).replace('status: received', 'status: retained\nretained_as: "Knowledge/Local/Note"')
+      (await box.project.read(invalidPath)).replace('decision_status: unconsidered', 'decision_status: retained\nretained_as: "Knowledge/Local/Note"')
     )
     box.cd('..')
     expect((await box.run(['ki', 'trade', 'release', invalidId])).output).toContain('permits retained only for knowledge trades')
@@ -367,7 +373,7 @@ describe('[ki trade]', () => {
     )
     expect(await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work', '--id', id])).toEqual({
       exitCode: 0,
-      output: `ki trade receive\n  received ${id}\n`
+      output: `ki trade receive\n  accepted ${id}\n`
     })
 
     await box.project.write(path, outbound.replace('receiver: example/receiver', 'receiver: example/other'))
@@ -402,9 +408,9 @@ describe('[ki trade]', () => {
     box.cd('..')
     const shown = await box.run(['ki', 'trade', 'show', firstId])
 
-    expect(outboundList.output).toContain(`⚒ ${firstId} → example/receiver [sent] Route contract`)
-    expect(received.output).toContain(`received ${firstId}`)
-    expect(received.output).toContain(`received ${secondId}`)
+    expect(outboundList.output).toContain(`⚒ ${firstId} → example/receiver [sent · unavailable] Route contract`)
+    expect(received.output).toContain(`accepted ${firstId}`)
+    expect(received.output).toContain(`accepted ${secondId}`)
     expect(repeated.output).toContain(`existing ${firstId}`)
     expect(repeated.output).toContain(`existing ${secondId}`)
     expect(shown.output).not.toContain(secondId)
@@ -448,8 +454,8 @@ describe('[ki trade]', () => {
     await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work', '--id', id])
     const path = `receiver/+/_TRADES/example/source/${id}.md`
     const inbound = await box.project.read(path)
-    const releaseWith = async (status: string) => {
-      await box.project.write(path, inbound.replace('status: received', status))
+    const releaseWith = async (decisionStatus: string) => {
+      await box.project.write(path, inbound.replace('decision_status: unconsidered', decisionStatus))
       box.cd('..')
       const result = await box.run(['ki', 'trade', 'release', id])
       box.cd('receiver')
@@ -457,19 +463,19 @@ describe('[ki trade]', () => {
     }
 
     const cases: readonly [string, string][] = [
-      ['status: unknown', 'invalid receiver status'],
-      ['status: received\nreviewed_at: invalid', 'invalid reviewed_at timestamp'],
-      ['status: parked', 'requires rationale for status parked'],
-      ['status: adopted', 'requires adopted_as for status adopted'],
-      ['status: received\nadopted_as: "KI-LOCAL-001"', 'permits adopted_as only for status adopted'],
-      ['status: received\nretained_as: "Knowledge/Note"', 'permits retained_as only for status retained'],
-      ['status: superseded\nrationale: "replaced"', 'requires superseded_by for status superseded'],
-      ['status: received\nsuperseded_by: "TRD-other"', 'permits superseded_by only for status superseded']
+      ['decision_status: unknown', 'invalid decision status'],
+      ['decision_status: unconsidered\nreviewed_at: invalid', 'invalid reviewed_at timestamp'],
+      ['decision_status: parked', 'requires rationale for decision status parked'],
+      ['decision_status: adopted', 'requires adopted_as for decision status adopted'],
+      ['decision_status: unconsidered\nadopted_as: "KI-LOCAL-001"', 'permits adopted_as only for decision status adopted'],
+      ['decision_status: unconsidered\nretained_as: "Knowledge/Note"', 'permits retained_as only for decision status retained'],
+      ['decision_status: superseded\nrationale: "replaced"', 'requires superseded_by for decision status superseded'],
+      ['decision_status: unconsidered\nsuperseded_by: "TRD-other"', 'permits superseded_by only for decision status superseded']
     ]
     for (const [status, message] of cases) expect((await releaseWith(status)).output).toContain(message)
 
-    expect((await releaseWith('status: received')).output).toContain('cannot be released while receiver status is received')
-    expect((await releaseWith('status: adopted\nadopted_as: "KI-LOCAL-001"\nreviewed_at: 2026-08-03T12:30:00Z')).exitCode).toBe(0)
+    expect((await releaseWith('decision_status: unconsidered')).output).toContain('cannot be released while receiver decision status is unconsidered')
+    expect((await releaseWith('decision_status: adopted\nadopted_as: "KI-LOCAL-001"\nreviewed_at: 2026-08-03T12:30:00Z')).exitCode).toBe(0)
 
     box.cd('..')
     const changed = await box.run(newTrade('work'))
@@ -480,7 +486,7 @@ describe('[ki trade]', () => {
     await box.project.write(
       changedPath,
       (await box.project.read(changedPath))
-        .replace('status: received', 'status: declined\nrationale: "not local"')
+        .replace('decision_status: unconsidered', 'decision_status: declined\nrationale: "not local"')
         .replaceAll('Route contract', 'Changed title')
     )
     box.cd('..')
@@ -492,13 +498,13 @@ describe('[ki trade]', () => {
     await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'knowledge', '--id', knowledgeId])
     const knowledgePath = `receiver/+/_TRADES/example/source/${knowledgeId}.md`
     const knowledgeInbound = await box.project.read(knowledgePath)
-    await box.project.write(knowledgePath, knowledgeInbound.replace('status: received', 'status: adopted\nadopted_as: "KI-LOCAL-002"'))
+    await box.project.write(knowledgePath, knowledgeInbound.replace('decision_status: unconsidered', 'decision_status: adopted\nadopted_as: "KI-LOCAL-002"'))
     box.cd('..')
     expect((await box.run(['ki', 'trade', 'release', knowledgeId])).output).toContain('permits adopted only for work trades')
     box.cd('receiver')
-    await box.project.write(knowledgePath, knowledgeInbound.replace('status: received', 'status: retained'))
+    await box.project.write(knowledgePath, knowledgeInbound.replace('decision_status: unconsidered', 'decision_status: retained'))
     box.cd('..')
-    expect((await box.run(['ki', 'trade', 'release', knowledgeId])).output).toContain('requires retained_as for status retained')
+    expect((await box.run(['ki', 'trade', 'release', knowledgeId])).output).toContain('requires retained_as for decision status retained')
 
     const superseded = await box.run(newTrade('work'))
     const supersededId = /TRD-[0-9a-f-]+/u.exec(superseded.output)?.[0] as string
@@ -507,7 +513,10 @@ describe('[ki trade]', () => {
     const supersededPath = `receiver/+/_TRADES/example/source/${supersededId}.md`
     await box.project.write(
       supersededPath,
-      (await box.project.read(supersededPath)).replace('status: received', 'status: superseded\nrationale: "newer trade"\nsuperseded_by: "TRD-00000000"')
+      (await box.project.read(supersededPath)).replace(
+        'decision_status: unconsidered',
+        'decision_status: superseded\nrationale: "newer trade"\nsuperseded_by: "TRD-00000000"'
+      )
     )
     box.cd('..')
     expect((await box.run(['ki', 'trade', 'release', supersededId])).exitCode).toBe(0)
@@ -522,9 +531,12 @@ describe('[ki trade]', () => {
 
     box.cd('receiver')
     await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work', '--id', id])
-    expect((await box.run(['ki', 'trade', 'prune', id])).output).toContain('cannot be pruned while receiver status is received')
+    expect((await box.run(['ki', 'trade', 'prune', id])).output).toContain('cannot be pruned while receiver decision status is unconsidered')
     const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
-    await box.project.write(inboundPath, (await box.project.read(inboundPath)).replace('status: received', 'status: declined\nrationale: "not local"'))
+    await box.project.write(
+      inboundPath,
+      (await box.project.read(inboundPath)).replace('decision_status: unconsidered', 'decision_status: declined\nrationale: "not local"')
+    )
     expect((await box.run(['ki', 'trade', 'prune', id])).output).toContain('before sender release is observable')
 
     box.cd('..')

@@ -3,7 +3,7 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
-import { type LocatedTrade, locateTrades } from '../../core/trade-core.ts'
+import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade-core.ts'
 import { pruneDoneWorkItems, readWorkItems, updateWorkItemHorizon, type WorkItem, type WorkItemHorizon, workItemHorizons } from '../../core/work-items.ts'
 
 interface RoadmapOptions {
@@ -39,7 +39,7 @@ const textHorizonGroups = (items: readonly WorkItem[]): readonly { readonly hori
     return group.length ? [{ horizon, items: group }] : []
   })
 
-const renderTradeContext = (trades: readonly LocatedTrade[], diagnostic?: string): readonly string[] => {
+const renderTradeContext = (trades: readonly LocatedTrade[], estate: readonly LocatedTrade[], diagnostic?: string): readonly string[] => {
   if (diagnostic) return [`│  ╰─ ❌ unavailable: ${diagnostic}`]
   const directions = [
     ['import', 'inbound'],
@@ -52,18 +52,17 @@ const renderTradeContext = (trades: readonly LocatedTrade[], diagnostic?: string
     return [
       `│  ${lastDirection ? '╰─' : '├─'} ${label} (${selected.length})`,
       ...selected.map((trade, tradeIndex) => {
-        // The trade parser supplies sent when a sender record has no explicit disposition.
-        /* v8 ignore next */
-        const status = trade.record.status ?? 'sent'
         const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
         const peer = direction === 'outbound' ? `→ ${trade.record.receiver}` : `← ${trade.record.sender}`
-        return `${itemPrefix}${tradeIndex === selected.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${peer} [${status}] ${trade.record.title}`
+        const lifecycle = tradeLifecycle(trade, estate)
+        const statuses = [lifecycle.senderStatus, lifecycle.receiverStatus, lifecycle.decisionStatus].filter(Boolean).join(' · ')
+        return `${itemPrefix}${tradeIndex === selected.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${peer} [${statuses}] ${trade.record.title}`
       })
     ]
   })
 }
 
-const renderTextResult = (result: RoadmapResult): string => {
+const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]): string => {
   const items = result.items ?? []
   const groups = textHorizonGroups(items)
   const lines = [`╭─ KI REPO ROADMAP`, `│  📁 ${basename(result.repository)}`, `│     ${result.repository}`, `├─ roadmap (${items.length})`]
@@ -80,7 +79,7 @@ const renderTextResult = (result: RoadmapResult): string => {
         ]
       })
     )
-  lines.push(`├─ trades (${result.trades.length})`, ...renderTradeContext(result.trades, result.tradeDiagnostic))
+  lines.push(`├─ trades (${result.trades.length})`, ...renderTradeContext(result.trades, estate, result.tradeDiagnostic))
   const inbound = result.trades.filter((trade) => trade.direction === 'inbound').length
   const outbound = result.trades.filter((trade) => trade.direction === 'outbound').length
   const tradeSummary = result.tradeDiagnostic ? 'unavailable' : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
@@ -166,7 +165,7 @@ export const createRepoRoadmapCommand = (
               }
             })
           )
-          context.stdout.write(`${results.map(renderTextResult).join('\n\n')}\n`)
+          context.stdout.write(`${results.map((result) => renderTextResult(result, tradeInventory.trades)).join('\n\n')}\n`)
           if (results.some((result) => result.tradeDiagnostic || ('diagnostic' in result && result.diagnostic))) throw new KiExit(1)
         })
     )

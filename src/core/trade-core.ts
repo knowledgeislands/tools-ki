@@ -15,13 +15,13 @@ const repositoryExpression = /^https:\/\/github\.com\/([a-z0-9](?:[a-z0-9._-]*[a
 const identifierExpression = /^TRD-[0-9a-f]{8}$/
 const timestampExpression = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
 const tradeKinds = ['work', 'knowledge'] as const
-const receiverStatuses = ['received', 'adopted', 'retained', 'parked', 'clarify', 'declined', 'superseded'] as const
-const terminalStatuses = ['adopted', 'retained', 'declined', 'superseded'] as const
+const decisionStatuses = ['unconsidered', 'in_progress', 'parked', 'clarify', 'adopted', 'retained', 'declined', 'superseded'] as const
+const terminalDecisionStatuses = ['adopted', 'retained', 'declined', 'superseded'] as const
 
 export type TradeDirection = 'inbound' | 'outbound'
 export type RouteDirection = 'export' | 'import'
 export type TradeKind = (typeof tradeKinds)[number]
-export type ReceiverStatus = (typeof receiverStatuses)[number]
+export type DecisionStatus = (typeof decisionStatuses)[number]
 
 export interface TradeConfiguration {
   readonly repository: string
@@ -38,7 +38,7 @@ export interface TradeRecord {
   readonly receiver: string
   readonly kind: TradeKind
   readonly sourceRef: string
-  readonly status?: ReceiverStatus
+  readonly decisionStatus?: DecisionStatus
   readonly reviewedAt?: string
   readonly rationale?: string
   readonly adoptedAs?: string
@@ -56,6 +56,12 @@ export interface LocatedTrade {
   readonly record: TradeRecord
 }
 
+export interface TradeLifecycle {
+  readonly senderStatus: 'sent' | 'received'
+  readonly receiverStatus: 'unavailable' | 'accepted'
+  readonly decisionStatus?: DecisionStatus
+}
+
 interface TradeFields {
   readonly id?: string
   readonly title?: string
@@ -64,7 +70,7 @@ interface TradeFields {
   readonly receiver?: string
   readonly kind?: string
   readonly source_ref?: string
-  readonly status?: string
+  readonly decision_status?: string
   readonly reviewed_at?: string
   readonly rationale?: string
   readonly adopted_as?: string
@@ -361,7 +367,7 @@ const requiredField = (fields: TradeFields, name: string, path: string): string 
 const recordFromContents = (contents: string, path: string, direction: TradeDirection): TradeRecord => {
   const { fields, body } = frontmatter(contents, path)
   const sender = ['id', 'title', 'created_at', 'sender', 'receiver', 'kind', 'source_ref']
-  const allowed = direction === 'outbound' ? sender : [...sender, 'status', 'reviewed_at', 'rationale', 'adopted_as', 'retained_as', 'superseded_by']
+  const allowed = direction === 'outbound' ? sender : [...sender, 'decision_status', 'reviewed_at', 'rationale', 'adopted_as', 'retained_as', 'superseded_by']
   const unknown = Object.keys(fields).find((key) => !allowed.includes(key))
   if (unknown) throw tradeError(`${path} has unrecognised trade field ${unknown}`)
   const id = identifier(requiredField(fields, 'id', path))
@@ -376,20 +382,20 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
   addressParts(recordSender)
   addressParts(receiver)
   if (!isTradeKind(kind)) throw tradeError(`${path} has invalid trade kind`)
-  const status = fields.status as ReceiverStatus | undefined
+  const decisionStatus = fields.decision_status as DecisionStatus | undefined
   if (direction === 'inbound') {
-    if (!status || !receiverStatuses.includes(status)) throw tradeError(`${path} has invalid receiver status`)
+    if (!decisionStatus || !decisionStatuses.includes(decisionStatus)) throw tradeError(`${path} has invalid decision status`)
     if (fields.reviewed_at && !timestampExpression.test(fields.reviewed_at)) throw tradeError(`${path} has invalid reviewed_at timestamp`)
-    if (['parked', 'clarify', 'declined', 'superseded'].includes(status) && !fields.rationale)
-      throw tradeError(`${path} requires rationale for status ${status}`)
-    if (status === 'adopted' && kind !== 'work') throw tradeError(`${path} permits adopted only for work trades`)
-    if (status === 'adopted' && !fields.adopted_as) throw tradeError(`${path} requires adopted_as for status adopted`)
-    if (status === 'retained' && kind !== 'knowledge') throw tradeError(`${path} permits retained only for knowledge trades`)
-    if (status === 'retained' && !fields.retained_as) throw tradeError(`${path} requires retained_as for status retained`)
-    if (status !== 'adopted' && fields.adopted_as) throw tradeError(`${path} permits adopted_as only for status adopted`)
-    if (status !== 'retained' && fields.retained_as) throw tradeError(`${path} permits retained_as only for status retained`)
-    if (status === 'superseded' && !fields.superseded_by) throw tradeError(`${path} requires superseded_by for status superseded`)
-    if (status !== 'superseded' && fields.superseded_by) throw tradeError(`${path} permits superseded_by only for status superseded`)
+    if (['parked', 'clarify', 'declined', 'superseded'].includes(decisionStatus) && !fields.rationale)
+      throw tradeError(`${path} requires rationale for decision status ${decisionStatus}`)
+    if (decisionStatus === 'adopted' && kind !== 'work') throw tradeError(`${path} permits adopted only for work trades`)
+    if (decisionStatus === 'adopted' && !fields.adopted_as) throw tradeError(`${path} requires adopted_as for decision status adopted`)
+    if (decisionStatus === 'retained' && kind !== 'knowledge') throw tradeError(`${path} permits retained only for knowledge trades`)
+    if (decisionStatus === 'retained' && !fields.retained_as) throw tradeError(`${path} requires retained_as for decision status retained`)
+    if (decisionStatus !== 'adopted' && fields.adopted_as) throw tradeError(`${path} permits adopted_as only for decision status adopted`)
+    if (decisionStatus !== 'retained' && fields.retained_as) throw tradeError(`${path} permits retained_as only for decision status retained`)
+    if (decisionStatus === 'superseded' && !fields.superseded_by) throw tradeError(`${path} requires superseded_by for decision status superseded`)
+    if (decisionStatus !== 'superseded' && fields.superseded_by) throw tradeError(`${path} permits superseded_by only for decision status superseded`)
   }
   return {
     id,
@@ -399,7 +405,7 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
     receiver,
     kind,
     sourceRef,
-    ...(status ? { status } : {}),
+    ...(decisionStatus ? { decisionStatus } : {}),
     ...(fields.reviewed_at ? { reviewedAt: fields.reviewed_at } : {}),
     ...(fields.rationale ? { rationale: fields.rationale } : {}),
     ...(fields.adopted_as ? { adoptedAs: fields.adopted_as } : {}),
@@ -476,7 +482,7 @@ const readDirectory = async (path: string): Promise<readonly string[]> => {
   return (await readdir(path, { withFileTypes: true })).filter((entry) => entry.isFile() && entry.name.endsWith('.md')).map((entry) => join(path, entry.name))
 }
 
-const copyInboundContents = (record: TradeRecord): string => record.contents.replace('\n---\n', '\nstatus: received\n---\n')
+const copyInboundContents = (record: TradeRecord): string => record.contents.replace('\n---\n', '\ndecision_status: unconsidered\n---\n')
 
 export const receiveTrades = async (
   context: KiContext,
@@ -556,6 +562,21 @@ export const locateTrades = async (
   )
 }
 
+export const tradeLifecycle = (trade: LocatedTrade, estate: readonly LocatedTrade[]): TradeLifecycle => {
+  if (trade.direction === 'inbound')
+    return { senderStatus: 'received', receiverStatus: 'accepted', ...(trade.record.decisionStatus ? { decisionStatus: trade.record.decisionStatus } : {}) }
+  const inbound = estate.find(
+    (candidate) =>
+      candidate.direction === 'inbound' &&
+      candidate.record.id === trade.record.id &&
+      candidate.record.sender === trade.record.sender &&
+      candidate.record.receiver === trade.record.receiver
+  )
+  return inbound
+    ? { senderStatus: 'received', receiverStatus: 'accepted', ...(inbound.record.decisionStatus ? { decisionStatus: inbound.record.decisionStatus } : {}) }
+    : { senderStatus: 'sent', receiverStatus: 'unavailable' }
+}
+
 const localTrade = async (
   context: KiContext,
   direction: TradeDirection,
@@ -586,8 +607,8 @@ export const releaseTrade = async (context: KiContext, id: string): Promise<void
   const state = await lstat(inbound).catch(() => undefined)
   if (!state?.isFile()) throw tradeError(`receiver has not recorded an inbound trade ${id}`)
   const received = recordFromContents(await readFile(inbound, 'utf8'), inbound, 'inbound')
-  if (!terminalStatuses.includes(received.status as (typeof terminalStatuses)[number]))
-    throw tradeError(`trade ${id} cannot be released while receiver status is ${received.status}`)
+  if (!terminalDecisionStatuses.includes(received.decisionStatus as (typeof terminalDecisionStatuses)[number]))
+    throw tradeError(`trade ${id} cannot be released while receiver decision status is ${received.decisionStatus}`)
   if (!sameSenderPayload(trade.record, received)) throw tradeError(`receiver inbound trade ${id} does not preserve the sender payload`)
   await rm(trade.path)
 }
@@ -595,8 +616,8 @@ export const releaseTrade = async (context: KiContext, id: string): Promise<void
 export const pruneTrade = async (context: KiContext, id: string): Promise<void> => {
   const { local, trade } = await localTrade(context, 'inbound', identifier(id))
   if (trade.record.receiver !== local.configuration.identity) throw tradeError(`inbound trade ${id} is not addressed to the current repository`)
-  if (!terminalStatuses.includes(trade.record.status as (typeof terminalStatuses)[number]))
-    throw tradeError(`trade ${id} cannot be pruned while receiver status is ${trade.record.status}`)
+  if (!terminalDecisionStatuses.includes(trade.record.decisionStatus as (typeof terminalDecisionStatuses)[number]))
+    throw tradeError(`trade ${id} cannot be pruned while receiver decision status is ${trade.record.decisionStatus}`)
   const sender = await peerForRecord(context, trade.record.sender)
   await requireActiveRoute(context, local.configuration, sender.configuration.repository, 'import', trade.record.kind)
   const outbound = tradePath(sender.root, 'outbound', local.configuration.identity, id)

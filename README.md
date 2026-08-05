@@ -84,7 +84,7 @@ Creation, shaping, readiness, implementation, acceptance, and completion remain 
 
 `ki trade routes list` presents the current repository's declared export and import routes in a framed tree, including their registered-estate state. A declared export route may create a local trade before its receiver has configured KI trades; the receiver cannot inspect or receive it until it declares the reciprocal import route.
 
-`ki trade list` presents visible import and export trade records across the registered repository estate. Each item identifies its peer (`→ receiver` for exports, `← sender` for imports) and kind (`⚒` work, `◇` knowledge); a displayed `sent` status denotes an outbound sender copy rather than a receiver disposition.
+`ki trade list` presents visible import and export trade records across the registered repository estate. Each item identifies its peer (`→ receiver` for exports, `← sender` for imports) and kind (`⚒` work, `◇` knowledge). Its bracket contains the mutually observable lifecycle: sender status (`sent` or `received`), receiver status (`unavailable` or `accepted`), then the receiver-owned decision status when delivery has been accepted (`unconsidered`, `in_progress`, `parked`, `clarify`, `adopted`, `retained`, `declined`, or `superseded`).
 
 `ki repo roadmap list` includes that record context for each selected repository, so planning work and incoming or outgoing trades can be scanned together without changing either lifecycle. If the local registered trade estate cannot be read, it reports that context as unavailable and exits with status `1` after rendering the inventory.
 
