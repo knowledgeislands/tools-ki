@@ -172,7 +172,7 @@ describe('[ki repo conform writes]', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('╭─ KI REPO CONFORM')
-    expect(result.output).toContain('│  ╰─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0 FIXED=0')
+    expect(result.output).toContain('│  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0 FIXED=0')
     expect(result.output).toContain('╰─ summary: PASS=1 WARN=0 FAIL=0 FIXED=0 · FINDINGS: FAIL=0 WARN=0 FIXED=0')
   })
 
@@ -208,9 +208,9 @@ describe('[ki repo conform writes]', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('│  ╰─ ⚠️  example/harness:ki-example WARN · FAIL=0 WARN=2 FIXED=0')
-    expect(result.output).toContain('│     ├─ ⚠️  warn  [First (EXAMPLE-1)] — first line\n│     │         continued first line')
-    expect(result.output).toContain('│     ╰─ ⚠️  warn  [Second (EXAMPLE-2)] — second line\n│               continued second line')
+    expect(result.output).toContain('│  ╰─ ! example/harness:ki-example WARN · FAIL=0 WARN=2 FIXED=0')
+    expect(result.output).toContain('│     ├─ ! warn  [First (EXAMPLE-1)] — first line\n│     │         continued first line')
+    expect(result.output).toContain('│     ╰─ ! warn  [Second (EXAMPLE-2)] — second line\n│               continued second line')
   })
 
   test('withholds a proposal that shares a skill with its blocking audit', async () => {
@@ -241,7 +241,7 @@ describe('[ki repo conform writes]', () => {
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('proposed write safe.txt')
-    expect(result.output).toContain('❌ fail  [Blocking audit (EXAMPLE-2)] — unrelated license failure')
+    expect(result.output).toContain('× fail  [Blocking audit (EXAMPLE-2)] — unrelated license failure')
     expect(result.output).toContain(
       'repository conform completed independent publication with unresolved groups; blocking failure: repository conform found failures'
     )
@@ -288,15 +288,15 @@ describe('[ki repo conform writes]', () => {
 
     expect(dryRun.exitCode).toBe(1)
     expect(dryRun.output).toContain('would apply write safe.txt')
-    expect(dryRun.output).toContain('❌ fail  [Blocking audit (BLOCKED-1)] — external settings require approval')
+    expect(dryRun.output).toContain('× fail  [Blocking audit (BLOCKED-1)] — external settings require approval')
     expect(await box.project.read('safe.txt')).toBe('before\n')
 
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('applied write safe.txt')
-    expect(result.output).toContain('✅ fixed [Safe repair (SAFE-1)] — conformed')
-    expect(result.output).toContain('❌ fail  [Blocking audit (BLOCKED-1)] — external settings require approval')
+    expect(result.output).toContain('↺ fixed [Safe repair (SAFE-1)] — conformed')
+    expect(result.output).toContain('× fail  [Blocking audit (BLOCKED-1)] — external settings require approval')
     expect(await box.project.read('safe.txt')).toBe('after\n')
   })
 
@@ -422,7 +422,7 @@ describe('[ki repo conform writes]', () => {
     const allowed = await box.run('ki repo conform --allow-guarded')
     expect(allowed.exitCode).toBe(1)
     expect(allowed.output).toContain(`run guarded "node" "-e" "require('node:fs').writeFileSync('command.txt', 'after')"`)
-    expect(allowed.output).toContain('✅ fixed [Command repair (COMMAND-1)] — conformed')
+    expect(allowed.output).toContain('↺ fixed [Command repair (COMMAND-1)] — conformed')
     await expect(box.project.read('command.txt')).resolves.toBe('after')
   })
 
@@ -708,8 +708,8 @@ export default {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('proposed write governed.txt\napplied write governed.txt')
-    expect(result.output).toContain('│  ╰─ ✅ example/harness:ki-example FIXED · FAIL=0 WARN=0 FIXED=1')
-    expect(result.output).toContain('│     ╰─ ✅ fixed [Example (EXAMPLE-1)] — conformed')
+    expect(result.output).toContain('│  ╰─ ↺ example/harness:ki-example FIXED · FAIL=0 WARN=0 FIXED=1')
+    expect(result.output).toContain('│     ╰─ ↺ fixed [Example (EXAMPLE-1)] — conformed')
     expect(result.output).toContain('╰─ summary: PASS=0 WARN=0 FAIL=0 FIXED=1 · FINDINGS: FAIL=0 WARN=0 FIXED=1')
   })
 
@@ -731,7 +731,7 @@ export default {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('❌ fail  [Example (EXAMPLE-1)] — always fails')
+    expect(result.output).toContain('× fail  [Example (EXAMPLE-1)] — always fails')
     expect(result.output).toContain('re-audit found failures')
   })
 
@@ -777,7 +777,7 @@ export default {
 
     const result = await box.run('ki repo conform')
     expect(result.output).toContain('applied write created.txt\n')
-    expect(result.output).toContain('✅ fixed [Example (EXAMPLE-1)] — created')
+    expect(result.output).toContain('↺ fixed [Example (EXAMPLE-1)] — created')
     await expect(box.project.read('created.txt')).resolves.toBe('created\n')
   })
 

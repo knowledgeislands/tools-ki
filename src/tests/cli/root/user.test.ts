@@ -55,10 +55,10 @@ describe('[ki repo] user-home rubric scope', () => {
     const conform = await box.run('ki repo conform')
 
     expect(audit.exitCode).toBe(1)
-    expect(audit.output).toContain('❌ fail  [Governed file (USER-1)] — user file needs conform')
+    expect(audit.output).toContain('× fail  [Governed file (USER-1)] — user file needs conform')
     expect(dryRun.output).toContain('would apply write .managed/governed.txt\n')
     expect(conform.output).toContain('applied write .managed/governed.txt\n')
-    expect(conform.output).toContain('✅ fixed [Governed file (USER-1)] — user file is conformed')
+    expect(conform.output).toContain('↺ fixed [Governed file (USER-1)] — user file is conformed')
     expect(await box.home.read('.managed/governed.txt')).toBe('after\n')
   })
 

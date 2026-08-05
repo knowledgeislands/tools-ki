@@ -32,7 +32,7 @@ describe('[ki manage list]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        'ki manage list\nInstalled harnesses:\n  example/harness\n    skill ki-example\nUser skills:\n  example/harness:ki-a\n  example/harness:ki-example\nRegistered repositories:\n  none\n'
+        '╭─ KI MANAGE\n├─ harnesses (1)\n│  ╰─ example/harness (1)\n│     ╰─ skill ki-example\n├─ user skills (2)\n│  ├─ example/harness:ki-a\n│  ╰─ example/harness:ki-example\n├─ repositories (0)\n│  ╰─ none\n╰─ summary: HARNESSES=1 CAPABILITIES=1 USER_SKILLS=2 REPOSITORIES=0\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
   })
@@ -42,7 +42,11 @@ describe('[ki manage list]', () => {
 
     const result = await box.run('ki manage list')
 
-    expect(result).toEqual({ exitCode: 0, output: 'ki manage list\nInstalled harnesses:\n  none\nUser skills:\n  none\nRegistered repositories:\n  none\n' })
+    expect(result).toEqual({
+      exitCode: 0,
+      output:
+        '╭─ KI MANAGE\n├─ harnesses (0)\n│  ╰─ none\n├─ user skills (0)\n│  ╰─ none\n├─ repositories (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0 USER_SKILLS=0 REPOSITORIES=0\n'
+    })
   })
 
   test('rejects arguments and invalid user configuration without inspecting repository declarations', async () => {
@@ -61,7 +65,8 @@ describe('[ki manage list]', () => {
     })
     expect(invalidDeclaration).toEqual({
       exitCode: 0,
-      output: 'ki manage list\nInstalled harnesses:\n  none\nUser skills:\n  none\nRegistered repositories:\n  none\n'
+      output:
+        '╭─ KI MANAGE\n├─ harnesses (0)\n│  ╰─ none\n├─ user skills (0)\n│  ╰─ none\n├─ repositories (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0 USER_SKILLS=0 REPOSITORIES=0\n'
     })
     expect(invalidConfiguration).toEqual({
       exitCode: 1,

@@ -7,7 +7,7 @@ describe('[ki manage doctor]', () => {
     const box = await sandbox()
     const doctor = await box.run('ki manage doctor')
 
-    expect(doctor.output).toContain('ki manage doctor\n  ✗ Configuration: missing; run ki bootstrap')
+    expect(doctor.output).toContain('╭─ KI MANAGE DOCTOR\n├─ checks (4)\n│  ├─ ✗ Configuration: missing; run ki bootstrap')
     expect(doctor.output).not.toContain('ki: error:')
     expect(doctor.exitCode).toBe(1)
   })

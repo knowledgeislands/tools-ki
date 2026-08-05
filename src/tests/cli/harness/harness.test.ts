@@ -12,7 +12,10 @@ describe('[ki harness]', () => {
       await box.setupExampleHarness()
       const listed = await box.run('ki harness list')
 
-      expect(listed).toEqual({ exitCode: 0, output: 'example/harness\t1 capabilities\n' })
+      expect(listed).toEqual({
+        exitCode: 0,
+        output: '╭─ KI HARNESSES\n├─ installed (1)\n│  ╰─ example/harness (1)\n╰─ summary: HARNESSES=1 CAPABILITIES=1\n'
+      })
     })
 
     test('reports no installed harnesses when list is empty', async () => {
@@ -20,7 +23,7 @@ describe('[ki harness]', () => {
 
       const listed = await box.run('ki harness list')
 
-      expect(listed).toEqual({ exitCode: 0, output: 'No installed compatible harnesses.\n' })
+      expect(listed).toEqual({ exitCode: 0, output: '╭─ KI HARNESSES\n├─ installed (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0\n' })
     })
 
     test('resolves fallback paths without either user-home variable', async () => {
@@ -37,7 +40,7 @@ describe('[ki harness]', () => {
 
       const listed = await box.run('ki harness list')
 
-      expect(listed).toEqual({ exitCode: 0, output: 'No installed compatible harnesses.\n' })
+      expect(listed).toEqual({ exitCode: 0, output: '╭─ KI HARNESSES\n├─ installed (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0\n' })
     })
   })
 
@@ -48,8 +51,8 @@ describe('[ki harness]', () => {
       const info = await box.run('ki harness info example/harness')
 
       expect(info.exitCode).toBe(0)
-      expect(info.output).toContain('capabilities: 1')
-      expect(info.output).toContain('  skill ki-example\n')
+      expect(info.output).toContain('├─ capabilities (1)')
+      expect(info.output).toContain('│  ╰─ skill ki-example\n')
     })
 
     test('rejects the retired JSON output option', async () => {
@@ -631,7 +634,10 @@ releases = [
 
       const info = await box.run('ki harness info example/harness')
 
-      expect(info).toEqual({ exitCode: 0, output: 'example/harness\ncapabilities: 1\n  skill ki-external\n' })
+      expect(info).toEqual({
+        exitCode: 0,
+        output: '╭─ KI HARNESS\n├─ example/harness\n├─ capabilities (1)\n│  ╰─ skill ki-external\n╰─ summary: CAPABILITIES=1\n'
+      })
     })
 
     test.each([

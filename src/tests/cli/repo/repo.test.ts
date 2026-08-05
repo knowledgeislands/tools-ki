@@ -187,8 +187,8 @@ describe('[ki repo]', () => {
 │  ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
 ├─ results
-│  ╰─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0
-│     ╰─ ℹ️  info  [Example (EXAMPLE-1)] — ok
+│  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
+│     ╰─ i info  [Example (EXAMPLE-1)] — ok
 ╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
@@ -217,13 +217,13 @@ describe('[ki repo]', () => {
       expect(defaults.output).not.toContain('pass evidence')
       expect(defaults.output).not.toContain('not applicable evidence')
       expect(defaults.output).not.toContain('info evidence')
-      expect(all.output).toContain('✅ pass')
-      expect(all.output).toContain('🚫 na')
-      expect(all.output).toContain('ℹ️  info')
-      expect(all.output).toContain('⚠️  warn')
-      expect(all.output).toContain('❌ fail')
-      expect(all.output).toContain('│     ├─ ✅ pass')
-      expect(all.output).toContain('│     ╰─ ❌ fail')
+      expect(all.output).toContain('✓ pass')
+      expect(all.output).toContain('– na')
+      expect(all.output).toContain('i info')
+      expect(all.output).toContain('! warn')
+      expect(all.output).toContain('× fail')
+      expect(all.output).toContain('│     ├─ ✓ pass')
+      expect(all.output).toContain('│     ╰─ × fail')
       expect(warnings.output).toContain('warn evidence')
       expect(warnings.output).not.toContain('fail evidence')
       expect(warnings.output).toContain('FAIL=1 WARN=1')
@@ -271,7 +271,7 @@ describe('[ki repo]', () => {
       const result = await box.run(`ki repo --repo ${box.project.path} audit --skill ki-website`)
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain(`╰─ ⚠️  example/harness:ki-website WARN · FAIL=0 WARN=1`)
+      expect(result.output).toContain(`╰─ ! example/harness:ki-website WARN · FAIL=0 WARN=1`)
       expect(result.output).not.toContain('ki-website-cloudflare')
     })
 
@@ -290,7 +290,7 @@ describe('[ki repo]', () => {
 │  ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
 ├─ results
-│  ╰─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0
+│  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
 ╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
@@ -351,8 +351,8 @@ describe('[ki repo]', () => {
 
       expect(result.exitCode).toBe(0)
       expect(progressOutput.startsWith(header)).toBe(true)
-      expect(standardOutput).toBe(`│  ├─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0
-│  ╰─ ✅ example/harness:ki-extra PASS · FAIL=0 WARN=0
+      expect(standardOutput).toBe(`│  ├─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
+│  ╰─ ✓ example/harness:ki-extra PASS · FAIL=0 WARN=0
 ╰─ summary: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `)
       expect(frames.map((frame) => frame.trimEnd())).toEqual([
@@ -385,8 +385,8 @@ describe('[ki repo]', () => {
 │     ├─ example/harness:ki-example
 │     ╰─ example/harness:ki-extra
 ├─ results
-│  ├─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0
-│  ╰─ ✅ example/harness:ki-extra PASS · FAIL=0 WARN=0
+│  ├─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
+│  ╰─ ✓ example/harness:ki-extra PASS · FAIL=0 WARN=0
 ╰─ summary: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
@@ -469,7 +469,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('❌ fail  [Example (EXAMPLE-1)] — not conformed')
+      expect(result.output).toContain('× fail  [Example (EXAMPLE-1)] — not conformed')
       expect(result.output).toContain('repository audit found failures')
     })
 
@@ -494,8 +494,8 @@ describe('[ki repo]', () => {
 │  ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
 ├─ results
-│  ╰─ ✅ example/harness:ki-example PASS · FAIL=0 WARN=0
-│     ╰─ ℹ️  info  [Example (EXAMPLE-1)] some/file.ts — ok
+│  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
+│     ╰─ i info  [Example (EXAMPLE-1)] some/file.ts — ok
 ╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
@@ -566,7 +566,7 @@ export default {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain('⚠️  warn  [Hybrid evidence (DIRECT-1)]')
+      expect(result.output).toContain('! warn  [Hybrid evidence (DIRECT-1)]')
       expect(result.output).toContain('╰─ summary: PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1')
     })
   })

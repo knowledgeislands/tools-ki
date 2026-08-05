@@ -390,12 +390,12 @@ interface SkillReport {
 }
 
 const REPORT_ICON: Record<RenderedFinding['level'], string> = {
-  fail: '❌',
-  warn: '⚠️ ',
-  fixed: '✅',
-  info: 'ℹ️ ',
-  'not-applicable': '🚫',
-  pass: '✅'
+  fail: '×',
+  warn: '!',
+  fixed: '↺',
+  info: 'i',
+  'not-applicable': '–',
+  pass: '✓'
 }
 
 const REPORT_LABEL: Record<RenderedFinding['level'], string> = {

@@ -172,10 +172,10 @@ describe('[ki repo roadmap]', () => {
     const result = await box.run('ki repo --repo source --repo receiver roadmap list')
 
     expect(result.output).toContain(
-      `│  ╰─ export (3)\n│     ├─ ⚒ ${id} → example/receiver [received · accepted · unconsidered] Trade-aware planning\n│     ├─ ◇ TRD-00000001 → example/receiver [received · accepted · unconsidered] Trade-aware planning\n│     ╰─ ⚒ TRD-00000002 → example/receiver [received · accepted · unconsidered] Trade-aware planning`
+      `│  ╰─ export (3)\n│     ├─ ⚒ ${id} → receiver [received · accepted · unconsidered] Trade-aware planning\n│     ├─ ◇ TRD-00000001 → receiver [received · accepted · unconsidered] Trade-aware planning\n│     ╰─ ⚒ TRD-00000002 → receiver [received · accepted · unconsidered] Trade-aware planning`
     )
     expect(result.output).toContain(
-      `│  ├─ import (3)\n│  │  ├─ ⚒ ${id} ← example/source [received · accepted · unconsidered] Trade-aware planning\n│  │  ├─ ◇ TRD-00000001 ← example/source [received · accepted · unconsidered] Trade-aware planning\n│  │  ╰─ ⚒ TRD-00000002 ← example/source [received · accepted · unconsidered] Trade-aware planning`
+      `│  ├─ import (3)\n│  │  ├─ ⚒ ${id} ← source [received · accepted · unconsidered] Trade-aware planning\n│  │  ├─ ◇ TRD-00000001 ← source [received · accepted · unconsidered] Trade-aware planning\n│  │  ╰─ ⚒ TRD-00000002 ← source [received · accepted · unconsidered] Trade-aware planning`
     )
     expect(result.output).toContain('TRADES=3 IMPORTS=0 EXPORTS=3')
     expect(result.output).toContain('TRADES=3 IMPORTS=3 EXPORTS=0')
@@ -186,7 +186,7 @@ describe('[ki repo roadmap]', () => {
     const bodyIncomplete = await box.run('ki repo --repo source roadmap list')
 
     expect(bodyIncomplete.exitCode).toBe(0)
-    expect(bodyIncomplete.output).toContain('⚒ TRD-00000003 → example/receiver [sent · unavailable] Trade-aware planning')
+    expect(bodyIncomplete.output).toContain('⚒ TRD-00000003 → receiver [sent · unavailable] Trade-aware planning')
 
     await box.project.write('source/docs/roadmap/malformed.md', 'not a governed work item\n')
     const malformedRoadmap = await box.run('ki repo --repo source roadmap list')

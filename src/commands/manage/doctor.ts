@@ -67,7 +67,15 @@ const managedLink = async (agent: InstalledAgent, name: string): Promise<{ reado
 }
 
 const report = (context: KiContext, checks: readonly DoctorCheck[]): void => {
-  context.stdout.write(`ki manage doctor\n${checks.map((check) => `  ${mark(check.status)} ${check.label}: ${check.detail}`).join('\n')}\n`)
+  const totals = {
+    pass: checks.filter((check) => check.status === 'pass').length,
+    fail: checks.filter((check) => check.status === 'fail').length,
+    skip: checks.filter((check) => check.status === 'skip').length
+  }
+  const lines = ['╭─ KI MANAGE DOCTOR', `├─ checks (${checks.length})`]
+  lines.push(...checks.map((check, index) => `│  ${index === checks.length - 1 ? '╰─' : '├─'} ${mark(check.status)} ${check.label}: ${check.detail}`))
+  lines.push(`╰─ summary: PASS=${totals.pass} FAIL=${totals.fail} SKIP=${totals.skip}`)
+  context.stdout.write(`${lines.join('\n')}\n`)
 
   if (checks.some((check) => check.status === 'fail')) throw new KiExit(1)
 }

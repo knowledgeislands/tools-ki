@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
 import { createOutboundTrade, locateTrades, pruneTrade, receiveTrades, releaseTrade, tradeLifecycle } from '../../core/trade-core.ts'
-import { count, kind, repository, requireText, tradeId } from './shared.ts'
+import { count, displayTradePeer, kind, repository, requireText, tradeId } from './shared.ts'
 
 interface NewOptions {
   readonly to?: string
@@ -47,7 +47,7 @@ const renderTradeList = (trades: Awaited<ReturnType<typeof locateTrades>>, estat
           `│  ${lastGroup ? '╰─' : '├─'} ${label}`,
           ...group.map((trade, tradeIndex) => {
             const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
-            const peer = direction === 'outbound' ? `→ ${trade.record.receiver}` : `← ${trade.record.sender}`
+            const peer = `${direction === 'outbound' ? '→' : '←'} ${displayTradePeer(trade.record, direction)}`
             const lifecycle = tradeLifecycle(trade, estate)
             const statuses = [lifecycle.senderStatus, lifecycle.receiverStatus, lifecycle.decisionStatus].filter(Boolean).join(' · ')
             return `${itemPrefix}${tradeIndex === group.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${peer} [${statuses}] ${trade.record.title}`

@@ -143,7 +143,7 @@ describe('[ki repo target sets]', () => {
       expect(result.output.match(/╭─ KI REPO AUDIT\n/g)).toHaveLength(2)
       expect(result.output).toContain(`╭─ KI REPO AUDIT\n│  📁 second\n│     ${second}`)
       expect(result.output).toContain(
-        `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✅ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n│  ╰─ ✅ second PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n╰─ totals: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0`
+        `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✓ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n│  ╰─ ✓ second PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n╰─ totals: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0`
       )
     })
 
@@ -175,7 +175,7 @@ describe('[ki repo target sets]', () => {
       expect(result.output).toContain('╰─ summary: PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1')
       expect(result.output).toContain('╰─ summary: PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0')
       expect(result.output).toContain(
-        `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✅ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n│  ├─ ⚠️  second PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1\n│  ╰─ ❌ third PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0\n╰─ totals: PASS=1 WARN=1 FAIL=1 · FINDINGS: FAIL=1 WARN=1`
+        `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✓ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n│  ├─ ! second PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1\n│  ╰─ × third PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0\n╰─ totals: PASS=1 WARN=1 FAIL=1 · FINDINGS: FAIL=1 WARN=1`
       )
     })
 

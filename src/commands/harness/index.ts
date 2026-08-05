@@ -67,13 +67,15 @@ export const createHarnessCommand = (context: KiContext): Command =>
     .addCommand(
       new Command('list').description('list installed harnesses').action(async () => {
         const harnesses = await discoverInstalledHarnesses(context.paths.data)
-        if (!harnesses.length) {
-          context.stdout.write('No installed compatible harnesses.\n')
-          return
-        }
-        for (const { id, capabilities } of harnesses) {
-          context.stdout.write(`${id}\t${capabilities.length} capabilities\n`)
-        }
+        const capabilities = harnesses.reduce((total, harness) => total + harness.capabilities.length, 0)
+        const lines = ['╭─ KI HARNESSES', `├─ installed (${harnesses.length})`]
+        if (!harnesses.length) lines.push('│  ╰─ none')
+        else
+          lines.push(
+            ...harnesses.map(({ id, capabilities: installed }, index) => `│  ${index === harnesses.length - 1 ? '╰─' : '├─'} ${id} (${installed.length})`)
+          )
+        lines.push(`╰─ summary: HARNESSES=${harnesses.length} CAPABILITIES=${capabilities}`)
+        context.stdout.write(`${lines.join('\n')}\n`)
       })
     )
     .addCommand(
@@ -89,8 +91,14 @@ export const createHarnessCommand = (context: KiContext): Command =>
             depends_on: dependsOn,
             rubric_module: rubricModule ?? null
           }))
-          context.stdout.write(`${harness.id}\ncapabilities: ${capabilities.length}\n`)
-          for (const capability of capabilities) context.stdout.write(`  ${capability.kind} ${capability.name}\n`)
+          const lines = ['╭─ KI HARNESS', `├─ ${harness.id}`, `├─ capabilities (${capabilities.length})`]
+          if (!capabilities.length) lines.push('│  ╰─ none')
+          else
+            lines.push(
+              ...capabilities.map((capability, index) => `│  ${index === capabilities.length - 1 ? '╰─' : '├─'} ${capability.kind} ${capability.name}`)
+            )
+          lines.push(`╰─ summary: CAPABILITIES=${capabilities.length}`)
+          context.stdout.write(`${lines.join('\n')}\n`)
         })
     )
     .addCommand(

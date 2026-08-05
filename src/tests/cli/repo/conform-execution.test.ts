@@ -166,7 +166,7 @@ describe('[ki repo conform execution]', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('❌ fail  [Example (EXAMPLE-1)] — not fixable')
+    expect(result.output).toContain('× fail  [Example (EXAMPLE-1)] — not fixable')
     expect(result.output).toContain('repository conform found failures')
   })
 
@@ -187,7 +187,7 @@ describe('[ki repo conform execution]', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('⚠️  warn  [Example (EXAMPLE-1)] — nothing safe to propose')
+    expect(result.output).toContain('! warn  [Example (EXAMPLE-1)] — nothing safe to propose')
   })
 
   test('reports subprocess conforms in dry-run mode without executing them, then runs and re-audits them', async () => {
@@ -211,7 +211,7 @@ describe('[ki repo conform execution]', () => {
 
     expect(dryRun.output).toContain(`would run "node" "-e" "require('node:fs').writeFileSync('conformed.txt', 'ok')"\n`)
     expect(conformed.output).toContain(`run "node" "-e" "require('node:fs').writeFileSync('conformed.txt', 'ok')"\n`)
-    expect(conformed.output).toContain('✅ fixed [Example (EXAMPLE-1)] — conformed')
+    expect(conformed.output).toContain('↺ fixed [Example (EXAMPLE-1)] — conformed')
     await expect(box.project.read('conformed.txt')).resolves.toBe('ok')
   })
 
@@ -297,7 +297,7 @@ export default {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('✅ fixed [Info conform (INFO-1)] workspace — conformed')
+    expect(result.output).toContain('↺ fixed [Info conform (INFO-1)] workspace — conformed')
     expect(await box.project.read('governed.txt')).toBe('after\n')
   })
 

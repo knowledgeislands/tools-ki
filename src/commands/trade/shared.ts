@@ -1,5 +1,13 @@
 import { grammarError } from '../../core/errors.ts'
-import { isTradeIdentifier, isTradeKind, isTradeRepository, type RouteDirection, type RouteState, type TradeKind } from '../../core/trade-core.ts'
+import {
+  isTradeIdentifier,
+  isTradeKind,
+  isTradeRepository,
+  type RouteDirection,
+  type RouteState,
+  type TradeKind,
+  type TradeRecord
+} from '../../core/trade-core.ts'
 
 export const repository = (value: string | undefined, option: string): string => {
   if (!value || !isTradeRepository(value)) throw grammarError(`${option} must use canonical HTTPS GitHub repository form`)
@@ -35,3 +43,13 @@ export const routeState = (state: RouteState): string =>
   })[state]
 
 export const count = (value: number, noun: string): string => `${value} ${noun}${value === 1 ? '' : 's'}`
+
+const owner = (repository: string): string => repository.slice(0, repository.indexOf('/'))
+
+const name = (repository: string): string => repository.slice(repository.indexOf('/') + 1)
+
+export const displayTradePeer = (record: Pick<TradeRecord, 'sender' | 'receiver'>, direction: 'inbound' | 'outbound'): string => {
+  const peer = direction === 'outbound' ? record.receiver : record.sender
+  const local = direction === 'outbound' ? record.sender : record.receiver
+  return owner(peer) === owner(local) ? name(peer) : peer
+}

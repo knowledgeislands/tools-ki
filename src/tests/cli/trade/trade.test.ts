@@ -149,10 +149,10 @@ describe('[ki trade]', () => {
     expect(received).toEqual({ exitCode: 0, output: `ki trade receive\n  accepted ${id}\n` })
     expect(listed).toEqual({
       exitCode: 0,
-      output: `╭─ KI TRADES\n│  ✦ 1 trade\n├─ results\n│  ╰─ import\n│     ╰─ ⚒ ${id} ← example/source [received · accepted · adopted] Route contract\n╰─ summary: TRADES=1 IMPORTS=1 EXPORTS=0\n`
+      output: `╭─ KI TRADES\n│  ✦ 1 trade\n├─ results\n│  ╰─ import\n│     ╰─ ⚒ ${id} ← source [received · accepted · adopted] Route contract\n╰─ summary: TRADES=1 IMPORTS=1 EXPORTS=0\n`
     })
     expect(allListed.output).toContain(
-      `│  ├─ import\n│  │  ╰─ ⚒ ${id} ← example/source [received · accepted · adopted] Route contract\n│  ╰─ export\n│     ╰─ ⚒ ${id} → example/receiver [received · accepted · adopted] Route contract`
+      `│  ├─ import\n│  │  ╰─ ⚒ ${id} ← source [received · accepted · adopted] Route contract\n│  ╰─ export\n│     ╰─ ⚒ ${id} → receiver [received · accepted · adopted] Route contract`
     )
     expect(shown.output).toContain(`Repository: ${sourceHome} [export]\n${outbound.trimEnd()}`)
     expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
@@ -219,6 +219,22 @@ describe('[ki trade]', () => {
     expect(emptyTitle.output).toContain('--title is required and must be non-empty')
     expect(retired.exitCode).toBe(2)
     expect(plural.exitCode).toBe(2)
+  })
+
+  test('retains the owner when a trade peer belongs to another owner', async () => {
+    const box = await sandbox()
+    const source = await realpath(box.project.path)
+    const receiver = await box.project.mkdir('receiver')
+    const foreignReceiver = home('other/receiver')
+    await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { work: [foreignReceiver] }))
+    await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('other/receiver'))
+    await box.config.write('ki/config.toml', localConfiguration([source, receiver]))
+
+    const created = await box.run([...newTrade('work').slice(0, 4), foreignReceiver, ...newTrade('work').slice(5)])
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+    const listed = await box.run('ki trade list')
+
+    expect(listed.output).toContain(`⚒ ${id} → other/receiver [sent · unavailable] Route contract`)
   })
 
   test('reports malformed route declarations plus pending, active, and ambiguous registered-estate routes', async () => {
@@ -408,7 +424,7 @@ describe('[ki trade]', () => {
     box.cd('..')
     const shown = await box.run(['ki', 'trade', 'show', firstId])
 
-    expect(outboundList.output).toContain(`⚒ ${firstId} → example/receiver [sent · unavailable] Route contract`)
+    expect(outboundList.output).toContain(`⚒ ${firstId} → receiver [sent · unavailable] Route contract`)
     expect(received.output).toContain(`accepted ${firstId}`)
     expect(received.output).toContain(`accepted ${secondId}`)
     expect(repeated.output).toContain(`existing ${firstId}`)
