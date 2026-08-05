@@ -199,7 +199,7 @@ ki-recap for claude-code already installed
       expect(firstOff.exitCode).toBe(1)
       expect(secondOn.exitCode).toBe(0)
       expect(secondOff.exitCode).toBe(1)
-      expect(await realpath(`${box.home.path}/.claude/skills/ki-recap`)).toBe(`${harnessPath}/skills/process/ki-recap`)
+      expect(await realpath(`${box.home.path}/.claude/skills/ki-recap`)).toBe(`${harnessPath}/skills/change-management/ki-recap`)
       expect(doctor.exitCode).toBe(0)
       expect(doctor.output).not.toContain('✗')
     })
@@ -237,7 +237,7 @@ ki-recap for claude-code already installed
       const result = await box.run(`ki dev local set ${path}`)
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('skills/keystone/ki-bootstrap/SKILL.md')
+      expect(result.output).toContain('local harness does not provide ki-bootstrap')
     })
 
     test('refuses to replace an unfamiliar canonical development link', async () => {
@@ -364,13 +364,13 @@ ki-recap for claude-code already installed
       await enableLocal(box, harnessPath)
       const link = `${box.home.path}/.agents/skills/ki-recap`
       await unlink(link)
-      await symlink(`${stalePath}/skills/process/ki-recap`, link, 'dir')
+      await symlink(`${stalePath}/skills/change-management/ki-recap`, link, 'dir')
 
       const result = await box.run('ki dev local on')
 
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('ki-recap for chatgpt-codex installed')
-      expect(await realpath(link)).toBe(`${harnessPath}/skills/process/ki-recap`)
+      expect(await realpath(link)).toBe(`${harnessPath}/skills/change-management/ki-recap`)
     })
   })
 })

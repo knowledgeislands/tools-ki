@@ -1,7 +1,7 @@
 import { lstat, mkdir, readdir, readlink, realpath, symlink, unlink, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../core/errors.ts'
-import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type HarnessCapability, readInstalledHarness } from '../core/harness.ts'
+import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type HarnessCapability, inspectHarnessRoot, readInstalledHarness } from '../core/harness.ts'
 import { inspectUserConfiguration, readConfiguration, renderConfiguration } from './configuration.ts'
 import { detectAgents } from './detection.ts'
 import {
@@ -47,17 +47,8 @@ export const installedBootstrapSkillSources = async (
 }
 
 export const localBootstrapHarness = async (harnessDirectory: string): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
-  const harness = await requiredPhysicalDirectory(resolve(harnessDirectory), 'local harness')
-  const skills: ManagedUserSkill[] = []
-  for (const name of minimumBootstrapUserSkills) {
-    const source = join(harness, 'skills', name === 'ki-bootstrap' ? 'keystone' : 'process', name)
-    const entry = await lstat(join(source, 'SKILL.md')).catch(() => undefined)
-    if (!entry?.isFile() || entry.isSymbolicLink()) {
-      throw new KiError(`local harness must contain ${source.slice(harness.length + 1)}/SKILL.md`, 1)
-    }
-    skills.push({ name, source: await requiredPhysicalDirectory(source, `local harness ${name} skill`) })
-  }
-  return { harness, skills }
+  const inspected = await inspectHarnessRoot(resolve(harnessDirectory), canonicalHarnessIdentifier)
+  return { harness: inspected.root, skills: await bootstrapSkillSources(inspected, 'local harness') }
 }
 
 export const configureBootstrapAgents = async (options: {

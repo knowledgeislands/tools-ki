@@ -101,7 +101,7 @@ const setupExampleHarness = async (data: SandboxArea, { rubric, name = 'ki-examp
 const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<void> => {
   await Promise.all(['subagents', 'hooks'].map((payload) => area.mkdir(`${base}/${payload}`)))
   for (const skill of bootstrapHarnessSkills) {
-    const group = skill === 'ki-bootstrap' ? 'keystone' : 'process'
+    const group = skill === 'ki-bootstrap' ? 'keystone' : 'change-management'
     await area.write(`${base}/skills/${group}/${skill}/SKILL.md`, `---\nname: ${skill}\nki-depends-on: []\n---\n`)
   }
 }

@@ -303,11 +303,11 @@ harness = "example/harness"
     await box.run('ki bootstrap')
     await box.run(`ki dev local set ${harnessPath}`)
     await box.run('ki dev local on')
-    await rm(`${harnessPath}/skills/process/ki-recap/SKILL.md`)
+    await rm(`${harnessPath}/skills/change-management/ki-recap/SKILL.md`)
 
     const doctor = await box.run('ki manage doctor')
 
-    expect(doctor.output).toContain('✗ Local development: local harness must contain skills/process/ki-recap/SKILL.md')
+    expect(doctor.output).toContain('✗ Local development: local harness does not provide ki-recap')
     expect(doctor.exitCode).toBe(1)
   })
 
@@ -335,7 +335,7 @@ harness = "example/harness"
     await box.run(`ki dev local set ${harnessPath}`)
     const link = `${box.home.path}/.claude/skills/ki-recap`
     await unlink(link)
-    await symlink(`${harnessPath}/skills/process/ki-recap`, link, 'dir')
+    await symlink(`${harnessPath}/skills/change-management/ki-recap`, link, 'dir')
 
     const doctor = await box.run('ki manage doctor')
 

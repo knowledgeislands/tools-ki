@@ -318,7 +318,7 @@ ids = ["claude-code"]
   test('refuses an installed canonical harness missing a required bootstrap skill', async () => {
     const box = await sandbox()
     await box.setupCanonicalHarness()
-    await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills/process/ki-implement`, { recursive: true })
+    await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills/change-management/ki-implement`, { recursive: true })
 
     const bootstrapped = await box.run('ki bootstrap')
 
