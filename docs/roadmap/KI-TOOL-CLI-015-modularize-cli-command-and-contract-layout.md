@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-015
 title: Modularize CLI command and contract layout
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: b52f39da94975be86185855510e2a7c8cc79dd62
 ---
 
 ## Goal
@@ -39,7 +39,7 @@ CLI tests use the required `run(args, context)` sandbox seam, but test files for
 
 ## Steps
 
-- [ ] Establish and record a clean `bun run test:coverage` baseline before changing either source or test layout.
+- [x] Establish and record a clean `bun run test:coverage` baseline before changing either source or test layout.
 - [ ] Define the public-grammar directory convention for the test hierarchy, then re-home every active CLI-contract suite beneath the matching command-family or cross-cutting-operation directory; only underscore-prefixed shared helpers remain at the test root.
 - [ ] Run `bun run test:coverage` after the test-only refactor and stop if any metric falls below the enforced 100% threshold.
 - [ ] Apply the same directory convention to `src/commands/`: move each flat root command family into a focused directory with a narrow entry module, colocate `harness-refresh` under harness and trade route and record operations under trade, and split root assembly and command inventory data by their owning grammar surface.
