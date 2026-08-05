@@ -22,7 +22,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 #### Local management
 
-- `ki manage completion <shell>`
+- `ki manage completion <shell>` (Bash and Zsh scripts derived from the registered command tree, including nested commands, options, closed values, and local path completion)
 - `ki manage outdated`
 - `ki manage missing`
 - `ki manage update`

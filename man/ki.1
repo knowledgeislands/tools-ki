@@ -1,4 +1,4 @@
-.TH KI 1 "2026-07-30" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-08-05" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -30,7 +30,7 @@ Detect agents, install the canonical harness, and install core user skills.
 Search verified installed local harness capabilities.
 .TP
 .B ki manage completion <shell>
-Print Bash or Zsh completion source.
+Print Bash or Zsh completion source for the complete registered CLI grammar.
 .TP
 .B ki manage outdated
 Report installed harnesses only when comparable newer release evidence is
@@ -101,7 +101,7 @@ without changing their lifecycle.
 Delete completed canonical work-item records.
 .TP
 .B ki repo [repo-options] roadmap promote <id> [horizon]
-Move one work item toward the blocking horizon.
+Move one work item toward the now horizon.
 .TP
 .B ki repo [repo-options] roadmap demote <id> [horizon]
 Move one work item toward the future horizon.
@@ -286,7 +286,11 @@ repository nor consults a registry or the network. When no capability matches,
 it succeeds and reports that no matching installed capabilities exist.
 .TP
 .B ki manage completion <shell>
-Print Bash or Zsh completion source to standard output.
+Print Bash or Zsh completion source to standard output. The generated scripts
+follow the complete registered command tree, offer valid option names at every
+reachable command, complete documented closed values, and delegate repository
+selection and output-directory values to the shell's native path completion.
+They do not invoke KI, consult the network, or invent dynamic identifiers.
 .TP
 .B ki manage outdated
 Report installed harnesses only when comparable newer release evidence is
@@ -439,8 +443,8 @@ remains available for later repair and bulk maintenance.
 .B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>]
 List canonical governed work items from every selected repository without
 changing their lifecycle. The framed text output names each selected repository,
-then groups items by horizon from \fBblocking\fR through \fBfuture\fR and by
-lifecycle from \fBdone\fR through \fBopen\fR, with identifiers breaking ties.
+then groups items by horizon from \fBnow\fR through \fBfuture\fR and by
+lifecycle from \fBdone\fR through \fBdraft\fR, with identifiers breaking ties.
 \fB--horizon\fR
 and \fB--status\fR filter before rendering. A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
@@ -459,10 +463,10 @@ record.
 .TP
 .B ki repo [repo-options] roadmap promote <id> [horizon]
 Move exactly one selected repository's named work item one horizon toward
-.BR blocking .
+.BR now .
 With an optional destination horizon, move directly only toward
-.BR blocking ;
-the current horizon, a future-facing destination, and the blocking endpoint are
+.BR now ;
+the current horizon, a future-facing destination, and the now endpoint are
 errors. The command changes only the item's horizon frontmatter; moving from
 .BR future
 also removes its required candidate marker.
@@ -472,7 +476,7 @@ Move exactly one selected repository's named work item one horizon toward
 .BR future .
 With an optional destination horizon, move directly only toward
 .BR future ;
-the current horizon, a blocking-facing destination, and the future endpoint are
+the current horizon, a now-facing destination, and the future endpoint are
 errors. The command changes only the item's horizon frontmatter; moving to
 .BR future
 adds its required candidate marker.

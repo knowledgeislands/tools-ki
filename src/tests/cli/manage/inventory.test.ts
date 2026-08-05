@@ -4,7 +4,6 @@ import { sandbox } from '../_cli_helper.ts'
 
 const rootHelpCommands = ['bootstrap', 'manage', 'agora', 'skill', 'repo', 'registry', 'harness', 'trade', 'acquire', 'dev']
 
-const rootCompletionCommands = [...rootHelpCommands].sort()
 const manageCommands = ['cleanup', 'completion', 'diag', 'docs', 'doctor', 'list', 'missing', 'outdated', 'search', 'update']
 const agoraCommands = ['create', 'add', 'remove', 'discover', 'list', 'show', 'open']
 const repoCommands = ['audit', 'conform', 'educate', 'init', 'roadmap', 'repair', 'skill', 'upgrade']
@@ -28,16 +27,16 @@ describe('[ki command inventory]', () => {
     expect(commandNames(agora.output)).toEqual(agoraCommands)
     expect(commandNames(repository.output)).toEqual(['init', 'audit', 'conform', 'roadmap', 'educate', 'repair', 'skill', 'upgrade'])
     expect(commandNames(registry.output)).toEqual(registryCommands)
-    for (const command of rootCompletionCommands) expect(zsh.output).toContain(`'${command}:`)
+    for (const command of rootHelpCommands) expect(zsh.output).toContain(`'${command}:`)
     for (const command of manageCommands) expect(zsh.output).toContain(`'${command}:`)
     for (const command of agoraCommands) expect(zsh.output).toContain(`'${command}:`)
     for (const command of repoCommands) expect(zsh.output).toContain(`'${command}:`)
     for (const command of registryCommands) expect(zsh.output).toContain(`'${command}:`)
-    expect(bash.output).toContain(`compgen -W "${rootCompletionCommands.join(' ')} --help --version"`)
-    expect(bash.output).toContain(`compgen -W "${manageCommands.join(' ')}"`)
-    expect(bash.output).toContain(`compgen -W "${[...agoraCommands].sort().join(' ')}"`)
-    expect(bash.output).toContain(`compgen -W "${repoCommands.join(' ')}"`)
-    expect(bash.output).toContain(`compgen -W "${registryCommands.join(' ')}"`)
+    expect(bash.output).toContain(`'') printf '%s\\n' '${rootHelpCommands.join(' ')}'`)
+    expect(bash.output).toContain(`'manage') printf '%s\\n' '${manageCommands.join(' ')}'`)
+    expect(bash.output).toContain(`'agora') printf '%s\\n' '${agoraCommands.join(' ')}'`)
+    expect(bash.output).toContain("'repo') printf '%s\\n' 'init audit conform roadmap educate repair skill upgrade'")
+    expect(bash.output).toContain(`'registry') printf '%s\\n' '${registryCommands.join(' ')}'`)
   })
 
   test('keeps the purpose-oriented manual and changelog inventories complete', async () => {
