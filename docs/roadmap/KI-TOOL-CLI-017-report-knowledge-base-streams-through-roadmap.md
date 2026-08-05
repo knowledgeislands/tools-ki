@@ -2,9 +2,8 @@
 id: KI-TOOL-CLI-017
 title: Report Knowledge Base streams
 theme: cli
-horizon: future
+horizon: next
 status: open
-candidate: true
 blocks: []
 blocked-by: []
 baseline-ref: null
