@@ -1,6 +1,6 @@
 ---
 id: KI-TOOL-CLI-013
-title: Group roadmap text output by horizon
+title: Group roadmap output
 theme: cli
 horizon: next
 status: done

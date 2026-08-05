@@ -1,6 +1,6 @@
 ---
 id: KI-TOOL-CLI-016
-title: Add native roadmap lifecycle subcommands
+title: Add roadmap subcommands
 theme: cli
 horizon: next
 status: in-progress

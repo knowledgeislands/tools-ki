@@ -1,6 +1,6 @@
 ---
 id: KI-TOOL-CLI-015
-title: Modularize CLI command and contract layout
+title: Modularize CLI layout
 theme: cli
 horizon: next
 status: done

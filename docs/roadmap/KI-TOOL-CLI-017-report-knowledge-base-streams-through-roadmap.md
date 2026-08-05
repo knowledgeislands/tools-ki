@@ -1,6 +1,6 @@
 ---
 id: KI-TOOL-CLI-017
-title: Report Knowledge Base streams through roadmap
+title: Report Knowledge Base streams
 theme: cli
 horizon: future
 status: open

@@ -1,6 +1,6 @@
 ---
 id: KI-TOOL-CLI-014
-title: Complete shell completions across the CLI grammar
+title: Complete CLI completions
 theme: cli
 horizon: next
 status: open

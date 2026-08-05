@@ -1,6 +1,6 @@
 ---
 id: KI-TOOL-VENDOR-001
-title: Define cross-repository skill vendor provenance
+title: Define skill provenance
 theme: cross-repository-vendoring
 horizon: future
 status: open
