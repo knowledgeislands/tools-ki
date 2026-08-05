@@ -80,7 +80,7 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
     )
     .addCommand(
       new Command('check')
-        .description('check local typed trade routes against the registered repository estate')
+        .description('check local typed trade routes and their activation state')
         .argument('[repository]', 'canonical peer HTTPS GitHub repository')
         .option('--direction <export|import>', 'restrict to one route direction')
         .option('--kind <work|knowledge>', 'restrict to one trade kind')

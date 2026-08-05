@@ -27,6 +27,11 @@ export const requireText = (value: string | undefined, option: string): string =
 }
 
 export const routeState = (state: RouteState): string =>
-  ({ active: 'active', 'missing-repository': 'missing repository', 'ambiguous-repository': 'ambiguous repository', nonreciprocal: 'nonreciprocal' })[state]
+  ({
+    active: 'active',
+    'awaiting-receiver': 'awaiting receiver activation',
+    'awaiting-sender': 'awaiting sender activation',
+    'ambiguous-repository': 'ambiguous repository'
+  })[state]
 
 export const count = (value: number, noun: string): string => `${value} ${noun}${value === 1 ? '' : 's'}`

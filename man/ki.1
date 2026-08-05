@@ -156,10 +156,10 @@ Remove one local typed trade route.
 List local typed trade routes and their registered-estate state.
 .TP
 .B ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]
-Check local typed trade routes against the registered repository estate.
+Check local typed trade routes and their activation state.
 .TP
 .B ki trade new --to <repository> --kind work|knowledge --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
-Create one local export typed trade.
+Create one local export typed trade on a declared route.
 .TP
 .B ki trade receive --from <repository> --kind work|knowledge [--id <trade-id>]
 Import eligible export trades from a reciprocal sender.
@@ -570,10 +570,15 @@ Remove one local typed route.
 List local typed routes with their registered-estate state.
 .TP
 .B ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]
-Check declared routes for reciprocal registered-repository evidence by kind.
+Check declared routes by kind. An export awaiting local receiver registration,
+receiver participation, or a reciprocal import awaits receiver activation; the
+equivalent import awaits sender activation.
 .TP
 .B ki trade new --to <repository> --kind work|knowledge --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
-Create one export typed trade in the current repository.
+Create one export typed trade in the current repository when it declares the
+matching export route. The receiver need not yet have configured KI trades;
+that local record remains unavailable to it until its reciprocal import route
+is declared.
 .TP
 .B ki trade receive --from <repository> --kind work|knowledge [--id <trade-id>]
 Import eligible export trades of one kind into the current repository as import

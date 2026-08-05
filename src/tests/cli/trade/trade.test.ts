@@ -187,7 +187,7 @@ describe('[ki trade]', () => {
     expect((await box.run(['ki', 'trade', 'release', invalidId])).output).toContain('permits retained only for knowledge trades')
   })
 
-  test('reports inactive, malformed, and retired command inputs without making a peer write', async () => {
+  test('creates declared outbound trades before receiver activation and rejects malformed or retired inputs', async () => {
     const { box } = await configuredPair()
     await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver'))
 
@@ -200,7 +200,10 @@ describe('[ki trade]', () => {
     const retired = await box.run('ki handoffs list')
     const plural = await box.run('ki trades list')
 
-    expect(nonreciprocal).toEqual({ exitCode: 2, output: `ki: error: export work trade route ${receiverHome} is nonreciprocal\n` })
+    expect(nonreciprocal.exitCode).toBe(0)
+    expect(nonreciprocal.output).toMatch(/^ki trade new: created TRD-[0-9a-f]{8} for example\/receiver\n$/)
+    const id = /TRD-[0-9a-f]{8}/u.exec(nonreciprocal.output)?.[0] as string
+    expect(await box.project.read(`-/_TRADES/example/receiver/${id}.md`)).toContain(`receiver: example/receiver`)
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
     expect((await box.run(newTrade('work'))).output).toContain('is not declared locally')
     expect(missingKind.exitCode).toBe(2)
@@ -212,7 +215,7 @@ describe('[ki trade]', () => {
     expect(plural.exitCode).toBe(2)
   })
 
-  test('reports malformed route declarations and every registered-estate route state', async () => {
+  test('reports malformed route declarations plus pending, active, and ambiguous registered-estate routes', async () => {
     const box = await sandbox()
     const source = await realpath(box.project.path)
     const receiver = await box.project.mkdir('receiver')
@@ -265,11 +268,19 @@ describe('[ki trade]', () => {
 
     const missingHome = home('example/missing')
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { work: [missingHome] }))
-    expect((await box.run('ki trade routes check')).output).toContain(`${missingHome}: missing repository`)
+    expect((await box.run('ki trade routes check')).output).toContain(`${missingHome}: awaiting receiver activation`)
 
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { work: [receiverHome] }))
+    await box.project.write('receiver/.ki-config.toml', '["knowledgeislands/ki-agentic-harness:ki-repo"]\n')
+    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
+    await box.project.write('receiver/.ki-config.toml', `["knowledgeislands/ki-agentic-harness:ki-repo"]\nrepository = 1\n`)
+    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
+    await box.project.write('receiver/.ki-config.toml', '["knowledgeislands/ki-agentic-harness:ki-repo"]\nrepository = "not-a-repository"\n')
+    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
+    await box.project.write('receiver/.ki-config.toml', `["knowledgeislands/ki-agentic-harness:ki-repo"]\nrepository = "${receiverHome}"\n`)
+    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver'))
-    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: nonreciprocal`)
+    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
 
     await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver', {}, { work: [sourceHome] }))
     await box.project.write('duplicate/.ki-config.toml', repositoryConfiguration('example/receiver', {}, { work: [sourceHome] }))
@@ -278,6 +289,13 @@ describe('[ki trade]', () => {
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
     expect((await box.run(`ki trade routes add ${sourceHome} --direction export --kind work`)).output).toContain('must differ from the local repository')
     expect((await box.run(`ki trade routes remove ${receiverHome} --direction export --kind work`)).output).toContain('is not declared locally')
+    await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
+    await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver', {}, { work: [sourceHome] }))
+    box.cd('receiver')
+    expect((await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work'])).output).toContain('is awaiting sender')
+    await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver'))
+    expect((await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work'])).output).toContain('is not declared locally')
+    box.cd('..')
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { work: [home('example/zulu')] }))
     expect((await box.run(`ki trade routes add ${receiverHome} --direction export --kind work`)).exitCode).toBe(0)
   })

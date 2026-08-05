@@ -187,6 +187,13 @@ describe('[ki repo roadmap]', () => {
 
     expect(bodyIncomplete.exitCode).toBe(0)
     expect(bodyIncomplete.output).toContain('TRD-00000003 [sent] Trade-aware planning')
+
+    await box.project.write('source/docs/roadmap/malformed.md', 'not a governed work item\n')
+    const malformedRoadmap = await box.run('ki repo --repo source roadmap list')
+
+    expect(malformedRoadmap.exitCode).toBe(1)
+    expect(malformedRoadmap.output).toContain('must declare canonical frontmatter')
+    expect(malformedRoadmap.output).toContain('├─ trades (4)')
   })
 
   test('rejects every malformed canonical frontmatter shape', async () => {

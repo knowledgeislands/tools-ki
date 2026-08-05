@@ -75,6 +75,11 @@ interface TradeFields {
 
 interface RegisteredRepository {
   readonly root: string
+  readonly repository: string
+  readonly configuration?: TradeConfiguration
+}
+
+interface ActiveRegisteredRepository extends RegisteredRepository {
   readonly configuration: TradeConfiguration
 }
 
@@ -234,9 +239,20 @@ const registeredRepositories = async (context: KiContext): Promise<readonly Regi
     const state = await lstat(path).catch(() => undefined)
     if (!state?.isFile()) continue
     try {
-      repositories.push({ root, configuration: await readTradeConfiguration(path) })
+      const contents = await readFile(path, 'utf8')
+      const parsed = parse(contents)
+      /* v8 ignore next -- smol-toml parses valid configuration input as a document object. */
+      const repositoryDeclaration = isRecord(parsed) ? parsed[REPOSITORY_TABLE] : undefined
+      if (!hasRepository(repositoryDeclaration) || typeof repositoryDeclaration.repository !== 'string' || !isTradeRepository(repositoryDeclaration.repository))
+        continue
+      const repository = repositoryDeclaration.repository
+      try {
+        repositories.push({ root, repository, configuration: parseConfiguration(contents, path) })
+      } catch {
+        repositories.push({ root, repository })
+      }
     } catch {
-      // Invalid or nonparticipating registered repositories remain visible but never activate a trade route.
+      // Invalid registered entries cannot identify a trade endpoint.
     }
   }
   return repositories
@@ -258,7 +274,7 @@ export const localRegisteredConfiguration = async (
   return { repository, configuration: await readTradeConfiguration(repository.configuration) }
 }
 
-export type RouteState = 'active' | 'missing-repository' | 'ambiguous-repository' | 'nonreciprocal'
+export type RouteState = 'active' | 'awaiting-receiver' | 'awaiting-sender' | 'ambiguous-repository'
 
 export interface RouteInspection {
   readonly repository: string
@@ -277,12 +293,14 @@ const declaredRoutes = (configuration: TradeConfiguration): readonly Pick<RouteI
 export const inspectRoutes = async (context: KiContext, local: TradeConfiguration): Promise<readonly RouteInspection[]> => {
   const repositories = await registeredRepositories(context)
   return declaredRoutes(local).map((route) => {
-    const candidates = repositories.filter((candidate) => candidate.configuration.repository === route.repository)
-    if (!candidates.length) return { ...route, state: 'missing-repository' }
+    const candidates = repositories.filter((candidate) => candidate.repository === route.repository)
+    const pending = route.direction === 'export' ? 'awaiting-receiver' : 'awaiting-sender'
+    if (!candidates.length) return { ...route, state: pending }
     if (candidates.length > 1) return { ...route, state: 'ambiguous-repository' }
     const peer = candidates[0] as RegisteredRepository
+    if (!peer.configuration) return { ...route, state: pending, peer }
     const reciprocal = route.direction === 'export' ? peer.configuration.importsFrom[route.kind] : peer.configuration.exportsTo[route.kind]
-    if (!reciprocal.includes(local.repository)) return { ...route, state: 'nonreciprocal', peer }
+    if (!reciprocal.includes(local.repository)) return { ...route, state: pending, peer }
     return { ...route, state: 'active', peer }
   })
 }
@@ -293,14 +311,22 @@ export const requireActiveRoute = async (
   repository: string,
   direction: RouteDirection,
   kind: TradeKind
-): Promise<RegisteredRepository> => {
+): Promise<ActiveRegisteredRepository> => {
   /* v8 ignore next -- public CLI grammar validates canonical repository URLs before route inspection. */
   if (!isTradeRepository(repository)) throw tradeError('trade route repository must use canonical HTTPS GitHub repository form')
   const route = (await inspectRoutes(context, local)).find(
     (candidate) => candidate.repository === repository && candidate.direction === direction && candidate.kind === kind
   )
-  if (route?.state !== 'active') throw tradeError(`${direction} ${kind} trade route ${repository} is ${route?.state ?? 'not declared locally'}`)
-  return route.peer as RegisteredRepository
+  if (route?.state !== 'active')
+    throw tradeError(`${direction} ${kind} trade route ${repository} is ${route?.state?.replace('-', ' ') ?? 'not declared locally'}`)
+  return route.peer as ActiveRegisteredRepository
+}
+
+const requireDeclaredExportRoute = (local: TradeConfiguration, repository: string, kind: TradeKind): string => {
+  /* v8 ignore next -- public CLI grammar validates canonical repository URLs before core trade creation. */
+  if (!isTradeRepository(repository)) throw tradeError('trade route repository must use canonical HTTPS GitHub repository form')
+  if (!local.exportsTo[kind].includes(repository)) throw tradeError(`export ${kind} trade route ${repository} is not declared locally`)
+  return repositoryIdentity(repository)
 }
 
 const frontmatter = (contents: string, path: string): { readonly fields: TradeFields; readonly body: string } => {
@@ -431,14 +457,14 @@ export const createOutboundTrade = async (
   }
 ): Promise<TradeRecord> => {
   const local = await localRegisteredConfiguration(context)
-  const receiver = await requireActiveRoute(context, local.configuration, options.to, 'export', options.kind)
+  const receiver = requireDeclaredExportRoute(local.configuration, options.to, options.kind)
   /* v8 ignore next 2 -- public CLI grammar rejects every empty authored field before invoking the core operation. */
   if (![options.title, options.sourceRef, options.context, options.submission, options.constraints].every((value) => value.trim()))
     throw tradeError('trade title, source-ref, context, submission, and constraints must be non-empty')
   const id = `TRD-${randomUUID().slice(0, 8)}`
   const createdAt = new Date(context.now()).toISOString().replace(/\.\d{3}Z$/u, 'Z')
-  const contents = outboundContents({ id, createdAt, sender: local.configuration.identity, receiver: receiver.configuration.identity, ...options })
-  const path = tradePath(local.repository.root, 'outbound', receiver.configuration.identity, id)
+  const contents = outboundContents({ id, createdAt, sender: local.configuration.identity, receiver, ...options })
+  const path = tradePath(local.repository.root, 'outbound', receiver, id)
   await mkdir(join(path, '..'), { recursive: true })
   await writeFile(path, contents, 'utf8')
   return recordFromContents(contents, path, 'outbound')
@@ -516,12 +542,12 @@ export const locateTrades = async (
   if (options.repository && !isTradeRepository(options.repository)) throw tradeError('repository must use canonical HTTPS GitHub repository form')
   const locations: LocatedTrade[] = []
   for (const repository of await registeredRepositories(context)) {
-    if (options.repository && repository.configuration.repository !== options.repository) continue
+    if (!repository.configuration || (options.repository && repository.repository !== options.repository)) continue
     for (const direction of (options.direction ? [options.direction] : ['inbound', 'outbound']) as readonly TradeDirection[]) {
       for (const path of await peerDirectories(repository.root, direction)) {
         const record = recordFromContents(await readFile(path, 'utf8'), path, direction)
         if (options.id && record.id !== options.id) continue
-        locations.push({ repository: repository.configuration.repository, root: repository.root, direction, path, record })
+        locations.push({ repository: repository.repository, root: repository.root, direction, path, record })
       }
     }
   }
@@ -543,10 +569,12 @@ const localTrade = async (
   return { local, trade: candidates[0] as LocatedTrade }
 }
 
-const peerForRecord = async (context: KiContext, identity: string): Promise<RegisteredRepository> => {
-  const candidates = (await registeredRepositories(context)).filter((candidate) => candidate.configuration.identity === identity)
+const peerForRecord = async (context: KiContext, identity: string): Promise<ActiveRegisteredRepository> => {
+  const candidates = (await registeredRepositories(context)).filter((candidate): candidate is ActiveRegisteredRepository =>
+    Boolean(candidate.configuration && candidate.configuration.identity === identity)
+  )
   if (candidates.length !== 1) throw tradeError(`trade record peer ${identity} is unavailable or ambiguous in the registered repository estate`)
-  return candidates[0] as RegisteredRepository
+  return candidates[0] as ActiveRegisteredRepository
 }
 
 export const releaseTrade = async (context: KiContext, id: string): Promise<void> => {
