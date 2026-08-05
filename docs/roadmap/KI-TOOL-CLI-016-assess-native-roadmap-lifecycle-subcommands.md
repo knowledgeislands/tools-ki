@@ -1,91 +1,99 @@
 ---
 id: KI-TOOL-CLI-016
-title: Assess native roadmap lifecycle subcommands
+title: Add native roadmap lifecycle subcommands
 theme: cli
 horizon: next
 status: open
-blocks: []
+blocks: [KI-TOOL-CLI-014]
 blocked-by: []
 baseline-ref: null
 ---
 
 ## Goal
 
-Decide which read-only or explicitly authorised `ki repo roadmap` subcommands would usefully support the governed work-item lifecycle.
+Add the small, deterministic subset of `ki repo roadmap` lifecycle operations that operates only on canonical work-item files: listing, pruning completed records, and moving an item between horizons.
 
 ## Context
 
-`ki repo roadmap list` now provides a deterministic, read-only view of selected repositories' work items and trade context.
+`ki repo roadmap list` already provides the read-only inventory for selected repositories. Its framed output groups canonical work items in the same immediate-to-distant horizon order used by the roadmap standard.
 
-The current repository workflow assigns creation and shaping to `ki-plan`, implementation transitions to `ki-implement`, and explicit acceptance and pruning to `ki-accept`.
-
-There may be value in narrowly scoped native commands that prepare a placeholder work item, present lifecycle candidates, apply a user-confirmed status transition, or prune an explicitly named retained record. The assessment must first establish whether any native command adds durable operator value beyond the process skills, rather than duplicating their lifecycle authority.
+The remaining mechanical record operations are equally local and deterministic. `prune` can remove only terminal `done` files, while `promote` and `demote` can change only an explicitly named item's `horizon` field. They do not decide scope, readiness, implementation, acceptance, or completion; those remain process-skill and human-authority operations.
 
 ## Boundary
 
-This discovery item does not add lifecycle-mutating CLI commands, bypass human confirmation, infer roadmap authority from trade records, or replace the `ki-plan`, `ki-implement`, or `ki-accept` process responsibilities. It delivers a decision and, only if justified, a separately scoped implementation item; it does not quietly turn its own assessment into product work.
+Implement exactly these public commands:
+
+- `ki repo roadmap list [--horizon <horizon>] [--status <status>]`
+- `ki repo roadmap prune`
+- `ki repo roadmap promote <id> [horizon]`
+- `ki repo roadmap demote <id> [horizon]`
+
+`prune` removes every selected repository's canonical item whose status is exactly `done`; it leaves every other status and every non-canonical file untouched. Without `[horizon]`, `promote` moves one step toward `blocking` and `demote` moves one step toward `future`. With `[horizon]`, each command moves directly to the named horizon only in its respective direction. An item already at that directional endpoint is an error, as is a target that reverses or makes no movement.
+
+Do not add commands for creating, shaping, marking ready, starting implementation, accepting work, or marking work done. Do not infer a status from a trade, alter anything outside `docs/roadmap/`, retain legacy command grammar, or implement shell-completion work from CLI-014.
 
 ## Current state
 
-The CLI exposes `ki repo roadmap list` as a read-only inventory in `src/commands/repo/roadmap.ts`, with black-box coverage in `src/tests/cli/repo/roadmap.test.ts` and target-selection coverage in `src/tests/cli/repo/targets.test.ts`.
+`src/commands/repo/roadmap.ts` exposes only the `list` subcommand. `src/core/work-items.ts` validates and reads canonical work-item frontmatter, including the six ordered horizons and lifecycle status. Contract coverage is in `src/tests/cli/repo/roadmap.test.ts`, with repository-target behavior in `src/tests/cli/repo/targets.test.ts`.
 
-The process skills already define creation and readiness (`ki-plan`), implementation (`ki-implement`), acceptance and pruning (`ki-accept`), and selection (`ki-next`). They retain confirmation and evidence authority. Native `ki` currently has no lifecycle-mutation grammar.
+The process skills retain authority for lifecycle judgment: `ki-plan` creates, shapes, and readies items; `ki-implement` controls active delivery; and `ki-accept` requires evidence and human approval for completion. This command surface handles only deterministic file mechanics after those judgments have already occurred.
 
 ## Steps
 
-- [ ] Build an authority matrix for every existing lifecycle operation: canonical record affected, required evidence, required human confirmation, process-skill owner, and whether any bounded native host capability already exists.
-- [ ] Assess only four candidate classes: read-only candidate/status reporting; placeholder preparation; explicit lifecycle transition; and explicit retained-record prune. For each, state the operator problem, exact input, local write set, confirmation mechanism, re-audit requirement, and why a process skill is insufficient.
-- [ ] Reject duplication explicitly. A candidate does not proceed merely because it is mechanically possible; it must preserve the process skill's authority boundary and reduce a concrete operator failure mode.
-- [ ] Select one of three outcomes for each candidate: retain process-skill-only ownership, add read-only CLI guidance, or create a separately numbered implementation item with exact grammar and contract tests.
-- [ ] Record the decision and any follow-on link in this item's Discussion. Do not add source, tests, README, or manual changes unless a new implementation item is explicitly selected.
+- [ ] Define one typed horizon-order helper shared by listing, `promote`, and `demote`, with explicit predecessor/successor behavior and direct-target direction validation.
+- [ ] Extend the `ki repo roadmap` grammar with `prune`, `promote <id> [horizon]`, and `demote <id> [horizon]`, retaining `list` and the repository target-selection contract.
+- [ ] Resolve each mutation target to exactly one canonical regular file inside the selected repository's physical `docs/roadmap/` directory; reject a missing, ambiguous, malformed, or out-of-scope identifier before any write.
+- [ ] Implement `prune` as a deterministic selected-repository sweep that deletes only validated records with `status: done`, reports each deletion and a summary, and succeeds with an explicit empty result when there is nothing to prune.
+- [ ] Implement `promote` and `demote` as frontmatter-only horizon updates. Without a target horizon they move exactly one canonical level; with a target they move directly only in the requested direction. Preserve all other frontmatter and Markdown body bytes.
+- [ ] Establish the native-operation authority boundary in the CLI documentation: these commands perform only record mechanics and do not replace `ki-plan`, `ki-implement`, or `ki-accept` judgment and evidence gates.
+- [ ] Cover the public contract through `run(args, context)`: every horizon transition, directional endpoint, invalid direct target, missing identifier, selected repository behavior, prune eligibility, no-op prune, failure atomicity, and unchanged non-roadmap content.
+- [ ] Update README, the man page, completion grammar, and the compatible Harness process documentation to describe the new narrow host authority without retaining a conflicting process-only prune rule.
 
 ## Files touched
 
-- This roadmap item
-
-Any selected implementation receives its own roadmap item and enumerates its product, test, README, and manual files there.
+- `src/commands/repo/roadmap.ts`
+- `src/core/work-items.ts`
+- `src/tests/cli/repo/roadmap.test.ts`
+- `src/tests/cli/repo/targets.test.ts`
+- `src/tests/cli/manage/completions.test.ts` or the CLI-014 completion contract if it has landed
+- `README.md`
+- `man/ki.1`
+- `docs/roadmap/KI-TOOL-CLI-016-assess-native-roadmap-lifecycle-subcommands.md`
+- Compatible Harness lifecycle-process documentation, limited to reconciling this delegated deterministic host authority
 
 ## Verify
 
-- The completed authority matrix covers creation, shaping, readiness, implementation, acceptance, completion, and prune.
-- Every candidate has an explicit decision, inputs, write set, evidence, confirmation, post-mutation audit, and process-skill relationship.
-- `ki repo roadmap list` remains read-only and retains its inventory and trade-context behaviour.
-- Any follow-on implementation item has a checkable command grammar, black-box CLI contract coverage, full verification gates, and an explicit human-acceptance boundary.
-- The roadmap audit passes.
+- `bunx vitest run src/tests/cli/repo/roadmap.test.ts src/tests/cli/repo/targets.test.ts`
+- `bun run test:coverage`
+- `bunx tsc --noEmit`
+- `bunx biome check src README.md`
+- Documentation and man-page checks
+- `ki repo audit --skill ki-roadmap --repo .`
+- `ki repo roadmap list` stays read-only and retains its current framed inventory and trade context.
+- `ki repo roadmap prune` removes only `done` records and reports an empty prune without mutation when none exist.
+- `promote` and `demote` move exactly one horizon when omitted, accept only a directionally valid direct horizon, and leave all non-horizon content unchanged.
+- Invalid input and a failure while resolving any selected target leave every candidate file unchanged.
 
 ## Dependencies / blocks
 
-This assessment is self-contained and depends on the existing process skills remaining lifecycle authority. It must not block CLI-014 completion work.
+CLI-015 is complete and established the command/test module boundaries used here. This item must complete before CLI-014 so completion generation can target the final roadmap grammar.
+
+The lifecycle-process documentation must explicitly delegate these three deterministic host operations before release; it remains authoritative for every judgmental lifecycle operation.
 
 ## Discussion
 
-### Lifecycle operations need explicit authority
+### Mechanical movement is not lifecycle judgment
 
-Any future `ki repo roadmap` subcommand must make its target, intended transition, required evidence, and confirmation boundary explicit.
+`promote` and `demote` change priority placement, not lifecycle status. They cannot move an item to ready, in progress, acceptance, or done, and they cannot choose an item's content or dependency model. Direct horizon moves are useful because reprioritisation often crosses more than one planning interval, but they must remain directionally constrained so the verb states what happened truthfully.
 
-The assessment should compare read-only recommendation commands with user-confirmed mutation commands for placeholder creation, readiness preparation, acceptance, completion, and explicit pruning.
+### Pruning is limited to terminal records
 
-### Candidate decision table
+The command is intentionally broad within its selected repository: it removes every canonical `done` item because there is no subjective selection left once the terminal state has already been authorised. It must not delete acceptance, in-progress, ready, or open records; loose Markdown files, nested paths, and malformed records are outside its write set.
 
-The assessment must make the following forks explicit rather than assuming every lifecycle verb belongs in `ki`.
+### Lifecycle authority remains legible
 
-| Candidate | Minimum proof to proceed | Likely default |
-| --- | --- | --- |
-| Candidate/status report | Adds information unavailable from `roadmap list` without inferring a decision | Read-only only |
-| Placeholder preparation | Produces a canonical record without choosing its scope, horizon, or lifecycle | Process skill only unless a deterministic skeleton is demonstrated |
-| Lifecycle transition | Exact item, expected current state, required evidence, and a separate confirmation input | Process skill only unless the host can preserve all gates |
-| Retained-record prune | Exact file selection, explicit human approval, and evidence of terminal completion | Process skill only; no bulk deletion |
+The CLI owns deterministic local file mechanics. The process skills own the evidence, confirmation, and judgment that establish the lifecycle states on which those mechanics operate. Documentation must make that division clear and remove any contradictory statement that prune is exclusively process-skill owned.
 
-### Canonical records remain the source of truth
+### Readiness decision
 
-Future commands must preserve canonical Markdown work-item records, existing audits, and lifecycle ordering.
-
-They must not introduce a parallel lifecycle store, perform autonomous transitions, or use trade direction or record status as evidence to alter roadmap state.
-
-### Delivery and readiness decision
-
-This is ready to enter `ready` as a bounded discovery task once the candidate table above is accepted. Its only implementation output is a documented decision and zero or more new, separately approved roadmap items.
-
-### Promotion condition
-
-Promote this item when a concrete operator workflow can name the required subcommand, its exact authority and confirmation boundary, the evidence it consumes, and its relationship to the existing process skills.
+This item is ready to enter `ready` when the exact four-command grammar and the process-boundary reconciliation above are approved. CLI-014 remains blocked until this grammar is delivered.
