@@ -62,7 +62,7 @@ export const repoCommandSummaries: Readonly<Record<RepoCommandName, string>> = {
   conform: 'apply approved local repairs',
   educate: 'explain declared skill maintenance',
   init: 'initialize one KI repository',
-  roadmap: 'inspect governed work items',
+  roadmap: 'inspect and maintain governed work items',
   repair: 'reconcile proven managed state',
   skill: 'manage repository skills',
   upgrade: 'refresh declared capabilities'

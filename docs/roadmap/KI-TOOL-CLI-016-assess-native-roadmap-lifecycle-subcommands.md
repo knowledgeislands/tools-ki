@@ -40,14 +40,14 @@ The process skills retain authority for lifecycle judgment: `ki-plan` creates, s
 
 ## Steps
 
-- [ ] Define one typed horizon-order helper shared by listing, `promote`, and `demote`, with explicit predecessor/successor behavior and direct-target direction validation.
-- [ ] Extend the `ki repo roadmap` grammar with `prune`, `promote <id> [horizon]`, and `demote <id> [horizon]`, retaining `list` and the repository target-selection contract.
-- [ ] Resolve each mutation target to exactly one canonical regular file inside the selected repository's physical `docs/roadmap/` directory; reject a missing, ambiguous, malformed, or out-of-scope identifier before any write.
-- [ ] Implement `prune` as a deterministic selected-repository sweep that deletes only validated records with `status: done`, reports each deletion and a summary, and succeeds with an explicit empty result when there is nothing to prune.
-- [ ] Implement `promote` and `demote` as frontmatter-only horizon updates. Without a target horizon they move exactly one canonical level; with a target they move directly only in the requested direction. Preserve all other frontmatter and Markdown body bytes.
-- [ ] Establish the native-operation authority boundary in the CLI documentation: these commands perform only record mechanics and do not replace `ki-plan`, `ki-implement`, or `ki-accept` judgment and evidence gates.
-- [ ] Cover the public contract through `run(args, context)`: every horizon transition, directional endpoint, invalid direct target, missing identifier, selected repository behavior, prune eligibility, no-op prune, failure atomicity, and unchanged non-roadmap content.
-- [ ] Update README, the man page, completion grammar, and the compatible Harness process documentation to describe the new narrow host authority without retaining a conflicting process-only prune rule.
+- [x] Define one typed horizon-order helper shared by listing, `promote`, and `demote`, with explicit predecessor/successor behavior and direct-target direction validation.
+- [x] Extend the `ki repo roadmap` grammar with `prune`, `promote <id> [horizon]`, and `demote <id> [horizon]`, retaining `list` and the repository target-selection contract.
+- [x] Resolve each mutation target to exactly one canonical regular file inside the selected repository's physical `docs/roadmap/` directory; reject a missing, ambiguous, malformed, or out-of-scope identifier before any write.
+- [x] Implement `prune` as a deterministic selected-repository sweep that deletes only validated records with `status: done`, reports each deletion and a summary, and succeeds with an explicit empty result when there is nothing to prune.
+- [x] Implement `promote` and `demote` as frontmatter-only horizon updates. Without a target horizon they move exactly one canonical level; with a target they move directly only in the requested direction. Preserve all other frontmatter and Markdown body bytes.
+- [x] Establish the native-operation authority boundary in the CLI documentation: these commands perform only record mechanics and do not replace `ki-plan`, `ki-implement`, or `ki-accept` judgment and evidence gates.
+- [x] Cover the public contract through `run(args, context)`: every horizon transition, directional endpoint, invalid direct target, missing identifier, selected repository behavior, prune eligibility, no-op prune, failure atomicity, and unchanged non-roadmap content.
+- [x] Update README, the man page, and compatible Harness process documentation to describe the new narrow host authority without retaining a conflicting process-only prune rule. CLI-014 owns completion generation from the final grammar.
 
 ## Files touched
 
@@ -55,7 +55,10 @@ The process skills retain authority for lifecycle judgment: `ki-plan` creates, s
 - `src/core/work-items.ts`
 - `src/tests/cli/repo/roadmap.test.ts`
 - `src/tests/cli/repo/targets.test.ts`
-- `src/tests/cli/manage/completions.test.ts` or the CLI-014 completion contract if it has landed
+- `src/core/configuration.ts`
+- `src/core/agora.ts`
+- `src/tests/cli/agora/agora.test.ts`
+- `src/tests/cli/trade/trade.test.ts`
 - `README.md`
 - `man/ki.1`
 - `docs/roadmap/KI-TOOL-CLI-016-assess-native-roadmap-lifecycle-subcommands.md`
@@ -93,6 +96,14 @@ The command is intentionally broad within its selected repository: it removes ev
 ### Lifecycle authority remains legible
 
 The CLI owns deterministic local file mechanics. The process skills own the evidence, confirmation, and judgment that establish the lifecycle states on which those mechanics operate. Documentation must make that division clear and remove any contradictory statement that prune is exclusively process-skill owned.
+
+### Candidate evaluation
+
+`roadmap list` remains the only read-only status view: its horizon and lifecycle filters already answer the candidate/status use case. A separate status or check command would duplicate that inventory and the existing roadmap audit.
+
+Creation, shaping, readiness, implementation, acceptance, and completion were rejected as native commands because each requires scope, evidence, or human judgment. `prune`, `promote`, and `demote` are the complete mechanical subset because their targets and permitted writes are deterministic from canonical records.
+
+Moving to or from `future` necessarily adds or removes the canonical `candidate: true` marker; all other frontmatter and the Markdown body remain byte-preserved.
 
 ### Readiness decision
 

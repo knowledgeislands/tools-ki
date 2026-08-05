@@ -1,6 +1,7 @@
-import { lstat, readdir, readFile } from 'node:fs/promises'
+import { lstat, readdir, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { KiError } from './errors.ts'
+import { prepareWrites, publishWrites } from './transaction.ts'
 
 const ROADMAP_DIRECTORY = 'docs/roadmap'
 const requiredFields = ['id', 'title', 'theme', 'horizon', 'status', 'blocks', 'blocked-by', 'baseline-ref'] as const
@@ -9,7 +10,9 @@ type WorkItemField = RequiredField | 'candidate' | 'transferred-from'
 type WorkItemFields = Partial<Record<WorkItemField, string>>
 
 const allowedFields = new Set<WorkItemField>([...requiredFields, 'candidate', 'transferred-from'])
-const horizons = new Set(['blocking', 'next', 'soon', 'waiting-for', 'parked', 'future'])
+export const workItemHorizons = ['blocking', 'next', 'soon', 'waiting-for', 'parked', 'future'] as const
+export type WorkItemHorizon = (typeof workItemHorizons)[number]
+const horizons = new Set<WorkItemHorizon>(workItemHorizons)
 const statuses = new Set<WorkItemStatus>(['open', 'ready', 'in-progress', 'acceptance', 'done'])
 
 export type WorkItemStatus = 'open' | 'ready' | 'in-progress' | 'acceptance' | 'done'
@@ -18,13 +21,20 @@ export interface WorkItem {
   readonly id: string
   readonly title: string
   readonly theme: string
-  readonly horizon: string
+  readonly horizon: WorkItemHorizon
   readonly status: WorkItemStatus
   readonly blocks: readonly string[]
   readonly blockedBy: readonly string[]
   readonly baselineRef: null | string
   readonly candidate?: true
   readonly transferredFrom?: string
+}
+
+interface WorkItemRecord {
+  readonly item: WorkItem
+  readonly file: string
+  readonly path: string
+  readonly contents: string
 }
 
 const itemError = (file: string, message: string): KiError => new KiError(`work item ${file} ${message}`, 2)
@@ -54,27 +64,28 @@ const frontmatter = (contents: string, file: string): Readonly<WorkItemFields> =
   return fields
 }
 
-const readItem = async (directory: string, file: string): Promise<WorkItem> => {
+const readItem = async (directory: string, file: string): Promise<WorkItemRecord> => {
   /* v8 ignore next -- readWorkItems only passes .md directory entries. */
   if (!file.endsWith('.md')) throw itemError(file, 'must use the .md extension')
   const path = join(directory, file)
   const state = await lstat(path)
   if (!state.isFile() || state.isSymbolicLink()) throw itemError(file, 'must be a regular file')
-  const fields = frontmatter(await readFile(path, 'utf8'), file)
+  const contents = await readFile(path, 'utf8')
+  const fields = frontmatter(contents, file)
   const id = fields.id as string
   if (!/^[A-Z][A-Z0-9-]*-\d{3}$/.test(id) || !file.startsWith(`${id}-`)) throw itemError(file, 'must use a matching work-item identifier')
-  if (!fields.title || !/^[a-z0-9-]+$/.test(fields.theme as string) || !horizons.has(fields.horizon as string))
+  if (!fields.title || !/^[a-z0-9-]+$/.test(fields.theme as string) || !horizons.has(fields.horizon as WorkItemHorizon))
     throw itemError(file, 'has invalid title, theme, or horizon')
   if (!statuses.has(fields.status as WorkItemStatus)) throw itemError(file, 'has an invalid lifecycle status')
   if (fields.horizon === 'future' ? fields.candidate !== 'true' : fields.candidate !== undefined)
     throw itemError(file, 'must use candidate: true only for future items')
   const baseline = fields['baseline-ref']
   if (baseline !== 'null' && !/^[a-f0-9]{40}$/.test(baseline as string)) throw itemError(file, 'baseline-ref must be null or a full commit ID')
-  return {
+  const item: WorkItem = {
     id,
     title: fields.title as string,
     theme: fields.theme as string,
-    horizon: fields.horizon as string,
+    horizon: fields.horizon as WorkItemHorizon,
     status: fields.status as WorkItemStatus,
     blocks: parseList(fields.blocks as string, file, 'blocks'),
     blockedBy: parseList(fields['blocked-by'] as string, file, 'blocked-by'),
@@ -82,13 +93,54 @@ const readItem = async (directory: string, file: string): Promise<WorkItem> => {
     ...(fields.candidate ? { candidate: true } : {}),
     ...(fields['transferred-from'] ? { transferredFrom: fields['transferred-from'] } : {})
   }
+  return { item, file, path, contents }
 }
 
-export const readWorkItems = async (repository: string): Promise<readonly WorkItem[]> => {
+const readWorkItemRecords = async (repository: string): Promise<readonly WorkItemRecord[]> => {
   const directory = join(repository, ROADMAP_DIRECTORY)
   const state = await lstat(directory).catch(() => undefined)
   if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError(`repository ${repository} has no physical docs/roadmap directory`, 2)
   const entries = await readdir(directory)
-  const items = await Promise.all(entries.filter((entry) => entry.endsWith('.md')).map((entry) => readItem(directory, entry)))
-  return items.sort((left, right) => left.id.localeCompare(right.id))
+  const records = await Promise.all(entries.filter((entry) => entry.endsWith('.md')).map((entry) => readItem(directory, entry)))
+  return records.sort((left, right) => left.item.id.localeCompare(right.item.id))
+}
+
+export const readWorkItems = async (repository: string): Promise<readonly WorkItem[]> => (await readWorkItemRecords(repository)).map(({ item }) => item)
+
+const workItemRecord = async (repository: string, id: string): Promise<WorkItemRecord> => {
+  const matches = (await readWorkItemRecords(repository)).filter((record) => record.item.id === id)
+  // The CLI resolves this exact cardinality before calling the publisher; retain the core guard for future callers.
+  /* v8 ignore next */
+  if (matches.length !== 1) throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
+  return matches[0] as WorkItemRecord
+}
+
+const renderHorizon = (contents: string, horizon: WorkItemHorizon): string => {
+  return contents.replace(/^---\n([\s\S]*?)\n---/, (_frontmatter, fields: string) => {
+    const withHorizon = fields.replace(/^horizon: .+$/m, `horizon: ${horizon}`)
+    const next =
+      horizon === 'future'
+        ? withHorizon.replace(/^horizon: .+$/m, '$&\ncandidate: true')
+        : withHorizon
+            .split('\n')
+            .filter((line) => !line.startsWith('candidate: '))
+            .join('\n')
+    return `---\n${next}\n---`
+  })
+}
+
+export const updateWorkItemHorizon = async (repository: string, id: string, horizon: WorkItemHorizon): Promise<WorkItem> => {
+  const record = await workItemRecord(repository, id)
+  const content = renderHorizon(record.contents, horizon)
+  const writes = await prepareWrites(repository, [{ path: join(ROADMAP_DIRECTORY, record.file), content }])
+  await publishWrites(writes, false)
+  const { candidate: _candidate, ...item } = record.item
+  return { ...item, horizon, ...(horizon === 'future' ? { candidate: true } : {}) }
+}
+
+export const pruneDoneWorkItems = async (repository: string): Promise<readonly WorkItem[]> => {
+  const records = await readWorkItemRecords(repository)
+  const done = records.filter(({ item }) => item.status === 'done')
+  await Promise.all(done.map(({ path }) => rm(path)))
+  return done.map(({ item }) => item)
 }

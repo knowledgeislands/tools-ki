@@ -70,11 +70,15 @@ ki repo --agora inventory audit
 
 ## Inspect governed work
 
-`ki repo roadmap list` reads the canonical work-item records in selected repositories without changing their lifecycle.
+`ki repo roadmap list` reads the canonical work-item records in selected repositories without changing them.
 
 Its deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, its import and export trade context, diagnostics, and a compact summary. Use `--horizon <value>` or `--status <value>` to filter records before rendering.
 
-Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report. The command never creates, transitions, accepts, prunes, or repairs work items; the harness process skills remain their lifecycle authority.
+Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report.
+
+`ki repo roadmap prune` removes every canonical `done` record in the selected repository set and nothing else. `ki repo roadmap promote <id> [horizon]` and `ki repo roadmap demote <id> [horizon]` move one explicitly named item one horizon toward `blocking` or `future`, respectively; an optional destination permits a direct move only in that direction. These operations change only the canonical work-item file and preserve lifecycle status.
+
+Creation, shaping, readiness, implementation, acceptance, and completion remain harness-process and human-authority operations. The native commands do not infer those judgments from a trade or alter a peer repository.
 
 ## Inspect cross-repository trades
 

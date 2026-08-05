@@ -81,6 +81,7 @@ describe('[ki repo target sets]', () => {
       const missingBase = await box.run(['ki', 'repo', '--repo', 'missing/*', 'roadmap', 'list'])
       const unmatched = await box.run(['ki', 'repo', '--repo', 'empty/*', 'roadmap', 'list'])
       const duplicate = await box.run(['ki', 'repo', '--repo', 'repos/a', '--repo', 'repos/a', 'roadmap', 'list'])
+      const conflictingSelectors = await box.run(['ki', 'repo', '--repo', 'repos/a', '--agora', 'inventory', 'roadmap', 'list'])
 
       expect(immediate.output).toContain(`│     ${root}/repos/a`)
       expect(recursive.output).toContain(`│     ${root}/repos/a/nested`)
@@ -89,6 +90,7 @@ describe('[ki repo target sets]', () => {
       expect(missingBase.output).toContain('has no existing directory')
       expect(unmatched.output).toContain('matched no repositories')
       expect(duplicate.output).toContain('selects duplicate repository')
+      expect(conflictingSelectors.output).toContain('--repo and --agora cannot be used together')
     })
 
     test('expands mGit standard, nested, and container members through supported roadmap listing', async () => {

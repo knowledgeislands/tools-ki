@@ -34,6 +34,7 @@ describe('[ki agora]', () => {
     await box.config.write('ki/agoras/empty.ki-agora', profile())
     expect(await box.run('ki agora show empty')).toEqual({ exitCode: 0, output: 'ki agora show empty\n  Example\n  tool zed\n' })
     expect(await box.run('ki agora open empty')).toEqual({ exitCode: 2, output: 'ki: error: Agora empty has no projects\n' })
+    expect(await box.run('ki repo --agora empty roadmap list')).toEqual({ exitCode: 2, output: 'ki: error: Agora empty has no projects\n' })
   })
 
   test('resolves explicit relative and absolute profile paths', async () => {
@@ -56,6 +57,7 @@ describe('[ki agora]', () => {
     await symlink(join(box.config.path, 'ki/agoras/target.ki-agora'), linked)
 
     expect((await box.run('ki agora show missing')).output).toContain('no Agora profile')
+    expect((await box.run('ki agora create Upper')).output).toContain('Agora name must use lower-case letters, numbers, and hyphens')
     expect((await box.run(['ki', 'agora', 'show', directory])).output).toContain('must be a regular file')
     expect((await box.run(['ki', 'agora', 'show', linked])).output).toContain('must be a regular file')
   })
@@ -111,7 +113,12 @@ describe('[ki agora]', () => {
     const dotted = await box.project.mkdir('dotted.project')
 
     expect(await box.run('ki agora create inventory')).toEqual({ exitCode: 0, output: 'ki agora create: created inventory\n' })
+    expect((await box.run('ki agora create inventory')).output).toContain('Agora inventory already exists')
     expect(await box.run('ki agora add inventory first')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 1 projects\n' })
+    expect((await box.run('ki agora add inventory first')).output).toContain('Agora inventory already has a project named first')
+    await symlink(first, join(box.project.path, 'linked-first'))
+    expect((await box.run('ki agora add inventory linked-first')).output).toContain('Agora project linked-first must be an existing physical directory')
+    expect((await box.run('ki agora add inventory missing-project')).output).toContain('Agora project missing-project must be an existing physical directory')
     expect(await box.run('ki agora add inventory second')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 2 projects\n' })
     expect(await box.run('ki agora add inventory dotted.project')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 3 projects\n' })
     const roadmap = await box.run('ki repo --agora inventory roadmap list')
@@ -121,11 +128,21 @@ describe('[ki agora]', () => {
     expect(roadmap.output).toContain(`│     ${second}\n├─ roadmap (0)`)
     expect(roadmap.output).toContain('├─ trades (0)')
     expect(await box.run('ki agora remove inventory first')).toEqual({ exitCode: 0, output: 'ki agora remove: inventory now has 2 projects\n' })
+    expect((await box.run('ki agora remove inventory first')).output).toContain('Agora inventory has no project named first')
     expect(await box.run('ki agora create discovered')).toEqual({ exitCode: 0, output: 'ki agora create: created discovered\n' })
+    await box.project.mkdir('nested/.git')
+    await box.project.write('nested/ignored.txt', 'ignore\n')
+    await symlink(third, join(box.project.path, 'nested/linked-third'))
     expect(await box.run('ki agora discover discovered nested')).toEqual({ exitCode: 0, output: 'ki agora discover: discovered now has 1 projects\n' })
     expect(await box.run('ki agora show discovered')).toEqual({
       exitCode: 0,
       output: `ki agora show discovered\n  discovered\n  tool zed\n  project ${third}\n`
     })
+    await box.config.write('ki/agoras/duplicate.ki-agora', profile(`\n[projects]\nalias = ${JSON.stringify(first)}`))
+    expect((await box.run('ki agora add duplicate first')).output).toContain(`Agora duplicate already has project ${first}`)
+    await box.config.write('ki/agoras/collision.ki-agora', profile(`\n[projects]\nthird = ${JSON.stringify(second)}`))
+    expect((await box.run('ki agora discover collision nested')).output).toContain('Agora collision already has a different project named third')
+    const empty = await box.project.mkdir('empty')
+    expect((await box.run('ki agora discover discovered empty')).output).toContain(`Agora discovery found no KI repositories in ${empty}`)
   })
 })

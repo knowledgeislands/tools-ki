@@ -97,6 +97,15 @@ proven KI-managed projections.
 List governed work items in a framed deterministic horizon and lifecycle tree
 without changing their lifecycle.
 .TP
+.B ki repo [repo-options] roadmap prune
+Delete completed canonical work-item records.
+.TP
+.B ki repo [repo-options] roadmap promote <id> [horizon]
+Move one work item toward the blocking horizon.
+.TP
+.B ki repo [repo-options] roadmap demote <id> [horizon]
+Move one work item toward the future horizon.
+.TP
 .B ki repo [repo-options] educate [--skill <skill>]
 Explain the registered repository maintenance catalogue.
 .TP
@@ -437,6 +446,33 @@ and \fB--status\fR filter before rendering. A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
 selected repositories still report. The command never creates, transitions,
 accepts, prunes, or repairs a work item.
+.TP
+.B ki repo [repo-options] roadmap prune
+Delete every canonical work-item record whose lifecycle status is exactly
+.BR done
+from the selected repositories. It leaves every other lifecycle status,
+non-canonical file, and peer repository untouched. If no selected repository
+contains a completed record, it reports that no record was pruned.
+.TP
+.B ki repo [repo-options] roadmap promote <id> [horizon]
+Move exactly one selected repository's named work item one horizon toward
+.BR blocking .
+With an optional destination horizon, move directly only toward
+.BR blocking ;
+the current horizon, a future-facing destination, and the blocking endpoint are
+errors. The command changes only the item's horizon frontmatter; moving from
+.BR future
+also removes its required candidate marker.
+.TP
+.B ki repo [repo-options] roadmap demote <id> [horizon]
+Move exactly one selected repository's named work item one horizon toward
+.BR future .
+With an optional destination horizon, move directly only toward
+.BR future ;
+the current horizon, a blocking-facing destination, and the future endpoint are
+errors. The command changes only the item's horizon frontmatter; moving to
+.BR future
+adds its required candidate marker.
 .TP
 .B ki repo [repo-options] educate [--skill <skill>]
 Explain each selected repository's declared capabilities and their recommended

@@ -91,18 +91,30 @@ describe('[ki trade]', () => {
     await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver', {}, { work: [sourceHome] }))
     await box.config.write('ki/config.toml', localConfiguration([source, receiver]))
 
+    const empty = await box.run('ki trade routes list')
     const added = await box.run(['ki', 'trade', 'routes', 'add', receiverHome, '--direction', 'export', '--kind', 'work'])
+    const exportOnly = await box.run('ki trade routes list')
+    const addedExportKnowledge = await box.run(['ki', 'trade', 'routes', 'add', receiverHome, '--direction', 'export', '--kind', 'knowledge'])
+    const addedImport = await box.run(['ki', 'trade', 'routes', 'add', receiverHome, '--direction', 'import', '--kind', 'knowledge'])
     const listed = await box.run('ki trade routes list')
     const checked = await box.run(['ki', 'trade', 'routes', 'check', receiverHome, '--direction', 'export', '--kind', 'work'])
     const removed = await box.run(['ki', 'trade', 'routes', 'remove', receiverHome, '--direction', 'export', '--kind', 'work'])
+    const removedExportKnowledge = await box.run(['ki', 'trade', 'routes', 'remove', receiverHome, '--direction', 'export', '--kind', 'knowledge'])
+    const removedImport = await box.run(['ki', 'trade', 'routes', 'remove', receiverHome, '--direction', 'import', '--kind', 'knowledge'])
 
+    expect(empty.output).toContain('│  ╰─ routes: none')
     expect(added).toEqual({ exitCode: 0, output: `ki trade routes add: export work ${sourceHome} -> ${receiverHome}\n` })
-    expect(listed).toEqual({
-      exitCode: 0,
-      output: `╭─ KI TRADE ROUTES\n│  📁 example/source\n│     ${sourceHome}\n│  ✦ 1 route\n├─ results\n│  ╰─ export\n│     ╰─ work ${receiverHome} [active]\n╰─ summary: ROUTES=1\n`
-    })
+    expect(exportOnly.output).toContain('│  ╰─ export')
+    expect(addedExportKnowledge).toEqual({ exitCode: 0, output: `ki trade routes add: export knowledge ${sourceHome} -> ${receiverHome}\n` })
+    expect(addedImport).toEqual({ exitCode: 0, output: `ki trade routes add: import knowledge ${sourceHome} -> ${receiverHome}\n` })
+    expect(listed.exitCode).toBe(0)
+    expect(listed.output).toContain('│  ├─ export\n│  │  ├─ work')
+    expect(listed.output).toContain('│  │  ╰─ knowledge')
+    expect(listed.output).toContain('│  ╰─ import')
     expect(checked).toEqual({ exitCode: 0, output: `ki trade routes check\n  export work ${receiverHome}: active\n` })
     expect(removed).toEqual({ exitCode: 0, output: `ki trade routes remove: export work ${sourceHome} -> ${receiverHome}\n` })
+    expect(removedExportKnowledge).toEqual({ exitCode: 0, output: `ki trade routes remove: export knowledge ${sourceHome} -> ${receiverHome}\n` })
+    expect(removedImport).toEqual({ exitCode: 0, output: `ki trade routes remove: import knowledge ${sourceHome} -> ${receiverHome}\n` })
     expect(await box.project.read('.ki-config.toml')).toContain(`repository = "${sourceHome}"`)
     expect(await box.project.read('receiver/.ki-config.toml')).toContain(`work = ["${sourceHome}"]`)
   })
@@ -124,6 +136,7 @@ describe('[ki trade]', () => {
     )
     box.cd('..')
     const listed = await box.run(['ki', 'trade', 'list', '--repo', receiverHome, '--direction', 'import', '--status', 'adopted', '--kind', 'work'])
+    const allListed = await box.run('ki trade list')
     const shown = await box.run(['ki', 'trade', 'show', id])
     const released = await box.run(['ki', 'trade', 'release', id])
     box.cd('receiver')
@@ -135,6 +148,9 @@ describe('[ki trade]', () => {
       exitCode: 0,
       output: `╭─ KI TRADES\n│  ✦ 1 trade\n├─ results\n│  ╰─ import\n│     ╰─ ${receiverHome} ${id} [work, adopted] Route contract\n╰─ summary: TRADES=1 IMPORTS=1 EXPORTS=0\n`
     })
+    expect(allListed.output).toContain(
+      `│  ├─ import\n│  │  ╰─ ${receiverHome} ${id} [work, adopted] Route contract\n│  ╰─ export\n│     ╰─ ${sourceHome} ${id} [work] Route contract`
+    )
     expect(shown.output).toContain(`Repository: ${sourceHome} [export]\n${outbound.trimEnd()}`)
     expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
     expect(pruned).toEqual({ exitCode: 0, output: `ki trade prune: pruned ${id}\n` })

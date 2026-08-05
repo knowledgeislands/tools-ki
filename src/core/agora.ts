@@ -107,6 +107,8 @@ const physicalProject = async (value: string, workingDirectory: string): Promise
 
 const projectName = (path: string): string => {
   const name = basename(path)
+  // realpath() returns a physical path with a basename; keep the guard if that platform invariant ever changes.
+  /* v8 ignore next */
   if (!name) throw new KiError(`cannot derive an Agora project name from ${path}`, 2)
   return name
 }

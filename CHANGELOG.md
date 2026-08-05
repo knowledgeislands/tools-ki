@@ -61,6 +61,9 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo conform`
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` (framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context)
+- `ki repo roadmap prune`
+- `ki repo roadmap promote <id> [horizon]`
+- `ki repo roadmap demote <id> [horizon]`
 - `ki repo educate`
 - `ki repo repair`
 - `ki repo skill add`
