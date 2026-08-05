@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-015
 title: Modularize CLI command and contract layout
 theme: cli
 horizon: next
-status: acceptance
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: b52f39da94975be86185855510e2a7c8cc79dd62
@@ -75,6 +75,10 @@ The immutable baseline is `b52f39da94975be86185855510e2a7c8cc79dd62`; the test-o
 `bun run test:coverage`, `bunx tsc --noEmit`, Biome, Markdown lint, `mandoc -Tlint man/ki.1`, and `git diff --check` passed after integrating the command-source move and trade split.
 
 No command grammar, completion candidate, lifecycle behaviour, or public output was intentionally changed.
+
+## Done
+
+Accepted by the user on 2026-08-05 after review of the completed CLI grammar alignment and acceptance evidence.
 
 ## Discussion
 
