@@ -68,8 +68,10 @@ ids = ["example:skill", "example:skill"]
 
     const human = await box.run('ki manage diag')
 
-    expect(human.output).toContain('Warnings\n  - unrecognised key unexpected')
-    expect(human.output).toContain('Errors\n  - schema must equal 1')
+    expect(human.output).toContain('├─ warnings (3)')
+    expect(human.output).toContain('! unrecognised key unexpected')
+    expect(human.output).toContain('├─ errors (4)')
+    expect(human.output).toContain('× schema must equal 1')
   })
 
   test('does not discover a repository for user diagnostics', async () => {
@@ -90,7 +92,7 @@ ids = ["example:skill", "example:skill"]
     const diag = await box.run('ki manage diag')
 
     expect(diag.exitCode).toBe(0)
-    expect(diag.output).not.toContain('\nRepository\n')
+    expect(diag.output).not.toContain('\n├─ repository (')
   })
 
   test('reports only a direct repository declaration and its missing compatible projection', async () => {
@@ -107,9 +109,9 @@ ids = ["example:skill", "example:skill"]
     const nested = await box.run('ki manage diag')
 
     expect(direct.exitCode).toBe(0)
-    expect(direct.output).toContain('Repository\n')
+    expect(direct.output).toContain('├─ repository (repairable)')
     expect(direct.output).toContain('chatgpt-codex ki-example: projection is missing')
-    expect(nested.output).not.toContain('\nRepository\n')
+    expect(nested.output).not.toContain('\n├─ repository (')
   })
 
   test('reports an unsafe direct repository declaration without following it', async () => {
@@ -140,7 +142,7 @@ ids = ["example:skill", "example:skill"]
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain('Errors\n  - configuration must be a regular file')
+    expect(diag.output).toContain('× configuration must be a regular file')
   })
 
   test('rejects a configuration file that is not valid TOML', async () => {
@@ -149,7 +151,7 @@ ids = ["example:skill", "example:skill"]
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain('Errors\n  - configuration must be valid TOML')
+    expect(diag.output).toContain('× configuration must be valid TOML')
   })
 
   test('reports non-array agents.ids, a skill missing its harness, a non-table harness release, and an unrecognised local key', async () => {
@@ -172,10 +174,10 @@ extra = true
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain('Errors\n  - agents.ids must be an array of non-empty strings')
-    expect(diag.output).toContain('- skills.foo must declare a harness string')
-    expect(diag.output).toContain('- harnesses[0] must be a table')
-    expect(diag.output).toContain('Warnings\n  - local has unrecognised key extra')
+    expect(diag.output).toContain('× agents.ids must be an array of non-empty strings')
+    expect(diag.output).toContain('× skills.foo must declare a harness string')
+    expect(diag.output).toContain('× harnesses[0] must be a table')
+    expect(diag.output).toContain('! local has unrecognised key extra')
   })
 
   test('displays configuration with no warnings or errors', async () => {
@@ -286,12 +288,12 @@ local = "not-a-table"
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain('- agents must be a TOML table')
-    expect(diag.output).toContain('- skills must be a TOML table')
-    expect(diag.output).toContain('- harnesses must be a TOML table')
-    expect(diag.output).toContain('- harnesses must declare an ids array')
-    expect(diag.output).toContain('- local must be a TOML table')
-    expect(diag.output).toContain('- local.path must be a non-empty path string')
+    expect(diag.output).toContain('× agents must be a TOML table')
+    expect(diag.output).toContain('× skills must be a TOML table')
+    expect(diag.output).toContain('× harnesses must be a TOML table')
+    expect(diag.output).toContain('× harnesses must declare an ids array')
+    expect(diag.output).toContain('× local must be a TOML table')
+    expect(diag.output).toContain('× local.path must be a non-empty path string')
   })
 
   test('reports duplicate, unrecognised, and malformed entries throughout a sectioned configuration', async () => {
@@ -324,16 +326,16 @@ path = ""
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain('- agents.ids repeats a value')
-    expect(diag.output).toContain('- unrecognised agent unrecognised')
-    expect(diag.output).toContain('- agents has unrecognised key extra')
-    expect(diag.output).toContain('- harnesses has unrecognised key section_extra')
-    expect(diag.output).toContain('- harnesses[0] has unrecognised key extra')
-    expect(diag.output).toContain('- harnesses[0] id must be a non-empty string')
-    expect(diag.output).toContain('- harnesses[0] url must be an HTTPS URL')
-    expect(diag.output).toContain('- harnesses[0] sha256 must be lowercase SHA-256')
-    expect(diag.output).toContain('- skills.scalar must be a TOML table')
-    expect(diag.output).toContain('- skills.empty must declare a harness string')
-    expect(diag.output).toContain('- local.path must be a non-empty path string')
+    expect(diag.output).toContain('× agents.ids repeats a value')
+    expect(diag.output).toContain('! unrecognised agent unrecognised')
+    expect(diag.output).toContain('! agents has unrecognised key extra')
+    expect(diag.output).toContain('! harnesses has unrecognised key section_extra')
+    expect(diag.output).toContain('! harnesses[0] has unrecognised key extra')
+    expect(diag.output).toContain('× harnesses[0] id must be a non-empty string')
+    expect(diag.output).toContain('× harnesses[0] url must be an HTTPS URL')
+    expect(diag.output).toContain('× harnesses[0] sha256 must be lowercase SHA-256')
+    expect(diag.output).toContain('× skills.scalar must be a TOML table')
+    expect(diag.output).toContain('× skills.empty must declare a harness string')
+    expect(diag.output).toContain('× local.path must be a non-empty path string')
   })
 })
