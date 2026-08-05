@@ -1,7 +1,7 @@
 import { lstat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Command } from 'commander'
-import type { InstalledAgent } from '../agents/index.ts'
+import type { InstalledAgent } from '../../agents/index.ts'
 import {
   configuredAgents,
   inspectUserConfiguration,
@@ -10,15 +10,15 @@ import {
   localBootstrapHarness,
   refreshUserConfiguration,
   setLocalBootstrapHarness
-} from '../agents/index.ts'
-import type { KiContext } from '../context.ts'
-import { KiError } from '../core/errors.ts'
-import { discoverInstalledHarnesses } from '../core/harness.ts'
-import { canonicalHarnessDevelopmentEnabled, enableCanonicalHarnessDevelopment, restoreCanonicalHarness } from '../core/registry.ts'
-import { resolveInstalledSkill } from '../core/resolution.ts'
-import { prepareRubricPublication } from '../core/rubric-publication.ts'
-import { loadRubricDefinition } from '../core/runtime-loader.ts'
-import { prepareWrites, publishWrites } from '../core/transaction.ts'
+} from '../../agents/index.ts'
+import type { KiContext } from '../../context.ts'
+import { KiError } from '../../core/errors.ts'
+import { discoverInstalledHarnesses } from '../../core/harness.ts'
+import { canonicalHarnessDevelopmentEnabled, enableCanonicalHarnessDevelopment, restoreCanonicalHarness } from '../../core/registry.ts'
+import { resolveInstalledSkill } from '../../core/resolution.ts'
+import { prepareRubricPublication } from '../../core/rubric-publication.ts'
+import { loadRubricDefinition } from '../../core/runtime-loader.ts'
+import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 
 const configured = (context: KiContext) => configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config })
 

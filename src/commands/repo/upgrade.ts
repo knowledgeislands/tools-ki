@@ -4,7 +4,7 @@ import { readDeclaredSkills } from '../../core/configuration.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { resolveDeclaredSkills } from '../../core/resolution.ts'
-import { refreshHarnesses } from '../harness-refresh.ts'
+import { refreshHarnesses } from '../harness/refresh.ts'
 
 export const createUpgradeCommand = (
   context: KiContext,

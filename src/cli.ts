@@ -1,5 +1,5 @@
 import { Command, CommanderError } from 'commander'
-import { addRootCommands } from './commands/root.ts'
+import { addRootCommands } from './commands/root/index.ts'
 import type { KiContext } from './context.ts'
 import { KiError, KiExit } from './core/errors.ts'
 import { KI_VERSION } from './version.ts'

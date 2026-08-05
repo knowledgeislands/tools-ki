@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import { addUserSkill, removeUserSkill } from '../agents/index.ts'
-import type { KiContext } from '../context.ts'
+import { addUserSkill, removeUserSkill } from '../../agents/index.ts'
+import type { KiContext } from '../../context.ts'
 
 const createUserCommands = (context: KiContext): readonly Command[] => [
   new Command('add')

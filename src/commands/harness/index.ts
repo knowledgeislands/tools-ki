@@ -1,9 +1,9 @@
 import { Command } from 'commander'
-import { inspectUserConfiguration } from '../agents/index.ts'
-import type { KiContext } from '../context.ts'
-import { KiError } from '../core/errors.ts'
-import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness, readInstalledHarness } from '../core/harness.ts'
-import { installHarness, isCanonicalHarnessDevelopmentLinked, recordInstalledHarness, uninstallHarness } from '../core/registry.ts'
+import { inspectUserConfiguration } from '../../agents/index.ts'
+import type { KiContext } from '../../context.ts'
+import { KiError } from '../../core/errors.ts'
+import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness, readInstalledHarness } from '../../core/harness.ts'
+import { installHarness, isCanonicalHarnessDevelopmentLinked, recordInstalledHarness, uninstallHarness } from '../../core/registry.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 

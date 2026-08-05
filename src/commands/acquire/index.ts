@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import type { KiContext } from '../context.ts'
-import { type ImportOptions, importCapture } from '../core/kep.ts'
+import type { KiContext } from '../../context.ts'
+import { type ImportOptions, importCapture } from '../../core/kep.ts'
 
 export const createAcquireCommand = (context: KiContext): Command => {
   const importer = new Command('import')

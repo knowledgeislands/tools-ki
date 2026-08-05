@@ -42,9 +42,9 @@ CLI tests use the required `run(args, context)` sandbox seam, but test files for
 - [x] Establish and record a clean `bun run test:coverage` baseline before changing either source or test layout.
 - [x] Define the public-grammar directory convention for the test hierarchy, then re-home every active CLI-contract suite beneath the matching command-family or cross-cutting-operation directory; only underscore-prefixed shared helpers remain at the test root.
 - [x] Run `bun run test:coverage` after the test-only refactor and stop if any metric falls below the enforced 100% threshold.
-- [ ] Apply the same directory convention to `src/commands/`: move each flat root command family into a focused directory with a narrow entry module, colocate `harness-refresh` under harness and trade route and record operations under trade, and split root assembly and command inventory data by their owning grammar surface.
-- [ ] Run `bun run test:coverage` again after the command-source refactor and stop if any metric falls below the enforced 100% threshold.
-- [ ] Update imports, developer documentation, and test discovery; prove unchanged public grammar, outputs, completions, and error behaviour through focused contracts and the final repository gate.
+- [x] Apply the same directory convention to `src/commands/`: move each flat root command family into a focused directory with a narrow entry module, colocate `harness-refresh` under harness and trade route and record operations under trade, and split root assembly and command inventory data by their owning grammar surface.
+- [x] Run `bun run test:coverage` again after the command-source refactor and stop if any metric falls below the enforced 100% threshold.
+- [x] Update imports, developer documentation, and test discovery; prove unchanged public grammar, outputs, completions, and error behaviour through focused contracts and the final repository gate.
 
 ## Files touched
 
@@ -65,6 +65,16 @@ CLI tests use the required `run(args, context)` sandbox seam, but test files for
 This is a self-contained structural refactor.
 
 It intentionally precedes KI-TOOL-CLI-014 so the recursive completion grammar lands on a stable command and test ownership layout.
+
+## Acceptance evidence
+
+The completed boundary moves active CLI-contract suites and command implementations into matching public-grammar directories without changing the public CLI contract.
+
+The immutable baseline is `b52f39da94975be86185855510e2a7c8cc79dd62`; the test-only phase is committed as `c70d929`.
+
+`bun run test:coverage`, `bunx tsc --noEmit`, Biome, Markdown lint, `mandoc -Tlint man/ki.1`, and `git diff --check` passed after integrating the command-source move and trade split.
+
+No command grammar, completion candidate, lifecycle behaviour, or public output was intentionally changed.
 
 ## Discussion
 

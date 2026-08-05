@@ -10,10 +10,10 @@ import {
   localBootstrapHarness,
   refreshUserConfiguration,
   setConfiguredUserSkills
-} from '../agents/index.ts'
-import type { KiContext } from '../context.ts'
-import { canonicalHarnessIdentifier } from '../core/harness.ts'
-import { canonicalHarnessDevelopmentEnabled, restoreCanonicalHarness } from '../core/registry.ts'
+} from '../../agents/index.ts'
+import type { KiContext } from '../../context.ts'
+import { canonicalHarnessIdentifier } from '../../core/harness.ts'
+import { canonicalHarnessDevelopmentEnabled, restoreCanonicalHarness } from '../../core/registry.ts'
 
 export const createBootstrapCommand = (context: KiContext): Command =>
   new Command('bootstrap')

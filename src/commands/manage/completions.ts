@@ -12,7 +12,7 @@ import {
   repoCommandSummaries,
   rootCommandNames,
   rootCommandSummaries
-} from '../catalogue.ts'
+} from '../root/catalogue.ts'
 
 const zshValues = <Name extends string>(names: readonly Name[], summaries: Readonly<Record<Name, string>>): string =>
   names.map((name) => `'${name}:${summaries[name]}'`).join(' ')
