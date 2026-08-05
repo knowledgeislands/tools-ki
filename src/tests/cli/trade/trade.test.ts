@@ -111,6 +111,7 @@ describe('[ki trade]', () => {
     const { box } = await configuredPair()
     const created = await box.run(newTrade('work'), { now: () => Date.UTC(2026, 7, 3, 12, 0, 0) })
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
+    expect(id).toMatch(/^TRD-[0-9a-f]{8}$/u)
     const outboundPath = `-/_TRADES/example/receiver/${id}.md`
     const outbound = await box.project.read(outboundPath)
     expect(outbound).toContain('kind: work')
@@ -271,9 +272,9 @@ describe('[ki trade]', () => {
       exitCode: 0,
       output: '╭─ KI TRADES\n│  ✦ 0 trades\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 IMPORTS=0 EXPORTS=0\n'
     })
-    expect(await box.run('ki trade show TRD-00000000-0000-0000-0000-000000000000')).toEqual({
+    expect(await box.run('ki trade show TRD-00000000')).toEqual({
       exitCode: 2,
-      output: 'ki: error: trade TRD-00000000-0000-0000-0000-000000000000 was not found in the registered repository estate\n'
+      output: 'ki: error: trade TRD-00000000 was not found in the registered repository estate\n'
     })
     box.cd('receiver')
     expect(await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work'])).toEqual({ exitCode: 0, output: 'ki trade receive\n' })
@@ -286,6 +287,7 @@ describe('[ki trade]', () => {
     const badListDirection = await box.run('ki trade list --direction sideways')
     const badListRepository = await box.run('ki trade list --repo example/source')
     const badId = await box.run('ki trade show TRD-invalid')
+    const retiredUuidId = await box.run('ki trade show TRD-00000000-0000-0000-0000-000000000000')
 
     expect(removed.exitCode).toBe(0)
     expect(added.exitCode).toBe(0)
@@ -296,6 +298,7 @@ describe('[ki trade]', () => {
     expect(badListDirection.output).toContain('--direction accepts import or export')
     expect(badListRepository.output).toContain('--repo must use canonical HTTPS GitHub repository form')
     expect(badId.output).toContain('trade id must use TRD-')
+    expect(retiredUuidId.output).toContain('trade id must use TRD-')
   })
 
   test('rejects malformed outbound envelopes observed by the receiver', async () => {
@@ -330,9 +333,9 @@ describe('[ki trade]', () => {
       'does not match the active work trade route'
     )
     await box.project.write(path, outbound)
-    const missing = await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work', '--id', 'TRD-00000000-0000-0000-0000-000000000000'])
+    const missing = await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work', '--id', 'TRD-00000000'])
     expect(missing.output).toContain('was not found')
-    const wrongId = 'TRD-00000000-0000-0000-0000-000000000000'
+    const wrongId = 'TRD-00000000'
     await box.project.write(`-/_TRADES/example/receiver/${wrongId}.md`, outbound)
     box.cd('..')
     expect((await box.run('ki trade list')).output).toContain(`filename must match trade id ${id}`)
@@ -462,10 +465,7 @@ describe('[ki trade]', () => {
     const supersededPath = `receiver/+/_TRADES/example/source/${supersededId}.md`
     await box.project.write(
       supersededPath,
-      (await box.project.read(supersededPath)).replace(
-        'status: received',
-        'status: superseded\nrationale: "newer trade"\nsuperseded_by: "TRD-00000000-0000-0000-0000-000000000000"'
-      )
+      (await box.project.read(supersededPath)).replace('status: received', 'status: superseded\nrationale: "newer trade"\nsuperseded_by: "TRD-00000000"')
     )
     box.cd('..')
     expect((await box.run(['ki', 'trade', 'release', supersededId])).exitCode).toBe(0)
@@ -475,7 +475,7 @@ describe('[ki trade]', () => {
     const { box, source, receiver } = await configuredPair()
     const created = await box.run(newTrade('work'))
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
-    expect((await box.run(['ki', 'trade', 'release', 'TRD-00000000-0000-0000-0000-000000000000'])).output).toContain('was not found in the current repository')
+    expect((await box.run(['ki', 'trade', 'release', 'TRD-00000000'])).output).toContain('was not found in the current repository')
     expect((await box.run(['ki', 'trade', 'release', id])).output).toContain('receiver has not recorded an inbound trade')
 
     box.cd('receiver')

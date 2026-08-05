@@ -12,7 +12,7 @@ const TRADES_TABLE = 'knowledgeislands/ki-agentic-harness:ki-trades'
 const REPOSITORY_TABLE = 'knowledgeislands/ki-agentic-harness:ki-repo'
 const addressExpression = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
 const repositoryExpression = /^https:\/\/github\.com\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)$/
-const identifierExpression = /^TRD-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+const identifierExpression = /^TRD-[0-9a-f]{8}$/
 const timestampExpression = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
 const tradeKinds = ['work', 'knowledge'] as const
 const receiverStatuses = ['received', 'adopted', 'retained', 'parked', 'clarify', 'declined', 'superseded'] as const
@@ -98,7 +98,7 @@ const addressParts = (address: string): readonly [string, string] => {
 }
 
 const identifier = (value: string): string => {
-  if (!isTradeIdentifier(value)) throw tradeError('trade id must use TRD- followed by a lower-case UUID')
+  if (!isTradeIdentifier(value)) throw tradeError('trade id must use TRD- followed by eight lower-case hexadecimal characters')
   return value
 }
 
@@ -437,7 +437,7 @@ export const createOutboundTrade = async (
   /* v8 ignore next 2 -- public CLI grammar rejects every empty authored field before invoking the core operation. */
   if (![options.title, options.sourceRef, options.context, options.submission, options.constraints].every((value) => value.trim()))
     throw tradeError('trade title, source-ref, context, submission, and constraints must be non-empty')
-  const id = `TRD-${randomUUID()}`
+  const id = `TRD-${randomUUID().slice(0, 8)}`
   const createdAt = new Date(context.now()).toISOString().replace(/\.\d{3}Z$/u, 'Z')
   const contents = outboundContents({ id, createdAt, sender: local.configuration.identity, receiver: receiver.configuration.identity, ...options })
   const path = tradePath(local.repository.root, 'outbound', receiver.configuration.identity, id)
@@ -462,7 +462,7 @@ export const receiveTrades = async (
 ): Promise<{ readonly received: readonly string[]; readonly existing: readonly string[] }> => {
   const local = await localRegisteredConfiguration(context)
   const sender = await requireActiveRoute(context, local.configuration, repository, 'import', kind)
-  const directory = tradePath(sender.root, 'outbound', local.configuration.identity, 'TRD-00000000-0000-0000-0000-000000000000').replace(/TRD-[^/]+\.md$/u, '')
+  const directory = tradePath(sender.root, 'outbound', local.configuration.identity, 'TRD-00000000').replace(/TRD-[^/]+\.md$/u, '')
   const paths = await readDirectory(directory)
   const selected = requestedId ? paths.filter((path) => path.endsWith(`${identifier(requestedId)}.md`)) : paths
   if (requestedId && !selected.length) throw tradeError(`outbound trade ${requestedId} was not found for ${local.configuration.repository}`)

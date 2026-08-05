@@ -17,7 +17,7 @@ export const routeDirection = (value: string | undefined): RouteDirection => {
 }
 
 export const tradeId = (value: string | undefined, option = 'trade id'): string => {
-  if (!value || !isTradeIdentifier(value)) throw grammarError(`${option} must use TRD- followed by a lower-case UUID`)
+  if (!value || !isTradeIdentifier(value)) throw grammarError(`${option} must use TRD- followed by eight lower-case hexadecimal characters`)
   return value
 }
 

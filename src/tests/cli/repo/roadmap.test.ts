@@ -136,7 +136,7 @@ describe('[ki repo roadmap]', () => {
     const receiver = await box.project.mkdir('receiver')
     const sourceHome = 'https://github.com/example/source'
     const receiverHome = 'https://github.com/example/receiver'
-    const id = 'TRD-00000000-0000-0000-0000-000000000000'
+    const id = 'TRD-00000000'
     const configuration = (repository: string, exportsTo: readonly string[], importsFrom: readonly string[]): string =>
       [
         '["knowledgeislands/ki-agentic-harness:ki-repo"]',
