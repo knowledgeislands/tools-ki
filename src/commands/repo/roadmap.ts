@@ -64,7 +64,7 @@ const renderTradeContext = (trades: readonly LocatedTrade[], diagnostic?: string
 const renderTextResult = (result: RoadmapResult): string => {
   const items = result.items ?? []
   const groups = textHorizonGroups(items)
-  const lines = [`╭─ KI REPO ROADMAP`, `│  📁 ${basename(result.repository)}`, `│     ${result.repository}`, `│  ✦ ${itemCount(items)}`, '├─ results']
+  const lines = [`╭─ KI REPO ROADMAP`, `│  📁 ${basename(result.repository)}`, `│     ${result.repository}`, `│  ✦ ${itemCount(items)}`, '├─ roadmap']
   if (result.diagnostic) lines.push(`│  ╰─ ❌ ${result.diagnostic}`)
   else if (!items.length) lines.push('│  ╰─ items: none')
   else

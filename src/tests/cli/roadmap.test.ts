@@ -46,7 +46,7 @@ describe('[ki repo roadmap]', () => {
 
     expect(text).toEqual({
       exitCode: 0,
-      output: `╭─ KI REPO ROADMAP\n│  📁 repo\n│     ${root}\n│  ✦ 1 item\n├─ results\n│  ╰─ next\n│     ╰─ KI-TOOL-CLI-003 [open] Inspect governed work\n├─ trades\n│  ╰─ ❌ unavailable: ki environment is not bootstrapped; run \`ki bootstrap\` first\n╰─ summary: ITEMS=1 HORIZONS=1 TRADES=unavailable\n`
+      output: `╭─ KI REPO ROADMAP\n│  📁 repo\n│     ${root}\n│  ✦ 1 item\n├─ roadmap\n│  ╰─ next\n│     ╰─ KI-TOOL-CLI-003 [open] Inspect governed work\n├─ trades\n│  ╰─ ❌ unavailable: ki environment is not bootstrapped; run \`ki bootstrap\` first\n╰─ summary: ITEMS=1 HORIZONS=1 TRADES=unavailable\n`
     })
     expect(accepted.output).toContain('KI-TOOL-CLI-010 [acceptance] Cleanup')
     expect(accepted.output).not.toContain('KI-TOOL-CLI-003')
@@ -74,7 +74,7 @@ describe('[ki repo roadmap]', () => {
     const result = await box.run(['ki', 'repo', '--repo', valid, '--repo', missing, '--repo', invalidStatus, '--repo', unsafe, 'roadmap', 'list'])
     const retiredFormat = await box.run('ki repo --repo valid roadmap list --format yaml')
 
-    expect(result.output).toContain(`│     ${valid}\n│  ✦ 1 item\n├─ results\n│  ╰─ next\n│     ╰─ KI-TOOL-CLI-003 [open] Inspect governed work`)
+    expect(result.output).toContain(`│     ${valid}\n│  ✦ 1 item\n├─ roadmap\n│  ╰─ next\n│     ╰─ KI-TOOL-CLI-003 [open] Inspect governed work`)
     expect(result.output).toContain(`│  ╰─ ❌ repository ${missing} has no physical docs/roadmap directory`)
     expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md has an invalid lifecycle status`)
     expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md must be a regular file`)
