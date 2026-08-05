@@ -34,6 +34,11 @@ const parseList = (value: string, file: string, field: string): readonly string[
   return value.slice(1, -1).split(', ').filter(Boolean)
 }
 
+const parseScalar = (value: string): string => {
+  const quote = value.at(0)
+  return (quote === "'" || quote === '"') && value.endsWith(quote) ? value.slice(1, -1) : value
+}
+
 const frontmatter = (contents: string, file: string): Readonly<WorkItemFields> => {
   const match = /^---\n([\s\S]*?)\n---(?:\n|$)/.exec(contents)
   if (!match?.[1]) throw itemError(file, 'must declare canonical frontmatter')
@@ -43,7 +48,7 @@ const frontmatter = (contents: string, file: string): Readonly<WorkItemFields> =
     if (!entry?.[1] || entry[2] === undefined) throw itemError(file, 'frontmatter must contain simple key-value fields')
     const [, key, value] = entry
     if (!allowedFields.has(key as WorkItemField) || Object.hasOwn(fields, key)) throw itemError(file, `has unsupported or repeated field ${key}`)
-    fields[key as WorkItemField] = value
+    fields[key as WorkItemField] = parseScalar(value)
   }
   for (const field of requiredFields) if (!fields[field]) throw itemError(file, `must declare ${field}`)
   return fields

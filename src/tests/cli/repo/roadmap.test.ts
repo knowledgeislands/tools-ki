@@ -194,6 +194,17 @@ describe('[ki repo roadmap]', () => {
     }
   })
 
+  test('accepts quoted scalar frontmatter values', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki-config.toml', '# repo\n')
+    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item({ id: "'KI-TOOL-CLI-003'", title: '"Inspect governed work"', theme: "'cli'" }))
+
+    const result = await box.run('ki repo --repo repo roadmap list')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('KI-TOOL-CLI-003 [open] Inspect governed work')
+  })
+
   test('rejects the retired plan namespace', async () => {
     const box = await sandbox()
 
