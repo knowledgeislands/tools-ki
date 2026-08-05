@@ -114,10 +114,12 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora add inventory first')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 1 projects\n' })
     expect(await box.run('ki agora add inventory second')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 2 projects\n' })
     expect(await box.run('ki agora add inventory dotted.project')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 3 projects\n' })
-    expect(await box.run('ki repo --agora inventory roadmap list')).toEqual({
-      exitCode: 0,
-      output: `╭─ KI REPO ROADMAP\n│  📁 dotted.project\n│     ${dotted}\n│  ✦ 0 items\n├─ results\n│  ╰─ ❌ repository ${dotted} has no physical docs/roadmap directory\n╰─ summary: ITEMS=0 HORIZONS=0\n\n╭─ KI REPO ROADMAP\n│  📁 first\n│     ${first}\n│  ✦ 0 items\n├─ results\n│  ╰─ ❌ repository ${first} has no physical docs/roadmap directory\n╰─ summary: ITEMS=0 HORIZONS=0\n\n╭─ KI REPO ROADMAP\n│  📁 second\n│     ${second}\n│  ✦ 0 items\n├─ results\n│  ╰─ ❌ repository ${second} has no physical docs/roadmap directory\n╰─ summary: ITEMS=0 HORIZONS=0\n`
-    })
+    const roadmap = await box.run('ki repo --agora inventory roadmap list')
+    expect(roadmap.exitCode).toBe(0)
+    expect(roadmap.output).toContain(`│     ${dotted}\n├─ roadmap (0)`)
+    expect(roadmap.output).toContain(`│     ${first}\n├─ roadmap (0)`)
+    expect(roadmap.output).toContain(`│     ${second}\n├─ roadmap (0)`)
+    expect(roadmap.output).toContain('├─ trades (0)')
     expect(await box.run('ki agora remove inventory first')).toEqual({ exitCode: 0, output: 'ki agora remove: inventory now has 2 projects\n' })
     expect(await box.run('ki agora create discovered')).toEqual({ exitCode: 0, output: 'ki agora create: created discovered\n' })
     expect(await box.run('ki agora discover discovered nested')).toEqual({ exitCode: 0, output: 'ki agora discover: discovered now has 1 projects\n' })

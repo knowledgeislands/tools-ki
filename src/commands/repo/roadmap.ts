@@ -38,25 +38,27 @@ const textHorizonGroups = (items: readonly WorkItem[]): readonly { readonly hori
     return group.length ? [{ horizon, items: group }] : []
   })
 
-const itemCount = (items: readonly WorkItem[]): string => `${items.length} item${items.length === 1 ? '' : 's'}`
-
 const renderTradeContext = (trades: readonly LocatedTrade[], diagnostic?: string): readonly string[] => {
   if (diagnostic) return [`│  ╰─ ❌ unavailable: ${diagnostic}`]
-  if (!trades.length) return ['│  ╰─ trades: none']
   const directions = ['inbound', 'outbound'] as const
-  const groups = directions.flatMap((direction) => {
-    const located = trades.filter((trade) => trade.direction === direction)
-    return located.length ? [{ direction, trades: located }] : []
-  })
-  return groups.flatMap(({ direction, trades: group }, groupIndex) => {
-    const lastGroup = groupIndex === groups.length - 1
-    const itemPrefix = `│  ${lastGroup ? '   ' : '│  '}`
+  const kinds = ['work', 'knowledge'] as const
+  return directions.flatMap((direction, directionIndex) => {
+    const selected = trades.filter((trade) => trade.direction === direction)
+    const lastDirection = directionIndex === directions.length - 1
     return [
-      `│  ${lastGroup ? '╰─' : '├─'} ${direction}`,
-      ...group.map(
-        (trade, tradeIndex) =>
-          `${itemPrefix}${tradeIndex === group.length - 1 ? '╰─' : '├─'} ${trade.record.id} [${trade.record.kind}${trade.record.status ? `, ${trade.record.status}` : ''}] ${trade.record.title}`
-      )
+      `│  ${lastDirection ? '╰─' : '├─'} ${direction} (${selected.length})`,
+      ...kinds.flatMap((kind, kindIndex) => {
+        const group = selected.filter((trade) => trade.record.kind === kind)
+        const lastKind = kindIndex === kinds.length - 1
+        const prefix = `│  ${lastDirection ? '   ' : '│  '}`
+        return [
+          `${prefix}${lastKind ? '╰─' : '├─'} ${kind} (${group.length})`,
+          ...group.map(
+            (trade, tradeIndex) =>
+              `${prefix}${lastKind ? '   ' : '│  '}${tradeIndex === group.length - 1 ? '╰─' : '├─'} ${trade.record.id} [${trade.record.status ?? 'sent'}] ${trade.record.title}`
+          )
+        ]
+      })
     ]
   })
 }
@@ -64,7 +66,7 @@ const renderTradeContext = (trades: readonly LocatedTrade[], diagnostic?: string
 const renderTextResult = (result: RoadmapResult): string => {
   const items = result.items ?? []
   const groups = textHorizonGroups(items)
-  const lines = [`╭─ KI REPO ROADMAP`, `│  📁 ${basename(result.repository)}`, `│     ${result.repository}`, `│  ✦ ${itemCount(items)}`, '├─ roadmap']
+  const lines = [`╭─ KI REPO ROADMAP`, `│  📁 ${basename(result.repository)}`, `│     ${result.repository}`, `├─ roadmap (${items.length})`]
   if (result.diagnostic) lines.push(`│  ╰─ ❌ ${result.diagnostic}`)
   else if (!items.length) lines.push('│  ╰─ items: none')
   else
@@ -73,12 +75,12 @@ const renderTextResult = (result: RoadmapResult): string => {
         const lastGroup = groupIndex === groups.length - 1
         const itemPrefix = `│  ${lastGroup ? '   ' : '│  '}`
         return [
-          `│  ${lastGroup ? '╰─' : '├─'} ${horizon}`,
+          `│  ${lastGroup ? '╰─' : '├─'} ${horizon} (${group.length})`,
           ...group.map((item, itemIndex) => `${itemPrefix}${itemIndex === group.length - 1 ? '╰─' : '├─'} ${item.id} [${item.status}] ${item.title}`)
         ]
       })
     )
-  lines.push('├─ trades', ...renderTradeContext(result.trades, result.tradeDiagnostic))
+  lines.push(`├─ trades (${result.trades.length})`, ...renderTradeContext(result.trades, result.tradeDiagnostic))
   const inbound = result.trades.filter((trade) => trade.direction === 'inbound').length
   const outbound = result.trades.filter((trade) => trade.direction === 'outbound').length
   const tradeSummary = result.tradeDiagnostic ? 'unavailable' : `${result.trades.length} INBOUND=${inbound} OUTBOUND=${outbound}`
