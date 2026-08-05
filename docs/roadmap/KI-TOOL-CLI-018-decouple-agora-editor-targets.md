@@ -2,9 +2,8 @@
 id: KI-TOOL-CLI-018
 title: Normalize Agora estate
 theme: cli
-horizon: future
+horizon: next
 status: draft
-candidate: true
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -25,6 +24,38 @@ Tool workspaces are a separate layer. A VS Code, Zed, or later target can assemb
 ## Boundary
 
 This item does not define the portable `ki-repo` contract for repository kind and KB store roles, create every tool target, or make non-repository stores eligible for `ki repo` operations. It consumes the agreed contract in the CLI, establishes that no editor target is stored in `.ki-agora`, and retains the registry as the first-class management surface for the canonical estate.
+
+## Current state
+
+Agora profiles currently require `tool = "zed"` and store arbitrary physical directories under basename-derived keys. The user configuration holds a separate unkeyed registry path list. No portable `ki-repo` declaration currently defines repository kind or KB store roles.
+
+`TRD-d2cd35f7` has been sent to the KI Agentic Harness to define that portable contract. The CLI can shape its local migration now, but must not choose alternate kind or store semantics before the receiving repository accepts a contract.
+
+## Steps
+
+- [ ] Reconcile the accepted `ki-repo` kind and store-role contract into repository resolution and validation.
+- [ ] Replace the separate registry path representation with a protected canonical Agora whose members have local repository-name keys and canonical HTTPS identities.
+- [ ] Restrict named Agoras to canonical estate members, diagnose name/identity collisions, and retain registry commands as the first-class estate-management interface.
+- [ ] Remove stored Zed tool state and define the explicit tool-target boundary for opening repository members and declared stores.
+- [ ] Migrate configuration, CLI contracts, completions, manual, README, changelog, and contract tests without compatibility aliases.
+
+## Files touched
+
+- `src/core/agora.ts`, local user-configuration and repository-resolution modules.
+- `src/commands/agora/`, `src/commands/registry/`, and any new tool-target command module.
+- `src/tests/cli/agora/`, `src/tests/cli/registry/`, repository-target and trade tests.
+- `man/ki.1`, `README.md`, `CHANGELOG.md`, and shell completion coverage.
+
+## Verify
+
+- A canonical registered estate round-trips repository-name keys, canonical HTTPS identities, and physical roots without accepting an arbitrary project as a repository member.
+- `ki registry` adds, lists, diagnoses, and repairs that estate, while `ki repo --agora <name>` resolves only its canonical members.
+- No `.ki-agora` form contains `tool`; an opening target is resolved outside the profile and can compose a KB's declared `notes`, `sources`, and `legacy` stores without registering the latter two as KI repositories.
+- Full CLI contract tests retain 100% coverage and documentation, completion, TypeScript, and formatting checks pass.
+
+## Dependencies / blocks
+
+The portable `ki-repo` contract is owned by KI Agentic Harness and has been proposed through outbound work trade `TRD-d2cd35f7`. It needs receiver review before tools-ki validates repository kinds or named KB store roles. This record remains a `next` draft so its local migration can be shaped against the agreed contract.
 
 ## Discussion
 
