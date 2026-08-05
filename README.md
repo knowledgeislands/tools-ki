@@ -72,7 +72,7 @@ ki repo --agora inventory audit
 
 `ki repo roadmap list` reads the canonical work-item records in selected repositories without changing their lifecycle.
 
-Its deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, its inbound and outbound trade context, diagnostics, and a compact summary. Use `--horizon <value>` or `--status <value>` to filter records before rendering.
+Its deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, its import and export trade context, diagnostics, and a compact summary. Use `--horizon <value>` or `--status <value>` to filter records before rendering.
 
 Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report. The command never creates, transitions, accepts, prunes, or repairs work items; the harness process skills remain their lifecycle authority.
 
@@ -80,7 +80,7 @@ Malformed or unsafe work items become a diagnostic for only that selected reposi
 
 `ki trade routes list` presents the current repository's declared export and import routes in a framed tree, including their registered-estate state.
 
-`ki trade list` presents visible inbound and outbound trade records in the same form across the registered repository estate.
+`ki trade list` presents visible import and export trade records in the same form across the registered repository estate.
 
 `ki repo roadmap list` includes that record context for each selected repository, so planning work and incoming or outgoing trades can be scanned together without changing either lifecycle. If the local registered trade estate cannot be read, it reports that context as unavailable without preventing the roadmap inventory.
 

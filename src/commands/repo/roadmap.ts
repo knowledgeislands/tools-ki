@@ -40,13 +40,16 @@ const textHorizonGroups = (items: readonly WorkItem[]): readonly { readonly hori
 
 const renderTradeContext = (trades: readonly LocatedTrade[], diagnostic?: string): readonly string[] => {
   if (diagnostic) return [`│  ╰─ ❌ unavailable: ${diagnostic}`]
-  const directions = ['inbound', 'outbound'] as const
+  const directions = [
+    ['import', 'inbound'],
+    ['export', 'outbound']
+  ] as const
   const kinds = ['work', 'knowledge'] as const
-  return directions.flatMap((direction, directionIndex) => {
+  return directions.flatMap(([label, direction], directionIndex) => {
     const selected = trades.filter((trade) => trade.direction === direction)
     const lastDirection = directionIndex === directions.length - 1
     return [
-      `│  ${lastDirection ? '╰─' : '├─'} ${direction} (${selected.length})`,
+      `│  ${lastDirection ? '╰─' : '├─'} ${label} (${selected.length})`,
       ...kinds.flatMap((kind, kindIndex) => {
         const group = selected.filter((trade) => trade.record.kind === kind)
         const lastKind = kindIndex === kinds.length - 1
@@ -83,7 +86,7 @@ const renderTextResult = (result: RoadmapResult): string => {
   lines.push(`├─ trades (${result.trades.length})`, ...renderTradeContext(result.trades, result.tradeDiagnostic))
   const inbound = result.trades.filter((trade) => trade.direction === 'inbound').length
   const outbound = result.trades.filter((trade) => trade.direction === 'outbound').length
-  const tradeSummary = result.tradeDiagnostic ? 'unavailable' : `${result.trades.length} INBOUND=${inbound} OUTBOUND=${outbound}`
+  const tradeSummary = result.tradeDiagnostic ? 'unavailable' : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
   lines.push(`╰─ summary: ITEMS=${items.length} HORIZONS=${groups.length} TRADES=${tradeSummary}`)
   return lines.join('\n')
 }

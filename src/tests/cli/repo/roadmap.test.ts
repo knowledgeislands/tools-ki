@@ -165,10 +165,10 @@ describe('[ki repo roadmap]', () => {
 
     const result = await box.run('ki repo --repo source --repo receiver roadmap list')
 
-    expect(result.output).toContain(`│  ╰─ outbound (1)\n│     ├─ work (1)\n│     │  ╰─ ${id} [sent] Trade-aware planning`)
-    expect(result.output).toContain(`│  ├─ inbound (1)\n│  │  ├─ work (1)\n│  │  │  ╰─ ${id} [received] Trade-aware planning`)
-    expect(result.output).toContain('TRADES=1 INBOUND=0 OUTBOUND=1')
-    expect(result.output).toContain('TRADES=1 INBOUND=1 OUTBOUND=0')
+    expect(result.output).toContain(`│  ╰─ export (1)\n│     ├─ work (1)\n│     │  ╰─ ${id} [sent] Trade-aware planning`)
+    expect(result.output).toContain(`│  ├─ import (1)\n│  │  ├─ work (1)\n│  │  │  ╰─ ${id} [received] Trade-aware planning`)
+    expect(result.output).toContain('TRADES=1 IMPORTS=0 EXPORTS=1')
+    expect(result.output).toContain('TRADES=1 IMPORTS=1 EXPORTS=0')
   })
 
   test('rejects every malformed canonical frontmatter shape', async () => {

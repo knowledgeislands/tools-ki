@@ -31,17 +31,20 @@ const renderTradeList = (trades: Awaited<ReturnType<typeof locateTrades>>): stri
   const lines = ['╭─ KI TRADES', `│  ✦ ${count(trades.length, 'trade')}`, '├─ results']
   if (!trades.length) lines.push('│  ╰─ trades: none')
   else {
-    const directions = ['inbound', 'outbound'] as const
-    const groups = directions.flatMap((direction) => {
+    const directions = [
+      ['import', 'inbound'],
+      ['export', 'outbound']
+    ] as const
+    const groups = directions.flatMap(([label, direction]) => {
       const located = trades.filter((trade) => trade.direction === direction)
-      return located.length ? [{ direction, trades: located }] : []
+      return located.length ? [{ label, trades: located }] : []
     })
     lines.push(
-      ...groups.flatMap(({ direction, trades: group }, groupIndex) => {
+      ...groups.flatMap(({ label, trades: group }, groupIndex) => {
         const lastGroup = groupIndex === groups.length - 1
         const itemPrefix = `│  ${lastGroup ? '   ' : '│  '}`
         return [
-          `│  ${lastGroup ? '╰─' : '├─'} ${direction}`,
+          `│  ${lastGroup ? '╰─' : '├─'} ${label}`,
           ...group.map(
             (trade, tradeIndex) =>
               `${itemPrefix}${tradeIndex === group.length - 1 ? '╰─' : '├─'} ${trade.repository} ${trade.record.id} [${trade.record.kind}${trade.record.status ? `, ${trade.record.status}` : ''}] ${trade.record.title}`
@@ -51,14 +54,14 @@ const renderTradeList = (trades: Awaited<ReturnType<typeof locateTrades>>): stri
     )
   }
   lines.push(
-    `╰─ summary: TRADES=${trades.length} INBOUND=${trades.filter((trade) => trade.direction === 'inbound').length} OUTBOUND=${trades.filter((trade) => trade.direction === 'outbound').length}`
+    `╰─ summary: TRADES=${trades.length} IMPORTS=${trades.filter((trade) => trade.direction === 'inbound').length} EXPORTS=${trades.filter((trade) => trade.direction === 'outbound').length}`
   )
   return lines.join('\n')
 }
 
 export const createTradeRecordCommands = (context: KiContext): readonly Command[] => [
   new Command('new')
-    .description('create one local outbound trade')
+    .description('create one local export trade')
     .requiredOption('--to <repository>', 'receiver canonical HTTPS GitHub repository')
     .requiredOption('--kind <work|knowledge>', 'trade kind')
     .requiredOption('--title <title>', 'trade title')
@@ -79,7 +82,7 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
       context.stdout.write(`ki trade new: created ${record.id} for ${record.receiver}\n`)
     }),
   new Command('receive')
-    .description('pull one kind of eligible outbound trade from a reciprocal sender')
+    .description('import one kind of eligible trade from a reciprocal sender')
     .requiredOption('--from <repository>', 'sender canonical HTTPS GitHub repository')
     .requiredOption('--kind <work|knowledge>', 'trade kind')
     .option('--id <trade-id>', 'receive one HND trade only')
@@ -90,15 +93,14 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
     }),
   new Command('list')
     .description('list trades visible in the registered repository estate')
-    .option('--direction <direction>', 'inbound or outbound')
-    .option('--status <status>', 'receiver status for inbound trades')
+    .option('--direction <direction>', 'import or export')
+    .option('--status <status>', 'receiver status for imported trades')
     .option('--kind <work|knowledge>', 'trade kind')
     .option('--repo <repository>', 'only one canonical HTTPS GitHub repository')
     .action(async (options: ListOptions) => {
-      if (options.direction && options.direction !== 'inbound' && options.direction !== 'outbound')
-        throw grammarError('--direction accepts inbound or outbound')
+      if (options.direction && options.direction !== 'import' && options.direction !== 'export') throw grammarError('--direction accepts import or export')
       const trades = await locateTrades(context, {
-        direction: options.direction as TradeDirection | undefined,
+        direction: ({ import: 'inbound', export: 'outbound' } as const)[options.direction as 'import' | 'export'] as TradeDirection | undefined,
         ...(options.repo ? { repository: repository(options.repo, '--repo') } : {})
       })
       const selected = trades.filter(
@@ -113,11 +115,12 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
       const selected = await locateTrades(context, { id: tradeId(id) })
       if (!selected.length) throw grammarError(`trade ${id} was not found in the registered repository estate`)
       const lines = [`ki trade show ${id}`]
-      for (const trade of selected) lines.push(`Repository: ${trade.repository} [${trade.direction}]`, trade.record.contents.trimEnd())
+      for (const trade of selected)
+        lines.push(`Repository: ${trade.repository} [${trade.direction === 'inbound' ? 'import' : 'export'}]`, trade.record.contents.trimEnd())
       context.stdout.write(`${lines.join('\n')}\n`)
     }),
   new Command('release')
-    .description('remove this repository’s outbound copy after a terminal receiver disposition')
+    .description('remove this repository’s export copy after a terminal receiver disposition')
     .argument('<trade-id>', 'HND trade identifier')
     .action(async (id: string) => {
       const value = tradeId(id)
@@ -125,7 +128,7 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
       context.stdout.write(`ki trade release: released ${value}\n`)
     }),
   new Command('prune')
-    .description('remove this repository’s terminal inbound copy after observable sender release')
+    .description('remove this repository’s terminal import copy after observable sender release')
     .argument('<trade-id>', 'HND trade identifier')
     .action(async (id: string) => {
       const value = tradeId(id)

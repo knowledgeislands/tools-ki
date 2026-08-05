@@ -170,12 +170,12 @@ List local typed trade routes and their registered-estate state.
 Check local typed trade routes against the registered repository estate.
 .TP
 .B ki trade new --to <repository> --kind work|knowledge --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
-Create one local outbound typed trade.
+Create one local export typed trade.
 .TP
 .B ki trade receive --from <repository> --kind work|knowledge [--id <trade-id>]
 Pull eligible outbound trades from a reciprocal sender.
 .TP
-.B ki trade list [--direction inbound|outbound] [--status <status>] [--kind work|knowledge] [--repo <repository>]
+.B ki trade list [--direction import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]
 List visible trade copies in the registered repository estate.
 .TP
 .B ki trade show <trade-id>
@@ -545,24 +545,24 @@ List local typed routes with their registered-estate state.
 Check declared routes for reciprocal registered-repository evidence by kind.
 .TP
 .B ki trade new --to <repository> --kind work|knowledge --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
-Create one outbound typed trade in the current repository.
+Create one export typed trade in the current repository.
 .TP
 .B ki trade receive --from <repository> --kind work|knowledge [--id <trade-id>]
 Pull eligible outbound trades of one kind into the current repository as inbound
 copies with status \fBreceived\fR.
 .TP
-.B ki trade list [--direction inbound|outbound] [--status <status>] [--kind work|knowledge] [--repo <repository>]
+.B ki trade list [--direction import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]
 Read visible trade copies in the registered estate.
 .TP
 .B ki trade show <trade-id>
 Show every visible copy of a trade.
 .TP
 .B ki trade release <trade-id>
-Remove the current repository's outbound copy only after observing a terminal
+Remove the current repository's export copy only after observing a terminal
 receiver disposition.
 .TP
 .B ki trade prune <trade-id>
-Remove the current repository's terminal inbound copy only after sender release
+Remove the current repository's terminal import copy only after sender release
 is observable.
 .SS Acquisition
 \&

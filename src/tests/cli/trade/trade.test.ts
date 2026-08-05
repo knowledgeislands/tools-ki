@@ -122,7 +122,7 @@ describe('[ki trade]', () => {
       (await box.project.read(`receiver/+/_TRADES/example/source/${id}.md`)).replace('status: received', 'status: adopted\nadopted_as: "KI-RECEIVER-FND-001"')
     )
     box.cd('..')
-    const listed = await box.run(['ki', 'trade', 'list', '--repo', receiverHome, '--direction', 'inbound', '--status', 'adopted', '--kind', 'work'])
+    const listed = await box.run(['ki', 'trade', 'list', '--repo', receiverHome, '--direction', 'import', '--status', 'adopted', '--kind', 'work'])
     const shown = await box.run(['ki', 'trade', 'show', id])
     const released = await box.run(['ki', 'trade', 'release', id])
     box.cd('receiver')
@@ -132,9 +132,9 @@ describe('[ki trade]', () => {
     expect(received).toEqual({ exitCode: 0, output: `ki trade receive\n  received ${id}\n` })
     expect(listed).toEqual({
       exitCode: 0,
-      output: `╭─ KI TRADES\n│  ✦ 1 trade\n├─ results\n│  ╰─ inbound\n│     ╰─ ${receiverHome} ${id} [work, adopted] Route contract\n╰─ summary: TRADES=1 INBOUND=1 OUTBOUND=0\n`
+      output: `╭─ KI TRADES\n│  ✦ 1 trade\n├─ results\n│  ╰─ import\n│     ╰─ ${receiverHome} ${id} [work, adopted] Route contract\n╰─ summary: TRADES=1 IMPORTS=1 EXPORTS=0\n`
     })
-    expect(shown.output).toContain(`Repository: ${sourceHome} [outbound]\n${outbound.trimEnd()}`)
+    expect(shown.output).toContain(`Repository: ${sourceHome} [export]\n${outbound.trimEnd()}`)
     expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
     expect(pruned).toEqual({ exitCode: 0, output: `ki trade prune: pruned ${id}\n` })
     await expect(box.project.read(`receiver/+/_TRADES/example/source/${id}.md`)).rejects.toThrow()
@@ -269,7 +269,7 @@ describe('[ki trade]', () => {
     const { box } = await configuredPair()
     expect(await box.run('ki trade list')).toEqual({
       exitCode: 0,
-      output: '╭─ KI TRADES\n│  ✦ 0 trades\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 INBOUND=0 OUTBOUND=0\n'
+      output: '╭─ KI TRADES\n│  ✦ 0 trades\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 IMPORTS=0 EXPORTS=0\n'
     })
     expect(await box.run('ki trade show TRD-00000000-0000-0000-0000-000000000000')).toEqual({
       exitCode: 2,
@@ -293,7 +293,7 @@ describe('[ki trade]', () => {
     expect(absent.output).toContain('is not declared locally')
     expect(badDirection.output).toContain('--direction accepts export or import')
     expect(badKind.output).toContain('--kind accepts work or knowledge')
-    expect(badListDirection.output).toContain('--direction accepts inbound or outbound')
+    expect(badListDirection.output).toContain('--direction accepts import or export')
     expect(badListRepository.output).toContain('--repo must use canonical HTTPS GitHub repository form')
     expect(badId.output).toContain('trade id must use TRD-')
   })
@@ -350,7 +350,7 @@ describe('[ki trade]', () => {
     const secondId = /TRD-[0-9a-f-]+/u.exec(second.output)?.[0] as string
     await box.project.write('-/_TRADES/not-an-owner', 'not a directory')
     await box.project.write('-/_TRADES/example/not-a-repository', 'not a directory')
-    const outboundList = await box.run('ki trade list --direction outbound')
+    const outboundList = await box.run('ki trade list --direction export')
     box.cd('receiver')
     const received = await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work'])
     const repeated = await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work'])
@@ -387,7 +387,7 @@ describe('[ki trade]', () => {
 
     expect(await box.run('ki trade list')).toEqual({
       exitCode: 0,
-      output: '╭─ KI TRADES\n│  ✦ 0 trades\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 INBOUND=0 OUTBOUND=0\n'
+      output: '╭─ KI TRADES\n│  ✦ 0 trades\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 IMPORTS=0 EXPORTS=0\n'
     })
     const created = await box.run(newTrade('work'))
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
