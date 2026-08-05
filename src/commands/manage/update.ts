@@ -23,21 +23,23 @@ export const createUpdateCommand = (context: KiContext): Command =>
     .description('update an installer-managed CLI and refresh installed configured harnesses')
     .option('--cli', 'update only the installer-managed CLI executable')
     .action(async (options: { cli?: boolean }) => {
-      const lines = ['ki manage update']
+      const lines = ['╭─ KI MANAGE UPDATE']
       if (options.cli) {
-        lines.push(await updateExecutable(context))
+        lines.push('├─ CLI', `│  ╰─ ${await updateExecutable(context)}`, '╰─ summary: CLI=UPDATED')
         context.stdout.write(`${lines.join('\n')}\n`)
         return
       }
       try {
-        lines.push(await updateExecutable(context))
+        lines.push('├─ CLI', `│  ╰─ ${await updateExecutable(context)}`)
       } catch (error) {
         if (!(error instanceof KiError)) throw error
-        lines.push(`CLI executable: unavailable (${error.message})`)
+        lines.push('├─ CLI', `│  ╰─ CLI executable: unavailable (${error.message})`)
       }
       const harnesses = await discoverInstalledHarnesses(context.paths.data)
       const refreshed = await refreshHarnesses(context, harnesses)
-      if (!refreshed.length) lines.push('No installed harnesses.')
-      else lines.push('Harnesses:', ...refreshed.map((line) => `  ${line}`))
+      lines.push(`├─ harnesses (${refreshed.length})`)
+      if (!refreshed.length) lines.push('│  ╰─ none')
+      else lines.push(...refreshed.map((line, index) => `│  ${index === refreshed.length - 1 ? '╰─' : '├─'} ${line}`))
+      lines.push(`╰─ summary: HARNESS_RESULTS=${refreshed.length}`)
       context.stdout.write(`${lines.join('\n')}\n`)
     })

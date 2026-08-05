@@ -1,4 +1,4 @@
-import { lstat, symlink } from 'node:fs/promises'
+import { lstat, realpath, symlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { makeHarnessArchive } from '../_archive_helper.ts'
 import { sandbox } from '../_cli_helper.ts'
@@ -38,7 +38,7 @@ describe('[ki manage update and ki repo upgrade]', () => {
     expect(result).toEqual({
       exitCode: 0,
       output:
-        'ki manage update\nCLI executable: unavailable (CLI executable is not installer-managed; update it with its distribution manager)\nNo installed harnesses.\n'
+        '╭─ KI MANAGE UPDATE\n├─ CLI\n│  ╰─ CLI executable: unavailable (CLI executable is not installer-managed; update it with its distribution manager)\n├─ harnesses (0)\n│  ╰─ none\n╰─ summary: HARNESS_RESULTS=0\n'
     })
   })
 
@@ -50,7 +50,10 @@ describe('[ki manage update and ki repo upgrade]', () => {
 
     const updated = await box.run('ki manage update --cli', { runner: 'default' })
 
-    expect(updated).toEqual({ exitCode: 0, output: 'ki manage update\nCLI executable: updated with the verified installer\n' })
+    expect(updated).toEqual({
+      exitCode: 0,
+      output: '╭─ KI MANAGE UPDATE\n├─ CLI\n│  ╰─ CLI executable: updated with the verified installer\n╰─ summary: CLI=UPDATED\n'
+    })
   })
 
   test('rejects malformed, incompatible, mismatched, and incomplete installer receipts before invoking an update', async () => {
@@ -203,8 +206,12 @@ describe('[ki manage update and ki repo upgrade]', () => {
     await box.project.write('.ki-config.toml', '')
 
     const result = await box.run('ki repo upgrade')
+    const project = await realpath(box.project.path)
 
-    expect(result).toEqual({ exitCode: 0, output: 'ki repo upgrade\nNo declared capabilities.\n' })
+    expect(result).toEqual({
+      exitCode: 0,
+      output: `╭─ KI REPO UPGRADE\n├─ repositories (1)\n│  ╰─ ${project}\n│     ╰─ providers (0)\n│        ╰─ none\n╰─ summary: REPOSITORIES=1 PROVIDERS=0\n`
+    })
   })
 
   test('reports every explicitly selected repository during an upgrade', async () => {
@@ -213,8 +220,12 @@ describe('[ki manage update and ki repo upgrade]', () => {
     await box.root.write('second/.ki-config.toml', '')
 
     const result = await box.run(['ki', 'repo', '--repo', `${box.root.path}/first`, '--repo', `${box.root.path}/second`, 'upgrade'])
+    const [first, second] = await Promise.all([realpath(`${box.root.path}/first`), realpath(`${box.root.path}/second`)])
 
-    expect(result).toEqual({ exitCode: 0, output: 'ki repo upgrade\nNo declared capabilities.\nNo declared capabilities.\n' })
+    expect(result).toEqual({
+      exitCode: 0,
+      output: `╭─ KI REPO UPGRADE\n├─ repositories (2)\n│  ├─ ${first}\n│  │  ╰─ providers (0)\n│  │     ╰─ none\n│  ╰─ ${second}\n│     ╰─ providers (0)\n│        ╰─ none\n╰─ summary: REPOSITORIES=2 PROVIDERS=0\n`
+    })
   })
 
   test('refuses upgrade outside a repository and uses the declared repository provider', async () => {
