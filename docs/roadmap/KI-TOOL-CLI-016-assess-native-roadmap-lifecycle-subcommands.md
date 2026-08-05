@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-016
 title: Add roadmap subcommands
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: [KI-TOOL-CLI-014]
 blocked-by: []
 baseline-ref: b7f8539566c83efbfe4ad89d0b805fb0a16d6121
@@ -108,6 +108,10 @@ The command surface remains deliberately narrow: it cannot create, approve, comp
 ### Mini recap
 
 The durable command and authority-boundary decisions are captured in this record, its public documentation, and the compatible Harness process documentation. No separate learning promotion is proposed.
+
+## Done
+
+On 2026-08-05, the user explicitly accepted the reviewed CLI-016 evidence packet and approved terminal closure as `done`, including the recorded exception for unrelated repository-wide roadmap audit failures.
 
 ## Discussion
 
