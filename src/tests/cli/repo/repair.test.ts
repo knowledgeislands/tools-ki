@@ -32,7 +32,7 @@ describe('[ki repo repair]', () => {
 
     expect(repair.exitCode).toBe(0)
     expect(repair.output).toContain('Registry: registered')
-    expect(repair.output).toContain('  link ')
+    expect(repair.output).toContain('link ')
     expect((await lstat(projection)).isSymbolicLink()).toBe(true)
     expect(await box.config.read('ki/config.toml')).toContain(box.project.path)
   })
@@ -106,9 +106,9 @@ describe('[ki repo repair]', () => {
     const selected = await box.run(['ki', 'repo', '--repo', box.project.path, 'repair'])
 
     expect(nested.exitCode).toBe(0)
-    expect(nested.output).toContain('Repository: ')
+    expect(nested.output).toContain('╭─ KI REPO REPAIR')
     expect(selected.exitCode).toBe(0)
-    expect(selected.output).toContain('Repository: ')
+    expect(selected.output).toContain('├─ repositories (1)')
   })
 
   test('reports an unbootstrapped global environment as unrepairable', async () => {
