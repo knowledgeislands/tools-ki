@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-016
 title: Add native roadmap lifecycle subcommands
 theme: cli
 horizon: next
-status: open
+status: ready
 blocks: [KI-TOOL-CLI-014]
 blocked-by: []
 baseline-ref: null
