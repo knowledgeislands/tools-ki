@@ -27,34 +27,38 @@ Support Bash and Zsh only; `ki manage completion` continues to reject unsupporte
 
 ## Current state
 
-`src/commands/manage/completions.ts` renders hard-coded shell branches keyed to a small set of command names and word positions. `src/commands/catalogue.ts` supplies inventories for the four completed first-level namespaces, but it cannot represent their nested grammar or option signatures. The actual Commander registration across `src/commands/` is the authoritative command structure.
+`src/commands/manage/completions.ts` renders hard-coded shell branches keyed to a small set of command names and word positions. `src/commands/root/catalogue.ts` supplies first-level inventories for help and the current shallow completion lists, but it cannot represent nested grammar, option signatures, or option values. The actual Commander registration across the focused command modules is the authoritative command structure.
+
+The CLI-015 modularisation places the relevant command families under `src/commands/manage/`, `src/commands/repo/`, `src/commands/trade/`, `src/commands/acquire/`, and `src/commands/root/`. Contract tests follow the same grammar-oriented layout under `src/tests/cli/`.
 
 ## Steps
 
-- [ ] Define one typed, recursive completion-grammar adapter from the registered Commander command tree, preserving command descriptions and every reachable subcommand path instead of adding another hand-maintained partial inventory.
-- [ ] Make the Bash and Zsh renderers consume that grammar so command candidates work at every depth, including `acquire → chatgpt → import`, `repo → skill → add|remove`, `trade → routes → add|remove|list|check`, and `dev → local → set|on|off`.
-- [ ] Complete every applicable long option and the standard help/version flags at its valid command position, including inherited repository and registry selectors before or after their nested operation; repeated options remain available where the CLI permits repetition.
-- [ ] Attach an explicit value strategy to each value-bearing parameter: complete closed documented value sets (for example, shell, format, horizon, status, runtime, visibility, direction, and kind); delegate filesystem-oriented arguments and options such as `--repo`, capture directories, and `--output` to the shell's path completion; and offer no fabricated candidates for opaque free-form values.
-- [ ] Keep the generated scripts side-effect free and compatible with native shell completion behavior: completing a path does not require the target to exist, and a user-entered glob remains a valid `--repo` pattern.
-- [ ] Replace shallow inventory assertions with CLI-contract coverage that derives the public hierarchy from `--help` and proves every registered command/subcommand, option, and defined value strategy is emitted for both shells. Add focused cases for `ki acquire`, `--repo` before and after `ki repo audit`, repeated selectors, path-valued options, and rejected completion shells.
-- [ ] Update the public completion documentation and man page to state the supported shells and the command, option, enum-value, and path-value completion contract.
+- [ ] Establish a typed completion grammar as the one shared input to both renderers. It must represent a command's description, reachable subcommands, accepted options, repeatability, and the value strategy for each argument or option without making completion invoke the CLI again.
+- [ ] Populate that grammar from the registered Commander surface through a narrow adapter. Keep deliberately synthetic placement rules explicit where Commander alone cannot express them, notably repository and registry selectors being valid before or after the operation.
+- [ ] Render Bash candidates at every grammar depth, including `acquire → chatgpt → import`, `repo → skill → add|remove`, `trade → routes → add|remove|list|check`, and `dev → local → set|on|off`; retain the standard Bash registration contract.
+- [ ] Render the same grammar as an autoloadable Zsh `_ki` artifact with concise descriptions, retaining its `#compdef` header, `compdef` registration, and no invocation during loading.
+- [ ] Give every value-bearing position exactly one strategy: closed documented values; shell-native path completion for filesystem-oriented values including `--repo`, capture directories, and `--output`; or no candidates for opaque free-form identifiers and text. A typed `--repo` glob remains valid even when path completion yields no match.
+- [ ] Cover the public contract through `run(args, context)`: every registered command path is offered by both shells; every command's options appear only at valid positions; documented enums complete; path positions delegate natively; repeated selectors remain repeatable; and Fish plus retired completion paths remain syntax errors.
+- [ ] Update README and the manual to describe the supported shells, full grammar coverage, closed-value completion, path delegation, and the deliberate absence of invented dynamic values.
 
 ## Files touched
 
 - `src/commands/manage/completions.ts`
 - `src/commands/manage/completion-grammar.ts` (new)
-- `src/commands/catalogue.ts`
-- `src/commands/root.ts`
-- `src/tests/cli/completions.test.ts`
-- `src/tests/cli/inventory.test.ts`
+- `src/commands/root/catalogue.ts`
+- `src/commands/{acquire,bootstrap,dev,harness,repo,root,skill,trade}/` (grammar-adapter integration only)
+- `src/tests/cli/manage/completions.test.ts`
+- `src/tests/cli/manage/completion-registration.test.ts`
+- `src/tests/cli/manage/inventory.test.ts`
+- `src/tests/cli/root/help.test.ts`
 - `README.md`
 - `man/ki.1`
 - This roadmap item
 
 ## Verify
 
-- `bunx vitest run src/tests/cli/completions.test.ts src/tests/cli/inventory.test.ts`
-- `bun run test`
+- `bunx vitest run src/tests/cli/manage/completions.test.ts src/tests/cli/manage/completion-registration.test.ts src/tests/cli/manage/inventory.test.ts src/tests/cli/root/help.test.ts`
+- `bun run test:coverage`
 - `bunx tsc --noEmit`
 - `ki manage completion bash` and `ki manage completion zsh` contain candidates for every path reported by the corresponding `ki … --help` command, including `acquire chatgpt import`, `repo skill add`, `trade routes add`, and `dev local set`.
 - Both scripts offer `--repo` and `--agora` around repository operations; `--repo` delegates its following value to filesystem completion without excluding a manually typed pattern.
@@ -63,13 +67,15 @@ Support Bash and Zsh only; `ki manage completion` continues to reject unsupporte
 
 ## Dependencies / blocks
 
-This is self-contained. It shares completion files with [KI-TOOL-CLI-013](KI-TOOL-CLI-013-group-governed-work-items-by-horizon.md), but neither change is a logical prerequisite; coordinate integration if both are active concurrently.
+This is self-contained. CLI-015 is complete and established the command/test module boundaries used here. This item requires no compatibility aliases or peer-repository changes.
 
 ## Discussion
 
 ### The Commander tree is the completeness authority
 
 Completion has fallen behind because its separately maintained lists cover only selected namespaces. The live Commander registration already defines the public grammar, descriptions, nesting, and option ownership, so a narrow typed adapter should derive the structural completion tree from it. The adapter is also the place to make inheritance and supported option positions explicit, rather than duplicating positional shell conditions in two renderers.
+
+The adapter must not expose Commander as an uncontrolled runtime dependency to the renderers. It should convert only the stable public grammar into a small data model, then make the deliberately non-local placement rules visible and tested. That leaves new commands detectable in contract tests without coupling emitted shell code to Commander internals.
 
 ### Option names and option values need different policies
 
@@ -78,3 +84,7 @@ Every valid option name is safe and useful to offer. Its following value is not 
 ### Shell parity is a public contract
 
 Bash and Zsh may use different native mechanisms, but they must expose the same command paths, options, and declared value strategies. Tests should inspect scripts emitted through `run(args, context)` and compare them to the CLI's help grammar, so a newly registered command or option cannot ship without an intentional completion policy.
+
+### Readiness decision
+
+The implementation is ready to enter `ready` when the adapter's public data model and the exact path/opaque-value policies above are approved. No dynamic lookup is approved in this item.
