@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-016
 title: Add roadmap subcommands
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: [KI-TOOL-CLI-014]
 blocked-by: []
 baseline-ref: b7f8539566c83efbfe4ad89d0b805fb0a16d6121
@@ -82,6 +82,32 @@ The process skills retain authority for lifecycle judgment: `ki-plan` creates, s
 CLI-015 is complete and established the command/test module boundaries used here. This item must complete before CLI-014 so completion generation can target the final roadmap grammar.
 
 The lifecycle-process documentation must explicitly delegate these three deterministic host operations before release; it remains authoritative for every judgmental lifecycle operation.
+
+## Review
+
+### Delivered
+
+`ki repo roadmap` now provides the final four-command grammar: read-only `list`, deterministic `prune [id]`, and directionally constrained `promote` and `demote` operations.
+
+### Summary of changes
+
+Added typed work-item horizon movement and canonical completed-record pruning in `src/core/work-items.ts`, with the public grammar and rendering in `src/commands/repo/roadmap.ts`. Updated the README, man page, changelog, root catalogue, and Harness lifecycle documentation to establish the deterministic-host versus judgmental-process boundary.
+
+### Verification
+
+At `18e8110`, the full CLI suite passed: 475 tests with 100% statements, branches, functions, and lines. TypeScript, Biome, Markdown, man-page lint, and diff checks also passed. The public contract covers sweep and exact pruning, invalid and ambiguous targets, all horizon movements, endpoint and directional errors, and unchanged non-roadmap content.
+
+### Outstanding concerns
+
+`ki repo audit --skill ki-roadmap --repo .` currently reports 12 schema violations in other retained roadmap records. They do not concern CLI-016's delivered boundary. On 2026-08-05, the user explicitly directed this item to proceed despite those unrelated failures; no implementation concern remains for this item.
+
+### Post-change review
+
+The command surface remains deliberately narrow: it cannot create, approve, complete, or infer lifecycle status. Named pruning is restricted to one repository target; omitted-ID pruning is the explicit selected-repository sweep.
+
+### Mini recap
+
+The durable command and authority-boundary decisions are captured in this record, its public documentation, and the compatible Harness process documentation. No separate learning promotion is proposed.
 
 ## Discussion
 
