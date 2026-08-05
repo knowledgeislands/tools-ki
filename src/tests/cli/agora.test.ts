@@ -116,7 +116,7 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora add inventory dotted.project')).toEqual({ exitCode: 0, output: 'ki agora add: inventory now has 3 projects\n' })
     expect(await box.run('ki repo --agora inventory roadmap list')).toEqual({
       exitCode: 0,
-      output: `ki repo roadmap list\nRepository: ${dotted}\nDiagnostic: repository ${dotted} has no physical docs/roadmap directory\nRepository: ${first}\nDiagnostic: repository ${first} has no physical docs/roadmap directory\nRepository: ${second}\nDiagnostic: repository ${second} has no physical docs/roadmap directory\n`
+      output: `╭─ KI REPO ROADMAP\n│  📁 dotted.project\n│     ${dotted}\n│  ✦ 0 items\n├─ results\n│  ╰─ ❌ repository ${dotted} has no physical docs/roadmap directory\n╰─ summary: ITEMS=0 HORIZONS=0\n\n╭─ KI REPO ROADMAP\n│  📁 first\n│     ${first}\n│  ✦ 0 items\n├─ results\n│  ╰─ ❌ repository ${first} has no physical docs/roadmap directory\n╰─ summary: ITEMS=0 HORIZONS=0\n\n╭─ KI REPO ROADMAP\n│  📁 second\n│     ${second}\n│  ✦ 0 items\n├─ results\n│  ╰─ ❌ repository ${second} has no physical docs/roadmap directory\n╰─ summary: ITEMS=0 HORIZONS=0\n`
     })
     expect(await box.run('ki agora remove inventory first')).toEqual({ exitCode: 0, output: 'ki agora remove: inventory now has 2 projects\n' })
     expect(await box.run('ki agora create discovered')).toEqual({ exitCode: 0, output: 'ki agora create: created discovered\n' })

@@ -72,7 +72,7 @@ ki repo --agora inventory audit
 
 `ki repo roadmap list` reads the canonical work-item records in selected repositories without changing their lifecycle.
 
-Its deterministic text output groups each repository's items by horizon—`blocking` through `future`—then by lifecycle from `done` through `open`, with identifiers breaking ties. Use `--format json` for the unchanged stable document, and use `--horizon <value>` or `--status <value>` to filter records before text grouping.
+Its deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, diagnostics, and a compact summary. Use `--horizon <value>` or `--status <value>` to filter records before rendering.
 
 Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report. The command never creates, transitions, accepts, prunes, or repairs work items; the harness process skills remain their lifecycle authority.
 

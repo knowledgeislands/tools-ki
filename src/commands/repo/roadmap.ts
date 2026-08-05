@@ -1,13 +1,18 @@
+import { basename } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { KiError } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { readWorkItems, type WorkItem } from '../../core/work-items.ts'
 
 interface RoadmapOptions {
-  readonly format?: string
   readonly horizon?: string
   readonly status?: string
+}
+
+interface RoadmapResult {
+  readonly repository: string
+  readonly items?: readonly WorkItem[]
+  readonly diagnostic?: string
 }
 
 const horizonOrder = ['blocking', 'next', 'soon', 'waiting-for', 'parked', 'future'] as const
@@ -30,6 +35,29 @@ const textHorizonGroups = (items: readonly WorkItem[]): readonly { readonly hori
     return group.length ? [{ horizon, items: group }] : []
   })
 
+const itemCount = (items: readonly WorkItem[]): string => `${items.length} item${items.length === 1 ? '' : 's'}`
+
+const renderTextResult = (result: RoadmapResult): string => {
+  const items = result.items ?? []
+  const groups = textHorizonGroups(items)
+  const lines = [`╭─ KI REPO ROADMAP`, `│  📁 ${basename(result.repository)}`, `│     ${result.repository}`, `│  ✦ ${itemCount(items)}`, '├─ results']
+  if (result.diagnostic) lines.push(`│  ╰─ ❌ ${result.diagnostic}`)
+  else if (!items.length) lines.push('│  ╰─ items: none')
+  else
+    lines.push(
+      ...groups.flatMap(({ horizon, items: group }, groupIndex) => {
+        const lastGroup = groupIndex === groups.length - 1
+        const itemPrefix = `│  ${lastGroup ? '   ' : '│  '}`
+        return [
+          `│  ${lastGroup ? '╰─' : '├─'} ${horizon}`,
+          ...group.map((item, itemIndex) => `${itemPrefix}${itemIndex === group.length - 1 ? '╰─' : '├─'} ${item.id} [${item.status}] ${item.title}`)
+        ]
+      })
+    )
+  lines.push(`╰─ summary: ITEMS=${items.length} HORIZONS=${groups.length}`)
+  return lines.join('\n')
+}
+
 export const createRepoRoadmapCommand = (
   context: KiContext,
   selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
@@ -37,11 +65,9 @@ export const createRepoRoadmapCommand = (
   new Command('roadmap').description('inspect governed work items in one or more repositories').addCommand(
     new Command('list')
       .description('list governed work items')
-      .option('--format <format>', 'output format: text or json (default: text)')
       .option('--horizon <horizon>', 'only items at this horizon')
       .option('--status <status>', 'only items at this status')
       .action(async (options: RoadmapOptions) => {
-        if (options.format && options.format !== 'text' && options.format !== 'json') throw new KiError('--format accepts text or json', 2)
         const repositories = await resolveRepositoryTargets({
           ...selectedRepositories(),
           configurationDirectory: context.paths.config,
@@ -59,24 +85,6 @@ export const createRepoRoadmapCommand = (
             }
           })
         )
-        if (options.format === 'json') {
-          context.stdout.write(`${JSON.stringify({ repositories: results }, null, 2)}\n`)
-          return
-        }
-        const lines = ['ki repo roadmap list']
-        for (const result of results) {
-          lines.push(`Repository: ${result.repository}`)
-          if ('diagnostic' in result) lines.push(`Diagnostic: ${result.diagnostic}`)
-          else if (!result.items.length) lines.push('Items: none')
-          else
-            lines.push(
-              'Items:',
-              ...textHorizonGroups(result.items).flatMap(({ horizon, items }) => [
-                `  ${horizon}:`,
-                ...items.map((item) => `    ${item.id} [${item.horizon}/${item.status}] ${item.title}`)
-              ])
-            )
-        }
-        context.stdout.write(`${lines.join('\n')}\n`)
+        context.stdout.write(`${results.map(renderTextResult).join('\n\n')}\n`)
       })
   )

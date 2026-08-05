@@ -113,9 +113,9 @@ registered native repository repairs.
 Record selected physical KI repository roots, then reconcile only their
 proven KI-managed projections.
 .TP
-.B ki repo [repo-options] roadmap list [--format <text|json>] [--horizon <horizon>] [--status <status>]
-List governed work items in deterministic horizon and lifecycle groups without
-changing their lifecycle. JSON output remains a stable flat document.
+.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>]
+List governed work items in a framed deterministic horizon and lifecycle tree
+without changing their lifecycle.
 .TP
 .B ki repo [repo-options] educate [--skill <skill>]
 Explain the registered repository maintenance catalogue.
@@ -422,12 +422,11 @@ registry before resolving declarations or evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
 .TP
-.B ki repo [repo-options] roadmap list [--format <text|json>] [--horizon <horizon>] [--status <status>]
+.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>]
 List canonical governed work items from every selected repository without
-changing their lifecycle. The default text output groups items within each
-repository by horizon from \fBblocking\fR through \fBfuture\fR, then by
+changing their lifecycle. The framed text output names each selected repository,
+then groups items by horizon from \fBblocking\fR through \fBfuture\fR and by
 lifecycle from \fBdone\fR through \fBopen\fR, with identifiers breaking ties.
-\fB--format json\fR emits the unchanged fields in one stable object.
 \fB--horizon\fR
 and \fB--status\fR filter before rendering. A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other

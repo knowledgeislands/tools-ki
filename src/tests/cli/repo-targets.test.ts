@@ -82,10 +82,10 @@ describe('[ki repo target sets]', () => {
       const unmatched = await box.run(['ki', 'repo', '--repo', 'empty/*', 'roadmap', 'list'])
       const duplicate = await box.run(['ki', 'repo', '--repo', 'repos/a', '--repo', 'repos/a', 'roadmap', 'list'])
 
-      expect(immediate.output).toContain(`Repository: ${root}/repos/a`)
-      expect(recursive.output).toContain(`Repository: ${root}/repos/a/nested`)
-      expect(absolute.output).toContain(`Repository: ${root}/repos/a`)
-      expect(character.output).toContain(`Repository: ${root}/repos/b`)
+      expect(immediate.output).toContain(`│     ${root}/repos/a`)
+      expect(recursive.output).toContain(`│     ${root}/repos/a/nested`)
+      expect(absolute.output).toContain(`│     ${root}/repos/a`)
+      expect(character.output).toContain(`│     ${root}/repos/b`)
       expect(missingBase.output).toContain('has no existing directory')
       expect(unmatched.output).toContain('matched no repositories')
       expect(duplicate.output).toContain('selects duplicate repository')
@@ -105,7 +105,7 @@ describe('[ki repo target sets]', () => {
       const result = await box.run('ki repo roadmap list')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain('Repository:')
+      expect(result.output).toContain('╭─ KI REPO ROADMAP')
       expect(result.output).toContain('/group/second')
       expect(result.output).toContain('/nested/main')
     })
