@@ -26,7 +26,7 @@ work = ["https://github.com/knowledgeislands/ki-agentic-harness", "https://githu
 knowledge = ["https://github.com/knowledgeislands/ki-website"]
 
 ["knowledgeislands/ki-agentic-harness:ki-trades".imports_from]
-work = ["https://github.com/knowledgeislands/ki-agentic-harness"]
+work = ["https://github.com/knowledgeislands/ki-agentic-harness", "https://github.com/knowledgeislands/tools-mgit"]
 knowledge = []
 
 ["knowledgeislands/ki-agentic-harness:ki-tokenomics"]
