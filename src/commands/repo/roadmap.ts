@@ -58,7 +58,7 @@ const renderTradeContext = (trades: readonly LocatedTrade[], estate: readonly Lo
         const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
         const peer = `${direction === 'outbound' ? '→' : '←'} ${displayTradePeer(trade.record, direction)}`
         const lifecycle = tradeLifecycle(trade, estate)
-        const statuses = [lifecycle.senderStatus, lifecycle.receiverStatus, lifecycle.decisionStatus].filter(Boolean).join(' · ')
+        const statuses = [lifecycle.publicationStatus, lifecycle.deliveryStatus, lifecycle.decisionStatus].filter(Boolean).join(' · ')
         return `${itemPrefix}${tradeIndex === selected.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${peer} [${statuses}] ${trade.record.title}`
       })
     ]

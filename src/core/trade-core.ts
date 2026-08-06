@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { lstat, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { lstat, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { basename, dirname, join, relative } from 'node:path'
 import { parse } from 'smol-toml'
 import { inspectUserConfiguration } from '../agents/configuration.ts'
 import type { KiContext } from '../context.ts'
@@ -14,13 +15,16 @@ const addressExpression = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-
 const repositoryExpression = /^https:\/\/github\.com\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)$/
 const identifierExpression = /^TRD-[0-9a-f]{8}$/
 const timestampExpression = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
+const commitExpression = /^[0-9a-f]{40}$/
 const tradeKinds = ['work', 'knowledge'] as const
-const decisionStatuses = ['unconsidered', 'in_progress', 'parked', 'clarify', 'adopted', 'retained', 'declined', 'superseded'] as const
-const terminalDecisionStatuses = ['adopted', 'retained', 'declined', 'superseded'] as const
+const observationPolicies = ['unattended', 'receipt', 'decision', 'completion'] as const
+const decisionStatuses = ['unconsidered', 'in_progress', 'parked', 'clarify', 'applied', 'adopted', 'retained', 'declined', 'superseded'] as const
+const terminalDecisionStatuses = ['applied', 'adopted', 'retained', 'declined', 'superseded'] as const
 
-export type TradeDirection = 'inbound' | 'outbound'
+export type TradeDirection = 'preparation' | 'inbound' | 'outbound'
 export type RouteDirection = 'export' | 'import'
 export type TradeKind = (typeof tradeKinds)[number]
+export type ObservationPolicy = (typeof observationPolicies)[number]
 export type DecisionStatus = (typeof decisionStatuses)[number]
 
 export interface TradeConfiguration {
@@ -38,9 +42,13 @@ export interface TradeRecord {
   readonly receiver: string
   readonly kind: TradeKind
   readonly sourceRef: string
+  readonly observation: ObservationPolicy
+  readonly phase?: 'preparing'
   readonly decisionStatus?: DecisionStatus
+  readonly receivedFromRef?: string
   readonly reviewedAt?: string
   readonly rationale?: string
+  readonly appliedCommit?: string
   readonly adoptedAs?: string
   readonly retainedAs?: string
   readonly supersededBy?: string
@@ -57,9 +65,11 @@ export interface LocatedTrade {
 }
 
 export interface TradeLifecycle {
-  readonly senderStatus: 'sent' | 'received'
-  readonly receiverStatus: 'unavailable' | 'accepted'
+  readonly publicationStatus: 'preparing' | 'submitted'
+  readonly deliveryStatus: 'not-deliverable' | 'awaiting-receipt' | 'received'
   readonly decisionStatus?: DecisionStatus
+  readonly releaseEligible: boolean
+  readonly pruneEligible: boolean
 }
 
 interface TradeFields {
@@ -70,9 +80,13 @@ interface TradeFields {
   readonly receiver?: string
   readonly kind?: string
   readonly source_ref?: string
+  readonly observation?: string
+  readonly phase?: string
   readonly decision_status?: string
+  readonly received_from_ref?: string
   readonly reviewed_at?: string
   readonly rationale?: string
+  readonly applied_commit?: string
   readonly adopted_as?: string
   readonly retained_as?: string
   readonly superseded_by?: string
@@ -100,6 +114,8 @@ export const isTradeRepository = (value: string): boolean => repositoryExpressio
 export const isTradeIdentifier = (value: string): boolean => identifierExpression.test(value)
 
 export const isTradeKind = (value: string): value is TradeKind => tradeKinds.includes(value as TradeKind)
+
+export const isObservationPolicy = (value: string): value is ObservationPolicy => observationPolicies.includes(value as ObservationPolicy)
 
 const repositoryIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
 
@@ -223,6 +239,23 @@ export const removeTradeRoute = async (path: string, repository: string, directi
   const existing = await readTradeConfiguration(path)
   const routes = direction === 'export' ? existing.exportsTo : existing.importsFrom
   if (!routes[kind].includes(repository)) throw tradeError(`${direction} ${kind} trade route ${repository} is not declared locally`)
+  const peer = repositoryIdentity(repository)
+  const [owner, name] = addressParts(peer)
+  const roots =
+    direction === 'export'
+      ? [join(dirname(path), '-', '_TRADES', '_PREPARATIONS', owner, name), join(dirname(path), '-', '_TRADES', owner, name)]
+      : [join(dirname(path), '+', '_TRADES', owner, name)]
+  const dependencies: string[] = []
+  for (const root of roots) {
+    const state = await lstat(root).catch(() => undefined)
+    if (!state?.isDirectory()) continue
+    for (const entry of await readdir(root, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.startsWith('TRD-') || !entry.name.endsWith('.md')) continue
+      const recordPath = join(root, entry.name)
+      if ((await readFile(recordPath, 'utf8')).includes(`\nkind: ${kind}\n`)) dependencies.push(entry.name.slice(0, -3))
+    }
+  }
+  if (dependencies.length) throw tradeError(`${direction} ${kind} trade route ${repository} is used by ${dependencies.sort().join(', ')}`)
   const configuration =
     direction === 'export'
       ? { ...existing, exportsTo: nextRoutes(existing.exportsTo, kind, repository, true) }
@@ -382,10 +415,35 @@ const requiredField = (fields: TradeFields, name: string, path: string): string 
   return value
 }
 
+const receiverFieldNames = [
+  'decision_status',
+  'received_from_ref',
+  'reviewed_at',
+  'rationale',
+  'applied_commit',
+  'adopted_as',
+  'retained_as',
+  'superseded_by'
+] as const
+
+const rawSenderProjection = (contents: string, direction: TradeDirection): string => {
+  if (direction !== 'inbound') return contents
+  const match = /^(---\n)([\s\S]*?)(\n---\n[\s\S]*)$/u.exec(contents)
+  if (!match) return contents
+  const frontmatter = (match[2] as string)
+    .split('\n')
+    .filter((line) => {
+      const key = /^([a-z_]+):/u.exec(line)?.[1]
+      return !key || !receiverFieldNames.includes(key as (typeof receiverFieldNames)[number])
+    })
+    .join('\n')
+  return `${match[1]}${frontmatter}${match[3]}`
+}
+
 const recordFromContents = (contents: string, path: string, direction: TradeDirection): TradeRecord => {
   const { fields, body } = frontmatter(contents, path)
-  const sender = ['id', 'title', 'created_at', 'sender', 'receiver', 'kind', 'source_ref']
-  const allowed = direction === 'outbound' ? sender : [...sender, 'decision_status', 'reviewed_at', 'rationale', 'adopted_as', 'retained_as', 'superseded_by']
+  const sender = ['id', 'title', 'created_at', 'sender', 'receiver', 'kind', 'source_ref', 'observation']
+  const allowed = direction === 'preparation' ? [...sender, 'phase'] : direction === 'outbound' ? sender : [...sender, ...receiverFieldNames]
   const unknown = Object.keys(fields).find((key) => !allowed.includes(key))
   if (unknown) throw tradeError(`${path} has unrecognised trade field ${unknown}`)
   const id = identifier(requiredField(fields, 'id', path))
@@ -396,21 +454,37 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
   const receiver = requiredField(fields, 'receiver', path)
   const kind = requiredField(fields, 'kind', path)
   const sourceRef = requiredField(fields, 'source_ref', path)
+  const observation = requiredField(fields, 'observation', path)
   if (!timestampExpression.test(createdAt)) throw tradeError(`${path} has invalid created_at timestamp`)
   addressParts(recordSender)
   addressParts(receiver)
   if (!isTradeKind(kind)) throw tradeError(`${path} has invalid trade kind`)
+  if (!isObservationPolicy(observation)) throw tradeError(`${path} has invalid observation policy`)
+  if (direction === 'preparation' && fields.phase !== 'preparing') throw tradeError(`${path} preparation must declare phase: preparing`)
+
+  const content = body.replace(/^(?:\r?\n)+/u, '')
+  if (content.split('\n')[0] !== `# ${id}: ${title}`) throw tradeError(`${path} H1 must exactly repeat trade id and title`)
+  for (const heading of ['Context', 'Submission', 'Constraints']) {
+    const section = new RegExp(`(?:^|\\n)## ${heading}\\n\\n([\\s\\S]*?)(?=\\n## |$)`, 'u').exec(body)
+    if (!section?.[1]?.trim()) throw tradeError(`${path} requires non-empty ${heading} section`)
+  }
+
   const decisionStatus = fields.decision_status as DecisionStatus | undefined
   if (direction === 'inbound') {
     if (!decisionStatus || !decisionStatuses.includes(decisionStatus)) throw tradeError(`${path} has invalid decision status`)
+    if (fields.received_from_ref && !commitExpression.test(fields.received_from_ref)) throw tradeError(`${path} has invalid received_from_ref commit`)
     if (fields.reviewed_at && !timestampExpression.test(fields.reviewed_at)) throw tradeError(`${path} has invalid reviewed_at timestamp`)
     if (['parked', 'clarify', 'declined', 'superseded'].includes(decisionStatus) && !fields.rationale)
       throw tradeError(`${path} requires rationale for decision status ${decisionStatus}`)
     if (decisionStatus === 'adopted' && kind !== 'work') throw tradeError(`${path} permits adopted only for work trades`)
     if (decisionStatus === 'adopted' && !fields.adopted_as) throw tradeError(`${path} requires adopted_as for decision status adopted`)
+    if (decisionStatus === 'applied' && kind !== 'work') throw tradeError(`${path} permits applied only for work trades`)
+    if (decisionStatus === 'applied' && (!fields.applied_commit || !commitExpression.test(fields.applied_commit)))
+      throw tradeError(`${path} requires full applied_commit for decision status applied`)
     if (decisionStatus === 'retained' && kind !== 'knowledge') throw tradeError(`${path} permits retained only for knowledge trades`)
     if (decisionStatus === 'retained' && !fields.retained_as) throw tradeError(`${path} requires retained_as for decision status retained`)
     if (decisionStatus !== 'adopted' && fields.adopted_as) throw tradeError(`${path} permits adopted_as only for decision status adopted`)
+    if (decisionStatus !== 'applied' && fields.applied_commit) throw tradeError(`${path} permits applied_commit only for decision status applied`)
     if (decisionStatus !== 'retained' && fields.retained_as) throw tradeError(`${path} permits retained_as only for decision status retained`)
     if (decisionStatus === 'superseded' && !fields.superseded_by) throw tradeError(`${path} requires superseded_by for decision status superseded`)
     if (decisionStatus !== 'superseded' && fields.superseded_by) throw tradeError(`${path} permits superseded_by only for decision status superseded`)
@@ -423,9 +497,13 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
     receiver,
     kind,
     sourceRef,
+    observation,
+    ...(direction === 'preparation' ? { phase: 'preparing' as const } : {}),
     ...(decisionStatus ? { decisionStatus } : {}),
+    ...(fields.received_from_ref ? { receivedFromRef: fields.received_from_ref } : {}),
     ...(fields.reviewed_at ? { reviewedAt: fields.reviewed_at } : {}),
     ...(fields.rationale ? { rationale: fields.rationale } : {}),
+    ...(fields.applied_commit ? { appliedCommit: fields.applied_commit } : {}),
     ...(fields.adopted_as ? { adoptedAs: fields.adopted_as } : {}),
     ...(fields.retained_as ? { retainedAs: fields.retained_as } : {}),
     ...(fields.superseded_by ? { supersededBy: fields.superseded_by } : {}),
@@ -436,10 +514,11 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
 
 const tradePath = (root: string, direction: TradeDirection, peer: string, id: string): string => {
   const [owner, repository] = addressParts(peer)
+  if (direction === 'preparation') return join(root, '-', '_TRADES', '_PREPARATIONS', owner, repository, `${identifier(id)}.md`)
   return join(root, direction === 'inbound' ? '+' : '-', '_TRADES', owner, repository, `${identifier(id)}.md`)
 }
 
-const outboundContents = (
+const senderContents = (
   record: Omit<TradeRecord, 'body' | 'contents'> & { readonly context: string; readonly submission: string; readonly constraints: string }
 ): string =>
   [
@@ -451,6 +530,8 @@ const outboundContents = (
     `receiver: ${record.receiver}`,
     `kind: ${record.kind}`,
     `source_ref: ${JSON.stringify(record.sourceRef)}`,
+    `observation: ${record.observation}`,
+    ...(record.phase ? ['phase: preparing'] : []),
     '---',
     `# ${record.id}: ${record.title}`,
     '',
@@ -468,11 +549,12 @@ const outboundContents = (
     ''
   ].join('\n')
 
-export const createOutboundTrade = async (
+export const createTradePreparation = async (
   context: KiContext,
   options: {
     readonly to: string
     readonly kind: TradeKind
+    readonly observation: ObservationPolicy
     readonly title: string
     readonly sourceRef: string
     readonly context: string
@@ -487,11 +569,28 @@ export const createOutboundTrade = async (
     throw tradeError('trade title, source-ref, context, submission, and constraints must be non-empty')
   const id = `TRD-${randomUUID().slice(0, 8)}`
   const createdAt = new Date(context.now()).toISOString().replace(/\.\d{3}Z$/u, 'Z')
-  const contents = outboundContents({ id, createdAt, sender: local.configuration.identity, receiver, ...options })
-  const path = tradePath(local.repository.root, 'outbound', receiver, id)
+  const contents = senderContents({ id, createdAt, sender: local.configuration.identity, receiver, phase: 'preparing', ...options })
+  const path = tradePath(local.repository.root, 'preparation', receiver, id)
   await mkdir(join(path, '..'), { recursive: true })
   await writeFile(path, contents, 'utf8')
-  return recordFromContents(contents, path, 'outbound')
+  return recordFromContents(contents, path, 'preparation')
+}
+
+export const submitTrade = async (context: KiContext, id: string): Promise<TradeRecord> => {
+  const { trade } = await localTrade(context, 'preparation', identifier(id))
+  const destination = tradePath(trade.root, 'outbound', trade.record.receiver, trade.record.id)
+  if (await lstat(destination).catch(() => undefined)) throw tradeError(`outbound trade ${id} already exists`)
+  const contents = trade.record.contents.replace('\nphase: preparing\n---\n', '\n---\n')
+  const submitted = recordFromContents(contents, destination, 'outbound')
+  await mkdir(dirname(destination), { recursive: true })
+  await writeFile(trade.path, contents, 'utf8')
+  await rename(trade.path, destination)
+  return submitted
+}
+
+export const abandonTrade = async (context: KiContext, id: string): Promise<void> => {
+  const { trade } = await localTrade(context, 'preparation', identifier(id))
+  await rm(trade.path)
 }
 
 const readDirectory = async (path: string): Promise<readonly string[]> => {
@@ -500,45 +599,125 @@ const readDirectory = async (path: string): Promise<readonly string[]> => {
   return (await readdir(path, { withFileTypes: true })).filter((entry) => entry.isFile() && entry.name.endsWith('.md')).map((entry) => join(path, entry.name))
 }
 
-const copyInboundContents = (record: TradeRecord): string => record.contents.replace('\n---\n', '\ndecision_status: unconsidered\n---\n')
+const committedFile = async (context: KiContext, root: string, path: string): Promise<{ readonly contents: string; readonly ref: string }> => {
+  const revision = await context.runner('git', ['-C', root, 'rev-parse', 'HEAD'], context.environment)
+  const ref = revision.output.trim()
+  if (revision.exitCode !== 0 || !commitExpression.test(ref)) throw tradeError(`trade peer ${root} has no usable committed HEAD`)
+  const source = await context.runner('git', ['-C', root, 'show', `${ref}:${relative(root, path)}`], context.environment)
+  if (source.exitCode !== 0) throw tradeError(`trade record ${relative(root, path)} is not committed at ${ref}`)
+  return { contents: source.output, ref }
+}
 
-export const receiveTrades = async (
+const copyInboundContents = (record: TradeRecord, receivedFromRef: string): string =>
+  record.contents.replace('\n---\n', `\ndecision_status: unconsidered\nreceived_from_ref: ${receivedFromRef}\n---\n`)
+
+const receivableTrade = async (
   context: KiContext,
-  repository: string,
-  kind: TradeKind,
-  requestedId?: string
-): Promise<{ readonly received: readonly string[]; readonly existing: readonly string[] }> => {
-  const local = await localRegisteredConfiguration(context)
-  const sender = await requireActiveRoute(context, local.configuration, repository, 'import', kind)
-  const directory = tradePath(sender.root, 'outbound', local.configuration.identity, 'TRD-00000000').replace(/TRD-[^/]+\.md$/u, '')
-  const paths = await readDirectory(directory)
-  const selected = requestedId ? paths.filter((path) => path.endsWith(`${identifier(requestedId)}.md`)) : paths
-  if (requestedId && !selected.length) throw tradeError(`outbound trade ${requestedId} was not found for ${local.configuration.repository}`)
-  const received: string[] = []
-  const existing: string[] = []
-  for (const path of selected) {
-    const record = recordFromContents(await readFile(path, 'utf8'), path, 'outbound')
-    if (record.kind !== kind || record.sender !== sender.configuration.identity || record.receiver !== local.configuration.identity)
-      throw tradeError(`${path} does not match the active ${kind} trade route`)
-    const destination = tradePath(local.repository.root, 'inbound', sender.configuration.identity, record.id)
-    if (await lstat(destination).catch(() => undefined)) {
-      existing.push(record.id)
-      continue
+  local: Awaited<ReturnType<typeof localRegisteredConfiguration>>,
+  id: string
+): Promise<{ readonly sender: ActiveRegisteredRepository; readonly path: string; readonly record: TradeRecord; readonly ref: string }> => {
+  const candidates: { sender: ActiveRegisteredRepository; path: string; record: TradeRecord; ref: string }[] = []
+  for (const repository of await registeredRepositories(context)) {
+    if (!repository.configuration) continue
+    for (const kind of tradeKinds) {
+      if (!local.configuration.importsFrom[kind].includes(repository.repository)) continue
+      const peer = local.configuration.identity
+      const path = tradePath(repository.root, 'outbound', peer, id)
+      if (!(await lstat(path).catch(() => undefined))?.isFile()) continue
+      const committed = await committedFile(context, repository.root, path)
+      const record = recordFromContents(committed.contents, path, 'outbound')
+      if (record.kind !== kind || record.sender !== repository.configuration.identity || record.receiver !== peer) continue
+      const sender = await requireActiveRoute(context, local.configuration, repository.repository, 'import', kind)
+      candidates.push({ sender, path, record, ref: committed.ref })
     }
-    await mkdir(join(destination, '..'), { recursive: true })
-    await writeFile(destination, copyInboundContents(record), 'utf8')
-    received.push(record.id)
   }
-  return { received, existing }
+  if (candidates.length !== 1) throw tradeError(`outbound trade ${id} is unavailable or ambiguous for ${local.configuration.repository}`)
+  return candidates[0] as (typeof candidates)[number]
+}
+
+export const receiveTrade = async (context: KiContext, requestedId: string): Promise<{ readonly id: string; readonly existing: boolean }> => {
+  const local = await localRegisteredConfiguration(context)
+  const candidate = await receivableTrade(context, local, identifier(requestedId))
+  const destination = tradePath(local.repository.root, 'inbound', candidate.sender.configuration.identity, candidate.record.id)
+  if (await lstat(destination).catch(() => undefined)) return { id: candidate.record.id, existing: true }
+  await mkdir(dirname(destination), { recursive: true })
+  await writeFile(destination, copyInboundContents(candidate.record, candidate.ref), 'utf8')
+  return { id: candidate.record.id, existing: false }
+}
+
+export const previewReceivableTrades = async (context: KiContext): Promise<readonly TradeRecord[]> => {
+  const local = await localRegisteredConfiguration(context)
+  const ids = new Set<string>()
+  for (const sender of await registeredRepositories(context)) {
+    if (!sender.configuration) continue
+    for (const kind of tradeKinds) {
+      if (!local.configuration.importsFrom[kind].includes(sender.repository)) continue
+      const directory = dirname(tradePath(sender.root, 'outbound', local.configuration.identity, 'TRD-00000000'))
+      for (const path of await readDirectory(directory)) if (isTradeIdentifier(basename(path, '.md'))) ids.add(basename(path, '.md'))
+    }
+  }
+  const records: TradeRecord[] = []
+  for (const id of [...ids].sort()) records.push((await receivableTrade(context, local, id)).record)
+  return records
+}
+
+export interface ObservedPreparation {
+  readonly record: TradeRecord
+  readonly ref: string
+  readonly mode: 'diff' | 'verbatim'
+  readonly output: string
+  readonly reason?: string
+}
+
+export const observeTradePreparation = async (context: KiContext, requestedId: string): Promise<ObservedPreparation> => {
+  const id = identifier(requestedId)
+  const local = await localRegisteredConfiguration(context)
+  const candidates: { root: string; path: string; contents: string; ref: string; record: TradeRecord }[] = []
+  for (const sender of await registeredRepositories(context)) {
+    if (!sender.configuration) continue
+    for (const kind of tradeKinds) {
+      if (!sender.configuration.exportsTo[kind].includes(local.configuration.repository)) continue
+      const path = tradePath(sender.root, 'preparation', local.configuration.identity, id)
+      try {
+        const committed = await committedFile(context, sender.root, path)
+        const record = recordFromContents(committed.contents, path, 'preparation')
+        if (record.kind === kind) candidates.push({ root: sender.root, path, ...committed, record })
+      } catch {}
+    }
+  }
+  if (candidates.length !== 1) throw tradeError(`preparation ${id} is unavailable or ambiguous for ${local.configuration.repository}`)
+  const candidate = candidates[0] as (typeof candidates)[number]
+  const record = candidate.record
+  const cursor = join(context.paths.state, 'trades', 'observations', record.sender, `${record.id}.ref`)
+  const previous = await readFile(cursor, 'utf8').catch(() => '')
+  let mode: ObservedPreparation['mode'] = 'verbatim'
+  let output = candidate.contents
+  let reason = 'first observation has no prior committed reference'
+  if (commitExpression.test(previous.trim())) {
+    const before = previous.trim()
+    const comparable = await context.runner('git', ['-C', candidate.root, 'merge-base', '--is-ancestor', before, candidate.ref], context.environment)
+    if (comparable.exitCode === 0) {
+      const diff = await context.runner('git', ['-C', candidate.root, 'diff', before, candidate.ref, '--', relative(candidate.root, candidate.path)], context.environment)
+      if (diff.exitCode === 0) {
+        mode = 'diff'
+        output = diff.output
+        reason = ''
+      }
+    } else reason = 'the prior reference is not comparable with the current committed history'
+  }
+  await mkdir(dirname(cursor), { recursive: true })
+  await writeFile(cursor, `${candidate.ref}\n`, 'utf8')
+  return { record, ref: candidate.ref, mode, output, ...(reason ? { reason } : {}) }
 }
 
 const peerDirectories = async (root: string, direction: TradeDirection): Promise<readonly string[]> => {
-  const base = join(root, direction === 'inbound' ? '+' : '-', '_TRADES')
+  const base =
+    direction === 'preparation' ? join(root, '-', '_TRADES', '_PREPARATIONS') : join(root, direction === 'inbound' ? '+' : '-', '_TRADES')
   const state = await lstat(base).catch(() => undefined)
   if (!state?.isDirectory()) return []
   const paths: string[] = []
   for (const owner of await readdir(base, { withFileTypes: true })) {
-    if (!owner.isDirectory()) continue
+    if (!owner.isDirectory() || (direction === 'outbound' && owner.name === '_PREPARATIONS')) continue
     for (const repository of await readdir(join(base, owner.name), { withFileTypes: true })) {
       if (!repository.isDirectory()) continue
       paths.push(...(await readDirectory(join(base, owner.name, repository.name))))
@@ -548,14 +727,7 @@ const peerDirectories = async (root: string, direction: TradeDirection): Promise
 }
 
 const sameSenderPayload = (outbound: TradeRecord, inbound: TradeRecord): boolean =>
-  outbound.id === inbound.id &&
-  outbound.title === inbound.title &&
-  outbound.createdAt === inbound.createdAt &&
-  outbound.sender === inbound.sender &&
-  outbound.receiver === inbound.receiver &&
-  outbound.kind === inbound.kind &&
-  outbound.sourceRef === inbound.sourceRef &&
-  outbound.body === inbound.body
+  rawSenderProjection(outbound.contents, 'outbound') === rawSenderProjection(inbound.contents, 'inbound')
 
 export const locateTrades = async (
   context: KiContext,
@@ -567,7 +739,7 @@ export const locateTrades = async (
   const locations: LocatedTrade[] = []
   for (const repository of await registeredRepositories(context)) {
     if (!repository.configuration || (options.repository && repository.repository !== options.repository)) continue
-    for (const direction of (options.direction ? [options.direction] : ['inbound', 'outbound']) as readonly TradeDirection[]) {
+    for (const direction of (options.direction ? [options.direction] : ['preparation', 'inbound', 'outbound']) as readonly TradeDirection[]) {
       for (const path of await peerDirectories(repository.root, direction)) {
         const record = recordFromContents(await readFile(path, 'utf8'), path, direction)
         if (options.id && record.id !== options.id) continue
@@ -580,9 +752,46 @@ export const locateTrades = async (
   )
 }
 
+const linkedWorkIsDone = (root: string, identity: string | undefined): boolean => {
+  if (!identity) return false
+  const directory = join(root, 'docs', 'roadmap')
+  if (!existsSync(directory)) return false
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.md')) continue
+    const contents = readFileSync(join(directory, entry.name), 'utf8')
+    if (contents.includes(`\nid: ${identity}\n`) && contents.includes('\nstatus: done\n')) return true
+  }
+  return false
+}
+
+const releaseEligible = (record: TradeRecord, receiptVisible: boolean, receiverRoot: string): boolean => {
+  if (!receiptVisible) return false
+  if (record.observation === 'unattended' || record.observation === 'receipt') return true
+  if (!record.decisionStatus || !terminalDecisionStatuses.includes(record.decisionStatus as (typeof terminalDecisionStatuses)[number])) return false
+  if (record.observation === 'decision' || ['applied', 'retained', 'declined', 'superseded'].includes(record.decisionStatus)) return true
+  return record.decisionStatus === 'adopted' && linkedWorkIsDone(receiverRoot, record.adoptedAs)
+}
+
 export const tradeLifecycle = (trade: LocatedTrade, estate: readonly LocatedTrade[]): TradeLifecycle => {
-  if (trade.direction === 'inbound')
-    return { senderStatus: 'received', receiverStatus: 'accepted', decisionStatus: trade.record.decisionStatus as DecisionStatus }
+  if (trade.direction === 'preparation')
+    return { publicationStatus: 'preparing', deliveryStatus: 'not-deliverable', releaseEligible: false, pruneEligible: false }
+  if (trade.direction === 'inbound') {
+    const outbound = estate.find(
+      (candidate) =>
+        candidate.direction === 'outbound' &&
+        candidate.record.id === trade.record.id &&
+        candidate.record.sender === trade.record.sender &&
+        candidate.record.receiver === trade.record.receiver
+    )
+    const eligible = releaseEligible(trade.record, true, trade.root)
+    return {
+      publicationStatus: 'submitted',
+      deliveryStatus: 'received',
+      decisionStatus: trade.record.decisionStatus as DecisionStatus,
+      releaseEligible: Boolean(outbound && eligible),
+      pruneEligible: Boolean(!outbound && eligible)
+    }
+  }
   const inbound = estate.find(
     (candidate) =>
       candidate.direction === 'inbound' &&
@@ -591,8 +800,14 @@ export const tradeLifecycle = (trade: LocatedTrade, estate: readonly LocatedTrad
       candidate.record.receiver === trade.record.receiver
   )
   return inbound
-    ? { senderStatus: 'received', receiverStatus: 'accepted', decisionStatus: inbound.record.decisionStatus as DecisionStatus }
-    : { senderStatus: 'sent', receiverStatus: 'unavailable' }
+    ? {
+        publicationStatus: 'submitted',
+        deliveryStatus: 'received',
+        decisionStatus: inbound.record.decisionStatus as DecisionStatus,
+        releaseEligible: releaseEligible(inbound.record, true, inbound.root),
+        pruneEligible: false
+      }
+    : { publicationStatus: 'submitted', deliveryStatus: 'awaiting-receipt', releaseEligible: false, pruneEligible: false }
 }
 
 const localTrade = async (
@@ -616,6 +831,19 @@ const peerForRecord = async (context: KiContext, identity: string): Promise<Acti
   return candidates[0] as ActiveRegisteredRepository
 }
 
+export const eligibleTradeCleanup = async (context: KiContext, operation: 'release' | 'prune'): Promise<readonly LocatedTrade[]> => {
+  const local = await localRegisteredConfiguration(context)
+  const estate = await locateTrades(context)
+  const direction = operation === 'release' ? 'outbound' : 'inbound'
+  const selected = estate.filter((trade) => trade.root === local.repository.root && trade.direction === direction)
+  const eligible: LocatedTrade[] = []
+  for (const trade of selected) {
+    const lifecycle = tradeLifecycle(trade, estate)
+    if (operation === 'release' ? lifecycle.releaseEligible : lifecycle.pruneEligible) eligible.push(trade)
+  }
+  return eligible
+}
+
 export const releaseTrade = async (context: KiContext, id: string): Promise<void> => {
   const { local, trade } = await localTrade(context, 'outbound', identifier(id))
   if (trade.record.sender !== local.configuration.identity) throw tradeError(`outbound trade ${id} is not owned by the current repository`)
@@ -625,20 +853,20 @@ export const releaseTrade = async (context: KiContext, id: string): Promise<void
   const state = await lstat(inbound).catch(() => undefined)
   if (!state?.isFile()) throw tradeError(`receiver has not recorded an inbound trade ${id}`)
   const received = recordFromContents(await readFile(inbound, 'utf8'), inbound, 'inbound')
-  if (!terminalDecisionStatuses.includes(received.decisionStatus as (typeof terminalDecisionStatuses)[number]))
-    throw tradeError(`trade ${id} cannot be released while receiver decision status is ${received.decisionStatus}`)
   if (!sameSenderPayload(trade.record, received)) throw tradeError(`receiver inbound trade ${id} does not preserve the sender payload`)
+  if (!releaseEligible(received, true, receiver.root))
+    throw tradeError(`trade ${id} cannot be released before its ${trade.record.observation} observation policy is satisfied`)
   await rm(trade.path)
 }
 
 export const pruneTrade = async (context: KiContext, id: string): Promise<void> => {
   const { local, trade } = await localTrade(context, 'inbound', identifier(id))
   if (trade.record.receiver !== local.configuration.identity) throw tradeError(`inbound trade ${id} is not addressed to the current repository`)
-  if (!terminalDecisionStatuses.includes(trade.record.decisionStatus as (typeof terminalDecisionStatuses)[number]))
-    throw tradeError(`trade ${id} cannot be pruned while receiver decision status is ${trade.record.decisionStatus}`)
   const sender = await peerForRecord(context, trade.record.sender)
   await requireActiveRoute(context, local.configuration, sender.configuration.repository, 'import', trade.record.kind)
   const outbound = tradePath(sender.root, 'outbound', local.configuration.identity, id)
   if (await lstat(outbound).catch(() => undefined)) throw tradeError(`trade ${id} cannot be pruned before sender release is observable`)
+  if (!releaseEligible(trade.record, true, trade.root))
+    throw tradeError(`trade ${id} cannot be pruned after a premature ${trade.record.observation} sender release`)
   await rm(trade.path)
 }

@@ -237,7 +237,7 @@ describe('[ki repo roadmap]', () => {
         ''
       ].join('\n')
     const record = (recordId: string, kind: 'work' | 'knowledge', status = ''): string =>
-      `---\nid: ${recordId}\ntitle: Trade-aware planning\ncreated_at: 2026-08-05T12:00:00Z\nsender: example/source\nreceiver: example/receiver\nkind: ${kind}\nsource_ref: KI-TOOL-CLI-012${status}\n---\n# ${recordId}: Trade-aware planning\n\n## Context\n\nTrade context.\n\n## Submission\n\nShow trades with roadmap work.\n\n## Constraints\n\nRemain read-only.\n`
+      `---\nid: ${recordId}\ntitle: Trade-aware planning\ncreated_at: 2026-08-05T12:00:00Z\nsender: example/source\nreceiver: example/receiver\nkind: ${kind}\nsource_ref: KI-TOOL-CLI-012\nobservation: decision${status}\n---\n# ${recordId}: Trade-aware planning\n\n## Context\n\nTrade context.\n\n## Submission\n\nShow trades with roadmap work.\n\n## Constraints\n\nRemain read-only.\n`
     await box.project.write('source/.ki-config.toml', configuration(sourceHome, [receiverHome], []))
     await box.project.write('receiver/.ki-config.toml', configuration(receiverHome, [], [sourceHome]))
     await box.project.write('source/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
@@ -256,10 +256,10 @@ describe('[ki repo roadmap]', () => {
     const result = await box.run('ki repo --repo source --repo receiver roadmap list')
 
     expect(result.output).toContain(
-      `│  ╰─ export (3)\n│     ├─ ⚒ ${id} → receiver [received · accepted · unconsidered] Trade-aware planning\n│     ├─ ◇ TRD-00000001 → receiver [received · accepted · unconsidered] Trade-aware planning\n│     ╰─ ⚒ TRD-00000002 → receiver [received · accepted · unconsidered] Trade-aware planning`
+      `│  ╰─ export (3)\n│     ├─ ⚒ ${id} → receiver [submitted · received · unconsidered] Trade-aware planning\n│     ├─ ◇ TRD-00000001 → receiver [submitted · received · unconsidered] Trade-aware planning\n│     ╰─ ⚒ TRD-00000002 → receiver [submitted · received · unconsidered] Trade-aware planning`
     )
     expect(result.output).toContain(
-      `│  ├─ import (3)\n│  │  ├─ ⚒ ${id} ← source [received · accepted · unconsidered] Trade-aware planning\n│  │  ├─ ◇ TRD-00000001 ← source [received · accepted · unconsidered] Trade-aware planning\n│  │  ╰─ ⚒ TRD-00000002 ← source [received · accepted · unconsidered] Trade-aware planning`
+      `│  ├─ import (3)\n│  │  ├─ ⚒ ${id} ← source [submitted · received · unconsidered] Trade-aware planning\n│  │  ├─ ◇ TRD-00000001 ← source [submitted · received · unconsidered] Trade-aware planning\n│  │  ╰─ ⚒ TRD-00000002 ← source [submitted · received · unconsidered] Trade-aware planning`
     )
     expect(result.output).toContain('TRADES=3 IMPORTS=0 EXPORTS=3')
     expect(result.output).toContain('TRADES=3 IMPORTS=3 EXPORTS=0')
@@ -269,9 +269,10 @@ describe('[ki repo roadmap]', () => {
 
     const bodyIncomplete = await box.run('ki repo --repo source roadmap list')
 
-    expect(bodyIncomplete.exitCode).toBe(0)
-    expect(bodyIncomplete.output).toContain('⚒ TRD-00000003 → receiver [sent · unavailable] Trade-aware planning')
+    expect(bodyIncomplete.exitCode).toBe(1)
+    expect(bodyIncomplete.output).toContain('TRD-00000003.md requires non-empty Context section')
 
+    await box.project.write(`source/-/_TRADES/example/receiver/TRD-00000003.md`, record('TRD-00000003', 'work'))
     await box.project.write('source/docs/roadmap/malformed.md', 'not a governed work item\n')
     const malformedRoadmap = await box.run('ki repo --repo source roadmap list')
 

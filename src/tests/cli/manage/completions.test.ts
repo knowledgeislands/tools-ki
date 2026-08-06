@@ -65,8 +65,10 @@ const commandPaths = [
   'skill add',
   'skill remove',
   'trade',
+  'trade abandon',
   'trade list',
-  'trade new',
+  'trade observe',
+  'trade prepare',
   'trade prune',
   'trade receive',
   'trade release',
@@ -75,7 +77,8 @@ const commandPaths = [
   'trade routes check',
   'trade routes list',
   'trade routes remove',
-  'trade show'
+  'trade show',
+  'trade submit'
 ] as const
 
 describe('[ki manage completion]', () => {
@@ -118,7 +121,8 @@ describe('[ki manage completion]', () => {
       expect(output).toContain("'acquire chatgpt import:0') printf '%s\\n' 'path'")
       expect(output).toContain("'agora add:1') printf '%s\\n' 'path'")
       expect(output).toContain("'manage docs:0') printf '%s\\n' 'overview site manual roadmap'")
-      expect(output).toContain("'trade new:--title') printf '%s\\n' ''")
+      expect(output).toContain("'trade prepare:--observation') printf '%s\\n' 'unattended receipt decision completion'")
+      expect(output).toContain("'trade prepare:--title') printf '%s\\n' ''")
     }
   })
 

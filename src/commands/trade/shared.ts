@@ -2,6 +2,8 @@ import { grammarError } from '../../core/errors.ts'
 import {
   isTradeIdentifier,
   isTradeKind,
+  isObservationPolicy,
+  type ObservationPolicy,
   isTradeRepository,
   type RouteDirection,
   type RouteState,
@@ -16,6 +18,11 @@ export const repository = (value: string | undefined, option: string): string =>
 
 export const kind = (value: string | undefined, option = '--kind'): TradeKind => {
   if (!value || !isTradeKind(value)) throw grammarError(`${option} accepts work or knowledge`)
+  return value
+}
+
+export const observation = (value: string | undefined): ObservationPolicy => {
+  if (!value || !isObservationPolicy(value)) throw grammarError('--observation accepts unattended, receipt, decision, or completion')
   return value
 }
 
@@ -48,8 +55,8 @@ const owner = (repository: string): string => repository.slice(0, repository.ind
 
 const name = (repository: string): string => repository.slice(repository.indexOf('/') + 1)
 
-export const displayTradePeer = (record: Pick<TradeRecord, 'sender' | 'receiver'>, direction: 'inbound' | 'outbound'): string => {
-  const peer = direction === 'outbound' ? record.receiver : record.sender
-  const local = direction === 'outbound' ? record.sender : record.receiver
+export const displayTradePeer = (record: Pick<TradeRecord, 'sender' | 'receiver'>, direction: 'preparation' | 'inbound' | 'outbound'): string => {
+  const peer = direction === 'inbound' ? record.sender : record.receiver
+  const local = direction === 'inbound' ? record.receiver : record.sender
   return owner(peer) === owner(local) ? name(peer) : peer
 }
