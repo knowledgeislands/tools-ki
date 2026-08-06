@@ -26,6 +26,12 @@ These govern all work in this repo.
 - Record the originating repository and item, then state whether the handoff `blocks` or is `blocked by` the local item. Keep the relationship reciprocal where both items exist.
 - Prefer independently executable, non-blocking work. Mark an item as blocking only when it is a genuine prerequisite; otherwise let the receiving repository schedule it in its own horizon.
 
+## Cross-repository authority
+
+- Work in `tools-ki` may be read, written, and committed as part of an authorised task.
+- Other repositories are read-only by default. Request explicit chat approval before writing there, and do not commit there unless the user expressly approves that exact commit after its target and scope are clear.
+- An outbound trade is authored and committed only in this repository. It does not grant permission to write a receiver copy, alter the receiver's configuration, or make a decision on its behalf.
+
 ## CLI platform authority
 
 - `tools-ki` owns the public `ki` executable, its release artifacts, harness installation, repository resolution, scoped activation, and registered native-operation host.
