@@ -126,6 +126,31 @@ describe('[ki trade]', () => {
     expect(await box.project.read('receiver/.ki-config.toml')).toContain(`work = ["${sourceHome}"]`)
   })
 
+  test('lists incomplete route declarations across the registered estate', async () => {
+    const { box } = await configuredPair()
+    const estate = await box.run('ki trade routes list --estate')
+    const incomplete = await box.run('ki trade routes list --estate --incomplete')
+
+    expect(estate).toEqual({
+      exitCode: 0,
+      output:
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 4 routes\n├─ results\n│  ├─ ◇ example/source → example/receiver [active]\n│  ├─ ◇ example/source → example/receiver [active]\n│  ├─ ⚒ example/source → example/receiver [active]\n│  ╰─ ⚒ example/source → example/receiver [active]\n╰─ summary: ROUTES=4 ACTIVE=4 INCOMPLETE=0\n'
+    })
+    expect(incomplete).toEqual({
+      exitCode: 0,
+      output:
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 0 routes\n├─ results\n│  ╰─ incomplete routes: none\n╰─ summary: ROUTES=0 ACTIVE=0 INCOMPLETE=0\n'
+    })
+
+    await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver', {}, { work: [sourceHome] }))
+
+    expect(await box.run('ki trade routes list --estate --incomplete')).toEqual({
+      exitCode: 0,
+      output:
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ ◇ example/source → example/receiver [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
+    })
+  })
+
   test('creates, receives, displays, releases, and prunes a work trade while each command writes only its local repository', async () => {
     const { box } = await configuredPair()
     const created = await box.run(newTrade('work'), { now: () => Date.UTC(2026, 7, 3, 12, 0, 0) })

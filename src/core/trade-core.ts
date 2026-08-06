@@ -290,15 +290,18 @@ export interface RouteInspection {
   readonly peer?: RegisteredRepository
 }
 
+export interface EstateRouteInspection extends RouteInspection {
+  readonly source: Pick<TradeConfiguration, 'identity' | 'repository'>
+}
+
 const declaredRoutes = (configuration: TradeConfiguration): readonly Pick<RouteInspection, 'repository' | 'direction' | 'kind'>[] =>
   tradeKinds.flatMap((kind) => [
     ...configuration.exportsTo[kind].map((repository) => ({ repository, direction: 'export' as const, kind })),
     ...configuration.importsFrom[kind].map((repository) => ({ repository, direction: 'import' as const, kind }))
   ])
 
-export const inspectRoutes = async (context: KiContext, local: TradeConfiguration): Promise<readonly RouteInspection[]> => {
-  const repositories = await registeredRepositories(context)
-  return declaredRoutes(local).map((route) => {
+const inspectRoutesInEstate = (repositories: readonly RegisteredRepository[], local: TradeConfiguration): readonly RouteInspection[] =>
+  declaredRoutes(local).map((route) => {
     const candidates = repositories.filter((candidate) => candidate.repository === route.repository)
     const pending = route.direction === 'export' ? 'awaiting-receiver' : 'awaiting-sender'
     if (!candidates.length) return { ...route, state: pending }
@@ -308,6 +311,21 @@ export const inspectRoutes = async (context: KiContext, local: TradeConfiguratio
     const reciprocal = route.direction === 'export' ? peer.configuration.importsFrom[route.kind] : peer.configuration.exportsTo[route.kind]
     if (!reciprocal.includes(local.repository)) return { ...route, state: pending, peer }
     return { ...route, state: 'active', peer }
+  })
+
+export const inspectRoutes = async (context: KiContext, local: TradeConfiguration): Promise<readonly RouteInspection[]> =>
+  inspectRoutesInEstate(await registeredRepositories(context), local)
+
+export const inspectEstateRoutes = async (context: KiContext): Promise<readonly EstateRouteInspection[]> => {
+  const repositories = await registeredRepositories(context)
+  return repositories.flatMap((source) => {
+    const configuration = source.configuration
+    return configuration
+      ? inspectRoutesInEstate(repositories, configuration).map((route) => ({
+          ...route,
+          source: { identity: configuration.identity, repository: configuration.repository }
+        }))
+      : []
   })
 }
 

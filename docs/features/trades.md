@@ -22,6 +22,12 @@ _Verify:_ `src/tests/cli/trade/trade.test.ts` — `receives all matching trades`
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `reports malformed route declarations plus pending` and `ignores missing registered roots and missing trade paths without treating them as peer state`.
 
+### TRADE-004 — Estate route inspection
+
+`ki trade routes list --estate` MUST inspect every valid registered repository trade declaration as one estate; `--incomplete` MUST retain only routes that are not active.
+
+_Verify:_ `src/tests/cli/trade/trade.test.ts` — `lists incomplete route declarations across the registered estate`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

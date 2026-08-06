@@ -1,12 +1,24 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
-import { addTradeRoute, inspectRoutes, localRegisteredConfiguration, localRegisteredRepository, removeTradeRoute } from '../../core/trade-core.ts'
+import {
+  addTradeRoute,
+  inspectEstateRoutes,
+  inspectRoutes,
+  localRegisteredConfiguration,
+  localRegisteredRepository,
+  removeTradeRoute
+} from '../../core/trade-core.ts'
 import { count, kind, repository, routeDirection, routeState } from './shared.ts'
 
 interface RouteOptions {
   readonly direction?: string
   readonly kind?: string
+}
+
+interface RouteListOptions {
+  readonly estate?: boolean
+  readonly incomplete?: boolean
 }
 
 const renderRouteList = (local: Awaited<ReturnType<typeof localRegisteredConfiguration>>, inspected: Awaited<ReturnType<typeof inspectRoutes>>): string => {
@@ -42,6 +54,34 @@ const renderRouteList = (local: Awaited<ReturnType<typeof localRegisteredConfigu
   return lines.join('\n')
 }
 
+const renderEstateRouteList = (inspected: Awaited<ReturnType<typeof inspectEstateRoutes>>, incomplete: boolean): string => {
+  const selected = incomplete ? inspected.filter((route) => route.state !== 'active') : inspected
+  const routeIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
+  const endpoints = (route: (typeof selected)[number]): readonly [string, string] =>
+    route.direction === 'export' ? [route.source.identity, routeIdentity(route.repository)] : [routeIdentity(route.repository), route.source.identity]
+  const ordered = [...selected].sort((left, right) => {
+    const [leftExporter, leftImporter] = endpoints(left)
+    const [rightExporter, rightImporter] = endpoints(right)
+    return (
+      leftExporter.localeCompare(rightExporter) ||
+      leftImporter.localeCompare(rightImporter) ||
+      left.kind.localeCompare(right.kind) ||
+      left.direction.localeCompare(right.direction)
+    )
+  })
+  const active = selected.filter((route) => route.state === 'active').length
+  const incompleteCount = selected.length - active
+  const directedRoute = (route: (typeof selected)[number]): string => {
+    const [exporter, importer] = endpoints(route)
+    return `${route.kind === 'work' ? '⚒' : '◇'} ${exporter} → ${importer} [${routeState(route.state)}]`
+  }
+  const lines = ['╭─ KI TRADE ROUTES', '│  ◫ registered estate', `│  ✦ ${count(selected.length, 'route')}`, '├─ results']
+  if (!selected.length) lines.push(`│  ╰─ ${incomplete ? 'incomplete routes: none' : 'routes: none'}`)
+  else lines.push(...ordered.map((route, index) => `│  ${index === ordered.length - 1 ? '╰─' : '├─'} ${directedRoute(route)}`))
+  lines.push(`╰─ summary: ROUTES=${selected.length} ACTIVE=${active} INCOMPLETE=${incompleteCount}`)
+  return lines.join('\n')
+}
+
 export const createTradeRoutesCommand = (context: KiContext): Command => {
   const routes = new Command('routes').description('maintain local typed trade-route declarations')
   routes
@@ -72,11 +112,19 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
         })
     )
     .addCommand(
-      new Command('list').description('list locally declared typed trade routes and their estate state').action(async () => {
-        const local = await localRegisteredConfiguration(context)
-        const inspected = await inspectRoutes(context, local.configuration)
-        context.stdout.write(`${renderRouteList(local, inspected)}\n`)
-      })
+      new Command('list')
+        .description('list local routes or every registered route and its estate state')
+        .option('--estate', 'list route declarations across the registered repository estate')
+        .option('--incomplete', 'show only routes that are not active')
+        .action(async (options: RouteListOptions) => {
+          if (options.estate) {
+            context.stdout.write(`${renderEstateRouteList(await inspectEstateRoutes(context), Boolean(options.incomplete))}\n`)
+            return
+          }
+          const local = await localRegisteredConfiguration(context)
+          const inspected = await inspectRoutes(context, local.configuration)
+          context.stdout.write(`${renderRouteList(local, options.incomplete ? inspected.filter((route) => route.state !== 'active') : inspected)}\n`)
+        })
     )
     .addCommand(
       new Command('check')

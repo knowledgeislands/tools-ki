@@ -82,7 +82,7 @@ Creation, shaping, readiness, implementation, acceptance, and completion remain 
 
 ## Inspect cross-repository trades
 
-`ki trade routes list` presents the current repository's declared export and import routes in a framed tree, including their registered-estate state. A declared export route may create a local trade before its receiver has configured KI trades; the receiver cannot inspect or receive it until it declares the reciprocal import route.
+`ki trade routes list` presents the current repository's declared export and import routes in a framed tree, including their registered-estate state. `ki trade routes list --estate` presents every registered repository's valid route declarations as one estate; add `--incomplete` to focus on routes awaiting reciprocity or with ambiguous peers. A declared export route may create a local trade before its receiver has configured KI trades; the receiver cannot inspect or receive it until it declares the reciprocal import route.
 
 `ki trade list` presents visible import and export trade records across the registered repository estate. Each item identifies its peer (`→ receiver` for exports, `← sender` for imports) and kind (`⚒` work, `◇` knowledge). Its bracket contains the mutually observable lifecycle: sender status (`sent` or `received`), receiver status (`unavailable` or `accepted`), then the receiver-owned decision status when delivery has been accepted (`unconsidered`, `in_progress`, `parked`, `clarify`, `adopted`, `retained`, `declined`, or `superseded`).
 

@@ -89,7 +89,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki trade routes add`
 - `ki trade routes remove`
-- `ki trade routes list` (framed local route inventory)
+- `ki trade routes list [--estate] [--incomplete]` (framed local or registered-estate route inventory)
 - `ki trade routes check`
 - `ki trade new` (creates a local export once this repository declares the route; receiver activation remains reciprocal)
 - `ki trade receive`
