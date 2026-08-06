@@ -31,6 +31,8 @@ Agora profiles currently require `tool = "zed"` and store arbitrary physical dir
 
 `TRD-d2cd35f7` has been sent to the KI Agentic Harness to define that portable contract. The CLI can shape its local migration now, but must not choose alternate kind or store semantics before the receiving repository accepts a contract.
 
+The local record at [`TRD-d2cd35f7`](../../-/_TRADES/knowledgeislands/ki-agentic-harness/TRD-d2cd35f7.md) is only the sender submission; no receiver-authored acceptance or compatible published contract is available in this checkout.
+
 ## Steps
 
 - [ ] Reconcile the accepted `ki-repo` kind and store-role contract into repository resolution and validation.
@@ -55,7 +57,7 @@ Agora profiles currently require `tool = "zed"` and store arbitrary physical dir
 
 ## Dependencies / blocks
 
-The portable `ki-repo` contract is owned by KI Agentic Harness and has been proposed through outbound work trade `TRD-d2cd35f7`. It needs receiver review before tools-ki validates repository kinds or named KB store roles. This record remains a `next` draft so its local migration can be shaped against the agreed contract.
+The portable `ki-repo` contract is owned by KI Agentic Harness and has been proposed through outbound work trade [`TRD-d2cd35f7`](../../-/_TRADES/knowledgeislands/ki-agentic-harness/TRD-d2cd35f7.md). It needs receiver review and a compatible published contract before tools-ki validates repository kinds or named KB store roles. This external prerequisite cannot appear in `blocked-by`, which permits only local work-item identifiers. This record remains a `next` draft so its local migration can be shaped against the agreed contract, but it cannot become Ready or enter the requested implementation batch until that prerequisite is observable.
 
 ## Discussion
 

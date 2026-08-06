@@ -27,27 +27,30 @@ This item does not replace the Knowledge Base Streams lifecycle, invent flat Mar
 
 ## Current state
 
-`ki repo roadmap` currently reads only `docs/roadmap/` work items. Knowledge Bases intentionally use `Streams/`, so the command reports a missing repository-roadmap directory instead of their governed native forward-work structure.
+`src/commands/repo/roadmap.ts` routes every selected repository through the flat work-item reader, while repository resolution establishes only a physical root and configuration path. Consequently a declared Knowledge Base without `docs/roadmap/` produces a missing-directory diagnostic. Existing roadmap contract tests cover only the flat work-item adapter.
 
 ## Steps
 
-- [ ] Resolve the selected repository type from its declared KI configuration.
-- [ ] Render a Knowledge Base's Streams and Focus structure through the existing read-only roadmap command surface.
-- [ ] Add CLI contract coverage for both repository adapters and their diagnostics.
+- [ ] Parse the selected repository's declared type at the repository boundary, preserving the current physical-root and configuration safety checks.
+- [ ] Add a read-only Knowledge Base planning-source adapter that reads its Focus and Streams material without requiring, creating, or changing `docs/roadmap/`.
+- [ ] Render the adapter's source, Focus horizons, and proposal identities through the existing `ki repo roadmap list` framing while retaining its trade context and existing flat-repository ordering.
+- [ ] Cover a declared Knowledge Base fixture, the existing flat adapter, malformed or unavailable planning sources, and the command's no-write behaviour through `run(args, context)`.
 
 ## Files touched
 
-- `src/commands/repo/roadmap.ts` and supporting repository-type resolution.
+- `src/core/repository.ts` and the read-only Knowledge Base planning-source adapter.
+- `src/commands/repo/roadmap.ts`.
 - `src/tests/cli/repo/roadmap.test.ts`.
 
 ## Verify
 
-- `ki repo roadmap list` renders a declared Knowledge Base's Streams without requiring `docs/roadmap/`.
-- Existing non-KB roadmap output and read-only behaviour remain unchanged.
+- `bunx vitest run src/tests/cli/repo/roadmap.test.ts`.
+- `bun run test:coverage` and `bunx tsc --noEmit`.
+- `ki repo roadmap list` renders a declared Knowledge Base's Streams without requiring `docs/roadmap/`, while an equivalent non-KB fixture retains the current output and read-only behaviour.
 
 ## Dependencies / blocks
 
-This draft is independently shapeable; it has no active roadmap dependency.
+This work depends only on the declared `repo_type = "kb"` discriminator already used by the portable roadmap standard. It does not consume the separate Agora store-role contract and has no active local roadmap dependency.
 
 ## Discussion
 
@@ -62,3 +65,7 @@ The rendered result should make that source explicit, preserve the selected-repo
 Knowledge Base streams, proposals, and Checklists remain authoritative for their own state and transitions.
 
 This work is an inventory and rendering integration only; any lifecycle operation belongs to the appropriate Knowledge Base skill and requires separately defined authority.
+
+### Adapter boundary
+
+The Knowledge Base adapter must expose the native planning source explicitly rather than flattening Streams into fabricated work items. Its output is an inspection view: it may diagnose missing or malformed native material, but it must not infer lifecycle state, rewrite a Focus, or introduce a parallel repository roadmap.

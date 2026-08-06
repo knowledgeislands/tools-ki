@@ -27,7 +27,7 @@ Support Bash and Zsh only; `ki manage completion` continues to reject unsupporte
 
 ## Current state
 
-`src/commands/manage/completions.ts` renders hard-coded shell branches keyed to a small set of command names and word positions. `src/commands/root/catalogue.ts` supplies first-level inventories for help and the current shallow completion lists, but it cannot represent nested grammar, option signatures, or option values. The actual Commander registration across the focused command modules is the authoritative command structure.
+`src/commands/manage/completion-grammar.ts` already derives recursive command paths and inherited option names from the registered Commander tree, and both shell renderers consume that projection. The remaining gap is policy and proof: value strategy is still a command-path heuristic, root-position `--repo` does not receive filesystem completion, and the contract tests exercise representative paths rather than proving parity with the registered help grammar.
 
 The CLI-015 modularisation places the relevant command families under `src/commands/manage/`, `src/commands/repo/`, `src/commands/trade/`, `src/commands/acquire/`, and `src/commands/root/`. Contract tests follow the same grammar-oriented layout under `src/tests/cli/`.
 
