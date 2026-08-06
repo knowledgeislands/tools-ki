@@ -145,6 +145,8 @@ export interface Sandbox {
       readonly executable?: string
       readonly installation?: KiInstallationMode
       readonly stdoutFailure?: Error
+      /** Receives the interrupt handler a live display registers, so a test can fire it. */
+      readonly captureInterrupt?: (handler: () => void) => void
     }
   ) => Promise<CommandResult>
 }
@@ -207,6 +209,8 @@ const create = async (): Promise<Sandbox> => {
       readonly executable?: string
       readonly installation?: KiInstallationMode
       readonly stdoutFailure?: Error
+      /** Receives the interrupt handler a live display registers, so a test can fire it. */
+      readonly captureInterrupt?: (handler: () => void) => void
     }
   ): Promise<CommandResult> => {
     let output = ''
@@ -225,7 +229,15 @@ const create = async (): Promise<Sandbox> => {
       ...(options?.fetcher === 'default' ? {} : { fetcher: (input, init) => fetcher(input, init) }),
       ...(options?.runner === 'default' ? {} : { runner }),
       ...(stat === undefined ? {} : { lstat: stat }),
-      now: options?.now
+      now: options?.now,
+      ...(options?.captureInterrupt === undefined
+        ? {}
+        : {
+            onInterrupt: (handler: () => void) => {
+              options.captureInterrupt?.(handler)
+              return () => {}
+            }
+          })
     })
     const tokens = typeof command === 'string' ? command.split(' ').filter(Boolean) : [...command]
     if (tokens[0] !== 'ki') throw new Error(`sandbox run() commands must start with "ki": ${command}`)

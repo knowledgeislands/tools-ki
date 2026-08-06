@@ -127,7 +127,10 @@ describe('[ki repo conform writes]', () => {
     expect(regular.output).toContain('╭─ KI REPO CONFORM')
     expect(regular.output).toContain('├─ progress [')
     expect(narrow.output).toContain('\r\x1b[2K.')
-    expect(invalidWidth.output).toContain('0/0 100% complete')
+    expect(invalidWidth.output).toContain('conform complete · 0/0 100% 0.0s')
+    // Conform drives the bar twice; the phase label is what tells the two sweeps apart.
+    expect(regular.output).toContain('conform complete · 0/0 100% 0.0s')
+    expect(regular.output).toContain('verify complete · 0/0 100% 0.0s')
     expect(multiple.output).toContain('│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra')
   })
 
@@ -373,7 +376,9 @@ describe('[ki repo conform writes]', () => {
       'refused example/harness:ki-overlap-one, example/harness:ki-overlap-two: direct conform repeats write path shared.txt with different content'
     )
     expect(result.output).toContain('refused example/harness:ki-unsafe: direct conform write target unsafe.txt must be an existing regular file')
-    expect(result.output).toContain('withheld example/harness:ki-command: command-backed conform repairs require --allow-commands while failures are unresolved')
+    expect(result.output).toContain(
+      'withheld example/harness:ki-command: command-backed conform repairs require --allow-commands while failures are unresolved'
+    )
     expect(result.output).toContain(
       'refused example/harness:ki-user-command: user-home rubric conform actions must be guarded direct writes; conform commands are not permitted'
     )

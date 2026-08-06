@@ -260,12 +260,18 @@ export const prepareSkill = async (skill: ResolvedSkill): Promise<PreparedSkill>
   return { skill, definition, items: orderedMechanicalItems(definition) }
 }
 
-const auditSkill = async (
-  scope: RuntimeScope,
-  prepared: PreparedSkill,
-  mode: 'audit' | 'conform',
-  onItemComplete?: (item: PreparedRubricItem) => void
-): Promise<InternalAudit> => {
+/**
+ * Item progress is reported at both edges of the await. A caller rendering a live
+ * line needs the item that is running, not the one that has finished; reporting
+ * only completion leaves the display naming the previous item for the whole of a
+ * slow item's execution.
+ */
+export interface ItemProgress {
+  readonly onItemStart?: (item: PreparedRubricItem) => void
+  readonly onItemComplete?: (item: PreparedRubricItem) => void
+}
+
+const auditSkill = async (scope: RuntimeScope, prepared: PreparedSkill, mode: 'audit' | 'conform', progress?: ItemProgress): Promise<InternalAudit> => {
   const { skill, definition, items: plannedItems } = prepared
   const definitionScope = definition.scope as RubricScope
   if (definitionScope.kind === 'user-home') {
@@ -295,8 +301,9 @@ const auditSkill = async (
   )
   const items: ItemAuditState[] = []
   for (const item of plannedItems) {
+    progress?.onItemStart?.(item)
     items.push(await auditItem(item, session))
-    onItemComplete?.(item)
+    progress?.onItemComplete?.(item)
   }
   const findings = items.flatMap((state) =>
     state.outcomes.flatMap((outcome) => {
@@ -306,12 +313,8 @@ const auditSkill = async (
   return { session, items, findings, scope: definitionScope, publication: publicationDraft }
 }
 
-export const runSkillAudit = async (
-  scope: RuntimeScope,
-  prepared: PreparedSkill,
-  onItemComplete?: (item: PreparedRubricItem) => void
-): Promise<SkillAuditResult> => {
-  const { items, findings } = await auditSkill(scope, prepared, 'audit', onItemComplete)
+export const runSkillAudit = async (scope: RuntimeScope, prepared: PreparedSkill, progress?: ItemProgress): Promise<SkillAuditResult> => {
+  const { items, findings } = await auditSkill(scope, prepared, 'audit', progress)
   return { findings, items }
 }
 
@@ -347,12 +350,8 @@ const attemptConform = async (state: ItemAuditState, publication: { write?: Nati
   return attempted
 }
 
-export const runSkillConform = async (
-  scope: RuntimeScope,
-  prepared: PreparedSkill,
-  onItemComplete?: (item: PreparedRubricItem) => void
-): Promise<SkillConformResult> => {
-  const { session, items, scope: definitionScope, publication } = await auditSkill(scope, prepared, 'conform', onItemComplete)
+export const runSkillConform = async (scope: RuntimeScope, prepared: PreparedSkill, progress?: ItemProgress): Promise<SkillConformResult> => {
+  const { session, items, scope: definitionScope, publication } = await auditSkill(scope, prepared, 'conform', progress)
   const conformOrder = items
     .filter((state) => state.item.item.mechanical.remediation.class === 'automatic' && state.item.item.mechanical.conform)
     .slice()

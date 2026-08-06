@@ -6,6 +6,7 @@ import type { ResolvedSkill } from './resolution.ts'
 import { type educateSkill, type Finding, type FindingLevel, type FixedItem, type PreparedSkill, prepareSkill } from './runtime.ts'
 
 const FALLBACK_TERMINAL_COLUMNS = 80
+const PROGRESS_PREFIX = '├─ progress '
 
 type ProgressMode = 'auto' | 'always' | 'never'
 type ProgressStyle = 'single' | 'multi'
@@ -16,8 +17,6 @@ interface OperationOptions {
   readonly progressStyle: ProgressStyle
   readonly reporterLevels: readonly ReporterLevel[]
 }
-
-type ProgressLineRenderer = (right: string, complete: number | undefined, total: number | undefined, columns: number) => string
 
 const REPORTER_LEVELS: readonly ReporterLevel[] = ['fail', 'warn', 'fixed', 'info', 'not-applicable', 'pass']
 
@@ -62,23 +61,78 @@ const truncate = (text: string, width: number): string => {
   return `${text.slice(0, width - 3)}...`
 }
 
-const progressBar = (width: number, complete?: number, total?: number): string => {
-  const innerWidth = width - 2
-  if (complete === undefined || total === undefined) return `[>${'.'.repeat(Math.max(0, innerWidth - 1))}]`
-  if (total <= 0) return `[${'#'.repeat(innerWidth)}]`
-  const clamped = Math.max(0, Math.min(complete, total))
-  const filled = clamped === total ? innerWidth : Math.floor((clamped / total) * innerWidth)
-  return `[${'#'.repeat(filled)}${'.'.repeat(innerWidth - filled)}]`
+/**
+ * A bar carries two measures. `complete` is finished weight; `started` is finished
+ * weight plus the item currently executing. Under sequential execution they differ
+ * by exactly one item, and the width of that difference is the point: it shows how
+ * large the running item is, which is what explains an apparently stalled bar.
+ */
+interface BarModel {
+  readonly complete: number
+  readonly started: number
+  /** Undefined while the total is not yet known, which renders an animated sweep. */
+  readonly total: number | undefined
+  readonly text: string
 }
 
-const framedProgressLine: ProgressLineRenderer = (right, complete, total, columns) => {
-  const terminalWidth = Number.isFinite(columns) && columns > 0 ? Math.floor(columns) : FALLBACK_TERMINAL_COLUMNS
-  const prefix = '├─ progress '
-  if (terminalWidth <= prefix.length) return truncate(right, terminalWidth)
-  const remainingWidth = terminalWidth - prefix.length - 1
-  const barWidth = Math.min(100, Math.floor(remainingWidth / 2))
-  if (barWidth >= 3) return `${prefix}${progressBar(barWidth, complete, total)} ${truncate(right, remainingWidth - barWidth)}`.padEnd(terminalWidth)
-  return `${prefix}${truncate(right, Math.max(0, terminalWidth - prefix.length))}`
+const SGR_RESET = '\x1b[0m'
+const SGR_COMPLETE = '\x1b[7m'
+const SGR_STARTED = '\x1b[7;2m'
+const CURSOR_HIDE = '\x1b[?25l'
+const CURSOR_SHOW = '\x1b[?25h'
+
+const terminalColumns = (columns: number | undefined): number =>
+  columns !== undefined && Number.isFinite(columns) && columns > 0 ? Math.floor(columns) : FALLBACK_TERMINAL_COLUMNS
+
+/** Resolves the two zone boundaries, in columns, that split a bar into complete, running, and pending. */
+const barZones = (model: BarModel, width: number, tick: number): readonly [number, number] => {
+  if (model.total === undefined) {
+    const band = Math.max(1, Math.floor(width / 8))
+    const offset = tick % (width + band)
+    return [Math.max(0, Math.min(width, offset - band)), Math.max(0, Math.min(width, offset))]
+  }
+  const bounded = model.total
+  if (bounded <= 0) return [width, width]
+  const scale = (value: number): number => Math.max(0, Math.min(width, Math.round((value / bounded) * width)))
+  const complete = scale(model.complete)
+  return [complete, Math.max(complete, scale(model.started))]
+}
+
+const centred = (text: string, width: number): string => {
+  const clipped = truncate(text, width)
+  return `${' '.repeat(Math.max(0, Math.floor((width - clipped.length) / 2)))}${clipped}`.padEnd(width)
+}
+
+/** Draws the status text inside the bar, recolouring it in place at the zone boundaries. */
+const styledBar = (model: BarModel, width: number, tick: number): string => {
+  const text = centred(model.text, width)
+  const [completeEnd, startedEnd] = barZones(model, width, tick)
+  const zone = (code: string, span: string): string => (span ? `${code}${span}${SGR_RESET}` : '')
+  return `${zone(SGR_COMPLETE, text.slice(0, completeEnd))}${zone(SGR_STARTED, text.slice(completeEnd, startedEnd))}${text.slice(startedEnd)}`
+}
+
+/** The plain-stream form keeps the bar beside its text so a log line stays greppable. */
+const bracketBar = (model: BarModel, width: number, tick: number): string => {
+  const inner = Math.max(0, width - 2)
+  const [completeEnd, startedEnd] = barZones(model, inner, tick)
+  return `[${'#'.repeat(completeEnd)}${'>'.repeat(startedEnd - completeEnd)}${'.'.repeat(inner - startedEnd)}]`
+}
+
+interface RenderOptions {
+  readonly columns: number | undefined
+  readonly styled: boolean
+  readonly tick: number
+}
+
+const progressLine = (model: BarModel, { columns, styled, tick }: RenderOptions): string => {
+  const width = terminalColumns(columns)
+  if (width <= PROGRESS_PREFIX.length) return truncate(model.text, width)
+  if (styled) return `${PROGRESS_PREFIX}${styledBar(model, width - PROGRESS_PREFIX.length, tick)}`
+  const remaining = width - PROGRESS_PREFIX.length - 1
+  // The status text carries the running item, which is the part a reader needs; give the bar the smaller share.
+  const barWidth = Math.min(40, Math.floor(remaining / 3))
+  if (barWidth < 3) return `${PROGRESS_PREFIX}${truncate(model.text, width - PROGRESS_PREFIX.length)}`
+  return `${PROGRESS_PREFIX}${bracketBar(model, barWidth, tick)} ${truncate(model.text, remaining - barWidth)}`.padEnd(width)
 }
 
 const elapsed = (milliseconds: number): string => `${(Math.max(0, milliseconds) / 1000).toFixed(1)}s`
@@ -86,117 +140,190 @@ const elapsed = (milliseconds: number): string => `${(Math.max(0, milliseconds) 
 interface ProgressTracker {
   readonly loading: (loaded: number, total: number) => void
   readonly planned: (skills: readonly PreparedSkill[]) => void
+  readonly start: (skill: PreparedSkill, code: string) => void
   readonly item: (skill: PreparedSkill, code: string) => void
   readonly complete: () => void
   readonly failed: () => void
 }
 
-interface MultiProgressState {
+/** Identity keys the tracker; the bare declaration name is what a reader sees. */
+interface TrackedSkill {
+  readonly identity: string
+  readonly name: string
+}
+
+interface SkillProgressState {
   readonly complete: number
+  readonly started: number
   readonly total: number
   readonly planned: boolean
   readonly status: string
 }
 
-const createProgressTracker = (
-  context: KiContext,
-  options: OperationOptions,
-  skillNames: readonly string[],
-  lineRenderer: ProgressLineRenderer = framedProgressLine
-): ProgressTracker | undefined => {
+const PENDING_STATE: SkillProgressState = { complete: 0, started: 0, total: 0, planned: false, status: 'loading' }
+
+const trackedSkills = (skills: readonly ResolvedSkill[]): readonly TrackedSkill[] =>
+  skills.map((skill) => ({ identity: skill.identity, name: skill.declaration.name }))
+
+const trackedPreparedSkills = (skills: readonly PreparedSkill[]): readonly TrackedSkill[] => trackedSkills(skills.map(({ skill }) => skill))
+
+const createProgressTracker = (context: KiContext, options: OperationOptions, skills: readonly TrackedSkill[], phase: string): ProgressTracker | undefined => {
   const enabled = options.progress === 'always' || (options.progress === 'auto' && context.stderr.isTTY === true)
   if (!enabled) return undefined
+  const interactive = context.stderr.isTTY === true
+  // Reverse video is styling, so NO_COLOR suppresses it exactly as it suppresses colour.
+  const { NO_COLOR } = context.environment
+  const styled = interactive && !NO_COLOR
   const started = context.now()
   let complete = 0
+  let inFlight = 0
   let total: number | undefined
-  const columns = context.stderr.columns ?? FALLBACK_TERMINAL_COLUMNS
-  const writeSingle = (right: string, final = false): void =>
-    context.stderr.write(
-      `${context.stderr.isTTY === true ? '\r\x1b[2K' : ''}${lineRenderer(right, total === undefined ? undefined : complete, total, columns)}${
-        final || context.stderr.isTTY !== true ? '\n' : ''
-      }`
-    )
-  const states = new Map<string, MultiProgressState>(skillNames.map((skill) => [skill, { complete: 0, total: 0, planned: false, status: 'loading' }]))
-  const progressState = (skill: string): MultiProgressState => {
-    const state = states.get(skill)
+  let tick = 0
+  let lastFrame: string | undefined
+  let cursorHidden = false
+  let lastRunning: string | undefined
+  const states = new Map<string, SkillProgressState>(skills.map((skill) => [skill.identity, PENDING_STATE]))
+  const skillState = (identity: string): SkillProgressState => {
+    const state = states.get(identity)
     // Every caller uses the fixed skill list used to initialise this tracker; this only protects a future refactor.
     /* v8 ignore next */
-    if (!state) throw new KiError(`progress lost state for ${skill}`, 1)
+    if (!state) throw new KiError(`progress lost state for ${identity}`, 1)
     return state
   }
-  let multiRendered = false
-  const renderMulti = (): void => {
-    const lines = skillNames.map((skill) => {
-      const state = progressState(skill)
-      return lineRenderer(`[${skill}] ${state.status}`, state.planned ? state.complete : undefined, state.planned ? state.total : undefined, columns)
-    })
-    if (context.stderr.isTTY === true && multiRendered) context.stderr.write(`\x1b[${lines.length}A`)
-    context.stderr.write(lines.map((line) => `${context.stderr.isTTY === true ? '\r\x1b[2K' : ''}${line}\n`).join(''))
-    multiRendered = true
+  const hideCursor = (): void => {
+    if (!interactive || cursorHidden) return
+    context.stderr.write(CURSOR_HIDE)
+    cursorHidden = true
   }
-  const render = (right: string, final = false): void => {
-    if (options.progressStyle === 'single') writeSingle(right, final)
-    else renderMulti()
+  const showCursor = (): void => {
+    if (!cursorHidden) return
+    context.stderr.write(CURSOR_SHOW)
+    cursorHidden = false
+  }
+  const releaseInterrupt = context.onInterrupt(() => {
+    showCursor()
+    context.stderr.write('\n')
+  })
+  const renderOptions = (): RenderOptions => ({ columns: context.stderr.columns, styled, tick })
+  /** The trailing counters; the leading detail names the work, which matters more when width is short. */
+  const counters = (): string => {
+    const clock = elapsed(context.now() - started)
+    if (total === undefined) return clock
+    const percentage = total === 0 ? 100 : Math.round((complete / total) * 100)
+    return `${complete}/${total} ${percentage}% ${clock}`
+  }
+  const summaryText = (detail: string): string => `${phase} ${detail} · ${counters()}`
+  const singleFrame = (text: string): readonly string[] => [progressLine({ complete, started: complete + inFlight, total, text }, renderOptions())]
+  const multiFrame = (): readonly string[] => [
+    ...skills.map((skill) => {
+      const state = skillState(skill.identity)
+      const model: BarModel = {
+        complete: state.complete,
+        started: state.started,
+        total: state.planned ? state.total : undefined,
+        text: `[${skill.name}] ${state.status}`
+      }
+      return progressLine(model, renderOptions())
+    }),
+    progressLine({ complete, started: complete + inFlight, total, text: summaryText(lastRunning ? `running ${lastRunning}` : 'working') }, renderOptions())
+  ]
+  let renderedRows = 0
+  const writeRows = (rows: readonly string[], final: boolean): void => {
+    if (options.progressStyle === 'single') {
+      context.stderr.write(`${interactive ? '\r\x1b[2K' : ''}${rows[0]}${final || !interactive ? '\n' : ''}`)
+      return
+    }
+    // Only rewind over rows this tracker drew; a list taller than the terminal would
+    // otherwise scroll and the cursor-up would overwrite unrelated output.
+    const height = Math.max(1, Math.floor(terminalColumns(context.stderr.columns) / 2))
+    const rewind = interactive && renderedRows && renderedRows <= height ? `\x1b[${renderedRows}A` : ''
+    context.stderr.write(`${rewind}${rows.map((row) => `${interactive ? '\r\x1b[2K' : ''}${row}\n`).join('')}`)
+    renderedRows = rows.length
+  }
+  const render = (text: string, final = false): void => {
+    tick += 1
+    const rows = options.progressStyle === 'single' ? singleFrame(text) : multiFrame()
+    const frame = rows.join('\n')
+    // Coalesce identical consecutive frames; a fast rubric otherwise redraws the same line.
+    if (!final && frame === lastFrame) return
+    lastFrame = frame
+    hideCursor()
+    writeRows(rows, final)
+  }
+  const finish = (): void => {
+    showCursor()
+    releaseInterrupt()
   }
   return {
     loading: (loaded, definitions) => {
-      const detail = `${elapsed(context.now() - started)} loading ${loaded}/${definitions} definitions`
-      for (const skill of skillNames) states.set(skill, { complete: 0, total: 0, planned: false, status: detail })
-      render(detail)
+      total = undefined
+      render(summaryText(`loading ${loaded}/${definitions} definitions`))
     },
-    planned: (skills) => {
-      const itemTotal = skills.reduce((count, skill) => count + skill.items.length, 0)
-      total = itemTotal
-      for (const skill of skills) states.set(skill.skill.declaration.name, { complete: 0, total: skill.items.length, planned: true, status: 'pending' })
-      render(`${complete}/${total} ${total === 0 ? 100 : 0}% starting`)
+    planned: (planned) => {
+      total = planned.reduce((count, skill) => count + skill.items.length, 0)
+      for (const skill of planned) states.set(skill.skill.identity, { complete: 0, started: 0, total: skill.items.length, planned: true, status: 'pending' })
+      render(summaryText('starting'))
+    },
+    start: (skill, code) => {
+      inFlight = 1
+      lastRunning = code
+      const { identity, declaration } = skill.skill
+      const state = skillState(identity)
+      states.set(identity, { ...state, started: state.complete + 1, planned: true, total: skill.items.length, status: `running ${code}` })
+      render(summaryText(`${declaration.name} running ${code}`))
     },
     item: (skill, code) => {
       complete += 1
-      const percentage = Math.round((complete / (total as number)) * 100)
-      const name = skill.skill.declaration.name
-      const state = progressState(name)
-      states.set(name, { complete: state.complete + 1, total: skill.items.length, planned: true, status: code })
-      render(`${complete}/${total} ${percentage}% ${name} ${code}`)
+      inFlight = 0
+      const { identity, declaration } = skill.skill
+      const state = skillState(identity)
+      const done = state.complete + 1
+      states.set(identity, { complete: done, started: done, total: skill.items.length, planned: true, status: code })
+      render(summaryText(`${declaration.name} ${code}`))
     },
     complete: () => {
-      for (const skill of skillNames) {
-        const state = progressState(skill)
-        states.set(skill, { complete: state.total, total: state.total, planned: state.planned, status: 'complete' })
+      inFlight = 0
+      for (const skill of skills) {
+        const state = skillState(skill.identity)
+        states.set(skill.identity, { ...state, complete: state.total, started: state.total, status: 'complete' })
       }
-      render(`${total as number}/${total as number} 100% complete`, true)
+      render(summaryText('complete'), true)
+      finish()
     },
     failed: () => {
-      if (options.progressStyle === 'multi') {
-        for (const skill of skillNames) {
-          const state = progressState(skill)
-          states.set(skill, { ...state, status: 'failed' })
-        }
-        renderMulti()
-      } else if (context.stderr.isTTY === true) context.stderr.write('\n')
+      inFlight = 0
+      for (const skill of skills) states.set(skill.identity, { ...skillState(skill.identity), status: 'failed' })
+      render(summaryText(lastRunning ? `failed at ${lastRunning}` : 'failed'), true)
+      finish()
     }
   }
+}
+
+/** Reports the item edges a live progress line needs, narrowed to the item code the renderer displays. */
+export interface ItemProgressCodes {
+  readonly onItemStart: (code: string) => void
+  readonly onItemComplete: (code: string) => void
 }
 
 export const runPreparedWithProgress = async <Result>(
   context: KiContext,
   prepared: readonly PreparedSkill[],
-  run: (skill: PreparedSkill, onItemComplete: (code: string) => void) => Promise<Result>,
+  run: (skill: PreparedSkill, progress: ItemProgressCodes) => Promise<Result>,
   options: OperationOptions,
-  lineRenderer?: ProgressLineRenderer,
-  progress = prepared.length
-    ? createProgressTracker(
-        context,
-        options,
-        prepared.map((skill) => skill.skill.declaration.name),
-        lineRenderer
-      )
-    : undefined
+  phase: string,
+  existing?: ProgressTracker
 ): Promise<Result[]> => {
+  const progress = existing ?? (prepared.length ? createProgressTracker(context, options, trackedPreparedSkills(prepared), phase) : undefined)
   const results: Result[] = []
   try {
     progress?.planned(prepared)
     for (const skill of prepared) {
-      results.push(await run(skill, (code) => progress?.item(skill, code)))
+      results.push(
+        await run(skill, {
+          onItemStart: (code) => progress?.start(skill, code),
+          onItemComplete: (code) => progress?.item(skill, code)
+        })
+      )
     }
   } catch (error) {
     progress?.failed()
@@ -209,18 +336,11 @@ export const runPreparedWithProgress = async <Result>(
 export const runWithProgress = async <Result>(
   context: KiContext,
   skills: readonly ResolvedSkill[],
-  run: (skill: PreparedSkill, onItemComplete: (code: string) => void) => Promise<Result>,
+  run: (skill: PreparedSkill, progress: ItemProgressCodes) => Promise<Result>,
   options: OperationOptions,
-  lineRenderer?: ProgressLineRenderer
+  phase: string
 ): Promise<Result[]> => {
-  const progress = skills.length
-    ? createProgressTracker(
-        context,
-        options,
-        skills.map((skill) => skill.declaration.name),
-        lineRenderer
-      )
-    : undefined
+  const progress = skills.length ? createProgressTracker(context, options, trackedSkills(skills), phase) : undefined
   const prepared: PreparedSkill[] = []
   try {
     progress?.loading(0, skills.length)
@@ -232,7 +352,7 @@ export const runWithProgress = async <Result>(
     progress?.failed()
     throw error
   }
-  return runPreparedWithProgress(context, prepared, run, options, lineRenderer, progress)
+  return runPreparedWithProgress(context, prepared, run, options, phase, progress)
 }
 
 interface AuditSkillReport {
@@ -356,10 +476,6 @@ export const renderMultiRepositoryAuditSummary = (context: KiContext, summaries:
     `╰─ totals: PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} · FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}\n`
   )
 }
-
-export const auditProgressLine = framedProgressLine
-
-export const conformProgressLine = framedProgressLine
 
 export const renderEducation = (education: Awaited<ReturnType<typeof educateSkill>>): string[] => [
   education.identity,

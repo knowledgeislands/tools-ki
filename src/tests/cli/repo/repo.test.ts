@@ -1,7 +1,18 @@
 import { realpath } from 'node:fs/promises'
 import { basename } from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 import { describe, expect, test } from 'vitest'
 import { type SandboxArea, sandbox } from '../_cli_helper.ts'
+
+/** The bar's zone codes: completed weight, then the item in flight. */
+const SGR_COMPLETE = '\x1b[7m'
+const SGR_STARTED = '\x1b[7;2m'
+const SGR_RESET = '\x1b[0m'
+const CURSOR_HIDE = '\x1b[?25l'
+const CURSOR_SHOW = '\x1b[?25h'
+
+/** Status text is centred inside the bar, so compare frames on their words rather than their padding. */
+const normaliseFrame = (frame: string): string => stripVTControlCharacters(frame).replace(/\s+/g, ' ').trim()
 
 // Builds a full direct `scripts/rubric/items/index.ts` catalogue. Most tests use a
 // compact literal which this fixture expands into the real family/item contract;
@@ -255,7 +266,8 @@ describe('[ki repo]', () => {
       )
       expect(always.output.indexOf('╭─ KI REPO AUDIT')).toBeLessThan(always.output.indexOf('├─ progress ['))
       expect(multi.output).toContain('[ki-example]')
-      expect(multiInteractive.output).toContain('\x1b[1A')
+      // One row per skill plus the totals row, so the rewind spans two lines.
+      expect(multiInteractive.output).toContain('\x1b[2A')
       expect(invalidProgress).toMatchObject({ exitCode: 2 })
       expect(invalidProgress.output).toContain('--progress accepts auto, always, or never')
       expect(invalidStyle).toMatchObject({ exitCode: 2 })
@@ -305,8 +317,12 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain('├─ progress [###############################] 0/0 100% starting')
-      expect(result.output).toContain('├─ progress [###############################] 0/0 100% complete')
+      expect(stripVTControlCharacters(result.output)).toContain('audit starting · 0/0 100% 0.0s')
+      expect(stripVTControlCharacters(result.output)).toContain('audit complete · 0/0 100% 0.0s')
+      // A zero-item run is wholly complete, so its final bar is all completed zone and no band.
+      const finalFrame = result.output.split('\r\x1b[2K').at(-1) as string
+      expect(finalFrame).toContain(SGR_COMPLETE)
+      expect(finalFrame).not.toContain(SGR_STARTED)
     })
 
     test('uses the fallback progress width when a TTY reports an invalid column count', async () => {
@@ -317,7 +333,9 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit', { interactive: true, columns: Number.NaN, now: () => 0 })
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain('├─ progress [###############################] 0/0 100% complete')
+      expect(stripVTControlCharacters(result.output)).toContain('audit complete · 0/0 100% 0.0s')
+      // The 80-column fallback leaves 68 columns for the bar itself.
+      expect(stripVTControlCharacters(result.output)).toContain(`├─ progress ${' '.repeat(19)}audit complete`)
     })
 
     test('renders per-rubric progress with bounded three-column TTY status without changing non-interactive output', async () => {
@@ -337,14 +355,13 @@ describe('[ki repo]', () => {
           'ki-extra'
         )
       )
-      const times = [0, 0, 1_250, 1_500]
-      const now = (): number => times.shift() ?? 1_500
-
-      const result = await box.run('ki repo audit', { interactive: true, now })
-      const [progressOutput = '', standardOutput = ''] = result.output.split('\n├─ results\n')
+      const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
+      // The tracker restores the cursor between its last frame and the report body.
+      const [progressOutput = '', standardOutput = ''] = result.output.replaceAll(CURSOR_SHOW, '').split('\n├─ results\n')
       const header = `╭─ KI REPO AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 2 skills selected\n│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra\n`
       const frames = progressOutput
         .slice(header.length)
+        .replaceAll(CURSOR_HIDE, '')
         .replace(/\n$/, '')
         .split('\r\x1b[2K')
         .filter(Boolean)
@@ -356,25 +373,34 @@ describe('[ki repo]', () => {
 │  ╰─ ✓ example/harness:ki-extra PASS · FAIL=0 WARN=0
 ╰─ summary: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `)
-      expect(frames.map((frame) => frame.trimEnd())).toEqual([
-        '├─ progress [>..............................] 0.0s loading 0/2 definitions',
-        '├─ progress [>..............................] 1.3s loading 1/2 definitions',
-        '├─ progress [>..............................] 1.5s loading 2/2 definitions',
-        '├─ progress [...............................] 0/3 0% starting',
-        '├─ progress [##########.....................] 1/3 33% ki-example EXAMPLE-1',
-        '├─ progress [####################...........] 2/3 67% ki-example EXAMPLE-2',
-        '├─ progress [###############################] 3/3 100% ki-extra EXTRA-1',
-        '├─ progress [###############################] 3/3 100% complete'
+      // Each item reports at both edges of its await, so a running frame precedes every completion.
+      expect(frames.map(normaliseFrame)).toEqual([
+        '├─ progress audit loading 0/2 definitions · 0.0s',
+        '├─ progress audit loading 1/2 definitions · 0.0s',
+        '├─ progress audit loading 2/2 definitions · 0.0s',
+        '├─ progress audit starting · 0/3 0% 0.0s',
+        '├─ progress audit ki-example running EXAMPLE-1 · 0/3 0% 0.0s',
+        '├─ progress audit ki-example EXAMPLE-1 · 1/3 33% 0.0s',
+        '├─ progress audit ki-example running EXAMPLE-2 · 1/3 33% 0.0s',
+        '├─ progress audit ki-example EXAMPLE-2 · 2/3 67% 0.0s',
+        '├─ progress audit ki-extra running EXTRA-1 · 2/3 67% 0.0s',
+        '├─ progress audit ki-extra EXTRA-1 · 3/3 100% 0.0s',
+        '├─ progress audit complete · 3/3 100% 0.0s'
       ])
-      expect(frames.every((frame) => frame.length === 80)).toBe(true)
+      // The status text is drawn inside the bar, so every frame fills the terminal width.
+      expect(frames.every((frame) => stripVTControlCharacters(frame).length === 80)).toBe(true)
+      // The band is the item in flight: one of three items over a 68-column bar.
+      const band = (frames[4] as string).split(SGR_STARTED)[1]?.split(SGR_RESET)[0]
+      expect(band).toHaveLength(23)
 
-      const wide = await box.run('ki repo audit', { interactive: true, columns: 240, now: () => 0 })
-      const firstBar = wide.output.match(/\[(>[^\]]*)\]/)?.[1]
-      expect(firstBar).toHaveLength(98)
+      const wide = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
+      const firstBar = wide.output.match(/\[([#>.]*)\]/)?.[1]
+      expect(firstBar).toHaveLength(38)
 
       const multi = await box.run('ki repo audit --progress-style multi', { interactive: true, now: () => 0 })
-      expect(multi.output).toContain('[ki-example] EXAMPLE-1')
-      expect(multi.output).toContain('[ki-extra] EXTRA-1')
+      // A zone boundary can fall inside the centred text, so compare on the stripped form.
+      expect(stripVTControlCharacters(multi.output)).toContain('[ki-example] EXAMPLE-1')
+      expect(stripVTControlCharacters(multi.output)).toContain('[ki-extra] EXTRA-1')
 
       const nonInteractive = await box.run('ki repo audit')
       expect(nonInteractive).toEqual({
@@ -393,12 +419,92 @@ describe('[ki repo]', () => {
       })
     })
 
+    test('drops the bar from a plain-stream frame too narrow to hold one', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+
+      // 20 columns leaves under three columns for a bracket bar, so only the text survives.
+      const result = await box.run('ki repo audit --progress always', { columns: 20, now: () => 0 })
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('├─ progress audit...')
+      expect(result.output).not.toContain('├─ progress [')
+    })
+
+    test('names the running item when an audit fails part-way through', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+      // A malformed outcome is rejected while the item is in flight, which is the only
+      // failure the tracker can attribute to a named running item.
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'NOT_A_STATUS', message: 'bad' }]
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo audit --progress always', { now: () => 0 })
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('audit failed at EXAMPLE-1 · 0/1 0% 0.0s')
+    })
+
+    test('restores the terminal cursor when the run is interrupted', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+
+      let interrupt: (() => void) | undefined
+      const result = await box.run('ki repo audit', {
+        interactive: true,
+        now: () => 0,
+        captureInterrupt: (handler) => {
+          interrupt = handler
+        }
+      })
+      // The run completed and already restored the cursor, so a later interrupt is a no-op.
+      const restoresDuringRun = result.output.split(CURSOR_SHOW).length - 1
+      interrupt?.()
+
+      expect(result.exitCode).toBe(0)
+      expect(interrupt).toBeTypeOf('function')
+      expect(result.output).toContain(CURSOR_HIDE)
+      expect(restoresDuringRun).toBe(1)
+    })
+
+    test('restores the terminal cursor when an interrupt arrives mid-run', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+      // Firing the captured handler from inside an item reproduces a signal arriving
+      // while the display owns the terminal, which no completed invocation can reach.
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => { globalThis.__kiInterrupt?.(); return [] }
+        }] }]`)
+      })
+
+      const result = await box.run('ki repo audit', {
+        interactive: true,
+        now: () => 0,
+        captureInterrupt: (handler) => {
+          ;(globalThis as { __kiInterrupt?: () => void }).__kiInterrupt = handler
+        }
+      })
+      delete (globalThis as { __kiInterrupt?: () => void }).__kiInterrupt
+
+      expect(result.exitCode).toBe(0)
+      // Restored once by the interrupt mid-run, and once more when the run completed.
+      expect(result.output.split(CURSOR_SHOW).length - 1).toBe(2)
+    })
+
     test.each([
       [Number.MIN_VALUE, ''],
       [1, '.'],
       [3, '...'],
-      [8, '0.0s ...'],
-      [13, '├─ progress .']
+      [8, 'audit...'],
+      [13, '├─ progress \x1b[7;2m.\x1b[0m']
     ])('renders a safe abbreviated TTY progress frame at %p columns', async (columns, expected) => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
@@ -432,7 +538,7 @@ describe('[ki repo]', () => {
       expect(result.output).toContain('\nki: error: example/harness:ki-example rubric catalogue could not be imported')
       expect(forcedSingle.exitCode).toBe(1)
       expect(multi.exitCode).toBe(1)
-      expect(multi.output).toContain('[ki-example] failed')
+      expect(stripVTControlCharacters(multi.output)).toContain('[ki-example] failed')
     })
 
     test('rejects a repository configuration that is not valid TOML', async () => {

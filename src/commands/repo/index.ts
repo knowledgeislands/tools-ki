@@ -9,8 +9,6 @@ import { discoverInstalledHarnesses } from '../../core/harness.ts'
 import { resolveRepositoryInitialisationTarget, resolveRepositoryTargets } from '../../core/repository.ts'
 import {
   type AuditRepositorySummary,
-  auditProgressLine,
-  conformProgressLine,
   operationOptions,
   renderAuditFrameStart,
   renderAuditResults,
@@ -160,7 +158,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
           const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
           for (const { skills } of selected) {
             const output = { progress: 'auto' as const, progressStyle: 'single' as const, reporterLevels: [] }
-            const educations = await runWithProgress(context, skills, (skill) => educateSkill(skill), output)
+            const educations = await runWithProgress(context, skills, (skill) => educateSkill(skill), output, 'educate')
             if (!educations.length) context.stdout.write('ki repo educate: no declared skills\n')
             else context.stdout.write(`${educations.flatMap(renderEducation).join('\n')}\n`)
           }
@@ -185,16 +183,19 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               const results = await runWithProgress(
                 context,
                 skills,
-                async (skill, onItemComplete) => ({
+                async (skill, itemProgress) => ({
                   skill,
                   audit: await runSkillAudit(
                     { kind: 'repository', repository: repository.root, userHome: context.homeDirectory, lstat: context.lstat },
                     skill,
-                    (item) => onItemComplete(item.code)
+                    {
+                      onItemStart: (item) => itemProgress.onItemStart(item.code),
+                      onItemComplete: (item) => itemProgress.onItemComplete(item.code)
+                    }
                   )
                 }),
                 output,
-                auditProgressLine
+                'audit'
               )
               const findings = results.flatMap(({ audit }) => audit.findings)
               const registration = await localRepositoryRegistration(context, repository.root, skills)
@@ -253,17 +254,20 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             const conformed = await runWithProgress(
               context,
               skills,
-              async (skill, onItemComplete) => ({
+              async (skill, itemProgress) => ({
                 skill: skill.skill,
                 prepared: skill,
                 conform: await runSkillConform(
                   { kind: 'repository', repository: repository.root, userHome: context.homeDirectory, lstat: context.lstat },
                   skill,
-                  (item) => onItemComplete(item.code)
+                  {
+                    onItemStart: (item) => itemProgress.onItemStart(item.code),
+                    onItemComplete: (item) => itemProgress.onItemComplete(item.code)
+                  }
                 )
               }),
               output,
-              conformProgressLine
+              'conform'
             )
             const findings = conformed.flatMap(({ conform }) => conform.findings)
             const renderInitialReports = () =>
@@ -276,7 +280,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               const reaudited = await runPreparedWithProgress(
                 context,
                 conformed.map(({ prepared }) => prepared),
-                async (skill, onItemComplete) => {
+                async (skill, itemProgress) => {
                   const previous = conformed.find((entry) => entry.skill.identity === skill.skill.identity)
                   // The re-audit selection is derived directly from conformed above; this only
                   // protects a future refactor from pairing an audit with the wrong conform set.
@@ -288,12 +292,15 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                     audit: await runSkillAudit(
                       { kind: 'repository', repository: repository.root, userHome: context.homeDirectory, lstat: context.lstat },
                       skill,
-                      (item) => onItemComplete(item.code)
+                      {
+                        onItemStart: (item) => itemProgress.onItemStart(item.code),
+                        onItemComplete: (item) => itemProgress.onItemComplete(item.code)
+                      }
                     )
                   }
                 },
                 output,
-                conformProgressLine
+                'verify'
               )
               const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
               const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
