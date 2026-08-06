@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-014
 title: Complete CLI completions
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 28075f57f84b60b8f11b31328b1d6fe339b8f2e0
@@ -53,6 +53,7 @@ The CLI-015 modularisation places the relevant command families under `src/comma
 - `src/tests/cli/root/help.test.ts`
 - `README.md`
 - `man/ki.1`
+- `docs/guides/developer/local-development.md`
 - This roadmap item
 
 ## Verify
@@ -82,6 +83,10 @@ CLI-015 is complete and established the command/test module boundaries used here
 - Verification passed: focused completion contract suite; scoped coverage-remediation suite (192 tests); `bunx tsc --noEmit`; Biome; Markdown and manual checks; and `bun run test:coverage` (37 files, 488 tests, 100% statements, branches, functions, and lines).
 - Repair verification passed: `bunx vitest run src/tests/cli/manage/completions.test.ts`, `bunx tsc --noEmit`, Biome, and `bun run test:coverage` (37 files, 492 tests, 100% statements, branches, functions, and lines).
 - No external coordination, compatibility aliases, dynamic completion lookup, push, release, or other unresolved concern remains.
+
+## Done
+
+Accepted by the user on 2026-08-06. Retained as completed roadmap history; no pruning was requested.
 
 ## Discussion
 
