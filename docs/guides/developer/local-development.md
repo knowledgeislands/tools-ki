@@ -13,6 +13,25 @@ Run the checkout without changing any installation:
 
 This source entry point requires Bun and runs the typed command modules in `src/` directly.
 
+## Test shell completions
+
+`ki manage completion` prints a script; it does not install or refresh a shell's persisted completion file. Test the checkout's current Zsh completion in the current terminal with:
+
+```zsh
+source <(./bin/ki manage completion zsh)
+```
+
+This replaces the loaded `_ki` function for that shell only. It is the right path when a development checkout changes command grammar or completion rendering.
+
+Zsh startup normally autoloads a static `_ki` file from a directory in `fpath`, such as `~/.zsh/completions/_ki`. Restarting the terminal reloads that static file, not the checkout's freshly generated source. Update that managed file only when deliberately changing the persisted user completion configuration.
+
+Before sourcing either script, parse its generated form:
+
+```sh
+./bin/ki manage completion bash >/tmp/ki.bash && bash -n /tmp/ki.bash
+./bin/ki manage completion zsh >/tmp/ki.zsh && zsh -n /tmp/ki.zsh
+```
+
 ## Develop a compatible harness locally
 
 Keep a local harness source separate from its active projection:
