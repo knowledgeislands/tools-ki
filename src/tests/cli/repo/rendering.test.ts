@@ -27,6 +27,7 @@ export default {
       sources: ['standard.md'],
       mechanical: {
         level: 'FAIL',
+        remediation: { class: 'diagnostic', guidance: 'Diagnose the reported evidence.' },
         audit: {
           phase: 'PRIMARY',
           run: () => [
