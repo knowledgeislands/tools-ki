@@ -6,7 +6,7 @@ sender: knowledgeislands/tools-ki
 receiver: knowledgeislands/ki-agentic-harness
 kind: knowledge
 source_ref: "KI-TOOL-CLI-017"
-observation: decision
+observation: receipt
 ---
 # TRD-c8a23b80: Define stable Knowledge Base stream codes
 
