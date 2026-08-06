@@ -162,23 +162,32 @@ Limit either view to incomplete routes.
 .B ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]
 Check local typed trade routes and their activation state.
 .TP
-.B ki trade new --to <repository> --kind work|knowledge --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
-Create one local export typed trade on a declared route.
+.B ki trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
+Create one mutable local trade preparation on a declared export route.
 .TP
-.B ki trade receive --from <repository> --kind work|knowledge [--id <trade-id>]
-Import eligible export trades from a reciprocal sender.
+.B ki trade observe <trade-id>
+Inspect one sender's committed mutable preparation.
 .TP
-.B ki trade list [--direction import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]
+.B ki trade submit <trade-id>
+Freeze one local preparation as an outbound submission.
+.TP
+.B ki trade abandon <trade-id> --yes
+Remove one local mutable preparation.
+.TP
+.B ki trade receive <trade-id> | --all [--yes]
+Receive one committed submission, or preview and confirm an explicit batch.
+.TP
+.B ki trade list [--direction prepare|import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]
 List visible trade copies in the registered repository estate.
 .TP
 .B ki trade show <trade-id>
 Show every visible copy of one trade.
 .TP
-.B ki trade release <trade-id>
-Release one local export trade after a terminal receiver disposition.
+.B ki trade release <trade-id> | --eligible [--yes]
+Release one eligible local outbound submission, or preview and confirm a batch.
 .TP
-.B ki trade prune <trade-id>
-Prune one local terminal import trade after sender release is observable.
+.B ki trade prune <trade-id> | --eligible [--yes]
+Prune one eligible local inbound copy, or preview and confirm a batch.
 .SS Agora management
 \&
 .TP
@@ -591,29 +600,45 @@ Check declared routes by kind. An export awaiting local receiver registration,
 receiver participation, or a reciprocal import awaits receiver activation; the
 equivalent import awaits sender activation.
 .TP
-.B ki trade new --to <repository> --kind work|knowledge --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
-Create one export typed trade in the current repository when it declares the
-matching export route. The receiver need not yet have configured KI trades;
-that local record remains unavailable to it until its reciprocal import route
-is declared.
+.B ki trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
+Create one mutable preparation in the current repository when it declares the
+matching export route. The mandatory observation policy selects whether receipt,
+a terminal decision, or completion of adopted work is required before release;
+\fBunattended\fR requires no receiver follow-up beyond an observable receipt.
 .TP
-.B ki trade receive --from <repository> --kind work|knowledge [--id <trade-id>]
-Import eligible export trades of one kind into the current repository as import
-copies with status \fBreceived\fR.
+.B ki trade observe <trade-id>
+Read one sender's committed mutable preparation without receiving or acting on
+it. Compare it with the commit last observed by this receiver, or show the full
+current contents when no usable earlier Git evidence exists.
 .TP
-.B ki trade list [--direction import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]
-Read visible trade copies in the registered estate.
+.B ki trade submit <trade-id>
+Freeze one local preparation and move it to the outbound submitted path.
+.TP
+.B ki trade abandon <trade-id> --yes
+Remove one unsubmitted mutable preparation after explicit confirmation.
+.TP
+.B ki trade receive <trade-id> | --all [--yes]
+Import one committed outbound submission into the current repository and record
+its source commit. The \fB--all\fR form previews every receivable submission and
+changes nothing unless \fB--yes\fR is also supplied.
+.TP
+.B ki trade list [--direction prepare|import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]
+Read visible preparations, imports, and exports in the registered estate,
+including their observation policy, delivery and decision state, and cleanup
+eligibility.
 .TP
 .B ki trade show <trade-id>
 Show every visible copy of a trade.
 .TP
-.B ki trade release <trade-id>
-Remove the current repository's export copy only after observing a terminal
-receiver disposition.
+.B ki trade release <trade-id> | --eligible [--yes]
+Remove one current-repository outbound submission only after its observation
+policy is satisfied. The \fB--eligible\fR form previews all eligible submissions
+and changes nothing unless \fB--yes\fR is also supplied.
 .TP
-.B ki trade prune <trade-id>
-Remove the current repository's terminal import copy only after sender release
-is observable.
+.B ki trade prune <trade-id> | --eligible [--yes]
+Remove one eligible current-repository inbound copy only after sender release is
+observable. The \fB--eligible\fR form previews all eligible copies and changes
+nothing unless \fB--yes\fR is also supplied.
 .SS Agora management
 \&
 .PP
