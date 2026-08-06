@@ -78,6 +78,8 @@ git push origin vX.Y.Z
 
 Open **Actions** → **Release** → **Run workflow**, choose `main`, and enter the same `vX.Y.Z` version. The workflow builds the three archives, signs the manifest, creates a draft release, re-downloads and verifies its published assets, then publishes it. If future team protection is enabled, the independent reviewer approves the pending `release` deployment first.
 
+The packaging jobs run the functional suite on every target. Coverage is a CI engineering gate rather than a release-publishing gate; the release proof is immutable publication followed by the clean Linux installation verification.
+
 After the release workflow has completed its clean Linux installation proof, public users install that exact release from an empty directory:
 
 ```sh

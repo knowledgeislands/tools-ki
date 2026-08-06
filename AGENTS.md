@@ -13,6 +13,7 @@ These govern all work in this repo.
 - **Coverage is a dead-code detector** — `bun run test` enforces 100% thresholds on all four metrics over product code (`src/tests/**` excluded). A reachable-but-uncovered span gets a CLI test; an unreachable one is deleted — except a future-proofing guard, which may stay under a `/* v8 ignore */` carrying a justification comment stating why no CLI input can reach it (existing examples: `src/cli.ts`, `src/core/resolution.ts`, `src/commands/acquire.ts`).
 - **Fault injection stays at the interface** — a degenerate context or stub-fetcher bad bytes is preferred; `vi.mock` of `node:fs/promises` is a last resort, documented at the use site, wrapped around a CLI-driven invocation. Sanctioned instances: the transaction write-failure test in `src/tests/cli/acquire.test.ts` and the concurrent-replacement/rollback acceptance tests in `src/tests/cli/transaction.test.ts` — both provoke transaction guards unreachable from a single in-process CLI invocation.
 - **No legacy shims** — make the contract correct for the current state and migrate every footprint to it; no compatibility fallbacks or dual paths unless a transition period is explicitly requested.
+- **Release verification** — packaging runs the functional suite on each target; coverage remains a CI engineering gate, not a release-publishing gate. A release is complete only after immutable publication and the workflow's clean-install proof succeed.
 
 ## Progress and commits
 
