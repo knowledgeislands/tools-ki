@@ -6,7 +6,7 @@ import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
 import { KI_VERSION } from '../../version.ts'
 import { inspectDirectRepositoryHealth } from '../repo/repository-health.ts'
 
-const field = (label: string, value: string): string => `${label.padEnd(14)}${label.length >= 14 ? ' ' : ''}${value}`
+const field = (label: string, value: string): string => `${label.padEnd(14)}${value}`
 
 const branches = (prefix: string, entries: readonly string[]): readonly string[] =>
   entries.length ? entries.map((entry, index) => `${prefix}${index === entries.length - 1 ? '╰─' : '├─'} ${entry}`) : [`${prefix}╰─ none`]

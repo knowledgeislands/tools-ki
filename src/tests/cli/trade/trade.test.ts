@@ -97,6 +97,7 @@ describe('[ki trade]', () => {
     const addedExportKnowledge = await box.run(['ki', 'trade', 'routes', 'add', receiverHome, '--direction', 'export', '--kind', 'knowledge'])
     const addedImport = await box.run(['ki', 'trade', 'routes', 'add', receiverHome, '--direction', 'import', '--kind', 'knowledge'])
     const listed = await box.run('ki trade routes list')
+    const checkedAll = await box.run('ki trade routes check')
     const checked = await box.run(['ki', 'trade', 'routes', 'check', receiverHome, '--direction', 'export', '--kind', 'work'])
     const removed = await box.run(['ki', 'trade', 'routes', 'remove', receiverHome, '--direction', 'export', '--kind', 'work'])
     const removedExportKnowledge = await box.run(['ki', 'trade', 'routes', 'remove', receiverHome, '--direction', 'export', '--kind', 'knowledge'])
@@ -111,6 +112,9 @@ describe('[ki trade]', () => {
     expect(listed.output).toContain('│  ├─ export\n│  │  ├─ work')
     expect(listed.output).toContain('│  │  ╰─ knowledge')
     expect(listed.output).toContain('│  ╰─ import')
+    expect(checkedAll.output).toContain(`│  ├─ export work ${receiverHome}: active`)
+    expect(checkedAll.output).toContain(`│  ├─ export knowledge ${receiverHome}: awaiting receiver activation`)
+    expect(checkedAll.output).toContain(`│  ╰─ import knowledge ${receiverHome}: awaiting sender activation`)
     expect(checked).toEqual({
       exitCode: 0,
       output: `╭─ KI TRADE ROUTE CHECK\n├─ routes (1)\n│  ╰─ export work ${receiverHome}: active\n╰─ summary: ROUTES=1 ACTIVE=1\n`
@@ -133,12 +137,11 @@ describe('[ki trade]', () => {
 
     box.cd('receiver')
     const received = await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'work', '--id', id])
+    const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
+    const receivedInbound = await box.project.read(inboundPath)
     await box.project.write(
-      `receiver/+/_TRADES/example/source/${id}.md`,
-      (await box.project.read(`receiver/+/_TRADES/example/source/${id}.md`)).replace(
-        'decision_status: unconsidered',
-        'decision_status: adopted\nadopted_as: "KI-RECEIVER-FND-001"'
-      )
+      inboundPath,
+      receivedInbound.replace('decision_status: unconsidered', 'decision_status: adopted\nadopted_as: "KI-RECEIVER-FND-001"')
     )
     box.cd('..')
     const listed = await box.run(['ki', 'trade', 'list', '--repo', receiverHome, '--direction', 'import', '--status', 'adopted', '--kind', 'work'])
@@ -167,6 +170,8 @@ describe('[ki trade]', () => {
     const { box } = await configuredPair()
     const created = await box.run(newTrade('knowledge'))
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
+    const listed = await box.run('ki trade list')
+    expect(listed.output).toContain(`◇ ${id} → receiver [sent · unavailable] Route contract`)
     box.cd('receiver')
     await box.run(['ki', 'trade', 'receive', '--from', sourceHome, '--kind', 'knowledge', '--id', id])
     const path = `receiver/+/_TRADES/example/source/${id}.md`

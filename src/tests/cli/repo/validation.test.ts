@@ -879,7 +879,7 @@ ${optionalDeps.length ? `ki-optional-depends-on: [${optionalDeps.join(', ')}]\n`
       ])
       await box.project.write('.ki-config.toml', '["example/harness:ki-batch"]\n')
 
-      const absent = await box.run('ki repo audit --reporter-levels info')
+      const absent = await box.run('ki repo audit --skill ki-batch --reporter-levels info')
       await box.project.write('.ki-config.toml', '["example/harness:ki-batch"]\n["example/harness:ki-delegation"]\n')
       const active = await box.run('ki repo audit --skill ki-batch --reporter-levels info')
 

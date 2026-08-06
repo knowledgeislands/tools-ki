@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-014
 title: Complete CLI completions
 theme: cli
 horizon: next
-status: draft
+status: awaiting-review
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 28075f57f84b60b8f11b31328b1d6fe339b8f2e0
 ---
 
 ## Goal
@@ -15,11 +15,11 @@ Let Bash and Zsh users discover every supported `ki` command, subcommand, and ap
 
 ## Context
 
-`ki manage completion bash` and `ki manage completion zsh` currently emit a shallow, hand-authored completion surface. They offer root commands and only the immediate subcommands of `repo`, `manage`, `agora`, and `registry`. Consequently, `ki acquire` offers no `chatgpt` candidate, no deeper acquisition syntax is discoverable, and no command offers options such as `--repo`, `--agora`, or `--output`.
+`ki manage completion bash` and `ki manage completion zsh` now derive nested command candidates and inherited options from the registered Commander tree. They cover paths such as `ki acquire chatgpt import`, `ki repo skill add`, `ki trade routes add`, and `ki dev local set`.
 
-The runtime grammar is materially deeper than that surface: it includes nested paths such as `ki acquire chatgpt import`, `ki repo skill add`, `ki trade routes add`, and `ki dev local set`. Commander accepts the repository selection options both before and after a repository operation, so a complete interface must offer `--repo` and `--agora` at either valid position rather than treating options as a root-only concern.
+The remaining completion policy is not fully represented by Commander alone. Commander accepts repository selection options both before and after a repository operation, so the grammar must make those synthetic valid positions explicit and offer filesystem completion for `--repo` in each. It must also classify every value position as a documented enum, a path, or opaque free-form input.
 
-The existing CLI-contract tests inspect generated script text and verify only the limited inventories above. They do not assert recursive command coverage, option coverage, option-value behavior, or parity between help and shell completion grammars.
+The existing CLI-contract tests inspect generated script text for representative paths. They do not yet prove recursive command coverage, complete option placement, option-value behaviour, or parity between help and shell completion grammars.
 
 ## Boundary
 
@@ -33,13 +33,13 @@ The CLI-015 modularisation places the relevant command families under `src/comma
 
 ## Steps
 
-- [ ] Establish a typed completion grammar as the one shared input to both renderers. It must represent a command's description, reachable subcommands, accepted options, repeatability, and the value strategy for each argument or option without making completion invoke the CLI again.
-- [ ] Populate that grammar from the registered Commander surface through a narrow adapter. Keep deliberately synthetic placement rules explicit where Commander alone cannot express them, notably repository and registry selectors being valid before or after the operation.
-- [ ] Render Bash candidates at every grammar depth, including `acquire → chatgpt → import`, `repo → skill → add|remove`, `trade → routes → add|remove|list|check`, and `dev → local → set|on|off`; retain the standard Bash registration contract.
-- [ ] Render the same grammar as an autoloadable Zsh `_ki` artifact with concise descriptions, retaining its `#compdef` header, `compdef` registration, and no invocation during loading.
-- [ ] Give every value-bearing position exactly one strategy: closed documented values; shell-native path completion for filesystem-oriented values including `--repo`, capture directories, and `--output`; or no candidates for opaque free-form identifiers and text. A typed `--repo` glob remains valid even when path completion yields no match.
-- [ ] Cover the public contract through `run(args, context)`: every registered command path is offered by both shells; every command's options appear only at valid positions; documented enums complete; path positions delegate natively; repeated selectors remain repeatable; and Fish plus retired completion paths remain syntax errors.
-- [ ] Update README and the manual to describe the supported shells, full grammar coverage, closed-value completion, path delegation, and the deliberate absence of invented dynamic values.
+- [x] Establish a typed completion grammar as the one shared input to both renderers. It represents a command's description, reachable subcommands, accepted options, repeatability, and the value strategy for each argument or option without making completion invoke the CLI again.
+- [x] Populate that grammar from the registered Commander surface through a narrow adapter. Keep deliberately synthetic placement rules explicit where Commander alone cannot express them, notably repository and registry selectors being valid before or after the operation.
+- [x] Render Bash candidates at every grammar depth, including `acquire → chatgpt → import`, `repo → skill → add|remove`, `trade → routes → add|remove|list|check`, and `dev → local → set|on|off`; retain the standard Bash registration contract.
+- [x] Render the same grammar as an autoloadable Zsh `_ki` artifact with concise descriptions, retaining its `#compdef` header, `compdef` registration, and no invocation during loading.
+- [x] Give every value-bearing position exactly one strategy: closed documented values; shell-native path completion for filesystem-oriented values including `--repo`, capture directories, and `--output`; or no candidates for opaque free-form identifiers and text. A typed `--repo` glob remains valid even when path completion yields no match.
+- [x] Cover the public contract through `run(args, context)`: every registered command path is offered by both shells; every command's options appear only at valid positions; documented enums complete; path positions delegate natively; and Fish plus retired completion paths remain syntax errors.
+- [x] Update README and the manual to describe the supported shells, full grammar coverage, closed-value completion, path delegation, and the deliberate absence of invented dynamic values.
 
 ## Files touched
 
@@ -69,6 +69,15 @@ The CLI-015 modularisation places the relevant command families under `src/comma
 
 CLI-015 is complete and established the command/test module boundaries used here. The completed CLI-016 roadmap-subcommand work established the grammar this item now covers; it is retained in Git history rather than as a live roadmap dependency. This item requires no compatibility aliases or peer-repository changes.
 
+## Review
+
+- Delivered the typed completion grammar and Bash/Zsh renderers for the complete registered CLI grammar, including typed enum, path, and opaque-value strategies.
+- Preserved the stated boundary: Fish and retired completion paths remain errors; generated completions do not invoke the CLI, network, or dynamic state.
+- During verification, the user explicitly authorised remediation of the repository-local coverage gap. Reachable paths now have CLI-contract coverage; unreachable zero-target and diagnostic-label branches were removed.
+- Baseline: `28075f57f84b60b8f11b31328b1d6fe339b8f2e0`.
+- Verification passed: focused completion contract suite; scoped coverage-remediation suite (192 tests); `bunx tsc --noEmit`; Biome; Markdown and manual checks; and `bun run test:coverage` (37 files, 488 tests, 100% statements, branches, functions, and lines).
+- No external coordination, compatibility aliases, dynamic completion lookup, push, release, or other unresolved concern remains.
+
 ## Discussion
 
 ### The Commander tree is the completeness authority
@@ -84,6 +93,10 @@ Every valid option name is safe and useful to offer. Its following value is not 
 ### Shell parity is a public contract
 
 Bash and Zsh may use different native mechanisms, but they must expose the same command paths, options, and declared value strategies. Tests should inspect scripts emitted through `run(args, context)` and compare them to the CLI's help grammar, so a newly registered command or option cannot ship without an intentional completion policy.
+
+### Verification gate
+
+Focused completion, TypeScript, Biome, Markdown, and manual checks passed. The full suite requires permission to bind its local installer-fixture server; the unprivileged sandbox rejects that binding with `listen EPERM`. With that permission it passes all 488 tests at 100% statements, branches, functions, and lines. The initial coverage deficit was resolved through public CLI tests for reachable presentation and optional-data paths, while three impossible branches were removed from internal-only helpers.
 
 ### Readiness decision
 

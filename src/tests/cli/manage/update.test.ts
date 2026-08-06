@@ -191,13 +191,15 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     const payload = archive()
     await box.setupExampleHarness()
+    await box.data.write('ki/harnesses/other/harness/skills/ki-other/SKILL.md', skill.replace('ki-example', 'ki-other'))
     await box.config.write('ki/config.toml', configuration(payload.sha256))
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n["other/harness:ki-other"]\n')
     box.setFetcher(async () => new Response(payload.payload))
 
     const upgraded = await box.run('ki repo upgrade')
 
     expect(upgraded.output).toContain(`example/harness: refreshed archive ${payload.sha256}`)
+    expect(upgraded.output).toContain('other/harness: unavailable (no configured immutable release)')
     expect(await box.data.read('ki/harnesses/example/harness/skills/example/SKILL.md')).toBe(skill)
   })
 

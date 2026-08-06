@@ -26,21 +26,19 @@ export const createUpgradeCommand = (
     }
     const providers = reports.reduce((total, report) => total + report.providers.length, 0)
     const lines = ['╭─ KI REPO UPGRADE', `├─ repositories (${reports.length})`]
-    if (!reports.length) lines.push('│  ╰─ none')
-    else
-      lines.push(
-        ...reports.flatMap((report, reportIndex) => {
-          const lastReport = reportIndex === reports.length - 1
-          const itemPrefix = `│  ${lastReport ? '   ' : '│  '}`
-          return [
-            `│  ${lastReport ? '╰─' : '├─'} ${report.root}`,
-            `${itemPrefix}╰─ providers (${report.providers.length})`,
-            ...(report.providers.length
-              ? report.providers.map((provider, providerIndex) => `${itemPrefix}   ${providerIndex === report.providers.length - 1 ? '╰─' : '├─'} ${provider}`)
-              : [`${itemPrefix}   ╰─ none`])
-          ]
-        })
-      )
+    lines.push(
+      ...reports.flatMap((report, reportIndex) => {
+        const lastReport = reportIndex === reports.length - 1
+        const itemPrefix = `│  ${lastReport ? '   ' : '│  '}`
+        return [
+          `│  ${lastReport ? '╰─' : '├─'} ${report.root}`,
+          `${itemPrefix}╰─ providers (${report.providers.length})`,
+          ...(report.providers.length
+            ? report.providers.map((provider, providerIndex) => `${itemPrefix}   ${providerIndex === report.providers.length - 1 ? '╰─' : '├─'} ${provider}`)
+            : [`${itemPrefix}   ╰─ none`])
+        ]
+      })
+    )
     lines.push(`╰─ summary: REPOSITORIES=${reports.length} PROVIDERS=${providers}`)
     context.stdout.write(`${lines.join('\n')}\n`)
   })

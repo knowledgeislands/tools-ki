@@ -26,6 +26,16 @@ describe('[ki harness]', () => {
       expect(listed).toEqual({ exitCode: 0, output: '╭─ KI HARNESSES\n├─ installed (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0\n' })
     })
 
+    test('renders every installed harness in order', async () => {
+      const box = await sandbox()
+      await box.setupExampleHarness()
+      await box.data.write('ki/harnesses/other/harness/skills/ki-other/SKILL.md', '---\nname: ki-other\nki-depends-on: []\n---\n')
+
+      const listed = await box.run('ki harness list')
+
+      expect(listed.output).toContain('│  ├─ example/harness (1)\n│  ╰─ other/harness (1)')
+    })
+
     test('resolves fallback paths without either user-home variable', async () => {
       const box = await sandbox()
       box.setEnv({
@@ -48,11 +58,21 @@ describe('[ki harness]', () => {
     test('inspects one non-canonical harness in human form', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
+      await box.data.write('ki/harnesses/example/harness/skills/ki-other/SKILL.md', '---\nname: ki-other\nki-depends-on: []\n---\n')
       const info = await box.run('ki harness info example/harness')
 
       expect(info.exitCode).toBe(0)
-      expect(info.output).toContain('├─ capabilities (1)')
-      expect(info.output).toContain('│  ╰─ skill ki-example\n')
+      expect(info.output).toContain('├─ capabilities (2)')
+      expect(info.output).toContain('│  ├─ skill ki-example\n│  ╰─ skill ki-other\n')
+    })
+
+    test('renders an installed harness with no capabilities', async () => {
+      const box = await sandbox()
+      await box.data.mkdir('ki/harnesses/empty/harness/skills')
+
+      const info = await box.run('ki harness info empty/harness')
+
+      expect(info).toEqual({ exitCode: 0, output: '╭─ KI HARNESS\n├─ empty/harness\n├─ capabilities (0)\n│  ╰─ none\n╰─ summary: CAPABILITIES=0\n' })
     })
 
     test('rejects the retired JSON output option', async () => {
@@ -645,6 +665,11 @@ releases = [
       ['an ignored frontmatter line', '---\nnot metadata\nki-depends-on: []\n---\n', 'must declare name'],
       ['an invalid dependency declaration', '---\nname: ki-example\nki-depends-on: ki-other\n---\n', 'must declare ki-depends-on as a flow list'],
       ['a repeated dependency', '---\nname: ki-example\nki-depends-on: [ki-other, ki-other]\n---\n', 'repeats a dependency'],
+      [
+        'a repeated optional dependency',
+        '---\nname: ki-example\nki-depends-on: []\nki-optional-depends-on: [ki-other, ki-other]\n---\n',
+        'repeats a optional dependency'
+      ],
       [
         'an empty runtime list',
         '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: []\n---\n',

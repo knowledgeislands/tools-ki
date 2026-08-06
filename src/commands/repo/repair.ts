@@ -73,18 +73,16 @@ export const createRepairCommand = (
         reports.push({ root: repository.root, entries })
       }
       const lines = ['╭─ KI REPO REPAIR', `├─ repositories (${reports.length})`]
-      if (!reports.length) lines.push('│  ╰─ none')
-      else
-        lines.push(
-          ...reports.flatMap((report, reportIndex) => {
-            const lastReport = reportIndex === reports.length - 1
-            const itemPrefix = `│  ${lastReport ? '   ' : '│  '}`
-            return [
-              `│  ${lastReport ? '╰─' : '├─'} ${report.root}`,
-              ...report.entries.map((entry, entryIndex) => `${itemPrefix}${entryIndex === report.entries.length - 1 ? '╰─' : '├─'} ${entry}`)
-            ]
-          })
-        )
+      lines.push(
+        ...reports.flatMap((report, reportIndex) => {
+          const lastReport = reportIndex === reports.length - 1
+          const itemPrefix = `│  ${lastReport ? '   ' : '│  '}`
+          return [
+            `│  ${lastReport ? '╰─' : '├─'} ${report.root}`,
+            ...report.entries.map((entry, entryIndex) => `${itemPrefix}${entryIndex === report.entries.length - 1 ? '╰─' : '├─'} ${entry}`)
+          ]
+        })
+      )
       lines.push(`╰─ summary: REPOSITORIES=${reports.length} RESULT=${failed ? 'FAIL' : 'PASS'}`)
       context.stdout.write(`${lines.join('\n')}\n`)
       if (failed) throw new KiExit(1)

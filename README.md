@@ -32,7 +32,7 @@ For the installation and activation boundary, read the [capability lifecycle gui
 
 `ki manage update` refreshes installed harnesses with configured immutable releases and updates the executable only when a verified installer receipt proves that it owns the running regular installation.
 
-`ki manage completion bash` and `ki manage completion zsh` print corresponding completion source derived from the registered CLI tree. Bash and Zsh cover every command path and valid option name; closed values complete locally, path-bearing repository selectors and output directories delegate to the shell, and opaque identifiers remain user-entered.
+`ki manage completion bash` and `ki manage completion zsh` print corresponding completion source derived from the registered CLI tree. Bash and Zsh cover every command path and valid option name; closed values complete locally, path-bearing repository selectors, capture directories, and output directories delegate to the shell, and opaque identifiers remain user-entered.
 
 `ki repo upgrade` refreshes the uniquely resolved providers declared by one or more selected KI repositories.
 

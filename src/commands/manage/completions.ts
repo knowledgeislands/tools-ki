@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
-import { type CompletionNode, type CompletionOption, completionGrammar } from './completion-grammar.ts'
+import { type CompletionNode, type CompletionOption, type CompletionValueStrategy, completionGrammar } from './completion-grammar.ts'
 
 const shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`
 
@@ -14,24 +14,24 @@ const optionNames = (option: CompletionOption): readonly string[] => option.name
 
 const valueOptions = (node: CompletionNode): readonly string[] => node.options.filter((option) => option.takesValue).flatMap(optionNames)
 
-const valueStrategy = (path: string, option: string): string => {
-  if (option === '--horizon') return 'now next soon waiting-for parked future'
-  if (option === '--kind') return 'work knowledge'
-  if (option === '--direction') return 'import export'
-  if (option === '--visibility') return 'public private'
-  if (option === '--runtime') return 'claude-code chatgpt-codex'
-  if (option === '--progress') return 'auto always never'
-  if (option === '--progress-style') return 'single multi'
-  if (option === '--reporter-levels') return 'levels all'
-  if (option === '--output' || ((option === '--repo' || option === '-r') && /^(repo|registry)( |$)/.test(path))) return 'path'
-  return ''
-}
+const renderValueStrategy = (strategy: CompletionValueStrategy): string =>
+  strategy.kind === 'values' ? strategy.values.join(' ') : strategy.kind === 'path' ? 'path' : ''
 
 const strategies = (nodes: readonly CompletionNode[]): string =>
   nodes
     .flatMap((node) =>
-      valueOptions(node).map(
-        (option) => `    ${shellQuote(`${nodeKey(node)}:${option}`)}) printf '%s\\n' ${shellQuote(valueStrategy(nodeKey(node), option))} ;;`
+      valueOptions(node).map((name) => {
+        const option = node.options.find((value) => value.names.includes(name)) as CompletionOption
+        return `    ${shellQuote(`${nodeKey(node)}:${name}`)}) printf '%s\\n' ${shellQuote(renderValueStrategy(option.valueStrategy))} ;;`
+      })
+    )
+    .join('\n')
+
+const argumentStrategies = (nodes: readonly CompletionNode[]): string =>
+  nodes
+    .flatMap((node) =>
+      node.arguments.map(
+        (argument, index) => `    ${shellQuote(`${nodeKey(node)}:${index}`)}) printf '%s\\n' ${shellQuote(renderValueStrategy(argument.valueStrategy))} ;;`
       )
     )
     .join('\n')
@@ -56,8 +56,13 @@ _ki_value_strategy() {
 ${strategies(nodes)}
   esac
 }
+_ki_argument_strategy() {
+  case "$1:$2" in
+${argumentStrategies(nodes)}
+  esac
+}
 _ki() {
-  local current="\${COMP_WORDS[COMP_CWORD]}" path='' token pending='' strategy
+  local current="\${COMP_WORDS[COMP_CWORD]}" path='' token pending='' strategy argument_index=0
   local index
   for (( index=1; index<COMP_CWORD; index++ )); do
     token="\${COMP_WORDS[index]}"
@@ -66,11 +71,20 @@ _ki() {
       [[ " $(_ki_value_options "$path") " == *" $token "* ]] && pending="$token"
     elif [[ " $(_ki_names "$path") " == *" $token "* ]]; then
       path="\${path:+$path }$token"
-    fi
+    else ((argument_index++))
   done
   if [[ -n "$pending" ]]; then
     strategy="$(_ki_value_strategy "$path" "$pending")"
     [[ "$strategy" == path ]] && COMPREPLY=( $(compgen -f -- "$current") ) || COMPREPLY=( $(compgen -W "$strategy" -- "$current") )
+    return
+  fi
+  strategy="$(_ki_argument_strategy "$path" "$argument_index")"
+  if [[ "$strategy" == path ]]; then
+    COMPREPLY=( $(compgen -f -- "$current") )
+    return
+  fi
+  if [[ -n "$strategy" ]]; then
+    COMPREPLY=( $(compgen -W "$strategy" -- "$current") )
     return
   fi
   COMPREPLY=( $(compgen -W "$(_ki_names "$path") $(_ki_options "$path")" -- "$current") )
@@ -103,6 +117,11 @@ _ki_value_strategy() {
 ${strategies(nodes)}
   esac
 }
+_ki_argument_strategy() {
+  case "$1:$2" in
+${argumentStrategies(nodes)}
+  esac
+}
 _ki_candidates() {
   case "$1" in
 ${caseBody(nodes, candidateValues)}
@@ -110,7 +129,7 @@ ${caseBody(nodes, candidateValues)}
 }
 _ki() {
   local path='' token pending='' strategy
-  integer index
+  integer index argument_index=0
   for (( index=2; index<CURRENT; index++ )); do
     token="\${words[index]}"
     if [[ -n "$pending" ]]; then pending=''; continue; fi
@@ -118,11 +137,20 @@ _ki() {
       [[ " $(_ki_value_options "$path") " == *" $token "* ]] && pending="$token"
     elif [[ " $(_ki_names "$path") " == *" $token "* ]]; then
       path="\${path:+$path }$token"
-    fi
+    else ((argument_index++))
   done
   if [[ -n "$pending" ]]; then
     strategy="$(_ki_value_strategy "$path" "$pending")"
     [[ "$strategy" == path ]] && _files || compadd -- $=strategy
+    return
+  fi
+  strategy="$(_ki_argument_strategy "$path" "$argument_index")"
+  if [[ "$strategy" == path ]]; then
+    _files
+    return
+  fi
+  if [[ -n "$strategy" ]]; then
+    compadd -- $=strategy
     return
   fi
   local -a candidates

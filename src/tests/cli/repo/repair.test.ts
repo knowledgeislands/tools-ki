@@ -1,4 +1,4 @@
-import { lstat, readlink, symlink } from 'node:fs/promises'
+import { lstat, readlink, realpath, symlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -109,6 +109,19 @@ describe('[ki repo repair]', () => {
     expect(nested.output).toContain('╭─ KI REPO REPAIR')
     expect(selected.exitCode).toBe(0)
     expect(selected.output).toContain('├─ repositories (1)')
+  })
+
+  test('renders every explicitly selected repository repair', async () => {
+    const box = await preparedRepository()
+    await box.root.write('second/.ki-config.toml', repositoryConfiguration)
+    const [project, second] = await Promise.all([realpath(box.project.path), realpath(`${box.root.path}/second`)])
+
+    const repair = await box.run(['ki', 'repo', '--repo', box.project.path, '--repo', `${box.root.path}/second`, 'repair'])
+
+    expect(repair.exitCode).toBe(0)
+    expect(repair.output).toContain('├─ repositories (2)')
+    expect(repair.output).toContain(`│  ├─ ${project}`)
+    expect(repair.output).toContain(`│  ╰─ ${second}`)
   })
 
   test('reports an unbootstrapped global environment as unrepairable', async () => {

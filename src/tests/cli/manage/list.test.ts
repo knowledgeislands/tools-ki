@@ -49,6 +49,16 @@ describe('[ki manage list]', () => {
     })
   })
 
+  test('renders every installed harness in its capability section', async () => {
+    const box = await sandbox()
+    await box.setupExampleHarness()
+    await box.data.write('ki/harnesses/other/harness/skills/ki-other/SKILL.md', '---\nname: ki-other\nki-depends-on: []\n---\n')
+
+    const result = await box.run('ki manage list')
+
+    expect(result.output).toContain('│  ├─ example/harness (1)\n│  │  ╰─ skill ki-example\n│  ╰─ other/harness (1)\n│     ╰─ skill ki-other')
+  })
+
   test('rejects arguments and invalid user configuration without inspecting repository declarations', async () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '[ki-example\n')

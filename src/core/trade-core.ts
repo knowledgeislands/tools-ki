@@ -564,7 +564,7 @@ export const locateTrades = async (
 
 export const tradeLifecycle = (trade: LocatedTrade, estate: readonly LocatedTrade[]): TradeLifecycle => {
   if (trade.direction === 'inbound')
-    return { senderStatus: 'received', receiverStatus: 'accepted', ...(trade.record.decisionStatus ? { decisionStatus: trade.record.decisionStatus } : {}) }
+    return { senderStatus: 'received', receiverStatus: 'accepted', decisionStatus: trade.record.decisionStatus as DecisionStatus }
   const inbound = estate.find(
     (candidate) =>
       candidate.direction === 'inbound' &&
@@ -573,7 +573,7 @@ export const tradeLifecycle = (trade: LocatedTrade, estate: readonly LocatedTrad
       candidate.record.receiver === trade.record.receiver
   )
   return inbound
-    ? { senderStatus: 'received', receiverStatus: 'accepted', ...(inbound.record.decisionStatus ? { decisionStatus: inbound.record.decisionStatus } : {}) }
+    ? { senderStatus: 'received', receiverStatus: 'accepted', decisionStatus: inbound.record.decisionStatus as DecisionStatus }
     : { senderStatus: 'sent', receiverStatus: 'unavailable' }
 }
 
