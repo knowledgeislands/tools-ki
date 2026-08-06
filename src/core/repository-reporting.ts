@@ -300,7 +300,7 @@ const createProgressTracker = (context: KiContext, options: OperationOptions, sk
 }
 
 /** Reports the item edges a live progress line needs, narrowed to the item code the renderer displays. */
-export interface ItemProgressCodes {
+interface ItemProgressCodes {
   readonly onItemStart: (code: string) => void
   readonly onItemComplete: (code: string) => void
 }

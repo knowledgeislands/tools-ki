@@ -266,7 +266,7 @@ export const prepareSkill = async (skill: ResolvedSkill): Promise<PreparedSkill>
  * only completion leaves the display naming the previous item for the whole of a
  * slow item's execution.
  */
-export interface ItemProgress {
+interface ItemProgress {
   readonly onItemStart?: (item: PreparedRubricItem) => void
   readonly onItemComplete?: (item: PreparedRubricItem) => void
 }
