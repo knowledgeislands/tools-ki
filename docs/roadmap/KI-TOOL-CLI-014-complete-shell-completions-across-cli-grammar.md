@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-014
 title: Complete CLI completions
 theme: cli
 horizon: next
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked-by: []
 baseline-ref: 28075f57f84b60b8f11b31328b1d6fe339b8f2e0
@@ -71,6 +71,7 @@ CLI-015 is complete and established the command/test module boundaries used here
 
 ## Review
 
+- Reopened again after loading the repaired Zsh script exposed candidate descriptions as literal quoted text. The Zsh renderer must emit newline-delimited raw `candidate:description` records to `_describe`, not shell-quoted records embedded in an already shell-quoted case payload.
 - Reopened during review after the generated Bash and Zsh scripts were found to omit a closing `fi` in their token-processing loops. The completion grammar correctly includes `repo roadmap`; the syntax error prevented a refreshed script from loading, leaving a shell's previously sourced completion function active. The repair restores that closing branch in both renderers.
 - Repair verification: generated Bash and Zsh scripts pass their native syntax parsers; Zsh sources after `compinit`; and the generated Bash function completes `repo roadmap` with `list`, `prune`, `promote`, and `demote`, while excluding the retired `plan` command.
 - Delivered the typed completion grammar and Bash/Zsh renderers for the complete registered CLI grammar, including typed enum, path, and opaque-value strategies.
