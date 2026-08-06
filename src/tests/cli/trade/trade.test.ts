@@ -650,6 +650,11 @@ describe('[ki trade]', () => {
       [outbound.replace('created_at:', 'created_at: invalid #'), 'has invalid created_at timestamp'],
       [outbound.replace('sender: example/source', 'sender: Example/source'), 'trade record address must use canonical'],
       [outbound.replace('kind: work', 'kind: other'), 'has invalid trade kind'],
+      [outbound.replace('observation: decision', 'observation: whenever'), 'has invalid observation policy'],
+      [
+        outbound.replace(`# ${id}: Route contract`, '# Some other heading'),
+        'H1 must exactly repeat trade id and title'
+      ],
       [outbound.replace('source_ref: "KI-TOOL-CLI-012"\n', ''), 'must declare non-empty trade field source_ref']
     ]
 
@@ -1053,5 +1058,234 @@ describe('[ki trade]', () => {
     expect((await box.run('ki trade list --direction import')).output).toContain(
       `⚒ ${id} import ← source [submitted · received · adopted · prune eligible] [decision] Route contract`
     )
+  })
+
+  test('skips absent submission directories and peers that declare no trade routes', async () => {
+    const { box } = await configuredPair()
+    box.cd('receiver')
+    const beforeAnySubmission = await box.run(['ki', 'trade', 'receive', '--all'])
+    box.cd('..')
+    await box.project.write(
+      '.ki-config.toml',
+      `["knowledgeislands/ki-agentic-harness:ki-repo"]\nrepository = "${sourceHome}"\n`
+    )
+    box.cd('receiver')
+    const unavailable = await box.run(['ki', 'trade', 'receive', 'TRD-00000000'])
+    const previewed = await box.run(['ki', 'trade', 'receive', '--all'])
+    const observed = await box.run(['ki', 'trade', 'observe', 'TRD-00000000'])
+
+    expect(beforeAnySubmission.output).toContain('0 eligible trades')
+    expect(unavailable.output).toContain('is unavailable or ambiguous')
+    expect(previewed.output).toContain('0 eligible trades')
+    expect(observed.output).toContain('is unavailable or ambiguous')
+  })
+
+  test('ignores submission files that are not named for a trade identifier', async () => {
+    const { box } = await configuredPair()
+    await box.project.write('-/_TRADES/example/receiver/notes.md', 'not a trade record\n')
+    box.cd('receiver')
+
+    expect((await box.run(['ki', 'trade', 'receive', '--all'])).output).toContain('0 eligible trades')
+  })
+
+  test('previews an eligible batch that excludes a submission the receiver has not recorded', async () => {
+    const { box } = await configuredPair()
+    const created = await createTrade(box, 'work')
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+
+    const previewed = await box.run(['ki', 'trade', 'release', '--eligible'])
+
+    expect(previewed).toEqual({ exitCode: 0, output: 'ki trade release --eligible: 0 eligible trades\n' })
+    expect(await box.project.read(`-/_TRADES/example/receiver/${id}.md`)).toContain('kind: work')
+  })
+
+  test('holds a completion trade while the linked receiver work is not yet done', async () => {
+    const { box } = await configuredPair()
+    const created = await createTrade(box, 'work', { observation: 'completion' })
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+    box.cd('receiver')
+    await box.run(['ki', 'trade', 'receive', id])
+    const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
+    await box.project.write(
+      inboundPath,
+      (await box.project.read(inboundPath)).replace(
+        'decision_status: unconsidered',
+        'decision_status: adopted\nadopted_as: "KI-LOCAL-001"'
+      )
+    )
+    await box.project.write('receiver/docs/roadmap/other.md', '---\nid: KI-OTHER-001\nstatus: done\n---\n')
+    box.cd('..')
+
+    expect((await box.run(['ki', 'trade', 'release', id])).output).toContain(
+      'cannot be released before its completion observation policy is satisfied'
+    )
+  })
+
+  test('refuses to read a trade peer without a usable committed HEAD or a committed record', async () => {
+    const { box } = await configuredPair()
+    const created = await createTrade(box, 'work')
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+    box.cd('receiver')
+
+    box.setRunner(async () => ({ exitCode: 1, output: 'fatal: not a git repository\n' }))
+    const withoutHead = await box.run(['ki', 'trade', 'receive', id])
+    box.setRunner(async (_command, arguments_) =>
+      arguments_[2] === 'rev-parse'
+        ? { exitCode: 0, output: `${'a'.repeat(40)}\n` }
+        : { exitCode: 1, output: 'fatal: path does not exist\n' }
+    )
+    const withoutRecord = await box.run(['ki', 'trade', 'receive', id])
+
+    expect(withoutHead.output).toContain('has no usable committed HEAD')
+    expect(withoutRecord.output).toContain(`is not committed at ${'a'.repeat(40)}`)
+  })
+
+  test('reports a prior observation reference that cannot be compared with committed history', async () => {
+    const { box } = await configuredPair()
+    const prepared = await box.run(prepareTrade('work'))
+    const id = /TRD-[0-9a-f]{8}/u.exec(prepared.output)?.[0] as string
+    box.cd('receiver')
+    const first = await box.run(['ki', 'trade', 'observe', id])
+    const second = await box.run(['ki', 'trade', 'observe', id])
+    box.setRunner(async (_command, arguments_) =>
+      arguments_[2] === 'show'
+        ? { exitCode: 0, output: await readFile(join(box.project.path, (arguments_[3] as string).slice(41)), 'utf8') }
+        : arguments_[2] === 'diff'
+          ? { exitCode: 1, output: 'fatal: bad revision\n' }
+          : { exitCode: 0, output: `${'a'.repeat(40)}\n` }
+    )
+    const undiffable = await box.run(['ki', 'trade', 'observe', id])
+
+    expect(first.output).toContain('first observation has no prior committed reference')
+    expect(second.output).toContain('the prior reference is not comparable with the current committed history')
+    expect(undiffable.output).toContain(`verbatim ${'a'.repeat(40)}`)
+  })
+
+  test('releases an unattended submission without waiting for a receiver decision', async () => {
+    const { box } = await configuredPair()
+    const created = await createTrade(box, 'work', { observation: 'unattended' })
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+    box.cd('receiver')
+    await box.run(['ki', 'trade', 'receive', id])
+    box.cd('..')
+
+    expect(await box.run(['ki', 'trade', 'release', id])).toEqual({
+      exitCode: 0,
+      output: `ki trade release: released ${id}\n`
+    })
+  })
+
+  test('ignores non-trade entries and other-kind records when checking route-removal dependencies', async () => {
+    const { box } = await configuredPair()
+    await createTrade(box, 'knowledge')
+    await box.project.write('-/_TRADES/example/receiver/notes.md', 'not a trade record\n')
+    await box.project.write('-/_TRADES/example/receiver/TRD-00000001.txt', 'not markdown\n')
+    await box.project.mkdir('-/_TRADES/example/receiver/TRD-00000002.md')
+
+    const removed = await box.run([
+      'ki',
+      'trade',
+      'routes',
+      'remove',
+      receiverHome,
+      '--direction',
+      'export',
+      '--kind',
+      'work'
+    ])
+
+    expect(removed).toEqual({
+      exitCode: 0,
+      output: `ki trade routes remove: export work ${sourceHome} -> ${receiverHome}\n`
+    })
+  })
+
+  test('refuses release when the export route is no longer active or no longer declared', async () => {
+    const { box } = await configuredPair()
+    const created = await createTrade(box, 'work')
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+    box.cd('receiver')
+    await box.run(['ki', 'trade', 'receive', id])
+    box.cd('..')
+
+    await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver'))
+    const inactive = await box.run(['ki', 'trade', 'release', id])
+    await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { knowledge: [receiverHome] }))
+    const undeclared = await box.run(['ki', 'trade', 'release', id])
+
+    expect(inactive).toEqual({
+      exitCode: 2,
+      output: `ki: error: export work trade route ${receiverHome} is awaiting receiver\n`
+    })
+    expect(undeclared).toEqual({
+      exitCode: 2,
+      output: `ki: error: export work trade route ${receiverHome} is not declared locally\n`
+    })
+  })
+
+  test('rejects preparations that lose their phase, policy, or heading contract', async () => {
+    const { box } = await configuredPair()
+    const prepared = await box.run(prepareTrade('work'))
+    const id = /TRD-[0-9a-f]{8}/u.exec(prepared.output)?.[0] as string
+    const path = `-/_TRADES/_PREPARATIONS/example/receiver/${id}.md`
+    const preparation = await box.project.read(path)
+
+    const cases: readonly [string, string][] = [
+      [preparation.replace('phase: preparing\n', ''), 'preparation must declare phase: preparing'],
+      [preparation.replace('observation: decision', 'observation: eventually'), 'has invalid observation policy'],
+      [preparation.replace(`# ${id}: Route contract`, `# ${id}: Other contract`), 'H1 must exactly repeat']
+    ]
+
+    for (const [contents, message] of cases) {
+      await box.project.write(path, contents)
+      expect((await box.run('ki trade list')).output).toContain(message)
+    }
+  })
+
+  test('rejects receiver fields that contradict the recorded decision status', async () => {
+    const { box } = await configuredPair()
+    const work = await createTrade(box, 'work')
+    const workId = /TRD-[0-9a-f]{8}/u.exec(work.output)?.[0] as string
+    const knowledge = await createTrade(box, 'knowledge')
+    const knowledgeId = /TRD-[0-9a-f]{8}/u.exec(knowledge.output)?.[0] as string
+    box.cd('receiver')
+    await box.run(['ki', 'trade', 'receive', workId])
+    await box.run(['ki', 'trade', 'receive', knowledgeId])
+    box.cd('..')
+    const workPath = `receiver/+/_TRADES/example/source/${workId}.md`
+    const knowledgePath = `receiver/+/_TRADES/example/source/${knowledgeId}.md`
+    const workInbound = await box.project.read(workPath)
+    const knowledgeInbound = await box.project.read(knowledgePath)
+
+    const cases: readonly [string, string, string][] = [
+      [
+        workPath,
+        workInbound.replace(`received_from_ref: ${'a'.repeat(40)}`, 'received_from_ref: nope'),
+        'has invalid received_from_ref commit'
+      ],
+      [
+        workPath,
+        workInbound.replace(
+          'decision_status: unconsidered',
+          `decision_status: declined\nrationale: "not local"\napplied_commit: ${'b'.repeat(40)}`
+        ),
+        'permits applied_commit only for decision status applied'
+      ],
+      [
+        knowledgePath,
+        knowledgeInbound.replace(
+          'decision_status: unconsidered',
+          `decision_status: applied\napplied_commit: ${'b'.repeat(40)}`
+        ),
+        'permits applied only for work trades'
+      ]
+    ]
+
+    for (const [path, contents, message] of cases) {
+      await box.project.write(workPath, workInbound)
+      await box.project.write(knowledgePath, knowledgeInbound)
+      await box.project.write(path, contents)
+      expect((await box.run('ki trade list')).output).toContain(message)
+    }
   })
 })
