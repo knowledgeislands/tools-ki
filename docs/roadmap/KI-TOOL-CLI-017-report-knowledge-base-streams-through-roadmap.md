@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-017
 title: Report Knowledge Base streams
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 3c5b1e930cc7126c3130a1b8ff555d2c1970401d
@@ -61,6 +61,10 @@ The command remains read-only. CLI-contract fixtures prove populated and empty K
 Verification passed: `bunx vitest run src/tests/cli/repo/roadmap.test.ts`, `bunx tsc --noEmit`, and `bun run test:coverage` (491 tests; 100% statements, branches, functions, and lines).
 
 Proposed harness learning: express architecturally significant boundaries as observable CLI contracts. Treat a coverage miss as either a valid end-to-end input to add or dead code to remove; do not retain untestable internal paths merely to preserve an implementation shape.
+
+## Done
+
+Accepted by the user on 2026-08-06. The focused roadmap contract suite and TypeScript gate were rechecked at closure; no unresolved concern remains.
 
 ## Discussion
 
