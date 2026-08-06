@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-020
 title: Render rubric remedies
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: b80ef17092abbdb8226a375b4921f4ac63c09358
@@ -22,16 +22,14 @@ Harness work `KI-HARNESS-GOV-012` requested a bounded host-contract delivery thr
 
 This item does not define remediation classes, choose guarded actions, execute judgment guidance, or add a compatibility path for unclassified mechanical criteria. Those policy decisions remain Harness-owned. The host validates the published v1 schema, renders it faithfully, and executes only `automatic` mechanical actions.
 
-## Discussion
-
 ## Steps
 
-- [ ] Preserve `contract: 1` and validate mandatory remediation metadata for every mechanical aspect: `automatic` has a callback; `diagnostic` and `guarded` have non-empty guidance and no callback; `guarded` has a judgment aspect.
-- [ ] Validate complete judgment review metadata: evidence scope, prompt, unique outcome vocabulary, and conforming guidance.
-- [ ] Render mechanical remediation and judgment-review guidance in generated rubric publications without creating synthetic findings.
-- [ ] Restrict rubric execution to `automatic` mechanical callbacks, retaining audit evidence for every remediation class.
-- [ ] Rename or clarify the unrelated command-publication `--allow-guarded` option so it cannot be confused with rubric remediation classification.
-- [ ] Migrate all host fixtures atomically, run focused CLI tests and the type gate, then return status and trade evidence to GOV-012.
+- [x] Preserve `contract: 1` and validate mandatory remediation metadata for every mechanical aspect: `automatic` has a callback; `diagnostic` and `guarded` have non-empty guidance and no callback; `guarded` has a judgment aspect.
+- [x] Validate complete judgment review metadata: evidence scope, prompt, unique outcome vocabulary, and conforming guidance.
+- [x] Render mechanical remediation and judgment-review guidance in generated rubric publications without creating synthetic findings.
+- [x] Restrict rubric execution to `automatic` mechanical callbacks, retaining audit evidence for every remediation class.
+- [x] Rename the unrelated command-publication option to `--allow-commands`, so it cannot be confused with rubric remediation classification.
+- [x] Migrate all host fixtures atomically and run 189 focused CLI tests plus the TypeScript gate.
 
 ## Files touched
 
