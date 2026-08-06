@@ -79,13 +79,7 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
   const planning = result.planning
   if (planning?.kind === 'streams') {
     const count = planning.focuses.reduce((total, focus) => total + focus.proposals.length, 0)
-    const lines = [
-      '╭─ KI REPO ROADMAP',
-      `│  📁 ${basename(result.repository)}`,
-      `│     ${result.repository}`,
-      `├─ streams (${count})`,
-      '│  source: Knowledge Base Streams'
-    ]
+    const lines = ['╭─ KI REPO ROADMAP', `│  📁 ${basename(result.repository)}`, `│     ${result.repository}`, `├─ streams (${count}) · Knowledge Base Streams`]
     if (!count) lines.push('│  ╰─ proposals: none')
     else
       for (const [focusIndex, focus] of planning.focuses.entries()) {
@@ -93,7 +87,9 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
         const itemPrefix = `│  ${lastFocus ? '   ' : '│  '}`
         lines.push(`│  ${lastFocus ? '╰─' : '├─'} ${focus.name} (${focus.proposals.length})`)
         for (const [proposalIndex, proposal] of focus.proposals.entries())
-          lines.push(`${itemPrefix}${proposalIndex === focus.proposals.length - 1 ? '╰─' : '├─'} ${proposal.identity} [${proposal.status}] ${proposal.title}`)
+          lines.push(
+            `${itemPrefix}${proposalIndex === focus.proposals.length - 1 ? '╰─' : '├─'} ${proposal.identity.slice(focus.name.length + 1)} [${proposal.status}] ${proposal.title}`
+          )
       }
     if (planning.diagnostics.length) {
       lines.push(`├─ stream diagnostics (${planning.diagnostics.length})`)

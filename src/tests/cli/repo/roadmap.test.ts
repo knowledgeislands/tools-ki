@@ -37,7 +37,7 @@ describe('[ki repo roadmap]', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain(
-      '├─ streams (3)\n│  source: Knowledge Base Streams\n│  ├─ Now (2)\n│  │  ├─ Now/Proposal [awaiting-review] Native proposal\n│  │  ╰─ Now/Second [draft] Second proposal\n│  ╰─ Soon (1)\n│     ╰─ Soon/Later [ready] Later proposal'
+      '├─ streams (3) · Knowledge Base Streams\n│  ├─ Now (2)\n│  │  ├─ Proposal [awaiting-review] Native proposal\n│  │  ╰─ Second [draft] Second proposal\n│  ╰─ Soon (1)\n│     ╰─ Later [ready] Later proposal'
     )
     expect(result.output).toContain('╰─ summary: PROPOSALS=3 FOCUSES=2 TRADES=0 IMPORTS=0 EXPORTS=0')
     expect(await box.project.read('knowledge/Streams/Now/Proposal/Proposal.md')).toBe(before)
@@ -65,7 +65,7 @@ describe('[ki repo roadmap]', () => {
     expect(missing.output).toContain('has no physical Streams directory')
     expect(missingIndex.output).toContain('has no physical Streams/Streams.md file')
     expect(malformed.exitCode).toBe(1)
-    expect(malformed.output).toContain('Now/Valid [draft] Valid')
+    expect(malformed.output).toContain('Valid [draft] Valid')
     expect(malformed.output).toContain('stream diagnostics (2)')
     expect(malformed.output).toContain('must declare type, title, and status')
     expect(malformed.output).toContain('has invalid stream-proposal frontmatter')
@@ -95,7 +95,7 @@ describe('[ki repo roadmap]', () => {
     const invalid = await box.run('ki repo --repo invalid roadmap list')
     const repeated = await box.run('ki repo --repo repeated roadmap list')
 
-    expect(empty.output).toContain('├─ streams (0)\n│  source: Knowledge Base Streams\n│  ╰─ proposals: none')
+    expect(empty.output).toContain('├─ streams (0) · Knowledge Base Streams\n│  ╰─ proposals: none')
     expect(absent.output).toContain('must declare stream-proposal frontmatter')
     expect(invalid.output).toContain('has invalid stream-proposal frontmatter')
     expect(repeated.output).toContain('has invalid stream-proposal frontmatter')
