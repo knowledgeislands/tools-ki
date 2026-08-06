@@ -20,7 +20,7 @@ _Verify:_ a named CLI test asserts the behaviour.
 
 ## ID scheme
 
-`REPO-AUDIT-NNN` identifiers belong to the repository-audit area. Serials are zero-padded, sequential, append-only, and never reused.
+Each area owns one uppercase prefix. Identifiers use `<PREFIX>-NNN`; serials are zero-padded, sequential and append-only within their area, and never reused.
 
 ## Gaps convention
 
@@ -28,6 +28,17 @@ Unbuilt or uncertain behaviour belongs in an area's unnumbered `## Gaps` section
 
 ## Areas
 
-| File                | Prefix       | Covers                                                         |
-| ------------------- | ------------ | -------------------------------------------------------------- |
-| repository-audit.md | `REPO-AUDIT` | `ki repo audit` selection, results, output, and multi-repo use |
+| File                     | Prefix       | Covers                                                         |
+| ------------------------ | ------------ | -------------------------------------------------------------- |
+| acquisition.md           | `ACQUIRE`    | Knowledge Exchange Package acquisition                         |
+| agoras.md                | `AGORA`      | Named user-level repository groups                             |
+| bootstrap.md             | `BOOT`       | First-time user activation and refresh                         |
+| cli.md                   | `CLI`        | Root command discovery, version, and failure boundary          |
+| development.md           | `DEV`        | Controlled local Harness development                           |
+| harnesses.md             | `HARN`       | Verified compatible Harness lifecycle                          |
+| management.md            | `MANAGE`     | User inventory, diagnosis, updates, and shell integration      |
+| registry.md              | `REGISTRY`   | Explicit repository registration and inventory                 |
+| repository-audit.md      | `REPO-AUDIT` | `ki repo audit` selection, results, output, and multi-repo use |
+| repository-operations.md | `REPO-OPS`   | Repository targeting, conform, repair, and provider upgrades   |
+| skills.md                | `SKILL`      | User and repository skill activation plus rubrics              |
+| trades.md                | `TRADE`      | Local directional cross-repository trade operations            |
