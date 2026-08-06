@@ -16,6 +16,7 @@ const item = (value) => {
     sources: value.sources ?? ['standard.md'],
     mechanical: {
       level: value.level,
+      remediation: value.remediation ?? (value.conform === undefined ? { class: 'diagnostic', guidance: 'Diagnose the reported evidence.' } : { class: 'automatic' }),
       audit: { phase: value.phase, run: value.audit },
       ...(value.conform === undefined ? {} : {
         conform: {
@@ -30,7 +31,7 @@ const item = (value) => {
     title: value.title,
     description: value.description ?? 'Judgment test criterion.',
     sources: value.sources ?? ['standard.md'],
-    judgment: { prompt: value.prompt }
+    judgment: { scope: value.scope ?? 'Review the supplied evidence.', prompt: value.prompt, outcomes: value.outcomes ?? ['accepted'], guidance: value.guidance ?? 'Record the selected outcome.' }
   }
   return {
     ...value,

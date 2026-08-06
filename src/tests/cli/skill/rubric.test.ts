@@ -22,12 +22,12 @@ const mixedFamilies = `[{
   selectContext: (context) => context,
   items: [
     { code: 'FAM-1', title: 'Mechanical item', description: 'Mechanical description.', sources: ['standard.md#mechanical'],
-      mechanical: { level: 'FAIL', audit: { phase: 'PRIMARY', run: async () => [] } } },
+      mechanical: { level: 'FAIL', remediation: { class: 'diagnostic', guidance: 'Diagnose the evidence.' }, audit: { phase: 'PRIMARY', run: async () => [] } } },
     { code: 'FAM-2', title: 'Judgment item', description: 'Judgment description.', sources: ['standard.md#judgment'],
-      judgment: { prompt: 'weigh it by hand' } },
+      judgment: { scope: 'The item evidence.', prompt: 'weigh it by hand', outcomes: ['accepted', 'rework'], guidance: 'Record the selected outcome.' } },
     { code: 'FAM-3', title: 'Hybrid item', description: 'Hybrid description.', sources: ['standard.md#hybrid'],
-      mechanical: { level: 'WARN', heuristic: true, audit: { phase: 'INSPECT', run: async () => [] } },
-      judgment: { prompt: 'review the heuristic' } }
+      mechanical: { level: 'WARN', heuristic: true, remediation: { class: 'guarded', guidance: 'Apply the recorded review decision.' }, audit: { phase: 'INSPECT', run: async () => [] } },
+      judgment: { scope: 'The heuristic evidence.', prompt: 'review the heuristic', outcomes: ['accepted', 'rework'], guidance: 'Record the selected outcome.' } }
   ]
 }]`
 
@@ -51,10 +51,18 @@ const expectedRendered = [
   'The family description.',
   '',
   '- **FAM-1 [M] — Mechanical item** — Mechanical description. (standard.md#mechanical)',
+  '  - _Remediation:_ diagnostic — Diagnose the evidence.',
   '- **FAM-2 [J] — Judgment item** — Judgment description. (standard.md#judgment)',
+  '  - _Evidence scope:_ The item evidence.',
   '  - _Review prompt:_ weigh it by hand',
+  '  - _Outcomes:_ accepted; rework',
+  '  - _Conforming guidance:_ Record the selected outcome.',
   '- **FAM-3 [M-heuristic + J] — Hybrid item** — Hybrid description. (standard.md#hybrid)',
+  '  - _Remediation:_ guarded — Apply the recorded review decision.',
+  '  - _Evidence scope:_ The heuristic evidence.',
   '  - _Review prompt:_ review the heuristic',
+  '  - _Outcomes:_ accepted; rework',
+  '  - _Conforming guidance:_ Record the selected outcome.',
   ''
 ].join('\n')
 

@@ -16,6 +16,7 @@ const item = (value) => {
     sources: value.sources ?? ['standard.md'],
     mechanical: {
       level: value.level,
+      remediation: value.remediation ?? (value.conform === undefined ? { class: 'diagnostic', guidance: 'Diagnose the reported evidence.' } : { class: 'automatic' }),
       audit: { phase: value.phase, run: value.audit },
       ...(value.conform === undefined ? {} : {
         conform: {
@@ -30,7 +31,7 @@ const item = (value) => {
     title: value.title,
     description: value.description ?? 'Judgment test criterion.',
     sources: value.sources ?? ['standard.md'],
-    judgment: { prompt: value.prompt }
+    judgment: { scope: value.scope ?? 'Review the supplied evidence.', prompt: value.prompt, outcomes: value.outcomes ?? ['accepted'], guidance: value.guidance ?? 'Record the selected outcome.' }
   }
   return {
     ...value,
@@ -372,7 +373,7 @@ describe('[ki repo conform writes]', () => {
       'refused example/harness:ki-overlap-one, example/harness:ki-overlap-two: direct conform repeats write path shared.txt with different content'
     )
     expect(result.output).toContain('refused example/harness:ki-unsafe: direct conform write target unsafe.txt must be an existing regular file')
-    expect(result.output).toContain('withheld example/harness:ki-command: command-backed conform repairs require --allow-guarded while failures are unresolved')
+    expect(result.output).toContain('withheld example/harness:ki-command: command-backed conform repairs require --allow-commands while failures are unresolved')
     expect(result.output).toContain(
       'refused example/harness:ki-user-command: user-home rubric conform actions must be guarded direct writes; conform commands are not permitted'
     )
@@ -413,13 +414,13 @@ describe('[ki repo conform writes]', () => {
 
     const withheld = await box.run('ki repo conform')
     expect(withheld.exitCode).toBe(1)
-    expect(withheld.output).toContain('command-backed conform repairs require --allow-guarded')
+    expect(withheld.output).toContain('command-backed conform repairs require --allow-commands')
     await expect(box.project.read('command.txt')).rejects.toThrow()
-    const dryRun = await box.run('ki repo conform --allow-guarded --dry-run')
+    const dryRun = await box.run('ki repo conform --allow-commands --dry-run')
     expect(dryRun.exitCode).toBe(1)
     expect(dryRun.output).toContain(`would run guarded "node" "-e" "require('node:fs').writeFileSync('command.txt', 'after')"`)
     await expect(box.project.read('command.txt')).rejects.toThrow()
-    const allowed = await box.run('ki repo conform --allow-guarded')
+    const allowed = await box.run('ki repo conform --allow-commands')
     expect(allowed.exitCode).toBe(1)
     expect(allowed.output).toContain(`run guarded "node" "-e" "require('node:fs').writeFileSync('command.txt', 'after')"`)
     expect(allowed.output).toContain('↺ fixed [Command repair (COMMAND-1)] — conformed')
@@ -448,7 +449,7 @@ describe('[ki repo conform writes]', () => {
       )
     )
 
-    const result = await box.run('ki repo conform --allow-guarded')
+    const result = await box.run('ki repo conform --allow-commands')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('run guarded "false"')
@@ -516,6 +517,7 @@ export default {
       sources: ['standard.md'],
       mechanical: {
         level: 'FAIL',
+        remediation: { class: 'automatic' },
         audit: {
           phase: 'INSPECT',
           run: ({ read }) => read().includes('primary\\n')
@@ -531,6 +533,7 @@ export default {
       sources: ['standard.md'],
       mechanical: {
         level: 'FAIL',
+        remediation: { class: 'automatic' },
         audit: {
           phase: 'INSPECT',
           run: ({ read }) => read().includes('normalised\\n')

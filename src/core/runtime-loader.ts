@@ -54,19 +54,33 @@ const validateLevels = (value: unknown, identity: string, code: string): readonl
   return value as ViolationLevel[]
 }
 
+const validateRemediation = (value: unknown, identity: string, code: string): MechanicalRubric<unknown>['remediation'] => {
+  if (!isRecord(value) || (value['class'] !== 'automatic' && value['class'] !== 'diagnostic' && value['class'] !== 'guarded'))
+    throw new KiError(`${identity} rubric item ${code} must declare automatic, diagnostic, or guarded remediation`, 1)
+  if (value['class'] === 'automatic') return { class: 'automatic' }
+  if (!nonEmptyString(value['guidance'])) throw new KiError(`${identity} rubric item ${code} ${value['class']} remediation must have guidance`, 1)
+  return { class: value['class'], guidance: value['guidance'] }
+}
+
 const validateMechanical = (value: unknown, identity: string, code: string): MechanicalRubric<unknown> | undefined => {
   if (value === undefined) return undefined
   if (!isRecord(value)) throw new KiError(`${identity} rubric item ${code} mechanical aspect must be a table`, 1)
-  const { level, overrideLevels, heuristic, audit, conform, conformOn } = value
+  const { level, overrideLevels, heuristic, remediation: rawRemediation, audit, conform, conformOn } = value
   if (typeof level !== 'string' || !(VIOLATION_LEVELS as readonly string[]).includes(level))
     throw new KiError(`${identity} rubric item ${code} has an invalid level`, 1)
   if (heuristic !== undefined && typeof heuristic !== 'boolean') throw new KiError(`${identity} rubric item ${code} heuristic must be boolean`, 1)
   if (conformOn !== undefined && (!Array.isArray(conformOn) || conformOn.some((status) => status !== 'INFO') || new Set(conformOn).size !== conformOn.length))
     throw new KiError(`${identity} rubric item ${code} conformOn must contain unique INFO statuses`, 1)
+  const remediation = validateRemediation(rawRemediation, identity, code)
+  if (remediation.class === 'automatic' && conform === undefined)
+    throw new KiError(`${identity} rubric item ${code} automatic remediation must have a conform action`, 1)
+  if (remediation.class !== 'automatic' && conform !== undefined)
+    throw new KiError(`${identity} rubric item ${code} ${remediation.class} remediation must not have a conform action`, 1)
   return {
     level: level as ViolationLevel,
     ...(overrideLevels === undefined ? {} : { overrideLevels: validateLevels(overrideLevels, identity, code) }),
     ...(heuristic === undefined ? {} : { heuristic }),
+    remediation,
     audit: validatePhaseExecution(audit, identity, code, 'audit'),
     ...(conform === undefined ? {} : { conform: validatePhaseExecution(conform, identity, code, 'conform') }),
     ...(conformOn === undefined ? {} : { conformOn: conformOn as 'INFO'[] })
@@ -85,13 +99,19 @@ const validateItem = (value: unknown, identity: string, seenCodes: Set<string>):
   seenCodes.add(code)
 
   const mechanical = validateMechanical(rawMechanical, identity, code)
-  let judgment: { readonly prompt: string } | undefined
+  let judgment: RubricItem<unknown>['judgment']
   if (rawJudgment !== undefined) {
-    if (!isRecord(rawJudgment)) throw new KiError(`${identity} rubric item ${code} judgment must have a prompt`, 1)
-    const { prompt } = rawJudgment
+    if (!isRecord(rawJudgment)) throw new KiError(`${identity} rubric item ${code} judgment must be a table`, 1)
+    const { scope, prompt, outcomes, guidance } = rawJudgment
+    if (!nonEmptyString(scope)) throw new KiError(`${identity} rubric item ${code} judgment must have an evidence scope`, 1)
     if (!nonEmptyString(prompt)) throw new KiError(`${identity} rubric item ${code} judgment must have a prompt`, 1)
-    judgment = { prompt }
+    if (!Array.isArray(outcomes) || !outcomes.length || outcomes.some((outcome) => !nonEmptyString(outcome)) || new Set(outcomes).size !== outcomes.length)
+      throw new KiError(`${identity} rubric item ${code} judgment must have unique non-empty outcomes`, 1)
+    if (!nonEmptyString(guidance)) throw new KiError(`${identity} rubric item ${code} judgment must have conforming guidance`, 1)
+    judgment = { scope, prompt, outcomes: outcomes as [string, ...string[]], guidance }
   }
+  if (mechanical?.remediation.class === 'guarded' && !judgment)
+    throw new KiError(`${identity} rubric item ${code} guarded remediation must have a judgment aspect`, 1)
   if (!mechanical && !judgment) throw new KiError(`${identity} rubric item ${code} must be mechanical, judgment, or both`, 1)
   return {
     code,

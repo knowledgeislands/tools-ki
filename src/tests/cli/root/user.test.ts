@@ -28,6 +28,7 @@ const governedItem = (conform: string): string => `[{
     code: 'USER-1', title: 'Governed file', description: 'The file is governed.', sources: ['standard.md'],
     mechanical: {
       level: 'FAIL',
+      remediation: { class: 'automatic' },
       audit: { phase: 'PRIMARY', run: async ({ userHome }) => {
         const { readFile } = await import('node:fs/promises')
         const content = await readFile(userHome + '/.managed/governed.txt', 'utf8')

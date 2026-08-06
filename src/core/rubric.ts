@@ -61,13 +61,21 @@ export interface MechanicalRubric<Context> {
   readonly level: ViolationLevel
   readonly overrideLevels?: readonly ViolationLevel[]
   readonly heuristic?: boolean
+  readonly remediation: MechanicalRemediation
   readonly audit: RubricExecution<Context, readonly AuditOutcome[]>
   readonly conform?: RubricExecution<Context, void>
   readonly conformOn?: readonly 'INFO'[]
 }
 
+export type MechanicalRemediation =
+  | { readonly class: 'automatic' }
+  | { readonly class: 'diagnostic' | 'guarded'; readonly guidance: string }
+
 export interface JudgmentRubric {
+  readonly scope: string
   readonly prompt: string
+  readonly outcomes: readonly [string, ...string[]]
+  readonly guidance: string
 }
 
 export interface RubricItem<Context> {

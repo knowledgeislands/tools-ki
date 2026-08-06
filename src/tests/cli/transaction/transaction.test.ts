@@ -88,6 +88,7 @@ const governedItem = (path: string, code: string, content: string) => `{
   code: '${code}', title: '${code}', description: 'Publication test item.', sources: ['standard.md'],
   mechanical: {
     level: 'FAIL',
+    remediation: { class: 'automatic' },
     audit: { phase: 'PRIMARY', run: async () => [{ status: 'VIOLATION', message: 'not conformed' }] },
     conform: { phase: 'PRIMARY', run: async (context) => { context.propose({ writes: [{ path: '${path}', content: '${content}' }] }) } }
   }

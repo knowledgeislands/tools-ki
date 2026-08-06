@@ -16,8 +16,13 @@ const classification = (item: RubricItem<unknown>): string => {
 }
 
 const renderItem = (item: RubricItem<unknown>): string => {
-  const prompt = item.judgment ? `\n  - _Review prompt:_ ${item.judgment.prompt}` : ''
-  return `- **${item.code} [${classification(item)}] — ${item.title}** — ${item.description} (${item.sources.join(', ')})${prompt}`
+  const remediation = item.mechanical
+    ? `\n  - _Remediation:_ ${item.mechanical.remediation.class}${item.mechanical.remediation.class === 'automatic' ? '' : ` — ${item.mechanical.remediation.guidance}`}`
+    : ''
+  const judgment = item.judgment
+    ? `\n  - _Evidence scope:_ ${item.judgment.scope}\n  - _Review prompt:_ ${item.judgment.prompt}\n  - _Outcomes:_ ${item.judgment.outcomes.join('; ')}\n  - _Conforming guidance:_ ${item.judgment.guidance}`
+    : ''
+  return `- **${item.code} [${classification(item)}] — ${item.title}** — ${item.description} (${item.sources.join(', ')})${remediation}${judgment}`
 }
 
 /** The same loaded catalogue drives both execution and publication. */

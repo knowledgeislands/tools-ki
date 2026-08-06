@@ -15,6 +15,7 @@ const item = (value) => {
     sources: value.sources ?? ['standard.md'],
     mechanical: {
       level: value.level,
+      remediation: value.remediation ?? (value.conform === undefined ? { class: 'diagnostic', guidance: 'Diagnose the reported evidence.' } : { class: 'automatic' }),
       audit: { phase: value.phase, run: value.audit },
       ...(value.conform === undefined ? {} : {
         conform: {
@@ -29,7 +30,7 @@ const item = (value) => {
     title: value.title,
     description: value.description ?? 'Judgment test criterion.',
     sources: value.sources ?? ['standard.md'],
-    judgment: { prompt: value.prompt }
+    judgment: { scope: value.scope ?? 'Review the supplied evidence.', prompt: value.prompt, outcomes: value.outcomes ?? ['accepted'], guidance: value.guidance ?? 'Record the selected outcome.' }
   }
   return {
     ...value,
@@ -272,6 +273,7 @@ export default {
         code: 'INFO-1', title: 'Info conform', description: 'Conforms an opted-in INFO result.', sources: ['standard.md'],
         mechanical: {
           level: 'WARN', conformOn: ['INFO'],
+          remediation: { class: 'automatic' },
           audit: { phase: 'PRIMARY', run: async ({ repository }) =>
             (await readFile(repository + '/governed.txt', 'utf8')) === 'after\\n'
               ? [{ status: 'PASS', message: 'conformed' }]
@@ -284,8 +286,8 @@ export default {
         code: 'SKIP-1', title: 'Skipped conform', description: 'Does not conform a non-violation.', sources: ['standard.md'],
         mechanical: {
           level: 'WARN',
+          remediation: { class: 'diagnostic', guidance: 'No action is required.' },
           audit: { phase: 'PRIMARY', run: async () => [{ status: 'NOT_APPLICABLE', message: 'not applicable' }] },
-          conform: { phase: 'PRIMARY', run: async () => { throw new Error('must not conform') } }
         }
       }
     ]

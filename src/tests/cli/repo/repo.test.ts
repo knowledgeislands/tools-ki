@@ -16,6 +16,7 @@ const item = (value) => {
     sources: value.sources ?? ['standard.md'],
     mechanical: {
       level: value.level,
+      remediation: value.remediation ?? (value.conform === undefined ? { class: 'diagnostic', guidance: 'Diagnose the reported evidence.' } : { class: 'automatic' }),
       audit: { phase: value.phase, run: value.audit },
       ...(value.conform === undefined ? {} : {
         conform: {
@@ -30,7 +31,7 @@ const item = (value) => {
     title: value.title,
     description: value.description ?? 'Judgment test criterion.',
     sources: value.sources ?? ['standard.md'],
-    judgment: { prompt: value.prompt }
+    judgment: { scope: value.scope ?? 'Review the supplied evidence.', prompt: value.prompt, outcomes: value.outcomes ?? ['accepted'], guidance: value.guidance ?? 'Record the selected outcome.' }
   }
   return {
     ...value,
@@ -141,8 +142,8 @@ describe('[ki repo]', () => {
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           code: 'HYBRID-1', title: 'Heuristic hybrid',
-          mechanical: { level: 'WARN', heuristic: true, audit: { phase: 'PRIMARY', run: async () => [] } },
-          judgment: { prompt: 'Review the result.' }
+          mechanical: { level: 'WARN', heuristic: true, remediation: { class: 'guarded', guidance: 'Apply the review decision.' }, audit: { phase: 'PRIMARY', run: async () => [] } },
+          judgment: { scope: 'The reported result.', prompt: 'Review the result.', outcomes: ['accepted'], guidance: 'Record the result.' }
         }] }]`).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
       })
 
@@ -549,6 +550,7 @@ export default {
       sources: ['standard.md#direct'],
       mechanical: {
         level: 'FAIL',
+        remediation: { class: 'guarded', guidance: 'Apply the review decision.' },
         overrideLevels: ['WARN'],
         heuristic: true,
         audit: {
@@ -556,7 +558,7 @@ export default {
           run: ({ repository }) => [{ status: 'VIOLATION', level: 'WARN', message: repository }]
         }
       },
-      judgment: { prompt: 'Review the evidence.' }
+      judgment: { scope: 'The selected evidence.', prompt: 'Review the evidence.', outcomes: ['accepted'], guidance: 'Record the decision.' }
     }]
   }]
 }

@@ -28,6 +28,7 @@ export default {
       sources: ['standard.md'],
       mechanical: {
         level: 'FAIL',
+        remediation: { class: 'automatic' },
         audit: {
           phase: 'DERIVED',
           run: ({ publication }) => [publication.state === 'in-sync'
@@ -67,6 +68,7 @@ export default {
       code: 'EXAMPLE-PUB-1', title: 'Generated publication', description: 'The publication matches the canonical catalogue.', sources: ['standard.md'],
       mechanical: {
         level: 'FAIL',
+        remediation: { class: 'diagnostic', guidance: 'Diagnose the publication state.' },
         audit: { phase: 'DERIVED', run: ({ publication }) => { publication.propose(); return [] } }
       }
     }]

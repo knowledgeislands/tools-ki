@@ -15,6 +15,7 @@ const item = (value) => {
     sources: value.sources ?? ['standard.md'],
     mechanical: {
       level: value.level,
+      remediation: value.remediation ?? (value.conform === undefined ? { class: 'diagnostic', guidance: 'Diagnose the reported evidence.' } : { class: 'automatic' }),
       audit: { phase: value.phase, run: value.audit },
       ...(value.conform === undefined ? {} : {
         conform: {
@@ -29,7 +30,7 @@ const item = (value) => {
     title: value.title,
     description: value.description ?? 'Judgment test criterion.',
     sources: value.sources ?? ['standard.md'],
-    judgment: { prompt: value.prompt }
+    judgment: { scope: value.scope ?? 'Review the supplied evidence.', prompt: value.prompt, outcomes: value.outcomes ?? ['accepted'], guidance: value.guidance ?? 'Record the selected outcome.' }
   }
   return {
     ...value,
@@ -116,12 +117,12 @@ describe('[ki repo validation]', () => {
     test.each([
       [
         'invalid override levels',
-        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', overrideLevels: ['CRITICAL'], audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', remediation: { class: 'diagnostic', guidance: 'Diagnose.' }, overrideLevels: ['CRITICAL'], audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
         'overrideLevels must contain only FAIL or WARN'
       ],
       [
         'repeated override levels',
-        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', overrideLevels: ['WARN', 'WARN'], audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', remediation: { class: 'diagnostic', guidance: 'Diagnose.' }, overrideLevels: ['WARN', 'WARN'], audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
         'repeats an override level'
       ],
       [
@@ -146,13 +147,13 @@ describe('[ki repo validation]', () => {
       ],
       [
         'a conform aspect that is not a table',
-        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', audit: { phase: 'PRIMARY', run: async () => [] }, conform: null } }] }]`,
+        `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', remediation: { class: 'automatic' }, audit: { phase: 'PRIMARY', run: async () => [] }, conform: null } }] }]`,
         'conform must be a table'
       ],
       [
         'a judgment aspect that is not a table',
         `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', judgment: null }] }]`,
-        'judgment must have a prompt'
+        'judgment must be a table'
       ],
       [
         'an empty sources list',
@@ -168,6 +169,25 @@ describe('[ki repo validation]', () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
       await box.setupExampleHarness({ rubric: rubric(families) })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(expected)
+    })
+
+    test.each([
+      ['missing remediation', "mechanical: { level: 'FAIL', audit: { phase: 'PRIMARY', run: async () => [] } }", 'must declare automatic, diagnostic, or guarded remediation'],
+      ['automatic without conform', "mechanical: { level: 'FAIL', remediation: { class: 'automatic' }, audit: { phase: 'PRIMARY', run: async () => [] } }", 'automatic remediation must have a conform action'],
+      ['diagnostic with conform', "mechanical: { level: 'FAIL', remediation: { class: 'diagnostic', guidance: 'Diagnose.' }, audit: { phase: 'PRIMARY', run: async () => [] }, conform: { phase: 'PRIMARY', run: async () => {} } }", 'diagnostic remediation must not have a conform action'],
+      ['guarded without judgment', "mechanical: { level: 'FAIL', remediation: { class: 'guarded', guidance: 'Choose.' }, audit: { phase: 'PRIMARY', run: async () => [] } }", 'guarded remediation must have a judgment aspect'],
+      ['incomplete judgment', "judgment: { prompt: 'Review it.' }", 'judgment must have an evidence scope']
+    ])('rejects v1 rubric metadata with %s', async (_case, aspect, expected) => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', ${aspect} }] }]`)
+      })
 
       const result = await box.run('ki repo audit')
 
@@ -537,6 +557,7 @@ describe('[ki repo validation]', () => {
             code: 'EXAMPLE-1', title: 'Example',
             mechanical: {
               level: 'FAIL',
+              remediation: { class: 'automatic' },
               audit: { phase: 'PRIMARY', run: async () => [] },
               conform: { phase: 'PRIMARY', run: 'not a function' }
             }

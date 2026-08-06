@@ -34,7 +34,7 @@ import { createUpgradeCommand } from './upgrade.ts'
 interface RepositoryConformOptions {
   readonly skill?: string
   readonly dryRun?: boolean
-  readonly allowGuarded?: boolean
+  readonly allowCommands?: boolean
   readonly progress?: string
   readonly progressStyle?: string
   readonly reporterLevels?: string
@@ -222,7 +222,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .description('stage registered conform operations and apply their writes after every initial audit passes')
         .option('--skill <capability>', 'one declared resolved skill to conform')
         .option('--dry-run', 'validate staged writes and report without applying them')
-        .option('--allow-guarded', 'attempt eligible command-backed conform groups during partial failures')
+        .option('--allow-commands', 'attempt eligible command-backed conform groups during partial failures')
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
         .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN,FIXED)')
@@ -309,7 +309,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 repository: repository.root,
                 userHome: context.homeDirectory,
                 dryRun: Boolean(options.dryRun),
-                allowGuarded: Boolean(options.allowGuarded),
+                allowCommands: Boolean(options.allowCommands),
                 write: (value) => context.stdout.write(value)
               })
               if (published && !options.dryRun) await reAuditAndRender()

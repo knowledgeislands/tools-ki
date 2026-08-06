@@ -354,7 +354,7 @@ export const runSkillConform = async (
 ): Promise<SkillConformResult> => {
   const { session, items, scope: definitionScope, publication } = await auditSkill(scope, prepared, 'conform', onItemComplete)
   const conformOrder = items
-    .filter((state) => state.item.item.mechanical.conform)
+    .filter((state) => state.item.item.mechanical.remediation.class === 'automatic' && state.item.item.mechanical.conform)
     .slice()
     // The filter above guarantees conform is present; the fallback only protects a future filter refactor.
     /* v8 ignore next */
