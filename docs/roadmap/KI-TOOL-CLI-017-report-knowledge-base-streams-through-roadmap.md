@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-017
 title: Report Knowledge Base streams
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: 3c5b1e930cc7126c3130a1b8ff555d2c1970401d
@@ -31,14 +31,14 @@ This item does not replace the Knowledge Base Streams lifecycle, invent flat Mar
 
 ## Steps
 
-- [ ] Parse the selected repository's declared type at the repository boundary, preserving the current physical-root and configuration safety checks.
-- [ ] Add a read-only Knowledge Base planning-source adapter that reads its Focus and Streams material without requiring, creating, or changing `docs/roadmap/`.
-- [ ] Render the adapter's source, Focus horizons, and proposal identities through the existing `ki repo roadmap list` framing while retaining its trade context and existing flat-repository ordering.
-- [ ] Cover a declared Knowledge Base fixture, the existing flat adapter, malformed or unavailable planning sources, and the command's no-write behaviour through `run(args, context)`.
+- [x] Parse the selected repository's declared type at the repository boundary, preserving the current physical-root and configuration safety checks.
+- [x] Add a read-only Knowledge Base planning-source adapter that reads its Focus and Streams material without requiring, creating, or changing `docs/roadmap/`.
+- [x] Render the adapter's source, Focus horizons, and proposal identities through the existing `ki repo roadmap list` framing while retaining its trade context and existing flat-repository ordering.
+- [x] Cover a declared Knowledge Base fixture, the existing flat adapter, malformed or unavailable planning sources, and the command's no-write behaviour through `run(args, context)`.
 
 ## Files touched
 
-- `src/core/repository.ts` and the read-only Knowledge Base planning-source adapter.
+- `src/core/planning.ts`.
 - `src/commands/repo/roadmap.ts`.
 - `src/tests/cli/repo/roadmap.test.ts`.
 
@@ -51,6 +51,16 @@ This item does not replace the Knowledge Base Streams lifecycle, invent flat Mar
 ## Dependencies / blocks
 
 This work depends only on the declared `repo_type = "kb"` discriminator already used by the portable roadmap standard. It does not consume the separate Agora store-role contract and has no active local roadmap dependency.
+
+## Review
+
+The implementation selects the planning adapter from the declared `ki-decision-records` `repo_type`: non-KB repositories retain the existing `docs/roadmap/` reader, while `repo_type = "kb"` reads physical Streams, Focus, and proposal material through `src/core/planning.ts`.
+
+The command remains read-only. CLI-contract fixtures prove populated and empty Knowledge Base Streams, malformed or missing native planning material, no creation of `docs/roadmap/`, and the unchanged flat-roadmap behaviour and trade framing.
+
+Verification passed: `bunx vitest run src/tests/cli/repo/roadmap.test.ts`, `bunx tsc --noEmit`, and `bun run test:coverage` (491 tests; 100% statements, branches, functions, and lines).
+
+Proposed harness learning: express architecturally significant boundaries as observable CLI contracts. Treat a coverage miss as either a valid end-to-end input to add or dead code to remove; do not retain untestable internal paths merely to preserve an implementation shape.
 
 ## Discussion
 

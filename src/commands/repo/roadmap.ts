@@ -2,6 +2,7 @@ import { basename } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
+import { type RepositoryPlanningSource, readRepositoryPlanningSource } from '../../core/planning.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade-core.ts'
 import { pruneDoneWorkItems, readWorkItems, updateWorkItemHorizon, type WorkItem, type WorkItemHorizon, workItemHorizons } from '../../core/work-items.ts'
@@ -16,6 +17,7 @@ interface RoadmapResult {
   readonly repository: string
   readonly trades: readonly LocatedTrade[]
   readonly tradeDiagnostic?: string
+  readonly planning?: RepositoryPlanningSource
   readonly items?: readonly WorkItem[]
   readonly diagnostic?: string
 }
@@ -63,7 +65,42 @@ const renderTradeContext = (trades: readonly LocatedTrade[], estate: readonly Lo
   })
 }
 
+const countTradeDirections = (trades: readonly LocatedTrade[]): { readonly inbound: number; readonly outbound: number } => {
+  let inbound = 0
+  let outbound = 0
+  for (const trade of trades) {
+    if (trade.direction === 'inbound') inbound += 1
+    else outbound += 1
+  }
+  return { inbound, outbound }
+}
+
 const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]): string => {
+  const planning = result.planning
+  if (planning?.kind === 'streams') {
+    const count = planning.focuses.reduce((total, focus) => total + focus.proposals.length, 0)
+    const lines = [
+      '╭─ KI REPO ROADMAP',
+      `│  📁 ${basename(result.repository)}`,
+      `│     ${result.repository}`,
+      `├─ streams (${count})`,
+      '│  source: Knowledge Base Streams'
+    ]
+    if (!count) lines.push('│  ╰─ proposals: none')
+    else
+      for (const [focusIndex, focus] of planning.focuses.entries()) {
+        const lastFocus = focusIndex === planning.focuses.length - 1
+        const itemPrefix = `│  ${lastFocus ? '   ' : '│  '}`
+        lines.push(`│  ${lastFocus ? '╰─' : '├─'} ${focus.name} (${focus.proposals.length})`)
+        for (const [proposalIndex, proposal] of focus.proposals.entries())
+          lines.push(`${itemPrefix}${proposalIndex === focus.proposals.length - 1 ? '╰─' : '├─'} ${proposal.identity} [${proposal.status}] ${proposal.title}`)
+      }
+    lines.push(`├─ trades (${result.trades.length})`, ...renderTradeContext(result.trades, estate, result.tradeDiagnostic))
+    const { inbound, outbound } = countTradeDirections(result.trades)
+    const tradeSummary = result.tradeDiagnostic ? 'unavailable' : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
+    lines.push(`╰─ summary: PROPOSALS=${count} FOCUSES=${planning.focuses.length} TRADES=${tradeSummary}`)
+    return lines.join('\n')
+  }
   const items = result.items ?? []
   const groups = textHorizonGroups(items)
   const lines = [`╭─ KI REPO ROADMAP`, `│  📁 ${basename(result.repository)}`, `│     ${result.repository}`, `├─ roadmap (${items.length})`]
@@ -81,8 +118,7 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
       })
     )
   lines.push(`├─ trades (${result.trades.length})`, ...renderTradeContext(result.trades, estate, result.tradeDiagnostic))
-  const inbound = result.trades.filter((trade) => trade.direction === 'inbound').length
-  const outbound = result.trades.filter((trade) => trade.direction === 'outbound').length
+  const { inbound, outbound } = countTradeDirections(result.trades)
   const tradeSummary = result.tradeDiagnostic ? 'unavailable' : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
   lines.push(`╰─ summary: ITEMS=${items.length} HORIZONS=${groups.length} TRADES=${tradeSummary}`)
   return lines.join('\n')
@@ -148,11 +184,13 @@ export const createRepoRoadmapCommand = (
           const results = await Promise.all(
             repositories.map(async (repository) => {
               try {
+                const planning = await readRepositoryPlanningSource(repository.root, repository.configuration)
                 return {
                   repository: repository.root,
                   trades: tradeInventory.trades.filter((trade) => trade.root === repository.root),
                   ...(tradeInventory.diagnostic ? { tradeDiagnostic: tradeInventory.diagnostic } : {}),
-                  items: filterItems(await readWorkItems(repository.root), options)
+                  planning,
+                  ...(planning.kind === 'roadmap' ? { items: filterItems(await readWorkItems(repository.root), options) } : {})
                 }
               } catch (error) {
                 /* v8 ignore next -- inventory failures are always KiError instances. */

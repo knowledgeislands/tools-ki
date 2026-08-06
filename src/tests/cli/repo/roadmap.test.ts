@@ -20,6 +20,81 @@ const item = (overrides: Record<string, string> = {}): string => {
 }
 
 describe('[ki repo roadmap]', () => {
+  test('reads declared Knowledge Base Streams without requiring or changing a flat roadmap', async () => {
+    const box = await sandbox()
+    await box.project.write('knowledge/.ki-config.toml', '["knowledgeislands/ki-agentic-harness:ki-decision-records"]\nrepo_type = "kb"\n')
+    await box.config.write('ki/config.toml', 'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = []\n')
+    await box.project.write('knowledge/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
+    await box.project.write('knowledge/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
+    await box.project.write('knowledge/Streams/Now/Proposal/Proposal.md', '---\ntype: stream-proposal\ntitle: Native proposal\nstatus: awaiting-review\n---\n')
+    await box.project.write('knowledge/Streams/Now/Second/Second.md', '---\ntype: stream-proposal\ntitle: Second proposal\nstatus: draft\n---\n')
+    await box.project.write('knowledge/Streams/Soon/Soon.md', '---\ntype: stream-focus\n---\n')
+    await box.project.write('knowledge/Streams/Soon/Later/Later.md', '---\ntype: stream-proposal\ntitle: Later proposal\nstatus: ready\n---\n')
+    const before = await box.project.read('knowledge/Streams/Now/Proposal/Proposal.md')
+
+    const result = await box.run('ki repo --repo knowledge roadmap list')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain(
+      '├─ streams (3)\n│  source: Knowledge Base Streams\n│  ├─ Now (2)\n│  │  ├─ Now/Proposal [awaiting-review] Native proposal\n│  │  ╰─ Now/Second [draft] Second proposal\n│  ╰─ Soon (1)\n│     ╰─ Soon/Later [ready] Later proposal'
+    )
+    expect(result.output).toContain('╰─ summary: PROPOSALS=3 FOCUSES=2 TRADES=0 IMPORTS=0 EXPORTS=0')
+    expect(await box.project.read('knowledge/Streams/Now/Proposal/Proposal.md')).toBe(before)
+    await expect(box.project.read('knowledge/docs/roadmap')).rejects.toThrow()
+  })
+
+  test('diagnoses unavailable and malformed Knowledge Base planning sources without falling back to a flat roadmap', async () => {
+    const box = await sandbox()
+    const configuration = '["knowledgeislands/ki-agentic-harness:ki-decision-records"]\nrepo_type = "kb"\n'
+    await box.project.write('missing/.ki-config.toml', configuration)
+    await box.project.write('missing-index/.ki-config.toml', configuration)
+    await box.project.mkdir('missing-index/Streams')
+    await box.project.write('malformed/.ki-config.toml', configuration)
+    await box.project.write('malformed/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
+    await box.project.write('malformed/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
+    await box.project.write('malformed/Streams/Now/Proposal/Proposal.md', '---\ntype: stream-proposal\ntitle: Incomplete\n---\n')
+
+    const missing = await box.run('ki repo --repo missing roadmap list')
+    const missingIndex = await box.run('ki repo --repo missing-index roadmap list')
+    const malformed = await box.run('ki repo --repo malformed roadmap list')
+
+    expect(missing.exitCode).toBe(1)
+    expect(missing.output).toContain('has no physical Streams directory')
+    expect(missingIndex.output).toContain('has no physical Streams/Streams.md file')
+    expect(malformed.exitCode).toBe(1)
+    expect(malformed.output).toContain('must declare type, title, and status')
+    await expect(box.project.read('missing/docs/roadmap')).rejects.toThrow()
+    await expect(box.project.read('malformed/docs/roadmap')).rejects.toThrow()
+  })
+
+  test('renders an empty Stream focus and rejects invalid proposal frontmatter', async () => {
+    const box = await sandbox()
+    const configuration = '["knowledgeislands/ki-agentic-harness:ki-decision-records"]\nrepo_type = "kb"\n'
+    await box.project.write('empty/.ki-config.toml', configuration)
+    await box.project.write('empty/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
+    await box.project.write('empty/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
+    for (const [name, contents] of [
+      ['absent', 'No frontmatter\n'],
+      ['invalid', '---\nnot metadata\n---\n'],
+      ['repeated', '---\ntype: stream-proposal\ntype: stream-proposal\ntitle: Repeated\nstatus: draft\n---\n']
+    ] as const) {
+      await box.project.write(`${name}/.ki-config.toml`, configuration)
+      await box.project.write(`${name}/Streams/Streams.md`, '---\ntype: stream-zone\n---\n')
+      await box.project.write(`${name}/Streams/Now/Now.md`, '---\ntype: stream-focus\n---\n')
+      await box.project.write(`${name}/Streams/Now/Proposal/Proposal.md`, contents)
+    }
+
+    const empty = await box.run('ki repo --repo empty roadmap list')
+    const absent = await box.run('ki repo --repo absent roadmap list')
+    const invalid = await box.run('ki repo --repo invalid roadmap list')
+    const repeated = await box.run('ki repo --repo repeated roadmap list')
+
+    expect(empty.output).toContain('├─ streams (0)\n│  source: Knowledge Base Streams\n│  ╰─ proposals: none')
+    expect(absent.output).toContain('must declare stream-proposal frontmatter')
+    expect(invalid.output).toContain('has invalid stream-proposal frontmatter')
+    expect(repeated.output).toContain('has invalid stream-proposal frontmatter')
+  })
+
   test('lists and filters grouped governed work items without JSON output', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki-config.toml', '# repo\n')
