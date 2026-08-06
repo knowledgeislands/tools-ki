@@ -27,13 +27,13 @@ This item does not define the portable `ki-repo` contract for repository kind an
 
 ## Current state
 
-Agora profiles currently require `tool = "zed"` and store arbitrary physical directories under basename-derived keys. The user configuration holds a separate unkeyed registry path list. No portable `ki-repo` declaration currently defines repository kind or KB store roles.
+Agora profiles currently require `tool = "zed"` and store arbitrary physical directories under basename-derived keys. The user configuration holds a separate unkeyed registry path list.
 
-The KI Agentic Harness accepted the portable contract through `KI-HARNESS-GOV-015`, but that item remains a draft and no compatible published contract is yet available. The CLI can shape its local migration now, but must not choose alternate kind or store semantics before that contract is delivered.
+The reviewed `ki-repo` contract now makes an ordinary repository implicit when `repo_type` is omitted. A Knowledge Base declares `repo_type = "kb"` and `store_roles`, whose closed vocabulary is `notes`, `sources`, and `legacy`: `notes` names the selected repository itself, while the optional external roles are stable names rather than paths or local bindings. `KI-HARNESS-GOV-015` is awaiting final review, so no compatible published release is available yet. The CLI can shape its migration against this reviewed contract, but must re-check the accepted release before it becomes Ready.
 
 ## Steps
 
-- [ ] Reconcile the accepted `ki-repo` kind and store-role contract into repository resolution and validation.
+- [ ] Re-check the accepted published `ki-repo` contract before implementation, then reconcile its implicit ordinary-repository model and KB `store_roles` contract into repository resolution and validation.
 - [ ] Replace the separate registry path representation with a protected canonical Agora whose members have local repository-name keys and canonical HTTPS identities.
 - [ ] Restrict named Agoras to canonical estate members, diagnose name/identity collisions, and retain registry commands as the first-class estate-management interface.
 - [ ] Remove stored Zed tool state and define the explicit tool-target boundary for opening repository members and declared stores.
@@ -41,7 +41,7 @@ The KI Agentic Harness accepted the portable contract through `KI-HARNESS-GOV-01
 
 ## Files touched
 
-- `src/core/agora.ts`, local user-configuration and repository-resolution modules.
+- `src/core/agora.ts`, local user-configuration, registry, and repository-resolution modules.
 - `src/commands/agora/`, `src/commands/registry/`, and any new tool-target command module.
 - `src/tests/cli/agora/`, `src/tests/cli/registry/`, repository-target and trade tests.
 - `man/ki.1`, `README.md`, `CHANGELOG.md`, and shell completion coverage.
@@ -50,12 +50,13 @@ The KI Agentic Harness accepted the portable contract through `KI-HARNESS-GOV-01
 
 - A canonical registered estate round-trips repository-name keys, canonical HTTPS identities, and physical roots without accepting an arbitrary project as a repository member.
 - `ki registry` adds, lists, diagnoses, and repairs that estate, while `ki repo --agora <name>` resolves only its canonical members.
-- No `.ki-agora` form contains `tool`; an opening target is resolved outside the profile and can compose a KB's declared `notes`, `sources`, and `legacy` stores without registering the latter two as KI repositories.
+- No `.ki-agora` form contains `tool`; an opening target is resolved outside the profile and can compose a KB's declared `notes`, `sources`, and `legacy` roles without registering the latter two as KI repositories or storing their physical bindings in repository configuration.
+- Before Ready, compare the compatible published `ki-repo` release with the reviewed contract above and stop for a revised plan if its kind, role, or authority rules changed.
 - Full CLI contract tests retain 100% coverage and documentation, completion, TypeScript, and formatting checks pass.
 
 ## Dependencies / blocks
 
-The portable `ki-repo` contract is owned by KI Agentic Harness and is being defined by `KI-HARNESS-GOV-015`. It needs delivery as a compatible published contract before tools-ki validates repository kinds or named KB store roles. This external prerequisite cannot appear in `blocked-by`, which permits only local work-item identifiers. This record remains a `next` draft so its local migration can be shaped against the agreed contract, but it cannot become Ready or enter the requested implementation batch until that prerequisite is observable.
+The portable `ki-repo` contract is owned by KI Agentic Harness and is at `awaiting-review` in `KI-HARNESS-GOV-015`. Its compatible published release remains the external prerequisite before tools-ki validates repository kinds or named KB store roles. This condition cannot appear in `blocked-by`, which permits only local work-item identifiers. This record remains a `next` draft so its local migration can be shaped against the reviewed contract, but it cannot become Ready or enter an implementation batch until the release is observable and its final contract is checked.
 
 ## Discussion
 
@@ -73,6 +74,10 @@ The opening operation needs a deliberate follow-up command grammar: it may requi
 
 ### Tool workspace composition
 
-An editor or other target composes its workspace from canonical repository members and their declared stores. For example, a Knowledge Base may expose `notes` as its self-reference, then optional `sources` and `legacy` stores. The tool layer decides whether and how to open those stores, including their ordering and read-only treatment.
+An editor or other target composes its workspace from canonical repository members and their declared store roles. For a Knowledge Base, `notes` is its self-reference, while optional `sources` and `legacy` roles identify externally bound stores. The tool layer decides whether and how to resolve and open those role bindings, including ordering and read-only treatment; it must not write machine paths into tracked repository configuration or make an external store a canonical KI repository.
 
 The portable definition of repository kind and store roles belongs to the `ki-repo` contract. This CLI item must not invent a private alternate schema.
+
+### Final contract check
+
+Before the item enters Ready, compare the accepted compatible `ki-repo` release with the reviewed model recorded here. Re-plan rather than silently proceeding if the selected repository authority, repository kind, or named-store contract changes during Harness review.
