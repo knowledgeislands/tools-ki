@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-019
 title: Re-engineer feature definitions
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: a002a6c85a5607c0901d7d2da4323c99e949b064
@@ -81,6 +81,10 @@ The corpus still treats requirements as bounded behavioural contracts. The propo
 ### Mini recap
 
 CLI-019 closes the gap between the current public CLI and its as-built documentation, and records the reusable standard learning at the Harness boundary.
+
+## Done
+
+Accepted by the user on 2026-08-06. Retain this completed record until an explicitly selected future prune.
 
 ## Discussion
 
