@@ -198,7 +198,7 @@ jobs:
           export PATH="$KI_CLI_INSTALL_DIR:$PATH"
           test "$(command -v ki)" = "$KI_CLI_INSTALL_DIR/ki"
           test "$(ki --version)" = "${VERSION#v}"
-          ki diag | grep -F "Executable    $KI_CLI_INSTALL_DIR/ki"
+          ki manage diag | grep -F "Executable    $KI_CLI_INSTALL_DIR/ki"
           ki bootstrap
-          ki diag | grep -F 'Status        valid'
+          ki manage diag | grep -F 'Status        valid'
           ki harness list | grep -F 'knowledgeislands/ki-agentic-harness'
