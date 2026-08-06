@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-019
 title: Establish KI self
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 0939ffe4acef8144bbb041b10373c35cf1ed390a
@@ -105,6 +105,10 @@ The restored source is intentionally a readable local contract, not a claim that
 ### Mini recap
 
 The initial source was restored, its output-boundary application was completed, and the roadmap now accurately separates local governance from the harness-owned portable lifecycle.
+
+## Done
+
+Accepted by the user on 2026-08-06. Retain this record as the decision and delivery history; the durable operational rules remain in `ki-self`, while the portable lifecycle request remains in `TRD-af376594`.
 
 ## Discussion
 
