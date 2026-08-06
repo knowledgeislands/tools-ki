@@ -55,6 +55,12 @@ const readProposal = async (directory: string, focus: string, name: string): Pro
   return { identity: `${focus}/${name}`, title, status }
 }
 
+const readProposalIfPresent = async (directory: string, focus: string, name: string): Promise<StreamProposal | undefined> => {
+  const entries = await readdir(join(directory, name))
+  if (!entries.length) return undefined
+  return readProposal(directory, focus, name)
+}
+
 const readStreams = async (repository: string): Promise<readonly StreamFocus[]> => {
   const directory = join(repository, 'Streams')
   await physicalDirectory(directory, `Knowledge Base repository ${repository} has no physical Streams directory`)
@@ -74,8 +80,8 @@ const readStreams = async (repository: string): Promise<readonly StreamFocus[]> 
             proposals
               .filter((proposal) => proposal.isDirectory() && !proposal.isSymbolicLink())
               .sort((left, right) => left.name.localeCompare(right.name))
-              .map((proposal) => readProposal(focusDirectory, entry.name, proposal.name))
-          )
+              .map((proposal) => readProposalIfPresent(focusDirectory, entry.name, proposal.name))
+          ).then((items) => items.filter((item): item is StreamProposal => item !== undefined))
         }
       })
   )

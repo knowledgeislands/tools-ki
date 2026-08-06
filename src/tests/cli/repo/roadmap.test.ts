@@ -28,6 +28,7 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('knowledge/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
     await box.project.write('knowledge/Streams/Now/Proposal/Proposal.md', '---\ntype: stream-proposal\ntitle: Native proposal\nstatus: awaiting-review\n---\n')
     await box.project.write('knowledge/Streams/Now/Second/Second.md', '---\ntype: stream-proposal\ntitle: Second proposal\nstatus: draft\n---\n')
+    await box.project.mkdir('knowledge/Streams/Now/Pruned Proposal')
     await box.project.write('knowledge/Streams/Soon/Soon.md', '---\ntype: stream-focus\n---\n')
     await box.project.write('knowledge/Streams/Soon/Later/Later.md', '---\ntype: stream-proposal\ntitle: Later proposal\nstatus: ready\n---\n')
     const before = await box.project.read('knowledge/Streams/Now/Proposal/Proposal.md')
