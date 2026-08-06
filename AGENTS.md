@@ -28,6 +28,8 @@ These govern all work in this repo.
 
 ## Cross-repository authority
 
+This temporary local rule must be removed when `ki-repo` defines the same default behaviour for KI repositories.
+
 - Work in `tools-ki` may be read, written, and committed as part of an authorised task.
 - Other repositories are read-only by default. Request explicit chat approval before writing there, and do not commit there unless the user expressly approves that exact commit after its target and scope are clear.
 - An outbound trade is authored and committed only in this repository. It does not grant permission to write a receiver copy, alter the receiver's configuration, or make a decision on its behalf.
