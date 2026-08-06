@@ -177,10 +177,26 @@ describe('[ki repo validation]', () => {
     })
 
     test.each([
-      ['missing remediation', "mechanical: { level: 'FAIL', audit: { phase: 'PRIMARY', run: async () => [] } }", 'must declare automatic, diagnostic, or guarded remediation'],
-      ['automatic without conform', "mechanical: { level: 'FAIL', remediation: { class: 'automatic' }, audit: { phase: 'PRIMARY', run: async () => [] } }", 'automatic remediation must have a conform action'],
-      ['diagnostic with conform', "mechanical: { level: 'FAIL', remediation: { class: 'diagnostic', guidance: 'Diagnose.' }, audit: { phase: 'PRIMARY', run: async () => [] }, conform: { phase: 'PRIMARY', run: async () => {} } }", 'diagnostic remediation must not have a conform action'],
-      ['guarded without judgment', "mechanical: { level: 'FAIL', remediation: { class: 'guarded', guidance: 'Choose.' }, audit: { phase: 'PRIMARY', run: async () => [] } }", 'guarded remediation must have a judgment aspect'],
+      [
+        'missing remediation',
+        "mechanical: { level: 'FAIL', audit: { phase: 'PRIMARY', run: async () => [] } }",
+        'must declare automatic, diagnostic, or guarded remediation'
+      ],
+      [
+        'automatic without conform',
+        "mechanical: { level: 'FAIL', remediation: { class: 'automatic' }, audit: { phase: 'PRIMARY', run: async () => [] } }",
+        'automatic remediation must have a conform action'
+      ],
+      [
+        'diagnostic with conform',
+        "mechanical: { level: 'FAIL', remediation: { class: 'diagnostic', guidance: 'Diagnose.' }, audit: { phase: 'PRIMARY', run: async () => [] }, conform: { phase: 'PRIMARY', run: async () => {} } }",
+        'diagnostic remediation must not have a conform action'
+      ],
+      [
+        'guarded without judgment',
+        "mechanical: { level: 'FAIL', remediation: { class: 'guarded', guidance: 'Choose.' }, audit: { phase: 'PRIMARY', run: async () => [] } }",
+        'guarded remediation must have a judgment aspect'
+      ],
       ['incomplete judgment', "judgment: { prompt: 'Review it.' }", 'judgment must have an evidence scope']
     ])('rejects v1 rubric metadata with %s', async (_case, aspect, expected) => {
       const box = await sandbox()
@@ -264,9 +280,17 @@ describe('[ki repo validation]', () => {
 
     test.each([
       ['a non-table session', 'null', 'rubric context must return a session table'],
-      ['no subjects array', `{ subjects: null, proposal: () => ({ writes: [] }) }`, 'rubric session must contain a subjects array'],
+      [
+        'no subjects array',
+        `{ subjects: null, proposal: () => ({ writes: [] }) }`,
+        'rubric session must contain a subjects array'
+      ],
       ['no proposal function', `{ subjects: [], proposal: null }`, 'rubric session must provide a proposal function'],
-      ['a non-table subject', `{ subjects: [null], proposal: () => ({ writes: [] }) }`, 'rubric subject 0 must be a table'],
+      [
+        'a non-table subject',
+        `{ subjects: [null], proposal: () => ({ writes: [] }) }`,
+        'rubric subject 0 must be a table'
+      ],
       [
         'a subject with no context function',
         `{ subjects: [{ families: ['F'] }], proposal: () => ({ writes: [] }) }`,
@@ -417,7 +441,8 @@ describe('[ki repo validation]', () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
       await box.setupExampleHarness({
-        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+        rubric:
+          rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', level: 'WARN', message: 'x' }] }] }]`)
       })
 
@@ -431,7 +456,8 @@ describe('[ki repo validation]', () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
       await box.setupExampleHarness({
-        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+        rubric:
+          rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'INFO', level: 'WARN', message: 'x' }] }] }]`)
       })
 
@@ -489,21 +515,34 @@ describe('[ki repo validation]', () => {
     })
 
     test.each([
-      ['a non-boolean create flag', `{ writes: [{ path: 'governed.txt', content: 'x', create: 'yes' }] }`, 'create must be boolean'],
+      [
+        'a non-boolean create flag',
+        `{ writes: [{ path: 'governed.txt', content: 'x', create: 'yes' }] }`,
+        'create must be boolean'
+      ],
       ['a non-array commands field', `{ writes: [], commands: 'not an array' }`, 'proposal commands must be an array'],
       ['a non-table command', `{ writes: [], commands: [null] }`, 'command 0 must have a program and arguments'],
-      ['an invalid command program', `{ writes: [], commands: [{ program: '../false', arguments: [] }] }`, 'command 0 must have a program and arguments'],
+      [
+        'an invalid command program',
+        `{ writes: [], commands: [{ program: '../false', arguments: [] }] }`,
+        'command 0 must have a program and arguments'
+      ],
       [
         'a command argument with a NUL byte',
         `{ writes: [], commands: [{ program: 'false', arguments: ['a\\0b'] }] }`,
         'arguments must be strings without NUL bytes'
       ],
-      ['a non-string command argument', `{ writes: [], commands: [{ program: 'false', arguments: [1] }] }`, 'arguments must be strings without NUL bytes']
+      [
+        'a non-string command argument',
+        `{ writes: [], commands: [{ program: 'false', arguments: [1] }] }`,
+        'arguments must be strings without NUL bytes'
+      ]
     ])('rejects %s in a conform proposal', async (_case, proposal, expected) => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
       await box.setupExampleHarness({
-        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+        rubric:
+          rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
           audit: async () => [{ status: 'VIOLATION', message: 'x' }], conform: async () => (${proposal}) }] }]`)
       })
 
@@ -602,7 +641,10 @@ describe('[ki repo validation]', () => {
     test('orders mechanical items across families by phase, then family, then item position', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
-      const item = (code: string, phase: string) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
+      const item = (
+        code: string,
+        phase: string
+      ) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
         audit: async () => [{ status: 'INFO', message: '${code}' }] }`
       await box.setupExampleHarness({
         rubric: rubric(`[
@@ -700,7 +742,9 @@ describe('[ki repo validation]', () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
       await box.setupExampleHarness({
-        rubric: rubric(`[{ code: 'F', title: 'Family', items: [{ kind: 'judgment', code: 'J-1', title: 'Judgment' }] }]`)
+        rubric: rubric(
+          `[{ code: 'F', title: 'Family', items: [{ kind: 'judgment', code: 'J-1', title: 'Judgment' }] }]`
+        )
       })
 
       const result = await box.run('ki repo audit')
@@ -809,7 +853,11 @@ describe('[ki repo validation]', () => {
   describe('skill resolution', () => {
     const installSkillsHarness = async (
       data: SandboxArea,
-      specs: readonly { readonly name: string; readonly deps: readonly string[]; readonly optionalDeps?: readonly string[] }[]
+      specs: readonly {
+        readonly name: string
+        readonly deps: readonly string[]
+        readonly optionalDeps?: readonly string[]
+      }[]
     ): Promise<void> => {
       for (const { name, deps, optionalDeps = [] } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
@@ -845,7 +893,9 @@ ${optionalDeps.length ? `ki-optional-depends-on: [${optionalDeps.join(', ')}]\n`
       const result = await box.run('ki repo audit --reporter-levels info')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output.indexOf('example/harness:ki-foundation')).toBeLessThan(result.output.indexOf('example/harness:ki-feature'))
+      expect(result.output.indexOf('example/harness:ki-foundation')).toBeLessThan(
+        result.output.indexOf('example/harness:ki-feature')
+      )
       expect(result.output).toContain('[Order (R-1)] — ki-foundation')
       expect(result.output).toContain('[Order (R-1)] — ki-feature')
     })
@@ -907,7 +957,9 @@ ${optionalDeps.length ? `ki-optional-depends-on: [${optionalDeps.join(', ')}]\n`
       expect(absent.exitCode).toBe(0)
       expect(absent.output).toContain('[Order (R-1)] — ki-batch')
       expect(active.exitCode).toBe(0)
-      expect(active.output.indexOf('example/harness:ki-delegation')).toBeLessThan(active.output.indexOf('example/harness:ki-batch'))
+      expect(active.output.indexOf('example/harness:ki-delegation')).toBeLessThan(
+        active.output.indexOf('example/harness:ki-batch')
+      )
     })
 
     test('refuses a dependency cycle between declared skills', async () => {
@@ -980,12 +1032,17 @@ ${optionalDeps.length ? `ki-optional-depends-on: [${optionalDeps.join(', ')}]\n`
         { name: 'ki-foundation', deps: [] },
         { name: 'ki-feature', deps: ['ki-foundation'] }
       ])
-      await box.project.write('.ki-config.toml', '["example/harness:ki-feature"]\n\n["example/harness:ki-foundation"]\n')
+      await box.project.write(
+        '.ki-config.toml',
+        '["example/harness:ki-feature"]\n\n["example/harness:ki-foundation"]\n'
+      )
 
       const result = await box.run('ki repo audit --skill example/harness:ki-feature --reporter-levels info')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output.indexOf('example/harness:ki-foundation')).toBeLessThan(result.output.indexOf('example/harness:ki-feature'))
+      expect(result.output.indexOf('example/harness:ki-foundation')).toBeLessThan(
+        result.output.indexOf('example/harness:ki-feature')
+      )
     })
   })
 })

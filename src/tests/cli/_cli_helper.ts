@@ -49,7 +49,15 @@ const agentConfig: Record<AgentId, { home: string }> = {
 // A fixture shaped exactly like the real canonical knowledgeislands/ki-agentic-harness
 // (its specific skill names and keystone/process grouping), because `ki bootstrap`/`ki
 // dev` hardcode expectations about that identity rather than accepting any harness.
-const bootstrapHarnessSkills = ['ki-bootstrap', 'ki-next', 'ki-plan', 'ki-implement', 'ki-accept', 'ki-batch', 'ki-recap'] as const
+const bootstrapHarnessSkills = [
+  'ki-bootstrap',
+  'ki-next',
+  'ki-plan',
+  'ki-implement',
+  'ki-accept',
+  'ki-batch',
+  'ki-recap'
+] as const
 
 // This tools-ki checkout's own `bin/ki` — never spawned (run() drives the CLI in-process),
 // only used to populate `executable`/`_` in the synthetic context so commands that inspect
@@ -82,7 +90,8 @@ const area = (path: string): SandboxArea => {
       await writeFile(target, content)
     },
     read: (relativePath) => readFile(resolve(relativePath), 'utf8'),
-    mkdir: (relativePath) => mkdir(resolve(relativePath), { recursive: true }).then(() => realpath(resolve(relativePath))),
+    mkdir: (relativePath) =>
+      mkdir(resolve(relativePath), { recursive: true }).then(() => realpath(resolve(relativePath))),
     isSymlink: async (relativePath) => (await lstat(resolve(relativePath))).isSymbolicLink()
   }
 }
@@ -92,7 +101,10 @@ const area = (path: string): SandboxArea => {
 // Used to exercise the repo/harness/skill
 // commands against arbitrary rubric-definition behavior. Omitting `rubric` writes the skill
 // without a rubric module at all, for exercising skills that provide no native governance.
-const setupExampleHarness = async (data: SandboxArea, { rubric, name = 'ki-example' }: { rubric?: string; name?: string } = {}): Promise<void> => {
+const setupExampleHarness = async (
+  data: SandboxArea,
+  { rubric, name = 'ki-example' }: { rubric?: string; name?: string } = {}
+): Promise<void> => {
   const base = `ki/harnesses/example/harness/skills/${name}`
   await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
   if (rubric !== undefined) await data.write(`${base}/scripts/rubric/items/index.ts`, rubric)
@@ -106,7 +118,8 @@ const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<v
   }
 }
 
-const setupCanonicalHarness = (data: SandboxArea): Promise<void> => writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
+const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
+  writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
 
 // The same fixture, but written under an arbitrary local directory rather than the
 // installed-harness data root — for exercising `ki dev local set <path>` against a local
@@ -168,10 +181,14 @@ const create = async (): Promise<Sandbox> => {
   // without a test calling setFetcher() first fails loudly here instead of silently
   // making a live request.
   let fetcher: Fetcher = async () => {
-    throw new Error('sandbox fetcher not configured; call setFetcher() before running a command that acquires a harness')
+    throw new Error(
+      'sandbox fetcher not configured; call setFetcher() before running a command that acquires a harness'
+    )
   }
   let runner: Runner = async () => {
-    throw new Error('sandbox runner not configured; call setRunner() before running a command that invokes an installer')
+    throw new Error(
+      'sandbox runner not configured; call setRunner() before running a command that invokes an installer'
+    )
   }
   let stat: typeof lstat | undefined
 

@@ -27,7 +27,8 @@ export const tarSize = (archive: Uint8Array, start: number): number => {
   return size
 }
 
-export const zeroBlock = (archive: Uint8Array, offset: number): boolean => archive.subarray(offset, offset + 512).every((byte) => byte === 0)
+export const zeroBlock = (archive: Uint8Array, offset: number): boolean =>
+  archive.subarray(offset, offset + 512).every((byte) => byte === 0)
 
 interface ParsedTarEntry {
   readonly payloadPath: string
@@ -55,13 +56,16 @@ const parsePayloadEntries = (archive: Uint8Array): readonly ParsedTarEntry[] => 
     const size = tarSize(archive, offset + 124)
     const contentsStart = offset + 512
     const contentsEnd = contentsStart + size
-    if (!safeRelativePath(path) || contentsEnd > archive.length) throw new KiError('harness archive contains an unsafe entry', 1)
+    if (!safeRelativePath(path) || contentsEnd > archive.length)
+      throw new KiError('harness archive contains an unsafe entry', 1)
     const parts = path.split('/')
     const direct = parts[0] === 'skills' || parts[0] === 'subagents' || parts[0] === 'hooks'
-    const nested = !parts[0]?.startsWith('.') && (parts[1] === 'skills' || parts[1] === 'subagents' || parts[1] === 'hooks')
+    const nested =
+      !parts[0]?.startsWith('.') && (parts[1] === 'skills' || parts[1] === 'subagents' || parts[1] === 'hooks')
     if (direct || nested) {
       const entryPrefix = direct ? '' : (parts[0] as string)
-      if (payloadPrefix !== undefined && payloadPrefix !== entryPrefix) throw new KiError('harness archive mixes payload roots', 1)
+      if (payloadPrefix !== undefined && payloadPrefix !== entryPrefix)
+        throw new KiError('harness archive mixes payload roots', 1)
       payloadPrefix = entryPrefix
       const payloadPath = parts.slice(direct ? 0 : 1).join('/')
       entries.push({ payloadPath, type, contentsStart, contentsEnd })
@@ -90,7 +94,8 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
     const destination = join(target, entry.payloadPath)
     // payloadPath passed safeRelativePath before this join; this only guards a future extraction refactor.
     /* v8 ignore next */
-    if (relative(target, destination).startsWith('..')) throw new KiError('harness archive entry escapes its staging directory', 1)
+    if (relative(target, destination).startsWith('..'))
+      throw new KiError('harness archive entry escapes its staging directory', 1)
     if (entry.type === '5') await mkdir(destination, { recursive: true })
     else {
       await mkdir(dirname(destination), { recursive: true })
@@ -118,6 +123,7 @@ export const acquireVerifiedArchive = async (fetcher: Fetcher, release: HarnessR
   if (!response.ok) throw new KiError(`could not download configured harness ${release.id}: HTTP ${response.status}`, 1)
   const payload = new Uint8Array(await response.arrayBuffer())
   const digest = createHash('sha256').update(payload).digest('hex')
-  if (digest !== release.sha256) throw new KiError(`configured harness ${release.id} archive does not match its SHA-256`, 1)
+  if (digest !== release.sha256)
+    throw new KiError(`configured harness ${release.id} archive does not match its SHA-256`, 1)
   return payload
 }

@@ -121,12 +121,17 @@ describe('[ki generated rubric publication]', () => {
     await projectLinkedHarness(box)
     await box.root.write('outside-rubric.md', 'outside\n')
     await box.project.mkdir('skills/ki-example/references')
-    await symlink(join(box.root.path, 'outside-rubric.md'), join(box.project.path, 'skills/ki-example/references/rubric.md'))
+    await symlink(
+      join(box.root.path, 'outside-rubric.md'),
+      join(box.project.path, 'skills/ki-example/references/rubric.md')
+    )
 
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('installed harness payload skills/ki-example/references/rubric.md must not be a symlink')
+    expect(result.output).toContain(
+      'installed harness payload skills/ki-example/references/rubric.md must not be a symlink'
+    )
     expect(await box.root.read('outside-rubric.md')).toBe('outside\n')
   })
 

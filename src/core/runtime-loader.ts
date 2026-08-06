@@ -19,7 +19,8 @@ import {
   type ViolationLevel
 } from './rubric.ts'
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const nonEmptyString = (value: unknown): value is string => typeof value === 'string' && Boolean(value)
 
@@ -31,34 +32,51 @@ const validateScope = (value: unknown, identity: string): RubricScope => {
   if (!isRecord(value)) throw new KiError(`${identity} rubric definition scope must be a table`, 1)
   const { kind, paths } = value
   if (kind === 'repository') return { kind: 'repository' }
-  if (kind !== 'user-home' || !Array.isArray(paths) || !paths.length) throw new KiError(`${identity} rubric definition user-home scope must declare paths`, 1)
+  if (kind !== 'user-home' || !Array.isArray(paths) || !paths.length)
+    throw new KiError(`${identity} rubric definition user-home scope must declare paths`, 1)
   if (paths.some((path) => typeof path !== 'string' || !safeRelativePath(path)))
     throw new KiError(`${identity} rubric definition user-home scope paths must be safe relative paths`, 1)
-  if (new Set(paths).size !== paths.length) throw new KiError(`${identity} rubric definition user-home scope repeats a path`, 1)
+  if (new Set(paths).size !== paths.length)
+    throw new KiError(`${identity} rubric definition user-home scope repeats a path`, 1)
   return { kind: 'user-home', paths: paths as string[] }
 }
 
-const validatePhaseExecution = <Result>(value: unknown, identity: string, code: string, aspect: 'audit' | 'conform'): RubricExecution<unknown, Result> => {
+const validatePhaseExecution = <Result>(
+  value: unknown,
+  identity: string,
+  code: string,
+  aspect: 'audit' | 'conform'
+): RubricExecution<unknown, Result> => {
   if (!isRecord(value)) throw new KiError(`${identity} rubric item ${code} ${aspect} must be a table`, 1)
   const { phase, run } = value
   if (typeof phase !== 'string' || !(RUBRIC_PHASES as readonly string[]).includes(phase))
     throw new KiError(`${identity} rubric item ${code} ${aspect} has an invalid phase`, 1)
-  if (typeof run !== 'function') throw new KiError(`${identity} rubric item ${code} ${aspect} must have a run function`, 1)
+  if (typeof run !== 'function')
+    throw new KiError(`${identity} rubric item ${code} ${aspect} must have a run function`, 1)
   return { phase: phase as (typeof RUBRIC_PHASES)[number], run: run as RubricExecution<unknown, Result>['run'] }
 }
 
 const validateLevels = (value: unknown, identity: string, code: string): readonly ViolationLevel[] | undefined => {
   if (!Array.isArray(value) || value.some((level) => !(VIOLATION_LEVELS as readonly unknown[]).includes(level)))
     throw new KiError(`${identity} rubric item ${code} overrideLevels must contain only FAIL or WARN`, 1)
-  if (new Set(value).size !== value.length) throw new KiError(`${identity} rubric item ${code} repeats an override level`, 1)
+  if (new Set(value).size !== value.length)
+    throw new KiError(`${identity} rubric item ${code} repeats an override level`, 1)
   return value as ViolationLevel[]
 }
 
-const validateRemediation = (value: unknown, identity: string, code: string): MechanicalRubric<unknown>['remediation'] => {
-  if (!isRecord(value) || (value['class'] !== 'automatic' && value['class'] !== 'diagnostic' && value['class'] !== 'guarded'))
+const validateRemediation = (
+  value: unknown,
+  identity: string,
+  code: string
+): MechanicalRubric<unknown>['remediation'] => {
+  if (
+    !isRecord(value) ||
+    (value['class'] !== 'automatic' && value['class'] !== 'diagnostic' && value['class'] !== 'guarded')
+  )
     throw new KiError(`${identity} rubric item ${code} must declare automatic, diagnostic, or guarded remediation`, 1)
   if (value['class'] === 'automatic') return { class: 'automatic' }
-  if (!nonEmptyString(value['guidance'])) throw new KiError(`${identity} rubric item ${code} ${value['class']} remediation must have guidance`, 1)
+  if (!nonEmptyString(value['guidance']))
+    throw new KiError(`${identity} rubric item ${code} ${value['class']} remediation must have guidance`, 1)
   return { class: value['class'], guidance: value['guidance'] }
 }
 
@@ -68,14 +86,23 @@ const validateMechanical = (value: unknown, identity: string, code: string): Mec
   const { level, overrideLevels, heuristic, remediation: rawRemediation, audit, conform, conformOn } = value
   if (typeof level !== 'string' || !(VIOLATION_LEVELS as readonly string[]).includes(level))
     throw new KiError(`${identity} rubric item ${code} has an invalid level`, 1)
-  if (heuristic !== undefined && typeof heuristic !== 'boolean') throw new KiError(`${identity} rubric item ${code} heuristic must be boolean`, 1)
-  if (conformOn !== undefined && (!Array.isArray(conformOn) || conformOn.some((status) => status !== 'INFO') || new Set(conformOn).size !== conformOn.length))
+  if (heuristic !== undefined && typeof heuristic !== 'boolean')
+    throw new KiError(`${identity} rubric item ${code} heuristic must be boolean`, 1)
+  if (
+    conformOn !== undefined &&
+    (!Array.isArray(conformOn) ||
+      conformOn.some((status) => status !== 'INFO') ||
+      new Set(conformOn).size !== conformOn.length)
+  )
     throw new KiError(`${identity} rubric item ${code} conformOn must contain unique INFO statuses`, 1)
   const remediation = validateRemediation(rawRemediation, identity, code)
   if (remediation.class === 'automatic' && conform === undefined)
     throw new KiError(`${identity} rubric item ${code} automatic remediation must have a conform action`, 1)
   if (remediation.class !== 'automatic' && conform !== undefined)
-    throw new KiError(`${identity} rubric item ${code} ${remediation.class} remediation must not have a conform action`, 1)
+    throw new KiError(
+      `${identity} rubric item ${code} ${remediation.class} remediation must not have a conform action`,
+      1
+    )
   return {
     level: level as ViolationLevel,
     ...(overrideLevels === undefined ? {} : { overrideLevels: validateLevels(overrideLevels, identity, code) }),
@@ -103,16 +130,24 @@ const validateItem = (value: unknown, identity: string, seenCodes: Set<string>):
   if (rawJudgment !== undefined) {
     if (!isRecord(rawJudgment)) throw new KiError(`${identity} rubric item ${code} judgment must be a table`, 1)
     const { scope, prompt, outcomes, guidance } = rawJudgment
-    if (!nonEmptyString(scope)) throw new KiError(`${identity} rubric item ${code} judgment must have an evidence scope`, 1)
+    if (!nonEmptyString(scope))
+      throw new KiError(`${identity} rubric item ${code} judgment must have an evidence scope`, 1)
     if (!nonEmptyString(prompt)) throw new KiError(`${identity} rubric item ${code} judgment must have a prompt`, 1)
-    if (!Array.isArray(outcomes) || !outcomes.length || outcomes.some((outcome) => !nonEmptyString(outcome)) || new Set(outcomes).size !== outcomes.length)
+    if (
+      !Array.isArray(outcomes) ||
+      !outcomes.length ||
+      outcomes.some((outcome) => !nonEmptyString(outcome)) ||
+      new Set(outcomes).size !== outcomes.length
+    )
       throw new KiError(`${identity} rubric item ${code} judgment must have unique non-empty outcomes`, 1)
-    if (!nonEmptyString(guidance)) throw new KiError(`${identity} rubric item ${code} judgment must have conforming guidance`, 1)
+    if (!nonEmptyString(guidance))
+      throw new KiError(`${identity} rubric item ${code} judgment must have conforming guidance`, 1)
     judgment = { scope, prompt, outcomes: outcomes as [string, ...string[]], guidance }
   }
   if (mechanical?.remediation.class === 'guarded' && !judgment)
     throw new KiError(`${identity} rubric item ${code} guarded remediation must have a judgment aspect`, 1)
-  if (!mechanical && !judgment) throw new KiError(`${identity} rubric item ${code} must be mechanical, judgment, or both`, 1)
+  if (!mechanical && !judgment)
+    throw new KiError(`${identity} rubric item ${code} must be mechanical, judgment, or both`, 1)
   return {
     code,
     title,
@@ -123,7 +158,12 @@ const validateItem = (value: unknown, identity: string, seenCodes: Set<string>):
   }
 }
 
-const validateFamily = (value: unknown, identity: string, seenFamilies: Set<string>, seenItems: Set<string>): RubricFamily<unknown> => {
+const validateFamily = (
+  value: unknown,
+  identity: string,
+  seenFamilies: Set<string>,
+  seenItems: Set<string>
+): RubricFamily<unknown> => {
   if (!isRecord(value)) throw new KiError(`${identity} rubric family must be a table`, 1)
   const { code, title, description, standard, selectContext, items } = value
   if (!nonEmptyString(code)) throw new KiError(`${identity} rubric family must have a code`, 1)
@@ -132,7 +172,8 @@ const validateFamily = (value: unknown, identity: string, seenFamilies: Set<stri
   if (!nonEmptyString(title)) throw new KiError(`${identity} rubric family ${code} must have a title`, 1)
   if (!nonEmptyString(description)) throw new KiError(`${identity} rubric family ${code} must have a description`, 1)
   if (!nonEmptyString(standard)) throw new KiError(`${identity} rubric family ${code} must name its standard`, 1)
-  if (typeof selectContext !== 'function') throw new KiError(`${identity} rubric family ${code} must have a selectContext function`, 1)
+  if (typeof selectContext !== 'function')
+    throw new KiError(`${identity} rubric family ${code} must have a selectContext function`, 1)
   if (!Array.isArray(items)) throw new KiError(`${identity} rubric family ${code} must have an items array`, 1)
   return {
     code,
@@ -158,10 +199,13 @@ export const loadRubricDefinition = async (skill: ResolvedSkill): Promise<SkillR
   const candidate = module[RUBRIC_MODULE_EXPORT]
   if (!isRecord(candidate)) throw new KiError(`${skill.identity} rubric catalogue default export is not a table`, 1)
   const { contract, name, concern, scope, createSession, families } = candidate
-  if (contract !== RUBRIC_CONTRACT_VERSION) throw new KiError(`${skill.identity} rubric catalogue has an unsupported contract version`, 1)
-  if (name !== skill.capability.name) throw new KiError(`${skill.identity} rubric catalogue name does not match the installed capability`, 1)
+  if (contract !== RUBRIC_CONTRACT_VERSION)
+    throw new KiError(`${skill.identity} rubric catalogue has an unsupported contract version`, 1)
+  if (name !== skill.capability.name)
+    throw new KiError(`${skill.identity} rubric catalogue name does not match the installed capability`, 1)
   if (!nonEmptyString(concern)) throw new KiError(`${skill.identity} rubric catalogue must name its concern`, 1)
-  if (typeof createSession !== 'function') throw new KiError(`${skill.identity} rubric catalogue must have a createSession function`, 1)
+  if (typeof createSession !== 'function')
+    throw new KiError(`${skill.identity} rubric catalogue must have a createSession function`, 1)
   if (!Array.isArray(families)) throw new KiError(`${skill.identity} rubric catalogue must have a families array`, 1)
   const seenFamilies = new Set<string>()
   const seenItems = new Set<string>()

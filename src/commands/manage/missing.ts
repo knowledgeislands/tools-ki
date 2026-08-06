@@ -10,7 +10,12 @@ export const createMissingCommand = (context: KiContext): Command =>
     })
     const lines = ['╭─ KI MANAGE MISSING', `├─ capabilities (${status.missing.length})`]
     if (!status.missing.length) lines.push('│  ╰─ none')
-    else lines.push(...status.missing.map((entry, index) => `│  ${index === status.missing.length - 1 ? '╰─' : '├─'} user skill ${entry.name}`))
+    else
+      lines.push(
+        ...status.missing.map(
+          (entry, index) => `│  ${index === status.missing.length - 1 ? '╰─' : '├─'} user skill ${entry.name}`
+        )
+      )
     lines.push(`╰─ summary: MISSING=${status.missing.length}`)
     context.stdout.write(`${lines.join('\n')}\n`)
   })

@@ -66,11 +66,15 @@ const frontmatterDependencies = (
     .split(',')
     .map((dependency) => dependency.trim())
     .filter(Boolean)
-  if (new Set(dependencies).size !== dependencies.length) throw new KiError(`${path} repeats a ${required ? '' : 'optional '}dependency`, 1)
+  if (new Set(dependencies).size !== dependencies.length)
+    throw new KiError(`${path} repeats a ${required ? '' : 'optional '}dependency`, 1)
   return dependencies
 }
 
-const frontmatterSupportedRuntimes = (value: string | undefined, path: string): readonly SupportedRuntime[] | undefined => {
+const frontmatterSupportedRuntimes = (
+  value: string | undefined,
+  path: string
+): readonly SupportedRuntime[] | undefined => {
   if (value === undefined) return undefined
   if (!/^\[[^\]]+\]$/.test(value)) {
     throw new KiError(`${path} must declare ki-supported-runtimes as a non-empty flow list`, 1)
@@ -86,15 +90,22 @@ const frontmatterSupportedRuntimes = (value: string | undefined, path: string): 
   return runtimes as readonly SupportedRuntime[]
 }
 
-const enumeratePayloadFiles = async (root: string, directory: string, externalPayload = false): Promise<readonly string[]> => {
+const enumeratePayloadFiles = async (
+  root: string,
+  directory: string,
+  externalPayload = false
+): Promise<readonly string[]> => {
   const path = join(root, directory)
   const state = await lstat(path).catch(() => undefined)
   if (!state) return []
   const linkedRoot = state.isSymbolicLink()
   // Recursion reaches nested entries only after their parent was verified non-symlinked.
   /* v8 ignore next */
-  if (linkedRoot && directory.includes('/')) throw new KiError(`installed harness payload ${directory} must not be a symlink`, 1)
-  const physicalDirectoryPath = linkedRoot ? await realpath(path) : await physicalDirectory(path, `installed harness payload ${directory}`)
+  if (linkedRoot && directory.includes('/'))
+    throw new KiError(`installed harness payload ${directory} must not be a symlink`, 1)
+  const physicalDirectoryPath = linkedRoot
+    ? await realpath(path)
+    : await physicalDirectory(path, `installed harness payload ${directory}`)
   const physicalState = await lstat(physicalDirectoryPath)
   if (!physicalState?.isDirectory() || physicalState.isSymbolicLink()) {
     throw new KiError(`installed harness payload ${directory} must be a directory`, 1)
@@ -109,7 +120,8 @@ const enumeratePayloadFiles = async (root: string, directory: string, externalPa
   for (const entry of entries) {
     const relativePath = `${directory}/${entry.name}`
     if (entry.isSymbolicLink()) throw new KiError(`installed harness payload ${relativePath} must not be a symlink`, 1)
-    if (entry.isDirectory()) files.push(...(await enumeratePayloadFiles(root, relativePath, externalPayload || linkedRoot)))
+    if (entry.isDirectory())
+      files.push(...(await enumeratePayloadFiles(root, relativePath, externalPayload || linkedRoot)))
     else if (entry.isFile()) files.push(relativePath)
     else throw new KiError(`installed harness payload ${relativePath} must be a regular file or directory`, 1)
   }
@@ -134,14 +146,20 @@ const discoverCapabilities = async (root: string, identifier: string): Promise<r
       name,
       source,
       dependsOn: frontmatterDependencies(metadata['ki-depends-on'], file, 'ki-depends-on', true),
-      optionalDependsOn: frontmatterDependencies(metadata['ki-optional-depends-on'], file, 'ki-optional-depends-on', false),
+      optionalDependsOn: frontmatterDependencies(
+        metadata['ki-optional-depends-on'],
+        file,
+        'ki-optional-depends-on',
+        false
+      ),
       supportedRuntimes: frontmatterSupportedRuntimes(metadata['ki-supported-runtimes'], file),
       rubricModule
     })
   }
   const names = new Set<string>()
   for (const capability of capabilities) {
-    if (names.has(capability.name)) throw new KiError(`installed harness ${identifier} repeats skill ${capability.name}`, 1)
+    if (names.has(capability.name))
+      throw new KiError(`installed harness ${identifier} repeats skill ${capability.name}`, 1)
     names.add(capability.name)
   }
   return capabilities.sort((left, right) => left.name.localeCompare(right.name))
@@ -162,11 +180,13 @@ export const readInstalledHarness = async (dataDirectory: string, identifier: st
   const ownerDirectory = await physicalDirectory(join(harnesses, owner), `installed harness ${identifier}`)
   // physicalDirectory rejects symlinks; a physical child cannot escape its physical parent.
   /* v8 ignore next */
-  if (!contained(harnesses, ownerDirectory)) throw new KiError(`installed harness ${identifier} escapes the harnesses directory`, 1)
+  if (!contained(harnesses, ownerDirectory))
+    throw new KiError(`installed harness ${identifier} escapes the harnesses directory`, 1)
   const root = await physicalDirectory(join(ownerDirectory, name), `installed harness ${identifier}`)
   // physicalDirectory rejects symlinks; a physical child cannot escape its physical parent.
   /* v8 ignore next */
-  if (!contained(harnesses, root)) throw new KiError(`installed harness ${identifier} escapes the harnesses directory`, 1)
+  if (!contained(harnesses, root))
+    throw new KiError(`installed harness ${identifier} escapes the harnesses directory`, 1)
   return inspectHarnessRoot(root, identifier)
 }
 

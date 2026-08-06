@@ -1,10 +1,10 @@
 import { grammarError } from '../../core/errors.ts'
 import {
+  isObservationPolicy,
   isTradeIdentifier,
   isTradeKind,
-  isObservationPolicy,
-  type ObservationPolicy,
   isTradeRepository,
+  type ObservationPolicy,
   type RouteDirection,
   type RouteState,
   type TradeKind,
@@ -12,7 +12,8 @@ import {
 } from '../../core/trade-core.ts'
 
 export const repository = (value: string | undefined, option: string): string => {
-  if (!value || !isTradeRepository(value)) throw grammarError(`${option} must use canonical HTTPS GitHub repository form`)
+  if (!value || !isTradeRepository(value))
+    throw grammarError(`${option} must use canonical HTTPS GitHub repository form`)
   return value
 }
 
@@ -22,7 +23,8 @@ export const kind = (value: string | undefined, option = '--kind'): TradeKind =>
 }
 
 export const observation = (value: string | undefined): ObservationPolicy => {
-  if (!value || !isObservationPolicy(value)) throw grammarError('--observation accepts unattended, receipt, decision, or completion')
+  if (!value || !isObservationPolicy(value))
+    throw grammarError('--observation accepts unattended, receipt, decision, or completion')
   return value
 }
 
@@ -32,7 +34,8 @@ export const routeDirection = (value: string | undefined): RouteDirection => {
 }
 
 export const tradeId = (value: string | undefined, option = 'trade id'): string => {
-  if (!value || !isTradeIdentifier(value)) throw grammarError(`${option} must use TRD- followed by eight lower-case hexadecimal characters`)
+  if (!value || !isTradeIdentifier(value))
+    throw grammarError(`${option} must use TRD- followed by eight lower-case hexadecimal characters`)
   return value
 }
 
@@ -55,7 +58,10 @@ const owner = (repository: string): string => repository.slice(0, repository.ind
 
 const name = (repository: string): string => repository.slice(repository.indexOf('/') + 1)
 
-export const displayTradePeer = (record: Pick<TradeRecord, 'sender' | 'receiver'>, direction: 'preparation' | 'inbound' | 'outbound'): string => {
+export const displayTradePeer = (
+  record: Pick<TradeRecord, 'sender' | 'receiver'>,
+  direction: 'preparation' | 'inbound' | 'outbound'
+): string => {
   const peer = direction === 'inbound' ? record.sender : record.receiver
   const local = direction === 'inbound' ? record.receiver : record.sender
   return owner(peer) === owner(local) ? name(peer) : peer

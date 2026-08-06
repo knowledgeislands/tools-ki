@@ -2,14 +2,38 @@ import { readFile } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
-const rootHelpCommands = ['bootstrap', 'manage', 'agora', 'skill', 'repo', 'registry', 'harness', 'trade', 'acquire', 'dev']
+const rootHelpCommands = [
+  'bootstrap',
+  'manage',
+  'agora',
+  'skill',
+  'repo',
+  'registry',
+  'harness',
+  'trade',
+  'acquire',
+  'dev'
+]
 
-const manageCommands = ['cleanup', 'completion', 'diag', 'docs', 'doctor', 'list', 'missing', 'outdated', 'repair', 'search', 'update']
+const manageCommands = [
+  'cleanup',
+  'completion',
+  'diag',
+  'docs',
+  'doctor',
+  'list',
+  'missing',
+  'outdated',
+  'repair',
+  'search',
+  'update'
+]
 const agoraCommands = ['create', 'add', 'remove', 'discover', 'list', 'show', 'open']
 const repoCommands = ['audit', 'conform', 'educate', 'init', 'roadmap', 'repair', 'skill', 'upgrade']
 const registryCommands = ['add', 'list']
 
-const commandNames = (output: string): string[] => output.split('\n').flatMap((line) => /^ {2}([a-z]+)(?:\s|$)/.exec(line)?.[1] ?? [])
+const commandNames = (output: string): string[] =>
+  output.split('\n').flatMap((line) => /^ {2}([a-z]+)(?:\s|$)/.exec(line)?.[1] ?? [])
 
 describe('[ki command inventory]', () => {
   test('keeps runtime help and completion memberships aligned with the public command contract', async () => {
@@ -25,7 +49,16 @@ describe('[ki command inventory]', () => {
     expect(commandNames(root.output)).toEqual(rootHelpCommands)
     expect(commandNames(manage.output)).toEqual(manageCommands)
     expect(commandNames(agora.output)).toEqual(agoraCommands)
-    expect(commandNames(repository.output)).toEqual(['init', 'audit', 'conform', 'roadmap', 'educate', 'repair', 'skill', 'upgrade'])
+    expect(commandNames(repository.output)).toEqual([
+      'init',
+      'audit',
+      'conform',
+      'roadmap',
+      'educate',
+      'repair',
+      'skill',
+      'upgrade'
+    ])
     expect(commandNames(registry.output)).toEqual(registryCommands)
     for (const command of rootHelpCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of manageCommands) expect(zsh.output).toContain(`${command}:`)

@@ -12,7 +12,8 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   return {
     ...original,
     rename: (...arguments_: Parameters<typeof original.rename>) => {
-      if (registryWriteFailure.path && String(arguments_[1]) === registryWriteFailure.path) return Promise.reject(new Error('registry write failure'))
+      if (registryWriteFailure.path && String(arguments_[1]) === registryWriteFailure.path)
+        return Promise.reject(new Error('registry write failure'))
       return original.rename(...arguments_)
     }
   }
@@ -44,7 +45,9 @@ export default {
 `
 
 const gitRepositoryRunner = (root: string) => async (command: string, arguments_: readonly string[]) =>
-  command === 'git' && arguments_.join(' ') === `-C ${root} rev-parse --show-toplevel` ? { exitCode: 0, output: `${root}\n` } : { exitCode: 1, output: '' }
+  command === 'git' && arguments_.join(' ') === `-C ${root} rev-parse --show-toplevel`
+    ? { exitCode: 0, output: `${root}\n` }
+    : { exitCode: 1, output: '' }
 
 const initialise = (box: Awaited<ReturnType<typeof sandbox>>, directory?: string) =>
   box.run([
@@ -74,7 +77,10 @@ test('initializes one explicit physical Git root and registers its complete KI i
 
   const result = await initialise(box)
 
-  expect(result).toEqual({ exitCode: 0, output: `write .ki-config.toml\nwrite config.toml\nki repo init: initialized ${root}\n` })
+  expect(result).toEqual({
+    exitCode: 0,
+    output: `write .ki-config.toml\nwrite config.toml\nki repo init: initialized ${root}\n`
+  })
   expect(await box.project.read('.ki-config.toml')).toEqual(
     '["knowledgeislands/ki-agentic-harness:ki-repo"]\n' +
       'title = "Example repository"\n' +
@@ -94,7 +100,9 @@ test('initializes an explicit directory but refuses non-root, linked, and alread
   const linked = `${box.root.path}/linked`
   await symlink(repository, linked)
   box.setRunner(async (command, arguments_) =>
-    command === 'git' && arguments_[0] === '-C' && arguments_[2] === 'rev-parse' ? { exitCode: 0, output: `${repository}\n` } : { exitCode: 1, output: '' }
+    command === 'git' && arguments_[0] === '-C' && arguments_[2] === 'rev-parse'
+      ? { exitCode: 0, output: `${repository}\n` }
+      : { exitCode: 1, output: '' }
   )
 
   const initialized = await initialise(box, repository)
@@ -103,8 +111,14 @@ test('initializes an explicit directory but refuses non-root, linked, and alread
   const repeated = await initialise(box, repository)
 
   expect(initialized.exitCode).toBe(0)
-  expect(nestedTarget).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target must be the Git repository root\n' })
-  expect(linkedTarget).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target must be an existing physical directory\n' })
+  expect(nestedTarget).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki repo init target must be the Git repository root\n'
+  })
+  expect(linkedTarget).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki repo init target must be an existing physical directory\n'
+  })
   expect(repeated).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target already has .ki-config.toml\n' })
 })
 
@@ -114,14 +128,30 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
   box.setRunner(async () => ({ exitCode: 1, output: 'not a repository' }))
 
   const nonGit = await initialise(box)
-  const missingTitle = await box.run('ki repo init --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private')
-  const missingDescription = await box.run('ki repo init --title title --repo-code EXAMPLE --runtime chatgpt-codex --visibility private')
-  const missingCode = await box.run('ki repo init --title title --description description --runtime chatgpt-codex --visibility private')
-  const missingRuntime = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --visibility private')
-  const missingVisibility = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex')
-  const invalidCode = await box.run('ki repo init --title title --description description --repo-code example --runtime chatgpt-codex --visibility private')
-  const invalidRuntime = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime node --visibility private')
-  const retiredRuntime = await box.run('ki repo init --title title --description description --repo-code EXAMPLE --runtime codex --visibility private')
+  const missingTitle = await box.run(
+    'ki repo init --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private'
+  )
+  const missingDescription = await box.run(
+    'ki repo init --title title --repo-code EXAMPLE --runtime chatgpt-codex --visibility private'
+  )
+  const missingCode = await box.run(
+    'ki repo init --title title --description description --runtime chatgpt-codex --visibility private'
+  )
+  const missingRuntime = await box.run(
+    'ki repo init --title title --description description --repo-code EXAMPLE --visibility private'
+  )
+  const missingVisibility = await box.run(
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex'
+  )
+  const invalidCode = await box.run(
+    'ki repo init --title title --description description --repo-code example --runtime chatgpt-codex --visibility private'
+  )
+  const invalidRuntime = await box.run(
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime node --visibility private'
+  )
+  const retiredRuntime = await box.run(
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime codex --visibility private'
+  )
   const repeatedRuntime = await box.run(
     'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --runtime chatgpt-codex --visibility private'
   )
@@ -138,11 +168,26 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
   expect(missingCode).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires --repo-code\n' })
   expect(missingRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires at least one --runtime\n' })
   expect(missingVisibility).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires --visibility\n' })
-  expect(invalidCode).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --repo-code must be a stable uppercase identifier\n' })
-  expect(invalidRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime may contain only claude-code or chatgpt-codex\n' })
-  expect(retiredRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime codex is retired; use chatgpt-codex\n' })
-  expect(repeatedRuntime).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --runtime must not repeat a runtime\n' })
-  expect(invalidVisibility).toEqual({ exitCode: 2, output: 'ki: error: ki repo init --visibility must be public or private\n' })
+  expect(invalidCode).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki repo init --repo-code must be a stable uppercase identifier\n'
+  })
+  expect(invalidRuntime).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki repo init --runtime may contain only claude-code or chatgpt-codex\n'
+  })
+  expect(retiredRuntime).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki repo init --runtime codex is retired; use chatgpt-codex\n'
+  })
+  expect(repeatedRuntime).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki repo init --runtime must not repeat a runtime\n'
+  })
+  expect(invalidVisibility).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki repo init --visibility must be public or private\n'
+  })
   expect(selectors).toEqual({ exitCode: 2, output: 'ki: error: ki repo init does not accept --repo or --agora\n' })
   await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
 })
@@ -150,7 +195,10 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
 test('initializes a public repository without rewriting an existing local registry entry', async () => {
   const box = await sandbox()
   const repository = await box.root.mkdir('registered-repository')
-  await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`)
+  await box.config.write(
+    'ki/config.toml',
+    `${localConfiguration}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`
+  )
   box.setRunner(gitRepositoryRunner(repository))
 
   const result = await box.run([
@@ -181,7 +229,10 @@ test('leaves no declaration when local registration cannot be prepared or publis
 
   const unbootstrapped = await initialise(box)
 
-  expect(unbootstrapped).toEqual({ exitCode: 1, output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n' })
+  expect(unbootstrapped).toEqual({
+    exitCode: 1,
+    output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n'
+  })
   await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
 
   await box.config.write('ki/config.toml', localConfiguration)
@@ -213,7 +264,9 @@ test('audits, conforms, and lists the local ki-repo registry without discovering
   expect(repeatedConform.exitCode).toBe(0)
   expect(await box.config.read('ki/config.toml')).toContain(`paths = [\n  ${JSON.stringify(repository)},\n]`)
   expect(listed).toEqual({ exitCode: 0, output: `${repository}\n` })
-  expect((await box.run('ki repo audit')).output).toContain('╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0')
+  expect((await box.run('ki repo audit')).output).toContain(
+    '╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0'
+  )
 })
 
 test('registers a selected KI repository even when its declaration cannot resolve', async () => {
@@ -225,7 +278,10 @@ test('registers a selected KI repository even when its declaration cannot resolv
   const dryRun = await box.run(['ki', 'registry', '--repo', repository, 'add', '--dry-run'])
   const result = await box.run(['ki', 'registry', '--repo', repository, 'add'])
 
-  expect(dryRun).toEqual({ exitCode: 0, output: `would write config.toml\nki registry add: would register ${repository}\n` })
+  expect(dryRun).toEqual({
+    exitCode: 0,
+    output: `would write config.toml\nki registry add: would register ${repository}\n`
+  })
   expect(result).toEqual({ exitCode: 0, output: `write config.toml\nki registry add: registered ${repository}\n` })
   expect(await box.config.read('ki/config.toml')).toContain(`paths = [\n  ${JSON.stringify(repository)},\n]`)
 })
@@ -236,7 +292,10 @@ test('preserves and extends an existing local repository registry in determinist
   const later = await box.root.mkdir('z-later')
   const earlier = await box.root.mkdir('a-earlier')
   const repository = await realpath(box.project.path)
-  await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = [\n  ${JSON.stringify(later)},\n  ${JSON.stringify(earlier)},\n]\n`)
+  await box.config.write(
+    'ki/config.toml',
+    `${localConfiguration}\n[repositories]\npaths = [\n  ${JSON.stringify(later)},\n  ${JSON.stringify(earlier)},\n]\n`
+  )
 
   const registered = await box.run('ki registry add')
   const repeated = await box.run('ki registry add')
@@ -244,7 +303,9 @@ test('preserves and extends an existing local repository registry in determinist
 
   expect(registered).toEqual({ exitCode: 0, output: `write config.toml\nki registry add: registered ${repository}\n` })
   expect(repeated).toEqual({ exitCode: 0, output: `ki registry add: already registered ${repository}\n` })
-  expect(await box.config.read('ki/config.toml')).toContain(`paths = [\n${expected.map((path) => `  ${JSON.stringify(path)},`).join('\n')}\n]`)
+  expect(await box.config.read('ki/config.toml')).toContain(
+    `paths = [\n${expected.map((path) => `  ${JSON.stringify(path)},`).join('\n')}\n]`
+  )
 })
 
 test('reports missing, invalid, and unsafe local registry configuration without repairing it', async () => {
@@ -263,11 +324,19 @@ test('reports missing, invalid, and unsafe local registry configuration without 
   await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = []\nextra = true\n`)
   const warnedRegister = await box.run('ki registry add')
 
-  expect(missingList).toEqual({ exitCode: 1, output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n' })
+  expect(missingList).toEqual({
+    exitCode: 1,
+    output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n'
+  })
   expect(missingAudit.output).toContain('local KI configuration is missing; run `ki bootstrap` first')
   expect(missingConform.exitCode).toBe(0)
-  expect(missingRegister).toEqual({ exitCode: 1, output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n' })
-  expect(invalidAudit.output).toContain('local KI configuration is invalid: repositories.paths must contain absolute paths')
+  expect(missingRegister).toEqual({
+    exitCode: 1,
+    output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n'
+  })
+  expect(invalidAudit.output).toContain(
+    'local KI configuration is invalid: repositories.paths must contain absolute paths'
+  )
   expect(invalidConform).toEqual({
     exitCode: 1,
     output: 'ki: error: ki configuration is invalid: repositories.paths must contain absolute paths\n'
@@ -300,7 +369,10 @@ test('lists registered repositories as a newline-delimited absolute-path stream'
   const box = await sandbox()
   const first = await box.root.mkdir('first')
   const second = await box.root.mkdir('second')
-  await box.config.write('ki/config.toml', `${localConfiguration}\n[repositories]\npaths = [${JSON.stringify(second)}, ${JSON.stringify(first)}]\n`)
+  await box.config.write(
+    'ki/config.toml',
+    `${localConfiguration}\n[repositories]\npaths = [${JSON.stringify(second)}, ${JSON.stringify(first)}]\n`
+  )
 
   expect(await box.run('ki registry list')).toEqual({ exitCode: 0, output: `${second}\n${first}\n` })
 })

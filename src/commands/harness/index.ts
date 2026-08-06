@@ -2,8 +2,18 @@ import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { KiError } from '../../core/errors.ts'
-import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness, readInstalledHarness } from '../../core/harness.ts'
-import { installHarness, isCanonicalHarnessDevelopmentLinked, recordInstalledHarness, uninstallHarness } from '../../core/registry.ts'
+import {
+  canonicalHarnessIdentifier,
+  discoverInstalledHarnesses,
+  type InstalledHarness,
+  readInstalledHarness
+} from '../../core/harness.ts'
+import {
+  installHarness,
+  isCanonicalHarnessDevelopmentLinked,
+  recordInstalledHarness,
+  uninstallHarness
+} from '../../core/registry.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
@@ -17,14 +27,23 @@ const activeRemovalActions = async (context: KiContext, harness: InstalledHarnes
   const user = await inspectUserConfiguration(context.paths.config)
   for (const declaration of user.skills) {
     const prefix = `${harness.id}:`
-    if (declaration.startsWith(prefix) && names.has(declaration.slice(prefix.length))) active.push(`ki skill remove ${declaration.slice(prefix.length)}`)
+    if (declaration.startsWith(prefix) && names.has(declaration.slice(prefix.length)))
+      active.push(`ki skill remove ${declaration.slice(prefix.length)}`)
   }
   return active
 }
 
-const requireInactive = async (context: KiContext, harness: InstalledHarness, action: 'reinstall' | 'uninstall'): Promise<void> => {
+const requireInactive = async (
+  context: KiContext,
+  harness: InstalledHarness,
+  action: 'reinstall' | 'uninstall'
+): Promise<void> => {
   const removals = await activeRemovalActions(context, harness)
-  if (removals.length) throw new KiError(`cannot ${action} ${harness.id} while it has active skills; run ${removals.join(' and ')} first`, 1)
+  if (removals.length)
+    throw new KiError(
+      `cannot ${action} ${harness.id} while it has active skills; run ${removals.join(' and ')} first`,
+      1
+    )
 }
 
 export const createHarnessCommand = (context: KiContext): Command =>
@@ -52,14 +71,27 @@ export const createHarnessCommand = (context: KiContext): Command =>
           requireHarnessIdentifier(identifier)
           const harnesses = await discoverInstalledHarnesses(context.paths.data)
           const harness = harnesses.find((candidate) => candidate.id === identifier)
-          if (!harness) throw new KiError(`harness ${identifier} is not installed; run ki harness install ${identifier} first`, 1)
+          if (!harness)
+            throw new KiError(`harness ${identifier} is not installed; run ki harness install ${identifier} first`, 1)
           await requireInactive(context, harness, 'reinstall')
-          if (identifier === canonicalHarnessIdentifier && (await isCanonicalHarnessDevelopmentLinked(context.paths.data))) {
-            throw new KiError(`the canonical harness ${identifier} is development-linked; run ki dev local off before reinstalling`, 1)
+          if (
+            identifier === canonicalHarnessIdentifier &&
+            (await isCanonicalHarnessDevelopmentLinked(context.paths.data))
+          ) {
+            throw new KiError(
+              `the canonical harness ${identifier} is development-linked; run ki dev local off before reinstalling`,
+              1
+            )
           }
-          const installation = await installHarness(context.paths.config, context.paths.data, identifier, context.fetcher, {
-            replace: true
-          })
+          const installation = await installHarness(
+            context.paths.config,
+            context.paths.data,
+            identifier,
+            context.fetcher,
+            {
+              replace: true
+            }
+          )
           await recordInstalledHarness(context.paths.config, identifier, true)
           context.stdout.write(`reinstalled ${identifier}\tarchive ${installation.archiveSha256}\n`)
         })
@@ -72,7 +104,10 @@ export const createHarnessCommand = (context: KiContext): Command =>
         if (!harnesses.length) lines.push('│  ╰─ none')
         else
           lines.push(
-            ...harnesses.map(({ id, capabilities: installed }, index) => `│  ${index === harnesses.length - 1 ? '╰─' : '├─'} ${id} (${installed.length})`)
+            ...harnesses.map(
+              ({ id, capabilities: installed }, index) =>
+                `│  ${index === harnesses.length - 1 ? '╰─' : '├─'} ${id} (${installed.length})`
+            )
           )
         lines.push(`╰─ summary: HARNESSES=${harnesses.length} CAPABILITIES=${capabilities}`)
         context.stdout.write(`${lines.join('\n')}\n`)
@@ -95,7 +130,10 @@ export const createHarnessCommand = (context: KiContext): Command =>
           if (!capabilities.length) lines.push('│  ╰─ none')
           else
             lines.push(
-              ...capabilities.map((capability, index) => `│  ${index === capabilities.length - 1 ? '╰─' : '├─'} ${capability.kind} ${capability.name}`)
+              ...capabilities.map(
+                (capability, index) =>
+                  `│  ${index === capabilities.length - 1 ? '╰─' : '├─'} ${capability.kind} ${capability.name}`
+              )
             )
           lines.push(`╰─ summary: CAPABILITIES=${capabilities.length}`)
           context.stdout.write(`${lines.join('\n')}\n`)
@@ -110,7 +148,8 @@ export const createHarnessCommand = (context: KiContext): Command =>
           const harnesses = await discoverInstalledHarnesses(context.paths.data)
           const harness = harnesses.find((candidate) => candidate.id === identifier)
           if (!harness) throw new KiError(`harness ${identifier} is not installed`, 1)
-          if (identifier === canonicalHarnessIdentifier) throw new KiError(`the canonical harness ${identifier} cannot be uninstalled`, 1)
+          if (identifier === canonicalHarnessIdentifier)
+            throw new KiError(`the canonical harness ${identifier} cannot be uninstalled`, 1)
           await requireInactive(context, harness, 'uninstall')
           await uninstallHarness(context.paths.data, identifier)
           await recordInstalledHarness(context.paths.config, identifier, false)

@@ -27,7 +27,8 @@ interface ManagedAgora {
   readonly projects: Readonly<Record<string, string>>
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
 
 export const agoraDirectory = (configurationDirectory: string): string => join(configurationDirectory, 'agoras')
 
@@ -36,7 +37,8 @@ const profileError = (path: string, message: string): KiError => new KiError(`${
 const profileId = (path: string): string => path.slice(path.lastIndexOf('/') + 1, -AGORA_EXTENSION.length)
 
 const requireAgoraId = (value: string): string => {
-  if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(value)) throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
+  if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(value))
+    throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
   return value
 }
 
@@ -69,7 +71,8 @@ const readManagedAgora = async (path: string): Promise<ManagedAgora> => {
     if (!isAbsolute(entry)) throw profileError(path, `project ${name} path must be absolute`)
     projects[name] = entry
   }
-  if (new Set(Object.values(projects)).size !== Object.keys(projects).length) throw profileError(path, 'projects must not contain duplicate paths')
+  if (new Set(Object.values(projects)).size !== Object.keys(projects).length)
+    throw profileError(path, 'projects must not contain duplicate paths')
   return { path, id: profileId(path), name: document.name, projects }
 }
 
@@ -86,22 +89,28 @@ const renderManagedAgora = (profile: Omit<ManagedAgora, 'path' | 'id'>): string 
   return [
     `name = ${JSON.stringify(profile.name)}`,
     'tool = "zed"',
-    ...(entries.length ? ['', '[projects]', ...entries.map(([name, path]) => `${JSON.stringify(name)} = ${JSON.stringify(path)}`)] : []),
+    ...(entries.length
+      ? ['', '[projects]', ...entries.map(([name, path]) => `${JSON.stringify(name)} = ${JSON.stringify(path)}`)]
+      : []),
     ''
   ].join('\n')
 }
 
-const writeManagedAgora = async (profile: Omit<ManagedAgora, 'path' | 'id'> & { readonly path: string }): Promise<void> => {
+const writeManagedAgora = async (
+  profile: Omit<ManagedAgora, 'path' | 'id'> & { readonly path: string }
+): Promise<void> => {
   await mkdir(agoraDirectory(resolve(profile.path, '..', '..')), { recursive: true })
   await writeFile(profile.path, renderManagedAgora(profile), 'utf8')
 }
 
-const managedAgora = (configurationDirectory: string, id: string): Promise<ManagedAgora> => readManagedAgora(profilePath(configurationDirectory, id))
+const managedAgora = (configurationDirectory: string, id: string): Promise<ManagedAgora> =>
+  readManagedAgora(profilePath(configurationDirectory, id))
 
 const physicalProject = async (value: string, workingDirectory: string): Promise<string> => {
   const path = resolve(workingDirectory, value)
   const state = await lstat(path).catch(() => undefined)
-  if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError(`Agora project ${value} must be an existing physical directory`, 2)
+  if (!state?.isDirectory() || state.isSymbolicLink())
+    throw new KiError(`Agora project ${value} must be an existing physical directory`, 2)
   return realpath(path)
 }
 
@@ -125,10 +134,18 @@ export const listAgoras = async (configurationDirectory: string): Promise<readon
   )
 }
 
-export const resolveAgora = async (configurationDirectory: string, workingDirectory: string, value: string): Promise<AgoraProfile> =>
+export const resolveAgora = async (
+  configurationDirectory: string,
+  workingDirectory: string,
+  value: string
+): Promise<AgoraProfile> =>
   profileFromManaged(
     await readManagedAgora(
-      isAbsolute(value) ? resolve(value) : value.endsWith(AGORA_EXTENSION) ? resolve(workingDirectory, value) : profilePath(configurationDirectory, value)
+      isAbsolute(value)
+        ? resolve(value)
+        : value.endsWith(AGORA_EXTENSION)
+          ? resolve(workingDirectory, value)
+          : profilePath(configurationDirectory, value)
     )
   )
 
@@ -140,7 +157,12 @@ export const createAgora = async (configurationDirectory: string, id: string): P
   return profileFromManaged({ ...profile, id })
 }
 
-export const addAgoraProject = async (configurationDirectory: string, workingDirectory: string, id: string, value: string): Promise<AgoraProfile> => {
+export const addAgoraProject = async (
+  configurationDirectory: string,
+  workingDirectory: string,
+  id: string,
+  value: string
+): Promise<AgoraProfile> => {
   const profile = await managedAgora(configurationDirectory, id)
   const path = await physicalProject(value, workingDirectory)
   const name = projectName(path)
@@ -152,7 +174,11 @@ export const addAgoraProject = async (configurationDirectory: string, workingDir
   return profileFromManaged(updated)
 }
 
-export const removeAgoraProject = async (configurationDirectory: string, id: string, name: string): Promise<AgoraProfile> => {
+export const removeAgoraProject = async (
+  configurationDirectory: string,
+  id: string,
+  name: string
+): Promise<AgoraProfile> => {
   const profile = await managedAgora(configurationDirectory, id)
   if (!Object.hasOwn(profile.projects, name)) throw new KiError(`Agora ${id} has no project named ${name}`, 2)
   const projects = Object.fromEntries(Object.entries(profile.projects).filter(([project]) => project !== name))
@@ -177,7 +203,12 @@ const discoverProjects = async (directory: string): Promise<readonly string[]> =
   return projects
 }
 
-export const discoverAgoraProjects = async (configurationDirectory: string, workingDirectory: string, id: string, directory: string): Promise<AgoraProfile> => {
+export const discoverAgoraProjects = async (
+  configurationDirectory: string,
+  workingDirectory: string,
+  id: string,
+  directory: string
+): Promise<AgoraProfile> => {
   const profile = await managedAgora(configurationDirectory, id)
   const root = await physicalProject(directory, workingDirectory)
   const discovered = await discoverProjects(root)
@@ -185,7 +216,8 @@ export const discoverAgoraProjects = async (configurationDirectory: string, work
   const projects = { ...profile.projects }
   for (const path of discovered) {
     const name = projectName(path)
-    if (Object.hasOwn(projects, name) && projects[name] !== path) throw new KiError(`Agora ${id} already has a different project named ${name}`, 2)
+    if (Object.hasOwn(projects, name) && projects[name] !== path)
+      throw new KiError(`Agora ${id} already has a different project named ${name}`, 2)
     projects[name] = path
   }
   const updated = { ...profile, projects }

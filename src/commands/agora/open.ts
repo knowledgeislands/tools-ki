@@ -11,10 +11,18 @@ export const createAgoraOpenCommand = (context: KiContext): Command =>
       const profile = await resolveAgora(context.paths.config, context.workingDirectory, value)
       if (!profile.projects[0]) throw new KiError(`Agora ${profile.id} has no projects`, 2)
       const window = await context.runner('zed', ['-n'], context.environment)
-      if (window.exitCode) throw new KiError(`could not open Agora ${profile.id}: ${window.output.trim() || 'zed failed'}`, window.exitCode)
+      if (window.exitCode)
+        throw new KiError(
+          `could not open Agora ${profile.id}: ${window.output.trim() || 'zed failed'}`,
+          window.exitCode
+        )
       for (const project of [...profile.projects].reverse()) {
         const result = await context.runner('zed', ['-e', project], context.environment)
-        if (result.exitCode) throw new KiError(`could not open Agora ${profile.id}: ${result.output.trim() || 'zed failed'}`, result.exitCode)
+        if (result.exitCode)
+          throw new KiError(
+            `could not open Agora ${profile.id}: ${result.output.trim() || 'zed failed'}`,
+            result.exitCode
+          )
       }
       context.stdout.write(`ki agora open ${profile.id}: opened ${profile.projects.length} Zed projects\n`)
     })

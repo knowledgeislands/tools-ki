@@ -1,6 +1,9 @@
 import type { Argument, Command, Option } from 'commander'
 
-export type CompletionValueStrategy = { readonly kind: 'none' } | { readonly kind: 'path' } | { readonly kind: 'values'; readonly values: readonly string[] }
+export type CompletionValueStrategy =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'path' }
+  | { readonly kind: 'values'; readonly values: readonly string[] }
 
 export interface CompletionOption {
   readonly names: readonly string[]
@@ -32,7 +35,9 @@ const helpOption: CompletionOption = {
 }
 
 const optionNames = (option: Option): readonly string[] =>
-  Array.from(option.flags.matchAll(/(?:^|[,\s])(--[a-z-]+|-[A-Za-z])\b/g), (match) => match[1]).filter((name): name is string => Boolean(name))
+  Array.from(option.flags.matchAll(/(?:^|[,\s])(--[a-z-]+|-[A-Za-z])\b/g), (match) => match[1]).filter(
+    (name): name is string => Boolean(name)
+  )
 
 const closedOptionValues: Readonly<Record<string, readonly string[]>> = {
   '--direction': ['import', 'export'],
@@ -49,7 +54,8 @@ const noValue: CompletionValueStrategy = { kind: 'none' }
 
 const optionValueStrategy = (path: string, option: Option): CompletionValueStrategy => {
   const name = option.long as string
-  if (name === '--direction' && path === 'trade list') return { kind: 'values', values: ['prepare', 'import', 'export'] }
+  if (name === '--direction' && path === 'trade list')
+    return { kind: 'values', values: ['prepare', 'import', 'export'] }
   if (name === '--observation') return { kind: 'values', values: ['unattended', 'receipt', 'decision', 'completion'] }
   if (closedOptionValues[name]) return { kind: 'values', values: closedOptionValues[name] }
   if (name === '--output' || (name === '--repo' && /^(repo|registry)( |$)/.test(path))) return { kind: 'path' }
@@ -68,7 +74,8 @@ const option = (path: string, value: Option): CompletionOption => ({
 })
 
 const argumentValueStrategy = (path: string, value: Argument): CompletionValueStrategy => {
-  if (path === 'manage docs' && value.name() === 'topic') return { kind: 'values', values: ['overview', 'site', 'manual', 'roadmap'] }
+  if (path === 'manage docs' && value.name() === 'topic')
+    return { kind: 'values', values: ['overview', 'site', 'manual', 'roadmap'] }
   if (value.name().includes('directory')) return { kind: 'path' }
   return noValue
 }
@@ -82,7 +89,11 @@ const argument = (path: string, value: Argument): CompletionArgument => ({
 const uniqueOptions = (values: readonly CompletionOption[]): readonly CompletionOption[] =>
   Array.from(new Map(values.map((value) => [value.names.join('\0'), value])).values())
 
-const collect = (command: Command, path: readonly string[], inherited: readonly CompletionOption[]): readonly CompletionNode[] => {
+const collect = (
+  command: Command,
+  path: readonly string[],
+  inherited: readonly CompletionOption[]
+): readonly CompletionNode[] => {
   const key = path.join(' ')
   const options = uniqueOptions([...inherited, ...command.options.map((value) => option(key, value))])
   const node: CompletionNode = {

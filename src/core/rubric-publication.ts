@@ -21,7 +21,8 @@ const readPublication = async (target: string, stat: typeof lstat): Promise<stri
     throw error
   })
   if (!state) return undefined
-  if (!state.isFile() || state.isSymbolicLink()) throw new KiError('rubric publication target must be a regular file', 1)
+  if (!state.isFile() || state.isSymbolicLink())
+    throw new KiError('rubric publication target must be a regular file', 1)
   return readFile(target, 'utf8')
 }
 
@@ -62,8 +63,11 @@ export const prepareRubricPublication = async (
     displayTarget: join(skill.harness.root, skill.capability.source, publicationPath),
     publicationRoot: root,
     proposal: () => {
-      if (!writePath) throw new KiError(`${skill.identity} rubric publication is outside the repository publication scope`, 1)
-      return state === 'missing' ? { path: writePath, content: rendered, create: true } : { path: writePath, content: rendered }
+      if (!writePath)
+        throw new KiError(`${skill.identity} rubric publication is outside the repository publication scope`, 1)
+      return state === 'missing'
+        ? { path: writePath, content: rendered, create: true }
+        : { path: writePath, content: rendered }
     }
   }
 }

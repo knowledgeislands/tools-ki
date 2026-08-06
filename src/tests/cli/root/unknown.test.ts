@@ -12,9 +12,21 @@ describe('[ki unknown]', () => {
     const declaredOptionWithHelp = await box.run('ki repo --repo repository -h')
     const optionTerminatorWithHelp = await box.run('ki manage diag -h -- --repo')
     const retired = await Promise.all(
-      ['cleanup', 'completion', 'diag', 'docs', 'doctor', 'help', 'list', 'missing', 'outdated', 'repair', 'search', 'update', 'version'].map((command) =>
-        box.run(`ki ${command}`)
-      )
+      [
+        'cleanup',
+        'completion',
+        'diag',
+        'docs',
+        'doctor',
+        'help',
+        'list',
+        'missing',
+        'outdated',
+        'repair',
+        'search',
+        'update',
+        'version'
+      ].map((command) => box.run(`ki ${command}`))
     )
 
     for (const result of [unknown, unknownWithHelp]) {

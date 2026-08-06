@@ -21,7 +21,10 @@ interface RouteListOptions {
   readonly incomplete?: boolean
 }
 
-const renderRouteList = (local: Awaited<ReturnType<typeof localRegisteredConfiguration>>, inspected: Awaited<ReturnType<typeof inspectRoutes>>): string => {
+const renderRouteList = (
+  local: Awaited<ReturnType<typeof localRegisteredConfiguration>>,
+  inspected: Awaited<ReturnType<typeof inspectRoutes>>
+): string => {
   const lines = [
     '╭─ KI TRADE ROUTES',
     `│  📁 ${local.configuration.identity}`,
@@ -54,11 +57,16 @@ const renderRouteList = (local: Awaited<ReturnType<typeof localRegisteredConfigu
   return lines.join('\n')
 }
 
-const renderEstateRouteList = (inspected: Awaited<ReturnType<typeof inspectEstateRoutes>>, incomplete: boolean): string => {
+const renderEstateRouteList = (
+  inspected: Awaited<ReturnType<typeof inspectEstateRoutes>>,
+  incomplete: boolean
+): string => {
   const selected = incomplete ? inspected.filter((route) => route.state !== 'active') : inspected
   const routeIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
   const endpoints = (route: (typeof selected)[number]): readonly [string, string] =>
-    route.direction === 'export' ? [route.source.identity, routeIdentity(route.repository)] : [routeIdentity(route.repository), route.source.identity]
+    route.direction === 'export'
+      ? [route.source.identity, routeIdentity(route.repository)]
+      : [routeIdentity(route.repository), route.source.identity]
   const ordered = [...selected].sort((left, right) => {
     const [leftExporter, leftImporter] = endpoints(left)
     const [rightExporter, rightImporter] = endpoints(right)
@@ -75,9 +83,17 @@ const renderEstateRouteList = (inspected: Awaited<ReturnType<typeof inspectEstat
     const [exporter, importer] = endpoints(route)
     return `${route.kind === 'work' ? '⚒' : '◇'} ${exporter} → ${importer} [${routeState(route.state)}]`
   }
-  const lines = ['╭─ KI TRADE ROUTES', '│  ◫ registered estate', `│  ✦ ${count(selected.length, 'route')}`, '├─ results']
+  const lines = [
+    '╭─ KI TRADE ROUTES',
+    '│  ◫ registered estate',
+    `│  ✦ ${count(selected.length, 'route')}`,
+    '├─ results'
+  ]
   if (!selected.length) lines.push(`│  ╰─ ${incomplete ? 'incomplete routes: none' : 'routes: none'}`)
-  else lines.push(...ordered.map((route, index) => `│  ${index === ordered.length - 1 ? '╰─' : '├─'} ${directedRoute(route)}`))
+  else
+    lines.push(
+      ...ordered.map((route, index) => `│  ${index === ordered.length - 1 ? '╰─' : '├─'} ${directedRoute(route)}`)
+    )
   lines.push(`╰─ summary: ROUTES=${selected.length} ACTIVE=${active} INCOMPLETE=${incompleteCount}`)
   return lines.join('\n')
 }
@@ -94,8 +110,15 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
         .action(async (peer: string, options: RouteOptions) => {
           const local = await localRegisteredRepository(context)
           const direction = routeDirection(options.direction)
-          const result = await addTradeRoute(local.configuration, repository(peer, 'trade route repository'), direction, kind(options.kind))
-          context.stdout.write(`ki trade routes add: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`)
+          const result = await addTradeRoute(
+            local.configuration,
+            repository(peer, 'trade route repository'),
+            direction,
+            kind(options.kind)
+          )
+          context.stdout.write(
+            `ki trade routes add: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`
+          )
         })
     )
     .addCommand(
@@ -107,8 +130,15 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
         .action(async (peer: string, options: RouteOptions) => {
           const local = await localRegisteredConfiguration(context)
           const direction = routeDirection(options.direction)
-          const result = await removeTradeRoute(local.repository.configuration, repository(peer, 'trade route repository'), direction, kind(options.kind))
-          context.stdout.write(`ki trade routes remove: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`)
+          const result = await removeTradeRoute(
+            local.repository.configuration,
+            repository(peer, 'trade route repository'),
+            direction,
+            kind(options.kind)
+          )
+          context.stdout.write(
+            `ki trade routes remove: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`
+          )
         })
     )
     .addCommand(
@@ -118,12 +148,16 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
         .option('--incomplete', 'show only routes that are not active')
         .action(async (options: RouteListOptions) => {
           if (options.estate) {
-            context.stdout.write(`${renderEstateRouteList(await inspectEstateRoutes(context), Boolean(options.incomplete))}\n`)
+            context.stdout.write(
+              `${renderEstateRouteList(await inspectEstateRoutes(context), Boolean(options.incomplete))}\n`
+            )
             return
           }
           const local = await localRegisteredConfiguration(context)
           const inspected = await inspectRoutes(context, local.configuration)
-          context.stdout.write(`${renderRouteList(local, options.incomplete ? inspected.filter((route) => route.state !== 'active') : inspected)}\n`)
+          context.stdout.write(
+            `${renderRouteList(local, options.incomplete ? inspected.filter((route) => route.state !== 'active') : inspected)}\n`
+          )
         })
     )
     .addCommand(

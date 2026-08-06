@@ -92,7 +92,12 @@ const setupPrefixCollisionHarness = async (data: SandboxArea): Promise<void> => 
   }
 }
 
-const setupSkill = async (data: SandboxArea, name: string, dependencies: readonly string[], definition: string): Promise<void> => {
+const setupSkill = async (
+  data: SandboxArea,
+  name: string,
+  dependencies: readonly string[],
+  definition: string
+): Promise<void> => {
   const base = `ki/harnesses/example/harness/skills/${name}`
   await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: [${dependencies.join(', ')}]\n---\n`)
   await data.write(`${base}/scripts/rubric/items/index.ts`, definition)
@@ -120,8 +125,14 @@ describe('[ki repo conform writes]', () => {
     const narrow = await box.run('ki repo conform --progress always', { interactive: true, columns: 1 })
     const invalidWidth = await box.run('ki repo conform --progress always', { columns: Number.NaN })
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n["example/harness:ki-extra"]\n')
-    await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
-    await box.data.write('ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts', rubric('[]', 'ki-extra'))
+    await box.data.write(
+      'ki/harnesses/example/harness/skills/ki-extra/SKILL.md',
+      '---\nname: ki-extra\nki-depends-on: []\n---\n'
+    )
+    await box.data.write(
+      'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
+      rubric('[]', 'ki-extra')
+    )
     const multiple = await box.run('ki repo conform --progress always')
 
     expect(regular.output).toContain('╭─ KI REPO CONFORM')
@@ -136,7 +147,10 @@ describe('[ki repo conform writes]', () => {
 
   test('selects an exact capability when another conforming skill extends its name', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-website"]\n["example/harness:ki-website-cloudflare"]\n')
+    await box.project.write(
+      '.ki-config.toml',
+      '["example/harness:ki-website"]\n["example/harness:ki-website-cloudflare"]\n'
+    )
     await setupPrefixCollisionHarness(box.data)
 
     const result = await box.run(`ki repo --repo ${box.project.path} conform --skill ki-website`)
@@ -213,8 +227,12 @@ describe('[ki repo conform writes]', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('│  ╰─ ! example/harness:ki-example WARN · FAIL=0 WARN=2 FIXED=0')
-    expect(result.output).toContain('│     ├─ ! warn  [First (EXAMPLE-1)] — first line\n│     │         continued first line')
-    expect(result.output).toContain('│     ╰─ ! warn  [Second (EXAMPLE-2)] — second line\n│               continued second line')
+    expect(result.output).toContain(
+      '│     ├─ ! warn  [First (EXAMPLE-1)] — first line\n│     │         continued first line'
+    )
+    expect(result.output).toContain(
+      '│     ╰─ ! warn  [Second (EXAMPLE-2)] — second line\n│               continued second line'
+    )
   })
 
   test('withholds a proposal that shares a skill with its blocking audit', async () => {
@@ -346,11 +364,17 @@ describe('[ki repo conform writes]', () => {
     const userCommand = rubric(
       `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'USER-COMMAND-1', title: 'User command repair', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'user command repair is needed' }], conform: async () => ({ writes: [], commands: [{ program: 'false', arguments: [] }] }) }] }]`,
       'ki-user-command'
-    ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+    ).replace(
+      "concern: 'test governance',",
+      "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
+    )
     const userSafe = rubric(
       `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'USER-SAFE-1', title: 'User repair', level: 'WARN', phase: 'PRIMARY', audit: async () => [{ status: 'VIOLATION', message: 'user repair is needed' }], conform: async () => ({ writes: [{ path: '.managed/setting.txt', content: 'after\\n' }] }) }] }]`,
       'ki-user-safe'
-    ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+    ).replace(
+      "concern: 'test governance',",
+      "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
+    )
     const safe = rubric(
       `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'SAFE-1', title: 'Safe repair', level: 'FAIL', phase: 'PRIMARY', audit: async ({ repository }) => (await (await import('node:fs/promises')).readFile(repository + '/safe.txt', 'utf8')) === 'after\\n' ? [{ status: 'PASS', message: 'conformed' }] : [{ status: 'VIOLATION', message: 'safe repair is needed' }], conform: async () => ({ writes: [{ path: 'safe.txt', content: 'after\\n' }] }) }] }]`,
       'ki-safe'
@@ -375,7 +399,9 @@ describe('[ki repo conform writes]', () => {
     expect(result.output).toContain(
       'refused example/harness:ki-overlap-one, example/harness:ki-overlap-two: direct conform repeats write path shared.txt with different content'
     )
-    expect(result.output).toContain('refused example/harness:ki-unsafe: direct conform write target unsafe.txt must be an existing regular file')
+    expect(result.output).toContain(
+      'refused example/harness:ki-unsafe: direct conform write target unsafe.txt must be an existing regular file'
+    )
     expect(result.output).toContain(
       'withheld example/harness:ki-command: command-backed conform repairs require --allow-commands while failures are unresolved'
     )
@@ -423,11 +449,15 @@ describe('[ki repo conform writes]', () => {
     await expect(box.project.read('command.txt')).rejects.toThrow()
     const dryRun = await box.run('ki repo conform --allow-commands --dry-run')
     expect(dryRun.exitCode).toBe(1)
-    expect(dryRun.output).toContain(`would run guarded "node" "-e" "require('node:fs').writeFileSync('command.txt', 'after')"`)
+    expect(dryRun.output).toContain(
+      `would run guarded "node" "-e" "require('node:fs').writeFileSync('command.txt', 'after')"`
+    )
     await expect(box.project.read('command.txt')).rejects.toThrow()
     const allowed = await box.run('ki repo conform --allow-commands')
     expect(allowed.exitCode).toBe(1)
-    expect(allowed.output).toContain(`run guarded "node" "-e" "require('node:fs').writeFileSync('command.txt', 'after')"`)
+    expect(allowed.output).toContain(
+      `run guarded "node" "-e" "require('node:fs').writeFileSync('command.txt', 'after')"`
+    )
     expect(allowed.output).toContain('↺ fixed [Command repair (COMMAND-1)] — conformed')
     await expect(box.project.read('command.txt')).resolves.toBe('after')
   })
@@ -901,7 +931,10 @@ export default {
 `,
         'ki-example'
       )
-        .replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+        .replace(
+          "concern: 'test governance',",
+          "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
+        )
         .replace('createSession: async ({ repository })', 'createSession: async ({ repository, userHome })')
         .replace('const context = { repository,', 'const context = { repository, userHome,')
     })
@@ -917,7 +950,10 @@ export default {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
     await box.setupExampleHarness({
-      rubric: rubric('[]').replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+      rubric: rubric('[]').replace(
+        "concern: 'test governance',",
+        "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
+      )
     })
     await rm(box.home.path, { recursive: true })
 
@@ -940,10 +976,19 @@ export default {
           conform: async () => ({ writes: [{ path: '.managed/setting.txt', content: 'after\\n' }] })
         }] }]`,
         skill
-      ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+      ).replace(
+        "concern: 'test governance',",
+        "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
+      )
     await box.setupExampleHarness({ rubric: userHomeRubric('ki-example', 'EXAMPLE-1') })
-    await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
-    await box.data.write('ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts', userHomeRubric('ki-extra', 'EXTRA-1'))
+    await box.data.write(
+      'ki/harnesses/example/harness/skills/ki-extra/SKILL.md',
+      '---\nname: ki-extra\nki-depends-on: []\n---\n'
+    )
+    await box.data.write(
+      'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
+      userHomeRubric('ki-extra', 'EXTRA-1')
+    )
 
     const result = await box.run('ki repo conform')
 

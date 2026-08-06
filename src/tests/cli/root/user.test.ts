@@ -49,7 +49,9 @@ const setup = async (rubricSource: string) => {
 
 describe('[ki repo] user-home rubric scope', () => {
   test('audits and incrementally conforms a repository-declared user-home rubric', async () => {
-    const box = await setup(rubric(governedItem(`{ writes: [{ path: '.managed/governed.txt', content: 'after\\n' }] }`)))
+    const box = await setup(
+      rubric(governedItem(`{ writes: [{ path: '.managed/governed.txt', content: 'after\\n' }] }`))
+    )
 
     const audit = await box.run('ki repo audit')
     const dryRun = await box.run('ki repo conform --dry-run')
@@ -64,7 +66,9 @@ describe('[ki repo] user-home rubric scope', () => {
   })
 
   test('refuses a user conform outside the rubric-declared filesystem scope', async () => {
-    const box = await setup(rubric(governedItem(`{ writes: [{ path: '.other.txt', content: 'after\\n', create: true }] }`)))
+    const box = await setup(
+      rubric(governedItem(`{ writes: [{ path: '.other.txt', content: 'after\\n', create: true }] }`))
+    )
 
     const result = await box.run('ki repo conform')
 
@@ -75,7 +79,9 @@ describe('[ki repo] user-home rubric scope', () => {
   })
 
   test('refuses a symlinked user-home conform target before publishing anything', async () => {
-    const box = await setup(rubric(governedItem(`{ writes: [{ path: '.managed/governed.txt', content: 'after\\n' }] }`)))
+    const box = await setup(
+      rubric(governedItem(`{ writes: [{ path: '.managed/governed.txt', content: 'after\\n' }] }`))
+    )
     await box.root.write('outside.txt', 'outside\n')
     await rm(join(box.home.path, '.managed', 'governed.txt'))
     await symlink(join(box.root.path, 'outside.txt'), join(box.home.path, '.managed', 'governed.txt'))

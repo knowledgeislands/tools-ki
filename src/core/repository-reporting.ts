@@ -3,7 +3,14 @@ import { stripVTControlCharacters } from 'node:util'
 import type { KiContext } from '../context.ts'
 import { KiError } from './errors.ts'
 import type { ResolvedSkill } from './resolution.ts'
-import { type educateSkill, type Finding, type FindingLevel, type FixedItem, type PreparedSkill, prepareSkill } from './runtime.ts'
+import {
+  type educateSkill,
+  type Finding,
+  type FindingLevel,
+  type FixedItem,
+  type PreparedSkill,
+  prepareSkill
+} from './runtime.ts'
 
 const FALLBACK_TERMINAL_COLUMNS = 80
 const PROGRESS_PREFIX = '├─ progress '
@@ -132,7 +139,9 @@ const progressLine = (model: BarModel, { columns, styled, tick }: RenderOptions)
   // The status text carries the running item, which is the part a reader needs; give the bar the smaller share.
   const barWidth = Math.min(40, Math.floor(remaining / 3))
   if (barWidth < 3) return `${PROGRESS_PREFIX}${truncate(model.text, width - PROGRESS_PREFIX.length)}`
-  return `${PROGRESS_PREFIX}${bracketBar(model, barWidth, tick)} ${truncate(model.text, remaining - barWidth)}`.padEnd(width)
+  return `${PROGRESS_PREFIX}${bracketBar(model, barWidth, tick)} ${truncate(model.text, remaining - barWidth)}`.padEnd(
+    width
+  )
 }
 
 const elapsed = (milliseconds: number): string => `${(Math.max(0, milliseconds) / 1000).toFixed(1)}s`
@@ -165,9 +174,15 @@ const PENDING_STATE: SkillProgressState = { complete: 0, started: 0, total: 0, p
 const trackedSkills = (skills: readonly ResolvedSkill[]): readonly TrackedSkill[] =>
   skills.map((skill) => ({ identity: skill.identity, name: skill.declaration.name }))
 
-const trackedPreparedSkills = (skills: readonly PreparedSkill[]): readonly TrackedSkill[] => trackedSkills(skills.map(({ skill }) => skill))
+const trackedPreparedSkills = (skills: readonly PreparedSkill[]): readonly TrackedSkill[] =>
+  trackedSkills(skills.map(({ skill }) => skill))
 
-const createProgressTracker = (context: KiContext, options: OperationOptions, skills: readonly TrackedSkill[], phase: string): ProgressTracker | undefined => {
+const createProgressTracker = (
+  context: KiContext,
+  options: OperationOptions,
+  skills: readonly TrackedSkill[],
+  phase: string
+): ProgressTracker | undefined => {
   const enabled = options.progress === 'always' || (options.progress === 'auto' && context.stderr.isTTY === true)
   if (!enabled) return undefined
   const interactive = context.stderr.isTTY === true
@@ -213,7 +228,9 @@ const createProgressTracker = (context: KiContext, options: OperationOptions, sk
     return `${complete}/${total} ${percentage}% ${clock}`
   }
   const summaryText = (detail: string): string => `${phase} ${detail} · ${counters()}`
-  const singleFrame = (text: string): readonly string[] => [progressLine({ complete, started: complete + inFlight, total, text }, renderOptions())]
+  const singleFrame = (text: string): readonly string[] => [
+    progressLine({ complete, started: complete + inFlight, total, text }, renderOptions())
+  ]
   const multiFrame = (): readonly string[] => [
     ...skills.map((skill) => {
       const state = skillState(skill.identity)
@@ -225,7 +242,15 @@ const createProgressTracker = (context: KiContext, options: OperationOptions, sk
       }
       return progressLine(model, renderOptions())
     }),
-    progressLine({ complete, started: complete + inFlight, total, text: summaryText(lastRunning ? `running ${lastRunning}` : 'working') }, renderOptions())
+    progressLine(
+      {
+        complete,
+        started: complete + inFlight,
+        total,
+        text: summaryText(lastRunning ? `running ${lastRunning}` : 'working')
+      },
+      renderOptions()
+    )
   ]
   let renderedRows = 0
   const writeRows = (rows: readonly string[], final: boolean): void => {
@@ -261,7 +286,14 @@ const createProgressTracker = (context: KiContext, options: OperationOptions, sk
     },
     planned: (planned) => {
       total = planned.reduce((count, skill) => count + skill.items.length, 0)
-      for (const skill of planned) states.set(skill.skill.identity, { complete: 0, started: 0, total: skill.items.length, planned: true, status: 'pending' })
+      for (const skill of planned)
+        states.set(skill.skill.identity, {
+          complete: 0,
+          started: 0,
+          total: skill.items.length,
+          planned: true,
+          status: 'pending'
+        })
       render(summaryText('starting'))
     },
     start: (skill, code) => {
@@ -269,7 +301,13 @@ const createProgressTracker = (context: KiContext, options: OperationOptions, sk
       lastRunning = code
       const { identity, declaration } = skill.skill
       const state = skillState(identity)
-      states.set(identity, { ...state, started: state.complete + 1, planned: true, total: skill.items.length, status: `running ${code}` })
+      states.set(identity, {
+        ...state,
+        started: state.complete + 1,
+        planned: true,
+        total: skill.items.length,
+        status: `running ${code}`
+      })
       render(summaryText(`${declaration.name} running ${code}`))
     },
     item: (skill, code) => {
@@ -313,7 +351,9 @@ export const runPreparedWithProgress = async <Result>(
   phase: string,
   existing?: ProgressTracker
 ): Promise<Result[]> => {
-  const progress = existing ?? (prepared.length ? createProgressTracker(context, options, trackedPreparedSkills(prepared), phase) : undefined)
+  const progress =
+    existing ??
+    (prepared.length ? createProgressTracker(context, options, trackedPreparedSkills(prepared), phase) : undefined)
   const results: Result[] = []
   try {
     progress?.planned(prepared)
@@ -369,7 +409,9 @@ export interface AuditRepositorySummary {
   readonly warningFindings: number
 }
 
-const auditSkillSummary = (findings: readonly Finding[]): { readonly level: 'pass' | 'warn' | 'fail'; readonly fails: number; readonly warnings: number } => {
+const auditSkillSummary = (
+  findings: readonly Finding[]
+): { readonly level: 'pass' | 'warn' | 'fail'; readonly fails: number; readonly warnings: number } => {
   const fails = findings.filter((finding) => finding.level === 'fail').length
   const warnings = findings.filter((finding) => finding.level === 'warn').length
   return { level: fails ? 'fail' : warnings ? 'warn' : 'pass', fails, warnings }
@@ -398,12 +440,18 @@ const renderOperationFrameStart = (
 }
 
 /** Begin one framed audit report before its live progress stream starts. */
-export const renderAuditFrameStart = (context: KiContext, repository: string, skills: readonly { readonly identity: string }[]): void =>
-  renderOperationFrameStart(context, 'AUDIT', repository, skills)
+export const renderAuditFrameStart = (
+  context: KiContext,
+  repository: string,
+  skills: readonly { readonly identity: string }[]
+): void => renderOperationFrameStart(context, 'AUDIT', repository, skills)
 
 /** Begin one framed conform report before its live progress stream starts. */
-export const renderConformFrameStart = (context: KiContext, repository: string, skills: readonly { readonly identity: string }[]): void =>
-  renderOperationFrameStart(context, 'CONFORM', repository, skills)
+export const renderConformFrameStart = (
+  context: KiContext,
+  repository: string,
+  skills: readonly { readonly identity: string }[]
+): void => renderOperationFrameStart(context, 'CONFORM', repository, skills)
 
 /** Render the result portion and close one framed audit report. */
 export const renderAuditResults = (
@@ -414,7 +462,8 @@ export const renderAuditResults = (
   registrationFailure?: string
 ): AuditRepositorySummary => {
   const skillSummaries = reports.map((report) => auditSkillSummary(report.findings))
-  const failingFindings = skillSummaries.reduce((total, summary) => total + summary.fails, 0) + Number(Boolean(registrationFailure))
+  const failingFindings =
+    skillSummaries.reduce((total, summary) => total + summary.fails, 0) + Number(Boolean(registrationFailure))
   const warningFindings = skillSummaries.reduce((total, summary) => total + summary.warnings, 0)
   const summary: AuditRepositorySummary = {
     repository,
@@ -446,7 +495,9 @@ export const renderAuditResults = (
     }
   }
   if (registrationFailure)
-    context.stdout.write(`│  ╰─ ${REPORT_ICON.fail} local repository registration FAIL [Local repository registration (REPO-REG-1)] — ${registrationFailure}\n`)
+    context.stdout.write(
+      `│  ╰─ ${REPORT_ICON.fail} local repository registration FAIL [Local repository registration (REPO-REG-1)] — ${registrationFailure}\n`
+    )
   context.stdout.write(
     `╰─ summary: PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}\n`
   )
@@ -454,7 +505,10 @@ export const renderAuditResults = (
 }
 
 /** Render one compact recap after every selected repository completed its audit. */
-export const renderMultiRepositoryAuditSummary = (context: KiContext, summaries: readonly AuditRepositorySummary[]): void => {
+export const renderMultiRepositoryAuditSummary = (
+  context: KiContext,
+  summaries: readonly AuditRepositorySummary[]
+): void => {
   const totals = summaries.reduce(
     (total, summary) => ({
       passingSkills: total.passingSkills + summary.passingSkills,
@@ -486,7 +540,10 @@ export const renderEducation = (education: Awaited<ReturnType<typeof educateSkil
     `    ${family.description}`,
     `    Standard: ${family.standard}`,
     ...family.items.flatMap((item) => {
-      const aspects = [...(item.mechanical ? [item.mechanical.heuristic ? 'M-heuristic' : 'M'] : []), ...(item.judgment ? ['J'] : [])].join(' + ')
+      const aspects = [
+        ...(item.mechanical ? [item.mechanical.heuristic ? 'M-heuristic' : 'M'] : []),
+        ...(item.judgment ? ['J'] : [])
+      ].join(' + ')
       return [
         `    ${item.code} [${aspects}]: ${item.title}`,
         `      ${item.description}`,
@@ -555,12 +612,19 @@ const conformSkillSummary = (findings: readonly RenderedFinding[]): ConformSkill
  * structured outcomes; this renderer keeps their item title and evidence subject intact
  * instead of making each harness ship a runner merely to format a report.
  */
-export const renderConformReports = (context: KiContext, reports: readonly SkillReport[], reporterLevels: readonly ReporterLevel[]): void => {
+export const renderConformReports = (
+  context: KiContext,
+  reports: readonly SkillReport[],
+  reporterLevels: readonly ReporterLevel[]
+): void => {
   const reportFindings = reports.map((report) => ({ report, findings: withFixed(report) }))
   const skillSummaries = reportFindings.map(({ findings }) => conformSkillSummary(findings))
   const countSkills = (level: ReporterLevel): number => skillSummaries.filter((item) => item.level === level).length
   const countFindings = (level: ReporterLevel): number =>
-    skillSummaries.reduce((total, item) => total + (level === 'fail' ? item.fails : level === 'warn' ? item.warnings : item.fixed), 0)
+    skillSummaries.reduce(
+      (total, item) => total + (level === 'fail' ? item.fails : level === 'warn' ? item.warnings : item.fixed),
+      0
+    )
   context.stdout.write('├─ results\n')
   for (const [index, { report, findings }] of reportFindings.entries()) {
     const reportSummary = skillSummaries[index]

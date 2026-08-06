@@ -41,7 +41,15 @@ export const renderConfiguration = (
       return ['', `[skills.${skill.slice(separator + 1)}]`, `harness = ${JSON.stringify(skill.slice(0, separator))}`]
     }),
     ...(local ? ['', '[local]', `path = ${JSON.stringify(local)}`] : []),
-    ...(repositories.length ? ['', '[repositories]', 'paths = [', ...repositories.map((repository) => `  ${JSON.stringify(repository)},`), ']'] : []),
+    ...(repositories.length
+      ? [
+          '',
+          '[repositories]',
+          'paths = [',
+          ...repositories.map((repository) => `  ${JSON.stringify(repository)},`),
+          ']'
+        ]
+      : []),
     ''
   ].join('\n')
 
@@ -60,10 +68,23 @@ const inspectSection = (value: unknown, key: string, errors: string[]): Record<s
   return {}
 }
 
-export const inspectUserConfiguration = async (configurationDirectory: string): Promise<UserConfigurationInspection> => {
+export const inspectUserConfiguration = async (
+  configurationDirectory: string
+): Promise<UserConfigurationInspection> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
   const state = await lstat(path).catch(() => undefined)
-  if (!state) return { path, state: 'missing', agents: [], harnesses: [], skills: [], local: null, repositories: [], warnings: [], errors: [] }
+  if (!state)
+    return {
+      path,
+      state: 'missing',
+      agents: [],
+      harnesses: [],
+      skills: [],
+      local: null,
+      repositories: [],
+      warnings: [],
+      errors: []
+    }
   if (!state.isFile() || state.isSymbolicLink()) {
     return {
       path,
@@ -150,7 +171,8 @@ export const inspectUserConfiguration = async (configurationDirectory: string): 
     if (key !== 'ids' && key !== 'releases') warnings.push(`harnesses has unrecognised key ${key}`)
   }
   const harnesses: string[] = []
-  if (harnessSection.ids !== undefined) harnesses.push(...inspectStringList(harnessSection.ids, 'harnesses.ids', errors))
+  if (harnessSection.ids !== undefined)
+    harnesses.push(...inspectStringList(harnessSection.ids, 'harnesses.ids', errors))
   else if (!Array.isArray(harnessSection.releases)) errors.push('harnesses must declare an ids array')
   else {
     for (const [index, harness] of harnessSection.releases.entries()) {
@@ -167,31 +189,58 @@ export const inspectUserConfiguration = async (configurationDirectory: string): 
       const digest = release.sha256
       if (typeof id !== 'string' || !id) errors.push(`harnesses[${index}] id must be a non-empty string`)
       else harnesses.push(id)
-      if (typeof url !== 'string' || !url.startsWith('https://')) errors.push(`harnesses[${index}] url must be an HTTPS URL`)
-      if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) errors.push(`harnesses[${index}] sha256 must be lowercase SHA-256`)
+      if (typeof url !== 'string' || !url.startsWith('https://'))
+        errors.push(`harnesses[${index}] url must be an HTTPS URL`)
+      if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest))
+        errors.push(`harnesses[${index}] sha256 must be lowercase SHA-256`)
     }
   }
-  const localSection = configuration.local === undefined ? undefined : (inspectSection(configuration.local, 'local', errors) as LocalSection)
+  const localSection =
+    configuration.local === undefined
+      ? undefined
+      : (inspectSection(configuration.local, 'local', errors) as LocalSection)
   if (localSection) {
     for (const key of Object.keys(localSection)) {
       if (key !== 'path') warnings.push(`local has unrecognised key ${key}`)
     }
   }
-  const local = localSection === undefined ? null : typeof localSection.path === 'string' && localSection.path ? localSection.path : null
+  const local =
+    localSection === undefined
+      ? null
+      : typeof localSection.path === 'string' && localSection.path
+        ? localSection.path
+        : null
   if (localSection !== undefined && local === null) errors.push('local.path must be a non-empty path string')
   const repositoriesSection =
-    configuration.repositories === undefined ? undefined : (inspectSection(configuration.repositories, 'repositories', errors) as RepositoriesSection)
+    configuration.repositories === undefined
+      ? undefined
+      : (inspectSection(configuration.repositories, 'repositories', errors) as RepositoriesSection)
   if (repositoriesSection) {
     for (const key of Object.keys(repositoriesSection)) {
       if (key !== 'paths') warnings.push(`repositories has unrecognised key ${key}`)
     }
   }
-  const repositories = repositoriesSection === undefined ? [] : inspectStringList(repositoriesSection.paths, 'repositories.paths', errors)
-  if (repositories.some((repository) => !isAbsolute(repository))) errors.push('repositories.paths must contain absolute paths')
-  return { path, state: errors.length ? 'invalid' : 'valid', agents, harnesses, skills, local, repositories, warnings, errors }
+  const repositories =
+    repositoriesSection === undefined ? [] : inspectStringList(repositoriesSection.paths, 'repositories.paths', errors)
+  if (repositories.some((repository) => !isAbsolute(repository)))
+    errors.push('repositories.paths must contain absolute paths')
+  return {
+    path,
+    state: errors.length ? 'invalid' : 'valid',
+    agents,
+    harnesses,
+    skills,
+    local,
+    repositories,
+    warnings,
+    errors
+  }
 }
 
-export const readConfiguration = async (configurationDirectory: string, homeDirectory: string): Promise<readonly InstalledAgent[] | undefined> => {
+export const readConfiguration = async (
+  configurationDirectory: string,
+  homeDirectory: string
+): Promise<readonly InstalledAgent[] | undefined> => {
   const path = bootstrapConfigurationPath(configurationDirectory)
   const state = await lstat(path).catch(() => undefined)
   if (!state) return undefined
@@ -207,13 +256,19 @@ export const readConfiguration = async (configurationDirectory: string, homeDire
   if (!isRecord(parsed)) throw new KiError('agent configuration must use schema 1', 1)
   const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown; local?: unknown }
   const agentSection = isRecord(configuration.agents) ? (configuration.agents as StringListSection) : undefined
-  const localSection = configuration.local === undefined ? undefined : isRecord(configuration.local) ? (configuration.local as LocalSection) : null
+  const localSection =
+    configuration.local === undefined
+      ? undefined
+      : isRecord(configuration.local)
+        ? (configuration.local as LocalSection)
+        : null
   if (
     configuration.schema !== 1 ||
     !agentSection ||
     !Array.isArray(agentSection.ids) ||
     agentSection.ids.some((agent) => typeof agent !== 'string') ||
-    (localSection !== undefined && (localSection === null || typeof localSection.path !== 'string' || !localSection.path))
+    (localSection !== undefined &&
+      (localSection === null || typeof localSection.path !== 'string' || !localSection.path))
   ) {
     throw new KiError('ki configuration must declare an agents.ids string array and an optional local.path', 1)
   }
@@ -241,7 +296,11 @@ export const clearLocalBootstrapHarness = async (configurationDirectory: string)
   await writeFile(path, contents.replace(expression, ''), 'utf8')
 }
 
-export const setLocalBootstrapHarness = async (configurationDirectory: string, homeDirectory: string, local: string): Promise<void> => {
+export const setLocalBootstrapHarness = async (
+  configurationDirectory: string,
+  homeDirectory: string,
+  local: string
+): Promise<void> => {
   const agents = await configuredAgents({ homeDirectory, configurationDirectory })
   const inspection = await inspectUserConfiguration(configurationDirectory)
   await writeFile(
@@ -251,7 +310,11 @@ export const setLocalBootstrapHarness = async (configurationDirectory: string, h
   )
 }
 
-export const setConfiguredUserSkills = async (configurationDirectory: string, homeDirectory: string, skills: readonly string[]): Promise<void> => {
+export const setConfiguredUserSkills = async (
+  configurationDirectory: string,
+  homeDirectory: string,
+  skills: readonly string[]
+): Promise<void> => {
   const agents = await configuredAgents({ homeDirectory, configurationDirectory })
   const inspection = await inspectUserConfiguration(configurationDirectory)
   await writeFile(
@@ -262,7 +325,9 @@ export const setConfiguredUserSkills = async (configurationDirectory: string, ho
 }
 
 const renderedRepositorySection = (repositories: readonly string[]): string =>
-  ['[repositories]', 'paths = [', ...repositories.map((repository) => `  ${JSON.stringify(repository)},`), ']'].join('\n')
+  ['[repositories]', 'paths = [', ...repositories.map((repository) => `  ${JSON.stringify(repository)},`), ']'].join(
+    '\n'
+  )
 
 /**
  * Produces the one local-user configuration update that records a physical KI
@@ -274,16 +339,22 @@ export const configuredRepositoryWrite = async (
   repository: string
 ): Promise<{ readonly path: string; readonly content: string } | undefined> => {
   const inspection = await inspectUserConfiguration(configurationDirectory)
-  if (inspection.state === 'missing') throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
-  if (inspection.state === 'invalid') throw new KiError(`ki configuration is invalid: ${inspection.errors.join('; ')}`, 1)
+  if (inspection.state === 'missing')
+    throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
+  if (inspection.state === 'invalid')
+    throw new KiError(`ki configuration is invalid: ${inspection.errors.join('; ')}`, 1)
   if (inspection.warnings.some((warning) => warning.startsWith('repositories has unrecognised key ')))
     throw new KiError('ki configuration repositories section has unrecognised keys; resolve them before conforming', 1)
   if (inspection.repositories.includes(repository)) return undefined
 
   const path = bootstrapConfigurationPath(configurationDirectory)
   const contents = await readFile(path, 'utf8')
-  const replacement = renderedRepositorySection([...inspection.repositories, repository].sort((left, right) => left.localeCompare(right)))
+  const replacement = renderedRepositorySection(
+    [...inspection.repositories, repository].sort((left, right) => left.localeCompare(right))
+  )
   const section = /(?:^|\n)\[repositories\]\n[\s\S]*?(?=\n\[[^\n]+\]|$)/
-  const content = section.test(contents) ? contents.replace(section, `\n${replacement}`) : `${contents.trimEnd()}\n\n${replacement}\n`
+  const content = section.test(contents)
+    ? contents.replace(section, `\n${replacement}`)
+    : `${contents.trimEnd()}\n\n${replacement}\n`
   return { path: 'config.toml', content }
 }

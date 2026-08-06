@@ -82,7 +82,16 @@ describe('[ki repo target sets]', () => {
       const missingBase = await box.run(['ki', 'repo', '--repo', 'missing/*', 'roadmap', 'list'])
       const unmatched = await box.run(['ki', 'repo', '--repo', 'empty/*', 'roadmap', 'list'])
       const duplicate = await box.run(['ki', 'repo', '--repo', 'repos/a', '--repo', 'repos/a', 'roadmap', 'list'])
-      const conflictingSelectors = await box.run(['ki', 'repo', '--repo', 'repos/a', '--agora', 'inventory', 'roadmap', 'list'])
+      const conflictingSelectors = await box.run([
+        'ki',
+        'repo',
+        '--repo',
+        'repos/a',
+        '--agora',
+        'inventory',
+        'roadmap',
+        'list'
+      ])
 
       expect(immediate.output).toContain(`│     ${root}/repos/a`)
       expect(recursive.output).toContain(`│     ${root}/repos/a/nested`)
@@ -220,9 +229,20 @@ describe('[ki repo target sets]', () => {
       })
       const first = await realpath(`${box.root.path}/first`)
 
-      const result = await box.run(['ki', 'repo', '--repo', first, '--repo', `${box.root.path}/not-a-repository`, 'conform'])
+      const result = await box.run([
+        'ki',
+        'repo',
+        '--repo',
+        first,
+        '--repo',
+        `${box.root.path}/not-a-repository`,
+        'conform'
+      ])
 
-      expect(result).toEqual({ exitCode: 2, output: 'ki: error: --repo must name a repository containing .ki-config.toml\n' })
+      expect(result).toEqual({
+        exitCode: 2,
+        output: 'ki: error: --repo must name a repository containing .ki-config.toml\n'
+      })
       await expect(lstat(`${first}/marker.txt`)).rejects.toThrow()
     })
 

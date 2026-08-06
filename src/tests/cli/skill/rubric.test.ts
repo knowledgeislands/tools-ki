@@ -95,11 +95,16 @@ describe('[ki dev skill rubric]', () => {
 
     const written = await box.run('ki dev skill rubric ki-example --write')
     expect(written.exitCode).toBe(0)
-    expect(written.output).toMatch(/^write .*ki\/harnesses\/example\/harness\/skills\/ki-example\/references\/rubric\.md\n$/)
+    expect(written.output).toMatch(
+      /^write .*ki\/harnesses\/example\/harness\/skills\/ki-example\/references\/rubric\.md\n$/
+    )
     expect(await box.data.read(target)).toBe(expectedRendered)
 
     const checked = await box.run('ki dev skill rubric ki-example')
-    expect(checked).toEqual({ exitCode: 0, output: 'ki dev skill rubric: example/harness:ki-example references/rubric.md is in sync\n' })
+    expect(checked).toEqual({
+      exitCode: 0,
+      output: 'ki dev skill rubric: example/harness:ki-example references/rubric.md is in sync\n'
+    })
   })
 
   test('reports missing when references/rubric.md has never been generated', async () => {
@@ -171,7 +176,10 @@ describe('[ki dev skill rubric]', () => {
   test('refuses a skill provided by multiple installed harnesses', async () => {
     const box = await sandbox()
     await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
-    await box.data.write('ki/harnesses/second/harness/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
+    await box.data.write(
+      'ki/harnesses/second/harness/skills/ki-example/SKILL.md',
+      '---\nname: ki-example\nki-depends-on: []\n---\n'
+    )
 
     const result = await box.run('ki dev skill rubric ki-example')
 

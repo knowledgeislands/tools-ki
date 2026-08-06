@@ -11,7 +11,10 @@ const headingAnchor = (heading: string): string =>
     .replaceAll(/[^a-z0-9-]/g, '')
 
 const classification = (item: RubricItem<unknown>): string => {
-  const aspects = [...(item.mechanical ? [item.mechanical.heuristic ? 'M-heuristic' : 'M'] : []), ...(item.judgment ? ['J'] : [])]
+  const aspects = [
+    ...(item.mechanical ? [item.mechanical.heuristic ? 'M-heuristic' : 'M'] : []),
+    ...(item.judgment ? ['J'] : [])
+  ]
   return aspects.join(' + ')
 }
 

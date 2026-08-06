@@ -16,7 +16,12 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
         `├─ projects (${profile.projects.length})`
       ]
       if (!profile.projects.length) lines.push('│  ╰─ none')
-      else lines.push(...profile.projects.map((project, index) => `│  ${index === profile.projects.length - 1 ? '╰─' : '├─'} ${project}`))
+      else
+        lines.push(
+          ...profile.projects.map(
+            (project, index) => `│  ${index === profile.projects.length - 1 ? '╰─' : '├─'} ${project}`
+          )
+        )
       lines.push(`╰─ summary: PROJECTS=${profile.projects.length}`)
       context.stdout.write(`${lines.join('\n')}\n`)
     })

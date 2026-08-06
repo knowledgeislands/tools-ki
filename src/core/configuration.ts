@@ -21,7 +21,8 @@ export interface RepositoryInitialisation {
   readonly visibility: string
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const initialisationField = (value: string | undefined, name: string): string => {
   if (!value?.trim()) throw new KiError(`ki repo init requires --${name}`, 2)
@@ -33,14 +34,17 @@ export const renderRepositoryConfiguration = (initialisation: RepositoryInitiali
   const description = initialisationField(initialisation.description, 'description')
   const repoCode = initialisationField(initialisation.repoCode, 'repo-code')
   const visibility = initialisationField(initialisation.visibility, 'visibility')
-  if (!/^[A-Z][A-Z0-9-]{1,23}$/.test(repoCode)) throw new KiError('ki repo init --repo-code must be a stable uppercase identifier', 2)
+  if (!/^[A-Z][A-Z0-9-]{1,23}$/.test(repoCode))
+    throw new KiError('ki repo init --repo-code must be a stable uppercase identifier', 2)
   if (!initialisation.supportedRuntimes.length) throw new KiError('ki repo init requires at least one --runtime', 2)
-  if (initialisation.supportedRuntimes.includes('codex')) throw new KiError('ki repo init --runtime codex is retired; use chatgpt-codex', 2)
+  if (initialisation.supportedRuntimes.includes('codex'))
+    throw new KiError('ki repo init --runtime codex is retired; use chatgpt-codex', 2)
   if (initialisation.supportedRuntimes.some((runtime) => !supportedRuntimes.includes(runtime as SupportedRuntime)))
     throw new KiError('ki repo init --runtime may contain only claude-code or chatgpt-codex', 2)
   if (new Set(initialisation.supportedRuntimes).size !== initialisation.supportedRuntimes.length)
     throw new KiError('ki repo init --runtime must not repeat a runtime', 2)
-  if (visibility !== 'public' && visibility !== 'private') throw new KiError('ki repo init --visibility must be public or private', 2)
+  if (visibility !== 'public' && visibility !== 'private')
+    throw new KiError('ki repo init --visibility must be public or private', 2)
   return [
     `[${JSON.stringify(REPOSITORY_SKILL_IDENTITY)}]`,
     `title = ${JSON.stringify(title)}`,
@@ -65,7 +69,8 @@ const qualifiedSkill = (identity: string): { readonly harness: string; readonly 
 
 const looksLikeSkill = (name: string): boolean => name.startsWith('ki-') || name.includes(':')
 
-const declarationError = (identity: string): KiError => new KiError(`declared skill ${identity} must use a qualified <harness-id>:<skill-name> TOML table`, 1)
+const declarationError = (identity: string): KiError =>
+  new KiError(`declared skill ${identity} must use a qualified <harness-id>:<skill-name> TOML table`, 1)
 
 export const readDeclaredSkills = async (configurationPath: string): Promise<readonly DeclaredSkill[]> => {
   let parsed: unknown
@@ -86,7 +91,8 @@ export const readDeclaredSkills = async (configurationPath: string): Promise<rea
   })
   const names = new Set<string>()
   for (const declaration of declared) {
-    if (names.has(declaration.name)) throw new KiError(`declared skill ${declaration.name} is repeated by multiple providers`, 1)
+    if (names.has(declaration.name))
+      throw new KiError(`declared skill ${declaration.name} is repeated by multiple providers`, 1)
     names.add(declaration.name)
   }
   return declared

@@ -5,7 +5,14 @@ import { KiError, KiExit } from '../../core/errors.ts'
 import { type RepositoryPlanningSource, readRepositoryPlanningSource } from '../../core/planning.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade-core.ts'
-import { pruneDoneWorkItems, readWorkItems, updateWorkItemHorizon, type WorkItem, type WorkItemHorizon, workItemHorizons } from '../../core/work-items.ts'
+import {
+  pruneDoneWorkItems,
+  readWorkItems,
+  updateWorkItemHorizon,
+  type WorkItem,
+  type WorkItemHorizon,
+  workItemHorizons
+} from '../../core/work-items.ts'
 import { displayTradePeer } from '../trade/shared.ts'
 
 interface RoadmapOptions {
@@ -26,23 +33,33 @@ const horizonOrder = workItemHorizons
 const statusOrder = ['done', 'awaiting-review', 'in-progress', 'ready', 'draft'] as const
 
 const filterItems = (items: readonly WorkItem[], options: RoadmapOptions): readonly WorkItem[] =>
-  items.filter((item) => (!options.horizon || item.horizon === options.horizon) && (!options.status || item.status === options.status))
+  items.filter(
+    (item) =>
+      (!options.horizon || item.horizon === options.horizon) && (!options.status || item.status === options.status)
+  )
 
 const orderItemsForText = (items: readonly WorkItem[]): readonly WorkItem[] =>
   [...items].sort(
     (left, right) =>
-      horizonOrder.indexOf(left.horizon as (typeof horizonOrder)[number]) - horizonOrder.indexOf(right.horizon as (typeof horizonOrder)[number]) ||
+      horizonOrder.indexOf(left.horizon as (typeof horizonOrder)[number]) -
+        horizonOrder.indexOf(right.horizon as (typeof horizonOrder)[number]) ||
       statusOrder.indexOf(left.status) - statusOrder.indexOf(right.status) ||
       left.id.localeCompare(right.id)
   )
 
-const textHorizonGroups = (items: readonly WorkItem[]): readonly { readonly horizon: string; readonly items: readonly WorkItem[] }[] =>
+const textHorizonGroups = (
+  items: readonly WorkItem[]
+): readonly { readonly horizon: string; readonly items: readonly WorkItem[] }[] =>
   horizonOrder.flatMap((horizon) => {
     const group = orderItemsForText(items.filter((item) => item.horizon === horizon))
     return group.length ? [{ horizon, items: group }] : []
   })
 
-const renderTradeContext = (trades: readonly LocatedTrade[], estate: readonly LocatedTrade[], diagnostic?: string): readonly string[] => {
+const renderTradeContext = (
+  trades: readonly LocatedTrade[],
+  estate: readonly LocatedTrade[],
+  diagnostic?: string
+): readonly string[] => {
   if (diagnostic) return [`│  ╰─ ❌ unavailable: ${diagnostic}`]
   const directions = [
     ['import', 'inbound'],
@@ -58,14 +75,18 @@ const renderTradeContext = (trades: readonly LocatedTrade[], estate: readonly Lo
         const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
         const peer = `${direction === 'outbound' ? '→' : '←'} ${displayTradePeer(trade.record, direction)}`
         const lifecycle = tradeLifecycle(trade, estate)
-        const statuses = [lifecycle.publicationStatus, lifecycle.deliveryStatus, lifecycle.decisionStatus].filter(Boolean).join(' · ')
+        const statuses = [lifecycle.publicationStatus, lifecycle.deliveryStatus, lifecycle.decisionStatus]
+          .filter(Boolean)
+          .join(' · ')
         return `${itemPrefix}${tradeIndex === selected.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${peer} [${statuses}] ${trade.record.title}`
       })
     ]
   })
 }
 
-const countTradeDirections = (trades: readonly LocatedTrade[]): { readonly inbound: number; readonly outbound: number } => {
+const countTradeDirections = (
+  trades: readonly LocatedTrade[]
+): { readonly inbound: number; readonly outbound: number } => {
   let inbound = 0
   let outbound = 0
   for (const trade of trades) {
@@ -79,7 +100,12 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
   const planning = result.planning
   if (planning?.kind === 'streams') {
     const count = planning.focuses.reduce((total, focus) => total + focus.proposals.length, 0)
-    const lines = ['╭─ KI REPO ROADMAP', `│  📁 ${basename(result.repository)}`, `│     ${result.repository}`, `├─ streams (${count}) · Knowledge Base Streams`]
+    const lines = [
+      '╭─ KI REPO ROADMAP',
+      `│  📁 ${basename(result.repository)}`,
+      `│     ${result.repository}`,
+      `├─ streams (${count}) · Knowledge Base Streams`
+    ]
     if (!count) lines.push('│  ╰─ proposals: none')
     else
       for (const [focusIndex, focus] of planning.focuses.entries()) {
@@ -96,15 +122,25 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
       for (const [diagnosticIndex, diagnostic] of planning.diagnostics.entries())
         lines.push(`│  ${diagnosticIndex === planning.diagnostics.length - 1 ? '╰─' : '├─'} ❌ ${diagnostic}`)
     }
-    lines.push(`├─ trades (${result.trades.length})`, ...renderTradeContext(result.trades, estate, result.tradeDiagnostic))
+    lines.push(
+      `├─ trades (${result.trades.length})`,
+      ...renderTradeContext(result.trades, estate, result.tradeDiagnostic)
+    )
     const { inbound, outbound } = countTradeDirections(result.trades)
-    const tradeSummary = result.tradeDiagnostic ? 'unavailable' : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
+    const tradeSummary = result.tradeDiagnostic
+      ? 'unavailable'
+      : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
     lines.push(`╰─ summary: PROPOSALS=${count} FOCUSES=${planning.focuses.length} TRADES=${tradeSummary}`)
     return lines.join('\n')
   }
   const items = result.items ?? []
   const groups = textHorizonGroups(items)
-  const lines = [`╭─ KI REPO ROADMAP`, `│  📁 ${basename(result.repository)}`, `│     ${result.repository}`, `├─ roadmap (${items.length})`]
+  const lines = [
+    `╭─ KI REPO ROADMAP`,
+    `│  📁 ${basename(result.repository)}`,
+    `│     ${result.repository}`,
+    `├─ roadmap (${items.length})`
+  ]
   if (result.diagnostic) lines.push(`│  ╰─ ❌ ${result.diagnostic}`)
   else if (!items.length) lines.push('│  ╰─ items: none')
   else
@@ -114,18 +150,29 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
         const itemPrefix = `│  ${lastGroup ? '   ' : '│  '}`
         return [
           `│  ${lastGroup ? '╰─' : '├─'} ${horizon} (${group.length})`,
-          ...group.map((item, itemIndex) => `${itemPrefix}${itemIndex === group.length - 1 ? '╰─' : '├─'} ${item.id} [${item.status}] ${item.title}`)
+          ...group.map(
+            (item, itemIndex) =>
+              `${itemPrefix}${itemIndex === group.length - 1 ? '╰─' : '├─'} ${item.id} [${item.status}] ${item.title}`
+          )
         ]
       })
     )
-  lines.push(`├─ trades (${result.trades.length})`, ...renderTradeContext(result.trades, estate, result.tradeDiagnostic))
+  lines.push(
+    `├─ trades (${result.trades.length})`,
+    ...renderTradeContext(result.trades, estate, result.tradeDiagnostic)
+  )
   const { inbound, outbound } = countTradeDirections(result.trades)
-  const tradeSummary = result.tradeDiagnostic ? 'unavailable' : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
+  const tradeSummary = result.tradeDiagnostic
+    ? 'unavailable'
+    : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
   lines.push(`╰─ summary: ITEMS=${items.length} HORIZONS=${groups.length} TRADES=${tradeSummary}`)
   return lines.join('\n')
 }
 
-const resolveTargets = async (context: KiContext, selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }) =>
+const resolveTargets = async (
+  context: KiContext,
+  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
+) =>
   resolveRepositoryTargets({
     ...selectedRepositories(),
     configurationDirectory: context.paths.config,
@@ -140,7 +187,8 @@ const oneMutationTarget = async (
 ) => {
   const repositories = await resolveTargets(context, selectedRepositories)
   const repository = repositories[0]
-  if (repositories.length !== 1 || !repository) throw new KiError(`ki repo roadmap ${operation} requires exactly one repository target`, 2)
+  if (repositories.length !== 1 || !repository)
+    throw new KiError(`ki repo roadmap ${operation} requires exactly one repository target`, 2)
   return repository
 }
 
@@ -148,10 +196,15 @@ const moveHorizon = (item: WorkItem, operation: 'promote' | 'demote', requested?
   const current = horizonOrder.indexOf(item.horizon)
   const direction = operation === 'promote' ? -1 : 1
   const target = requested === undefined ? current + direction : horizonOrder.indexOf(requested as WorkItemHorizon)
-  if (requested !== undefined && target === -1) throw new KiError(`roadmap ${operation} horizon must be one of ${horizonOrder.join(', ')}`, 2)
-  if (target < 0 || target >= horizonOrder.length) throw new KiError(`work item ${item.id} is already at the ${operation} limit`, 2)
+  if (requested !== undefined && target === -1)
+    throw new KiError(`roadmap ${operation} horizon must be one of ${horizonOrder.join(', ')}`, 2)
+  if (target < 0 || target >= horizonOrder.length)
+    throw new KiError(`work item ${item.id} is already at the ${operation} limit`, 2)
   if ((operation === 'promote' && target >= current) || (operation === 'demote' && target <= current))
-    throw new KiError(`roadmap ${operation} must move ${item.id} ${operation === 'promote' ? 'toward now' : 'toward future'}`, 2)
+    throw new KiError(
+      `roadmap ${operation} must move ${item.id} ${operation === 'promote' ? 'toward now' : 'toward future'}`,
+      2
+    )
   return horizonOrder[target] as WorkItemHorizon
 }
 
@@ -174,14 +227,15 @@ export const createRepoRoadmapCommand = (
         .option('--status <status>', 'only items at this status')
         .action(async (options: RoadmapOptions) => {
           const repositories = await resolveTargets(context, selectedRepositories)
-          const tradeInventory: { readonly trades: readonly LocatedTrade[]; readonly diagnostic?: string } = await locateTrades(context)
-            .then((trades) => ({ trades }))
-            .catch((error) => ({
-              trades: [] as readonly LocatedTrade[],
-              // locateTrades normalizes every failure to a KiError before this boundary.
-              /* v8 ignore next */
-              diagnostic: error instanceof Error ? error.message : String(error)
-            }))
+          const tradeInventory: { readonly trades: readonly LocatedTrade[]; readonly diagnostic?: string } =
+            await locateTrades(context)
+              .then((trades) => ({ trades }))
+              .catch((error) => ({
+                trades: [] as readonly LocatedTrade[],
+                // locateTrades normalizes every failure to a KiError before this boundary.
+                /* v8 ignore next */
+                diagnostic: error instanceof Error ? error.message : String(error)
+              }))
           const results = await Promise.all(
             repositories.map(async (repository) => {
               try {
@@ -191,7 +245,9 @@ export const createRepoRoadmapCommand = (
                   trades: tradeInventory.trades.filter((trade) => trade.root === repository.root),
                   ...(tradeInventory.diagnostic ? { tradeDiagnostic: tradeInventory.diagnostic } : {}),
                   planning,
-                  ...(planning.kind === 'roadmap' ? { items: filterItems(await readWorkItems(repository.root), options) } : {})
+                  ...(planning.kind === 'roadmap'
+                    ? { items: filterItems(await readWorkItems(repository.root), options) }
+                    : {})
                 }
               } catch (error) {
                 /* v8 ignore next -- inventory failures are always KiError instances. */
@@ -205,7 +261,9 @@ export const createRepoRoadmapCommand = (
               }
             })
           )
-          context.stdout.write(`${results.map((result) => renderTextResult(result, tradeInventory.trades)).join('\n\n')}\n`)
+          context.stdout.write(
+            `${results.map((result) => renderTextResult(result, tradeInventory.trades)).join('\n\n')}\n`
+          )
           if (
             results.some(
               (result) =>
@@ -223,10 +281,19 @@ export const createRepoRoadmapCommand = (
         .argument('[id]', 'canonical completed work-item identifier')
         .action(async (id: string | undefined) => {
           const repositories =
-            id === undefined ? await resolveTargets(context, selectedRepositories) : [await oneMutationTarget(context, selectedRepositories, 'prune')]
+            id === undefined
+              ? await resolveTargets(context, selectedRepositories)
+              : [await oneMutationTarget(context, selectedRepositories, 'prune')]
           await Promise.all(repositories.map((repository) => readWorkItems(repository.root)))
-          const removed = await Promise.all(repositories.map(async (repository) => ({ repository, items: await pruneDoneWorkItems(repository.root, id) })))
-          const entries = removed.flatMap(({ repository, items }) => items.map((item) => `${repository.root}: ${item.id} [done] ${item.title}`))
+          const removed = await Promise.all(
+            repositories.map(async (repository) => ({
+              repository,
+              items: await pruneDoneWorkItems(repository.root, id)
+            }))
+          )
+          const entries = removed.flatMap(({ repository, items }) =>
+            items.map((item) => `${repository.root}: ${item.id} [done] ${item.title}`)
+          )
           if (!entries.length) context.stdout.write('ki repo roadmap prune: no done work items\n')
           else
             context.stdout.write(

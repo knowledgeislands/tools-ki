@@ -39,7 +39,8 @@ const digest = (value: string | Uint8Array): string => createHash('sha256').upda
 
 const operationalError = (message: string): KiError => new KiError(message)
 
-const isRegularFile = async (path: string): Promise<boolean> => Boolean((await stat(path).catch(() => undefined))?.isFile())
+const isRegularFile = async (path: string): Promise<boolean> =>
+  Boolean((await stat(path).catch(() => undefined))?.isFile())
 
 const inspectPath = async (path: string, label: string): Promise<void> => {
   const state = await lstat(path).catch(() => undefined)
@@ -48,14 +49,17 @@ const inspectPath = async (path: string, label: string): Promise<void> => {
 
 const physicalDirectory = async (path: string, label: string): Promise<string> => {
   const state = await lstat(path).catch(() => undefined)
-  if (!state || state.isSymbolicLink() || !state.isDirectory()) throw operationalError(`${label} must be an existing directory`)
+  if (!state || state.isSymbolicLink() || !state.isDirectory())
+    throw operationalError(`${label} must be an existing directory`)
   return realpath(path)
 }
 
 const isSafeRelativePath = (path: string): boolean => {
   if (path.startsWith('/') || path.includes('//')) return false
   const segments = path.split('/')
-  return segments.every((segment) => segment && segment !== '.' && segment !== '..' && /^[A-Za-z0-9._-]+$/.test(segment))
+  return segments.every(
+    (segment) => segment && segment !== '.' && segment !== '..' && /^[A-Za-z0-9._-]+$/.test(segment)
+  )
 }
 
 const listFiles = async (directory: string, relativeDirectory = ''): Promise<string[]> => {
@@ -64,7 +68,8 @@ const listFiles = async (directory: string, relativeDirectory = ''): Promise<str
   for (const entry of entries) {
     const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name
     const fullPath = join(directory, entry.name)
-    if (entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory())) throw operationalError('capture contains an unsafe file')
+    if (entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory()))
+      throw operationalError('capture contains an unsafe file')
     if (entry.isDirectory()) paths.push(...(await listFiles(fullPath, relativePath)))
     if (entry.isFile()) paths.push(relativePath)
   }
@@ -86,14 +91,17 @@ const parseMetadata = async (path: string): Promise<CaptureMetadata> => {
     values.set(key, value)
   }
 
-  if (values.get('format') !== '"ki-chatgpt-capture"') throw operationalError('capture metadata format must be ki-chatgpt-capture')
-  if (values.get('format_version') !== '"0.1.0"') throw operationalError('capture metadata format_version must be 0.1.0')
+  if (values.get('format') !== '"ki-chatgpt-capture"')
+    throw operationalError('capture metadata format must be ki-chatgpt-capture')
+  if (values.get('format_version') !== '"0.1.0"')
+    throw operationalError('capture metadata format_version must be 0.1.0')
   const rawBoundary = values.get('capture_boundary')
   if (!rawBoundary?.startsWith('"') || !rawBoundary.endsWith('"') || !boundaryPattern.test(rawBoundary.slice(1, -1))) {
     throw operationalError('capture_boundary contains unsupported characters')
   }
   const omissions = values.get('omissions')
-  if (!omissions || !omissionsPattern.test(omissions)) throw operationalError('omissions must be a compact array of plain strings')
+  if (!omissions || !omissionsPattern.test(omissions))
+    throw operationalError('omissions must be a compact array of plain strings')
 
   return { boundary: rawBoundary.slice(1, -1), omissions: JSON.parse(omissions) as string[] }
 }
@@ -117,10 +125,12 @@ const validateRelationships = async (path: string, records: string, assets: stri
   if (lines.at(-1) === '') lines.pop()
   const positions = new Set<string>()
   const duplicateLines = new Set<string>()
-  const orderPattern = /^\{"type":"conversation-order","record":"records\/([A-Za-z0-9._/-]+)","position":([1-9][0-9]*)\}$/
+  const orderPattern =
+    /^\{"type":"conversation-order","record":"records\/([A-Za-z0-9._/-]+)","position":([1-9][0-9]*)\}$/
   const assetPattern =
     /^\{"type":"message-asset","record":"records\/([A-Za-z0-9._/-]+)","asset":"assets\/([A-Za-z0-9._/-]+)","message_id":"([A-Za-z0-9._:-]+)"\}$/
-  const projectPattern = /^\{"type":"project-conversation","record":"records\/([A-Za-z0-9._/-]+)","project_id":"([A-Za-z0-9._:-]+)"\}$/
+  const projectPattern =
+    /^\{"type":"project-conversation","record":"records\/([A-Za-z0-9._/-]+)","project_id":"([A-Za-z0-9._:-]+)"\}$/
 
   for (const line of lines) {
     if (!line) throw operationalError('relationships/native.jsonl contains a blank record')
@@ -131,7 +141,8 @@ const validateRelationships = async (path: string, records: string, assets: stri
     const project = projectPattern.exec(line)
     if (order?.[1] && order[2]) {
       if (!isSafeRelativePath(order[1])) throw operationalError('relationship record path is unsafe')
-      if (!(await isRegularFile(join(records, order[1])))) throw operationalError('relationship references a missing record')
+      if (!(await isRegularFile(join(records, order[1]))))
+        throw operationalError('relationship references a missing record')
       if (positions.has(order[2])) throw operationalError('relationship repeats a conversation position')
       positions.add(order[2])
       continue
@@ -139,13 +150,16 @@ const validateRelationships = async (path: string, records: string, assets: stri
     if (asset?.[1] && asset[2]) {
       if (!isSafeRelativePath(asset[1])) throw operationalError('relationship record path is unsafe')
       if (!isSafeRelativePath(asset[2])) throw operationalError('relationship asset path is unsafe')
-      if (!(await isRegularFile(join(records, asset[1])))) throw operationalError('relationship references a missing record')
-      if (!(await isRegularFile(join(assets, asset[2])))) throw operationalError('relationship references a missing asset')
+      if (!(await isRegularFile(join(records, asset[1]))))
+        throw operationalError('relationship references a missing record')
+      if (!(await isRegularFile(join(assets, asset[2]))))
+        throw operationalError('relationship references a missing asset')
       continue
     }
     if (project?.[1]) {
       if (!isSafeRelativePath(project[1])) throw operationalError('relationship record path is unsafe')
-      if (!(await isRegularFile(join(records, project[1])))) throw operationalError('relationship references a missing record')
+      if (!(await isRegularFile(join(records, project[1]))))
+        throw operationalError('relationship references a missing record')
       continue
     }
     throw operationalError('relationship is not a supported source-native record')
@@ -157,8 +171,10 @@ const loadCapture = async (captureArgument: string): Promise<Capture> => {
   const directory = await physicalDirectory(captureArgument, 'capture-directory')
   const allowedEntries = new Set(['capture.toml', 'originals', 'records', 'assets', 'relationships'])
   for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (!allowedEntries.has(entry.name)) throw operationalError('capture-directory contains an unsupported top-level entry')
-    if (entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory())) throw operationalError('capture-directory contains an unsupported file type')
+    if (!allowedEntries.has(entry.name))
+      throw operationalError('capture-directory contains an unsupported top-level entry')
+    if (entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory()))
+      throw operationalError('capture-directory contains an unsupported file type')
   }
   const originals = join(directory, 'originals')
   const records = join(directory, 'records')
@@ -276,16 +292,30 @@ const writeKep = async (capture: Capture, payload: Payload, output: string): Pro
   }
 }
 
-const emitResult = (context: KiContext, capture: Capture, payload: Payload, output: string, options: ImportOptions): void => {
+const emitResult = (
+  context: KiContext,
+  capture: Capture,
+  payload: Payload,
+  output: string,
+  options: ImportOptions
+): void => {
   context.stdout.write(`${options.dryRun ? 'KEP plan' : 'KEP created'}: ${output}\n`)
   context.stdout.write(`Package: ${payload.packageId}\n`)
-  context.stdout.write(`Inventory: ${capture.recordCount} records, ${capture.assetCount} assets, ${capture.relationshipCount} relationships\n`)
+  context.stdout.write(
+    `Inventory: ${capture.recordCount} records, ${capture.assetCount} assets, ${capture.relationshipCount} relationships\n`
+  )
   context.stdout.write(`Omissions: ${JSON.stringify(capture.metadata.omissions)}\n`)
-  context.stdout.write('Limitations: local user-provided capture only; no browser, network, credentials, repository discovery, or knowledge extraction.\n')
+  context.stdout.write(
+    'Limitations: local user-provided capture only; no browser, network, credentials, repository discovery, or knowledge extraction.\n'
+  )
   if (options.dryRun) context.stdout.write('Dry run: no files written.\n')
 }
 
-export const importCapture = async (context: KiContext, captureArgument: string, options: ImportOptions): Promise<void> => {
+export const importCapture = async (
+  context: KiContext,
+  captureArgument: string,
+  options: ImportOptions
+): Promise<void> => {
   const captureState = await lstat(captureArgument).catch(() => undefined)
   if (captureState?.isSymbolicLink()) throw operationalError('capture-directory must not be a symbolic link')
   const captureDirectory = await physicalDirectory(captureArgument, 'capture-directory')

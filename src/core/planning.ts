@@ -46,7 +46,8 @@ const frontmatter = (contents: string, path: string): ProposalFields => {
   const fields: Record<string, string> = {}
   for (const line of match[1].split('\n')) {
     const entry = /^([a-z_]+): (.+)$/.exec(line)
-    if (!entry?.[1] || entry[2] === undefined || Object.hasOwn(fields, entry[1])) throw new KiError(`${path} has invalid stream-proposal frontmatter`, 2)
+    if (!entry?.[1] || entry[2] === undefined || Object.hasOwn(fields, entry[1]))
+      throw new KiError(`${path} has invalid stream-proposal frontmatter`, 2)
     fields[entry[1]] = entry[2]
   }
   return fields
@@ -81,10 +82,15 @@ const readProposalIfPresent = async (directory: string, focus: string, name: str
   }
 }
 
-const readStreams = async (repository: string): Promise<{ readonly focuses: readonly StreamFocus[]; readonly diagnostics: readonly string[] }> => {
+const readStreams = async (
+  repository: string
+): Promise<{ readonly focuses: readonly StreamFocus[]; readonly diagnostics: readonly string[] }> => {
   const directory = join(repository, 'Streams')
   await physicalDirectory(directory, `Knowledge Base repository ${repository} has no physical Streams directory`)
-  await physicalFile(join(directory, 'Streams.md'), `Knowledge Base repository ${repository} has no physical Streams/Streams.md file`)
+  await physicalFile(
+    join(directory, 'Streams.md'),
+    `Knowledge Base repository ${repository} has no physical Streams/Streams.md file`
+  )
   const entries = await readdir(directory, { withFileTypes: true })
   const focusResults = await Promise.all(
     entries
@@ -92,7 +98,10 @@ const readStreams = async (repository: string): Promise<{ readonly focuses: read
       .sort((left, right) => left.name.localeCompare(right.name))
       .map(async (entry) => {
         const focusDirectory = join(directory, entry.name)
-        await physicalFile(join(focusDirectory, `${entry.name}.md`), `Knowledge Base stream focus ${entry.name} must be a regular file`)
+        await physicalFile(
+          join(focusDirectory, `${entry.name}.md`),
+          `Knowledge Base stream focus ${entry.name} must be a regular file`
+        )
         const proposals = await readdir(focusDirectory, { withFileTypes: true })
         const reads = await Promise.all(
           proposals
@@ -107,10 +116,16 @@ const readStreams = async (repository: string): Promise<{ readonly focuses: read
         }
       })
   )
-  return { focuses: focusResults.map(({ name, proposals }) => ({ name, proposals })), diagnostics: focusResults.flatMap(({ diagnostics }) => diagnostics) }
+  return {
+    focuses: focusResults.map(({ name, proposals }) => ({ name, proposals })),
+    diagnostics: focusResults.flatMap(({ diagnostics }) => diagnostics)
+  }
 }
 
-export const readRepositoryPlanningSource = async (repository: string, configuration: string): Promise<RepositoryPlanningSource> => {
+export const readRepositoryPlanningSource = async (
+  repository: string,
+  configuration: string
+): Promise<RepositoryPlanningSource> => {
   const declarations = await readDeclaredSkills(configuration)
   const decisionRecords = declarations.find((declaration) => declaration.name === 'ki-decision-records')
   const { repo_type: repoType } = decisionRecords?.configuration ?? {}

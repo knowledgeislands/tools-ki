@@ -1,7 +1,12 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
-import { type CompletionNode, type CompletionOption, type CompletionValueStrategy, completionGrammar } from './completion-grammar.ts'
+import {
+  type CompletionNode,
+  type CompletionOption,
+  type CompletionValueStrategy,
+  completionGrammar
+} from './completion-grammar.ts'
 
 const shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`
 
@@ -12,7 +17,8 @@ const caseBody = (nodes: readonly CompletionNode[], values: (node: CompletionNod
 
 const optionNames = (option: CompletionOption): readonly string[] => option.names
 
-const valueOptions = (node: CompletionNode): readonly string[] => node.options.filter((option) => option.takesValue).flatMap(optionNames)
+const valueOptions = (node: CompletionNode): readonly string[] =>
+  node.options.filter((option) => option.takesValue).flatMap(optionNames)
 
 const renderValueStrategy = (strategy: CompletionValueStrategy): string =>
   strategy.kind === 'values' ? strategy.values.join(' ') : strategy.kind === 'path' ? 'path' : ''
@@ -31,7 +37,8 @@ const argumentStrategies = (nodes: readonly CompletionNode[]): string =>
   nodes
     .flatMap((node) =>
       node.arguments.map(
-        (argument, index) => `    ${shellQuote(`${nodeKey(node)}:${index}`)}) printf '%s\\n' ${shellQuote(renderValueStrategy(argument.valueStrategy))} ;;`
+        (argument, index) =>
+          `    ${shellQuote(`${nodeKey(node)}:${index}`)}) printf '%s\\n' ${shellQuote(renderValueStrategy(argument.valueStrategy))} ;;`
       )
     )
     .join('\n')

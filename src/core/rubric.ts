@@ -142,7 +142,9 @@ export interface SkillRubricDefinition<RootContext = unknown> {
    * Builds one operation-scoped session. AUDIT callbacks remain read-only;
    * CONFORM callbacks may change only the session's private in-memory draft.
    */
-  readonly createSession: (options: RubricContextOptions) => Promise<RubricSession<RootContext>> | RubricSession<RootContext>
+  readonly createSession: (
+    options: RubricContextOptions
+  ) => Promise<RubricSession<RootContext>> | RubricSession<RootContext>
   readonly families: readonly RubricFamily<RootContext>[]
 }
 

@@ -99,8 +99,12 @@ path = ${JSON.stringify(harnessPath)}
 `
       expect(dataIsSymlink).toBe(true)
       expect(homeIsSymlink).toBe(true)
-      expect(await readlink(`${box.home.path}/.agents/skills/ki-bootstrap`)).toBe(`${harnessPath}/skills/keystone/ki-bootstrap`)
-      expect(await realpath(`${box.home.path}/.agents/skills/ki-bootstrap`)).toBe(`${harnessPath}/skills/keystone/ki-bootstrap`)
+      expect(await readlink(`${box.home.path}/.agents/skills/ki-bootstrap`)).toBe(
+        `${harnessPath}/skills/keystone/ki-bootstrap`
+      )
+      expect(await realpath(`${box.home.path}/.agents/skills/ki-bootstrap`)).toBe(
+        `${harnessPath}/skills/keystone/ki-bootstrap`
+      )
       expect(config).toBe(expectedConfig)
     })
 
@@ -173,7 +177,9 @@ ki-recap for claude-code already installed
 
       expect(off.exitCode).toBe(1)
       expect(off.output).toContain('could not download configured harness knowledgeislands/ki-agentic-harness')
-      expect((await lstat(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills`)).isSymbolicLink()).toBe(true)
+      expect(
+        (await lstat(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills`)).isSymbolicLink()
+      ).toBe(true)
     })
 
     test('keeps repeated local on and failed off transitions coherent', async () => {
@@ -194,7 +200,9 @@ ki-recap for claude-code already installed
       expect(firstOff.exitCode).toBe(1)
       expect(secondOn.exitCode).toBe(0)
       expect(secondOff.exitCode).toBe(1)
-      expect(await realpath(`${box.home.path}/.claude/skills/ki-recap`)).toBe(`${harnessPath}/skills/change-management/ki-recap`)
+      expect(await realpath(`${box.home.path}/.claude/skills/ki-recap`)).toBe(
+        `${harnessPath}/skills/change-management/ki-recap`
+      )
       expect(doctor.exitCode).toBe(0)
       expect(doctor.output).not.toContain('✗')
     })

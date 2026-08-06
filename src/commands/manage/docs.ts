@@ -25,4 +25,6 @@ export const createDocsCommand = (context: KiContext): Command =>
   new Command('docs')
     .description('print canonical KI documentation locations')
     .argument('[topic]', 'overview, site, manual, or roadmap')
-    .action((topic: string | undefined) => context.stdout.write(`${topic ? documentationUrl(topic) : allDocumentationUrls()}\n`))
+    .action((topic: string | undefined) =>
+      context.stdout.write(`${topic ? documentationUrl(topic) : allDocumentationUrls()}\n`)
+    )

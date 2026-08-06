@@ -138,7 +138,10 @@ describe('[ki repo]', () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
       await box.setupExampleHarness({
-        rubric: rubric('[]').replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'repository' },")
+        rubric: rubric('[]').replace(
+          "concern: 'test governance',",
+          "concern: 'test governance', scope: { kind: 'repository' },"
+        )
       })
 
       const result = await box.run('ki repo educate')
@@ -155,7 +158,10 @@ describe('[ki repo]', () => {
           code: 'HYBRID-1', title: 'Heuristic hybrid',
           mechanical: { level: 'WARN', heuristic: true, remediation: { class: 'guarded', guidance: 'Apply the review decision.' }, audit: { phase: 'PRIMARY', run: async () => [] } },
           judgment: { scope: 'The reported result.', prompt: 'Review the result.', outcomes: ['accepted'], guidance: 'Record the result.' }
-        }] }]`).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+        }] }]`).replace(
+          "concern: 'test governance',",
+          "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
+        )
       })
 
       const result = await box.run('ki repo educate')
@@ -172,7 +178,10 @@ describe('[ki repo]', () => {
 
       const result = await box.run('ki repo audit')
 
-      expect(result).toEqual({ exitCode: 2, output: 'ki: error: no KI repository found from the current working directory\n' })
+      expect(result).toEqual({
+        exitCode: 2,
+        output: 'ki: error: no KI repository found from the current working directory\n'
+      })
     })
 
     test("runs only a declared skill's mechanical rubric items", async () => {
@@ -250,7 +259,10 @@ describe('[ki repo]', () => {
       const never = await box.run('ki repo audit --progress never', { interactive: true, now: () => 0 })
       const always = await box.run('ki repo audit --progress always', { now: () => 0 })
       const multi = await box.run('ki repo audit --progress always --progress-style multi', { now: () => 0 })
-      const multiInteractive = await box.run('ki repo audit --progress-style multi', { interactive: true, now: () => 0 })
+      const multiInteractive = await box.run('ki repo audit --progress-style multi', {
+        interactive: true,
+        now: () => 0
+      })
       const invalidProgress = await box.run('ki repo audit --progress later')
       const invalidStyle = await box.run('ki repo audit --progress-style rows')
       const invalidLevels = await box.run('ki repo audit --reporter-levels nope')
@@ -273,12 +285,17 @@ describe('[ki repo]', () => {
       expect(invalidStyle).toMatchObject({ exitCode: 2 })
       expect(invalidStyle.output).toContain('--progress-style accepts single or multi')
       expect(invalidLevels).toMatchObject({ exitCode: 2 })
-      expect(invalidLevels.output).toContain('--reporter-levels accepts FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, PASS, or all')
+      expect(invalidLevels.output).toContain(
+        '--reporter-levels accepts FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, PASS, or all'
+      )
     })
 
     test('selects an exact capability when another declared skill extends its name', async () => {
       const box = await sandbox()
-      await box.project.write('.ki-config.toml', '["example/harness:ki-website"]\n["example/harness:ki-website-cloudflare"]\n')
+      await box.project.write(
+        '.ki-config.toml',
+        '["example/harness:ki-website"]\n["example/harness:ki-website-cloudflare"]\n'
+      )
       await setupPrefixCollisionHarness(box.data)
 
       const result = await box.run(`ki repo --repo ${box.project.path} audit --skill ki-website`)
@@ -347,7 +364,10 @@ describe('[ki repo]', () => {
           { kind: 'mechanical', code: 'EXAMPLE-2', title: 'Second', level: 'FAIL', phase: 'DERIVED', audit: async () => [] }
         ] }]`)
       })
-      await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
+      await box.data.write(
+        'ki/harnesses/example/harness/skills/ki-extra/SKILL.md',
+        '---\nname: ki-extra\nki-depends-on: []\n---\n'
+      )
       await box.data.write(
         'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
         rubric(
@@ -357,7 +377,9 @@ describe('[ki repo]', () => {
       )
       const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
       // The tracker restores the cursor between its last frame and the report body.
-      const [progressOutput = '', standardOutput = ''] = result.output.replaceAll(CURSOR_SHOW, '').split('\n├─ results\n')
+      const [progressOutput = '', standardOutput = ''] = result.output
+        .replaceAll(CURSOR_SHOW, '')
+        .split('\n├─ results\n')
       const header = `╭─ KI REPO AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 2 skills selected\n│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra\n`
       const frames = progressOutput
         .slice(header.length)

@@ -46,13 +46,17 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     await box.root.write('installer.sh', '#!/usr/bin/env bash\nprintf update\nprintf diagnostic >&2\nexit 0\n')
     await box.root.write('ki.1', '.TH KI 1\n')
-    await box.home.write('.local/state/ki/installation.toml', receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`))
+    await box.home.write(
+      '.local/state/ki/installation.toml',
+      receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
+    )
 
     const updated = await box.run('ki manage update --cli', { runner: 'default' })
 
     expect(updated).toEqual({
       exitCode: 0,
-      output: '╭─ KI MANAGE UPDATE\n├─ CLI\n│  ╰─ CLI executable: updated with the verified installer\n╰─ summary: CLI=UPDATED\n'
+      output:
+        '╭─ KI MANAGE UPDATE\n├─ CLI\n│  ╰─ CLI executable: updated with the verified installer\n╰─ summary: CLI=UPDATED\n'
     })
   })
 
@@ -81,7 +85,9 @@ describe('[ki manage update and ki repo upgrade]', () => {
       '.local/state/ki/installation.toml',
       receipt(missingCurrent, `${missingCurrent.root.path}/installer.sh`, `${missingCurrent.root.path}/ki.1`)
     )
-    const missingCurrentResult = await missingCurrent.run('ki manage update --cli', { executable: `${missingCurrent.root.path}/missing-ki` })
+    const missingCurrentResult = await missingCurrent.run('ki manage update --cli', {
+      executable: `${missingCurrent.root.path}/missing-ki`
+    })
 
     const incomplete = await sandbox()
     await incomplete.root.write('installer.sh', '')
@@ -108,10 +114,22 @@ describe('[ki manage update and ki repo upgrade]', () => {
       exitCode: 1,
       output: 'ki: error: installer receipt must use schema 1 for the installer distribution\n'
     })
-    expect(mismatchedResult).toEqual({ exitCode: 1, output: 'ki: error: installer receipt does not own the running CLI executable\n' })
-    expect(missingCurrentResult).toEqual({ exitCode: 1, output: 'ki: error: installer receipt does not own the running CLI executable\n' })
-    expect(incompleteResult).toEqual({ exitCode: 1, output: 'ki: error: installer receipt manual must be a regular file\n' })
-    expect(relativePathResult).toEqual({ exitCode: 1, output: 'ki: error: installer receipt manual must be an absolute path\n' })
+    expect(mismatchedResult).toEqual({
+      exitCode: 1,
+      output: 'ki: error: installer receipt does not own the running CLI executable\n'
+    })
+    expect(missingCurrentResult).toEqual({
+      exitCode: 1,
+      output: 'ki: error: installer receipt does not own the running CLI executable\n'
+    })
+    expect(incompleteResult).toEqual({
+      exitCode: 1,
+      output: 'ki: error: installer receipt manual must be a regular file\n'
+    })
+    expect(relativePathResult).toEqual({
+      exitCode: 1,
+      output: 'ki: error: installer receipt manual must be an absolute path\n'
+    })
     expect(directoryResult).toEqual({ exitCode: 1, output: 'ki: error: installer receipt must be a regular file\n' })
   })
 
@@ -119,7 +137,10 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     await box.root.write('installer.sh', '')
     await box.root.write('ki.1', '')
-    await box.home.write('.local/state/ki/installation.toml', receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`))
+    await box.home.write(
+      '.local/state/ki/installation.toml',
+      receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
+    )
     box.setRunner(async () => ({ exitCode: 1, output: 'installer failed' }))
     const detailed = await box.run('ki manage update --cli')
     box.setRunner(async () => ({ exitCode: 1, output: '' }))
@@ -133,7 +154,10 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     await box.root.write('installer.sh', 'kill -TERM $$\n')
     await box.root.write('ki.1', '')
-    await box.home.write('.local/state/ki/installation.toml', receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`))
+    await box.home.write(
+      '.local/state/ki/installation.toml',
+      receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
+    )
 
     const result = await box.run('ki manage update --cli', { runner: 'default' })
 
@@ -144,7 +168,10 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     await box.root.write('installer.sh', '')
     await box.root.write('ki.1', '')
-    await box.home.write('.local/state/ki/installation.toml', receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`))
+    await box.home.write(
+      '.local/state/ki/installation.toml',
+      receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
+    )
     box.setEnv({ PATH: '' })
 
     await expect(box.run('ki manage update', { runner: 'default' })).rejects.toThrow('spawn bash ENOENT')
@@ -154,7 +181,10 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     await symlink(box.executable, `${box.root.path}/linked-ki`)
 
-    const result = await box.run('ki manage update --cli', { executable: `${box.root.path}/linked-ki`, installation: 'local' })
+    const result = await box.run('ki manage update --cli', {
+      executable: `${box.root.path}/linked-ki`,
+      installation: 'local'
+    })
 
     expect(result).toEqual({
       exitCode: 1,
@@ -178,7 +208,10 @@ describe('[ki manage update and ki repo upgrade]', () => {
   test('reports unconfigured harnesses without mutating them', async () => {
     const box = await sandbox()
     await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/skills/ki-other/SKILL.md', '---\nname: ki-other\nki-depends-on: []\n---\n')
+    await box.data.write(
+      'ki/harnesses/other/harness/skills/ki-other/SKILL.md',
+      '---\nname: ki-other\nki-depends-on: []\n---\n'
+    )
 
     const result = await box.run('ki manage update')
 
@@ -221,7 +254,15 @@ describe('[ki manage update and ki repo upgrade]', () => {
     await box.root.write('first/.ki-config.toml', '')
     await box.root.write('second/.ki-config.toml', '')
 
-    const result = await box.run(['ki', 'repo', '--repo', `${box.root.path}/first`, '--repo', `${box.root.path}/second`, 'upgrade'])
+    const result = await box.run([
+      'ki',
+      'repo',
+      '--repo',
+      `${box.root.path}/first`,
+      '--repo',
+      `${box.root.path}/second`,
+      'upgrade'
+    ])
     const [first, second] = await Promise.all([realpath(`${box.root.path}/first`), realpath(`${box.root.path}/second`)])
 
     expect(result).toEqual({
@@ -240,13 +281,18 @@ describe('[ki manage update and ki repo upgrade]', () => {
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
     const declared = await box.run('ki repo upgrade')
 
-    expect(missingRepository).toEqual({ exitCode: 2, output: 'ki: error: no KI repository found from the current working directory\n' })
+    expect(missingRepository).toEqual({
+      exitCode: 2,
+      output: 'ki: error: no KI repository found from the current working directory\n'
+    })
     expect(declared.output).toContain('example/harness: unavailable (no configured immutable release)')
   })
 
   test('keeps a provider intact when its upgrade archive drops an installed capability', async () => {
     const box = await sandbox()
-    const payload = makeHarnessArchive({ 'source/skills/other/SKILL.md': '---\nname: ki-other\nki-depends-on: []\n---\n' })
+    const payload = makeHarnessArchive({
+      'source/skills/other/SKILL.md': '---\nname: ki-other\nki-depends-on: []\n---\n'
+    })
     await box.setupExampleHarness()
     await box.config.write('ki/config.toml', configuration(payload.sha256))
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
@@ -254,7 +300,10 @@ describe('[ki manage update and ki repo upgrade]', () => {
 
     const result = await box.run('ki repo upgrade')
 
-    expect(result).toEqual({ exitCode: 1, output: 'ki: error: harness example/harness does not provide skill ki-example\n' })
+    expect(result).toEqual({
+      exitCode: 1,
+      output: 'ki: error: harness example/harness does not provide skill ki-example\n'
+    })
     expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)
     await expect(lstat(`${box.data.path}/ki/harnesses/example/harness/skills/other`)).rejects.toThrow()
   })

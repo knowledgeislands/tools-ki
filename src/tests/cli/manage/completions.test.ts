@@ -144,18 +144,30 @@ describe('[ki manage completion]', () => {
 
     await expect(execute('bash', ['-n', 'completion.bash'], { cwd: box.root.path })).resolves.toBeDefined()
     await expect(execute('zsh', ['-n', 'completion.zsh'], { cwd: box.root.path })).resolves.toBeDefined()
-    await expect(execute('zsh', ['-fc', 'autoload -Uz compinit; compinit -D -i; source completion.zsh'], { cwd: box.root.path })).resolves.toBeDefined()
-    const zshCandidates = await execute('zsh', ['-fc', 'autoload -Uz compinit; compinit -D -i; source completion.zsh; _ki_candidates ""'], {
-      cwd: box.root.path
-    })
+    await expect(
+      execute('zsh', ['-fc', 'autoload -Uz compinit; compinit -D -i; source completion.zsh'], { cwd: box.root.path })
+    ).resolves.toBeDefined()
+    const zshCandidates = await execute(
+      'zsh',
+      ['-fc', 'autoload -Uz compinit; compinit -D -i; source completion.zsh; _ki_candidates ""'],
+      {
+        cwd: box.root.path
+      }
+    )
     expect(zshCandidates.stdout.split('\n')).toEqual(
-      expect.arrayContaining(['bootstrap:configure detected agents and install KI core user skills', 'repo:run operations for one or more KI repositories'])
+      expect.arrayContaining([
+        'bootstrap:configure detected agents and install KI core user skills',
+        'repo:run operations for one or more KI repositories'
+      ])
     )
     expect(zshCandidates.stdout).not.toContain("'bootstrap:")
 
     const completion = await execute(
       'bash',
-      ['-c', `source completion.bash; COMP_WORDS=(ki repo roadmap ""); COMP_CWORD=3; _ki; printf "%s\\n" "\${COMPREPLY[@]}"`],
+      [
+        '-c',
+        `source completion.bash; COMP_WORDS=(ki repo roadmap ""); COMP_CWORD=3; _ki; printf "%s\\n" "\${COMPREPLY[@]}"`
+      ],
       {
         cwd: box.root.path
       }

@@ -54,9 +54,13 @@ const physicalDirectory = async (path: string, error: string): Promise<string> =
   return realpath(path)
 }
 
-const isBoundary = (directory: string, homeDirectory: string): boolean => directory === homeDirectory || directory === dirname(directory)
+const isBoundary = (directory: string, homeDirectory: string): boolean =>
+  directory === homeDirectory || directory === dirname(directory)
 
-export const discoverRepository = async (workingDirectory: string, homeDirectory: string): Promise<RepositoryLocation | null> => {
+export const discoverRepository = async (
+  workingDirectory: string,
+  homeDirectory: string
+): Promise<RepositoryLocation | null> => {
   const home = await realpath(homeDirectory).catch(() => resolve(homeDirectory))
   let candidate = await realpath(workingDirectory)
   while (!isBoundary(candidate, home)) {
@@ -77,7 +81,11 @@ export const resolveRepository = async (options: {
     if (discovered) return discovered
     throw new KiError('no KI repository found from the current working directory', 2)
   }
-  return targetFromDirectory(options.repository, '--repo must be an existing directory', '--repo must name a repository containing .ki-config.toml')
+  return targetFromDirectory(
+    options.repository,
+    '--repo must be an existing directory',
+    '--repo must name a repository containing .ki-config.toml'
+  )
 }
 
 /** Resolves one physical Git worktree root without requiring a KI declaration. */
@@ -95,7 +103,8 @@ export const resolveRepositoryInitialisationTarget = async (options: {
   const gitRoot = await physicalDirectory(reported, 'ki repo init target must be an existing Git repository')
   if (gitRoot !== root) throw new KiError('ki repo init target must be the Git repository root', 2)
   const configuration = join(root, REPOSITORY_CONFIGURATION_FILE)
-  if (await lstat(configuration).catch(() => undefined)) throw new KiError(`ki repo init target already has ${REPOSITORY_CONFIGURATION_FILE}`, 2)
+  if (await lstat(configuration).catch(() => undefined))
+    throw new KiError(`ki repo init target already has ${REPOSITORY_CONFIGURATION_FILE}`, 2)
   return { root, configuration }
 }
 
@@ -116,7 +125,8 @@ const globExpression = (value: string): RegExp => {
   return new RegExp(`${expression}$`)
 }
 
-const globBase = (pattern: string): string => pattern.slice(0, Math.max(1, pattern.lastIndexOf(sep, pattern.search(/[*?]/))))
+const globBase = (pattern: string): string =>
+  pattern.slice(0, Math.max(1, pattern.lastIndexOf(sep, pattern.search(/[*?]/))))
 
 const walkDirectories = async (directory: string): Promise<readonly string[]> => {
   const entries = await readdir(directory, { withFileTypes: true })
@@ -128,7 +138,11 @@ const walkDirectories = async (directory: string): Promise<readonly string[]> =>
   return directories
 }
 
-const expandPattern = async (value: string, workingDirectory: string, source = '--repo'): Promise<readonly string[]> => {
+const expandPattern = async (
+  value: string,
+  workingDirectory: string,
+  source = '--repo'
+): Promise<readonly string[]> => {
   const pattern = isAbsolute(value) ? resolve(value) : resolve(workingDirectory, value)
   const base = globBase(pattern)
   await physicalDirectory(base, `${source} pattern ${value} has no existing directory`)
@@ -136,7 +150,11 @@ const expandPattern = async (value: string, workingDirectory: string, source = '
   return (await walkDirectories(base)).filter((directory) => expression.test(directory))
 }
 
-const targetFromDirectory = async (directory: string, directoryMessage: string, configurationMessage = directoryMessage): Promise<RepositoryLocation> => {
+const targetFromDirectory = async (
+  directory: string,
+  directoryMessage: string,
+  configurationMessage = directoryMessage
+): Promise<RepositoryLocation> => {
   const root = await physicalDirectory(directory, directoryMessage)
   const configuration = join(root, REPOSITORY_CONFIGURATION_FILE)
   if (!(await isConfigurationFile(configuration))) throw new KiError(configurationMessage, 2)
@@ -146,7 +164,8 @@ const targetFromDirectory = async (directory: string, directoryMessage: string, 
 const safeEntryPath = (value: string): boolean =>
   Boolean(value) && !isAbsolute(value) && !value.split(/[\\/]/).some((part) => !part || part === '.' || part === '..')
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
 
 type MgitEntryKind = 'bare' | 'dir' | 'nested' | 'standard'
 
@@ -201,11 +220,15 @@ const repositoriesFromMgitConfiguration = async (directory: string): Promise<rea
     const child = join(directory, entry.path)
     if (entry.kind === 'dir')
       targets.push(
-        ...(await repositoriesFromMgitConfiguration(await physicalDirectory(child, `invalid ${MGIT_CONFIGURATION_FILE} directory target ${entry.path}`)))
+        ...(await repositoriesFromMgitConfiguration(
+          await physicalDirectory(child, `invalid ${MGIT_CONFIGURATION_FILE} directory target ${entry.path}`)
+        ))
       )
     else {
       const checkout = entry.kind === 'nested' ? join(child, 'main') : child
-      targets.push(await targetFromDirectory(checkout, `invalid ${MGIT_CONFIGURATION_FILE} repository target ${entry.path}`))
+      targets.push(
+        await targetFromDirectory(checkout, `invalid ${MGIT_CONFIGURATION_FILE} repository target ${entry.path}`)
+      )
     }
   }
   return targets
@@ -243,7 +266,8 @@ export const resolveRepositoryTargets = async (options: {
       }
       const matches = await expandPattern(value, options.workingDirectory)
       if (!matches.length) throw new KiError(`--repo pattern ${value} matched no repositories`, 2)
-      for (const match of matches) targets.push(await targetFromDirectory(match, `--repo pattern ${value} matched a non-KI directory`))
+      for (const match of matches)
+        targets.push(await targetFromDirectory(match, `--repo pattern ${value} matched a non-KI directory`))
     }
     return distinctTargets(targets, '--repo')
   }
@@ -263,6 +287,7 @@ export const resolveRepositoryTargets = async (options: {
   }
   const working = await realpath(options.workingDirectory)
   const configuration = join(working, MGIT_CONFIGURATION_FILE)
-  if (await isRegularFile(configuration)) return distinctTargets(await repositoriesFromMgitConfiguration(working), MGIT_CONFIGURATION_FILE)
+  if (await isRegularFile(configuration))
+    return distinctTargets(await repositoriesFromMgitConfiguration(working), MGIT_CONFIGURATION_FILE)
   return [await resolveRepository({ workingDirectory: options.workingDirectory, homeDirectory: options.homeDirectory })]
 }

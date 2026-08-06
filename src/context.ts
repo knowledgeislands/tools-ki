@@ -51,7 +51,9 @@ const processInterrupt = (handler: () => void): (() => void) => {
 
 export const createContext = async (options: ContextOptions): Promise<KiContext> => {
   const workingDirectory = await realpath(options.workingDirectory)
-  const homeDirectory = await realpath(userHome(options.environment)).catch(() => resolve(userHome(options.environment)))
+  const homeDirectory = await realpath(userHome(options.environment)).catch(() =>
+    resolve(userHome(options.environment))
+  )
   return {
     stdout: options.stdout,
     stderr: options.stderr,

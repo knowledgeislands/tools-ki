@@ -70,7 +70,10 @@ describe('[ki repo repair]', () => {
     await symlink(`${box.root.path}/old-skill`, projection, 'dir')
 
     const repaired = await box.run('ki repo repair')
-    await box.project.write('.ki-config.toml', repositoryConfiguration.replace('example/harness:ki-example', 'missing/harness:ki-missing'))
+    await box.project.write(
+      '.ki-config.toml',
+      repositoryConfiguration.replace('example/harness:ki-example', 'missing/harness:ki-missing')
+    )
     const unresolved = await box.run('ki repo repair')
 
     expect(repaired.exitCode).toBe(0)
@@ -94,7 +97,10 @@ describe('[ki repo repair]', () => {
 
     expect(dangling.exitCode).toBe(0)
     expect((await lstat(projection)).isSymbolicLink()).toBe(true)
-    expect(unsafe).toEqual({ exitCode: 2, output: 'ki: error: no KI repository found from the current working directory\n' })
+    expect(unsafe).toEqual({
+      exitCode: 2,
+      output: 'ki: error: no KI repository found from the current working directory\n'
+    })
   })
 
   test('uses repository discovery by default and accepts explicit repository selectors', async () => {
@@ -116,7 +122,15 @@ describe('[ki repo repair]', () => {
     await box.root.write('second/.ki-config.toml', repositoryConfiguration)
     const [project, second] = await Promise.all([realpath(box.project.path), realpath(`${box.root.path}/second`)])
 
-    const repair = await box.run(['ki', 'repo', '--repo', box.project.path, '--repo', `${box.root.path}/second`, 'repair'])
+    const repair = await box.run([
+      'ki',
+      'repo',
+      '--repo',
+      box.project.path,
+      '--repo',
+      `${box.root.path}/second`,
+      'repair'
+    ])
 
     expect(repair.exitCode).toBe(0)
     expect(repair.output).toContain('├─ repositories (2)')
@@ -129,7 +143,10 @@ describe('[ki repo repair]', () => {
 
     const repair = await box.run('ki repo repair')
 
-    expect(repair).toEqual({ exitCode: 1, output: 'ki: error: local KI configuration is missing; run ki bootstrap first\n' })
+    expect(repair).toEqual({
+      exitCode: 1,
+      output: 'ki: error: local KI configuration is missing; run ki bootstrap first\n'
+    })
   })
 
   test('does not evaluate a direct repository when global configuration is invalid', async () => {

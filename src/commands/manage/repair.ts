@@ -1,7 +1,13 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Command } from 'commander'
-import { agentSkillDirectory, compatibleWithSkill, configuredAgents, inspectUserConfiguration, localBootstrapHarness } from '../../agents/index.ts'
+import {
+  agentSkillDirectory,
+  compatibleWithSkill,
+  configuredAgents,
+  inspectUserConfiguration,
+  localBootstrapHarness
+} from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
@@ -40,7 +46,10 @@ export const createRepairCommand = (context: KiContext): Command =>
           discoverInstalledHarnesses(context.paths.data)
         ])
         const localSources = new Map<string, string>()
-        if (configuration.local && (await canonicalHarnessDevelopmentEnabled(context.paths.data, configuration.local))) {
+        if (
+          configuration.local &&
+          (await canonicalHarnessDevelopmentEnabled(context.paths.data, configuration.local))
+        ) {
           const local = await localBootstrapHarness(configuration.local)
           for (const skill of local.skills) localSources.set(skill.name, skill.source)
         }
@@ -51,7 +60,9 @@ export const createRepairCommand = (context: KiContext): Command =>
             .flatMap((harness) => harness.capabilities.map((capability) => ({ harness, capability })))
             .find(({ harness, capability }) => identity === `${harness.id}:${capability.name}`)
           if (!resolved) {
-            results.push(`✗ User skill ${name}: configured source ${identity.slice(0, identity.indexOf(':'))} is unavailable`)
+            results.push(
+              `✗ User skill ${name}: configured source ${identity.slice(0, identity.indexOf(':'))} is unavailable`
+            )
             failed = true
             continue
           }

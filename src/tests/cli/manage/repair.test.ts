@@ -61,9 +61,13 @@ describe('[ki manage repair]', () => {
 
     expect(missingRepair).toEqual({
       exitCode: 1,
-      output: '╭─ KI MANAGE REPAIR\n├─ results (1)\n│  ╰─ ✗ Configuration: missing; run ki bootstrap\n╰─ summary: FAIL\n'
+      output:
+        '╭─ KI MANAGE REPAIR\n├─ results (1)\n│  ╰─ ✗ Configuration: missing; run ki bootstrap\n╰─ summary: FAIL\n'
     })
-    expect(invalidRepair).toEqual({ exitCode: 1, output: expect.stringContaining('✗ Configuration: configuration must be valid TOML') })
+    expect(invalidRepair).toEqual({
+      exitCode: 1,
+      output: expect.stringContaining('✗ Configuration: configuration must be valid TOML')
+    })
   })
 
   test('reports unavailable configured sources and skills with no compatible configured agent', async () => {
@@ -90,7 +94,10 @@ describe('[ki manage repair]', () => {
       exitCode: 1,
       output: expect.stringContaining('User skill ki-missing: configured source missing/harness is unavailable')
     })
-    expect(incompatibleRepair).toEqual({ exitCode: 1, output: expect.stringContaining('User skill ki-example: no compatible configured agent') })
+    expect(incompatibleRepair).toEqual({
+      exitCode: 1,
+      output: expect.stringContaining('User skill ki-example: no compatible configured agent')
+    })
   })
 
   test('uses the active local canonical harness as the repair source', async () => {

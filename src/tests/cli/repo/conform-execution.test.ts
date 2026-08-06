@@ -77,10 +77,19 @@ describe('[ki repo conform execution]', () => {
           conform: async () => ({ writes: [{ path: '.managed/setting.txt', content: '${content}' }] })
         }] }]`,
         skill
-      ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+      ).replace(
+        "concern: 'test governance',",
+        "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
+      )
     await box.setupExampleHarness({ rubric: userHomeRubric('ki-example', 'EXAMPLE-1', 'first\\n') })
-    await box.data.write('ki/harnesses/example/harness/skills/ki-extra/SKILL.md', '---\nname: ki-extra\nki-depends-on: []\n---\n')
-    await box.data.write('ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts', userHomeRubric('ki-extra', 'EXTRA-1', 'second\\n'))
+    await box.data.write(
+      'ki/harnesses/example/harness/skills/ki-extra/SKILL.md',
+      '---\nname: ki-extra\nki-depends-on: []\n---\n'
+    )
+    await box.data.write(
+      'ki/harnesses/example/harness/skills/ki-extra/scripts/rubric/items/index.ts',
+      userHomeRubric('ki-extra', 'EXTRA-1', 'second\\n')
+    )
 
     const result = await box.run('ki repo conform')
 
@@ -101,13 +110,18 @@ describe('[ki repo conform execution]', () => {
           conform: async () => ({ writes: [{ path: '.outside/setting.txt', content: 'after\\n' }] })
         }] }]`,
         'ki-example'
-      ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+      ).replace(
+        "concern: 'test governance',",
+        "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
+      )
     })
 
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('direct conform write path .outside/setting.txt is outside its declared filesystem scope')
+    expect(result.output).toContain(
+      'direct conform write path .outside/setting.txt is outside its declared filesystem scope'
+    )
     expect(await box.home.read('.outside/setting.txt')).toBe('before\n')
   })
 
@@ -123,13 +137,18 @@ describe('[ki repo conform execution]', () => {
           conform: async () => ({ writes: [], commands: [{ program: 'false', arguments: [] }] })
         }] }]`,
         'ki-example'
-      ).replace("concern: 'test governance',", "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },")
+      ).replace(
+        "concern: 'test governance',",
+        "concern: 'test governance', scope: { kind: 'user-home', paths: ['.managed'] },"
+      )
     })
 
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted')
+    expect(result.output).toContain(
+      'user-home rubric conform actions must be guarded direct writes; conform commands are not permitted'
+    )
     expect(await box.home.read('.managed/setting.txt')).toBe('before\n')
   })
 
@@ -230,7 +249,9 @@ describe('[ki repo conform execution]', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('direct subprocess conform failed: "node" "-e" "process.stdout.write(\'detail\'); process.exit(3)"\ndetail')
+    expect(result.output).toContain(
+      'direct subprocess conform failed: "node" "-e" "process.stdout.write(\'detail\'); process.exit(3)"\ndetail'
+    )
   })
 
   test('combines stdout and stderr from a failed subprocess conform', async () => {
@@ -247,7 +268,9 @@ describe('[ki repo conform execution]', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain("\"process.stdout.write('out'); process.stderr.write('err'); process.exit(3)\"\nout\nerr")
+    expect(result.output).toContain(
+      "\"process.stdout.write('out'); process.stderr.write('err'); process.exit(3)\"\nout\nerr"
+    )
   })
 
   test('conforms INFO outcomes explicitly opted into conforming and retains a fixed subject', async () => {
@@ -324,7 +347,9 @@ export default {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output.indexOf('[Second item (SECOND-1)]')).toBeLessThan(result.output.indexOf('[First item (FIRST-1)]'))
+    expect(result.output.indexOf('[Second item (SECOND-1)]')).toBeLessThan(
+      result.output.indexOf('[First item (FIRST-1)]')
+    )
   })
 
   test('refuses an unsafe direct conform write before publication', async () => {
@@ -382,7 +407,9 @@ export default {
     expect(result.output).toContain(
       'proposed run "node" "-e" "process.kill(process.pid, \'SIGTERM\')"\nrun "node" "-e" "process.kill(process.pid, \'SIGTERM\')"'
     )
-    expect(result.output).toContain('ki: error: direct subprocess conform failed: "node" "-e" "process.kill(process.pid, \'SIGTERM\')"')
+    expect(result.output).toContain(
+      'ki: error: direct subprocess conform failed: "node" "-e" "process.kill(process.pid, \'SIGTERM\')"'
+    )
   })
 
   test('rejects a malformed subprocess conform proposal before execution', async () => {

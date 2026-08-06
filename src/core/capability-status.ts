@@ -28,11 +28,14 @@ export const collectCapabilityStatus = async (options: {
     inspectUserConfiguration(options.configurationDirectory),
     discoverInstalledHarnesses(options.dataDirectory)
   ])
-  if (configuration.state === 'invalid') throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
+  if (configuration.state === 'invalid')
+    throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
   const registry = await readHarnessRegistry(options.configurationDirectory)
 
   const installed = identities(harnesses)
-  const missing: MissingCapability[] = configuration.skills.filter((identity) => !installed.has(identity)).map((name) => ({ name }))
+  const missing: MissingCapability[] = configuration.skills
+    .filter((identity) => !installed.has(identity))
+    .map((name) => ({ name }))
   const configured = new Set(registry.map((release) => release.id))
   const outdatedEvidenceGaps = harnesses
     .map(({ id }) => ({

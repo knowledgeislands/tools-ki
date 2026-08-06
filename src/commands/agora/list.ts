@@ -11,7 +11,8 @@ export const createAgoraListCommand = (context: KiContext): Command =>
     else
       lines.push(
         ...profiles.map(
-          (profile, index) => `│  ${index === profiles.length - 1 ? '╰─' : '├─'} ${profile.id} — ${profile.name} (${profile.projects.length} projects)`
+          (profile, index) =>
+            `│  ${index === profiles.length - 1 ? '╰─' : '├─'} ${profile.id} — ${profile.name} (${profile.projects.length} projects)`
         )
       )
     lines.push(`╰─ summary: PROFILES=${profiles.length} PROJECTS=${projects}`)

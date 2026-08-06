@@ -1,7 +1,13 @@
 import { lstat, mkdir, readdir, readlink, realpath, symlink, unlink, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../core/errors.ts'
-import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type HarnessCapability, inspectHarnessRoot, readInstalledHarness } from '../core/harness.ts'
+import {
+  canonicalHarnessIdentifier,
+  discoverInstalledHarnesses,
+  type HarnessCapability,
+  inspectHarnessRoot,
+  readInstalledHarness
+} from '../core/harness.ts'
 import { inspectUserConfiguration, readConfiguration, renderConfiguration } from './configuration.ts'
 import { detectAgents } from './detection.ts'
 import {
@@ -46,7 +52,9 @@ export const installedBootstrapSkillSources = async (
   return bootstrapSkillSources(harness, `installed harness ${identifier}`, options.preserveHarnessRoot)
 }
 
-export const localBootstrapHarness = async (harnessDirectory: string): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
+export const localBootstrapHarness = async (
+  harnessDirectory: string
+): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
   const inspected = await inspectHarnessRoot(resolve(harnessDirectory), canonicalHarnessIdentifier)
   return { harness: inspected.root, skills: await bootstrapSkillSources(inspected, 'local harness') }
 }
@@ -58,17 +66,30 @@ export const configureBootstrapAgents = async (options: {
 }): Promise<BootstrapConfiguration> => {
   const path = bootstrapConfigurationPath(options.configurationDirectory)
   const state = await lstat(options.configurationDirectory).catch(() => undefined)
-  if (state && (!state.isDirectory() || state.isSymbolicLink())) throw new KiError('ki configuration directory must be a directory', 1)
-  const configured = options.refresh ? undefined : await readConfiguration(options.configurationDirectory, options.homeDirectory)
+  if (state && (!state.isDirectory() || state.isSymbolicLink()))
+    throw new KiError('ki configuration directory must be a directory', 1)
+  const configured = options.refresh
+    ? undefined
+    : await readConfiguration(options.configurationDirectory, options.homeDirectory)
   const existing = options.refresh
     ? await inspectUserConfiguration(options.configurationDirectory)
     : { harnesses: [], skills: [], local: null, repositories: [] }
   const agents = options.refresh || !configured ? await detectAgents(options.homeDirectory) : configured
   if (!configured) {
     await mkdir(options.configurationDirectory, { recursive: true })
-    await writeFile(path, renderConfiguration(agents, existing.harnesses, existing.skills, existing.local ?? undefined, existing.repositories), {
-      encoding: 'utf8'
-    })
+    await writeFile(
+      path,
+      renderConfiguration(
+        agents,
+        existing.harnesses,
+        existing.skills,
+        existing.local ?? undefined,
+        existing.repositories
+      ),
+      {
+        encoding: 'utf8'
+      }
+    )
   }
   return { agents, disposition: options.refresh ? 'refreshed' : !configured ? 'created' : 'reused' }
 }
@@ -112,9 +133,13 @@ export const refreshUserConfiguration = async (
   const harnesses = installed.map((harness) => harness.id).sort((left, right) => left.localeCompare(right))
   const localSkills = local ? (await localBootstrapHarness(local)).skills : []
   const skills = await discoverManagedUserSkills(agents, installed, localSkills)
-  await writeFile(bootstrapConfigurationPath(configurationDirectory), renderConfiguration(agents, harnesses, skills, local, existing.repositories), {
-    encoding: 'utf8'
-  })
+  await writeFile(
+    bootstrapConfigurationPath(configurationDirectory),
+    renderConfiguration(agents, harnesses, skills, local, existing.repositories),
+    {
+      encoding: 'utf8'
+    }
+  )
   return { harnesses: harnesses.length, skills: skills.length }
 }
 
@@ -137,7 +162,11 @@ export const installBootstrapSkills = async (
         continue
       }
       if (!state.isSymbolicLink()) throw new KiError(`${agent.descriptor.id} ${skill.name} skill is not KI-managed`, 1)
-      const [actual, expected, target] = await Promise.all([realpath(path).catch(() => undefined), realpath(skill.source), readlink(path)])
+      const [actual, expected, target] = await Promise.all([
+        realpath(path).catch(() => undefined),
+        realpath(skill.source),
+        readlink(path)
+      ])
       if (actual !== expected && !options.replace) {
         throw new KiError(`${agent.descriptor.id} ${skill.name} skill points elsewhere; pass --replace to re-point`, 1)
       }

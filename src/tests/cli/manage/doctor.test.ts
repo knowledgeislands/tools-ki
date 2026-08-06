@@ -7,7 +7,9 @@ describe('[ki manage doctor]', () => {
     const box = await sandbox()
     const doctor = await box.run('ki manage doctor')
 
-    expect(doctor.output).toContain('╭─ KI MANAGE DOCTOR\n├─ checks (4)\n│  ├─ ✗ Configuration: missing; run ki bootstrap')
+    expect(doctor.output).toContain(
+      '╭─ KI MANAGE DOCTOR\n├─ checks (4)\n│  ├─ ✗ Configuration: missing; run ki bootstrap'
+    )
     expect(doctor.output).not.toContain('ki: error:')
     expect(doctor.exitCode).toBe(1)
   })
@@ -21,7 +23,9 @@ describe('[ki manage doctor]', () => {
 
     const doctor = await box.run('ki manage doctor')
 
-    expect(doctor.output).toContain('✗ Legacy repository state: .ki-meta/, .ki/ detected; remove after migrating to .ki-config.toml')
+    expect(doctor.output).toContain(
+      '✗ Legacy repository state: .ki-meta/, .ki/ detected; remove after migrating to .ki-config.toml'
+    )
     expect(doctor.exitCode).toBe(1)
   })
 
@@ -42,8 +46,13 @@ describe('[ki manage doctor]', () => {
     await symlink(`${box.root.path}/linked-config.toml`, `${box.project.path}/.ki-config.toml`)
     const symbolic = await box.run('ki manage doctor')
 
-    expect(valid).toEqual({ exitCode: 0, output: expect.stringContaining('✓ Repository configuration: 0 declared skills') })
-    expect(legacyDeclaration.output).toContain('✗ Repository configuration: declared skill ki-repo must use a qualified <harness-id>:<skill-name> TOML table')
+    expect(valid).toEqual({
+      exitCode: 0,
+      output: expect.stringContaining('✓ Repository configuration: 0 declared skills')
+    })
+    expect(legacyDeclaration.output).toContain(
+      '✗ Repository configuration: declared skill ki-repo must use a qualified <harness-id>:<skill-name> TOML table'
+    )
     expect(directory.output).toContain('✗ Repository configuration: .ki-config.toml must be a regular file')
     expect(symbolic.output).toContain('✗ Repository configuration: .ki-config.toml must be a regular file')
   })
@@ -158,7 +167,9 @@ harness = "example/harness"
 
     const doctor = await box.run('ki manage doctor')
 
-    expect(doctor.output).toContain('✗ User skill ki-example: configured skill cannot be resolved from the active source example/harness')
+    expect(doctor.output).toContain(
+      '✗ User skill ki-example: configured skill cannot be resolved from the active source example/harness'
+    )
     expect(doctor.exitCode).toBe(1)
   })
 
@@ -292,7 +303,9 @@ harness = "example/harness"
 
     const doctor = await box.run('ki manage doctor')
 
-    expect(doctor.output).toContain('✗ Local development: canonical payload links do not match the configured local source')
+    expect(doctor.output).toContain(
+      '✗ Local development: canonical payload links do not match the configured local source'
+    )
     expect(doctor.exitCode).toBe(1)
   })
 

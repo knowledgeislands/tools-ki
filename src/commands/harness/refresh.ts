@@ -2,9 +2,13 @@ import type { KiContext } from '../../context.ts'
 import type { InstalledHarness } from '../../core/harness.ts'
 import { installHarness, readHarnessRegistry } from '../../core/registry.ts'
 
-const retainedCapabilities = (harness: InstalledHarness): readonly string[] => harness.capabilities.map((capability) => capability.name)
+const retainedCapabilities = (harness: InstalledHarness): readonly string[] =>
+  harness.capabilities.map((capability) => capability.name)
 
-export const refreshHarnesses = async (context: KiContext, harnesses: readonly InstalledHarness[]): Promise<readonly string[]> => {
+export const refreshHarnesses = async (
+  context: KiContext,
+  harnesses: readonly InstalledHarness[]
+): Promise<readonly string[]> => {
   const registry = await readHarnessRegistry(context.paths.config)
   const configured = new Set(registry.map((release) => release.id))
   const lines: string[] = []

@@ -19,7 +19,8 @@ export const createRepairCommand = (
       const dryRun = Boolean(options.dryRun)
       const global = await inspectUserConfiguration(context.paths.config)
       if (global.state === 'missing') throw new KiError('local KI configuration is missing; run ki bootstrap first', 1)
-      if (global.state === 'invalid') throw new KiError(`local KI configuration is invalid: ${global.errors.join('; ')}`, 1)
+      if (global.state === 'invalid')
+        throw new KiError(`local KI configuration is invalid: ${global.errors.join('; ')}`, 1)
       const repositories = await resolveRepositoryTargets({
         ...selectedRepositories(),
         configurationDirectory: context.paths.config,
@@ -79,7 +80,9 @@ export const createRepairCommand = (
           const itemPrefix = `│  ${lastReport ? '   ' : '│  '}`
           return [
             `│  ${lastReport ? '╰─' : '├─'} ${report.root}`,
-            ...report.entries.map((entry, entryIndex) => `${itemPrefix}${entryIndex === report.entries.length - 1 ? '╰─' : '├─'} ${entry}`)
+            ...report.entries.map(
+              (entry, entryIndex) => `${itemPrefix}${entryIndex === report.entries.length - 1 ? '╰─' : '├─'} ${entry}`
+            )
           ]
         })
       )

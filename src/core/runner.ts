@@ -5,7 +5,11 @@ export interface CommandResult {
   readonly output: string
 }
 
-export type Runner = (command: string, arguments_: readonly string[], environment: NodeJS.ProcessEnv) => Promise<CommandResult>
+export type Runner = (
+  command: string,
+  arguments_: readonly string[],
+  environment: NodeJS.ProcessEnv
+) => Promise<CommandResult>
 
 export const runCommand: Runner = (command, arguments_, environment) =>
   new Promise((resolve, reject) => {

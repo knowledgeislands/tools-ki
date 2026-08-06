@@ -40,7 +40,8 @@ interface WorkItemRecord {
 const itemError = (file: string, message: string): KiError => new KiError(`work item ${file} ${message}`, 2)
 
 const parseList = (value: string, file: string, field: string): readonly string[] => {
-  if (!/^\[(?:[A-Z0-9-]+(?:, [A-Z0-9-]+)*)?\]$/.test(value)) throw itemError(file, `${field} must be an identifier array`)
+  if (!/^\[(?:[A-Z0-9-]+(?:, [A-Z0-9-]+)*)?\]$/.test(value))
+    throw itemError(file, `${field} must be an identifier array`)
   return value.slice(1, -1).split(', ').filter(Boolean)
 }
 
@@ -57,7 +58,8 @@ const frontmatter = (contents: string, file: string): Readonly<WorkItemFields> =
     const entry = /^([a-z-]+): (.+)$/.exec(line)
     if (!entry?.[1] || entry[2] === undefined) throw itemError(file, 'frontmatter must contain simple key-value fields')
     const [, key, value] = entry
-    if (!allowedFields.has(key as WorkItemField) || Object.hasOwn(fields, key)) throw itemError(file, `has unsupported or repeated field ${key}`)
+    if (!allowedFields.has(key as WorkItemField) || Object.hasOwn(fields, key))
+      throw itemError(file, `has unsupported or repeated field ${key}`)
     fields[key as WorkItemField] = parseScalar(value)
   }
   for (const field of requiredFields) if (!fields[field]) throw itemError(file, `must declare ${field}`)
@@ -73,14 +75,16 @@ const readItem = async (directory: string, file: string): Promise<WorkItemRecord
   const contents = await readFile(path, 'utf8')
   const fields = frontmatter(contents, file)
   const id = fields.id as string
-  if (!/^[A-Z][A-Z0-9-]*-\d{3}$/.test(id) || !file.startsWith(`${id}-`)) throw itemError(file, 'must use a matching work-item identifier')
+  if (!/^[A-Z][A-Z0-9-]*-\d{3}$/.test(id) || !file.startsWith(`${id}-`))
+    throw itemError(file, 'must use a matching work-item identifier')
   if (!fields.title || !/^[a-z0-9-]+$/.test(fields.theme as string) || !horizons.has(fields.horizon as WorkItemHorizon))
     throw itemError(file, 'has invalid title, theme, or horizon')
   if (!statuses.has(fields.status as WorkItemStatus)) throw itemError(file, 'has an invalid lifecycle status')
   if (fields.horizon === 'future' ? fields.candidate !== 'true' : fields.candidate !== undefined)
     throw itemError(file, 'must use candidate: true only for future items')
   const baseline = fields['baseline-ref']
-  if (baseline !== 'null' && !/^[a-f0-9]{40}$/.test(baseline as string)) throw itemError(file, 'baseline-ref must be null or a full commit ID')
+  if (baseline !== 'null' && !/^[a-f0-9]{40}$/.test(baseline as string))
+    throw itemError(file, 'baseline-ref must be null or a full commit ID')
   const item: WorkItem = {
     id,
     title: fields.title as string,
@@ -99,13 +103,17 @@ const readItem = async (directory: string, file: string): Promise<WorkItemRecord
 const readWorkItemRecords = async (repository: string): Promise<readonly WorkItemRecord[]> => {
   const directory = join(repository, ROADMAP_DIRECTORY)
   const state = await lstat(directory).catch(() => undefined)
-  if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError(`repository ${repository} has no physical docs/roadmap directory`, 2)
+  if (!state?.isDirectory() || state.isSymbolicLink())
+    throw new KiError(`repository ${repository} has no physical docs/roadmap directory`, 2)
   const entries = await readdir(directory)
-  const records = await Promise.all(entries.filter((entry) => entry.endsWith('.md')).map((entry) => readItem(directory, entry)))
+  const records = await Promise.all(
+    entries.filter((entry) => entry.endsWith('.md')).map((entry) => readItem(directory, entry))
+  )
   return records.sort((left, right) => left.item.id.localeCompare(right.item.id))
 }
 
-export const readWorkItems = async (repository: string): Promise<readonly WorkItem[]> => (await readWorkItemRecords(repository)).map(({ item }) => item)
+export const readWorkItems = async (repository: string): Promise<readonly WorkItem[]> =>
+  (await readWorkItemRecords(repository)).map(({ item }) => item)
 
 const workItemRecord = async (repository: string, id: string): Promise<WorkItemRecord> => {
   const matches = (await readWorkItemRecords(repository)).filter((record) => record.item.id === id)
@@ -129,7 +137,11 @@ const renderHorizon = (contents: string, horizon: WorkItemHorizon): string => {
   })
 }
 
-export const updateWorkItemHorizon = async (repository: string, id: string, horizon: WorkItemHorizon): Promise<WorkItem> => {
+export const updateWorkItemHorizon = async (
+  repository: string,
+  id: string,
+  horizon: WorkItemHorizon
+): Promise<WorkItem> => {
   const record = await workItemRecord(repository, id)
   const content = renderHorizon(record.contents, horizon)
   const writes = await prepareWrites(repository, [{ path: join(ROADMAP_DIRECTORY, record.file), content }])
@@ -140,9 +152,14 @@ export const updateWorkItemHorizon = async (repository: string, id: string, hori
 
 export const pruneDoneWorkItems = async (repository: string, id?: string): Promise<readonly WorkItem[]> => {
   const records = await readWorkItemRecords(repository)
-  const selected = id === undefined ? records.filter(({ item }) => item.status === 'done') : records.filter(({ item }) => item.id === id)
-  if (id !== undefined && selected.length !== 1) throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
-  if (selected.some(({ item }) => item.status !== 'done')) throw new KiError(`work item ${id} must be done before pruning`, 2)
+  const selected =
+    id === undefined
+      ? records.filter(({ item }) => item.status === 'done')
+      : records.filter(({ item }) => item.id === id)
+  if (id !== undefined && selected.length !== 1)
+    throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
+  if (selected.some(({ item }) => item.status !== 'done'))
+    throw new KiError(`work item ${id} must be done before pruning`, 2)
   await Promise.all(selected.map(({ path }) => rm(path)))
   return selected.map(({ item }) => item)
 }

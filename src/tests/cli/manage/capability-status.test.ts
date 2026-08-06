@@ -8,8 +8,14 @@ describe('[ki manage missing and ki manage outdated]', () => {
     const missing = await box.run('ki manage missing')
     const outdated = await box.run('ki manage outdated')
 
-    expect(missing).toEqual({ exitCode: 0, output: '╭─ KI MANAGE MISSING\n├─ capabilities (0)\n│  ╰─ none\n╰─ summary: MISSING=0\n' })
-    expect(outdated).toEqual({ exitCode: 0, output: '╭─ KI MANAGE OUTDATED\n├─ evidence gaps (0)\n│  ╰─ none\n╰─ summary: EVIDENCE_GAPS=0\n' })
+    expect(missing).toEqual({
+      exitCode: 0,
+      output: '╭─ KI MANAGE MISSING\n├─ capabilities (0)\n│  ╰─ none\n╰─ summary: MISSING=0\n'
+    })
+    expect(outdated).toEqual({
+      exitCode: 0,
+      output: '╭─ KI MANAGE OUTDATED\n├─ evidence gaps (0)\n│  ╰─ none\n╰─ summary: EVIDENCE_GAPS=0\n'
+    })
   })
 
   test('reports missing user skills without inspecting the current repository', async () => {
@@ -66,6 +72,9 @@ describe('[ki manage missing and ki manage outdated]', () => {
 
     const result = await box.run('ki manage missing')
 
-    expect(result).toEqual({ exitCode: 1, output: 'ki: error: ki configuration is invalid: configuration must be valid TOML\n' })
+    expect(result).toEqual({
+      exitCode: 1,
+      output: 'ki: error: ki configuration is invalid: configuration must be valid TOML\n'
+    })
   })
 })

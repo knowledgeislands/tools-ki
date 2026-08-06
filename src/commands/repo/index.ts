@@ -2,7 +2,11 @@ import { realpath, rm } from 'node:fs/promises'
 import { Command } from 'commander'
 import { configuredRepositoryWrite, inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
-import { REPOSITORY_CONFIGURATION_FILE, readDeclaredSkills, renderRepositoryConfiguration } from '../../core/configuration.ts'
+import {
+  REPOSITORY_CONFIGURATION_FILE,
+  readDeclaredSkills,
+  renderRepositoryConfiguration
+} from '../../core/configuration.ts'
 import { publishIndependentConformGroups } from '../../core/conform-publication.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
@@ -56,12 +60,16 @@ const localRepositoryRegistryWrites = async (context: KiContext, repository: str
   // Repository conformance remains portable: a caller without a local KI installation has no
   // user registry to update. Once one exists, an invalid configuration remains a hard error.
   if (configuration.state === 'missing') return []
-  if (configuration.state === 'invalid') throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
+  if (configuration.state === 'invalid')
+    throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
   const registryWrite = await configuredRepositoryWrite(context.paths.config, repository)
   return registryWrite ? prepareWrites(await realpath(context.paths.config), [registryWrite]) : []
 }
 
-const resolveSkills = async (context: KiContext, options: { repositories: readonly string[]; agora?: string; skill?: string }) => {
+const resolveSkills = async (
+  context: KiContext,
+  options: { repositories: readonly string[]; agora?: string; skill?: string }
+) => {
   const repositories = await resolveRepositoryTargets({
     repositories: options.repositories,
     agora: options.agora,
@@ -88,7 +96,12 @@ const resolveSkillsForRepositories = async (
 export const createRepositoryOperations = (context: KiContext): Command => {
   const command = new Command('repo')
     .description('run operations for one or more KI repositories')
-    .option('--repo <path-or-pattern>', 'repository root or pattern', (value: string, previous: readonly string[] = []) => [...previous, value], [])
+    .option(
+      '--repo <path-or-pattern>',
+      'repository root or pattern',
+      (value: string, previous: readonly string[] = []) => [...previous, value],
+      []
+    )
     .option('--agora <name>', 'named Agora profile from XDG KI configuration')
   const selectedRepositories = (): { readonly repositories: readonly string[]; readonly agora?: string } => {
     const options = command.opts<{ repo: readonly string[]; agora?: string }>()
@@ -116,10 +129,17 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .action(
           async (
             directory: string | undefined,
-            options: { title?: string; description?: string; repoCode?: string; runtime: readonly string[]; visibility?: string }
+            options: {
+              title?: string
+              description?: string
+              repoCode?: string
+              runtime: readonly string[]
+              visibility?: string
+            }
           ) => {
             const selection = selectedRepositories()
-            if (selection.repositories.length || selection.agora) throw new KiError('ki repo init does not accept --repo or --agora', 2)
+            if (selection.repositories.length || selection.agora)
+              throw new KiError('ki repo init does not accept --repo or --agora', 2)
             const configuration = renderRepositoryConfiguration({
               title: options.title ?? '',
               description: options.description ?? '',
@@ -136,8 +156,12 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             // Resolve every write before changing state: a missing or invalid user
             // configuration cannot leave a new repository declaration behind.
             const registryWrite = await configuredRepositoryWrite(context.paths.config, repository.root)
-            const declarationWrites = await prepareWrites(repository.root, [{ path: REPOSITORY_CONFIGURATION_FILE, content: configuration, create: true }])
-            const registryWrites = registryWrite ? await prepareWrites(await realpath(context.paths.config), [registryWrite]) : []
+            const declarationWrites = await prepareWrites(repository.root, [
+              { path: REPOSITORY_CONFIGURATION_FILE, content: configuration, create: true }
+            ])
+            const registryWrites = registryWrite
+              ? await prepareWrites(await realpath(context.paths.config), [registryWrite])
+              : []
             await publishWrites(declarationWrites, false)
             try {
               await publishWrites(registryWrites, false)
@@ -171,52 +195,59 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
         .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN)')
-        .action(async (options: { skill?: string; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
-          const output = operationOptions('audit', options)
-          const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
-          let failed = false
-          const summaries: AuditRepositorySummary[] = []
-          for (const [index, { repository, skills }] of selected.entries()) {
-            if (index) context.stdout.write('\n')
-            renderAuditFrameStart(context, repository.root, skills)
-            try {
-              const results = await runWithProgress(
-                context,
-                skills,
-                async (skill, itemProgress) => ({
-                  skill,
-                  audit: await runSkillAudit(
-                    { kind: 'repository', repository: repository.root, userHome: context.homeDirectory, lstat: context.lstat },
-                    skill,
-                    {
-                      onItemStart: (item) => itemProgress.onItemStart(item.code),
-                      onItemComplete: (item) => itemProgress.onItemComplete(item.code)
-                    }
-                  )
-                }),
-                output,
-                'audit'
-              )
-              const findings = results.flatMap(({ audit }) => audit.findings)
-              const registration = await localRepositoryRegistration(context, repository.root, skills)
-              summaries.push(
-                renderAuditResults(
+        .action(
+          async (options: { skill?: string; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
+            const output = operationOptions('audit', options)
+            const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
+            let failed = false
+            const summaries: AuditRepositorySummary[] = []
+            for (const [index, { repository, skills }] of selected.entries()) {
+              if (index) context.stdout.write('\n')
+              renderAuditFrameStart(context, repository.root, skills)
+              try {
+                const results = await runWithProgress(
                   context,
-                  repository.root,
-                  results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
-                  output.reporterLevels,
-                  registration
+                  skills,
+                  async (skill, itemProgress) => ({
+                    skill,
+                    audit: await runSkillAudit(
+                      {
+                        kind: 'repository',
+                        repository: repository.root,
+                        userHome: context.homeDirectory,
+                        lstat: context.lstat
+                      },
+                      skill,
+                      {
+                        onItemStart: (item) => itemProgress.onItemStart(item.code),
+                        onItemComplete: (item) => itemProgress.onItemComplete(item.code)
+                      }
+                    )
+                  }),
+                  output,
+                  'audit'
                 )
-              )
-              failed ||= Boolean(registration) || findings.some((finding) => finding.level === 'fail')
-            } catch (error) {
-              context.stdout.write('╰─ audit failed\n')
-              throw error
+                const findings = results.flatMap(({ audit }) => audit.findings)
+                const registration = await localRepositoryRegistration(context, repository.root, skills)
+                summaries.push(
+                  renderAuditResults(
+                    context,
+                    repository.root,
+                    results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
+                    output.reporterLevels,
+                    registration
+                  )
+                )
+                failed ||= Boolean(registration) || findings.some((finding) => finding.level === 'fail')
+              } catch (error) {
+                context.stdout.write('╰─ audit failed\n')
+                throw error
+              }
             }
+            if (summaries.length > 1) renderMultiRepositoryAuditSummary(context, summaries)
+            if (failed) throw new KiError('repository audit found failures', 1)
           }
-          if (summaries.length > 1) renderMultiRepositoryAuditSummary(context, summaries)
-          if (failed) throw new KiError('repository audit found failures', 1)
-        })
+        )
     )
     .addCommand(
       new Command('conform')
@@ -241,7 +272,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             // conformance verdict. Publish it before parsing declarations or evaluating
             // the selected skills so a failing repository stays discoverable for repair.
             const registryWrites = await localRepositoryRegistryWrites(context, repository.root)
-            for (const write of registryWrites) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
+            for (const write of registryWrites)
+              context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
             await publishWrites(registryWrites, Boolean(options.dryRun))
 
             const resolved = await resolveSkillsForRepositories([repository], harnesses, options.skill)
@@ -258,7 +290,12 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 skill: skill.skill,
                 prepared: skill,
                 conform: await runSkillConform(
-                  { kind: 'repository', repository: repository.root, userHome: context.homeDirectory, lstat: context.lstat },
+                  {
+                    kind: 'repository',
+                    repository: repository.root,
+                    userHome: context.homeDirectory,
+                    lstat: context.lstat
+                  },
                   skill,
                   {
                     onItemStart: (item) => itemProgress.onItemStart(item.code),
@@ -290,7 +327,12 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                     prepared: skill,
                     conform: previous.conform,
                     audit: await runSkillAudit(
-                      { kind: 'repository', repository: repository.root, userHome: context.homeDirectory, lstat: context.lstat },
+                      {
+                        kind: 'repository',
+                        repository: repository.root,
+                        userHome: context.homeDirectory,
+                        lstat: context.lstat
+                      },
                       skill,
                       {
                         onItemStart: (item) => itemProgress.onItemStart(item.code),
@@ -306,7 +348,11 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
               renderConformReports(
                 context,
-                reaudited.map(({ prepared, audit }, index) => ({ skill: prepared, findings: audit.findings, fixed: fixedBySkill[index] })),
+                reaudited.map(({ prepared, audit }, index) => ({
+                  skill: prepared,
+                  findings: audit.findings,
+                  fixed: fixedBySkill[index]
+                })),
                 output.reporterLevels
               )
               return auditFindings.some((finding) => finding.level === 'fail')
@@ -328,7 +374,9 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             }
             const repositoryWrites = await prepareWrites(
               repository.root,
-              conformed.filter(({ conform }) => conform.scope.kind === 'repository').flatMap(({ conform }) => conform.writes)
+              conformed
+                .filter(({ conform }) => conform.scope.kind === 'repository')
+                .flatMap(({ conform }) => conform.writes)
             )
             const scopedUserWrites = conformed.flatMap(({ conform }) => {
               const scope = conform.scope
@@ -339,9 +387,13 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             const writes = [...repositoryWrites, ...userWrites]
             const commands = conformed.flatMap(({ conform }) => conform.commands)
             if (conformed.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length))
-              throw new KiError('user-home rubric conform actions must be guarded direct writes; conform commands are not permitted', 1)
+              throw new KiError(
+                'user-home rubric conform actions must be guarded direct writes; conform commands are not permitted',
+                1
+              )
             for (const write of writes) context.stdout.write(`proposed write ${write.path}\n`)
-            for (const command of commands) context.stdout.write(`proposed run ${renderRepositoryConformCommand(command)}\n`)
+            for (const command of commands)
+              context.stdout.write(`proposed run ${renderRepositoryConformCommand(command)}\n`)
             let publicationError: unknown
             try {
               await publishWrites(writes, Boolean(options.dryRun))
@@ -354,7 +406,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             }
             if (options.dryRun) {
               for (const write of writes) context.stdout.write(`would apply write ${write.path}\n`)
-              for (const command of commands) context.stdout.write(`would run ${renderRepositoryConformCommand(command)}\n`)
+              for (const command of commands)
+                context.stdout.write(`would run ${renderRepositoryConformCommand(command)}\n`)
               renderInitialReports()
               continue
             }

@@ -13,17 +13,21 @@ const repositoryRuntimeSet = (value: unknown): readonly SupportedRuntime[] => {
     throw new KiError('[ki-repo].supported_runtimes must be a non-empty array of runtime identifiers', 1)
   }
   const runtimes = value as string[]
-  if (runtimes.includes('codex')) throw new KiError('[ki-repo].supported_runtimes codex is retired; use chatgpt-codex', 1)
+  if (runtimes.includes('codex'))
+    throw new KiError('[ki-repo].supported_runtimes codex is retired; use chatgpt-codex', 1)
   if (runtimes.some((runtime) => !supportedRuntimes.includes(runtime as SupportedRuntime)))
     throw new KiError('[ki-repo].supported_runtimes may contain only claude-code or chatgpt-codex', 1)
   if (new Set(runtimes).size !== runtimes.length) throw new KiError('[ki-repo].supported_runtimes repeats a runtime', 1)
   return runtimes as readonly SupportedRuntime[]
 }
 
-export const runtimeForAgent = (agent: InstalledAgent): SupportedRuntime => agentRuntimes[agent.descriptor.id as keyof typeof agentRuntimes]
+export const runtimeForAgent = (agent: InstalledAgent): SupportedRuntime =>
+  agentRuntimes[agent.descriptor.id as keyof typeof agentRuntimes]
 
-export const compatibleWithSkill = (agent: InstalledAgent, skillRuntimes: readonly SupportedRuntime[] | undefined): boolean =>
-  skillRuntimes === undefined || skillRuntimes.includes(runtimeForAgent(agent))
+export const compatibleWithSkill = (
+  agent: InstalledAgent,
+  skillRuntimes: readonly SupportedRuntime[] | undefined
+): boolean => skillRuntimes === undefined || skillRuntimes.includes(runtimeForAgent(agent))
 
 export const repositorySupportedRuntimes = async (configuration: string): Promise<readonly SupportedRuntime[]> => {
   const repository = (await readDeclaredSkills(configuration)).find((skill) => skill.name === 'ki-repo')?.configuration

@@ -28,9 +28,13 @@ describe('[ki local utility commands]', () => {
 
     expect(identifier).toEqual({
       exitCode: 0,
-      output: '╭─ KI MANAGE SEARCH\n│  query: EXAMPLE/HARNESS\n├─ matches (1)\n│  ╰─ example/harness skill ki-example\n╰─ summary: MATCHES=1\n'
+      output:
+        '╭─ KI MANAGE SEARCH\n│  query: EXAMPLE/HARNESS\n├─ matches (1)\n│  ╰─ example/harness skill ki-example\n╰─ summary: MATCHES=1\n'
     })
-    expect(absent).toEqual({ exitCode: 0, output: '╭─ KI MANAGE SEARCH\n│  query: absent\n├─ matches (0)\n│  ╰─ none\n╰─ summary: MATCHES=0\n' })
+    expect(absent).toEqual({
+      exitCode: 0,
+      output: '╭─ KI MANAGE SEARCH\n│  query: absent\n├─ matches (0)\n│  ╰─ none\n╰─ summary: MATCHES=0\n'
+    })
   })
 
   test('rejects missing, empty, additional, and option search arguments', async () => {
@@ -55,7 +59,10 @@ describe('[ki local utility commands]', () => {
 
     const result = await box.run('ki manage cleanup')
 
-    expect(result).toEqual({ exitCode: 0, output: '╭─ KI MANAGE CLEANUP\n├─ eligible (0)\n│  ╰─ none\n╰─ summary: ELIGIBLE=0\n' })
+    expect(result).toEqual({
+      exitCode: 0,
+      output: '╭─ KI MANAGE CLEANUP\n├─ eligible (0)\n│  ╰─ none\n╰─ summary: ELIGIBLE=0\n'
+    })
     expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)
     expect(await box.data.read('ki/unknown-state')).toBe(unknown)
   })
@@ -85,7 +92,10 @@ describe('[ki local utility commands]', () => {
     expect(explicitOverview).toEqual({ exitCode: 0, output: 'https://knowledgeislands.info/tooling/cli/\n' })
     expect(site).toEqual({ exitCode: 0, output: 'https://knowledgeislands.info/\n' })
     expect(manual).toEqual({ exitCode: 0, output: 'https://github.com/knowledgeislands/tools-ki/blob/main/man/ki.1\n' })
-    expect(roadmap).toEqual({ exitCode: 0, output: 'https://github.com/knowledgeislands/tools-ki/blob/main/ROADMAP.md\n' })
+    expect(roadmap).toEqual({
+      exitCode: 0,
+      output: 'https://github.com/knowledgeislands/tools-ki/blob/main/ROADMAP.md\n'
+    })
   })
 
   test('rejects unknown documentation topics, options, and additional arguments', async () => {
@@ -94,7 +104,10 @@ describe('[ki local utility commands]', () => {
     const option = await box.run('ki manage docs --open')
     const extra = await box.run('ki manage docs manual extra')
 
-    expect(unknown).toEqual({ exitCode: 2, output: 'ki: error: docs topic must be overview, site, manual, or roadmap\n' })
+    expect(unknown).toEqual({
+      exitCode: 2,
+      output: 'ki: error: docs topic must be overview, site, manual, or roadmap\n'
+    })
     expect(option.exitCode).toBe(2)
     expect(extra.exitCode).toBe(2)
   })

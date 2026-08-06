@@ -14,7 +14,12 @@ const userConfiguration = (release?: { readonly id: string; readonly sha256: str
     '',
     '[harnesses]',
     'ids = []',
-    ...(release ? ['', `releases = [{ id = "${release.id}", url = "https://releases.example.test/harness.tgz", sha256 = "${release.sha256}" }]`] : []),
+    ...(release
+      ? [
+          '',
+          `releases = [{ id = "${release.id}", url = "https://releases.example.test/harness.tgz", sha256 = "${release.sha256}" }]`
+        ]
+      : []),
     '',
     '[skills]',
     ''
@@ -43,7 +48,10 @@ describe('[ki harness lifecycle]', () => {
 
     expect(retired.exitCode).toBe(2)
     expect(retired.output).toContain("ki: error: unknown subcommand 'install' for 'ki'")
-    expect(qualified).toEqual({ exitCode: 2, output: 'ki: error: harness identifier must be an owner/name identifier\n' })
+    expect(qualified).toEqual({
+      exitCode: 2,
+      output: 'ki: error: harness identifier must be an owner/name identifier\n'
+    })
   })
 
   test('reinstalls an inactive installed harness only with a verified archive', async () => {
@@ -88,11 +96,13 @@ describe('[ki harness lifecycle]', () => {
 
     expect(reinstalled).toEqual({
       exitCode: 1,
-      output: 'ki: error: cannot reinstall example/harness while it has active skills; run ki skill remove ki-example first\n'
+      output:
+        'ki: error: cannot reinstall example/harness while it has active skills; run ki skill remove ki-example first\n'
     })
     expect(removed).toEqual({
       exitCode: 1,
-      output: 'ki: error: cannot uninstall example/harness while it has active skills; run ki skill remove ki-example first\n'
+      output:
+        'ki: error: cannot uninstall example/harness while it has active skills; run ki skill remove ki-example first\n'
     })
   })
 
@@ -111,7 +121,10 @@ describe('[ki harness lifecycle]', () => {
   test('allows removal when a user declaration names no capability supplied by the harness', async () => {
     const box = await sandbox()
     await box.setupExampleHarness()
-    await box.config.write('ki/config.toml', userConfiguration().replace('[skills]\n', '[skills.ki-other]\nharness = "example/harness"\n'))
+    await box.config.write(
+      'ki/config.toml',
+      userConfiguration().replace('[skills]\n', '[skills.ki-other]\nharness = "example/harness"\n')
+    )
 
     const result = await box.run('ki harness uninstall example/harness')
 
@@ -131,7 +144,8 @@ describe('[ki harness lifecycle]', () => {
 
     expect(reinstalled).toEqual({
       exitCode: 1,
-      output: 'ki: error: the canonical harness knowledgeislands/ki-agentic-harness is development-linked; run ki dev local off before reinstalling\n'
+      output:
+        'ki: error: the canonical harness knowledgeislands/ki-agentic-harness is development-linked; run ki dev local off before reinstalling\n'
     })
     expect(removed).toEqual({
       exitCode: 1,

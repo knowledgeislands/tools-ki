@@ -13,7 +13,8 @@ const receiptName = 'installation.toml'
 
 const receiptField = (value: Record<string, unknown>, name: string): string => {
   const field = value[name]
-  if (typeof field !== 'string' || !field.startsWith('/')) throw new KiError(`installer receipt ${name} must be an absolute path`, 1)
+  if (typeof field !== 'string' || !field.startsWith('/'))
+    throw new KiError(`installer receipt ${name} must be an absolute path`, 1)
   return field
 }
 
@@ -29,7 +30,10 @@ export const readInstallerReceipt = async (stateDirectory: string): Promise<Inst
   if (!state.isFile() || state.isSymbolicLink()) throw new KiError('installer receipt must be a regular file', 1)
   let record: Record<string, unknown> & { schema?: unknown; distribution?: unknown }
   try {
-    record = parse(await readFile(path, 'utf8')) as Record<string, unknown> & { schema?: unknown; distribution?: unknown }
+    record = parse(await readFile(path, 'utf8')) as Record<string, unknown> & {
+      schema?: unknown
+      distribution?: unknown
+    }
   } catch {
     throw new KiError('installer receipt must be valid TOML', 1)
   }
@@ -45,7 +49,10 @@ export const readInstallerReceipt = async (stateDirectory: string): Promise<Inst
   return receipt
 }
 
-export const requireCurrentInstallerReceipt = async (stateDirectory: string, executable: string): Promise<InstallerReceipt> => {
+export const requireCurrentInstallerReceipt = async (
+  stateDirectory: string,
+  executable: string
+): Promise<InstallerReceipt> => {
   const receipt = await readInstallerReceipt(stateDirectory)
   if (!receipt) throw new KiError('CLI executable is not installer-managed; update it with its distribution manager', 1)
   const current = await realpath(executable).catch(() => undefined)

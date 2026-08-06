@@ -39,9 +39,11 @@ const unite = (parents: number[], left: number, right: number): void => {
   if (leftRoot !== rightRoot) parents[rightRoot] = leftRoot
 }
 
-const proposalTargets = (entry: ConformedSkill): readonly string[] => entry.conform.writes.map(({ path }) => `${entry.conform.scope.kind}:${path}`)
+const proposalTargets = (entry: ConformedSkill): readonly string[] =>
+  entry.conform.writes.map(({ path }) => `${entry.conform.scope.kind}:${path}`)
 
-const firstFailure = (entry: ConformedSkill): Finding | undefined => entry.conform.findings.find(({ level }) => level === 'fail')
+const firstFailure = (entry: ConformedSkill): Finding | undefined =>
+  entry.conform.findings.find(({ level }) => level === 'fail')
 
 /**
  * Builds the smallest safe publication groups. A declared dependency and a shared target
@@ -73,8 +75,12 @@ export const groupConformPublication = (entries: readonly ConformedSkill[]): rea
     else grouped.set(root, [entry])
   })
   return [...grouped.values()].map((group) => {
-    const failed = group.map((entry) => ({ skill: entry.prepared.skill.identity, finding: firstFailure(entry) })).find(({ finding }) => finding !== undefined)
-    return failed?.finding ? { entries: group, blockingFinding: { skill: failed.skill, finding: failed.finding } } : { entries: group }
+    const failed = group
+      .map((entry) => ({ skill: entry.prepared.skill.identity, finding: firstFailure(entry) }))
+      .find(({ finding }) => finding !== undefined)
+    return failed?.finding
+      ? { entries: group, blockingFinding: { skill: failed.skill, finding: failed.finding } }
+      : { entries: group }
   })
 }
 
@@ -97,17 +103,23 @@ export const publishIndependentConformGroups = async (
       continue
     }
     if (group.entries.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length)) {
-      write(`refused ${label}: user-home rubric conform actions must be guarded direct writes; conform commands are not permitted\n`)
+      write(
+        `refused ${label}: user-home rubric conform actions must be guarded direct writes; conform commands are not permitted\n`
+      )
       continue
     }
     if (groupCommands.length && !allowCommands) {
-      write(`withheld ${label}: command-backed conform repairs require --allow-commands while failures are unresolved\n`)
+      write(
+        `withheld ${label}: command-backed conform repairs require --allow-commands while failures are unresolved\n`
+      )
       continue
     }
     try {
       const repositoryWrites = await prepareWrites(
         repository,
-        group.entries.filter(({ conform }) => conform.scope.kind === 'repository').flatMap(({ conform }) => conform.writes)
+        group.entries
+          .filter(({ conform }) => conform.scope.kind === 'repository')
+          .flatMap(({ conform }) => conform.writes)
       )
       const scopedUserWrites = group.entries.flatMap(({ conform }) => {
         const scope = conform.scope

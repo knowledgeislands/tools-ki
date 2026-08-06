@@ -64,7 +64,11 @@ const removeManagedUserSkill = async (agent: InstalledAgent, name: string): Prom
   return true
 }
 
-const removeManagedRepoSkill = async (agent: InstalledAgent, repositoryRoot: string, name: string): Promise<boolean> => {
+const removeManagedRepoSkill = async (
+  agent: InstalledAgent,
+  repositoryRoot: string,
+  name: string
+): Promise<boolean> => {
   const target = join(agentSkillDirectory(agent, 'repo', repositoryRoot), name)
   const targetState = await lstat(target).catch(() => undefined)
   if (!targetState) return false
@@ -77,17 +81,26 @@ const installedSkillSource = async (
   dataDirectory: string,
   name: string
 ): Promise<{
-  readonly skill: { readonly name: string; readonly source: string; readonly supportedRuntimes?: readonly SupportedRuntime[] }
+  readonly skill: {
+    readonly name: string
+    readonly source: string
+    readonly supportedRuntimes?: readonly SupportedRuntime[]
+  }
   readonly harness: string
 }> => {
   const harnesses = await discoverInstalledHarnesses(dataDirectory)
   const matches = harnesses.flatMap((harness) =>
-    harness.capabilities.filter((capability) => capability.kind === 'skill' && capability.name === name).map((capability) => ({ harness, capability }))
+    harness.capabilities
+      .filter((capability) => capability.kind === 'skill' && capability.name === name)
+      .map((capability) => ({ harness, capability }))
   )
   const [match] = matches
   if (!match) throw new KiError(`no installed harness provides skill ${name}`, 1)
   if (matches.length > 1) throw new KiError(`skill ${name} is provided by multiple installed harnesses`, 1)
-  const source = await requiredPhysicalDirectory(join(match.harness.root, match.capability.source), `installed harness ${match.harness.id} ${name} skill`)
+  const source = await requiredPhysicalDirectory(
+    join(match.harness.root, match.capability.source),
+    `installed harness ${match.harness.id} ${name} skill`
+  )
   return { skill: { name, source, supportedRuntimes: match.capability.supportedRuntimes }, harness: match.harness.id }
 }
 
@@ -100,14 +113,20 @@ export const addUserSkill = async (options: {
   readonly skill: string
   readonly replace?: boolean
 }): Promise<{ readonly skill: string; readonly agents: readonly string[] }> => {
-  const agents = await configuredAgents({ homeDirectory: options.homeDirectory, configurationDirectory: options.configurationDirectory })
+  const agents = await configuredAgents({
+    homeDirectory: options.homeDirectory,
+    configurationDirectory: options.configurationDirectory
+  })
   const resolved = await installedSkillSource(options.dataDirectory, options.skill)
   const compatible = agents.filter((agent) => compatibleWithSkill(agent, resolved.skill.supportedRuntimes))
-  if (compatible.length === 0) throw new KiError(`skill ${resolved.skill.name} is incompatible with every configured agent`, 1)
+  if (compatible.length === 0)
+    throw new KiError(`skill ${resolved.skill.name} is incompatible with every configured agent`, 1)
   for (const agent of compatible) await linkManagedSkill(agent, { scope: 'user' }, resolved.skill, options.replace)
   const identity = `${resolved.harness}:${resolved.skill.name}`
   const current = (await inspectUserConfiguration(options.configurationDirectory)).skills
-  const next = [...current.filter((entry) => skillNameOf(entry) !== resolved.skill.name), identity].sort((left, right) => left.localeCompare(right))
+  const next = [...current.filter((entry) => skillNameOf(entry) !== resolved.skill.name), identity].sort(
+    (left, right) => left.localeCompare(right)
+  )
   await setConfiguredUserSkills(options.configurationDirectory, options.homeDirectory, next)
   return { skill: resolved.skill.name, agents: compatible.map((agent) => agent.descriptor.id) }
 }
@@ -117,7 +136,10 @@ export const removeUserSkill = async (options: {
   readonly homeDirectory: string
   readonly skill: string
 }): Promise<{ readonly skill: string; readonly agents: readonly string[]; readonly removed: boolean }> => {
-  const agents = await configuredAgents({ homeDirectory: options.homeDirectory, configurationDirectory: options.configurationDirectory })
+  const agents = await configuredAgents({
+    homeDirectory: options.homeDirectory,
+    configurationDirectory: options.configurationDirectory
+  })
   let removed = false
   for (const agent of agents) {
     if (await removeManagedUserSkill(agent, options.skill)) removed = true
@@ -142,14 +164,25 @@ export const addRepoSkill = async (options: {
     workingDirectory: options.workingDirectory,
     homeDirectory: options.homeDirectory
   })
-  const agents = await configuredAgents({ homeDirectory: options.homeDirectory, configurationDirectory: options.configurationDirectory })
+  const agents = await configuredAgents({
+    homeDirectory: options.homeDirectory,
+    configurationDirectory: options.configurationDirectory
+  })
   const resolved = await installedSkillSource(options.dataDirectory, options.skill)
   const runtimes = await repositorySupportedRuntimes(location.configuration)
-  const compatible = agents.filter((agent) => runtimes.includes(runtimeForAgent(agent)) && compatibleWithSkill(agent, resolved.skill.supportedRuntimes))
-  if (compatible.length === 0) throw new KiError(`skill ${resolved.skill.name} is incompatible with this repository's configured agents`, 1)
-  for (const agent of compatible) await linkManagedSkill(agent, { scope: 'repo', repository: location.root }, resolved.skill, options.replace)
+  const compatible = agents.filter(
+    (agent) => runtimes.includes(runtimeForAgent(agent)) && compatibleWithSkill(agent, resolved.skill.supportedRuntimes)
+  )
+  if (compatible.length === 0)
+    throw new KiError(`skill ${resolved.skill.name} is incompatible with this repository's configured agents`, 1)
+  for (const agent of compatible)
+    await linkManagedSkill(agent, { scope: 'repo', repository: location.root }, resolved.skill, options.replace)
   await declareRepositorySkill(location.configuration, `${resolved.harness}:${resolved.skill.name}`)
-  return { skill: resolved.skill.name, repository: location.root, agents: compatible.map((agent) => agent.descriptor.id) }
+  return {
+    skill: resolved.skill.name,
+    repository: location.root,
+    agents: compatible.map((agent) => agent.descriptor.id)
+  }
 }
 
 export const removeRepoSkill = async (options: {
@@ -158,14 +191,24 @@ export const removeRepoSkill = async (options: {
   readonly workingDirectory: string
   readonly repository?: string
   readonly skill: string
-}): Promise<{ readonly skill: string; readonly repository: string; readonly agents: readonly string[]; readonly removed: boolean }> => {
+}): Promise<{
+  readonly skill: string
+  readonly repository: string
+  readonly agents: readonly string[]
+  readonly removed: boolean
+}> => {
   const location = await resolveRepository({
     repository: options.repository,
     workingDirectory: options.workingDirectory,
     homeDirectory: options.homeDirectory
   })
-  const declaration = (await readDeclaredSkills(location.configuration)).find((candidate) => candidate.name === options.skill)
-  const agents = await configuredAgents({ homeDirectory: options.homeDirectory, configurationDirectory: options.configurationDirectory })
+  const declaration = (await readDeclaredSkills(location.configuration)).find(
+    (candidate) => candidate.name === options.skill
+  )
+  const agents = await configuredAgents({
+    homeDirectory: options.homeDirectory,
+    configurationDirectory: options.configurationDirectory
+  })
   let removed = false
   for (const agent of agents) {
     if (await removeManagedRepoSkill(agent, location.root, options.skill)) removed = true

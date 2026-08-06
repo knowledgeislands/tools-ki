@@ -31,7 +31,9 @@ export const createRepoSkillCommand = (
               skill,
               replace: options.replace
             })
-            context.stdout.write(`ki repo skill add: linked ${result.skill} into ${result.repository} for ${result.agents.join(', ')}\n`)
+            context.stdout.write(
+              `ki repo skill add: linked ${result.skill} into ${result.repository} for ${result.agents.join(', ')}\n`
+            )
           }
         })
     )
@@ -55,7 +57,9 @@ export const createRepoSkillCommand = (
               skill
             })
             const disposition = result.removed ? 'removed' : 'no KI-managed link or declaration for'
-            context.stdout.write(`ki repo skill remove: ${disposition} ${result.skill} in ${result.repository} for ${result.agents.join(', ')}\n`)
+            context.stdout.write(
+              `ki repo skill remove: ${disposition} ${result.skill} in ${result.repository} for ${result.agents.join(', ')}\n`
+            )
           }
         })
     )

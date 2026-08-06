@@ -40,7 +40,11 @@ const stateDescription: Record<RepositoryProjection['state'], string> = {
   foreign: 'projection is not a KI-managed link'
 }
 
-const inspectProjection = async (agent: InstalledAgent, root: string, skill: ResolvedSkill): Promise<RepositoryProjection> => {
+const inspectProjection = async (
+  agent: InstalledAgent,
+  root: string,
+  skill: ResolvedSkill
+): Promise<RepositoryProjection> => {
   const expected = await realpath(join(skill.harness.root, skill.capability.source))
   const path = join(agentSkillDirectory(agent, 'repo', root), skill.declaration.name)
   const state = await lstat(path).catch(() => undefined)
@@ -60,7 +64,10 @@ const failure = (root: string, configuration: string, detail: string): Repositor
 })
 
 /** Inspect one resolved physical declaration and every compatible repository projection. */
-export const inspectRepositoryHealth = async (context: KiContext, location: RepositoryLocation): Promise<RepositoryHealth> => {
+export const inspectRepositoryHealth = async (
+  context: KiContext,
+  location: RepositoryLocation
+): Promise<RepositoryHealth> => {
   try {
     const declarations = await readDeclaredSkills(location.configuration)
     const [harnesses, agents, runtimes] = await Promise.all([
@@ -73,13 +80,21 @@ export const inspectRepositoryHealth = async (context: KiContext, location: Repo
       await Promise.all(
         skills.flatMap((skill) =>
           agents
-            .filter((agent) => runtimes.includes(runtimeForAgent(agent)) && compatibleWithSkill(agent, skill.capability.supportedRuntimes))
+            .filter(
+              (agent) =>
+                runtimes.includes(runtimeForAgent(agent)) &&
+                compatibleWithSkill(agent, skill.capability.supportedRuntimes)
+            )
             .map((agent) => inspectProjection(agent, location.root, skill))
         )
       )
     ).sort((left, right) => left.path.localeCompare(right.path))
     const broken = projections.filter((projection) => projection.state !== 'linked')
-    const health: Health = broken.some((projection) => projection.state === 'foreign') ? 'unrepairable' : broken.length ? 'repairable' : 'healthy'
+    const health: Health = broken.some((projection) => projection.state === 'foreign')
+      ? 'unrepairable'
+      : broken.length
+        ? 'repairable'
+        : 'healthy'
     return {
       root: location.root,
       configuration: location.configuration,

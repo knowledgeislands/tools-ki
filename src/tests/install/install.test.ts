@@ -4,7 +4,11 @@ import { describe, expect, test } from 'vitest'
 import packageMetadata from '../../../package.json' with { type: 'json' }
 import { installSandbox } from './_helper.ts'
 
-const releaseEnvironment = (baseUrl: string, publicKey: string, extra: Record<string, string> = {}): Record<string, string> => ({
+const releaseEnvironment = (
+  baseUrl: string,
+  publicKey: string,
+  extra: Record<string, string> = {}
+): Record<string, string> => ({
   KI_INSTALL_TEST_MODE: '1',
   KI_INSTALL_TEST_BASE_URL: baseUrl,
   KI_INSTALL_TEST_PUBLIC_KEY: publicKey,
@@ -46,10 +50,15 @@ describe('install.sh', () => {
       })
     })
 
-    expect(result).toEqual({ exitCode: 0, output: expect.stringContaining('installed verified release v1.2.3 (darwin-arm64)') })
+    expect(result).toEqual({
+      exitCode: 0,
+      output: expect.stringContaining('installed verified release v1.2.3 (darwin-arm64)')
+    })
     expect(await box.exec([join(installDir, 'ki'), '--version'])).toEqual({ exitCode: 0, output: '1.2.3\n' })
     await expect(access(join(manDir, 'ki.1'))).resolves.toBeUndefined()
-    expect(await readFile(join(box.path, 'home', '.local', 'state', 'ki', 'installation.toml'), 'utf8')).toContain(`executable = "${join(installDir, 'ki')}"`)
+    expect(await readFile(join(box.path, 'home', '.local', 'state', 'ki', 'installation.toml'), 'utf8')).toContain(
+      `executable = "${join(installDir, 'ki')}"`
+    )
   })
 
   test('installs from an installer without a sibling release directory', async () => {
@@ -72,7 +81,10 @@ describe('install.sh', () => {
       })
     })
 
-    expect(result).toEqual({ exitCode: 0, output: expect.stringContaining('installed verified release v1.2.3 (linux-x64)') })
+    expect(result).toEqual({
+      exitCode: 0,
+      output: expect.stringContaining('installed verified release v1.2.3 (linux-x64)')
+    })
     expect(await box.exec([join(installDir, 'ki'), '--version'])).toEqual({ exitCode: 0, output: '1.2.3\n' })
   })
 
@@ -89,7 +101,10 @@ describe('install.sh', () => {
       })
     })
 
-    expect(result).toEqual({ exitCode: 1, output: expect.stringContaining('release manifest signature could not be verified') })
+    expect(result).toEqual({
+      exitCode: 1,
+      output: expect.stringContaining('release manifest signature could not be verified')
+    })
     await expect(access(join(box.path, 'bin', 'ki'))).rejects.toThrow()
   })
 
@@ -112,9 +127,15 @@ describe('install.sh', () => {
     const box = await installSandbox()
     const installDir = join(box.path, 'bin')
     const manDir = join(box.path, 'man1')
-    await Promise.all([writeFile(join(box.path, 'old-ki'), 'old executable\n'), writeFile(join(box.path, 'old-man'), 'old manual\n')])
+    await Promise.all([
+      writeFile(join(box.path, 'old-ki'), 'old executable\n'),
+      writeFile(join(box.path, 'old-man'), 'old manual\n')
+    ])
     await box.exec(['mkdir', '-p', installDir, manDir])
-    await Promise.all([writeFile(join(installDir, 'ki'), 'old executable\n'), writeFile(join(manDir, 'ki.1'), 'old manual\n')])
+    await Promise.all([
+      writeFile(join(installDir, 'ki'), 'old executable\n'),
+      writeFile(join(manDir, 'ki.1'), 'old manual\n')
+    ])
     const fixtures = await Promise.all([
       box.release({ unsigned: true }),
       box.release({ manifest: 'format=ki-release-checksums-v1\nversion=v1.2.3\nnot a checksum\n' }),
@@ -145,7 +166,10 @@ describe('install.sh', () => {
     const installDir = join(box.path, 'bin')
     const manDir = join(box.path, 'man1')
     await box.exec(['mkdir', '-p', installDir, manDir])
-    await Promise.all([writeFile(join(installDir, 'ki'), 'old executable\n'), writeFile(join(manDir, 'ki.1'), 'old manual\n')])
+    await Promise.all([
+      writeFile(join(installDir, 'ki'), 'old executable\n'),
+      writeFile(join(manDir, 'ki.1'), 'old manual\n')
+    ])
     const result = await box.exec([box.installer, fixture.version], {
       environment: releaseEnvironment(fixture.baseUrl, fixture.publicKey, {
         KI_CLI_INSTALL_DIR: installDir,
@@ -192,6 +216,9 @@ describe('install.sh', () => {
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('src/main.ts')
     expect((await lstat(join(installDir, 'ki'))).isSymbolicLink()).toBe(true)
-    expect(await box.exec([join(installDir, 'ki'), '--version'])).toEqual({ exitCode: 0, output: `${packageMetadata.version}\n` })
+    expect(await box.exec([join(installDir, 'ki'), '--version'])).toEqual({
+      exitCode: 0,
+      output: `${packageMetadata.version}\n`
+    })
   })
 })

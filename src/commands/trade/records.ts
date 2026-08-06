@@ -86,7 +86,12 @@ const receiveAll = async (context: KiContext, options: BatchOptions): Promise<vo
   context.stdout.write(`ki trade receive: received ${count(records.length, 'trade')}\n`)
 }
 
-const cleanup = async (context: KiContext, operation: 'release' | 'prune', id: string | undefined, options: BatchOptions): Promise<void> => {
+const cleanup = async (
+  context: KiContext,
+  operation: 'release' | 'prune',
+  id: string | undefined,
+  options: BatchOptions
+): Promise<void> => {
   if (id && options.eligible) throw grammarError(`ki trade ${operation} accepts either one trade id or --eligible`)
   if (!id && !options.eligible) throw grammarError(`ki trade ${operation} requires one trade id or --eligible`)
   if (id) {
@@ -96,10 +101,18 @@ const cleanup = async (context: KiContext, operation: 'release' | 'prune', id: s
     return
   }
   const records = await eligibleTradeCleanup(context, operation)
-  context.stdout.write(`${renderPreview(`${operation} --eligible`, records.map((trade) => trade.record))}\n`)
+  context.stdout.write(
+    `${renderPreview(
+      `${operation} --eligible`,
+      records.map((trade) => trade.record)
+    )}\n`
+  )
   if (!options.yes) return
-  for (const trade of records) await (operation === 'release' ? releaseTrade(context, trade.record.id) : pruneTrade(context, trade.record.id))
-  context.stdout.write(`ki trade ${operation}: ${operation === 'release' ? 'released' : 'pruned'} ${count(records.length, 'trade')}\n`)
+  for (const trade of records)
+    await (operation === 'release' ? releaseTrade(context, trade.record.id) : pruneTrade(context, trade.record.id))
+  context.stdout.write(
+    `ki trade ${operation}: ${operation === 'release' ? 'released' : 'pruned'} ${count(records.length, 'trade')}\n`
+  )
 }
 
 export const createTradeRecordCommands = (context: KiContext): readonly Command[] => [
@@ -132,7 +145,9 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
     .action(async (id: string) => {
       const observed = await observeTradePreparation(context, tradeId(id))
       const note = observed.reason ? ` (${observed.reason})` : ''
-      context.stdout.write(`ki trade observe ${observed.record.id}: ${observed.mode} ${observed.ref}${note}\n${observed.output}`)
+      context.stdout.write(
+        `ki trade observe ${observed.record.id}: ${observed.mode} ${observed.ref}${note}\n${observed.output}`
+      )
     }),
   new Command('submit')
     .description('freeze one local preparation as an outbound submission')
@@ -174,7 +189,11 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
       const estate = await locateTrades(context)
       const selected = estate.filter(
         (trade) =>
-          (!options.direction || trade.direction === ({ prepare: 'preparation', import: 'inbound', export: 'outbound' } as const)[options.direction as 'prepare']) &&
+          (!options.direction ||
+            trade.direction ===
+              ({ prepare: 'preparation', import: 'inbound', export: 'outbound' } as const)[
+                options.direction as 'prepare'
+              ]) &&
           (!selectedRepository || trade.repository === selectedRepository) &&
           (!options.status || trade.record.decisionStatus === options.status) &&
           (!options.kind || trade.record.kind === kind(options.kind))
@@ -188,7 +207,11 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
       const selected = await locateTrades(context, { id: tradeId(id) })
       if (!selected.length) throw grammarError(`trade ${id} was not found in the registered repository estate`)
       const lines = [`ki trade show ${id}`]
-      for (const trade of selected) lines.push(`Repository: ${trade.repository} [${directionLabel[trade.direction]}]`, trade.record.contents.trimEnd())
+      for (const trade of selected)
+        lines.push(
+          `Repository: ${trade.repository} [${directionLabel[trade.direction]}]`,
+          trade.record.contents.trimEnd()
+        )
       context.stdout.write(`${lines.join('\n')}\n`)
     }),
   new Command('release')

@@ -23,13 +23,19 @@ describe('[ki harness]', () => {
 
       const listed = await box.run('ki harness list')
 
-      expect(listed).toEqual({ exitCode: 0, output: '╭─ KI HARNESSES\n├─ installed (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0\n' })
+      expect(listed).toEqual({
+        exitCode: 0,
+        output: '╭─ KI HARNESSES\n├─ installed (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0\n'
+      })
     })
 
     test('renders every installed harness in order', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
-      await box.data.write('ki/harnesses/other/harness/skills/ki-other/SKILL.md', '---\nname: ki-other\nki-depends-on: []\n---\n')
+      await box.data.write(
+        'ki/harnesses/other/harness/skills/ki-other/SKILL.md',
+        '---\nname: ki-other\nki-depends-on: []\n---\n'
+      )
 
       const listed = await box.run('ki harness list')
 
@@ -50,7 +56,10 @@ describe('[ki harness]', () => {
 
       const listed = await box.run('ki harness list')
 
-      expect(listed).toEqual({ exitCode: 0, output: '╭─ KI HARNESSES\n├─ installed (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0\n' })
+      expect(listed).toEqual({
+        exitCode: 0,
+        output: '╭─ KI HARNESSES\n├─ installed (0)\n│  ╰─ none\n╰─ summary: HARNESSES=0 CAPABILITIES=0\n'
+      })
     })
   })
 
@@ -58,7 +67,10 @@ describe('[ki harness]', () => {
     test('inspects one non-canonical harness in human form', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
-      await box.data.write('ki/harnesses/example/harness/skills/ki-other/SKILL.md', '---\nname: ki-other\nki-depends-on: []\n---\n')
+      await box.data.write(
+        'ki/harnesses/example/harness/skills/ki-other/SKILL.md',
+        '---\nname: ki-other\nki-depends-on: []\n---\n'
+      )
       const info = await box.run('ki harness info example/harness')
 
       expect(info.exitCode).toBe(0)
@@ -72,7 +84,10 @@ describe('[ki harness]', () => {
 
       const info = await box.run('ki harness info empty/harness')
 
-      expect(info).toEqual({ exitCode: 0, output: '╭─ KI HARNESS\n├─ empty/harness\n├─ capabilities (0)\n│  ╰─ none\n╰─ summary: CAPABILITIES=0\n' })
+      expect(info).toEqual({
+        exitCode: 0,
+        output: '╭─ KI HARNESS\n├─ empty/harness\n├─ capabilities (0)\n│  ╰─ none\n╰─ summary: CAPABILITIES=0\n'
+      })
     })
 
     test('rejects the retired JSON output option', async () => {
@@ -90,7 +105,10 @@ describe('[ki harness]', () => {
 
       const result = await box.run('ki harness info not-an-identifier')
 
-      expect(result).toEqual({ exitCode: 2, output: 'ki: error: harness identifier must be an owner/name identifier\n' })
+      expect(result).toEqual({
+        exitCode: 2,
+        output: 'ki: error: harness identifier must be an owner/name identifier\n'
+      })
     })
   })
 
@@ -100,7 +118,10 @@ describe('[ki harness]', () => {
 
       const result = await box.run('ki harness uninstall invalid')
 
-      expect(result).toEqual({ exitCode: 2, output: 'ki: error: harness identifier must be an owner/name identifier\n' })
+      expect(result).toEqual({
+        exitCode: 2,
+        output: 'ki: error: harness identifier must be an owner/name identifier\n'
+      })
     })
 
     test('removes one non-canonical harness and un-records it', async () => {
@@ -137,7 +158,9 @@ describe('[ki harness]', () => {
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('has unrecognised state')
-      await expect(readFile(`${box.data.path}/ki/harnesses/example/harness/notes.txt`, 'utf8')).resolves.toBe('preserve me\n')
+      await expect(readFile(`${box.data.path}/ki/harnesses/example/harness/notes.txt`, 'utf8')).resolves.toBe(
+        'preserve me\n'
+      )
     })
   })
 
@@ -154,7 +177,11 @@ describe('[ki harness]', () => {
         `[harnesses]\nreleases = [{ id = "example/harness", url = "https://user:secret@releases.example.test/archive.tar.gz", sha256 = "${'a'.repeat(64)}" }]\n`,
         'must be an HTTPS URL without credentials'
       ],
-      ['a scalar harnesses configuration', 'harnesses = "example/harness"\n', 'ki configuration harnesses must be a TOML table'],
+      [
+        'a scalar harnesses configuration',
+        'harnesses = "example/harness"\n',
+        'ki configuration harnesses must be a TOML table'
+      ],
       [
         'an invalid release digest',
         `[harnesses]\nreleases = [{ id = "example/harness", url = "https://releases.example.test/archive.tar.gz", sha256 = "UPPERCASE" }]\n`,
@@ -176,7 +203,11 @@ describe('[ki harness]', () => {
         `[harnesses]\nreleases = [{ id = "not-an-identifier", url = "https://releases.example.test/archive.tar.gz", sha256 = "${'a'.repeat(64)}" }]\n`,
         'harnesses[0] id must be an owner/name identifier'
       ],
-      ['a release without a URL', `[harnesses]\nreleases = [{ id = "example/harness", sha256 = "${'a'.repeat(64)}" }]\n`, 'harnesses[0] must declare url'],
+      [
+        'a release without a URL',
+        `[harnesses]\nreleases = [{ id = "example/harness", sha256 = "${'a'.repeat(64)}" }]\n`,
+        'harnesses[0] must declare url'
+      ],
       [
         'a release using HTTP',
         `[harnesses]\nreleases = [{ id = "example/harness", url = "http://releases.example.test/archive.tar.gz", sha256 = "${'a'.repeat(64)}" }]\n`,
@@ -187,8 +218,16 @@ describe('[ki harness]', () => {
         '[harnesses]\nreleases = [{ id = "example/harness", url = "https://releases.example.test/archive.tar.gz" }]\n',
         'harnesses[0] must declare sha256'
       ],
-      ['a releases value that is not an array', '[harnesses]\nreleases = "example/harness"\n', 'must be an array of release entries'],
-      ['no configured release for the requested harness', '[harnesses]\nreleases = []\n', 'is not configured in the immutable release registry'],
+      [
+        'a releases value that is not an array',
+        '[harnesses]\nreleases = "example/harness"\n',
+        'must be an array of release entries'
+      ],
+      [
+        'no configured release for the requested harness',
+        '[harnesses]\nreleases = []\n',
+        'is not configured in the immutable release registry'
+      ],
       [
         'repeated release identifiers',
         `[harnesses]\nreleases = [{ id = "example/harness", url = "https://releases.example.test/one.tar.gz", sha256 = "${'a'.repeat(64)}" }, { id = "example/harness", url = "https://releases.example.test/two.tar.gz", sha256 = "${'b'.repeat(64)}" }]\n`,
@@ -262,7 +301,10 @@ describe('[ki harness]', () => {
 
       const result = await box.run('ki harness install not-an-identifier')
 
-      expect(result).toEqual({ exitCode: 2, output: 'ki: error: harness identifier must be an owner/name identifier\n' })
+      expect(result).toEqual({
+        exitCode: 2,
+        output: 'ki: error: harness identifier must be an owner/name identifier\n'
+      })
     })
 
     test('adds the harness section when recording an already-installed canonical harness', async () => {
@@ -273,7 +315,9 @@ describe('[ki harness]', () => {
       const result = await box.run('ki harness install knowledgeislands/ki-agentic-harness')
 
       expect(result.exitCode).toBe(0)
-      expect(await box.config.read('ki/config.toml')).toContain('[harnesses]\nids = [\n  "knowledgeislands/ki-agentic-harness",\n]')
+      expect(await box.config.read('ki/config.toml')).toContain(
+        '[harnesses]\nids = [\n  "knowledgeislands/ki-agentic-harness",\n]'
+      )
     })
 
     test('reports an already-installed configured harness and records it', async () => {
@@ -396,12 +440,17 @@ releases = [
 
       const installed = await box.run('ki harness install example/harness')
 
-      expect(installed).toEqual({ exitCode: 1, output: 'ki: error: skills/ki-empty/SKILL.md must declare frontmatter\n' })
+      expect(installed).toEqual({
+        exitCode: 1,
+        output: 'ki: error: skills/ki-empty/SKILL.md must declare frontmatter\n'
+      })
     })
 
     test('resolves the immutable canonical harness from the registry without user configuration', async () => {
       const box = await sandbox()
-      const { payload } = makeHarnessArchive({ 'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' })
+      const { payload } = makeHarnessArchive({
+        'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n'
+      })
       box.setFetcher(async () => new Response(payload))
 
       const result = await box.run('ki harness install knowledgeislands/ki-agentic-harness')
@@ -449,7 +498,9 @@ releases = [
       const result = await box.run('ki harness install example/harness')
 
       expect(result.exitCode).toBe(0)
-      await expect(box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).resolves.toContain('name: ki-example')
+      await expect(box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).resolves.toContain(
+        'name: ki-example'
+      )
     })
 
     test('refuses a non-ok download response', async () => {
@@ -586,7 +637,9 @@ releases = [
 
     test('refuses an archive that does not match configured immutable evidence without creating an installation', async () => {
       const box = await sandbox()
-      const { payload } = makeHarnessArchive({ 'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' })
+      const { payload } = makeHarnessArchive({
+        'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n'
+      })
       await box.config.write(
         'ki/config.toml',
         `[harnesses]
@@ -656,15 +709,24 @@ releases = [
 
       expect(info).toEqual({
         exitCode: 0,
-        output: '╭─ KI HARNESS\n├─ example/harness\n├─ capabilities (1)\n│  ╰─ skill ki-external\n╰─ summary: CAPABILITIES=1\n'
+        output:
+          '╭─ KI HARNESS\n├─ example/harness\n├─ capabilities (1)\n│  ╰─ skill ki-external\n╰─ summary: CAPABILITIES=1\n'
       })
     })
 
     test.each([
       ['a missing skill name', '---\nki-depends-on: []\n---\n', 'must declare name'],
       ['an ignored frontmatter line', '---\nnot metadata\nki-depends-on: []\n---\n', 'must declare name'],
-      ['an invalid dependency declaration', '---\nname: ki-example\nki-depends-on: ki-other\n---\n', 'must declare ki-depends-on as a flow list'],
-      ['a repeated dependency', '---\nname: ki-example\nki-depends-on: [ki-other, ki-other]\n---\n', 'repeats a dependency'],
+      [
+        'an invalid dependency declaration',
+        '---\nname: ki-example\nki-depends-on: ki-other\n---\n',
+        'must declare ki-depends-on as a flow list'
+      ],
+      [
+        'a repeated dependency',
+        '---\nname: ki-example\nki-depends-on: [ki-other, ki-other]\n---\n',
+        'repeats a dependency'
+      ],
       [
         'a repeated optional dependency',
         '---\nname: ki-example\nki-depends-on: []\nki-optional-depends-on: [ki-other, ki-other]\n---\n',
@@ -704,7 +766,10 @@ releases = [
     test('rejects repeated installed skill capabilities', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
-      await box.data.write('ki/harnesses/example/harness/skills/ki-copy/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
+      await box.data.write(
+        'ki/harnesses/example/harness/skills/ki-copy/SKILL.md',
+        '---\nname: ki-example\nki-depends-on: []\n---\n'
+      )
 
       const info = await box.run('ki harness info example/harness')
 

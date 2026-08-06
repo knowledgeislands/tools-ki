@@ -23,11 +23,17 @@ const runRepositoryConformCommand = async (
     child.on('close', (exitCode) => resolve({ exitCode: exitCode ?? 1, stdout, stderr }))
   })
 
-export const runRepositoryConformCommands = async (repository: string, commands: readonly RepositoryConformCommand[]): Promise<void> => {
+export const runRepositoryConformCommands = async (
+  repository: string,
+  commands: readonly RepositoryConformCommand[]
+): Promise<void> => {
   for (const command of commands) {
     const { exitCode, stdout, stderr } = await runRepositoryConformCommand(repository, command)
     if (exitCode === 0) continue
     const detail = [stdout, stderr].filter(Boolean).join('\n').trim()
-    throw new KiError(`direct subprocess conform failed: ${renderRepositoryConformCommand(command)}${detail ? `\n${detail}` : ''}`, 1)
+    throw new KiError(
+      `direct subprocess conform failed: ${renderRepositoryConformCommand(command)}${detail ? `\n${detail}` : ''}`,
+      1
+    )
   }
 }
