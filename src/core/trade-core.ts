@@ -505,6 +505,7 @@ const receiverFieldNames = [
 const rawSenderProjection = (contents: string, direction: TradeDirection): string => {
   if (direction !== 'inbound') return contents
   const match = /^(---\n)([\s\S]*?)(\n---\n[\s\S]*)$/u.exec(contents)
+  /* v8 ignore next -- an inbound projection only ever receives contents that recordFromContents already matched against the identical frontmatter expression, so no CLI input reaches this guard. */
   if (!match) return contents
   const frontmatter = (match[2] as string)
     .split('\n')
@@ -632,7 +633,9 @@ const senderContents = (
     `kind: ${record.kind}`,
     `source_ref: ${JSON.stringify(record.sourceRef)}`,
     `observation: ${record.observation}`,
+    /* v8 ignore start -- sender contents are only rendered for a new preparation, which always carries a phase; the empty arm is a type-level guard on the optional field. */
     ...(record.phase ? ['phase: preparing'] : []),
+    /* v8 ignore stop */
     '---',
     `# ${record.id}: ${record.title}`,
     '',
@@ -911,6 +914,7 @@ export const locateTrades = async (
 }
 
 const linkedWorkIsDone = (root: string, identity: string | undefined): boolean => {
+  /* v8 ignore next -- this is only consulted for an adopted inbound record, and inbound validation already requires adopted_as, so the identity is a type-level guard on the optional field. */
   if (!identity) return false
   const directory = join(root, 'docs', 'roadmap')
   if (!existsSync(directory)) return false
@@ -922,8 +926,7 @@ const linkedWorkIsDone = (root: string, identity: string | undefined): boolean =
   return false
 }
 
-const releaseEligible = (record: TradeRecord, receiptVisible: boolean, receiverRoot: string): boolean => {
-  if (!receiptVisible) return false
+const releaseEligible = (record: TradeRecord, receiverRoot: string): boolean => {
   if (record.observation === 'unattended' || record.observation === 'receipt') return true
   if (
     !record.decisionStatus ||
@@ -954,7 +957,7 @@ export const tradeLifecycle = (trade: LocatedTrade, estate: readonly LocatedTrad
         candidate.record.sender === trade.record.sender &&
         candidate.record.receiver === trade.record.receiver
     )
-    const eligible = releaseEligible(trade.record, true, trade.root)
+    const eligible = releaseEligible(trade.record, trade.root)
     return {
       publicationStatus: 'submitted',
       deliveryStatus: 'received',
@@ -975,7 +978,7 @@ export const tradeLifecycle = (trade: LocatedTrade, estate: readonly LocatedTrad
         publicationStatus: 'submitted',
         deliveryStatus: 'received',
         decisionStatus: inbound.record.decisionStatus as DecisionStatus,
-        releaseEligible: releaseEligible(inbound.record, true, inbound.root),
+        releaseEligible: releaseEligible(inbound.record, inbound.root),
         pruneEligible: false
       }
     : {
@@ -1040,7 +1043,7 @@ export const releaseTrade = async (context: KiContext, id: string): Promise<void
   const received = recordFromContents(await readFile(inbound, 'utf8'), inbound, 'inbound')
   if (!sameSenderPayload(trade.record, received))
     throw tradeError(`receiver inbound trade ${id} does not preserve the sender payload`)
-  if (!releaseEligible(received, true, receiver.root))
+  if (!releaseEligible(received, receiver.root))
     throw tradeError(
       `trade ${id} cannot be released before its ${trade.record.observation} observation policy is satisfied`
     )
@@ -1056,7 +1059,7 @@ export const pruneTrade = async (context: KiContext, id: string): Promise<void> 
   const outbound = tradePath(sender.root, 'outbound', local.configuration.identity, id)
   if (await lstat(outbound).catch(() => undefined))
     throw tradeError(`trade ${id} cannot be pruned before sender release is observable`)
-  if (!releaseEligible(trade.record, true, trade.root))
+  if (!releaseEligible(trade.record, trade.root))
     throw tradeError(`trade ${id} cannot be pruned after a premature ${trade.record.observation} sender release`)
   await rm(trade.path)
 }
