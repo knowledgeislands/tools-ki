@@ -1,5 +1,9 @@
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
+
+const execute = promisify(execFile)
 
 const commandPaths = [
   'acquire',
@@ -122,6 +126,29 @@ describe('[ki manage completion]', () => {
 
     expect(invalidCompletion).toEqual({ exitCode: 2, output: 'ki: error: completion shell must be bash or zsh\n' })
     expect(missingCompletionShell.exitCode).toBe(2)
+  })
+
+  test('emits loadable scripts whose Bash completion reaches repo roadmap', async () => {
+    const box = await sandbox()
+    const bash = await box.run('ki manage completion bash')
+    const zsh = await box.run('ki manage completion zsh')
+    await box.root.write('completion.bash', bash.output)
+    await box.root.write('completion.zsh', zsh.output)
+
+    await expect(execute('bash', ['-n', 'completion.bash'], { cwd: box.root.path })).resolves.toBeDefined()
+    await expect(execute('zsh', ['-n', 'completion.zsh'], { cwd: box.root.path })).resolves.toBeDefined()
+    await expect(execute('zsh', ['-fc', 'autoload -Uz compinit; compinit -D; source completion.zsh'], { cwd: box.root.path })).resolves.toBeDefined()
+
+    const completion = await execute(
+      'bash',
+      ['-c', `source completion.bash; COMP_WORDS=(ki repo roadmap ""); COMP_CWORD=3; _ki; printf "%s\\n" "\${COMPREPLY[@]}"`],
+      {
+        cwd: box.root.path
+      }
+    )
+    const candidates = completion.stdout.trim().split('\n')
+    expect(candidates).toEqual(expect.arrayContaining(['list', 'prune', 'promote', 'demote']))
+    expect(candidates).not.toContain('plan')
   })
 
   test('rejects retired root and plural completion command names', async () => {

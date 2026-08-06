@@ -72,6 +72,7 @@ _ki() {
     elif [[ " $(_ki_names "$path") " == *" $token "* ]]; then
       path="\${path:+$path }$token"
     else ((argument_index++))
+    fi
   done
   if [[ -n "$pending" ]]; then
     strategy="$(_ki_value_strategy "$path" "$pending")"
@@ -138,6 +139,7 @@ _ki() {
     elif [[ " $(_ki_names "$path") " == *" $token "* ]]; then
       path="\${path:+$path }$token"
     else ((argument_index++))
+    fi
   done
   if [[ -n "$pending" ]]; then
     strategy="$(_ki_value_strategy "$path" "$pending")"

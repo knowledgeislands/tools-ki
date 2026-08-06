@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-014
 title: Complete CLI completions
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: 28075f57f84b60b8f11b31328b1d6fe339b8f2e0
@@ -71,12 +71,14 @@ CLI-015 is complete and established the command/test module boundaries used here
 
 ## Review
 
-- Reopened during review after the generated Bash and Zsh scripts were found to omit a closing `fi` in their token-processing loops. The completion grammar correctly includes `repo roadmap`; the syntax error prevents a refreshed script from loading, leaving a shell's previously sourced completion function active.
+- Reopened during review after the generated Bash and Zsh scripts were found to omit a closing `fi` in their token-processing loops. The completion grammar correctly includes `repo roadmap`; the syntax error prevented a refreshed script from loading, leaving a shell's previously sourced completion function active. The repair restores that closing branch in both renderers.
+- Repair verification: generated Bash and Zsh scripts pass their native syntax parsers; Zsh sources after `compinit`; and the generated Bash function completes `repo roadmap` with `list`, `prune`, `promote`, and `demote`, while excluding the retired `plan` command.
 - Delivered the typed completion grammar and Bash/Zsh renderers for the complete registered CLI grammar, including typed enum, path, and opaque-value strategies.
 - Preserved the stated boundary: Fish and retired completion paths remain errors; generated completions do not invoke the CLI, network, or dynamic state.
 - During verification, the user explicitly authorised remediation of the repository-local coverage gap. Reachable paths now have CLI-contract coverage; unreachable zero-target and diagnostic-label branches were removed.
 - Baseline: `28075f57f84b60b8f11b31328b1d6fe339b8f2e0`.
 - Verification passed: focused completion contract suite; scoped coverage-remediation suite (192 tests); `bunx tsc --noEmit`; Biome; Markdown and manual checks; and `bun run test:coverage` (37 files, 488 tests, 100% statements, branches, functions, and lines).
+- Repair verification passed: `bunx vitest run src/tests/cli/manage/completions.test.ts`, `bunx tsc --noEmit`, Biome, and `bun run test:coverage` (37 files, 492 tests, 100% statements, branches, functions, and lines).
 - No external coordination, compatibility aliases, dynamic completion lookup, push, release, or other unresolved concern remains.
 
 ## Discussion
