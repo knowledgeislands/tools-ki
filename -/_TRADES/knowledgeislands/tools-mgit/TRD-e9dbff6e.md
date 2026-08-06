@@ -6,6 +6,7 @@ sender: knowledgeislands/tools-ki
 receiver: knowledgeislands/tools-mgit
 kind: work
 source_ref: "docs/roadmap/KI-TOOL-CLI-018-decouple-agora-editor-targets.md"
+observation: decision
 ---
 # TRD-e9dbff6e: Consume canonical estate and stores
 

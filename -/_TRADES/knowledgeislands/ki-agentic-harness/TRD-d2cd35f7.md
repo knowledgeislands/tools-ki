@@ -6,6 +6,7 @@ sender: knowledgeislands/tools-ki
 receiver: knowledgeislands/ki-agentic-harness
 kind: work
 source_ref: "docs/roadmap/KI-TOOL-CLI-018-decouple-agora-editor-targets.md"
+observation: decision
 ---
 # TRD-d2cd35f7: Define repository kind and stores
 

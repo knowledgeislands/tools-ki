@@ -6,6 +6,7 @@ sender: knowledgeislands/tools-ki
 receiver: knowledgeislands/ki-agentic-harness
 kind: work
 source_ref: "tools-ki/discussion-coverage-review"
+observation: decision
 ---
 # TRD-cbef1f49: Assess recap coverage matrix
 
