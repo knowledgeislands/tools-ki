@@ -14,7 +14,13 @@ export interface StreamFocus {
   readonly proposals: readonly StreamProposal[]
 }
 
-export type RepositoryPlanningSource = { readonly kind: 'roadmap' } | { readonly kind: 'streams'; readonly focuses: readonly StreamFocus[] }
+export interface StreamPlanningSource {
+  readonly kind: 'streams'
+  readonly focuses: readonly StreamFocus[]
+  readonly diagnostics: readonly string[]
+}
+
+export type RepositoryPlanningSource = { readonly kind: 'roadmap' } | StreamPlanningSource
 
 interface ProposalFields {
   readonly type?: string
@@ -55,18 +61,31 @@ const readProposal = async (directory: string, focus: string, name: string): Pro
   return { identity: `${focus}/${name}`, title, status }
 }
 
-const readProposalIfPresent = async (directory: string, focus: string, name: string): Promise<StreamProposal | undefined> => {
-  const entries = await readdir(join(directory, name))
-  if (!entries.length) return undefined
-  return readProposal(directory, focus, name)
+interface ProposalRead {
+  readonly proposal?: StreamProposal
+  readonly diagnostic?: string
 }
 
-const readStreams = async (repository: string): Promise<readonly StreamFocus[]> => {
+const readProposalIfPresent = async (directory: string, focus: string, name: string): Promise<ProposalRead> => {
+  try {
+    const entries = await readdir(join(directory, name))
+    if (!entries.length) return {}
+    return { proposal: await readProposal(directory, focus, name) }
+  } catch (error) {
+    return {
+      // Stream validation failures are normalized KiError instances.
+      /* v8 ignore next */
+      diagnostic: error instanceof Error ? error.message : String(error)
+    }
+  }
+}
+
+const readStreams = async (repository: string): Promise<{ readonly focuses: readonly StreamFocus[]; readonly diagnostics: readonly string[] }> => {
   const directory = join(repository, 'Streams')
   await physicalDirectory(directory, `Knowledge Base repository ${repository} has no physical Streams directory`)
   await physicalFile(join(directory, 'Streams.md'), `Knowledge Base repository ${repository} has no physical Streams/Streams.md file`)
   const entries = await readdir(directory, { withFileTypes: true })
-  const focuses = await Promise.all(
+  const focusResults = await Promise.all(
     entries
       .filter((entry) => entry.isDirectory() && !entry.isSymbolicLink())
       .sort((left, right) => left.name.localeCompare(right.name))
@@ -74,18 +93,20 @@ const readStreams = async (repository: string): Promise<readonly StreamFocus[]> 
         const focusDirectory = join(directory, entry.name)
         await physicalFile(join(focusDirectory, `${entry.name}.md`), `Knowledge Base stream focus ${entry.name} must be a regular file`)
         const proposals = await readdir(focusDirectory, { withFileTypes: true })
+        const reads = await Promise.all(
+          proposals
+            .filter((proposal) => proposal.isDirectory() && !proposal.isSymbolicLink())
+            .sort((left, right) => left.name.localeCompare(right.name))
+            .map((proposal) => readProposalIfPresent(focusDirectory, entry.name, proposal.name))
+        )
         return {
           name: entry.name,
-          proposals: await Promise.all(
-            proposals
-              .filter((proposal) => proposal.isDirectory() && !proposal.isSymbolicLink())
-              .sort((left, right) => left.name.localeCompare(right.name))
-              .map((proposal) => readProposalIfPresent(focusDirectory, entry.name, proposal.name))
-          ).then((items) => items.filter((item): item is StreamProposal => item !== undefined))
+          proposals: reads.flatMap((read) => (read.proposal ? [read.proposal] : [])),
+          diagnostics: reads.flatMap((read) => (read.diagnostic ? [read.diagnostic] : []))
         }
       })
   )
-  return focuses
+  return { focuses: focusResults.map(({ name, proposals }) => ({ name, proposals })), diagnostics: focusResults.flatMap(({ diagnostics }) => diagnostics) }
 }
 
 export const readRepositoryPlanningSource = async (repository: string, configuration: string): Promise<RepositoryPlanningSource> => {
@@ -93,5 +114,5 @@ export const readRepositoryPlanningSource = async (repository: string, configura
   const decisionRecords = declarations.find((declaration) => declaration.name === 'ki-decision-records')
   const { repo_type: repoType } = decisionRecords?.configuration ?? {}
   if (repoType !== 'kb') return { kind: 'roadmap' }
-  return { kind: 'streams', focuses: await readStreams(repository) }
+  return { kind: 'streams', ...(await readStreams(repository)) }
 }

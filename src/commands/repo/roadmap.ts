@@ -95,6 +95,11 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
         for (const [proposalIndex, proposal] of focus.proposals.entries())
           lines.push(`${itemPrefix}${proposalIndex === focus.proposals.length - 1 ? '╰─' : '├─'} ${proposal.identity} [${proposal.status}] ${proposal.title}`)
       }
+    if (planning.diagnostics.length) {
+      lines.push(`├─ stream diagnostics (${planning.diagnostics.length})`)
+      for (const [diagnosticIndex, diagnostic] of planning.diagnostics.entries())
+        lines.push(`│  ${diagnosticIndex === planning.diagnostics.length - 1 ? '╰─' : '├─'} ❌ ${diagnostic}`)
+    }
     lines.push(`├─ trades (${result.trades.length})`, ...renderTradeContext(result.trades, estate, result.tradeDiagnostic))
     const { inbound, outbound } = countTradeDirections(result.trades)
     const tradeSummary = result.tradeDiagnostic ? 'unavailable' : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
@@ -205,7 +210,15 @@ export const createRepoRoadmapCommand = (
             })
           )
           context.stdout.write(`${results.map((result) => renderTextResult(result, tradeInventory.trades)).join('\n\n')}\n`)
-          if (results.some((result) => result.tradeDiagnostic || ('diagnostic' in result && result.diagnostic))) throw new KiExit(1)
+          if (
+            results.some(
+              (result) =>
+                result.tradeDiagnostic ||
+                ('planning' in result && result.planning.kind === 'streams' && result.planning.diagnostics.length) ||
+                ('diagnostic' in result && result.diagnostic)
+            )
+          )
+            throw new KiExit(1)
         })
     )
     .addCommand(
