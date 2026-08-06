@@ -1,6 +1,6 @@
 ---
 id: KI-TOOL-CLI-022
-title: Weight progress by observed item duration
+title: Weight progress by duration
 theme: cli
 horizon: next
 status: draft
@@ -17,13 +17,15 @@ Make the repository-operation progress bar advance in proportion to how long eac
 
 `KI-TOOL-CLI-021` rebuilds the progress renderer but weights every rubric item equally, because nothing in the rubric contract says which items are expensive. A single `ki repo audit --skill ki-engineering` run spans items ranging from a single `lstat` to a full test invocation, so a uniformly weighted bar leaps through the cheap majority and then parks for the remainder of the run.
 
-There is no static signal available to fix this. `commands` lives on `ConformProposal`, a value produced at runtime by a conform action, not on `RubricItem`; an audit item that shells out does so inside its own `audit.run`, invisible to the declaration. A rubric could be extended to declare an expected cost, but that would be a portable contract change owned by KI Specifications and would still be a guess, since the same item costs seconds in a small repository and minutes in a large one.
-
 Observation is therefore the only sound basis, and it has to be persisted, because each item runs at most once per invocation — within a single run the weights never inform the item they describe.
 
 ## Boundary
 
 This item does not change the progress renderer's composition, zones, or command grammar, all of which are settled by `KI-TOOL-CLI-021`. It does not add a user-facing command to inspect or clear the cache, does not ship a checked-in baseline table, and does not make the cache a correctness dependency: absent or unreadable data must degrade silently to uniform weighting.
+
+## Current state
+
+There is no static signal available to fix this. `commands` lives on `ConformProposal`, a value produced at runtime by a conform action, not on `RubricItem`; an audit item that shells out does so inside its own `audit.run`, invisible to the declaration. A rubric could be extended to declare an expected cost, but that would be a portable contract change owned by KI Specifications and would still be a guess, since the same item costs seconds in a small repository and minutes in a large one.
 
 ## Steps
 
