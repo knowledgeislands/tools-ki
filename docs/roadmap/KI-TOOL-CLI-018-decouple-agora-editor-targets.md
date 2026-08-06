@@ -29,9 +29,7 @@ This item does not define the portable `ki-repo` contract for repository kind an
 
 Agora profiles currently require `tool = "zed"` and store arbitrary physical directories under basename-derived keys. The user configuration holds a separate unkeyed registry path list. No portable `ki-repo` declaration currently defines repository kind or KB store roles.
 
-`TRD-d2cd35f7` has been sent to the KI Agentic Harness to define that portable contract. The CLI can shape its local migration now, but must not choose alternate kind or store semantics before the receiving repository accepts a contract.
-
-The local record at [`TRD-d2cd35f7`](../../-/_TRADES/knowledgeislands/ki-agentic-harness/TRD-d2cd35f7.md) is only the sender submission; no receiver-authored acceptance or compatible published contract is available in this checkout.
+The KI Agentic Harness accepted the portable contract through `KI-HARNESS-GOV-015`, but that item remains a draft and no compatible published contract is yet available. The CLI can shape its local migration now, but must not choose alternate kind or store semantics before that contract is delivered.
 
 ## Steps
 
@@ -57,7 +55,7 @@ The local record at [`TRD-d2cd35f7`](../../-/_TRADES/knowledgeislands/ki-agentic
 
 ## Dependencies / blocks
 
-The portable `ki-repo` contract is owned by KI Agentic Harness and has been proposed through outbound work trade [`TRD-d2cd35f7`](../../-/_TRADES/knowledgeislands/ki-agentic-harness/TRD-d2cd35f7.md). It needs receiver review and a compatible published contract before tools-ki validates repository kinds or named KB store roles. This external prerequisite cannot appear in `blocked-by`, which permits only local work-item identifiers. This record remains a `next` draft so its local migration can be shaped against the agreed contract, but it cannot become Ready or enter the requested implementation batch until that prerequisite is observable.
+The portable `ki-repo` contract is owned by KI Agentic Harness and is being defined by `KI-HARNESS-GOV-015`. It needs delivery as a compatible published contract before tools-ki validates repository kinds or named KB store roles. This external prerequisite cannot appear in `blocked-by`, which permits only local work-item identifiers. This record remains a `next` draft so its local migration can be shaped against the agreed contract, but it cannot become Ready or enter the requested implementation batch until that prerequisite is observable.
 
 ## Discussion
 

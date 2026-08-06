@@ -7,8 +7,10 @@ receiver: knowledgeislands/tools-ki
 kind: work
 source_ref: KI-HARNESS-GOV-012
 observation: decision
-decision_status: unconsidered
+decision_status: adopted
 received_from_ref: 323ed367ad526d1583802bd59eeb1466adea34c0
+rationale: 'Captured as waiting local host work until the Harness publishes its compatible remediation metadata contract.'
+adopted_as: KI-TOOL-CLI-020
 ---
 
 # TRD-9eb558c6: Render rubric remediation model
