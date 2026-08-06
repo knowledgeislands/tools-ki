@@ -504,9 +504,9 @@ const receiverFieldNames = [
 
 const rawSenderProjection = (contents: string, direction: TradeDirection): string => {
   if (direction !== 'inbound') return contents
-  const match = /^(---\n)([\s\S]*?)(\n---\n[\s\S]*)$/u.exec(contents)
-  /* v8 ignore next -- an inbound projection only ever receives contents that recordFromContents already matched against the identical frontmatter expression, so no CLI input reaches this guard. */
-  if (!match) return contents
+  // Only an inbound record reaches the exec, and its contents were already accepted by the
+  // frontmatter parse against an equivalent expression, so the match cannot fail.
+  const match = /^(---\n)([\s\S]*?)(\n---\n[\s\S]*)$/u.exec(contents) as RegExpExecArray
   const frontmatter = (match[2] as string)
     .split('\n')
     .filter((line) => {
@@ -633,9 +633,9 @@ const senderContents = (
     `kind: ${record.kind}`,
     `source_ref: ${JSON.stringify(record.sourceRef)}`,
     `observation: ${record.observation}`,
-    /* v8 ignore start -- sender contents are only rendered for a new preparation, which always carries a phase; the empty arm is a type-level guard on the optional field. */
-    ...(record.phase ? ['phase: preparing'] : []),
-    /* v8 ignore stop */
+    // Sender contents are only ever rendered for a new preparation, so the phase is fixed here;
+    // submitTrade strips the line again when it freezes the record for outbound submission.
+    'phase: preparing',
     '---',
     `# ${record.id}: ${record.title}`,
     '',
@@ -682,7 +682,6 @@ export const createTradePreparation = async (
     createdAt,
     sender: local.configuration.identity,
     receiver,
-    phase: 'preparing',
     ...options
   })
   const path = tradePath(local.repository.root, 'preparation', receiver, id)
@@ -913,9 +912,7 @@ export const locateTrades = async (
   )
 }
 
-const linkedWorkIsDone = (root: string, identity: string | undefined): boolean => {
-  /* v8 ignore next -- this is only consulted for an adopted inbound record, and inbound validation already requires adopted_as, so the identity is a type-level guard on the optional field. */
-  if (!identity) return false
+const linkedWorkIsDone = (root: string, identity: string): boolean => {
   const directory = join(root, 'docs', 'roadmap')
   if (!existsSync(directory)) return false
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -938,7 +935,9 @@ const releaseEligible = (record: TradeRecord, receiverRoot: string): boolean => 
     ['applied', 'retained', 'declined', 'superseded'].includes(record.decisionStatus)
   )
     return true
-  return record.decisionStatus === 'adopted' && linkedWorkIsDone(receiverRoot, record.adoptedAs)
+  // Inbound validation already rejects an adopted record with no adopted_as, so the identity
+  // is present whenever this short-circuit reaches the lookup.
+  return record.decisionStatus === 'adopted' && linkedWorkIsDone(receiverRoot, record.adoptedAs as string)
 }
 
 export const tradeLifecycle = (trade: LocatedTrade, estate: readonly LocatedTrade[]): TradeLifecycle => {
