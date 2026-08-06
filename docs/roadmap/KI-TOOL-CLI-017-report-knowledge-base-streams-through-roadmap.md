@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-017
 title: Report Knowledge Base streams
 theme: cli
 horizon: next
-status: draft
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 3c5b1e930cc7126c3130a1b8ff555d2c1970401d
 ---
 
 ## Goal
