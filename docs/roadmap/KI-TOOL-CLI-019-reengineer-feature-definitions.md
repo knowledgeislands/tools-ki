@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-019
 title: Re-engineer feature definitions
 theme: cli
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -31,28 +31,28 @@ The corpus already defines twelve areas for acquisition, Agoras, bootstrap, the 
 
 ## Steps
 
-- [ ] Compare each public command path and its contract-test seam with the existing Feature Definitions index; identify missing areas, misplaced requirements, and unbuilt behaviour that belongs in `Gaps`.
-- [ ] Update the index and affected area files with concise RFC-2119 requirements that describe only current observable behaviour and cite the exact in-process CLI test that verifies each behaviour.
-- [ ] Add a compact Feature Definitions area for every materially distinct public family that lacks one, without duplicating a neighbouring command group's contract.
-- [ ] Verify the complete corpus against the registered feature-definition governance and capture the reusable Guides-routing learning as a Harness knowledge trade.
+- [ ] Add as-built Agora requirements for profile membership and opening behaviour.
+- [ ] Add as-built management requirements for direct diagnostics, safe projection repair, and read-only cleanup and documentation lookup.
+- [ ] Add an as-built repository-roadmap requirement for inventory and guarded lifecycle maintenance.
+- [ ] Submit a knowledge trade that proposes a public-contract coverage review in the Feature Definitions standard without requiring one requirement per command.
+- [ ] Verify the complete corpus and its cited CLI contracts.
 
 ## Files touched
 
-- `docs/features/index.md` and the affected Feature Definition area files.
-- New flat `docs/features/<area>.md` files only where a distinct public command family has no current area.
+- `docs/features/agoras.md`, `docs/features/management.md`, and `docs/features/repository-operations.md`.
 - `docs/roadmap/KI-TOOL-CLI-019-reengineer-feature-definitions.md`.
-- One outbound knowledge-trade record only after the local corpus is verified.
+- One outbound Feature Definitions knowledge-trade record.
 
 ## Verify
 
 - `ki repo audit --skill ki-feature-definitions --repo .`.
-- The existing named contract tests for every requirement cited by an updated or new area.
-- `bun run test:coverage` and `bunx tsc --noEmit`.
-- A review confirms each public command family is covered once, requirements state as-built behaviour, and unbuilt work appears only in `Gaps`.
+- `bunx vitest run src/tests/cli/agora/agora.test.ts src/tests/cli/manage/diag.test.ts src/tests/cli/manage/local-commands.test.ts src/tests/cli/manage/repair.test.ts src/tests/cli/repo/roadmap.test.ts`.
+- `bunx tsc --noEmit`.
+- A review confirms every public contract surface has a requirement, Gap, or explicit area-level exclusion rather than implying one requirement per command.
 
 ## Dependencies / blocks
 
-This is independently executable documentation work. It must not invent CLI behaviour or alter the Feature Definitions standard; any reusable guidance learning is submitted to the Harness only after local verification.
+This is independently executable documentation work. It must not invent CLI behaviour or alter the Feature Definitions standard; the Harness retains authority over the submitted standard improvement.
 
 ## Discussion
 
