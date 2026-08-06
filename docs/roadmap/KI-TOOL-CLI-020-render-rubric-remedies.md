@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-020
 title: Render rubric remedies
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: b80ef17092abbdb8226a375b4921f4ac63c09358
@@ -43,3 +43,53 @@ This item does not define remediation classes, choose guarded actions, execute j
 - Generated publication fixtures show remediation and complete reviewer guidance.
 - Dry-run and apply fixtures prove only `automatic` callbacks create proposals or writes.
 - Focused CLI tests and `bunx tsc --noEmit` pass.
+
+## Review
+
+### Delivered
+
+The rubric host now enforces complete v1 remediation and judgment-review metadata, publishes that metadata, and executes only automatic mechanical remediation callbacks.
+
+### Summary of changes
+
+The runtime loader validates the remediation class, callback or guidance, and guarded-review relationship for every mechanical aspect. It also validates reviewer evidence, prompts, outcome vocabulary, and guidance. Generated publications render the new material, while the command-publication option is now named `--allow-commands`.
+
+### Verification
+
+```bash
+bunx vitest run \
+  src/tests/cli/repo/conform-execution.test.ts \
+  src/tests/cli/repo/conform-writes.test.ts \
+  src/tests/cli/repo/repo.test.ts \
+  src/tests/cli/repo/targets.test.ts \
+  src/tests/cli/repo/validation.test.ts \
+  src/tests/cli/root/user.test.ts \
+  src/tests/cli/skill/rubric-publication.test.ts \
+  src/tests/cli/skill/rubric.test.ts \
+  src/tests/cli/transaction/transaction.test.ts
+bunx tsc --noEmit
+```
+
+The focused run passed 189 tests, and the TypeScript gate passed.
+
+### Outstanding concerns
+
+`ki repo audit --skill ki-roadmap --repo .` currently refuses the active Harness `ki-roadmap` rubric because its existing mechanical item lacks the newly mandatory remediation metadata. The corresponding Harness changes are being rolled out; this is outside the delivered host boundary and remains a known integration concern.
+
+### Post-change review
+
+The host preserves `contract: 1`, rejects contract 2, and does not introduce a compatibility path for incomplete metadata. Only automatic callbacks can publish remediation, so diagnostic and guarded guidance remains non-executing.
+
+### Mini recap
+
+The scope and its verification are complete. The remaining audit failure is an external rollout dependency, not an unrecorded implementation change.
+
+## Done
+
+Accepted by the user on 2026-08-06 with the known Harness rubric rollout concern retained above. Keep this record until explicitly selected for pruning.
+
+## Discussion
+
+### Contract coordination
+
+The host-side validation and the corresponding Harness metadata must become available together. The temporary audit refusal correctly prevents a partial runtime contract from being treated as compatible while the rollout completes.
