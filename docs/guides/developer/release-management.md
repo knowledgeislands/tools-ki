@@ -34,7 +34,7 @@ The public-key file is safe to commit and distribute. Copy it into the tracked t
 cp "$key_dir/ki-release-signing-public.pem" release/ki-release-signing-public.pem
 ```
 
-The tracked [public key](../../release/ki-release-signing-public.pem) must match the private key stored in GitHub; the workflow compares them before it signs a release.
+The tracked [public key](../../../release/ki-release-signing-public.pem) must match the private key stored in GitHub; the workflow compares them before it signs a release.
 
 ## Require immutable releases
 
