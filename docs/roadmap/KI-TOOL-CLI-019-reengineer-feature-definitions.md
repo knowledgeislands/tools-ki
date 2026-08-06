@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-019
 title: Re-engineer feature definitions
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: a002a6c85a5607c0901d7d2da4323c99e949b064
 ---
 
 ## Goal
