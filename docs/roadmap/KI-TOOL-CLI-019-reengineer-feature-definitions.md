@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-019
 title: Re-engineer feature definitions
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: a002a6c85a5607c0901d7d2da4323c99e949b064
@@ -53,6 +53,34 @@ The corpus already defines twelve areas for acquisition, Agoras, bootstrap, the 
 ## Dependencies / blocks
 
 This is independently executable documentation work. It must not invent CLI behaviour or alter the Feature Definitions standard; the Harness retains authority over the submitted standard improvement.
+
+## Review
+
+### Delivered
+
+Added as-built requirements for Agora profile membership and opening, management diagnostics, repair, cleanup, and documentation lookup, and repository-roadmap inventory and guarded maintenance. Submitted [TRD-094f7987](../../-/_TRADES/knowledgeislands/ki-agentic-harness/TRD-094f7987.md) to propose a bounded public-contract coverage review for the shared Feature Definitions standard.
+
+### Summary of changes
+
+The corpus now records the previously unrepresented tested public surfaces without requiring a one-to-one command-to-requirement mapping. Each requirement remains behaviour-level and cites its existing CLI-contract evidence.
+
+### Verification
+
+- Baseline: `a002a6c85a5607c0901d7d2da4323c99e949b064`.
+- Delivery: `43b63546dc0e2a1818d9d3f1fb7b1a648fb0e587`.
+- Passed: `bunx vitest run src/tests/cli/agora/agora.test.ts src/tests/cli/manage/diag.test.ts src/tests/cli/manage/local-commands.test.ts src/tests/cli/manage/repair.test.ts src/tests/cli/repo/roadmap.test.ts` (53 tests), `bunx tsc --noEmit`, `ki repo audit --skill ki-feature-definitions --repo .`, and `ki repo audit --skill ki-authoring --repo .`.
+
+### Outstanding concerns
+
+The Harness alone decides whether and how to tighten the shared Feature Definitions standard. Its response to the submitted knowledge trade is not a blocker to this completed local documentation work.
+
+### Post-change review
+
+The corpus still treats requirements as bounded behavioural contracts. The proposed coverage review makes omissions visible through human judgment against a product's public contract inventory, without manufacturing a mechanical claim of completeness or flattening every command into a separate requirement.
+
+### Mini recap
+
+CLI-019 closes the gap between the current public CLI and its as-built documentation, and records the reusable standard learning at the Harness boundary.
 
 ## Discussion
 
