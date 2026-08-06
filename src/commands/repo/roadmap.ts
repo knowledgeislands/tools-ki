@@ -88,7 +88,7 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
         lines.push(`│  ${lastFocus ? '╰─' : '├─'} ${focus.name} (${focus.proposals.length})`)
         for (const [proposalIndex, proposal] of focus.proposals.entries())
           lines.push(
-            `${itemPrefix}${proposalIndex === focus.proposals.length - 1 ? '╰─' : '├─'} ${proposal.identity.slice(focus.name.length + 1)} [${proposal.status}] ${proposal.title}`
+            `${itemPrefix}${proposalIndex === focus.proposals.length - 1 ? '╰─' : '├─'} ${proposal.code ?? 'undefined'} [${proposal.status}] ${proposal.title}`
           )
       }
     if (planning.diagnostics.length) {

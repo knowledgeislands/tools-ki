@@ -5,6 +5,7 @@ import { KiError } from './errors.ts'
 
 export interface StreamProposal {
   readonly identity: string
+  readonly code?: string
   readonly title: string
   readonly status: string
 }
@@ -55,10 +56,10 @@ const readProposal = async (directory: string, focus: string, name: string): Pro
   const path = join(directory, name, `${name}.md`)
   await physicalFile(path, `Knowledge Base stream proposal ${focus}/${name} must be a regular file`)
   const fields = frontmatter(await readFile(path, 'utf8'), path)
-  const { type, title, status } = fields
+  const { type, code, title, status } = fields
   if (type !== 'stream-proposal' || !title || !status)
     throw new KiError(`Knowledge Base stream proposal ${focus}/${name} must declare type, title, and status`, 2)
-  return { identity: `${focus}/${name}`, title, status }
+  return { identity: `${focus}/${name}`, ...(code ? { code } : {}), title, status }
 }
 
 interface ProposalRead {

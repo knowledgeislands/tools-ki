@@ -26,7 +26,10 @@ describe('[ki repo roadmap]', () => {
     await box.config.write('ki/config.toml', 'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = []\n')
     await box.project.write('knowledge/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
     await box.project.write('knowledge/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
-    await box.project.write('knowledge/Streams/Now/Proposal/Proposal.md', '---\ntype: stream-proposal\ntitle: Native proposal\nstatus: awaiting-review\n---\n')
+    await box.project.write(
+      'knowledge/Streams/Now/Proposal/Proposal.md',
+      '---\ntype: stream-proposal\ncode: KBS-001\ntitle: Native proposal\nstatus: awaiting-review\n---\n'
+    )
     await box.project.write('knowledge/Streams/Now/Second/Second.md', '---\ntype: stream-proposal\ntitle: Second proposal\nstatus: draft\n---\n')
     await box.project.mkdir('knowledge/Streams/Now/Pruned Proposal')
     await box.project.write('knowledge/Streams/Soon/Soon.md', '---\ntype: stream-focus\n---\n')
@@ -37,7 +40,7 @@ describe('[ki repo roadmap]', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain(
-      '├─ streams (3) · Knowledge Base Streams\n│  ├─ Now (2)\n│  │  ├─ Proposal [awaiting-review] Native proposal\n│  │  ╰─ Second [draft] Second proposal\n│  ╰─ Soon (1)\n│     ╰─ Later [ready] Later proposal'
+      '├─ streams (3) · Knowledge Base Streams\n│  ├─ Now (2)\n│  │  ├─ KBS-001 [awaiting-review] Native proposal\n│  │  ╰─ undefined [draft] Second proposal\n│  ╰─ Soon (1)\n│     ╰─ undefined [ready] Later proposal'
     )
     expect(result.output).toContain('╰─ summary: PROPOSALS=3 FOCUSES=2 TRADES=0 IMPORTS=0 EXPORTS=0')
     expect(await box.project.read('knowledge/Streams/Now/Proposal/Proposal.md')).toBe(before)
@@ -65,7 +68,7 @@ describe('[ki repo roadmap]', () => {
     expect(missing.output).toContain('has no physical Streams directory')
     expect(missingIndex.output).toContain('has no physical Streams/Streams.md file')
     expect(malformed.exitCode).toBe(1)
-    expect(malformed.output).toContain('Valid [draft] Valid')
+    expect(malformed.output).toContain('undefined [draft] Valid')
     expect(malformed.output).toContain('stream diagnostics (2)')
     expect(malformed.output).toContain('must declare type, title, and status')
     expect(malformed.output).toContain('has invalid stream-proposal frontmatter')
