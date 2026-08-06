@@ -25,7 +25,7 @@ VENDOR = "cross-repository-vendoring"
 
 ["knowledgeislands/ki-agentic-harness:ki-trades".exports_to]
 work = ["https://github.com/knowledgeislands/ki-agentic-harness", "https://github.com/knowledgeislands/ki-website", "https://github.com/knowledgeislands/tools-mgit"]
-knowledge = ["https://github.com/knowledgeislands/ki-agentic-harness", "https://github.com/knowledgeislands/ki-website"]
+knowledge = ["https://github.com/knowledgeislands/ki-agentic-harness", "https://github.com/knowledgeislands/ki-website", "https://github.com/krisb/dotfiles"]
 
 ["knowledgeislands/ki-agentic-harness:ki-trades".imports_from]
 work = ["https://github.com/knowledgeislands/ki-agentic-harness", "https://github.com/knowledgeislands/tools-mgit"]
