@@ -22,7 +22,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 #### Local management
 
-- `ki manage completion <shell>` (Bash and Zsh scripts derived from the registered command tree, including nested commands, options, closed values, and local path completion)
+- `ki manage completion <shell>`
 - `ki manage outdated`
 - `ki manage missing`
 - `ki manage update`
@@ -48,7 +48,6 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki agora list`
 - `ki agora show <agora>`
 - `ki agora open <agora>`
-- `$XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora` profiles define named user-level project collections for repository selection and ordered Zed windows.
 
 #### Repository options
 
@@ -60,8 +59,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo init`
 - `ki repo audit`
 - `ki repo conform`
-- `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
-- `ki repo roadmap list` (framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context)
+- `ki repo roadmap list`
 - `ki repo roadmap prune [id]`
 - `ki repo roadmap promote <id> [horizon]`
 - `ki repo roadmap demote <id> [horizon]`
@@ -89,11 +87,11 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki trade routes add`
 - `ki trade routes remove`
-- `ki trade routes list [--estate] [--incomplete]` (framed local or registered-estate route inventory)
+- `ki trade routes list [--estate] [--incomplete]`
 - `ki trade routes check`
-- `ki trade new` (creates a local export once this repository declares the route; receiver activation remains reciprocal)
+- `ki trade new`
 - `ki trade receive`
-- `ki trade list` (framed registered-estate inventory)
+- `ki trade list`
 - `ki trade show`
 - `ki trade release`
 - `ki trade prune`
@@ -108,6 +106,17 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki dev local on`
 - `ki dev local off`
 - `ki dev skill rubric`
+
+### Behaviours
+
+- `ki manage completion <shell>` emits Bash and Zsh scripts derived from the registered command tree, including nested commands, options, closed values, and local path completion.
+- `$XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora` profiles define named user-level project collections for repository selection and ordered Zed windows.
+- `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
+- `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context.
+- Local `ki registry add` records every selected physical KI repository root without applying repairs; `ki repo conform` does the same before evaluating its declaration or conformance findings.
+- `ki trade routes list [--estate] [--incomplete]` is a framed local or registered-estate route inventory.
+- `ki trade new` creates a local export once this repository declares the route; receiver activation remains reciprocal.
+- `ki trade list` is a framed registered-estate inventory.
 
 ### Distribution baseline
 
