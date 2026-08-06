@@ -97,9 +97,7 @@ const candidateValues = (node: CompletionNode): string =>
   [
     ...node.commands.map((command) => `${command.name}:${command.description}`),
     ...node.options.flatMap((option) => option.names.map((name) => `${name}:${option.description}`))
-  ]
-    .map(shellQuote)
-    .join(' ')
+  ].join('\n')
 
 const renderZsh = (nodes: readonly CompletionNode[]): string => `#compdef ki
 zstyle ':completion:*:ki-commands' verbose yes
