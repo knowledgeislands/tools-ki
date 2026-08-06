@@ -987,4 +987,71 @@ describe('[ki trade]', () => {
     box.cd('receiver')
     expect((await box.run(['ki', 'trade', 'prune', prematureId])).output).toContain('premature decision sender release')
   })
+
+  test('narrows the local route list to incomplete routes and omits unconfigured repositories from the estate', async () => {
+    const { box } = await configuredPair()
+    await box.project.write(
+      'receiver/.ki-config.toml',
+      repositoryConfiguration('example/receiver', {}, { work: [sourceHome] })
+    )
+
+    expect(await box.run('ki trade routes list --incomplete')).toEqual({
+      exitCode: 0,
+      output: `╭─ KI TRADE ROUTES\n│  📁 example/source\n│     ${sourceHome}\n│  ✦ 1 route\n├─ results\n│  ╰─ export\n│     ╰─ knowledge ${receiverHome} [awaiting receiver activation]\n╰─ summary: ROUTES=1\n`
+    })
+
+    await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
+    await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver'))
+    expect(await box.run('ki trade routes list --estate')).toEqual({
+      exitCode: 0,
+      output:
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 0 routes\n├─ results\n│  ╰─ routes: none\n╰─ summary: ROUTES=0 ACTIVE=0 INCOMPLETE=0\n'
+    })
+
+    await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { work: [receiverHome] }))
+    await box.project.write(
+      'receiver/.ki-config.toml',
+      `["knowledgeislands/ki-agentic-harness:ki-repo"]\nrepository = "${receiverHome}"\n`
+    )
+    expect(await box.run('ki trade routes list --estate')).toEqual({
+      exitCode: 0,
+      output:
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ ⚒ example/source → example/receiver [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
+    })
+  })
+
+  test('rejects ambiguous cleanup grammar, reports an already-received copy, and marks prune eligibility', async () => {
+    const { box } = await configuredPair()
+    const created = await createTrade(box, 'work')
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+
+    expect(await box.run(['ki', 'trade', 'release', id, '--eligible'])).toEqual({
+      exitCode: 2,
+      output: 'ki: error: ki trade release accepts either one trade id or --eligible\n'
+    })
+    expect(await box.run(['ki', 'trade', 'prune'])).toEqual({
+      exitCode: 2,
+      output: 'ki: error: ki trade prune requires one trade id or --eligible\n'
+    })
+
+    box.cd('receiver')
+    const received = await box.run(['ki', 'trade', 'receive', id])
+    const repeated = await box.run(['ki', 'trade', 'receive', id])
+    expect(received).toEqual({ exitCode: 0, output: `ki trade receive: received ${id}\n` })
+    expect(repeated).toEqual({ exitCode: 0, output: `ki trade receive: existing ${id}\n` })
+
+    const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
+    await box.project.write(
+      inboundPath,
+      (await box.project.read(inboundPath)).replace(
+        'decision_status: unconsidered',
+        'decision_status: adopted\nadopted_as: "KI-LOCAL-001"'
+      )
+    )
+    box.cd('..')
+    expect((await box.run(['ki', 'trade', 'release', id])).exitCode).toBe(0)
+    expect((await box.run('ki trade list --direction import')).output).toContain(
+      `⚒ ${id} import ← source [submitted · received · adopted · prune eligible] [decision] Route contract`
+    )
+  })
 })
