@@ -72,6 +72,8 @@ jobs:
           ref: ${{ needs.validate.outputs.tag-commit }}
           persist-credentials: false
       - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
+      - if: matrix.asset-target == 'linux-x64'
+        run: sudo apt-get update && sudo apt-get install --yes zsh
       - run: bun install --frozen-lockfile
       - run: bun run test
       - if: matrix.asset-target == 'linux-x64'
