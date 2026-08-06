@@ -28,6 +28,18 @@ _Verify:_ `src/tests/cli/repo/repair.test.ts` — `registers the selected physic
 
 _Verify:_ `src/tests/cli/manage/update.test.ts` — `upgrades the uniquely resolved providers declared by the current repository`.
 
+### REPO-OPS-005 — Governed roadmap inventory
+
+`ki repo roadmap list` MUST render the selected repository's governed work inventory from its declared planning source, including native Knowledge Base Streams without creating or requiring a flat roadmap.
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `reads declared Knowledge Base Streams without requiring or changing a flat roadmap` and `lists and filters grouped governed work items without JSON output`.
+
+### REPO-OPS-006 — Guarded roadmap maintenance
+
+`ki repo roadmap` MUST prune only completed work records and move one unambiguous record only through valid directional horizon transitions.
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `prunes only completed items across selected repositories after every target is valid`, `promotes and demotes one explicit item with directional horizon validation`, and `rejects ambiguous roadmap identifiers before changing or pruning a work item`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

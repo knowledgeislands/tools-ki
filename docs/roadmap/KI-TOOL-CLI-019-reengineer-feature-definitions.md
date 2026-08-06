@@ -31,11 +31,11 @@ The corpus already defines twelve areas for acquisition, Agoras, bootstrap, the 
 
 ## Steps
 
-- [ ] Add as-built Agora requirements for profile membership and opening behaviour.
-- [ ] Add as-built management requirements for direct diagnostics, safe projection repair, and read-only cleanup and documentation lookup.
-- [ ] Add an as-built repository-roadmap requirement for inventory and guarded lifecycle maintenance.
-- [ ] Submit a knowledge trade that proposes a public-contract coverage review in the Feature Definitions standard without requiring one requirement per command.
-- [ ] Verify the complete corpus and its cited CLI contracts.
+- [x] Add as-built Agora requirements for profile membership and opening behaviour.
+- [x] Add as-built management requirements for direct diagnostics, safe projection repair, and read-only cleanup and documentation lookup.
+- [x] Add an as-built repository-roadmap requirement for inventory and guarded lifecycle maintenance.
+- [x] Submit a knowledge trade that proposes a public-contract coverage review in the Feature Definitions standard without requiring one requirement per command.
+- [x] Verify the complete corpus and its cited CLI contracts.
 
 ## Files touched
 

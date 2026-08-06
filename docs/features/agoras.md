@@ -22,6 +22,18 @@ _Verify:_ `src/commands/agora/discover.ts` — `discoverAgoraRepositories`; `src
 
 _Verify:_ `src/tests/cli/agora/agora.test.ts` — `rejects malformed profile documents` and `rejects missing and unsafe profile paths`.
 
+### AGORA-004 — Explicit profile membership
+
+`ki agora add` and `ki agora remove` MUST add or remove one named physical project from an explicit Agora profile while preserving the profile's validated membership model.
+
+_Verify:_ `src/tests/cli/agora/agora.test.ts` — `creates, mutates, discovers, and selects named global repository profiles`.
+
+### AGORA-005 — Profile inspection and opening
+
+`ki agora list` and `ki agora show` MUST expose the available and selected profile state, while `ki agora open` MUST launch the selected Zed profile in one process and report a launch failure.
+
+_Verify:_ `src/tests/cli/agora/agora.test.ts` — `lists, shows, and opens a project-name ordered Zed profile in one window` and `reports Zed launch failures with and without process output`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.
