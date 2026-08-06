@@ -197,7 +197,22 @@ describe('[ki repo validation]', () => {
         "mechanical: { level: 'FAIL', remediation: { class: 'guarded', guidance: 'Choose.' }, audit: { phase: 'PRIMARY', run: async () => [] } }",
         'guarded remediation must have a judgment aspect'
       ],
-      ['incomplete judgment', "judgment: { prompt: 'Review it.' }", 'judgment must have an evidence scope']
+      [
+        'diagnostic without guidance',
+        "mechanical: { level: 'FAIL', remediation: { class: 'diagnostic' }, audit: { phase: 'PRIMARY', run: async () => [] } }",
+        'diagnostic remediation must have guidance'
+      ],
+      ['incomplete judgment', "judgment: { prompt: 'Review it.' }", 'judgment must have an evidence scope'],
+      [
+        'judgment repeating an outcome',
+        "judgment: { scope: 'the skill body', prompt: 'Review it.', outcomes: ['PASS', 'PASS'], guidance: 'Fix it.' }",
+        'judgment must have unique non-empty outcomes'
+      ],
+      [
+        'judgment without conforming guidance',
+        "judgment: { scope: 'the skill body', prompt: 'Review it.', outcomes: ['PASS'] }",
+        'judgment must have conforming guidance'
+      ]
     ])('rejects v1 rubric metadata with %s', async (_case, aspect, expected) => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
