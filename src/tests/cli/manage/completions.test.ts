@@ -140,8 +140,8 @@ describe('[ki manage completion]', () => {
 
     await expect(execute('bash', ['-n', 'completion.bash'], { cwd: box.root.path })).resolves.toBeDefined()
     await expect(execute('zsh', ['-n', 'completion.zsh'], { cwd: box.root.path })).resolves.toBeDefined()
-    await expect(execute('zsh', ['-fc', 'autoload -Uz compinit; compinit -D; source completion.zsh'], { cwd: box.root.path })).resolves.toBeDefined()
-    const zshCandidates = await execute('zsh', ['-fc', 'autoload -Uz compinit; compinit -D; source completion.zsh; _ki_candidates ""'], {
+    await expect(execute('zsh', ['-fc', 'autoload -Uz compinit; compinit -D -i; source completion.zsh'], { cwd: box.root.path })).resolves.toBeDefined()
+    const zshCandidates = await execute('zsh', ['-fc', 'autoload -Uz compinit; compinit -D -i; source completion.zsh; _ki_candidates ""'], {
       cwd: box.root.path
     })
     expect(zshCandidates.stdout.split('\n')).toEqual(
