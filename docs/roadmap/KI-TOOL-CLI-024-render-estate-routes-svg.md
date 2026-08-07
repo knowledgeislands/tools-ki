@@ -2,7 +2,7 @@
 id: KI-TOOL-CLI-024
 title: Render estate routes SVG
 theme: cli
-horizon: next
+horizon: now
 status: draft
 blocks: []
 blocked-by: [KI-TOOL-CLI-025]

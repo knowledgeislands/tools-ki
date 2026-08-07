@@ -2,7 +2,7 @@
 id: KI-TOOL-VENDOR-001
 title: Define skill provenance
 theme: cross-repository-vendoring
-horizon: next
+horizon: now
 status: draft
 blocks: []
 blocked-by: [KI-TOOL-CLI-025]
