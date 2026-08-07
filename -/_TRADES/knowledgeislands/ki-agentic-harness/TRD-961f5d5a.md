@@ -7,6 +7,7 @@ receiver: knowledgeislands/ki-agentic-harness
 kind: knowledge
 source_ref: "-/_TRADES/_PREPARATIONS"
 observation: decision
+phase: submitted
 ---
 # TRD-961f5d5a: Encode trade lifecycle in the record rather than its directory
 
