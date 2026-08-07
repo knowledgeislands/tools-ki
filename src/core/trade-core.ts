@@ -794,6 +794,9 @@ const receivableTrade = async (
       const path = tradePath(repository.root, 'outbound', peer, id)
       if (!(await lstat(path).catch(() => undefined))?.isFile()) continue
       const committed = await committedFile(context, repository.root, path)
+      // A preparation shares the submitted record's path, so it is visible here but not yet
+      // receivable: the sender has not frozen it.
+      if (phaseOf(committed.contents, path) !== 'submitted') continue
       const record = recordFromContents(committed.contents, path, 'outbound')
       if (record.kind !== kind || record.sender !== repository.configuration.identity || record.receiver !== peer)
         continue
@@ -837,7 +840,13 @@ export const previewReceivableTrades = async (context: KiContext): Promise<reado
     }
   }
   const records: TradeRecord[] = []
-  for (const id of [...ids].sort()) records.push((await receivableTrade(context, local, id)).record)
+  for (const id of [...ids].sort()) {
+    // The directory now holds the sender's preparations alongside its submitted records, so
+    // an id here is a candidate rather than a guarantee. Preview lists what is receivable and
+    // stays silent about the rest; asking for one by id still reports why it is not.
+    const candidate = await receivableTrade(context, local, id).catch(() => undefined)
+    if (candidate) records.push(candidate.record)
+  }
   return records
 }
 
