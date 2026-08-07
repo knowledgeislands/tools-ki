@@ -255,6 +255,35 @@ describe('[ki trade]', () => {
     expect(await box.project.read('receiver/.ki-config.toml')).toContain(`work = ["${sourceHome}"]`)
   })
 
+  test('groups estate routes by exporter when several repositories declare several peers', async () => {
+    const box = await sandbox()
+    const thirdHome = home('example/third')
+    const source = await realpath(box.project.path)
+    const receiver = await box.project.mkdir('receiver')
+    const third = await box.project.mkdir('third')
+    // Source reaches two peers and receiver reaches one, so the listing has a
+    // non-final exporter and a non-final peer — the branches a single pair never reaches.
+    await box.project.write(
+      '.ki-config.toml',
+      repositoryConfiguration('example/source', { work: [receiverHome, thirdHome] })
+    )
+    await box.project.write(
+      'receiver/.ki-config.toml',
+      repositoryConfiguration('example/receiver', { knowledge: [thirdHome] }, { work: [sourceHome] })
+    )
+    await box.project.write(
+      'third/.ki-config.toml',
+      repositoryConfiguration('example/third', {}, { work: [sourceHome], knowledge: [receiverHome] })
+    )
+    await box.config.write('ki/config.toml', localConfiguration([source, receiver, third]))
+
+    expect(await box.run('ki trade routes list --estate')).toEqual({
+      exitCode: 0,
+      output:
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 3 routes\n├─ results\n│  ├─ example/receiver\n│  │  ╰─ → example/third · knowledge [active]\n│  ╰─ example/source\n│     ├─ → example/receiver · work [active]\n│     ╰─ → example/third · work [active]\n╰─ summary: ROUTES=3 ACTIVE=3 INCOMPLETE=0\n'
+    })
+  })
+
   test('lists incomplete route declarations across the registered estate', async () => {
     const { box } = await configuredPair()
     const estate = await box.run('ki trade routes list --estate')
@@ -263,7 +292,7 @@ describe('[ki trade]', () => {
     expect(estate).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 4 routes\n├─ results\n│  ├─ ◇ example/source → example/receiver [active]\n│  ├─ ◇ example/source → example/receiver [active]\n│  ├─ ⚒ example/source → example/receiver [active]\n│  ╰─ ⚒ example/source → example/receiver [active]\n╰─ summary: ROUTES=4 ACTIVE=4 INCOMPLETE=0\n'
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · knowledge, work [active]\n╰─ summary: ROUTES=1 ACTIVE=1 INCOMPLETE=0\n'
     })
     expect(incomplete).toEqual({
       exitCode: 0,
@@ -279,7 +308,7 @@ describe('[ki trade]', () => {
     expect(await box.run('ki trade routes list --estate --incomplete')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ ◇ example/source → example/receiver [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · knowledge [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
     })
   })
 
@@ -1021,7 +1050,7 @@ describe('[ki trade]', () => {
     expect(await box.run('ki trade routes list --estate')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ ⚒ example/source → example/receiver [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · work [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
     })
   })
 
