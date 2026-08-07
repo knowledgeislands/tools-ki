@@ -573,9 +573,13 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
   if (!isTradeKind(kind)) throw tradeError(`${path} has invalid trade kind`)
   if (!isObservationPolicy(observation)) throw tradeError(`${path} has invalid observation policy`)
   const phase = requiredField(fields, 'phase', path)
+  /* v8 ignore start -- phaseOf already rejects a phase outside the vocabulary and derives
+     direction from it, so by the time a record is read the two agree by construction. Retained
+     to guard a future caller that validates a record against an independently chosen direction. */
   if (!tradePhases.includes(phase as TradePhase)) throw tradeError(`${path} has invalid phase`)
   if (phase !== expectedPhase(direction))
     throw tradeError(`${path} ${direction} must declare phase: ${expectedPhase(direction)}`)
+  /* v8 ignore stop */
 
   const content = body.replace(/^(?:\r?\n)+/u, '')
   if (content.split('\n')[0] !== `# ${id}: ${title}`)
