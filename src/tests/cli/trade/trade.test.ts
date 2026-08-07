@@ -680,6 +680,26 @@ describe('[ki trade]', () => {
     expect(retiredUuidId.output).toContain('trade id must use TRD-')
   })
 
+  test('previews only frozen submissions while a sender still holds a preparation', async () => {
+    const { box } = await configuredPair()
+    const submitted = await createTrade(box, 'work', { title: 'Frozen contract' })
+    const submittedId = /TRD-[0-9a-f]{8}/u.exec(submitted.output)?.[0] as string
+    // Retiring _PREPARATIONS put preparations on the submitted record's path, so the receive
+    // scan sees them. One unfrozen preparation must not hide the submissions beside it.
+    const preparing = await box.run(prepareTrade('work', { title: 'Still preparing' }))
+    const preparingId = /TRD-[0-9a-f]{8}/u.exec(preparing.output)?.[0] as string
+
+    box.cd('receiver')
+    const preview = await box.run(['ki', 'trade', 'receive', '--all'])
+    const askedDirectly = await box.run(['ki', 'trade', 'receive', preparingId])
+
+    expect(preview.exitCode).toBe(0)
+    expect(preview.output).toContain(submittedId)
+    expect(preview.output).not.toContain(preparingId)
+    // Silence in a preview is not a refusal: asking for it by id still says why.
+    expect(askedDirectly.exitCode).not.toBe(0)
+  })
+
   test('rejects malformed outbound envelopes observed by the receiver', async () => {
     const { box } = await configuredPair()
     const created = await createTrade(box, 'work')

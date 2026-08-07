@@ -795,8 +795,10 @@ const receivableTrade = async (
       if (!(await lstat(path).catch(() => undefined))?.isFile()) continue
       const committed = await committedFile(context, repository.root, path)
       // A preparation shares the submitted record's path, so it is visible here but not yet
-      // receivable: the sender has not frozen it.
-      if (phaseOf(committed.contents, path) !== 'submitted') continue
+      // receivable: the sender has not frozen it. Skip only on a phase that reads cleanly —
+      // a record too malformed to declare one must still reach the reader that can say why.
+      const candidatePhase = readPhase(committed.contents)
+      if (candidatePhase !== undefined && candidatePhase !== 'submitted') continue
       const record = recordFromContents(committed.contents, path, 'outbound')
       if (record.kind !== kind || record.sender !== repository.configuration.identity || record.receiver !== peer)
         continue
@@ -921,12 +923,18 @@ const directionForPhase: Readonly<Record<TradePhase, TradeDirection>> = {
   received: 'inbound'
 }
 
-const phaseOf = (contents: string, path: string): TradePhase => {
+/** The declared phase, or undefined where the record is too malformed to say. */
+const readPhase = (contents: string): TradePhase | undefined => {
   const match = /^---\n([\s\S]*?)\n---\n/u.exec(contents)
   const line = (match?.[1] ?? '').split('\n').find((entry) => entry.startsWith('phase:'))
   const phase = line?.slice('phase:'.length).trim()
-  if (!phase || !tradePhases.includes(phase as TradePhase)) throw tradeError(`${path} has invalid phase`)
-  return phase as TradePhase
+  return phase && tradePhases.includes(phase as TradePhase) ? (phase as TradePhase) : undefined
+}
+
+const phaseOf = (contents: string, path: string): TradePhase => {
+  const phase = readPhase(contents)
+  if (!phase) throw tradeError(`${path} has invalid phase`)
+  return phase
 }
 
 const peerDirectories = async (root: string, area: '+' | '-'): Promise<readonly string[]> => {
