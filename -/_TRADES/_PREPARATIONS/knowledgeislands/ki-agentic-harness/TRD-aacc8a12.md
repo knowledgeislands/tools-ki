@@ -1,14 +1,15 @@
 ---
 id: TRD-aacc8a12
-title: "Reduce repetition in the repository configuration contract"
+title: 'Reduce repetition in the repository configuration contract'
 created_at: 2026-08-07T06:26:12Z
 sender: knowledgeislands/tools-ki
 receiver: knowledgeislands/ki-agentic-harness
 kind: knowledge
-source_ref: ".ki-config.toml"
+source_ref: '.ki-config.toml'
 observation: decision
 phase: preparing
 ---
+
 # TRD-aacc8a12: Reduce repetition in the repository configuration contract
 
 ## Context
@@ -19,6 +20,10 @@ The `.ki-config.toml` contract requires every skill declaration to be a fully qu
 
 Consider a revised layout that declares harness resolution once for the repository and names skills under a `[skills.<name>]` namespace, so the common single-harness case carries no repetition: a `[repo]` table holding `harnesses` as a list, bare `[skills.ki-repo]` tables resolved against that list, and nested configuration reached as `[skills.ki-roadmap.themes]`. A skill drawn from a harness outside the declared list keeps a fully qualified quoted key, so the exceptional case stays visibly exceptional rather than requiring a reserved key inside every skill's configuration namespace. Resolving a bare name against the declared list should bind exactly one provider, report that no declared harness provides the skill when there is none, and require explicit qualification when more than one does. That last rule is not new machinery: `resolveInstalledSkill` in tools-ki already reports that a skill is provided by multiple installed harnesses, and the existing contract already guarantees that a skill name is unique per repository regardless of provider. Resolution should use the declared list rather than whichever harnesses happen to be installed, so that a version-controlled file means the same thing on every machine.
 
+The same repetition appears inside the trade route declaration, which keys routes first by direction and then by kind, so a partner repository is named once for every kind and direction it participates in. In this repository four distinct partners occupy nine URL entries spread across `exports_to.work`, `exports_to.knowledge`, `imports_from.work`, and `imports_from.knowledge`. Keying routes by the partner repository instead would name each partner once and carry its kinds as arrays, so that `[skills.ki-trades.routes]` holds one entry per partner of the form `"https://github.com/owner/name" = { export = ["work", "knowledge"], import = ["work"] }`. That makes the whole relationship with one repository readable on a single line rather than assembled by scanning four lists, lets TOML itself reject a duplicated partner instead of the hand-written uniqueness and lexical-ordering check the parser currently applies to each list separately, removes the explicit empty array a direction needs when it carries no kinds, and shortens `exports_to` and `imports_from` to `export` and `import` because the preposition's object has become the key. A route declaration can afford to carry nothing but its kinds, because route state is computed from the peer's reciprocal declaration rather than stored in the file.
+
 ## Constraints
 
 The Harness retains every decision on whether to change the contract, on key names and nesting, and on migration sequencing across the estate. This is an observation and a proposal, not an agreed design. One consumer cost belongs in the receiver's assessment: today a declaration's identity is read literally from the table header, and under a bare-name layout it can only be derived once resolution has bound a provider, so the parsed declaration and the resolved skill become distinct shapes. In tools-ki that reaches beyond configuration parsing into skill selection, capability status reporting, and the path that reconstructs a qualified identity when declaring a skill. The parser, skill declaration, and skill undeclaration all become simpler, so the cost is concentrated in identity derivation rather than spread across the consumer. No compatibility shim is assumed in either repository; an unmigrated file fails loudly today because a bare table name is already rejected as unqualified, which makes a single clean cutover safe.
+
+Two questions about the route shape belong to the Harness rather than to this proposal. Trade records identify a repository as `owner/name` while route declarations use a canonical HTTPS URL, so keying routes by repository forces a deliberate choice between matching the record form and keeping the host inside the key; this proposal assumes the URL without arguing the point. Separately, an inline table suits the declaration while a route carries only its kinds, but TOML does not allow an inline table to span lines, so a route that later gained a per-partner property would have to convert to a nested table header whose key is a full URL; whether to accept that later conversion or adopt the longer header immediately is the receiver's call.
