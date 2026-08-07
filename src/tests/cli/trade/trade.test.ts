@@ -255,6 +255,27 @@ describe('[ki trade]', () => {
     expect(await box.project.read('receiver/.ki-config.toml')).toContain(`work = ["${sourceHome}"]`)
   })
 
+  test('tolerates a phase field on either copy without breaking the projection comparison', async () => {
+    const { box } = await configuredPair()
+    const created = await createTrade(box, 'work', {}, () => Date.UTC(2026, 7, 3, 12, 0, 0))
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+    box.cd('receiver')
+    await box.run(['ki', 'trade', 'receive', id])
+    const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
+    // A counterpart that has adopted the proposed lifecycle vocabulary writes a phase the
+    // sender's copy does not carry; neither reading the record nor pairing the two may fail.
+    const inbound = await box.project.read(inboundPath)
+    box.cd('..')
+    await box.project.write(inboundPath, inbound.replace('\n---\n', '\nphase: received\n---\n'))
+
+    const listed = await box.run('ki trade list')
+
+    expect(listed.exitCode).toBe(0)
+    expect(listed.output).toContain('received')
+    expect(listed.output).not.toContain('unrecognised trade field')
+    expect(await box.run(['ki', 'trade', 'show', id])).toMatchObject({ exitCode: 0 })
+  })
+
   test('groups estate routes by exporter when several repositories declare several peers', async () => {
     const box = await sandbox()
     const thirdHome = home('example/third')

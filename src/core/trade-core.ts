@@ -54,7 +54,8 @@ export interface TradeRecord {
   readonly kind: TradeKind
   readonly sourceRef: string
   readonly observation: ObservationPolicy
-  readonly phase?: 'preparing'
+  /** Present only where a record declares one; see `transitionalFieldNames`. */
+  readonly phase?: string
   readonly decisionStatus?: DecisionStatus
   readonly receivedFromRef?: string
   readonly reviewedAt?: string
@@ -502,16 +503,24 @@ const receiverFieldNames = [
   'superseded_by'
 ] as const
 
+/**
+ * Tolerated on every copy ahead of the record-lifecycle contract proposed in
+ * TRD-961f5d5a, and excluded from the projection comparison on both sides, so a copy
+ * that carries a phase still matches one that does not while the proposal is undecided.
+ */
+const transitionalFieldNames = ['phase'] as const
+
 const rawSenderProjection = (contents: string, direction: TradeDirection): string => {
-  if (direction !== 'inbound') return contents
-  // Only an inbound record reaches the exec, and its contents were already accepted by the
-  // frontmatter parse against an equivalent expression, so the match cannot fail.
+  const stripped: readonly string[] =
+    direction === 'inbound' ? [...receiverFieldNames, ...transitionalFieldNames] : transitionalFieldNames
+  // Contents reaching here were already accepted by the frontmatter parse against an
+  // equivalent expression, so the match cannot fail.
   const match = /^(---\n)([\s\S]*?)(\n---\n[\s\S]*)$/u.exec(contents) as RegExpExecArray
   const frontmatter = (match[2] as string)
     .split('\n')
     .filter((line) => {
       const key = /^([a-z_]+):/u.exec(line)?.[1]
-      return !key || !receiverFieldNames.includes(key as (typeof receiverFieldNames)[number])
+      return !key || !stripped.includes(key)
     })
     .join('\n')
   return `${match[1]}${frontmatter}${match[3]}`
@@ -519,13 +528,18 @@ const rawSenderProjection = (contents: string, direction: TradeDirection): strin
 
 const recordFromContents = (contents: string, path: string, direction: TradeDirection): TradeRecord => {
   const { fields, body } = frontmatter(contents, path)
-  const sender = ['id', 'title', 'created_at', 'sender', 'receiver', 'kind', 'source_ref', 'observation']
-  const allowed =
-    direction === 'preparation'
-      ? [...sender, 'phase']
-      : direction === 'outbound'
-        ? sender
-        : [...sender, ...receiverFieldNames]
+  const sender = [
+    'id',
+    'title',
+    'created_at',
+    'sender',
+    'receiver',
+    'kind',
+    'source_ref',
+    'observation',
+    ...transitionalFieldNames
+  ]
+  const allowed = direction === 'inbound' ? [...sender, ...receiverFieldNames] : sender
   const unknown = Object.keys(fields).find((key) => !allowed.includes(key))
   if (unknown) throw tradeError(`${path} has unrecognised trade field ${unknown}`)
   const id = identifier(requiredField(fields, 'id', path))
@@ -595,7 +609,7 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
     kind,
     sourceRef,
     observation,
-    ...(direction === 'preparation' ? { phase: 'preparing' as const } : {}),
+    ...(fields.phase === undefined ? {} : { phase: fields.phase }),
     ...(decisionStatus ? { decisionStatus } : {}),
     ...(fields.received_from_ref ? { receivedFromRef: fields.received_from_ref } : {}),
     ...(fields.reviewed_at ? { reviewedAt: fields.reviewed_at } : {}),
