@@ -14,12 +14,14 @@ These govern all work in this repo.
 - **Fault injection stays at the interface** — a degenerate context or stub-fetcher bad bytes is preferred; `vi.mock` of `node:fs/promises` is a last resort, documented at the use site, wrapped around a CLI-driven invocation. Sanctioned instances: the transaction write-failure test in `src/tests/cli/acquire.test.ts` and the concurrent-replacement/rollback acceptance tests in `src/tests/cli/transaction.test.ts` — both provoke transaction guards unreachable from a single in-process CLI invocation.
 - **No legacy shims** — make the contract correct for the current state and migrate every footprint to it; no compatibility fallbacks or dual paths unless a transition period is explicitly requested.
 - **Release verification** — packaging runs the functional suite on each target; coverage remains a CI engineering gate, not a release-publishing gate. A release is complete only after immutable publication and the workflow's clean-install proof succeed.
+- **Verify a portable claim against its specification** — when an assertion about a format, protocol, or standard leaves this repository, particularly in a trade, check it against that standard rather than against the parser or library that happens to implement it here. A permissive implementation reads as agreement and a strict one reads as prohibition, and neither is evidence about the standard. `smol-toml` accepting a construction says nothing about whether TOML permits it.
 
 ## Progress and commits
 
 - Give concise progress updates at meaningful checkpoints and at least every few minutes during sustained work.
 - Commit only a completed, verified unit of work. Stage explicit paths for that unit and do not combine it with unrelated working-tree changes.
 - If a unit cannot yet be verified, report the checkpoint and leave it uncommitted until its verification is complete.
+- **Attribute state before blaming it on the tree.** More than one session may hold this checkout at once, so a failing test, a reformatted file, or a reverted record is not evidence about `HEAD` until it has been attributed. Establish which commit introduced a failure with `git log` or a bisect against a specific commit rather than inferring it from the working tree, and never use `git stash` or `git checkout --` to probe a question while uncommitted work is present: both discard whatever a concurrent session is holding, and `git checkout --` will silently take your own uncommitted edits with it. Commit first, then probe.
 
 ## Cross-repository choreography
 
