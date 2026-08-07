@@ -302,7 +302,7 @@ describe('[ki trade]', () => {
     expect(await box.run('ki trade routes list --estate')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 3 routes\n├─ results\n│  ├─ example/receiver\n│  │  ╰─ → example/third · knowledge [active]\n│  ╰─ example/source\n│     ├─ → example/receiver · work [active]\n│     ╰─ → example/third · work [active]\n╰─ summary: ROUTES=3 ACTIVE=3 INCOMPLETE=0\n'
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 3 routes\n├─ results\n│  ├─ example/receiver\n│  │  ╰─ → example/third · ◇ knowledge [active]\n│  ╰─ example/source\n│     ├─ → example/receiver · ⚒ work [active]\n│     ╰─ → example/third · ⚒ work [active]\n╰─ summary: ROUTES=3 ACTIVE=3 INCOMPLETE=0\n'
     })
   })
 
@@ -314,7 +314,7 @@ describe('[ki trade]', () => {
     expect(estate).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · knowledge, work [active]\n╰─ summary: ROUTES=1 ACTIVE=1 INCOMPLETE=0\n'
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · ◇ knowledge, ⚒ work [active]\n╰─ summary: ROUTES=1 ACTIVE=1 INCOMPLETE=0\n'
     })
     expect(incomplete).toEqual({
       exitCode: 0,
@@ -330,7 +330,7 @@ describe('[ki trade]', () => {
     expect(await box.run('ki trade routes list --estate --incomplete')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · knowledge [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · ◇ knowledge [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
     })
   })
 
@@ -1076,7 +1076,7 @@ describe('[ki trade]', () => {
     expect(await box.run('ki trade routes list --estate')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · work [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
+        '╭─ KI TRADE ROUTES\n│  ◫ registered estate\n│  ✦ 1 route\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · ⚒ work [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
     })
   })
 
