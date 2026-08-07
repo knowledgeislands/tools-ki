@@ -84,7 +84,9 @@ interface BarModel {
 
 const SGR_RESET = '\x1b[0m'
 const SGR_COMPLETE = '\x1b[7m'
-const SGR_STARTED = '\x1b[7;2m'
+// Dim alone is widely ignored, and ignored dim on reverse is indistinguishable from
+// the completed zone, so the band also carries underline as a texture that survives it.
+const SGR_STARTED = '\x1b[7;2;4m'
 const CURSOR_HIDE = '\x1b[?25l'
 const CURSOR_SHOW = '\x1b[?25h'
 
@@ -102,7 +104,10 @@ const barZones = (model: BarModel, width: number, tick: number): readonly [numbe
   if (bounded <= 0) return [width, width]
   const scale = (value: number): number => Math.max(0, Math.min(width, Math.round((value / bounded) * width)))
   const complete = scale(model.complete)
-  return [complete, Math.max(complete, scale(model.started))]
+  // An item in flight always occupies at least one column. Without this a run with more
+  // items than the bar has columns rounds the band away entirely and shows no work starting.
+  if (model.started <= model.complete) return [complete, complete]
+  return [Math.min(complete, width - 1), Math.max(Math.min(complete, width - 1) + 1, scale(model.started))]
 }
 
 const centred = (text: string, width: number): string => {
@@ -134,7 +139,12 @@ interface RenderOptions {
 const progressLine = (model: BarModel, { columns, styled, tick }: RenderOptions): string => {
   const width = terminalColumns(columns)
   if (width <= PROGRESS_PREFIX.length) return truncate(model.text, width)
-  if (styled) return `${PROGRESS_PREFIX}${styledBar(model, width - PROGRESS_PREFIX.length, tick)}`
+  if (styled) {
+    // Brackets delimit the bar, so its extent stays visible when it is wholly full or wholly empty.
+    const styledWidth = width - PROGRESS_PREFIX.length - 2
+    if (styledWidth < 1) return `${PROGRESS_PREFIX}${truncate(model.text, width - PROGRESS_PREFIX.length)}`
+    return `${PROGRESS_PREFIX}[${styledBar(model, styledWidth, tick)}]`
+  }
   const remaining = width - PROGRESS_PREFIX.length - 1
   // The status text carries the running item, which is the part a reader needs; give the bar the smaller share.
   const barWidth = Math.min(40, Math.floor(remaining / 3))

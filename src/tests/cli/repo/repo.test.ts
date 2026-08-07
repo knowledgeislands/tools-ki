@@ -6,7 +6,7 @@ import { type SandboxArea, sandbox } from '../_cli_helper.ts'
 
 /** The bar's zone codes: completed weight, then the item in flight. */
 const SGR_COMPLETE = '\x1b[7m'
-const SGR_STARTED = '\x1b[7;2m'
+const SGR_STARTED = '\x1b[7;2;4m'
 const SGR_RESET = '\x1b[0m'
 const CURSOR_HIDE = '\x1b[?25l'
 const CURSOR_SHOW = '\x1b[?25h'
@@ -352,7 +352,7 @@ describe('[ki repo]', () => {
       expect(result.exitCode).toBe(0)
       expect(stripVTControlCharacters(result.output)).toContain('audit complete · 0/0 100% 0.0s')
       // The 80-column fallback leaves 68 columns for the bar itself.
-      expect(stripVTControlCharacters(result.output)).toContain(`├─ progress ${' '.repeat(19)}audit complete`)
+      expect(stripVTControlCharacters(result.output)).toContain(`├─ progress [${' '.repeat(18)}audit complete`)
     })
 
     test('renders per-rubric progress with bounded three-column TTY status without changing non-interactive output', async () => {
@@ -397,23 +397,23 @@ describe('[ki repo]', () => {
 `)
       // Each item reports at both edges of its await, so a running frame precedes every completion.
       expect(frames.map(normaliseFrame)).toEqual([
-        '├─ progress audit loading 0/2 definitions · 0.0s',
-        '├─ progress audit loading 1/2 definitions · 0.0s',
-        '├─ progress audit loading 2/2 definitions · 0.0s',
-        '├─ progress audit starting · 0/3 0% 0.0s',
-        '├─ progress audit ki-example running EXAMPLE-1 · 0/3 0% 0.0s',
-        '├─ progress audit ki-example EXAMPLE-1 · 1/3 33% 0.0s',
-        '├─ progress audit ki-example running EXAMPLE-2 · 1/3 33% 0.0s',
-        '├─ progress audit ki-example EXAMPLE-2 · 2/3 67% 0.0s',
-        '├─ progress audit ki-extra running EXTRA-1 · 2/3 67% 0.0s',
-        '├─ progress audit ki-extra EXTRA-1 · 3/3 100% 0.0s',
-        '├─ progress audit complete · 3/3 100% 0.0s'
+        '├─ progress [ audit loading 0/2 definitions · 0.0s ]',
+        '├─ progress [ audit loading 1/2 definitions · 0.0s ]',
+        '├─ progress [ audit loading 2/2 definitions · 0.0s ]',
+        '├─ progress [ audit starting · 0/3 0% 0.0s ]',
+        '├─ progress [ audit ki-example running EXAMPLE-1 · 0/3 0% 0.0s ]',
+        '├─ progress [ audit ki-example EXAMPLE-1 · 1/3 33% 0.0s ]',
+        '├─ progress [ audit ki-example running EXAMPLE-2 · 1/3 33% 0.0s ]',
+        '├─ progress [ audit ki-example EXAMPLE-2 · 2/3 67% 0.0s ]',
+        '├─ progress [ audit ki-extra running EXTRA-1 · 2/3 67% 0.0s ]',
+        '├─ progress [ audit ki-extra EXTRA-1 · 3/3 100% 0.0s ]',
+        '├─ progress [ audit complete · 3/3 100% 0.0s ]'
       ])
       // The status text is drawn inside the bar, so every frame fills the terminal width.
       expect(frames.every((frame) => stripVTControlCharacters(frame).length === 80)).toBe(true)
       // The band is the item in flight: one of three items over a 68-column bar.
       const band = (frames[4] as string).split(SGR_STARTED)[1]?.split(SGR_RESET)[0]
-      expect(band).toHaveLength(23)
+      expect(band).toHaveLength(22)
 
       const wide = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
       const firstBar = wide.output.match(/\[([#>.]*)\]/)?.[1]
@@ -526,7 +526,7 @@ describe('[ki repo]', () => {
       [1, '.'],
       [3, '...'],
       [8, 'audit...'],
-      [13, '├─ progress \x1b[7;2m.\x1b[0m']
+      [13, '├─ progress .']
     ])('renders a safe abbreviated TTY progress frame at %p columns', async (columns, expected) => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
