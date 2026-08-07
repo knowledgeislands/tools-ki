@@ -285,7 +285,7 @@ describe('[ki repo roadmap]', () => {
         ''
       ].join('\n')
     const record = (recordId: string, kind: 'work' | 'knowledge', status = ''): string =>
-      `---\nid: ${recordId}\ntitle: Trade-aware planning\ncreated_at: 2026-08-05T12:00:00Z\nsender: example/source\nreceiver: example/receiver\nkind: ${kind}\nsource_ref: KI-TOOL-CLI-012\nobservation: decision${status}\n---\n# ${recordId}: Trade-aware planning\n\n## Context\n\nTrade context.\n\n## Submission\n\nShow trades with roadmap work.\n\n## Constraints\n\nRemain read-only.\n`
+      `---\nid: ${recordId}\ntitle: Trade-aware planning\ncreated_at: 2026-08-05T12:00:00Z\nsender: example/source\nreceiver: example/receiver\nkind: ${kind}\nsource_ref: KI-TOOL-CLI-012\nobservation: decision\nphase: ${status ? 'received' : 'submitted'}${status}\n---\n# ${recordId}: Trade-aware planning\n\n## Context\n\nTrade context.\n\n## Submission\n\nShow trades with roadmap work.\n\n## Constraints\n\nRemain read-only.\n`
     await box.project.write('source/.ki-config.toml', configuration(sourceHome, [receiverHome], []))
     await box.project.write('receiver/.ki-config.toml', configuration(receiverHome, [], [sourceHome]))
     await box.project.write('source/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())

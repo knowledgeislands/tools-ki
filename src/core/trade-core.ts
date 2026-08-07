@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { lstat, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, relative } from 'node:path'
 import { parse } from 'smol-toml'
 import { inspectUserConfiguration } from '../agents/configuration.ts'
@@ -19,6 +19,7 @@ const timestampExpression = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
 const commitExpression = /^[0-9a-f]{40}$/
 const tradeKinds = ['work', 'knowledge'] as const
 const observationPolicies = ['unattended', 'receipt', 'decision', 'completion'] as const
+const tradePhases = ['preparing', 'submitted', 'received'] as const
 const decisionStatuses = [
   'unconsidered',
   'in_progress',
@@ -33,6 +34,7 @@ const decisionStatuses = [
 const terminalDecisionStatuses = ['applied', 'adopted', 'retained', 'declined', 'superseded'] as const
 
 export type TradeDirection = 'preparation' | 'inbound' | 'outbound'
+export type TradePhase = (typeof tradePhases)[number]
 export type RouteDirection = 'export' | 'import'
 export type TradeKind = (typeof tradeKinds)[number]
 export type ObservationPolicy = (typeof observationPolicies)[number]
@@ -54,8 +56,8 @@ export interface TradeRecord {
   readonly kind: TradeKind
   readonly sourceRef: string
   readonly observation: ObservationPolicy
-  /** Present only where a record declares one; see `transitionalFieldNames`. */
-  readonly phase?: string
+  /** The copy's own lifecycle state, distinct from the receiver's `decisionStatus`. */
+  readonly phase: TradePhase
   readonly decisionStatus?: DecisionStatus
   readonly receivedFromRef?: string
   readonly reviewedAt?: string
@@ -504,15 +506,29 @@ const receiverFieldNames = [
 ] as const
 
 /**
- * Tolerated on every copy ahead of the record-lifecycle contract proposed in
- * TRD-961f5d5a, and excluded from the projection comparison on both sides, so a copy
- * that carries a phase still matches one that does not while the proposal is undecided.
+ * Excluded from the projection comparison on both sides: a sender copy reads
+ * `submitted` while its receiver copy reads `received`, so the two are correctly
+ * divergent on this field alone and comparing it would report every honest pair as
+ * tampered (KI-HARNESS-GOV-022).
  */
-const transitionalFieldNames = ['phase'] as const
+const phaseFieldNames = ['phase'] as const
+
+/**
+ * Set the frontmatter phase to `value`, replacing the existing line wherever it sits in the
+ * block. An ordinary field update, so it does not depend on `phase` being the last key the
+ * way the previous text substitution did. Every record carries a phase, so there is no
+ * absent case to accommodate.
+ */
+const rewritePhase = (contents: string, value: TradePhase): string => {
+  const match = /^(---\n)([\s\S]*?)(\n---\n[\s\S]*)$/u.exec(contents) as RegExpExecArray
+  const lines = (match[2] as string).split('\n')
+  const index = lines.findIndex((line) => line.startsWith('phase:'))
+  return `${match[1]}${lines.with(index, `phase: ${value}`).join('\n')}${match[3]}`
+}
 
 const rawSenderProjection = (contents: string, direction: TradeDirection): string => {
   const stripped: readonly string[] =
-    direction === 'inbound' ? [...receiverFieldNames, ...transitionalFieldNames] : transitionalFieldNames
+    direction === 'inbound' ? [...receiverFieldNames, ...phaseFieldNames] : phaseFieldNames
   // Contents reaching here were already accepted by the frontmatter parse against an
   // equivalent expression, so the match cannot fail.
   const match = /^(---\n)([\s\S]*?)(\n---\n[\s\S]*)$/u.exec(contents) as RegExpExecArray
@@ -537,7 +553,7 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
     'kind',
     'source_ref',
     'observation',
-    ...transitionalFieldNames
+    ...phaseFieldNames
   ]
   const allowed = direction === 'inbound' ? [...sender, ...receiverFieldNames] : sender
   const unknown = Object.keys(fields).find((key) => !allowed.includes(key))
@@ -556,8 +572,10 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
   addressParts(receiver)
   if (!isTradeKind(kind)) throw tradeError(`${path} has invalid trade kind`)
   if (!isObservationPolicy(observation)) throw tradeError(`${path} has invalid observation policy`)
-  if (direction === 'preparation' && fields.phase !== 'preparing')
-    throw tradeError(`${path} preparation must declare phase: preparing`)
+  const phase = requiredField(fields, 'phase', path)
+  if (!tradePhases.includes(phase as TradePhase)) throw tradeError(`${path} has invalid phase`)
+  if (phase !== expectedPhase(direction))
+    throw tradeError(`${path} ${direction} must declare phase: ${expectedPhase(direction)}`)
 
   const content = body.replace(/^(?:\r?\n)+/u, '')
   if (content.split('\n')[0] !== `# ${id}: ${title}`)
@@ -609,7 +627,7 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
     kind,
     sourceRef,
     observation,
-    ...(fields.phase === undefined ? {} : { phase: fields.phase }),
+    phase: phase as TradePhase,
     ...(decisionStatus ? { decisionStatus } : {}),
     ...(fields.received_from_ref ? { receivedFromRef: fields.received_from_ref } : {}),
     ...(fields.reviewed_at ? { reviewedAt: fields.reviewed_at } : {}),
@@ -625,13 +643,14 @@ const recordFromContents = (contents: string, path: string, direction: TradeDire
 
 const tradePath = (root: string, direction: TradeDirection, peer: string, id: string): string => {
   const [owner, repository] = addressParts(peer)
-  if (direction === 'preparation')
-    return join(root, '-', '_TRADES', '_PREPARATIONS', owner, repository, `${identifier(id)}.md`)
+  // A preparation and its submitted successor share one path: submission rewrites the
+  // phase field rather than relocating the record.
   return join(root, direction === 'inbound' ? '+' : '-', '_TRADES', owner, repository, `${identifier(id)}.md`)
 }
 
 const senderContents = (
-  record: Omit<TradeRecord, 'body' | 'contents'> & {
+  // Phase is not an input: sender contents are only ever rendered for a new preparation.
+  record: Omit<TradeRecord, 'body' | 'contents' | 'phase'> & {
     readonly context: string
     readonly submission: string
     readonly constraints: string
@@ -706,13 +725,12 @@ export const createTradePreparation = async (
 
 export const submitTrade = async (context: KiContext, id: string): Promise<TradeRecord> => {
   const { trade } = await localTrade(context, 'preparation', identifier(id))
-  const destination = tradePath(trade.root, 'outbound', trade.record.receiver, trade.record.id)
-  if (await lstat(destination).catch(() => undefined)) throw tradeError(`outbound trade ${id} already exists`)
-  const contents = trade.record.contents.replace('\nphase: preparing\n---\n', '\n---\n')
+  // Preparation and submission share one path, so submission rewrites the phase field in
+  // place rather than relocating the record.
+  const destination = trade.path
+  const contents = rewritePhase(trade.record.contents, 'submitted')
   const submitted = recordFromContents(contents, destination, 'outbound')
-  await mkdir(dirname(destination), { recursive: true })
-  await writeFile(trade.path, contents, 'utf8')
-  await rename(trade.path, destination)
+  await writeFile(destination, contents, 'utf8')
   return submitted
 }
 
@@ -748,7 +766,10 @@ const committedFile = async (
 }
 
 const copyInboundContents = (record: TradeRecord, receivedFromRef: string): string =>
-  record.contents.replace('\n---\n', `\ndecision_status: unconsidered\nreceived_from_ref: ${receivedFromRef}\n---\n`)
+  rewritePhase(record.contents, 'received').replace(
+    '\n---\n',
+    `\ndecision_status: unconsidered\nreceived_from_ref: ${receivedFromRef}\n---\n`
+  )
 
 const receivableTrade = async (
   context: KiContext,
@@ -877,16 +898,32 @@ export const observeTradePreparation = async (
   return { record, ref: candidate.ref, mode, output, ...(reason ? { reason } : {}) }
 }
 
-const peerDirectories = async (root: string, direction: TradeDirection): Promise<readonly string[]> => {
-  const base =
-    direction === 'preparation'
-      ? join(root, '-', '_TRADES', '_PREPARATIONS')
-      : join(root, direction === 'inbound' ? '+' : '-', '_TRADES')
+const expectedPhase = (direction: TradeDirection): TradePhase =>
+  direction === 'preparation' ? 'preparing' : direction === 'outbound' ? 'submitted' : 'received'
+
+/** Direction is read from the record's phase, so the scan walks physical areas instead. */
+const directionForPhase: Readonly<Record<TradePhase, TradeDirection>> = {
+  preparing: 'preparation',
+  submitted: 'outbound',
+  received: 'inbound'
+}
+
+const phaseOf = (contents: string, path: string): TradePhase => {
+  const match = /^---\n([\s\S]*?)\n---\n/u.exec(contents)
+  const line = (match?.[1] ?? '').split('\n').find((entry) => entry.startsWith('phase:'))
+  const phase = line?.slice('phase:'.length).trim()
+  if (!phase || !tradePhases.includes(phase as TradePhase)) throw tradeError(`${path} has invalid phase`)
+  return phase as TradePhase
+}
+
+const peerDirectories = async (root: string, area: '+' | '-'): Promise<readonly string[]> => {
+  const base = join(root, area, '_TRADES')
   const state = await lstat(base).catch(() => undefined)
   if (!state?.isDirectory()) return []
   const paths: string[] = []
   for (const owner of await readdir(base, { withFileTypes: true })) {
-    if (!owner.isDirectory() || (direction === 'outbound' && owner.name === '_PREPARATIONS')) continue
+    // No reserved directory name shares the owner namespace now that phase carries lifecycle.
+    if (!owner.isDirectory()) continue
     for (const repository of await readdir(join(base, owner.name), { withFileTypes: true })) {
       if (!repository.isDirectory()) continue
       paths.push(...(await readDirectory(join(base, owner.name, repository.name))))
@@ -909,11 +946,12 @@ export const locateTrades = async (
   const locations: LocatedTrade[] = []
   for (const repository of await registeredRepositories(context)) {
     if (!repository.configuration || (options.repository && repository.repository !== options.repository)) continue
-    for (const direction of (options.direction
-      ? [options.direction]
-      : ['preparation', 'inbound', 'outbound']) as readonly TradeDirection[]) {
-      for (const path of await peerDirectories(repository.root, direction)) {
-        const record = recordFromContents(await readFile(path, 'utf8'), path, direction)
+    for (const area of ['+', '-'] as const) {
+      for (const path of await peerDirectories(repository.root, area)) {
+        const contents = await readFile(path, 'utf8')
+        const direction = directionForPhase[phaseOf(contents, path)]
+        if (options.direction && direction !== options.direction) continue
+        const record = recordFromContents(contents, path, direction)
         if (options.id && record.id !== options.id) continue
         locations.push({ repository: repository.repository, root: repository.root, direction, path, record })
       }

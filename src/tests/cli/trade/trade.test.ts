@@ -255,18 +255,19 @@ describe('[ki trade]', () => {
     expect(await box.project.read('receiver/.ki-config.toml')).toContain(`work = ["${sourceHome}"]`)
   })
 
-  test('tolerates a phase field on either copy without breaking the projection comparison', async () => {
+  test('pairs copies whose phases differ, since sender and receiver hold different states', async () => {
     const { box } = await configuredPair()
     const created = await createTrade(box, 'work', {}, () => Date.UTC(2026, 7, 3, 12, 0, 0))
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
     box.cd('receiver')
     await box.run(['ki', 'trade', 'receive', id])
-    const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
-    // A counterpart that has adopted the proposed lifecycle vocabulary writes a phase the
-    // sender's copy does not carry; neither reading the record nor pairing the two may fail.
-    const inbound = await box.project.read(inboundPath)
     box.cd('..')
-    await box.project.write(inboundPath, inbound.replace('\n---\n', '\nphase: received\n---\n'))
+
+    // The sender's copy reads submitted and the receiver's reads received, so the two are
+    // correctly divergent on phase alone. Pairing strips it, or every honest pair would
+    // report as tampered.
+    expect(await box.project.read(`-/_TRADES/example/receiver/${id}.md`)).toContain('phase: submitted')
+    expect(await box.project.read(`receiver/+/_TRADES/example/source/${id}.md`)).toContain('phase: received')
 
     const listed = await box.run('ki trade list')
 
@@ -940,11 +941,11 @@ describe('[ki trade]', () => {
     expect((await box.run(['ki', 'trade', 'prune', id])).output).toContain('not addressed to the current repository')
   })
 
-  test('prepares, observes, guards routes and submission identity, then abandons mutable work', async () => {
+  test('prepares, observes, guards routes and record validity, then abandons mutable work', async () => {
     const { box } = await configuredPair()
     const prepared = await box.run(prepareTrade('work', { observation: 'receipt' }))
     const id = /TRD-[0-9a-f]{8}/u.exec(prepared.output)?.[0] as string
-    const preparationPath = `-/_TRADES/_PREPARATIONS/example/receiver/${id}.md`
+    const preparationPath = `-/_TRADES/example/receiver/${id}.md`
     expect(await box.project.read(preparationPath)).toContain('phase: preparing')
     expect((await box.run('ki trade list --direction prepare')).output).toContain(
       `${id} prepare → receiver [preparing · not-deliverable] [receipt]`
@@ -972,9 +973,13 @@ describe('[ki trade]', () => {
     expect((await box.run(['ki', 'trade', 'observe', 'TRD-00000000'])).output).toContain('unavailable or ambiguous')
 
     box.cd('..')
-    await box.project.write(`-/_TRADES/example/receiver/${id}.md`, 'conflict')
-    expect((await box.run(['ki', 'trade', 'submit', id])).output).toContain('already exists')
-    await rm(join(box.project.path, `-/_TRADES/example/receiver/${id}.md`))
+    // Submission rewrites the phase in place, so no outbound destination exists to collide
+    // with; what remains to guard is that a corrupted record is refused. The preparation and
+    // its successor share one path, so restore it rather than removing it before abandoning.
+    const valid = await box.project.read(preparationPath)
+    await box.project.write(preparationPath, 'conflict')
+    expect((await box.run(['ki', 'trade', 'submit', id])).output).toContain('has invalid phase')
+    await box.project.write(preparationPath, valid)
     expect((await box.run(['ki', 'trade', 'abandon', id, '--yes'])).exitCode).toBe(0)
     await expect(box.project.read(preparationPath)).rejects.toThrow()
     const invalidObservation = await box.run(prepareTrade('work', { observation: 'unknown' }))
@@ -1277,11 +1282,11 @@ describe('[ki trade]', () => {
     const { box } = await configuredPair()
     const prepared = await box.run(prepareTrade('work'))
     const id = /TRD-[0-9a-f]{8}/u.exec(prepared.output)?.[0] as string
-    const path = `-/_TRADES/_PREPARATIONS/example/receiver/${id}.md`
+    const path = `-/_TRADES/example/receiver/${id}.md`
     const preparation = await box.project.read(path)
 
     const cases: readonly [string, string][] = [
-      [preparation.replace('phase: preparing\n', ''), 'preparation must declare phase: preparing'],
+      [preparation.replace('phase: preparing\n', ''), 'has invalid phase'],
       [preparation.replace('observation: decision', 'observation: eventually'), 'has invalid observation policy'],
       [preparation.replace(`# ${id}: Route contract`, `# ${id}: Other contract`), 'H1 must exactly repeat']
     ]
