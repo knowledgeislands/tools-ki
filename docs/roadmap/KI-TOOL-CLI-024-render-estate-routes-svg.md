@@ -5,7 +5,7 @@ theme: cli
 horizon: now
 status: draft
 blocks: []
-blocked-by: [KI-TOOL-CLI-025]
+blocked-by: []
 baseline-ref: null
 ---
 
@@ -60,7 +60,7 @@ Tests must assert on structural properties — node count, edge count, presence 
 
 The inspection this renders already exists and is stable, and the diagram is additive to the existing textual output.
 
-Blocked by `KI-TOOL-CLI-025`, which restructures `.ki-config.toml` and, if the Harness adopts the shape proposed in `TRD-aacc8a12`, re-keys route declarations by partner repository with kinds as arrays. That changes how routes are written, not what they mean, and a renderer over `inspectEstateRoutes` would be unaffected either way — but building this once against the settled declaration shape is preferable to building it twice.
+Nothing blocks this item. It was briefly recorded as blocked by `KI-TOOL-CLI-025`, on the reasoning that building once against a settled declaration shape beats building twice. That dependency has been withdrawn deliberately: this renderer consumes `inspectEstateRoutes`, which returns edges carrying source, peer, kind, and computed state, and never reads `.ki-config.toml` itself. Re-keying route declarations by partner repository would change how routes are written, not what the inspection yields, so the renderer is genuinely insulated from that change.
 
 ## Discussion
 
