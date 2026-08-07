@@ -7,7 +7,7 @@ receiver: knowledgeislands/ki-agentic-harness
 kind: work
 source_ref: "KI-TOOL-CLI-022"
 observation: decision
-phase: preparing
+phase: submitted
 ---
 # TRD-dbcda0ce: Specify observable, asynchronous evidence-gathering steps
 
