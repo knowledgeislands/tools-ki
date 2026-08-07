@@ -7,7 +7,6 @@ receiver: knowledgeislands/ki-agentic-harness
 kind: knowledge
 source_ref: '.ki-config.toml'
 observation: decision
-phase: preparing
 ---
 
 # TRD-aacc8a12: Reduce repetition in the repository configuration contract
