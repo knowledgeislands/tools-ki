@@ -2,10 +2,10 @@
 id: KI-TOOL-CLI-022
 title: Weight progress by duration
 theme: cli
-horizon: next
-status: draft
+horizon: now
+status: in-progress
 blocks: []
-blocked-by: [KI-TOOL-CLI-021]
+blocked-by: []
 baseline-ref: null
 ---
 
@@ -53,7 +53,7 @@ Manual confirmation: run an audit twice in this repository against a skill with 
 
 ## Dependencies / blocks
 
-Blocked by `KI-TOOL-CLI-021`, which introduces both the `onItemStart` hook that makes per-item timing observable and the three-zone bar whose in-flight band width this item makes meaningful.
+Nothing blocks this item. `KI-TOOL-CLI-021` delivered both the `onItemStart` hook that makes per-item timing observable and the three-zone bar whose in-flight band width this item makes meaningful, and has since been accepted and pruned, so the dependency this record carried no longer names a live item.
 
 ## Discussion
 
