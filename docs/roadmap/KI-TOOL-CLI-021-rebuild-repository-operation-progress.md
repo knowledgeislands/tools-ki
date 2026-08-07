@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-021
 title: Rebuild repository-operation progress rendering
 theme: cli
 horizon: now
-status: ready
+status: done
 blocks: [KI-TOOL-CLI-022]
 blocked-by: []
 baseline-ref: null
