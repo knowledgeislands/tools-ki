@@ -13,6 +13,7 @@ import {
 } from './runtime.ts'
 
 const FALLBACK_TERMINAL_COLUMNS = 80
+const REFRESH_INTERVAL_MS = 250
 const PROGRESS_PREFIX = '├─ progress '
 
 type ProgressMode = 'auto' | 'always' | 'never'
@@ -275,9 +276,12 @@ const createProgressTracker = (
     context.stderr.write(`${rewind}${rows.map((row) => `${interactive ? '\r\x1b[2K' : ''}${row}\n`).join('')}`)
     renderedRows = rows.length
   }
-  const render = (text: string, final = false): void => {
+  // Retained so a refresh can redraw the current state with a fresh clock.
+  let lastDetail = 'starting'
+  const render = (detail: string, final = false): void => {
+    lastDetail = detail
     tick += 1
-    const rows = options.progressStyle === 'single' ? singleFrame(text) : multiFrame()
+    const rows = options.progressStyle === 'single' ? singleFrame(summaryText(detail)) : multiFrame()
     const frame = rows.join('\n')
     // Coalesce identical consecutive frames; a fast rubric otherwise redraws the same line.
     if (!final && frame === lastFrame) return
@@ -285,14 +289,20 @@ const createProgressTracker = (
     hideCursor()
     writeRows(rows, final)
   }
+  // Progress is otherwise reported only at item edges, so a slow item leaves the clock
+  // frozen and the display indistinguishable from a hang. Refreshing on a timer advances
+  // the elapsed time and the indeterminate sweep between events. A plain stream would
+  // gain a line per refresh, so only an interactive display ticks.
+  const releaseInterval = interactive ? context.startInterval(REFRESH_INTERVAL_MS, () => render(lastDetail)) : undefined
   const finish = (): void => {
+    releaseInterval?.()
     showCursor()
     releaseInterrupt()
   }
   return {
     loading: (loaded, definitions) => {
       total = undefined
-      render(summaryText(`loading ${loaded}/${definitions} definitions`))
+      render(`loading ${loaded}/${definitions} definitions`)
     },
     planned: (planned) => {
       total = planned.reduce((count, skill) => count + skill.items.length, 0)
@@ -304,7 +314,7 @@ const createProgressTracker = (
           planned: true,
           status: 'pending'
         })
-      render(summaryText('starting'))
+      render('starting')
     },
     start: (skill, code) => {
       inFlight = 1
@@ -318,7 +328,7 @@ const createProgressTracker = (
         total: skill.items.length,
         status: `running ${code}`
       })
-      render(summaryText(`${declaration.name} running ${code}`))
+      render(`${declaration.name} running ${code}`)
     },
     item: (skill, code) => {
       complete += 1
@@ -327,7 +337,7 @@ const createProgressTracker = (
       const state = skillState(identity)
       const done = state.complete + 1
       states.set(identity, { complete: done, started: done, total: skill.items.length, planned: true, status: code })
-      render(summaryText(`${declaration.name} ${code}`))
+      render(`${declaration.name} ${code}`)
     },
     complete: () => {
       inFlight = 0
@@ -335,13 +345,13 @@ const createProgressTracker = (
         const state = skillState(skill.identity)
         states.set(skill.identity, { ...state, complete: state.total, started: state.total, status: 'complete' })
       }
-      render(summaryText('complete'), true)
+      render('complete', true)
       finish()
     },
     failed: () => {
       inFlight = 0
       for (const skill of skills) states.set(skill.identity, { ...skillState(skill.identity), status: 'failed' })
-      render(summaryText(lastRunning ? `failed at ${lastRunning}` : 'failed'), true)
+      render(lastRunning ? `failed at ${lastRunning}` : 'failed', true)
       finish()
     }
   }

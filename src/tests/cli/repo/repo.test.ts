@@ -472,6 +472,30 @@ describe('[ki repo]', () => {
       expect(result.output).toContain('audit failed at EXAMPLE-1 · 0/1 0% 0.0s')
     })
 
+    test('advances the elapsed clock between item events', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+
+      let refresh: (() => void) | undefined
+      // A slow item reports nothing between its edges, so without a refresh the clock
+      // would sit still and the display would be indistinguishable from a hang.
+      let clock = 0
+      const result = await box.run('ki repo audit', {
+        interactive: true,
+        now: () => clock,
+        captureInterval: (handler) => {
+          refresh = handler
+          clock += 4_000
+          handler()
+        }
+      })
+
+      expect(result.exitCode).toBe(0)
+      expect(refresh).toBeTypeOf('function')
+      expect(stripVTControlCharacters(result.output)).toContain('4.0s')
+    })
+
     test('restores the terminal cursor when the run is interrupted', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')

@@ -23,6 +23,8 @@ export interface KiContext {
   readonly now: () => number
   /** Registers an interrupt observer so a live display can restore the terminal; returns its release. */
   readonly onInterrupt: (handler: () => void) => () => void
+  /** Starts a repeating timer so a live display can advance between events; returns its cancel. */
+  readonly startInterval: (milliseconds: number, handler: () => void) => () => void
 }
 
 export interface ContextOptions {
@@ -38,7 +40,17 @@ export interface ContextOptions {
   readonly lstat?: typeof lstat
   readonly now?: () => number
   readonly onInterrupt?: (handler: () => void) => () => void
+  readonly startInterval?: (milliseconds: number, handler: () => void) => () => void
 }
+
+/* v8 ignore start -- Real timers are a process concern; tests inject this capability at the same boundary. */
+const processInterval = (milliseconds: number, handler: () => void): (() => void) => {
+  const timer = setInterval(handler, milliseconds)
+  // A refresh timer must never be the reason the process stays alive.
+  timer.unref()
+  return () => clearInterval(timer)
+}
+/* v8 ignore stop */
 
 /* v8 ignore start -- Real signal delivery is a process concern; tests inject this capability at the same boundary. */
 const processInterrupt = (handler: () => void): (() => void) => {
@@ -67,6 +79,7 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
     runner: options.runner ?? runCommand,
     lstat: options.lstat ?? lstat,
     now: options.now ?? Date.now,
-    onInterrupt: options.onInterrupt ?? processInterrupt
+    onInterrupt: options.onInterrupt ?? processInterrupt,
+    startInterval: options.startInterval ?? processInterval
   }
 }

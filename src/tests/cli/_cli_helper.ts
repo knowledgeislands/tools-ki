@@ -160,6 +160,8 @@ export interface Sandbox {
       readonly stdoutFailure?: Error
       /** Receives the interrupt handler a live display registers, so a test can fire it. */
       readonly captureInterrupt?: (handler: () => void) => void
+      /** Receives the refresh handler a live display registers, so a test can fire it. */
+      readonly captureInterval?: (handler: () => void) => void
     }
   ) => Promise<CommandResult>
 }
@@ -228,6 +230,8 @@ const create = async (): Promise<Sandbox> => {
       readonly stdoutFailure?: Error
       /** Receives the interrupt handler a live display registers, so a test can fire it. */
       readonly captureInterrupt?: (handler: () => void) => void
+      /** Receives the refresh handler a live display registers, so a test can fire it. */
+      readonly captureInterval?: (handler: () => void) => void
     }
   ): Promise<CommandResult> => {
     let output = ''
@@ -252,6 +256,14 @@ const create = async (): Promise<Sandbox> => {
         : {
             onInterrupt: (handler: () => void) => {
               options.captureInterrupt?.(handler)
+              return () => {}
+            }
+          }),
+      ...(options?.captureInterval === undefined
+        ? {}
+        : {
+            startInterval: (_milliseconds: number, handler: () => void) => {
+              options.captureInterval?.(handler)
               return () => {}
             }
           })
