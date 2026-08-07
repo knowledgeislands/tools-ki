@@ -294,23 +294,20 @@ export const removeTradeRoute = async (
     throw tradeError(`${direction} ${kind} trade route ${repository} is not declared locally`)
   const peer = repositoryIdentity(repository)
   const [owner, name] = addressParts(peer)
-  const roots =
+  // A preparation and its submitted successor share one path, so the outbound area is a
+  // single root; the separate preparation root this once probed no longer exists.
+  const root =
     direction === 'export'
-      ? [
-          join(dirname(path), '-', '_TRADES', '_PREPARATIONS', owner, name),
-          join(dirname(path), '-', '_TRADES', owner, name)
-        ]
-      : [join(dirname(path), '+', '_TRADES', owner, name)]
+      ? join(dirname(path), '-', '_TRADES', owner, name)
+      : join(dirname(path), '+', '_TRADES', owner, name)
   const dependencies: string[] = []
-  for (const root of roots) {
-    const state = await lstat(root).catch(() => undefined)
-    if (!state?.isDirectory()) continue
+  const state = await lstat(root).catch(() => undefined)
+  if (state?.isDirectory())
     for (const entry of await readdir(root, { withFileTypes: true })) {
       if (!entry.isFile() || !entry.name.startsWith('TRD-') || !entry.name.endsWith('.md')) continue
       const recordPath = join(root, entry.name)
       if ((await readFile(recordPath, 'utf8')).includes(`\nkind: ${kind}\n`)) dependencies.push(entry.name.slice(0, -3))
     }
-  }
   if (dependencies.length)
     throw tradeError(`${direction} ${kind} trade route ${repository} is used by ${dependencies.sort().join(', ')}`)
   const configuration =

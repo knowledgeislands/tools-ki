@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-026
 title: Implement trade phase field
 theme: cli
 horizon: now
-status: draft
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -47,17 +47,17 @@ One further coupling needs care: `sameSenderPayload` compares `rawSenderProjecti
 
 ## Steps
 
-- [ ] Confirm the settled vocabulary from the Harness before writing code; this item assumes `preparing`, `submitted`, and `received`.
-- [ ] Widen `TradeRecord.phase` to the closed vocabulary, make it required on every direction, and validate the permitted value per direction in `recordFromContents`.
-- [ ] Emit `phase` in `senderContents` for a new preparation as an ordinary field, no longer relying on its position in the block.
-- [ ] Replace the `submitTrade` text strip with a field update writing `phase: submitted`, and rewrite the record in place rather than moving it between directories.
-- [ ] Set `phase: received` on the receiver copy alongside the `decision_status` and `received_from_ref` that receipt already adds.
-- [ ] Retire `_PREPARATIONS`: remove the segment from `tradePath`, root the preparation scan at the per-partner directories, and delete the outbound scan's `_PREPARATIONS` skip and the two-root probe in `routeDependencies`. Locate a preparation by its phase field instead.
-- [ ] Normalise `phase` out of `rawSenderProjection` so that a submitted sender copy and its received counterpart still compare equal.
-- [ ] Derive `TradeLifecycle.publicationStatus` from the field rather than from the path.
-- [ ] Migrate the ten existing records across the registered estate, none of which is currently a preparation, so every one gains an explicit phase.
-- [ ] Cover each phase transition, each per-direction rejection, and the reordered-frontmatter case through the CLI seam.
-- [ ] Update `man/ki.1`, `README.md`, and `CHANGELOG.md`.
+- [x] Confirm the settled vocabulary from the Harness before writing code; this item assumes `preparing`, `submitted`, and `received`.
+- [x] Widen `TradeRecord.phase` to the closed vocabulary, make it required on every direction, and validate the permitted value per direction in `recordFromContents`.
+- [x] Emit `phase` in `senderContents` for a new preparation as an ordinary field, no longer relying on its position in the block.
+- [x] Replace the `submitTrade` text strip with a field update writing `phase: submitted`, and rewrite the record in place rather than moving it between directories.
+- [x] Set `phase: received` on the receiver copy alongside the `decision_status` and `received_from_ref` that receipt already adds.
+- [x] Retire `_PREPARATIONS`: remove the segment from `tradePath`, root the preparation scan at the per-partner directories, and delete the outbound scan's `_PREPARATIONS` skip and the two-root probe in `routeDependencies`. Locate a preparation by its phase field instead.
+- [x] Normalise `phase` out of `rawSenderProjection` so that a submitted sender copy and its received counterpart still compare equal.
+- [x] Derive `TradeLifecycle.publicationStatus` from the field rather than from the path.
+- [x] Migrate the ten existing records across the registered estate, none of which is currently a preparation, so every one gains an explicit phase.
+- [x] Cover each phase transition, each per-direction rejection, and the reordered-frontmatter case through the CLI seam.
+- [x] Update `man/ki.1`, `README.md`, and `CHANGELOG.md`.
 
 ## Files touched
 
