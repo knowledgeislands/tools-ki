@@ -2,11 +2,10 @@
 id: KI-TOOL-VENDOR-001
 title: Define skill provenance
 theme: cross-repository-vendoring
-horizon: future
+horizon: next
 status: draft
-candidate: true
 blocks: []
-blocked-by: []
+blocked-by: [KI-TOOL-CLI-025]
 baseline-ref: null
 transferred-from: knowledgeislands/ki-agentic-harness:foundation-tooling
 ---
@@ -22,6 +21,30 @@ Define how one KI harness can declare and receive a shared module from another h
 ## Boundary
 
 Do not weaken the rule that only a provider in the same physical harness checkout may be symlinked; an external provider requires an explicit portable vendor or installation contract.
+
+## Current state
+
+Nothing implements cross-harness vendoring today. `ki` installs skills from a single acquired harness and links a provider only within the same physical harness checkout; there is no notion of an external provider, no place to record its identity or version evidence, and no acquisition path that does not depend on a nearby checkout. `KI-TOOL-CLI-025` introduces the first structure this contract could attach to, a declared `[repo] harnesses` list in `.ki-config.toml`.
+
+## Steps
+
+- [ ] Wait for `KI-TOOL-CLI-025` to settle the declared harness list, then decide what a provenance entry adds to it: provider identity, immutable version or digest evidence, declared capability surface, and acquisition path.
+- [ ] Choose the publication form the first provider supports — archive, registry entry, or signed release — and specify how the receiver records immutable evidence of what it acquired.
+- [ ] Specify validation of an imported module's declared contract before exposure, the conflict policy for two providers offering the same capability, and the upgrade and removal story that preserves a working installed version on failure.
+- [ ] Specify the diagnostics for an offline or unavailable provider, an incompatible version, and a capability conflict, so none of them falls back to a local checkout.
+- [ ] Prove one provider-to-one receiver artifact path end to end before generalising.
+
+## Files touched
+
+Not yet determined. The contract is the deliverable at this stage; the implementation surface follows from the publication form chosen, and would centre on harness acquisition and skill resolution.
+
+## Verify
+
+The contract is verified when a single provider-to-receiver path runs end to end: publication evidence produced, acquisition verified against it, installation beneath a receiver-owned location, capability validation before exposure, and deterministic diagnostics for the offline, incompatible, and conflicting cases. Until that path exists, this item is verified by review of the written contract rather than by a command.
+
+## Dependencies / blocks
+
+Blocked by `KI-TOOL-CLI-025`, which introduces the `[repo] harnesses` list. That list is the natural anchor for a provenance contract: it is where a repository names the harnesses it draws skills from, so it is where a provider's identity, version or digest evidence, and acquisition path would be recorded. Designing provenance before the declaration it must attach to would design it against a shape that is about to change.
 
 ## Discussion
 

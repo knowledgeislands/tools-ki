@@ -1,11 +1,11 @@
 ---
 id: KI-TOOL-CLI-024
-title: Render estate trade routes as SVG
+title: Render estate routes SVG
 theme: cli
 horizon: next
 status: draft
 blocks: []
-blocked-by: []
+blocked-by: [KI-TOOL-CLI-025]
 baseline-ref: null
 ---
 
@@ -58,9 +58,9 @@ Tests must assert on structural properties — node count, edge count, presence 
 
 ## Dependencies / blocks
 
-None. The inspection this renders already exists and is stable, and the diagram is additive to the existing textual output.
+The inspection this renders already exists and is stable, and the diagram is additive to the existing textual output.
 
-`TRD-aacc8a12`, submitted to the Harness, proposes keying route declarations by partner repository with kinds as arrays. That proposal changes how routes are written, not what they mean, so it does not block this item; a renderer over `inspectEstateRoutes` is unaffected either way.
+Blocked by `KI-TOOL-CLI-025`, which restructures `.ki-config.toml` and, if the Harness adopts the shape proposed in `TRD-aacc8a12`, re-keys route declarations by partner repository with kinds as arrays. That changes how routes are written, not what they mean, and a renderer over `inspectEstateRoutes` would be unaffected either way — but building this once against the settled declaration shape is preferable to building it twice.
 
 ## Discussion
 
