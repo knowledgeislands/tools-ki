@@ -441,6 +441,39 @@ describe('[ki trade]', () => {
     })
   })
 
+  test('releases a decided trade whose receiver reformatted the record without changing the payload', async () => {
+    const { box } = await configuredPair()
+    const created = await createTrade(box, 'work')
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+    box.cd('receiver')
+    await box.run(['ki', 'trade', 'receive', id])
+    // Everything a Markdown formatter does to a received record at once: it requotes the
+    // frontmatter's YAML scalars and puts a blank line before the first block. None of it is
+    // payload, and if any of it read as tampering no trade could ever complete its lifecycle
+    // in a repository with ordinary formatting hygiene.
+    const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
+    await box.project.write(
+      inboundPath,
+      (await box.project.read(inboundPath))
+        .replace(
+          'decision_status: unconsidered',
+          'decision_status: adopted\nadopted_as: "KI-LOCAL-004"\nreviewed_at: 2026-08-03T12:30:00Z'
+        )
+        .replace(/^title: "(.*)"$/mu, "title: '$1'")
+        .replace(/^source_ref: "(.*)"$/mu, "source_ref: '$1'")
+        .replace(`---\n\n# ${id}`, `---\n\n\n# ${id}`)
+    )
+    box.cd('..')
+    // The sender copy stands in for a record frozen before this repository emitted a canonical
+    // blank line after the frontmatter, which must still pair against a formatted receiver copy.
+    const outboundPath = `-/_TRADES/example/receiver/${id}.md`
+    const outbound = await box.project.read(outboundPath)
+    expect(outbound).toContain(`---\n\n# ${id}`)
+    await box.project.write(outboundPath, outbound.replace(`---\n\n# ${id}`, `---\n# ${id}`))
+
+    expect(await box.run(['ki', 'trade', 'release', id])).toMatchObject({ exitCode: 0 })
+  })
+
   test('creates, receives, displays, releases, and prunes a work trade while each command writes only its local repository', async () => {
     const { box } = await configuredPair()
     const created = await createTrade(box, 'work', {}, () => Date.UTC(2026, 7, 3, 12, 0, 0))

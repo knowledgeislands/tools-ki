@@ -523,22 +523,6 @@ const rewritePhase = (contents: string, value: TradePhase): string => {
   return `${match[1]}${lines.with(index, `phase: ${value}`).join('\n')}${match[3]}`
 }
 
-const rawSenderProjection = (contents: string, direction: TradeDirection): string => {
-  const stripped: readonly string[] =
-    direction === 'inbound' ? [...receiverFieldNames, ...phaseFieldNames] : phaseFieldNames
-  // Contents reaching here were already accepted by the frontmatter parse against an
-  // equivalent expression, so the match cannot fail.
-  const match = /^(---\n)([\s\S]*?)(\n---\n[\s\S]*)$/u.exec(contents) as RegExpExecArray
-  const frontmatter = (match[2] as string)
-    .split('\n')
-    .filter((line) => {
-      const key = /^([a-z_]+):/u.exec(line)?.[1]
-      return !key || !stripped.includes(key)
-    })
-    .join('\n')
-  return `${match[1]}${frontmatter}${match[3]}`
-}
-
 const recordFromContents = (contents: string, path: string, direction: TradeDirection): TradeRecord => {
   const { fields, body } = frontmatter(contents, path)
   const sender = [
@@ -671,6 +655,10 @@ const senderContents = (
     // submitTrade strips the line again when it freezes the record for outbound submission.
     'phase: preparing',
     '---',
+    // Markdown formatters put a blank line between frontmatter and the first block. Emitting it
+    // makes the payload a fixed point of the formatter a receiver will run over its repository,
+    // so an ordinary hygiene pass cannot make an untouched record read as tampered with.
+    '',
     `# ${record.id}: ${record.title}`,
     '',
     '## Context',
@@ -950,8 +938,28 @@ const peerDirectories = async (root: string, area: '+' | '-'): Promise<readonly 
   return paths
 }
 
+/**
+ * Projects what the sender authored, so pairing compares the payload rather than the receiver's
+ * storage of it. A receiver that formats its repository renormalises frontmatter quoting and the
+ * blank line after the frontmatter; neither is payload, and neither may read as tampering, or no
+ * trade could complete its lifecycle in a repository with ordinary Markdown hygiene. A receiver
+ * that alters a field value or the prose still fails, which is the guard's reason to exist.
+ */
+const senderPayloadProjection = (record: TradeRecord): string =>
+  JSON.stringify([
+    record.id,
+    record.title,
+    record.createdAt,
+    record.sender,
+    record.receiver,
+    record.kind,
+    record.sourceRef,
+    record.observation,
+    record.body.trim()
+  ])
+
 const sameSenderPayload = (outbound: TradeRecord, inbound: TradeRecord): boolean =>
-  rawSenderProjection(outbound.contents, 'outbound') === rawSenderProjection(inbound.contents, 'inbound')
+  senderPayloadProjection(outbound) === senderPayloadProjection(inbound)
 
 export const locateTrades = async (
   context: KiContext,
