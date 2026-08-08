@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-031
 title: Cover reachable trade guard
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: null

@@ -512,6 +512,35 @@ describe('[ki trade]', () => {
     expect(await box.run(['ki', 'trade', 'release', id])).toMatchObject({ exitCode: 0 })
   })
 
+  test('refuses release when the receiver inbound record declares a phase its location contradicts', async () => {
+    // The estate scan derives direction from the record's own phase, so it can never disagree
+    // with itself. Release is the caller that does not: it asserts inbound for a file in another
+    // repository, hand-editable and never consulted for its phase before this point. A record
+    // copied into place rather than recorded through `ki trade receive` arrives here intact.
+    const { box } = await configuredPair()
+    const created = await createTrade(box, 'work')
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+    box.cd('receiver')
+    await box.run(['ki', 'trade', 'receive', id])
+    const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
+    const inbound = await box.project.read(inboundPath)
+    box.cd('..')
+    const releaseWithPhase = async (phase: string) => {
+      await box.project.write(inboundPath, inbound.replace('phase: received', `phase: ${phase}`))
+      return box.run(['ki', 'trade', 'release', id])
+    }
+
+    // The two lines fail on different inputs: a phase outside the vocabulary at all, and a phase
+    // inside it that belongs to another location.
+    const outsideVocabulary = await releaseWithPhase('bogus')
+    expect(outsideVocabulary.exitCode).toBe(2)
+    expect(outsideVocabulary.output).toContain(`${id}.md has invalid phase`)
+
+    const wrongLocation = await releaseWithPhase('submitted')
+    expect(wrongLocation.exitCode).toBe(2)
+    expect(wrongLocation.output).toContain(`${id}.md inbound must declare phase: received`)
+  })
+
   test('creates, receives, displays, releases, and prunes a work trade while each command writes only its local repository', async () => {
     const { box } = await configuredPair()
     const created = await createTrade(box, 'work', {}, () => Date.UTC(2026, 7, 3, 12, 0, 0))
