@@ -31,14 +31,18 @@ This item does not reintroduce per-item duration weighting, which the measuremen
 
 The host reports `loading N/M definitions` while preparing skills, then announces its plan, then reports at each item edge. Session creation happens inside the first call into a prepared skill, after the plan is announced and before any item edge, and is invisible to the host except as elapsed time.
 
-The display also cannot refresh during that block, because the evidence gathering runs its subprocesses synchronously and holds the event loop. That constraint is recorded separately in `KI-TOOL-CLI-027`, and an outbound trade proposes that items yield; this item is about representing the phase, not about animating it.
+The display also could not refresh during that block, because the evidence gathering ran its subprocesses synchronously and held the event loop. That constraint is recorded separately in `KI-TOOL-CLI-027` and the Harness has now applied the fix, so the display does refresh during the block. This item remains about representing the phase, not about animating it, but the animation it produces is no longer inert.
+
+The fourth step below is also answered. `TRD-dbcda0ce` carries `decision_status: applied` against harness commit `a6f7b2c3fb86fc4db74bc2e45a69b61aa85a0eca`: sessions now take an optional emitter reporting named stages and steps, and `ki-engineering` emits one step per external command. So the Harness can report progress within evidence gathering, the minimal contract that carries it exists, and this item's remaining work is to consume it rather than to establish whether it could exist.
+
+That emitter is not in the CLI's canonical archive pin `501b40111aefa774aff49f10893dc235708a823c`, which predates it by 253 commits. Implementation here can proceed against a `ki dev local` checkout, but the feature only reaches users once the pin moves — the same external prerequisite `KI-TOOL-CLI-018` records.
 
 ## Steps
 
 - [ ] Report the transition into evidence gathering as its own phase, so the display names what is happening instead of showing a stalled item count.
 - [ ] Confirm by measurement how much of a representative operation falls inside that phase, for this repository and for at least one other, so the reporting is proportionate to reality rather than to this one rubric.
 - [ ] Decide what the bar should show while a single unreported block dominates the operation, given that a proportion cannot be computed without knowing what the phase contains.
-- [ ] Establish whether the Harness could report progress within evidence gathering, and if it could, what minimal contract would carry it; capture the outcome rather than assuming it.
+- [x] Establish whether the Harness could report progress within evidence gathering, and if it could, what minimal contract would carry it; capture the outcome rather than assuming it. It can: an optional session emitter reporting named stages and steps, with `ki-engineering` emitting one step per external command.
 - [ ] Keep the plain-stream form informative, since a phase transition is exactly the kind of event a log should carry.
 
 ## Files touched
@@ -55,7 +59,7 @@ Re-run the phase measurement afterwards and confirm the reported structure match
 
 ## Dependencies / blocks
 
-Nothing local blocks this item. It overlaps `KI-TOOL-CLI-027`, which records that the display cannot refresh while an item or a session holds the event loop: naming the phase helps even while frozen, since a named phase that does not tick is still more informative than an item count that does not move.
+Nothing local blocks this item, and the Harness dependency its fourth step raised is now resolved and applied. It overlaps `KI-TOOL-CLI-027`, which records that the display cannot refresh while an item or a session holds the event loop: naming the phase helps even while frozen, since a named phase that does not tick is still more informative than an item count that does not move.
 
 ## Discussion
 

@@ -2,8 +2,8 @@
 id: KI-TOOL-CLI-027
 title: Resolve blocking-item progress limit
 theme: cli
-horizon: next
-status: draft
+horizon: now
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -29,14 +29,18 @@ This item does not change the rubric contract, which is portable and owned elsew
 
 The refresh capability is injected as `startInterval` on the context, mirroring `onInterrupt`, and is started only for an interactive display because a plain stream would otherwise gain a line per refresh. Its behaviour is covered through the CLI seam by firing the captured handler.
 
-An outbound work trade to the Harness proposes that rubric items avoid blocking the event loop, carrying the measurement above as evidence. The Harness owns whether and how to act, and this item does not assume a particular outcome.
+An outbound work trade to the Harness proposed that rubric items avoid blocking the event loop, carrying the measurement above as evidence. The Harness applied it. `TRD-d7d00505` carries `decision_status: applied` against harness commit `b0cdf90a33d55ad67f077780c410e6ba2381c88d`, with the rationale that evidence gathering now awaits each external command and the session is asynchronous, so a run yields between subprocesses.
+
+Re-measuring against that change resolves the constraint. `ki repo audit --skill ki-engineering` in this repository, captured on a pseudo-terminal, now produces eighty-eight distinct elapsed-clock values advancing from `0.0s` to `21.8s` in steps of `0.3s` — the configured 250-millisecond refresh, rounded to the displayed tenth. The same capture before the change held eighty-eight frames carrying three distinct clock values and jumped from `0.0s` straight to `30.5s`. The refresh fires, the clock advances during a long item, and a frozen display no longer misreports a running operation as a hang.
+
+This measurement was taken with `ki dev local` enabled, so the harness under test was the working checkout at `101e39c0`. The CLI's canonical archive pin `501b40111aefa774aff49f10893dc235708a823c` predates the fix by 253 commits, so a user on the pinned archive still sees the old behaviour. Moving that pin is the same external prerequisite `KI-TOOL-CLI-018` records, and it gates when this resolution reaches users rather than whether it is correct.
 
 ## Steps
 
-- [ ] Track the Harness's disposition of the outbound trade, and reconcile this item with whatever it decides rather than presuming adoption.
-- [ ] If items begin to yield, confirm by measurement that the refresh fires at the expected rate and that the clock advances during a long item.
-- [ ] If the Harness declines or defers, decide whether the host should say something explicit when an item has been running without yielding, so a frozen clock is at least attributable rather than ambiguous.
-- [ ] Keep the measurement reproducible, so the constraint can be re-checked cheaply after any change to either side.
+- [x] Track the Harness's disposition of the outbound trade, and reconcile this item with whatever it decides rather than presuming adoption. Applied, not declined.
+- [x] If items begin to yield, confirm by measurement that the refresh fires at the expected rate and that the clock advances during a long item.
+- [x] If the Harness declines or defers, decide whether the host should say something explicit when an item has been running without yielding. Not reached: the Harness applied the change, so no attribution fallback is needed.
+- [x] Keep the measurement reproducible, so the constraint can be re-checked cheaply after any change to either side. See Verify.
 
 ## Files touched
 
@@ -46,13 +50,21 @@ An outbound work trade to the Harness proposes that rubric items avoid blocking 
 
 ## Verify
 
-Run an audit against a skill with a subprocess-backed item and count refresh firings against wall-clock time. Today that ratio is zero; the constraint is resolved when it approaches the configured interval, and the elapsed clock visibly advances while a single item runs.
+Capture an audit on a pseudo-terminal and count the distinct elapsed-clock values it emits against wall-clock time:
+
+```
+script -q /dev/null ki repo audit --skill ki-engineering > frames.txt 2>&1
+```
+
+Then count distinct `N.Ns` values in `frames.txt`. The constraint is resolved when their spacing approaches the configured refresh interval rather than the item-edge spacing. It currently yields eighty-eight values spaced `0.3s` apart across a 21.8-second run.
 
 Confirm that no change made here reintroduces a refresh on a plain stream, which would put one line per interval into a log.
 
 ## Dependencies / blocks
 
-Nothing local blocks this item. Its substance depends on the Harness's decision about the outbound trade, which cannot be expressed in `blocked-by` because that field admits only local work-item identifiers. This record stays a `next` draft until that disposition is known.
+Nothing local blocks this item. Its substance depended on the Harness's decision about the outbound trade, which could not be expressed in `blocked-by` because that field admits only local work-item identifiers. That disposition is now known and applied, so the record moves to review.
+
+`TRD-d7d00505` is the originating trade. It is release-eligible but cannot yet be released: the receiver's copy differs from the sender payload by one blank line after the frontmatter, which the payload-immutability guard correctly rejects. That defect is recorded separately and does not affect this item's substance.
 
 ## Discussion
 

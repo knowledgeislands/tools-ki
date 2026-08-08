@@ -4,7 +4,7 @@ title: Restructure repository configuration contract
 theme: cli
 horizon: now
 status: draft
-blocks: [KI-TOOL-CLI-024, KI-TOOL-VENDOR-001]
+blocks: [KI-TOOL-VENDOR-001]
 blocked-by: []
 baseline-ref: null
 ---
@@ -70,7 +70,9 @@ Confirm that an unmigrated file fails with a diagnostic naming the expected shap
 
 ## Dependencies / blocks
 
-Blocks `KI-TOOL-CLI-024`, which reads route declarations to render the estate diagram and should be built once against the settled shape rather than twice. Blocks `KI-TOOL-VENDOR-001`, whose provenance contract needs the declared harness list as its anchor.
+Blocks `KI-TOOL-VENDOR-001`, whose provenance contract needs the declared harness list as its anchor.
+
+This item previously blocked `KI-TOOL-CLI-024` on the reasoning that the estate diagram reads route declarations and should be built once against the settled shape. That was withdrawn before `024` was implemented: the diagram consumes `inspectEstateRoutes`, which returns an inspection type rather than raw configuration, so a change to the declaration syntax lands in the parser and leaves the renderer untouched. `024` shipped against the current shape without incurring the rework the block was meant to prevent.
 
 `KI-HARNESS-GOV-021` in `knowledgeislands/ki-agentic-harness` settles the portable contract this item implements, and `KI-HARNESS-GOV-022` covers the estate migration. Both are recorded here as prose rather than as `blocked-by` identifiers, because they are items in another repository which owns its own priority, plan, and execution. Work here should not begin until the contract is settled, but the Harness schedules that in its own horizon.
 
