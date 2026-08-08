@@ -375,77 +375,108 @@ describe('[ki trade]', () => {
     return box
   }
 
-  test('renders the registered estate as a self-contained SVG collapsing reciprocal declarations', async () => {
+  test('renders the registered estate as an interactive network page and opens it', async () => {
     const box = await diagramEstate()
+    const opened: string[][] = []
+    box.setRunner(async (command, args) => {
+      opened.push([command, ...args])
+      return { exitCode: 0, output: '' }
+    })
 
-    const rendered = await box.run('ki trade routes list --estate --svg')
+    const rendered = await box.run('ki trade routes list --estate --html')
 
     expect(rendered.exitCode).toBe(0)
-    const svg = rendered.output
-    expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true)
-    expect(svg.endsWith('</svg>\n')).toBe(true)
-    expect(svg).toContain('<title>Knowledge Islands trade routes — registered estate</title>')
-    expect(svg).toContain('<desc>4 repositories, 6 routes, all declared routes.</desc>')
-    // One rectangle-and-label group per repository, one titled group per directed edge.
-    expect(svg.match(/<g><rect /gu)?.length).toBe(4)
-    expect(svg.match(/<g><title>example\//gu)?.length).toBe(6)
-    // A reciprocated pair stays two edges drawn side by side rather than one double-headed line,
-    // so a pair reciprocating one trade kind and not the other can still be told apart.
-    expect(svg).toContain('<title>example/source &#8594; example/receiver · knowledge + work · active</title>')
-    expect(svg).toContain('<title>example/receiver &#8594; example/source · work · active</title>')
-    expect(svg).not.toContain('marker-start')
-    expect(svg).toContain('<title>example/source &#8594; example/third · work · active</title>')
-    // A declaration the peer has not answered renders dashed, in each direction.
-    expect(svg).toContain('<title>example/fourth &#8594; example/source · work · awaiting-receiver</title>')
-    expect(svg).toContain('<title>example/third &#8594; example/fourth · knowledge · awaiting-sender</title>')
-    expect(svg.match(/stroke-dasharray="6 4"/gu)?.length).toBe(3)
-    // Kind rides the edge as an icon rather than colouring the line: a square for work,
-    // a diamond for knowledge.
-    expect(svg).toContain('fill="#b45309"')
-    expect(svg).toContain('fill="#1d4ed8"')
-    expect(svg).toContain('>reciprocated, drawn side by side</text>')
-    expect(svg).toContain('>awaiting reciprocity</text>')
-    // Self-contained: the SVG namespace is the only URL, and nothing is fetched at render time.
-    expect(svg.match(/https?:\/\//gu)?.length).toBe(1)
-    expect(svg).not.toMatch(/<script|<image|xlink:href|@import/u)
+    expect(rendered.output).toContain('estate network written to')
+    const page = await box.home.read('.cache/ki/estate-routes.html')
+    // The page is a payload and a simulation, so the assertions are about the estate it carries
+    // and never about where anything is drawn — the browser decides that, and a reader can drag it.
+    const payload = JSON.parse(/window\.__estate = (.*?)<\/script>/u.exec(page)?.[1] as string)
+    expect(payload.nodes.map((node: { id: string }) => node.id)).toEqual([
+      'example/fourth',
+      'example/receiver',
+      'example/source',
+      'example/third'
+    ])
+    expect(payload.links).toEqual([
+      {
+        source: 'example/fourth',
+        target: 'example/source',
+        kinds: ['work'],
+        states: ['awaiting-receiver'],
+        active: false
+      },
+      { source: 'example/receiver', target: 'example/source', kinds: ['work'], states: ['active'], active: true },
+      { source: 'example/receiver', target: 'example/third', kinds: ['knowledge'], states: ['active'], active: true },
+      {
+        source: 'example/source',
+        target: 'example/receiver',
+        kinds: ['knowledge', 'work'],
+        states: ['active'],
+        active: true
+      },
+      { source: 'example/source', target: 'example/third', kinds: ['work'], states: ['active'], active: true },
+      {
+        source: 'example/third',
+        target: 'example/fourth',
+        kinds: ['knowledge'],
+        states: ['awaiting-sender'],
+        active: false
+      }
+    ])
+    expect(payload.incomplete).toBe(false)
+    // Self-contained: the viewer runtime ships in the page, so nothing is fetched when it opens.
+    expect(page).toContain('forceSimulation')
+    expect(page).not.toMatch(/<script[^>]*\ssrc=/u)
+    expect(page).toContain('knowledge</span>')
+    expect(opened).toEqual([['open', join(box.home.path, '.cache/ki/estate-routes.html')]])
   })
 
-  test('narrows the diagram to incomplete routes and writes it to a given path', async () => {
+  test('narrows the network to incomplete routes and reports a failure to open it', async () => {
     const box = await diagramEstate()
+    box.setRunner(async () => ({ exitCode: 1, output: '' }))
 
-    const written = await box.run('ki trade routes list --estate --incomplete --svg routes.svg')
+    const rendered = await box.run('ki trade routes list --estate --incomplete --html')
 
-    expect(written).toEqual({
-      exitCode: 0,
-      output: `ki trade routes list: estate diagram written to ${join(await realpath(box.project.path), 'routes.svg')}\n`
-    })
-    const svg = await box.project.read('routes.svg')
-    expect(svg).toContain('<desc>3 repositories, 2 routes, incomplete routes only.</desc>')
-    expect(svg.match(/<g><title>example\//gu)?.length).toBe(2)
-    // Layout, not geometry: these two routes form the chain third -> fourth -> source, so the
-    // repository that only sends is placed left of the one that only receives, with the
-    // repository doing both between them.
-    const columnOf = (name: string): number =>
-      Number(new RegExp(`<text x="([0-9.]+)"[^>]*>${name}</text>`, 'u').exec(svg)?.[1])
-    expect(columnOf('third')).toBeLessThan(columnOf('fourth'))
-    expect(columnOf('fourth')).toBeLessThan(columnOf('source'))
+    expect(rendered.exitCode).toBe(0)
+    // The page is already written, so failing to open it is worth saying and not worth failing on.
+    expect(rendered.output).toContain('could not open')
+    const payload = JSON.parse(
+      /window\.__estate = (.*?)<\/script>/u.exec(await box.home.read('.cache/ki/estate-routes.html'))?.[1] as string
+    )
+    expect(payload.incomplete).toBe(true)
+    expect(payload.nodes).toHaveLength(3)
+    expect(payload.links.map((link: { source: string }) => link.source)).toEqual(['example/fourth', 'example/third'])
   })
 
-  test('renders an empty estate diagram and refuses a diagram of the local route list', async () => {
+  test('renders an empty estate network and refuses a network of the local route list', async () => {
     const box = await sandbox()
     const source = await realpath(box.project.path)
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
     await box.config.write('ki/config.toml', localConfiguration([source]))
-
-    const empty = await box.run('ki trade routes list --estate --svg')
-
-    expect(empty.exitCode).toBe(0)
-    expect(empty.output).toContain('<desc>0 repositories, 0 routes, all declared routes.</desc>')
-    expect(empty.output).toContain('>knowledge travels this way</text>')
-    expect(await box.run('ki trade routes list --svg')).toEqual({
-      exitCode: 2,
-      output: 'ki: error: trade route --svg requires --estate\n'
+    box.setEnv({ KI_BROWSER_OPENER: 'noop-opener' })
+    const opened: string[] = []
+    box.setRunner(async (command) => {
+      opened.push(command)
+      return { exitCode: 0, output: '' }
     })
+
+    expect((await box.run('ki trade routes list --estate --html')).exitCode).toBe(0)
+    const page = await box.home.read('.cache/ki/estate-routes.html')
+    expect(page).toContain('0 repositories · 0 routes · all declared routes')
+    expect(JSON.parse(/window\.__estate = (.*?)<\/script>/u.exec(page)?.[1] as string).links).toEqual([])
+    // The opener is configurable, so a machine without the platform default can still be used.
+    expect(opened).toEqual(['noop-opener'])
+    expect(await box.run('ki trade routes list --html')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: trade route --html requires --estate\n'
+    })
+
+    // Without an override the opener is the platform's, which is injected rather than read from
+    // the host, so both defaults stay reachable from a test wherever the suite runs.
+    box.setEnv({ KI_BROWSER_OPENER: undefined })
+    await box.run('ki trade routes list --estate --html', { platform: 'linux' })
+    await box.run('ki trade routes list --estate --html', { platform: 'darwin' })
+    expect(opened.slice(1)).toEqual(['xdg-open', 'open'])
   })
 
   test('releases a decided trade whose receiver reformatted the record without changing the payload', async () => {

@@ -87,7 +87,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki trade routes add`
 - `ki trade routes remove`
-- `ki trade routes list [--estate] [--incomplete] [--svg [path]]`
+- `ki trade routes list [--estate] [--incomplete] [--html]`
 - `ki trade routes check`
 - `ki trade new`
 - `ki trade receive`
@@ -114,7 +114,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context.
 - Local `ki registry add` records every selected physical KI repository root without applying repairs; `ki repo conform` does the same before evaluating its declaration or conformance findings.
-- `ki trade routes list [--estate] [--incomplete]` is a framed local or registered-estate route inventory; `--svg` renders the estate as a self-contained SVG diagram instead, laying repositories into left-to-right columns by what they send and receive, and drawing one edge per direction with per-kind icons so a reciprocated pair runs side by side. Both listings now show only the furthest-advanced lifecycle stage of a trade rather than the full publication, delivery and decision triplet.
+- `ki trade routes list [--estate] [--incomplete]` is a framed local or registered-estate route inventory; `--html` renders the estate as a self-contained interactive force-directed network instead, written to the cache and opened in a browser, drawing one arc per direction with per-kind chips so a reciprocated pair separates. The viewer runtime is vendored into the page, which therefore opens with no network. Both listings now show only the furthest-advanced lifecycle stage of a trade rather than the full publication, delivery and decision triplet.
 - `ki trade new` creates a local export once this repository declares the route; receiver activation remains reciprocal.
 - Trade pairing compares the payload the sender authored — its field values as parsed and its prose — rather than raw bytes, so a receiver that formats its own Markdown does not read as having tampered with a record.
 

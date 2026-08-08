@@ -1,8 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["bin/ki", "src/cli.ts", "src/**/*.test.ts"],
-  "ignore": [".claude/skills/**", ".agents/skills/**"],
+  "ignore": [".claude/skills/**", ".agents/skills/**", "scripts/**"],
   "ignoreBinaries": ["mandoc", "mkfifo"],
-  "ignoreDependencies": ["lint-staged", "syncpack"],
+  "ignoreDependencies": ["lint-staged", "syncpack", "d3-force", "d3-selection", "d3-drag", "d3-zoom"],
   "ignoreExportsUsedInFile": true
 }

@@ -157,6 +157,7 @@ export interface Sandbox {
       readonly runner?: 'default'
       readonly executable?: string
       readonly installation?: KiInstallationMode
+      readonly platform?: NodeJS.Platform
       readonly stdoutFailure?: Error
       /** Receives the interrupt handler a live display registers, so a test can fire it. */
       readonly captureInterrupt?: (handler: () => void) => void
@@ -227,6 +228,7 @@ const create = async (): Promise<Sandbox> => {
       readonly runner?: 'default'
       readonly executable?: string
       readonly installation?: KiInstallationMode
+      readonly platform?: NodeJS.Platform
       readonly stdoutFailure?: Error
       /** Receives the interrupt handler a live display registers, so a test can fire it. */
       readonly captureInterrupt?: (handler: () => void) => void
@@ -245,6 +247,7 @@ const create = async (): Promise<Sandbox> => {
       stderr: { write, isTTY: options?.interactive, columns: options?.columns },
       executable,
       installation: options?.installation,
+      ...(options?.platform === undefined ? {} : { platform: options.platform }),
       workingDirectory,
       environment: { ...env, ...environmentOverrides, _: executable },
       ...(options?.fetcher === 'default' ? {} : { fetcher: (input, init) => fetcher(input, init) }),

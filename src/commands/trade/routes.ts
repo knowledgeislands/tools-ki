@@ -1,9 +1,9 @@
-import { writeFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
-import { renderEstateRoutesDiagram } from '../../core/route-diagram.ts'
+import { estateNetwork, renderEstateRoutesPage } from '../../core/route-network.ts'
 import {
   addTradeRoute,
   inspectEstateRoutes,
@@ -22,7 +22,7 @@ interface RouteOptions {
 interface RouteListOptions {
   readonly estate?: boolean
   readonly incomplete?: boolean
-  readonly svg?: boolean | string
+  readonly html?: boolean
 }
 
 const renderRouteList = (
@@ -119,6 +119,16 @@ const renderEstateRouteList = (
   return lines.join('\n')
 }
 
+/**
+ * Hands the page to the desktop's own opener. A failure to open is reported rather than fatal:
+ * the file is already written, so the caller can open it themselves.
+ */
+const openInBrowser = async (context: KiContext, path: string): Promise<void> => {
+  const opener = context.environment['KI_BROWSER_OPENER'] ?? (context.platform === 'darwin' ? 'open' : 'xdg-open')
+  const result = await context.runner(opener, [path], context.environment)
+  if (result.exitCode !== 0) context.stderr.write(`ki trade routes list: could not open ${path} with ${opener}\n`)
+}
+
 export const createTradeRoutesCommand = (context: KiContext): Command => {
   const routes = new Command('routes').description('maintain local typed trade-route declarations')
   routes
@@ -167,20 +177,20 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
         .description('list local routes or every registered route and its estate state')
         .option('--estate', 'list route declarations across the registered repository estate')
         .option('--incomplete', 'show only routes that are not active')
-        .option('--svg [path]', 'render the estate as an SVG diagram, to a file when a path is given')
+        .option('--html', 'render the estate as an interactive network page and open it')
         .action(async (options: RouteListOptions) => {
-          if (options.svg && !options.estate) throw grammarError('trade route --svg requires --estate')
+          if (options.html && !options.estate) throw grammarError('trade route --html requires --estate')
           if (options.estate) {
             const inspected = await inspectEstateRoutes(context)
             const incomplete = Boolean(options.incomplete)
-            if (options.svg) {
-              const diagram = renderEstateRoutesDiagram(inspected, incomplete)
-              if (options.svg === true) context.stdout.write(diagram)
-              else {
-                const path = resolve(context.workingDirectory, options.svg)
-                await writeFile(path, diagram, 'utf8')
-                context.stdout.write(`ki trade routes list: estate diagram written to ${path}\n`)
-              }
+            if (options.html) {
+              // The page is regenerable from the estate at any moment, so it lives in the cache
+              // under a fixed name and is rewritten in place rather than accumulating copies.
+              const path = join(context.paths.cache, 'estate-routes.html')
+              await mkdir(context.paths.cache, { recursive: true })
+              await writeFile(path, renderEstateRoutesPage(estateNetwork(inspected, incomplete)), 'utf8')
+              context.stdout.write(`ki trade routes list: estate network written to ${path}\n`)
+              await openInBrowser(context, path)
               return
             }
             context.stdout.write(`${renderEstateRouteList(inspected, incomplete)}\n`)

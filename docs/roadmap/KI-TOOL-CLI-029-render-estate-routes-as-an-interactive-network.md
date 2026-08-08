@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-029
 title: Render estate routes as an interactive network
 theme: cli
 horizon: now
-status: draft
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -27,9 +27,11 @@ This item does not add a server, a build step for the viewer, or any runtime tha
 
 ## Current state
 
-`ki trade routes list --estate --svg [path]` writes a self-contained SVG. Its data model is sound and survives: `directedEdges` in `src/core/route-diagram.ts` collapses declarations onto the direction they run, keeps the kinds travelling each way and the states behind them, and never reads configuration itself. Everything above that — placement, column layering, edge detours, node boundary intersection, badge rotation — exists only to arrange the graph, and all of it goes.
+Delivered. `ki trade routes list --estate --html` writes `estate-routes.html` under the cache and opens it. `src/core/route-diagram.ts` is deleted; its data model survives as `estateNetwork` in `src/core/route-network.ts`, and every line that placed a node or routed an edge is gone.
 
-The CLI has no capability for opening a file in a browser. It has `context.runner`, which tests already stub, so the launch can go through that rather than through a new capability.
+The vendored runtime is produced by `scripts/vendor-d3.js`, bundled to `src/assets/d3-runtime.txt` and checked in, so no code generation stands in front of the gate on a clean checkout. It is imported with `with { type: 'text' }`, which Bun embeds into the compiled binary. Four `d3-*` packages are devDependencies used only to regenerate that bundle; the shipped page carries a 64 KB minified runtime and fetches nothing.
+
+The launch goes through `context.runner`, which tests already stub, and `KI_BROWSER_OPENER` overrides the platform default. The platform itself became an injected capability on `KiContext` rather than an ambient `process.platform` read, because the default was otherwise a branch no test on this machine could reach.
 
 ## Decisions
 
@@ -41,28 +43,31 @@ The CLI has no capability for opening a file in a browser. It has `context.runne
 
 ## Steps
 
-- [ ] Decide how the vendored viewer script is produced and where it lives, and confirm it does not put a code-generation step in front of `bun run test` on a clean checkout. This is the one genuinely open question in this item.
-- [ ] Emit a page carrying the estate as data — nodes with identity and owner, links with exporter, importer, kinds, and state — plus the simulation, so that the renderer's output is a payload and not a picture.
-- [ ] Keep every distinction the SVG earned: one link per direction, a reciprocated pair legible as two, trade kind carried per direction, an unreciprocated route visibly incomplete, and a legend.
-- [ ] Support drag, hover detail, and zoom, since these are the whole reason for the change.
-- [ ] Open the page through `context.runner` after writing it, choosing the platform opener, and cover the failure to open as a reportable condition rather than a crash.
-- [ ] Remove `src/core/route-diagram.ts`'s layout and the `--svg` surface, including its manual page, README, changelog and completion entries.
-- [ ] Assert the embedded payload through the CLI seam — node count, link count, directions, kinds, states — rather than any geometry.
+- [x] Decide how the vendored viewer script is produced and where it lives, and confirm it does not put a code-generation step in front of `bun run test` on a clean checkout. This is the one genuinely open question in this item.
+- [x] Emit a page carrying the estate as data — nodes with identity and owner, links with exporter, importer, kinds, and state — plus the simulation, so that the renderer's output is a payload and not a picture.
+- [x] Keep every distinction the SVG earned: one link per direction, a reciprocated pair legible as two, trade kind carried per direction, an unreciprocated route visibly incomplete, and a legend.
+- [x] Support drag, hover detail, and zoom, since these are the whole reason for the change.
+- [x] Open the page through `context.runner` after writing it, choosing the platform opener, and cover the failure to open as a reportable condition rather than a crash.
+- [x] Remove `src/core/route-diagram.ts`'s layout and the `--svg` surface, including its manual page, README, changelog and completion entries.
+- [x] Assert the embedded payload through the CLI seam — node count, link count, directions, kinds, states — rather than any geometry.
 
 ## Files touched
 
-- `src/core/route-diagram.ts` — reduced to the data model, or replaced by a network module beside it.
-- `src/commands/trade/routes.ts` — `--html` replaces `--svg`.
+- `src/core/route-diagram.ts` — deleted.
+- `src/core/route-network.ts` — the payload, the page, and the viewer.
+- `scripts/vendor-d3.js`, `src/assets/d3-runtime.txt`, `src/assets/assets.d.ts` — the vendored runtime and its type.
+- `src/commands/trade/routes.ts` — `--html` replaces `--svg`, and the browser launch.
 - `src/commands/manage/completion-grammar.ts` — the flag no longer completes as a path.
-- `src/context.ts` — only if opening a browser needs something `runner` cannot express.
-- `src/tests/cli/trade/trade.test.ts` — payload assertions replacing the structural SVG ones.
+- `src/context.ts`, `src/tests/cli/_cli_helper.ts` — the injected platform.
+- `src/tests/cli/trade/trade.test.ts`, `src/tests/cli/manage/completions.test.ts`.
+- `knip.json`, `package.json` — the vendor script's dependencies.
 - `man/ki.1`, `README.md`, `CHANGELOG.md`.
 
 ## Verify
 
-Run the command against the real registered estate with the network disabled and confirm the page opens, the simulation settles, every route in `ki trade routes list --estate` is present exactly once with its direction and kinds, and dragging a node moves it. Confirm no request leaves the page.
+Rendered against the real registered estate and checked in a browser: all five repositories and all thirteen routes present, the simulation settles, reciprocated pairs separate into two arcs, and arrowheads land on the boxes. The only URLs in the page are XML namespace identifiers from D3's internals, which are names rather than requests, so nothing is fetched.
 
-Tests assert the payload, not the arrangement. Coverage remains at 100% over product code, and the platform-specific opener must not need a `/* v8 ignore */` that hides a reachable branch.
+Tests assert the payload and never the arrangement. Coverage is 100% on all four metrics with no `/* v8 ignore */` added: both platform defaults are exercised through the CLI seam by injecting the platform.
 
 ## Dependencies / blocks
 

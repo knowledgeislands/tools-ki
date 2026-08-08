@@ -155,11 +155,11 @@ Declare one local typed directional trade route.
 .B ki trade routes remove <repository> --direction export|import --kind work|knowledge
 Remove one local typed trade route.
 .TP
-.B ki trade routes list [--estate] [--incomplete] [--svg [path]]
+.B ki trade routes list [--estate] [--incomplete] [--html]
 List local typed trade routes, or every declared registered-estate route.
 Limit either view to incomplete routes.
-Render the estate as an SVG diagram with
-.BR --svg .
+Render the estate as an interactive network page with
+.BR --html .
 .TP
 .B ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]
 Check local typed trade routes and their activation state.
@@ -590,18 +590,21 @@ identity remains the required \fBrepository\fR value in the ki-repo table.
 .B ki trade routes remove <repository> --direction export|import --kind work|knowledge
 Remove one local typed route.
 .TP
-.B ki trade routes list [--estate] [--incomplete] [--svg [path]]
+.B ki trade routes list [--estate] [--incomplete] [--html]
 List local typed routes with their registered-estate state. With
 .BR --estate ,
 list every valid registered repository declaration together; with
 .BR --incomplete ,
 show only routes that await reciprocity or have ambiguous peers. With
-.BR --svg ,
-render that estate as a self-contained SVG diagram, to standard output or to the
-given path; it requires
+.BR --html ,
+write that estate to the cache as a self-contained interactive network page and
+open it; it requires
 .BR --estate .
-The diagram lays repositories into left-to-right columns by what they trade
-and draws one edge per direction, so a reciprocated pair runs side by side.
+The page draws one arc per direction, so a reciprocated pair separates, and
+vendors its viewer so it opens with no network.
+Set
+.B KI_BROWSER_OPENER
+to override the platform opener.
 .TP
 .B ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]
 Check declared routes by kind. An export awaiting local receiver registration,
