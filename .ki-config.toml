@@ -1,4 +1,7 @@
-["knowledgeislands/ki-agentic-harness:ki-repo"]
+[repo]
+harnesses = ["knowledgeislands/ki-agentic-harness"]
+
+[skills.ki-repo]
 repository = "https://github.com/knowledgeislands/tools-ki"
 title = "tools-ki"
 description = "Knowledge Islands command-line interface."
@@ -6,37 +9,37 @@ repo_code = "KI-TOOL"
 supported_runtimes = ["claude-code", "chatgpt-codex"]
 visibility = "public"
 
-["knowledgeislands/ki-agentic-harness:ki-authoring"]
+[skills.ki-authoring]
 
-["knowledgeislands/ki-agentic-harness:ki-feature-definitions"]
+[skills.ki-feature-definitions]
 
-["knowledgeislands/ki-agentic-harness:ki-guides"]
+[skills.ki-guides]
 
-["knowledgeislands/ki-agentic-harness:ki-tools"]
+[skills.ki-tools]
 
-["knowledgeislands/ki-agentic-harness:ki-engineering"]
+[skills.ki-engineering]
 
-["knowledgeislands/ki-agentic-harness:ki-roadmap"]
-["knowledgeislands/ki-agentic-harness:ki-roadmap".themes]
+[skills.ki-roadmap]
+[skills.ki-roadmap.themes]
 CLI = "cli"
 VENDOR = "cross-repository-vendoring"
 
-["knowledgeislands/ki-agentic-harness:ki-decision-records"]
+[skills.ki-decision-records]
 
-["knowledgeislands/ki-agentic-harness:ki-trades".exports_to]
-work = ["https://github.com/knowledgeislands/ki-agentic-harness", "https://github.com/knowledgeislands/ki-website", "https://github.com/knowledgeislands/tools-mgit", "https://github.com/krisb/dotfiles"]
-knowledge = ["https://github.com/knowledgeislands/ki-agentic-harness", "https://github.com/knowledgeislands/ki-website", "https://github.com/krisb/dotfiles"]
+[skills.ki-trades]
 
-["knowledgeislands/ki-agentic-harness:ki-trades".imports_from]
-work = ["https://github.com/knowledgeislands/ki-agentic-harness", "https://github.com/knowledgeislands/tools-mgit"]
-knowledge = []
+[skills.ki-trades.routes]
+"knowledgeislands/ki-agentic-harness" = { export = ["work", "knowledge"], import = ["work"] }
+"knowledgeislands/ki-website" = { export = ["work", "knowledge"] }
+"knowledgeislands/tools-mgit" = { export = ["work"], import = ["work"] }
+"krisb/dotfiles" = { export = ["work", "knowledge"] }
 
-["knowledgeislands/ki-agentic-harness:ki-tokenomics"]
+[skills.ki-tokenomics]
 
-["knowledgeislands/ki-agentic-harness:ki-housekeeping-claude"]
+[skills.ki-housekeeping-claude]
 
-["knowledgeislands/ki-agentic-harness:ki-tokenomics-claude"]
+[skills.ki-tokenomics-claude]
 
-["knowledgeislands/ki-agentic-harness:ki-tokenomics-codex"]
+[skills.ki-tokenomics-codex]
 
-["knowledgeislands/ki-agentic-harness:ki-git"]
+[skills.ki-git]

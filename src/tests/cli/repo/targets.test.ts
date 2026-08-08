@@ -164,7 +164,7 @@ describe('[ki repo target sets]', () => {
         '.mgit-config.toml',
         'version = 1\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n'
       )
-      await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({ rubric: rubric('[]') })
       const root = await realpath(box.project.path)
 
@@ -191,8 +191,8 @@ describe('[ki repo target sets]', () => {
 
     test('runs audit independently for every preflighted explicit target', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')
-      await box.root.write('second/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({ rubric: rubric('[]') })
       const first = await realpath(`${box.root.path}/first`)
       const second = await realpath(`${box.root.path}/second`)
@@ -209,9 +209,9 @@ describe('[ki repo target sets]', () => {
 
     test('recaps every repository verdict and aggregate finding volume', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')
-      await box.root.write('second/.ki-config.toml', '["example/harness:ki-example"]\n')
-      await box.root.write('third/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('third/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [
           {
@@ -241,8 +241,8 @@ describe('[ki repo target sets]', () => {
 
     test('conforms every explicit target independently after all targets preflight', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')
-      await box.root.write('second/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'MARK-1', title: 'Marker', level: 'FAIL', phase: 'PRIMARY',
@@ -265,7 +265,7 @@ describe('[ki repo target sets]', () => {
 
     test('does not mutate an earlier target when a later target fails preflight', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.root.mkdir('not-a-repository')
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
@@ -298,8 +298,8 @@ describe('[ki repo target sets]', () => {
 
     test('retains an earlier mutation when a later selected target fails', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')
-      await box.root.write('second/.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'MARK-1', title: 'Marker', level: 'FAIL', phase: 'PRIMARY',

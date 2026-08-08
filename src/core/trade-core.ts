@@ -9,8 +9,8 @@ import { REPOSITORY_CONFIGURATION_FILE } from './configuration.ts'
 import { KiError } from './errors.ts'
 import { type RepositoryLocation, resolveRepository } from './repository.ts'
 
-const TRADES_TABLE = 'knowledgeislands/ki-agentic-harness:ki-trades'
-const REPOSITORY_TABLE = 'knowledgeislands/ki-agentic-harness:ki-repo'
+const TRADES_TABLE = 'skills.ki-trades'
+const REPOSITORY_TABLE = 'skills.ki-repo'
 const addressExpression = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
 const repositoryExpression =
   /^https:\/\/github\.com\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)$/
@@ -120,6 +120,12 @@ interface ActiveRegisteredRepository extends RegisteredRepository {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
+/** One skill's table under the `[skills]` namespace, or undefined where the file declares neither. */
+const skillTable = (parsed: Record<string, unknown>, name: string): unknown => {
+  const skills = parsed['skills']
+  return isRecord(skills) ? skills[name] : undefined
+}
+
 const hasRepository = (value: unknown): value is { readonly repository: unknown } =>
   isRecord(value) && 'repository' in value
 
@@ -148,37 +154,56 @@ const identifier = (value: string): string => {
   return value
 }
 
-const parseRoutes = (
-  declaration: Record<string, unknown>,
-  key: 'exports_to' | 'imports_from',
-  path: string,
-  repository: string,
-  allowIncomplete: boolean
-): Readonly<Record<TradeKind, readonly string[]>> => {
-  const value = declaration[key]
-  if (value === undefined && allowIncomplete) return { work: [], knowledge: [] }
-  if (!isRecord(value)) throw tradeError(`${path} [${TRADES_TABLE}].${key} must be a table`)
-  const unknown = Object.keys(value).find((candidate) => !tradeKinds.includes(candidate as TradeKind))
-  if (unknown) throw tradeError(`${path} [${TRADES_TABLE}].${key} has unrecognised trade kind ${unknown}`)
-  const routes: Record<TradeKind, readonly string[]> = { work: [], knowledge: [] }
-  for (const kind of tradeKinds) {
-    const values = value[kind]
-    if (!Array.isArray(values) || values.some((route) => typeof route !== 'string' || !isTradeRepository(route)))
-      throw tradeError(`${path} [${TRADES_TABLE}].${key}.${kind} must be a canonical HTTPS GitHub repository URL array`)
-    const entries = values as string[]
-    if (entries.includes(repository))
-      throw tradeError(`${path} [${TRADES_TABLE}].${key}.${kind} must not contain the local repository`)
-    if (
-      new Set(entries).size !== entries.length ||
-      entries.some((entry, index) => index > 0 && entry.localeCompare(entries[index - 1] as string) <= 0)
-    )
-      throw tradeError(`${path} [${TRADES_TABLE}].${key}.${kind} must be unique and lexical`)
-    routes[kind] = entries
-  }
-  return routes
+interface DirectionalRoutes {
+  readonly exportsTo: Readonly<Record<TradeKind, readonly string[]>>
+  readonly importsFrom: Readonly<Record<TradeKind, readonly string[]>>
 }
 
-const parseConfiguration = (contents: string, path: string, allowIncomplete = false): TradeConfiguration => {
+const emptyRoutes = (): { work: string[]; knowledge: string[] } => ({ work: [], knowledge: [] })
+
+/**
+ * Reads the partner-keyed route map. Each partner is named once, carrying the kinds it trades in
+ * each direction; a direction it does not trade is absent. TOML's own prohibition on defining a key
+ * twice is what makes each partner unique, so no ordering or uniqueness rule is written here.
+ */
+const parseRoutes = (declaration: Record<string, unknown>, path: string, repository: string): DirectionalRoutes => {
+  const exportsTo = emptyRoutes()
+  const importsFrom = emptyRoutes()
+  const value = declaration['routes']
+  if (value === undefined) return { exportsTo, importsFrom }
+  if (!isRecord(value)) throw tradeError(`${path} [${TRADES_TABLE}.routes] must be a table`)
+  for (const [partner, route] of Object.entries(value)) {
+    if (!addressExpression.test(partner))
+      throw tradeError(`${path} [${TRADES_TABLE}.routes] partner ${partner} must use canonical owner/repository form`)
+    const url = `https://github.com/${partner}`
+    if (url === repository) throw tradeError(`${path} [${TRADES_TABLE}.routes] must not name the local repository`)
+    if (!isRecord(route))
+      throw tradeError(`${path} [${TRADES_TABLE}.routes].${partner} must be a table of export and import trade kinds`)
+    const unknown = Object.keys(route).find((key) => key !== 'export' && key !== 'import')
+    if (unknown) throw tradeError(`${path} [${TRADES_TABLE}.routes].${partner} has unrecognised key ${unknown}`)
+    for (const direction of ['export', 'import'] as const) {
+      const kinds = route[direction]
+      if (kinds === undefined) continue
+      if (
+        !Array.isArray(kinds) ||
+        !kinds.length ||
+        kinds.some((kind) => typeof kind !== 'string' || !isTradeKind(kind))
+      )
+        throw tradeError(
+          `${path} [${TRADES_TABLE}.routes].${partner}.${direction} must be a non-empty array of work or knowledge`
+        )
+      const entries = kinds as TradeKind[]
+      if (new Set(entries).size !== entries.length)
+        throw tradeError(`${path} [${TRADES_TABLE}.routes].${partner}.${direction} must not repeat a trade kind`)
+      for (const kind of entries) (direction === 'export' ? exportsTo : importsFrom)[kind].push(url)
+    }
+  }
+  for (const routes of [exportsTo, importsFrom])
+    for (const kind of tradeKinds) routes[kind].sort((left, right) => left.localeCompare(right))
+  return { exportsTo, importsFrom }
+}
+
+const parseConfiguration = (contents: string, path: string): TradeConfiguration => {
   let parsed: unknown
   try {
     parsed = parse(contents)
@@ -187,7 +212,7 @@ const parseConfiguration = (contents: string, path: string, allowIncomplete = fa
   }
   /* v8 ignore next -- smol-toml either rejects invalid input or returns a TOML document object. */
   if (!isRecord(parsed)) throw tradeError(`${path} must be a TOML table`)
-  const repositoryDeclaration = parsed[REPOSITORY_TABLE]
+  const repositoryDeclaration = skillTable(parsed, 'ki-repo')
   if (
     !hasRepository(repositoryDeclaration) ||
     typeof repositoryDeclaration.repository !== 'string' ||
@@ -195,46 +220,45 @@ const parseConfiguration = (contents: string, path: string, allowIncomplete = fa
   )
     throw tradeError(`${path} [${REPOSITORY_TABLE}].repository must use canonical HTTPS GitHub repository form`)
   const repository = repositoryDeclaration.repository
-  const declaration = parsed[TRADES_TABLE]
+  const declaration = skillTable(parsed, 'ki-trades')
   if (!isRecord(declaration)) throw tradeError(`${path} does not declare [${TRADES_TABLE}]`)
-  const unknown = Object.keys(declaration).find((key) => key !== 'exports_to' && key !== 'imports_from')
+  const unknown = Object.keys(declaration).find((key) => key !== 'routes')
   if (unknown) throw tradeError(`${path} [${TRADES_TABLE}] has unrecognised key ${unknown}`)
   return {
     repository,
     identity: repositoryIdentity(repository),
-    exportsTo: parseRoutes(declaration, 'exports_to', path, repository, allowIncomplete),
-    importsFrom: parseRoutes(declaration, 'imports_from', path, repository, allowIncomplete)
+    ...parseRoutes(declaration, path, repository)
   }
 }
 
 export const readTradeConfiguration = async (path: string): Promise<TradeConfiguration> =>
   parseConfiguration(await readFile(path, 'utf8'), path)
 
-const readEditableConfiguration = async (path: string): Promise<TradeConfiguration> =>
-  parseConfiguration(await readFile(path, 'utf8'), path, true)
+const routeKinds = (routes: Readonly<Record<TradeKind, readonly string[]>>, partner: string): readonly TradeKind[] =>
+  tradeKinds.filter((kind) => routes[kind].includes(partner))
 
-const renderRoutes = (routes: Readonly<Record<TradeKind, readonly string[]>>): readonly string[] =>
-  tradeKinds.map((kind) =>
-    routes[kind].length
-      ? `${kind} = [${routes[kind].map((route) => JSON.stringify(route)).join(', ')}]`
-      : `${kind} = []`
+const renderDirection = (direction: RouteDirection, kinds: readonly TradeKind[]): readonly string[] =>
+  kinds.length ? [`${direction} = [${kinds.map((kind) => JSON.stringify(kind)).join(', ')}]`] : []
+
+const renderTradeDeclaration = (configuration: TradeConfiguration): string => {
+  const partners = [
+    ...new Set(tradeKinds.flatMap((kind) => [...configuration.exportsTo[kind], ...configuration.importsFrom[kind]]))
+  ].sort((left, right) => left.localeCompare(right))
+  const routes = partners.map(
+    (partner) =>
+      `${JSON.stringify(repositoryIdentity(partner))} = { ${[
+        ...renderDirection('export', routeKinds(configuration.exportsTo, partner)),
+        ...renderDirection('import', routeKinds(configuration.importsFrom, partner))
+      ].join(', ')} }`
   )
-
-const renderTradeDeclaration = (configuration: TradeConfiguration): string =>
-  [
-    `[${JSON.stringify(TRADES_TABLE)}.exports_to]`,
-    ...renderRoutes(configuration.exportsTo),
-    '',
-    `[${JSON.stringify(TRADES_TABLE)}.imports_from]`,
-    ...renderRoutes(configuration.importsFrom)
-  ].join('\n')
+  return [`[${TRADES_TABLE}]`, ...(routes.length ? ['', `[${TRADES_TABLE}.routes]`, ...routes] : [])].join('\n')
+}
 
 const writeTradeConfiguration = async (path: string, configuration: TradeConfiguration): Promise<void> => {
   const contents = await readFile(path, 'utf8')
   const headers = [...contents.matchAll(/^\[([^\n]+)\]$/gmu)]
-  const table = JSON.stringify(TRADES_TABLE)
   const isOwnedHeader = (header: string | undefined): boolean =>
-    header === table || Boolean(header?.startsWith(`${table}.`))
+    header === TRADES_TABLE || Boolean(header?.startsWith(`${TRADES_TABLE}.`))
   const owned = headers.filter((header) => isOwnedHeader(header[1]))
   const start = owned[0]?.index
   if (start === undefined) throw tradeError(`${path} does not declare [${TRADES_TABLE}] route tables`)
@@ -268,7 +292,7 @@ export const addTradeRoute = async (
   /* v8 ignore next -- public CLI grammar validates canonical repository URLs before core route mutation. */
   if (!isTradeRepository(repository))
     throw tradeError('trade route repository must use canonical HTTPS GitHub repository form')
-  const existing = await readEditableConfiguration(path)
+  const existing = await readTradeConfiguration(path)
   if (repository === existing.repository)
     throw tradeError('trade route repository must differ from the local repository')
   const configuration =
@@ -337,7 +361,7 @@ const registeredRepositories = async (context: KiContext): Promise<readonly Regi
       const contents = await readFile(path, 'utf8')
       const parsed = parse(contents)
       /* v8 ignore next -- smol-toml parses valid configuration input as a document object. */
-      const repositoryDeclaration = isRecord(parsed) ? parsed[REPOSITORY_TABLE] : undefined
+      const repositoryDeclaration = isRecord(parsed) ? skillTable(parsed, 'ki-repo') : undefined
       if (
         !hasRepository(repositoryDeclaration) ||
         typeof repositoryDeclaration.repository !== 'string' ||

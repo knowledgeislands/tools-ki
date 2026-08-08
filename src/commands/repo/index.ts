@@ -4,7 +4,7 @@ import { configuredRepositoryWrite, inspectUserConfiguration } from '../../agent
 import type { KiContext } from '../../context.ts'
 import {
   REPOSITORY_CONFIGURATION_FILE,
-  readDeclaredSkills,
+  readRepositoryDeclaration,
   renderRepositoryConfiguration
 } from '../../core/configuration.ts'
 import { publishIndependentConformGroups } from '../../core/conform-publication.ts'
@@ -89,7 +89,7 @@ const resolveSkillsForRepositories = async (
   Promise.all(
     repositories.map(async (repository) => ({
       repository,
-      skills: resolveDeclaredSkills(await readDeclaredSkills(repository.configuration), harnesses, skill)
+      skills: resolveDeclaredSkills(await readRepositoryDeclaration(repository.configuration), harnesses, skill)
     }))
   )
 

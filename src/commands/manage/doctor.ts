@@ -10,7 +10,7 @@ import {
   localBootstrapHarness
 } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
-import { readDeclaredSkills } from '../../core/configuration.ts'
+import { readRepositoryDeclaration } from '../../core/configuration.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness } from '../../core/harness.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
@@ -48,8 +48,12 @@ const repositoryConfigurationCheck = async (directory: string): Promise<DoctorCh
   if (!state.isFile() || state.isSymbolicLink())
     return { status: 'fail', label: 'Repository configuration', detail: '.ki-config.toml must be a regular file' }
   try {
-    const declarations = await readDeclaredSkills(path)
-    return { status: 'pass', label: 'Repository configuration', detail: `${declarations.length} declared skills` }
+    const declarations = await readRepositoryDeclaration(path)
+    return {
+      status: 'pass',
+      label: 'Repository configuration',
+      detail: `${declarations.skills.length} declared skills`
+    }
   } catch (error) {
     return { status: 'fail', label: 'Repository configuration', detail: (error as Error).message }
   }

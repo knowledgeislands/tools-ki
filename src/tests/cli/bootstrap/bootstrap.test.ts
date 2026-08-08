@@ -303,7 +303,10 @@ ids = ["claude-code"]
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
     await box.setupExampleHarness()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-repo"]\nsupported_runtimes = ["claude-code"]\n')
+    await box.project.write(
+      '.ki-config.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+    )
     await box.run('ki bootstrap')
 
     const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)

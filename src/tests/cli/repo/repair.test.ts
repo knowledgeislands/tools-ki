@@ -3,14 +3,17 @@ import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
 const repositoryConfiguration = `
-["example/harness:ki-repo"]
+[repo]
+harnesses = ["example/harness"]
+
+[skills.ki-repo]
 title = "Example"
 description = "Example repository."
 repo_code = "EXAMPLE"
 supported_runtimes = ["chatgpt-codex"]
 visibility = "private"
 
-["example/harness:ki-example"]
+[skills.ki-example]
 `
 
 const preparedRepository = async () => {
@@ -72,14 +75,14 @@ describe('[ki repo repair]', () => {
     const repaired = await box.run('ki repo repair')
     await box.project.write(
       '.ki-config.toml',
-      repositoryConfiguration.replace('example/harness:ki-example', 'missing/harness:ki-missing')
+      repositoryConfiguration.replace('[skills.ki-example]', '[skills."missing/harness:ki-missing"]')
     )
     const unresolved = await box.run('ki repo repair')
 
     expect(repaired.exitCode).toBe(0)
     expect(await readlink(projection)).not.toBe(`${box.root.path}/old-skill`)
     expect(unresolved.exitCode).toBe(1)
-    expect(unresolved.output).toContain('requires installed harness missing/harness')
+    expect(unresolved.output).toContain('declared harness missing/harness is not installed')
   })
 
   test('recreates a dangling projection and refuses an unsafe declaration', async () => {

@@ -1,4 +1,4 @@
-import type { DeclaredSkill } from './configuration.ts'
+import type { DeclaredSkill, RepositoryDeclaration } from './configuration.ts'
 import { KiError } from './errors.ts'
 import type { HarnessCapability, InstalledHarness } from './harness.ts'
 
@@ -15,7 +15,7 @@ const skillCandidates = (harnesses: readonly InstalledHarness[], name: string): 
       .filter((capability) => capability.kind === 'skill' && capability.name === name)
       .map((capability) => ({
         identity: `${harness.id}:${capability.name}`,
-        declaration: { identity: `${harness.id}:${capability.name}`, harness: harness.id, name, configuration: {} },
+        declaration: { key: name, harness: harness.id, name, configuration: {} },
         harness,
         capability
       }))
@@ -74,28 +74,58 @@ export const resolveInstalledSkill = (harnesses: readonly InstalledHarness[], na
   return candidate
 }
 
+const providedSkill = (harness: InstalledHarness, name: string): HarnessCapability | undefined =>
+  harness.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === name)
+
+const installedHarness = (harnesses: readonly InstalledHarness[], id: string): InstalledHarness => {
+  const harness = harnesses.find((candidate) => candidate.id === id)
+  if (!harness) throw new KiError(`declared harness ${id} is not installed; install it before auditing`, 1)
+  return harness
+}
+
+/**
+ * Binds each declaration to its provider. A bare name resolves against the repository's declared
+ * harness list rather than whichever harnesses happen to be installed, so a version-controlled file
+ * means the same thing on every machine; a quoted qualified key names its provider directly.
+ */
 export const resolveDeclaredSkills = (
-  declarations: readonly DeclaredSkill[],
+  declaration: RepositoryDeclaration,
   harnesses: readonly InstalledHarness[],
   selected?: string
 ): readonly ResolvedSkill[] => {
-  const resolved = declarations.map((declaration) => {
-    const harness = harnesses.find((candidate) => candidate.id === declaration.harness)
-    if (!harness) {
-      throw new KiError(
-        `declared skill ${declaration.identity} requires installed harness ${declaration.harness}; install it before auditing`,
-        1
-      )
+  const declared = declaration.harnesses.flatMap((id) => harnesses.filter((candidate) => candidate.id === id))
+  const absent = declaration.harnesses.filter((id) => !harnesses.some((candidate) => candidate.id === id))
+  const resolved = declaration.skills.map((skill) => {
+    if (skill.harness !== undefined) {
+      const harness = installedHarness(harnesses, skill.harness)
+      const capability = providedSkill(harness, skill.name)
+      if (!capability)
+        throw new KiError(`installed harness ${skill.harness} does not provide declared skill ${skill.name}`, 1)
+      return { identity: `${skill.harness}:${skill.name}`, declaration: skill, harness, capability }
     }
-    const capability = harness.capabilities.find(
-      (candidate) => candidate.kind === 'skill' && candidate.name === declaration.name
-    )
-    if (!capability)
+    const providers = declared.flatMap((harness) => {
+      const capability = providedSkill(harness, skill.name)
+      return capability ? [{ harness, capability }] : []
+    })
+    const [provider] = providers
+    if (!provider)
       throw new KiError(
-        `installed harness ${declaration.harness} does not provide declared skill ${declaration.name}`,
+        `declared skill ${skill.name} is provided by no declared harness (${declaration.harnesses.join(', ')})${
+          absent.length ? `; ${absent.join(', ')} is not installed` : ''
+        }`,
         1
       )
-    return { identity: declaration.identity, declaration, harness, capability }
+    if (providers.length > 1)
+      throw new KiError(
+        `declared skill ${skill.name} is provided by more than one declared harness; qualify it as [skills."<harness-id>:${skill.name}"]`,
+        1
+      )
+    return {
+      identity: `${provider.harness.id}:${skill.name}`,
+      declaration: skill,
+      harness: provider.harness,
+      capability: provider.capability
+    }
   })
   const ordered = orderedSkills(resolved)
   if (!selected) return ordered

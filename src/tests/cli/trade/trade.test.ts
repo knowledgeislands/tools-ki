@@ -3,36 +3,57 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
-const tradesTable = 'knowledgeislands/ki-agentic-harness:ki-trades'
+const tradesTable = 'skills.ki-trades'
 const home = (identity: string): string => `https://github.com/${identity}`
 const sourceHome = home('example/source')
 const receiverHome = home('example/receiver')
 
-const routeArray = (routes: readonly string[]): string => `[${routes.map((route) => JSON.stringify(route)).join(', ')}]`
+type Kind = 'work' | 'knowledge'
+type Directions = Partial<Record<Kind, readonly string[]>>
 
-const repositoryConfiguration = (
-  identity: string,
-  exportsTo: Partial<Record<'work' | 'knowledge', readonly string[]>> = {},
-  importsFrom: Partial<Record<'work' | 'knowledge', readonly string[]>> = {}
-): string =>
+/** Inverts the kind-keyed fixture arguments into the partner-keyed route map the contract declares. */
+const routeLines = (exportsTo: Directions, importsFrom: Directions): readonly string[] => {
+  const partners = new Map<string, { export: Kind[]; import: Kind[] }>()
+  const record = (direction: 'export' | 'import', directions: Directions): void => {
+    for (const kind of ['work', 'knowledge'] as const)
+      for (const partner of directions[kind] ?? []) {
+        const entry = partners.get(partner) ?? { export: [], import: [] }
+        entry[direction].push(kind)
+        partners.set(partner, entry)
+      }
+  }
+  record('export', exportsTo)
+  record('import', importsFrom)
+  if (!partners.size) return []
+  return [
+    '',
+    `[${tradesTable}.routes]`,
+    ...[...partners.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([partner, kinds]) => {
+        const entries = (['export', 'import'] as const)
+          .filter((direction) => kinds[direction].length)
+          .map((direction) => `${direction} = [${kinds[direction].map((kind) => JSON.stringify(kind)).join(', ')}]`)
+        return `${JSON.stringify(partner.slice('https://github.com/'.length))} = { ${entries.join(', ')} }`
+      })
+  ]
+}
+
+const repositoryConfiguration = (identity: string, exportsTo: Directions = {}, importsFrom: Directions = {}): string =>
   [
-    '"knowledgeislands/ki-agentic-harness:ki-repo"',
+    '[repo]',
+    'harnesses = ["example/harness"]',
+    '',
+    '[skills.ki-repo]',
     `repository = ${JSON.stringify(home(identity))}`,
     'title = "Test repository"',
     'description = "Trade fixture."',
     'repo_code = "TEST"',
     '',
-    `["${tradesTable}".exports_to]`,
-    `work = ${routeArray(exportsTo.work ?? [])}`,
-    `knowledge = ${routeArray(exportsTo.knowledge ?? [])}`,
-    '',
-    `["${tradesTable}".imports_from]`,
-    `work = ${routeArray(importsFrom.work ?? [])}`,
-    `knowledge = ${routeArray(importsFrom.knowledge ?? [])}`,
+    `[${tradesTable}]`,
+    ...routeLines(exportsTo, importsFrom),
     ''
-  ]
-    .join('\n')
-    .replace('"knowledgeislands/ki-agentic-harness:ki-repo"\n', '["knowledgeislands/ki-agentic-harness:ki-repo"]\n')
+  ].join('\n')
 
 const localConfiguration = (repositories: readonly string[]): string =>
   [
@@ -252,7 +273,7 @@ describe('[ki trade]', () => {
       output: `ki trade routes remove: import knowledge ${sourceHome} -> ${receiverHome}\n`
     })
     expect(await box.project.read('.ki-config.toml')).toContain(`repository = "${sourceHome}"`)
-    expect(await box.project.read('receiver/.ki-config.toml')).toContain(`work = ["${sourceHome}"]`)
+    expect(await box.project.read('receiver/.ki-config.toml')).toContain('"example/source" = { import = ["work"] }')
   })
 
   test('pairs copies whose phases differ, since sender and receiver hold different states', async () => {
@@ -712,48 +733,56 @@ describe('[ki trade]', () => {
       '.repository must use canonical HTTPS GitHub repository form'
     )
 
-    await box.project.write(
-      '.ki-config.toml',
-      repositoryConfiguration('example/source').replace(
-        `["${tradesTable}".exports_to]`,
-        `["${tradesTable}"]\nunknown = true\n\n["${tradesTable}".exports_to]`
-      )
-    )
+    const repositoryOnly = repositoryConfiguration('example/source').split(`[${tradesTable}]`)[0] as string
+    const withRoutes = (routes: string): string =>
+      `${repositoryOnly}[${tradesTable}]\n\n[${tradesTable}.routes]\n${routes}\n`
+
+    await box.project.write('.ki-config.toml', `${repositoryOnly}[${tradesTable}]\nunknown = true\n`)
     expect((await box.run('ki trade routes list')).output).toContain('has unrecognised key unknown')
 
-    await box.project.write(
-      '.ki-config.toml',
-      repositoryConfiguration('example/source').replace('work = []', 'other = []\nwork = []')
-    )
-    expect((await box.run('ki trade routes list')).output).toContain('has unrecognised trade kind other')
-
-    for (const routes of [[sourceHome], [receiverHome, receiverHome], [receiverHome, 'https://github.com/aaa/first']]) {
-      await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { work: routes }))
-      expect((await box.run('ki trade routes list')).exitCode).toBe(2)
+    // Each partner is named once by a key TOML itself keeps unique, so what remains checkable is the
+    // key's form, the entry's shape, and the kinds it carries.
+    const rejected: readonly (readonly [string, string])[] = [
+      ['"example/receiver" = { export = ["work"], other = [] }', 'has unrecognised key other'],
+      ['"https://github.com/example/receiver" = { export = ["work"] }', 'must use canonical owner/repository form'],
+      ['"example/source" = { export = ["work"] }', 'must not name the local repository'],
+      ['"example/receiver" = "work"', 'must be a table of export and import trade kinds'],
+      ['"example/receiver" = { export = [] }', 'must be a non-empty array of work or knowledge'],
+      ['"example/receiver" = { export = ["other"] }', 'must be a non-empty array of work or knowledge'],
+      ['"example/receiver" = { export = ["work", "work"] }', 'must not repeat a trade kind']
+    ]
+    for (const [routes, detail] of rejected) {
+      await box.project.write('.ki-config.toml', withRoutes(routes))
+      const listed = await box.run('ki trade routes list')
+      expect(listed.exitCode).toBe(2)
+      expect(listed.output).toContain(detail)
     }
 
-    await box.project.write(
-      '.ki-config.toml',
-      repositoryConfiguration('example/source').replace('work = []', 'work = [1]')
-    )
-    expect((await box.run('ki trade routes list')).output).toContain(
-      'must be a canonical HTTPS GitHub repository URL array'
-    )
+    await box.project.write('.ki-config.toml', `${repositoryOnly}[${tradesTable}]\nroutes = "none"\n`)
+    expect((await box.run('ki trade routes list')).output).toContain(`[${tradesTable}.routes] must be a table`)
 
-    const repositoryOnly = repositoryConfiguration('example/source').split(`["${tradesTable}".exports_to]`)[0] as string
     await box.project.write('.ki-config.toml', repositoryOnly)
     expect((await box.run('ki trade routes list')).output).toContain(`does not declare [${tradesTable}]`)
-    await box.project.write('.ki-config.toml', `${repositoryOnly}["${tradesTable}"]\n`)
-    expect((await box.run('ki trade routes list')).output).toContain('.exports_to must be a table')
-    await box.project.write('.ki-config.toml', `${repositoryOnly}["${tradesTable}"]\n\n[after]\nvalue = true\n`)
+    await box.project.write('.ki-config.toml', `${repositoryOnly}[${tradesTable}]\n\n[after]\nvalue = true\n`)
     expect((await box.run(`ki trade routes add ${receiverHome} --direction export --kind work`)).exitCode).toBe(0)
     expect(await box.project.read('.ki-config.toml')).toContain('[after]\nvalue = true')
-    await box.project.write(
-      '.ki-config.toml',
-      `"${tradesTable}" = { exports_to = { work = [], knowledge = [] }, imports_from = { work = [], knowledge = [] } }\n${repositoryOnly}`
-    )
+    await box.project.write('.ki-config.toml', repositoryOnly)
     expect((await box.run(`ki trade routes add ${receiverHome} --direction export --kind work`)).output).toContain(
       'does not declare'
+    )
+    // Declared as an inline table under [skills], which parses but presents no header for the
+    // editor to rewrite, so the write refuses rather than appending a second declaration.
+    await box.project.write(
+      '.ki-config.toml',
+      `[repo]\nharnesses = ["example/harness"]\n\n[skills]\nki-repo = { repository = "${sourceHome}" }\nki-trades = {}\n`
+    )
+    expect((await box.run(`ki trade routes add ${receiverHome} --direction export --kind work`)).output).toContain(
+      `does not declare [${tradesTable}] route tables`
+    )
+    // No [skills] namespace at all: the repository endpoint the estate is keyed by is absent.
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    expect((await box.run('ki trade routes list')).output).toContain(
+      '.repository must use canonical HTTPS GitHub repository form'
     )
 
     const missingHome = home('example/missing')
@@ -761,21 +790,21 @@ describe('[ki trade]', () => {
     expect((await box.run('ki trade routes check')).output).toContain(`${missingHome}: awaiting receiver activation`)
 
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { work: [receiverHome] }))
-    await box.project.write('receiver/.ki-config.toml', '["knowledgeislands/ki-agentic-harness:ki-repo"]\n')
+    await box.project.write('receiver/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\n')
     expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write(
       'receiver/.ki-config.toml',
-      `["knowledgeislands/ki-agentic-harness:ki-repo"]\nrepository = 1\n`
+      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = 1\n`
     )
     expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write(
       'receiver/.ki-config.toml',
-      '["knowledgeislands/ki-agentic-harness:ki-repo"]\nrepository = "not-a-repository"\n'
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "not-a-repository"\n'
     )
     expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write(
       'receiver/.ki-config.toml',
-      `["knowledgeislands/ki-agentic-harness:ki-repo"]\nrepository = "${receiverHome}"\n`
+      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "${receiverHome}"\n`
     )
     expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver'))
@@ -1290,7 +1319,7 @@ describe('[ki trade]', () => {
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { work: [receiverHome] }))
     await box.project.write(
       'receiver/.ki-config.toml',
-      `["knowledgeislands/ki-agentic-harness:ki-repo"]\nrepository = "${receiverHome}"\n`
+      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "${receiverHome}"\n`
     )
     expect(await box.run('ki trade routes list --estate')).toEqual({
       exitCode: 0,
@@ -1341,7 +1370,7 @@ describe('[ki trade]', () => {
     box.cd('..')
     await box.project.write(
       '.ki-config.toml',
-      `["knowledgeislands/ki-agentic-harness:ki-repo"]\nrepository = "${sourceHome}"\n`
+      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "${sourceHome}"\n`
     )
     box.cd('receiver')
     const unavailable = await box.run(['ki', 'trade', 'receive', 'TRD-00000000'])

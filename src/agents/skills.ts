@@ -1,6 +1,6 @@
 import { lstat, mkdir, readlink, realpath, symlink, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import { declareRepositorySkill, readDeclaredSkills, undeclareRepositorySkill } from '../core/configuration.ts'
+import { declareRepositorySkill, readRepositoryDeclaration, undeclareRepositorySkill } from '../core/configuration.ts'
 import { KiError } from '../core/errors.ts'
 import { discoverInstalledHarnesses, type SupportedRuntime } from '../core/harness.ts'
 import { resolveRepository } from '../core/repository.ts'
@@ -177,7 +177,7 @@ export const addRepoSkill = async (options: {
     throw new KiError(`skill ${resolved.skill.name} is incompatible with this repository's configured agents`, 1)
   for (const agent of compatible)
     await linkManagedSkill(agent, { scope: 'repo', repository: location.root }, resolved.skill, options.replace)
-  await declareRepositorySkill(location.configuration, `${resolved.harness}:${resolved.skill.name}`)
+  await declareRepositorySkill(location.configuration, resolved.harness, resolved.skill.name)
   return {
     skill: resolved.skill.name,
     repository: location.root,
@@ -202,7 +202,7 @@ export const removeRepoSkill = async (options: {
     workingDirectory: options.workingDirectory,
     homeDirectory: options.homeDirectory
   })
-  const declaration = (await readDeclaredSkills(location.configuration)).find(
+  const declaration = (await readRepositoryDeclaration(location.configuration)).skills.find(
     (candidate) => candidate.name === options.skill
   )
   const agents = await configuredAgents({
@@ -213,12 +213,12 @@ export const removeRepoSkill = async (options: {
   for (const agent of agents) {
     if (await removeManagedRepoSkill(agent, location.root, options.skill)) removed = true
   }
-  const undeclared = declaration ? await undeclareRepositorySkill(location.configuration, declaration.identity) : false
+  const undeclared = declaration ? await undeclareRepositorySkill(location.configuration, declaration.key) : false
   // A parsed declaration whose table cannot be found in the file's text means the two readings of
   // the same file disagree. Reporting removal here would leave the declaration standing behind a
   // successful exit, with the projections it names already gone.
   if (declaration && !undeclared)
-    throw new KiError(`declared skill ${declaration.identity} could not be removed from ${location.configuration}`, 1)
+    throw new KiError(`declared skill ${declaration.key} could not be removed from ${location.configuration}`, 1)
   return {
     skill: options.skill,
     repository: location.root,

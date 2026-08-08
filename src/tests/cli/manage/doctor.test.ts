@@ -33,10 +33,10 @@ describe('[ki manage doctor]', () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.project.write('.ki-config.toml', '# valid\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
 
     const valid = await box.run('ki manage doctor')
-    await box.project.write('.ki-config.toml', '[ki-repo]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.repository]\n')
     const legacyDeclaration = await box.run('ki manage doctor')
     await rm(`${box.project.path}/.ki-config.toml`)
     await box.project.mkdir('.ki-config.toml')
@@ -51,7 +51,7 @@ describe('[ki manage doctor]', () => {
       output: expect.stringContaining('✓ Repository configuration: 0 declared skills')
     })
     expect(legacyDeclaration.output).toContain(
-      '✗ Repository configuration: declared skill ki-repo must use a qualified <harness-id>:<skill-name> TOML table'
+      '✗ Repository configuration: declared skill repository must be [skills.<skill-name>], or [skills."<harness-id>:<skill-name>"] for a harness outside [repo] harnesses'
     )
     expect(directory.output).toContain('✗ Repository configuration: .ki-config.toml must be a regular file')
     expect(symbolic.output).toContain('✗ Repository configuration: .ki-config.toml must be a regular file')

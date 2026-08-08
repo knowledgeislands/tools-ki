@@ -4,7 +4,7 @@ import { agentSkillDirectory, compatibleWithSkill, configuredAgents } from '../.
 import type { InstalledAgent } from '../../agents/internal.ts'
 import { repositorySupportedRuntimes, runtimeForAgent } from '../../agents/runtimes.ts'
 import type { KiContext } from '../../context.ts'
-import { readDeclaredSkills } from '../../core/configuration.ts'
+import { readRepositoryDeclaration } from '../../core/configuration.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
 import { directRepositoryLocation } from '../../core/repository.ts'
 import { type ResolvedSkill, resolveDeclaredSkills } from '../../core/resolution.ts'
@@ -69,7 +69,7 @@ export const inspectRepositoryHealth = async (
   location: RepositoryLocation
 ): Promise<RepositoryHealth> => {
   try {
-    const declarations = await readDeclaredSkills(location.configuration)
+    const declarations = await readRepositoryDeclaration(location.configuration)
     const [harnesses, agents, runtimes] = await Promise.all([
       discoverInstalledHarnesses(context.paths.data),
       configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config }),

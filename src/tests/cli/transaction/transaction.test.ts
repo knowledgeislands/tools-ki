@@ -97,7 +97,7 @@ const governedItem = (path: string, code: string, content: string) => `{
 describe('[ki repo conform] guarded incremental publication', () => {
   test('refuses publication when a target changes before its atomic replacement', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.project.write('governed.txt', 'before\n')
     readInterception.path = '/governed.txt'
     await box.setupExampleHarness({
@@ -115,7 +115,7 @@ describe('[ki repo conform] guarded incremental publication', () => {
 
   test('retains an earlier successful write when a later replacement fails', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.project.write('governed-1.txt', 'before-1\n')
     await box.project.write('governed-2.txt', 'before-2\n')
     await box.setupExampleHarness({
@@ -133,7 +133,7 @@ describe('[ki repo conform] guarded incremental publication', () => {
 
   test('refuses a same-byte target replacement before publication', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.project.write('governed.txt', 'before\n')
     identityReplacement.path = '/governed.txt'
     await box.setupExampleHarness({
@@ -151,7 +151,7 @@ describe('[ki repo conform] guarded incremental publication', () => {
 
   test('refuses a target replaced while its publication snapshot is taken', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.project.write('governed.txt', 'before\n')
     preparationReplacement.path = '/governed.txt'
     await box.setupExampleHarness({
@@ -169,7 +169,7 @@ describe('[ki repo conform] guarded incremental publication', () => {
 
   test('retains an already-created file when a later create fails', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(
         `[{ code: 'F', title: 'Family', description: 'Publication.', standard: 'standard.md', selectContext: (context) => context, items: [${governedItem('created-1.txt', 'EXAMPLE-1', 'after-1\\n').replace("path: 'created-1.txt', content: 'after-1\\n'", "path: 'created-1.txt', content: 'after-1\\n', create: true")}, ${governedItem('created-2.txt', 'EXAMPLE-2', 'after-2\\n').replace("path: 'created-2.txt', content: 'after-2\\n'", "path: 'created-2.txt', content: 'after-2\\n', create: true")}] }]`

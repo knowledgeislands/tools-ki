@@ -41,7 +41,7 @@ export default {
 
 const withRubric = async (body: string): Promise<Awaited<ReturnType<typeof sandbox>>> => {
   const box = await sandbox()
-  await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+  await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
   await box.setupExampleHarness({ rubric: emittingRubric(body) })
   return box
 }

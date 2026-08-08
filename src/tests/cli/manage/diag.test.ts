@@ -4,14 +4,17 @@ import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
 const repositoryConfiguration = `
-["example/harness:ki-repo"]
+[repo]
+harnesses = ["example/harness"]
+
+[skills.ki-repo]
 title = "Example"
 description = "Example repository."
 repo_code = "EXAMPLE"
 supported_runtimes = ["chatgpt-codex"]
 visibility = "private"
 
-["example/harness:ki-example"]
+[skills.ki-example]
 `
 
 describe('[ki manage diag]', () => {

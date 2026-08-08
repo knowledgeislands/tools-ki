@@ -82,7 +82,7 @@ test('initializes one explicit physical Git root and registers its complete KI i
     output: `write .ki-config.toml\nwrite config.toml\nki repo init: initialized ${root}\n`
   })
   expect(await box.project.read('.ki-config.toml')).toEqual(
-    '["knowledgeislands/ki-agentic-harness:ki-repo"]\n' +
+    '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\n' +
       'title = "Example repository"\n' +
       'description = "Repository initialization contract."\n' +
       'repo_code = "EXAMPLE"\n' +
@@ -246,7 +246,7 @@ test('leaves no declaration when local registration cannot be prepared or publis
 test('audits, conforms, and lists the local ki-repo registry without discovering other paths', async () => {
   const box = await sandbox()
   await box.setupExampleHarness({ name: 'ki-repo', rubric })
-  await box.project.write('.ki-config.toml', '["example/harness:ki-repo"]\n')
+  await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\n')
   await box.config.write('ki/config.toml', localConfiguration)
 
   const audit = await box.run('ki repo audit')
@@ -311,7 +311,7 @@ test('preserves and extends an existing local repository registry in determinist
 test('reports missing, invalid, and unsafe local registry configuration without repairing it', async () => {
   const box = await sandbox()
   await box.setupExampleHarness({ name: 'ki-repo', rubric })
-  await box.project.write('.ki-config.toml', '["example/harness:ki-repo"]\n')
+  await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\n')
 
   const missingList = await box.run('ki registry list')
   const missingAudit = await box.run('ki repo audit')

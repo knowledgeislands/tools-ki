@@ -1,4 +1,4 @@
-import { readDeclaredSkills } from '../core/configuration.ts'
+import { readRepositoryDeclaration } from '../core/configuration.ts'
 import { KiError } from '../core/errors.ts'
 import { type SupportedRuntime, supportedRuntimes } from '../core/harness.ts'
 import type { InstalledAgent } from './internal.ts'
@@ -10,7 +10,7 @@ const agentRuntimes = {
 
 const repositoryRuntimeSet = (value: unknown): readonly SupportedRuntime[] => {
   if (!Array.isArray(value) || value.length === 0 || value.some((runtime) => typeof runtime !== 'string')) {
-    throw new KiError('[ki-repo].supported_runtimes must be a non-empty array of runtime identifiers', 1)
+    throw new KiError('[skills.ki-repo].supported_runtimes must be a non-empty array of runtime identifiers', 1)
   }
   const runtimes = value as string[]
   if (runtimes.includes('codex'))
@@ -30,7 +30,9 @@ export const compatibleWithSkill = (
 ): boolean => skillRuntimes === undefined || skillRuntimes.includes(runtimeForAgent(agent))
 
 export const repositorySupportedRuntimes = async (configuration: string): Promise<readonly SupportedRuntime[]> => {
-  const repository = (await readDeclaredSkills(configuration)).find((skill) => skill.name === 'ki-repo')?.configuration
+  const repository = (await readRepositoryDeclaration(configuration)).skills.find(
+    (skill) => skill.name === 'ki-repo'
+  )?.configuration
   if (!repository || !Object.hasOwn(repository, 'supported_runtimes')) {
     throw new KiError('[ki-repo].supported_runtimes must declare the repository runtime set', 1)
   }

@@ -119,6 +119,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - Trade pairing compares the payload the sender authored — its field values as parsed and its prose — rather than raw bytes, so a receiver that formats its own Markdown does not read as having tampered with a record.
 - `ki trade list` is a framed registered-estate inventory.
 - `ki repo audit` and `ki repo conform` report the span in which a skill gathers its evidence, which precedes every criterion and on a subprocess-backed rubric is nearly the whole operation. The host names that span itself, so a session that emits nothing is still reported as gathering evidence rather than as a stalled item count; a session that takes the optional emitter refines it with its own named stages and steps, and a step carrying its own counters draws a determinate bar.
+- `.ki-config.toml` names each harness once in `[repo]` and declares each governing skill by its bare name under `[skills]`, resolving that name against the declared harness list rather than against whichever harnesses happen to be installed. A skill from a harness outside that list keeps a quoted, fully-qualified key. Trade routes are re-keyed by partner: one entry per peer carrying its `export` and `import` kinds, with a direction it does not trade simply absent. The previous fully-qualified top-level shape is not read: an unmigrated file fails naming the shape expected, with no dual parse or fallback.
 
 ### Distribution baseline
 

@@ -1,6 +1,6 @@
 import { lstat, readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { readDeclaredSkills } from './configuration.ts'
+import { readRepositoryDeclaration } from './configuration.ts'
 import { KiError } from './errors.ts'
 
 export interface StreamProposal {
@@ -126,8 +126,8 @@ export const readRepositoryPlanningSource = async (
   repository: string,
   configuration: string
 ): Promise<RepositoryPlanningSource> => {
-  const declarations = await readDeclaredSkills(configuration)
-  const decisionRecords = declarations.find((declaration) => declaration.name === 'ki-decision-records')
+  const declarations = await readRepositoryDeclaration(configuration)
+  const decisionRecords = declarations.skills.find((declaration) => declaration.name === 'ki-decision-records')
   const { repo_type: repoType } = decisionRecords?.configuration ?? {}
   if (repoType !== 'kb') return { kind: 'roadmap' }
   return { kind: 'streams', ...(await readStreams(repository)) }

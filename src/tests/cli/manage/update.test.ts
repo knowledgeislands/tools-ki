@@ -226,7 +226,10 @@ describe('[ki manage update and ki repo upgrade]', () => {
     await box.setupExampleHarness()
     await box.data.write('ki/harnesses/other/harness/skills/ki-other/SKILL.md', skill.replace('ki-example', 'ki-other'))
     await box.config.write('ki/config.toml', configuration(payload.sha256))
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n["other/harness:ki-other"]\n')
+    await box.project.write(
+      '.ki-config.toml',
+      '[repo]\nharnesses = ["example/harness", "other/harness"]\n\n[skills.ki-example]\n[skills.ki-other]\n'
+    )
     box.setFetcher(async () => new Response(payload.payload))
 
     const upgraded = await box.run('ki repo upgrade')
@@ -238,7 +241,7 @@ describe('[ki manage update and ki repo upgrade]', () => {
 
   test('reports a repository with no declared capabilities as an update no-op', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
 
     const result = await box.run('ki repo upgrade')
     const project = await realpath(box.project.path)
@@ -251,8 +254,8 @@ describe('[ki manage update and ki repo upgrade]', () => {
 
   test('reports every explicitly selected repository during an upgrade', async () => {
     const box = await sandbox()
-    await box.root.write('first/.ki-config.toml', '')
-    await box.root.write('second/.ki-config.toml', '')
+    await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.root.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
 
     const result = await box.run([
       'ki',
@@ -278,7 +281,7 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     await box.setupExampleHarness()
     await box.data.write('ki/harnesses/other/harness/skills/example/SKILL.md', skill)
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     const declared = await box.run('ki repo upgrade')
 
     expect(missingRepository).toEqual({
@@ -295,7 +298,7 @@ describe('[ki manage update and ki repo upgrade]', () => {
     })
     await box.setupExampleHarness()
     await box.config.write('ki/config.toml', configuration(payload.sha256))
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     box.setFetcher(async () => new Response(payload.payload))
 
     const result = await box.run('ki repo upgrade')

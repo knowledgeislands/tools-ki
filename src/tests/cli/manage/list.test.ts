@@ -69,7 +69,7 @@ describe('[ki manage list]', () => {
     await box.project.write('.ki-config.toml', '[ki-example\n')
     const grammar = await box.run('ki manage list unexpected')
     const invalidDeclaration = await box.run('ki manage list')
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.config.write('ki/config.toml', '[agents\n')
     const invalidConfiguration = await box.run('ki manage list')
 

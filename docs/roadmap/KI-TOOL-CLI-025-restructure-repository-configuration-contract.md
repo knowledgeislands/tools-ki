@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-025
 title: Restructure repository configuration contract
 theme: cli
 horizon: now
-status: draft
+status: awaiting-review
 blocks: [KI-TOOL-VENDOR-001]
 blocked-by: []
-baseline-ref: null
+baseline-ref: 5bc677d4345982e186fa6082baff80b975f6eb6f
 ---
 
 ## Goal
@@ -39,16 +39,16 @@ Trade routes are parsed separately by `parseConfiguration` in `src/core/trade-co
 
 ## Steps
 
-- [ ] Confirm the settled contract from `KI-HARNESS-GOV-021` before writing code — the key names (`[repo]`, its `harnesses` list, and `[skills.<name>]`), whether routes are keyed by partner, and whether a route entry is an inline table or a nested table header.
-- [ ] Read the declared harness list from `[repo] harnesses` and make it the resolution basis: a bare skill name binds to exactly one declared provider, no declared harness providing the skill is a clear diagnostic, and more than one requires explicit qualification.
-- [ ] Parse `[skills.<name>]` as the declaration, retaining support for a quoted `[skills."<harness>:<name>"]` key for the exceptional case of a skill drawn from a harness outside the declared list, so the exception stays visibly exceptional.
-- [ ] Derive `DeclaredSkill.identity` from the bare name plus its resolved provider, so the cost of the change concentrates in identity derivation rather than spreading across the nine consuming modules.
-- [ ] Delete `looksLikeSkill` and the top-level heuristic outright; a key is a declaration because it sits under `[skills]`, not because it looks like one.
-- [ ] Rewrite `declareRepositorySkill` and `undeclareRepositorySkill` against the new header spelling, and update `REPOSITORY_SKILL_IDENTITY` and `renderRepositoryConfiguration` so `ki repo init` emits the new shape.
-- [ ] Re-key trade routes by partner repository if the Harness adopts that shape, so each partner is named once carrying its kinds, replacing the hand-written uniqueness and lexical-ordering checks with TOML's own prohibition on defining a key twice, and dropping the explicit empty array a direction currently needs when it carries no kinds.
-- [ ] Migrate this repository's `.ki-config.toml`, giving `ki-trades` an explicit `[skills.ki-trades]` declaration so it is no longer declared only by its sub-tables.
-- [ ] Make an unmigrated file a loud, specific failure naming the expected shape, with no fallback parse.
-- [ ] Update `man/ki.1`, `README.md`, and `CHANGELOG.md` for the changed contract.
+- [x] Confirm the settled contract from `KI-HARNESS-GOV-021` before writing code — the key names (`[repo]`, its `harnesses` list, and `[skills.<name>]`), whether routes are keyed by partner, and whether a route entry is an inline table or a nested table header.
+- [x] Read the declared harness list from `[repo] harnesses` and make it the resolution basis: a bare skill name binds to exactly one declared provider, no declared harness providing the skill is a clear diagnostic, and more than one requires explicit qualification.
+- [x] Parse `[skills.<name>]` as the declaration, retaining support for a quoted `[skills."<harness>:<name>"]` key for the exceptional case of a skill drawn from a harness outside the declared list, so the exception stays visibly exceptional.
+- [x] Derive `DeclaredSkill.identity` from the bare name plus its resolved provider, so the cost of the change concentrates in identity derivation rather than spreading across the nine consuming modules.
+- [x] Delete `looksLikeSkill` and the top-level heuristic outright; a key is a declaration because it sits under `[skills]`, not because it looks like one.
+- [x] Rewrite `declareRepositorySkill` and `undeclareRepositorySkill` against the new header spelling, and update `REPOSITORY_SKILL_IDENTITY` and `renderRepositoryConfiguration` so `ki repo init` emits the new shape.
+- [x] Re-key trade routes by partner repository if the Harness adopts that shape, so each partner is named once carrying its kinds, replacing the hand-written uniqueness and lexical-ordering checks with TOML's own prohibition on defining a key twice, and dropping the explicit empty array a direction currently needs when it carries no kinds.
+- [x] Migrate this repository's `.ki-config.toml`, giving `ki-trades` an explicit `[skills.ki-trades]` declaration so it is no longer declared only by its sub-tables.
+- [x] Make an unmigrated file a loud, specific failure naming the expected shape, with no fallback parse.
+- [x] Update `man/ki.1`, `README.md`, and `CHANGELOG.md` for the changed contract.
 
 ## Files touched
 
@@ -81,6 +81,22 @@ Observed in that repository on 2026-08-08: `KI-HARNESS-GOV-021` is `status: read
 This record previously also cited `KI-HARNESS-GOV-022` as covering the estate migration. **No such item exists** in that repository — no roadmap file and no reference anywhere in its `docs/`. It was presumably renumbered, folded into `GOV-021`, or never created. The citation is removed rather than guessed at; if an estate migration is a real prerequisite it needs re-establishing against whatever item actually carries it.
 
 `TRD-aacc8a12` is the originating trade, sent from this repository to the Harness.
+
+## Review
+
+Delivered against the contract the Harness settled in `1bb5b865` and migrated in `e1d0315a`. `bun run test:coverage` passes 559 tests at 100% on all four metrics, `bunx tsc --noEmit` is clean, and `ki repo audit` against this repository's own migrated file reports `PASS=14 WARN=0 FAIL=0` — the `CONFIG-1` failure the Harness's landing produced here is resolved.
+
+Four decisions the record left open, settled during implementation.
+
+**An absent `routes` table means no routes.** `parseRoutes` previously needed an `allowIncomplete` flag so `ki trade routes add` could write into a file that had not yet declared its route tables. Under the new shape a partner-keyed map that is absent already means "trades with nobody", so the flag and its second parsing mode are deleted rather than ported, and `readEditableConfiguration` with it. A direction a partner does not trade is likewise absent rather than an empty array, which the parser now rejects.
+
+**A route key is `owner/name` only.** The portable standard keeps a full canonical URL as the key for a partner outside the default host. `ki` cannot represent such a partner at all — `isTradeRepository` admits only `https://github.com/…` — so a full-URL key here could never be anything but a longer spelling of the short form, and is rejected naming the expected form. If `ki` ever gains a non-GitHub endpoint model this is the place that has to change.
+
+**Declared harnesses are not required to be installed.** Resolution binds a bare name against the declared list, but requiring every declared harness to be present would fail a repository that declares two and uses skills from one. The candidate set is therefore the declared harnesses that are installed, and the no-provider diagnostic names both the declared list and any member of it that is missing, so an uninstalled provider is still reported rather than silently skipped.
+
+**`ki repo skill add` writes the quoted key when it must.** A skill resolved from an installed harness that the file does not declare in `[repo] harnesses` is appended as `[skills."<harness-id>:<name>"]`, keeping the exception visible instead of writing a bare name that would not resolve on the next read.
+
+One incidental behaviour is now pinned by a test rather than left implicit: `undeclareRepositorySkill` takes the blank line preceding each table it removes, so removing a skill that carries a sub-table closes two gaps and can leave `[repo]` adjacent to the declaration that followed it. That is the existing text-editing rule, unchanged here, and the file remains valid TOML.
 
 ## Discussion
 

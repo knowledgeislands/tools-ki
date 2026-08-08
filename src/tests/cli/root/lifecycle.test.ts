@@ -87,7 +87,7 @@ describe('[ki harness lifecycle]', () => {
     await box.setupExampleHarness()
     await box.config.write(
       'ki/config.toml',
-      `${userConfiguration({ id: 'example/harness', sha256: archive.sha256 }).replace('[skills]\n', '[skills.ki-example]\nharness = "example/harness"\n')}`
+      `${userConfiguration({ id: 'example/harness', sha256: archive.sha256 }).replace('[skills]\n', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\nharness = "example/harness"\n')}`
     )
     box.setFetcher(async () => new Response(archive.payload))
 
@@ -110,7 +110,7 @@ describe('[ki harness lifecycle]', () => {
     const box = await sandbox()
     await box.setupExampleHarness()
     await box.config.write('ki/config.toml', userConfiguration())
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
 
     const result = await box.run('ki harness uninstall example/harness')
 
@@ -123,7 +123,10 @@ describe('[ki harness lifecycle]', () => {
     await box.setupExampleHarness()
     await box.config.write(
       'ki/config.toml',
-      userConfiguration().replace('[skills]\n', '[skills.ki-other]\nharness = "example/harness"\n')
+      userConfiguration().replace(
+        '[skills]\n',
+        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-other]\nharness = "example/harness"\n'
+      )
     )
 
     const result = await box.run('ki harness uninstall example/harness')

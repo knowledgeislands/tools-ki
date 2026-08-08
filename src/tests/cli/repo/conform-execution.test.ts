@@ -67,7 +67,10 @@ export default {
 describe('[ki repo conform execution]', () => {
   test('refuses conflicting user-home writes proposed by separate skills', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n["example/harness:ki-extra"]\n')
+    await box.project.write(
+      '.ki-config.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n[skills.ki-extra]\n'
+    )
     await box.home.write('.managed/setting.txt', 'before\n')
     const userHomeRubric = (skill: string, code: string, content: string): string =>
       rubric(
@@ -100,7 +103,7 @@ describe('[ki repo conform execution]', () => {
 
   test('refuses a user-home write outside the declaring skill filesystem scope', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.home.write('.outside/setting.txt', 'before\n')
     await box.setupExampleHarness({
       rubric: rubric(
@@ -127,7 +130,7 @@ describe('[ki repo conform execution]', () => {
 
   test('refuses user-home conform commands before running them', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.home.write('.managed/setting.txt', 'before\n')
     await box.setupExampleHarness({
       rubric: rubric(
@@ -154,7 +157,7 @@ describe('[ki repo conform execution]', () => {
 
   test('refuses an explicit create target that already exists', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.project.write('created.txt', 'existing\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
@@ -172,7 +175,7 @@ describe('[ki repo conform execution]', () => {
 
   test('an unfixed violation (no conform function) blocks conform and is reported', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{
           code: 'F', title: 'Family',
@@ -192,7 +195,7 @@ describe('[ki repo conform execution]', () => {
 
   test('a conform proposing no writes leaves its violation reported and unfixed', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{
           code: 'F', title: 'Family',
@@ -212,7 +215,7 @@ describe('[ki repo conform execution]', () => {
 
   test('reports subprocess conforms in dry-run mode without executing them, then runs and re-audits them', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'NORMALISE',
@@ -237,7 +240,7 @@ describe('[ki repo conform execution]', () => {
 
   test('reports a failed subprocess conform with its command output', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
@@ -256,7 +259,7 @@ describe('[ki repo conform execution]', () => {
 
   test('combines stdout and stderr from a failed subprocess conform', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
@@ -275,7 +278,7 @@ describe('[ki repo conform execution]', () => {
 
   test('conforms INFO outcomes explicitly opted into conforming and retains a fixed subject', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.project.write('governed.txt', 'before\n')
     await box.setupExampleHarness({
       rubric: `
@@ -328,7 +331,7 @@ export default {
 
   test('orders same-phase conform actions by their family declaration', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(`[
           { code: 'SECOND', title: 'Second', items: [{
@@ -354,7 +357,7 @@ export default {
 
   test('refuses an unsafe direct conform write before publication', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
@@ -372,7 +375,7 @@ export default {
 
   test('reports a failed silent subprocess conform without an empty detail line', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
@@ -391,7 +394,7 @@ export default {
 
   test('reports a subprocess terminated by a signal as a failed conform', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'WARN', phase: 'PRIMARY',
@@ -414,7 +417,7 @@ export default {
 
   test('rejects a malformed subprocess conform proposal before execution', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.setupExampleHarness({
       rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
