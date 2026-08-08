@@ -74,7 +74,11 @@ Blocks `KI-TOOL-VENDOR-001`, whose provenance contract needs the declared harnes
 
 This item previously blocked `KI-TOOL-CLI-024` on the reasoning that the estate diagram reads route declarations and should be built once against the settled shape. That was withdrawn before `024` was implemented: the diagram consumes `inspectEstateRoutes`, which returns an inspection type rather than raw configuration, so a change to the declaration syntax lands in the parser and leaves the renderer untouched. `024` shipped against the current shape without incurring the rework the block was meant to prevent.
 
-`KI-HARNESS-GOV-021` in `knowledgeislands/ki-agentic-harness` settles the portable contract this item implements, and `KI-HARNESS-GOV-022` covers the estate migration. Both are recorded here as prose rather than as `blocked-by` identifiers, because they are items in another repository which owns its own priority, plan, and execution. Work here should not begin until the contract is settled, but the Harness schedules that in its own horizon.
+`KI-HARNESS-GOV-021` in `knowledgeislands/ki-agentic-harness` settles the portable contract this item implements. It is recorded here as prose rather than as a `blocked-by` identifier, because it is an item in another repository which owns its own priority, plan, and execution. Work here should not begin until the contract is settled, but the Harness schedules that in its own horizon.
+
+Observed in that repository on 2026-08-08: `KI-HARNESS-GOV-021` is `status: ready`, `horizon: now`, with nothing blocking it, and its two open route-shape questions were settled just before it was readied. Ready is a plan rather than a settled contract, so this item stays blocked — but the gate is now one transition away rather than an open design question.
+
+This record previously also cited `KI-HARNESS-GOV-022` as covering the estate migration. **No such item exists** in that repository — no roadmap file and no reference anywhere in its `docs/`. It was presumably renumbered, folded into `GOV-021`, or never created. The citation is removed rather than guessed at; if an estate migration is a real prerequisite it needs re-establishing against whatever item actually carries it.
 
 `TRD-aacc8a12` is the originating trade, sent from this repository to the Harness.
 
