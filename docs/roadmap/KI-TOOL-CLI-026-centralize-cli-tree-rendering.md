@@ -25,7 +25,9 @@ This item does not introduce a machine-readable output format, redesign report c
 
 ## Current state
 
-Tree-formatting characters and the rules for placing them are embedded in command-local arrays and interpolation expressions. Similar helpers already exist independently in several command modules, while repository reporting writes tree lines directly to stdout. There is no common typed report structure or renderer that makes the hierarchy explicit before it becomes text.
+`src/core/tree-rendering.ts` now owns the tree glyphs and nesting rules. `ki manage diag` is the first consumer, while repository health exposes structured facts instead of pre-rendered lines so `diag` and `ki repo repair` can each render the information appropriate to their own command.
+
+The remaining reports still embed tree characters in command-local arrays, interpolation expressions, or direct stdout writes. The inventory below is the migration queue; it does not establish a priority among independently safe slices.
 
 ## Steps
 
@@ -40,6 +42,22 @@ Tree-formatting characters and the rules for placing them are embedded in comman
 - A new focused CLI-output rendering module under `src/core/` and its barrel export if required.
 - Tree-reporting command modules under `src/commands/` and `src/core/repository-reporting.ts`.
 - The affected CLI contract tests under `src/tests/cli/`.
+
+## Candidate migrations
+
+Already migrated:
+
+- `ki manage diag` — `src/commands/manage/diag.ts`.
+
+Remaining report paths:
+
+- **Agora:** `src/commands/agora/list.ts` and `src/commands/agora/show.ts`.
+- **Harness:** `src/commands/harness/index.ts`.
+- **Manage:** `src/commands/manage/cleanup.ts`, `doctor.ts`, `list.ts`, `missing.ts`, `outdated.ts`, `repair.ts`, `search.ts`, and `update.ts`.
+- **Repository:** `src/commands/repo/index.ts`, `repair.ts`, `roadmap.ts`, `upgrade.ts`, and the shared `src/core/repository-reporting.ts` audit and conform reports.
+- **Trades:** `src/commands/trade/records.ts` and `src/commands/trade/routes.ts`.
+
+Each migration should retain the command's own content and semantics while replacing only its layout construction. A command that needs a report structure the renderer does not yet express must stop for a separate design decision rather than growing the renderer opportunistically.
 
 ## Verify
 
