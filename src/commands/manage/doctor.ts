@@ -14,6 +14,7 @@ import { readRepositoryDeclaration } from '../../core/configuration.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness } from '../../core/harness.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 
 type CheckStatus = 'pass' | 'fail' | 'skip'
 
@@ -80,15 +81,18 @@ const report = (context: KiContext, checks: readonly DoctorCheck[]): void => {
     fail: checks.filter((check) => check.status === 'fail').length,
     skip: checks.filter((check) => check.status === 'skip').length
   }
-  const lines = ['╭─ KI MANAGE DOCTOR', `├─ checks (${checks.length})`]
-  lines.push(
-    ...checks.map(
-      (check, index) =>
-        `│  ${index === checks.length - 1 ? '╰─' : '├─'} ${mark(check.status)} ${check.label}: ${check.detail}`
-    )
+  context.stdout.write(
+    `${renderTree({
+      title: 'KI MANAGE DOCTOR',
+      entries: [
+        {
+          label: `checks (${checks.length})`,
+          children: checks.map((check) => ({ label: `${mark(check.status)} ${check.label}: ${check.detail}` }))
+        },
+        { label: `summary: PASS=${totals.pass} FAIL=${totals.fail} SKIP=${totals.skip}` }
+      ]
+    }).join('\n')}\n`
   )
-  lines.push(`╰─ summary: PASS=${totals.pass} FAIL=${totals.fail} SKIP=${totals.skip}`)
-  context.stdout.write(`${lines.join('\n')}\n`)
 
   if (checks.some((check) => check.status === 'fail')) throw new KiExit(1)
 }
