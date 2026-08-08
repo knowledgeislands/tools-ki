@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-029
 title: Render estate routes as an interactive network
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: null
