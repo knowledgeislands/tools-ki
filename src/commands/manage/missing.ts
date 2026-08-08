@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { collectCapabilityStatus } from '../../core/capability-status.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 
 export const createMissingCommand = (context: KiContext): Command =>
   new Command('missing').description('report desired capabilities without an installed provider').action(async () => {
@@ -8,14 +9,16 @@ export const createMissingCommand = (context: KiContext): Command =>
       configurationDirectory: context.paths.config,
       dataDirectory: context.paths.data
     })
-    const lines = ['╭─ KI MANAGE MISSING', `├─ capabilities (${status.missing.length})`]
-    if (!status.missing.length) lines.push('│  ╰─ none')
-    else
-      lines.push(
-        ...status.missing.map(
-          (entry, index) => `│  ${index === status.missing.length - 1 ? '╰─' : '├─'} user skill ${entry.name}`
-        )
-      )
-    lines.push(`╰─ summary: MISSING=${status.missing.length}`)
-    context.stdout.write(`${lines.join('\n')}\n`)
+    const capabilities = status.missing.length
+      ? status.missing.map((entry) => ({ label: `user skill ${entry.name}` }))
+      : [{ label: 'none' }]
+    context.stdout.write(
+      `${renderTree({
+        title: 'KI MANAGE MISSING',
+        entries: [
+          { label: `capabilities (${status.missing.length})`, children: capabilities },
+          { label: `summary: MISSING=${status.missing.length}` }
+        ]
+      }).join('\n')}\n`
+    )
   })
