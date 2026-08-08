@@ -6,7 +6,7 @@ import type { KiContext } from '../../context.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
-import { inspectRepositoryHealth } from './repository-health.ts'
+import { describeRepositoryProjection, inspectRepositoryHealth } from './repository-health.ts'
 
 export const createRepairCommand = (
   context: KiContext,
@@ -46,8 +46,8 @@ export const createRepairCommand = (
           continue
         }
         const health = await inspectRepositoryHealth(context, repository)
-        const healthLines = health.lines.map((line) => line.trimStart())
-        entries.push(...(healthLines[0]?.startsWith('Root') ? healthLines.slice(1) : healthLines))
+        if (health.diagnostic) entries.push(`✗ Repository: ${health.diagnostic}`)
+        else entries.push(...health.projections.map(describeRepositoryProjection))
         for (const projection of health.projections) {
           if (projection.state === 'linked' || projection.state === 'foreign') continue
           entries.push(`${dryRun ? 'would link' : 'link'} ${projection.path} -> ${projection.expected}`)

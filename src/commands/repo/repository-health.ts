@@ -23,7 +23,7 @@ export interface RepositoryHealth {
   readonly root: string
   readonly configuration: string
   readonly health: Health
-  readonly lines: readonly string[]
+  readonly diagnostic?: string
   readonly projections: readonly RepositoryProjection[]
 }
 
@@ -39,6 +39,9 @@ const stateDescription: Record<RepositoryProjection['state'], string> = {
   stale: 'projection target is stale',
   foreign: 'projection is not a KI-managed link'
 }
+
+export const describeRepositoryProjection = (projection: RepositoryProjection): string =>
+  `${projection.state === 'linked' ? '✓' : '✗'} ${projection.agent.descriptor.id} ${projection.skill.declaration.name}: ${stateDescription[projection.state]}`
 
 const inspectProjection = async (
   agent: InstalledAgent,
@@ -59,7 +62,7 @@ const failure = (root: string, configuration: string, detail: string): Repositor
   root,
   configuration,
   health: 'unrepairable',
-  lines: [`  ✗ Repository: ${detail}`],
+  diagnostic: detail,
   projections: []
 })
 
@@ -99,15 +102,6 @@ export const inspectRepositoryHealth = async (
       root: location.root,
       configuration: location.configuration,
       health,
-      lines: [
-        `  Root          ${location.root}`,
-        `  Configuration ${location.configuration}`,
-        `  Status        ${health}`,
-        ...projections.map(
-          (projection) =>
-            `  ${projection.state === 'linked' ? '✓' : '✗'} ${projection.agent.descriptor.id} ${projection.skill.declaration.name}: ${stateDescription[projection.state]}`
-        )
-      ],
       projections
     }
   } catch (error) {

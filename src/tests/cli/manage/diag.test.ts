@@ -1,4 +1,4 @@
-import { rm, symlink, unlink } from 'node:fs/promises'
+import { realpath, rm, symlink, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
@@ -110,9 +110,13 @@ ids = ["example:skill", "example:skill"]
     const direct = await box.run('ki manage diag')
     box.cd('child')
     const nested = await box.run('ki manage diag')
+    const root = await realpath(box.project.path)
 
     expect(direct.exitCode).toBe(0)
     expect(direct.output).toContain('├─ repository (repairable)')
+    expect(direct.output).toContain(`Root: ${root}`)
+    expect(direct.output).toContain(`Configuration: ${root}/.ki-config.toml`)
+    expect(direct.output).toContain('Status: repairable')
     expect(direct.output).toContain('chatgpt-codex ki-example: projection is missing')
     expect(nested.output).not.toContain('\n├─ repository (')
   })

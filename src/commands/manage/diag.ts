@@ -5,7 +5,7 @@ import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
 import { renderTree, type TreeEntry } from '../../core/tree-rendering.ts'
 import { KI_VERSION } from '../../version.ts'
-import { inspectDirectRepositoryHealth } from '../repo/repository-health.ts'
+import { describeRepositoryProjection, inspectDirectRepositoryHealth } from '../repo/repository-health.ts'
 
 const field = (label: string, value: string): string => `${label}: ${value}`
 
@@ -81,7 +81,14 @@ export const createDiagCommand = (context: KiContext): Command =>
       if (repository) {
         entries.push({
           label: `repository (${repository.health})`,
-          children: treeEntries(repository.lines.map((line) => line.trimStart()))
+          children: repository.diagnostic
+            ? [{ label: `✗ Repository: ${repository.diagnostic}` }]
+            : [
+                { label: field('Root', repository.root) },
+                { label: field('Configuration', repository.configuration) },
+                { label: field('Status', repository.health) },
+                ...repository.projections.map((projection) => ({ label: describeRepositoryProjection(projection) }))
+              ]
         })
       }
       entries.push({
