@@ -24,7 +24,7 @@ Both sit in `configuredHarnessIds` and justify themselves by asserting that `ins
 
 So `recordInstalledHarness` performs the first and only strict read of `config.toml` in an uninstall, and its guards are ordinary input validation over a user-editable file rather than the concurrent-replacement race the pragma claims. A configuration carrying `harnesses = 5`, or a `config.toml` replaced by a symlink, reaches them from a plain second invocation.
 
-The coverage gap is the smaller half. Because the strict read happens in `recordInstalledHarness`, and that call comes *after* `uninstallHarness`, the harness is already deleted from the data directory when validation fails. A user whose configuration is malformed asks to uninstall one harness and gets the files removed, the registry unchanged, and a non-zero exit — the worst of the three outcomes, and the one hardest to recover from because the evidence of what was installed is gone.
+The coverage gap is the smaller half. Because the strict read happens in `recordInstalledHarness`, and that call comes _after_ `uninstallHarness`, the harness is already deleted from the data directory when validation fails. A user whose configuration is malformed asks to uninstall one harness and gets the files removed, the registry unchanged, and a non-zero exit — the worst of the three outcomes, and the one hardest to recover from because the evidence of what was installed is gone.
 
 This is inconsistent with what the command already promises elsewhere. `src/tests/cli/harness/harness.test.ts` pins that an uninstall refusing on unrecognised state preserves the payload it declined to remove. Refusing on a malformed configuration should preserve it too.
 

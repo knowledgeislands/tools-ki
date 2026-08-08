@@ -195,6 +195,9 @@ describe('[ki agora]', () => {
     expect((await box.run('ki agora add inventory missing-project')).output).toContain(
       'Agora project missing-project must be an existing physical directory'
     )
+    // The filesystem root is an existing physical directory with no basename, so it passes the
+    // project check and then has no name to key a member by.
+    expect((await box.run('ki agora add inventory /')).output).toContain('cannot derive an Agora project name from /')
     expect(await box.run('ki agora add inventory second')).toEqual({
       exitCode: 0,
       output: 'ki agora add: inventory now has 2 projects\n'

@@ -398,7 +398,8 @@ ids = []
       for (const spelling of spellings) {
         const box = await sandbox()
         await bootstrapClaudeCode(box)
-        await box.setupExampleHarness({ skills: ['ki-example', 'ki-repo'] })
+        await box.setupExampleHarness()
+        await box.setupExampleHarness({ name: 'ki-repo' })
         // The decoy line looks like a table header and is not one, because it sits inside a
         // multi-line string. Read alone it is not valid TOML, so the key reader must decline it
         // rather than fail the removal.
@@ -424,7 +425,8 @@ ids = []
       // removal it did not perform.
       const box = await sandbox()
       await bootstrapClaudeCode(box)
-      await box.setupExampleHarness({ skills: ['ki-example', 'ki-repo'] })
+      await box.setupExampleHarness()
+      await box.setupExampleHarness({ name: 'ki-repo' })
       const configuration = join(box.project.path, '.ki-config.toml')
       await writeFile(
         configuration,
