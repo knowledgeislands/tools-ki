@@ -12,6 +12,7 @@ import {
   installHarness,
   isCanonicalHarnessDevelopmentLinked,
   recordInstalledHarness,
+  requireWritableHarnessRegistry,
   uninstallHarness
 } from '../../core/registry.ts'
 
@@ -151,6 +152,10 @@ export const createHarnessCommand = (context: KiContext): Command =>
           if (identifier === canonicalHarnessIdentifier)
             throw new KiError(`the canonical harness ${identifier} cannot be uninstalled`, 1)
           await requireInactive(context, harness, 'uninstall')
+          // The record below rewrites config.toml and cannot proceed against a file it fails to
+          // parse. Reading it first keeps that refusal ahead of the removal, so a hand-edited
+          // configuration costs the user an error rather than a half-uninstalled harness.
+          await requireWritableHarnessRegistry(context.paths.config)
           await uninstallHarness(context.paths.data, identifier)
           await recordInstalledHarness(context.paths.config, identifier, false)
           context.stdout.write(`uninstalled ${identifier}\n`)

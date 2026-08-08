@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-032
 title: Validate registry before uninstalling
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 2a17b40d23318e51ed24388e7772aee0367d0431
 ---
 
 ## Goal
@@ -40,11 +40,11 @@ This item owns the ordering of validation against removal in `ki harness uninsta
 
 ## Steps
 
-- [ ] Validate the harness registry before the destructive step, so a malformed configuration fails the uninstall with nothing removed.
-- [ ] Remove the two `/* v8 ignore */` pragmas at `src/core/registry.ts:147` and `:160`, whose justifications the uninstall path falsifies.
-- [ ] Cover both guards through the CLI: a `config.toml` replaced by a symlink, and one whose top-level `harnesses` key is a scalar.
-- [ ] Assert in both tests that the harness survives, so the ordering is pinned rather than merely the message.
-- [ ] Correct the justification at `src/core/registry.ts:176` to state the actual reason it is unreachable and the true caller count.
+- [x] Validate the harness registry before the destructive step, so a malformed configuration fails the uninstall with nothing removed.
+- [x] Remove the two `/* v8 ignore */` pragmas at `src/core/registry.ts:147` and `:160`, whose justifications the uninstall path falsifies.
+- [x] Cover both guards through the CLI: a `config.toml` replaced by a symlink, and one whose top-level `harnesses` key is a scalar.
+- [x] Assert in both tests that the harness survives, so the ordering is pinned rather than merely the message.
+- [x] Correct the justification at `src/core/registry.ts:176` to state the actual reason it is unreachable and the true caller count.
 
 ## Files touched
 
@@ -59,6 +59,14 @@ This item owns the ordering of validation against removal in `ki harness uninsta
 ## Dependencies / blocks
 
 Nothing blocks this item. It shares a cause with `KI-TOOL-CLI-031` and the convention recorded in `AGENTS.md`, but touches different code.
+
+## Review
+
+The validation is an exported `requireWritableHarnessRegistry`, called after `requireInactive` and before `uninstallHarness`. It reads the configuration a record will have to rewrite and discards the result, so the refusal it produces lands ahead of the removal rather than after it. Both new tests assert the payload still exists, which is the assertion that fails if the ordering regresses — the diagnostic alone would keep passing.
+
+Coverage is 100% on all four metrics across 4928 statements, two lines more than before because the guards are now measured rather than exempted.
+
+The third justification, at what was `src/core/registry.ts:176`, is corrected rather than removed. That guard is genuinely unreachable, but not for the reason it gave: it claimed two CLI callers validate the identifier, where there are three call sites and the install one does not call `requireHarnessIdentifier` at all — it is unreachable because `installHarness` cannot match an unconfigured identifier against the registry first. The guard stays; the stale caller count and the wrong mechanism are gone, which is the drift the every-caller rule exists to catch.
 
 ## Discussion
 

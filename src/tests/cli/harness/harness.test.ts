@@ -149,6 +149,38 @@ describe('[ki harness]', () => {
       expect(result.output).toContain('cannot be uninstalled')
     })
 
+    test('refuses to remove an installed harness when its registry cannot be rewritten, preserving it', async () => {
+      // Uninstall never calls installHarness, so the strict read of config.toml that a record needs
+      // happens on this path alone. It must happen before the removal: the rewrite is a substitution
+      // over existing text and cannot proceed against a file it fails to parse, so a configuration
+      // this malformed has to cost an error rather than a harness deleted with its registry intact.
+      const box = await sandbox()
+      await box.setupExampleHarness()
+      const payload = `${box.data.path}/ki/harnesses/example/harness`
+      await box.config.write('ki/config.toml', 'harnesses = 5\n')
+
+      const result = await box.run('ki harness uninstall example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('ki configuration harnesses must be a TOML table')
+      await expect(lstat(payload)).resolves.toBeDefined()
+    })
+
+    test('refuses to remove an installed harness when its registry is not a regular file, preserving it', async () => {
+      const box = await sandbox()
+      await box.setupExampleHarness()
+      const payload = `${box.data.path}/ki/harnesses/example/harness`
+      await box.config.write('ki/registry-source.toml', '[harnesses]\nids = ["example/harness"]\n')
+      await rm(`${box.config.path}/ki/config.toml`, { force: true })
+      await symlink(`${box.config.path}/ki/registry-source.toml`, `${box.config.path}/ki/config.toml`)
+
+      const result = await box.run('ki harness uninstall example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('ki configuration must be a regular file')
+      await expect(lstat(payload)).resolves.toBeDefined()
+    })
+
     test('refuses to remove an installed harness with unrecognised state, preserving it', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()

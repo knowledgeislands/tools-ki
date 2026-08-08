@@ -139,12 +139,19 @@ export const readHarnessRegistry = async (configurationDirectory: string): Promi
   return [canonicalHarnessRelease, ...releases]
 }
 
+/**
+ * Reads the configuration a harness record will have to rewrite, so a caller can refuse before it
+ * removes anything. Uninstall reaches `recordInstalledHarness` without going through
+ * `installHarness`, so this is the first strict read of `config.toml` on that path.
+ */
+export const requireWritableHarnessRegistry = async (configurationDirectory: string): Promise<void> => {
+  await configuredHarnessIds(configurationDirectory)
+}
+
 const configuredHarnessIds = async (configurationDirectory: string): Promise<readonly string[] | undefined> => {
   const path = join(configurationDirectory, 'config.toml')
   const state = await lstat(path).catch(() => undefined)
   if (!state) return undefined
-  // installHarness already read this configuration as a regular file; reaching this requires a concurrent replacement.
-  /* v8 ignore next */
   if (!state.isFile() || state.isSymbolicLink()) throw new KiError('ki configuration must be a regular file', 1)
   let parsed: unknown
   try {
@@ -156,8 +163,6 @@ const configuredHarnessIds = async (configurationDirectory: string): Promise<rea
   /* v8 ignore next */
   if (!isRecord(parsed)) throw new KiError('ki configuration must be a TOML table', 1)
   if (parsed.harnesses === undefined) return []
-  // installHarness already validated this section before recordInstalledHarness is reached.
-  /* v8 ignore next */
   if (!isRecord(parsed.harnesses)) throw new KiError('ki configuration harnesses must be a TOML table', 1)
   const ids = (parsed.harnesses as { readonly ids?: unknown }).ids
   if (ids === undefined) return []
@@ -172,7 +177,8 @@ export const recordInstalledHarness = async (
   identifier: string,
   installed: boolean
 ): Promise<void> => {
-  // Both CLI callers validate the harness identifier in installHarness/uninstallHarness before recording it.
+  // Unreachable because installHarness rejects an identifier it cannot match against the registry,
+  // and the uninstall and reinstall actions both call requireHarnessIdentifier before reaching here.
   /* v8 ignore next */
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   const identifiers = await configuredHarnessIds(configurationDirectory)
