@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-022
 title: Report evidence gathering phase
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: null
