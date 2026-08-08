@@ -385,6 +385,67 @@ ids = []
       })
     })
 
+    test('removes a repository skill declared under any legal spelling of its table header', async () => {
+      // The declaration is located by parsing the file and removed by editing its text. TOML spells
+      // the same key as a basic string, a literal string, or with whitespace inside the brackets, so
+      // a header this tool did not write must still be recognised — otherwise the projections go and
+      // the declaration stays, behind a successful exit.
+      const spellings = [
+        "['example/harness:ki-example']",
+        '[ "example/harness:ki-example" ]',
+        '["example/harness:ki-example"]'
+      ]
+      for (const spelling of spellings) {
+        const box = await sandbox()
+        await bootstrapClaudeCode(box)
+        await box.setupExampleHarness({ skills: ['ki-example', 'ki-repo'] })
+        // The decoy line looks like a table header and is not one, because it sits inside a
+        // multi-line string. Read alone it is not valid TOML, so the key reader must decline it
+        // rather than fail the removal.
+        await writeFile(
+          join(box.project.path, '.ki-config.toml'),
+          `["example/harness:ki-repo"]\nsupported_runtimes = ["claude-code"]\nnotes = """\n[not a header]\n"""\n\n${spelling}\n`
+        )
+        const projectRoot = await realpath(box.project.path)
+
+        const removed = await box.run(`ki repo --repo ${box.project.path} skill remove ki-example`)
+
+        expect(removed).toEqual({
+          exitCode: 0,
+          output: `ki repo skill remove: removed ki-example in ${projectRoot} for claude-code\n`
+        })
+        expect(await box.project.read('.ki-config.toml')).not.toContain('ki-example')
+      }
+    })
+
+    test('refuses a repository skill removal when the declaration cannot be found in the file text', async () => {
+      // The parser and the text editor must agree about the same file. Where they cannot — here a
+      // header whose key the grammar rejects outright — the command fails rather than reporting a
+      // removal it did not perform.
+      const box = await sandbox()
+      await bootstrapClaudeCode(box)
+      await box.setupExampleHarness({ skills: ['ki-example', 'ki-repo'] })
+      const configuration = join(box.project.path, '.ki-config.toml')
+      await writeFile(
+        configuration,
+        '["example/harness:ki-repo"]\nsupported_runtimes = ["claude-code"]\n\n["example/harness:ki-example"]\n'
+      )
+      await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
+      // Replace the header with a top-level inline table carrying the same key, which parses to the
+      // same declaration but presents no table header for the editor to remove. It has to precede
+      // every header, or it would belong to the table above it rather than to the document.
+      await writeFile(
+        configuration,
+        '"example/harness:ki-example" = {}\n\n["example/harness:ki-repo"]\nsupported_runtimes = ["claude-code"]\n'
+      )
+
+      const removed = await box.run(`ki repo --repo ${box.project.path} skill remove ki-example`)
+
+      expect(removed.exitCode).toBe(1)
+      expect(removed.output).toContain('could not be removed from')
+      expect(await box.project.read('.ki-config.toml')).toContain('example/harness:ki-example')
+    })
+
     test('declares a repository skill when its configuration has no final newline', async () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)

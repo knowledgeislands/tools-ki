@@ -110,10 +110,25 @@ export const declareRepositorySkill = async (configurationPath: string, identity
   return true
 }
 
-const isDeclaredHeader = (line: string, identity: string): boolean => {
+/**
+ * The first key of a TOML table header, or undefined where the line is not one. The declarations
+ * this tool writes are always basic strings, but TOML also spells the same key as a literal string
+ * and permits whitespace inside the brackets, and a hand-edited file is entitled to either. Matching
+ * the rendered line instead of the key made the parser and this editor disagree about the same file.
+ */
+const headerKey = (line: string): string | undefined => {
   const header = line.trim()
-  return header === `["${identity}"]` || header.startsWith(`["${identity}".`)
+  if (!header.startsWith('[') || !header.endsWith(']')) return undefined
+  try {
+    // The grammar's own parser decides what the key is, so quoting style and escape
+    // sequences cannot be read one way here and another way by readDeclaredSkills.
+    return Object.keys(parse(header))[0]
+  } catch {
+    return undefined
+  }
 }
+
+const isDeclaredHeader = (line: string, identity: string): boolean => headerKey(line) === identity
 
 // Remove a skill's quoted root and nested tables, preserving unrelated text and tables.
 export const undeclareRepositorySkill = async (configurationPath: string, identity: string): Promise<boolean> => {
@@ -132,7 +147,6 @@ export const undeclareRepositorySkill = async (configurationPath: string, identi
     lines.splice(from, end - from)
     removed = true
   }
-  // v8 ignore next -- repository removal invokes this only after locating the declaration in the same parsed file.
   if (!removed) return false
   await writeFile(configurationPath, lines.join('\n'), 'utf8')
   return true

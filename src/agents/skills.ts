@@ -214,6 +214,14 @@ export const removeRepoSkill = async (options: {
     if (await removeManagedRepoSkill(agent, location.root, options.skill)) removed = true
   }
   const undeclared = declaration ? await undeclareRepositorySkill(location.configuration, declaration.identity) : false
+  // A parsed declaration whose table cannot be found in the file's text means the two readings of
+  // the same file disagree. Reporting removal here would leave the declaration standing behind a
+  // successful exit, with the projections it names already gone.
+  if (declaration && !undeclared)
+    throw new KiError(
+      `declared skill ${declaration.identity} could not be removed from ${location.configuration}`,
+      1
+    )
   return {
     skill: options.skill,
     repository: location.root,
