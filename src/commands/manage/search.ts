@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 
 interface CapabilityMatch {
   readonly harness: string
@@ -33,15 +34,17 @@ export const createSearchCommand = (context: KiContext): Command =>
         }))
       )
       const found = capabilities.filter((entry) => matches(query, entry)).sort(compareMatches)
-      const lines = ['╭─ KI MANAGE SEARCH', `│  query: ${query}`, `├─ matches (${found.length})`]
-      if (!found.length) lines.push('│  ╰─ none')
-      else
-        lines.push(
-          ...found.map(
-            (entry, index) =>
-              `│  ${index === found.length - 1 ? '╰─' : '├─'} ${entry.harness} ${entry.kind} ${entry.name}`
-          )
-        )
-      lines.push(`╰─ summary: MATCHES=${found.length}`)
-      context.stdout.write(`${lines.join('\n')}\n`)
+      const matchEntries = found.length
+        ? found.map((entry) => ({ label: `${entry.harness} ${entry.kind} ${entry.name}` }))
+        : [{ label: 'none' }]
+      context.stdout.write(
+        `${renderTree({
+          title: 'KI MANAGE SEARCH',
+          entries: [
+            { label: `query: ${query}` },
+            { label: `matches (${found.length})`, children: matchEntries },
+            { label: `summary: MATCHES=${found.length}` }
+          ]
+        }).join('\n')}\n`
+      )
     })
