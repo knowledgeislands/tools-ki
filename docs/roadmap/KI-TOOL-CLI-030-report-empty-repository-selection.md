@@ -1,6 +1,6 @@
 ---
 id: KI-TOOL-CLI-030
-title: Fail loudly on empty selection
+title: Report empty repository selection
 theme: cli
 horizon: now
 status: draft
