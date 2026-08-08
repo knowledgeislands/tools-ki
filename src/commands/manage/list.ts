@@ -3,11 +3,10 @@ import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 
-const branches = (prefix: string, items: readonly string[]): readonly string[] =>
-  items.length
-    ? items.map((item, index) => `${prefix}${index === items.length - 1 ? '╰─' : '├─'} ${item}`)
-    : [`${prefix}╰─ none`]
+const treeEntries = (items: readonly string[]) =>
+  items.length ? items.map((label) => ({ label })) : [{ label: 'none' }]
 
 export const createListCommand = (context: KiContext): Command =>
   new Command('list').description('list installed harness capabilities and declared skills').action(async () => {
@@ -19,25 +18,30 @@ export const createListCommand = (context: KiContext): Command =>
       throw new KiError(`ki configuration is invalid: ${userConfiguration.errors.join('; ')}`, 1)
     const skills = [...userConfiguration.skills].sort((left, right) => left.localeCompare(right))
     const capabilities = harnesses.reduce((total, harness) => total + harness.capabilities.length, 0)
-    const lines = ['╭─ KI MANAGE', `├─ harnesses (${harnesses.length})`]
-    if (!harnesses.length) lines.push('│  ╰─ none')
-    for (const harness of harnesses) {
-      const last = harness === harnesses[harnesses.length - 1]
-      lines.push(`│  ${last ? '╰─' : '├─'} ${harness.id} (${harness.capabilities.length})`)
-      lines.push(
-        ...branches(
-          `│  ${last ? '   ' : '│  '}`,
-          harness.capabilities.map((capability) => `${capability.kind} ${capability.name}`)
-        )
-      )
-    }
-    lines.push(`├─ user skills (${skills.length})`, ...branches('│  ', skills))
-    lines.push(
-      `├─ repositories (${userConfiguration.repositories.length})`,
-      ...branches('│  ', userConfiguration.repositories)
+    context.stdout.write(
+      `${renderTree({
+        title: 'KI MANAGE',
+        entries: [
+          {
+            label: `harnesses (${harnesses.length})`,
+            children: harnesses.length
+              ? harnesses.map((harness) => ({
+                  label: `${harness.id} (${harness.capabilities.length})`,
+                  children: treeEntries(
+                    harness.capabilities.map((capability) => `${capability.kind} ${capability.name}`)
+                  )
+                }))
+              : [{ label: 'none' }]
+          },
+          { label: `user skills (${skills.length})`, children: treeEntries(skills) },
+          {
+            label: `repositories (${userConfiguration.repositories.length})`,
+            children: treeEntries(userConfiguration.repositories)
+          },
+          {
+            label: `summary: HARNESSES=${harnesses.length} CAPABILITIES=${capabilities} USER_SKILLS=${skills.length} REPOSITORIES=${userConfiguration.repositories.length}`
+          }
+        ]
+      }).join('\n')}\n`
     )
-    lines.push(
-      `╰─ summary: HARNESSES=${harnesses.length} CAPABILITIES=${capabilities} USER_SKILLS=${skills.length} REPOSITORIES=${userConfiguration.repositories.length}`
-    )
-    context.stdout.write(`${lines.join('\n')}\n`)
   })
