@@ -12,6 +12,7 @@ import {
   localRegisteredRepository,
   removeTradeRoute
 } from '../../core/trade-core.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 import { count, kind, repository, routeDirection, routeState } from './shared.ts'
 
 interface RouteOptions {
@@ -220,17 +221,20 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
           )
           if (peer && !selected.length) throw grammarError(`trade route ${peer} is not declared locally`)
           const active = selected.filter((route) => route.state === 'active').length
-          const lines = ['╭─ KI TRADE ROUTE CHECK', `├─ routes (${selected.length})`]
-          if (!selected.length) lines.push('│  ╰─ none')
-          else
-            lines.push(
-              ...selected.map(
-                (route, index) =>
-                  `│  ${index === selected.length - 1 ? '╰─' : '├─'} ${route.direction} ${route.kind} ${route.repository}: ${routeState(route.state)}`
-              )
-            )
-          lines.push(`╰─ summary: ROUTES=${selected.length} ACTIVE=${active}`)
-          context.stdout.write(`${lines.join('\n')}\n`)
+          const routes = selected.length
+            ? selected.map((route) => ({
+                label: `${route.direction} ${route.kind} ${route.repository}: ${routeState(route.state)}`
+              }))
+            : [{ label: 'none' }]
+          context.stdout.write(
+            `${renderTree({
+              title: 'KI TRADE ROUTE CHECK',
+              entries: [
+                { label: `routes (${selected.length})`, children: routes },
+                { label: `summary: ROUTES=${selected.length} ACTIVE=${active}` }
+              ]
+            }).join('\n')}\n`
+          )
         })
     )
   return routes
