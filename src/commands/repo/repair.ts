@@ -6,6 +6,7 @@ import type { KiContext } from '../../context.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 import { describeRepositoryProjection, inspectRepositoryHealth } from './repository-health.ts'
 
 export const createRepairCommand = (
@@ -72,20 +73,20 @@ export const createRepairCommand = (
         if (repaired.health === 'unrepairable' || (!dryRun && repaired.health !== 'healthy')) failed = true
         reports.push({ root: repository.root, entries })
       }
-      const lines = ['╭─ KI REPO REPAIR', `├─ repositories (${reports.length})`]
-      lines.push(
-        ...reports.flatMap((report, reportIndex) => {
-          const lastReport = reportIndex === reports.length - 1
-          const itemPrefix = `│  ${lastReport ? '   ' : '│  '}`
-          return [
-            `│  ${lastReport ? '╰─' : '├─'} ${report.root}`,
-            ...report.entries.map(
-              (entry, entryIndex) => `${itemPrefix}${entryIndex === report.entries.length - 1 ? '╰─' : '├─'} ${entry}`
-            )
+      context.stdout.write(
+        `${renderTree({
+          title: 'KI REPO REPAIR',
+          entries: [
+            {
+              label: `repositories (${reports.length})`,
+              children: reports.map((report) => ({
+                label: report.root,
+                children: report.entries.map((label) => ({ label }))
+              }))
+            },
+            { label: `summary: REPOSITORIES=${reports.length} RESULT=${failed ? 'FAIL' : 'PASS'}` }
           ]
-        })
+        }).join('\n')}\n`
       )
-      lines.push(`╰─ summary: REPOSITORIES=${reports.length} RESULT=${failed ? 'FAIL' : 'PASS'}`)
-      context.stdout.write(`${lines.join('\n')}\n`)
       if (failed) throw new KiExit(1)
     })
