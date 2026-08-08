@@ -15,6 +15,7 @@ import {
   requireWritableHarnessRegistry,
   uninstallHarness
 } from '../../core/registry.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
@@ -101,17 +102,18 @@ export const createHarnessCommand = (context: KiContext): Command =>
       new Command('list').description('list installed harnesses').action(async () => {
         const harnesses = await discoverInstalledHarnesses(context.paths.data)
         const capabilities = harnesses.reduce((total, harness) => total + harness.capabilities.length, 0)
-        const lines = ['╭─ KI HARNESSES', `├─ installed (${harnesses.length})`]
-        if (!harnesses.length) lines.push('│  ╰─ none')
-        else
-          lines.push(
-            ...harnesses.map(
-              ({ id, capabilities: installed }, index) =>
-                `│  ${index === harnesses.length - 1 ? '╰─' : '├─'} ${id} (${installed.length})`
-            )
-          )
-        lines.push(`╰─ summary: HARNESSES=${harnesses.length} CAPABILITIES=${capabilities}`)
-        context.stdout.write(`${lines.join('\n')}\n`)
+        const installed = harnesses.length
+          ? harnesses.map(({ id, capabilities: entries }) => ({ label: `${id} (${entries.length})` }))
+          : [{ label: 'none' }]
+        context.stdout.write(
+          `${renderTree({
+            title: 'KI HARNESSES',
+            entries: [
+              { label: `installed (${harnesses.length})`, children: installed },
+              { label: `summary: HARNESSES=${harnesses.length} CAPABILITIES=${capabilities}` }
+            ]
+          }).join('\n')}\n`
+        )
       })
     )
     .addCommand(
@@ -127,17 +129,19 @@ export const createHarnessCommand = (context: KiContext): Command =>
             depends_on: dependsOn,
             rubric_module: rubricModule ?? null
           }))
-          const lines = ['╭─ KI HARNESS', `├─ ${harness.id}`, `├─ capabilities (${capabilities.length})`]
-          if (!capabilities.length) lines.push('│  ╰─ none')
-          else
-            lines.push(
-              ...capabilities.map(
-                (capability, index) =>
-                  `│  ${index === capabilities.length - 1 ? '╰─' : '├─'} ${capability.kind} ${capability.name}`
-              )
-            )
-          lines.push(`╰─ summary: CAPABILITIES=${capabilities.length}`)
-          context.stdout.write(`${lines.join('\n')}\n`)
+          const entries = capabilities.length
+            ? capabilities.map((capability) => ({ label: `${capability.kind} ${capability.name}` }))
+            : [{ label: 'none' }]
+          context.stdout.write(
+            `${renderTree({
+              title: 'KI HARNESS',
+              entries: [
+                { label: harness.id },
+                { label: `capabilities (${capabilities.length})`, children: entries },
+                { label: `summary: CAPABILITIES=${capabilities.length}` }
+              ]
+            }).join('\n')}\n`
+          )
         })
     )
     .addCommand(
