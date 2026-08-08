@@ -6,7 +6,7 @@ horizon: now
 status: awaiting-review
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 6c0e4f5f8d558ce500b9291a98e7cf840290f140
 ---
 
 ## Goal
@@ -35,10 +35,10 @@ Seven call sites reach `recordFromContents`: one through `locateTrades` at line 
 
 ## Steps
 
-- [ ] Remove the `/* v8 ignore start */` and `/* v8 ignore stop */` pair at `src/core/trade-core.ts:557-563`.
-- [ ] Add a CLI test driving `ki trade release` against a receiver whose inbound record declares a phase inconsistent with its location, asserting the diagnostic and the exit code.
-- [ ] Confirm both lines are covered rather than only the first, since the vocabulary check and the agreement check fail on different inputs and one test reaches only one of them.
-- [ ] Correct the comment on any part of the block that survives, so no justification is left claiming a guarantee that only one caller provides.
+- [x] Remove the `/* v8 ignore start */` and `/* v8 ignore stop */` pair at `src/core/trade-core.ts:557-563`.
+- [x] Add a CLI test driving `ki trade release` against a receiver whose inbound record declares a phase inconsistent with its location, asserting the diagnostic and the exit code.
+- [x] Confirm both lines are covered rather than only the first, since the vocabulary check and the agreement check fail on different inputs and one test reaches only one of them.
+- [x] Correct the comment on any part of the block that survives, so no justification is left claiming a guarantee that only one caller provides.
 
 ## Files touched
 
@@ -52,6 +52,12 @@ Seven call sites reach `recordFromContents`: one through `locateTrades` at line 
 ## Dependencies / blocks
 
 Nothing blocks this item and it blocks nothing. It touches `src/core/trade-core.ts`, which `KI-TOOL-CLI-025` will also edit if the Harness settles a new configuration contract, but the two do not overlap: this is record parsing and that is route table parsing.
+
+## Review
+
+Delivered in `a99482f`. Both lines are covered by one test driving `ki trade release` twice against the same received trade — a phase outside the vocabulary, and a valid phase belonging to another location — because the two checks fail on different inputs. Neutering either line alone fails its own assertion, so the test pins the guard rather than merely reaching it; without the guard both records fall through and are treated as well-formed. Exit code is 2 rather than 1, trade errors mapping to 2 throughout this CLI. Coverage rose from 4848 to 4852 measured statements at 100% on all four metrics.
+
+Implementation sharpened the record's account of why the guard is reachable. The Context above attributes it to the receiver's file being hand-editable, which is true but not sufficient. `localTrade` scans with a repository filter pinned to the local repository, so the estate scan never traverses the receiver at all. Had it done so, `phaseOf` would have thrown first with identical wording and a test would have passed while covering nothing. Both facts are needed: the scan does not reach the file, and the file is not trustworthy.
 
 ## Discussion
 

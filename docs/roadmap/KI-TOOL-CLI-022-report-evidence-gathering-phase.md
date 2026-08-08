@@ -6,7 +6,7 @@ horizon: now
 status: awaiting-review
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: d782f20d8a97c77f9d6d18958acfc2cf42d9b99e
 ---
 
 ## Goal
@@ -81,6 +81,14 @@ A subprocess-backed measurement in a second repository was deliberately not take
 ## Dependencies / blocks
 
 Nothing local blocks this item, and the Harness dependency its fourth step raised is now resolved and applied. The host does not depend on it: it names the phase whether or not a session emits, so the CLI's canonical archive pin needs no move for this item to land. It overlaps `KI-TOOL-CLI-027`, which records that the display cannot refresh while an item or a session holds the event loop: naming the phase helps even while frozen, since a named phase that does not tick is still more informative than an item count that does not move.
+
+## Review
+
+Delivered in `8126021`. Coverage 100% on all four metrics across 4911 measured statements, with no ignore pragma added. Both paths are exercised: the fixture harnesses in `src/tests/cli/repo/` emit nothing and prove the host's own bracket, while the installed harness emits and was measured driving a determinate step count through five external commands.
+
+Two aspects are worth flagging to a reviewer. Progress events are rubric-supplied and land directly in a terminal, so they are validated exactly as audit outcomes are and their labels have control characters stripped — a rubric is catalogue data from another repository, and a label may carry a path or a command line. Separately, the pinned frame expectations in `repo.test.ts` were updated rather than relaxed: every frame is still asserted at exactly 80 columns and the in-flight band still at 22, with the frame index moved to account for the two new stage frames.
+
+The record's premise that implementation needed a `ki dev local` checkout proved wrong in one direction that matters. The host names the phase whether or not a session emits, so this item lands and helps users without the archive pin moving; only the determinate step count waits on the pin.
 
 ## Discussion
 

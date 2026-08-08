@@ -6,7 +6,7 @@ horizon: now
 status: awaiting-review
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: a99482f573f5c5bad7a3d29ed404f3b0a87a9105
 ---
 
 ## Goal
@@ -79,6 +79,14 @@ The regression test asserts the exit code and the message on empty selection, no
 ## Dependencies / blocks
 
 Nothing blocks this item. It was raised from `ki-agentic-harness` during `KI-HARNESS-FND-010`; that repository owns no part of the fix.
+
+## Review
+
+Delivered in `d782f20`. Verified against the repository that raised this: `ki repo audit --skill ki-authoring` in `er-research` now reports `PASS=1 WARN=0 FAIL=0` where it previously printed nothing and exited `0`. Coverage 100% on all four metrics across 532 tests.
+
+One finding is worth recording beyond the fix. The test suite contained a fixture row asserting that a `version = 1` mGit document — one naming no members — should exit `0`. That row pinned the defect as expected behaviour, so the suite would have failed had the bug been fixed and passed for as long as it remained. It is removed. A test that encodes the current behaviour rather than the intended one converts a regression suite into a ratchet holding the defect in place.
+
+The empty-selection guard turned out to be unreachable once resolution was fixed, so it carries a justified ignore as a future-proofing guard. Its justification concerns the four branches of the single selector it wraps, all visible in one function with one caller, which satisfies the every-caller requirement rather than evading it.
 
 ## Discussion
 
