@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-030
 title: Report empty repository selection
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: a99482f573f5c5bad7a3d29ed404f3b0a87a9105
@@ -87,6 +87,10 @@ Delivered in `d782f20`. Verified against the repository that raised this: `ki re
 One finding is worth recording beyond the fix. The test suite contained a fixture row asserting that a `version = 1` mGit document — one naming no members — should exit `0`. That row pinned the defect as expected behaviour, so the suite would have failed had the bug been fixed and passed for as long as it remained. It is removed. A test that encodes the current behaviour rather than the intended one converts a regression suite into a ratchet holding the defect in place.
 
 The empty-selection guard turned out to be unreachable once resolution was fixed, so it carries a justified ignore as a future-proofing guard. Its justification concerns the four branches of the single selector it wraps, all visible in one function with one caller, which satisfies the every-caller requirement rather than evading it.
+
+## Done
+
+Accepted by the repository owner on 2026-08-08. The repository that raised this audits itself again, and an empty selection can no longer present as a clean estate. The two other repositories from the migration sweep that reported success without being touched are now diagnosable rather than silent.
 
 ## Discussion
 

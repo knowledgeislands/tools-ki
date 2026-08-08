@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-022
 title: Report evidence gathering phase
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: d782f20d8a97c77f9d6d18958acfc2cf42d9b99e
@@ -89,6 +89,10 @@ Delivered in `8126021`. Coverage 100% on all four metrics across 4911 measured s
 Two aspects are worth flagging to a reviewer. Progress events are rubric-supplied and land directly in a terminal, so they are validated exactly as audit outcomes are and their labels have control characters stripped — a rubric is catalogue data from another repository, and a label may carry a path or a command line. Separately, the pinned frame expectations in `repo.test.ts` were updated rather than relaxed: every frame is still asserted at exactly 80 columns and the in-flight band still at 22, with the frame index moved to account for the two new stage frames.
 
 The record's premise that implementation needed a `ki dev local` checkout proved wrong in one direction that matters. The host names the phase whether or not a session emits, so this item lands and helps users without the archive pin moving; only the determinate step count waits on the pin.
+
+## Done
+
+Accepted by the repository owner on 2026-08-08. The twenty seconds an audit spends gathering evidence are now named while they pass, and the determinate step count arrives for users when the archive pin moves — an external prerequisite this record shares with `KI-TOOL-CLI-018`, not unfinished work here.
 
 ## Discussion
 

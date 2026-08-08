@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-031
 title: Cover reachable trade guard
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 6c0e4f5f8d558ce500b9291a98e7cf840290f140
@@ -58,6 +58,10 @@ Nothing blocks this item and it blocks nothing. It touches `src/core/trade-core.
 Delivered in `a99482f`. Both lines are covered by one test driving `ki trade release` twice against the same received trade — a phase outside the vocabulary, and a valid phase belonging to another location — because the two checks fail on different inputs. Neutering either line alone fails its own assertion, so the test pins the guard rather than merely reaching it; without the guard both records fall through and are treated as well-formed. Exit code is 2 rather than 1, trade errors mapping to 2 throughout this CLI. Coverage rose from 4848 to 4852 measured statements at 100% on all four metrics.
 
 Implementation sharpened the record's account of why the guard is reachable. The Context above attributes it to the receiver's file being hand-editable, which is true but not sufficient. `localTrade` scans with a repository filter pinned to the local repository, so the estate scan never traverses the receiver at all. Had it done so, `phaseOf` would have thrown first with identical wording and a test would have passed while covering nothing. Both facts are needed: the scan does not reach the file, and the file is not trustworthy.
+
+## Done
+
+Accepted by the repository owner on 2026-08-08. The ignore pragma is gone, both lines of the guard are measured, and the convention that caught this is recorded in `AGENTS.md` so the next justification written from a single call site fails review rather than the gate.
 
 ## Discussion
 
