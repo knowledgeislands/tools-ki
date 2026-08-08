@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-025
 title: Restructure repository configuration contract
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: [KI-TOOL-VENDOR-001]
 blocked-by: []
 baseline-ref: 5bc677d4345982e186fa6082baff80b975f6eb6f
@@ -97,6 +97,16 @@ Four decisions the record left open, settled during implementation.
 **`ki repo skill add` writes the quoted key when it must.** A skill resolved from an installed harness that the file does not declare in `[repo] harnesses` is appended as `[skills."<harness-id>:<name>"]`, keeping the exception visible instead of writing a bare name that would not resolve on the next read.
 
 One incidental behaviour is now pinned by a test rather than left implicit: `undeclareRepositorySkill` takes the blank line preceding each table it removes, so removing a skill that carries a sub-table closes two gaps and can leave `[repo]` adjacent to the declaration that followed it. That is the existing text-editing rule, unchanged here, and the file remains valid TOML.
+
+## Done
+
+Accepted 2026-08-09 and delivered by `7498b8c`, with the two conventions it produced recorded in `AGENTS.md` by `f9f74ce`. Both are on `origin/main`.
+
+Verified at the accepting commit: `bunx tsc --noEmit` clean, 559 CLI tests passing across 38 files, `bun run test:coverage` at 100% on statements, branches, functions and lines, and `ki repo audit` against this repository's own migrated `.ki-config.toml` reporting `PASS=14 WARN=0 FAIL=0`. The `CONFIG-1` failure the Harness's contract commit produced here is resolved.
+
+Every step above is complete. The four decisions the record left open are settled and recorded in `## Review`; the boundary held, in that no skill's configuration semantics, route-state computation, or `-`/`+` working area changed.
+
+`KI-TOOL-VENDOR-001` was blocked on this item and is now unblocked.
 
 ## Discussion
 
