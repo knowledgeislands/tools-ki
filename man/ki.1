@@ -406,9 +406,12 @@ rejects unmatched patterns, invalid roots, and duplicate physical roots.
 Select every project listed by a named Agora profile. This option and
 \fB--repo\fR are mutually exclusive. Each project must be a physical KI
 repository. With neither selector, KI checks a regular direct-CWD
-\fB.mgit-config.toml\fR, then discovers one repository from the current
-working directory. It never searches ancestor directories for an mGit
-configuration or invokes \fBmgit\fR.
+\fB.mgit-config.toml\fR and follows it only when it names member
+repositories; a document that names none describes the repository it sits in,
+so KI discovers one repository from the current working directory instead. It
+never searches ancestor directories for an mGit configuration or invokes
+\fBmgit\fR. Selection never resolves to no repository: every selector either
+selects at least one repository or fails with a message and a non-zero exit.
 .SS Repository management
 \&
 .PP

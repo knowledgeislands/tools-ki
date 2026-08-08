@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-030
 title: Report empty repository selection
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -56,16 +56,17 @@ The second is what turned a narrow resolution bug into a sweep that reported suc
 ## Steps
 
 - [x] Reproduce against `er-research` and `kit-techmedix`, contrasting with `kit-midnight.ninja`, and identify what makes default resolution return an empty set for the first two. The discriminator is the presence of `.mgit-config.toml`, which routes selection into a workspace expansion that names no repositories.
-- [ ] Make an empty repository selection a loud, non-zero outcome for every `ki repo` operation, naming what was searched and why nothing matched. This lands first and independently, because an empty selection is never a success whatever produced it.
-- [ ] Treat `.mgit-config.toml` as a workspace declaration only when it actually declares repositories, falling through to single-repository resolution when it does not. A file that carries only `[symlinks]` describes the repository it sits in, not a set of others.
-- [ ] Decide and state what a `.mgit-config.toml` that declares repositories *and* sits in a KI repository should select — the members, the repository itself, or both. The current code silently assumes the members; whichever rule is chosen must be stated in the record and covered by a test, because this is the case the fix above deliberately leaves untouched.
-- [ ] Audit the other commands for the same shape — any operation that can complete having acted on nothing and exit `0`.
+- [x] Make an empty repository selection a loud, non-zero outcome for every `ki repo` operation, naming what was searched and why nothing matched. This lands first and independently, because an empty selection is never a success whatever produced it. `resolveRepositoryTargets` is now a guard around the selector: every selector either yields at least one repository or throws, and the guard refuses to return an empty set to any caller.
+- [x] Treat `.mgit-config.toml` as a workspace declaration only when it actually declares repositories, falling through to single-repository resolution when it does not. A file that carries only `[symlinks]` describes the repository it sits in, not a set of others.
+- [x] Decide and state what a `.mgit-config.toml` that declares repositories *and* sits in a KI repository should select — the members, the repository itself, or both. Decision: the members alone. See "What a workspace root that is itself a KI repository selects" below; covered by a test that places a `.ki-config.toml` beside a member-bearing mGit document and asserts the root is not selected.
+- [x] Audit the other commands for the same shape — any operation that can complete having acted on nothing and exit `0`. See "Audit of the remaining commands" below; no second silent-empty shape was found inside this item's boundary.
 
 ## Files touched
 
 - `src/core/repository.ts` — `resolveRepositoryTargets` and `repositoriesFromMgitConfiguration`.
-- `src/commands/repo/index.ts` — the empty-selection outcome and its exit code, applied to every `ki repo` operation rather than to audit alone.
-- `src/tests/cli/repo/` — an mgit configuration fixture carrying only `[symlinks]`, and the empty-selection exit-code and message assertions.
+- `src/tests/cli/repo/targets.test.ts` — an mgit configuration fixture carrying only `[symlinks]`, the exit-code and message assertions for both of its outcomes, and the workspace-root decision test.
+
+`src/commands/repo/index.ts` was not touched. The empty-selection outcome belongs at the single point every `ki repo` operation already shares — `resolveRepositoryTargets` — rather than repeated in each command, which would have been a per-command guard that a new command could forget.
 
 ## Verify
 
@@ -84,6 +85,20 @@ Nothing blocks this item. It was raised from `ki-agentic-harness` during `KI-HAR
 ### Why the reporting fix is separable from the resolution fix
 
 The resolution cause may turn out to be legitimate — a rule that properly excludes those repositories. Even then the behaviour is wrong, because the tool never says so. Fixing the report is therefore unconditional and worth landing first; fixing resolution depends on what the diagnosis finds. Sequencing them the other way round would leave the dangerous shape in place for every future cause of an empty selection.
+
+### What a workspace root that is itself a KI repository selects
+
+An `.mgit-config.toml` that names members selects those members and not the directory it sits in, even when that directory carries its own `.ki-config.toml`. This keeps the previous behaviour, but it is now a stated rule rather than an accident of the code.
+
+The reasoning is that the two files answer different questions. `.mgit-config.toml` says which repositories a directory gathers; `.ki-config.toml` says which skills govern a repository. A workspace root's own declaration governs the root's own files, and those files are the workspace's scaffolding — the members are the estate. Auditing both from one bare invocation would silently mix a container's housekeeping into a sweep of its contents, and the totals line would count a repository the caller did not think it had asked for. A caller who wants the root audited can say so with `--repo .`, which is unambiguous and already works; there is no equally short way to say "the members only" if the bare form meant both.
+
+The rule is now covered by a test rather than left implicit, because the alternative reading is defensible and a future change that quietly adopted it would be invisible.
+
+### Audit of the remaining commands
+
+Every `ki repo` operation — `audit`, `conform`, `educate`, `repair`, `roadmap`, `skill`, `upgrade` — and `ki registry add` resolve their targets through `resolveRepositoryTargets`, so the guard covers all of them at once. No other command selects repositories.
+
+The one adjacent shape is an empty *skill* selection: a repository whose `.ki-config.toml` declares no skills is audited over nothing. That is not the same defect, because it is reported — the frame states `0 skills selected` and the summary line reads `PASS=0 WARN=0 FAIL=0` against a named repository, which is a stated clean result rather than silence. `ki repo educate` likewise prints `no declared skills`. Whether a zero-skill repository should be an error at all is a question about what an audit checks, which this item's boundary excludes; it is left as it stands rather than changed here.
 
 ### The failure class
 

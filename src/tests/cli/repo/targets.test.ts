@@ -125,7 +125,6 @@ describe('[ki repo target sets]', () => {
     test('reports every malformed mGit selection through supported roadmap listing', async () => {
       const box = await sandbox()
       const documents: readonly [string, number][] = [
-        ['version = 1\n', 0],
         ['version = [\n', 2],
         ['[members."repo"]\ntype = "standard"\n', 2],
         ['version = 1\nmembers = []\n', 2],
@@ -139,6 +138,57 @@ describe('[ki repo target sets]', () => {
         expect((await box.run('ki repo roadmap list')).exitCode).toBe(exitCode)
       }
     })
+    // KI-TOOL-CLI-030 decision: an mGit document that names members selects those members and not
+    // the repository it sits in, even when that directory carries its own `.ki-config.toml`. A
+    // workspace root's declaration governs the workspace; its members are audited on their own.
+    test('selects only the members of an mGit document that also sits in a KI repository', async () => {
+      const box = await sandbox()
+      await box.project.write('.mgit-config.toml', 'version = 1\n\n[members."first"]\ntype = "standard"\n')
+      await box.project.write('.ki-config.toml', '# workspace root\n')
+      await box.project.write('first/.ki-config.toml', '# first\n')
+      const root = await realpath(box.project.path)
+
+      const result = await box.run('ki repo roadmap list')
+
+      expect(result.output).toContain(`│     ${root}/first`)
+      expect(result.output).not.toContain(`│     ${root}\n`)
+    })
+
+    // KI-TOOL-CLI-030. `mgit register` writes `.mgit-config.toml` into an ordinary single
+    // repository to carry a `[symlinks]` table alone. Treating its presence as a workspace root
+    // selected nothing there, so `ki repo audit` completed over no repository and exited `0` — a
+    // silent success a governance sweep reads as a clean estate.
+    test('audits the repository an mGit document naming no members sits in', async () => {
+      const box = await sandbox()
+      await box.project.write(
+        '.mgit-config.toml',
+        'version = 1\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n'
+      )
+      await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+      const root = await realpath(box.project.path)
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain(`╭─ KI REPO AUDIT\n│  📁 project\n│     ${root}`)
+      expect(result.output).toContain('PASS=1 WARN=0 FAIL=0')
+    })
+
+    test('fails loudly when an mGit document names no members and no repository is discoverable', async () => {
+      const box = await sandbox()
+      await box.project.write(
+        '.mgit-config.toml',
+        'version = 1\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n'
+      )
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(2)
+      expect(result.output).toContain('no KI repository found from the current working directory')
+      expect(result.output).not.toContain('PASS=')
+    })
+
     test('runs audit independently for every preflighted explicit target', async () => {
       const box = await sandbox()
       await box.root.write('first/.ki-config.toml', '["example/harness:ki-example"]\n')

@@ -243,13 +243,15 @@ const distinctTargets = (targets: readonly RepositoryLocation[], source: string)
   return targets
 }
 
-export const resolveRepositoryTargets = async (options: {
+interface RepositorySelection {
   readonly repositories: readonly string[]
   readonly agora?: string
   readonly configurationDirectory: string
   readonly workingDirectory: string
   readonly homeDirectory: string
-}): Promise<readonly RepositoryLocation[]> => {
+}
+
+const selectRepositoryTargets = async (options: RepositorySelection): Promise<readonly RepositoryLocation[]> => {
   if (options.repositories.length && options.agora) throw new KiError('--repo and --agora cannot be used together', 2)
   if (options.repositories.length) {
     const targets: RepositoryLocation[] = []
@@ -287,7 +289,30 @@ export const resolveRepositoryTargets = async (options: {
   }
   const working = await realpath(options.workingDirectory)
   const configuration = join(working, MGIT_CONFIGURATION_FILE)
-  if (await isRegularFile(configuration))
-    return distinctTargets(await repositoriesFromMgitConfiguration(working), MGIT_CONFIGURATION_FILE)
+  // The presence of `.mgit-config.toml` is not by itself a workspace root: mgit also writes
+  // this file into an ordinary single repository to carry a `[symlinks]` table alone. Only a
+  // document that actually names member repositories describes a workspace; anything else
+  // describes the repository it sits in, so selection falls through to ordinary discovery.
+  if (await isRegularFile(configuration)) {
+    const members = distinctTargets(await repositoriesFromMgitConfiguration(working), MGIT_CONFIGURATION_FILE)
+    if (members.length) return members
+  }
   return [await resolveRepository({ workingDirectory: options.workingDirectory, homeDirectory: options.homeDirectory })]
+}
+
+/**
+ * Resolves the repositories every `ki repo` operation runs over.  An empty selection is never a
+ * result: an operation that completes over no repository and exits `0` reads as a clean estate to
+ * its caller, so selection either yields at least one repository or fails loudly.
+ */
+export const resolveRepositoryTargets = async (
+  options: RepositorySelection
+): Promise<readonly RepositoryLocation[]> => {
+  const targets = await selectRepositoryTargets(options)
+  /* v8 ignore next 3 -- every selector above yields at least one repository or throws, so no CLI
+     input reaches this; it keeps a future selector from completing an operation over nothing and
+     reporting that silence as success. */
+  if (!targets.length)
+    throw new KiError('repository selection resolved no repositories; refusing to report success over nothing', 2)
+  return targets
 }
