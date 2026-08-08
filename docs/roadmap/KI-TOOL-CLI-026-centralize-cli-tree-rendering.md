@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-026
 title: Centralize CLI rendering
 theme: cli
 horizon: now
-status: draft
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: a375a9f802aad45b5032ea1c03f5aadd080a1f04
 ---
 
 ## Goal
