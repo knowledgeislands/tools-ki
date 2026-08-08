@@ -27,8 +27,8 @@ describe('[ki manage diag]', () => {
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain(`Executable    ${box.executable}`)
-    expect(diag.output).toContain(`Data          ${missingHome}/data/ki`)
+    expect(diag.output).toContain(`Executable: ${box.executable}`)
+    expect(diag.output).toContain(`Data: ${missingHome}/data/ki`)
   })
 
   test('reports the entrypoint-proven installation mode', async () => {
@@ -37,8 +37,8 @@ describe('[ki manage diag]', () => {
     const regular = await box.run('ki manage diag')
     const local = await box.run('ki manage diag', { installation: 'local' })
 
-    expect(regular.output).toContain('Installation  regular')
-    expect(local.output).toContain('Installation  local')
+    expect(regular.output).toContain('Installation: regular')
+    expect(local.output).toContain('Installation: local')
   })
 
   test('resolves the user home from USERPROFILE when HOME is unset', async () => {
@@ -187,7 +187,7 @@ extra = true
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.output).toContain('Status        valid')
+    expect(diag.output).toContain('Status: valid')
     expect(diag.output).not.toContain('Warnings')
     expect(diag.output).not.toContain('Errors')
     expect(diag.output).toContain('├─ agents (1)\n│  │  ╰─ claude-code')
