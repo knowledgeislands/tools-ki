@@ -5,7 +5,7 @@ theme: cli
 horizon: now
 status: draft
 blocks: []
-blocked-by: [KI-TOOL-CLI-035]
+blocked-by: []
 baseline-ref: null
 ---
 
@@ -33,14 +33,14 @@ Five persisted artifact families exist, none carrying an ownership record:
 | Estate route diagram | `trade/routes.ts:189` | `paths.cache/estate-routes.html` |
 | Installer receipt | `manage/update.ts:12` | `paths.state` |
 
-† Recovered concretely by `KI-TOOL-CLI-035`, which this item is sequenced behind.
+† Recovered concretely by `KI-TOOL-CLI-035`, delivered and pruned. `ki manage cleanup` now reports both as eligible state and `ki manage repair` recovers them.
 
-`ki manage cleanup` reports `ELIGIBLE=0` unconditionally: it is the V1 no-op, and it stays that way until this design authorises otherwise.
+`ki manage cleanup` no longer reports `ELIGIBLE=0` unconditionally: it reports the two install families above. It still proposes no delete verb of its own — recovery is `ki manage repair` — and the remaining three families are unreported until this design authorises it.
 
 ## Steps
 
 - [ ] Survey the five families above, recording for each its producer, exact owned paths, lifetime, and who owns recovery.
-- [ ] Establish what a `.install-`/`.replace-` recovery, once implemented by `KI-TOOL-CLI-035`, actually needed to know — and treat that as the minimum the record must express.
+- [x] Establish what a `.install-`/`.replace-` recovery actually needed to know — and treat that as the minimum the record must express. Answered by `KI-TOOL-CLI-035`: the destination the artifact belongs to, which nothing else on disk knew. The parked payload had to be renamed to carry it.
 - [ ] Define the manifest: version, producing operation, owned paths, lifecycle state, and where it lives relative to its artifact.
 - [ ] Settle whether the manifest is written atomically with its artifact, and what a reader does with an unknown version.
 - [ ] Define staleness evidence and its refusal conditions, including live, interrupted-recoverable, manually altered, and foreign.
@@ -57,7 +57,7 @@ The design names every family in the table, and for each states producer, owned 
 
 ## Dependencies / blocks
 
-Blocked by `KI-TOOL-CLI-035`, which recovers the first family concretely. Nothing else blocks it, and it blocks nothing.
+Nothing blocks this item. `KI-TOOL-CLI-035` recovered the first family concretely and has been delivered and pruned; its finding is recorded in the Steps above.
 
 ## Discussion
 
@@ -87,4 +87,4 @@ Three other persisted families exist and belong in the survey this item owes: th
 
 ### Relationship to `KI-TOOL-CLI-035`
 
-`035` fixes the staging-directory failure directly and is deliberately not blocked on this design. This item is `blocked-by: [KI-TOOL-CLI-035]` so its general record is drawn from a family that has already been recovered concretely, rather than from a hypothesis about one. The specific fix teaches the general design what it needs to express; doing them in the other order risks a manifest format that fits no real artifact.
+`035` fixed the staging-directory failure directly and was deliberately not blocked on this design. Sequencing this item behind it paid off: recovery proved impossible until the parked payload carried its destination, because a harness payload does not record its own identity. That is the first concrete answer to what the ownership record must express, and it came from the fix rather than from reasoning about one.
