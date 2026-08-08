@@ -16,6 +16,11 @@ const CHARACTER_WIDTH = 7.3
 const ICON_PITCH = 14
 const ICON_HEIGHT = 13
 const EDGE_GAP = 8
+/**
+ * Shortest drawn edge the layout will produce. An edge has to carry a badge, an arrowhead, and a
+ * clear gap at each end; below this the three run together and the edge stops reading as a route.
+ */
+const MINIMUM_EDGE_LENGTH = 96
 const LEGEND_COLUMN = 230
 const LEGEND_TEXT_OFFSET = 52
 /** Advance of the 11px monospace legend text, used to keep the canvas wide enough to hold it. */
@@ -152,7 +157,14 @@ export const renderEstateRoutesDiagram = (inspected: readonly EstateRouteInspect
   )
   const widest = Math.max(0, ...nodes.map(halfWidthOf))
   // Size the circle so the arc between neighbours clears their labels, or long identities overlap.
-  const radius = Math.max(150, (nodes.length * Math.max(2 * widest + 24, NODE_HEIGHT + 26)) / (2 * Math.PI))
+  const arcRadius = (nodes.length * Math.max(2 * widest + 24, NODE_HEIGHT + 26)) / (2 * Math.PI)
+  // Then hold the shortest edge to a readable length. Neighbours on the circle are the closest
+  // pair, and the drawn edge is their chord less what each node's box and gap consume, so pushing
+  // that one chord out is enough to lift every edge. Clamping the divisor keeps an estate too
+  // small to have edges from demanding an infinite radius.
+  const separationRadius =
+    (MINIMUM_EDGE_LENGTH + 2 * (widest + EDGE_GAP)) / (2 * Math.sin(Math.PI / Math.max(nodes.length, 2)))
+  const radius = Math.max(150, arcRadius, separationRadius)
   const centreY = TITLE_BAND + NODE_HEIGHT / 2 + radius
   // Stacking a node's owner above its name makes the circle narrow enough that the legend, not
   // the diagram, can be what sets the canvas width. Take whichever needs more room.
