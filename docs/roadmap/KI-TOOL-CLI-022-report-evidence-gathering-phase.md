@@ -39,17 +39,20 @@ That emitter is not in the CLI's canonical archive pin `501b40111aefa774aff49f10
 
 ## Steps
 
-- [ ] Report the transition into evidence gathering as its own phase, so the display names what is happening instead of showing a stalled item count.
-- [ ] Confirm by measurement how much of a representative operation falls inside that phase, for this repository and for at least one other, so the reporting is proportionate to reality rather than to this one rubric.
-- [x] Decide what the bar should show while a single unreported block dominates the operation. The applied emitter answers it: a session that emits reports named stages and one step per external command, so the phase is determinate — step *k* of *n* within a named stage — and needs no indeterminate animation. Because the emitter postdates the archive pin, the host must render both cases: a determinate step count where the session emits, and a named phase with an indeterminate bar where it does not. The fallback is not a transitional shim but the permanent contract for a session that declines the optional emitter.
+- [x] Report the transition into evidence gathering as its own phase, so the display names what is happening instead of showing a stalled item count. The host brackets `createSession` itself and renders `gathering evidence` for its whole duration, closing the span with a `gathering evidence done` frame before the first item edge.
+- [x] Confirm by measurement how much of a representative operation falls inside that phase, for this repository and for at least one other, so the reporting is proportionate to reality rather than to this one rubric. Measured below: the share tracks the rubric's evidence cost, not the repository, and a rubric that gathers nothing expensive shows a phase of 0.0 s rather than a spurious one.
+- [x] Decide what the bar should show while a single unreported block dominates the operation. The applied emitter answers it: a session that emits reports named stages and one step per external command, so the phase is determinate — step _k_ of _n_ within a named stage — and needs no indeterminate animation. Because the emitter postdates the archive pin, the host must render both cases: a determinate step count where the session emits, and a named phase with an indeterminate bar where it does not. The fallback is not a transitional shim but the permanent contract for a session that declines the optional emitter.
 - [x] Establish whether the Harness could report progress within evidence gathering, and if it could, what minimal contract would carry it; capture the outcome rather than assuming it. It can: an optional session emitter reporting named stages and steps, with `ki-engineering` emitting one step per external command.
-- [ ] Keep the plain-stream form informative, since a phase transition is exactly the kind of event a log should carry.
+- [x] Keep the plain-stream form informative, since a phase transition is exactly the kind of event a log should carry. A plain stream gains one greppable line per transition — each stage edge and each step — and nothing else; only an interactive display ticks on the refresh timer.
 
 ## Files touched
 
-- `src/core/repository-reporting.ts` — phase reporting and what the bar shows during an unmeasured block.
-- `src/core/runtime.ts` — only if the host needs a signal at the session boundary it does not currently have.
-- `src/tests/cli/repo/` — coverage for the new phase through the CLI seam.
+- `src/core/rubric.ts` — the optional `emit` capability and the `RubricProgressEvent` shape a session reports through.
+- `src/core/runtime.ts` — validation of a rubric-supplied event, and the host's own stage bracket around session construction.
+- `src/core/repository-reporting.ts` — stage and step state, what the bar and the counters show inside an unmeasured span.
+- `src/commands/repo/index.ts` — the event channel threaded to audit, conform, and the conform re-audit.
+- `src/tests/cli/repo/progress-stages.test.ts` — coverage for the new phase through the CLI seam.
+- `man/ki.1`, `CHANGELOG.md` — the user-visible change to what progress reports.
 
 ## Verify
 
@@ -57,9 +60,27 @@ Run an audit against a skill whose evidence gathering dominates, and confirm the
 
 Re-run the phase measurement afterwards and confirm the reported structure matches where time is genuinely spent.
 
+### Measured
+
+`ki repo audit --skill <skill>` against this repository, and one other repository, on a quiet tree:
+
+| Repository      | Skill            | Phase closes at | Operation total | Items |
+| --------------- | ---------------- | --------------- | --------------- | ----- |
+| `tools-ki`      | `ki-engineering` | 20.1 s          | 20.1 s          | 42    |
+| `tools-ki`      | `ki-roadmap`     | 0.0 s           | 0.0 s           | 13    |
+| `tools-ki`      | `ki-tools`       | 0.1 s           | 0.1 s           | 13    |
+| `tools-ki`      | `ki-authoring`   | 0.2 s           | 0.2 s           | 5     |
+| `mcp-git-audit` | `ki-roadmap`     | 0.0 s           | 0.0 s           | 13    |
+
+The `ki-engineering` figure reproduces the 22.13 s originally recorded here, and confirms its shape: the phase accounts for the entire operation and the forty-two criteria for none of it. The reported boundary matches the measurement — the closing frame's clock equals the process wall time (19.5 s to 20.1 s across runs) — so the phase duration is measured, not asserted. The three fast rubrics gain no spurious phase: their span opens and closes within a tenth of a second and the item count takes over immediately.
+
+The installed harness emits, so the run also exercises the emitter rather than the fallback: `ki-engineering` reports one step per external command — `biome check`, `tsc --noEmit`, `syncpack format (check)`, `knip`, `test:coverage` — and `test:coverage` alone holds the display from 1.2 s to 20.1 s. Because that session awaits between commands, the 250 ms refresh advances the clock throughout, which is the difference `KI-TOOL-CLI-027` records.
+
+A subprocess-backed measurement in a second repository was deliberately not taken: `ki-engineering` evidence runs that repository's test suite, and this repository holds no authority to provoke build artefacts in a checkout another writer may hold. The second repository is therefore measured with a rubric that runs no subprocess, which is enough to show the share follows the rubric rather than the repository.
+
 ## Dependencies / blocks
 
-Nothing local blocks this item, and the Harness dependency its fourth step raised is now resolved and applied. It overlaps `KI-TOOL-CLI-027`, which records that the display cannot refresh while an item or a session holds the event loop: naming the phase helps even while frozen, since a named phase that does not tick is still more informative than an item count that does not move.
+Nothing local blocks this item, and the Harness dependency its fourth step raised is now resolved and applied. The host does not depend on it: it names the phase whether or not a session emits, so the CLI's canonical archive pin needs no move for this item to land. It overlaps `KI-TOOL-CLI-027`, which records that the display cannot refresh while an item or a session holds the event loop: naming the phase helps even while frozen, since a named phase that does not tick is still more informative than an item count that does not move.
 
 ## Discussion
 

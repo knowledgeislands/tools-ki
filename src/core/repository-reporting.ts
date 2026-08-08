@@ -9,7 +9,8 @@ import {
   type FindingLevel,
   type FixedItem,
   type PreparedSkill,
-  prepareSkill
+  prepareSkill,
+  type RubricProgressReport
 } from './runtime.ts'
 
 const FALLBACK_TERMINAL_COLUMNS = 80
@@ -162,8 +163,15 @@ interface ProgressTracker {
   readonly planned: (skills: readonly PreparedSkill[]) => void
   readonly start: (skill: PreparedSkill, code: string) => void
   readonly item: (skill: PreparedSkill, code: string) => void
+  readonly report: (skill: PreparedSkill, event: RubricProgressReport) => void
   readonly complete: () => void
   readonly failed: () => void
+}
+
+/** The innermost stage a session has open, with whatever step it last reported inside it. */
+interface StepState {
+  readonly label: string
+  readonly count?: { readonly completed: number; readonly total: number }
 }
 
 /** Identity keys the tracker; the bare declaration name is what a reader sees. */
@@ -177,10 +185,19 @@ interface SkillProgressState {
   readonly started: number
   readonly total: number
   readonly planned: boolean
+  /** True while the skill's session holds a named stage open, whose extent is unmeasured. */
+  readonly staged: boolean
   readonly status: string
 }
 
-const PENDING_STATE: SkillProgressState = { complete: 0, started: 0, total: 0, planned: false, status: 'loading' }
+const PENDING_STATE: SkillProgressState = {
+  complete: 0,
+  started: 0,
+  total: 0,
+  planned: false,
+  staged: false,
+  status: 'loading'
+}
 
 const trackedSkills = (skills: readonly ResolvedSkill[]): readonly TrackedSkill[] =>
   skills.map((skill) => ({ identity: skill.identity, name: skill.declaration.name }))
@@ -208,6 +225,8 @@ const createProgressTracker = (
   let lastFrame: string | undefined
   let cursorHidden = false
   let lastRunning: string | undefined
+  let stages: readonly string[] = []
+  let step: StepState | undefined
   const states = new Map<string, SkillProgressState>(skills.map((skill) => [skill.identity, PENDING_STATE]))
   const skillState = (identity: string): SkillProgressState => {
     const state = states.get(identity)
@@ -231,37 +250,43 @@ const createProgressTracker = (
     context.stderr.write('\n')
   })
   const renderOptions = (): RenderOptions => ({ columns: context.stderr.columns, styled, tick })
+  /**
+   * A named stage displaces the item counters entirely. Reporting `0/42` through a span that
+   * runs no item is the specific untruth this exists to remove: the operation is not stalled
+   * at the first of forty-two, it is inside work the item count cannot see.
+   */
+  const stageParts = (): readonly string[] => [...stages.slice(-1), ...(step ? [step.label] : [])]
+  const countsOf = (done: number, of: number): string =>
+    `${done}/${of} ${of === 0 ? 100 : Math.round((done / of) * 100)}%`
   /** The trailing counters; the leading detail names the work, which matters more when width is short. */
   const counters = (): string => {
     const clock = elapsed(context.now() - started)
+    if (step?.count) return `${countsOf(step.count.completed, step.count.total)} ${clock}`
+    // An unmeasured stage reports the clock alone: elapsed time is all that is honestly known.
+    if (stageParts().length) return clock
     if (total === undefined) return clock
-    const percentage = total === 0 ? 100 : Math.round((complete / total) * 100)
-    return `${complete}/${total} ${percentage}% ${clock}`
+    return `${countsOf(complete, total)} ${clock}`
   }
   const summaryText = (detail: string): string => `${phase} ${detail} · ${counters()}`
-  const singleFrame = (text: string): readonly string[] => [
-    progressLine({ complete, started: complete + inFlight, total, text }, renderOptions())
-  ]
+  const barModel = (text: string): BarModel => {
+    if (step?.count)
+      return { complete: step.count.completed, started: step.count.completed, total: step.count.total, text }
+    if (stageParts().length) return { complete: 0, started: 0, total: undefined, text }
+    return { complete, started: complete + inFlight, total, text }
+  }
+  const singleFrame = (text: string): readonly string[] => [progressLine(barModel(text), renderOptions())]
   const multiFrame = (): readonly string[] => [
     ...skills.map((skill) => {
       const state = skillState(skill.identity)
       const model: BarModel = {
         complete: state.complete,
         started: state.started,
-        total: state.planned ? state.total : undefined,
+        total: state.planned && !state.staged ? state.total : undefined,
         text: `[${skill.name}] ${state.status}`
       }
       return progressLine(model, renderOptions())
     }),
-    progressLine(
-      {
-        complete,
-        started: complete + inFlight,
-        total,
-        text: summaryText(lastRunning ? `running ${lastRunning}` : 'working')
-      },
-      renderOptions()
-    )
+    progressLine(barModel(summaryText(lastRunning ? `running ${lastRunning}` : 'working')), renderOptions())
   ]
   let renderedRows = 0
   const writeRows = (rows: readonly string[], final: boolean): void => {
@@ -312,6 +337,7 @@ const createProgressTracker = (
           started: 0,
           total: skill.items.length,
           planned: true,
+          staged: false,
           status: 'pending'
         })
       render('starting')
@@ -325,6 +351,7 @@ const createProgressTracker = (
         ...state,
         started: state.complete + 1,
         planned: true,
+        staged: false,
         total: skill.items.length,
         status: `running ${code}`
       })
@@ -336,11 +363,40 @@ const createProgressTracker = (
       const { identity, declaration } = skill.skill
       const state = skillState(identity)
       const done = state.complete + 1
-      states.set(identity, { complete: done, started: done, total: skill.items.length, planned: true, status: code })
+      states.set(identity, {
+        complete: done,
+        started: done,
+        total: skill.items.length,
+        planned: true,
+        staged: false,
+        status: code
+      })
       render(`${declaration.name} ${code}`)
+    },
+    report: (skill, event) => {
+      // A stage nests, so its end pops one level rather than clearing the span the host itself
+      // opened around the session. A step belongs to whichever stage is innermost now.
+      if (event.kind === 'stage') {
+        stages = event.edge === 'start' ? [...stages, event.label] : stages.slice(0, -1)
+        step = undefined
+      } else step = { label: event.label, ...(event.count ? { count: event.count } : {}) }
+      const parts = stageParts()
+      // Both edges of a stage are reported. The closing one is what tells a reader, and a
+      // plain-stream log, how long the span actually took and that item work resumes now.
+      const closed = event.kind === 'stage' && event.edge === 'end' ? [event.label, 'done'] : []
+      const { identity, declaration } = skill.skill
+      const state = skillState(identity)
+      states.set(identity, {
+        ...state,
+        staged: parts.length > 0,
+        status: parts.length ? parts.join(' ') : state.status
+      })
+      render([declaration.name, ...parts, ...closed].join(' '))
     },
     complete: () => {
       inFlight = 0
+      stages = []
+      step = undefined
       for (const skill of skills) {
         const state = skillState(skill.identity)
         states.set(skill.identity, { ...state, complete: state.total, started: state.total, status: 'complete' })
@@ -361,6 +417,8 @@ const createProgressTracker = (
 interface ItemProgressCodes {
   readonly onItemStart: (code: string) => void
   readonly onItemComplete: (code: string) => void
+  /** Undefined while nothing is displaying, which is how a rubric learns not to emit at all. */
+  readonly onProgressEvent?: (event: RubricProgressReport) => void
 }
 
 export const runPreparedWithProgress = async <Result>(
@@ -381,7 +439,8 @@ export const runPreparedWithProgress = async <Result>(
       results.push(
         await run(skill, {
           onItemStart: (code) => progress?.start(skill, code),
-          onItemComplete: (code) => progress?.item(skill, code)
+          onItemComplete: (code) => progress?.item(skill, code),
+          ...(progress ? { onProgressEvent: (event) => progress.report(skill, event) } : {})
         })
       )
     }

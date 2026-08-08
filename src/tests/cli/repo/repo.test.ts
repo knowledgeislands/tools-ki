@@ -401,10 +401,16 @@ describe('[ki repo]', () => {
         '├─ progress [ audit loading 1/2 definitions · 0.0s ]',
         '├─ progress [ audit loading 2/2 definitions · 0.0s ]',
         '├─ progress [ audit starting · 0/3 0% 0.0s ]',
+        // A session that emits nothing still has its construction named: the host brackets the
+        // span itself, so evidence gathering is never reported as a stalled item count.
+        '├─ progress [ audit ki-example gathering evidence · 0.0s ]',
+        '├─ progress [ audit ki-example gathering evidence done · 0/3 0% 0.0s ]',
         '├─ progress [ audit ki-example running EXAMPLE-1 · 0/3 0% 0.0s ]',
         '├─ progress [ audit ki-example EXAMPLE-1 · 1/3 33% 0.0s ]',
         '├─ progress [ audit ki-example running EXAMPLE-2 · 1/3 33% 0.0s ]',
         '├─ progress [ audit ki-example EXAMPLE-2 · 2/3 67% 0.0s ]',
+        '├─ progress [ audit ki-extra gathering evidence · 0.0s ]',
+        '├─ progress [ audit ki-extra gathering evidence done · 2/3 67% 0.0s ]',
         '├─ progress [ audit ki-extra running EXTRA-1 · 2/3 67% 0.0s ]',
         '├─ progress [ audit ki-extra EXTRA-1 · 3/3 100% 0.0s ]',
         '├─ progress [ audit complete · 3/3 100% 0.0s ]'
@@ -412,7 +418,7 @@ describe('[ki repo]', () => {
       // The status text is drawn inside the bar, so every frame fills the terminal width.
       expect(frames.every((frame) => stripVTControlCharacters(frame).length === 80)).toBe(true)
       // The band is the item in flight: one of three items over a 68-column bar.
-      const band = (frames[4] as string).split(SGR_STARTED)[1]?.split(SGR_RESET)[0]
+      const band = (frames[6] as string).split(SGR_STARTED)[1]?.split(SGR_RESET)[0]
       expect(band).toHaveLength(22)
 
       const wide = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })

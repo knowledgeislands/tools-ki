@@ -220,7 +220,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                       skill,
                       {
                         onItemStart: (item) => itemProgress.onItemStart(item.code),
-                        onItemComplete: (item) => itemProgress.onItemComplete(item.code)
+                        onItemComplete: (item) => itemProgress.onItemComplete(item.code),
+                        onProgressEvent: itemProgress.onProgressEvent
                       }
                     )
                   }),
@@ -299,7 +300,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                   skill,
                   {
                     onItemStart: (item) => itemProgress.onItemStart(item.code),
-                    onItemComplete: (item) => itemProgress.onItemComplete(item.code)
+                    onItemComplete: (item) => itemProgress.onItemComplete(item.code),
+                    onProgressEvent: itemProgress.onProgressEvent
                   }
                 )
               }),
@@ -336,7 +338,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                       skill,
                       {
                         onItemStart: (item) => itemProgress.onItemStart(item.code),
-                        onItemComplete: (item) => itemProgress.onItemComplete(item.code)
+                        onItemComplete: (item) => itemProgress.onItemComplete(item.code),
+                        onProgressEvent: itemProgress.onProgressEvent
                       }
                     )
                   }

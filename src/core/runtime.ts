@@ -4,6 +4,7 @@
 // are catalogue data only; the runtime never executes them.
 
 import { type lstat, realpath } from 'node:fs/promises'
+import { stripVTControlCharacters } from 'node:util'
 import { KiError } from './errors.ts'
 import type { ResolvedSkill } from './resolution.ts'
 import {
@@ -12,6 +13,7 @@ import {
   RUBRIC_PHASES,
   type RubricFamily,
   type RubricItem,
+  type RubricProgressEvent,
   type RubricPublication,
   type RubricScope,
   type RubricSession,
@@ -101,6 +103,45 @@ export interface FixedItem {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
+
+/** The host's own name for the span between a session being asked for and it being ready. */
+export const EVIDENCE_STAGE_LABEL = 'gathering evidence'
+
+/**
+ * The validated form of a rubric progress event. A step's two counters are optional in the
+ * contract but meaningless apart, so validation pairs them here and every consumer downstream
+ * sees one countable step or an uncounted one.
+ */
+export type RubricProgressReport =
+  | { readonly kind: 'stage'; readonly edge: 'start' | 'end'; readonly label: string; readonly code?: string }
+  | {
+      readonly kind: 'step'
+      readonly label: string
+      readonly code?: string
+      readonly count?: { readonly completed: number; readonly total: number }
+    }
+
+/**
+ * A progress event is rubric-supplied and lands directly in the host's display, so it is
+ * validated exactly as an audit outcome is. A label may carry a repository path or a command
+ * line, so its control characters are stripped before it can reach a terminal.
+ */
+const validateProgressEvent = (value: unknown, identity: string): RubricProgressReport => {
+  const invalid = (detail: string): KiError => new KiError(`${identity} rubric progress event ${detail}`, 1)
+  if (!isRecord(value)) throw invalid('is not an object')
+  const { kind, label, code, edge, completed, total } = value
+  if (typeof label !== 'string' || !label) throw invalid('has no label')
+  if (code !== undefined && typeof code !== 'string') throw invalid('has a non-string code')
+  const named = { label: stripVTControlCharacters(label), ...(code === undefined ? {} : { code }) }
+  if (kind === 'stage') {
+    if (edge !== 'start' && edge !== 'end') throw invalid('has an invalid stage edge')
+    return { kind, edge, ...named }
+  }
+  if (kind !== 'step') throw invalid('has an unknown kind')
+  if (completed === undefined && total === undefined) return { kind, ...named }
+  if (typeof completed !== 'number' || typeof total !== 'number') throw invalid('reports a partial step count')
+  return { kind, ...named, count: { completed, total } }
+}
 
 const validateRubricSession = (
   value: unknown,
@@ -296,6 +337,12 @@ export const prepareSkill = async (skill: ResolvedSkill): Promise<PreparedSkill>
 interface ItemProgress {
   readonly onItemStart?: (item: PreparedRubricItem) => void
   readonly onItemComplete?: (item: PreparedRubricItem) => void
+  /**
+   * Receives the stage and step reports that name work no item edge covers. The host brackets
+   * session construction itself, so the phase is named whether or not the rubric emits: a
+   * session that declines the channel still reports as gathering evidence, indeterminately.
+   */
+  readonly onProgressEvent?: (event: RubricProgressReport) => void
 }
 
 const auditSkill = async (
@@ -322,17 +369,23 @@ const auditSkill = async (
       publicationDraft.write = preparedPublication.proposal()
     }
   }
+  const emit = progress?.onProgressEvent
+  emit?.({ kind: 'stage', edge: 'start', label: EVIDENCE_STAGE_LABEL })
   const session = validateRubricSession(
     await definition.createSession({
       mode,
       repository: scope.repository,
       userHome: scope.userHome,
       configuration: skill.declaration.configuration,
+      // Withheld when nothing is displaying, so a rubric can tell that emitting is pointless
+      // rather than formatting reports no one will read.
+      ...(emit ? { emit: (event: RubricProgressEvent) => emit(validateProgressEvent(event, skill.identity)) } : {}),
       publication
     }),
     definition,
     skill.identity
   )
+  emit?.({ kind: 'stage', edge: 'end', label: EVIDENCE_STAGE_LABEL })
   const items: ItemAuditState[] = []
   for (const item of plannedItems) {
     progress?.onItemStart?.(item)

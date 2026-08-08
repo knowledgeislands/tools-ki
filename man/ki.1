@@ -442,6 +442,10 @@ Progress defaults to \fBauto\fR, which follows stderr's TTY state; \fBalways\fR
 also renders deterministic progress in redirected output, and \fBnever\fR
 suppresses it.
 Use \fB--progress-style multi\fR for stable per-skill rows.
+Progress also names the span in which a skill gathers its evidence, before any
+criterion runs, together with whatever stages and steps that skill reports
+inside it; a span of unknown extent shows an elapsed clock rather than an item
+count it has not yet begun.
 Each per-skill result names the assessed repository first and its supplying
 harness skill in brackets. Audit renders FAIL and WARN findings by default, but
 always shows a terminal per-skill result so a clean assessment is visible;
