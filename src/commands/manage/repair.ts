@@ -13,6 +13,7 @@ import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness.ts'
 import { canonicalHarnessDevelopmentEnabled, planOrphanRecovery, recoverInstallOrphans } from '../../core/registry.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 
 const managedSkillName = (identity: string): string => identity.slice(identity.indexOf(':') + 1)
 
@@ -107,9 +108,14 @@ export const createRepairCommand = (context: KiContext): Command =>
         }
       }
 
-      const lines = ['╭─ KI MANAGE REPAIR', `├─ results (${results.length})`]
-      lines.push(...results.map((result, index) => `│  ${index === results.length - 1 ? '╰─' : '├─'} ${result}`))
-      lines.push(`╰─ summary: ${failed ? 'FAIL' : 'PASS'}`)
-      context.stdout.write(`${lines.join('\n')}\n`)
+      context.stdout.write(
+        `${renderTree({
+          title: 'KI MANAGE REPAIR',
+          entries: [
+            { label: `results (${results.length})`, children: results.map((label) => ({ label })) },
+            { label: `summary: ${failed ? 'FAIL' : 'PASS'}` }
+          ]
+        }).join('\n')}\n`
+      )
       if (failed) throw new KiExit(1)
     })
