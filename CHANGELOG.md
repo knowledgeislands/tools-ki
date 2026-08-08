@@ -117,7 +117,6 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki trade routes list [--estate] [--incomplete]` is a framed local or registered-estate route inventory; `--html` renders the estate as a self-contained interactive force-directed network instead, written to the cache and opened in a browser, drawing one arc per direction with per-kind chips so a reciprocated pair separates. The viewer runtime is vendored into the page, which therefore opens with no network. Both listings now show only the furthest-advanced lifecycle stage of a trade rather than the full publication, delivery and decision triplet.
 - `ki trade new` creates a local export once this repository declares the route; receiver activation remains reciprocal.
 - Trade pairing compares the payload the sender authored — its field values as parsed and its prose — rather than raw bytes, so a receiver that formats its own Markdown does not read as having tampered with a record.
-
 - `ki trade list` is a framed registered-estate inventory.
 - `ki repo audit` and `ki repo conform` report the span in which a skill gathers its evidence, which precedes every criterion and on a subprocess-backed rubric is nearly the whole operation. The host names that span itself, so a session that emits nothing is still reported as gathering evidence rather than as a stalled item count; a session that takes the optional emitter refines it with its own named stages and steps, and a step carrying its own counters draws a determinate bar.
 
