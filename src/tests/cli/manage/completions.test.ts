@@ -103,7 +103,10 @@ describe('[ki manage completion]', () => {
     expect(bash.output).toContain('_ki_value_strategy()')
     expect(bash.output).toContain("'repo roadmap')")
     expect(bash.output).toContain("'trade routes')")
-    expect(bash.output).toContain("'trade routes list') printf '%s\\n' '-V --version -h --help --estate --incomplete'")
+    expect(bash.output).toContain(
+      "'trade routes list') printf '%s\\n' '-V --version -h --help --estate --incomplete --svg'"
+    )
+    expect(bash.output).toContain("'trade routes list:--svg') printf '%s\\n' 'path'")
     expect(bash.output).toContain("'acquire chatgpt')")
     expect(bash.output).toContain("'dev local')")
     expect(bash.output).toContain("'repo roadmap list:--horizon')")

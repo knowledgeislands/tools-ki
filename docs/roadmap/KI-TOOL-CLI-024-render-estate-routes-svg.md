@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-024
 title: Render estate routes SVG
 theme: cli
 horizon: now
-status: draft
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -31,21 +31,27 @@ This item does not change route declaration, route semantics, or the `.ki-config
 
 Route state is computed from the peer's reciprocal declaration rather than stored, so `active`, `awaiting-receiver`, `awaiting-sender`, and `ambiguous-repository` are all available per edge and are the natural candidates for visual distinction.
 
+The renderer is now delivered. `ki trade routes list --estate --svg` writes the diagram to standard output and `--svg <path>` writes it to a file; the flag is rejected without `--estate`, since there is no local-only diagram to draw. `src/core/route-diagram.ts` collapses every declaration onto the unordered repository pair it connects, so a pair trading both ways is drawn as one double-headed edge and a pair trading one way carries a single arrowhead. Trade kind selects the stroke colour, an unreciprocated state dashes the line, and each edge carries a `<title>` naming its endpoints, direction, kinds, and states. Identities are constrained to `[a-z0-9._-]` and `/`, so no XML escaping pass is needed and none was added.
+
+Against the real registered estate the eleven listed declarations collapse to eight edges over five repositories, and the file rasterises legibly with `rsvg-convert`.
+
 ## Steps
 
-- [ ] Decide the command surface, most likely a flag on the existing estate listing that writes SVG to a path or to standard output, so the textual form stays the default.
-- [ ] Collapse reciprocal declarations into one logical edge per repository pair and kind before layout, retaining direction and state.
-- [ ] Choose a layout that stays legible at estate scale without a general graph engine; a circular or layered arrangement is likely sufficient for the tens of repositories a realistic estate holds.
-- [ ] Distinguish trade kind and route state visually, and render an edge that is reciprocal differently from a one-way edge rather than drawing two arrows.
-- [ ] Emit self-contained SVG with no external font, script, or stylesheet reference, so the file renders identically wherever it is opened.
-- [ ] Include a legend, and label the diagram with the estate it describes.
-- [ ] Cover the renderer through the CLI seam with a deterministic estate fixture, asserting structure rather than exact geometry so the test does not ossify the layout.
+- [x] Decide the command surface, most likely a flag on the existing estate listing that writes SVG to a path or to standard output, so the textual form stays the default.
+- [x] Collapse reciprocal declarations into one logical edge per repository pair and kind before layout, retaining direction and state.
+- [x] Choose a layout that stays legible at estate scale without a general graph engine; a circular or layered arrangement is likely sufficient for the tens of repositories a realistic estate holds.
+- [x] Distinguish trade kind and route state visually, and render an edge that is reciprocal differently from a one-way edge rather than drawing two arrows.
+- [x] Emit self-contained SVG with no external font, script, or stylesheet reference, so the file renders identically wherever it is opened.
+- [x] Include a legend, and label the diagram with the estate it describes.
+- [x] Cover the renderer through the CLI seam with a deterministic estate fixture, asserting structure rather than exact geometry so the test does not ossify the layout.
 
 ## Files touched
 
-- `src/commands/trade/routes.ts` — the command surface and flag.
-- A new core module owning SVG generation, kept separate from textual rendering.
-- `src/tests/cli/trade/` — estate fixture and renderer tests.
+- `src/commands/trade/routes.ts` — the `--svg [path]` flag on the estate listing.
+- `src/core/route-diagram.ts` — the new module owning SVG generation, kept separate from textual rendering.
+- `src/commands/manage/completion-grammar.ts` — `--svg` completes as a filesystem path.
+- `src/tests/cli/trade/trade.test.ts` — the four-repository estate fixture and its three renderer tests.
+- `src/tests/cli/manage/completions.test.ts` — the pinned option and value strategy for the new flag.
 - `man/ki.1`, `README.md`, `CHANGELOG.md` for the new surface.
 
 ## Verify

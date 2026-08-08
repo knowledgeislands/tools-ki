@@ -334,6 +334,105 @@ describe('[ki trade]', () => {
     })
   })
 
+  // The diagram asserts structure — node count, edge count, reciprocity, legend, self-containment —
+  // rather than coordinates, so tuning the layout later does not rewrite these expectations.
+  const diagramEstate = async () => {
+    const box = await sandbox()
+    const thirdHome = home('example/third')
+    const source = await realpath(box.project.path)
+    const receiver = await box.project.mkdir('receiver')
+    const third = await box.project.mkdir('third')
+    const fourth = await box.project.mkdir('fourth')
+    await box.project.write(
+      '.ki-config.toml',
+      repositoryConfiguration(
+        'example/source',
+        { work: [receiverHome, thirdHome], knowledge: [receiverHome] },
+        { work: [receiverHome] }
+      )
+    )
+    await box.project.write(
+      'receiver/.ki-config.toml',
+      repositoryConfiguration(
+        'example/receiver',
+        { work: [sourceHome], knowledge: [thirdHome] },
+        { work: [sourceHome], knowledge: [sourceHome] }
+      )
+    )
+    await box.project.write(
+      'third/.ki-config.toml',
+      repositoryConfiguration('example/third', {}, { work: [sourceHome], knowledge: [receiverHome] })
+    )
+    // Neither of this repository's declarations is reciprocated, so one edge runs each way
+    // and both render incomplete — the states a fully wired estate never produces.
+    await box.project.write(
+      'fourth/.ki-config.toml',
+      repositoryConfiguration('example/fourth', { work: [sourceHome] }, { knowledge: [thirdHome] })
+    )
+    await box.config.write('ki/config.toml', localConfiguration([source, receiver, third, fourth]))
+    return box
+  }
+
+  test('renders the registered estate as a self-contained SVG collapsing reciprocal declarations', async () => {
+    const box = await diagramEstate()
+
+    const rendered = await box.run('ki trade routes list --estate --svg')
+
+    expect(rendered.exitCode).toBe(0)
+    const svg = rendered.output
+    expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true)
+    expect(svg.endsWith('</svg>\n')).toBe(true)
+    expect(svg).toContain('<title>Knowledge Islands trade routes — registered estate</title>')
+    expect(svg).toContain('<desc>4 repositories, 5 routes, all declared routes.</desc>')
+    // One rectangle-and-label group per repository, one titled line per collapsed edge.
+    expect(svg.match(/<g><rect /gu)?.length).toBe(4)
+    expect(svg.match(/<title>example\//gu)?.length).toBe(5)
+    // A pair trading both kinds both ways collapses to a single double-headed edge.
+    expect(svg).toContain('<title>example/receiver &#8596; example/source · knowledge + work · active</title>')
+    expect(svg).toContain('marker-start="url(#arrow-start-both)"')
+    expect(svg).toContain('<title>example/source &#8594; example/third · work · active</title>')
+    // A declaration the peer has not answered renders one-way and dashed, in each direction.
+    expect(svg).toContain('<title>example/fourth &#8594; example/source · work · awaiting-receiver</title>')
+    expect(svg).toContain('<title>example/fourth &#8592; example/third · knowledge · awaiting-sender</title>')
+    expect(svg.match(/stroke-dasharray="6 4"/gu)?.length).toBe(3)
+    expect(svg).toContain('>reciprocal</text>')
+    expect(svg).toContain('>incomplete</text>')
+    // Self-contained: the SVG namespace is the only URL, and nothing is fetched at render time.
+    expect(svg.match(/https?:\/\//gu)?.length).toBe(1)
+    expect(svg).not.toMatch(/<script|<image|xlink:href|@import/u)
+  })
+
+  test('narrows the diagram to incomplete routes and writes it to a given path', async () => {
+    const box = await diagramEstate()
+
+    const written = await box.run('ki trade routes list --estate --incomplete --svg routes.svg')
+
+    expect(written).toEqual({
+      exitCode: 0,
+      output: `ki trade routes list: estate diagram written to ${join(await realpath(box.project.path), 'routes.svg')}\n`
+    })
+    const svg = await box.project.read('routes.svg')
+    expect(svg).toContain('<desc>3 repositories, 2 routes, incomplete routes only.</desc>')
+    expect(svg.match(/<title>example\//gu)?.length).toBe(2)
+  })
+
+  test('renders an empty estate diagram and refuses a diagram of the local route list', async () => {
+    const box = await sandbox()
+    const source = await realpath(box.project.path)
+    await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
+    await box.config.write('ki/config.toml', localConfiguration([source]))
+
+    const empty = await box.run('ki trade routes list --estate --svg')
+
+    expect(empty.exitCode).toBe(0)
+    expect(empty.output).toContain('<desc>0 repositories, 0 routes, all declared routes.</desc>')
+    expect(empty.output).toContain('>knowledge</text>')
+    expect(await box.run('ki trade routes list --svg')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: trade route --svg requires --estate\n'
+    })
+  })
+
   test('creates, receives, displays, releases, and prunes a work trade while each command writes only its local repository', async () => {
     const { box } = await configuredPair()
     const created = await createTrade(box, 'work', {}, () => Date.UTC(2026, 7, 3, 12, 0, 0))

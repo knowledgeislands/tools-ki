@@ -1,6 +1,9 @@
+import { writeFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
+import { renderEstateRoutesDiagram } from '../../core/route-diagram.ts'
 import {
   addTradeRoute,
   inspectEstateRoutes,
@@ -19,6 +22,7 @@ interface RouteOptions {
 interface RouteListOptions {
   readonly estate?: boolean
   readonly incomplete?: boolean
+  readonly svg?: boolean | string
 }
 
 const renderRouteList = (
@@ -92,12 +96,7 @@ const renderEstateRouteList = (
   // Counted over collapsed edges, so the summary and the listed rows agree.
   const active = [...edges.values()].filter((edge) => edge.state === 'active').length
   const incompleteCount = edges.size - active
-  const lines = [
-    '╭─ KI TRADE ROUTES',
-    '│  ◫ registered estate',
-    `│  ✦ ${count(edges.size, 'route')}`,
-    '├─ results'
-  ]
+  const lines = ['╭─ KI TRADE ROUTES', '│  ◫ registered estate', `│  ✦ ${count(edges.size, 'route')}`, '├─ results']
   if (!edges.size) lines.push(`│  ╰─ ${incomplete ? 'incomplete routes: none' : 'routes: none'}`)
   else
     lines.push(
@@ -168,11 +167,23 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
         .description('list local routes or every registered route and its estate state')
         .option('--estate', 'list route declarations across the registered repository estate')
         .option('--incomplete', 'show only routes that are not active')
+        .option('--svg [path]', 'render the estate as an SVG diagram, to a file when a path is given')
         .action(async (options: RouteListOptions) => {
+          if (options.svg && !options.estate) throw grammarError('trade route --svg requires --estate')
           if (options.estate) {
-            context.stdout.write(
-              `${renderEstateRouteList(await inspectEstateRoutes(context), Boolean(options.incomplete))}\n`
-            )
+            const inspected = await inspectEstateRoutes(context)
+            const incomplete = Boolean(options.incomplete)
+            if (options.svg) {
+              const diagram = renderEstateRoutesDiagram(inspected, incomplete)
+              if (options.svg === true) context.stdout.write(diagram)
+              else {
+                const path = resolve(context.workingDirectory, options.svg)
+                await writeFile(path, diagram, 'utf8')
+                context.stdout.write(`ki trade routes list: estate diagram written to ${path}\n`)
+              }
+              return
+            }
+            context.stdout.write(`${renderEstateRouteList(inspected, incomplete)}\n`)
             return
           }
           const local = await localRegisteredConfiguration(context)
