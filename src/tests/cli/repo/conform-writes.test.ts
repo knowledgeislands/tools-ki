@@ -912,6 +912,51 @@ export default {
     expect(result.output).toContain('direct conform create target linked/created.txt escapes the repository')
   })
 
+  // The immediate parent of a create target is refused by its own lstat, but an *intermediate*
+  // segment is not: lstat resolves the components before the one it reports on, so a symlinked
+  // ancestor is invisible to the containment check and only shows up once the path is resolved.
+  test('refuses a create target whose intermediate segment links outside the repository', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.root.mkdir('outside/sub')
+    await symlink(`${box.root.path}/outside`, `${box.project.path}/linked`)
+    await box.setupExampleHarness({
+      rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'missing' }],
+          conform: async () => ({ writes: [{ path: 'linked/sub/created.txt', content: 'created\\n', create: true }] })
+        }] }]`)
+    })
+
+    const dryRun = await box.run('ki repo conform --dry-run')
+
+    expect(dryRun.exitCode).toBe(1)
+    expect(dryRun.output).toContain('direct conform create target linked/sub/created.txt escapes the repository')
+    await expect(box.root.read('outside/sub/created.txt')).rejects.toThrow()
+  })
+
+  // The same shape with the link pointing back inside the repository passes containment, so the
+  // refusal comes from the segment-by-segment walk in the publish path rather than from validation.
+  test('refuses a create target whose intermediate segment is a symbolic link within the repository', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')
+    await box.project.mkdir('real/sub')
+    await symlink(`${box.project.path}/real`, `${box.project.path}/linked`)
+    await box.setupExampleHarness({
+      rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+          kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+          audit: async () => [{ status: 'VIOLATION', message: 'missing' }],
+          conform: async () => ({ writes: [{ path: 'linked/sub/created.txt', content: 'created\\n', create: true }] })
+        }] }]`)
+    })
+
+    const result = await box.run('ki repo conform')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('direct conform create target linked/sub/created.txt escapes the repository')
+    await expect(box.project.read('real/sub/created.txt')).rejects.toThrow()
+  })
+
   test('conforms a declared user-home path incrementally', async () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '["example/harness:ki-example"]\n')

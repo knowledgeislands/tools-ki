@@ -103,7 +103,8 @@ const inspectCreateTarget = async (repository: string, path: string, absolutePat
       // A concurrent deletion after lstat is not reachable through one CLI invocation.
       /* v8 ignore next */
       const physicalParent = await realpath(parent).catch(() => undefined)
-      /* v8 ignore next -- A physical existing parent was validated above; only a concurrent replacement can violate this. */
+      // lstat resolves the components before the one it reports on, so an intermediate symlink
+      // passes the check above and only shows as an escape once the parent is fully resolved.
       if (!physicalParent || !isContained(repository, physicalParent))
         throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
       return
@@ -132,7 +133,8 @@ const ensureCreateParent = async (repository: string, path: string, absolutePath
       /* v8 ignore next */
       state = await lstat(current).catch(() => undefined)
     }
-    /* v8 ignore next -- Current was either a physical existing directory or created and rechecked above. */
+    // Validation inspects only the first existing ancestor, so an intermediate segment that is
+    // itself a symbolic link reaches this walk unexamined.
     if (!state?.isDirectory() || state.isSymbolicLink())
       throw new KiError(`direct conform create target ${path} escapes the repository`, 1)
     // A concurrent replacement after lstat is not reachable through one CLI invocation.

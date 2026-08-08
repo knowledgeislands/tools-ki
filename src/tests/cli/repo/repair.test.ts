@@ -169,4 +169,20 @@ describe('[ki repo repair]', () => {
     expect(repair.exitCode).toBe(1)
     expect(repair.output).toContain('Registry: ki configuration repositories section has unrecognised keys')
   })
+
+  // Health inspects the projection path itself, and lstat resolves the components above it, so a
+  // symlinked skills *directory* is invisible to classification: the projection reads as an
+  // ordinary missing one, and the refusal only arrives once linking validates the container.
+  test('reports a repair failure when the containing skills directory is a symbolic link', async () => {
+    const box = await preparedRepository()
+    await box.root.mkdir('outside-skills')
+    await box.project.mkdir('.agents')
+    await symlink(`${box.root.path}/outside-skills`, `${box.project.path}/.agents/skills`, 'dir')
+
+    const repair = await box.run('ki repo repair')
+
+    expect(repair.exitCode).toBe(1)
+    expect(repair.output).toContain('✗ Repair: chatgpt-codex skills directory must be a directory')
+    await expect(lstat(`${box.root.path}/outside-skills/ki-example`)).rejects.toThrow()
+  })
 })

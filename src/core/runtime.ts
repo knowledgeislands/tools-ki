@@ -456,8 +456,6 @@ export const runSkillConform = async (
       (state) => state.item.item.mechanical.remediation.class === 'automatic' && state.item.item.mechanical.conform
     )
     .slice()
-    // The filter above guarantees conform is present; the fallback only protects a future filter refactor.
-    /* v8 ignore next */
     .sort((left, right) => {
       const phaseDelta =
         RUBRIC_PHASES.indexOf(

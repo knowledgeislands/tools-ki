@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-034
 title: Correct remaining ignore justifications
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 08a36373e395f7bb0828ef517823e3e704c93dfa
 ---
 
 ## Goal
@@ -29,7 +29,7 @@ Sixty-odd sites are sound: index-signature artefacts over an array or map just p
 
 ### Wrong reason, unreachable span
 
-**`src/commands/bootstrap/index.ts:98`, `:109` and `src/commands/dev/index.ts:134`** all justify themselves with "Fixture archives cannot match the pinned canonical SHA-256". There is no pinned canonical SHA-256 in `src/`. `installHarness` verifies a download against the fetched release manifest's own `sha256`, which in a sandbox the stubbed fetcher supplies, so fixture archives verify normally and existing tests prove it. The real reason these spans are uncovered is narrower: every sandbox pre-installs the canonical harness, and the one test reaching the `activeLocal` branch installs a throwing fetcher, so it exercises only the rollback. These are untested, not unreachable, and the stated rationale is not true of this codebase.
+**`src/commands/bootstrap/index.ts:98`, `:109` and `src/commands/dev/index.ts:134`** all justify themselves with "Fixture archives cannot match the pinned canonical SHA-256", and the sweep judged that there is no pinned canonical SHA-256 in `src/`. **That judgement was wrong** — see the Review. `src/core/registry.ts:50-54` holds the pin, and `readHarnessRegistry` prepends it so configuration cannot override it. The claim was accurate; only its wording, which named no pin, invited the doubt.
 
 **`src/commands/dev/index.ts:78`** — the claim is false and the pragma is inert: both arms of the ternary it guards are already asserted by existing dev tests. It should simply be deleted.
 
@@ -47,12 +47,12 @@ Every finding above is from static analysis of the call graph, not from a failin
 
 ## Steps
 
-- [ ] Confirm each reachable finding with an actual CLI invocation before changing anything, and record any that do not reproduce.
-- [ ] Cover the two remaining reachable spans in `transaction.ts`, removing their pragmas, and decide separately whether the behaviour each guard produces is the behaviour wanted.
-- [ ] Replace the three SHA-256 justifications with the true reason those spans are uncovered, and cover them if a fresh-install fixture is in scope.
-- [ ] Delete the inert pragma in `src/commands/dev/index.ts`.
-- [ ] Establish whether the `runtime.ts` comparator is covered, then either cover it or move and reword the pragma.
-- [ ] Settle the `repair.ts` question by checking whether repository health classifies a symlinked skills directory first.
+- [x] Confirm each reachable finding with an actual CLI invocation before changing anything, and record any that do not reproduce.
+- [x] Cover the two remaining reachable spans in `transaction.ts`, removing their pragmas, and decide separately whether the behaviour each guard produces is the behaviour wanted.
+- [x] Replace the three SHA-256 justifications with the true reason those spans are uncovered, and cover them if a fresh-install fixture is in scope.
+- [x] Delete the inert pragma in `src/commands/dev/index.ts`.
+- [x] Establish whether the `runtime.ts` comparator is covered, then either cover it or move and reword the pragma.
+- [x] Settle the `repair.ts` question by checking whether repository health classifies a symlinked skills directory first.
 
 ## Files touched
 
@@ -67,6 +67,18 @@ Every finding above is from static analysis of the call graph, not from a failin
 ## Dependencies / blocks
 
 Nothing blocks this item. It completes the sweep begun by `KI-TOOL-CLI-031` and continued by `032` and `033`.
+
+## Review
+
+Six pragmas removed and three reworded; coverage is 100% on all four metrics across 4937 statements, with `tsc --noEmit` clean and `ki repo audit` at PASS=14 FAIL=0 WARN=0.
+
+**Both `transaction.ts` findings reproduced, but not by the route the record proposed.** A symlinked _immediate_ parent is refused by `inspectCreateTarget`'s own `lstat` before either guard is reached, so the `.claude`-is-a-symlink shape in the Context section does not in fact get there. What does is a symlinked _intermediate_ segment — `linked/sub/created.txt` where `linked` is a symlink and `sub` is a real directory beneath it. `lstat` resolves the components above the one it reports on, so the link is invisible to classification. Pointed outside the repository it reaches `inspectCreateTarget`'s containment check on the dry-run path; pointed back inside it passes containment and is caught instead by the segment walk in `ensureCreateParent`. Both refusals were left as they stand: refusing to write through a symlinked directory is the intended policy, and the diagnostic is shared across every guard in the pair, so rewording it for the inside-pointing case is a behaviour change belonging to its own record.
+
+**The three SHA-256 justifications were right about the mechanism and the record was wrong.** `src/core/registry.ts:50-54` pins the canonical release's URL and `sha256`, and `readHarnessRegistry` prepends that entry to any configured releases, so `installHarness`'s `find` always selects the pinned one — a configured entry for the canonical identifier cannot shadow it. A fixture archive therefore can never verify as the canonical harness, and no sandbox can reach a successful fresh canonical install. This was established by removing all three pragmas, measuring, and then building the fresh-install test the record called for and watching it fail on exactly that digest. The spans are genuinely unreachable; the justifications now say so in terms of the pin rather than an unnamed one, and each cites the file that holds it.
+
+**`repair.ts` resolved against the record's own doubt.** `inspectRepositoryHealth` classifies the projection path, never the directory containing it, and `lstat` resolves that container — so a repository whose `.agents/skills` is a symlink reads as an ordinary missing projection, is classified `repairable`, and only fails once `linkManagedSkill` validates the container. Both pragmas removed and covered by a CLI test.
+
+**Two pragmas were simply inert.** The `runtime.ts` comparator and `reportProjections` in `src/commands/dev/index.ts` were both already fully exercised; removing them changed no metric. The `runtime.ts` one is the more instructive: it sat on a `.sort()` comparator and would have suppressed function coverage for real ordering logic had that logic ever gone untested.
 
 ## Discussion
 

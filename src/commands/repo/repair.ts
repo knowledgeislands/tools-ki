@@ -60,10 +60,9 @@ export const createRepairCommand = (
                 true
               )
             } catch (error) {
-              // The preflight just proved this is a repairable KI-managed link; this is reachable only if it changes concurrently.
-              /* v8 ignore next */
+              // Health classifies the projection path; linking also validates the directory
+              // containing it, about which classification says nothing.
               entries.push(`✗ Repair: ${(error as Error).message}`)
-              /* v8 ignore next */
               failed = true
             }
           }

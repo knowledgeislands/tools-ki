@@ -95,7 +95,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         // installBootstrapSkills only returns after its finalize callback has completed.
         /* v8 ignore next -- The guard protects a future change to that callback contract. */
         if (!restored) throw new Error('canonical harness restoration did not complete')
-        /* v8 ignore next -- Fixture archives cannot match the pinned canonical SHA-256; active-local success is release-only. */
+        /* v8 ignore next -- The canonical release digest is pinned in `src/core/registry.ts` and shadows any configured entry, so no fixture archive can verify and this restoration cannot succeed in a sandbox. */
         installation = restored
       } else {
         installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
@@ -105,7 +105,8 @@ export const createBootstrapCommand = (context: KiContext): Command =>
           finalize: () => reconcileConfiguration(skills)
         })
       }
-      // Fixture archives cannot match the pinned canonical SHA-256; its fresh-install presentation is release-only.
+      // A sandbox always starts from an installed canonical payload, and its fresh-install arm
+      // needs a download that the pinned release digest in `src/core/registry.ts` forbids.
       /* v8 ignore next */
       context.stdout.write(
         `canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`
