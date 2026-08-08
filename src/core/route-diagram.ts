@@ -10,14 +10,18 @@ import type { EstateRouteInspection, RouteState } from './trade-core.ts'
 const MARGIN = 32
 const TITLE_BAND = 64
 const LEGEND_BAND = 96
-const NODE_HEIGHT = 30
+const NODE_HEIGHT = 46
 const NODE_PADDING = 16
 const CHARACTER_WIDTH = 7.3
 const ICON_PITCH = 14
-const ICON_HEIGHT = 16
+const ICON_HEIGHT = 13
 const EDGE_GAP = 8
+const LEGEND_COLUMN = 230
+const LEGEND_TEXT_OFFSET = 52
+/** Advance of the 11px monospace legend text, used to keep the canvas wide enough to hold it. */
+const LEGEND_CHARACTER_WIDTH = 6.7
 /** Half the distance between the two lines of a reciprocated pair. */
-const EDGE_SEPARATION = 11
+const EDGE_SEPARATION = 8
 const FONT = 'monospace'
 const INK = '#111827'
 const EDGE = '#4b5563'
@@ -34,7 +38,6 @@ interface DirectedEdge {
   readonly kinds: Set<string>
   readonly states: Set<RouteState>
   offset: number
-  fraction: number
 }
 
 interface PlacedNode {
@@ -67,8 +70,7 @@ const directedEdges = (routes: readonly EstateRouteInspection[]): readonly Direc
       importer,
       kinds: new Set<string>(),
       states: new Set<RouteState>(),
-      offset: 0,
-      fraction: 0.5
+      offset: 0
     }
     edge.kinds.add(route.kind)
     edge.states.add(route.state)
@@ -80,12 +82,20 @@ const directedEdges = (routes: readonly EstateRouteInspection[]): readonly Direc
     // either line needing to know which of the two it is.
     if (!edges.has(`${edge.importer} ${edge.exporter}`)) continue
     edge.offset = EDGE_SEPARATION
-    edge.fraction = edge.exporter < edge.importer ? 0.3 : 0.7
   }
   return ordered
 }
 
-const halfWidthOf = (identity: string): number => (identity.length * CHARACTER_WIDTH) / 2 + NODE_PADDING
+/** Splits `owner/name` so a node can stack its two parts instead of running wide on one line. */
+const nodeParts = (identity: string): readonly [string, string] => [
+  identity.slice(0, identity.indexOf('/')),
+  identity.slice(identity.indexOf('/') + 1)
+]
+
+const halfWidthOf = (identity: string): number => {
+  const [owner, name] = nodeParts(identity)
+  return (Math.max(owner.length, name.length) * CHARACTER_WIDTH) / 2 + NODE_PADDING
+}
 
 const round = (value: number): number => Math.round(value * 10) / 10
 
@@ -104,13 +114,11 @@ const kindIcon = (kind: string, x: number, y: number): string =>
     : `<path d="M ${round(x)} ${round(y - 5)} L ${round(x + 5)} ${round(y)} L ${round(x)} ${round(y + 5)} L ${round(x - 5)} ${round(y)} z" fill="${KIND_FILL.knowledge}"/>`
 
 /**
- * Keeps a badge upright whichever way its edge runs: an angle and its reverse read the same, so
- * the result stays within a quarter turn of horizontal and never renders upside down.
+ * The badge turns with its edge rather than staying upright, so its icons always read in the
+ * direction of travel — the same kinds appear in the same order whichever way the arrow points.
+ * Nothing in a badge has an up: both icons are symmetric under the half turn this can impose.
  */
-const uprightAngle = (dx: number, dy: number): number => {
-  const degrees = (Math.atan2(dy, dx) * 180) / Math.PI
-  return ((((degrees + 90) % 180) + 180) % 180) - 90
-}
+const edgeAngle = (dx: number, dy: number): number => (Math.atan2(dy, dx) * 180) / Math.PI
 
 /** Draws the kinds travelling one edge as a boxed row of icons laid out along it. */
 const kindBadge = (kinds: readonly string[], x: number, y: number, angle: number): string => {
@@ -121,6 +129,15 @@ const kindBadge = (kinds: readonly string[], x: number, y: number, angle: number
   ].join('')
   return `<g transform="rotate(${round(angle)} ${round(x)} ${round(y)})">${contents}</g>`
 }
+
+const legendEntries = [
+  { text: 'work travels this way', kinds: ['work'], dashed: false, paired: false },
+  { text: 'knowledge travels this way', kinds: ['knowledge'], dashed: false, paired: false },
+  { text: 'both kinds travel this way', kinds: ['knowledge', 'work'], dashed: false, paired: false },
+  { text: 'active', kinds: [], dashed: false, paired: false },
+  { text: 'awaiting reciprocity', kinds: [], dashed: true, paired: false },
+  { text: 'reciprocated, drawn side by side', kinds: [], dashed: false, paired: true }
+] as const
 
 const line = (x1: number, y1: number, x2: number, y2: number, dashed: boolean): string =>
   `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" stroke="${EDGE}" stroke-width="2"${dashed ? ' stroke-dasharray="6 4"' : ''} marker-end="url(#arrow)"/>`
@@ -135,10 +152,17 @@ export const renderEstateRoutesDiagram = (inspected: readonly EstateRouteInspect
   )
   const widest = Math.max(0, ...nodes.map(halfWidthOf))
   // Size the circle so the arc between neighbours clears their labels, or long identities overlap.
-  const radius = Math.max(150, (nodes.length * (2 * widest + 24)) / (2 * Math.PI))
-  const centreX = MARGIN + widest + radius
+  const radius = Math.max(150, (nodes.length * Math.max(2 * widest + 24, NODE_HEIGHT + 26)) / (2 * Math.PI))
   const centreY = TITLE_BAND + NODE_HEIGHT / 2 + radius
-  const width = round(2 * (radius + widest) + 2 * MARGIN)
+  // Stacking a node's owner above its name makes the circle narrow enough that the legend, not
+  // the diagram, can be what sets the canvas width. Take whichever needs more room.
+  const legendWidth =
+    2 * MARGIN +
+    2 * LEGEND_COLUMN +
+    LEGEND_TEXT_OFFSET +
+    Math.max(...legendEntries.map((entry) => entry.text.length)) * LEGEND_CHARACTER_WIDTH
+  const width = round(Math.max(2 * (radius + widest) + 2 * MARGIN, legendWidth))
+  const centreX = width / 2
   const legendTop = centreY + radius + NODE_HEIGHT / 2 + 24
   const height = round(legendTop + LEGEND_BAND)
   const placed = new Map<string, PlacedNode>(
@@ -176,30 +200,28 @@ export const renderEstateRoutesDiagram = (inspected: readonly EstateRouteInspect
     return [
       `<g><title>${edge.exporter} &#8594; ${edge.importer} · ${kinds.join(' + ')} · ${states}</title>`,
       line(x1, y1, x2, y2, dashed),
-      kindBadge(kinds, x1 + (x2 - x1) * edge.fraction, y1 + (y2 - y1) * edge.fraction, uprightAngle(x2 - x1, y2 - y1)),
+      kindBadge(kinds, (x1 + x2) / 2, (y1 + y2) / 2, edgeAngle(x2 - x1, y2 - y1)),
       '</g>'
     ].join('')
   })
 
-  const drawnNodes = [...placed.values()].map(
-    (node) =>
-      `<g><rect x="${round(node.x - node.halfWidth)}" y="${round(node.y - NODE_HEIGHT / 2)}" width="${round(node.halfWidth * 2)}" height="${NODE_HEIGHT}" rx="6" fill="${PAPER}" stroke="${INK}" stroke-width="1.5"/>${label(node.x, node.y, node.identity, INK, 12)}</g>`
-  )
+  const drawnNodes = [...placed.values()].map((node) => {
+    const [owner, name] = nodeParts(node.identity)
+    return [
+      `<g><rect x="${round(node.x - node.halfWidth)}" y="${round(node.y - NODE_HEIGHT / 2)}" width="${round(node.halfWidth * 2)}" height="${NODE_HEIGHT}" rx="6" fill="${PAPER}" stroke="${INK}" stroke-width="1.5"/>`,
+      label(node.x, node.y - 10, owner, MUTED, 10),
+      label(node.x, node.y + 8, name, INK, 13),
+      '</g>'
+    ].join('')
+  })
 
-  const legend = [
-    { text: 'work travels this way', kinds: ['work'], dashed: false, paired: false },
-    { text: 'knowledge travels this way', kinds: ['knowledge'], dashed: false, paired: false },
-    { text: 'both kinds travel this way', kinds: ['knowledge', 'work'], dashed: false, paired: false },
-    { text: 'active', kinds: [], dashed: false, paired: false },
-    { text: 'awaiting reciprocity', kinds: [], dashed: true, paired: false },
-    { text: 'reciprocated, drawn side by side', kinds: [], dashed: false, paired: true }
-  ].map((entry, index) => {
-    const x = MARGIN + (index % 3) * 230
+  const legend = legendEntries.map((entry, index) => {
+    const x = MARGIN + (index % 3) * LEGEND_COLUMN
     const y = legendTop + 16 + Math.floor(index / 3) * 30
     const sample = entry.paired
       ? `${line(x, y - 4, x + 44, y - 4, false)}${line(x + 44, y + 4, x, y + 4, false)}`
       : `${line(x, y, x + 44, y, entry.dashed)}${entry.kinds.length ? kindBadge(entry.kinds, x + 22, y, 0) : ''}`
-    return `${sample}<text x="${x + 52}" y="${y}" dominant-baseline="middle" font-family="${FONT}" font-size="11" fill="${INK}">${entry.text}</text>`
+    return `${sample}<text x="${x + LEGEND_TEXT_OFFSET}" y="${y}" dominant-baseline="middle" font-family="${FONT}" font-size="11" fill="${INK}">${entry.text}</text>`
   })
 
   return [
