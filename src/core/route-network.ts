@@ -152,6 +152,11 @@ const simulation = d3.forceSimulation(data.nodes)
 const paired = new Set(data.links.map((d) => d.source.id + ' ' + d.target.id))
 const bowed = (d) => paired.has(d.target.id + ' ' + d.source.id)
 
+// Kinds ride close to the arrowhead rather than the midpoint, where a reciprocated pair's two
+// arcs run nearest each other and a chip cannot be told apart from its opposite number's.
+const CHIP_AT = 0.82
+const along = (from, control, to, t) => (1 - t) * (1 - t) * from + 2 * (1 - t) * t * control + t * t * to
+
 // Both ends clipped to their box, bowed to one side when the pair also trades the other way.
 const geometry = (d) => {
   const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y
@@ -171,8 +176,8 @@ function tick() {
   })
   chips.attr('transform', (d) => {
     const g = geometry(d)
-    const x = (g.sx + 2 * g.cx + g.tx) / 4
-    const y = (g.sy + 2 * g.cy + g.ty) / 4
+    const x = along(g.sx, g.cx, g.tx, CHIP_AT)
+    const y = along(g.sy, g.cy, g.ty, CHIP_AT)
     return 'translate(' + (x - (d.kinds.length * 13 - 4) / 2) + ',' + (y - 4.5) + ')'
   })
   chips.selectAll('rect').attr('x', (kind, index) => index * 13)
