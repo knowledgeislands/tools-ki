@@ -3,6 +3,7 @@ import type { KiContext } from '../../context.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
 import { installerEnvironment, requireCurrentInstallerReceipt } from '../../core/installation.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 import { refreshHarnesses } from '../harness/refresh.ts'
 
 const updateExecutable = async (context: KiContext): Promise<string> => {
@@ -23,23 +24,36 @@ export const createUpdateCommand = (context: KiContext): Command =>
     .description('update an installer-managed CLI and refresh installed configured harnesses')
     .option('--cli', 'update only the installer-managed CLI executable')
     .action(async (options: { cli?: boolean }) => {
-      const lines = ['╭─ KI MANAGE UPDATE']
       if (options.cli) {
-        lines.push('├─ CLI', `│  ╰─ ${await updateExecutable(context)}`, '╰─ summary: CLI=UPDATED')
-        context.stdout.write(`${lines.join('\n')}\n`)
+        context.stdout.write(
+          `${renderTree({
+            title: 'KI MANAGE UPDATE',
+            entries: [
+              { label: 'CLI', children: [{ label: await updateExecutable(context) }] },
+              { label: 'summary: CLI=UPDATED' }
+            ]
+          }).join('\n')}\n`
+        )
         return
       }
+      let cliResult: string
       try {
-        lines.push('├─ CLI', `│  ╰─ ${await updateExecutable(context)}`)
+        cliResult = await updateExecutable(context)
       } catch (error) {
         if (!(error instanceof KiError)) throw error
-        lines.push('├─ CLI', `│  ╰─ CLI executable: unavailable (${error.message})`)
+        cliResult = `CLI executable: unavailable (${error.message})`
       }
       const harnesses = await discoverInstalledHarnesses(context.paths.data)
       const refreshed = await refreshHarnesses(context, harnesses)
-      lines.push(`├─ harnesses (${refreshed.length})`)
-      if (!refreshed.length) lines.push('│  ╰─ none')
-      else lines.push(...refreshed.map((line, index) => `│  ${index === refreshed.length - 1 ? '╰─' : '├─'} ${line}`))
-      lines.push(`╰─ summary: HARNESS_RESULTS=${refreshed.length}`)
-      context.stdout.write(`${lines.join('\n')}\n`)
+      const harnessResults = refreshed.length ? refreshed.map((label) => ({ label })) : [{ label: 'none' }]
+      context.stdout.write(
+        `${renderTree({
+          title: 'KI MANAGE UPDATE',
+          entries: [
+            { label: 'CLI', children: [{ label: cliResult }] },
+            { label: `harnesses (${refreshed.length})`, children: harnessResults },
+            { label: `summary: HARNESS_RESULTS=${refreshed.length}` }
+          ]
+        }).join('\n')}\n`
+      )
     })
