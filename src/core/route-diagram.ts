@@ -21,6 +21,10 @@ const EDGE_GAP = 8
  * clear gap at each end; below this the three run together and the edge stops reading as a route.
  */
 const MINIMUM_EDGE_LENGTH = 96
+/** Vertical clearance between two nodes sharing a column. */
+const ROW_SPACING = 34
+/** How far an edge detours per column it has to clear, so it passes around nodes and not through. */
+const COLUMN_BOW = 92
 const LEGEND_COLUMN = 230
 const LEGEND_TEXT_OFFSET = 52
 /** Advance of the 11px monospace legend text, used to keep the canvas wide enough to hold it. */
@@ -97,6 +101,47 @@ const nodeParts = (identity: string): readonly [string, string] => [
   identity.slice(identity.indexOf('/') + 1)
 ]
 
+/**
+ * Assigns each repository a column, left to right, so that an edge points forward wherever the
+ * declarations allow it. A repository that only sends therefore starts at the left edge and one
+ * that only receives is pinned to the right, with everything else falling into the columns its
+ * own traffic implies.
+ *
+ * A reciprocated estate is cyclic almost everywhere, so the edges that close a cycle are set
+ * aside and the remainder — which is acyclic by construction — is layered by longest path. Depth
+ * first order follows the caller's node ordering, so the same estate always lays out the same way.
+ */
+const columnOf = (nodes: readonly string[], edges: readonly DirectedEdge[]): ReadonlyMap<string, number> => {
+  const outgoing = new Map<string, string[]>(nodes.map((node) => [node, []]))
+  for (const edge of edges) (outgoing.get(edge.exporter) as string[]).push(edge.importer)
+  const open = new Set<string>()
+  const closed = new Set<string>()
+  const closing = new Set<string>()
+  const visit = (node: string): void => {
+    open.add(node)
+    for (const next of outgoing.get(node) as string[]) {
+      if (open.has(next)) closing.add(`${node} ${next}`)
+      else if (!closed.has(next)) visit(next)
+    }
+    open.delete(node)
+    closed.add(node)
+  }
+  for (const node of nodes) if (!closed.has(node)) visit(node)
+
+  const forward = edges.filter((edge) => !closing.has(`${edge.exporter} ${edge.importer}`))
+  const layer = new Map<string, number>(nodes.map((node) => [node, 0]))
+  // One relaxation pass per node is enough for the longest path through an acyclic graph.
+  for (let pass = 0; pass < nodes.length; pass += 1)
+    for (const edge of forward)
+      layer.set(edge.importer, Math.max(layer.get(edge.importer) as number, (layer.get(edge.exporter) as number) + 1))
+
+  // A repository that sends nothing belongs at the right edge whatever path reached it.
+  const sending = new Set(edges.map((edge) => edge.exporter))
+  const last = Math.max(0, ...layer.values())
+  for (const node of nodes) if (!sending.has(node)) layer.set(node, last)
+  return layer
+}
+
 const halfWidthOf = (identity: string): number => {
   const [owner, name] = nodeParts(identity)
   return (Math.max(owner.length, name.length) * CHARACTER_WIDTH) / 2 + NODE_PADDING
@@ -147,6 +192,22 @@ const legendEntries = [
 const line = (x1: number, y1: number, x2: number, y2: number, dashed: boolean): string =>
   `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" stroke="${EDGE}" stroke-width="2"${dashed ? ' stroke-dasharray="6 4"' : ''} marker-end="url(#arrow)"/>`
 
+/**
+ * Draws an edge through a control point. Two nodes in one column would otherwise be joined by a
+ * line running straight through whatever sits between them, so the control point steps aside;
+ * placing it on the midpoint leaves the curve straight, which is what a cross-column edge wants.
+ */
+const curve = (
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  controlX: number,
+  controlY: number,
+  dashed: boolean
+): string =>
+  `<path d="M ${round(x1)} ${round(y1)} Q ${round(controlX)} ${round(controlY)} ${round(x2)} ${round(y2)}" fill="none" stroke="${EDGE}" stroke-width="2"${dashed ? ' stroke-dasharray="6 4"' : ''} marker-end="url(#arrow)"/>`
+
 const label = (x: number, y: number, text: string, colour: string, size: number): string =>
   `<text x="${round(x)}" y="${round(y)}" text-anchor="middle" dominant-baseline="middle" font-family="${FONT}" font-size="${size}" fill="${colour}">${text}</text>`
 
@@ -156,40 +217,63 @@ export const renderEstateRoutesDiagram = (inspected: readonly EstateRouteInspect
     left.localeCompare(right)
   )
   const widest = Math.max(0, ...nodes.map(halfWidthOf))
-  // Size the circle so the arc between neighbours clears their labels, or long identities overlap.
-  const arcRadius = (nodes.length * Math.max(2 * widest + 24, NODE_HEIGHT + 26)) / (2 * Math.PI)
-  // Then hold the shortest edge to a readable length. Neighbours on the circle are the closest
-  // pair, and the drawn edge is their chord less what each node's box and gap consume, so pushing
-  // that one chord out is enough to lift every edge. Clamping the divisor keeps an estate too
-  // small to have edges from demanding an infinite radius.
-  const separationRadius =
-    (MINIMUM_EDGE_LENGTH + 2 * (widest + EDGE_GAP)) / (2 * Math.sin(Math.PI / Math.max(nodes.length, 2)))
-  const radius = Math.max(150, arcRadius, separationRadius)
-  const centreY = TITLE_BAND + NODE_HEIGHT / 2 + radius
-  // Stacking a node's owner above its name makes the circle narrow enough that the legend, not
-  // the diagram, can be what sets the canvas width. Take whichever needs more room.
+  const layer = columnOf(nodes, edges)
+  // Layering leaves gaps wherever a column emptied, so re-index onto consecutive positions.
+  const occupied = [...new Set(layer.values())].sort((left, right) => left - right)
+  const columns: string[][] = occupied.map(() => [])
+  for (const node of nodes) (columns[occupied.indexOf(layer.get(node) as number)] as string[]).push(node)
+
+  // Space the columns so the shortest edge — one that crosses a single column — stays readable
+  // once each node's box and its end gap are taken out of it.
+  const columnGap = 2 * widest + MINIMUM_EDGE_LENGTH + 2 * EDGE_GAP
+  const rowGap = NODE_HEIGHT + ROW_SPACING
+  const tallest = Math.max(1, ...columns.map((column) => column.length))
+  const spread = Math.max(columns.length - 1, 0) * columnGap
   const legendWidth =
     2 * MARGIN +
     2 * LEGEND_COLUMN +
     LEGEND_TEXT_OFFSET +
     Math.max(...legendEntries.map((entry) => entry.text.length)) * LEGEND_CHARACTER_WIDTH
-  const width = round(Math.max(2 * (radius + widest) + 2 * MARGIN, legendWidth))
-  const centreX = width / 2
-  const legendTop = centreY + radius + NODE_HEIGHT / 2 + 24
+  const width = round(Math.max(2 * MARGIN + 2 * widest + spread, legendWidth))
+  const position = new Map<string, number>(
+    columns.flatMap((column, columnIndex) =>
+      column.map((identity): readonly [string, number] => [identity, columnIndex])
+    )
+  )
+  /**
+   * An edge between adjacent columns runs straight, in either direction — a reciprocated pair is
+   * already separated by its perpendicular offset. Every other edge has something in the way, an
+   * intervening column or the node it shares a column with, so it detours by how far it reaches.
+   * That also nests the long edges instead of piling them onto one another.
+   */
+  const detour = (edge: DirectedEdge): number =>
+    COLUMN_BOW *
+    Math.abs(Math.abs((position.get(edge.importer) as number) - (position.get(edge.exporter) as number)) - 1)
+  // A quadratic strays half its control offset and carries a badge at that far point. An edge
+  // running back leftwards detours above the row and everything else below it, so each side is
+  // sized by the edges that actually use it rather than by the largest detour anywhere.
+  const runsBack = (edge: DirectedEdge): boolean =>
+    (position.get(edge.importer) as number) < (position.get(edge.exporter) as number)
+  const clearanceFor = (backward: boolean): number =>
+    Math.max(0, ...edges.filter((edge) => runsBack(edge) === backward).map(detour)) / 2 + ICON_HEIGHT
+  const above = clearanceFor(true)
+  const below = clearanceFor(false)
+  const centreY = TITLE_BAND + above + (tallest * rowGap) / 2
+  const legendTop = TITLE_BAND + above + tallest * rowGap + below + 24
   const height = round(legendTop + LEGEND_BAND)
+  const leftColumn = (width - spread) / 2
   const placed = new Map<string, PlacedNode>(
-    nodes.map((identity, index) => {
-      const angle = (index / nodes.length) * 2 * Math.PI - Math.PI / 2
-      return [
+    columns.flatMap((column, columnIndex) =>
+      column.map((identity, rowIndex): readonly [string, PlacedNode] => [
         identity,
         {
           identity,
-          x: centreX + radius * Math.cos(angle),
-          y: centreY + radius * Math.sin(angle),
+          x: leftColumn + columnIndex * columnGap,
+          y: centreY + (rowIndex - (column.length - 1) / 2) * rowGap,
           halfWidth: halfWidthOf(identity)
         }
-      ]
-    })
+      ])
+    )
   )
   const scope = incomplete ? 'incomplete routes only' : 'all declared routes'
   const title = 'Knowledge Islands trade routes — registered estate'
@@ -206,13 +290,18 @@ export const renderEstateRoutesDiagram = (inspected: readonly EstateRouteInspect
     const y1 = baseY1 + shiftY
     const x2 = baseX2 + shiftX
     const y2 = baseY2 + shiftY
+    const bow = detour(edge)
+    const reach = Math.hypot(x2 - x1, y2 - y1)
+    const controlX = (x1 + x2) / 2 + ((y1 - y2) / reach) * bow
+    const controlY = (y1 + y2) / 2 + ((x2 - x1) / reach) * bow
     const kinds = [...edge.kinds].sort()
     const states = [...edge.states].sort().join(', ')
     const dashed = [...edge.states].some((state) => state !== 'active')
     return [
       `<g><title>${edge.exporter} &#8594; ${edge.importer} · ${kinds.join(' + ')} · ${states}</title>`,
-      line(x1, y1, x2, y2, dashed),
-      kindBadge(kinds, (x1 + x2) / 2, (y1 + y2) / 2, edgeAngle(x2 - x1, y2 - y1)),
+      curve(x1, y1, x2, y2, controlX, controlY, dashed),
+      // Halfway along the quadratic, which is not the midpoint of its ends once it bows.
+      kindBadge(kinds, (x1 + 2 * controlX + x2) / 4, (y1 + 2 * controlY + y2) / 4, edgeAngle(x2 - x1, y2 - y1)),
       '</g>'
     ].join('')
   })

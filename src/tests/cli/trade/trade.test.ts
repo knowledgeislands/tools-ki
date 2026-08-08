@@ -422,6 +422,13 @@ describe('[ki trade]', () => {
     const svg = await box.project.read('routes.svg')
     expect(svg).toContain('<desc>3 repositories, 2 routes, incomplete routes only.</desc>')
     expect(svg.match(/<g><title>example\//gu)?.length).toBe(2)
+    // Layout, not geometry: these two routes form the chain third -> fourth -> source, so the
+    // repository that only sends is placed left of the one that only receives, with the
+    // repository doing both between them.
+    const columnOf = (name: string): number =>
+      Number(new RegExp(`<text x="([0-9.]+)"[^>]*>${name}</text>`, 'u').exec(svg)?.[1])
+    expect(columnOf('third')).toBeLessThan(columnOf('fourth'))
+    expect(columnOf('fourth')).toBeLessThan(columnOf('source'))
   })
 
   test('renders an empty estate diagram and refuses a diagram of the local route list', async () => {
