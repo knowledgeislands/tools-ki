@@ -1,9 +1,9 @@
 ---
 id: KI-TOOL-CLI-022
-title: Report evidence gathering as progress
+title: Report evidence gathering phase
 theme: cli
 horizon: now
-status: draft
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -41,7 +41,7 @@ That emitter is not in the CLI's canonical archive pin `501b40111aefa774aff49f10
 
 - [ ] Report the transition into evidence gathering as its own phase, so the display names what is happening instead of showing a stalled item count.
 - [ ] Confirm by measurement how much of a representative operation falls inside that phase, for this repository and for at least one other, so the reporting is proportionate to reality rather than to this one rubric.
-- [ ] Decide what the bar should show while a single unreported block dominates the operation, given that a proportion cannot be computed without knowing what the phase contains.
+- [x] Decide what the bar should show while a single unreported block dominates the operation. The applied emitter answers it: a session that emits reports named stages and one step per external command, so the phase is determinate — step *k* of *n* within a named stage — and needs no indeterminate animation. Because the emitter postdates the archive pin, the host must render both cases: a determinate step count where the session emits, and a named phase with an indeterminate bar where it does not. The fallback is not a transitional shim but the permanent contract for a session that declines the optional emitter.
 - [x] Establish whether the Harness could report progress within evidence gathering, and if it could, what minimal contract would carry it; capture the outcome rather than assuming it. It can: an optional session emitter reporting named stages and steps, with `ki-engineering` emitting one step per external command.
 - [ ] Keep the plain-stream form informative, since a phase transition is exactly the kind of event a log should carry.
 
