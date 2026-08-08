@@ -73,9 +73,9 @@ const renderTradeContext = (
       `│  ${lastDirection ? '╰─' : '├─'} ${label} (${selected.length})`,
       ...selected.map((trade, tradeIndex) => {
         const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
-        const peer = `${direction === 'outbound' ? '→' : '←'} ${displayTradePeer(trade.record, direction)}`
+        const peer = `${glyph} ${direction === 'outbound' ? '→' : '←'} ${displayTradePeer(trade.record, direction)}`
         const status = lifecycleStatus(tradeLifecycle(trade, estate))
-        return `${itemPrefix}${tradeIndex === selected.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${peer} [${status}] ${trade.record.title}`
+        return `${itemPrefix}${tradeIndex === selected.length - 1 ? '╰─' : '├─'} ${trade.record.id} ${peer} [${status}] ${trade.record.title}`
       })
     ]
   })

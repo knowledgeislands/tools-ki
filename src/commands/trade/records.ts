@@ -60,7 +60,7 @@ const renderTradeList = async (
     for (const [index, trade] of trades.entries()) {
       const lifecycle = await tradeLifecycle(trade, estate)
       const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
-      const peer = `${trade.direction === 'inbound' ? '←' : '→'} ${displayTradePeer(trade.record, trade.direction)}`
+      const peer = `${glyph} ${trade.direction === 'inbound' ? '←' : '→'} ${displayTradePeer(trade.record, trade.direction)}`
       const statuses = [
         lifecycleStatus(lifecycle),
         lifecycle.releaseEligible ? 'release eligible' : undefined,
@@ -69,7 +69,7 @@ const renderTradeList = async (
         .filter(Boolean)
         .join(' · ')
       lines.push(
-        `│  ${index === trades.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${directionLabel[trade.direction]} ${peer} [${statuses}] [${trade.record.observation}] ${trade.record.title}`
+        `│  ${index === trades.length - 1 ? '╰─' : '├─'} ${trade.record.id} ${directionLabel[trade.direction]} ${peer} [${statuses}] [${trade.record.observation}] ${trade.record.title}`
       )
     }
   }
