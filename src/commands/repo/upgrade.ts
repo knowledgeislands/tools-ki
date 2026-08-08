@@ -4,6 +4,7 @@ import { readRepositoryDeclaration } from '../../core/configuration.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { resolveDeclaredSkills } from '../../core/resolution.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 import { refreshHarnesses } from '../harness/refresh.ts'
 
 export const createUpgradeCommand = (
@@ -30,23 +31,26 @@ export const createUpgradeCommand = (
         })
       }
       const providers = reports.reduce((total, report) => total + report.providers.length, 0)
-      const lines = ['╭─ KI REPO UPGRADE', `├─ repositories (${reports.length})`]
-      lines.push(
-        ...reports.flatMap((report, reportIndex) => {
-          const lastReport = reportIndex === reports.length - 1
-          const itemPrefix = `│  ${lastReport ? '   ' : '│  '}`
-          return [
-            `│  ${lastReport ? '╰─' : '├─'} ${report.root}`,
-            `${itemPrefix}╰─ providers (${report.providers.length})`,
-            ...(report.providers.length
-              ? report.providers.map(
-                  (provider, providerIndex) =>
-                    `${itemPrefix}   ${providerIndex === report.providers.length - 1 ? '╰─' : '├─'} ${provider}`
-                )
-              : [`${itemPrefix}   ╰─ none`])
+      context.stdout.write(
+        `${renderTree({
+          title: 'KI REPO UPGRADE',
+          entries: [
+            {
+              label: `repositories (${reports.length})`,
+              children: reports.map((report) => ({
+                label: report.root,
+                children: [
+                  {
+                    label: `providers (${report.providers.length})`,
+                    children: report.providers.length
+                      ? report.providers.map((label) => ({ label }))
+                      : [{ label: 'none' }]
+                  }
+                ]
+              }))
+            },
+            { label: `summary: REPOSITORIES=${reports.length} PROVIDERS=${providers}` }
           ]
-        })
+        }).join('\n')}\n`
       )
-      lines.push(`╰─ summary: REPOSITORIES=${reports.length} PROVIDERS=${providers}`)
-      context.stdout.write(`${lines.join('\n')}\n`)
     })
