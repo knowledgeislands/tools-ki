@@ -272,7 +272,9 @@ describe('[ki trade]', () => {
     const listed = await box.run('ki trade list')
 
     expect(listed.exitCode).toBe(0)
-    expect(listed.output).toContain('received')
+    // The collapsed status shows the furthest-advanced stage: an undecided received copy
+    // reads `unconsidered`, which already states that it was submitted and delivered.
+    expect(listed.output).toContain('unconsidered')
     expect(listed.output).not.toContain('unrecognised trade field')
     expect(await box.run(['ki', 'trade', 'show', id])).toMatchObject({ exitCode: 0 })
   })
@@ -383,20 +385,26 @@ describe('[ki trade]', () => {
     expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true)
     expect(svg.endsWith('</svg>\n')).toBe(true)
     expect(svg).toContain('<title>Knowledge Islands trade routes — registered estate</title>')
-    expect(svg).toContain('<desc>4 repositories, 5 routes, all declared routes.</desc>')
-    // One rectangle-and-label group per repository, one titled line per collapsed edge.
+    expect(svg).toContain('<desc>4 repositories, 6 routes, all declared routes.</desc>')
+    // One rectangle-and-label group per repository, one titled group per directed edge.
     expect(svg.match(/<g><rect /gu)?.length).toBe(4)
-    expect(svg.match(/<title>example\//gu)?.length).toBe(5)
-    // A pair trading both kinds both ways collapses to a single double-headed edge.
-    expect(svg).toContain('<title>example/receiver &#8596; example/source · knowledge + work · active</title>')
-    expect(svg).toContain('marker-start="url(#arrow-start-both)"')
+    expect(svg.match(/<g><title>example\//gu)?.length).toBe(6)
+    // A reciprocated pair stays two edges drawn side by side rather than one double-headed line,
+    // so a pair reciprocating one trade kind and not the other can still be told apart.
+    expect(svg).toContain('<title>example/source &#8594; example/receiver · knowledge + work · active</title>')
+    expect(svg).toContain('<title>example/receiver &#8594; example/source · work · active</title>')
+    expect(svg).not.toContain('marker-start')
     expect(svg).toContain('<title>example/source &#8594; example/third · work · active</title>')
-    // A declaration the peer has not answered renders one-way and dashed, in each direction.
+    // A declaration the peer has not answered renders dashed, in each direction.
     expect(svg).toContain('<title>example/fourth &#8594; example/source · work · awaiting-receiver</title>')
-    expect(svg).toContain('<title>example/fourth &#8592; example/third · knowledge · awaiting-sender</title>')
+    expect(svg).toContain('<title>example/third &#8594; example/fourth · knowledge · awaiting-sender</title>')
     expect(svg.match(/stroke-dasharray="6 4"/gu)?.length).toBe(3)
-    expect(svg).toContain('>reciprocal</text>')
-    expect(svg).toContain('>incomplete</text>')
+    // Kind rides the edge as an icon rather than colouring the line: a square for work,
+    // a diamond for knowledge.
+    expect(svg).toContain('fill="#b45309"')
+    expect(svg).toContain('fill="#1d4ed8"')
+    expect(svg).toContain('>reciprocated, drawn side by side</text>')
+    expect(svg).toContain('>awaiting reciprocity</text>')
     // Self-contained: the SVG namespace is the only URL, and nothing is fetched at render time.
     expect(svg.match(/https?:\/\//gu)?.length).toBe(1)
     expect(svg).not.toMatch(/<script|<image|xlink:href|@import/u)
@@ -413,7 +421,7 @@ describe('[ki trade]', () => {
     })
     const svg = await box.project.read('routes.svg')
     expect(svg).toContain('<desc>3 repositories, 2 routes, incomplete routes only.</desc>')
-    expect(svg.match(/<title>example\//gu)?.length).toBe(2)
+    expect(svg.match(/<g><title>example\//gu)?.length).toBe(2)
   })
 
   test('renders an empty estate diagram and refuses a diagram of the local route list', async () => {
@@ -426,7 +434,7 @@ describe('[ki trade]', () => {
 
     expect(empty.exitCode).toBe(0)
     expect(empty.output).toContain('<desc>0 repositories, 0 routes, all declared routes.</desc>')
-    expect(empty.output).toContain('>knowledge</text>')
+    expect(empty.output).toContain('>knowledge travels this way</text>')
     expect(await box.run('ki trade routes list --svg')).toEqual({
       exitCode: 2,
       output: 'ki: error: trade route --svg requires --estate\n'
@@ -475,11 +483,9 @@ describe('[ki trade]', () => {
 
     expect(created.output).toBe(`ki trade submit: submitted ${id} for example/receiver [decision]\n`)
     expect(received).toEqual({ exitCode: 0, output: `ki trade receive: received ${id}\n` })
-    expect(listed.output).toContain(
-      `⚒ ${id} import ← source [submitted · received · adopted · release eligible] [decision] Route contract`
-    )
-    expect(allListed.output).toContain(`⚒ ${id} import ← source [submitted · received · adopted`)
-    expect(allListed.output).toContain(`⚒ ${id} export → receiver [submitted · received · adopted`)
+    expect(listed.output).toContain(`⚒ ${id} import ← source [adopted · release eligible] [decision] Route contract`)
+    expect(allListed.output).toContain(`⚒ ${id} import ← source [adopted`)
+    expect(allListed.output).toContain(`⚒ ${id} export → receiver [adopted`)
     expect(shown.output).toContain(`Repository: ${sourceHome} [export]\n${outbound.trimEnd()}`)
     expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
     expect(pruned).toEqual({ exitCode: 0, output: `ki trade prune: pruned ${id}\n` })
@@ -491,9 +497,7 @@ describe('[ki trade]', () => {
     const created = await createTrade(box, 'knowledge')
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
     const listed = await box.run('ki trade list')
-    expect(listed.output).toContain(
-      `◇ ${id} export → receiver [submitted · awaiting-receipt] [decision] Route contract`
-    )
+    expect(listed.output).toContain(`◇ ${id} export → receiver [awaiting-receipt] [decision] Route contract`)
     box.cd('receiver')
     await box.run(['ki', 'trade', 'receive', id])
     const path = `receiver/+/_TRADES/example/source/${id}.md`
@@ -577,9 +581,7 @@ describe('[ki trade]', () => {
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
     const listed = await box.run('ki trade list')
 
-    expect(listed.output).toContain(
-      `⚒ ${id} export → other/receiver [submitted · awaiting-receipt] [decision] Route contract`
-    )
+    expect(listed.output).toContain(`⚒ ${id} export → other/receiver [awaiting-receipt] [decision] Route contract`)
   })
 
   test('reports malformed route declarations plus pending, active, and ambiguous registered-estate routes', async () => {
@@ -869,9 +871,7 @@ describe('[ki trade]', () => {
     box.cd('..')
     const shown = await box.run(['ki', 'trade', 'show', firstId])
 
-    expect(outboundList.output).toContain(
-      `⚒ ${firstId} export → receiver [submitted · awaiting-receipt] [decision] Route contract`
-    )
+    expect(outboundList.output).toContain(`⚒ ${firstId} export → receiver [awaiting-receipt] [decision] Route contract`)
     expect(received.output).toContain(firstId)
     expect(received.output).toContain(secondId)
     expect(repeated.output).toContain(firstId)
@@ -1067,7 +1067,7 @@ describe('[ki trade]', () => {
     const preparationPath = `-/_TRADES/example/receiver/${id}.md`
     expect(await box.project.read(preparationPath)).toContain('phase: preparing')
     expect((await box.run('ki trade list --direction prepare')).output).toContain(
-      `${id} prepare → receiver [preparing · not-deliverable] [receipt]`
+      `${id} prepare → receiver [preparing] [receipt]`
     )
     expect(
       (await box.run(['ki', 'trade', 'routes', 'remove', receiverHome, '--direction', 'export', '--kind', 'work']))
@@ -1230,7 +1230,7 @@ describe('[ki trade]', () => {
     box.cd('..')
     expect((await box.run(['ki', 'trade', 'release', id])).exitCode).toBe(0)
     expect((await box.run('ki trade list --direction import')).output).toContain(
-      `⚒ ${id} import ← source [submitted · received · adopted · prune eligible] [decision] Route contract`
+      `⚒ ${id} import ← source [adopted · prune eligible] [decision] Route contract`
     )
   })
 

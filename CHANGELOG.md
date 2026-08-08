@@ -114,7 +114,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context.
 - Local `ki registry add` records every selected physical KI repository root without applying repairs; `ki repo conform` does the same before evaluating its declaration or conformance findings.
-- `ki trade routes list [--estate] [--incomplete]` is a framed local or registered-estate route inventory; `--svg` renders the estate as a self-contained SVG diagram instead, collapsing reciprocal declarations into one edge per repository pair.
+- `ki trade routes list [--estate] [--incomplete]` is a framed local or registered-estate route inventory; `--svg` renders the estate as a self-contained SVG diagram instead, drawing one edge per direction with per-kind icons so a reciprocated pair runs side by side. Both listings now show only the furthest-advanced lifecycle stage of a trade rather than the full publication, delivery and decision triplet.
 - `ki trade new` creates a local export once this repository declares the route; receiver activation remains reciprocal.
 - `ki trade list` is a framed registered-estate inventory.
 

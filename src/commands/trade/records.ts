@@ -14,7 +14,16 @@ import {
   submitTrade,
   tradeLifecycle
 } from '../../core/trade-core.ts'
-import { count, displayTradePeer, kind, observation, repository, requireText, tradeId } from './shared.ts'
+import {
+  count,
+  displayTradePeer,
+  kind,
+  lifecycleStatus,
+  observation,
+  repository,
+  requireText,
+  tradeId
+} from './shared.ts'
 
 interface PrepareOptions {
   readonly kind?: string
@@ -53,9 +62,7 @@ const renderTradeList = async (
       const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
       const peer = `${trade.direction === 'inbound' ? '←' : '→'} ${displayTradePeer(trade.record, trade.direction)}`
       const statuses = [
-        lifecycle.publicationStatus,
-        lifecycle.deliveryStatus,
-        lifecycle.decisionStatus,
+        lifecycleStatus(lifecycle),
         lifecycle.releaseEligible ? 'release eligible' : undefined,
         lifecycle.pruneEligible ? 'prune eligible' : undefined
       ]

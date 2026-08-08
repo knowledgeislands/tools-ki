@@ -1,7 +1,7 @@
 import type { EstateRouteInspection, RouteState } from './trade-core.ts'
 
 /**
- * Renders the registered estate's collapsed trade routes as one self-contained SVG document.
+ * Renders the registered estate's declared trade routes as one self-contained SVG document.
  *
  * Identities are constrained to lower-case `owner/name` over `[a-z0-9._-]`, so no value reaching
  * this module can carry an XML metacharacter and no escaping pass is needed.
@@ -13,25 +13,28 @@ const LEGEND_BAND = 96
 const NODE_HEIGHT = 30
 const NODE_PADDING = 16
 const CHARACTER_WIDTH = 7.3
-const LABEL_HEIGHT = 16
+const ICON_PITCH = 14
+const ICON_HEIGHT = 16
 const EDGE_GAP = 8
+/** Half the distance between the two lines of a reciprocated pair. */
+const EDGE_SEPARATION = 9
 const FONT = 'monospace'
 const INK = '#111827'
+const EDGE = '#4b5563'
+const RULE = '#e5e7eb'
+const MUTED = '#6b7280'
 const PAPER = '#ffffff'
 
-/** `muted` carries the legend's shape entries, which explain line style rather than trade kind. */
-const STROKE = { work: '#b45309', knowledge: '#1d4ed8', both: '#4b5563', muted: '#6b7280' } as const
+/** Trade kind is carried by the icons riding an edge, so the line itself is free to mean state. */
+const KIND_FILL = { work: '#b45309', knowledge: '#1d4ed8' } as const
 
-type StrokeKey = keyof typeof STROKE
-type KindKey = Exclude<StrokeKey, 'muted'>
-
-interface PairEdge {
-  readonly left: string
-  readonly right: string
+interface DirectedEdge {
+  readonly exporter: string
+  readonly importer: string
   readonly kinds: Set<string>
   readonly states: Set<RouteState>
-  forward: boolean
-  reverse: boolean
+  offset: number
+  fraction: number
 }
 
 interface PlacedNode {
@@ -48,32 +51,39 @@ const endpoints = (route: EstateRouteInspection): readonly [string, string] =>
     ? [route.source.identity, identityOf(route.repository)]
     : [identityOf(route.repository), route.source.identity]
 
-// A reciprocal route is declared on both sides and a pair may trade in both directions, so
-// collapse every declaration onto the unordered pair it connects and keep which ways it runs.
-const pairEdges = (routes: readonly EstateRouteInspection[]): readonly PairEdge[] => {
-  const pairs = new Map<string, PairEdge>()
+/**
+ * Collapses declarations onto the direction they run, not the pair they connect. A reciprocal
+ * route is declared on both sides, so its two declarations become one directed edge each and are
+ * drawn side by side — which also states the case a single line cannot, where a pair reciprocates
+ * one trade kind and not the other.
+ */
+const directedEdges = (routes: readonly EstateRouteInspection[]): readonly DirectedEdge[] => {
+  const edges = new Map<string, DirectedEdge>()
   for (const route of routes) {
     const [exporter, importer] = endpoints(route)
-    const [left, right] = exporter < importer ? [exporter, importer] : [importer, exporter]
-    const key = `${left} ${right}`
-    const edge = pairs.get(key) ?? {
-      left,
-      right,
+    const key = `${exporter} ${importer}`
+    const edge = edges.get(key) ?? {
+      exporter,
+      importer,
       kinds: new Set<string>(),
       states: new Set<RouteState>(),
-      forward: false,
-      reverse: false
+      offset: 0,
+      fraction: 0.5
     }
     edge.kinds.add(route.kind)
     edge.states.add(route.state)
-    if (exporter === left) edge.forward = true
-    else edge.reverse = true
-    pairs.set(key, edge)
+    edges.set(key, edge)
   }
-  return [...pairs.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, edge]) => edge)
+  const ordered = [...edges.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, edge]) => edge)
+  for (const edge of ordered) {
+    // Each edge offsets to its own right-hand side, so a reciprocated pair separates without
+    // either line needing to know which of the two it is.
+    if (!edges.has(`${edge.importer} ${edge.exporter}`)) continue
+    edge.offset = EDGE_SEPARATION
+    edge.fraction = edge.exporter < edge.importer ? 0.3 : 0.7
+  }
+  return ordered
 }
-
-const kindKey = (edge: PairEdge): KindKey => (edge.kinds.size > 1 ? 'both' : ([...edge.kinds][0] as KindKey))
 
 const halfWidthOf = (identity: string): number => (identity.length * CHARACTER_WIDTH) / 2 + NODE_PADDING
 
@@ -85,21 +95,32 @@ const boundary = (node: PlacedNode, towardX: number, towardY: number): readonly 
   const dy = towardY - node.y
   const fraction =
     Math.min(node.halfWidth / Math.abs(dx), NODE_HEIGHT / 2 / Math.abs(dy)) + EDGE_GAP / Math.hypot(dx, dy)
-  return [round(node.x + dx * fraction), round(node.y + dy * fraction)]
+  return [node.x + dx * fraction, node.y + dy * fraction]
 }
 
-const marker = (id: string, colour: string, reversed: boolean): string =>
-  `<marker id="${id}" viewBox="0 0 10 10" refX="${reversed ? 1 : 9}" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="${reversed ? 'M 10 0 L 0 5 L 10 10 z' : 'M 0 0 L 10 5 L 0 10 z'}" fill="${colour}"/></marker>`
+const kindIcon = (kind: string, x: number, y: number): string =>
+  kind === 'work'
+    ? `<rect x="${round(x - 4)}" y="${round(y - 4)}" width="8" height="8" fill="${KIND_FILL.work}"/>`
+    : `<path d="M ${round(x)} ${round(y - 5)} L ${round(x + 5)} ${round(y)} L ${round(x)} ${round(y + 5)} L ${round(x - 5)} ${round(y)} z" fill="${KIND_FILL.knowledge}"/>`
+
+/** Draws the kinds travelling one edge as a boxed row of icons centred on a point. */
+const kindBadge = (kinds: readonly string[], x: number, y: number): string => {
+  const width = kinds.length * ICON_PITCH + 6
+  return [
+    `<rect x="${round(x - width / 2)}" y="${round(y - ICON_HEIGHT / 2)}" width="${round(width)}" height="${ICON_HEIGHT}" rx="4" fill="${PAPER}" stroke="${RULE}" stroke-width="1"/>`,
+    ...kinds.map((kind, index) => kindIcon(kind, x - ((kinds.length - 1) * ICON_PITCH) / 2 + index * ICON_PITCH, y))
+  ].join('')
+}
+
+const line = (x1: number, y1: number, x2: number, y2: number, dashed: boolean): string =>
+  `<line x1="${round(x1)}" y1="${round(y1)}" x2="${round(x2)}" y2="${round(y2)}" stroke="${EDGE}" stroke-width="2"${dashed ? ' stroke-dasharray="6 4"' : ''} marker-end="url(#arrow)"/>`
 
 const label = (x: number, y: number, text: string, colour: string, size: number): string =>
   `<text x="${round(x)}" y="${round(y)}" text-anchor="middle" dominant-baseline="middle" font-family="${FONT}" font-size="${size}" fill="${colour}">${text}</text>`
 
-const legendSample = (x: number, y: number, key: StrokeKey, dashed: boolean, both: boolean): string =>
-  `<line x1="${x}" y1="${y}" x2="${x + 30}" y2="${y}" stroke="${STROKE[key]}" stroke-width="2"${dashed ? ' stroke-dasharray="6 4"' : ''} marker-end="url(#arrow-end-${key})"${both ? ` marker-start="url(#arrow-start-${key})"` : ''}/>`
-
 export const renderEstateRoutesDiagram = (inspected: readonly EstateRouteInspection[], incomplete: boolean): string => {
-  const edges = pairEdges(incomplete ? inspected.filter((route) => route.state !== 'active') : inspected)
-  const nodes = [...new Set(edges.flatMap((edge) => [edge.left, edge.right]))].sort((left, right) =>
+  const edges = directedEdges(incomplete ? inspected.filter((route) => route.state !== 'active') : inspected)
+  const nodes = [...new Set(edges.flatMap((edge) => [edge.exporter, edge.importer]))].sort((left, right) =>
     left.localeCompare(right)
   )
   const widest = Math.max(0, ...nodes.map(halfWidthOf))
@@ -128,23 +149,25 @@ export const renderEstateRoutesDiagram = (inspected: readonly EstateRouteInspect
   const title = 'Knowledge Islands trade routes — registered estate'
 
   const drawnEdges = edges.map((edge) => {
-    const from = placed.get(edge.left) as PlacedNode
-    const to = placed.get(edge.right) as PlacedNode
-    const [x1, y1] = boundary(from, to.x, to.y)
-    const [x2, y2] = boundary(to, from.x, from.y)
-    const key = kindKey(edge)
-    const colour = STROKE[key]
-    const dashed = [...edge.states].some((state) => state !== 'active')
-    const kinds = [...edge.kinds].sort().join(' + ')
+    const from = placed.get(edge.exporter) as PlacedNode
+    const to = placed.get(edge.importer) as PlacedNode
+    const [baseX1, baseY1] = boundary(from, to.x, to.y)
+    const [baseX2, baseY2] = boundary(to, from.x, from.y)
+    const span = Math.hypot(baseX2 - baseX1, baseY2 - baseY1)
+    const shiftX = ((baseY1 - baseY2) / span) * edge.offset
+    const shiftY = ((baseX2 - baseX1) / span) * edge.offset
+    const x1 = baseX1 + shiftX
+    const y1 = baseY1 + shiftY
+    const x2 = baseX2 + shiftX
+    const y2 = baseY2 + shiftY
+    const kinds = [...edge.kinds].sort()
     const states = [...edge.states].sort().join(', ')
-    const arrows = `${edge.forward ? ` marker-end="url(#arrow-end-${key})"` : ''}${edge.reverse ? ` marker-start="url(#arrow-start-${key})"` : ''}`
-    const midX = (x1 + x2) / 2
-    const midY = (y1 + y2) / 2
-    const boxWidth = kinds.length * CHARACTER_WIDTH + 10
+    const dashed = [...edge.states].some((state) => state !== 'active')
     return [
-      `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${colour}" stroke-width="2"${dashed ? ' stroke-dasharray="6 4"' : ''}${arrows}><title>${edge.left} ${edge.forward && edge.reverse ? '&#8596;' : edge.forward ? '&#8594;' : '&#8592;'} ${edge.right} · ${kinds} · ${states}</title></line>`,
-      `<rect x="${round(midX - boxWidth / 2)}" y="${round(midY - LABEL_HEIGHT / 2)}" width="${round(boxWidth)}" height="${LABEL_HEIGHT}" rx="4" fill="${PAPER}" stroke="${colour}" stroke-width="0.5"/>`,
-      label(midX, midY, kinds, colour, 10)
+      `<g><title>${edge.exporter} &#8594; ${edge.importer} · ${kinds.join(' + ')} · ${states}</title>`,
+      line(x1, y1, x2, y2, dashed),
+      kindBadge(kinds, x1 + (x2 - x1) * edge.fraction, y1 + (y2 - y1) * edge.fraction),
+      '</g>'
     ].join('')
   })
 
@@ -154,34 +177,32 @@ export const renderEstateRoutesDiagram = (inspected: readonly EstateRouteInspect
   )
 
   const legend = [
-    { text: 'work', key: 'work', dashed: false, both: false },
-    { text: 'knowledge', key: 'knowledge', dashed: false, both: false },
-    { text: 'both kinds', key: 'both', dashed: false, both: false },
-    { text: 'active', key: 'muted', dashed: false, both: false },
-    { text: 'incomplete', key: 'muted', dashed: true, both: false },
-    { text: 'reciprocal', key: 'muted', dashed: false, both: true }
+    { text: 'work travels this way', kinds: ['work'], dashed: false, paired: false },
+    { text: 'knowledge travels this way', kinds: ['knowledge'], dashed: false, paired: false },
+    { text: 'both kinds travel this way', kinds: ['knowledge', 'work'], dashed: false, paired: false },
+    { text: 'active', kinds: [], dashed: false, paired: false },
+    { text: 'awaiting reciprocity', kinds: [], dashed: true, paired: false },
+    { text: 'reciprocated, drawn side by side', kinds: [], dashed: false, paired: true }
   ].map((entry, index) => {
-    const x = MARGIN + (index % 3) * 200
-    const y = legendTop + 16 + Math.floor(index / 3) * 28
-    return `${legendSample(x, y, entry.key as StrokeKey, entry.dashed, entry.both)}<text x="${x + 38}" y="${y}" dominant-baseline="middle" font-family="${FONT}" font-size="11" fill="${INK}">${entry.text}</text>`
+    const x = MARGIN + (index % 3) * 230
+    const y = legendTop + 16 + Math.floor(index / 3) * 30
+    const sample = entry.paired
+      ? `${line(x, y - 4, x + 44, y - 4, false)}${line(x + 44, y + 4, x, y + 4, false)}`
+      : `${line(x, y, x + 44, y, entry.dashed)}${entry.kinds.length ? kindBadge(entry.kinds, x + 22, y) : ''}`
+    return `${sample}<text x="${x + 52}" y="${y}" dominant-baseline="middle" font-family="${FONT}" font-size="11" fill="${INK}">${entry.text}</text>`
   })
-
-  const markers = (Object.keys(STROKE) as readonly StrokeKey[]).flatMap((key) => [
-    marker(`arrow-end-${key}`, STROKE[key], false),
-    marker(`arrow-start-${key}`, STROKE[key], true)
-  ])
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img">`,
     `<title>${title}</title>`,
     `<desc>${nodes.length} repositories, ${edges.length} routes, ${scope}.</desc>`,
     `<rect width="${width}" height="${height}" fill="${PAPER}"/>`,
-    `<defs>${markers.join('')}</defs>`,
+    `<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="${EDGE}"/></marker></defs>`,
     label(width / 2, 28, title, INK, 15),
-    label(width / 2, 48, `${nodes.length} repositories · ${edges.length} routes · ${scope}`, STROKE.muted, 11),
+    label(width / 2, 48, `${nodes.length} repositories · ${edges.length} routes · ${scope}`, MUTED, 11),
     ...drawnEdges,
     ...drawnNodes,
-    `<line x1="${MARGIN}" y1="${round(legendTop - 8)}" x2="${round(width - MARGIN)}" y2="${round(legendTop - 8)}" stroke="#e5e7eb" stroke-width="1"/>`,
+    `<line x1="${MARGIN}" y1="${round(legendTop - 8)}" x2="${round(width - MARGIN)}" y2="${round(legendTop - 8)}" stroke="${RULE}" stroke-width="1"/>`,
     ...legend,
     '</svg>',
     ''

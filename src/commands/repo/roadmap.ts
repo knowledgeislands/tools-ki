@@ -13,7 +13,7 @@ import {
   type WorkItemHorizon,
   workItemHorizons
 } from '../../core/work-items.ts'
-import { displayTradePeer } from '../trade/shared.ts'
+import { displayTradePeer, lifecycleStatus } from '../trade/shared.ts'
 
 interface RoadmapOptions {
   readonly horizon?: string
@@ -74,11 +74,8 @@ const renderTradeContext = (
       ...selected.map((trade, tradeIndex) => {
         const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
         const peer = `${direction === 'outbound' ? '→' : '←'} ${displayTradePeer(trade.record, direction)}`
-        const lifecycle = tradeLifecycle(trade, estate)
-        const statuses = [lifecycle.publicationStatus, lifecycle.deliveryStatus, lifecycle.decisionStatus]
-          .filter(Boolean)
-          .join(' · ')
-        return `${itemPrefix}${tradeIndex === selected.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${peer} [${statuses}] ${trade.record.title}`
+        const status = lifecycleStatus(tradeLifecycle(trade, estate))
+        return `${itemPrefix}${tradeIndex === selected.length - 1 ? '╰─' : '├─'} ${glyph} ${trade.record.id} ${peer} [${status}] ${trade.record.title}`
       })
     ]
   })

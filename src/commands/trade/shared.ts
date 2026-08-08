@@ -8,6 +8,7 @@ import {
   type RouteDirection,
   type RouteState,
   type TradeKind,
+  type TradeLifecycle,
   type TradeRecord
 } from '../../core/trade-core.ts'
 
@@ -43,6 +44,14 @@ export const requireText = (value: string | undefined, option: string): string =
   if (!value?.trim()) throw grammarError(`${option} is required and must be non-empty`)
   return value
 }
+
+// The lifecycle stages are monotonic — a decision implies delivery, and delivery implies
+// publication — so the furthest-advanced stage already states the ones behind it.
+export const lifecycleStatus = (lifecycle: TradeLifecycle): string =>
+  lifecycle.decisionStatus ??
+  (lifecycle.deliveryStatus === 'not-deliverable' && lifecycle.publicationStatus === 'preparing'
+    ? 'preparing'
+    : lifecycle.deliveryStatus)
 
 export const routeState = (state: RouteState): string =>
   ({
