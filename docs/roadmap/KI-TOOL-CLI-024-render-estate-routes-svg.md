@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-024
 title: Render estate routes SVG
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -31,16 +31,18 @@ This item does not change route declaration, route semantics, or the `.ki-config
 
 Route state is computed from the peer's reciprocal declaration rather than stored, so `active`, `awaiting-receiver`, `awaiting-sender`, and `ambiguous-repository` are all available per edge and are the natural candidates for visual distinction.
 
-The renderer is now delivered. `ki trade routes list --estate --svg` writes the diagram to standard output and `--svg <path>` writes it to a file; the flag is rejected without `--estate`, since there is no local-only diagram to draw. `src/core/route-diagram.ts` collapses every declaration onto the unordered repository pair it connects, so a pair trading both ways is drawn as one double-headed edge and a pair trading one way carries a single arrowhead. Trade kind selects the stroke colour, an unreciprocated state dashes the line, and each edge carries a `<title>` naming its endpoints, direction, kinds, and states. Identities are constrained to `[a-z0-9._-]` and `/`, so no XML escaping pass is needed and none was added.
+The renderer is delivered. `ki trade routes list --estate --svg` writes the diagram to standard output and `--svg <path>` writes it to a file; the flag is rejected without `--estate`, since there is no local-only diagram to draw.
 
-Against the real registered estate the eleven listed declarations collapse to eight edges over five repositories, and the file rasterises legibly with `rsvg-convert`.
+`src/core/route-diagram.ts` collapses declarations onto the direction they run rather than the pair they connect, so each direction is its own edge and a reciprocated pair runs side by side, offset to either side of the centre line. Trade kind rides each edge as an icon — a square for work, a diamond for knowledge, drawn as SVG shapes rather than font glyphs so the document carries no glyph-coverage assumption — which leaves the line itself free to carry state alone, solid for active and dashed for awaiting reciprocity. Each edge carries a `<title>` naming its endpoints, direction, kinds, and states. Identities are constrained to `[a-z0-9._-]` and `/`, so no XML escaping pass is needed and none was added.
+
+Against the real registered estate the diagram draws all eleven declared routes over five repositories, matching `ki trade routes list --estate` exactly, and rasterises legibly with `rsvg-convert`.
 
 ## Steps
 
 - [x] Decide the command surface, most likely a flag on the existing estate listing that writes SVG to a path or to standard output, so the textual form stays the default.
 - [x] Collapse reciprocal declarations into one logical edge per repository pair and kind before layout, retaining direction and state.
 - [x] Choose a layout that stays legible at estate scale without a general graph engine; a circular or layered arrangement is likely sufficient for the tens of repositories a realistic estate holds.
-- [x] Distinguish trade kind and route state visually, and render an edge that is reciprocal differently from a one-way edge rather than drawing two arrows.
+- [x] Distinguish trade kind and route state visually, and render a reciprocated pair differently from a one-way edge. The first attempt collapsed a reciprocated pair onto one double-headed line; that was replaced on review with two edges drawn side by side, because the collapsed form could not express a pair that reciprocates one trade kind and not the other.
 - [x] Emit self-contained SVG with no external font, script, or stylesheet reference, so the file renders identically wherever it is opened.
 - [x] Include a legend, and label the diagram with the estate it describes.
 - [x] Cover the renderer through the CLI seam with a deterministic estate fixture, asserting structure rather than exact geometry so the test does not ossify the layout.
@@ -56,7 +58,7 @@ Against the real registered estate the eleven listed declarations collapse to ei
 
 ## Verify
 
-Generate the diagram for the real registered estate and confirm every route in `ki trade routes list --estate` appears exactly once, that reciprocal pairs are drawn as one edge, and that a deliberately one-sided declaration renders visibly differently from an active one.
+Generate the diagram for the real registered estate and confirm every route in `ki trade routes list --estate` appears exactly once, that a reciprocated pair is drawn as two edges side by side rather than one double-headed line, and that a deliberately one-sided declaration renders visibly differently from an active one.
 
 Confirm the output is valid standalone SVG by opening it directly in a browser with no network access, which also proves no external font or stylesheet crept in.
 

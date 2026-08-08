@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-028
 title: Make trade payloads survive receiver formatting
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: null

@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-027
 title: Resolve blocking-item progress limit
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: null
