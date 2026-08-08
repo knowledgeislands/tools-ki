@@ -14,6 +14,7 @@ import {
   submitTrade,
   tradeLifecycle
 } from '../../core/trade-core.ts'
+import { renderTree } from '../../core/tree-rendering.ts'
 import {
   count,
   displayTradePeer,
@@ -54,29 +55,34 @@ const renderTradeList = async (
   trades: Awaited<ReturnType<typeof locateTrades>>,
   estate: Awaited<ReturnType<typeof locateTrades>>
 ): Promise<string> => {
-  const lines = ['╭─ KI TRADES', `│  ✦ ${count(trades.length, 'trade')}`, '├─ results']
-  if (!trades.length) lines.push('│  ╰─ trades: none')
-  else {
-    for (const [index, trade] of trades.entries()) {
-      const lifecycle = await tradeLifecycle(trade, estate)
-      const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
-      const peer = `${glyph} ${trade.direction === 'inbound' ? '←' : '→'} ${displayTradePeer(trade.record, trade.direction)}`
-      const statuses = [
-        lifecycleStatus(lifecycle),
-        lifecycle.releaseEligible ? 'release eligible' : undefined,
-        lifecycle.pruneEligible ? 'prune eligible' : undefined
-      ]
-        .filter(Boolean)
-        .join(' · ')
-      lines.push(
-        `│  ${index === trades.length - 1 ? '╰─' : '├─'} ${trade.record.id} ${directionLabel[trade.direction]} ${peer} [${statuses}] [${trade.record.observation}] ${trade.record.title}`
+  const results = trades.length
+    ? await Promise.all(
+        trades.map(async (trade) => {
+          const lifecycle = await tradeLifecycle(trade, estate)
+          const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
+          const peer = `${glyph} ${trade.direction === 'inbound' ? '←' : '→'} ${displayTradePeer(trade.record, trade.direction)}`
+          const statuses = [
+            lifecycleStatus(lifecycle),
+            lifecycle.releaseEligible ? 'release eligible' : undefined,
+            lifecycle.pruneEligible ? 'prune eligible' : undefined
+          ]
+            .filter(Boolean)
+            .join(' · ')
+          return {
+            label: `${trade.record.id} ${directionLabel[trade.direction]} ${peer} [${statuses}] [${trade.record.observation}] ${trade.record.title}`
+          }
+        })
       )
-    }
-  }
-  lines.push(
-    `╰─ summary: TRADES=${trades.length} PREPARATIONS=${trades.filter((trade) => trade.direction === 'preparation').length} IMPORTS=${trades.filter((trade) => trade.direction === 'inbound').length} EXPORTS=${trades.filter((trade) => trade.direction === 'outbound').length}`
-  )
-  return lines.join('\n')
+    : [{ label: 'trades: none' }]
+  return renderTree({
+    title: 'KI TRADES',
+    entries: [
+      { label: 'results', children: results },
+      {
+        label: `summary: TRADES=${trades.length} PREPARATIONS=${trades.filter((trade) => trade.direction === 'preparation').length} IMPORTS=${trades.filter((trade) => trade.direction === 'inbound').length} EXPORTS=${trades.filter((trade) => trade.direction === 'outbound').length}`
+      }
+    ]
+  }).join('\n')
 }
 
 const renderPreview = (label: string, records: readonly { readonly id: string; readonly title: string }[]): string => {
