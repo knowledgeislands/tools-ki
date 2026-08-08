@@ -7,8 +7,11 @@ import { acquireVerifiedArchive, extractArchive, type Fetcher } from './acquire.
 import { KiError } from './errors.ts'
 import {
   canonicalHarnessIdentifier,
+  discoverInstallOrphans,
   type InstalledHarness,
+  type InstallOrphan,
   inspectHarnessRoot,
+  parkedPayloadEntry,
   readInstalledHarness
 } from './harness.ts'
 
@@ -246,7 +249,7 @@ export const installHarness = async (
       await rename(staging, destination)
       return { installed: true, replaced: false, archiveSha256: release.sha256 }
     }
-    const previous = join(ownerDirectory, `.replace-${randomUUID()}`)
+    const previous = join(ownerDirectory, parkedPayloadEntry(randomUUID(), name))
     await rename(destination, previous)
     /* v8 ignore start -- Recovery needs a filesystem failure after the old verified payload is parked; no CLI input can cause it. */
     try {
@@ -262,6 +265,45 @@ export const installHarness = async (
     await rm(staging, { recursive: true, force: true })
     throw error
   }
+}
+
+export interface OrphanRecovery {
+  readonly orphan: InstallOrphan
+  readonly action: 'restore' | 'remove' | 'refuse'
+  readonly detail: string
+}
+
+// Decides what an orphan deserves without doing it, so a dry run and a real run agree by
+// construction. A parked payload is only ever removed once its destination is present again:
+// while the destination is absent it is the sole verified copy of that harness.
+const plannedRecovery = async (dataDirectory: string, orphan: InstallOrphan): Promise<OrphanRecovery> => {
+  if (orphan.kind === 'staging')
+    return { orphan, action: 'remove', detail: 'unpromoted extraction from an interrupted install' }
+  if (!orphan.destination)
+    return { orphan, action: 'refuse', detail: 'parked payload does not name the harness it replaced' }
+  const destination = join(dataDirectory, 'harnesses', orphan.owner, orphan.destination)
+  const present = await lstat(destination).catch(() => undefined)
+  return present
+    ? { orphan, action: 'remove', detail: `${orphan.owner}/${orphan.destination} is installed` }
+    : { orphan, action: 'restore', detail: `restores ${orphan.owner}/${orphan.destination}` }
+}
+
+export const planOrphanRecovery = async (dataDirectory: string): Promise<readonly OrphanRecovery[]> => {
+  const orphans = await discoverInstallOrphans(dataDirectory)
+  return Promise.all(orphans.map((orphan) => plannedRecovery(dataDirectory, orphan)))
+}
+
+export const recoverInstallOrphans = async (dataDirectory: string): Promise<readonly OrphanRecovery[]> => {
+  const planned = await planOrphanRecovery(dataDirectory)
+  for (const recovery of planned) {
+    if (recovery.action === 'restore')
+      await rename(
+        recovery.orphan.path,
+        join(dataDirectory, 'harnesses', recovery.orphan.owner, recovery.orphan.destination as string)
+      )
+    if (recovery.action === 'remove') await rm(recovery.orphan.path, { recursive: true, force: true })
+  }
+  return planned
 }
 
 const canonicalHarnessDirectory = (dataDirectory: string): string =>

@@ -12,7 +12,7 @@ import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness.ts'
-import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
+import { canonicalHarnessDevelopmentEnabled, planOrphanRecovery, recoverInstallOrphans } from '../../core/registry.ts'
 
 const managedSkillName = (identity: string): string => identity.slice(identity.indexOf(':') + 1)
 
@@ -32,6 +32,21 @@ export const createRepairCommand = (context: KiContext): Command =>
       const configuration = await inspectUserConfiguration(context.paths.config)
       const results: string[] = []
       let failed = false
+
+      // Interrupted-install residue is recovered before anything reads the harness tree, so a
+      // parked payload is back in place by the time skill projections are resolved against it.
+      const orphans = dryRun
+        ? await planOrphanRecovery(context.paths.data)
+        : await recoverInstallOrphans(context.paths.data)
+      for (const recovery of orphans) {
+        if (recovery.action === 'refuse') {
+          results.push(`✗ Install residue ${recovery.orphan.path}: ${recovery.detail}`)
+          failed = true
+          continue
+        }
+        const verb = recovery.action === 'restore' ? 'restore' : 'remove'
+        results.push(`${dryRun ? `would ${verb}` : `${verb}d`} ${recovery.orphan.path}: ${recovery.detail}`)
+      }
 
       if (configuration.state === 'missing') {
         results.push('✗ Configuration: missing; run ki bootstrap')

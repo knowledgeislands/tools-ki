@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-035
 title: Recover interrupted install orphans
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: [KI-TOOL-CLI-010]
 blocked-by: []
-baseline-ref: null
+baseline-ref: 9fdaf99683c21fbcc79dde6f0ec05fdd8bcf917e
 ---
 
 ## Goal
@@ -51,12 +51,12 @@ Whether recovery happens automatically on discovery or only under an explicit co
 
 ## Steps
 
-- [ ] Confirm which of the fourteen `discoverInstalledHarnesses` call sites actually fail with an orphan present, and record the ones that do not.
-- [ ] Settle the open decision below on automatic versus explicit recovery.
-- [ ] Distinguish this repository's own staging names from a foreign unsafe entry at the point of discovery.
-- [ ] Recover a `.replace-` orphan by restoring the parked payload when its destination is absent, never by deleting it.
-- [ ] Report an unrecoverable entry with its path and the action available, rather than the owner alone.
-- [ ] Cover both orphan families through the CLI, including the restore path and a genuinely foreign entry that must still be refused.
+- [x] Confirm which of the fourteen `discoverInstalledHarnesses` call sites actually fail with an orphan present, and record the ones that do not.
+- [x] Settle the open decision below on automatic versus explicit recovery.
+- [x] Distinguish this repository's own staging names from a foreign unsafe entry at the point of discovery.
+- [x] Recover a `.replace-` orphan by restoring the parked payload when its destination is absent, never by deleting it.
+- [x] Report an unrecoverable entry with its path and the action available, rather than the owner alone.
+- [x] Cover both orphan families through the CLI, including the restore path and a genuinely foreign entry that must still be refused.
 
 ## Files touched
 
@@ -72,6 +72,20 @@ Whether recovery happens automatically on discovery or only under an explicit co
 ## Dependencies / blocks
 
 Nothing blocks this item. It blocks `KI-TOOL-CLI-010` only in sequence, not in substance: `010` designs the general ownership record, and this item should land first so that design is informed by a concrete recovered family rather than a hypothetical one.
+
+## Review
+
+Implemented as the asymmetric approach proposed below, confirmed before starting. 557 tests, 100% on all four metrics, `tsc --noEmit` clean, `ki repo audit` PASS=14.
+
+**Discovery now distinguishes this repository's own residue from an entry it has no business touching.** `discoverInstalledHarnesses` skips a `.install-` or `.replace-` entry and continues; anything else still throws, and the diagnostic now carries the offending path rather than the owner alone. Because the fix sits at that one choke point, all fourteen call sites are covered by construction — the two verified failing before the change (`ki harness list`, `ki manage list`) were re-checked, and the remaining twelve are fixed by the same line rather than individually.
+
+**The parked-payload naming had to change, and the reason is the substance of this item.** A `.replace-<uuid>` directory could not be restored, because a harness payload does not record its own identity: `inspectHarnessRoot` is _told_ which harness it is reading. The parked name is now `.replace-<uuid>-<name>`, carrying the destination it belongs to. This is the concrete answer to what `KI-TOOL-CLI-010` asks in general — the minimum an ownership record must express is whatever recovery needs, and here that turned out to be the destination, which nothing else on disk knew.
+
+**An entry that does not name a destination is refused, not guessed.** It is reported with its path, `ki manage repair` exits non-zero, and the directory is left alone. Restoring it would mean picking a destination on the operator's behalf, and it may hold the only verified copy of whatever it parked.
+
+**Recovery is planned and then executed**, so a dry run and a real run cannot disagree: `planOrphanRecovery` decides `restore`/`remove`/`refuse` and `recoverInstallOrphans` performs exactly that plan. A parked payload is removed only once its destination is present again; while the destination is absent it is restored, never deleted. `ki manage cleanup` reports the plan and writes nothing, so every read path stays pure.
+
+Both commands run their residue pass ahead of the configuration branch, so a broken installation is still repairable — including a harness tree carrying an owner entry that discovery itself would refuse.
 
 ## Discussion
 

@@ -190,6 +190,41 @@ export const readInstalledHarness = async (dataDirectory: string, identifier: st
   return inspectHarnessRoot(root, identifier)
 }
 
+// An install extracts into `.install-<random>` and parks the payload it replaces in
+// `.replace-<uuid>-<name>`, both alongside the destination in the owner directory. A process
+// killed between creating one and promoting it leaves the directory behind, so discovery has to
+// tell this repository's own interrupted work apart from an entry it has no business touching.
+export const installStagingPrefix = '.install-'
+export const parkedPayloadPrefix = '.replace-'
+
+// The parked name carries the destination it must be restored to, because a payload does not
+// record its own identity — `inspectHarnessRoot` is told which harness it is reading.
+export const parkedPayloadEntry = (uuid: string, name: string): string => `${parkedPayloadPrefix}${uuid}-${name}`
+
+const parkedDestination = (entry: string): string | undefined => {
+  const rest = entry.slice(parkedPayloadPrefix.length)
+  const name = rest.slice(37)
+  return rest.length > 37 && harnessComponent.test(name) ? name : undefined
+}
+
+export interface InstallOrphan {
+  // `staging` holds an unpromoted extraction and is worth nothing; `parked` may hold the only
+  // verified copy of the payload it was displacing.
+  readonly kind: 'staging' | 'parked'
+  readonly owner: string
+  readonly entry: string
+  readonly path: string
+  // The harness name a parked payload restores to, absent when the entry does not carry one.
+  readonly destination?: string
+}
+
+const installOrphan = (owner: string, entry: string, path: string): InstallOrphan | undefined => {
+  if (entry.startsWith(installStagingPrefix)) return { kind: 'staging', owner, entry, path }
+  if (!entry.startsWith(parkedPayloadPrefix)) return undefined
+  const destination = parkedDestination(entry)
+  return { kind: 'parked', owner, entry, path, ...(destination ? { destination } : {}) }
+}
+
 export const discoverInstalledHarnesses = async (dataDirectory: string): Promise<readonly InstalledHarness[]> => {
   const harnesses = join(dataDirectory, 'harnesses')
   const state = await lstat(harnesses).catch(() => undefined)
@@ -199,15 +234,40 @@ export const discoverInstalledHarnesses = async (dataDirectory: string): Promise
   const identifiers: string[] = []
   for (const owner of owners) {
     if (!owner.isDirectory() || owner.isSymbolicLink() || !harnessComponent.test(owner.name)) {
-      throw new KiError('installed harnesses directory contains an unsafe owner entry', 1)
+      throw new KiError(`installed harnesses directory contains an unsafe owner entry ${owner.name}`, 1)
     }
     const names = await readdir(join(physicalHarnesses, owner.name), { withFileTypes: true })
     for (const name of names) {
+      // An orphan is reported by `ki manage cleanup` and recovered by `ki manage repair`; it must
+      // not fail the read paths that merely wanted to list what is installed.
+      if (installOrphan(owner.name, name.name, join(physicalHarnesses, owner.name, name.name))) continue
       if (!name.isDirectory() || name.isSymbolicLink() || !harnessComponent.test(name.name)) {
-        throw new KiError(`installed harness ${owner.name} contains an unsafe name entry`, 1)
+        throw new KiError(
+          `installed harness ${owner.name} contains an unsafe name entry ${join(physicalHarnesses, owner.name, name.name)}`,
+          1
+        )
       }
       identifiers.push(`${owner.name}/${name.name}`)
     }
   }
   return Promise.all(identifiers.sort().map((identifier) => readInstalledHarness(dataDirectory, identifier)))
+}
+
+// Reports interrupted-install residue without touching it. Recovery is `recoverInstallOrphans`,
+// reached only from a command the operator invoked for that purpose.
+export const discoverInstallOrphans = async (dataDirectory: string): Promise<readonly InstallOrphan[]> => {
+  const harnesses = join(dataDirectory, 'harnesses')
+  if (!(await lstat(harnesses).catch(() => undefined))) return []
+  const physicalHarnesses = await physicalDirectory(harnesses, 'installed harnesses directory')
+  const owners = await readdir(physicalHarnesses, { withFileTypes: true })
+  const orphans: InstallOrphan[] = []
+  for (const owner of owners) {
+    if (!owner.isDirectory() || owner.isSymbolicLink() || !harnessComponent.test(owner.name)) continue
+    const ownerDirectory = join(physicalHarnesses, owner.name)
+    for (const name of await readdir(ownerDirectory, { withFileTypes: true })) {
+      const orphan = installOrphan(owner.name, name.name, join(ownerDirectory, name.name))
+      if (orphan) orphans.push(orphan)
+    }
+  }
+  return orphans.sort((left, right) => left.path.localeCompare(right.path))
 }
