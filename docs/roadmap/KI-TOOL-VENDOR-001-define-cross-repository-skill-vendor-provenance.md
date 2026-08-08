@@ -5,7 +5,7 @@ theme: cross-repository-vendoring
 horizon: now
 status: draft
 blocks: []
-blocked-by: [KI-TOOL-CLI-025]
+blocked-by: []
 baseline-ref: null
 transferred-from: knowledgeislands/ki-agentic-harness:foundation-tooling
 ---
@@ -24,11 +24,12 @@ Do not weaken the rule that only a provider in the same physical harness checkou
 
 ## Current state
 
-Nothing implements cross-harness vendoring today. `ki` installs skills from a single acquired harness and links a provider only within the same physical harness checkout; there is no notion of an external provider, no place to record its identity or version evidence, and no acquisition path that does not depend on a nearby checkout. `KI-TOOL-CLI-025` introduces the first structure this contract could attach to, a declared `[repo] harnesses` list in `.ki-config.toml`.
+Nothing implements cross-harness vendoring today. `ki` installs skills from a single acquired harness and links a provider only within the same physical harness checkout; there is no notion of an external provider, no place to record its identity or version evidence, and no acquisition path that does not depend on a nearby checkout. `KI-TOOL-CLI-025` introduced the first structure this contract can attach to — a declared `[repo] harnesses` list in `.ki-config.toml` — and has been delivered, accepted, and pruned.
 
 ## Steps
 
-- [ ] Wait for `KI-TOOL-CLI-025` to settle the declared harness list, then decide what a provenance entry adds to it: provider identity, immutable version or digest evidence, declared capability surface, and acquisition path.
+- [x] Wait for the declared harness list to settle. `KI-TOOL-CLI-025` delivered it: `[repo] harnesses` is an array of `<owner>/<name>` identifiers, and a bare skill name binds to exactly one of them.
+- [ ] Decide what a provenance entry adds to that list: provider identity, immutable version or digest evidence, declared capability surface, and acquisition path.
 - [ ] Choose the publication form the first provider supports — archive, registry entry, or signed release — and specify how the receiver records immutable evidence of what it acquired.
 - [ ] Specify validation of an imported module's declared contract before exposure, the conflict policy for two providers offering the same capability, and the upgrade and removal story that preserves a working installed version on failure.
 - [ ] Specify the diagnostics for an offline or unavailable provider, an incompatible version, and a capability conflict, so none of them falls back to a local checkout.
@@ -44,7 +45,9 @@ The contract is verified when a single provider-to-receiver path runs end to end
 
 ## Dependencies / blocks
 
-Blocked by `KI-TOOL-CLI-025`, which introduces the `[repo] harnesses` list. That list is the natural anchor for a provenance contract: it is where a repository names the harnesses it draws skills from, so it is where a provider's identity, version or digest evidence, and acquisition path would be recorded. Designing provenance before the declaration it must attach to would design it against a shape that is about to change.
+Previously blocked by `KI-TOOL-CLI-025`, which introduced the `[repo] harnesses` list. That item was delivered, accepted, and pruned on 2026-08-09, so nothing now blocks this one.
+
+That list is the anchor for a provenance contract: it is where a repository names the harnesses it draws skills from, so it is where a provider's identity, version or digest evidence, and acquisition path would be recorded. Designing provenance before the declaration it must attach to would have designed it against a shape that was about to change — which is why the block was held rather than worked around. Resolution now binds a bare skill name against that declared list rather than against whichever harnesses happen to be installed, so a provenance entry has a stable, version-controlled subject to attach to.
 
 ## Discussion
 
