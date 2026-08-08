@@ -58,6 +58,17 @@ describe('[ki agora]', () => {
     })
   })
 
+  test('collapses repeated whitespace in rendered tree labels', async () => {
+    const box = await sandbox()
+    await box.config.write('ki/agoras/spaced.ki-agora', 'name = "Example  team"\ntool = "zed"\n')
+
+    expect(await box.run('ki agora show spaced')).toEqual({
+      exitCode: 0,
+      output:
+        '╭─ KI AGORA\n├─ spaced\n│  ├─ name: Example team\n│  ╰─ tool: zed\n├─ projects (0)\n│  ╰─ none\n╰─ summary: PROJECTS=0\n'
+    })
+  })
+
   test('resolves explicit relative and absolute profile paths', async () => {
     const box = await sandbox()
     await box.project.write('relative.ki-agora', profile())
