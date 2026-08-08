@@ -17,7 +17,7 @@ const ICON_PITCH = 14
 const ICON_HEIGHT = 16
 const EDGE_GAP = 8
 /** Half the distance between the two lines of a reciprocated pair. */
-const EDGE_SEPARATION = 14
+const EDGE_SEPARATION = 11
 const FONT = 'monospace'
 const INK = '#111827'
 const EDGE = '#4b5563'
@@ -103,13 +103,23 @@ const kindIcon = (kind: string, x: number, y: number): string =>
     ? `<rect x="${round(x - 4)}" y="${round(y - 4)}" width="8" height="8" fill="${KIND_FILL.work}"/>`
     : `<path d="M ${round(x)} ${round(y - 5)} L ${round(x + 5)} ${round(y)} L ${round(x)} ${round(y + 5)} L ${round(x - 5)} ${round(y)} z" fill="${KIND_FILL.knowledge}"/>`
 
-/** Draws the kinds travelling one edge as a boxed row of icons centred on a point. */
-const kindBadge = (kinds: readonly string[], x: number, y: number): string => {
+/**
+ * Keeps a badge upright whichever way its edge runs: an angle and its reverse read the same, so
+ * the result stays within a quarter turn of horizontal and never renders upside down.
+ */
+const uprightAngle = (dx: number, dy: number): number => {
+  const degrees = (Math.atan2(dy, dx) * 180) / Math.PI
+  return ((((degrees + 90) % 180) + 180) % 180) - 90
+}
+
+/** Draws the kinds travelling one edge as a boxed row of icons laid out along it. */
+const kindBadge = (kinds: readonly string[], x: number, y: number, angle: number): string => {
   const width = kinds.length * ICON_PITCH + 6
-  return [
+  const contents = [
     `<rect x="${round(x - width / 2)}" y="${round(y - ICON_HEIGHT / 2)}" width="${round(width)}" height="${ICON_HEIGHT}" rx="4" fill="${PAPER}" stroke="${RULE}" stroke-width="1"/>`,
     ...kinds.map((kind, index) => kindIcon(kind, x - ((kinds.length - 1) * ICON_PITCH) / 2 + index * ICON_PITCH, y))
   ].join('')
+  return `<g transform="rotate(${round(angle)} ${round(x)} ${round(y)})">${contents}</g>`
 }
 
 const line = (x1: number, y1: number, x2: number, y2: number, dashed: boolean): string =>
@@ -166,7 +176,7 @@ export const renderEstateRoutesDiagram = (inspected: readonly EstateRouteInspect
     return [
       `<g><title>${edge.exporter} &#8594; ${edge.importer} · ${kinds.join(' + ')} · ${states}</title>`,
       line(x1, y1, x2, y2, dashed),
-      kindBadge(kinds, x1 + (x2 - x1) * edge.fraction, y1 + (y2 - y1) * edge.fraction),
+      kindBadge(kinds, x1 + (x2 - x1) * edge.fraction, y1 + (y2 - y1) * edge.fraction, uprightAngle(x2 - x1, y2 - y1)),
       '</g>'
     ].join('')
   })
@@ -188,7 +198,7 @@ export const renderEstateRoutesDiagram = (inspected: readonly EstateRouteInspect
     const y = legendTop + 16 + Math.floor(index / 3) * 30
     const sample = entry.paired
       ? `${line(x, y - 4, x + 44, y - 4, false)}${line(x + 44, y + 4, x, y + 4, false)}`
-      : `${line(x, y, x + 44, y, entry.dashed)}${entry.kinds.length ? kindBadge(entry.kinds, x + 22, y) : ''}`
+      : `${line(x, y, x + 44, y, entry.dashed)}${entry.kinds.length ? kindBadge(entry.kinds, x + 22, y, 0) : ''}`
     return `${sample}<text x="${x + 52}" y="${y}" dominant-baseline="middle" font-family="${FONT}" font-size="11" fill="${INK}">${entry.text}</text>`
   })
 
