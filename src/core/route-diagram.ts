@@ -17,7 +17,7 @@ const ICON_PITCH = 14
 const ICON_HEIGHT = 16
 const EDGE_GAP = 8
 /** Half the distance between the two lines of a reciprocated pair. */
-const EDGE_SEPARATION = 9
+const EDGE_SEPARATION = 14
 const FONT = 'monospace'
 const INK = '#111827'
 const EDGE = '#4b5563'
