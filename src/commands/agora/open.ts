@@ -27,7 +27,11 @@ export const createAgoraOpenCommand = (context: KiContext): Command =>
             )
         }
       } else if (options.target === 'vscode') {
-        const result = await context.runner('code', ['--new-window', ...profile.members.map((member) => member.root)], context.environment)
+        const result = await context.runner(
+          'code',
+          ['--new-window', ...profile.members.map((member) => member.root)],
+          context.environment
+        )
         if (result.exitCode)
           throw new KiError(
             `could not open Agora ${profile.id}: ${result.output.trim() || 'code failed'}`,
@@ -36,5 +40,7 @@ export const createAgoraOpenCommand = (context: KiContext): Command =>
       } else {
         throw new KiError('Agora open --target supports zed or vscode', 2)
       }
-      context.stdout.write(`ki agora open ${profile.id} --target ${options.target}: opened ${profile.members.length} repositories\n`)
+      context.stdout.write(
+        `ki agora open ${profile.id} --target ${options.target}: opened ${profile.members.length} repositories\n`
+      )
     })

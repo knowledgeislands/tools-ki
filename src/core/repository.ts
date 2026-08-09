@@ -14,33 +14,9 @@ export interface RepositoryLocation {
   readonly configuration: string
 }
 
-export type DirectRepositoryLocation =
-  | { readonly kind: 'none' }
-  | { readonly kind: 'invalid'; readonly root: string; readonly configuration: string; readonly error: string }
-  | { readonly kind: 'repository'; readonly root: string; readonly configuration: string }
-
 const isConfigurationFile = async (path: string): Promise<boolean> => {
   const state = await lstat(path).catch(() => undefined)
   return Boolean(state?.isFile() && !state.isSymbolicLink())
-}
-
-/**
- * Inspects only the working directory itself.  This deliberately does not use
- * repository discovery: diagnostics and repair must never walk ancestors,
- * expand an mGit container, or accept a symbolic declaration.
- */
-export const directRepositoryLocation = async (workingDirectory: string): Promise<DirectRepositoryLocation> => {
-  const root = await realpath(workingDirectory).catch(
-    /* v8 ignore next -- KiContext creates only from an existing physical working directory. */
-    () => resolve(workingDirectory)
-  )
-  const configuration = join(root, REPOSITORY_CONFIGURATION_FILE)
-  const state = await lstat(configuration).catch(() => undefined)
-  if (!state) return { kind: 'none' }
-  if (!state.isFile() || state.isSymbolicLink()) {
-    return { kind: 'invalid', root, configuration, error: '.ki-config.toml must be a regular file' }
-  }
-  return { kind: 'repository', root, configuration }
 }
 
 const isRegularFile = async (path: string): Promise<boolean> => {

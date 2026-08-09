@@ -85,7 +85,10 @@ const frontmatterSupportedRuntimes = (
     .map((runtime) => runtime.trim())
   if (runtimes.includes('codex')) throw new KiError(`${path} declares retired runtime codex; use chatgpt-codex`, 1)
   if (runtimes.some((runtime) => !runtime || !supportedRuntimes.includes(runtime as SupportedRuntime)))
-    throw new KiError(`${path} must declare ki-supported-runtimes using only claude-code, claude-desktop, or chatgpt-codex`, 1)
+    throw new KiError(
+      `${path} must declare ki-supported-runtimes using only claude-code, claude-desktop, or chatgpt-codex`,
+      1
+    )
   if (new Set(runtimes).size !== runtimes.length) throw new KiError(`${path} repeats a supported runtime`, 1)
   return runtimes as readonly SupportedRuntime[]
 }

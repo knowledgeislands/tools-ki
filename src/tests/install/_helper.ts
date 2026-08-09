@@ -53,7 +53,6 @@ export const installSandbox = async (): Promise<InstallSandbox> => {
     try {
       const result = await executeFile(command[0], command.slice(1), {
         cwd: repositoryRoot,
-        // biome-ignore lint/complexity/useLiteralKeys: NodeJS.ProcessEnv declares environment variables through an index signature.
         env: { PATH: process.env['PATH'], TMPDIR: process.env['TMPDIR'], HOME: home, ...environment, _: command[0] }
       })
       return { exitCode: 0, output: `${result.stdout}${result.stderr}` }

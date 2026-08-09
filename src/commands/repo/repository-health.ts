@@ -6,7 +6,6 @@ import { repositorySupportedRuntimes, runtimeForAgent } from '../../agents/runti
 import type { KiContext } from '../../context.ts'
 import { readRepositoryDeclaration } from '../../core/configuration.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
-import { directRepositoryLocation } from '../../core/repository.ts'
 import { type ResolvedSkill, resolveDeclaredSkills } from '../../core/resolution.ts'
 
 type Health = 'healthy' | 'repairable' | 'unrepairable'
@@ -107,12 +106,4 @@ export const inspectRepositoryHealth = async (
   } catch (error) {
     return failure(location.root, location.configuration, (error as Error).message)
   }
-}
-
-/** Inspect one direct physical declaration and every compatible repository projection. */
-export const inspectDirectRepositoryHealth = async (context: KiContext): Promise<RepositoryHealth | undefined> => {
-  const location = await directRepositoryLocation(context.workingDirectory)
-  if (location.kind === 'none') return undefined
-  if (location.kind === 'invalid') return failure(location.root, location.configuration, location.error)
-  return inspectRepositoryHealth(context, location)
 }

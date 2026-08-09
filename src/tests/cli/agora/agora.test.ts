@@ -130,6 +130,43 @@ describe('[ki agora]', () => {
       `zed -e ${roots['second']}`,
       `zed -e ${roots['first']}`
     ])
+    box.setRunner(async () => ({ exitCode: 9, output: 'code failed\n' }))
+    expect(await box.run('ki agora open estate --target vscode')).toEqual({
+      exitCode: 9,
+      output: 'ki: error: could not open Agora estate: code failed\n'
+    })
+    box.setRunner(async () => ({ exitCode: 10, output: '' }))
+    expect(await box.run('ki agora open estate --target vscode')).toEqual({
+      exitCode: 10,
+      output: 'ki: error: could not open Agora estate: code failed\n'
+    })
+    expect(await box.run('ki agora open estate --target terminal')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: Agora open --target supports zed or vscode\n'
+    })
+  })
+
+  test('sorts multiple declared Agoras by identifier', async () => {
+    const box = await sandbox()
+    await registered(box, [
+      {
+        path: 'zeta',
+        identity: 'https://github.com/example/zeta',
+        agora: home('zeta', 'Zeta', {}, 'https://github.com/example/zeta')
+      },
+      {
+        path: 'alpha',
+        identity: 'https://github.com/example/alpha',
+        agora: home('alpha', 'Alpha', {}, 'https://github.com/example/alpha')
+      }
+    ])
+
+    const listed = await box.run('ki agora list')
+
+    expect(listed.exitCode).toBe(0)
+    expect(listed.output).toContain('├─ alpha [declared] alpha (1 members)')
+    expect(listed.output).toContain('zeta [declared] zeta (1 members)')
+    expect(listed.output.indexOf('alpha [declared]')).toBeLessThan(listed.output.indexOf('zeta [declared]'))
   })
 
   test('rejects a local registry identity that disagrees with its repository declaration', async () => {
@@ -253,6 +290,11 @@ describe('[ki agora]', () => {
       output:
         '╭─ KI AGORAS\n├─ agoras (1)\n│  ╰─ estate [system] Registered estate (0 members)\n╰─ summary: AGORAS=1 MEMBERS=0\n'
     })
+    expect(await box.run('ki agora open estate --target zed')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: Agora estate has no members\n'
+    })
+    expect((await box.run('ki agora show estate')).output).toContain('├─ members (0)\n│  ╰─ none\n')
     await box.state.write(
       'ki/registry.toml',
       'schema = 1\n[repositories."relative"]\nrepository = "https://github.com/example/relative"\npath = "relative"\n'
@@ -309,10 +351,7 @@ describe('[ki agora]', () => {
       ['[skills.ki-agora.homes."Bad"]\npurpose = "x"\nmembers = {}\n', 'must use a stable lower-case'],
       ['[skills.ki-agora]\nhomes = { team = [] }\n', 'home declaration must be a table'],
       ['[skills.ki-agora.homes.team]\npurpose = ""\nmembers = {}\n', 'requires a non-empty purpose'],
-      [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = []\n',
-        'members must be a repository-to-role table'
-      ],
+      ['[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = []\n', 'members must be a repository-to-role table'],
       [
         '[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = { "https://example.com/nope" = "member" }\n',
         'must be a canonical HTTPS'
