@@ -231,6 +231,7 @@ const createProgressTracker = (
   let lastRunning: string | undefined
   let stages: readonly string[] = []
   let step: StepState | undefined
+  let loading: { readonly loaded: number; readonly total: number } | undefined
   const states = new Map<string, SkillProgressState>(skills.map((skill) => [skill.identity, PENDING_STATE]))
   const skillState = (identity: string): SkillProgressState => {
     const state = states.get(identity)
@@ -265,6 +266,7 @@ const createProgressTracker = (
   /** The trailing counters; the leading detail names the work, which matters more when width is short. */
   const counters = (): string => {
     const clock = elapsed(context.now() - started)
+    if (loading) return `${countsOf(loading.loaded, loading.total)} ${clock}`
     if (step?.count) return `${countsOf(step.count.completed, step.count.total)} ${clock}`
     // An unmeasured stage reports the clock alone: elapsed time is all that is honestly known.
     if (stageParts().length) return clock
@@ -273,6 +275,7 @@ const createProgressTracker = (
   }
   const summaryText = (detail: string): string => `${phase} ${detail} · ${counters()}`
   const barModel = (text: string): BarModel => {
+    if (loading) return { complete: loading.loaded, started: loading.loaded, total: loading.total, text }
     if (step?.count)
       return { complete: step.count.completed, started: step.count.completed, total: step.count.total, text }
     if (stageParts().length) return { complete: 0, started: 0, total: undefined, text }
@@ -330,10 +333,14 @@ const createProgressTracker = (
   }
   return {
     loading: (loaded, definitions) => {
-      total = undefined
-      render(`loading ${loaded}/${definitions} definitions`)
+      loading = { loaded, total: definitions }
+      render('loading definitions')
     },
     planned: (planned) => {
+      if (loading) {
+        render('loading definitions complete', true)
+        loading = undefined
+      }
       total = planned.reduce((count, skill) => count + skill.items.length, 0)
       for (const skill of planned)
         states.set(skill.skill.identity, {

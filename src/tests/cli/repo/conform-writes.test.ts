@@ -142,7 +142,9 @@ describe('[ki repo conform writes]', () => {
     expect(regular.output).toContain('├─ progress [')
     expect(narrow.output).toContain('\r\x1b[2K.')
     expect(invalidWidth.output).toContain('conform complete · 0/0 100% 0.0s')
-    // Conform drives the bar twice; the phase label is what tells the two sweeps apart.
+    // Loading is retained, then conform and verification are independently labelled rather than
+    // appearing to be one bar that restarted.
+    expect(regular.output).toContain('conform loading definitions complete')
     expect(regular.output).toContain('conform complete · 0/0 100% 0.0s')
     expect(regular.output).toContain('verify complete · 0/0 100% 0.0s')
     expect(multiple.output).toContain('│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra')

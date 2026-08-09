@@ -397,11 +397,13 @@ describe('[ki repo]', () => {
 │  ╰─ ✓ example/harness:ki-extra PASS · FAIL=0 WARN=0
 ╰─ summary: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `)
-      // Each item reports at both edges of its await, so a running frame precedes every completion.
+      // Loading is retained as its own completed row; each item then reports at both edges of its
+      // await, so a running frame precedes every completion.
       expect(frames.map(normaliseFrame)).toEqual([
-        '├─ progress [ audit loading 0/2 definitions · 0.0s ]',
-        '├─ progress [ audit loading 1/2 definitions · 0.0s ]',
-        '├─ progress [ audit loading 2/2 definitions · 0.0s ]',
+        '├─ progress [ audit loading definitions · 0/2 0% 0.0s ]',
+        '├─ progress [ audit loading definitions · 1/2 50% 0.0s ]',
+        '├─ progress [ audit loading definitions · 2/2 100% 0.0s ]',
+        '├─ progress [ audit loading definitions complete · 2/2 100% 0.0s ]',
         '├─ progress [ audit starting · 0/3 0% 0.0s ]',
         // A session that emits nothing still has its construction named: the host brackets the
         // span itself, so evidence gathering is never reported as a stalled item count.
@@ -420,7 +422,7 @@ describe('[ki repo]', () => {
       // The status text is drawn inside the bar, so every frame fills the terminal width.
       expect(frames.every((frame) => stripVTControlCharacters(frame).length === 80)).toBe(true)
       // The band is the item in flight: one of three items over a 68-column bar.
-      const band = (frames[6] as string).split(SGR_STARTED)[1]?.split(SGR_RESET)[0]
+      const band = (frames[7] as string).split(SGR_STARTED)[1]?.split(SGR_RESET)[0]
       expect(band).toHaveLength(22)
 
       const wide = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
