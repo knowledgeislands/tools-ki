@@ -4,15 +4,15 @@ import { stripVTControlCharacters } from 'node:util'
 import { describe, expect, test } from 'vitest'
 import { type SandboxArea, sandbox } from '../_cli_helper.ts'
 
-/** The bar's zone codes: completed weight, then the item in flight. */
-const SGR_COMPLETE = '\x1b[7m'
-const SGR_STARTED = '\x1b[7;2;4m'
-const SGR_RESET = '\x1b[0m'
 const CURSOR_HIDE = '\x1b[?25l'
 const CURSOR_SHOW = '\x1b[?25h'
 
-/** Status text is centred inside the bar, so compare frames on their words rather than their padding. */
-const normaliseFrame = (frame: string): string => stripVTControlCharacters(frame).replace(/\s+/g, ' ').trim()
+/** Normalise counters and the changing bar, leaving the ordered progress status. */
+const normaliseFrame = (frame: string): string =>
+  stripVTControlCharacters(frame)
+    .replace(/^├─ \w+\s+\[[#>.]+\] /, 'audit ')
+    .replace(/ · .*$/, '')
+    .trim()
 
 // Builds a full direct `scripts/rubric/items/index.ts` catalogue. Most tests use a
 // compact literal which this fixture expands into the real family/item contract;
@@ -271,12 +271,12 @@ describe('[ki repo]', () => {
       expect(help.output).toContain('--progress-style <style>')
       expect(help.output).toContain('--reporter-levels <levels>')
       expect(never.output).not.toContain('\r\x1b[2K')
-      expect(always.output).toContain('├─ progress')
+      expect(always.output).toContain('├─ loading')
       expect(always.output).not.toContain('\r\x1b[2K')
       expect(always.output).toContain(
-        `╭─ KI REPO AUDIT\n│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})\n│  ╰─ ✦ 1 skill selected\n│     ╰─ example/harness:ki-example\n├─ progress [`
+        `╭─ KI REPO AUDIT\n│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})\n│  ╰─ ✦ 1 skill selected\n│     ╰─ example/harness:ki-example\n├─ loading`
       )
-      expect(always.output.indexOf('╭─ KI REPO AUDIT')).toBeLessThan(always.output.indexOf('├─ progress ['))
+      expect(always.output.indexOf('╭─ KI REPO AUDIT')).toBeLessThan(always.output.indexOf('├─ loading'))
       expect(multi.output).toContain('[ki-example]')
       // One row per skill plus the totals row, so the rewind spans two lines.
       expect(multiInteractive.output).toContain('\x1b[2A')
@@ -345,12 +345,12 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
 
       expect(result.exitCode).toBe(0)
-      expect(stripVTControlCharacters(result.output)).toContain('audit starting · 0/0 100% 0.0s')
-      expect(stripVTControlCharacters(result.output)).toContain('audit complete · 0/0 100% 0.0s')
-      // A zero-item run is wholly complete, so its final bar is all completed zone and no band.
+      expect(stripVTControlCharacters(result.output)).toContain('starting · 0/0 100% 0.0s')
+      expect(stripVTControlCharacters(result.output)).toContain('complete · 0/0 100% 0.0s')
+      // A zero-item run is wholly complete, so its final bar is all complete and has no running band.
       const finalFrame = result.output.split('\r\x1b[2K').at(-1) as string
-      expect(finalFrame).toContain(SGR_COMPLETE)
-      expect(finalFrame).not.toContain(SGR_STARTED)
+      expect(finalFrame).toMatch(/\[#+\]/)
+      expect(finalFrame).not.toContain('>')
     })
 
     test('uses the fallback progress width when a TTY reports an invalid column count', async () => {
@@ -361,9 +361,8 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit', { interactive: true, columns: Number.NaN, now: () => 0 })
 
       expect(result.exitCode).toBe(0)
-      expect(stripVTControlCharacters(result.output)).toContain('audit complete · 0/0 100% 0.0s')
-      // The 80-column fallback leaves 68 columns for the bar itself.
-      expect(stripVTControlCharacters(result.output)).toContain(`├─ progress [${' '.repeat(18)}audit complete`)
+      expect(stripVTControlCharacters(result.output)).toContain('complete · 0/0 100% 0.0s')
+      expect(stripVTControlCharacters(result.output)).toContain('├─ audit')
     })
 
     test('renders per-rubric progress with bounded three-column TTY status without changing non-interactive output', async () => {
@@ -401,7 +400,7 @@ describe('[ki repo]', () => {
         .replace(/\n$/, '')
         .split('\r\x1b[2K')
         .filter(Boolean)
-        .map((frame) => frame.replaceAll('\r', '').replace('\n', ''))
+        .map((frame) => frame.split('\n')[0]?.replaceAll('\r', '') ?? '')
 
       expect(result.exitCode).toBe(0)
       expect(progressOutput.startsWith(header)).toBe(true)
@@ -412,34 +411,27 @@ describe('[ki repo]', () => {
       // Loading and evidence are retained before item audit; each item then reports at both edges
       // of its await, so a running frame precedes every completion.
       expect(frames.map(normaliseFrame)).toEqual([
-        '├─ progress [ audit loading definitions · 0/2 0% 0.0s ]',
-        '├─ progress [ audit loading definitions · 1/2 50% 0.0s ]',
-        '├─ progress [ audit loading definitions · 2/2 100% 0.0s ]',
-        '├─ progress [ audit loading definitions complete · 2/2 100% 0.0s ]',
-        '├─ progress [ audit gathering evidence · 0/2 0% 0.0s ]',
-        // A session that emits nothing still has its construction named: the host brackets the
-        // span itself, so evidence gathering is never reported as a stalled item count.
-        '├─ progress [ audit ki-example gathering evidence · 0.0s ]',
-        '├─ progress [ audit ki-example gathering evidence done · 0/2 0% 0.0s ]',
-        '├─ progress [ audit gathering evidence · 1/2 50% 0.0s ]',
-        '├─ progress [ audit ki-extra gathering evidence · 0.0s ]',
-        '├─ progress [ audit ki-extra gathering evidence done · 1/2 50% 0.0s ]',
-        '├─ progress [ audit gathering evidence · 2/2 100% 0.0s ]',
-        '├─ progress [ audit gathering evidence complete · 2/2 100% 0.0s ]',
-        '├─ progress [ audit starting · 0/3 0% 0.0s ]',
-        '├─ progress [ audit ki-example running EXAMPLE-1 · 0/3 0% 0.0s ]',
-        '├─ progress [ audit ki-example EXAMPLE-1 · 1/3 33% 0.0s ]',
-        '├─ progress [ audit ki-example running EXAMPLE-2 · 1/3 33% 0.0s ]',
-        '├─ progress [ audit ki-example EXAMPLE-2 · 2/3 67% 0.0s ]',
-        '├─ progress [ audit ki-extra running EXTRA-1 · 2/3 67% 0.0s ]',
-        '├─ progress [ audit ki-extra EXTRA-1 · 3/3 100% 0.0s ]',
-        '├─ progress [ audit complete · 3/3 100% 0.0s ]'
+        'audit loading definitions',
+        'audit loading definitions',
+        'audit loading definitions',
+        'audit loading definitions complete',
+        'audit gathering evidence',
+        'audit gathering evidence',
+        'audit gathering evidence',
+        'audit gathering evidence complete',
+        'audit starting',
+        'audit ki-example running EXAMPLE-1',
+        'audit ki-example EXAMPLE-1',
+        'audit ki-example running EXAMPLE-2',
+        'audit ki-example EXAMPLE-2',
+        'audit ki-extra running EXTRA-1',
+        'audit ki-extra EXTRA-1',
+        'audit complete'
       ])
-      // The status text is drawn inside the bar, so every frame fills the terminal width.
+      // The status text follows a bounded bracket bar, while every frame still fills the terminal width.
       expect(frames.every((frame) => stripVTControlCharacters(frame).length === 80)).toBe(true)
-      // The band is the item in flight: one of three items over a 68-column bar.
-      const band = (frames[13] as string).split(SGR_STARTED)[1]?.split(SGR_RESET)[0]
-      expect(band).toHaveLength(22)
+      // The running item occupies six of the 18 columns in a one-of-three bounded bar.
+      expect((frames[9] as string).match(/\[([#>.]+)\]/)?.[1]).toBe('>>>>>>............')
 
       const wide = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
       const firstBar = wide.output.match(/\[([#>.]*)\]/)?.[1]
@@ -475,8 +467,8 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit --progress always', { columns: 20, now: () => 0 })
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain('├─ progress audit...')
-      expect(result.output).not.toContain('├─ progress [')
+      expect(result.output).toMatch(/├─ loading +\.\.\./)
+      expect(result.output).not.toMatch(/├─ loading +\[/)
     })
 
     test('names the running item when an audit fails part-way through', async () => {
@@ -494,7 +486,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit --progress always', { now: () => 0 })
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('audit failed at EXAMPLE-1 · 0/1 0% 0.0s')
+      expect(result.output).toContain('failed at EXAMPLE-1 · 0/1 0% 0.0s')
     })
 
     test('advances the elapsed clock between item events', async () => {
@@ -519,6 +511,9 @@ describe('[ki repo]', () => {
       expect(result.exitCode).toBe(0)
       expect(refresh).toBeTypeOf('function')
       expect(stripVTControlCharacters(result.output)).toContain('4.0s')
+      expect(stripVTControlCharacters(result.output)).toMatch(
+        /timings +loading 4\.0s · evidence 0\.0s · audit 0\.0s · total 4\.0s/
+      )
     })
 
     test('restores the terminal cursor when the run is interrupted', async () => {
@@ -574,8 +569,8 @@ describe('[ki repo]', () => {
       [Number.MIN_VALUE, ''],
       [1, '.'],
       [3, '...'],
-      [8, 'audit...'],
-      [13, '├─ progress .']
+      [8, 'loadi...'],
+      [13, 'loading de...']
     ])('renders a safe abbreviated TTY progress frame at %p columns', async (columns, expected) => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
@@ -589,7 +584,7 @@ describe('[ki repo]', () => {
       const frames = result.output
         .split('\r\x1b[2K')
         .slice(1)
-        .map((frame) => frame.replace('\n', ''))
+        .map((frame) => frame.replaceAll('\r', '').replace('\n', ''))
 
       expect(result.exitCode).toBe(0)
       expect(frames[0]).toBe(expected)

@@ -4,6 +4,7 @@ import type { KiContext } from '../context.ts'
 import { KiError } from './errors.ts'
 import type { ResolvedSkill } from './resolution.ts'
 import {
+  EVIDENCE_STAGE_LABEL,
   type educateSkill,
   type Finding,
   type FindingLevel,
@@ -25,6 +26,7 @@ const REFRESH_INTERVAL_MS = 250
 type ProgressMode = 'auto' | 'always' | 'never'
 type ProgressStyle = 'single' | 'multi'
 type ReporterLevel = FindingLevel | 'fixed'
+type ProgressPhase = 'loading' | 'evidence' | 'audit' | 'conform' | 'educate' | 'verify'
 
 interface OperationOptions {
   readonly progress: ProgressMode
@@ -89,11 +91,6 @@ interface BarModel {
   readonly text: string
 }
 
-const SGR_RESET = '\x1b[0m'
-const SGR_COMPLETE = '\x1b[7m'
-// Dim alone is widely ignored, and ignored dim on reverse is indistinguishable from
-// the completed zone, so the band also carries underline as a texture that survives it.
-const SGR_STARTED = '\x1b[7;2;4m'
 const CURSOR_HIDE = '\x1b[?25l'
 const CURSOR_SHOW = '\x1b[?25h'
 
@@ -117,20 +114,7 @@ const barZones = (model: BarModel, width: number, tick: number): readonly [numbe
   return [Math.min(complete, width - 1), Math.max(Math.min(complete, width - 1) + 1, scale(model.started))]
 }
 
-const centred = (text: string, width: number): string => {
-  const clipped = truncate(text, width)
-  return `${' '.repeat(Math.max(0, Math.floor((width - clipped.length) / 2)))}${clipped}`.padEnd(width)
-}
-
-/** Draws the status text inside the bar, recolouring it in place at the zone boundaries. */
-const styledBar = (model: BarModel, width: number, tick: number): string => {
-  const text = centred(model.text, width)
-  const [completeEnd, startedEnd] = barZones(model, width, tick)
-  const zone = (code: string, span: string): string => (span ? `${code}${span}${SGR_RESET}` : '')
-  return `${zone(SGR_COMPLETE, text.slice(0, completeEnd))}${zone(SGR_STARTED, text.slice(completeEnd, startedEnd))}${text.slice(startedEnd)}`
-}
-
-/** The plain-stream form keeps the bar beside its text so a log line stays greppable. */
+/** Keeps the bar beside its status so all terminal themes expose its three states. */
 const bracketBar = (model: BarModel, width: number, tick: number): string => {
   const inner = Math.max(0, width - 2)
   const [completeEnd, startedEnd] = barZones(model, inner, tick)
@@ -139,20 +123,15 @@ const bracketBar = (model: BarModel, width: number, tick: number): string => {
 
 interface RenderOptions {
   readonly columns: number | undefined
-  readonly styled: boolean
+  readonly label: string
+  readonly placement?: 'root' | 'child' | 'last-child' | 'last-root'
   readonly tick: number
 }
 
-const progressLine = (model: BarModel, { columns, styled, tick }: RenderOptions): string => {
-  const prefix = treeProgressPrefix()
+const progressLine = (model: BarModel, { columns, label, placement, tick }: RenderOptions): string => {
+  const prefix = treeProgressPrefix(label, placement)
   const width = terminalColumns(columns)
   if (width <= prefix.length) return truncate(model.text, width)
-  if (styled) {
-    // Brackets delimit the bar, so its extent stays visible when it is wholly full or wholly empty.
-    const styledWidth = width - prefix.length - 2
-    if (styledWidth < 1) return `${prefix}${truncate(model.text, width - prefix.length)}`
-    return `${prefix}[${styledBar(model, styledWidth, tick)}]`
-  }
   const remaining = width - prefix.length - 1
   // The status text carries the running item, which is the part a reader needs; give the bar the smaller share.
   const barWidth = Math.min(40, Math.floor(remaining / 3))
@@ -173,10 +152,13 @@ interface ProgressTracker {
   readonly failed: () => void
 }
 
-/** The innermost stage a session has open, with whatever step it last reported inside it. */
-interface StepState {
-  readonly label: string
+/** A live evidence detail retains its own time and final state beneath the evidence phase. */
+interface EvidenceProgressRow {
+  readonly skill: string
+  readonly detail: string
+  readonly started: number
   readonly count?: { readonly completed: number; readonly total: number }
+  readonly completedAt?: number
 }
 
 /** Identity keys the tracker; the bare declaration name is what a reader sees. */
@@ -219,10 +201,10 @@ const createProgressTracker = (
   const enabled = options.progress === 'always' || (options.progress === 'auto' && context.stderr.isTTY === true)
   if (!enabled) return undefined
   const interactive = context.stderr.isTTY === true
-  // Reverse video is styling, so NO_COLOR suppresses it exactly as it suppresses colour.
-  const { NO_COLOR } = context.environment
-  const styled = interactive && !NO_COLOR
   const started = context.now()
+  let phaseStarted = started
+  let activePhase: ProgressPhase = 'loading'
+  const timings: { phase: ProgressPhase; elapsed: number }[] = []
   let complete = 0
   let inFlight = 0
   let total: number | undefined
@@ -230,8 +212,13 @@ const createProgressTracker = (
   let lastFrame: string | undefined
   let cursorHidden = false
   let lastRunning: string | undefined
-  let stages: readonly string[] = []
-  let step: StepState | undefined
+  const stages = new Map<string, readonly string[]>()
+  const evidenceRows: EvidenceProgressRow[] = []
+  const activeEvidenceRows = new Map<string, EvidenceProgressRow>()
+  // A child has one additional tree level. Reserve that three-column difference on root rows so
+  // phase and skill bars share one visual column without making the renderer understand skills.
+  const childLabelWidth = Math.max(9, ...skills.map((skill) => skill.name.length))
+  const rootLabelWidth = childLabelWidth + 3
   let loading: { readonly loaded: number; readonly total: number } | undefined
   let evidence: { readonly gathered: number; readonly total: number } | undefined
   const states = new Map<string, SkillProgressState>(skills.map((skill) => [skill.identity, PENDING_STATE]))
@@ -256,75 +243,86 @@ const createProgressTracker = (
     showCursor()
     context.stderr.write('\n')
   })
-  const renderOptions = (): RenderOptions => ({ columns: context.stderr.columns, styled, tick })
-  /**
-   * A named stage displaces the item counters entirely. Reporting `0/42` through a span that
-   * runs no item is the specific untruth this exists to remove: the operation is not stalled
-   * at the first of forty-two, it is inside work the item count cannot see.
-   */
-  const stageParts = (): readonly string[] => [...stages.slice(-1), ...(step ? [step.label] : [])]
+  const renderOptions = (
+    label = activePhase.padEnd(rootLabelWidth),
+    placement: RenderOptions['placement'] = 'root'
+  ): RenderOptions => ({ columns: context.stderr.columns, label, placement, tick })
+  const closePhase = (): void => {
+    timings.push({ phase: activePhase, elapsed: context.now() - phaseStarted })
+  }
+  const openPhase = (next: ProgressPhase): void => {
+    activePhase = next
+    phaseStarted = context.now()
+  }
   const countsOf = (done: number, of: number): string =>
     `${done}/${of} ${of === 0 ? 100 : Math.round((done / of) * 100)}%`
   /** The trailing counters; the leading detail names the work, which matters more when width is short. */
   const counters = (): string => {
-    const clock = elapsed(context.now() - started)
+    const clock = elapsed(context.now() - phaseStarted)
     if (loading) return `${countsOf(loading.loaded, loading.total)} ${clock}`
-    if (step?.count) return `${countsOf(step.count.completed, step.count.total)} ${clock}`
-    // An unmeasured stage reports the clock alone: elapsed time is all that is honestly known.
-    if (stageParts().length) return clock
     if (evidence) return `${countsOf(evidence.gathered, evidence.total)} ${clock}`
     if (total === undefined) return clock
     return `${countsOf(complete, total)} ${clock}`
   }
-  const summaryText = (detail: string): string => `${phase} ${detail} · ${counters()}`
+  const summaryText = (detail: string): string => `${detail} · ${counters()}`
   const barModel = (text: string): BarModel => {
     if (loading) return { complete: loading.loaded, started: loading.loaded, total: loading.total, text }
-    if (step?.count)
-      return { complete: step.count.completed, started: step.count.completed, total: step.count.total, text }
-    if (stageParts().length) return { complete: 0, started: 0, total: undefined, text }
     if (evidence) return { complete: evidence.gathered, started: evidence.gathered, total: evidence.total, text }
     return { complete, started: complete + inFlight, total, text }
   }
-  const singleFrame = (text: string): readonly string[] => [progressLine(barModel(text), renderOptions())]
-  const multiFrame = (): readonly string[] => [
-    ...skills.map((skill) => {
-      const state = skillState(skill.identity)
-      const model: BarModel = {
-        complete: state.complete,
-        started: state.started,
-        total: state.planned && !state.staged ? state.total : undefined,
-        text: `[${skill.name}] ${state.status}`
+  const evidenceRowModel = (row: EvidenceProgressRow): BarModel => {
+    const duration = elapsed((row.completedAt ?? context.now()) - row.started)
+    if (row.completedAt !== undefined)
+      return { complete: 1, started: 1, total: 1, text: `${row.detail} complete · ${duration}` }
+    if (row.count)
+      return {
+        complete: row.count.completed,
+        started: row.count.completed,
+        total: row.count.total,
+        text: `${row.detail} · ${countsOf(row.count.completed, row.count.total)} ${duration}`
       }
-      return progressLine(model, renderOptions())
-    }),
-    progressLine(barModel(summaryText(lastRunning ? `running ${lastRunning}` : 'working')), renderOptions())
+    return { complete: 0, started: 0, total: undefined, text: `${row.detail} · ${duration}` }
+  }
+  const evidenceFrame = (text: string): readonly string[] => [
+    progressLine(barModel(text), renderOptions()),
+    ...evidenceRows.map((row) =>
+      progressLine(evidenceRowModel(row), renderOptions(row.skill.padEnd(childLabelWidth), 'child'))
+    )
   ]
+  const singleFrame = (text: string): readonly string[] =>
+    activePhase === 'evidence' ? evidenceFrame(text) : [progressLine(barModel(text), renderOptions())]
+  const multiFrame = (): readonly string[] =>
+    activePhase === 'evidence'
+      ? evidenceFrame(summaryText('gathering evidence'))
+      : [
+          ...skills.map((skill) => {
+            const state = skillState(skill.identity)
+            const model: BarModel = {
+              complete: state.complete,
+              started: state.started,
+              total: state.planned && !state.staged ? state.total : undefined,
+              text: `[${skill.name}] ${state.status}`
+            }
+            return progressLine(model, renderOptions())
+          }),
+          progressLine(barModel(summaryText(lastRunning ? `running ${lastRunning}` : 'working')), renderOptions())
+        ]
   let renderedRows = 0
   const writeRows = (rows: readonly string[], final: boolean): void => {
     const lineBreak = interactive ? '\r\n' : '\n'
-    if (options.progressStyle === 'single') {
+    if (rows.length === 1 && renderedRows <= 1) {
       context.stderr.write(`${interactive ? '\r\x1b[2K' : ''}${rows[0]}${final || !interactive ? lineBreak : ''}`)
+      renderedRows = final ? 0 : 1
       return
     }
     // Only rewind over rows this tracker drew; a list taller than the terminal would
     // otherwise scroll and the cursor-up would overwrite unrelated output.
     const height = Math.max(1, Math.floor(terminalColumns(context.stderr.columns) / 2))
-    const rewind = interactive && renderedRows && renderedRows <= height ? `\x1b[${renderedRows}A` : ''
-    if (final && interactive && renderedRows <= height) {
-      const [summary = ''] = rows.slice(-1)
-      // A multi tracker exists only for at least one selected skill, so every frame has
-      // a skill row and a summary. The summary therefore always has a row below it to clear.
-      const trailingRows = renderedRows - 1
-      context.stderr.write(
-        `${rewind}\r\x1b[2K${summary}${lineBreak}${`\r\x1b[2K${lineBreak}`.repeat(trailingRows)}\x1b[${trailingRows}A`
-      )
-      renderedRows = 0
-      return
-    }
+    const rewind = interactive && renderedRows > 1 && renderedRows <= height ? `\x1b[${renderedRows}A` : ''
     context.stderr.write(
       `${rewind}${rows.map((row) => `${interactive ? '\r\x1b[2K' : ''}${row}${lineBreak}`).join('')}`
     )
-    renderedRows = rows.length
+    renderedRows = final ? 0 : rows.length
   }
   // Retained so a refresh can redraw the current state with a fresh clock.
   let lastDetail = 'starting'
@@ -349,6 +347,60 @@ const createProgressTracker = (
     showCursor()
     releaseInterrupt()
   }
+  const renderTimings = (): void => {
+    const summary = [...timings, { phase: activePhase, elapsed: context.now() - phaseStarted }]
+      .map(({ phase: label, elapsed: duration }) => `${label} ${elapsed(duration)}`)
+      .join(' · ')
+    context.stderr.write(
+      `${treeProgressPrefix('timings'.padEnd(rootLabelWidth), 'last-root')}${summary} · total ${elapsed(context.now() - started)}\n`
+    )
+  }
+  const activeEvidenceRow = (identity: string): EvidenceProgressRow | undefined => {
+    return activeEvidenceRows.get(identity)
+  }
+  const completeEvidenceRow = (identity: string): void => {
+    const row = activeEvidenceRow(identity)
+    if (!row) return
+    evidenceRows[evidenceRows.indexOf(row)] = { ...row, completedAt: context.now() }
+    activeEvidenceRows.delete(identity)
+  }
+  const openEvidenceRow = (
+    identity: string,
+    skill: string,
+    detail: string,
+    count?: { readonly completed: number; readonly total: number }
+  ): void => {
+    completeEvidenceRow(identity)
+    const row = { skill, detail, started: context.now(), ...(count ? { count } : {}) }
+    activeEvidenceRows.set(identity, row)
+    evidenceRows.push(row)
+  }
+  const updateEvidenceRow = (
+    identity: string,
+    skill: string,
+    detail: string,
+    count?: { readonly completed: number; readonly total: number }
+  ): void => {
+    const row = activeEvidenceRow(identity)
+    if (!row || row.detail !== detail) {
+      openEvidenceRow(identity, skill, detail, count)
+      return
+    }
+    const updated = { ...row, ...(count ? { count } : {}) }
+    evidenceRows[evidenceRows.indexOf(row)] = updated
+    activeEvidenceRows.set(identity, updated)
+  }
+  const replaceEvidenceRow = (
+    identity: string,
+    row: EvidenceProgressRow,
+    skill: string,
+    detail: string,
+    count?: { readonly completed: number; readonly total: number }
+  ): void => {
+    const updated = { ...row, skill, detail, ...(count ? { count } : {}) }
+    evidenceRows[evidenceRows.indexOf(row)] = updated
+    activeEvidenceRows.set(identity, updated)
+  }
   return {
     loading: (loaded, definitions) => {
       loading = { loaded, total: definitions }
@@ -357,20 +409,25 @@ const createProgressTracker = (
     evidence: (gathered, sessions) => {
       if (loading) {
         render('loading definitions complete', true)
+        closePhase()
         loading = undefined
       }
       evidence = { gathered, total: sessions }
+      openPhase('evidence')
       render('gathering evidence')
     },
     planned: (planned) => {
       if (loading) {
         render('loading definitions complete', true)
+        closePhase()
         loading = undefined
       }
       if (evidence) {
         render('gathering evidence complete', true)
+        closePhase()
         evidence = undefined
       }
+      openPhase(phase as ProgressPhase)
       total = planned.reduce((count, skill) => count + skill.items.length, 0)
       for (const skill of planned)
         states.set(skill.skill.identity, {
@@ -415,34 +472,45 @@ const createProgressTracker = (
       render(`${declaration.name} ${code}`)
     },
     report: (skill, event) => {
-      // A stage nests, so its end pops one level rather than clearing the span the host itself
-      // opened around the session. A step belongs to whichever stage is innermost now.
-      if (event.kind === 'stage') {
-        stages = event.edge === 'start' ? [...stages, event.label] : stages.slice(0, -1)
-        step = undefined
-      } else step = { label: event.label, ...(event.count ? { count: event.count } : {}) }
-      const parts = stageParts()
-      // Both edges of a stage are reported. The closing one is what tells a reader, and a
-      // plain-stream log, how long the span actually took and that item work resumes now.
-      const closed = event.kind === 'stage' && event.edge === 'end' ? [event.label, 'done'] : []
       const { identity, declaration } = skill.skill
+      const currentStages = stages.get(identity) ?? []
+      if (event.kind === 'stage') {
+        if (event.label === EVIDENCE_STAGE_LABEL && event.edge === 'start') stages.set(identity, currentStages)
+        else if (event.label === EVIDENCE_STAGE_LABEL) completeEvidenceRow(identity)
+        else if (event.edge === 'start') {
+          const nextStages = [...currentStages, event.label]
+          stages.set(identity, nextStages)
+          updateEvidenceRow(identity, declaration.name, nextStages.join(' '))
+        } else {
+          completeEvidenceRow(identity)
+          stages.set(identity, currentStages.slice(0, -1))
+        }
+      } else {
+        const stageDetail = currentStages.join(' ')
+        const detail = [...currentStages, event.label].join(' ')
+        // A stage gives a reader an honest live row before it can report a concrete step. Once
+        // it does, retain the useful step rather than a zero-duration wrapper before it.
+        const row = activeEvidenceRow(identity)
+        if (row?.detail === stageDetail) replaceEvidenceRow(identity, row, declaration.name, detail, event.count)
+        else updateEvidenceRow(identity, declaration.name, detail, event.count)
+      }
+      const stateRow = activeEvidenceRow(identity)
       const state = skillState(identity)
       states.set(identity, {
         ...state,
-        staged: parts.length > 0,
-        status: parts.length ? parts.join(' ') : state.status
+        staged: stateRow !== undefined,
+        status: stateRow?.detail ?? state.status
       })
-      render([declaration.name, ...parts, ...closed].join(' '))
+      render('gathering evidence')
     },
     complete: () => {
       inFlight = 0
-      stages = []
-      step = undefined
       for (const skill of skills) {
         const state = skillState(skill.identity)
         states.set(skill.identity, { ...state, complete: state.total, started: state.total, status: 'complete' })
       }
       render('complete', true)
+      renderTimings()
       finish()
     },
     failed: () => {

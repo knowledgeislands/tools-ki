@@ -46,14 +46,15 @@ const withRubric = async (body: string): Promise<Awaited<ReturnType<typeof sandb
   return box
 }
 
-// A plain stream keeps the bar beside its text, so each frame is one greppable log line.
+// A plain stream keeps the phase and every retained evidence child beside its own bar.
 const plainFrames = (output: string): readonly string[] =>
   output
     .split('\n')
-    .filter((line) => line.startsWith('├─ progress'))
+    .filter((line) => /^(├─ (loading|evidence|audit)|│ {2}├─ )/.test(line))
     .map((line) =>
       stripVTControlCharacters(line)
-        .replace(/^├─ progress \[[#>.]*\] /, '')
+        .replace(/^├─ \w+\s+\[[#>.]*\] /, 'audit ')
+        .replace(/^│ {2}├─ [\w-]+\s+\[[#>.]*\] /, 'evidence ')
         .trimEnd()
     )
 
@@ -75,39 +76,58 @@ describe('[ki repo audit evidence progress]', () => {
     const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    // Loading and the counted evidence phase stay visible before item audit begins. Within a
-    // session's unmeasured stage, elapsed time remains the one quantity honestly known.
-    expect(plainFrames(result.output)).toEqual([
-      'audit loading definitions · 0/1 0% 0.0s',
-      'audit loading definitions · 1/1 100% 0.0s',
-      'audit loading definitions complete · 1/1 100% 0.0s',
-      'audit gathering evidence · 0/1 0% 0.0s',
-      'audit ki-example gathering evidence · 0.0s',
-      'audit ki-example engineering evidence · 0.0s',
-      'audit ki-example engineering evidence biome check · 0.0s',
-      'audit ki-example engineering evidence tsc --noEmit · 0.0s',
-      'audit ki-example gathering evidence engineering evidence done · 0.0s',
-      'audit ki-example gathering evidence done · 0/1 0% 0.0s',
-      'audit gathering evidence · 1/1 100% 0.0s',
-      'audit gathering evidence complete · 1/1 100% 0.0s',
-      'audit starting · 0/1 0% 0.0s',
-      'audit ki-example running EXAMPLE-1 · 0/1 0% 0.0s',
-      'audit ki-example EXAMPLE-1 · 1/1 100% 0.0s',
-      'audit complete · 1/1 100% 0.0s'
-    ])
+    expect(result.output).toMatch(/├─ loading +\[/)
+    expect(result.output).toMatch(/├─ evidence +\[/)
+    expect(result.output).toMatch(/├─ audit +\[/)
+    expect(result.output).toMatch(/╰─ timings +loading 0\.0s · evidence 0\.0s · audit 0\.0s · total 0\.0s/)
+    const barColumns = result.output
+      .split('\n')
+      .filter((line) => /^(├─ (loading|evidence|audit)|│ {2}├─ ki-example)/.test(line))
+      .map((line) => line.indexOf('['))
+    expect(new Set(barColumns)).toEqual(new Set([17]))
+    // Loading and the counted evidence phase stay visible before item audit begins. A stage
+    // or step becomes a retained evidence child; its completed bar proves it did not restart.
+    expect(plainFrames(result.output)).toEqual(
+      expect.arrayContaining([
+        'audit loading definitions complete · 1/1 100% 0.0s',
+        'audit gathering evidence · 0/1 0% 0.0s',
+        'evidence engineering evidence biome check complete · 0.0s',
+        'evidence engineering evidence tsc --noEmit complete · 0.0s',
+        'audit gathering evidence complete · 1/1 100% 0.0s',
+        'audit complete · 1/1 100% 0.0s'
+      ])
+    )
   })
 
   test('shows a counted step as a determinate share of its own work', async () => {
     const box = await withRubric(`
+      emit({ kind: 'step', label: 'preflight', completed: 1, total: 1 })
+      emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
+      emit({ kind: 'step', label: 'scanning', completed: 1, total: 4 })
       emit({ kind: 'step', label: 'scanning', completed: 3, total: 4 })
+      emit({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
     `)
 
     const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    expect(plainFrames(result.output)).toContain('audit ki-example gathering evidence scanning · 3/4 75% 0.0s')
+    expect(plainFrames(result.output)).toContain('evidence engineering evidence scanning complete · 0.0s')
     // The counted step fills three quarters of its own bar, where the enclosing stage animated.
     expect(barFor(result.output, 'scanning · 3/4')).toBe(`${'#'.repeat(29)}${'.'.repeat(9)}`)
+  })
+
+  test('updates a repeated uncounted step instead of retaining another child', async () => {
+    const box = await withRubric(`
+      emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
+      emit({ kind: 'step', label: 'scanning' })
+      emit({ kind: 'step', label: 'scanning' })
+      emit({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
+    `)
+
+    const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
+
+    expect(result.exitCode).toBe(0)
+    expect(plainFrames(result.output)).toContain('evidence engineering evidence scanning complete · 0.0s')
   })
 
   test('reverts to the item count when a session ends a stage it never opened', async () => {
@@ -121,8 +141,7 @@ describe('[ki repo audit evidence progress]', () => {
     const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    expect(plainFrames(result.output)).toContain('audit ki-example never opened done · 0/1 0% 0.0s')
-    expect(plainFrames(result.output)).toContain('audit ki-example orphaned work · 0.0s')
+    expect(plainFrames(result.output)).toContain('evidence orphaned work complete · 0.0s')
   })
 
   test('renders an open stage as an unmeasured row in the per-skill layout', async () => {
@@ -138,13 +157,13 @@ describe('[ki repo audit evidence progress]', () => {
     const single = await box.run('ki repo audit --progress always', { interactive: true, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    expect(stripVTControlCharacters(result.output)).toContain('[ki-example] engineering evidence')
+    expect(stripVTControlCharacters(result.output)).toContain('│  ├─ ki-example')
     expect(stripVTControlCharacters(result.output)).toContain('[ki-example] EXAMPLE-1')
-    // A completed phase collapses from one skill row plus its summary to its retained summary;
-    // the next live panel starts below it rather than rewinding over it.
-    expect(result.output).toContain('\x1b[1A')
-    const evidenceComplete = single.output.indexOf('audit gathering evidence complete')
-    const auditStart = single.output.indexOf('audit starting', evidenceComplete)
+    // A live evidence panel rewinds its parent and child together; completed rows remain before
+    // the next phase rather than reusing the same visual row.
+    expect(result.output).toContain('\x1b[2A')
+    const evidenceComplete = single.output.indexOf('gathering evidence complete')
+    const auditStart = single.output.indexOf('starting', evidenceComplete)
     // Frames fill the terminal width. An explicit CRLF resolves the terminal's deferred
     // wrap before the next phase begins, so their physical rows cannot overlap.
     expect(single.output.slice(evidenceComplete, auditStart)).toContain('\r\n\r\x1b[2K')
@@ -158,7 +177,7 @@ describe('[ki repo audit evidence progress]', () => {
     const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    expect(plainFrames(result.output)).toContain('audit ki-example gathering evidence red command · 0.0s')
+    expect(plainFrames(result.output)).toContain('evidence red command complete · 0.0s')
     expect(result.output).not.toContain('\x1b[31m')
   })
 

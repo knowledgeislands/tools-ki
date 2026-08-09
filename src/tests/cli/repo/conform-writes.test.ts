@@ -143,17 +143,18 @@ describe('[ki repo conform writes]', () => {
     const multiple = await box.run('ki repo conform --progress always')
 
     expect(regular.output).toContain('╭─ KI REPO CONFORM')
-    expect(regular.output).toContain('├─ progress [')
+    expect(regular.output).toContain('├─ loading')
     expect(narrow.output).toContain('\r\x1b[2K.')
-    expect(invalidWidth.output).toContain('conform complete · 0/0 100% 0.0s')
+    expect(invalidWidth.output).toContain('complete · 0/0 100% 0.0s')
     // Loading is retained, then conform and verification are independently labelled rather than
     // appearing to be one bar that restarted.
-    expect(regular.output).toContain('conform loading definitions complete')
-    expect(regular.output).toContain('conform complete · 0/0 100% 0.0s')
-    expect(regular.output).toContain('verify complete · 0/0 100% 0.0s')
-    // Each completed panel keeps its summary and clears only its own skill row: loading,
-    // conform, and verification therefore occupy successive terminal lines.
-    expect(interactiveMulti.output.split('\x1b[1A')).toHaveLength(4)
+    expect(regular.output).toContain('loading definitions complete')
+    expect(regular.output).toContain('├─ conform')
+    expect(regular.output).toContain('├─ verify')
+    // Multi rows are redrawn as one panel while active, then the completed phase remains before
+    // its successor. A two-row panel therefore rewinds two lines, never one shared visual row.
+    expect(interactiveMulti.output).toContain('\x1b[2A')
+    expect(interactiveMulti.output).not.toContain('\x1b[1A')
     expect(multiple.output).toContain('│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra')
   })
 
