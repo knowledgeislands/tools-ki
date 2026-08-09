@@ -4,7 +4,7 @@ title: Define managed cleanup artifacts
 area: CLI
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: [KI-TOOL-CLI-037]
 blocked-by: []
 baseline-ref: 3de2f81360cf392c9a617f1b32f39149f21750b7
@@ -155,6 +155,38 @@ No delete verb is proposed, and no product code changes: `git diff --stat` for t
 ## Dependencies / blocks
 
 Nothing blocks this item. `KI-TOOL-CLI-035` recovered the first family concretely and has been delivered and pruned; its finding is recorded in the Steps above.
+
+## Review
+
+### Delivered
+
+Defined the conservative managed-artifact ownership model and proposed `KI-TOOL-CLI-037` as the first bounded implementation over install staging. The delivery is documentation-only; no cleanup or deletion behaviour changed.
+
+### Summary of changes
+
+The survey corrects the known persisted surface from six to eight families, separates installer-owned state from KI-created state, defines a schema-one manifest and lock boundary, names exact refusal outcomes, and fixes the report ordering and candidate criteria.
+
+### Verification
+
+Baseline: `3de2f81360cf392c9a617f1b32f39149f21750b7`.
+
+Lifecycle start: `45982bc`.
+
+Delivered design and successor: `359b0d1`.
+
+`bun run test`, `ki repo audit --skill ki-change-management-roadmap`, and `ki repo audit --skill ki-authoring` passed. The final two audits were re-run after the last document edit.
+
+### Outstanding concerns
+
+CLI-037 must select and prove a portable exclusive-lock primitive before it can implement the first record. Installer-owned receipt and staging artifacts remain intentionally outside the KI ownership model.
+
+### Post-change review
+
+The original inventory omitted uninstall parking and installer-script staging. Recording them now prevents the first implementation from claiming a complete cleanup surface; it remains limited to install staging.
+
+### Mini recap
+
+Current prefix-based install recovery remains intact. The next change is a separate, blocked implementation record rather than a broad cleanup feature.
 
 ## Discussion
 
