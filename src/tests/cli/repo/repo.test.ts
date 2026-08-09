@@ -401,7 +401,7 @@ describe('[ki repo]', () => {
         .replace(/\n$/, '')
         .split('\r\x1b[2K')
         .filter(Boolean)
-        .map((frame) => frame.replace('\n', ''))
+        .map((frame) => frame.replaceAll('\r', '').replace('\n', ''))
 
       expect(result.exitCode).toBe(0)
       expect(progressOutput.startsWith(header)).toBe(true)

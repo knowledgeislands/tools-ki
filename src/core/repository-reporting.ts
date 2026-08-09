@@ -301,8 +301,9 @@ const createProgressTracker = (
   ]
   let renderedRows = 0
   const writeRows = (rows: readonly string[], final: boolean): void => {
+    const lineBreak = interactive ? '\r\n' : '\n'
     if (options.progressStyle === 'single') {
-      context.stderr.write(`${interactive ? '\r\x1b[2K' : ''}${rows[0]}${final || !interactive ? '\n' : ''}`)
+      context.stderr.write(`${interactive ? '\r\x1b[2K' : ''}${rows[0]}${final || !interactive ? lineBreak : ''}`)
       return
     }
     // Only rewind over rows this tracker drew; a list taller than the terminal would
@@ -314,11 +315,15 @@ const createProgressTracker = (
       // A multi tracker exists only for at least one selected skill, so every frame has
       // a skill row and a summary. The summary therefore always has a row below it to clear.
       const trailingRows = renderedRows - 1
-      context.stderr.write(`${rewind}\r\x1b[2K${summary}\n${'\r\x1b[2K\n'.repeat(trailingRows)}\x1b[${trailingRows}A`)
+      context.stderr.write(
+        `${rewind}\r\x1b[2K${summary}${lineBreak}${`\r\x1b[2K${lineBreak}`.repeat(trailingRows)}\x1b[${trailingRows}A`
+      )
       renderedRows = 0
       return
     }
-    context.stderr.write(`${rewind}${rows.map((row) => `${interactive ? '\r\x1b[2K' : ''}${row}\n`).join('')}`)
+    context.stderr.write(
+      `${rewind}${rows.map((row) => `${interactive ? '\r\x1b[2K' : ''}${row}${lineBreak}`).join('')}`
+    )
     renderedRows = rows.length
   }
   // Retained so a refresh can redraw the current state with a fresh clock.

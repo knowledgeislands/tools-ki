@@ -135,6 +135,7 @@ describe('[ki repo audit evidence progress]', () => {
       interactive: true,
       now: () => 0
     })
+    const single = await box.run('ki repo audit --progress always', { interactive: true, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
     expect(stripVTControlCharacters(result.output)).toContain('[ki-example] engineering evidence')
@@ -142,6 +143,11 @@ describe('[ki repo audit evidence progress]', () => {
     // A completed phase collapses from one skill row plus its summary to its retained summary;
     // the next live panel starts below it rather than rewinding over it.
     expect(result.output).toContain('\x1b[1A')
+    const evidenceComplete = single.output.indexOf('audit gathering evidence complete')
+    const auditStart = single.output.indexOf('audit starting', evidenceComplete)
+    // Frames fill the terminal width. An explicit CRLF resolves the terminal's deferred
+    // wrap before the next phase begins, so their physical rows cannot overlap.
+    expect(single.output.slice(evidenceComplete, auditStart)).toContain('\r\n\r\x1b[2K')
   })
 
   test('strips terminal control sequences from a rubric-supplied label', async () => {
