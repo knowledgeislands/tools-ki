@@ -2,8 +2,8 @@
 id: KI-TOOL-CLI-027
 title: Separate progress phases
 theme: cli
-horizon: next
-status: draft
+horizon: now
+status: ready
 blocks: []
 blocked-by: []
 baseline-ref: null
@@ -29,15 +29,15 @@ The progress tracker preserves one clock across definition loading and execution
 
 ## Steps
 
-- [ ] Model named progress phases with independently retained completion state.
-- [ ] Render completed loading and active audit phases as separate rows without leaving stale terminal content.
-- [ ] Apply the same model to conform and its verification pass.
-- [ ] Extend CLI contract tests for interactive and plain-stream phase output.
+- [ ] Replace the single persistent progress row with named phases that retain their individual completed state.
+- [ ] Complete `loading definitions` before opening the active audit phase, preserving the operation clock and leaving no stale terminal row.
+- [ ] Model conform as distinct loading, conform, and verification phases, each with its own known unit and count.
+- [ ] Extend interactive and plain-stream CLI contracts for phase order, elapsed time, cursor cleanup, and terminal output.
 
 ## Files touched
 
 - `src/core/repository-reporting.ts`.
-- Repository-operation CLI contract tests under `src/tests/cli/repo/`.
+- `src/tests/cli/repo/progress-stages.test.ts`, `src/tests/cli/repo/repo.test.ts`, and `src/tests/cli/repo/conform-writes.test.ts` as required by the public contracts.
 
 ## Verify
 
