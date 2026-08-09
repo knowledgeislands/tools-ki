@@ -167,6 +167,19 @@ describe('[ki repo roadmap]', () => {
     expect(format.output).toContain("unknown option '--format' for 'ki repo roadmap list'")
   })
 
+  test('ignores the canonical issue-allocation ledger when reading work items', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('repo/docs/roadmap/_ISSUES.md', 'last_id: 3\n')
+    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
+
+    const result = await box.run('ki repo --repo repo roadmap list')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('roadmap (1)')
+    expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
+  })
+
   test('isolates missing, malformed, invalid-status, and unsafe roadmap entries', async () => {
     const box = await sandbox()
     await box.project.write('valid/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')

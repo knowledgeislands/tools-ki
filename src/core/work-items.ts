@@ -4,6 +4,7 @@ import { KiError } from './errors.ts'
 import { prepareWrites, publishWrites } from './transaction.ts'
 
 const ROADMAP_DIRECTORY = 'docs/roadmap'
+const ISSUE_LEDGER = '_ISSUES.md'
 const requiredFields = ['id', 'title', 'theme', 'horizon', 'status', 'blocks', 'blocked-by', 'baseline-ref'] as const
 type RequiredField = (typeof requiredFields)[number]
 type WorkItemField = RequiredField | 'candidate' | 'transferred-from' | 'housekeeping-template' | 'scheduled-for'
@@ -113,7 +114,9 @@ const readWorkItemRecords = async (repository: string): Promise<readonly WorkIte
     throw new KiError(`repository ${repository} has no physical docs/roadmap directory`, 2)
   const entries = await readdir(directory)
   const records = await Promise.all(
-    entries.filter((entry) => entry.endsWith('.md')).map((entry) => readItem(directory, entry))
+    entries
+      .filter((entry) => entry.endsWith('.md') && entry !== ISSUE_LEDGER)
+      .map((entry) => readItem(directory, entry))
   )
   return records.sort((left, right) => left.item.id.localeCompare(right.item.id))
 }
