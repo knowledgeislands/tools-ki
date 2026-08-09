@@ -1,5 +1,5 @@
 ---
-id: KI-TOOL-CLI-010
+id: KI-TOOL-010
 title: Define managed cleanup artifacts
 theme: cli
 horizon: now
@@ -54,7 +54,7 @@ Six persisted artifact families exist, none carrying an ownership record. Every 
 
 ## Files touched
 
-- `docs/roadmap/KI-TOOL-CLI-010-define-managed-cleanup-artifacts.md` — the design itself. This item is design-only and is expected to touch nothing else.
+- `docs/roadmap/KI-TOOL-010-define-managed-cleanup-artifacts.md` — the design itself. This item is design-only and is expected to touch nothing else.
 
 No product code changes here. The successor implementation record owns `src/`; if this design finds it cannot be written without a code change, that is a finding to record rather than a licence to widen the scope.
 

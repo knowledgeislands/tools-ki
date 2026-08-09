@@ -1,5 +1,5 @@
 ---
-id: KI-TOOL-CLI-036
+id: KI-TOOL-036
 title: Compose KB store roles
 theme: cli
 horizon: future
