@@ -61,7 +61,7 @@ Interactive multi-progress output now keeps each completed phase as a summary ro
 
 ### Summary of changes
 
-The reporter collapses a completed multi-progress panel to its summary and clears only the panel's former skill rows before the next phase begins. Its cursor safety limit remains in place for output taller than the terminal. The interactive audit contract now asserts that a later phase rewinds only within its own live panel.
+The reporter collapses a completed multi-progress panel to its summary and clears only the panel's former skill rows before the next phase begins. Its cursor safety limit remains in place for output taller than the terminal. Interactive audit and conform contracts assert that later phases rewind only within their own live panel.
 
 ### Verification
 
