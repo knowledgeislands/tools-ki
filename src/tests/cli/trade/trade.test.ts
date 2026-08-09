@@ -604,10 +604,10 @@ describe('[ki trade]', () => {
 
     expect(created.output).toBe(`ki trade submit: submitted ${id} for example/receiver [decision]\n`)
     expect(received).toEqual({ exitCode: 0, output: `ki trade receive: received ${id}\n` })
-    expect(listed.output).toContain(`${id} import [✓ release] ← [⚒ work] source Route contract`)
-    expect(allListed.output).toContain(`${id} import [✓ release] ← [⚒ work] source`)
-    expect(allListed.output).toContain(`${id} export [⚒ work] → [✓ release] receiver`)
-    expect(plainListed.output).toContain(`${id} export [work] → [release] receiver`)
+    expect(listed.output).toContain(`${id} import [adopted] [✓ release] ← [⚒ work] source Route contract`)
+    expect(allListed.output).toContain(`${id} import [adopted] [✓ release] ← [⚒ work] source`)
+    expect(allListed.output).toContain(`${id} export [adopted] [⚒ work] → [✓ release] receiver`)
+    expect(plainListed.output).toContain(`${id} export [adopted] [work] → [release] receiver`)
     expect(shown.output).toContain(`Repository: ${sourceHome} [export]\n${outbound.trimEnd()}`)
     expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
     expect(pruned).toEqual({ exitCode: 0, output: `ki trade prune: pruned ${id}\n` })
@@ -1252,7 +1252,7 @@ describe('[ki trade]', () => {
     )
     box.cd('..')
     expect((await box.run('ki trade list --direction export')).output).toContain(
-      `${completionId} export [⚒ work] → [… completion] receiver Route contract`
+      `${completionId} export [adopted] [⚒ work] → [… completion] receiver Route contract`
     )
     expect((await box.run(['ki', 'trade', 'release', completionId])).output).toContain('completion observation policy')
     await box.project.write('receiver/docs/roadmap/not-markdown.txt', 'ignored')
@@ -1360,7 +1360,7 @@ describe('[ki trade]', () => {
     box.cd('..')
     expect((await box.run(['ki', 'trade', 'release', id])).exitCode).toBe(0)
     expect((await box.run('ki trade list --direction import')).output).toContain(
-      `${id} import [✓ prune] ← [⚒ work] source Route contract`
+      `${id} import [adopted] [✓ prune] ← [⚒ work] source Route contract`
     )
   })
 
