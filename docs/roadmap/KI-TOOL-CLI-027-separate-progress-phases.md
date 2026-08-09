@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-027
 title: Separate progress phases
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: df245e90305b3e1dcd84207adb31de9ea867a130
@@ -29,10 +29,10 @@ The progress tracker preserves one clock across definition loading and execution
 
 ## Steps
 
-- [ ] Replace the single persistent progress row with named phases that retain their individual completed state.
-- [ ] Complete `loading definitions` before opening the active audit phase, preserving the operation clock and leaving no stale terminal row.
-- [ ] Model conform as distinct loading, conform, and verification phases, each with its own known unit and count.
-- [ ] Extend interactive and plain-stream CLI contracts for phase order, elapsed time, cursor cleanup, and terminal output.
+- [x] Replace the single persistent progress row with named phases that retain their individual completed state.
+- [x] Complete `loading definitions` before opening the active audit phase, preserving the operation clock and leaving no stale terminal row.
+- [x] Model conform as distinct loading, conform, and verification phases, each with its own known unit and count.
+- [x] Extend interactive and plain-stream CLI contracts for phase order, elapsed time, cursor cleanup, and terminal output.
 
 ## Files touched
 
@@ -45,6 +45,15 @@ The progress tracker preserves one clock across definition loading and execution
 - `ki repo conform` distinguishes loading, conform, and verification rows.
 - Plain-stream and interactive output retain correct elapsed time, cleanup, and exit behaviour.
 - Focused CLI contract tests, `bunx tsc --noEmit`, and `bun run test:coverage` pass.
+
+## Review
+
+- Delivered: `loading definitions` now reports a counted progress phase and is retained as a completed row before audit or conform begins; verification remains separately labelled.
+- Excluded: progress-event semantics, terminal report layout, operation ordering, and exit behaviour remain unchanged.
+- Evidence: baseline `df245e90305b3e1dcd84207adb31de9ea867a130`; implementation `2d2717713ad36652d81f01f69d91263ecbfed3a3`; focused repository-progress contracts, `bunx biome check`, `bunx tsc --noEmit`, `bun run test:coverage -- --coverage.reportsDirectory=/private/tmp/ki-cli027-coverage-677039d` (560 contracts; 100% coverage), and `ki repo audit --repo .` passed.
+- Decision: loading has a known definition count, so its bar is determinate rather than an indeterminate sweep; its terminal row makes the transition to audit or conform explicit.
+- Concerns: none. The default coverage report directory was concurrently removed by another Vitest process, so final verification isolated only the generated report directory under `/private/tmp`.
+- Learning route: consider making coverage report locations invocation-scoped if concurrent full-suite runs remain common.
 
 ## Dependencies / blocks
 
