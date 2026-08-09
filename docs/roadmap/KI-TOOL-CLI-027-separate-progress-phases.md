@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-027
 title: Separate progress phases
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: 18ca452e9d06e0f7691d78026379486bfe2d7178
@@ -34,7 +34,7 @@ The progress tracker preserves one clock across definition loading and execution
 - [x] Gather every selected audit session as a distinct counted phase before any audit item runs, preserving the canonical skill and item order.
 - [x] Model conform as distinct loading, conform, and verification phases, each with its own known unit and count.
 - [x] Extend interactive and plain-stream CLI contracts for phase order, elapsed time, cursor cleanup, and terminal output.
-- [ ] Retain completed phase rows in interactive multi-progress output, so subsequent phases do not rewind over them.
+- [x] Retain completed phase rows in interactive multi-progress output, so subsequent phases do not rewind over them.
 
 ## Files touched
 
@@ -52,6 +52,32 @@ The progress tracker preserves one clock across definition loading and execution
 ## Dependencies / blocks
 
 No implementation dependency. This is a follow-up to the reviewed tree-rendering work in `KI-TOOL-CLI-026`, not a blocker for it.
+
+## Review
+
+### Delivered
+
+Interactive multi-progress output now keeps each completed phase as a summary row, then draws the next active phase beneath it. This applies to both `ki repo audit` and `ki repo conform` through their shared reporter.
+
+### Summary of changes
+
+The reporter collapses a completed multi-progress panel to its summary and clears only the panel's former skill rows before the next phase begins. Its cursor safety limit remains in place for output taller than the terminal. The interactive audit contract now asserts that a later phase rewinds only within its own live panel.
+
+### Verification
+
+`bunx biome check src/core/repository-reporting.ts src/tests/cli/repo/progress-stages.test.ts`, focused audit and conform CLI contracts, `bun run test:coverage` (561 tests; 100% statements, branches, functions, and lines), and `ki repo audit --progress never` all pass.
+
+### Outstanding concerns
+
+None. Narrow terminals retain panels sequentially rather than attempting an unsafe cursor rewind.
+
+### Post-change review
+
+The renderer remains the single implementation point for audit and conform. No operation derives state from rendered output; phase state remains in the progress tracker.
+
+### Mini recap
+
+The visual overwrite reported for the second and third progress phases is resolved. This item awaits explicit review and acceptance.
 
 ## Discussion
 
