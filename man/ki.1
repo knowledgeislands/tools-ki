@@ -1,4 +1,4 @@
-.TH KI 1 "2026-08-05" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-08-09" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -23,6 +23,7 @@ Print the CLI version.
 .TP
 .B ki bootstrap [--refresh]
 Detect agents, install the canonical harness, and install core user skills.
+On refresh, migrate retired local repository paths into machine-local registry state.
 .SS Local management
 \&
 .TP
@@ -274,6 +275,11 @@ configuration is reused without replacement. Pass
 .B --refresh
 to redetect every supported runtime and rebuild the user configuration's
 agents, installed harnesses, and KI-managed user skill links.
+During a refresh only, KI imports the retired
+\fB[repositories].paths\fR list into
+\fB$XDG_STATE_HOME/ki/registry.toml\fR and removes that list from user
+configuration. Normal repository, trade, and Agora resolution never reads the
+retired path list.
 .SS Local management
 \&
 .PP
@@ -416,7 +422,7 @@ Initialize exactly one existing physical Git worktree root. With no
 that worktree's root and must not be a symbolic link. Every identity value is
 required: \fB--title\fR, \fB--description\fR, a stable uppercase
 \fB--repo-code\fR, canonical HTTPS GitHub \fB--repository\fR, one or more \fB--runtime\fR values selected from
-\fBclaude-code\fR and \fBcodex\fR, and \fB--visibility public|private\fR.
+\fBclaude-code\fR and \fBchatgpt-codex\fR, and \fB--visibility public|private\fR.
 It atomically creates the minimal canonical \fBki-repo\fR declaration and
 registers the physical root in \fB$XDG_STATE_HOME/ki/registry.toml\fR. It never runs
 \fBgit init\fR, guesses identity, activates repository skills, creates a
@@ -529,7 +535,8 @@ repository. It changes neither user nor repository skill activation.
 .PP
 Use these root-level commands to record and list canonical KI repository roots
 in \fB$XDG_STATE_HOME/ki/registry.toml\fR. Registry membership is an inventory, not a
-repository-operation or conformance verdict.
+repository-operation or conformance verdict. Each entry records a stable local
+key, canonical HTTPS GitHub repository identity, and physical checkout path.
 .TP
 .B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
 Record selected canonical KI repository roots in \fB$XDG_STATE_HOME/ki/registry.toml\fR

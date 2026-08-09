@@ -69,7 +69,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki registry add`
 - `ki registry list`
-- `ki registry` now keeps canonical GitHub identity, local key, and checkout binding in the machine-local `$XDG_STATE_HOME/ki/registry.toml`; `ki bootstrap --refresh` migrates the retired configuration path list.
+- `ki registry` now keeps canonical GitHub identity, local key, and checkout binding in the machine-local `$XDG_STATE_HOME/ki/registry.toml`; `ki bootstrap --refresh` migrates and removes the retired configuration path list, which resolution no longer reads.
 
 #### Harness management
 
@@ -109,7 +109,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - Registered repository declarations define reciprocal named Agoras; the reserved `estate` selector derives the full locally registered canonical repository set for selection and Zed opening.
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context.
-- Local `ki registry add` records each selected canonical KI repository identity without applying repairs; `ki repo conform` does the same before evaluating conformance findings.
+- `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.
 - `ki trade routes list [--estate] [--incomplete]` is a framed local or registered-estate route inventory; `--html` renders the estate as a self-contained interactive force-directed network instead, written to the cache and opened in a browser, drawing one arc per direction with per-kind chips so a reciprocated pair separates. The viewer runtime is vendored into the page, which therefore opens with no network. Both listings now show only the furthest-advanced lifecycle stage of a trade rather than the full publication, delivery and decision triplet.
 - `ki trade new` creates a local export once this repository declares the route; receiver activation remains reciprocal.
 - Trade pairing compares the payload the sender authored — its field values as parsed and its prose — rather than raw bytes, so a receiver that formats its own Markdown does not read as having tampered with a record.

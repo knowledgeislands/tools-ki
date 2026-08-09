@@ -116,10 +116,12 @@ describe('[ki manage completion]', () => {
     for (const output of [bash.output, zsh.output]) {
       expect(output).toContain("'repo:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'repo roadmap:--repo') printf '%s\\n' 'path'")
+      expect(output).toContain("'registry:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'acquire chatgpt import:0') printf '%s\\n' 'path'")
       expect(output).toContain("'manage docs:0') printf '%s\\n' 'overview site manual roadmap'")
       expect(output).toContain("'trade prepare:--observation') printf '%s\\n' 'unattended receipt decision completion'")
       expect(output).toContain("'trade prepare:--title') printf '%s\\n' ''")
+      expect(output).toContain("'repo init:--repository') printf '%s\\n' ''")
     }
   })
 
