@@ -21,6 +21,8 @@
 // │               ├── skills/
 // │               ├── subagents/
 // │               └── hooks/
+// ├── state/                  ($XDG_STATE_HOME — machine-local mutable KI registry)
+// │   └── ki/registry.toml
 // └── project/                (run()'s default cwd; cd() moves relative to here)
 
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
@@ -135,6 +137,7 @@ export interface Sandbox {
   readonly home: SandboxArea
   readonly config: SandboxArea
   readonly data: SandboxArea
+  readonly state: SandboxArea
   readonly project: SandboxArea
   readonly env: Record<string, string>
   readonly executable: string
@@ -174,10 +177,11 @@ const create = async (): Promise<Sandbox> => {
   const home = area(join(rootPath, 'home'))
   const config = area(join(rootPath, 'config'))
   const data = area(join(rootPath, 'data'))
+  const state = area(join(rootPath, 'state'))
   const project = area(join(rootPath, 'project'))
   await mkdir(home.path, { recursive: true })
   await mkdir(project.path, { recursive: true })
-  const env = { HOME: home.path, XDG_CONFIG_HOME: config.path, XDG_DATA_HOME: data.path }
+  const env = { HOME: home.path, XDG_CONFIG_HOME: config.path, XDG_DATA_HOME: data.path, XDG_STATE_HOME: state.path }
   let environmentOverrides: Record<string, string | undefined> = {}
   let workingDirectory = project.path
   // No sandbox test may reach the real network: a command that needs the fetcher
@@ -281,6 +285,7 @@ const create = async (): Promise<Sandbox> => {
     home,
     config,
     data,
+    state,
     project,
     env,
     executable: executablePath,

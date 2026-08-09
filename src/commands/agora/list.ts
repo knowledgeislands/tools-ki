@@ -5,7 +5,7 @@ import { renderTree } from '../../core/tree-rendering.ts'
 
 export const createAgoraListCommand = (context: KiContext): Command =>
   new Command('list').description('list the registered estate and declared Agoras').action(async () => {
-    const profiles = await listAgoras(context.paths.config)
+    const profiles = await listAgoras(context.paths.state)
     const members = profiles.reduce((total, profile) => total + profile.members.length, 0)
     const entries = profiles.map((profile) => ({
       label: `${profile.id} [${profile.system ? 'system' : 'declared'}] ${profile.name} (${profile.members.length} members)`

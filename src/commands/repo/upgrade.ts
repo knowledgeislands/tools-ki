@@ -17,6 +17,7 @@ export const createUpgradeCommand = (
       const repositories = await resolveRepositoryTargets({
         ...selectedRepositories(),
         configurationDirectory: context.paths.config,
+        stateDirectory: context.paths.state,
         workingDirectory: context.workingDirectory,
         homeDirectory: context.homeDirectory
       })

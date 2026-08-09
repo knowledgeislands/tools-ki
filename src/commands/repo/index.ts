@@ -1,8 +1,9 @@
-import { realpath, rm } from 'node:fs/promises'
+import { mkdir, realpath, rm } from 'node:fs/promises'
 import { Command } from 'commander'
-import { configuredRepositoryWrite, inspectUserConfiguration } from '../../agents/index.ts'
+import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import {
+  declaredRepositoryIdentity,
   REPOSITORY_CONFIGURATION_FILE,
   readRepositoryDeclaration,
   renderRepositoryConfiguration
@@ -10,6 +11,7 @@ import {
 import { publishIndependentConformGroups } from '../../core/conform-publication.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
+import { inspectLocalRegistry, localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
 import { resolveRepositoryInitialisationTarget, resolveRepositoryTargets } from '../../core/repository.ts'
 import {
   type AuditRepositorySummary,
@@ -59,19 +61,28 @@ const localRepositoryRegistration = async (
   const configuration = await inspectUserConfiguration(context.paths.config)
   if (configuration.state === 'missing') return 'local KI configuration is missing; run `ki bootstrap` first'
   if (configuration.state === 'invalid') return `local KI configuration is invalid: ${configuration.errors.join('; ')}`
-  if (!configuration.repositories.includes(repository)) return `local KI configuration does not register ${repository}`
+  const registry = await inspectLocalRegistry(context.paths.state)
+  if (registry.state === 'invalid') return `local KI repository registry is invalid: ${registry.errors.join('; ')}`
+  if (!registry.repositories.some((entry) => entry.path === repository))
+    return `local KI repository registry does not register ${repository}`
   return undefined
 }
 
-const localRepositoryRegistryWrites = async (context: KiContext, repository: string) => {
+const localRepositoryRegistryWrites = async (
+  context: KiContext,
+  repository: { readonly root: string; readonly configuration: string }
+) => {
   const configuration = await inspectUserConfiguration(context.paths.config)
   // Repository conformance remains portable: a caller without a local KI installation has no
   // user registry to update. Once one exists, an invalid configuration remains a hard error.
   if (configuration.state === 'missing') return []
   if (configuration.state === 'invalid')
     throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
-  const registryWrite = await configuredRepositoryWrite(context.paths.config, repository)
-  return registryWrite ? prepareWrites(await realpath(context.paths.config), [registryWrite]) : []
+  const identity = declaredRepositoryIdentity(await readRepositoryDeclaration(repository.configuration))
+  const registryWrite = await localRegistryWrite(context.paths.state, registryEntry(repository.root, identity))
+  if (!registryWrite) return []
+  await mkdir(context.paths.state, { recursive: true })
+  return prepareWrites(await realpath(context.paths.state), [registryWrite])
 }
 
 const resolveSkills = async (
@@ -82,6 +93,7 @@ const resolveSkills = async (
     repositories: options.repositories,
     agora: options.agora,
     configurationDirectory: context.paths.config,
+    stateDirectory: context.paths.state,
     workingDirectory: context.workingDirectory,
     homeDirectory: context.homeDirectory
   })
@@ -127,6 +139,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .option('--title <title>', 'repository title')
         .option('--description <description>', 'repository description')
         .option('--repo-code <code>', 'stable uppercase repository identifier')
+        .option('--repository <url>', 'canonical HTTPS GitHub repository identity')
         .option(
           '--runtime <runtime>',
           'supported runtime: claude-code or chatgpt-codex',
@@ -141,6 +154,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               title?: string
               description?: string
               repoCode?: string
+              repository: string
               runtime: readonly string[]
               visibility?: string
             }
@@ -152,6 +166,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               title: options.title ?? '',
               description: options.description ?? '',
               repoCode: options.repoCode ?? '',
+              repository: options.repository,
               supportedRuntimes: options.runtime,
               visibility: options.visibility ?? ''
             })
@@ -163,12 +178,21 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             })
             // Resolve every write before changing state: a missing or invalid user
             // configuration cannot leave a new repository declaration behind.
-            const registryWrite = await configuredRepositoryWrite(context.paths.config, repository.root)
+            const local = await inspectUserConfiguration(context.paths.config)
+            if (local.state === 'missing')
+              throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
+            if (local.state === 'invalid')
+              throw new KiError(`ki configuration is invalid: ${local.errors.join('; ')}`, 1)
+            const registryWrite = await localRegistryWrite(
+              context.paths.state,
+              registryEntry(repository.root, options.repository)
+            )
             const declarationWrites = await prepareWrites(repository.root, [
               { path: REPOSITORY_CONFIGURATION_FILE, content: configuration, create: true }
             ])
+            if (registryWrite) await mkdir(context.paths.state, { recursive: true })
             const registryWrites = registryWrite
-              ? await prepareWrites(await realpath(context.paths.config), [registryWrite])
+              ? await prepareWrites(await realpath(context.paths.state), [registryWrite])
               : []
             await publishWrites(declarationWrites, false)
             try {
@@ -274,6 +298,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
           const repositories = await resolveRepositoryTargets({
             ...selectedRepositories(),
             configurationDirectory: context.paths.config,
+            stateDirectory: context.paths.state,
             workingDirectory: context.workingDirectory,
             homeDirectory: context.homeDirectory
           })
@@ -282,7 +307,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             // The local registry is an inventory of selected KI repository roots, not a
             // conformance verdict. Publish it before parsing declarations or evaluating
             // the selected skills so a failing repository stays discoverable for repair.
-            const registryWrites = await localRepositoryRegistryWrites(context, repository.root)
+            const registryWrites = await localRepositoryRegistryWrites(context, repository)
             for (const write of registryWrites)
               context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
             await publishWrites(registryWrites, Boolean(options.dryRun))

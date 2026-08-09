@@ -134,14 +134,25 @@ ids = [
       'ki/config.toml',
       `${existing}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`
     )
+    await box.project.write(
+      '.ki-config.toml',
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
+    )
+    await box.run(`ki dev local set ${harnessPath}`)
+    expect(await box.config.read('ki/config.toml')).toContain('[repositories]')
 
+    const migrated = await box.run('ki bootstrap --refresh')
+    await box.config.write(
+      'ki/config.toml',
+      `${await box.config.read('ki/config.toml')}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`
+    )
     const refreshed = await box.run('ki bootstrap --refresh')
 
+    expect(migrated.output).toContain('migrated local KI repository registry: 1 repositories')
     expect(refreshed.exitCode).toBe(0)
     expect(await box.config.read('ki/config.toml')).toContain(`[local]\npath = ${JSON.stringify(harnessPath)}\n`)
-    expect(await box.config.read('ki/config.toml')).toContain(
-      `[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]`
-    )
+    expect(await box.config.read('ki/config.toml')).not.toContain('[repositories]')
+    expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(repository)}`)
   })
 
   test('refuses to replace a foreign core-skill link during bootstrap but reconciles it on refresh', async () => {

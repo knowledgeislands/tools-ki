@@ -8,7 +8,7 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
     .description('show one declared Agora or the registered estate')
     .argument('<agora>', 'Agora name')
     .action(async (value: string) => {
-      const profile = await resolveAgora(context.paths.config, value)
+      const profile = await resolveAgora(context.paths.state, value)
       const members = profile.members.length
         ? profile.members.map((member) => ({ label: `${member.key}: ${member.repository} (${member.root})` }))
         : [{ label: 'none' }]

@@ -19,16 +19,28 @@ const item = (overrides: Record<string, string> = {}): string => {
     .join('\n')}\n---\n\n## Context\n\nTest item.\n\n## Boundary\n\nNone.\n\n## Discussion\n\n### Test\n\nTest.\n`
 }
 
+const localRegistry = (
+  entries: readonly { readonly key: string; readonly repository: string; readonly path: string }[]
+): string =>
+  [
+    'schema = 1',
+    ...(entries.length ? [] : ['repositories = []']),
+    ...entries.flatMap((entry) => [
+      '',
+      '[[repositories]]',
+      `key = ${JSON.stringify(entry.key)}`,
+      `repository = ${JSON.stringify(entry.repository)}`,
+      `path = ${JSON.stringify(entry.path)}`
+    ]),
+    ''
+  ].join('\n')
+
 describe('[ki repo roadmap]', () => {
   test('reads declared Knowledge Base Streams without requiring or changing a flat roadmap', async () => {
     const box = await sandbox()
     await box.project.write(
       'knowledge/.ki-config.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-decision-records]\nrepo_type = "kb"\n'
-    )
-    await box.config.write(
-      'ki/config.toml',
-      'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = []\n'
     )
     await box.project.write('knowledge/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
     await box.project.write('knowledge/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
@@ -97,6 +109,38 @@ describe('[ki repo roadmap]', () => {
     await expect(box.project.read('malformed/docs/roadmap')).rejects.toThrow()
   })
 
+  test('reports unavailable trade inventory alongside an otherwise valid Knowledge Base stream', async () => {
+    const box = await sandbox()
+    const knowledge = await box.project.mkdir('knowledge')
+    const broken = await box.project.mkdir('broken')
+    const configuration =
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\n\n[skills.ki-decision-records]\nrepo_type = "kb"\n\n[skills.ki-trades]\n'
+    await box.project.write('knowledge/.ki-config.toml', configuration)
+    await box.project.write('broken/.ki-config.toml', configuration.replace('example/knowledge', 'example/broken'))
+    await box.project.write('knowledge/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
+    await box.project.write('knowledge/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
+    await box.project.write(
+      'knowledge/Streams/Now/Proposal/Proposal.md',
+      '---\ntype: stream-proposal\ncode: KBS-001\ntitle: Native proposal\nstatus: awaiting-review\n---\n'
+    )
+    await box.project.write('knowledge/-/_TRADES/example/receiver/TRD-00000001.md', 'not a trade record\n')
+    await box.state.write(
+      'ki/registry.toml',
+      localRegistry([
+        { key: 'knowledge', repository: 'https://github.com/example/knowledge', path: knowledge },
+        { key: 'broken', repository: 'https://github.com/example/broken', path: broken }
+      ])
+    )
+
+    const result = await box.run('ki repo --repo knowledge --repo broken roadmap list')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('trades (0)')
+    expect(result.output).toContain('❌ unavailable:')
+    expect(result.output).toContain('TRADES=unavailable')
+    expect(result.output).toContain('has no physical Streams directory')
+  })
+
   test('renders an empty Stream focus and rejects invalid proposal frontmatter', async () => {
     const box = await sandbox()
     const configuration = '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-decision-records]\nrepo_type = "kb"\n'
@@ -144,9 +188,9 @@ describe('[ki repo roadmap]', () => {
       })
     )
     const root = await realpath(`${box.project.path}/repo`)
-    await box.config.write(
-      'ki/config.toml',
-      `schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = [${JSON.stringify(root)}]\n`
+    await box.state.write(
+      'ki/registry.toml',
+      localRegistry([{ key: 'repo', repository: 'https://github.com/example/repo', path: root }])
     )
 
     const text = await box.run('ki repo --repo repo roadmap list --horizon next --status draft')
@@ -320,9 +364,12 @@ describe('[ki repo roadmap]', () => {
       'receiver/+/_TRADES/example/source/TRD-00000001.md',
       record('TRD-00000001', 'knowledge', '\ndecision_status: unconsidered')
     )
-    await box.config.write(
-      'ki/config.toml',
-      `schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = [${JSON.stringify(source)}, ${JSON.stringify(receiver)}]\n`
+    await box.state.write(
+      'ki/registry.toml',
+      localRegistry([
+        { key: 'source', repository: 'https://github.com/example/source', path: source },
+        { key: 'receiver', repository: 'https://github.com/example/receiver', path: receiver }
+      ])
     )
 
     const result = await box.run('ki repo --repo source --repo receiver roadmap list')
@@ -401,7 +448,7 @@ describe('[ki repo roadmap]', () => {
 
     const result = await box.run('ki repo --repo repo roadmap list')
 
-    expect(result.exitCode).toBe(1)
+    expect(result.exitCode).toBe(0)
     expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
   })
 
@@ -415,7 +462,7 @@ describe('[ki repo roadmap]', () => {
 
     const result = await box.run('ki repo --repo repo roadmap list')
 
-    expect(result.exitCode).toBe(1)
+    expect(result.exitCode).toBe(0)
     expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
     expect(result.output).not.toContain('has unsupported or repeated field housekeeping-template')
   })

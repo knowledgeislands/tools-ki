@@ -3,10 +3,10 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { lstat, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, relative } from 'node:path'
 import { parse } from 'smol-toml'
-import { inspectUserConfiguration } from '../agents/configuration.ts'
 import type { KiContext } from '../context.ts'
 import { REPOSITORY_CONFIGURATION_FILE } from './configuration.ts'
 import { KiError } from './errors.ts'
+import { requiredLocalRegistry } from './local-registry.ts'
 import { type RepositoryLocation, resolveRepository } from './repository.ts'
 
 const TRADES_TABLE = 'skills.ki-trades'
@@ -343,12 +343,7 @@ export const removeTradeRoute = async (
 }
 
 const registeredRoots = async (context: KiContext): Promise<readonly string[]> => {
-  const configuration = await inspectUserConfiguration(context.paths.config)
-  if (configuration.state === 'missing')
-    throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
-  if (configuration.state === 'invalid')
-    throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
-  return configuration.repositories
+  return (await requiredLocalRegistry(context.paths.state)).map((repository) => repository.path)
 }
 
 const registeredRepositories = async (context: KiContext): Promise<readonly RegisteredRepository[]> => {

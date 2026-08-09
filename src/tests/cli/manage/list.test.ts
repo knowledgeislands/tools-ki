@@ -64,6 +64,25 @@ describe('[ki manage list]', () => {
     )
   })
 
+  test('lists state-registered repositories and rejects an invalid local registry', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('repository')
+    await box.state.write(
+      'ki/registry.toml',
+      `schema = 1\n\n[[repositories]]\nkey = "repository"\nrepository = "https://github.com/example/repository"\npath = ${JSON.stringify(repository)}\n`
+    )
+
+    const listed = await box.run('ki manage list')
+    await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = []\nextra = true\n')
+    const invalid = await box.run('ki manage list')
+
+    expect(listed.output).toContain(`╰─ repository: ${repository}`)
+    expect(invalid).toEqual({
+      exitCode: 1,
+      output: 'ki: error: local KI repository registry is invalid: unrecognised key extra\n'
+    })
+  })
+
   test('rejects arguments and invalid user configuration without inspecting repository declarations', async () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '[ki-example\n')

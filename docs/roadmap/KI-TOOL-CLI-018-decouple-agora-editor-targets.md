@@ -27,7 +27,7 @@ This item does not define the portable `ki-repo` contract for repository kind an
 
 ## Current state
 
-Agora profiles currently require `tool = "zed"` and store arbitrary physical directories under basename-derived keys. The user configuration holds a separate unkeyed registry path list.
+Agora profiles formerly required `tool = "zed"` and stored arbitrary physical directories under basename-derived keys. The retired user configuration held a separate unkeyed registry path list.
 
 The Harness-owned reciprocal Agora-membership contract was accepted as `GDR-KI-HARNESS-006` in Harness commit `ba50fb64`. This CLI may now resolve registered canonical identities and observe matching home/member declarations. It still must not alter peer `.ki-config.toml` files, treat current local profiles as portable membership evidence, or choose the initial Agora vocabulary and member set without user approval.
 
@@ -37,25 +37,28 @@ The verified canonical Harness archive is pinned to `445330a6836e429d60305941048
 
 Commit `55daa69` replaces user-local `.ki-agora` profiles with the local resolver for the accepted reciprocal home/member contract. `estate` is the reserved system selector for registered canonical repository roots; named declarations resolve only when every member is registered and reciprocates the home and role. It deliberately opens only those canonical roots through `ki agora open <agora> --target zed`: it neither binds external store roles nor writes peer declarations. Store-role target composition remains a later, separately approved boundary.
 
+The local registry now lives at `$XDG_STATE_HOME/ki/registry.toml`. Each record binds a stable local key, the declared canonical HTTPS GitHub identity, and the physical checkout path. Resolver consumers use only this state file; `ki bootstrap --refresh` imports the retired `[repositories].paths` list once and removes it from user configuration. `ki repo init`, `ki registry add`, `ki repo conform`, and `ki repo repair` require or derive the canonical identity before recording a binding.
+
 ## Steps
 
 - [x] Pin and verify the canonical Harness archive containing the accepted `ki-repo` contract.
 - [ ] Reconcile the implicit ordinary-repository model and KB `store_roles` into typed repository configuration, resolution, and validation.
 - [x] Derive a protected canonical `estate` Agora from registered members, each carrying a local repository-name key and canonical HTTPS identity.
+- [x] Move the machine-local registry to `$XDG_STATE_HOME/ki/registry.toml`, with canonical identity, local key, checkout binding, and explicit bootstrap-refresh migration from the retired user-configuration path list.
 - [x] Resolve named reciprocal declarations only across canonical estate members, diagnose name and identity collisions, and retain registry commands as the first-class estate-management interface.
 - [x] Remove `tool` and physical project paths from `.ki-agora`; require `ki agora open <agora> --target zed` at the target boundary, where Zed composes canonical repository members.
-- [x] Migrate configuration, CLI contracts, completions, manual, README, changelog, and contract tests without compatibility aliases.
+- [x] Migrate CLI contracts, manual, README, changelog, and contract tests to the state-backed registry without resolver compatibility aliases.
 
 ## Files touched
 
-- `src/core/registry.ts`, `src/core/agora.ts`, `src/core/configuration.ts`, `src/core/repository.ts`, and repository-resolution modules.
+- `src/core/local-registry.ts`, `src/core/agora.ts`, `src/core/configuration.ts`, `src/core/repository.ts`, and repository-resolution modules.
 - `src/commands/agora/`, `src/commands/registry/`, and the target-boundary command module.
 - `src/tests/cli/agora/agora.test.ts`, `src/tests/cli/registry/registry.test.ts`, bootstrap, repository-target, and trade contracts.
 - `man/ki.1`, `README.md`, `CHANGELOG.md`, and shell completion coverage.
 
 ## Verify
 
-- A canonical registered estate round-trips repository-name keys, canonical HTTPS identities, and physical roots without accepting an arbitrary project as a repository member.
+- A canonical registered estate round-trips repository-name keys, canonical HTTPS identities, and physical roots in `$XDG_STATE_HOME/ki/registry.toml` without accepting an arbitrary project as a repository member.
 - `ki registry` adds, lists, diagnoses, and repairs that estate, while `ki repo --agora <name>` resolves only its canonical members.
 - No `.ki-agora` form contains `tool` or a physical project path. `ki agora open <agora> --target zed` resolves the target outside the profile and can compose a KB's declared `notes`, `sources`, and `legacy` roles without registering the latter two as KI repositories or storing their physical bindings in repository configuration.
 - The verified canonical archive retains the accepted `ki-repo` kind, role, and authority rules recorded above; a later archive refresh that changes any of them requires a revised plan.
@@ -72,6 +75,12 @@ The portable `ki-repo` kind and store-role contract is accepted and available in
 The system-managed canonical Agora represents every locally registered canonical KI repository, whether it is a Knowledge Base or a non-KB repository. Registry commands retain their responsibility to add, list, diagnose, and repair this estate. Named Agoras select canonical repository members rather than arbitrary physical directories.
 
 Each member needs a local repository-name key for user-facing configuration and integration with mGit, alongside its declared canonical HTTPS home. A name collision must be diagnosed rather than silently replacing a different canonical repository identity.
+
+### Machine-local registry
+
+The estate is local machine state, not portable repository configuration. Its record is URL-first: a canonical GitHub identity is the durable identity, while the checkout path is a replaceable local binding and the key is a stable local handle. `estate` is the reserved system Agora over those records, so it needs no reciprocal declaration or separate membership record. The local KI tooling administers this state.
+
+The retired `[repositories].paths` configuration is migration input only. A user explicitly runs `ki bootstrap --refresh`; the command validates each listed checkout's declared identity, writes the state registry, and removes the old field. No estate, trade, Agora, or repository selector falls back to those paths after this change.
 
 ### Reciprocal membership authority
 

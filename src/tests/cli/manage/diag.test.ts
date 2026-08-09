@@ -77,6 +77,23 @@ ids = ["example:skill", "example:skill"]
     expect(human.output).toContain('× schema must equal 1')
   })
 
+  test('reports local registry entries and state registry errors', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('repository')
+    await box.state.write(
+      'ki/registry.toml',
+      `schema = 1\n\n[[repositories]]\nkey = "repository"\nrepository = "https://github.com/example/repository"\npath = ${JSON.stringify(repository)}\n`
+    )
+
+    const valid = await box.run('ki manage diag')
+    await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = []\nextra = true\n')
+    const invalid = await box.run('ki manage diag')
+
+    expect(valid.output).toContain(`╰─ repository: ${repository}`)
+    expect(invalid.output).toContain('errors (1)')
+    expect(invalid.output).toContain('unrecognised key extra')
+  })
+
   test('does not discover a repository for user diagnostics', async () => {
     const box = await sandbox()
     await box.project.mkdir('repo/src/nested')
@@ -187,6 +204,19 @@ extra = true
     expect(diag.output).toContain('! local has unrecognised key extra')
   })
 
+  test('reports invalid legacy repository migration input without using it as the active registry', async () => {
+    const box = await sandbox()
+    await box.config.write(
+      'ki/config.toml',
+      'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = ["relative"]\nextra = true\n'
+    )
+
+    const diag = await box.run('ki manage diag')
+
+    expect(diag.output).toContain('! repositories has unrecognised key extra')
+    expect(diag.output).toContain('× repositories.paths must contain absolute paths')
+  })
+
   test('displays configuration with no warnings or errors', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
@@ -201,7 +231,8 @@ extra = true
     expect(diag.output).toContain('├─ harnesses (0)\n│  │  ╰─ none')
     expect(diag.output).toContain('├─ skills (7)')
     expect(diag.output).toContain('│  │  ╰─ knowledgeislands/ki-agentic-harness:ki-recap')
-    expect(diag.output).toContain('├─ repositories (0)\n│  │  ╰─ none')
+    expect(diag.output).toContain('├─ registry\n│  ├─ Status: missing')
+    expect(diag.output).toContain('│  ╰─ repositories (0)\n│     ╰─ none')
     expect(diag.output).toContain('source: none')
     expect(diag.output).toContain('mode: not configured')
   })

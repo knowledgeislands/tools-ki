@@ -1,7 +1,9 @@
-import { lstat, readFile, writeFile } from 'node:fs/promises'
-import { isAbsolute, resolve } from 'node:path'
+import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { isAbsolute, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
+import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../core/configuration.ts'
 import { KiError } from '../core/errors.ts'
+import { localRegistryWriteMany, registryEntry } from '../core/local-registry.ts'
 import {
   agentDescriptors,
   bootstrapConfigurationPath,
@@ -324,37 +326,24 @@ export const setConfiguredUserSkills = async (
   )
 }
 
-const renderedRepositorySection = (repositories: readonly string[]): string =>
-  ['[repositories]', 'paths = [', ...repositories.map((repository) => `  ${JSON.stringify(repository)},`), ']'].join(
-    '\n'
-  )
-
 /**
- * Produces the one local-user configuration update that records a physical KI
- * repository. The host owns publication, so native repository operations cannot
- * mutate XDG configuration directly.
+ * Imports the retired user-configuration path list exactly when a user asks
+ * `ki bootstrap --refresh`. Resolution never reads this legacy field.
  */
-export const configuredRepositoryWrite = async (
+export const migrateLegacyRepositoryRegistry = async (
   configurationDirectory: string,
-  repository: string
-): Promise<{ readonly path: string; readonly content: string } | undefined> => {
+  stateDirectory: string
+): Promise<number> => {
   const inspection = await inspectUserConfiguration(configurationDirectory)
-  if (inspection.state === 'missing')
-    throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
-  if (inspection.state === 'invalid')
-    throw new KiError(`ki configuration is invalid: ${inspection.errors.join('; ')}`, 1)
-  if (inspection.warnings.some((warning) => warning.startsWith('repositories has unrecognised key ')))
-    throw new KiError('ki configuration repositories section has unrecognised keys; resolve them before conforming', 1)
-  if (inspection.repositories.includes(repository)) return undefined
-
-  const path = bootstrapConfigurationPath(configurationDirectory)
-  const contents = await readFile(path, 'utf8')
-  const replacement = renderedRepositorySection(
-    [...inspection.repositories, repository].sort((left, right) => left.localeCompare(right))
+  if (inspection.state !== 'valid' || !inspection.repositories.length) return 0
+  const entries = await Promise.all(
+    inspection.repositories.map(async (root) =>
+      registryEntry(root, declaredRepositoryIdentity(await readRepositoryDeclaration(join(root, '.ki-config.toml'))))
+    )
   )
-  const section = /(?:^|\n)\[repositories\]\n[\s\S]*?(?=\n\[[^\n]+\]|$)/
-  const content = section.test(contents)
-    ? contents.replace(section, `\n${replacement}`)
-    : `${contents.trimEnd()}\n\n${replacement}\n`
-  return { path: 'config.toml', content }
+  const write = await localRegistryWriteMany(stateDirectory, entries)
+  if (!write) return 0
+  await mkdir(stateDirectory, { recursive: true })
+  await writeFile(join(stateDirectory, write.path), write.content, { encoding: 'utf8' })
+  return entries.length
 }

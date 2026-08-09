@@ -63,6 +63,7 @@ export const configureBootstrapAgents = async (options: {
   readonly homeDirectory: string
   readonly configurationDirectory: string
   readonly refresh?: boolean
+  readonly dropLegacyRepositories?: boolean
 }): Promise<BootstrapConfiguration> => {
   const path = bootstrapConfigurationPath(options.configurationDirectory)
   const state = await lstat(options.configurationDirectory).catch(() => undefined)
@@ -84,7 +85,7 @@ export const configureBootstrapAgents = async (options: {
         existing.harnesses,
         existing.skills,
         existing.local ?? undefined,
-        existing.repositories
+        options.dropLegacyRepositories ? [] : existing.repositories
       ),
       {
         encoding: 'utf8'
@@ -126,7 +127,8 @@ export const refreshUserConfiguration = async (
   configurationDirectory: string,
   dataDirectory: string,
   agents: readonly InstalledAgent[],
-  local?: string
+  local?: string,
+  options: { readonly dropLegacyRepositories?: boolean } = {}
 ): Promise<{ readonly harnesses: number; readonly skills: number }> => {
   const installed = await discoverInstalledHarnesses(dataDirectory)
   const existing = await inspectUserConfiguration(configurationDirectory)
@@ -135,7 +137,7 @@ export const refreshUserConfiguration = async (
   const skills = await discoverManagedUserSkills(agents, installed, localSkills)
   await writeFile(
     bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(agents, harnesses, skills, local, existing.repositories),
+    renderConfiguration(agents, harnesses, skills, local, options.dropLegacyRepositories ? [] : existing.repositories),
     {
       encoding: 'utf8'
     }

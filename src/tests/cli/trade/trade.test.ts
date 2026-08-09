@@ -1,5 +1,5 @@
 import { readFile, realpath, rm } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -55,24 +55,31 @@ const repositoryConfiguration = (identity: string, exportsTo: Directions = {}, i
     ''
   ].join('\n')
 
-const localConfiguration = (repositories: readonly string[]): string =>
-  [
-    'schema = 1',
-    '',
-    '[agents]',
-    'ids = []',
-    '',
-    '[harnesses]',
-    'ids = []',
-    '',
-    '[skills]',
-    '',
-    '[repositories]',
-    'paths = [',
-    ...repositories.map((path) => `  ${JSON.stringify(path)},`),
-    ']',
-    ''
-  ].join('\n')
+const configureEstate = async (box: Awaited<ReturnType<typeof sandbox>>, roots: readonly string[]): Promise<void> => {
+  const entries = await Promise.all(
+    roots.map(async (path) => {
+      const declaration = await readFile(join(path, '.ki-config.toml'), 'utf8').catch(() => '')
+      const repository =
+        /\nrepository = "([^"]+)"/u.exec(`\n${declaration}`)?.[1] ?? `https://github.com/example/${basename(path)}`
+      return { key: basename(path), repository, path }
+    })
+  )
+  await box.state.write(
+    'ki/registry.toml',
+    [
+      'schema = 1',
+      ...(entries.length ? [] : ['repositories = []']),
+      ...entries.flatMap((entry) => [
+        '',
+        '[[repositories]]',
+        `key = ${JSON.stringify(entry.key)}`,
+        `repository = ${JSON.stringify(entry.repository)}`,
+        `path = ${JSON.stringify(entry.path)}`
+      ]),
+      ''
+    ].join('\n')
+  )
+}
 
 const configuredPair = async () => {
   const box = await sandbox()
@@ -86,7 +93,7 @@ const configuredPair = async () => {
     'receiver/.ki-config.toml',
     repositoryConfiguration('example/receiver', {}, { work: [sourceHome], knowledge: [sourceHome] })
   )
-  await box.config.write('ki/config.toml', localConfiguration([source, receiver]))
+  await configureEstate(box, [source, receiver])
   box.setRunner(async (command, arguments_) => {
     if (command !== 'git') return { exitCode: 1, output: 'unsupported command' }
     const root = arguments_[1] as string
@@ -142,6 +149,17 @@ const createTrade = async (
 }
 
 describe('[ki trade]', () => {
+  test('refuses release when the submitted trade receiver is no longer in the local estate', async () => {
+    const { box, source } = await configuredPair()
+    const submitted = await createTrade(box, 'work')
+    const id = /TRD-[0-9a-f]{8}/u.exec(submitted.output)?.[0] as string
+    await configureEstate(box, [source])
+
+    expect((await box.run(['ki', 'trade', 'release', id])).output).toContain(
+      'trade record peer example/receiver is unavailable or ambiguous in the registered repository estate'
+    )
+  })
+
   test('adds, lists, checks, and removes one typed directional route without changing repository identity', async () => {
     const box = await sandbox()
     const source = await realpath(box.project.path)
@@ -151,7 +169,7 @@ describe('[ki trade]', () => {
       'receiver/.ki-config.toml',
       repositoryConfiguration('example/receiver', {}, { work: [sourceHome] })
     )
-    await box.config.write('ki/config.toml', localConfiguration([source, receiver]))
+    await configureEstate(box, [source, receiver])
 
     const empty = await box.run('ki trade routes list')
     const added = await box.run([
@@ -319,7 +337,7 @@ describe('[ki trade]', () => {
       'third/.ki-config.toml',
       repositoryConfiguration('example/third', {}, { work: [sourceHome], knowledge: [receiverHome] })
     )
-    await box.config.write('ki/config.toml', localConfiguration([source, receiver, third]))
+    await configureEstate(box, [source, receiver, third])
 
     expect(await box.run('ki trade routes list --estate')).toEqual({
       exitCode: 0,
@@ -391,7 +409,7 @@ describe('[ki trade]', () => {
       'fourth/.ki-config.toml',
       repositoryConfiguration('example/fourth', { work: [sourceHome] }, { knowledge: [thirdHome] })
     )
-    await box.config.write('ki/config.toml', localConfiguration([source, receiver, third, fourth]))
+    await configureEstate(box, [source, receiver, third, fourth])
     return box
   }
 
@@ -472,7 +490,7 @@ describe('[ki trade]', () => {
     const box = await sandbox()
     const source = await realpath(box.project.path)
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
-    await box.config.write('ki/config.toml', localConfiguration([source]))
+    await configureEstate(box, [source])
     box.setEnv({ KI_BROWSER_OPENER: 'noop-opener' })
     const opened: string[] = []
     box.setRunner(async (command) => {
@@ -697,7 +715,7 @@ describe('[ki trade]', () => {
     const foreignReceiver = home('other/receiver')
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { work: [foreignReceiver] }))
     await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('other/receiver'))
-    await box.config.write('ki/config.toml', localConfiguration([source, receiver]))
+    await configureEstate(box, [source, receiver])
 
     const created = await createTrade(box, 'work', { receiver: foreignReceiver })
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
@@ -711,7 +729,7 @@ describe('[ki trade]', () => {
     const source = await realpath(box.project.path)
     const receiver = await box.project.mkdir('receiver')
     const duplicate = await box.project.mkdir('duplicate')
-    await box.config.write('ki/config.toml', localConfiguration([source, receiver, duplicate]))
+    await configureEstate(box, [source, receiver, duplicate])
 
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
     expect(await box.run('ki trade routes list')).toEqual({
@@ -1011,22 +1029,24 @@ describe('[ki trade]', () => {
   test('reports missing, invalid, and unregistered user configuration before trade mutation', async () => {
     const unbootstrapped = await sandbox()
     await unbootstrapped.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
-    expect((await unbootstrapped.run('ki trade routes list')).output).toContain('ki environment is not bootstrapped')
+    expect((await unbootstrapped.run('ki trade routes list')).output).toContain(
+      'current KI repository is not registered'
+    )
 
     const box = await sandbox()
     const source = await realpath(box.project.path)
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source'))
     await box.config.write('ki/config.toml', 'not valid TOML')
-    expect((await box.run('ki trade routes list')).output).toContain('ki configuration is invalid')
-    await box.config.write('ki/config.toml', localConfiguration([]))
     expect((await box.run('ki trade routes list')).output).toContain('current KI repository is not registered')
-    await box.config.write('ki/config.toml', localConfiguration([source]))
+    await configureEstate(box, [])
+    expect((await box.run('ki trade routes list')).output).toContain('current KI repository is not registered')
+    await configureEstate(box, [source])
     expect((await box.run('ki trade routes list')).exitCode).toBe(0)
   })
 
   test('ignores missing registered roots and missing trade paths without treating them as peer state', async () => {
     const { box, source, receiver } = await configuredPair()
-    await box.config.write('ki/config.toml', localConfiguration([source, receiver, `${box.root.path}/missing`]))
+    await configureEstate(box, [source, receiver, `${box.root.path}/missing`])
 
     expect(await box.run('ki trade list')).toEqual({
       exitCode: 0,
@@ -1172,10 +1192,10 @@ describe('[ki trade]', () => {
       'duplicate/.ki-config.toml',
       repositoryConfiguration('example/receiver', {}, { work: [sourceHome] })
     )
-    await box.config.write('ki/config.toml', localConfiguration([source, receiver, duplicate]))
-    expect((await box.run(['ki', 'trade', 'release', id])).output).toContain('unavailable or ambiguous')
+    await configureEstate(box, [source, receiver, duplicate])
+    expect((await box.run(['ki', 'trade', 'release', id])).output).toContain('repositories repeats a repository')
 
-    await box.config.write('ki/config.toml', localConfiguration([source, receiver]))
+    await configureEstate(box, [source, receiver])
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/other', { work: [receiverHome] }))
     expect((await box.run(['ki', 'trade', 'release', id])).output).toContain('not owned by the current repository')
 

@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { parse } from 'smol-toml'
 import { KiError } from './errors.ts'
 import { type SupportedRuntime, supportedRuntimes } from './harness.ts'
+import { canonicalRepositoryIdentity } from './local-registry.ts'
 
 export const REPOSITORY_CONFIGURATION_FILE = '.ki-config.toml'
 export const DEFAULT_HARNESS = 'knowledgeislands/ki-agentic-harness'
@@ -26,6 +27,7 @@ export interface RepositoryInitialisation {
   readonly repoCode: string
   readonly supportedRuntimes: readonly string[]
   readonly visibility: string
+  readonly repository: string
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -41,6 +43,7 @@ export const renderRepositoryConfiguration = (initialisation: RepositoryInitiali
   const description = initialisationField(initialisation.description, 'description')
   const repoCode = initialisationField(initialisation.repoCode, 'repo-code')
   const visibility = initialisationField(initialisation.visibility, 'visibility')
+  const repository = initialisationField(initialisation.repository, 'repository')
   if (!/^[A-Z][A-Z0-9-]{1,23}$/.test(repoCode))
     throw new KiError('ki repo init --repo-code must be a stable uppercase identifier', 2)
   if (!initialisation.supportedRuntimes.length) throw new KiError('ki repo init requires at least one --runtime', 2)
@@ -52,11 +55,14 @@ export const renderRepositoryConfiguration = (initialisation: RepositoryInitiali
     throw new KiError('ki repo init --runtime must not repeat a runtime', 2)
   if (visibility !== 'public' && visibility !== 'private')
     throw new KiError('ki repo init --visibility must be public or private', 2)
+  if (!canonicalRepositoryIdentity(repository))
+    throw new KiError('ki repo init --repository must be a canonical HTTPS GitHub repository', 2)
   return [
     '[repo]',
     `harnesses = [${JSON.stringify(DEFAULT_HARNESS)}]`,
     '',
     '[skills.ki-repo]',
+    `repository = ${JSON.stringify(repository)}`,
     `title = ${JSON.stringify(title)}`,
     `description = ${JSON.stringify(description)}`,
     `repo_code = ${JSON.stringify(repoCode)}`,
@@ -126,6 +132,13 @@ export const readRepositoryDeclaration = async (configurationPath: string): Prom
   /* v8 ignore next */
   if (!isRecord(parsed)) throw shapeError('must be a table')
   return { harnesses: declaredHarnesses(parsed), skills: declaredSkills(parsed) }
+}
+
+export const declaredRepositoryIdentity = (declaration: RepositoryDeclaration): string => {
+  const identity = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration['repository']
+  if (!canonicalRepositoryIdentity(identity))
+    throw new KiError('[skills.ki-repo].repository must be a canonical HTTPS GitHub repository', 1)
+  return identity
 }
 
 // Declare a skill in a repository's .ki-config.toml by appending its [skills.<name>] table. A

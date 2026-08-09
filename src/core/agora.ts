@@ -1,13 +1,12 @@
 import { lstat, realpath } from 'node:fs/promises'
-import { basename, join } from 'node:path'
-import { inspectUserConfiguration } from '../agents/configuration.ts'
+import { join } from 'node:path'
 import { type RepositoryDeclaration, readRepositoryDeclaration } from './configuration.ts'
 import { KiError } from './errors.ts'
+import { canonicalRepositoryIdentity, requiredLocalRegistry } from './local-registry.ts'
 
 export const ESTATE_AGORA = 'estate'
 
 const REPOSITORY_CONFIGURATION_FILE = '.ki-config.toml'
-const REPOSITORY = /^https:\/\/github\.com\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
 const AGORA_ID = /^[a-z][a-z0-9-]*[a-z0-9]$/
 const ROLE = /^[a-z][a-z0-9-]*[a-z0-9]$/
 const targets = new Set([
@@ -68,24 +67,18 @@ const skillConfiguration = (
 const canonicalRepository = (root: string, declaration: RepositoryDeclaration): string => {
   const configuration = skillConfiguration(declaration, 'ki-repo')
   const repository = configuration?.['repository']
-  if (typeof repository !== 'string' || !REPOSITORY.test(repository))
+  if (!canonicalRepositoryIdentity(repository))
     throw agoraError(root, '[skills.ki-repo].repository must be a canonical HTTPS GitHub repository')
   return repository
 }
 
-const registeredRepositories = async (configurationDirectory: string): Promise<readonly RegisteredRepository[]> => {
-  const configuration = await inspectUserConfiguration(configurationDirectory)
-  if (configuration.state === 'missing')
-    throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
-  if (configuration.state === 'invalid')
-    throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
-
+const registeredRepositories = async (stateDirectory: string): Promise<readonly RegisteredRepository[]> => {
   const repositories: RegisteredRepository[] = []
-  for (const configuredRoot of configuration.repositories) {
-    const state = await lstat(configuredRoot).catch(() => undefined)
+  for (const registered of await requiredLocalRegistry(stateDirectory)) {
+    const state = await lstat(registered.path).catch(() => undefined)
     if (!state?.isDirectory() || state.isSymbolicLink())
-      throw agoraError(configuredRoot, 'must be an existing physical directory')
-    const root = await realpath(configuredRoot)
+      throw agoraError(registered.path, 'must be an existing physical directory')
+    const root = await realpath(registered.path)
     const configurationPath = join(root, REPOSITORY_CONFIGURATION_FILE)
     const declarationState = await lstat(configurationPath).catch(() => undefined)
     if (!declarationState?.isFile() || declarationState.isSymbolicLink())
@@ -96,15 +89,21 @@ const registeredRepositories = async (configurationDirectory: string): Promise<r
     } catch (error) {
       throw agoraError(root, `has invalid ${REPOSITORY_CONFIGURATION_FILE}: ${(error as Error).message}`)
     }
-    const key = basename(root)
-    repositories.push({ key, root, repository: canonicalRepository(root, declaration), declaration })
+    const identity = canonicalRepository(root, declaration)
+    if (identity !== registered.repository)
+      throw agoraError(root, `declares ${identity}, but its local registry identity is ${registered.repository}`)
+    repositories.push({ key: registered.key, root, repository: identity, declaration })
   }
 
   const keys = new Set<string>()
   const identities = new Set<string>()
   for (const repository of repositories) {
+    // requiredLocalRegistry rejects duplicate keys and identities before this resolver runs.
+    /* v8 ignore next */
     if (keys.has(repository.key))
       throw new KiError(`registered estate repeats local repository key ${repository.key}`, 2)
+    // requiredLocalRegistry rejects duplicate keys and identities before this resolver runs.
+    /* v8 ignore next */
     if (identities.has(repository.repository))
       throw new KiError(`registered estate repeats canonical repository ${repository.repository}`, 2)
     keys.add(repository.key)
@@ -137,7 +136,7 @@ const homeDeclarations = (repository: RegisteredRepository): readonly AgoraHome[
     if (!members) throw profileError(id, 'members must be a repository-to-role table')
     const roles: Record<string, string> = {}
     for (const [identity, role] of Object.entries(members)) {
-      if (!REPOSITORY.test(identity))
+      if (!canonicalRepositoryIdentity(identity))
         throw profileError(id, `member ${identity} must be a canonical HTTPS GitHub repository`)
       if (identity === repository.repository) throw profileError(id, 'must not list its home repository as a member')
       if (typeof role !== 'string' || !ROLE.test(role)) throw profileError(id, `member ${identity} has an invalid role`)
@@ -156,7 +155,7 @@ const membershipDeclaration = (repository: RegisteredRepository, id: string): Me
   if (value === undefined) return undefined
   const membership = table(value)
   if (!membership) throw profileError(id, `membership in ${repository.repository} must be a table`)
-  if (typeof membership['home'] !== 'string' || !REPOSITORY.test(membership['home']))
+  if (!canonicalRepositoryIdentity(membership['home']))
     throw profileError(id, `membership in ${repository.repository} has an invalid home`)
   if (typeof membership['role'] !== 'string' || !ROLE.test(membership['role']))
     throw profileError(id, `membership in ${repository.repository} has an invalid role`)
@@ -201,17 +200,17 @@ const estate = (repositories: readonly RegisteredRepository[]): AgoraProfile => 
   system: true
 })
 
-export const listAgoras = async (configurationDirectory: string): Promise<readonly AgoraProfile[]> => {
-  const repositories = await registeredRepositories(configurationDirectory)
+export const listAgoras = async (stateDirectory: string): Promise<readonly AgoraProfile[]> => {
+  const repositories = await registeredRepositories(stateDirectory)
   return [
     estate(repositories),
     ...profileCandidates(repositories).sort((left, right) => left.id.localeCompare(right.id, 'en'))
   ]
 }
 
-export const resolveAgora = async (configurationDirectory: string, id: string): Promise<AgoraProfile> => {
+export const resolveAgora = async (stateDirectory: string, id: string): Promise<AgoraProfile> => {
   if (!AGORA_ID.test(id)) throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
-  const repositories = await registeredRepositories(configurationDirectory)
+  const repositories = await registeredRepositories(stateDirectory)
   if (id === ESTATE_AGORA) return estate(repositories)
   const profiles = profileCandidates(repositories)
   const candidates = profiles.filter((profile) => profile.id === id)

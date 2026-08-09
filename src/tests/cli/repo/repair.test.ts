@@ -7,6 +7,7 @@ const repositoryConfiguration = `
 harnesses = ["example/harness"]
 
 [skills.ki-repo]
+repository = "https://github.com/example/project"
 title = "Example"
 description = "Example repository."
 repo_code = "EXAMPLE"
@@ -37,7 +38,7 @@ describe('[ki repo repair]', () => {
     expect(repair.output).toContain('Registry: registered')
     expect(repair.output).toContain('link ')
     expect((await lstat(projection)).isSymbolicLink()).toBe(true)
-    expect(await box.config.read('ki/config.toml')).toContain(box.project.path)
+    expect(await box.state.read('ki/registry.toml')).toContain(box.project.path)
   })
 
   test('reports but does not change a dry-run repository repair or its registry', async () => {
@@ -50,7 +51,7 @@ describe('[ki repo repair]', () => {
     expect(repair.output).toContain('would register')
     expect(repair.output).toContain('would link')
     await expect(lstat(projection)).rejects.toThrow()
-    expect(await box.config.read('ki/config.toml')).not.toContain(box.project.path)
+    await expect(box.state.read('ki/registry.toml')).rejects.toThrow()
   })
 
   test('never replaces a foreign repository skill entry', async () => {
@@ -122,7 +123,10 @@ describe('[ki repo repair]', () => {
 
   test('renders every explicitly selected repository repair', async () => {
     const box = await preparedRepository()
-    await box.root.write('second/.ki-config.toml', repositoryConfiguration)
+    await box.root.write(
+      'second/.ki-config.toml',
+      repositoryConfiguration.replace('https://github.com/example/project', 'https://github.com/example/second')
+    )
     const [project, second] = await Promise.all([realpath(box.project.path), realpath(`${box.root.path}/second`)])
 
     const repair = await box.run([
@@ -164,13 +168,12 @@ describe('[ki repo repair]', () => {
 
   test('reports a registry configuration it cannot safely extend', async () => {
     const box = await preparedRepository()
-    const existing = await box.config.read('ki/config.toml')
-    await box.config.write('ki/config.toml', `${existing}\n[repositories]\npaths = []\nextra = true\n`)
+    await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = []\nextra = true\n')
 
     const repair = await box.run('ki repo repair')
 
     expect(repair.exitCode).toBe(1)
-    expect(repair.output).toContain('Registry: ki configuration repositories section has unrecognised keys')
+    expect(repair.output).toContain('Registry: local KI repository registry is invalid: unrecognised key extra')
   })
 
   // Health inspects the projection path itself, and lstat resolves the components above it, so a

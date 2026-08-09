@@ -1,9 +1,11 @@
-import { realpath } from 'node:fs/promises'
+import { mkdir, realpath } from 'node:fs/promises'
 import { Command } from 'commander'
-import { configuredRepositoryWrite, inspectUserConfiguration } from '../../agents/index.ts'
+import { inspectUserConfiguration } from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
+import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../core/configuration.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
+import { localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
@@ -25,6 +27,7 @@ export const createRepairCommand = (
       const repositories = await resolveRepositoryTargets({
         ...selectedRepositories(),
         configurationDirectory: context.paths.config,
+        stateDirectory: context.paths.state,
         workingDirectory: context.workingDirectory,
         homeDirectory: context.homeDirectory
       })
@@ -33,9 +36,11 @@ export const createRepairCommand = (
       for (const repository of repositories) {
         const entries: string[] = []
         try {
-          const registryWrite = await configuredRepositoryWrite(context.paths.config, repository.root)
+          const identity = declaredRepositoryIdentity(await readRepositoryDeclaration(repository.configuration))
+          const registryWrite = await localRegistryWrite(context.paths.state, registryEntry(repository.root, identity))
           if (registryWrite) {
-            const writes = await prepareWrites(await realpath(context.paths.config), [registryWrite])
+            await mkdir(context.paths.state, { recursive: true })
+            const writes = await prepareWrites(await realpath(context.paths.state), [registryWrite])
             for (const write of writes) entries.push(`${dryRun ? 'would write' : 'write'} ${write.path}`)
             await publishWrites(writes, dryRun)
             entries.push(`✓ Registry: ${dryRun ? 'would register' : 'registered'} ${repository.root}`)

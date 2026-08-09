@@ -46,8 +46,8 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     await box.root.write('installer.sh', '#!/usr/bin/env bash\nprintf update\nprintf diagnostic >&2\nexit 0\n')
     await box.root.write('ki.1', '.TH KI 1\n')
-    await box.home.write(
-      '.local/state/ki/installation.toml',
+    await box.state.write(
+      'ki/installation.toml',
       receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
     )
 
@@ -62,18 +62,18 @@ describe('[ki manage update and ki repo upgrade]', () => {
 
   test('rejects malformed, incompatible, mismatched, and incomplete installer receipts before invoking an update', async () => {
     const malformed = await sandbox()
-    await malformed.home.write('.local/state/ki/installation.toml', '[broken\n')
+    await malformed.state.write('ki/installation.toml', '[broken\n')
     const malformedResult = await malformed.run('ki manage update --cli')
 
     const incompatible = await sandbox()
-    await incompatible.home.write('.local/state/ki/installation.toml', 'schema = 2\ndistribution = "installer"\n')
+    await incompatible.state.write('ki/installation.toml', 'schema = 2\ndistribution = "installer"\n')
     const incompatibleResult = await incompatible.run('ki manage update --cli')
 
     const mismatched = await sandbox()
     await mismatched.root.write('installer.sh', '')
     await mismatched.root.write('ki.1', '')
-    await mismatched.home.write(
-      '.local/state/ki/installation.toml',
+    await mismatched.state.write(
+      'ki/installation.toml',
       `schema = 1\ndistribution = "installer"\nexecutable = "${mismatched.root.path}/other-ki"\nmanual = "${mismatched.root.path}/ki.1"\ninstaller = "${mismatched.root.path}/installer.sh"\n`
     )
     const mismatchedResult = await mismatched.run('ki manage update --cli')
@@ -81,8 +81,8 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const missingCurrent = await sandbox()
     await missingCurrent.root.write('installer.sh', '')
     await missingCurrent.root.write('ki.1', '')
-    await missingCurrent.home.write(
-      '.local/state/ki/installation.toml',
+    await missingCurrent.state.write(
+      'ki/installation.toml',
       receipt(missingCurrent, `${missingCurrent.root.path}/installer.sh`, `${missingCurrent.root.path}/ki.1`)
     )
     const missingCurrentResult = await missingCurrent.run('ki manage update --cli', {
@@ -91,22 +91,22 @@ describe('[ki manage update and ki repo upgrade]', () => {
 
     const incomplete = await sandbox()
     await incomplete.root.write('installer.sh', '')
-    await incomplete.home.write(
-      '.local/state/ki/installation.toml',
+    await incomplete.state.write(
+      'ki/installation.toml',
       receipt(incomplete, `${incomplete.root.path}/installer.sh`, `${incomplete.root.path}/missing.1`)
     )
     const incompleteResult = await incomplete.run('ki manage update --cli')
 
     const relativePath = await sandbox()
     await relativePath.root.write('installer.sh', '')
-    await relativePath.home.write(
-      '.local/state/ki/installation.toml',
+    await relativePath.state.write(
+      'ki/installation.toml',
       `schema = 1\ndistribution = "installer"\nexecutable = "${relativePath.executable}"\nmanual = "relative.1"\ninstaller = "${relativePath.root.path}/installer.sh"\n`
     )
     const relativePathResult = await relativePath.run('ki manage update --cli')
 
     const directory = await sandbox()
-    await directory.home.mkdir('.local/state/ki/installation.toml')
+    await directory.state.mkdir('ki/installation.toml')
     const directoryResult = await directory.run('ki manage update --cli')
 
     expect(malformedResult).toEqual({ exitCode: 1, output: 'ki: error: installer receipt must be valid TOML\n' })
@@ -137,8 +137,8 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     await box.root.write('installer.sh', '')
     await box.root.write('ki.1', '')
-    await box.home.write(
-      '.local/state/ki/installation.toml',
+    await box.state.write(
+      'ki/installation.toml',
       receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
     )
     box.setRunner(async () => ({ exitCode: 1, output: 'installer failed' }))
@@ -154,8 +154,8 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     await box.root.write('installer.sh', 'kill -TERM $$\n')
     await box.root.write('ki.1', '')
-    await box.home.write(
-      '.local/state/ki/installation.toml',
+    await box.state.write(
+      'ki/installation.toml',
       receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
     )
 
@@ -168,8 +168,8 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     await box.root.write('installer.sh', '')
     await box.root.write('ki.1', '')
-    await box.home.write(
-      '.local/state/ki/installation.toml',
+    await box.state.write(
+      'ki/installation.toml',
       receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
     )
     box.setEnv({ PATH: '' })

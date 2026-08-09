@@ -12,8 +12,8 @@ export {
 export {
   clearLocalBootstrapHarness,
   configuredAgents,
-  configuredRepositoryWrite,
   inspectUserConfiguration,
+  migrateLegacyRepositoryRegistry,
   setConfiguredUserSkills,
   setLocalBootstrapHarness
 } from './configuration.ts'

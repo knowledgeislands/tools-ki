@@ -82,9 +82,9 @@ reserved registered-estate selector.
 .SS Repository management
 \&
 .TP
-.B ki repo init [directory] --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>
+.B ki repo init [directory] --repository <https-url> --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>
 Create the explicit KI identity declaration for one existing Git repository
-and register its physical root locally.
+and register its physical root in the machine-local registry.
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run registered native repository audits.
@@ -125,11 +125,11 @@ Refresh uniquely resolved capabilities declared by selected KI repositories.
 \&
 .TP
 .B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
-Record selected physical KI repository roots in the local user register without
-applying repository repairs.
+Record selected canonical KI repository roots in the machine-local registry
+without applying repository repairs.
 .TP
 .B ki registry list
-List KI repositories registered in the local user register.
+List KI repositories registered in the machine-local register.
 .SS Harness management
 \&
 .TP
@@ -410,15 +410,15 @@ their skill links. Read-only operations isolate per-target diagnostics; a later
 mutation failure retains earlier successful targets and returns a non-zero
 result.
 .TP
-.B ki repo init [directory] --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>
+.B ki repo init [directory] --repository <https-url> --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>
 Initialize exactly one existing physical Git worktree root. With no
 \fIdirectory\fR, it uses the current directory; an explicit directory must be
 that worktree's root and must not be a symbolic link. Every identity value is
 required: \fB--title\fR, \fB--description\fR, a stable uppercase
-\fB--repo-code\fR, one or more \fB--runtime\fR values selected from
+\fB--repo-code\fR, canonical HTTPS GitHub \fB--repository\fR, one or more \fB--runtime\fR values selected from
 \fBclaude-code\fR and \fBcodex\fR, and \fB--visibility public|private\fR.
 It atomically creates the minimal canonical \fBki-repo\fR declaration and
-registers the physical root in the local user configuration. It never runs
+registers the physical root in \fB$XDG_STATE_HOME/ki/registry.toml\fR. It never runs
 \fBgit init\fR, guesses identity, activates repository skills, creates a
 Agora, accepts repository selectors, or overwrites an existing
 \fB.ki-config.toml\fR.
@@ -456,8 +456,8 @@ targets.
 Conform uses the same progress controls and reporter-level vocabulary as audit,
 names both the target and supplier for every skill, and renders FAIL, WARN, and
 FIXED findings by default while retaining every terminal per-skill result.
-For a local invocation it records each selected physical root in the user
-registry before resolving declarations or evaluating findings. Registration is
+For a local invocation it records each selected canonical root in the machine-local
+registry before evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
 .TP
@@ -527,20 +527,19 @@ repository. It changes neither user nor repository skill activation.
 .SS Registry management
 \&
 .PP
-Use these root-level commands to record and list physical KI repository roots
-in the local user configuration. Registry membership is an inventory, not a
+Use these root-level commands to record and list canonical KI repository roots
+in \fB$XDG_STATE_HOME/ki/registry.toml\fR. Registry membership is an inventory, not a
 repository-operation or conformance verdict.
 .TP
 .B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
-Record selected physical KI repository roots in the local user configuration
-without resolving their declarations or applying repository repairs. This is an
-explicit inventory action: it validates only that every selected target is a
-physical directory with a regular \fB.ki-config.toml\fR and preserves existing
-registry entries. It never searches outside the supplied target selection.
+Record selected canonical KI repository roots in \fB$XDG_STATE_HOME/ki/registry.toml\fR
+without applying repository repairs. This explicit inventory action validates the
+selected root's declared canonical identity and preserves existing entries. It never
+searches outside the supplied target selection.
 .TP
 .B ki registry list
-List physical KI repository roots explicitly registered in the local user
-configuration, one absolute path per line. The command neither discovers
+List physical KI repository roots explicitly registered in the machine-local
+registry, one absolute path per line. The command neither discovers
 repositories nor changes state.
 .SS Harness management
 \&

@@ -8,6 +8,7 @@ import {
   installBootstrapSkills,
   installedBootstrapSkillSources,
   localBootstrapHarness,
+  migrateLegacyRepositoryRegistry,
   refreshUserConfiguration,
   setConfiguredUserSkills
 } from '../../agents/index.ts'
@@ -27,10 +28,14 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         previous.local !== null && (await canonicalHarnessDevelopmentEnabled(context.paths.data, previous.local))
           ? await localBootstrapHarness(previous.local)
           : undefined
+      const migrated = options.refresh
+        ? await migrateLegacyRepositoryRegistry(context.paths.config, context.paths.state)
+        : 0
       const configuration = await configureBootstrapAgents({
         homeDirectory: context.homeDirectory,
         configurationDirectory: context.paths.config,
-        refresh: options.refresh
+        refresh: options.refresh,
+        dropLegacyRepositories: Boolean(options.refresh)
       })
       const agents = configuration.agents
       if (configuration.disposition === 'created') {
@@ -52,7 +57,8 @@ export const createBootstrapCommand = (context: KiContext): Command =>
             context.paths.config,
             context.paths.data,
             agents,
-            previous.local ?? undefined
+            previous.local ?? undefined,
+            { dropLegacyRepositories: Boolean(options.refresh) }
           )
           return
         }
@@ -116,6 +122,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
           `refreshed ki configuration: ${agents.length} agents, ${refreshed.harnesses} harnesses, ${refreshed.skills} skills\n`
         )
       }
+      if (migrated) context.stdout.write(`migrated local KI repository registry: ${migrated} repositories\n`)
       for (const { agent, skill, installed } of projections) {
         context.stdout.write(`${skill} for ${agent.descriptor.id} ${installed ? 'installed' : 'already installed'}\n`)
       }

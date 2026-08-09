@@ -247,6 +247,7 @@ interface RepositorySelection {
   readonly repositories: readonly string[]
   readonly agora?: string
   readonly configurationDirectory: string
+  readonly stateDirectory: string
   readonly workingDirectory: string
   readonly homeDirectory: string
 }
@@ -274,7 +275,7 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
     return distinctTargets(targets, '--repo')
   }
   if (options.agora) {
-    const selected = await resolveAgora(options.configurationDirectory, options.agora)
+    const selected = await resolveAgora(options.stateDirectory, options.agora)
     if (!selected.members.length) throw new KiError(`Agora ${selected.id} has no members`, 2)
     const targets = await Promise.all(
       selected.members.map((member) =>

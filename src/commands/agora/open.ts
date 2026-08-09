@@ -9,7 +9,7 @@ export const createAgoraOpenCommand = (context: KiContext): Command =>
     .argument('<agora>', 'Agora name')
     .requiredOption('--target <target>', 'local target to open')
     .action(async (value: string, options: { target: string }) => {
-      const profile = await resolveAgora(context.paths.config, value)
+      const profile = await resolveAgora(context.paths.state, value)
       if (options.target !== 'zed') throw new KiError('Agora open --target currently supports only zed', 2)
       if (!profile.targets.includes('zed-workspace'))
         throw new KiError(`Agora ${profile.id} does not permit the zed-workspace target`, 2)

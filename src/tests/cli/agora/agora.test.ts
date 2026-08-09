@@ -14,8 +14,21 @@ const home = (id: string, purpose: string, members: Record<string, string>, targ
 const membership = (id: string, homeIdentity: string, role: string): string =>
   `[skills.ki-agora.memberships.${id}]\nhome = ${JSON.stringify(homeIdentity)}\nrole = ${JSON.stringify(role)}\n`
 
-const userConfiguration = (roots: readonly string[]): string =>
-  `schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = ${JSON.stringify(roots)}\n`
+const localRegistry = (
+  entries: readonly { readonly key: string; readonly identity: string; readonly root: string }[]
+): string =>
+  [
+    'schema = 1',
+    ...(entries.length ? [] : ['repositories = []']),
+    ...entries.flatMap((entry) => [
+      '',
+      '[[repositories]]',
+      `key = ${JSON.stringify(entry.key)}`,
+      `repository = ${JSON.stringify(entry.identity)}`,
+      `path = ${JSON.stringify(entry.root)}`
+    ]),
+    ''
+  ].join('\n')
 
 const registered = async (
   box: Sandbox,
@@ -26,7 +39,16 @@ const registered = async (
     await box.project.write(`${declaration.path}/.ki-config.toml`, repository(declaration.identity, declaration.agora))
     roots[declaration.path] = await box.project.mkdir(declaration.path)
   }
-  await box.config.write('ki/config.toml', userConfiguration(Object.values(roots)))
+  await box.state.write(
+    'ki/registry.toml',
+    localRegistry(
+      declarations.map((declaration) => ({
+        key: declaration.path,
+        identity: declaration.identity,
+        root: roots[declaration.path] as string
+      }))
+    )
+  )
   return roots
 }
 
@@ -91,6 +113,21 @@ describe('[ki agora]', () => {
       output: 'ki agora open estate --target zed: opened 2 repositories\n'
     })
     expect(calls).toEqual(['zed -n', `zed -e ${roots['second']}`, `zed -e ${roots['first']}`])
+  })
+
+  test('rejects a local registry identity that disagrees with its repository declaration', async () => {
+    const box = await sandbox()
+    const root = await box.project.mkdir('repository')
+    await box.project.write('repository/.ki-config.toml', repository('https://github.com/example/declared'))
+    await box.state.write(
+      'ki/registry.toml',
+      localRegistry([{ key: 'repository', identity: 'https://github.com/example/registered', root }])
+    )
+
+    expect(await box.run('ki agora list')).toEqual({
+      exitCode: 2,
+      output: `ki: error: registered repository ${root} declares https://github.com/example/declared, but its local registry identity is https://github.com/example/registered\n`
+    })
   })
 
   test('refuses an unpermitted or empty Agora, and reports Zed launch failures', async () => {
@@ -190,12 +227,16 @@ describe('[ki agora]', () => {
   test('rejects unbootstrapped, invalid, and undeclared selectors', async () => {
     const box = await sandbox()
     expect(await box.run('ki agora list')).toEqual({
-      exitCode: 1,
-      output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n'
+      exitCode: 0,
+      output:
+        '╭─ KI AGORAS\n├─ agoras (1)\n│  ╰─ estate [system] Registered estate (0 members)\n╰─ summary: AGORAS=1 MEMBERS=0\n'
     })
-    await box.config.write('ki/config.toml', 'schema = 1\n[repositories]\npaths = ["relative"]\n')
-    expect((await box.run('ki agora list')).output).toContain('repositories.paths must contain absolute paths')
-    await box.config.write('ki/config.toml', userConfiguration([]))
+    await box.state.write(
+      'ki/registry.toml',
+      'schema = 1\n[[repositories]]\nkey = "relative"\nrepository = "https://github.com/example/relative"\npath = "relative"\n'
+    )
+    expect((await box.run('ki agora list')).output).toContain('repositories[0] path must be an absolute path')
+    await box.state.write('ki/registry.toml', localRegistry([]))
     expect(await box.run('ki agora show unknown')).toEqual({
       exitCode: 2,
       output: 'ki: error: Agora unknown is not declared by a registered Agora home\n'
@@ -210,14 +251,17 @@ describe('[ki agora]', () => {
     const homeRoot = await box.project.mkdir('home')
     const configure = async (document: string, message: string): Promise<void> => {
       await box.project.write('home/.ki-config.toml', document)
-      await box.config.write('ki/config.toml', userConfiguration([homeRoot]))
+      await box.state.write('ki/registry.toml', localRegistry([{ key: 'home', identity, root: homeRoot }]))
       expect((await box.run('ki agora list')).output).toContain(message)
     }
 
-    await box.config.write('ki/config.toml', userConfiguration([`${box.project.path}/missing`]))
+    await box.state.write(
+      'ki/registry.toml',
+      localRegistry([{ key: 'missing', identity, root: `${box.project.path}/missing` }])
+    )
     expect((await box.run('ki agora list')).output).toContain('must be an existing physical directory')
     const emptyRoot = await box.project.mkdir('empty')
-    await box.config.write('ki/config.toml', userConfiguration([emptyRoot]))
+    await box.state.write('ki/registry.toml', localRegistry([{ key: 'empty', identity, root: emptyRoot }]))
     expect((await box.run('ki agora list')).output).toContain('must contain a physical .ki-config.toml')
     await configure('[repo]\nharnesses = [\n', 'has invalid .ki-config.toml')
     await configure(
@@ -270,15 +314,27 @@ describe('[ki agora]', () => {
     const second = await box.project.mkdir('second')
     await box.project.write('first/.ki-config.toml', repository(homeIdentity))
     await box.project.write('second/.ki-config.toml', repository(homeIdentity))
-    await box.config.write('ki/config.toml', userConfiguration([first, second]))
-    expect((await box.run('ki agora list')).output).toContain('repeats canonical repository')
+    await box.state.write(
+      'ki/registry.toml',
+      localRegistry([
+        { key: 'first', identity: homeIdentity, root: first },
+        { key: 'second', identity: homeIdentity, root: second }
+      ])
+    )
+    expect((await box.run('ki agora list')).output).toContain('repositories repeats a repository')
 
     const outside = await box.root.mkdir('outside/shared')
     const inside = await box.project.mkdir('shared')
     await box.root.write('outside/shared/.ki-config.toml', repository('https://github.com/example/outside'))
     await box.project.write('shared/.ki-config.toml', repository('https://github.com/example/inside'))
-    await box.config.write('ki/config.toml', userConfiguration([outside, inside]))
-    expect((await box.run('ki agora list')).output).toContain('repeats local repository key shared')
+    await box.state.write(
+      'ki/registry.toml',
+      localRegistry([
+        { key: 'shared', identity: 'https://github.com/example/outside', root: outside },
+        { key: 'shared', identity: 'https://github.com/example/inside', root: inside }
+      ])
+    )
+    expect((await box.run('ki agora list')).output).toContain('repositories repeats a key')
 
     const roots = await registered(box, [
       {
