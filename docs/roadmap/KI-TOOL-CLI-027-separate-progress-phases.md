@@ -35,6 +35,7 @@ The progress tracker preserves one clock across definition loading and execution
 - [x] Model conform as distinct loading, conform, and verification phases, each with its own known unit and count.
 - [x] Extend interactive and plain-stream CLI contracts for phase order, elapsed time, cursor cleanup, and terminal output.
 - [x] Retain completed phase rows in interactive multi-progress output, so subsequent phases do not rewind over them.
+- [x] End interactive full-width progress frames with CRLF before starting a subsequent phase.
 
 ## Files touched
 
@@ -57,11 +58,11 @@ No implementation dependency. This is a follow-up to the reviewed tree-rendering
 
 ### Delivered
 
-Interactive multi-progress output now keeps each completed phase as a summary row, then draws the next active phase beneath it. This applies to both `ki repo audit` and `ki repo conform` through their shared reporter.
+Interactive progress output now keeps each completed phase on its own terminal row, then draws the next active phase beneath it. This applies to both single and multi layouts for `ki repo audit` and `ki repo conform` through their shared reporter.
 
 ### Summary of changes
 
-The reporter collapses a completed multi-progress panel to its summary and clears only the panel's former skill rows before the next phase begins. Its cursor safety limit remains in place for output taller than the terminal. Interactive audit and conform contracts assert that later phases rewind only within their own live panel.
+The reporter collapses a completed multi-progress panel to its summary and clears only the panel's former skill rows before the next phase begins. Interactive frames now use CRLF: because every bar fills the terminal width, this resolves a terminal's deferred wrap before the next phase starts. Interactive audit and conform contracts assert that later phases use independent physical rows.
 
 ### Verification
 
@@ -69,7 +70,7 @@ The reporter collapses a completed multi-progress panel to its summary and clear
 
 ### Outstanding concerns
 
-None. Narrow terminals retain panels sequentially rather than attempting an unsafe cursor rewind.
+None. Narrow terminals retain panels sequentially rather than attempting an unsafe cursor rewind; full-width frames use an explicit CRLF transition.
 
 ### Post-change review
 
@@ -77,7 +78,7 @@ The renderer remains the single implementation point for audit and conform. No o
 
 ### Mini recap
 
-The visual overwrite reported for the second and third progress phases is resolved. This item awaits explicit review and acceptance.
+The second and third progress phases no longer share a visual row while live; all completed phases remain independently visible. This item awaits explicit review and acceptance.
 
 ## Discussion
 
