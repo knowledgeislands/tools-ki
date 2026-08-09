@@ -15,20 +15,23 @@ visibility = "public"
 
 [skills.ki-guides]
 
-[skills.ki-tools]
+[skills.ki-repo-project]
+
+[skills.ki-repo-tools]
 
 [skills.ki-engineering]
 
-[skills.ki-roadmap]
-[skills.ki-roadmap.themes]
-CLI = "cli"
-VENDOR = "cross-repository-vendoring"
+[skills.ki-change-management]
+adapter = "roadmap"
+
+[skills.ki-change-management-roadmap]
+themes = ["cli", "cross-repository-vendoring"]
 
 [skills.ki-decision-records]
 
-[skills.ki-trades]
+[skills.ki-repo-trades]
 
-[skills.ki-trades.routes]
+[skills.ki-repo-trades.routes]
 "knowledgeislands/ki-agentic-harness" = { export = ["work", "knowledge"], import = ["work"] }
 "knowledgeislands/ki-website" = { export = ["work", "knowledge"] }
 "knowledgeislands/tools-mgit" = { export = ["work"], import = ["work"] }

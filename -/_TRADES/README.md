@@ -4,4 +4,4 @@ This directory holds sender-owned cross-repository work and knowledge preparatio
 
 Only this repository writes or removes these records. A submitted trade's observation policy determines whether receipt, a terminal decision, or completion of adopted local work permits release.
 
-An outbound record may await the receiver's `ki-trades` participation and matching import declaration. It remains sender-owned until an inbound copy is observable.
+An outbound record may await the receiver's `ki-repo-trades` participation and matching import declaration. It remains sender-owned until an inbound copy is observable.

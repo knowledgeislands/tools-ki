@@ -581,7 +581,7 @@ skills cannot be removed. A successful removal deletes its identifier from
 \&
 .PP
 Use these commands with repositories that declare the portable
-\fBki-trades\fR capability and are present in the local registered repository
+\fBki-repo-trades\fR capability and are present in the local registered repository
 estate. They preserve repository authority: every mutation writes only the
 current repository, a typed reciprocal route grants visibility rather than
 acceptance or retention, and no command changes a peer roadmap or knowledge.
@@ -738,7 +738,7 @@ governing skill is declared by its bare name under \fB[skills]\fR, carrying its
 own configuration. A skill drawn from a harness outside that list keeps a
 quoted, fully-qualified \fB[skills."<harness-id>:<skill-name>"]\fR key.
 Repository identity and metadata live in \fB[skills.ki-repo]\fR, and trade
-routes in \fB[skills.ki-trades.routes]\fR, keyed once per partner.
+routes in \fB[skills.ki-repo-trades.routes]\fR, keyed once per partner.
 .SH DEVELOPMENT INSTALLATIONS
 \&
 .PP

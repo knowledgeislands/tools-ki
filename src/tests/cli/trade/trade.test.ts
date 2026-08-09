@@ -3,7 +3,7 @@ import { basename, join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
-const tradesTable = 'skills.ki-trades'
+const tradesTable = 'skills.ki-repo-trades'
 const home = (identity: string): string => `https://github.com/${identity}`
 const sourceHome = home('example/source')
 const receiverHome = home('example/receiver')
@@ -793,7 +793,7 @@ describe('[ki trade]', () => {
     // editor to rewrite, so the write refuses rather than appending a second declaration.
     await box.project.write(
       '.ki-config.toml',
-      `[repo]\nharnesses = ["example/harness"]\n\n[skills]\nki-repo = { repository = "${sourceHome}" }\nki-trades = {}\n`
+      `[repo]\nharnesses = ["example/harness"]\n\n[skills]\nki-repo = { repository = "${sourceHome}" }\nki-repo-trades = {}\n`
     )
     expect((await box.run(`ki trade routes add ${receiverHome} --direction export --kind work`)).output).toContain(
       `does not declare [${tradesTable}] route tables`

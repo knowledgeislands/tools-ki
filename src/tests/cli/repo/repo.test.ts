@@ -81,8 +81,8 @@ const projectRoot = (area: SandboxArea): Promise<string> => realpath(area.path)
 
 const setupPrefixCollisionHarness = async (data: SandboxArea): Promise<void> => {
   for (const { name, code, marker } of [
-    { name: 'ki-website', code: 'WEB-1', marker: 'website.txt' },
-    { name: 'ki-website-cloudflare', code: 'WCF-1', marker: 'cloudflare.txt' }
+    { name: 'ki-repo-website', code: 'WEB-1', marker: 'website.txt' },
+    { name: 'ki-repo-website-cloudflare', code: 'WCF-1', marker: 'cloudflare.txt' }
   ]) {
     const base = `ki/harnesses/example/harness/skills/${name}`
     await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
@@ -294,15 +294,15 @@ describe('[ki repo]', () => {
       const box = await sandbox()
       await box.project.write(
         '.ki-config.toml',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-website]\n[skills.ki-website-cloudflare]\n'
+        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-website]\n[skills.ki-repo-website-cloudflare]\n'
       )
       await setupPrefixCollisionHarness(box.data)
 
-      const result = await box.run(`ki repo --repo ${box.project.path} audit --skill ki-website`)
+      const result = await box.run(`ki repo --repo ${box.project.path} audit --skill ki-repo-website`)
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain(`╰─ ! example/harness:ki-website WARN · FAIL=0 WARN=1`)
-      expect(result.output).not.toContain('ki-website-cloudflare')
+      expect(result.output).toContain(`╰─ ! example/harness:ki-repo-website WARN · FAIL=0 WARN=1`)
+      expect(result.output).not.toContain('ki-repo-website-cloudflare')
     })
 
     test('reports clean when no families declare items', async () => {

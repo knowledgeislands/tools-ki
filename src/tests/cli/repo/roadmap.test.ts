@@ -114,7 +114,7 @@ describe('[ki repo roadmap]', () => {
     const knowledge = await box.project.mkdir('knowledge')
     const broken = await box.project.mkdir('broken')
     const configuration =
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\n\n[skills.ki-decision-records]\nrepo_type = "kb"\n\n[skills.ki-trades]\n'
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\n\n[skills.ki-decision-records]\nrepo_type = "kb"\n\n[skills.ki-repo-trades]\n'
     await box.project.write('knowledge/.ki-config.toml', configuration)
     await box.project.write('broken/.ki-config.toml', configuration.replace('example/knowledge', 'example/broken'))
     await box.project.write('knowledge/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
@@ -336,9 +336,9 @@ describe('[ki repo roadmap]', () => {
         '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]',
         `repository = ${JSON.stringify(repository)}`,
         '',
-        '[skills.ki-trades]',
+        '[skills.ki-repo-trades]',
         '',
-        '[skills.ki-trades.routes]',
+        '[skills.ki-repo-trades.routes]',
         ...exportsTo.map((route) => `${JSON.stringify(peer(route))} = { export = ["work", "knowledge"] }`),
         ...importsFrom.map((route) => `${JSON.stringify(peer(route))} = { import = ["work", "knowledge"] }`),
         ''
