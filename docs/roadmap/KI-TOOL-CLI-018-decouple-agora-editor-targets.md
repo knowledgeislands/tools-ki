@@ -2,11 +2,11 @@
 id: KI-TOOL-CLI-018
 title: Normalize Agora estate
 theme: cli
-horizon: next
-status: draft
+horizon: now
+status: ready
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 06a66372991113613c0b820e63cbd4f6f2f95f62
 ---
 
 ## Goal
@@ -23,7 +23,7 @@ Tool workspaces are a separate layer. A VS Code, Zed, or later target can assemb
 
 ## Boundary
 
-This item does not define the portable `ki-repo` contract for repository kind and KB store roles, create every tool target, or make non-repository stores eligible for `ki repo` operations. It consumes the agreed contract in the CLI, establishes that no editor target is stored in `.ki-agora`, and retains the registry as the first-class management surface for the canonical estate.
+This item does not define the portable `ki-repo` contract for repository kind and KB store roles, create every tool target, or make non-repository stores eligible for `ki repo` operations. It consumes the agreed contract in the CLI, establishes that no editor target is stored in `.ki-agora`, and retains the registry as the first-class management surface for the canonical estate. The first target boundary requires `--target zed`; it introduces no global or profile-stored default.
 
 ## Current state
 
@@ -31,34 +31,35 @@ Agora profiles currently require `tool = "zed"` and store arbitrary physical dir
 
 The accepted `ki-repo` contract makes an ordinary repository implicit when `repo_type` is omitted. A Knowledge Base declares `repo_type = "kb"` and `store_roles`, whose closed vocabulary is `notes`, `sources`, and `legacy`: `notes` names the selected repository itself, while the optional external roles are stable names rather than paths or local bindings. `KI-HARNESS-GOV-015` was accepted in Harness commit `445330a6836e429d603059410481f97fd921593a`, is reachable from Harness `origin/main`, and no later `ki-repo` change alters this model.
 
-The CLI's default canonical Harness archive remains pinned to `501b40111aefa774aff49f10893dc235708a823c`, which predates the accepted contract. Normal canonical acquisition therefore cannot yet provide the contract this migration consumes. A verified canonical archive pin and digest must be available before this record becomes Ready.
+The verified canonical Harness archive is pinned to `445330a6836e429d603059410481f97fd921593a` with SHA-256 `9d395e9b35748f7cbb26b93f96407ab407d166d2d4e2fbc8519781585ee2692c`. Its `ki-repo` standard preserves the model above: omitted `repo_type` is an ordinary repository, `repo_type = "kb"` is the only specialised kind, and `store_roles` is the closed `notes`, `sources`, and `legacy` vocabulary. Normal canonical acquisition can therefore provide the contract this migration consumes.
 
 ## Steps
 
-- [ ] Verify a canonical Harness archive pin and digest that contain the accepted `ki-repo` contract, then reconcile its implicit ordinary-repository model and KB `store_roles` contract into repository resolution and validation.
-- [ ] Replace the separate registry path representation with a protected canonical Agora whose members have local repository-name keys and canonical HTTPS identities.
-- [ ] Restrict named Agoras to canonical estate members, diagnose name/identity collisions, and retain registry commands as the first-class estate-management interface.
-- [ ] Remove stored Zed tool state and define the explicit tool-target boundary for opening repository members and declared stores.
+- [x] Pin and verify the canonical Harness archive containing the accepted `ki-repo` contract.
+- [ ] Reconcile the implicit ordinary-repository model and KB `store_roles` into typed repository configuration, resolution, and validation.
+- [ ] Replace the separate registry path list with a protected canonical Agora derived from registered members, each carrying a local repository-name key and canonical HTTPS identity.
+- [ ] Restrict persisted named Agoras to canonical estate members, diagnose name and identity collisions, and retain registry commands as the first-class estate-management interface.
+- [ ] Remove `tool` and physical project paths from `.ki-agora`; require `ki agora open <agora> --target zed` at the target boundary, where Zed composes repository members and declared stores.
 - [ ] Migrate configuration, CLI contracts, completions, manual, README, changelog, and contract tests without compatibility aliases.
 
 ## Files touched
 
-- `src/core/agora.ts`, local user-configuration, registry, and repository-resolution modules.
-- `src/commands/agora/`, `src/commands/registry/`, and any new tool-target command module.
-- `src/tests/cli/agora/`, `src/tests/cli/registry/`, repository-target and trade tests.
+- `src/core/registry.ts`, `src/core/agora.ts`, `src/core/configuration.ts`, `src/core/repository.ts`, and repository-resolution modules.
+- `src/commands/agora/`, `src/commands/registry/`, and the target-boundary command module.
+- `src/tests/cli/agora/agora.test.ts`, `src/tests/cli/registry/registry.test.ts`, bootstrap, repository-target, and trade contracts.
 - `man/ki.1`, `README.md`, `CHANGELOG.md`, and shell completion coverage.
 
 ## Verify
 
 - A canonical registered estate round-trips repository-name keys, canonical HTTPS identities, and physical roots without accepting an arbitrary project as a repository member.
 - `ki registry` adds, lists, diagnoses, and repairs that estate, while `ki repo --agora <name>` resolves only its canonical members.
-- No `.ki-agora` form contains `tool`; an opening target is resolved outside the profile and can compose a KB's declared `notes`, `sources`, and `legacy` roles without registering the latter two as KI repositories or storing their physical bindings in repository configuration.
-- Before Ready, compare the accepted `ki-repo` contract in the verified canonical archive with the model above and stop for a revised plan if its kind, role, or authority rules changed.
+- No `.ki-agora` form contains `tool` or a physical project path. `ki agora open <agora> --target zed` resolves the target outside the profile and can compose a KB's declared `notes`, `sources`, and `legacy` roles without registering the latter two as KI repositories or storing their physical bindings in repository configuration.
+- The verified canonical archive retains the accepted `ki-repo` kind, role, and authority rules recorded above; a later archive refresh that changes any of them requires a revised plan.
 - Full CLI contract tests retain 100% coverage and documentation, completion, TypeScript, and formatting checks pass.
 
 ## Dependencies / blocks
 
-The portable `ki-repo` contract is owned by KI Agentic Harness. `KI-HARNESS-GOV-015` is accepted and its contract still matches the model above, but the CLI's canonical Harness archive pin predates it. A compatible archive pin and verified digest remain the external prerequisite before tools-ki validates repository kinds or named KB store roles. This condition cannot appear in `blocked-by`, which permits only local work-item identifiers. This record remains a `next` draft so its local migration can be shaped against the accepted contract, but it cannot become Ready or enter an implementation batch until the compatible archive is observable and checked.
+The portable `ki-repo` contract is owned by KI Agentic Harness. The pinned archive now carries its accepted kind, role, and authority rules, so nothing blocks this local migration.
 
 ## Discussion
 
@@ -72,7 +73,7 @@ Each member needs a local repository-name key for user-facing configuration and 
 
 The profile format should retain only profile identity, display metadata, and project membership. The implementation must remove the `tool` attribute from generated, parsed, rendered, documented, and tested profile forms.
 
-The opening operation needs a deliberate follow-up command grammar: it may require an explicit target such as `--target zed`, or use a separately configured default. Either design must keep that preference out of the Agora file and preserve a clear failure when no target can be resolved.
+The opening operation uses `ki agora open <agora> --target zed` in its first implementation. A missing or unsupported target fails clearly; a global default is deliberately deferred so target selection cannot leak back into the profile model.
 
 ### Tool workspace composition
 
@@ -82,4 +83,4 @@ The portable definition of repository kind and store roles belongs to the `ki-re
 
 ### Final contract check
 
-Before the item enters Ready, compare the accepted `ki-repo` contract in the verified canonical archive with the model recorded here. Re-plan rather than silently proceeding if the selected repository authority, repository kind, or named-store contract changes.
+The verified `445330a6836e429d603059410481f97fd921593a` archive was compared with the model recorded here. Its kind, named-store, and authority rules match; re-plan rather than silently proceeding if a future selected archive changes them.
