@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-027
 title: Separate progress phases
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 18ca452e9d06e0f7691d78026379486bfe2d7178
@@ -84,6 +84,10 @@ No audit or conform logic reads rendered output. The change is confined to share
 ### Mini recap
 
 The progress display now explains long evidence gathering as real, completed work rather than one repeatedly replaced middle bar. CLI-027 awaits explicit review and acceptance.
+
+## Done
+
+Accepted on 2026-08-09. The retained evidence-child progress rows, aligned phase bars, phase-local timings, and CLI contracts were approved after interactive audit and conform verification.
 
 ## Discussion
 
