@@ -15,16 +15,7 @@ import {
   tradeLifecycle
 } from '../../core/trade-core.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
-import {
-  count,
-  displayTradePeer,
-  kind,
-  lifecycleStatus,
-  observation,
-  repository,
-  requireText,
-  tradeId
-} from './shared.ts'
+import { count, kind, observation, renderTradeRelation, repository, requireText, tradeId } from './shared.ts'
 
 interface PrepareOptions {
   readonly kind?: string
@@ -47,29 +38,22 @@ interface ListOptions {
   readonly status?: string
   readonly kind?: string
   readonly repo?: string
+  readonly icons?: boolean
 }
 
 const directionLabel = { preparation: 'prepare', inbound: 'import', outbound: 'export' } as const
 
 const renderTradeList = async (
   trades: Awaited<ReturnType<typeof locateTrades>>,
-  estate: Awaited<ReturnType<typeof locateTrades>>
+  estate: Awaited<ReturnType<typeof locateTrades>>,
+  icons: boolean
 ): Promise<string> => {
   const results = trades.length
     ? await Promise.all(
         trades.map(async (trade) => {
           const lifecycle = await tradeLifecycle(trade, estate)
-          const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
-          const peer = `${glyph} ${trade.direction === 'inbound' ? '←' : '→'} ${displayTradePeer(trade.record, trade.direction)}`
-          const statuses = [
-            lifecycleStatus(lifecycle),
-            lifecycle.releaseEligible ? 'release eligible' : undefined,
-            lifecycle.pruneEligible ? 'prune eligible' : undefined
-          ]
-            .filter(Boolean)
-            .join(' · ')
           return {
-            label: `${trade.record.id} ${directionLabel[trade.direction]} ${peer} [${statuses}] [${trade.record.observation}] ${trade.record.title}`
+            label: `${trade.record.id} ${directionLabel[trade.direction]} ${renderTradeRelation(trade.record, trade.direction, lifecycle, icons)} ${trade.record.title}`
           }
         })
       )
@@ -195,6 +179,7 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
     .option('--status <status>', 'receiver decision status')
     .option('--kind <work|knowledge>', 'trade kind')
     .option('--repo <repository>', 'only one canonical HTTPS GitHub repository')
+    .option('--no-icons', 'omit decorative badge icons')
     .action(async (options: ListOptions) => {
       if (options.direction && !['prepare', 'import', 'export'].includes(options.direction))
         throw grammarError('--direction accepts prepare, import, or export')
@@ -211,7 +196,7 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
           (!options.status || trade.record.decisionStatus === options.status) &&
           (!options.kind || trade.record.kind === kind(options.kind))
       )
-      context.stdout.write(`${await renderTradeList(selected, estate)}\n`)
+      context.stdout.write(`${await renderTradeList(selected, estate, options.icons !== false)}\n`)
     }),
   new Command('show')
     .description('show every visible copy of one trade')

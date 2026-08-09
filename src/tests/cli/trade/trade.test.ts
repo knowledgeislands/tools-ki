@@ -293,9 +293,8 @@ describe('[ki trade]', () => {
     const listed = await box.run('ki trade list')
 
     expect(listed.exitCode).toBe(0)
-    // The collapsed status shows the furthest-advanced stage: an undecided received copy
-    // reads `unconsidered`, which already states that it was submitted and delivered.
-    expect(listed.output).toContain('unconsidered')
+    // The compact observation badge describes what the sender now awaits from the receiver.
+    expect(listed.output).toContain('[? decision]')
     expect(listed.output).not.toContain('unrecognised trade field')
     expect(await box.run(['ki', 'trade', 'show', id])).toMatchObject({ exitCode: 0 })
   })
@@ -597,6 +596,7 @@ describe('[ki trade]', () => {
       'work'
     ])
     const allListed = await box.run('ki trade list')
+    const plainListed = await box.run('ki trade list --no-icons')
     const shown = await box.run(['ki', 'trade', 'show', id])
     const released = await box.run(['ki', 'trade', 'release', id])
     box.cd('receiver')
@@ -604,9 +604,10 @@ describe('[ki trade]', () => {
 
     expect(created.output).toBe(`ki trade submit: submitted ${id} for example/receiver [decision]\n`)
     expect(received).toEqual({ exitCode: 0, output: `ki trade receive: received ${id}\n` })
-    expect(listed.output).toContain(`${id} import ⚒ ← source [adopted · release eligible] [decision] Route contract`)
-    expect(allListed.output).toContain(`${id} import ⚒ ← source [adopted`)
-    expect(allListed.output).toContain(`${id} export ⚒ → receiver [adopted`)
+    expect(listed.output).toContain(`${id} import [✓ release] ← [⚒ work] source Route contract`)
+    expect(allListed.output).toContain(`${id} import [✓ release] ← [⚒ work] source`)
+    expect(allListed.output).toContain(`${id} export [⚒ work] → [✓ release] receiver`)
+    expect(plainListed.output).toContain(`${id} export [work] → [release] receiver`)
     expect(shown.output).toContain(`Repository: ${sourceHome} [export]\n${outbound.trimEnd()}`)
     expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
     expect(pruned).toEqual({ exitCode: 0, output: `ki trade prune: pruned ${id}\n` })
@@ -618,7 +619,7 @@ describe('[ki trade]', () => {
     const created = await createTrade(box, 'knowledge')
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
     const listed = await box.run('ki trade list')
-    expect(listed.output).toContain(`${id} export ◇ → receiver [awaiting-receipt] [decision] Route contract`)
+    expect(listed.output).toContain(`${id} export [ⓘ knowledge] → [↓ receipt] receiver Route contract`)
     box.cd('receiver')
     await box.run(['ki', 'trade', 'receive', id])
     const path = `receiver/+/_TRADES/example/source/${id}.md`
@@ -702,7 +703,7 @@ describe('[ki trade]', () => {
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
     const listed = await box.run('ki trade list')
 
-    expect(listed.output).toContain(`${id} export ⚒ → other/receiver [awaiting-receipt] [decision] Route contract`)
+    expect(listed.output).toContain(`${id} export [⚒ work] → [↓ receipt] other/receiver Route contract`)
   })
 
   test('reports malformed route declarations plus pending, active, and ambiguous registered-estate routes', async () => {
@@ -999,7 +1000,7 @@ describe('[ki trade]', () => {
     box.cd('..')
     const shown = await box.run(['ki', 'trade', 'show', firstId])
 
-    expect(outboundList.output).toContain(`${firstId} export ⚒ → receiver [awaiting-receipt] [decision] Route contract`)
+    expect(outboundList.output).toContain(`${firstId} export [⚒ work] → [↓ receipt] receiver Route contract`)
     expect(received.output).toContain(firstId)
     expect(received.output).toContain(secondId)
     expect(repeated.output).toContain(firstId)
@@ -1194,7 +1195,7 @@ describe('[ki trade]', () => {
     const preparationPath = `-/_TRADES/example/receiver/${id}.md`
     expect(await box.project.read(preparationPath)).toContain('phase: preparing')
     expect((await box.run('ki trade list --direction prepare')).output).toContain(
-      `${id} prepare ⚒ → receiver [preparing] [receipt]`
+      `${id} prepare [⚒ work] → [? decision] receiver`
     )
     expect(
       (await box.run(['ki', 'trade', 'routes', 'remove', receiverHome, '--direction', 'export', '--kind', 'work']))
@@ -1250,6 +1251,9 @@ describe('[ki trade]', () => {
       )
     )
     box.cd('..')
+    expect((await box.run('ki trade list --direction export')).output).toContain(
+      `${completionId} export [⚒ work] → [… completion] receiver Route contract`
+    )
     expect((await box.run(['ki', 'trade', 'release', completionId])).output).toContain('completion observation policy')
     await box.project.write('receiver/docs/roadmap/not-markdown.txt', 'ignored')
     expect((await box.run(['ki', 'trade', 'release', completionId])).output).toContain('completion observation policy')
@@ -1356,7 +1360,7 @@ describe('[ki trade]', () => {
     box.cd('..')
     expect((await box.run(['ki', 'trade', 'release', id])).exitCode).toBe(0)
     expect((await box.run('ki trade list --direction import')).output).toContain(
-      `${id} import ⚒ ← source [adopted · prune eligible] [decision] Route contract`
+      `${id} import [✓ prune] ← [⚒ work] source Route contract`
     )
   })
 

@@ -310,13 +310,15 @@ describe('[ki repo roadmap]', () => {
     )
 
     const result = await box.run('ki repo --repo source --repo receiver roadmap list')
+    const plain = await box.run('ki repo --repo source roadmap list --no-icons')
 
     expect(result.output).toContain(
-      `│  ╰─ export (3)\n│     ├─ ${id} ⚒ → receiver [unconsidered] Trade-aware planning\n│     ├─ TRD-00000001 ◇ → receiver [unconsidered] Trade-aware planning\n│     ╰─ TRD-00000002 ⚒ → receiver [unconsidered] Trade-aware planning`
+      `│  ╰─ export (3)\n│     ├─ ${id} [⚒ work] → [? decision] receiver Trade-aware planning\n│     ├─ TRD-00000001 [ⓘ knowledge] → [? decision] receiver Trade-aware planning\n│     ╰─ TRD-00000002 [⚒ work] → [? decision] receiver Trade-aware planning`
     )
     expect(result.output).toContain(
-      `│  ├─ import (3)\n│  │  ├─ ${id} ⚒ ← source [unconsidered] Trade-aware planning\n│  │  ├─ TRD-00000001 ◇ ← source [unconsidered] Trade-aware planning\n│  │  ╰─ TRD-00000002 ⚒ ← source [unconsidered] Trade-aware planning`
+      `│  ├─ import (3)\n│  │  ├─ ${id} [? decision] ← [⚒ work] source Trade-aware planning\n│  │  ├─ TRD-00000001 [? decision] ← [ⓘ knowledge] source Trade-aware planning\n│  │  ╰─ TRD-00000002 [? decision] ← [⚒ work] source Trade-aware planning`
     )
+    expect(plain.output).toContain(`${id} [work] → [decision] receiver Trade-aware planning`)
     expect(result.output).toContain('TRADES=3 IMPORTS=0 EXPORTS=3')
     expect(result.output).toContain('TRADES=3 IMPORTS=3 EXPORTS=0')
     expect(result.exitCode).toBe(0)

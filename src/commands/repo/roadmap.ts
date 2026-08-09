@@ -14,11 +14,12 @@ import {
   type WorkItemHorizon,
   workItemHorizons
 } from '../../core/work-items.ts'
-import { displayTradePeer, lifecycleStatus } from '../trade/shared.ts'
+import { renderTradeRelation } from '../trade/shared.ts'
 
 interface RoadmapOptions {
   readonly horizon?: string
   readonly status?: string
+  readonly icons?: boolean
 }
 
 interface RoadmapResult {
@@ -59,7 +60,8 @@ const textHorizonGroups = (
 const renderTradeEntries = (
   trades: readonly LocatedTrade[],
   estate: readonly LocatedTrade[],
-  diagnostic?: string
+  diagnostic?: string,
+  icons = true
 ): readonly TreeEntry[] => {
   if (diagnostic) return [{ label: `❌ unavailable: ${diagnostic}` }]
   const directions = [
@@ -71,10 +73,10 @@ const renderTradeEntries = (
     return {
       label: `${label} (${selected.length})`,
       children: selected.map((trade) => {
-        const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
-        const peer = `${glyph} ${direction === 'outbound' ? '→' : '←'} ${displayTradePeer(trade.record, direction)}`
-        const status = lifecycleStatus(tradeLifecycle(trade, estate))
-        return { label: `${trade.record.id} ${peer} [${status}] ${trade.record.title}` }
+        const lifecycle = tradeLifecycle(trade, estate)
+        return {
+          label: `${trade.record.id} ${renderTradeRelation(trade.record, direction, lifecycle, icons)} ${trade.record.title}`
+        }
       })
     }
   })
@@ -92,7 +94,7 @@ const countTradeDirections = (
   return { inbound, outbound }
 }
 
-const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]): string => {
+const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[], icons = true): string => {
   const context = [{ label: `📁 ${basename(result.repository)} (${result.repository})` }]
   const planning = result.planning
   if (planning?.kind === 'streams') {
@@ -124,7 +126,7 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
           : []),
         {
           label: `trades (${result.trades.length})`,
-          children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic)
+          children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, icons)
         },
         { label: `summary: PROPOSALS=${count} FOCUSES=${planning.focuses.length} TRADES=${tradeSummary}` }
       ]
@@ -151,7 +153,7 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
       { label: `roadmap (${items.length})`, children: roadmap },
       {
         label: `trades (${result.trades.length})`,
-        children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic)
+        children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, icons)
       },
       { label: `summary: ITEMS=${items.length} HORIZONS=${groups.length} TRADES=${tradeSummary}` }
     ]
@@ -214,6 +216,7 @@ export const createRepoRoadmapCommand = (
         .description('list governed work items')
         .option('--horizon <horizon>', 'only items at this horizon')
         .option('--status <status>', 'only items at this status')
+        .option('--no-icons', 'omit decorative trade badge icons')
         .action(async (options: RoadmapOptions) => {
           const repositories = await resolveTargets(context, selectedRepositories)
           const tradeInventory: { readonly trades: readonly LocatedTrade[]; readonly diagnostic?: string } =
@@ -251,7 +254,7 @@ export const createRepoRoadmapCommand = (
             })
           )
           context.stdout.write(
-            `${results.map((result) => renderTextResult(result, tradeInventory.trades)).join('\n\n')}\n`
+            `${results.map((result) => renderTextResult(result, tradeInventory.trades, options.icons !== false)).join('\n\n')}\n`
           )
           if (
             results.some(

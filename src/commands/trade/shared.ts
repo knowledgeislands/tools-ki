@@ -45,14 +45,6 @@ export const requireText = (value: string | undefined, option: string): string =
   return value
 }
 
-// The lifecycle stages are monotonic — a decision implies delivery, and delivery implies
-// publication — so the furthest-advanced stage already states the ones behind it.
-export const lifecycleStatus = (lifecycle: TradeLifecycle): string =>
-  lifecycle.decisionStatus ??
-  (lifecycle.deliveryStatus === 'not-deliverable' && lifecycle.publicationStatus === 'preparing'
-    ? 'preparing'
-    : lifecycle.deliveryStatus)
-
 export const routeState = (state: RouteState): string =>
   ({
     active: 'active',
@@ -74,4 +66,36 @@ export const displayTradePeer = (
   const peer = direction === 'inbound' ? record.sender : record.receiver
   const local = direction === 'inbound' ? record.receiver : record.sender
   return owner(peer) === owner(local) ? name(peer) : peer
+}
+
+type TradeListDirection = 'preparation' | 'inbound' | 'outbound'
+
+const badge = (label: string, icon: string, icons: boolean): string => `[${icons ? `${icon} ` : ''}${label}]`
+
+const kindBadge = (kind: TradeKind, icons: boolean): string => badge(kind, kind === 'work' ? '⚒' : 'ⓘ', icons)
+
+const observationBadge = (
+  record: Pick<TradeRecord, 'observation'>,
+  lifecycle: TradeLifecycle,
+  icons: boolean
+): string => {
+  if (lifecycle.pruneEligible) return badge('prune', '✓', icons)
+  if (lifecycle.releaseEligible) return badge('release', '✓', icons)
+  if (lifecycle.deliveryStatus === 'awaiting-receipt') return badge('receipt', '↓', icons)
+  if (record.observation === 'completion' && lifecycle.decisionStatus === 'adopted')
+    return badge('completion', '…', icons)
+  return badge('decision', '?', icons)
+}
+
+/** Renders the kind at the sending end and the sender's active observation at the receiving end. */
+export const renderTradeRelation = (
+  record: TradeRecord,
+  direction: TradeListDirection,
+  lifecycle: TradeLifecycle,
+  icons = true
+): string => {
+  const tradeKind = kindBadge(record.kind, icons)
+  const observation = observationBadge(record, lifecycle, icons)
+  const peer = displayTradePeer(record, direction)
+  return direction === 'inbound' ? `${observation} ← ${tradeKind} ${peer}` : `${tradeKind} → ${observation} ${peer}`
 }
