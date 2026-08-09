@@ -199,7 +199,7 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
   })
   expect(invalidRuntime).toEqual({
     exitCode: 2,
-    output: 'ki: error: ki repo init --runtime may contain only claude-code or chatgpt-codex\n'
+    output: 'ki: error: ki repo init --runtime may contain only claude-code, claude-desktop, or chatgpt-codex\n'
   })
   expect(retiredRuntime).toEqual({
     exitCode: 2,

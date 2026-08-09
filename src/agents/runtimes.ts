@@ -5,6 +5,7 @@ import type { InstalledAgent } from './internal.ts'
 
 const agentRuntimes = {
   'claude-code': 'claude-code',
+  'claude-desktop': 'claude-desktop',
   'chatgpt-codex': 'chatgpt-codex'
 } as const satisfies Record<string, SupportedRuntime>
 

@@ -287,7 +287,7 @@ ids = []
 
       expect(missing.output).toContain('must declare the repository runtime set')
       expect(malformed.output).toContain('must be a non-empty array')
-      expect(unsupported.output).toContain('may contain only claude-code or chatgpt-codex')
+      expect(unsupported.output).toContain('may contain only claude-code, claude-desktop, or chatgpt-codex')
       expect(repeated.output).toContain('repeats a runtime')
       expect(retired.output).toContain('codex is retired; use chatgpt-codex')
       expect(invalidToml.output).toContain('.ki-config.toml must be valid TOML')
