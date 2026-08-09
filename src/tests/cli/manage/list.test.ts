@@ -69,11 +69,11 @@ describe('[ki manage list]', () => {
     const repository = await box.root.mkdir('repository')
     await box.state.write(
       'ki/registry.toml',
-      `schema = 1\n\n[[repositories]]\nkey = "repository"\nrepository = "https://github.com/example/repository"\npath = ${JSON.stringify(repository)}\n`
+      `schema = 1\n\n[repositories."repository"]\nrepository = "https://github.com/example/repository"\npath = ${JSON.stringify(repository)}\n`
     )
 
     const listed = await box.run('ki manage list')
-    await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = []\nextra = true\n')
+    await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
     const invalid = await box.run('ki manage list')
 
     expect(listed.output).toContain(`╰─ repository: ${repository}`)

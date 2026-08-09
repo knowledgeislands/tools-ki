@@ -39,11 +39,10 @@ const localRegistry = (
 ): string =>
   [
     'schema = 1',
-    ...(entries.length ? [] : ['repositories = []']),
+    ...(entries.length ? [] : ['repositories = {}']),
     ...entries.flatMap((entry) => [
       '',
-      '[[repositories]]',
-      `key = ${JSON.stringify(entry.key)}`,
+      `[repositories.${JSON.stringify(entry.key)}]`,
       `repository = ${JSON.stringify(entry.repository)}`,
       `path = ${JSON.stringify(entry.path)}`
     ]),
@@ -228,7 +227,7 @@ test('initializes a public repository without rewriting an existing local regist
   await box.config.write('ki/config.toml', localConfiguration)
   await box.state.write(
     'ki/registry.toml',
-    `schema = 1\n\n[[repositories]]\nkey = "registered-repository"\nrepository = "https://github.com/example/public"\npath = ${JSON.stringify(repository)}\n`
+    `schema = 1\n\n[repositories."registered-repository"]\nrepository = "https://github.com/example/public"\npath = ${JSON.stringify(repository)}\n`
   )
   box.setRunner(gitRepositoryRunner(repository))
 
@@ -269,7 +268,7 @@ test('leaves no declaration when local registration cannot be prepared or publis
   await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
 
   await box.config.write('ki/config.toml', localConfiguration)
-  await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = []\n')
+  await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\n')
   registryWriteFailure.path = await realpath(`${box.state.path}/ki/registry.toml`)
 
   await expect(initialise(box)).rejects.toThrow('registry write failure')
@@ -409,7 +408,7 @@ test('reports missing, invalid, and unsafe local registry configuration without 
   await box.config.write('ki/config.toml', localConfiguration)
   await box.state.write(
     'ki/registry.toml',
-    'schema = 1\n[[repositories]]\nkey = "relative"\nrepository = "https://github.com/example/relative"\npath = "relative-repository"\n'
+    'schema = 1\n[repositories."relative"]\nrepository = "https://github.com/example/relative"\npath = "relative-repository"\n'
   )
   const invalidAudit = await box.run('ki repo audit')
   const invalidConform = await box.run('ki repo conform')
@@ -418,7 +417,7 @@ test('reports missing, invalid, and unsafe local registry configuration without 
   const invalidLocalConform = await box.run('ki repo conform')
   const invalidLocalAudit = await box.run('ki repo audit')
   await box.config.write('ki/config.toml', localConfiguration)
-  await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = []\nextra = true\n')
+  await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
   const warnedRegister = await box.run('ki registry add')
 
   expect(missingList).toEqual({ exitCode: 0, output: '' })
@@ -426,15 +425,15 @@ test('reports missing, invalid, and unsafe local registry configuration without 
   expect(missingConform.exitCode).toBe(0)
   expect(missingRegister.exitCode).toBe(0)
   expect(invalidAudit.output).toContain(
-    'local KI repository registry is invalid: repositories[0] path must be an absolute path'
+    'local KI repository registry is invalid: repositories.relative path must be an absolute path'
   )
   expect(invalidConform).toEqual({
     exitCode: 1,
-    output: 'ki: error: local KI repository registry is invalid: repositories[0] path must be an absolute path\n'
+    output: 'ki: error: local KI repository registry is invalid: repositories.relative path must be an absolute path\n'
   })
   expect(invalidRegister).toEqual({
     exitCode: 1,
-    output: 'ki: error: local KI repository registry is invalid: repositories[0] path must be an absolute path\n'
+    output: 'ki: error: local KI repository registry is invalid: repositories.relative path must be an absolute path\n'
   })
   expect(invalidLocalConform).toEqual({
     exitCode: 1,
@@ -480,14 +479,14 @@ test('rejects relative repository registry paths in local state', async () => {
   const box = await sandbox()
   await box.state.write(
     'ki/registry.toml',
-    'schema = 1\n[[repositories]]\nkey = "relative"\nrepository = "https://github.com/example/relative"\npath = "relative-repository"\n'
+    'schema = 1\n[repositories."relative"]\nrepository = "https://github.com/example/relative"\npath = "relative-repository"\n'
   )
 
   const listed = await box.run('ki registry list')
 
   expect(listed).toEqual({
     exitCode: 1,
-    output: 'ki: error: local KI repository registry is invalid: repositories[0] path must be an absolute path\n'
+    output: 'ki: error: local KI repository registry is invalid: repositories.relative path must be an absolute path\n'
   })
 })
 
@@ -505,16 +504,27 @@ test('rejects malformed state records and conflicting local bindings', async () 
   }
 
   await invalid('[broken\n', 'registry must be valid TOML')
-  await invalid('schema = 2\nrepositories = []\n', 'schema must equal 1')
-  await invalid('schema = 1\nrepositories = "not-a-list"\n', 'repositories must be an array of tables')
-  await invalid('schema = 1\nrepositories = ["not-a-table"]\n', 'repositories[0] must be a table')
+  await invalid('schema = 2\nrepositories = {}\n', 'schema must equal 1')
   await invalid(
-    'schema = 1\n[[repositories]]\nkey = "Bad Key"\nrepository = "not-a-url"\npath = "relative"\nextra = true\n',
-    'repositories[0] has unrecognised key extra'
+    'schema = 1\nrepositories = "not-a-table"\n',
+    'repositories must be a table of keyed repository records'
   )
   await invalid(
-    `schema = 1\n[[repositories]]\nkey = "one"\nrepository = "https://github.com/example/one"\npath = ${JSON.stringify(root)}\n\n[[repositories]]\nkey = "one"\nrepository = "https://github.com/example/two"\npath = ${JSON.stringify(`${box.root.path}/two`)}\n`,
-    'repositories repeats a key'
+    'schema = 1\nrepositories = ["not-a-table"]\n',
+    'repositories must be a table of keyed repository records'
+  )
+  await invalid('schema = 1\nrepositories = { one = "not-a-table" }\n', 'repositories.one must be a table')
+  await invalid(
+    `schema = 1\nrepositories = { one = { repository = "https://github.com/example/one", path = ${JSON.stringify(root)}, extra = true } }\n`,
+    'repositories.one has unrecognised key extra'
+  )
+  await invalid(
+    'schema = 1\n[repositories."Bad Key"]\nrepository = "not-a-url"\npath = "relative"\n',
+    'repositories.Bad Key key must be a stable local repository name'
+  )
+  await invalid(
+    `schema = 1\n[repositories."one"]\nrepository = "https://github.com/example/one"\npath = ${JSON.stringify(root)}\n\n[repositories."two"]\nrepository = "https://github.com/example/one"\npath = ${JSON.stringify(`${box.root.path}/two`)}\n`,
+    'repositories repeats a repository'
   )
 
   const add = (): Promise<{ readonly exitCode: number; readonly output: string }> =>
@@ -538,7 +548,7 @@ test('rejects malformed state records and conflicting local bindings', async () 
 
 test('rejects a symbolic-link registry file without following it', async () => {
   const box = await sandbox()
-  await box.state.write('ki/actual-registry.toml', 'schema = 1\nrepositories = []\n')
+  await box.state.write('ki/actual-registry.toml', 'schema = 1\nrepositories = {}\n')
   await symlink(`${box.state.path}/ki/actual-registry.toml`, `${box.state.path}/ki/registry.toml`)
 
   expect(await box.run('ki registry list')).toEqual({

@@ -56,32 +56,31 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
     if (!['schema', 'repositories'].includes(key)) errors.push(`unrecognised key ${key}`)
   if (parsed['schema'] !== 1) errors.push('schema must equal 1')
   const entries = parsed['repositories']
-  if (!Array.isArray(entries)) errors.push('repositories must be an array of tables')
+  if (!isRecord(entries)) errors.push('repositories must be a table of keyed repository records')
   const repositories: LocalRegistryEntry[] = []
-  if (Array.isArray(entries)) {
-    for (const [index, entry] of entries.entries()) {
+  if (isRecord(entries)) {
+    for (const [key, entry] of Object.entries(entries)) {
       if (!isRecord(entry)) {
-        errors.push(`repositories[${index}] must be a table`)
+        errors.push(`repositories.${key} must be a table`)
         continue
       }
-      for (const key of Object.keys(entry))
-        if (!['key', 'repository', 'path'].includes(key))
-          errors.push(`repositories[${index}] has unrecognised key ${key}`)
-      if (!validKey(entry['key'])) errors.push(`repositories[${index}] key must be a stable local repository name`)
+      for (const field of Object.keys(entry))
+        if (!['repository', 'path'].includes(field)) errors.push(`repositories.${key} has unrecognised key ${field}`)
+      if (!validKey(key)) errors.push(`repositories.${key} key must be a stable local repository name`)
       if (!canonicalRepositoryIdentity(entry['repository']))
-        errors.push(`repositories[${index}] repository must be a canonical HTTPS GitHub repository`)
+        errors.push(`repositories.${key} repository must be a canonical HTTPS GitHub repository`)
       if (typeof entry['path'] !== 'string' || !isAbsolute(entry['path']))
-        errors.push(`repositories[${index}] path must be an absolute path`)
+        errors.push(`repositories.${key} path must be an absolute path`)
       if (
-        validKey(entry['key']) &&
+        validKey(key) &&
         canonicalRepositoryIdentity(entry['repository']) &&
         typeof entry['path'] === 'string' &&
         isAbsolute(entry['path'])
       )
-        repositories.push({ key: entry['key'], repository: entry['repository'], path: entry['path'] })
+        repositories.push({ key, repository: entry['repository'], path: entry['path'] })
     }
   }
-  for (const field of ['key', 'repository', 'path'] as const) {
+  for (const field of ['repository', 'path'] as const) {
     const values = repositories.map((repository) => repository[field])
     if (new Set(values).size !== values.length) errors.push(`repositories repeats a ${field}`)
   }
@@ -111,14 +110,13 @@ export const registryEntry = (repository: string, identity: string): LocalRegist
 export const renderLocalRegistry = (repositories: readonly LocalRegistryEntry[]): string =>
   [
     'schema = 1',
-    ...(repositories.length ? [] : ['repositories = []']),
+    ...(repositories.length ? [] : ['repositories = {}']),
     ...repositories
       .slice()
       .sort((left, right) => left.key.localeCompare(right.key, 'en'))
       .flatMap((repository) => [
         '',
-        '[[repositories]]',
-        `key = ${JSON.stringify(repository.key)}`,
+        `[repositories.${JSON.stringify(repository.key)}]`,
         `repository = ${JSON.stringify(repository.repository)}`,
         `path = ${JSON.stringify(repository.path)}`
       ]),

@@ -69,7 +69,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki registry add`
 - `ki registry list`
-- `ki registry` now keeps canonical GitHub identity, local key, and checkout binding in the machine-local `$XDG_STATE_HOME/ki/registry.toml`; `ki bootstrap --refresh` migrates and removes the retired configuration path list, which resolution no longer reads.
+- `ki registry` now keeps canonical GitHub identity and checkout bindings as keyed records in the machine-local `$XDG_STATE_HOME/ki/registry.toml`; `ki bootstrap --refresh` migrates and removes the retired configuration path list, which resolution no longer reads.
 
 #### Harness management
 

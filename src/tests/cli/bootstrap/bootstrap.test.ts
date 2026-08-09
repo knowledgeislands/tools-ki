@@ -146,6 +146,15 @@ ids = [
       'ki/config.toml',
       `${await box.config.read('ki/config.toml')}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`
     )
+    await box.project.write(
+      '.ki-config.toml',
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\n'
+    )
+    box.setRunner(async (command, arguments_) =>
+      command === 'git' && arguments_.join(' ') === `-C ${repository} remote get-url origin`
+        ? { exitCode: 0, output: 'git@github.com:example/project.git\n' }
+        : { exitCode: 1, output: '' }
+    )
     const refreshed = await box.run('ki bootstrap --refresh')
 
     expect(migrated.output).toContain('migrated local KI repository registry: 1 repositories')
@@ -153,6 +162,29 @@ ids = [
     expect(await box.config.read('ki/config.toml')).toContain(`[local]\npath = ${JSON.stringify(harnessPath)}\n`)
     expect(await box.config.read('ki/config.toml')).not.toContain('[repositories]')
     expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(repository)}`)
+    expect(await box.state.read('ki/registry.toml')).toContain('repository = "https://github.com/example/project"')
+  })
+
+  test('retains the retired path list when a legacy checkout has no canonical configuration or origin identity', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('chatgpt-codex')
+    await box.run('ki bootstrap')
+    const repository = await realpath(box.project.path)
+    const existing = await box.config.read('ki/config.toml')
+    await box.config.write(
+      'ki/config.toml',
+      `${existing}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`
+    )
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
+    box.setRunner(async () => ({ exitCode: 1, output: 'no origin\n' }))
+
+    const failed = await box.run('ki bootstrap --refresh')
+
+    expect(failed).toEqual({
+      exitCode: 1,
+      output: `ki: error: legacy repository ${repository} has no canonical GitHub identity\n`
+    })
+    expect(await box.config.read('ki/config.toml')).toContain('[repositories]')
   })
 
   test('refuses to replace a foreign core-skill link during bootstrap but reconciles it on refresh', async () => {

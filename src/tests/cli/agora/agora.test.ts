@@ -19,11 +19,10 @@ const localRegistry = (
 ): string =>
   [
     'schema = 1',
-    ...(entries.length ? [] : ['repositories = []']),
+    ...(entries.length ? [] : ['repositories = {}']),
     ...entries.flatMap((entry) => [
       '',
-      '[[repositories]]',
-      `key = ${JSON.stringify(entry.key)}`,
+      `[repositories.${JSON.stringify(entry.key)}]`,
       `repository = ${JSON.stringify(entry.identity)}`,
       `path = ${JSON.stringify(entry.root)}`
     ]),
@@ -233,9 +232,9 @@ describe('[ki agora]', () => {
     })
     await box.state.write(
       'ki/registry.toml',
-      'schema = 1\n[[repositories]]\nkey = "relative"\nrepository = "https://github.com/example/relative"\npath = "relative"\n'
+      'schema = 1\n[repositories."relative"]\nrepository = "https://github.com/example/relative"\npath = "relative"\n'
     )
-    expect((await box.run('ki agora list')).output).toContain('repositories[0] path must be an absolute path')
+    expect((await box.run('ki agora list')).output).toContain('repositories.relative path must be an absolute path')
     await box.state.write('ki/registry.toml', localRegistry([]))
     expect(await box.run('ki agora show unknown')).toEqual({
       exitCode: 2,
@@ -322,19 +321,6 @@ describe('[ki agora]', () => {
       ])
     )
     expect((await box.run('ki agora list')).output).toContain('repositories repeats a repository')
-
-    const outside = await box.root.mkdir('outside/shared')
-    const inside = await box.project.mkdir('shared')
-    await box.root.write('outside/shared/.ki-config.toml', repository('https://github.com/example/outside'))
-    await box.project.write('shared/.ki-config.toml', repository('https://github.com/example/inside'))
-    await box.state.write(
-      'ki/registry.toml',
-      localRegistry([
-        { key: 'shared', identity: 'https://github.com/example/outside', root: outside },
-        { key: 'shared', identity: 'https://github.com/example/inside', root: inside }
-      ])
-    )
-    expect((await box.run('ki agora list')).output).toContain('repositories repeats a key')
 
     const roots = await registered(box, [
       {

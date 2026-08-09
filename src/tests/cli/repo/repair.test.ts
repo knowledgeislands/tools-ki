@@ -168,7 +168,7 @@ describe('[ki repo repair]', () => {
 
   test('reports a registry configuration it cannot safely extend', async () => {
     const box = await preparedRepository()
-    await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = []\nextra = true\n')
+    await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
 
     const repair = await box.run('ki repo repair')
 

@@ -3,7 +3,8 @@ import { isAbsolute, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../core/configuration.ts'
 import { KiError } from '../core/errors.ts'
-import { localRegistryWriteMany, registryEntry } from '../core/local-registry.ts'
+import { canonicalRepositoryIdentity, registryEntry, renderLocalRegistry } from '../core/local-registry.ts'
+import type { Runner } from '../core/runner.ts'
 import {
   agentDescriptors,
   bootstrapConfigurationPath,
@@ -332,18 +333,30 @@ export const setConfiguredUserSkills = async (
  */
 export const migrateLegacyRepositoryRegistry = async (
   configurationDirectory: string,
-  stateDirectory: string
+  stateDirectory: string,
+  runner: Runner,
+  environment: NodeJS.ProcessEnv
 ): Promise<number> => {
   const inspection = await inspectUserConfiguration(configurationDirectory)
   if (inspection.state !== 'valid' || !inspection.repositories.length) return 0
   const entries = await Promise.all(
-    inspection.repositories.map(async (root) =>
-      registryEntry(root, declaredRepositoryIdentity(await readRepositoryDeclaration(join(root, '.ki-config.toml'))))
-    )
+    inspection.repositories.map(async (root) => {
+      try {
+        return registryEntry(
+          root,
+          declaredRepositoryIdentity(await readRepositoryDeclaration(join(root, '.ki-config.toml')))
+        )
+      } catch {
+        const remote = await runner('git', ['-C', root, 'remote', 'get-url', 'origin'], environment)
+        const match = /^(?:https:\/\/github\.com\/|git@github\.com:)([^/]+)\/([^/]+?)(?:\.git)?\s*$/.exec(remote.output)
+        const identity = match && `https://github.com/${match[1]}/${match[2]}`
+        if (remote.exitCode !== 0 || !canonicalRepositoryIdentity(identity))
+          throw new KiError(`legacy repository ${root} has no canonical GitHub identity`, 1)
+        return registryEntry(root, identity)
+      }
+    })
   )
-  const write = await localRegistryWriteMany(stateDirectory, entries)
-  if (!write) return 0
   await mkdir(stateDirectory, { recursive: true })
-  await writeFile(join(stateDirectory, write.path), write.content, { encoding: 'utf8' })
+  await writeFile(join(stateDirectory, 'registry.toml'), renderLocalRegistry(entries), { encoding: 'utf8' })
   return entries.length
 }

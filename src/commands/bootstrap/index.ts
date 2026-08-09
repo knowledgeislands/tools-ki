@@ -29,7 +29,12 @@ export const createBootstrapCommand = (context: KiContext): Command =>
           ? await localBootstrapHarness(previous.local)
           : undefined
       const migrated = options.refresh
-        ? await migrateLegacyRepositoryRegistry(context.paths.config, context.paths.state)
+        ? await migrateLegacyRepositoryRegistry(
+            context.paths.config,
+            context.paths.state,
+            context.runner,
+            context.environment
+          )
         : 0
       const configuration = await configureBootstrapAgents({
         homeDirectory: context.homeDirectory,
