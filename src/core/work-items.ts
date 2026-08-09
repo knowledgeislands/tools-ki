@@ -7,11 +7,18 @@ const ROADMAP_DIRECTORY = 'docs/roadmap'
 const ISSUE_LEDGER = '_ISSUES.md'
 const requiredFields = ['id', 'title', 'theme', 'horizon', 'status', 'blocks', 'blocked-by', 'baseline-ref'] as const
 type RequiredField = (typeof requiredFields)[number]
-type WorkItemField = RequiredField | 'candidate' | 'transferred-from' | 'housekeeping-template' | 'scheduled-for'
+type WorkItemField =
+  | RequiredField
+  | 'area'
+  | 'candidate'
+  | 'transferred-from'
+  | 'housekeeping-template'
+  | 'scheduled-for'
 type WorkItemFields = Partial<Record<WorkItemField, string>>
 
 const allowedFields = new Set<WorkItemField>([
   ...requiredFields,
+  'area',
   'candidate',
   'transferred-from',
   'housekeeping-template',

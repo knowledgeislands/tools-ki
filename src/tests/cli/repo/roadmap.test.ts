@@ -451,18 +451,19 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
   })
 
-  test('accepts Harness-owned housekeeping scheduling fields', async () => {
+  test('accepts contract-owned optional frontmatter fields', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write(
       'repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md',
-      item({ 'housekeeping-template': 'HK-001', 'scheduled-for': '2026-08-09' })
+      item({ area: 'CLI', 'housekeeping-template': 'HK-001', 'scheduled-for': '2026-08-09' })
     )
 
     const result = await box.run('ki repo --repo repo roadmap list')
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
+    expect(result.output).not.toContain('has unsupported or repeated field area')
     expect(result.output).not.toContain('has unsupported or repeated field housekeeping-template')
   })
 
