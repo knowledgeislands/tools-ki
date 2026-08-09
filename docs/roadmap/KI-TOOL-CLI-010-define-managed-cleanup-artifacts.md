@@ -4,7 +4,7 @@ title: Define managed cleanup artifacts
 area: CLI
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: [KI-TOOL-CLI-037]
 blocked-by: []
 baseline-ref: 3de2f81360cf392c9a617f1b32f39149f21750b7
@@ -187,6 +187,10 @@ The original inventory omitted uninstall parking and installer-script staging. R
 ### Mini recap
 
 Current prefix-based install recovery remains intact. The next change is a separate, blocked implementation record rather than a broad cleanup feature.
+
+## Done
+
+Accepted by the user on 2026-08-09. This record is retained as the ownership-model decision; `KI-TOOL-CLI-037` remains the separately planned implementation.
 
 ## Discussion
 
