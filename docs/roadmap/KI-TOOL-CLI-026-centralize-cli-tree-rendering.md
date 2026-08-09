@@ -15,7 +15,7 @@ Give every KI command a consistent, maintainable hierarchical report so users ca
 
 ## Context
 
-User-facing commands and shared reporting code currently construct output lines themselves, embedding tree glyphs, indentation, last-item branching, and empty-state placement in many places. Examples include the `agora`, `harness`, `manage`, `repo`, and `trade` command families, plus `src/core/repository-reporting.ts`.
+User-facing commands and shared reporting code previously constructed output lines themselves, embedding tree glyphs, indentation, last-item branching, and empty-state placement in many places. Examples included the `agora`, `harness`, `manage`, `repo`, and `trade` command families, plus `src/core/repository-reporting.ts`.
 
 That repeats presentation decisions throughout the command surface and makes a structural change expensive and inconsistent. Commands should instead declare report headings, values, and child entries; one common renderer should determine the visible tree layout.
 
@@ -25,17 +25,17 @@ This item does not introduce a machine-readable output format, redesign report c
 
 ## Current state
 
-`src/core/tree-rendering.ts` now owns the tree glyphs and nesting rules. `ki manage diag` is the first consumer, while repository health exposes structured facts instead of pre-rendered lines so `diag` and `ki repo repair` can each render the information appropriate to their own command.
+`src/core/tree-rendering.ts` owns the tree glyphs and nesting rules. It provides a batch renderer for bounded reports and a streaming reporter with declared section sizes, title context, explicit multi-line continuations, and the common progress prefix. Commands provide report facts and structure; they do not select branches, pad labels, or embed layout characters.
 
-The remaining reports still embed tree characters in command-local arrays, interpolation expressions, or direct stdout writes. The inventory below is the migration queue; it does not establish a priority among independently safe slices.
+Every known production tree report now uses that boundary. `ki manage diag` and `ki repo repair` independently render the structured repository-health facts they need, while repository audit and conform emit their output progressively through the streaming reporter.
 
 ## Steps
 
-- [ ] Inventory every user-facing tree report and its intentional layout variants, including headings, summaries, empty states, diagnostics, continuation lines, and direct stdout writers.
-- [ ] Define a small typed report-tree structure that represents labels, ordered children, and any required plain continuation text without exposing layout characters to command code.
-- [ ] Implement one renderer that converts that structure to the current human-readable tree format and owns all tree glyphs, indentation, and last-child rules.
-- [ ] Migrate every command and shared reporting path that emits a tree report to provide structured data to that renderer, deleting command-local branching helpers and embedded tree characters.
-- [ ] Update CLI contract tests to preserve intended report content and verify representative nested, empty, diagnostic, and multi-line cases through the public `run(args, context)` seam.
+- [x] Inventory every user-facing tree report and its intentional layout variants, including headings, summaries, empty states, diagnostics, continuation lines, and direct stdout writers.
+- [x] Define a small typed report-tree structure that represents labels, ordered children, and any required plain continuation text without exposing layout characters to command code.
+- [x] Implement one renderer that converts that structure to the current human-readable tree format and owns all tree glyphs, indentation, and last-child rules.
+- [x] Migrate every command and shared reporting path that emits a tree report to provide structured data to that renderer, deleting command-local branching helpers and embedded tree characters.
+- [x] Update CLI contract tests to preserve intended report content and verify representative nested, empty, diagnostic, and multi-line cases through the public `run(args, context)` seam.
 
 ## Files touched
 
@@ -45,19 +45,15 @@ The remaining reports still embed tree characters in command-local arrays, inter
 
 ## Candidate migrations
 
-Already migrated:
+Completed migrations:
 
-- `ki manage diag` — `src/commands/manage/diag.ts`.
+- **Agora:** profile lists and details.
+- **Harness:** status reports.
+- **Manage:** diagnostics, cleanup, doctor, inventory, missing, outdated, repair, search, and update reports.
+- **Repository:** repair, upgrade, roadmap, audit, and conform reports.
+- **Trades:** record lists, route lists, and route checks.
 
-Remaining report paths:
-
-- **Agora:** `src/commands/agora/list.ts` and `src/commands/agora/show.ts`.
-- **Harness:** `src/commands/harness/index.ts`.
-- **Manage:** `src/commands/manage/cleanup.ts`, `doctor.ts`, `list.ts`, `missing.ts`, `outdated.ts`, `repair.ts`, `search.ts`, and `update.ts`.
-- **Repository:** `src/commands/repo/index.ts`, `repair.ts`, `roadmap.ts`, `upgrade.ts`, and the shared `src/core/repository-reporting.ts` audit and conform reports.
-- **Trades:** `src/commands/trade/records.ts` and `src/commands/trade/routes.ts`.
-
-Each migration should retain the command's own content and semantics while replacing only its layout construction. A command that needs a report structure the renderer does not yet express must stop for a separate design decision rather than growing the renderer opportunistically.
+Each migration retained command content and semantics while replacing layout construction. The streaming reporter was added only after agreeing the need to render progress and final reports incrementally; its caller declares the child count of each open section so the renderer can choose branches at write time.
 
 ## Verify
 
