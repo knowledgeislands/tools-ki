@@ -219,9 +219,9 @@ describe('[ki agora]', () => {
     })
     const roadmap = await box.run('ki repo --agora inventory roadmap list')
     expect(roadmap.exitCode).toBe(1)
-    expect(roadmap.output).toContain(`│     ${dotted}\n├─ roadmap (0)`)
-    expect(roadmap.output).toContain(`│     ${first}\n├─ roadmap (0)`)
-    expect(roadmap.output).toContain(`│     ${second}\n├─ roadmap (0)`)
+    expect(roadmap.output).toContain(`(${dotted})\n├─ roadmap (0)`)
+    expect(roadmap.output).toContain(`(${first})\n├─ roadmap (0)`)
+    expect(roadmap.output).toContain(`(${second})\n├─ roadmap (0)`)
     expect(roadmap.output).toContain('├─ trades (0)')
     expect(await box.run('ki agora remove inventory first')).toEqual({
       exitCode: 0,

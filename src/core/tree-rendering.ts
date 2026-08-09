@@ -5,6 +5,7 @@ export interface TreeEntry {
 
 export interface TreeReport {
   readonly title: string
+  readonly context?: readonly TreeEntry[]
   readonly entries: readonly TreeEntry[]
 }
 
@@ -28,5 +29,6 @@ const renderEntries = (entries: readonly TreeEntry[], prefix = ''): readonly str
 /** Renders a semantic CLI report tree while owning every layout character and branching rule. */
 export const renderTree = (report: TreeReport): readonly string[] => [
   `${TOP_LEFT} ${normalizeLabel(report.title)}`,
+  ...renderEntries(report.context ?? [], VERTICAL),
   ...renderEntries(report.entries)
 ]

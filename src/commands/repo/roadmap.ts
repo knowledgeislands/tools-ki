@@ -5,6 +5,7 @@ import { KiError, KiExit } from '../../core/errors.ts'
 import { type RepositoryPlanningSource, readRepositoryPlanningSource } from '../../core/planning.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade-core.ts'
+import { renderTree, type TreeEntry } from '../../core/tree-rendering.ts'
 import {
   pruneDoneWorkItems,
   readWorkItems,
@@ -55,29 +56,27 @@ const textHorizonGroups = (
     return group.length ? [{ horizon, items: group }] : []
   })
 
-const renderTradeContext = (
+const renderTradeEntries = (
   trades: readonly LocatedTrade[],
   estate: readonly LocatedTrade[],
   diagnostic?: string
-): readonly string[] => {
-  if (diagnostic) return [`│  ╰─ ❌ unavailable: ${diagnostic}`]
+): readonly TreeEntry[] => {
+  if (diagnostic) return [{ label: `❌ unavailable: ${diagnostic}` }]
   const directions = [
     ['import', 'inbound'],
     ['export', 'outbound']
   ] as const
-  return directions.flatMap(([label, direction], directionIndex) => {
+  return directions.map(([label, direction]) => {
     const selected = trades.filter((trade) => trade.direction === direction)
-    const lastDirection = directionIndex === directions.length - 1
-    const itemPrefix = `│  ${lastDirection ? '   ' : '│  '}`
-    return [
-      `│  ${lastDirection ? '╰─' : '├─'} ${label} (${selected.length})`,
-      ...selected.map((trade, tradeIndex) => {
+    return {
+      label: `${label} (${selected.length})`,
+      children: selected.map((trade) => {
         const glyph = trade.record.kind === 'work' ? '⚒' : '◇'
         const peer = `${glyph} ${direction === 'outbound' ? '→' : '←'} ${displayTradePeer(trade.record, direction)}`
         const status = lifecycleStatus(tradeLifecycle(trade, estate))
-        return `${itemPrefix}${tradeIndex === selected.length - 1 ? '╰─' : '├─'} ${trade.record.id} ${peer} [${status}] ${trade.record.title}`
+        return { label: `${trade.record.id} ${peer} [${status}] ${trade.record.title}` }
       })
-    ]
+    }
   })
 }
 
@@ -94,76 +93,69 @@ const countTradeDirections = (
 }
 
 const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]): string => {
+  const context = [{ label: `📁 ${basename(result.repository)} (${result.repository})` }]
   const planning = result.planning
   if (planning?.kind === 'streams') {
     const count = planning.focuses.reduce((total, focus) => total + focus.proposals.length, 0)
-    const lines = [
-      '╭─ KI REPO ROADMAP',
-      `│  📁 ${basename(result.repository)}`,
-      `│     ${result.repository}`,
-      `├─ streams (${count}) · Knowledge Base Streams`
-    ]
-    if (!count) lines.push('│  ╰─ proposals: none')
-    else
-      for (const [focusIndex, focus] of planning.focuses.entries()) {
-        const lastFocus = focusIndex === planning.focuses.length - 1
-        const itemPrefix = `│  ${lastFocus ? '   ' : '│  '}`
-        lines.push(`│  ${lastFocus ? '╰─' : '├─'} ${focus.name} (${focus.proposals.length})`)
-        for (const [proposalIndex, proposal] of focus.proposals.entries())
-          lines.push(
-            `${itemPrefix}${proposalIndex === focus.proposals.length - 1 ? '╰─' : '├─'} ${proposal.code ?? 'undefined'} [${proposal.status}] ${proposal.title}`
-          )
-      }
-    if (planning.diagnostics.length) {
-      lines.push(`├─ stream diagnostics (${planning.diagnostics.length})`)
-      for (const [diagnosticIndex, diagnostic] of planning.diagnostics.entries())
-        lines.push(`│  ${diagnosticIndex === planning.diagnostics.length - 1 ? '╰─' : '├─'} ❌ ${diagnostic}`)
-    }
-    lines.push(
-      `├─ trades (${result.trades.length})`,
-      ...renderTradeContext(result.trades, estate, result.tradeDiagnostic)
-    )
+    const streams = count
+      ? planning.focuses.map((focus) => ({
+          label: `${focus.name} (${focus.proposals.length})`,
+          children: focus.proposals.map((proposal) => ({
+            label: `${proposal.code ?? 'undefined'} [${proposal.status}] ${proposal.title}`
+          }))
+        }))
+      : [{ label: 'proposals: none' }]
     const { inbound, outbound } = countTradeDirections(result.trades)
     const tradeSummary = result.tradeDiagnostic
       ? 'unavailable'
       : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
-    lines.push(`╰─ summary: PROPOSALS=${count} FOCUSES=${planning.focuses.length} TRADES=${tradeSummary}`)
-    return lines.join('\n')
+    return renderTree({
+      title: 'KI REPO ROADMAP',
+      context,
+      entries: [
+        { label: `streams (${count}) · Knowledge Base Streams`, children: streams },
+        ...(planning.diagnostics.length
+          ? [
+              {
+                label: `stream diagnostics (${planning.diagnostics.length})`,
+                children: planning.diagnostics.map((diagnostic) => ({ label: `❌ ${diagnostic}` }))
+              }
+            ]
+          : []),
+        {
+          label: `trades (${result.trades.length})`,
+          children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic)
+        },
+        { label: `summary: PROPOSALS=${count} FOCUSES=${planning.focuses.length} TRADES=${tradeSummary}` }
+      ]
+    }).join('\n')
   }
   const items = result.items ?? []
   const groups = textHorizonGroups(items)
-  const lines = [
-    `╭─ KI REPO ROADMAP`,
-    `│  📁 ${basename(result.repository)}`,
-    `│     ${result.repository}`,
-    `├─ roadmap (${items.length})`
-  ]
-  if (result.diagnostic) lines.push(`│  ╰─ ❌ ${result.diagnostic}`)
-  else if (!items.length) lines.push('│  ╰─ items: none')
-  else
-    lines.push(
-      ...groups.flatMap(({ horizon, items: group }, groupIndex) => {
-        const lastGroup = groupIndex === groups.length - 1
-        const itemPrefix = `│  ${lastGroup ? '   ' : '│  '}`
-        return [
-          `│  ${lastGroup ? '╰─' : '├─'} ${horizon} (${group.length})`,
-          ...group.map(
-            (item, itemIndex) =>
-              `${itemPrefix}${itemIndex === group.length - 1 ? '╰─' : '├─'} ${item.id} [${item.status}] ${item.title}`
-          )
-        ]
-      })
-    )
-  lines.push(
-    `├─ trades (${result.trades.length})`,
-    ...renderTradeContext(result.trades, estate, result.tradeDiagnostic)
-  )
+  const roadmap = result.diagnostic
+    ? [{ label: `❌ ${result.diagnostic}` }]
+    : !items.length
+      ? [{ label: 'items: none' }]
+      : groups.map(({ horizon, items: group }) => ({
+          label: `${horizon} (${group.length})`,
+          children: group.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
+        }))
   const { inbound, outbound } = countTradeDirections(result.trades)
   const tradeSummary = result.tradeDiagnostic
     ? 'unavailable'
     : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
-  lines.push(`╰─ summary: ITEMS=${items.length} HORIZONS=${groups.length} TRADES=${tradeSummary}`)
-  return lines.join('\n')
+  return renderTree({
+    title: 'KI REPO ROADMAP',
+    context,
+    entries: [
+      { label: `roadmap (${items.length})`, children: roadmap },
+      {
+        label: `trades (${result.trades.length})`,
+        children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic)
+      },
+      { label: `summary: ITEMS=${items.length} HORIZONS=${groups.length} TRADES=${tradeSummary}` }
+    ]
+  }).join('\n')
 }
 
 const resolveTargets = async (

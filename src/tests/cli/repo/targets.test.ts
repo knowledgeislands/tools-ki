@@ -93,10 +93,10 @@ describe('[ki repo target sets]', () => {
         'list'
       ])
 
-      expect(immediate.output).toContain(`│     ${root}/repos/a`)
-      expect(recursive.output).toContain(`│     ${root}/repos/a/nested`)
-      expect(absolute.output).toContain(`│     ${root}/repos/a`)
-      expect(character.output).toContain(`│     ${root}/repos/b`)
+      expect(immediate.output).toContain(`(${root}/repos/a)\n├─ roadmap (0)`)
+      expect(recursive.output).toContain(`(${root}/repos/a/nested)\n├─ roadmap (0)`)
+      expect(absolute.output).toContain(`(${root}/repos/a)\n├─ roadmap (0)`)
+      expect(character.output).toContain(`(${root}/repos/b)\n├─ roadmap (0)`)
       expect(missingBase.output).toContain('has no existing directory')
       expect(unmatched.output).toContain('matched no repositories')
       expect(duplicate.output).toContain('selects duplicate repository')
@@ -150,8 +150,8 @@ describe('[ki repo target sets]', () => {
 
       const result = await box.run('ki repo roadmap list')
 
-      expect(result.output).toContain(`│     ${root}/first`)
-      expect(result.output).not.toContain(`│     ${root}\n`)
+      expect(result.output).toContain(`(${root}/first)\n├─ roadmap (0)`)
+      expect(result.output).not.toContain(`(${root})\n`)
     })
 
     // KI-TOOL-CLI-030. `mgit register` writes `.mgit-config.toml` into an ordinary single
