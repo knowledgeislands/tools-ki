@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-018
 title: Normalize Agora estate
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: 06a66372991113613c0b820e63cbd4f6f2f95f62
+baseline-ref: a708cad5367d92f3136fe8e13d1eed34e6e4ae1c
 ---
 
 ## Goal
