@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-027
 title: Separate progress phases
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: df245e90305b3e1dcd84207adb31de9ea867a130
 ---
 
 ## Goal
