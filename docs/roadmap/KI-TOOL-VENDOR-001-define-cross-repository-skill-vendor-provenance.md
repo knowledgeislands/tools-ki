@@ -1,6 +1,7 @@
 ---
-id: KI-TOOL-001
+id: KI-TOOL-VENDOR-001
 title: Define skill provenance
+area: VENDOR
 theme: cross-repository-vendoring
 horizon: waiting-for
 status: draft

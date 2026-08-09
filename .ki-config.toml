@@ -27,6 +27,10 @@ adapter = "roadmap"
 [skills.ki-change-management-roadmap]
 themes = ["cli", "cross-repository-vendoring"]
 
+[skills.ki-change-management-roadmap.areas]
+CLI = "cli"
+VENDOR = "cross-repository-vendoring"
+
 [skills.ki-decision-records]
 
 [skills.ki-repo-trades]
