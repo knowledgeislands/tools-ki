@@ -204,13 +204,12 @@ describe('[ki repo]', () => {
       expect(result).toEqual({
         exitCode: 0,
         output: `╭─ KI REPO AUDIT
-│  📁 ${basename(await projectRoot(box.project))}
-│     ${await projectRoot(box.project)}
-│  ✦ 1 skill selected
+│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
+│  ╰─ ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
 ├─ results
 │  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
-│     ╰─ i info  [Example (EXAMPLE-1)] — ok
+│     ╰─ i info [Example (EXAMPLE-1)] — ok
 ╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
@@ -275,7 +274,7 @@ describe('[ki repo]', () => {
       expect(always.output).toContain('├─ progress')
       expect(always.output).not.toContain('\r\x1b[2K')
       expect(always.output).toContain(
-        `╭─ KI REPO AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 1 skill selected\n│     ╰─ example/harness:ki-example\n├─ progress [`
+        `╭─ KI REPO AUDIT\n│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})\n│  ╰─ ✦ 1 skill selected\n│     ╰─ example/harness:ki-example\n├─ progress [`
       )
       expect(always.output.indexOf('╭─ KI REPO AUDIT')).toBeLessThan(always.output.indexOf('├─ progress ['))
       expect(multi.output).toContain('[ki-example]')
@@ -316,9 +315,8 @@ describe('[ki repo]', () => {
       expect(result).toEqual({
         exitCode: 0,
         output: `╭─ KI REPO AUDIT
-│  📁 ${basename(await projectRoot(box.project))}
-│     ${await projectRoot(box.project)}
-│  ✦ 1 skill selected
+│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
+│  ╰─ ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
 ├─ results
 │  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
@@ -384,7 +382,7 @@ describe('[ki repo]', () => {
       const [progressOutput = '', standardOutput = ''] = result.output
         .replaceAll(CURSOR_SHOW, '')
         .split('\n├─ results\n')
-      const header = `╭─ KI REPO AUDIT\n│  📁 ${basename(await projectRoot(box.project))}\n│     ${await projectRoot(box.project)}\n│  ✦ 2 skills selected\n│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra\n`
+      const header = `╭─ KI REPO AUDIT\n│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})\n│  ╰─ ✦ 2 skills selected\n│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra\n`
       const frames = progressOutput
         .slice(header.length)
         .replaceAll(CURSOR_HIDE, '')
@@ -438,9 +436,8 @@ describe('[ki repo]', () => {
       expect(nonInteractive).toEqual({
         exitCode: 0,
         output: `╭─ KI REPO AUDIT
-│  📁 ${basename(await projectRoot(box.project))}
-│     ${await projectRoot(box.project)}
-│  ✦ 2 skills selected
+│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
+│  ╰─ ✦ 2 skills selected
 │     ├─ example/harness:ki-example
 │     ╰─ example/harness:ki-extra
 ├─ results
@@ -632,7 +629,7 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('× fail  [Example (EXAMPLE-1)] — not conformed')
+      expect(result.output).toContain('× fail [Example (EXAMPLE-1)] — not conformed')
       expect(result.output).toContain('repository audit found failures')
     })
 
@@ -652,13 +649,12 @@ describe('[ki repo]', () => {
       expect(result).toEqual({
         exitCode: 0,
         output: `╭─ KI REPO AUDIT
-│  📁 ${basename(await projectRoot(box.project))}
-│     ${await projectRoot(box.project)}
-│  ✦ 1 skill selected
+│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
+│  ╰─ ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
 ├─ results
 │  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
-│     ╰─ i info  [Example (EXAMPLE-1)] some/file.ts — ok
+│     ╰─ i info [Example (EXAMPLE-1)] some/file.ts — ok
 ╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
@@ -730,7 +726,7 @@ export default {
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(0)
-      expect(result.output).toContain('! warn  [Hybrid evidence (DIRECT-1)]')
+      expect(result.output).toContain('! warn [Hybrid evidence (DIRECT-1)]')
       expect(result.output).toContain('╰─ summary: PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1')
     })
   })

@@ -12,11 +12,16 @@ import {
   prepareSkill,
   type RubricProgressReport
 } from './runtime.ts'
+import {
+  createTreeReporter,
+  renderTree,
+  type TreeEntry,
+  type TreeReporter,
+  treeProgressPrefix
+} from './tree-rendering.ts'
 
 const FALLBACK_TERMINAL_COLUMNS = 80
 const REFRESH_INTERVAL_MS = 250
-const PROGRESS_PREFIX = '├─ progress '
-
 type ProgressMode = 'auto' | 'always' | 'never'
 type ProgressStyle = 'single' | 'multi'
 type ReporterLevel = FindingLevel | 'fixed'
@@ -139,21 +144,20 @@ interface RenderOptions {
 }
 
 const progressLine = (model: BarModel, { columns, styled, tick }: RenderOptions): string => {
+  const prefix = treeProgressPrefix()
   const width = terminalColumns(columns)
-  if (width <= PROGRESS_PREFIX.length) return truncate(model.text, width)
+  if (width <= prefix.length) return truncate(model.text, width)
   if (styled) {
     // Brackets delimit the bar, so its extent stays visible when it is wholly full or wholly empty.
-    const styledWidth = width - PROGRESS_PREFIX.length - 2
-    if (styledWidth < 1) return `${PROGRESS_PREFIX}${truncate(model.text, width - PROGRESS_PREFIX.length)}`
-    return `${PROGRESS_PREFIX}[${styledBar(model, styledWidth, tick)}]`
+    const styledWidth = width - prefix.length - 2
+    if (styledWidth < 1) return `${prefix}${truncate(model.text, width - prefix.length)}`
+    return `${prefix}[${styledBar(model, styledWidth, tick)}]`
   }
-  const remaining = width - PROGRESS_PREFIX.length - 1
+  const remaining = width - prefix.length - 1
   // The status text carries the running item, which is the part a reader needs; give the bar the smaller share.
   const barWidth = Math.min(40, Math.floor(remaining / 3))
-  if (barWidth < 3) return `${PROGRESS_PREFIX}${truncate(model.text, width - PROGRESS_PREFIX.length)}`
-  return `${PROGRESS_PREFIX}${bracketBar(model, barWidth, tick)} ${truncate(model.text, remaining - barWidth)}`.padEnd(
-    width
-  )
+  if (barWidth < 3) return `${prefix}${truncate(model.text, width - prefix.length)}`
+  return `${prefix}${bracketBar(model, barWidth, tick)} ${truncate(model.text, remaining - barWidth)}`.padEnd(width)
 }
 
 const elapsed = (milliseconds: number): string => `${(Math.max(0, milliseconds) / 1000).toFixed(1)}s`
@@ -504,18 +508,18 @@ const renderOperationFrameStart = (
   operation: 'AUDIT' | 'CONFORM',
   repository: string,
   skills: readonly { readonly identity: string }[]
-): void => {
+): TreeReporter => {
   const count = skills.length
-  const skillLines = skills.map((skill, index) => `│     ${index === count - 1 ? '╰─' : '├─'} ${skill.identity}`)
-  context.stdout.write(
-    `${[
-      `╭─ KI REPO ${operation}`,
-      `│  📁 ${basename(repository)}`,
-      `│     ${repository}`,
-      `│  ✦ ${count} skill${count === 1 ? '' : 's'} selected`,
-      ...skillLines
-    ].join('\n')}\n`
-  )
+  return createTreeReporter((output) => context.stdout.write(output), {
+    title: `KI REPO ${operation}`,
+    context: [
+      { label: `📁 ${basename(repository)} (${repository})` },
+      {
+        label: `✦ ${count} skill${count === 1 ? '' : 's'} selected`,
+        children: skills.map((skill) => ({ label: skill.identity }))
+      }
+    ]
+  })
 }
 
 /** Begin one framed audit report before its live progress stream starts. */
@@ -523,18 +527,23 @@ export const renderAuditFrameStart = (
   context: KiContext,
   repository: string,
   skills: readonly { readonly identity: string }[]
-): void => renderOperationFrameStart(context, 'AUDIT', repository, skills)
+): TreeReporter => renderOperationFrameStart(context, 'AUDIT', repository, skills)
 
 /** Begin one framed conform report before its live progress stream starts. */
 export const renderConformFrameStart = (
   context: KiContext,
   repository: string,
   skills: readonly { readonly identity: string }[]
-): void => renderOperationFrameStart(context, 'CONFORM', repository, skills)
+): TreeReporter => renderOperationFrameStart(context, 'CONFORM', repository, skills)
+
+const findingEntry = (finding: RenderedFinding): TreeEntry => {
+  const [label = '', ...continuation] = formatFinding(finding).split('\n')
+  return { label, ...(continuation.length ? { continuation } : {}) }
+}
 
 /** Render the result portion and close one framed audit report. */
 export const renderAuditResults = (
-  context: KiContext,
+  reporter: TreeReporter,
   repository: string,
   reports: readonly AuditSkillReport[],
   reporterLevels: readonly ReporterLevel[],
@@ -552,34 +561,25 @@ export const renderAuditResults = (
     failingFindings,
     warningFindings
   }
-  context.stdout.write('├─ results\n')
+  const results = reporter.section('results', reports.length + Number(Boolean(registrationFailure)))
   for (const [index, report] of reports.entries()) {
     const reportSummary = skillSummaries[index]
     // The aligned map above is fixed by reports.map(); preserve a guard for future changes.
     /* v8 ignore next */
     if (!reportSummary) throw new KiError(`audit report lost summary for ${report.skill.skill.identity}`, 1)
-    const last = index === reports.length - 1 && !registrationFailure
-    const branch = last ? '╰─' : '├─'
-    context.stdout.write(
-      `│  ${branch} ${REPORT_ICON[reportSummary.level]} ${report.skill.skill.identity} ${REPORT_LABEL[reportSummary.level].toUpperCase()} · FAIL=${reportSummary.fails} WARN=${reportSummary.warnings}\n`
-    )
-    const detailPrefix = `│  ${last ? '   ' : '│  '}`
     const visible = report.findings.filter((entry) => reporterLevels.includes(entry.level))
-    for (const [findingIndex, finding] of visible.entries()) {
-      const findingLast = findingIndex === visible.length - 1
-      const findingBranch = findingLast ? '╰─' : '├─'
-      const [firstLine = '', ...continuation] = formatFinding(finding).replace(/^ {2}/, '').split('\n')
-      context.stdout.write(`${detailPrefix}${findingBranch} ${firstLine}\n`)
-      for (const line of continuation) context.stdout.write(`${detailPrefix}${findingLast ? '   ' : '│  '}   ${line}\n`)
-    }
+    results.entry({
+      label: `${REPORT_ICON[reportSummary.level]} ${report.skill.skill.identity} ${REPORT_LABEL[reportSummary.level].toUpperCase()} · FAIL=${reportSummary.fails} WARN=${reportSummary.warnings}`,
+      children: visible.map(findingEntry)
+    })
   }
   if (registrationFailure)
-    context.stdout.write(
-      `│  ╰─ ${REPORT_ICON.fail} local repository registration FAIL [Local repository registration (REPO-REG-1)] — ${registrationFailure}\n`
-    )
-  context.stdout.write(
-    `╰─ summary: PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}\n`
-  )
+    results.entry({
+      label: `${REPORT_ICON.fail} local repository registration FAIL [Local repository registration (REPO-REG-1)] — ${registrationFailure}`
+    })
+  reporter.finish({
+    label: `summary: PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
+  })
   return summary
 }
 
@@ -598,15 +598,18 @@ export const renderMultiRepositoryAuditSummary = (
     }),
     { passingSkills: 0, warningSkills: 0, failingSkills: 0, failingFindings: 0, warningFindings: 0 }
   )
-  context.stdout.write('\n╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n')
-  for (const [index, summary] of summaries.entries()) {
-    const branch = index === summaries.length - 1 ? '╰─' : '├─'
-    context.stdout.write(
-      `│  ${branch} ${auditSummaryIcon(summary)} ${basename(summary.repository)} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}\n`
-    )
-  }
   context.stdout.write(
-    `╰─ totals: PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} · FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}\n`
+    `\n${renderTree({
+      title: 'KI REPO AUDIT · MULTI-REPOSITORY SUMMARY',
+      context: summaries.map((summary) => ({
+        label: `${auditSummaryIcon(summary)} ${basename(summary.repository)} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
+      })),
+      entries: [
+        {
+          label: `totals: PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} · FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}`
+        }
+      ]
+    }).join('\n')}\n`
   )
 }
 
@@ -667,7 +670,7 @@ const withFixed = (report: SkillReport): readonly RenderedFinding[] => [
 const formatFinding = (finding: RenderedFinding): string => {
   const safeMessage = stripVTControlCharacters(finding.message)
   const subject = finding.subject ? ` ${finding.subject}` : ''
-  const prefix = `  ${REPORT_ICON[finding.level]} ${REPORT_LABEL[finding.level].padEnd(5)}`
+  const prefix = `${REPORT_ICON[finding.level]} ${REPORT_LABEL[finding.level]}`
   return `${prefix} [${finding.title} (${finding.code})]${subject} — ${safeMessage.replace(/\r?\n/g, '\n    ')}`
 }
 
@@ -692,7 +695,7 @@ const conformSkillSummary = (findings: readonly RenderedFinding[]): ConformSkill
  * instead of making each harness ship a runner merely to format a report.
  */
 export const renderConformReports = (
-  context: KiContext,
+  reporter: TreeReporter,
   reports: readonly SkillReport[],
   reporterLevels: readonly ReporterLevel[]
 ): void => {
@@ -704,28 +707,19 @@ export const renderConformReports = (
       (total, item) => total + (level === 'fail' ? item.fails : level === 'warn' ? item.warnings : item.fixed),
       0
     )
-  context.stdout.write('├─ results\n')
+  const results = reporter.section('results', reportFindings.length)
   for (const [index, { report, findings }] of reportFindings.entries()) {
     const reportSummary = skillSummaries[index]
     // The aligned map above is fixed by reportFindings.map(); preserve a guard for future changes.
     /* v8 ignore next */
     if (!reportSummary) throw new KiError(`conform report lost summary for ${report.skill.skill.identity}`, 1)
-    const last = index === reportFindings.length - 1
-    const branch = last ? '╰─' : '├─'
-    context.stdout.write(
-      `│  ${branch} ${REPORT_ICON[reportSummary.level]} ${report.skill.skill.identity} ${REPORT_LABEL[reportSummary.level].toUpperCase()} · FAIL=${reportSummary.fails} WARN=${reportSummary.warnings} FIXED=${reportSummary.fixed}\n`
-    )
-    const detailPrefix = `│  ${last ? '   ' : '│  '}`
     const visible = findings.filter((finding) => reporterLevels.includes(finding.level))
-    for (const [findingIndex, finding] of visible.entries()) {
-      const findingLast = findingIndex === visible.length - 1
-      const findingBranch = findingLast ? '╰─' : '├─'
-      const [firstLine = '', ...continuation] = formatFinding(finding).replace(/^ {2}/, '').split('\n')
-      context.stdout.write(`${detailPrefix}${findingBranch} ${firstLine}\n`)
-      for (const line of continuation) context.stdout.write(`${detailPrefix}${findingLast ? '   ' : '│  '}   ${line}\n`)
-    }
+    results.entry({
+      label: `${REPORT_ICON[reportSummary.level]} ${report.skill.skill.identity} ${REPORT_LABEL[reportSummary.level].toUpperCase()} · FAIL=${reportSummary.fails} WARN=${reportSummary.warnings} FIXED=${reportSummary.fixed}`,
+      children: visible.map(findingEntry)
+    })
   }
-  context.stdout.write(
-    `╰─ summary: PASS=${countSkills('pass')} WARN=${countSkills('warn')} FAIL=${countSkills('fail')} FIXED=${countSkills('fixed')} · FINDINGS: FAIL=${countFindings('fail')} WARN=${countFindings('warn')} FIXED=${countFindings('fixed')}\n`
-  )
+  reporter.finish({
+    label: `summary: PASS=${countSkills('pass')} WARN=${countSkills('warn')} FAIL=${countSkills('fail')} FIXED=${countSkills('fixed')} · FINDINGS: FAIL=${countFindings('fail')} WARN=${countFindings('warn')} FIXED=${countFindings('fixed')}`
+  })
 }

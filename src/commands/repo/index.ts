@@ -203,7 +203,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             const summaries: AuditRepositorySummary[] = []
             for (const [index, { repository, skills }] of selected.entries()) {
               if (index) context.stdout.write('\n')
-              renderAuditFrameStart(context, repository.root, skills)
+              const reporter = renderAuditFrameStart(context, repository.root, skills)
               try {
                 const results = await runWithProgress(
                   context,
@@ -232,7 +232,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 const registration = await localRepositoryRegistration(context, repository.root, skills)
                 summaries.push(
                   renderAuditResults(
-                    context,
+                    reporter,
                     repository.root,
                     results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
                     output.reporterLevels,
@@ -241,7 +241,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 )
                 failed ||= Boolean(registration) || findings.some((finding) => finding.level === 'fail')
               } catch (error) {
-                context.stdout.write('╰─ audit failed\n')
+                reporter.finish({ label: 'audit failed' })
                 throw error
               }
             }
@@ -283,7 +283,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             /* v8 ignore next */
             if (!selected) throw new KiError('repository conform lost its selected repository before resolution', 1)
             const { skills } = selected
-            renderConformFrameStart(context, repository.root, skills)
+            const reporter = renderConformFrameStart(context, repository.root, skills)
             const conformed = await runWithProgress(
               context,
               skills,
@@ -311,7 +311,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             const findings = conformed.flatMap(({ conform }) => conform.findings)
             const renderInitialReports = () =>
               renderConformReports(
-                context,
+                reporter,
                 conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
                 output.reporterLevels
               )
@@ -350,7 +350,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
               const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
               renderConformReports(
-                context,
+                reporter,
                 reaudited.map(({ prepared, audit }, index) => ({
                   skill: prepared,
                   findings: audit.findings,

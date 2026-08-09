@@ -189,7 +189,7 @@ describe('[ki repo conform execution]', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('× fail  [Example (EXAMPLE-1)] — not fixable')
+    expect(result.output).toContain('× fail [Example (EXAMPLE-1)] — not fixable')
     expect(result.output).toContain('repository conform found failures')
   })
 
@@ -210,7 +210,7 @@ describe('[ki repo conform execution]', () => {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('! warn  [Example (EXAMPLE-1)] — nothing safe to propose')
+    expect(result.output).toContain('! warn [Example (EXAMPLE-1)] — nothing safe to propose')
   })
 
   test('reports subprocess conforms in dry-run mode without executing them, then runs and re-audits them', async () => {

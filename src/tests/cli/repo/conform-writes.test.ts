@@ -230,11 +230,9 @@ describe('[ki repo conform writes]', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('│  ╰─ ! example/harness:ki-example WARN · FAIL=0 WARN=2 FIXED=0')
+    expect(result.output).toContain('│     ├─ ! warn [First (EXAMPLE-1)] — first line\n│     │   continued first line')
     expect(result.output).toContain(
-      '│     ├─ ! warn  [First (EXAMPLE-1)] — first line\n│     │         continued first line'
-    )
-    expect(result.output).toContain(
-      '│     ╰─ ! warn  [Second (EXAMPLE-2)] — second line\n│               continued second line'
+      '│     ╰─ ! warn [Second (EXAMPLE-2)] — second line\n│         continued second line'
     )
   })
 
@@ -266,7 +264,7 @@ describe('[ki repo conform writes]', () => {
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('proposed write safe.txt')
-    expect(result.output).toContain('× fail  [Blocking audit (EXAMPLE-2)] — unrelated license failure')
+    expect(result.output).toContain('× fail [Blocking audit (EXAMPLE-2)] — unrelated license failure')
     expect(result.output).toContain(
       'repository conform completed independent publication with unresolved groups; blocking failure: repository conform found failures'
     )
@@ -316,7 +314,7 @@ describe('[ki repo conform writes]', () => {
 
     expect(dryRun.exitCode).toBe(1)
     expect(dryRun.output).toContain('would apply write safe.txt')
-    expect(dryRun.output).toContain('× fail  [Blocking audit (BLOCKED-1)] — external settings require approval')
+    expect(dryRun.output).toContain('× fail [Blocking audit (BLOCKED-1)] — external settings require approval')
     expect(await box.project.read('safe.txt')).toBe('before\n')
 
     const result = await box.run('ki repo conform')
@@ -324,7 +322,7 @@ describe('[ki repo conform writes]', () => {
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('applied write safe.txt')
     expect(result.output).toContain('↺ fixed [Safe repair (SAFE-1)] — conformed')
-    expect(result.output).toContain('× fail  [Blocking audit (BLOCKED-1)] — external settings require approval')
+    expect(result.output).toContain('× fail [Blocking audit (BLOCKED-1)] — external settings require approval')
     expect(await box.project.read('safe.txt')).toBe('after\n')
   })
 
@@ -781,7 +779,7 @@ export default {
     const result = await box.run('ki repo conform')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('× fail  [Example (EXAMPLE-1)] — always fails')
+    expect(result.output).toContain('× fail [Example (EXAMPLE-1)] — always fails')
     expect(result.output).toContain('re-audit found failures')
   })
 
