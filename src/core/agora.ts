@@ -41,6 +41,7 @@ interface Membership {
 
 interface AgoraHome {
   readonly id: string
+  readonly owner: string
   readonly purpose: string
   readonly targets: readonly string[]
   readonly members: Readonly<Record<string, string>>
@@ -127,6 +128,10 @@ const homeDeclarations = (repository: RegisteredRepository): readonly AgoraHome[
     if (!AGORA_ID.test(id)) throw profileError(id, 'must use a stable lower-case hyphenated identifier')
     const home = table(value)
     if (!home) throw profileError(id, 'home declaration must be a table')
+    if (!canonicalRepositoryIdentity(home['owner']))
+      throw profileError(id, 'owner must be a canonical HTTPS GitHub repository')
+    if (home['owner'] !== repository.repository)
+      throw profileError(id, 'owner must match its declaring registered repository')
     if (typeof home['purpose'] !== 'string' || !home['purpose'].trim())
       throw profileError(id, 'home requires a non-empty purpose')
     const policy = stringList(home['targets'], id, 'targets')
@@ -142,7 +147,7 @@ const homeDeclarations = (repository: RegisteredRepository): readonly AgoraHome[
       if (typeof role !== 'string' || !ROLE.test(role)) throw profileError(id, `member ${identity} has an invalid role`)
       roles[identity] = role
     }
-    return { id, purpose: home['purpose'], targets: policy, members: roles }
+    return { id, owner: home['owner'], purpose: home['purpose'], targets: policy, members: roles }
   })
 }
 
@@ -167,14 +172,17 @@ const profileFromHome = (
   declaration: AgoraHome,
   repositories: readonly RegisteredRepository[]
 ): AgoraProfile => {
-  const members = Object.entries(declaration.members).map(([identity, role]) => {
-    const member = repositories.find((candidate) => candidate.repository === identity)
-    if (!member) throw profileError(declaration.id, `member ${identity} is not registered locally`)
-    const consent = membershipDeclaration(member, declaration.id)
-    if (!consent || consent.home !== home.repository || consent.role !== role)
-      throw profileError(declaration.id, `member ${identity} does not declare matching consent`)
-    return { key: member.key, root: member.root, repository: member.repository, role }
-  })
+  const members = [
+    { key: home.key, root: home.root, repository: declaration.owner, role: 'owner' },
+    ...Object.entries(declaration.members).map(([identity, role]) => {
+      const member = repositories.find((candidate) => candidate.repository === identity)
+      if (!member) throw profileError(declaration.id, `member ${identity} is not registered locally`)
+      const consent = membershipDeclaration(member, declaration.id)
+      if (!consent || consent.home !== home.repository || consent.role !== role)
+        throw profileError(declaration.id, `member ${identity} does not declare matching consent`)
+      return { key: member.key, root: member.root, repository: member.repository, role }
+    })
+  ]
   return {
     id: declaration.id,
     name: declaration.id,
@@ -191,6 +199,23 @@ const profileCandidates = (repositories: readonly RegisteredRepository[]): Agora
     homeDeclarations(home).map((declaration) => profileFromHome(home, declaration, repositories))
   )
 
+const uniqueProfiles = (profiles: readonly AgoraProfile[]): AgoraProfile[] => {
+  const byId = new Map<string, AgoraProfile[]>()
+  for (const profile of profiles) byId.set(profile.id, [...(byId.get(profile.id) ?? []), profile])
+  for (const [id, candidates] of byId) {
+    if (candidates.length < 2) continue
+    throw profileError(
+      id,
+      `is declared by multiple owners: ${candidates
+        .map((profile) => profile.home?.repository)
+        .filter((owner): owner is string => Boolean(owner))
+        .sort((left, right) => left.localeCompare(right, 'en'))
+        .join(', ')}`
+    )
+  }
+  return [...profiles]
+}
+
 const estate = (repositories: readonly RegisteredRepository[]): AgoraProfile => ({
   id: ESTATE_AGORA,
   name: 'Registered estate',
@@ -204,7 +229,7 @@ export const listAgoras = async (stateDirectory: string): Promise<readonly Agora
   const repositories = await registeredRepositories(stateDirectory)
   return [
     estate(repositories),
-    ...profileCandidates(repositories).sort((left, right) => left.id.localeCompare(right.id, 'en'))
+    ...uniqueProfiles(profileCandidates(repositories)).sort((left, right) => left.id.localeCompare(right.id, 'en'))
   ]
 }
 
@@ -212,16 +237,8 @@ export const resolveAgora = async (stateDirectory: string, id: string): Promise<
   if (!AGORA_ID.test(id)) throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
   const repositories = await registeredRepositories(stateDirectory)
   if (id === ESTATE_AGORA) return estate(repositories)
-  const profiles = profileCandidates(repositories)
+  const profiles = uniqueProfiles(profileCandidates(repositories))
   const candidates = profiles.filter((profile) => profile.id === id)
   if (!candidates.length) throw profileError(id, 'is not declared by a registered Agora home')
-  if (candidates.length > 1)
-    throw profileError(
-      id,
-      `is declared by multiple homes: ${candidates
-        .map((profile) => profile.home?.repository)
-        .filter((home): home is string => Boolean(home))
-        .join(', ')}`
-    )
   return candidates[0] as AgoraProfile
 }

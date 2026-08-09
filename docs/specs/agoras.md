@@ -1,38 +1,38 @@
 # Agoras — AGORA
 
-This area specifies named user-level repository groups; see the [Specifications index](index.md) for corpus conventions and registered prefixes.
+This area specifies named, repository-declared groups; see the [Specifications index](index.md) for corpus conventions and registered prefixes.
 
-## Profile lifecycle
+## Declaration and resolution
 
-### AGORA-001 — Named profile creation
+### AGORA-001 — Registered declared owner
 
-`ki agora create` MUST create an empty named Agora profile.
+`ki` MUST resolve a named Agora only from a registered repository's `[skills.ki-agora.homes.<id>]` declaration. The declaration MUST name its declaring repository's canonical identity as `owner`; that repository is a projection participant without separately declaring membership.
 
-_Verify:_ `src/tests/cli/root/help.test.ts` — help for `ki agora` describes creating an empty named Agora profile; `src/tests/cli/agora/agora.test.ts` covers profile creation.
+_Verify:_ `src/core/agora.ts` — `homeDeclarations` and `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers owner inclusion and invalid owners.
 
-### AGORA-002 — Physical repository discovery
+### AGORA-002 — Reciprocal additional membership
 
-`ki agora discover` MUST discover physical KI repository roots beneath the selected path without following symbolic links.
+Every member other than the owner MUST be registered locally and reciprocally declare the declared owner and matching role.
 
-_Verify:_ `src/commands/agora/discover.ts` — `discoverAgoraRepositories`; `src/tests/cli/agora/agora.test.ts` covers discovery and unsafe profile paths.
+_Verify:_ `src/core/agora.ts` — `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers one-sided and malformed membership declarations.
 
-### AGORA-003 — Validated profile documents
+### AGORA-003 — Globally unique names
 
-`ki agora` MUST reject malformed or unsafe profile documents before using them.
+An Agora identifier MUST be declared by no more than one registered owner. Listing or resolving duplicates MUST fail and identify every owner.
 
-_Verify:_ `src/tests/cli/agora/agora.test.ts` — `rejects malformed profile documents` and `rejects missing and unsafe profile paths`.
+_Verify:_ `src/core/agora.ts` — `uniqueProfiles`; `src/tests/cli/agora/agora.test.ts` covers duplicate identifiers.
 
-### AGORA-004 — Explicit profile membership
+### AGORA-004 — Validated declared configuration
 
-`ki agora add` and `ki agora remove` MUST add or remove one named physical project from an explicit Agora profile while preserving the profile's validated membership model.
+`ki` MUST reject malformed, unregistered, or non-reciprocal declared Agora configuration before using it.
 
-_Verify:_ `src/tests/cli/agora/agora.test.ts` — `creates, mutates, discovers, and selects named global repository profiles`.
+_Verify:_ `src/tests/cli/agora/agora.test.ts` — malformed registered repository and Agora declaration coverage.
 
-### AGORA-005 — Profile inspection and opening
+### AGORA-005 — Inspection and opening
 
-`ki agora list` and `ki agora show` MUST expose the available and selected profile state, while `ki agora open` MUST launch the selected Zed profile in one process and report a launch failure.
+`ki agora list` and `ki agora show` MUST expose the resolved owner-inclusive group, while `ki agora open` MUST launch the selected Zed workspace and report a launch failure.
 
-_Verify:_ `src/tests/cli/agora/agora.test.ts` — `lists, shows, and opens a project-name ordered Zed profile in one window` and `reports Zed launch failures with and without process output`.
+_Verify:_ `src/tests/cli/agora/agora.test.ts` — list, show, open, and launch-failure coverage.
 
 ## Gaps
 

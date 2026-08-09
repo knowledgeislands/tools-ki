@@ -4,8 +4,14 @@ import { type Sandbox, sandbox } from '../_cli_helper.ts'
 const repository = (identity: string, agora = ''): string =>
   `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = ${JSON.stringify(identity)}\n${agora}`
 
-const home = (id: string, purpose: string, members: Record<string, string>, targets = ['zed-workspace']): string =>
-  `[skills.ki-agora.homes.${id}]\npurpose = ${JSON.stringify(purpose)}\ntargets = ${JSON.stringify(targets)}\nmembers = { ${Object.entries(
+const home = (
+  id: string,
+  purpose: string,
+  members: Record<string, string>,
+  targets = ['zed-workspace'],
+  owner = 'https://github.com/example/home'
+): string =>
+  `[skills.ki-agora.homes.${id}]\nowner = ${JSON.stringify(owner)}\npurpose = ${JSON.stringify(purpose)}\ntargets = ${JSON.stringify(targets)}\nmembers = { ${Object.entries(
     members
   )
     .map(([identity, role]) => `${JSON.stringify(identity)} = ${JSON.stringify(role)}`)
@@ -75,18 +81,23 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (3 members)\n│  ╰─ team [declared] team (2 members)\n╰─ summary: AGORAS=2 MEMBERS=5\n'
+        '╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (3 members)\n│  ╰─ team [declared] team (3 members)\n╰─ summary: AGORAS=2 MEMBERS=6\n'
     })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ├─ targets: zed-workspace\n│  ╰─ home: ${homeIdentity}\n├─ members (2)\n│  ├─ member: ${memberIdentity} (${roots['member']})\n│  ╰─ other: ${otherIdentity} (${roots['other']})\n╰─ summary: MEMBERS=2\n`
+      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ├─ targets: zed-workspace\n│  ╰─ home: ${homeIdentity}\n├─ members (3)\n│  ├─ home: ${homeIdentity} (${roots['home']})\n│  ├─ member: ${memberIdentity} (${roots['member']})\n│  ╰─ other: ${otherIdentity} (${roots['other']})\n╰─ summary: MEMBERS=3\n`
     })
     expect(await box.run('ki repo --agora team roadmap list')).toMatchObject({ exitCode: 1 })
     expect(await box.run('ki agora open team --target zed')).toEqual({
       exitCode: 0,
-      output: 'ki agora open team --target zed: opened 2 repositories\n'
+      output: 'ki agora open team --target zed: opened 3 repositories\n'
     })
-    expect(calls).toEqual(['zed -n', `zed -e ${roots['other']}`, `zed -e ${roots['member']}`])
+    expect(calls).toEqual([
+      'zed -n',
+      `zed -e ${roots['other']}`,
+      `zed -e ${roots['member']}`,
+      `zed -e ${roots['home']}`
+    ])
   })
 
   test('resolves estate only from registered repositories and requires an explicit permitted target', async () => {
@@ -146,10 +157,11 @@ describe('[ki agora]', () => {
       { path: 'member', identity: memberIdentity, agora: membership('team', homeIdentity, 'maintainer') }
     ])
 
+    box.setRunner(async () => ({ exitCode: 0, output: '' }))
     expect((await box.run('ki agora open unpermitted --target zed')).output).toContain(
       'does not permit the zed-workspace target'
     )
-    expect((await box.run('ki agora open empty --target zed')).output).toContain('Agora empty has no members')
+    expect((await box.run('ki agora open empty --target zed')).output).toContain('opened 1 repositories')
     expect((await box.run('ki agora show untargeted')).output).toContain('targets: none')
 
     await box.project.write(
@@ -211,15 +223,27 @@ describe('[ki agora]', () => {
   test('rejects a duplicated declared Agora id with the declaring homes', async () => {
     const box = await sandbox()
     await registered(box, [
-      { path: 'first', identity: 'https://github.com/example/first', agora: home('team', 'First', {}) },
-      { path: 'second', identity: 'https://github.com/example/second', agora: home('team', 'Second', {}) }
+      {
+        path: 'first',
+        identity: 'https://github.com/example/first',
+        agora: home('team', 'First', {}, ['zed-workspace'], 'https://github.com/example/first')
+      },
+      {
+        path: 'second',
+        identity: 'https://github.com/example/second',
+        agora: home('team', 'Second', {}, ['zed-workspace'], 'https://github.com/example/second')
+      }
     ])
 
-    expect((await box.run('ki agora list')).exitCode).toBe(0)
+    expect(await box.run('ki agora list')).toEqual({
+      exitCode: 2,
+      output:
+        'ki: error: Agora team is declared by multiple owners: https://github.com/example/first, https://github.com/example/second\n'
+    })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 2,
       output:
-        'ki: error: Agora team is declared by multiple homes: https://github.com/example/first, https://github.com/example/second\n'
+        'ki: error: Agora team is declared by multiple owners: https://github.com/example/first, https://github.com/example/second\n'
     })
   })
 
@@ -268,6 +292,19 @@ describe('[ki agora]', () => {
       'repository must be a canonical HTTPS GitHub repository'
     )
 
+    await configure(
+      repository(identity, '[skills.ki-agora.homes.team]\npurpose = "x"\ntargets = []\nmembers = {}\n'),
+      'owner must be a canonical HTTPS'
+    )
+    await configure(
+      repository(
+        identity,
+        '[skills.ki-agora.homes.team]\nowner = "https://github.com/example/other"\npurpose = "x"\ntargets = []\nmembers = {}\n'
+      ),
+      'owner must match its declaring registered repository'
+    )
+    const ownedHome = (agora: string): string =>
+      agora.replace(/^(\[skills\.ki-agora\.homes\.[^\]]+\]\n)/m, `$1owner = ${JSON.stringify(identity)}\n`)
     const cases = [
       ['[skills.ki-agora]\nhomes = []\n', 'homes must be a table'],
       ['[skills.ki-agora.homes."Bad"]\npurpose = "x"\ntargets = []\nmembers = {}\n', 'must use a stable lower-case'],
@@ -302,7 +339,7 @@ describe('[ki agora]', () => {
         'has an invalid role'
       ]
     ] as const
-    for (const [agora, message] of cases) await configure(repository(identity, agora), message)
+    for (const [agora, message] of cases) await configure(repository(identity, ownedHome(agora)), message)
   })
 
   test('rejects duplicate registry identities and malformed or non-reciprocal memberships', async () => {
