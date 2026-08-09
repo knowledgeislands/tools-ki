@@ -4,10 +4,10 @@ title: Define managed cleanup artifacts
 area: CLI
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: null
+baseline-ref: 3de2f81360cf392c9a617f1b32f39149f21750b7
 ---
 
 ## Goal
