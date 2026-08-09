@@ -6,7 +6,7 @@ repository = "https://github.com/knowledgeislands/tools-ki"
 title = "tools-ki"
 description = "Knowledge Islands command-line interface."
 repo_code = "KI-TOOL"
-supported_runtimes = ["claude-code", "chatgpt-codex"]
+supported_runtimes = ["claude-code", "claude-desktop", "chatgpt-codex"]
 visibility = "public"
 
 [skills.ki-authoring]
@@ -68,4 +68,3 @@ role = "maintainer"
 [skills.ki-agora.memberships.ki-fnd]
 home = "https://github.com/knowledgeislands/ki-agentic-harness"
 role = "maintainer"
-

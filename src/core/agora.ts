@@ -9,14 +9,6 @@ export const ESTATE_AGORA = 'estate'
 const REPOSITORY_CONFIGURATION_FILE = '.ki-config.toml'
 const AGORA_ID = /^[a-z][a-z0-9-]*[a-z0-9]$/
 const ROLE = /^[a-z][a-z0-9-]*[a-z0-9]$/
-const targets = new Set([
-  'zed-workspace',
-  'vscode-workspace',
-  'claude-code-trust',
-  'claude-desktop-trust',
-  'chatgpt-codex-trust'
-])
-
 export interface AgoraMember {
   readonly key: string
   readonly root: string
@@ -28,7 +20,6 @@ export interface AgoraProfile {
   readonly id: string
   readonly name: string
   readonly purpose: string
-  readonly targets: readonly string[]
   readonly home?: AgoraMember
   readonly members: readonly AgoraMember[]
   readonly system: boolean
@@ -43,7 +34,6 @@ interface AgoraHome {
   readonly id: string
   readonly owner: string
   readonly purpose: string
-  readonly targets: readonly string[]
   readonly members: Readonly<Record<string, string>>
 }
 
@@ -113,12 +103,6 @@ const registeredRepositories = async (stateDirectory: string): Promise<readonly 
   return repositories.sort((left, right) => left.key.localeCompare(right.key, 'en'))
 }
 
-const stringList = (value: unknown, id: string, field: string): readonly string[] => {
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string') || new Set(value).size !== value.length)
-    throw profileError(id, `${field} must be a duplicate-free string array`)
-  return value as readonly string[]
-}
-
 const homeDeclarations = (repository: RegisteredRepository): readonly AgoraHome[] => {
   const configuration = skillConfiguration(repository.declaration, 'ki-agora')
   if (!configuration || configuration['homes'] === undefined) return []
@@ -134,9 +118,6 @@ const homeDeclarations = (repository: RegisteredRepository): readonly AgoraHome[
       throw profileError(id, 'owner must match its declaring registered repository')
     if (typeof home['purpose'] !== 'string' || !home['purpose'].trim())
       throw profileError(id, 'home requires a non-empty purpose')
-    const policy = stringList(home['targets'], id, 'targets')
-    if (policy.some((target) => !targets.has(target)))
-      throw profileError(id, 'targets contains an unsupported target policy')
     const members = table(home['members'])
     if (!members) throw profileError(id, 'members must be a repository-to-role table')
     const roles: Record<string, string> = {}
@@ -147,7 +128,7 @@ const homeDeclarations = (repository: RegisteredRepository): readonly AgoraHome[
       if (typeof role !== 'string' || !ROLE.test(role)) throw profileError(id, `member ${identity} has an invalid role`)
       roles[identity] = role
     }
-    return { id, owner: home['owner'], purpose: home['purpose'], targets: policy, members: roles }
+    return { id, owner: home['owner'], purpose: home['purpose'], members: roles }
   })
 }
 
@@ -187,7 +168,6 @@ const profileFromHome = (
     id: declaration.id,
     name: declaration.id,
     purpose: declaration.purpose,
-    targets: declaration.targets,
     home: { key: home.key, root: home.root, repository: home.repository },
     members: members.sort((left, right) => left.key.localeCompare(right.key, 'en')),
     system: false
@@ -220,7 +200,6 @@ const estate = (repositories: readonly RegisteredRepository[]): AgoraProfile => 
   id: ESTATE_AGORA,
   name: 'Registered estate',
   purpose: 'Every locally registered canonical KI repository.',
-  targets: ['zed-workspace'],
   members: repositories.map(({ key, root, repository }) => ({ key, root, repository })),
   system: true
 })

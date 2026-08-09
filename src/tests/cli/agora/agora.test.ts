@@ -8,10 +8,9 @@ const home = (
   id: string,
   purpose: string,
   members: Record<string, string>,
-  targets = ['zed-workspace'],
   owner = 'https://github.com/example/home'
 ): string =>
-  `[skills.ki-agora.homes.${id}]\nowner = ${JSON.stringify(owner)}\npurpose = ${JSON.stringify(purpose)}\ntargets = ${JSON.stringify(targets)}\nmembers = { ${Object.entries(
+  `[skills.ki-agora.homes.${id}]\nowner = ${JSON.stringify(owner)}\npurpose = ${JSON.stringify(purpose)}\nmembers = { ${Object.entries(
     members
   )
     .map(([identity, role]) => `${JSON.stringify(identity)} = ${JSON.stringify(role)}`)
@@ -85,7 +84,7 @@ describe('[ki agora]', () => {
     })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ├─ targets: zed-workspace\n│  ╰─ home: ${homeIdentity}\n├─ members (3)\n│  ├─ home: ${homeIdentity} (${roots['home']})\n│  ├─ member: ${memberIdentity} (${roots['member']})\n│  ╰─ other: ${otherIdentity} (${roots['other']})\n╰─ summary: MEMBERS=3\n`
+      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (3)\n│  ├─ home: ${homeIdentity} (${roots['home']})\n│  ├─ member: ${memberIdentity} (${roots['member']})\n│  ╰─ other: ${otherIdentity} (${roots['other']})\n╰─ summary: MEMBERS=3\n`
     })
     expect(await box.run('ki repo --agora team roadmap list')).toMatchObject({ exitCode: 1 })
     expect(await box.run('ki agora open team --target zed')).toEqual({
@@ -114,15 +113,23 @@ describe('[ki agora]', () => {
 
     expect(await box.run('ki agora show estate')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ estate\n│  ├─ name: Registered estate\n│  ├─ purpose: Every locally registered canonical KI repository.\n│  ╰─ targets: zed-workspace\n├─ members (2)\n│  ├─ first: https://github.com/example/first (${roots['first']})\n│  ╰─ second: https://github.com/example/second (${roots['second']})\n╰─ summary: MEMBERS=2\n`
+      output: `╭─ KI AGORA\n├─ estate\n│  ├─ name: Registered estate\n│  ╰─ purpose: Every locally registered canonical KI repository.\n├─ members (2)\n│  ├─ first: https://github.com/example/first (${roots['first']})\n│  ╰─ second: https://github.com/example/second (${roots['second']})\n╰─ summary: MEMBERS=2\n`
     })
     expect(await box.run('ki agora open estate')).toMatchObject({ exitCode: 2 })
-    expect((await box.run('ki agora open estate --target vscode')).output).toContain('currently supports only zed')
+    expect(await box.run('ki agora open estate --target vscode')).toEqual({
+      exitCode: 0,
+      output: 'ki agora open estate --target vscode: opened 2 repositories\n'
+    })
     expect(await box.run('ki agora open estate --target zed')).toEqual({
       exitCode: 0,
       output: 'ki agora open estate --target zed: opened 2 repositories\n'
     })
-    expect(calls).toEqual(['zed -n', `zed -e ${roots['second']}`, `zed -e ${roots['first']}`])
+    expect(calls).toEqual([
+      `code --new-window ${roots['first']} ${roots['second']}`,
+      'zed -n',
+      `zed -e ${roots['second']}`,
+      `zed -e ${roots['first']}`
+    ])
   })
 
   test('rejects a local registry identity that disagrees with its repository declaration', async () => {
@@ -140,7 +147,7 @@ describe('[ki agora]', () => {
     })
   })
 
-  test('refuses an unpermitted or empty Agora, and reports Zed launch failures', async () => {
+  test('opens owner-only Agoras and reports Zed launch failures', async () => {
     const box = await sandbox()
     const homeIdentity = 'https://github.com/example/home'
     const memberIdentity = 'https://github.com/example/member'
@@ -148,21 +155,13 @@ describe('[ki agora]', () => {
       {
         path: 'home',
         identity: homeIdentity,
-        agora: [
-          home('unpermitted', 'No Zed', {}, ['vscode-workspace']),
-          home('empty', 'No members', {}),
-          home('untargeted', 'No target', {}, [])
-        ].join('\n')
+        agora: home('empty', 'No members', {})
       },
       { path: 'member', identity: memberIdentity, agora: membership('team', homeIdentity, 'maintainer') }
     ])
 
     box.setRunner(async () => ({ exitCode: 0, output: '' }))
-    expect((await box.run('ki agora open unpermitted --target zed')).output).toContain(
-      'does not permit the zed-workspace target'
-    )
     expect((await box.run('ki agora open empty --target zed')).output).toContain('opened 1 repositories')
-    expect((await box.run('ki agora show untargeted')).output).toContain('targets: none')
 
     await box.project.write(
       'home/.ki-config.toml',
@@ -226,12 +225,12 @@ describe('[ki agora]', () => {
       {
         path: 'first',
         identity: 'https://github.com/example/first',
-        agora: home('team', 'First', {}, ['zed-workspace'], 'https://github.com/example/first')
+        agora: home('team', 'First', {}, 'https://github.com/example/first')
       },
       {
         path: 'second',
         identity: 'https://github.com/example/second',
-        agora: home('team', 'Second', {}, ['zed-workspace'], 'https://github.com/example/second')
+        agora: home('team', 'Second', {}, 'https://github.com/example/second')
       }
     ])
 
@@ -293,13 +292,13 @@ describe('[ki agora]', () => {
     )
 
     await configure(
-      repository(identity, '[skills.ki-agora.homes.team]\npurpose = "x"\ntargets = []\nmembers = {}\n'),
+      repository(identity, '[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = {}\n'),
       'owner must be a canonical HTTPS'
     )
     await configure(
       repository(
         identity,
-        '[skills.ki-agora.homes.team]\nowner = "https://github.com/example/other"\npurpose = "x"\ntargets = []\nmembers = {}\n'
+        '[skills.ki-agora.homes.team]\nowner = "https://github.com/example/other"\npurpose = "x"\nmembers = {}\n'
       ),
       'owner must match its declaring registered repository'
     )
@@ -307,35 +306,23 @@ describe('[ki agora]', () => {
       agora.replace(/^(\[skills\.ki-agora\.homes\.[^\]]+\]\n)/m, `$1owner = ${JSON.stringify(identity)}\n`)
     const cases = [
       ['[skills.ki-agora]\nhomes = []\n', 'homes must be a table'],
-      ['[skills.ki-agora.homes."Bad"]\npurpose = "x"\ntargets = []\nmembers = {}\n', 'must use a stable lower-case'],
+      ['[skills.ki-agora.homes."Bad"]\npurpose = "x"\nmembers = {}\n', 'must use a stable lower-case'],
       ['[skills.ki-agora]\nhomes = { team = [] }\n', 'home declaration must be a table'],
-      ['[skills.ki-agora.homes.team]\npurpose = ""\ntargets = []\nmembers = {}\n', 'requires a non-empty purpose'],
+      ['[skills.ki-agora.homes.team]\npurpose = ""\nmembers = {}\n', 'requires a non-empty purpose'],
       [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\ntargets = "zed-workspace"\nmembers = {}\n',
-        'targets must be a duplicate-free'
-      ],
-      [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\ntargets = ["zed-workspace", "zed-workspace"]\nmembers = {}\n',
-        'targets must be a duplicate-free'
-      ],
-      [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\ntargets = ["unknown"]\nmembers = {}\n',
-        'unsupported target policy'
-      ],
-      [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\ntargets = []\nmembers = []\n',
+        '[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = []\n',
         'members must be a repository-to-role table'
       ],
       [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\ntargets = []\nmembers = { "https://example.com/nope" = "member" }\n',
+        '[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = { "https://example.com/nope" = "member" }\n',
         'must be a canonical HTTPS'
       ],
       [
-        `[skills.ki-agora.homes.team]\npurpose = "x"\ntargets = []\nmembers = { ${JSON.stringify(identity)} = "member" }\n`,
+        `[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = { ${JSON.stringify(identity)} = "member" }\n`,
         'must not list its home'
       ],
       [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\ntargets = []\nmembers = { "https://github.com/example/member" = "Bad" }\n',
+        '[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = { "https://github.com/example/member" = "Bad" }\n',
         'has an invalid role'
       ]
     ] as const

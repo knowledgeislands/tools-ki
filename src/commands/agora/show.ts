@@ -21,7 +21,6 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
               children: [
                 { label: `name: ${profile.name}` },
                 { label: `purpose: ${profile.purpose}` },
-                { label: `targets: ${profile.targets.join(', ') || 'none'}` },
                 ...(profile.home ? [{ label: `home: ${profile.home.repository}` }] : [])
               ]
             },

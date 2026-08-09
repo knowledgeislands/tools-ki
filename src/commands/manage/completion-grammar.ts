@@ -46,7 +46,7 @@ const closedOptionValues: Readonly<Record<string, readonly string[]>> = {
   '--progress': ['auto', 'always', 'never'],
   '--progress-style': ['single', 'multi'],
   '--reporter-levels': ['levels', 'all'],
-  '--runtime': ['claude-code', 'chatgpt-codex'],
+  '--runtime': ['claude-code', 'claude-desktop', 'chatgpt-codex'],
   '--visibility': ['public', 'private']
 }
 

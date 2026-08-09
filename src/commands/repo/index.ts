@@ -144,7 +144,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .option('--repository <url>', 'canonical HTTPS GitHub repository identity')
         .option(
           '--runtime <runtime>',
-          'supported runtime: claude-code or chatgpt-codex',
+          'supported runtime: claude-code, claude-desktop, or chatgpt-codex',
           (value: string, previous: readonly string[] = []) => [...previous, value],
           []
         )

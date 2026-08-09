@@ -16,7 +16,7 @@ const repositoryRuntimeSet = (value: unknown): readonly SupportedRuntime[] => {
   if (runtimes.includes('codex'))
     throw new KiError('[ki-repo].supported_runtimes codex is retired; use chatgpt-codex', 1)
   if (runtimes.some((runtime) => !supportedRuntimes.includes(runtime as SupportedRuntime)))
-    throw new KiError('[ki-repo].supported_runtimes may contain only claude-code or chatgpt-codex', 1)
+    throw new KiError('[ki-repo].supported_runtimes may contain only claude-code, claude-desktop, or chatgpt-codex', 1)
   if (new Set(runtimes).size !== runtimes.length) throw new KiError('[ki-repo].supported_runtimes repeats a runtime', 1)
   return runtimes as readonly SupportedRuntime[]
 }

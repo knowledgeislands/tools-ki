@@ -50,7 +50,7 @@ export const renderRepositoryConfiguration = (initialisation: RepositoryInitiali
   if (initialisation.supportedRuntimes.includes('codex'))
     throw new KiError('ki repo init --runtime codex is retired; use chatgpt-codex', 2)
   if (initialisation.supportedRuntimes.some((runtime) => !supportedRuntimes.includes(runtime as SupportedRuntime)))
-    throw new KiError('ki repo init --runtime may contain only claude-code or chatgpt-codex', 2)
+    throw new KiError('ki repo init --runtime may contain only claude-code, claude-desktop, or chatgpt-codex', 2)
   if (new Set(initialisation.supportedRuntimes).size !== initialisation.supportedRuntimes.length)
     throw new KiError('ki repo init --runtime must not repeat a runtime', 2)
   if (visibility !== 'public' && visibility !== 'private')
