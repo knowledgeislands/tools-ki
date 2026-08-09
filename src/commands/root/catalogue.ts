@@ -35,6 +35,7 @@ export const repoHelpCommandNames = [
   'init',
   'audit',
   'conform',
+  'diag',
   'roadmap',
   'educate',
   'repair',

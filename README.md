@@ -70,6 +70,7 @@ ki agora show estate
 ki agora open estate --target zed
 ki repo init --repository https://github.com/example/example --title 'Example repository' --description 'An explicit KI repository identity.' --repo-code EXAMPLE --runtime claude-code --runtime chatgpt-codex --visibility private
 ki manage diag
+ki repo diag
 ki repo repair --dry-run
 ki repo --agora estate audit
 ```
@@ -120,7 +121,7 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 `ki manage search <query>` searches only verified installed harness capabilities, without contacting a registry or discovering a repository.
 
-`ki manage cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki manage diag` always reports global KI state and, only for a regular `.ki-config.toml` in the current directory itself, also reports declared repository skills and compatible local projections. `ki manage repair` reconciles missing, dangling, or stale configured user-skill projections; `--dry-run` changes nothing and unavailable or unsafe state remains reported for manual resolution. `ki repo repair` uses the standard repository discovery, `--repo`, or `--agora` selection rules; it records each selected physical root before repairing only missing, dangling, or stale KI-managed projections, and `--dry-run` changes nothing. `ki manage doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories and validates a regular direct-CWD `.ki-config.toml`.
+`ki manage cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki manage diag` reports only machine-managed installation, configuration, registry, and path state. `ki repo diag` uses the standard repository discovery, `--repo`, or `--agora` selection rules to report each selected repository's declared skills and compatible local projections without changing state. `ki manage repair` reconciles missing, dangling, or stale configured user-skill projections; `--dry-run` changes nothing and unavailable or unsafe state remains reported for manual resolution. `ki repo repair` records each selected physical root before repairing only missing, dangling, or stale KI-managed projections, and `--dry-run` changes nothing. `ki manage doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories and validates a regular direct-CWD `.ki-config.toml`.
 
 `ki manage docs` prints labelled public CLI, site, manual, and roadmap locations; `ki manage docs [overview|site|manual|roadmap]` prints one location. It never opens a browser or fetches content.
 

@@ -94,12 +94,10 @@ ids = ["example:skill", "example:skill"]
     expect(invalid.output).toContain('unrecognised key extra')
   })
 
-  test('does not discover a repository for user diagnostics', async () => {
+  test('does not inspect repository state for user diagnostics', async () => {
     const box = await sandbox()
-    await box.project.mkdir('repo/src/nested')
-    await box.project.write('repo/.ki-config.toml', '# repo\n')
+    await box.project.write('.ki-config.toml', '# repo\n')
 
-    box.cd('repo/src/nested')
     const diag = await box.run('ki manage diag')
 
     expect(diag.output).not.toContain('Repository')
@@ -115,38 +113,34 @@ ids = ["example:skill", "example:skill"]
     expect(diag.output).not.toContain('\n├─ repository (')
   })
 
-  test('reports only a direct repository declaration and its missing compatible projection', async () => {
+  test('leaves direct repository projection health to ki repo diag', async () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
     await box.setupExampleHarness({ name: 'ki-repo' })
     await box.setupExampleHarness()
     await box.run('ki bootstrap')
     await box.project.write('.ki-config.toml', repositoryConfiguration)
-    await box.project.mkdir('child')
-
-    const direct = await box.run('ki manage diag')
-    box.cd('child')
-    const nested = await box.run('ki manage diag')
+    const managed = await box.run('ki manage diag')
+    const repository = await box.run('ki repo diag')
     const root = await realpath(box.project.path)
 
-    expect(direct.exitCode).toBe(0)
-    expect(direct.output).toContain('├─ repository (repairable)')
-    expect(direct.output).toContain(`Root: ${root}`)
-    expect(direct.output).toContain(`Configuration: ${root}/.ki-config.toml`)
-    expect(direct.output).toContain('Status: repairable')
-    expect(direct.output).toContain('chatgpt-codex ki-example: projection is missing')
-    expect(nested.output).not.toContain('\n├─ repository (')
+    expect(managed.exitCode).toBe(0)
+    expect(managed.output).not.toContain('Repository')
+    expect(repository.exitCode).toBe(0)
+    expect(repository.output).toContain(`╰─ ${root} (repairable)`)
+    expect(repository.output).toContain(`Configuration: ${root}/.ki-config.toml`)
+    expect(repository.output).toContain('chatgpt-codex ki-example: projection is missing')
   })
 
-  test('reports an unsafe direct repository declaration without following it', async () => {
+  test('does not inspect an unsafe direct repository declaration', async () => {
     const box = await sandbox()
     await box.project.write('actual.toml', repositoryConfiguration)
     await symlink(`${box.project.path}/actual.toml`, `${box.project.path}/.ki-config.toml`)
 
     const diag = await box.run('ki manage diag')
 
-    expect(diag.exitCode).toBe(1)
-    expect(diag.output).toContain('Repository: .ki-config.toml must be a regular file')
+    expect(diag.exitCode).toBe(0)
+    expect(diag.output).not.toContain('Repository')
   })
 
   test('rejects selectors on the direct diagnostic command before rendering help', async () => {

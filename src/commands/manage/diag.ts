@@ -1,12 +1,10 @@
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
-import { KiExit } from '../../core/errors.ts'
 import { inspectLocalRegistry } from '../../core/local-registry.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
 import { renderTree, type TreeEntry } from '../../core/tree-rendering.ts'
 import { KI_VERSION } from '../../version.ts'
-import { describeRepositoryProjection, inspectDirectRepositoryHealth } from '../repo/repository-health.ts'
 
 const field = (label: string, value: string): string => `${label}: ${value}`
 
@@ -15,7 +13,7 @@ const treeEntries = (entries: readonly string[]): readonly TreeEntry[] =>
 
 export const createDiagCommand = (context: KiContext): Command =>
   new Command('diag')
-    .description('report CLI installation mode, paths, configuration, and direct repository health')
+    .description('report CLI installation mode, paths, and managed local configuration')
     .action(async () => {
       const [configuration, registry] = await Promise.all([
         inspectUserConfiguration(context.paths.config),
@@ -89,24 +87,9 @@ export const createDiagCommand = (context: KiContext): Command =>
         })
       }
 
-      const repository = await inspectDirectRepositoryHealth(context)
-      if (repository) {
-        entries.push({
-          label: `repository (${repository.health})`,
-          children: repository.diagnostic
-            ? [{ label: `✗ Repository: ${repository.diagnostic}` }]
-            : [
-                { label: field('Root', repository.root) },
-                { label: field('Configuration', repository.configuration) },
-                { label: field('Status', repository.health) },
-                ...repository.projections.map((projection) => ({ label: describeRepositoryProjection(projection) }))
-              ]
-        })
-      }
       entries.push({
-        label: `summary: CONFIGURATION=${configuration.state} REGISTRY=${registry.state} WARNINGS=${configuration.warnings.length} ERRORS=${configuration.errors.length}${repository ? ` REPOSITORY=${repository.health}` : ''}`
+        label: `summary: CONFIGURATION=${configuration.state} REGISTRY=${registry.state} WARNINGS=${configuration.warnings.length} ERRORS=${configuration.errors.length}`
       })
 
       context.stdout.write(`${renderTree({ title: 'KI MANAGE DIAG', entries }).join('\n')}\n`)
-      if (repository?.health === 'unrepairable') throw new KiExit(1)
     })

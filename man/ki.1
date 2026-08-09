@@ -47,7 +47,7 @@ Update an installer-managed CLI and refresh installed configured harnesses.
 Report eligible KI-managed stale state.
 .TP
 .B ki manage diag
-Show global state and direct-CWD repository health.
+Show machine-managed installation, configuration, registry, and path state.
 .TP
 .B ki manage doctor
 Check user configuration, agents, harnesses, user-skill links, and direct-CWD
@@ -93,6 +93,10 @@ Run registered native repository audits.
 .B ki repo [repo-options] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Record the selected physical KI repository roots locally, then apply
 registered native repository repairs.
+.TP
+.B ki repo [repo-options] diag
+Report declared repository skills and compatible projection health without
+changing repository or registry state.
 .TP
 .B ki repo [repo-options] repair [--dry-run]
 Record selected physical KI repository roots, then reconcile only their
@@ -326,11 +330,8 @@ files are stale.
 .TP
 .B ki manage diag
 Print the CLI version, installation mode, resolved paths, and user
-configuration without changing state. When the current directory itself has a
-regular \fB.ki-config.toml\fR, it also reports that one repository's declared
-skills and compatible agent projections. It never accepts selectors, searches
-ancestors, expands a workspace or mGit container, or follows a symbolic
-repository declaration.
+configuration, registry, and managed local-development state without changing
+state. It does not inspect repository declarations or projections.
 .TP
 .B ki manage doctor
 Check the user configuration, configured agent skill directories, installed
@@ -512,6 +513,11 @@ adds its required candidate marker.
 .B ki repo [repo-options] educate [--skill <skill>]
 Explain each selected repository's declared capabilities and their recommended
 maintenance actions without changing repository state.
+.TP
+.B ki repo [repo-options] diag
+Report each selected repository's declared skills and compatible runtime
+projection health without changing repository or registry state. It returns a
+non-zero status when a declaration or projection is unrepairable.
 .TP
 .B ki repo [repo-options] repair [--dry-run]
 Record each selected physical repository root in the local user register, then

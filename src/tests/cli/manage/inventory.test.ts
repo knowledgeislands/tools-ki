@@ -29,7 +29,7 @@ const manageCommands = [
   'update'
 ]
 const agoraCommands = ['list', 'show', 'open']
-const repoCommands = ['audit', 'conform', 'educate', 'init', 'roadmap', 'repair', 'skill', 'upgrade']
+const repoCommands = ['audit', 'conform', 'diag', 'educate', 'init', 'roadmap', 'repair', 'skill', 'upgrade']
 const registryCommands = ['add', 'list']
 
 const commandNames = (output: string): string[] =>
@@ -53,6 +53,7 @@ describe('[ki command inventory]', () => {
       'init',
       'audit',
       'conform',
+      'diag',
       'roadmap',
       'educate',
       'repair',
@@ -68,7 +69,9 @@ describe('[ki command inventory]', () => {
     expect(bash.output).toContain(`'') printf '%s\\n' '${rootHelpCommands.join(' ')}'`)
     expect(bash.output).toContain(`'manage') printf '%s\\n' '${manageCommands.join(' ')}'`)
     expect(bash.output).toContain(`'agora') printf '%s\\n' '${agoraCommands.join(' ')}'`)
-    expect(bash.output).toContain("'repo') printf '%s\\n' 'init audit conform roadmap educate repair skill upgrade'")
+    expect(bash.output).toContain(
+      "'repo') printf '%s\\n' 'init audit conform diag roadmap educate repair skill upgrade'"
+    )
     expect(bash.output).toContain(`'registry') printf '%s\\n' '${registryCommands.join(' ')}'`)
   })
 

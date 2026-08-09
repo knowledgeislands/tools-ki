@@ -55,6 +55,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo init`
 - `ki repo audit`
 - `ki repo conform`
+- `ki repo diag`
 - `ki repo roadmap list`
 - `ki repo roadmap prune [id]`
 - `ki repo roadmap promote <id> [horizon]`

@@ -36,11 +36,11 @@ _Verify:_ `src/tests/cli/manage/update.test.ts` — `updates only an installer-m
 
 _Verify:_ `src/tests/cli/manage/completions.test.ts` — `renders zsh and bash completion scripts` and `rejects an unsupported shell and requires a shell argument`.
 
-### MANAGE-006 — Direct local diagnostics
+### MANAGE-006 — Managed-state diagnostics
 
-`ki manage diag` MUST report user configuration and only a direct current-directory repository declaration, without discovering a repository or expanding an mGit container.
+`ki manage diag` MUST report only machine-managed installation, user configuration, registry, and path state. It MUST NOT inspect a repository declaration or its projections.
 
-_Verify:_ `src/tests/cli/manage/diag.test.ts` — `does not discover a repository for user diagnostics`, `does not expand a direct mGit container for diagnostics`, and `reports only a direct repository declaration and its missing compatible projection`.
+_Verify:_ `src/tests/cli/manage/diag.test.ts` — `does not inspect repository state for user diagnostics` and `leaves direct repository projection health to ki repo diag`.
 
 ### MANAGE-007 — Safe managed projection repair
 

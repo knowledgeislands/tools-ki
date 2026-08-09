@@ -40,6 +40,12 @@ _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `reads declared Knowledge Bas
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `prunes only completed items across selected repositories after every target is valid`, `promotes and demotes one explicit item with directional horizon validation`, and `rejects ambiguous roadmap identifiers before changing or pruning a work item`.
 
+### REPO-OPS-007 — Repository projection diagnostics
+
+`ki repo diag` MUST report the declared skill and compatible runtime projection health for every selected repository without changing repository or registry state. It MUST return non-zero when any selected repository is unrepairable.
+
+_Verify:_ `src/tests/cli/repo/diag.test.ts` — `reports selected repository projection health without changing it` and `reports an unresolved declared provider as unrepairable`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

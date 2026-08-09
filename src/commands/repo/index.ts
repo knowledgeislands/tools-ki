@@ -38,6 +38,7 @@ import {
 } from '../../core/runtime.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../../core/transaction.ts'
 import { repoHelpCommandNames } from '../root/catalogue.ts'
+import { createRepoDiagCommand } from './diag.ts'
 import { createRepairCommand } from './repair.ts'
 import { createRepoRoadmapCommand } from './roadmap.ts'
 import { createRepoSkillCommand } from './skill.ts'
@@ -129,6 +130,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
   }
   command
     .addCommand(createRepoRoadmapCommand(context, selectedRepositories))
+    .addCommand(createRepoDiagCommand(context, selectedRepositories))
     .addCommand(createRepairCommand(context, selectedRepositories))
     .addCommand(createRepoSkillCommand(context, selectedRepositories))
     .addCommand(createUpgradeCommand(context, selectedRepositories))
