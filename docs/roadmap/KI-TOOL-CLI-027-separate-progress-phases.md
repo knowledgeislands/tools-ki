@@ -17,15 +17,15 @@ Make repository-operation progress clear by showing completed loading, execution
 
 `ki repo audit` first loads rubric definitions, then creates each rubric session to gather its evidence, before running the known audit items. Its per-skill evidence sweep is currently embedded in the audit row, making the audit phase appear to restart. `ki repo conform` has the same loading phase and then genuinely runs conform and verification passes.
 
-The agreed presentation retains each completed phase as a named fixed row and refreshes only the current phase. A reader can therefore see what has completed, which phase is active, and its own elapsed time.
+The agreed presentation retains each completed phase as a named fixed row and refreshes only the current phase. A reader can therefore see what has completed, which phase is active, and its own elapsed time. Evidence details now need the same treatment: a long session must show the completed checks beneath the evidence phase instead of replacing one status in place.
 
 ## Boundary
 
-This item changes only progress-phase presentation for repository operations. It does not alter which skills run, their ordering, progress-event semantics, terminal rendering, or CLI exit behaviour.
+This item changes only progress-phase presentation for repository operations. It does not alter which skills run, their ordering, progress-event semantics, or CLI exit behaviour.
 
 ## Current state
 
-The progress tracker preserves one clock across definition loading and execution, but it replaces its single rendered row when the phase changes. The tree renderer is complete and remains responsible only for report layout, not live progress lifecycle management.
+The progress tracker retains named phase rows with phase-local elapsed time and a final timing summary. Rubric-supplied evidence stages and steps now appear as nested rows while the outer evidence count stays honest.
 
 ## Steps
 
@@ -36,16 +36,19 @@ The progress tracker preserves one clock across definition loading and execution
 - [x] Extend interactive and plain-stream CLI contracts for phase order, elapsed time, cursor cleanup, and terminal output.
 - [x] Retain completed phase rows in interactive multi-progress output, so subsequent phases do not rewind over them.
 - [x] End interactive full-width progress frames with CRLF before starting a subsequent phase.
+- [x] Render each rubric-supplied evidence stage or step as a retained child row with its own progress state and elapsed time.
+- [x] Keep the outer evidence row as the authoritative completed-session count while nested detail rows report unmeasured or counted work.
+- [x] Keep independently identified evidence rows concurrently visible without changing the sequential audit execution model.
 
 ## Files touched
 
-- `src/core/repository-reporting.ts` and `src/core/runtime.ts`.
+- `src/core/repository-reporting.ts`, `src/core/tree-rendering.ts`, and `src/core/runtime.ts`.
 - `src/commands/repo/index.ts`.
 - `src/tests/cli/repo/progress-stages.test.ts`, `src/tests/cli/repo/repo.test.ts`, and `src/tests/cli/repo/conform-writes.test.ts` as required by the public contracts.
 
 ## Verify
 
-- `ki repo audit` shows completed `loading definitions` and `gathering evidence` rows before its active audit row.
+- `ki repo audit` shows completed `loading definitions` and `gathering evidence` rows before its active audit row, with retained nested evidence checks where a rubric reports them.
 - `ki repo conform` distinguishes loading, conform, and verification rows.
 - Plain-stream and interactive output retain correct elapsed time, cleanup, and exit behaviour.
 - Focused CLI contract tests, `bunx tsc --noEmit`, and `bun run test:coverage` pass.
@@ -58,27 +61,29 @@ No implementation dependency. This is a follow-up to the reviewed tree-rendering
 
 ### Delivered
 
-Interactive progress output now keeps each completed phase on its own terminal row, then draws the next active phase beneath it. This applies to both single and multi layouts for `ki repo audit` and `ki repo conform` through their shared reporter.
+`ki repo audit` now retains each reported evidence check below its `evidence` phase, with completed and active child bars sharing the same visual bar column as loading, evidence, audit, and timing rows.
 
 ### Summary of changes
 
-The reporter collapses a completed multi-progress panel to its summary and clears only the panel's former skill rows before the next phase begins. Interactive frames now use CRLF: because every bar fills the terminal width, this resolves a terminal's deferred wrap before the next phase starts. Interactive audit and conform contracts assert that later phases use independent physical rows.
+The shared progress reporter owns evidence-child lifetime and phase-local timing. A stage begins as a live child only until it reports a concrete step; that first step replaces the provisional wrapper, avoiding a zero-duration row. Later named steps complete the preceding child. The selected skill names determine one per-run label width, and root labels reserve the extra tree indentation so every bar starts in one column.
 
 ### Verification
 
-`bunx biome check src/core/repository-reporting.ts src/tests/cli/repo/progress-stages.test.ts`, focused audit and conform CLI contracts, `bun run test:coverage` (561 tests; 100% statements, branches, functions, and lines), and `ki repo audit --progress never` all pass.
+Baseline: `c94714eab9c153d5845c9ad8d4ca674b64cb7d2c`. Delivered source commit: `9bbd07c4d9629490cd9da28087cfd0d43ec7c3fe`.
+
+`bunx biome check` on the affected sources and contracts, `bunx tsc --noEmit`, focused repository CLI contracts (75 tests), `bun run test:coverage` (562 tests; 100% statements, branches, functions, and lines), and `ki repo audit --progress never` pass.
 
 ### Outstanding concerns
 
-None. Narrow terminals retain panels sequentially rather than attempting an unsafe cursor rewind; full-width frames use an explicit CRLF transition.
+None. Evidence gathering remains sequential today. The renderer can retain independent rows by skill identity, but a future operation that needs concurrent rows within one skill requires an explicit event identity rather than an inferred display rule.
 
 ### Post-change review
 
-The renderer remains the single implementation point for audit and conform. No operation derives state from rendered output; phase state remains in the progress tracker.
+No audit or conform logic reads rendered output. The change is confined to shared report presentation, its tree-prefix helper, and CLI contracts. Narrow output still degrades to safe truncated text when a bar does not fit.
 
 ### Mini recap
 
-The second and third progress phases no longer share a visual row while live; all completed phases remain independently visible. This item awaits explicit review and acceptance.
+The progress display now explains long evidence gathering as real, completed work rather than one repeatedly replaced middle bar. CLI-027 awaits explicit review and acceptance.
 
 ## Discussion
 
@@ -89,3 +94,9 @@ The definitions phase has a known count of selected skills, while the audit-item
 ### Consistent operations
 
 Audit has loading, evidence gathering, and item audit. Conform has loading, conform, and verification; the labels make its two substantive passes intentional rather than ambiguous. The presentation must not imply that every phase has the same unit of work or a comparable completion percentage.
+
+### Evidence detail lifetime
+
+The evidence phase owns its session count. A rubric-supplied stage or step appears as a child row and completes when the next detail begins or its enclosing stage ends. This makes sequential checks legible without recasting the evidence count as a mechanical-item count.
+
+Rows are keyed by their reporting skill, so independently reporting sessions can remain visible together if an operation later runs them concurrently. Existing stage events describe nesting, not concurrent identity within one skill; adding that capability would require an explicit progress-event extension rather than an inference from display text.
