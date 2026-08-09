@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-018
 title: Normalize Agora estate
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: 0db2f8acdb739c07a0da83b2e1d23cf1816b4c17
@@ -42,12 +42,13 @@ The local registry now lives at `$XDG_STATE_HOME/ki/registry.toml`. Each record 
 ## Steps
 
 - [x] Pin and verify the canonical Harness archive containing the accepted `ki-repo` contract.
-- [ ] Reconcile the implicit ordinary-repository model and KB `store_roles` into typed repository configuration, resolution, and validation.
 - [x] Derive a protected canonical `estate` Agora from registered members, each carrying a local repository-name key and canonical HTTPS identity.
 - [x] Move the machine-local registry to `$XDG_STATE_HOME/ki/registry.toml`, with canonical identity, local key, checkout binding, and explicit bootstrap-refresh migration from the retired user-configuration path list.
 - [x] Resolve named reciprocal declarations only across canonical estate members, diagnose name and identity collisions, and retain registry commands as the first-class estate-management interface.
 - [x] Remove `tool` and physical project paths from `.ki-agora`; require `ki agora open <agora> --target zed` at the target boundary, where Zed composes canonical repository members.
 - [x] Migrate CLI contracts, manual, README, changelog, and contract tests to the state-backed registry without resolver compatibility aliases.
+
+The optional Knowledge Base store-role composition work transfers to `KI-TOOL-CLI-036`; it was deliberately excluded from this canonical-estate delivery.
 
 ## Files touched
 
@@ -67,6 +68,32 @@ The local registry now lives at `$XDG_STATE_HOME/ki/registry.toml`. Each record 
 ## Dependencies / blocks
 
 The portable `ki-repo` kind and store-role contract is accepted and available in the pinned Harness archive. `KI-HARNESS-GOV-033` accepted the reciprocal home/member contract in `ba50fb64`. User approval of the initial Agora vocabulary and member set remains the publication gate for consumer configuration, Dotfiles projections, and all peer-repository declarations.
+
+## Review
+
+### Delivered
+
+Delivered the local canonical estate and reciprocal Agora resolver, including the dedicated machine-local registry and explicit `estate` selector. Peer repository configuration and optional Knowledge Base external stores remain untouched.
+
+### Summary of changes
+
+The estate is now `$XDG_STATE_HOME/ki/registry.toml`, with a stable local key, canonical GitHub URL, and physical checkout path per record. `ki bootstrap --refresh` performs the one-time migration from retired user configuration; `ki repo init`, `ki registry add`, `ki repo repair`, and `ki repo conform` maintain bindings. The Agora, repository selection, trade, diagnostics, manual, changelog, and generated completion contracts use that model.
+
+### Verification
+
+`bun run test:coverage` passed with 575 tests and 100% statements, branches, functions, and lines. Type-checking and focused completion/manual inventory contracts also passed.
+
+### Outstanding concerns
+
+The target-specific composition of an optional Knowledge Base `sources` or `legacy` store is intentionally not implemented. It is captured as `KI-TOOL-CLI-036` and requires its own approved local-binding and target-composition design.
+
+### Post-change review
+
+The public command surface, `README.md`, `CHANGELOG.md`, `ki(1)`, and generated Bash/Zsh completion contract now agree on the state-backed registry and explicit repository identity. No compatibility fallback reads retired registry paths during resolution.
+
+### Mini recap
+
+The migration removed the old mixed identity/path model without widening the canonical estate beyond KI repositories. The remaining store-role concern is a workspace-composition feature, not a defect in Agora estate resolution.
 
 ## Discussion
 
