@@ -325,6 +325,18 @@ describe('[ki repo]', () => {
       })
     })
 
+    test('reports an empty declared skill selection without opening progress', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+      await box.setupExampleHarness()
+
+      const result = await box.run('ki repo audit --progress always', { now: () => 0 })
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('✦ 0 skills selected')
+      expect(result.output).not.toContain('├─ progress')
+    })
+
     test('reports an interactive zero-item audit as complete', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
@@ -397,24 +409,28 @@ describe('[ki repo]', () => {
 │  ╰─ ✓ example/harness:ki-extra PASS · FAIL=0 WARN=0
 ╰─ summary: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `)
-      // Loading is retained as its own completed row; each item then reports at both edges of its
-      // await, so a running frame precedes every completion.
+      // Loading and evidence are retained before item audit; each item then reports at both edges
+      // of its await, so a running frame precedes every completion.
       expect(frames.map(normaliseFrame)).toEqual([
         '├─ progress [ audit loading definitions · 0/2 0% 0.0s ]',
         '├─ progress [ audit loading definitions · 1/2 50% 0.0s ]',
         '├─ progress [ audit loading definitions · 2/2 100% 0.0s ]',
         '├─ progress [ audit loading definitions complete · 2/2 100% 0.0s ]',
-        '├─ progress [ audit starting · 0/3 0% 0.0s ]',
+        '├─ progress [ audit gathering evidence · 0/2 0% 0.0s ]',
         // A session that emits nothing still has its construction named: the host brackets the
         // span itself, so evidence gathering is never reported as a stalled item count.
         '├─ progress [ audit ki-example gathering evidence · 0.0s ]',
-        '├─ progress [ audit ki-example gathering evidence done · 0/3 0% 0.0s ]',
+        '├─ progress [ audit ki-example gathering evidence done · 0/2 0% 0.0s ]',
+        '├─ progress [ audit gathering evidence · 1/2 50% 0.0s ]',
+        '├─ progress [ audit ki-extra gathering evidence · 0.0s ]',
+        '├─ progress [ audit ki-extra gathering evidence done · 1/2 50% 0.0s ]',
+        '├─ progress [ audit gathering evidence · 2/2 100% 0.0s ]',
+        '├─ progress [ audit gathering evidence complete · 2/2 100% 0.0s ]',
+        '├─ progress [ audit starting · 0/3 0% 0.0s ]',
         '├─ progress [ audit ki-example running EXAMPLE-1 · 0/3 0% 0.0s ]',
         '├─ progress [ audit ki-example EXAMPLE-1 · 1/3 33% 0.0s ]',
         '├─ progress [ audit ki-example running EXAMPLE-2 · 1/3 33% 0.0s ]',
         '├─ progress [ audit ki-example EXAMPLE-2 · 2/3 67% 0.0s ]',
-        '├─ progress [ audit ki-extra gathering evidence · 0.0s ]',
-        '├─ progress [ audit ki-extra gathering evidence done · 2/3 67% 0.0s ]',
         '├─ progress [ audit ki-extra running EXTRA-1 · 2/3 67% 0.0s ]',
         '├─ progress [ audit ki-extra EXTRA-1 · 3/3 100% 0.0s ]',
         '├─ progress [ audit complete · 3/3 100% 0.0s ]'
@@ -422,7 +438,7 @@ describe('[ki repo]', () => {
       // The status text is drawn inside the bar, so every frame fills the terminal width.
       expect(frames.every((frame) => stripVTControlCharacters(frame).length === 80)).toBe(true)
       // The band is the item in flight: one of three items over a 68-column bar.
-      const band = (frames[7] as string).split(SGR_STARTED)[1]?.split(SGR_RESET)[0]
+      const band = (frames[13] as string).split(SGR_STARTED)[1]?.split(SGR_RESET)[0]
       expect(band).toHaveLength(22)
 
       const wide = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
@@ -587,6 +603,8 @@ describe('[ki repo]', () => {
       const result = await box.run('ki repo audit', { interactive: true, now: () => 0 })
       const forcedSingle = await box.run('ki repo audit --progress always', { now: () => 0 })
       const multi = await box.run('ki repo audit --progress always --progress-style multi', { now: () => 0 })
+      const educate = await box.run('ki repo educate', { interactive: true, now: () => 0 })
+      const quietEducate = await box.run('ki repo educate')
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('\r\x1b[2K')
@@ -594,6 +612,8 @@ describe('[ki repo]', () => {
       expect(forcedSingle.exitCode).toBe(1)
       expect(multi.exitCode).toBe(1)
       expect(stripVTControlCharacters(multi.output)).toContain('[ki-example] failed')
+      expect(educate.exitCode).toBe(1)
+      expect(quietEducate.exitCode).toBe(1)
     })
 
     test('rejects a repository configuration that is not valid TOML', async () => {

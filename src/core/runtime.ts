@@ -345,13 +345,23 @@ interface ItemProgress {
   readonly onProgressEvent?: (event: RubricProgressReport) => void
 }
 
-const auditSkill = async (
+export interface EvidenceProgress {
+  readonly onProgressEvent?: (event: RubricProgressReport) => void
+}
+
+export interface GatheredSkillAudit {
+  readonly session: RubricSession<unknown>
+  readonly scope: RubricScope
+  readonly publication: { write?: NativeWrite; conforming: boolean }
+}
+
+const gatherSkillAudit = async (
   scope: RuntimeScope,
   prepared: PreparedSkill,
   mode: 'audit' | 'conform',
-  progress?: ItemProgress
-): Promise<InternalAudit> => {
-  const { skill, definition, items: plannedItems } = prepared
+  progress?: EvidenceProgress
+): Promise<GatheredSkillAudit> => {
+  const { skill, definition } = prepared
   const definitionScope = definition.scope as RubricScope
   if (definitionScope.kind === 'user-home') {
     const state = await scope.lstat(scope.userHome).catch(() => undefined)
@@ -386,6 +396,16 @@ const auditSkill = async (
     skill.identity
   )
   emit?.({ kind: 'stage', edge: 'end', label: EVIDENCE_STAGE_LABEL })
+  return { session, scope: definitionScope, publication: publicationDraft }
+}
+
+const auditGatheredSkill = async (
+  prepared: PreparedSkill,
+  gathered: GatheredSkillAudit,
+  progress?: ItemProgress
+): Promise<InternalAudit> => {
+  const { items: plannedItems } = prepared
+  const { session } = gathered
   const items: ItemAuditState[] = []
   for (const item of plannedItems) {
     progress?.onItemStart?.(item)
@@ -397,7 +417,32 @@ const auditSkill = async (
       return [findingForOutcome(state.item, outcome)]
     })
   )
-  return { session, items, findings, scope: definitionScope, publication: publicationDraft }
+  return { ...gathered, items, findings }
+}
+
+const auditSkill = async (
+  scope: RuntimeScope,
+  prepared: PreparedSkill,
+  mode: 'audit' | 'conform',
+  progress?: ItemProgress
+): Promise<InternalAudit> =>
+  auditGatheredSkill(prepared, await gatherSkillAudit(scope, prepared, mode, progress), progress)
+
+/** Gathers one audit session before the host starts the mechanical-item phase. */
+export const gatherSkillAuditEvidence = async (
+  scope: RuntimeScope,
+  prepared: PreparedSkill,
+  progress?: EvidenceProgress
+): Promise<GatheredSkillAudit> => gatherSkillAudit(scope, prepared, 'audit', progress)
+
+/** Runs one gathered audit session's mechanical items in its already-validated context. */
+export const runGatheredSkillAudit = async (
+  prepared: PreparedSkill,
+  gathered: GatheredSkillAudit,
+  progress?: ItemProgress
+): Promise<SkillAuditResult> => {
+  const { items, findings } = await auditGatheredSkill(prepared, gathered, progress)
+  return { findings, items }
 }
 
 export const runSkillAudit = async (

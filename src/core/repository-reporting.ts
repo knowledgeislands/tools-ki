@@ -164,6 +164,7 @@ const elapsed = (milliseconds: number): string => `${(Math.max(0, milliseconds) 
 
 interface ProgressTracker {
   readonly loading: (loaded: number, total: number) => void
+  readonly evidence: (gathered: number, total: number) => void
   readonly planned: (skills: readonly PreparedSkill[]) => void
   readonly start: (skill: PreparedSkill, code: string) => void
   readonly item: (skill: PreparedSkill, code: string) => void
@@ -232,6 +233,7 @@ const createProgressTracker = (
   let stages: readonly string[] = []
   let step: StepState | undefined
   let loading: { readonly loaded: number; readonly total: number } | undefined
+  let evidence: { readonly gathered: number; readonly total: number } | undefined
   const states = new Map<string, SkillProgressState>(skills.map((skill) => [skill.identity, PENDING_STATE]))
   const skillState = (identity: string): SkillProgressState => {
     const state = states.get(identity)
@@ -270,6 +272,7 @@ const createProgressTracker = (
     if (step?.count) return `${countsOf(step.count.completed, step.count.total)} ${clock}`
     // An unmeasured stage reports the clock alone: elapsed time is all that is honestly known.
     if (stageParts().length) return clock
+    if (evidence) return `${countsOf(evidence.gathered, evidence.total)} ${clock}`
     if (total === undefined) return clock
     return `${countsOf(complete, total)} ${clock}`
   }
@@ -279,6 +282,7 @@ const createProgressTracker = (
     if (step?.count)
       return { complete: step.count.completed, started: step.count.completed, total: step.count.total, text }
     if (stageParts().length) return { complete: 0, started: 0, total: undefined, text }
+    if (evidence) return { complete: evidence.gathered, started: evidence.gathered, total: evidence.total, text }
     return { complete, started: complete + inFlight, total, text }
   }
   const singleFrame = (text: string): readonly string[] => [progressLine(barModel(text), renderOptions())]
@@ -336,10 +340,22 @@ const createProgressTracker = (
       loading = { loaded, total: definitions }
       render('loading definitions')
     },
+    evidence: (gathered, sessions) => {
+      if (loading) {
+        render('loading definitions complete', true)
+        loading = undefined
+      }
+      evidence = { gathered, total: sessions }
+      render('gathering evidence')
+    },
     planned: (planned) => {
       if (loading) {
         render('loading definitions complete', true)
         loading = undefined
+      }
+      if (evidence) {
+        render('gathering evidence complete', true)
+        evidence = undefined
       }
       total = planned.reduce((count, skill) => count + skill.items.length, 0)
       for (const skill of planned)
@@ -483,6 +499,55 @@ export const runWithProgress = async <Result>(
     throw error
   }
   return runPreparedWithProgress(context, prepared, run, options, phase, progress)
+}
+
+/** Runs a counted session-evidence phase before the prepared skills' mechanical-item phase. */
+export const runWithEvidenceProgress = async <Evidence, Result>(
+  context: KiContext,
+  skills: readonly ResolvedSkill[],
+  gather: (
+    skill: PreparedSkill,
+    progress: { readonly onProgressEvent?: (event: RubricProgressReport) => void }
+  ) => Promise<Evidence>,
+  run: (skill: PreparedSkill, evidence: Evidence, progress: ItemProgressCodes) => Promise<Result>,
+  options: OperationOptions,
+  phase: string
+): Promise<Result[]> => {
+  const progress = skills.length ? createProgressTracker(context, options, trackedSkills(skills), phase) : undefined
+  const prepared: PreparedSkill[] = []
+  const evidence = new Map<string, Evidence>()
+  try {
+    progress?.loading(0, skills.length)
+    for (const skill of skills) {
+      prepared.push(await prepareSkill(skill))
+      progress?.loading(prepared.length, skills.length)
+    }
+    progress?.evidence(0, prepared.length)
+    for (const skill of prepared) {
+      evidence.set(
+        skill.skill.identity,
+        await gather(skill, { ...(progress ? { onProgressEvent: (event) => progress.report(skill, event) } : {}) })
+      )
+      progress?.evidence(evidence.size, prepared.length)
+    }
+  } catch (error) {
+    progress?.failed()
+    throw error
+  }
+  return runPreparedWithProgress(
+    context,
+    prepared,
+    async (skill, itemProgress) => {
+      const gathered = evidence.get(skill.skill.identity)
+      // The map is filled from the same prepared collection immediately above; preserve a guard for future changes.
+      /* v8 ignore next */
+      if (gathered === undefined) throw new KiError(`progress lost evidence for ${skill.skill.identity}`, 1)
+      return run(skill, gathered, itemProgress)
+    },
+    options,
+    phase,
+    progress
+  )
 }
 
 interface AuditSkillReport {

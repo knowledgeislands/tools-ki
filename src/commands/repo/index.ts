@@ -21,11 +21,19 @@ import {
   renderEducation,
   renderMultiRepositoryAuditSummary,
   runPreparedWithProgress,
+  runWithEvidenceProgress,
   runWithProgress
 } from '../../core/repository-reporting.ts'
 import { renderRepositoryConformCommand, runRepositoryConformCommands } from '../../core/repository-subprocess.ts'
 import { resolveDeclaredSkills } from '../../core/resolution.ts'
-import { detectFixed, educateSkill, runSkillAudit, runSkillConform } from '../../core/runtime.ts'
+import {
+  detectFixed,
+  educateSkill,
+  gatherSkillAuditEvidence,
+  runGatheredSkillAudit,
+  runSkillAudit,
+  runSkillConform
+} from '../../core/runtime.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../../core/transaction.ts'
 import { repoHelpCommandNames } from '../root/catalogue.ts'
 import { createRepairCommand } from './repair.ts'
@@ -205,12 +213,11 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               if (index) context.stdout.write('\n')
               const reporter = renderAuditFrameStart(context, repository.root, skills)
               try {
-                const results = await runWithProgress(
+                const results = await runWithEvidenceProgress(
                   context,
                   skills,
-                  async (skill, itemProgress) => ({
-                    skill,
-                    audit: await runSkillAudit(
+                  async (skill, evidenceProgress) =>
+                    gatherSkillAuditEvidence(
                       {
                         kind: 'repository',
                         repository: repository.root,
@@ -218,12 +225,15 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                         lstat: context.lstat
                       },
                       skill,
-                      {
-                        onItemStart: (item) => itemProgress.onItemStart(item.code),
-                        onItemComplete: (item) => itemProgress.onItemComplete(item.code),
-                        onProgressEvent: itemProgress.onProgressEvent
-                      }
-                    )
+                      evidenceProgress
+                    ),
+                  async (skill, evidence, itemProgress) => ({
+                    skill,
+                    audit: await runGatheredSkillAudit(skill, evidence, {
+                      onItemStart: (item) => itemProgress.onItemStart(item.code),
+                      onItemComplete: (item) => itemProgress.onItemComplete(item.code),
+                      onProgressEvent: itemProgress.onProgressEvent
+                    })
                   }),
                   output,
                   'audit'

@@ -75,19 +75,22 @@ describe('[ki repo audit evidence progress]', () => {
     const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    // Loading stays visible as a completed, counted phase before the host brackets the session's
-    // own unmeasured evidence stage; there the elapsed clock is the one quantity honestly known.
+    // Loading and the counted evidence phase stay visible before item audit begins. Within a
+    // session's unmeasured stage, elapsed time remains the one quantity honestly known.
     expect(plainFrames(result.output)).toEqual([
       'audit loading definitions · 0/1 0% 0.0s',
       'audit loading definitions · 1/1 100% 0.0s',
       'audit loading definitions complete · 1/1 100% 0.0s',
-      'audit starting · 0/1 0% 0.0s',
+      'audit gathering evidence · 0/1 0% 0.0s',
       'audit ki-example gathering evidence · 0.0s',
       'audit ki-example engineering evidence · 0.0s',
       'audit ki-example engineering evidence biome check · 0.0s',
       'audit ki-example engineering evidence tsc --noEmit · 0.0s',
       'audit ki-example gathering evidence engineering evidence done · 0.0s',
       'audit ki-example gathering evidence done · 0/1 0% 0.0s',
+      'audit gathering evidence · 1/1 100% 0.0s',
+      'audit gathering evidence complete · 1/1 100% 0.0s',
+      'audit starting · 0/1 0% 0.0s',
       'audit ki-example running EXAMPLE-1 · 0/1 0% 0.0s',
       'audit ki-example EXAMPLE-1 · 1/1 100% 0.0s',
       'audit complete · 1/1 100% 0.0s'
