@@ -124,6 +124,10 @@ describe('[ki repo conform writes]', () => {
     const regular = await box.run('ki repo conform --progress always')
     const narrow = await box.run('ki repo conform --progress always', { interactive: true, columns: 1 })
     const invalidWidth = await box.run('ki repo conform --progress always', { columns: Number.NaN })
+    const interactiveMulti = await box.run('ki repo conform --progress-style multi', {
+      interactive: true,
+      now: () => 0
+    })
     await box.project.write(
       '.ki-config.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n[skills.ki-extra]\n'
@@ -147,6 +151,9 @@ describe('[ki repo conform writes]', () => {
     expect(regular.output).toContain('conform loading definitions complete')
     expect(regular.output).toContain('conform complete · 0/0 100% 0.0s')
     expect(regular.output).toContain('verify complete · 0/0 100% 0.0s')
+    // Each completed panel keeps its summary and clears only its own skill row: loading,
+    // conform, and verification therefore occupy successive terminal lines.
+    expect(interactiveMulti.output.split('\x1b[1A')).toHaveLength(4)
     expect(multiple.output).toContain('│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra')
   })
 
