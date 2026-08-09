@@ -15,7 +15,6 @@ export interface TreeSection {
 }
 
 export interface TreeReporter {
-  readonly entry: (entry: TreeEntry) => void
   readonly section: (label: string, entries: number) => TreeSection
   readonly finish: (entry: TreeEntry) => void
 }
@@ -48,15 +47,12 @@ export const treeProgressPrefix = (): string => `${BRANCH} progress `
 /** Streams a title, known-count sections, and a terminal summary without exposing tree layout to callers. */
 export const createTreeReporter = (
   write: (output: string) => void,
-  report: Pick<TreeReport, 'title' | 'context'>
+  report: { readonly title: string; readonly context: readonly TreeEntry[] }
 ): TreeReporter => {
-  write(
-    `${[`${TOP_LEFT} ${normalizeLabel(report.title)}`, ...renderEntries(report.context ?? [], VERTICAL)].join('\n')}\n`
-  )
+  write(`${[`${TOP_LEFT} ${normalizeLabel(report.title)}`, ...renderEntries(report.context, VERTICAL)].join('\n')}\n`)
   const writeEntry = (entry: TreeEntry, last: boolean, prefix = ''): void =>
     write(`${renderEntry(entry, prefix, last).join('\n')}\n`)
   return {
-    entry: (entry) => writeEntry(entry, false),
     section: (label, entries) => {
       writeEntry({ label }, false)
       let written = 0
