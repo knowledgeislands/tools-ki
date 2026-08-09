@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-027
 title: Separate progress phases
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: f6948e171f4a031a7f0eea3d62b663cd454bb777
@@ -31,18 +31,19 @@ The progress tracker preserves one clock across definition loading and execution
 
 - [x] Replace the single persistent progress row with named phases that retain their individual completed state.
 - [x] Complete `loading definitions` before opening the active audit phase, preserving the operation clock and leaving no stale terminal row.
-- [ ] Gather every selected audit session as a distinct counted phase before any audit item runs, preserving the canonical skill and item order.
+- [x] Gather every selected audit session as a distinct counted phase before any audit item runs, preserving the canonical skill and item order.
 - [x] Model conform as distinct loading, conform, and verification phases, each with its own known unit and count.
 - [x] Extend interactive and plain-stream CLI contracts for phase order, elapsed time, cursor cleanup, and terminal output.
 
 ## Files touched
 
-- `src/core/repository-reporting.ts`.
+- `src/core/repository-reporting.ts` and `src/core/runtime.ts`.
+- `src/commands/repo/index.ts`.
 - `src/tests/cli/repo/progress-stages.test.ts`, `src/tests/cli/repo/repo.test.ts`, and `src/tests/cli/repo/conform-writes.test.ts` as required by the public contracts.
 
 ## Verify
 
-- `ki repo audit` shows a completed `loading definitions` row before its active audit row.
+- `ki repo audit` shows completed `loading definitions` and `gathering evidence` rows before its active audit row.
 - `ki repo conform` distinguishes loading, conform, and verification rows.
 - Plain-stream and interactive output retain correct elapsed time, cleanup, and exit behaviour.
 - Focused CLI contract tests, `bunx tsc --noEmit`, and `bun run test:coverage` pass.
@@ -50,6 +51,15 @@ The progress tracker preserves one clock across definition loading and execution
 ## Dependencies / blocks
 
 No implementation dependency. This is a follow-up to the reviewed tree-rendering work in `KI-TOOL-CLI-026`, not a blocker for it.
+
+## Review
+
+- Delivered: audit gathers all selected rubric sessions as a counted evidence phase before it starts mechanical items, retaining completed loading and evidence rows before the item-audit row.
+- Excluded: rubric event semantics, mechanical-item order within and across skills, terminal report layout, and CLI exit behaviour remain unchanged.
+- Evidence: baseline `f6948e171f4a031a7f0eea3d62b663cd454bb777`; implementation `94b3ae3ce566f869c2ee215dac29a441b1201442`; focused repository-progress contracts, `bunx tsc --noEmit`, `bun run test:coverage` (561 contracts; 100% coverage), and `ki repo audit --progress always --reporter-levels all` passed.
+- Decision: session construction is a distinct, read-only evidence phase. Completing every session before any item makes its 14-session count meaningful and prevents the item audit from appearing to restart.
+- Concerns: none.
+- Learning route: none.
 
 ## Discussion
 
