@@ -77,7 +77,8 @@ Use repeated \fB--repo\fR options to select explicit repository roots or
 patterns.
 .TP
 .B ki repo [--agora <name>] [command]
-Use the physical KI repositories listed by one named Agora profile.
+Use the physical KI repositories resolved from one declared named Agora or the
+reserved registered-estate selector.
 .SS Repository management
 \&
 .TP
@@ -193,26 +194,14 @@ Prune one eligible local inbound copy, or preview and confirm a batch.
 .SS Agora management
 \&
 .TP
-.B ki agora create <name>
-Create an empty named Agora profile.
-.TP
-.B ki agora add <name> <directory>
-Add one physical project directory to an Agora profile.
-.TP
-.B ki agora remove <name> <project>
-Remove one named project from an Agora profile.
-.TP
-.B ki agora discover <name> <directory>
-Add KI repositories discovered beneath one physical directory.
-.TP
 .B ki agora list
-List named Agora profiles.
+List declared named Agoras and the registered estate.
 .TP
 .B ki agora show <name>
-Show one Agora profile.
+Show one declared Agora or the registered estate.
 .TP
-.B ki agora open <name>
-Open one Agora profile.
+.B ki agora open <name> --target zed
+Open one declared Agora or the registered estate through the explicit Zed target.
 .SS Acquisition
 \&
 .TP
@@ -403,8 +392,9 @@ order. KI resolves every target physically before an operation begins and
 rejects unmatched patterns, invalid roots, and duplicate physical roots.
 .TP
 .B --agora <name>
-Select every project listed by a named Agora profile. This option and
-\fB--repo\fR are mutually exclusive. Each project must be a physical KI
+Select every member of one declared named Agora, or every registered canonical
+repository through the reserved \fBestate\fR selector. This option and
+\fB--repo\fR are mutually exclusive. Each member must be a physical KI
 repository. With neither selector, KI checks a regular direct-CWD
 \fB.mgit-config.toml\fR and follows it only when it names member
 repositories; a document that names none describes the repository it sits in,
@@ -660,22 +650,20 @@ nothing unless \fB--yes\fR is also supplied.
 .SS Agora management
 \&
 .PP
-Agora profiles are user-level named collections stored beneath
-\fB$XDG_CONFIG_HOME/ki/agoras\fR. Their project roster is ordered by project
-name for Zed and may select KI repositories for repository operations.
+Named Agoras are declared portably by registered home repositories under
+\fB[skills.ki-agora.homes.<id>]\fR. Each listed member reciprocates under
+\fB[skills.ki-agora.memberships.<id>]\fR. KI resolves only locally registered,
+reciprocal declarations; \fBestate\fR is the reserved selector for all locally
+registered canonical KI repositories.
 .TP
-.B ki agora create <name>
-Create an empty profile named \fIname\fR.
+.B ki agora list
+List declared named Agoras and the registered estate.
 .TP
-.B ki agora add <name> <directory>
-Add one existing physical directory, naming the project from its basename.
+.B ki agora show <name>
+Show one declared Agora or the registered estate.
 .TP
-.B ki agora remove <name> <project>
-Remove one project by its profile name.
-.TP
-.B ki agora discover <name> <directory>
-Walk an existing physical directory without following symbolic links and add
-every directory whose regular \fB.ki-config.toml\fR marks it as a KI repository.
+.B ki agora open <name> --target zed
+Open one declared Agora or the registered estate through the explicit Zed target.
 .SS Acquisition
 \&
 .PP
@@ -736,10 +724,6 @@ Run
 to inspect the effective values.
 .SH FILES
 \&
-.TP
-.I $XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora
-Named user-level Agora profile. It contains a display name, the \fBzed\fR
-tool declaration, and absolute project paths.
 .TP
 .I .ki-config.toml
 Required repository configuration at a KI repository root.

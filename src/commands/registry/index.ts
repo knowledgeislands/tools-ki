@@ -17,7 +17,7 @@ export const createRegistryCommand = (context: KiContext): Command => {
       (value: string, previous: readonly string[] = []) => [...previous, value],
       []
     )
-    .option('--agora <name>', 'named Agora profile from XDG KI configuration')
+    .option('--agora <name>', 'declared named Agora or the registered estate')
   const selectedRepositories = (): RegistrySelection => {
     const options = command.opts<{ repo: readonly string[]; agora?: string }>()
     return { repositories: options.repo, agora: options.agora }

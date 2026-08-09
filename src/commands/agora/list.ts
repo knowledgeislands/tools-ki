@@ -4,18 +4,18 @@ import { listAgoras } from '../../core/agora.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
 
 export const createAgoraListCommand = (context: KiContext): Command =>
-  new Command('list').description('list available Agora profiles').action(async () => {
+  new Command('list').description('list the registered estate and declared Agoras').action(async () => {
     const profiles = await listAgoras(context.paths.config)
-    const projects = profiles.reduce((total, profile) => total + profile.projects.length, 0)
-    const entries = profiles.length
-      ? profiles.map((profile) => ({ label: `${profile.id} — ${profile.name} (${profile.projects.length} projects)` }))
-      : [{ label: 'none' }]
+    const members = profiles.reduce((total, profile) => total + profile.members.length, 0)
+    const entries = profiles.map((profile) => ({
+      label: `${profile.id} [${profile.system ? 'system' : 'declared'}] ${profile.name} (${profile.members.length} members)`
+    }))
     context.stdout.write(
       `${renderTree({
         title: 'KI AGORAS',
         entries: [
-          { label: `profiles (${profiles.length})`, children: entries },
-          { label: `summary: PROFILES=${profiles.length} PROJECTS=${projects}` }
+          { label: `agoras (${profiles.length})`, children: entries },
+          { label: `summary: AGORAS=${profiles.length} MEMBERS=${members}` }
         ]
       }).join('\n')}\n`
     )

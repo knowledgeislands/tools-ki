@@ -1,225 +1,228 @@
-import { lstat, mkdir, readdir, readFile, realpath, writeFile } from 'node:fs/promises'
-import { basename, isAbsolute, join, resolve } from 'node:path'
-import { parse } from 'smol-toml'
-import { REPOSITORY_CONFIGURATION_FILE } from './configuration.ts'
+import { lstat, realpath } from 'node:fs/promises'
+import { basename, join } from 'node:path'
+import { inspectUserConfiguration } from '../agents/configuration.ts'
+import { type RepositoryDeclaration, readRepositoryDeclaration } from './configuration.ts'
 import { KiError } from './errors.ts'
 
-export const AGORA_EXTENSION = '.ki-agora'
+export const ESTATE_AGORA = 'estate'
+
+const REPOSITORY_CONFIGURATION_FILE = '.ki-config.toml'
+const REPOSITORY = /^https:\/\/github\.com\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
+const AGORA_ID = /^[a-z][a-z0-9-]*[a-z0-9]$/
+const ROLE = /^[a-z][a-z0-9-]*[a-z0-9]$/
+const targets = new Set([
+  'zed-workspace',
+  'vscode-workspace',
+  'claude-code-trust',
+  'claude-desktop-trust',
+  'chatgpt-codex-trust'
+])
+
+export interface AgoraMember {
+  readonly key: string
+  readonly root: string
+  readonly repository: string
+  readonly role?: string
+}
 
 export interface AgoraProfile {
-  readonly path: string
   readonly id: string
   readonly name: string
-  readonly tool: 'zed'
-  readonly projects: readonly string[]
+  readonly purpose: string
+  readonly targets: readonly string[]
+  readonly home?: AgoraMember
+  readonly members: readonly AgoraMember[]
+  readonly system: boolean
 }
 
-interface AgoraDocument {
-  readonly name?: unknown
-  readonly tool?: unknown
-  readonly projects?: unknown
+interface Membership {
+  readonly home: string
+  readonly role: string
 }
 
-interface ManagedAgora {
-  readonly path: string
+interface AgoraHome {
   readonly id: string
-  readonly name: string
-  readonly projects: Readonly<Record<string, string>>
+  readonly purpose: string
+  readonly targets: readonly string[]
+  readonly members: Readonly<Record<string, string>>
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-export const agoraDirectory = (configurationDirectory: string): string => join(configurationDirectory, 'agoras')
-
-const profileError = (path: string, message: string): KiError => new KiError(`${path} ${message}`, 2)
-
-const profileId = (path: string): string => path.slice(path.lastIndexOf('/') + 1, -AGORA_EXTENSION.length)
-
-const requireAgoraId = (value: string): string => {
-  if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(value))
-    throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
-  return value
+interface RegisteredRepository extends AgoraMember {
+  readonly declaration: RepositoryDeclaration
 }
 
-const profilePath = (configurationDirectory: string, id: string): string =>
-  join(agoraDirectory(configurationDirectory), `${requireAgoraId(id)}${AGORA_EXTENSION}`)
+const table = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined
 
-const orderedProjects = (projects: Readonly<Record<string, string>>): readonly string[] =>
-  Object.entries(projects)
-    .sort(([left], [right]) => left.localeCompare(right, 'en'))
-    .map(([, path]) => path)
+const agoraError = (root: string, message: string): KiError =>
+  new KiError(`registered repository ${root} ${message}`, 2)
 
-const readManagedAgora = async (path: string): Promise<ManagedAgora> => {
-  const state = await lstat(path).catch(() => undefined)
-  if (!state) throw new KiError(`no Agora profile at ${path}`, 2)
-  if (!state.isFile() || state.isSymbolicLink()) throw profileError(path, 'must be a regular file')
-  let document: AgoraDocument
-  try {
-    document = parse(await readFile(path, 'utf8')) as AgoraDocument
-  } catch {
-    throw profileError(path, 'must be valid TOML')
+const profileError = (id: string, message: string): KiError => new KiError(`Agora ${id} ${message}`, 2)
+
+const skillConfiguration = (
+  declaration: RepositoryDeclaration,
+  name: string
+): Readonly<Record<string, unknown>> | undefined =>
+  declaration.skills.find((skill) => skill.name === name)?.configuration
+
+const canonicalRepository = (root: string, declaration: RepositoryDeclaration): string => {
+  const configuration = skillConfiguration(declaration, 'ki-repo')
+  const repository = configuration?.['repository']
+  if (typeof repository !== 'string' || !REPOSITORY.test(repository))
+    throw agoraError(root, '[skills.ki-repo].repository must be a canonical HTTPS GitHub repository')
+  return repository
+}
+
+const registeredRepositories = async (configurationDirectory: string): Promise<readonly RegisteredRepository[]> => {
+  const configuration = await inspectUserConfiguration(configurationDirectory)
+  if (configuration.state === 'missing')
+    throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
+  if (configuration.state === 'invalid')
+    throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
+
+  const repositories: RegisteredRepository[] = []
+  for (const configuredRoot of configuration.repositories) {
+    const state = await lstat(configuredRoot).catch(() => undefined)
+    if (!state?.isDirectory() || state.isSymbolicLink())
+      throw agoraError(configuredRoot, 'must be an existing physical directory')
+    const root = await realpath(configuredRoot)
+    const configurationPath = join(root, REPOSITORY_CONFIGURATION_FILE)
+    const declarationState = await lstat(configurationPath).catch(() => undefined)
+    if (!declarationState?.isFile() || declarationState.isSymbolicLink())
+      throw agoraError(root, `must contain a physical ${REPOSITORY_CONFIGURATION_FILE}`)
+    let declaration: RepositoryDeclaration
+    try {
+      declaration = await readRepositoryDeclaration(configurationPath)
+    } catch (error) {
+      throw agoraError(root, `has invalid ${REPOSITORY_CONFIGURATION_FILE}: ${(error as Error).message}`)
+    }
+    const key = basename(root)
+    repositories.push({ key, root, repository: canonicalRepository(root, declaration), declaration })
   }
-  if (typeof document.name !== 'string' || !document.name) throw profileError(path, 'name must be a non-empty string')
-  if (document.tool !== 'zed') throw profileError(path, 'tool must equal "zed"')
-  if ('primary' in document) throw profileError(path, 'primary is no longer supported')
-  if (document.projects === undefined) return { path, id: profileId(path), name: document.name, projects: {} }
-  if (!isRecord(document.projects)) throw profileError(path, 'projects must be a table')
-  const projects: Record<string, string> = {}
-  for (const [name, entry] of Object.entries(document.projects)) {
-    if (typeof entry !== 'string' || !entry) throw profileError(path, `project ${name} must be a non-empty path`)
-    if (!isAbsolute(entry)) throw profileError(path, `project ${name} path must be absolute`)
-    projects[name] = entry
+
+  const keys = new Set<string>()
+  const identities = new Set<string>()
+  for (const repository of repositories) {
+    if (keys.has(repository.key))
+      throw new KiError(`registered estate repeats local repository key ${repository.key}`, 2)
+    if (identities.has(repository.repository))
+      throw new KiError(`registered estate repeats canonical repository ${repository.repository}`, 2)
+    keys.add(repository.key)
+    identities.add(repository.repository)
   }
-  if (new Set(Object.values(projects)).size !== Object.keys(projects).length)
-    throw profileError(path, 'projects must not contain duplicate paths')
-  return { path, id: profileId(path), name: document.name, projects }
+  return repositories.sort((left, right) => left.key.localeCompare(right.key, 'en'))
 }
 
-const profileFromManaged = (profile: ManagedAgora): AgoraProfile => ({
-  path: profile.path,
-  id: profile.id,
-  name: profile.name,
-  tool: 'zed',
-  projects: orderedProjects(profile.projects)
+const stringList = (value: unknown, id: string, field: string): readonly string[] => {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string') || new Set(value).size !== value.length)
+    throw profileError(id, `${field} must be a duplicate-free string array`)
+  return value as readonly string[]
+}
+
+const homeDeclarations = (repository: RegisteredRepository): readonly AgoraHome[] => {
+  const configuration = skillConfiguration(repository.declaration, 'ki-agora')
+  if (!configuration || configuration['homes'] === undefined) return []
+  const homes = table(configuration['homes'])
+  if (!homes) throw agoraError(repository.root, '[skills.ki-agora].homes must be a table')
+  return Object.entries(homes).map(([id, value]) => {
+    if (!AGORA_ID.test(id)) throw profileError(id, 'must use a stable lower-case hyphenated identifier')
+    const home = table(value)
+    if (!home) throw profileError(id, 'home declaration must be a table')
+    if (typeof home['purpose'] !== 'string' || !home['purpose'].trim())
+      throw profileError(id, 'home requires a non-empty purpose')
+    const policy = stringList(home['targets'], id, 'targets')
+    if (policy.some((target) => !targets.has(target)))
+      throw profileError(id, 'targets contains an unsupported target policy')
+    const members = table(home['members'])
+    if (!members) throw profileError(id, 'members must be a repository-to-role table')
+    const roles: Record<string, string> = {}
+    for (const [identity, role] of Object.entries(members)) {
+      if (!REPOSITORY.test(identity))
+        throw profileError(id, `member ${identity} must be a canonical HTTPS GitHub repository`)
+      if (identity === repository.repository) throw profileError(id, 'must not list its home repository as a member')
+      if (typeof role !== 'string' || !ROLE.test(role)) throw profileError(id, `member ${identity} has an invalid role`)
+      roles[identity] = role
+    }
+    return { id, purpose: home['purpose'], targets: policy, members: roles }
+  })
+}
+
+const membershipDeclaration = (repository: RegisteredRepository, id: string): Membership | undefined => {
+  const configuration = skillConfiguration(repository.declaration, 'ki-agora')
+  if (!configuration || configuration['memberships'] === undefined) return undefined
+  const memberships = table(configuration['memberships'])
+  if (!memberships) throw agoraError(repository.root, '[skills.ki-agora].memberships must be a table')
+  const value = memberships[id]
+  if (value === undefined) return undefined
+  const membership = table(value)
+  if (!membership) throw profileError(id, `membership in ${repository.repository} must be a table`)
+  if (typeof membership['home'] !== 'string' || !REPOSITORY.test(membership['home']))
+    throw profileError(id, `membership in ${repository.repository} has an invalid home`)
+  if (typeof membership['role'] !== 'string' || !ROLE.test(membership['role']))
+    throw profileError(id, `membership in ${repository.repository} has an invalid role`)
+  return { home: membership['home'], role: membership['role'] }
+}
+
+const profileFromHome = (
+  home: RegisteredRepository,
+  declaration: AgoraHome,
+  repositories: readonly RegisteredRepository[]
+): AgoraProfile => {
+  const members = Object.entries(declaration.members).map(([identity, role]) => {
+    const member = repositories.find((candidate) => candidate.repository === identity)
+    if (!member) throw profileError(declaration.id, `member ${identity} is not registered locally`)
+    const consent = membershipDeclaration(member, declaration.id)
+    if (!consent || consent.home !== home.repository || consent.role !== role)
+      throw profileError(declaration.id, `member ${identity} does not declare matching consent`)
+    return { key: member.key, root: member.root, repository: member.repository, role }
+  })
+  return {
+    id: declaration.id,
+    name: declaration.id,
+    purpose: declaration.purpose,
+    targets: declaration.targets,
+    home: { key: home.key, root: home.root, repository: home.repository },
+    members: members.sort((left, right) => left.key.localeCompare(right.key, 'en')),
+    system: false
+  }
+}
+
+const profileCandidates = (repositories: readonly RegisteredRepository[]): AgoraProfile[] =>
+  repositories.flatMap((home) =>
+    homeDeclarations(home).map((declaration) => profileFromHome(home, declaration, repositories))
+  )
+
+const estate = (repositories: readonly RegisteredRepository[]): AgoraProfile => ({
+  id: ESTATE_AGORA,
+  name: 'Registered estate',
+  purpose: 'Every locally registered canonical KI repository.',
+  targets: ['zed-workspace'],
+  members: repositories.map(({ key, root, repository }) => ({ key, root, repository })),
+  system: true
 })
 
-const renderManagedAgora = (profile: Omit<ManagedAgora, 'path' | 'id'>): string => {
-  const entries = Object.entries(profile.projects).sort(([left], [right]) => left.localeCompare(right, 'en'))
-  return [
-    `name = ${JSON.stringify(profile.name)}`,
-    'tool = "zed"',
-    ...(entries.length
-      ? ['', '[projects]', ...entries.map(([name, path]) => `${JSON.stringify(name)} = ${JSON.stringify(path)}`)]
-      : []),
-    ''
-  ].join('\n')
-}
-
-const writeManagedAgora = async (
-  profile: Omit<ManagedAgora, 'path' | 'id'> & { readonly path: string }
-): Promise<void> => {
-  await mkdir(agoraDirectory(resolve(profile.path, '..', '..')), { recursive: true })
-  await writeFile(profile.path, renderManagedAgora(profile), 'utf8')
-}
-
-const managedAgora = (configurationDirectory: string, id: string): Promise<ManagedAgora> =>
-  readManagedAgora(profilePath(configurationDirectory, id))
-
-const physicalProject = async (value: string, workingDirectory: string): Promise<string> => {
-  const path = resolve(workingDirectory, value)
-  const state = await lstat(path).catch(() => undefined)
-  if (!state?.isDirectory() || state.isSymbolicLink())
-    throw new KiError(`Agora project ${value} must be an existing physical directory`, 2)
-  return realpath(path)
-}
-
-const projectName = (path: string): string => {
-  const name = basename(path)
-  // The filesystem root has no basename and is otherwise a valid physical project directory.
-  if (!name) throw new KiError(`cannot derive an Agora project name from ${path}`, 2)
-  return name
-}
-
 export const listAgoras = async (configurationDirectory: string): Promise<readonly AgoraProfile[]> => {
-  const directory = agoraDirectory(configurationDirectory)
-  const entries = await readdir(directory, { withFileTypes: true }).catch(() => undefined)
-  if (!entries) return []
-  return Promise.all(
-    entries
-      .filter((entry) => entry.name.endsWith(AGORA_EXTENSION))
-      .sort((left, right) => left.name.localeCompare(right.name))
-      .map((entry) => readManagedAgora(join(directory, entry.name)).then(profileFromManaged))
-  )
+  const repositories = await registeredRepositories(configurationDirectory)
+  return [
+    estate(repositories),
+    ...profileCandidates(repositories).sort((left, right) => left.id.localeCompare(right.id, 'en'))
+  ]
 }
 
-export const resolveAgora = async (
-  configurationDirectory: string,
-  workingDirectory: string,
-  value: string
-): Promise<AgoraProfile> =>
-  profileFromManaged(
-    await readManagedAgora(
-      isAbsolute(value)
-        ? resolve(value)
-        : value.endsWith(AGORA_EXTENSION)
-          ? resolve(workingDirectory, value)
-          : profilePath(configurationDirectory, value)
+export const resolveAgora = async (configurationDirectory: string, id: string): Promise<AgoraProfile> => {
+  if (!AGORA_ID.test(id)) throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
+  const repositories = await registeredRepositories(configurationDirectory)
+  if (id === ESTATE_AGORA) return estate(repositories)
+  const profiles = profileCandidates(repositories)
+  const candidates = profiles.filter((profile) => profile.id === id)
+  if (!candidates.length) throw profileError(id, 'is not declared by a registered Agora home')
+  if (candidates.length > 1)
+    throw profileError(
+      id,
+      `is declared by multiple homes: ${candidates
+        .map((profile) => profile.home?.repository)
+        .filter((home): home is string => Boolean(home))
+        .join(', ')}`
     )
-  )
-
-export const createAgora = async (configurationDirectory: string, id: string): Promise<AgoraProfile> => {
-  const path = profilePath(configurationDirectory, id)
-  if (await lstat(path).catch(() => undefined)) throw new KiError(`Agora ${id} already exists`, 2)
-  const profile = { path, name: id, projects: {} }
-  await writeManagedAgora(profile)
-  return profileFromManaged({ ...profile, id })
-}
-
-export const addAgoraProject = async (
-  configurationDirectory: string,
-  workingDirectory: string,
-  id: string,
-  value: string
-): Promise<AgoraProfile> => {
-  const profile = await managedAgora(configurationDirectory, id)
-  const path = await physicalProject(value, workingDirectory)
-  const name = projectName(path)
-  if (Object.hasOwn(profile.projects, name)) throw new KiError(`Agora ${id} already has a project named ${name}`, 2)
-  if (Object.values(profile.projects).includes(path)) throw new KiError(`Agora ${id} already has project ${path}`, 2)
-  const projects = { ...profile.projects, [name]: path }
-  const updated = { ...profile, projects }
-  await writeManagedAgora(updated)
-  return profileFromManaged(updated)
-}
-
-export const removeAgoraProject = async (
-  configurationDirectory: string,
-  id: string,
-  name: string
-): Promise<AgoraProfile> => {
-  const profile = await managedAgora(configurationDirectory, id)
-  if (!Object.hasOwn(profile.projects, name)) throw new KiError(`Agora ${id} has no project named ${name}`, 2)
-  const projects = Object.fromEntries(Object.entries(profile.projects).filter(([project]) => project !== name))
-  const updated = { ...profile, projects }
-  await writeManagedAgora(updated)
-  return profileFromManaged(updated)
-}
-
-const isRepository = async (directory: string): Promise<boolean> => {
-  const state = await lstat(join(directory, REPOSITORY_CONFIGURATION_FILE)).catch(() => undefined)
-  return Boolean(state?.isFile() && !state.isSymbolicLink())
-}
-
-const discoverProjects = async (directory: string): Promise<readonly string[]> => {
-  if (await isRepository(directory)) return [directory]
-  const entries = await readdir(directory, { withFileTypes: true })
-  const projects: string[] = []
-  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-    if (entry.name === '.git' || !entry.isDirectory() || entry.isSymbolicLink()) continue
-    projects.push(...(await discoverProjects(join(directory, entry.name))))
-  }
-  return projects
-}
-
-export const discoverAgoraProjects = async (
-  configurationDirectory: string,
-  workingDirectory: string,
-  id: string,
-  directory: string
-): Promise<AgoraProfile> => {
-  const profile = await managedAgora(configurationDirectory, id)
-  const root = await physicalProject(directory, workingDirectory)
-  const discovered = await discoverProjects(root)
-  if (!discovered.length) throw new KiError(`Agora discovery found no KI repositories in ${root}`, 2)
-  const projects = { ...profile.projects }
-  for (const path of discovered) {
-    const name = projectName(path)
-    if (Object.hasOwn(projects, name) && projects[name] !== path)
-      throw new KiError(`Agora ${id} already has a different project named ${name}`, 2)
-    projects[name] = path
-  }
-  const updated = { ...profile, projects }
-  await writeManagedAgora(updated)
-  return profileFromManaged(updated)
+  return candidates[0] as AgoraProfile
 }

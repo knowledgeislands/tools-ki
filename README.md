@@ -38,19 +38,17 @@ For the installation and activation boundary, read the [capability lifecycle gui
 
 Neither command changes user or repository skill activation; read the [update and upgrade guide](https://knowledgeislands.info/guidance/cli/update-upgrade/) for target selection and ownership boundaries.
 
-## Agora profiles
+## Agoras
 
-Named Agora profiles live at `$XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora` (normally `~/.config/ki/agoras`).
+An Agora is declared portably by a registered home repository under `[skills.ki-agora.homes.<id>]`. Its declared members reciprocate under `[skills.ki-agora.memberships.<id>]`; `ki` resolves the declaration only when every member is also locally registered and agrees with its home and role.
 
-Use `ki agora list`, `ki agora show <name>`, and `ki agora open <name>` to inspect or open a profile's project-name ordered Zed roster.
+`estate` is the reserved system selector for every locally registered canonical KI repository. Use `ki agora list`, `ki agora show <id>`, and `ki agora open <id> --target zed` to inspect or open a declared Agora or the estate. Opening requires an explicit permitted target; it currently supports the portable `zed-workspace` policy through Zed.
 
 ## Select repository targets
 
 Every `ki repo` operation accepts repeated `--repo <path-or-pattern>` options or one `--agora <name>` option. The two explicit selectors are mutually exclusive. Literal paths and patterns resolve to physical KI repository roots in deterministic order; an unmatched pattern, invalid root, or duplicate root stops the operation before any target runs.
 
-An Agora is a named user-level collection of physical projects stored at `$XDG_CONFIG_HOME/ki/agoras/<name>.ki-agora`. Use `ki agora create <name>` to create one, `ki agora add <name> <directory>` to add a project, and `ki agora discover <name> <directory>` to add every KI repository discovered below a physical directory. `ki agora remove <name> <project>` removes a project by its profile name, while `list`, `show`, and `open` inspect or open a profile.
-
-`ki repo --agora <name>` selects the profile's projects and requires each selected project to be a physical KI repository. Without an explicit selector, `ki` reads a regular direct-CWD `.mgit-config.toml` and follows its `members` table through standard repositories, nested `main/` checkouts, and `dir` containers. It ignores mGit `symlinks` and bare stores, and never invokes `mgit`. A document that names no member repositories describes the repository it sits in rather than a workspace, so `ki` falls back to single-repository discovery from the working directory — as it does when there is no direct-CWD configuration at all. Selection never resolves to no repository: a selector that matches nothing fails with a message and a non-zero exit rather than completing an operation over nothing.
+`ki repo --agora <name>` selects the declared member repositories (or `estate`) and requires each selected root to remain a physical KI repository. A repeated declaration id is rejected with every declaring home so the user can resolve the ambiguity. Without an explicit selector, `ki` reads a regular direct-CWD `.mgit-config.toml` and follows its `members` table through standard repositories, nested `main/` checkouts, and `dir` containers. It ignores mGit `symlinks` and bare stores, and never invokes `mgit`. A document that names no member repositories describes the repository it sits in rather than a workspace, so `ki` falls back to single-repository discovery from the working directory — as it does when there is no direct-CWD configuration at all. Selection never resolves to no repository: a selector that matches nothing fails with a message and a non-zero exit rather than completing an operation over nothing.
 
 After target selection, operations run in target order. Read-only operations isolate a target's diagnostic; mutations retain earlier successful targets if a later target fails and return a non-zero overall result. Use `ki registry add --repo <path-or-pattern>` to add selected physical KI roots to the local user registry without applying repairs. A local `ki repo conform` also records each selected root first, even when its declaration or later conformance checks fail, so the registry remains an inventory for repair and bulk maintenance rather than a compliance badge.
 
@@ -59,13 +57,13 @@ For each selected repository, `ki repo conform` collects safe write proposals an
 To start a KI repository, run `ki repo init` in an existing Git worktree root, or name that root as its one argument. Supply `--title`, `--description`, `--repo-code`, one or more `--runtime` values (`claude-code` or `chatgpt-codex`), and `--visibility public|private`. Initialization creates only the canonical `ki-repo` declaration and registers that physical root locally; it never runs `git init`, guesses identity, activates skills, creates an Agora, or overwrites an existing declaration.
 
 ```sh
-ki agora create inventory
-ki agora discover inventory ./repos
 ki agora list
+ki agora show estate
+ki agora open estate --target zed
 ki repo init --title 'Example repository' --description 'An explicit KI repository identity.' --repo-code EXAMPLE --runtime claude-code --runtime chatgpt-codex --visibility private
 ki manage diag
 ki repo repair --dry-run
-ki repo --agora inventory audit
+ki repo --agora estate audit
 ```
 
 ## Inspect governed work

@@ -274,14 +274,14 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
     return distinctTargets(targets, '--repo')
   }
   if (options.agora) {
-    const selected = await resolveAgora(options.configurationDirectory, options.workingDirectory, options.agora)
-    if (!selected.projects.length) throw new KiError(`Agora ${selected.id} has no projects`, 2)
+    const selected = await resolveAgora(options.configurationDirectory, options.agora)
+    if (!selected.members.length) throw new KiError(`Agora ${selected.id} has no members`, 2)
     const targets = await Promise.all(
-      selected.projects.map((project) =>
+      selected.members.map((member) =>
         targetFromDirectory(
-          project,
-          `Agora ${selected.id} project ${project} must be an existing physical directory`,
-          `Agora ${selected.id} project ${project} is not a KI repository`
+          member.root,
+          `Agora ${selected.id} member ${member.repository} must be an existing physical directory`,
+          `Agora ${selected.id} member ${member.repository} is not a KI repository`
         )
       )
     )

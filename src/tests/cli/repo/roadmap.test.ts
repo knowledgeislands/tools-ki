@@ -127,7 +127,10 @@ describe('[ki repo roadmap]', () => {
 
   test('lists and filters grouped governed work items without JSON output', async () => {
     const box = await sandbox()
-    await box.project.write('repo/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'repo/.ki-config.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/repo"\n'
+    )
     await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
     await box.project.write(
       'repo/docs/roadmap/KI-TOOL-CLI-010-cleanup.md',
@@ -142,19 +145,19 @@ describe('[ki repo roadmap]', () => {
     )
     const root = await realpath(`${box.project.path}/repo`)
     await box.config.write(
-      'ki/agoras/inventory.ki-agora',
-      `name = "Inventory"\ntool = "zed"\n\n[projects]\nrepo = ${JSON.stringify(root)}\n`
+      'ki/config.toml',
+      `schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = [${JSON.stringify(root)}]\n`
     )
 
     const text = await box.run('ki repo --repo repo roadmap list --horizon next --status draft')
     const accepted = await box.run('ki repo --repo repo roadmap list --status awaiting-review')
     const empty = await box.run('ki repo --repo repo roadmap list --horizon now')
-    const agora = await box.run('ki repo --agora inventory roadmap list --status awaiting-review')
+    const agora = await box.run('ki repo --agora estate roadmap list --status awaiting-review')
     const format = await box.run('ki repo --repo repo roadmap list --format json')
 
     expect(text).toEqual({
-      exitCode: 1,
-      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ╰─ ❌ unavailable: ki environment is not bootstrapped; run \`ki bootstrap\` first\n╰─ summary: ITEMS=1 HORIZONS=1 TRADES=unavailable\n`
+      exitCode: 0,
+      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 HORIZONS=1 TRADES=0 IMPORTS=0 EXPORTS=0\n`
     })
     expect(accepted.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
     expect(accepted.output).not.toContain('KI-TOOL-CLI-003')
