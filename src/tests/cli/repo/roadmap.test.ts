@@ -349,6 +349,11 @@ describe('[ki repo roadmap]', () => {
       ['invalid.md', '---\nwrong\n---\n', 'frontmatter must contain simple key-value fields'],
       ['missing.md', '---\nid: KI-TOOL-CLI-003\n---\n', 'must declare title'],
       ['extra.md', item({ extra: 'field' }), 'has unsupported or repeated field extra'],
+      [
+        'repeated.md',
+        item().replace('title: Inspect governed work', 'title: Inspect governed work\ntitle: Repeated title'),
+        'has unsupported or repeated field title'
+      ],
       ['id.md', item({ id: 'wrong' }), 'must use a matching work-item identifier'],
       ['KI-TOOL-CLI-003-invalid.md', item({ theme: 'Wrong' }), 'has invalid title, theme, or horizon'],
       [
@@ -382,6 +387,21 @@ describe('[ki repo roadmap]', () => {
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
+  })
+
+  test('accepts Harness-owned housekeeping scheduling fields', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md',
+      item({ 'housekeeping-template': 'HK-001', 'scheduled-for': '2026-08-09' })
+    )
+
+    const result = await box.run('ki repo --repo repo roadmap list')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
+    expect(result.output).not.toContain('has unsupported or repeated field housekeeping-template')
   })
 
   test('prunes only completed items across selected repositories after every target is valid', async () => {

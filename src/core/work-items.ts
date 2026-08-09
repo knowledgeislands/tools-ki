@@ -6,10 +6,16 @@ import { prepareWrites, publishWrites } from './transaction.ts'
 const ROADMAP_DIRECTORY = 'docs/roadmap'
 const requiredFields = ['id', 'title', 'theme', 'horizon', 'status', 'blocks', 'blocked-by', 'baseline-ref'] as const
 type RequiredField = (typeof requiredFields)[number]
-type WorkItemField = RequiredField | 'candidate' | 'transferred-from'
+type WorkItemField = RequiredField | 'candidate' | 'transferred-from' | 'housekeeping-template' | 'scheduled-for'
 type WorkItemFields = Partial<Record<WorkItemField, string>>
 
-const allowedFields = new Set<WorkItemField>([...requiredFields, 'candidate', 'transferred-from'])
+const allowedFields = new Set<WorkItemField>([
+  ...requiredFields,
+  'candidate',
+  'transferred-from',
+  'housekeeping-template',
+  'scheduled-for'
+])
 export const workItemHorizons = ['now', 'next', 'soon', 'waiting-for', 'parked', 'future'] as const
 export type WorkItemHorizon = (typeof workItemHorizons)[number]
 const horizons = new Set<WorkItemHorizon>(workItemHorizons)
