@@ -97,8 +97,8 @@ export const renderTradeRelation = (
   const tradeKind = kindBadge(record.kind, icons)
   const observation = observationBadge(record, lifecycle, icons)
   const peer = displayTradePeer(record, direction)
-  const decision = lifecycle.decisionStatus ? `${badge(lifecycle.decisionStatus, '', false)} ` : ''
+  const decision = lifecycle.decisionStatus ? ` ${badge(lifecycle.decisionStatus, '', false)}` : ''
   const relation =
     direction === 'inbound' ? `${observation} ← ${tradeKind} ${peer}` : `${tradeKind} → ${observation} ${peer}`
-  return `${decision}${relation}`
+  return `${relation}${decision}`
 }
