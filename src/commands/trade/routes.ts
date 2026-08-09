@@ -13,7 +13,7 @@ import {
   removeTradeRoute
 } from '../../core/trade-core.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
-import { count, kind, repository, routeDirection, routeState } from './shared.ts'
+import { kind, repository, routeDirection, routeState } from './shared.ts'
 
 interface RouteOptions {
   readonly direction?: string
@@ -26,40 +26,24 @@ interface RouteListOptions {
   readonly html?: boolean
 }
 
-const renderRouteList = (
-  local: Awaited<ReturnType<typeof localRegisteredConfiguration>>,
-  inspected: Awaited<ReturnType<typeof inspectRoutes>>
-): string => {
-  const lines = [
-    '╭─ KI TRADE ROUTES',
-    `│  📁 ${local.configuration.identity}`,
-    `│     ${local.configuration.repository}`,
-    `│  ✦ ${count(inspected.length, 'route')}`,
-    '├─ results'
-  ]
-  if (!inspected.length) lines.push('│  ╰─ routes: none')
-  else {
-    const directions = ['export', 'import'] as const
-    const groups = directions.flatMap((direction) => {
-      const routes = inspected.filter((route) => route.direction === direction)
-      return routes.length ? [{ direction, routes }] : []
-    })
-    lines.push(
-      ...groups.flatMap(({ direction, routes }, groupIndex) => {
-        const lastGroup = groupIndex === groups.length - 1
-        const itemPrefix = `│  ${lastGroup ? '   ' : '│  '}`
-        return [
-          `│  ${lastGroup ? '╰─' : '├─'} ${direction}`,
-          ...routes.map(
-            (route, routeIndex) =>
-              `${itemPrefix}${routeIndex === routes.length - 1 ? '╰─' : '├─'} ${route.kind} ${route.repository} [${routeState(route.state)}]`
-          )
-        ]
-      })
-    )
-  }
-  lines.push(`╰─ summary: ROUTES=${inspected.length}`)
-  return lines.join('\n')
+const renderRouteList = (inspected: Awaited<ReturnType<typeof inspectRoutes>>): string => {
+  const directions = ['export', 'import'] as const
+  const groups = directions.flatMap((direction) => {
+    const routes = inspected.filter((route) => route.direction === direction)
+    return routes.length ? [{ direction, routes }] : []
+  })
+  const results = groups.length
+    ? groups.map(({ direction, routes }) => ({
+        label: direction,
+        children: routes.map((route) => ({
+          label: `${route.kind} ${route.repository} [${routeState(route.state)}]`
+        }))
+      }))
+    : [{ label: 'routes: none' }]
+  return renderTree({
+    title: 'KI TRADE ROUTES',
+    entries: [{ label: 'results', children: results }, { label: `summary: ROUTES=${inspected.length}` }]
+  }).join('\n')
 }
 
 const renderEstateRouteList = (
@@ -97,27 +81,27 @@ const renderEstateRouteList = (
   // Counted over collapsed edges, so the summary and the listed rows agree.
   const active = [...edges.values()].filter((edge) => edge.state === 'active').length
   const incompleteCount = edges.size - active
-  const lines = ['╭─ KI TRADE ROUTES', '│  ◫ registered estate', `│  ✦ ${count(edges.size, 'route')}`, '├─ results']
-  if (!edges.size) lines.push(`│  ╰─ ${incomplete ? 'incomplete routes: none' : 'routes: none'}`)
-  else
-    lines.push(
-      ...exporters.flatMap((exporter, exporterIndex) => {
-        const lastExporter = exporterIndex === exporters.length - 1
-        const peers = [...edges.values()].filter((edge) => edge.exporter === exporter)
-        return [
-          `│  ${lastExporter ? '╰─' : '├─'} ${exporter}`,
-          ...peers.map((edge, peerIndex) => {
+  const results = edges.size
+    ? exporters.map((exporter) => ({
+        label: exporter,
+        children: [...edges.values()]
+          .filter((edge) => edge.exporter === exporter)
+          .map((edge) => {
             const kinds = [...edge.kinds]
               .sort()
               .map((value) => `${value === 'work' ? '⚒' : '◇'} ${value}`)
               .join(', ')
-            return `│  ${lastExporter ? '   ' : '│  '}${peerIndex === peers.length - 1 ? '╰─' : '├─'} → ${edge.importer} · ${kinds} [${edge.state}]`
+            return { label: `→ ${edge.importer} · ${kinds} [${edge.state}]` }
           })
-        ]
-      })
-    )
-  lines.push(`╰─ summary: ROUTES=${edges.size} ACTIVE=${active} INCOMPLETE=${incompleteCount}`)
-  return lines.join('\n')
+      }))
+    : [{ label: incomplete ? 'incomplete routes: none' : 'routes: none' }]
+  return renderTree({
+    title: 'KI TRADE ROUTES',
+    entries: [
+      { label: 'results', children: results },
+      { label: `summary: ROUTES=${edges.size} ACTIVE=${active} INCOMPLETE=${incompleteCount}` }
+    ]
+  }).join('\n')
 }
 
 /**
@@ -200,7 +184,7 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
           const local = await localRegisteredConfiguration(context)
           const inspected = await inspectRoutes(context, local.configuration)
           context.stdout.write(
-            `${renderRouteList(local, options.incomplete ? inspected.filter((route) => route.state !== 'active') : inspected)}\n`
+            `${renderRouteList(options.incomplete ? inspected.filter((route) => route.state !== 'active') : inspected)}\n`
           )
         })
     )
