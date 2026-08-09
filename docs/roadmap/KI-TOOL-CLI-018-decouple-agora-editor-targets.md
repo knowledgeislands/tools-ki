@@ -2,11 +2,11 @@
 id: KI-TOOL-CLI-018
 title: Normalize Agora estate
 theme: cli
-horizon: now
-status: in-progress
+horizon: waiting-for
+status: draft
 blocks: []
 blocked-by: []
-baseline-ref: a708cad5367d92f3136fe8e13d1eed34e6e4ae1c
+baseline-ref: null
 ---
 
 ## Goal
@@ -28,6 +28,8 @@ This item does not define the portable `ki-repo` contract for repository kind an
 ## Current state
 
 Agora profiles currently require `tool = "zed"` and store arbitrary physical directories under basename-derived keys. The user configuration holds a separate unkeyed registry path list.
+
+This work is waiting for a Harness-owned portable reciprocal Agora-membership contract to be accepted. That contract must define an Agora home's identity, purpose, target policy, and approved repository members, plus each member repository's declaration of its Agora home and role. Until then, tools-ki must not invent that schema, alter peer `.ki-config.toml` files, or treat the current local profiles as portable membership evidence.
 
 The accepted `ki-repo` contract makes an ordinary repository implicit when `repo_type` is omitted. A Knowledge Base declares `repo_type = "kb"` and `store_roles`, whose closed vocabulary is `notes`, `sources`, and `legacy`: `notes` names the selected repository itself, while the optional external roles are stable names rather than paths or local bindings. `KI-HARNESS-GOV-015` was accepted in Harness commit `445330a6836e429d603059410481f97fd921593a`, is reachable from Harness `origin/main`, and no later `ki-repo` change alters this model.
 
@@ -59,7 +61,7 @@ The verified canonical Harness archive is pinned to `445330a6836e429d60305941048
 
 ## Dependencies / blocks
 
-The portable `ki-repo` contract is owned by KI Agentic Harness. The pinned archive now carries its accepted kind, role, and authority rules, so nothing blocks this local migration.
+The portable `ki-repo` kind and store-role contract is accepted and available in the pinned Harness archive. The separate reciprocal Agora-membership contract is not yet defined: a Harness-owned work item must establish and be accepted for the portable home/member schema before this CLI can resolve registered identities to local paths or validate agreement. No peer repository configuration may change before that acceptance.
 
 ## Discussion
 
@@ -68,6 +70,10 @@ The portable `ki-repo` contract is owned by KI Agentic Harness. The pinned archi
 The system-managed canonical Agora represents every locally registered canonical KI repository, whether it is a Knowledge Base or a non-KB repository. Registry commands retain their responsibility to add, list, diagnose, and repair this estate. Named Agoras select canonical repository members rather than arbitrary physical directories.
 
 Each member needs a local repository-name key for user-facing configuration and integration with mGit, alongside its declared canonical HTTPS home. A name collision must be diagnosed rather than silently replacing a different canonical repository identity.
+
+### Reciprocal membership authority
+
+`ki-agentic-harness` owns the portable reciprocal-membership contract because it governs declarations that must agree across repositories. `tools-ki` owns only the local resolver and validator that maps registered canonical identities to physical roots and checks the two declarations. The unresolved Harness item is therefore a real prerequisite, not an implementation detail that this CLI may choose unilaterally.
 
 ### Editor targeting
 
