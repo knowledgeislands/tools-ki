@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-027
 title: Separate progress phases
 theme: cli
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: df245e90305b3e1dcd84207adb31de9ea867a130
+baseline-ref: f6948e171f4a031a7f0eea3d62b663cd454bb777
 ---
 
 ## Goal
@@ -15,7 +15,7 @@ Make repository-operation progress clear by showing completed loading, execution
 
 ## Context
 
-`ki repo audit` first loads rubric definitions, then runs the known audit items. It currently uses one live line for both phases, preserving a useful continuous elapsed clock but making the indeterminate loading sweep look like a second audit run. `ki repo conform` has the same loading phase and then genuinely runs conform and verification passes.
+`ki repo audit` first loads rubric definitions, then creates each rubric session to gather its evidence, before running the known audit items. Its per-skill evidence sweep is currently embedded in the audit row, making the audit phase appear to restart. `ki repo conform` has the same loading phase and then genuinely runs conform and verification passes.
 
 The agreed presentation retains each completed phase as a named fixed row and refreshes only the current phase. A reader can therefore see what has completed, which phase is active, and its own elapsed time.
 
@@ -31,6 +31,7 @@ The progress tracker preserves one clock across definition loading and execution
 
 - [x] Replace the single persistent progress row with named phases that retain their individual completed state.
 - [x] Complete `loading definitions` before opening the active audit phase, preserving the operation clock and leaving no stale terminal row.
+- [ ] Gather every selected audit session as a distinct counted phase before any audit item runs, preserving the canonical skill and item order.
 - [x] Model conform as distinct loading, conform, and verification phases, each with its own known unit and count.
 - [x] Extend interactive and plain-stream CLI contracts for phase order, elapsed time, cursor cleanup, and terminal output.
 
@@ -50,15 +51,6 @@ The progress tracker preserves one clock across definition loading and execution
 
 No implementation dependency. This is a follow-up to the reviewed tree-rendering work in `KI-TOOL-CLI-026`, not a blocker for it.
 
-## Review
-
-- Delivered: `loading definitions` now reports a counted progress phase and is retained as a completed row before audit or conform begins; verification remains separately labelled.
-- Excluded: progress-event semantics, terminal report layout, operation ordering, and exit behaviour remain unchanged.
-- Evidence: baseline `df245e90305b3e1dcd84207adb31de9ea867a130`; implementation `2d2717713ad36652d81f01f69d91263ecbfed3a3`; coverage isolation `0beccfb52383a578914f000533e61543fc451022`; focused repository-progress contracts, `bunx biome check`, `bunx tsc --noEmit`, `bun run test:coverage` (560 contracts; 100% coverage), and `ki repo audit --repo .` passed.
-- Decision: loading has a known definition count, so its bar is determinate rather than an indeterminate sweep; its terminal row makes the transition to audit or conform explicit.
-- Concerns: none.
-- Learning route: consider making coverage report locations invocation-scoped if concurrent full-suite runs remain common.
-
 ## Discussion
 
 ### Phase lifetime
@@ -67,4 +59,4 @@ The definitions phase has a known count of selected skills, while the audit-item
 
 ### Consistent operations
 
-Audit has loading followed by audit. Conform has loading, conform, and verification; the labels make its two substantive passes intentional rather than ambiguous. The presentation must not imply that every phase has the same unit of work or a comparable completion percentage.
+Audit has loading, evidence gathering, and item audit. Conform has loading, conform, and verification; the labels make its two substantive passes intentional rather than ambiguous. The presentation must not imply that every phase has the same unit of work or a comparable completion percentage.
