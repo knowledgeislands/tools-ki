@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-026
 title: Centralize CLI rendering
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: a375a9f802aad45b5032ea1c03f5aadd080a1f04
@@ -90,6 +90,10 @@ Manual interactive review confirmed that the report formatting and continuously 
 ### Mini recap
 
 The renderer is deliberately a small report-layout boundary rather than a terminal UI framework. Progress phase presentation is intentionally outside that boundary.
+
+## Done
+
+Accepted on 2026-08-09 after review of the full migration and its contract evidence. This retained record captures the renderer boundary and completed rollout.
 
 ## Discussion
 
