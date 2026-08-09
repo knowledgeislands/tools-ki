@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-018
 title: Normalize Agora estate
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked-by: []
 baseline-ref: 0db2f8acdb739c07a0da83b2e1d23cf1816b4c17
@@ -94,6 +94,10 @@ The public command surface, `README.md`, `CHANGELOG.md`, `ki(1)`, and generated 
 ### Mini recap
 
 The migration removed the old mixed identity/path model without widening the canonical estate beyond KI repositories. The remaining store-role concern is a workspace-composition feature, not a defect in Agora estate resolution.
+
+## Done
+
+Accepted on 2026-08-09 after explicit review approval. Retain this record only until the requested explicit prune.
 
 ## Discussion
 
