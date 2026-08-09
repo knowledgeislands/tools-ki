@@ -3,10 +3,10 @@ id: KI-TOOL-CLI-027
 title: Separate progress phases
 theme: cli
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked-by: []
-baseline-ref: f6948e171f4a031a7f0eea3d62b663cd454bb777
+baseline-ref: 18ca452e9d06e0f7691d78026379486bfe2d7178
 ---
 
 ## Goal
@@ -34,6 +34,7 @@ The progress tracker preserves one clock across definition loading and execution
 - [x] Gather every selected audit session as a distinct counted phase before any audit item runs, preserving the canonical skill and item order.
 - [x] Model conform as distinct loading, conform, and verification phases, each with its own known unit and count.
 - [x] Extend interactive and plain-stream CLI contracts for phase order, elapsed time, cursor cleanup, and terminal output.
+- [ ] Retain completed phase rows in interactive multi-progress output, so subsequent phases do not rewind over them.
 
 ## Files touched
 
@@ -51,15 +52,6 @@ The progress tracker preserves one clock across definition loading and execution
 ## Dependencies / blocks
 
 No implementation dependency. This is a follow-up to the reviewed tree-rendering work in `KI-TOOL-CLI-026`, not a blocker for it.
-
-## Review
-
-- Delivered: audit gathers all selected rubric sessions as a counted evidence phase before it starts mechanical items, retaining completed loading and evidence rows before the item-audit row.
-- Excluded: rubric event semantics, mechanical-item order within and across skills, terminal report layout, and CLI exit behaviour remain unchanged.
-- Evidence: baseline `f6948e171f4a031a7f0eea3d62b663cd454bb777`; implementation `94b3ae3ce566f869c2ee215dac29a441b1201442`; focused repository-progress contracts, `bunx tsc --noEmit`, `bun run test:coverage` (561 contracts; 100% coverage), and `ki repo audit --progress always --reporter-levels all` passed.
-- Decision: session construction is a distinct, read-only evidence phase. Completing every session before any item makes its 14-session count meaningful and prevents the item audit from appearing to restart.
-- Concerns: none.
-- Learning route: none.
 
 ## Discussion
 
