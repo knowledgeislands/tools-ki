@@ -35,14 +35,16 @@ The accepted `ki-repo` contract makes an ordinary repository implicit when `repo
 
 The verified canonical Harness archive is pinned to `445330a6836e429d603059410481f97fd921593a` with SHA-256 `9d395e9b35748f7cbb26b93f96407ab407d166d2d4e2fbc8519781585ee2692c`. Its `ki-repo` standard preserves the model above: omitted `repo_type` is an ordinary repository, `repo_type = "kb"` is the only specialised kind, and `store_roles` is the closed `notes`, `sources`, and `legacy` vocabulary. Normal canonical acquisition can therefore provide the contract this migration consumes.
 
+Commit `55daa69` replaces user-local `.ki-agora` profiles with the local resolver for the accepted reciprocal home/member contract. `estate` is the reserved system selector for registered canonical repository roots; named declarations resolve only when every member is registered and reciprocates the home and role. It deliberately opens only those canonical roots through `ki agora open <agora> --target zed`: it neither binds external store roles nor writes peer declarations. Store-role target composition remains a later, separately approved boundary.
+
 ## Steps
 
 - [x] Pin and verify the canonical Harness archive containing the accepted `ki-repo` contract.
 - [ ] Reconcile the implicit ordinary-repository model and KB `store_roles` into typed repository configuration, resolution, and validation.
-- [ ] Replace the separate registry path list with a protected canonical Agora derived from registered members, each carrying a local repository-name key and canonical HTTPS identity.
-- [ ] Restrict persisted named Agoras to canonical estate members, diagnose name and identity collisions, and retain registry commands as the first-class estate-management interface.
-- [ ] Remove `tool` and physical project paths from `.ki-agora`; require `ki agora open <agora> --target zed` at the target boundary, where Zed composes repository members and declared stores.
-- [ ] Migrate configuration, CLI contracts, completions, manual, README, changelog, and contract tests without compatibility aliases.
+- [x] Derive a protected canonical `estate` Agora from registered members, each carrying a local repository-name key and canonical HTTPS identity.
+- [x] Resolve named reciprocal declarations only across canonical estate members, diagnose name and identity collisions, and retain registry commands as the first-class estate-management interface.
+- [x] Remove `tool` and physical project paths from `.ki-agora`; require `ki agora open <agora> --target zed` at the target boundary, where Zed composes canonical repository members.
+- [x] Migrate configuration, CLI contracts, completions, manual, README, changelog, and contract tests without compatibility aliases.
 
 ## Files touched
 
