@@ -1,6 +1,6 @@
 # Agoras — AGORA
 
-This area specifies named user-level repository groups; see the [Feature Definitions index](index.md) for corpus conventions and registered prefixes.
+This area specifies named user-level repository groups; see the [Specifications index](index.md) for corpus conventions and registered prefixes.
 
 ## Profile lifecycle
 

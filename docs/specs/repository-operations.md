@@ -1,6 +1,6 @@
 # Repository operations — REPO-OPS
 
-This area specifies repository operations other than the focused audit contract in [repository-audit.md](repository-audit.md); see the [Feature Definitions index](index.md) for corpus conventions and registered prefixes.
+This area specifies repository operations other than the focused audit contract in [repository-audit.md](repository-audit.md); see the [Specifications index](index.md) for corpus conventions and registered prefixes.
 
 ## Target and transaction boundaries
 

@@ -1,6 +1,6 @@
 # Compatible Harnesses — HARN
 
-This area specifies installed compatible Harness lifecycle behaviour; see the [Feature Definitions index](index.md) for the corpus conventions and registered prefixes.
+This area specifies installed compatible Harness lifecycle behaviour; see the [Specifications index](index.md) for the corpus conventions and registered prefixes.
 
 ## Verified installation
 

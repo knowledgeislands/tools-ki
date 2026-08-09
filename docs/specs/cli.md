@@ -1,6 +1,6 @@
 # CLI host — CLI
 
-This area specifies the public root interface of `ki`; see the [Feature Definitions index](index.md) for the corpus conventions and registered prefixes.
+This area specifies the public root interface of `ki`; see the [Specifications index](index.md) for the corpus conventions and registered prefixes.
 
 ## Command discovery and errors
 

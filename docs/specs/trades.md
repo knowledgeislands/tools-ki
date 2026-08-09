@@ -1,6 +1,6 @@
 # Cross-repository trades — TRADE
 
-This area specifies the CLI host's local trade operations; see the [Feature Definitions index](index.md) for corpus conventions and registered prefixes.
+This area specifies the CLI host's local trade operations; see the [Specifications index](index.md) for corpus conventions and registered prefixes.
 
 ## Directional records
 

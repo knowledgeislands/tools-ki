@@ -1,6 +1,6 @@
 # User management — MANAGE
 
-This area specifies the user-oriented management interface; see the [Feature Definitions index](index.md) for the corpus conventions and registered prefixes.
+This area specifies the user-oriented management interface; see the [Specifications index](index.md) for the corpus conventions and registered prefixes.
 
 ## Inventory and diagnosis
 

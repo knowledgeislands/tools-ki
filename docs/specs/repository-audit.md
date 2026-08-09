@@ -1,6 +1,6 @@
 # Repository audit — REPO-AUDIT
 
-This area specifies the as-built public behaviour of `ki repo audit`; see the [Feature Definitions index](index.md) for the corpus conventions and registered prefixes.
+This area specifies the as-built public behaviour of `ki repo audit`; see the [Specifications index](index.md) for the corpus conventions and registered prefixes.
 
 ## Repository and capability selection
 

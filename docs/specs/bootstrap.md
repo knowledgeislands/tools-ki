@@ -1,6 +1,6 @@
 # Bootstrap lifecycle — BOOT
 
-This area specifies first-time user activation and refresh; see the [Feature Definitions index](index.md) for the corpus conventions and registered prefixes.
+This area specifies first-time user activation and refresh; see the [Specifications index](index.md) for the corpus conventions and registered prefixes.
 
 ## Configuration and core inventory
 

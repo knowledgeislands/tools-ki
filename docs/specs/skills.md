@@ -1,6 +1,6 @@
 # Skill activation and rubrics — SKILL
 
-This area specifies user and repository skill activation plus public rubric publication; see the [Feature Definitions index](index.md) for the corpus conventions and registered prefixes.
+This area specifies user and repository skill activation plus public rubric publication; see the [Specifications index](index.md) for the corpus conventions and registered prefixes.
 
 ## Activation scopes
 

@@ -1,6 +1,6 @@
 # Repository registry — REGISTRY
 
-This area specifies explicit repository registration and inventory; see the [Feature Definitions index](index.md) for the corpus conventions and registered prefixes.
+This area specifies explicit repository registration and inventory; see the [Specifications index](index.md) for the corpus conventions and registered prefixes.
 
 ## Explicit repository selection
 

@@ -1,10 +1,10 @@
-# Feature Definitions
+# Specifications
 
 This corpus records the current observable behaviour of bounded `tools-ki` areas so maintainers can identify the contract and its verification without reconstructing it from source code and tests alone.
 
-## How these definitions fit
+## How these specifications fit
 
-Feature Definitions describe what the built CLI does. Decision Records explain why a behaviour was chosen, guides explain how to operate it, and roadmap items record when planned work will happen.
+Specifications describe what the built CLI does. Decision Records explain why a behaviour was chosen, guides explain how to operate it, and roadmap items record when planned work will happen.
 
 ## Reading a requirement
 

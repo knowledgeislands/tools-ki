@@ -1,6 +1,6 @@
 # Local Harness development — DEV
 
-This area specifies the controlled local Harness projection; see the [Feature Definitions index](index.md) for the corpus conventions and registered prefixes.
+This area specifies the controlled local Harness projection; see the [Specifications index](index.md) for the corpus conventions and registered prefixes.
 
 ## Projection lifecycle
 

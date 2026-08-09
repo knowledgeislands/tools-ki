@@ -1,6 +1,6 @@
 # Knowledge package acquisition — ACQUIRE
 
-This area specifies the as-built `ki acquire` boundary; see the [Feature Definitions index](index.md) for the corpus conventions and registered prefixes.
+This area specifies the as-built `ki acquire` boundary; see the [Specifications index](index.md) for the corpus conventions and registered prefixes.
 
 ## Package construction
 
