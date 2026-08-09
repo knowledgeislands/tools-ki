@@ -3,7 +3,7 @@ id: KI-TOOL-CLI-026
 title: Centralize CLI rendering
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked-by: []
 baseline-ref: a375a9f802aad45b5032ea1c03f5aadd080a1f04
@@ -64,6 +64,32 @@ Each migration retained command content and semantics while replacing layout con
 ## Dependencies / blocks
 
 Nothing blocks this internal refactor. It should be completed independently of output-content redesigns, because the renderer makes later presentation decisions apply consistently across every migrated report.
+
+## Review
+
+### Delivered
+
+All current production tree reports now pass structured entries to `src/core/tree-rendering.ts`. The shared renderer owns branches, indentation, title context, continuations, normalized label whitespace, and streamed report sections.
+
+### Summary of changes
+
+Migrated the Agora, Harness, Manage, Repository, and Trade report paths. Repository audit and conform now start their report before live progress, then stream their final sections and terminal summary through the common reporter.
+
+### Verification
+
+Focused CLI contract tests, `bunx tsc --noEmit`, `bun run test:coverage`, and production-source scans for tree glyphs passed. The roadmap and authoring audits also pass.
+
+### Outstanding concerns
+
+None within this item’s tree-rendering scope. The user-visible distinction between loading and execution progress is tracked separately by `KI-TOOL-CLI-027`.
+
+### Post-change review
+
+Manual interactive review confirmed that the report formatting and continuously advancing elapsed time are clear. It also identified that loading rubric definitions and running the audit currently share one resetting progress line; the agreed follow-up is to retain named completed phases as separate rows.
+
+### Mini recap
+
+The renderer is deliberately a small report-layout boundary rather than a terminal UI framework. Progress phase presentation is intentionally outside that boundary.
 
 ## Discussion
 
