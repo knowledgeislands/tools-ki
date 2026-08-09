@@ -131,11 +131,17 @@ describe('[ki repo audit evidence progress]', () => {
       emit({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
     `)
 
-    const result = await box.run('ki repo audit --progress always --progress-style multi', { now: () => 0 })
+    const result = await box.run('ki repo audit --progress always --progress-style multi', {
+      interactive: true,
+      now: () => 0
+    })
 
     expect(result.exitCode).toBe(0)
     expect(stripVTControlCharacters(result.output)).toContain('[ki-example] engineering evidence')
     expect(stripVTControlCharacters(result.output)).toContain('[ki-example] EXAMPLE-1')
+    // A completed phase collapses from one skill row plus its summary to its retained summary;
+    // the next live panel starts below it rather than rewinding over it.
+    expect(result.output).toContain('\x1b[1A')
   })
 
   test('strips terminal control sequences from a rubric-supplied label', async () => {

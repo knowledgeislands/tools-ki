@@ -309,6 +309,15 @@ const createProgressTracker = (
     // otherwise scroll and the cursor-up would overwrite unrelated output.
     const height = Math.max(1, Math.floor(terminalColumns(context.stderr.columns) / 2))
     const rewind = interactive && renderedRows && renderedRows <= height ? `\x1b[${renderedRows}A` : ''
+    if (final && interactive && renderedRows <= height) {
+      const [summary = ''] = rows.slice(-1)
+      // A multi tracker exists only for at least one selected skill, so every frame has
+      // a skill row and a summary. The summary therefore always has a row below it to clear.
+      const trailingRows = renderedRows - 1
+      context.stderr.write(`${rewind}\r\x1b[2K${summary}\n${'\r\x1b[2K\n'.repeat(trailingRows)}\x1b[${trailingRows}A`)
+      renderedRows = 0
+      return
+    }
     context.stderr.write(`${rewind}${rows.map((row) => `${interactive ? '\r\x1b[2K' : ''}${row}\n`).join('')}`)
     renderedRows = rows.length
   }
