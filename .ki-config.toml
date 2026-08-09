@@ -33,9 +33,9 @@ VENDOR = "cross-repository-vendoring"
 
 [skills.ki-decision-records]
 
-[skills.ki-repo-trades]
+[skills.ki-trades]
 
-[skills.ki-repo-trades.routes]
+[skills.ki-trades.routes]
 "knowledgeislands/ki-agentic-harness" = { export = ["work", "knowledge"], import = ["work"] }
 "knowledgeislands/ki-website" = { export = ["work", "knowledge"] }
 "knowledgeislands/tools-mgit" = { export = ["work"], import = ["work"] }

@@ -9,7 +9,7 @@ import { KiError } from './errors.ts'
 import { requiredLocalRegistry } from './local-registry.ts'
 import { type RepositoryLocation, resolveRepository } from './repository.ts'
 
-const TRADES_TABLE = 'skills.ki-repo-trades'
+const TRADES_TABLE = 'skills.ki-trades'
 const REPOSITORY_TABLE = 'skills.ki-repo'
 const addressExpression = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
 const repositoryExpression =
@@ -220,7 +220,7 @@ const parseConfiguration = (contents: string, path: string): TradeConfiguration 
   )
     throw tradeError(`${path} [${REPOSITORY_TABLE}].repository must use canonical HTTPS GitHub repository form`)
   const repository = repositoryDeclaration.repository
-  const declaration = skillTable(parsed, 'ki-repo-trades')
+  const declaration = skillTable(parsed, 'ki-trades')
   if (!isRecord(declaration)) throw tradeError(`${path} does not declare [${TRADES_TABLE}]`)
   const unknown = Object.keys(declaration).find((key) => key !== 'routes')
   if (unknown) throw tradeError(`${path} [${TRADES_TABLE}] has unrecognised key ${unknown}`)

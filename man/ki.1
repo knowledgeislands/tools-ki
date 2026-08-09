@@ -276,7 +276,7 @@ configuration is reused without replacement. Pass
 to redetect every supported runtime and rebuild the user configuration's
 agents, installed harnesses, and KI-managed user skill links.
 During a refresh only, KI imports the retired
-\fB[repositories].paths\fR list into
+\fB[repositories].paths\fR list into keyed records in
 \fB$XDG_STATE_HOME/ki/registry.toml\fR and removes that list from user
 configuration. Normal repository, trade, and Agora resolution never reads the
 retired path list.
@@ -535,8 +535,9 @@ repository. It changes neither user nor repository skill activation.
 .PP
 Use these root-level commands to record and list canonical KI repository roots
 in \fB$XDG_STATE_HOME/ki/registry.toml\fR. Registry membership is an inventory, not a
-repository-operation or conformance verdict. Each entry records a stable local
-key, canonical HTTPS GitHub repository identity, and physical checkout path.
+repository-operation or conformance verdict. The repository key names each
+record; each record holds a canonical HTTPS GitHub repository identity and
+physical checkout path.
 .TP
 .B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
 Record selected canonical KI repository roots in \fB$XDG_STATE_HOME/ki/registry.toml\fR
@@ -738,7 +739,7 @@ governing skill is declared by its bare name under \fB[skills]\fR, carrying its
 own configuration. A skill drawn from a harness outside that list keeps a
 quoted, fully-qualified \fB[skills."<harness-id>:<skill-name>"]\fR key.
 Repository identity and metadata live in \fB[skills.ki-repo]\fR, and trade
-routes in \fB[skills.ki-repo-trades.routes]\fR, keyed once per partner.
+routes in \fB[skills.ki-trades.routes]\fR, keyed once per partner.
 .SH DEVELOPMENT INSTALLATIONS
 \&
 .PP
