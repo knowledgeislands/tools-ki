@@ -4,10 +4,10 @@ title: Weight estate maps
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 0e0938fa4d9a41f73403e66c078ee381b8795ed2
 ---
 
 ## Goal
