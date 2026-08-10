@@ -3,6 +3,7 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
 import { type RepositoryPlanningSource, readRepositoryPlanningSource } from '../../core/planning.ts'
+import { presentation } from '../../core/presentation.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade-core.ts'
 import { renderTree, type TreeEntry } from '../../core/tree-rendering.ts'
@@ -63,7 +64,7 @@ const renderTradeEntries = (
   diagnostic?: string,
   icons = true
 ): readonly TreeEntry[] => {
-  if (diagnostic) return [{ label: `❌ unavailable: ${diagnostic}` }]
+  if (diagnostic) return [{ label: `${presentation('status.unavailable').terminal} unavailable: ${diagnostic}` }]
   const directions = [
     ['import', 'inbound'],
     ['export', 'outbound']
@@ -95,7 +96,9 @@ const countTradeDirections = (
 }
 
 const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[], icons = true): string => {
-  const context = [{ label: `📁 ${basename(result.repository)} (${result.repository})` }]
+  const context = [
+    { label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.repository})` }
+  ]
   const planning = result.planning
   if (planning?.kind === 'streams') {
     const count = planning.focuses.reduce((total, focus) => total + focus.proposals.length, 0)
@@ -120,7 +123,9 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
           ? [
               {
                 label: `stream diagnostics (${planning.diagnostics.length})`,
-                children: planning.diagnostics.map((diagnostic) => ({ label: `❌ ${diagnostic}` }))
+                children: planning.diagnostics.map((diagnostic) => ({
+                  label: `${presentation('status.unavailable').terminal} ${diagnostic}`
+                }))
               }
             ]
           : []),
@@ -135,7 +140,7 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
   const items = result.items ?? []
   const groups = textHorizonGroups(items)
   const roadmap = result.diagnostic
-    ? [{ label: `❌ ${result.diagnostic}` }]
+    ? [{ label: `${presentation('status.unavailable').terminal} ${result.diagnostic}` }]
     : groups.map(({ horizon, items: group }) => ({
         label: `${horizon} (${group.length})`,
         children: group.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))

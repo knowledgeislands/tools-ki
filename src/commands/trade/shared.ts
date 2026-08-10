@@ -1,4 +1,5 @@
 import { grammarError } from '../../core/errors.ts'
+import { presentation, presentationText } from '../../core/presentation.ts'
 import {
   isObservationPolicy,
   isTradeKind,
@@ -69,19 +70,26 @@ type TradeListDirection = 'preparation' | 'inbound' | 'outbound'
 
 const badge = (label: string, icon: string, icons: boolean): string => `[${icons ? `${icon} ` : ''}${label}]`
 
-const kindBadge = (kind: TradeKind, icons: boolean): string => badge(kind, kind === 'work' ? '⚒' : 'ⓘ', icons)
+export const tradeKindText = (kind: TradeKind): string => {
+  const key = kind === 'work' ? 'trade.kind.work' : 'trade.kind.knowledge'
+  return presentationText(key)
+}
+
+const kindBadge = (kind: TradeKind, icons: boolean): string =>
+  badge(kind, presentation(kind === 'work' ? 'trade.kind.work' : 'trade.kind.knowledge').terminal, icons)
 
 const observationBadge = (
   record: Pick<TradeRecord, 'observation'>,
   lifecycle: TradeLifecycle,
   icons: boolean
 ): string => {
-  if (lifecycle.pruneEligible) return badge('prune', '✓', icons)
-  if (lifecycle.releaseEligible) return badge('release', '✓', icons)
-  if (lifecycle.deliveryStatus === 'awaiting-receipt') return badge('receipt', '↓', icons)
+  if (lifecycle.pruneEligible) return badge('prune', presentation('trade.observation.release').terminal, icons)
+  if (lifecycle.releaseEligible) return badge('release', presentation('trade.observation.release').terminal, icons)
+  if (lifecycle.deliveryStatus === 'awaiting-receipt')
+    return badge('receipt', presentation('trade.observation.receipt').terminal, icons)
   if (record.observation === 'completion' && lifecycle.decisionStatus === 'adopted')
-    return badge('completion', '…', icons)
-  return badge('decision', '?', icons)
+    return badge('completion', presentation('trade.observation.complete').terminal, icons)
+  return badge('decision', presentation('trade.observation.pending').terminal, icons)
 }
 
 /** Renders the kind at the sending end and the sender's active observation at the receiving end. */

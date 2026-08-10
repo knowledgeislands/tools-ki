@@ -316,7 +316,7 @@ describe('[ki trade]', () => {
     expect(await box.run(['ki', 'trade', 'show', id])).toMatchObject({ exitCode: 0 })
   })
 
-  test('groups estate routes by exporter when several repositories declare several peers', async () => {
+  test('pairs estate routes lexically when several repositories declare several peers', async () => {
     const box = await sandbox()
     const thirdHome = home('example/third')
     const source = await realpath(box.project.path)
@@ -341,8 +341,11 @@ describe('[ki trade]', () => {
     expect(await box.run('ki trade routes list --estate')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI TRADE ROUTES\n├─ results\n│  ├─ example/receiver\n│  │  ╰─ → example/third · ◇ knowledge [active]\n│  ╰─ example/source\n│     ├─ → example/receiver · ⚒ work [active]\n│     ╰─ → example/third · ⚒ work [active]\n╰─ summary: ROUTES=3 ACTIVE=3 INCOMPLETE=0\n'
+        '╭─ KI TRADE ROUTES\n╭──────────────────┬────────────────────────┬────────────────╮\n│ example/receiver │ → —                    │ example/source │\n│                  ├────────────────────────┤                │\n│                  │ ← ⚒ work [active]      │                │\n├──────────────────┼────────────────────────┼────────────────┤\n│ example/receiver │ → ⓘ knowledge [active] │ example/third  │\n│                  ├────────────────────────┤                │\n│                  │ ← —                    │                │\n├──────────────────┼────────────────────────┼────────────────┤\n│ example/source   │ → ⚒ work [active]      │ example/third  │\n│                  ├────────────────────────┤                │\n│                  │ ← —                    │                │\n╰──────────────────┴────────────────────────┴────────────────╯\nsummary: ROUTES=3 ACTIVE=3 INCOMPLETE=0\n'
     })
+    const narrow = await box.run('ki trade routes list --estate', { interactive: true, columns: 40 })
+    expect(narrow.output).toContain('├─ example/receiver ↔ example/source')
+    expect(narrow.output).toContain('╰─ example/source ↔ example/third')
   })
 
   test('lists incomplete route declarations across the registered estate', async () => {
@@ -353,12 +356,11 @@ describe('[ki trade]', () => {
     expect(estate).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI TRADE ROUTES\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · ◇ knowledge, ⚒ work [active]\n╰─ summary: ROUTES=1 ACTIVE=1 INCOMPLETE=0\n'
+        '╭─ KI TRADE ROUTES\n╭──────────────────┬─────────────────────────────────────────┬────────────────╮\n│ example/receiver │ → —                                     │ example/source │\n│                  ├─────────────────────────────────────────┤                │\n│                  │ ← ⓘ knowledge [active], ⚒ work [active] │                │\n╰──────────────────┴─────────────────────────────────────────┴────────────────╯\nsummary: ROUTES=1 ACTIVE=1 INCOMPLETE=0\n'
     })
     expect(incomplete).toEqual({
       exitCode: 0,
-      output:
-        '╭─ KI TRADE ROUTES\n├─ results\n│  ╰─ incomplete routes: none\n╰─ summary: ROUTES=0 ACTIVE=0 INCOMPLETE=0\n'
+      output: '╭─ KI TRADE ROUTES\n╰─ routes: none\nsummary: ROUTES=0 ACTIVE=0 INCOMPLETE=0\n'
     })
 
     await box.project.write(
@@ -366,11 +368,46 @@ describe('[ki trade]', () => {
       repositoryConfiguration('example/receiver', {}, { work: [sourceHome] })
     )
 
-    expect(await box.run('ki trade routes list --estate --incomplete')).toEqual({
-      exitCode: 0,
-      output:
-        '╭─ KI TRADE ROUTES\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · ◇ knowledge [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
-    })
+    const narrowed = await box.run('ki trade routes list --estate --incomplete')
+    expect(narrowed.exitCode).toBe(0)
+    expect(narrowed.output).toContain('example/receiver')
+    expect(narrowed.output).toContain('← ⓘ knowledge [awaiting receiver activation]')
+    expect(narrowed.output).toContain('summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1')
+  })
+
+  test('uses the same pair projection for explicit wide and narrow estate tables', async () => {
+    const { box } = await configuredPair()
+
+    const wide = await box.run('ki trade routes list --estate', { interactive: true, columns: 120 })
+    const explicit = await box.run('ki trade routes list --estate --table', { interactive: true, columns: 120 })
+    const narrow = await box.run('ki trade routes list --estate', { interactive: true, columns: 40 })
+
+    expect(explicit).toEqual(wide)
+    expect(wide.output).toContain('╭──────────────────┬')
+    expect(wide.output).toContain('example/receiver │ → —')
+    expect(wide.output).toContain('← ⓘ knowledge [active], ⚒ work [active]')
+    expect(narrow.output).toBe(
+      '╭─ KI TRADE ROUTES\n╰─ example/receiver ↔ example/source\n   ├─ → —\n   ╰─ ← ⓘ knowledge [active], ⚒ work [active]\nsummary: ROUTES=1 ACTIVE=1 INCOMPLETE=0\n'
+    )
+  })
+
+  test('keeps both directions in one lexical estate pair', async () => {
+    const { box } = await configuredPair()
+    await box.project.write(
+      '.ki-config.toml',
+      repositoryConfiguration('example/source', { work: [receiverHome] }, { knowledge: [receiverHome] })
+    )
+    await box.project.write(
+      'receiver/.ki-config.toml',
+      repositoryConfiguration('example/receiver', { knowledge: [sourceHome] }, { work: [sourceHome] })
+    )
+
+    const listed = await box.run('ki trade routes list --estate')
+
+    expect(listed.exitCode).toBe(0)
+    expect(listed.output).toContain('→ ⓘ knowledge [active]')
+    expect(listed.output).toContain('← ⚒ work [active]')
+    expect(listed.output).toContain('summary: ROUTES=2 ACTIVE=2 INCOMPLETE=0')
   })
 
   // The diagram asserts structure — node count, edge count, reciprocity, legend, self-containment —
@@ -464,6 +501,10 @@ describe('[ki trade]', () => {
     // Self-contained: the viewer runtime ships in the page, so nothing is fetched when it opens.
     expect(page).toContain('forceSimulation')
     expect(page).not.toMatch(/<script[^>]*\ssrc=/u)
+    expect(page).toContain('aria-label="work"')
+    expect(page).toContain('aria-label="knowledge"')
+    expect(page).toContain('m15 12-8.373 8.373')
+    expect(page).toContain('M12 7v14')
     expect(page).toContain('knowledge</span>')
     expect(opened).toEqual([['open', join(box.home.path, '.cache/ki/estate-routes.html')]])
   })
@@ -506,6 +547,14 @@ describe('[ki trade]', () => {
     expect(await box.run('ki trade routes list --html')).toEqual({
       exitCode: 2,
       output: 'ki: error: trade route --html requires --estate\n'
+    })
+    expect(await box.run('ki trade routes list --table')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: trade route --table requires --estate\n'
+    })
+    expect(await box.run('ki trade routes list --estate --table --html')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: trade route --table cannot be combined with --html\n'
     })
 
     // Without an override the opener is the platform's, which is injected rather than read from
@@ -1335,7 +1384,7 @@ describe('[ki trade]', () => {
     await box.project.write('receiver/.ki-config.toml', repositoryConfiguration('example/receiver'))
     expect(await box.run('ki trade routes list --estate')).toEqual({
       exitCode: 0,
-      output: '╭─ KI TRADE ROUTES\n├─ results\n│  ╰─ routes: none\n╰─ summary: ROUTES=0 ACTIVE=0 INCOMPLETE=0\n'
+      output: '╭─ KI TRADE ROUTES\n╰─ routes: none\nsummary: ROUTES=0 ACTIVE=0 INCOMPLETE=0\n'
     })
 
     await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', { work: [receiverHome] }))
@@ -1346,7 +1395,7 @@ describe('[ki trade]', () => {
     expect(await box.run('ki trade routes list --estate')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI TRADE ROUTES\n├─ results\n│  ╰─ example/source\n│     ╰─ → example/receiver · ⚒ work [awaiting receiver activation]\n╰─ summary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
+        '╭─ KI TRADE ROUTES\n╭──────────────────┬─────────────────────────────────────────┬────────────────╮\n│ example/receiver │ → —                                     │ example/source │\n│                  ├─────────────────────────────────────────┤                │\n│                  │ ← ⚒ work [awaiting receiver activation] │                │\n╰──────────────────┴─────────────────────────────────────────┴────────────────╯\nsummary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
     })
   })
 

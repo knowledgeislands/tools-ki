@@ -2,6 +2,7 @@ import { basename } from 'node:path'
 import { stripVTControlCharacters } from 'node:util'
 import type { KiContext } from '../context.ts'
 import { KiError } from './errors.ts'
+import { presentation } from './presentation.ts'
 import type { ReporterLevel } from './repository-progress.ts'
 import type { educateSkill, Finding, FixedItem, PreparedSkill } from './runtime.ts'
 import { createTreeReporter, renderTree, type TreeEntry, type TreeReporter } from './tree-rendering.ts'
@@ -215,12 +216,12 @@ interface SkillReport {
 }
 
 const REPORT_ICON: Record<RenderedFinding['level'], string> = {
-  fail: '×',
-  warn: '!',
-  fixed: '↺',
-  info: 'i',
-  'not-applicable': '–',
-  pass: '✓'
+  fail: presentation('status.audit-fail').terminal,
+  warn: presentation('status.warn').terminal,
+  fixed: presentation('status.fixed').terminal,
+  info: presentation('status.info').terminal,
+  'not-applicable': presentation('status.not-applicable').terminal,
+  pass: presentation('status.pass').terminal
 }
 
 const REPORT_LABEL: Record<RenderedFinding['level'], string> = {

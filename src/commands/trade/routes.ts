@@ -4,6 +4,7 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
 import { estateNetwork, renderEstateRoutesPage } from '../../core/route-network.ts'
+import { type PairTableRow, renderPairTable } from '../../core/table-rendering.ts'
 import { addTradeRoute, removeTradeRoute } from '../../core/trade-configuration.ts'
 import {
   inspectEstateRoutes,
@@ -12,7 +13,7 @@ import {
   localRegisteredRepository
 } from '../../core/trade-core.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
-import { kind, repository, routeDirection, routeState } from './shared.ts'
+import { kind, repository, routeDirection, routeState, tradeKindText } from './shared.ts'
 
 interface RouteOptions {
   readonly direction?: string
@@ -23,6 +24,7 @@ interface RouteListOptions {
   readonly estate?: boolean
   readonly incomplete?: boolean
   readonly html?: boolean
+  readonly table?: boolean
 }
 
 const renderRouteList = (inspected: Awaited<ReturnType<typeof inspectRoutes>>): string => {
@@ -47,7 +49,8 @@ const renderRouteList = (inspected: Awaited<ReturnType<typeof inspectRoutes>>): 
 
 const renderEstateRouteList = (
   inspected: Awaited<ReturnType<typeof inspectEstateRoutes>>,
-  incomplete: boolean
+  incomplete: boolean,
+  columns?: number
 ): string => {
   const selected = incomplete ? inspected.filter((route) => route.state !== 'active') : inspected
   const routeIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
@@ -55,52 +58,48 @@ const renderEstateRouteList = (
     route.direction === 'export'
       ? [route.source.identity, routeIdentity(route.repository)]
       : [routeIdentity(route.repository), route.source.identity]
-  const ordered = [...selected].sort((left, right) => {
-    const [leftExporter, leftImporter] = endpoints(left)
-    const [rightExporter, rightImporter] = endpoints(right)
-    return (
-      leftExporter.localeCompare(rightExporter) ||
-      leftImporter.localeCompare(rightImporter) ||
-      left.kind.localeCompare(right.kind) ||
-      left.direction.localeCompare(right.direction)
-    )
-  })
-  // A reciprocal route is declared on both sides, so both declarations describe one edge.
-  // Collapse them, then group by exporter so each peer is named once carrying its kinds.
-  const edges = new Map<string, { exporter: string; importer: string; state: string; kinds: Set<string> }>()
-  for (const route of ordered) {
+  // A reciprocal declaration describes the same directed route; collapse it before pairing endpoints.
+  const edges = new Map<
+    string,
+    {
+      exporter: string
+      importer: string
+      state: string
+      kinds: Set<'work' | 'knowledge'>
+    }
+  >()
+  for (const route of selected) {
     const [exporter, importer] = endpoints(route)
     const state = routeState(route.state)
     const key = `${exporter} ${importer} ${state}`
-    const edge = edges.get(key) ?? { exporter, importer, state, kinds: new Set<string>() }
+    const edge = edges.get(key) ?? { exporter, importer, state, kinds: new Set<'work' | 'knowledge'>() }
     edge.kinds.add(route.kind)
     edges.set(key, edge)
   }
-  const exporters = [...new Set([...edges.values()].map(({ exporter }) => exporter))]
-  // Counted over collapsed edges, so the summary and the listed rows agree.
+  const pairs = new Map<string, { left: string; right: string; forward: Set<string>; reverse: Set<string> }>()
+  for (const edge of edges.values()) {
+    const left = edge.exporter.localeCompare(edge.importer) <= 0 ? edge.exporter : edge.importer
+    const right = edge.exporter === left ? edge.importer : edge.exporter
+    const key = `${left}\n${right}`
+    const pair = pairs.get(key) ?? { left, right, forward: new Set<string>(), reverse: new Set<string>() }
+    const target = edge.exporter === left ? pair.forward : pair.reverse
+    for (const value of edge.kinds) target.add(`${tradeKindText(value)} [${edge.state}]`)
+    pairs.set(key, pair)
+  }
   const active = [...edges.values()].filter((edge) => edge.state === 'active').length
   const incompleteCount = edges.size - active
-  const results = edges.size
-    ? exporters.map((exporter) => ({
-        label: exporter,
-        children: [...edges.values()]
-          .filter((edge) => edge.exporter === exporter)
-          .map((edge) => {
-            const kinds = [...edge.kinds]
-              .sort()
-              .map((value) => `${value === 'work' ? '⚒' : '◇'} ${value}`)
-              .join(', ')
-            return { label: `→ ${edge.importer} · ${kinds} [${edge.state}]` }
-          })
-      }))
-    : [{ label: incomplete ? 'incomplete routes: none' : 'routes: none' }]
-  return renderTree({
-    title: 'KI TRADE ROUTES',
-    entries: [
-      { label: 'results', children: results },
-      { label: `summary: ROUTES=${edges.size} ACTIVE=${active} INCOMPLETE=${incompleteCount}` }
-    ]
-  }).join('\n')
+  const rows: PairTableRow[] = [...pairs.values()]
+    .sort((a, b) => a.left.localeCompare(b.left) || a.right.localeCompare(b.right))
+    .map((pair) => ({
+      left: pair.left,
+      right: pair.right,
+      forward: `→ ${[...pair.forward].sort().join(', ') || '—'}`,
+      reverse: `← ${[...pair.reverse].sort().join(', ') || '—'}`
+    }))
+  return [
+    ...renderPairTable('KI TRADE ROUTES', rows, columns),
+    `summary: ROUTES=${edges.size} ACTIVE=${active} INCOMPLETE=${incompleteCount}`
+  ].join('\n')
 }
 
 /**
@@ -161,9 +160,12 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
         .description('list local routes or every registered route and its estate state')
         .option('--estate', 'list route declarations across the registered repository estate')
         .option('--incomplete', 'show only routes that are not active')
+        .option('--table', 'render estate routes as repository pairs')
         .option('--html', 'render the estate as an interactive network page and open it')
         .action(async (options: RouteListOptions) => {
+          if (options.table && !options.estate) throw grammarError('trade route --table requires --estate')
           if (options.html && !options.estate) throw grammarError('trade route --html requires --estate')
+          if (options.table && options.html) throw grammarError('trade route --table cannot be combined with --html')
           if (options.estate) {
             const inspected = await inspectEstateRoutes(context)
             const incomplete = Boolean(options.incomplete)
@@ -177,7 +179,9 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
               await openInBrowser(context, path)
               return
             }
-            context.stdout.write(`${renderEstateRouteList(inspected, incomplete)}\n`)
+            context.stdout.write(
+              `${renderEstateRouteList(inspected, incomplete, context.stdout.isTTY ? context.stdout.columns : undefined)}\n`
+            )
             return
           }
           const local = await localRegisteredConfiguration(context)

@@ -4,7 +4,7 @@ title: Centralize CLI icons
 area: CLI
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: c8bb7491dcea534796b0ce71734a17dcf7f61220
@@ -30,13 +30,13 @@ The estate HTML is self-contained and currently vendors D3. It can vendor the sm
 
 ## Steps
 
-- [ ] Add a typed, renderer-aware presentation registry for the existing shared user-facing concepts: trade kinds and observations, repository and skill entities, and report/diagnostic statuses. Each entry supplies an accessible label, portable terminal glyph, and (where required) a Lucide SVG identity. Keep layout punctuation out of this registry.
-- [ ] Add an internal box-table renderer that accepts a caller-supplied character set and defaults to the rounded single-line box-drawing style used by CLI trees. It must support endpoint cells spanning two directional sub-rows without exposing a generic table command or configuration.
-- [ ] Refactor estate route projection into unordered lexical repository pairs. Each pair carries an explicit left-to-right and right-to-left route cell, including kinds and route state; an absent direction renders as `—`. Keep the existing directed-route and active/incomplete summary semantics.
-- [ ] Make the pair table the default for `ki trade routes list --estate`; accept `--table` as its explicit equivalent; require `--estate` for both `--table` and `--html`; and reject their combination. At a viable live TTY width, render the spanning-cell table; otherwise render a stacked pair block from the same pair projection rather than an exporter-grouped tree.
-- [ ] Migrate trade route and record output plus existing repository reporting and diagnostic icons to the registry, preserving all command grammar, lifecycle behaviour, textual labels, and non-icon output.
-- [ ] Render the estate HTML legend and route chips from the same trade-kind mappings, using locally vendored Lucide `BookOpen` and `Hammer` SVG paths with accessible labels and no network request.
-- [ ] Add CLI-level wide, narrow, empty, incomplete, explicit-table, and invalid-flag route-output coverage; update presentation-dependent command assertions; and document both estate renderers and the icon vocabulary in the README, manual, and changelog.
+- [x] Add a typed, renderer-aware presentation registry for the existing shared user-facing concepts: trade kinds and observations, repository and skill entities, and report/diagnostic statuses. Each entry supplies an accessible label, portable terminal glyph, and (where required) a Lucide SVG identity. Keep layout punctuation out of this registry.
+- [x] Add an internal box-table renderer that accepts a caller-supplied character set and defaults to the rounded single-line box-drawing style used by CLI trees. It must support endpoint cells spanning two directional sub-rows without exposing a generic table command or configuration.
+- [x] Refactor estate route projection into unordered lexical repository pairs. Each pair carries an explicit left-to-right and right-to-left route cell, including kinds and route state; an absent direction renders as `—`. Keep the existing directed-route and active/incomplete summary semantics.
+- [x] Make the pair table the default for `ki trade routes list --estate`; accept `--table` as its explicit equivalent; require `--estate` for both `--table` and `--html`; and reject their combination. At a viable live TTY width, render the spanning-cell table; otherwise render a stacked pair block from the same pair projection rather than an exporter-grouped tree.
+- [x] Migrate trade route and record output plus existing repository reporting and diagnostic icons to the registry, preserving all command grammar, lifecycle behaviour, textual labels, and non-icon output.
+- [x] Render the estate HTML legend and route chips from the same trade-kind mappings, using locally vendored Lucide `BookOpen` and `Hammer` SVG paths with accessible labels and no network request.
+- [x] Add CLI-level wide, narrow, empty, incomplete, explicit-table, and invalid-flag route-output coverage; update presentation-dependent command assertions; and document both estate renderers and the icon vocabulary in the README, manual, and changelog.
 
 ## Files touched
 
@@ -51,6 +51,43 @@ Expected public material: `README.md`, `man/ki.1`, and `CHANGELOG.md`.
 ## Dependencies / blocks
 
 No external dependency is required. The selection of semantic roles must remain bounded to shared user-facing concepts, rather than absorbing tree layout characters or arbitrary command punctuation. The table view applies only to the registered estate; local declaration listing keeps its current rendering.
+
+## Review
+
+### Delivered
+
+- A bounded presentation registry now supplies terminal labels and glyphs for trade, report, diagnostic, repository, and skill roles, plus locally vendored Lucide SVG paths for work and knowledge.
+- Estate route listing now pairs lexical repository identities, renders directional sub-rows in a responsive box table, and retains the existing route summary semantics.
+- `--table` is the explicit estate text form; `--html` remains the mutually exclusive interactive form.
+
+### Summary of changes
+
+- Added internal presentation and table-rendering modules, then migrated trade views, report renderers, and diagnostics to named presentation roles.
+- Replaced the estate network's geometric chips with accessible self-contained Lucide Hammer and Book Open SVGs.
+- Updated completion, contract tests, README, manual, and changelog for the new table and icon vocabulary.
+
+### Verification
+
+- `bun run test`
+- `bun run test:coverage`
+- `bunx tsc --noEmit`
+- `bunx vitest run src/tests/cli/trade/trade.test.ts src/tests/cli/manage/doctor.test.ts src/tests/cli/manage/repair.test.ts src/tests/cli/manage/diag.test.ts src/tests/cli/repo/repair.test.ts src/tests/cli/repo/roadmap.test.ts src/tests/cli/repo/repo.test.ts src/tests/cli/root/user.test.ts`
+- `bunx rumdl check README.md CHANGELOG.md`
+- `mandoc -T lint man/ki.1`
+
+### Outstanding concerns
+
+- `ki repo audit --repo .` still reports a pre-existing `ki-engineering` failure in `src/core/registry.ts`: import ordering and one formatting block introduced by baseline commit `3e54a55`. That file is outside this change and remains unmodified.
+
+### Post-change review
+
+- The text table is internal to estate route rendering; local route listing and trade route lifecycle rules remain unchanged.
+- The pair projection collapses reciprocal declarations only after preserving direction, kinds, and state, so its directed-route summary remains compatible with the former renderer.
+- HTML contains all icon paths and labels directly in the generated page; it loads neither an icon font nor an external icon asset.
+
+### Mini recap
+
+Estate routes are now readable pair-by-pair in terminals and remain explorable in a self-contained HTML network, with one presentation vocabulary across the affected CLI surfaces.
 
 ## Discussion
 

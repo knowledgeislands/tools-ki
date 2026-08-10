@@ -86,7 +86,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki trade routes add`
 - `ki trade routes remove`
-- `ki trade routes list [--estate] [--incomplete] [--html]`
+- `ki trade routes list [--estate] [--incomplete] [--table|--html]`
 - `ki trade routes check`
 - `ki trade prepare`
 - `ki trade observe`
@@ -117,7 +117,8 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context.
 - `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.
-- `ki trade routes list [--estate] [--incomplete]` is a framed local or registered-estate route inventory; `--html` renders the estate as a self-contained interactive force-directed network instead, written to the cache and opened in a browser, drawing one arc per direction with per-kind chips so a reciprocated pair separates. The viewer runtime is vendored into the page, which therefore opens with no network.
+- `ki trade routes list [--estate] [--incomplete]` is a framed local route inventory or a paired registered-estate table. Estate rows are lexical repository pairs with left-to-right and right-to-left sub-rows, explicit missing directions, and a stacked form on narrow terminals; `--table` explicitly selects that default estate text renderer. `--html` renders the estate as a self-contained interactive force-directed network instead, written to the cache and opened in a browser, drawing one arc per direction with accessible locally vendored Lucide Hammer and Book Open chips so a reciprocated pair separates. `--table` and `--html` both require `--estate` and cannot be combined; the viewer has no icon-font or network dependency.
+- Trade kinds, observations, report statuses, diagnostics, and repository entities use a bounded named presentation registry. Layout punctuation remains local to each renderer, while terminal knowledge consistently renders as `ⓘ` and HTML uses the matching accessible Lucide Book Open mark.
 - `ki trade prepare` creates a mutable local export once this repository declares the route; the receiver may observe it before `ki trade submit` freezes it, and `ki trade abandon --yes` removes it while it remains mutable. Receiver activation remains reciprocal.
 - Trade pairing compares the payload the sender authored — its field values as parsed and its prose — rather than raw bytes, so a receiver that formats its own Markdown does not read as having tampered with a record.
 - `ki trade list` is a framed registered-estate inventory of preparations, outbound submissions, and received imports, including their observation and cleanup state.

@@ -3,6 +3,7 @@ import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
 import { inspectLocalRegistry } from '../../core/local-registry.ts'
+import { presentation } from '../../core/presentation.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
 import { renderTree, type TreeEntry } from '../../core/tree-rendering.ts'
 import { KI_VERSION } from '../../version.ts'
@@ -78,13 +79,17 @@ export const createDiagCommand = (context: KiContext): Command =>
       if (configuration.warnings.length) {
         entries.push({
           label: `warnings (${configuration.warnings.length})`,
-          children: treeEntries(configuration.warnings.map((warning) => `! ${warning}`))
+          children: treeEntries(
+            configuration.warnings.map((warning) => `${presentation('status.warn').terminal} ${warning}`)
+          )
         })
       }
       if (configuration.errors.length) {
         entries.push({
           label: `errors (${configuration.errors.length})`,
-          children: treeEntries(configuration.errors.map((error) => `× ${error}`))
+          children: treeEntries(
+            configuration.errors.map((error) => `${presentation('status.audit-fail').terminal} ${error}`)
+          )
         })
       }
 

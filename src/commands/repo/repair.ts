@@ -11,6 +11,7 @@ import {
 import { KiError, KiExit } from '../../core/errors.ts'
 import { inspectLocalRegistry, localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
 import { registeredKnowledgeBaseStoreRoots } from '../../core/local-stores.ts'
+import { presentation } from '../../core/presentation.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
@@ -24,6 +25,8 @@ export const createRepairCommand = (
     .description('reconcile proven KI-managed projections in selected repositories')
     .option('--dry-run', 'report repairs without writing')
     .action(async (options: { dryRun?: boolean }) => {
+      const failedMark = presentation('status.fail').terminal
+      const passedMark = presentation('status.pass').terminal
       const dryRun = Boolean(options.dryRun)
       const global = await inspectUserConfiguration(context.paths.config)
       if (global.state === 'missing') throw new KiError('local KI configuration is missing; run ki bootstrap first', 1)
@@ -58,7 +61,7 @@ export const createRepairCommand = (
                 1
               )
             }
-            entries.push(`✓ Registry: complete ${repository.root}`)
+            entries.push(`${passedMark} Registry: complete ${repository.root}`)
           } else {
             const registryWrite = await localRegistryWrite(
               context.paths.state,
@@ -69,17 +72,17 @@ export const createRepairCommand = (
               const writes = await prepareWrites(await realpath(context.paths.state), [registryWrite])
               for (const write of writes) entries.push(`${dryRun ? 'would write' : 'write'} ${write.path}`)
               await publishWrites(writes, dryRun)
-              entries.push(`✓ Registry: ${dryRun ? 'would register' : 'registered'} ${repository.root}`)
-            } else entries.push(`✓ Registry: already registered ${repository.root}`)
+              entries.push(`${passedMark} Registry: ${dryRun ? 'would register' : 'registered'} ${repository.root}`)
+            } else entries.push(`${passedMark} Registry: already registered ${repository.root}`)
           }
         } catch (error) {
-          entries.push(`✗ Registry: ${(error as Error).message}`)
+          entries.push(`${failedMark} Registry: ${(error as Error).message}`)
           reports.push({ root: repository.root, entries })
           failed = true
           continue
         }
         const health = await inspectRepositoryHealth(context, repository)
-        if (health.diagnostic) entries.push(`✗ Repository: ${health.diagnostic}`)
+        if (health.diagnostic) entries.push(`${failedMark} Repository: ${health.diagnostic}`)
         else entries.push(...health.projections.map(describeRepositoryProjection))
         for (const projection of health.projections) {
           if (projection.state === 'linked' || projection.state === 'foreign') continue
@@ -95,7 +98,7 @@ export const createRepairCommand = (
             } catch (error) {
               // Health classifies the projection path; linking also validates the directory
               // containing it, about which classification says nothing.
-              entries.push(`✗ Repair: ${(error as Error).message}`)
+              entries.push(`${failedMark} Repair: ${(error as Error).message}`)
               failed = true
             }
           }

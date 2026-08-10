@@ -1,4 +1,5 @@
 import d3Runtime from '../assets/d3-runtime.txt' with { type: 'text' }
+import { presentation } from './presentation.ts'
 import type { EstateRouteInspection, RouteState } from './trade-core.ts'
 
 /**
@@ -26,6 +27,26 @@ export interface EstateNetwork {
 }
 
 const identityOf = (repository: string): string => repository.slice('https://github.com/'.length)
+
+interface PresentationWithSvg {
+  readonly label: string
+  readonly svgPaths: readonly string[]
+}
+
+const tradeKindPresentation = {
+  work: presentation('trade.kind.work') as PresentationWithSvg,
+  knowledge: presentation('trade.kind.knowledge') as PresentationWithSvg
+} as const
+
+const tradeKindSvgPaths = Object.fromEntries(
+  Object.entries(tradeKindPresentation).map(([kind, item]) => [kind, item.svgPaths])
+)
+
+const tradeKindIcon = (kind: keyof typeof tradeKindPresentation): string => {
+  const item = tradeKindPresentation[kind]
+  const paths = item.svgPaths
+  return `<svg class="icon ${kind}" viewBox="0 0 24 24" role="img" aria-label="${item.label}">${paths.map((path) => `<path d="${path}"/>`).join('')}</svg>`
+}
 
 const endpoints = (route: EstateRouteInspection): readonly [string, string] =>
   route.direction === 'export'
@@ -91,9 +112,9 @@ footer span { display: inline-flex; align-items: center; gap: 6px; }
 .node { cursor: grab; }
 .link { stroke: var(--edge); stroke-width: 2; fill: none; }
 .link.incomplete { stroke-dasharray: 6 4; }
-.chip { width: 9px; height: 9px; }
-.chip.work { fill: var(--work); }
-.chip.knowledge { fill: var(--knowledge); transform-box: fill-box; transform-origin: center; rotate: 45deg; }
+.icon { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon.work { color: var(--work); }
+.icon.knowledge { color: var(--knowledge); }
 #detail { position: fixed; padding: 6px 9px; background: var(--paper); border: 1px solid var(--rule);
   border-radius: 5px; font-size: 11px; pointer-events: none; opacity: 0; transition: opacity .12s; }
 `
@@ -105,6 +126,7 @@ footer span { display: inline-flex; align-items: center; gap: 6px; }
  */
 const VIEWER = `
 const data = window.__estate
+const iconPaths = ${JSON.stringify(tradeKindSvgPaths)}
 const svg = d3.select('#canvas')
 const root = svg.append('g')
 const detail = d3.select('#detail')
@@ -129,8 +151,10 @@ const link = root.append('g').selectAll('path').data(data.links).join('path')
   .attr('marker-end', 'url(#arrow)')
 const chips = root.append('g').selectAll('g').data(data.links).join('g')
 chips.each(function (d) {
-  d3.select(this).selectAll('rect').data(d.kinds).join('rect')
-    .attr('class', (kind) => 'chip ' + kind).attr('width', 9).attr('height', 9)
+  d3.select(this).selectAll('svg').data(d.kinds).join('svg')
+    .attr('class', (kind) => 'icon ' + kind).attr('viewBox', '0 0 24 24').attr('width', 12).attr('height', 12)
+    .attr('role', 'img').attr('aria-label', (kind) => kind)
+    .html((kind) => iconPaths[kind].map((path) => '<path d="' + path + '"/>').join(''))
 })
 
 const node = root.append('g').selectAll('g').data(data.nodes).join('g').attr('class', 'node')
@@ -178,9 +202,9 @@ function tick() {
     const g = geometry(d)
     const x = along(g.sx, g.cx, g.tx, CHIP_AT)
     const y = along(g.sy, g.cy, g.ty, CHIP_AT)
-    return 'translate(' + (x - (d.kinds.length * 13 - 4) / 2) + ',' + (y - 4.5) + ')'
+    return 'translate(' + (x - (d.kinds.length * 15 - 4) / 2) + ',' + (y - 6) + ')'
   })
-  chips.selectAll('rect').attr('x', (kind, index) => index * 13)
+  chips.selectAll('svg').attr('x', (kind, index) => index * 15)
   node.attr('transform', (d) => 'translate(' + d.x + ',' + d.y + ')')
 }
 
@@ -210,8 +234,8 @@ addEventListener('resize', () => {
 `
 
 const legend = [
-  '<span><svg width="9" height="9"><rect class="chip work" width="9" height="9"/></svg> work</span>',
-  '<span><svg width="13" height="13"><rect class="chip knowledge" width="9" height="9" x="2" y="2"/></svg> knowledge</span>',
+  `<span>${tradeKindIcon('work')} work</span>`,
+  `<span>${tradeKindIcon('knowledge')} knowledge</span>`,
   '<span>solid — active</span>',
   '<span>dashed — awaiting reciprocity</span>',
   '<span>one arc per direction; drag a repository, scroll to zoom</span>'

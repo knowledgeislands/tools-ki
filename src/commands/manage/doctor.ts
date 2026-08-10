@@ -13,6 +13,7 @@ import type { KiContext } from '../../context.ts'
 import { readRepositoryDeclaration } from '../../core/configuration.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness } from '../../core/harness.ts'
+import { presentation } from '../../core/presentation.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
 
@@ -24,7 +25,7 @@ interface DoctorCheck {
   readonly detail: string
 }
 
-const mark = (status: CheckStatus): string => ({ pass: '✓', fail: '✗', skip: '○' })[status]
+const mark = (status: CheckStatus): string => presentation(`status.${status}`).terminal
 
 const physicalDirectory = async (path: string): Promise<boolean> => {
   const state = await lstat(path).catch(() => undefined)

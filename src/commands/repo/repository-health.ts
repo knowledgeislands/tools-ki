@@ -6,6 +6,7 @@ import { repositorySupportedRuntimes, runtimeForAgent } from '../../agents/runti
 import type { KiContext } from '../../context.ts'
 import { readRepositoryDeclaration } from '../../core/configuration.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
+import { presentation } from '../../core/presentation.ts'
 import { type ResolvedSkill, resolveDeclaredSkills } from '../../core/resolution.ts'
 
 type Health = 'healthy' | 'repairable' | 'unrepairable'
@@ -40,7 +41,7 @@ const stateDescription: Record<RepositoryProjection['state'], string> = {
 }
 
 export const describeRepositoryProjection = (projection: RepositoryProjection): string =>
-  `${projection.state === 'linked' ? '✓' : '✗'} ${projection.agent.descriptor.id} ${projection.skill.declaration.name}: ${stateDescription[projection.state]}`
+  `${presentation(projection.state === 'linked' ? 'status.pass' : 'status.fail').terminal} ${projection.agent.descriptor.id} ${projection.skill.declaration.name}: ${stateDescription[projection.state]}`
 
 const inspectProjection = async (
   agent: InstalledAgent,

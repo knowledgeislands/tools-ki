@@ -13,6 +13,7 @@ import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness.ts'
 import { acquireManagedArtifactRecovery } from '../../core/managed-artifacts.ts'
+import { presentation } from '../../core/presentation.ts'
 import { canonicalHarnessDevelopmentEnabled, planOrphanRecovery, recoverInstallOrphans } from '../../core/registry.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
 
@@ -30,6 +31,8 @@ export const createRepairCommand = (context: KiContext): Command =>
     .description('reconcile configured KI-managed user skill projections')
     .option('--dry-run', 'report repairs without writing')
     .action(async (options: { dryRun?: boolean }) => {
+      const failedMark = presentation('status.fail').terminal
+      const passedMark = presentation('status.pass').terminal
       const dryRun = Boolean(options.dryRun)
       const configuration = await inspectUserConfiguration(context.paths.config)
       const results: string[] = []
@@ -45,12 +48,12 @@ export const createRepairCommand = (context: KiContext): Command =>
         )
         const orphans = dryRun ? planned : await recoverInstallOrphans(context.paths.data, planned)
         for (const artifact of managed.protected) {
-          results.push(`✗ Install residue ${artifact.path}: ${artifact.detail}`)
+          results.push(`${failedMark} Install residue ${artifact.path}: ${artifact.detail}`)
           failed = true
         }
         for (const recovery of orphans) {
           if (recovery.action === 'refuse') {
-            results.push(`✗ Install residue ${recovery.orphan.path}: ${recovery.detail}`)
+            results.push(`${failedMark} Install residue ${recovery.orphan.path}: ${recovery.detail}`)
             failed = true
             continue
           }
@@ -73,13 +76,13 @@ export const createRepairCommand = (context: KiContext): Command =>
       }
 
       if (configuration.state === 'missing') {
-        results.push('✗ Configuration: missing; run ki bootstrap')
+        results.push(`${failedMark} Configuration: missing; run ki bootstrap`)
         failed = true
       } else if (configuration.state === 'invalid') {
-        results.push(`✗ Configuration: ${configuration.errors.join('; ')}`)
+        results.push(`${failedMark} Configuration: ${configuration.errors.join('; ')}`)
         failed = true
       } else {
-        results.push(`✓ Configuration: ${configuration.path}`)
+        results.push(`${passedMark} Configuration: ${configuration.path}`)
         const [agents, installed] = await Promise.all([
           configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config }),
           discoverInstalledHarnesses(context.paths.data)
@@ -100,7 +103,7 @@ export const createRepairCommand = (context: KiContext): Command =>
             .find(({ harness, capability }) => identity === `${harness.id}:${capability.name}`)
           if (!resolved) {
             results.push(
-              `✗ User skill ${name}: configured source ${identity.slice(0, identity.indexOf(':'))} is unavailable`
+              `${failedMark} User skill ${name}: configured source ${identity.slice(0, identity.indexOf(':'))} is unavailable`
             )
             failed = true
             continue
@@ -110,7 +113,7 @@ export const createRepairCommand = (context: KiContext): Command =>
             (await realpath(join(resolved.harness.root, resolved.capability.source)))
           const compatible = agents.filter((agent) => compatibleWithSkill(agent, resolved.capability.supportedRuntimes))
           if (!compatible.length) {
-            results.push(`✗ User skill ${name}: no compatible configured agent`)
+            results.push(`${failedMark} User skill ${name}: no compatible configured agent`)
             failed = true
             continue
           }
@@ -118,13 +121,13 @@ export const createRepairCommand = (context: KiContext): Command =>
             const target = join(agentSkillDirectory(agent, 'user'), name)
             try {
               if (await linkedTo(target, expected)) {
-                results.push(`✓ User skill ${name} for ${agent.descriptor.id}: linked`)
+                results.push(`${passedMark} User skill ${name} for ${agent.descriptor.id}: linked`)
                 continue
               }
               results.push(`${dryRun ? 'would link' : 'link'} ${target} -> ${expected}`)
               if (!dryRun) await linkManagedSkill(agent, { scope: 'user' }, { name, source: expected }, true)
             } catch (error) {
-              results.push(`✗ User skill ${name} for ${agent.descriptor.id}: ${(error as Error).message}`)
+              results.push(`${failedMark} User skill ${name} for ${agent.descriptor.id}: ${(error as Error).message}`)
               failed = true
             }
           }

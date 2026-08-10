@@ -92,6 +92,7 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain("'trade routes')")
     expect(zsh.output).toContain('--estate:list route declarations across the registered repository estate')
     expect(zsh.output).toContain('--incomplete:show only routes that are not active')
+    expect(zsh.output).toContain('--table:render estate routes as repository pairs')
     expect(zsh.output).toContain("'acquire chatgpt')")
     expect(zsh.output).toContain("'dev local')")
     expect(zsh.output).toContain('import:import a local capture into an immutable Knowledge Export Package')
@@ -102,7 +103,7 @@ describe('[ki manage completion]', () => {
     expect(bash.output).toContain("'repo roadmap')")
     expect(bash.output).toContain("'trade routes')")
     expect(bash.output).toContain(
-      "'trade routes list') printf '%s\\n' '-V --version -h --help --estate --incomplete --html'"
+      "'trade routes list') printf '%s\\n' '-V --version -h --help --estate --incomplete --table --html'"
     )
     expect(bash.output).toContain("'acquire chatgpt')")
     expect(bash.output).toContain("'dev local')")
