@@ -21,7 +21,7 @@ CLI-018 completed the canonical Agora estate: a local registry binds canonical r
 
 ## Boundary
 
-Do not add external stores to the estate, trade registry, Agora membership, or tracked repository configuration. Keep `ki agora open` as the canonical-group operation. Do not infer paths from names or compose stores into a multi-repository target unless the caller explicitly requests it.
+Do not add external stores to the estate, trade registry, Agora membership, or tracked repository configuration. Keep `ki agora open` as the canonical-group operation. Do not infer paths from names; `ki repo open` may include only explicitly bound stores for each selected Knowledge Base.
 
 ## Current state
 
@@ -30,14 +30,15 @@ The local registry represents canonical KI repositories only. No machine-local c
 ## Steps
 
 - [x] Select `ki repo open` as the first target, using the existing repository-selection rules for one repository, groups, and other supported target sets.
-- [x] Keep Agora opening separate: one selected Knowledge Base includes its available stores by default; a multi-repository selection does not unless explicitly requested.
+- [x] Keep Agora opening separate and include available stores for every selected Knowledge Base by default, including multi-repository selections.
 - [ ] Define machine-local binding syntax, ownership, regular-directory and symlink validation, and deterministic handling of missing optional stores.
-- [ ] Define explicit include and exclude store flags, then implement the target's composition using only local bindings without adding stores to canonical repository discovery.
+- [x] Define mutually exclusive `--stores` and `--no-stores` switches: inclusion is the default, and individual roles are not independently selectable.
+- [ ] Implement the target's composition using only local bindings without adding stores to canonical repository discovery.
 - [ ] Exercise valid, missing, malformed, unsafe, and deterministic-order cases at the CLI boundary.
 
 ## Files touched
 
-To be determined after the binding owner and override flags are confirmed. Expected surfaces are the local user configuration reader, a focused local-store resolver, the repository open command, and its CLI contract tests.
+To be determined after the binding owner is confirmed. Expected surfaces are the local user configuration reader, a focused local-store resolver, the repository open command, and its CLI contract tests.
 
 ## Verify
 
@@ -48,14 +49,18 @@ To be determined after the binding owner and override flags are confirmed. Expec
 
 ## Dependencies / blocks
 
-Machine-local binding authority and explicit override flags remain user-owned decisions. This item remains `draft` until they are recorded; no implementation may infer either choice.
+Machine-local binding authority remains a user-owned decision. This item remains `draft` until it is recorded; no implementation may infer it.
 
 ## Discussion
 
 ### Local composition boundary
 
-`notes` remains the canonical Knowledge Base repository itself. `ki repo open` will use the standard repository target selection and open a single selected notes project with its available optional stores. A multi-repository target stays canonical-only by default. Optional `sources` and `legacy` stores need a machine-local binding model, validation rules, and explicit include/exclude flags. Those bindings must be replaceable local state rather than portable repository identity, and a missing or unsafe binding must be diagnosed without preventing the canonical repository from remaining usable.
+`notes` remains the canonical Knowledge Base repository itself. `ki repo open` will use the standard repository target selection and include each selected notes project's available optional stores, whether the selection has one or many repositories. Optional `sources` and `legacy` stores need a machine-local binding model, validation rules, and all-or-nothing selection flags. Those bindings must be replaceable local state rather than portable repository identity, and a missing or unsafe binding must be diagnosed without preventing the canonical repository from remaining usable.
+
+### Store selection
+
+Stores are included by default. `--stores` makes that choice explicit for scripts and `--no-stores` opens canonical repositories only; the switches are mutually exclusive. There is no per-role flag: a caller either receives every available bound store or none.
 
 ### Promotion condition
 
-It is now positioned for planning. Readiness still requires its local binding authority and explicit override-flag contract; then the item can name exact syntax, validation and diagnostic cases, deterministic opening order, and a contract test matrix.
+It is now positioned for planning. Readiness still requires its local binding authority; then the item can name exact syntax, validation and diagnostic cases, deterministic opening order, and a contract test matrix.
