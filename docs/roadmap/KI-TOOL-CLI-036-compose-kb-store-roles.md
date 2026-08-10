@@ -21,22 +21,23 @@ CLI-018 completed the canonical Agora estate: a local registry binds canonical r
 
 ## Boundary
 
-Do not add external stores to the estate, trade registry, Agora membership, or tracked repository configuration. Do not infer paths from names, choose a global target, or introduce a target other than the separately approved target implementation.
+Do not add external stores to the estate, trade registry, Agora membership, or tracked repository configuration. Keep `ki agora open` as the canonical-group operation. Do not infer paths from names or compose stores into a multi-repository target unless the caller explicitly requests it.
 
 ## Current state
 
-The local registry represents canonical KI repositories only. No machine-local configuration can bind a Knowledge Base's optional `sources` or `legacy` stores, and no target currently composes them with the canonical `notes` repository.
+The local registry represents canonical KI repositories only. No machine-local configuration can bind a Knowledge Base's optional `sources` or `legacy` stores, and no repository target currently opens them with the canonical `notes` repository. `ki agora open` already correctly opens canonical group members and remains separate.
 
 ## Steps
 
-- [ ] Confirm the first supported target and its precise composition behaviour, including whether it opens paths, passes them to another tool, or only reports them.
+- [x] Select `ki repo open` as the first target, using the existing repository-selection rules for one repository, groups, and other supported target sets.
+- [x] Keep Agora opening separate: one selected Knowledge Base includes its available stores by default; a multi-repository selection does not unless explicitly requested.
 - [ ] Define machine-local binding syntax, ownership, regular-directory and symlink validation, and deterministic handling of missing optional stores.
-- [ ] Implement the selected target's composition using only those bindings, without adding stores to canonical repository discovery.
+- [ ] Define explicit include and exclude store flags, then implement the target's composition using only local bindings without adding stores to canonical repository discovery.
 - [ ] Exercise valid, missing, malformed, unsafe, and deterministic-order cases at the CLI boundary.
 
 ## Files touched
 
-To be determined after the first target and binding owner are confirmed. Expected surfaces are the local user configuration reader, a focused local-store resolver, the selected target command, and its CLI contract tests.
+To be determined after the binding owner and override flags are confirmed. Expected surfaces are the local user configuration reader, a focused local-store resolver, the repository open command, and its CLI contract tests.
 
 ## Verify
 
@@ -47,14 +48,14 @@ To be determined after the first target and binding owner are confirmed. Expecte
 
 ## Dependencies / blocks
 
-The first supported target and binding authority are user-owned decisions. This item remains `draft` until they are recorded; no implementation may infer either choice.
+Machine-local binding authority and explicit override flags remain user-owned decisions. This item remains `draft` until they are recorded; no implementation may infer either choice.
 
 ## Discussion
 
 ### Local composition boundary
 
-`notes` remains the canonical Knowledge Base repository itself. Optional `sources` and `legacy` stores need a machine-local binding model, validation rules, and a target-specific composition policy. Those bindings must be replaceable local state rather than portable repository identity, and a missing or unsafe binding must be diagnosed without preventing the canonical repository from remaining usable.
+`notes` remains the canonical Knowledge Base repository itself. `ki repo open` will use the standard repository target selection and open a single selected notes project with its available optional stores. A multi-repository target stays canonical-only by default. Optional `sources` and `legacy` stores need a machine-local binding model, validation rules, and explicit include/exclude flags. Those bindings must be replaceable local state rather than portable repository identity, and a missing or unsafe binding must be diagnosed without preventing the canonical repository from remaining usable.
 
 ### Promotion condition
 
-It is now positioned for planning. Readiness still requires the first target and its local binding authority to be explicitly agreed; then the item can name exact syntax, validation and diagnostic cases, deterministic opening order, and a contract test matrix.
+It is now positioned for planning. Readiness still requires its local binding authority and explicit override-flag contract; then the item can name exact syntax, validation and diagnostic cases, deterministic opening order, and a contract test matrix.
