@@ -30,15 +30,15 @@ _Verify:_ `src/tests/cli/manage/update.test.ts` — `upgrades the uniquely resol
 
 ### REPO-OPS-005 — Governed roadmap inventory
 
-`ki repo roadmap list` MUST render the selected repository's governed work inventory from its declared planning source, including native Knowledge Base Streams without creating or requiring a flat roadmap.
+`ki repo roadmap list` MUST resolve repository type from `[skills.ki-repo]` and render flat work items from the selected local adapter: `docs/roadmap/` for a project roadmap or `Streams/Roadmap/` for KB Streams, with the colocated `_ISSUES.md` treated as its ledger rather than a work item.
 
-_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `reads declared Knowledge Base Streams without requiring or changing a flat roadmap` and `lists and filters grouped governed work items without JSON output`.
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `lists flat Knowledge Base work items from the declared Streams roadmap and ignores its ledger` and `lists and filters grouped governed work items without JSON output`.
 
 ### REPO-OPS-006 — Guarded roadmap maintenance
 
 `ki repo roadmap` MUST prune only completed work records and move one unambiguous record only through valid directional horizon transitions.
 
-_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `prunes only completed items across selected repositories after every target is valid`, `promotes and demotes one explicit item with directional horizon validation`, and `rejects ambiguous roadmap identifiers before changing or pruning a work item`.
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `promotes and prunes flat Knowledge Base work items without changing the ledger`, `prunes only completed items across selected repositories after every target is valid`, `promotes and demotes one explicit item with directional horizon validation`, and `rejects ambiguous roadmap identifiers before changing or pruning a work item`.
 
 ### REPO-OPS-007 — Repository projection diagnostics
 

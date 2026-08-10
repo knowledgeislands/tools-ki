@@ -34,93 +34,87 @@ const localRegistry = (
     ''
   ].join('\n')
 
+const knowledgeBaseConfiguration = (extra = ''): string =>
+  `[repo]
+harnesses = ["example/harness"]
+
+[skills.ki-repo]
+repository = "https://github.com/example/knowledge"
+repo_type = "kb"
+store_roles = ["notes"]
+
+[skills.ki-change-management]
+adapter = "kb-streams"
+
+[skills.ki-decision-records]
+${extra}`
+
 describe('[ki repo roadmap]', () => {
-  test('reads declared Knowledge Base Streams without requiring or changing a flat roadmap', async () => {
+  test('lists flat Knowledge Base work items from the declared Streams roadmap and ignores its ledger', async () => {
     const box = await sandbox()
+    await box.project.write('knowledge/.ki-config.toml', knowledgeBaseConfiguration())
+    await box.project.write('knowledge/Streams/Roadmap/_ISSUES.md', 'last_id: 2\n')
     await box.project.write(
-      'knowledge/.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-decision-records]\nrepo_type = "kb"\n'
-    )
-    await box.project.write('knowledge/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
-    await box.project.write('knowledge/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
-    await box.project.write(
-      'knowledge/Streams/Now/Proposal/Proposal.md',
-      '---\ntype: stream-proposal\ncode: KBS-001\ntitle: Native proposal\nstatus: awaiting-review\n---\n'
+      'knowledge/Streams/Roadmap/KBS-001-native-proposal.md',
+      item({ id: 'KBS-001', title: 'Native proposal', status: 'awaiting-review' })
     )
     await box.project.write(
-      'knowledge/Streams/Now/Second/Second.md',
-      '---\ntype: stream-proposal\ntitle: Second proposal\nstatus: draft\n---\n'
+      'knowledge/Streams/Roadmap/KBS-002-later-proposal.md',
+      item({ id: 'KBS-002', title: 'Later proposal', horizon: 'future', candidate: 'true' })
     )
-    await box.project.mkdir('knowledge/Streams/Now/Pruned Proposal')
-    await box.project.write('knowledge/Streams/Soon/Soon.md', '---\ntype: stream-focus\n---\n')
-    await box.project.write(
-      'knowledge/Streams/Soon/Later/Later.md',
-      '---\ntype: stream-proposal\ntitle: Later proposal\nstatus: ready\n---\n'
-    )
-    const before = await box.project.read('knowledge/Streams/Now/Proposal/Proposal.md')
+    const before = await box.project.read('knowledge/Streams/Roadmap/KBS-001-native-proposal.md')
+    const ledger = await box.project.read('knowledge/Streams/Roadmap/_ISSUES.md')
 
     const result = await box.run('ki repo --repo knowledge roadmap list')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain(
-      '├─ streams (3) · Knowledge Base Streams\n│  ├─ Now (2)\n│  │  ├─ KBS-001 [awaiting-review] Native proposal\n│  │  ╰─ undefined [draft] Second proposal\n│  ╰─ Soon (1)\n│     ╰─ undefined [ready] Later proposal'
-    )
-    expect(result.output).toContain('╰─ summary: PROPOSALS=3 FOCUSES=2 TRADES=0 IMPORTS=0 EXPORTS=0')
-    expect(await box.project.read('knowledge/Streams/Now/Proposal/Proposal.md')).toBe(before)
+    expect(result.output).toContain('├─ roadmap (2)')
+    expect(result.output).toContain('KBS-001 [awaiting-review] Native proposal')
+    expect(result.output).toContain('KBS-002 [draft] Later proposal')
+    expect(result.output).toContain('╰─ summary: ITEMS=2 HORIZONS=2 TRADES=0 IMPORTS=0 EXPORTS=0')
+    expect(result.output).not.toContain('_ISSUES')
+    expect(await box.project.read('knowledge/Streams/Roadmap/KBS-001-native-proposal.md')).toBe(before)
+    expect(await box.project.read('knowledge/Streams/Roadmap/_ISSUES.md')).toBe(ledger)
     await expect(box.project.read('knowledge/docs/roadmap')).rejects.toThrow()
   })
 
-  test('diagnoses unavailable and malformed Knowledge Base planning sources without falling back to a flat roadmap', async () => {
+  test('diagnoses unavailable, malformed, and misconfigured Knowledge Base roadmaps without falling back', async () => {
     const box = await sandbox()
-    const configuration = '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-decision-records]\nrepo_type = "kb"\n'
+    const configuration = knowledgeBaseConfiguration()
     await box.project.write('missing/.ki-config.toml', configuration)
-    await box.project.write('missing-index/.ki-config.toml', configuration)
-    await box.project.mkdir('missing-index/Streams')
+    await box.project.write('missing/docs/roadmap/KI-TOOL-CLI-003-project-item.md', item())
     await box.project.write('malformed/.ki-config.toml', configuration)
-    await box.project.write('malformed/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
-    await box.project.write('malformed/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
-    await box.project.write(
-      'malformed/Streams/Now/Valid/Valid.md',
-      '---\ntype: stream-proposal\ntitle: Valid\nstatus: draft\n---\n'
-    )
-    await box.project.write(
-      'malformed/Streams/Now/Missing status Proposal/Missing status Proposal.md',
-      '---\ntype: stream-proposal\ntitle: Incomplete\n---\n'
-    )
-    await box.project.write(
-      'malformed/Streams/Now/Invalid fields Proposal/Invalid fields Proposal.md',
-      '---\nnot metadata\n---\n'
-    )
+    await box.project.write('malformed/Streams/Roadmap/KBS-001-valid.md', item({ id: 'KBS-001', title: 'Valid' }))
+    await box.project.write('malformed/Streams/Roadmap/KBS-002-invalid.md', item({ id: 'KBS-002', status: 'closed' }))
+    await box.project.write('misconfigured/.ki-config.toml', configuration.replace('kb-streams', 'roadmap'))
+    await box.project.write('misconfigured/docs/roadmap/KI-TOOL-CLI-003-project-item.md', item())
 
     const missing = await box.run('ki repo --repo missing roadmap list')
-    const missingIndex = await box.run('ki repo --repo missing-index roadmap list')
     const malformed = await box.run('ki repo --repo malformed roadmap list')
+    const misconfigured = await box.run('ki repo --repo misconfigured roadmap list')
 
     expect(missing.exitCode).toBe(1)
-    expect(missing.output).toContain('has no physical Streams directory')
-    expect(missingIndex.output).toContain('has no physical Streams/Streams.md file')
+    expect(missing.output).toContain('has no physical Streams/Roadmap directory')
+    expect(missing.output).not.toContain('KI-TOOL-CLI-003')
     expect(malformed.exitCode).toBe(1)
-    expect(malformed.output).toContain('undefined [draft] Valid')
-    expect(malformed.output).toContain('stream diagnostics (2)')
-    expect(malformed.output).toContain('must declare type, title, and status')
-    expect(malformed.output).toContain('has invalid stream-proposal frontmatter')
-    await expect(box.project.read('missing/docs/roadmap')).rejects.toThrow()
+    expect(malformed.output).toContain('has an invalid lifecycle status')
+    expect(misconfigured.exitCode).toBe(1)
+    expect(misconfigured.output).toContain(
+      'Knowledge Base roadmap operations require [skills.ki-change-management].adapter = "kb-streams"'
+    )
     await expect(box.project.read('malformed/docs/roadmap')).rejects.toThrow()
   })
 
-  test('reports unavailable trade inventory alongside an otherwise valid Knowledge Base stream', async () => {
+  test('reports unavailable trade inventory alongside an otherwise valid Knowledge Base roadmap', async () => {
     const box = await sandbox()
     const knowledge = await box.project.mkdir('knowledge')
     const broken = await box.project.mkdir('broken')
-    const configuration =
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\n\n[skills.ki-decision-records]\nrepo_type = "kb"\n\n[skills.ki-trades]\n'
+    const configuration = knowledgeBaseConfiguration('\n[skills.ki-trades]\n')
     await box.project.write('knowledge/.ki-config.toml', configuration)
     await box.project.write('broken/.ki-config.toml', configuration.replace('example/knowledge', 'example/broken'))
-    await box.project.write('knowledge/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
-    await box.project.write('knowledge/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
     await box.project.write(
-      'knowledge/Streams/Now/Proposal/Proposal.md',
-      '---\ntype: stream-proposal\ncode: KBS-001\ntitle: Native proposal\nstatus: awaiting-review\n---\n'
+      'knowledge/Streams/Roadmap/KBS-001-native-proposal.md',
+      item({ id: 'KBS-001', title: 'Native proposal', status: 'awaiting-review' })
     )
     await box.project.write('knowledge/-/_TRADES/example/receiver/TRD-00000001.md', 'not a trade record\n')
     await box.state.write(
@@ -137,35 +131,25 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('trades (0)')
     expect(result.output).toContain('❌ unavailable:')
     expect(result.output).toContain('TRADES=unavailable')
-    expect(result.output).toContain('has no physical Streams directory')
+    expect(result.output).toContain('has no physical Streams/Roadmap directory')
   })
 
-  test('renders an empty Stream focus and rejects invalid proposal frontmatter', async () => {
+  test('promotes and prunes flat Knowledge Base work items without changing the ledger', async () => {
     const box = await sandbox()
-    const configuration = '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-decision-records]\nrepo_type = "kb"\n'
-    await box.project.write('empty/.ki-config.toml', configuration)
-    await box.project.write('empty/Streams/Streams.md', '---\ntype: stream-zone\n---\n')
-    await box.project.write('empty/Streams/Now/Now.md', '---\ntype: stream-focus\n---\n')
-    for (const [name, contents] of [
-      ['absent', 'No frontmatter\n'],
-      ['invalid', '---\nnot metadata\n---\n'],
-      ['repeated', '---\ntype: stream-proposal\ntype: stream-proposal\ntitle: Repeated\nstatus: draft\n---\n']
-    ] as const) {
-      await box.project.write(`${name}/.ki-config.toml`, configuration)
-      await box.project.write(`${name}/Streams/Streams.md`, '---\ntype: stream-zone\n---\n')
-      await box.project.write(`${name}/Streams/Now/Now.md`, '---\ntype: stream-focus\n---\n')
-      await box.project.write(`${name}/Streams/Now/Proposal/Proposal.md`, contents)
-    }
+    await box.project.write('knowledge/.ki-config.toml', knowledgeBaseConfiguration())
+    await box.project.write('knowledge/Streams/Roadmap/_ISSUES.md', 'last_id: 2\n')
+    await box.project.write('knowledge/Streams/Roadmap/KBS-001-next.md', item({ id: 'KBS-001' }))
+    await box.project.write(
+      'knowledge/Streams/Roadmap/KBS-002-done.md',
+      item({ id: 'KBS-002', title: 'Done item', status: 'done' })
+    )
 
-    const empty = await box.run('ki repo --repo empty roadmap list')
-    const absent = await box.run('ki repo --repo absent roadmap list')
-    const invalid = await box.run('ki repo --repo invalid roadmap list')
-    const repeated = await box.run('ki repo --repo repeated roadmap list')
-
-    expect(empty.output).toContain('├─ streams (0) · Knowledge Base Streams\n│  ╰─ proposals: none')
-    expect(absent.output).toContain('must declare stream-proposal frontmatter')
-    expect(invalid.output).toContain('has invalid stream-proposal frontmatter')
-    expect(repeated.output).toContain('has invalid stream-proposal frontmatter')
+    expect((await box.run('ki repo --repo knowledge roadmap promote KBS-001')).exitCode).toBe(0)
+    expect((await box.run('ki repo --repo knowledge roadmap prune KBS-002')).exitCode).toBe(0)
+    await expect(box.project.read('knowledge/Streams/Roadmap/KBS-001-next.md')).resolves.toContain('horizon: now')
+    await expect(box.project.read('knowledge/Streams/Roadmap/KBS-002-done.md')).rejects.toThrow()
+    await expect(box.project.read('knowledge/Streams/Roadmap/_ISSUES.md')).resolves.toBe('last_id: 2\n')
+    await expect(box.project.read('knowledge/docs/roadmap')).rejects.toThrow()
   })
 
   test('lists and filters grouped governed work items without JSON output', async () => {

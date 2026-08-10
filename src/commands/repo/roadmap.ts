@@ -2,7 +2,7 @@ import { basename } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
-import { type RepositoryPlanningSource, readRepositoryPlanningSource } from '../../core/planning.ts'
+import { readRepositoryPlanningSource, type WorkItemDirectory } from '../../core/planning.ts'
 import { presentation } from '../../core/presentation.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade-core.ts'
@@ -27,7 +27,6 @@ interface RoadmapResult {
   readonly repository: string
   readonly trades: readonly LocatedTrade[]
   readonly tradeDiagnostic?: string
-  readonly planning?: RepositoryPlanningSource
   readonly items?: readonly WorkItem[]
   readonly diagnostic?: string
 }
@@ -99,44 +98,6 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
   const context = [
     { label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.repository})` }
   ]
-  const planning = result.planning
-  if (planning?.kind === 'streams') {
-    const count = planning.focuses.reduce((total, focus) => total + focus.proposals.length, 0)
-    const streams = count
-      ? planning.focuses.map((focus) => ({
-          label: `${focus.name} (${focus.proposals.length})`,
-          children: focus.proposals.map((proposal) => ({
-            label: `${proposal.code ?? 'undefined'} [${proposal.status}] ${proposal.title}`
-          }))
-        }))
-      : [{ label: 'proposals: none' }]
-    const { inbound, outbound } = countTradeDirections(result.trades)
-    const tradeSummary = result.tradeDiagnostic
-      ? 'unavailable'
-      : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
-    return renderTree({
-      title: 'KI REPO ROADMAP',
-      context,
-      entries: [
-        { label: `streams (${count}) · Knowledge Base Streams`, children: streams },
-        ...(planning.diagnostics.length
-          ? [
-              {
-                label: `stream diagnostics (${planning.diagnostics.length})`,
-                children: planning.diagnostics.map((diagnostic) => ({
-                  label: `${presentation('status.unavailable').terminal} ${diagnostic}`
-                }))
-              }
-            ]
-          : []),
-        {
-          label: `trades (${result.trades.length})`,
-          children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, icons)
-        },
-        { label: `summary: PROPOSALS=${count} FOCUSES=${planning.focuses.length} TRADES=${tradeSummary}` }
-      ]
-    }).join('\n')
-  }
   const items = result.items ?? []
   const groups = textHorizonGroups(items)
   const roadmap = result.diagnostic
@@ -203,8 +164,8 @@ const moveHorizon = (item: WorkItem, operation: 'promote' | 'demote', requested?
   return horizonOrder[target] as WorkItemHorizon
 }
 
-const selectedItem = async (repository: string, id: string): Promise<WorkItem> => {
-  const items = (await readWorkItems(repository)).filter((item) => item.id === id)
+const selectedItem = async (repository: string, directory: WorkItemDirectory, id: string): Promise<WorkItem> => {
+  const items = (await readWorkItems(repository, directory)).filter((item) => item.id === id)
   if (items.length !== 1) throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
   return items[0] as WorkItem
 }
@@ -235,15 +196,12 @@ export const createRepoRoadmapCommand = (
           const results = await Promise.all(
             repositories.map(async (repository) => {
               try {
-                const planning = await readRepositoryPlanningSource(repository.root, repository.configuration)
+                const planning = await readRepositoryPlanningSource(repository.configuration)
                 return {
                   repository: repository.root,
                   trades: tradeInventory.trades.filter((trade) => trade.root === repository.root),
                   ...(tradeInventory.diagnostic ? { tradeDiagnostic: tradeInventory.diagnostic } : {}),
-                  planning,
-                  ...(planning.kind === 'roadmap'
-                    ? { items: filterItems(await readWorkItems(repository.root), options) }
-                    : {})
+                  items: filterItems(await readWorkItems(repository.root, planning.directory), options)
                 }
               } catch (error) {
                 /* v8 ignore next -- inventory failures are always KiError instances. */
@@ -260,14 +218,7 @@ export const createRepoRoadmapCommand = (
           context.stdout.write(
             `${results.map((result) => renderTextResult(result, tradeInventory.trades, options.icons !== false)).join('\n\n')}\n`
           )
-          if (
-            results.some(
-              (result) =>
-                result.tradeDiagnostic ||
-                ('planning' in result && result.planning.kind === 'streams' && result.planning.diagnostics.length) ||
-                ('diagnostic' in result && result.diagnostic)
-            )
-          )
+          if (results.some((result) => result.tradeDiagnostic || ('diagnostic' in result && result.diagnostic)))
             throw new KiExit(1)
         })
     )
@@ -280,11 +231,19 @@ export const createRepoRoadmapCommand = (
             id === undefined
               ? await resolveTargets(context, selectedRepositories)
               : [await oneMutationTarget(context, selectedRepositories, 'prune')]
-          await Promise.all(repositories.map((repository) => readWorkItems(repository.root)))
-          const removed = await Promise.all(
+          const sources = await Promise.all(
             repositories.map(async (repository) => ({
               repository,
-              items: await pruneDoneWorkItems(repository.root, id)
+              planning: await readRepositoryPlanningSource(repository.configuration)
+            }))
+          )
+          await Promise.all(
+            sources.map(({ repository, planning }) => readWorkItems(repository.root, planning.directory))
+          )
+          const removed = await Promise.all(
+            sources.map(async ({ repository, planning }) => ({
+              repository,
+              items: await pruneDoneWorkItems(repository.root, planning.directory, id)
             }))
           )
           const entries = removed.flatMap(({ repository, items }) =>
@@ -304,9 +263,10 @@ export const createRepoRoadmapCommand = (
         .argument('[horizon]', 'direct destination horizon toward now')
         .action(async (id: string, horizon: string | undefined) => {
           const repository = await oneMutationTarget(context, selectedRepositories, 'promote')
-          const item = await selectedItem(repository.root, id)
+          const planning = await readRepositoryPlanningSource(repository.configuration)
+          const item = await selectedItem(repository.root, planning.directory, id)
           const destination = moveHorizon(item, 'promote', horizon)
-          await updateWorkItemHorizon(repository.root, id, destination)
+          await updateWorkItemHorizon(repository.root, planning.directory, id, destination)
           context.stdout.write(`ki repo roadmap promote: ${id} ${item.horizon} -> ${destination}\n`)
         })
     )
@@ -317,9 +277,10 @@ export const createRepoRoadmapCommand = (
         .argument('[horizon]', 'direct destination horizon toward future')
         .action(async (id: string, horizon: string | undefined) => {
           const repository = await oneMutationTarget(context, selectedRepositories, 'demote')
-          const item = await selectedItem(repository.root, id)
+          const planning = await readRepositoryPlanningSource(repository.configuration)
+          const item = await selectedItem(repository.root, planning.directory, id)
           const destination = moveHorizon(item, 'demote', horizon)
-          await updateWorkItemHorizon(repository.root, id, destination)
+          await updateWorkItemHorizon(repository.root, planning.directory, id, destination)
           context.stdout.write(`ki repo roadmap demote: ${id} ${item.horizon} -> ${destination}\n`)
         })
     )

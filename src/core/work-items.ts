@@ -1,9 +1,9 @@
 import { lstat, readdir, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { KiError } from './errors.ts'
+import type { WorkItemDirectory } from './planning.ts'
 import { prepareWrites, publishWrites } from './transaction.ts'
 
-const ROADMAP_DIRECTORY = 'docs/roadmap'
 const ISSUE_LEDGER = '_ISSUES.md'
 const requiredFields = ['id', 'title', 'theme', 'horizon', 'status', 'blocks', 'blocked_by', 'baseline_ref'] as const
 type RequiredField = (typeof requiredFields)[number]
@@ -114,11 +114,14 @@ const readItem = async (directory: string, file: string): Promise<WorkItemRecord
   return { item, file, path, contents }
 }
 
-const readWorkItemRecords = async (repository: string): Promise<readonly WorkItemRecord[]> => {
-  const directory = join(repository, ROADMAP_DIRECTORY)
+const readWorkItemRecords = async (
+  repository: string,
+  roadmapDirectory: WorkItemDirectory
+): Promise<readonly WorkItemRecord[]> => {
+  const directory = join(repository, roadmapDirectory)
   const state = await lstat(directory).catch(() => undefined)
   if (!state?.isDirectory() || state.isSymbolicLink())
-    throw new KiError(`repository ${repository} has no physical docs/roadmap directory`, 2)
+    throw new KiError(`repository ${repository} has no physical ${roadmapDirectory} directory`, 2)
   const entries = await readdir(directory)
   const records = await Promise.all(
     entries
@@ -128,11 +131,17 @@ const readWorkItemRecords = async (repository: string): Promise<readonly WorkIte
   return records.sort((left, right) => left.item.id.localeCompare(right.item.id))
 }
 
-export const readWorkItems = async (repository: string): Promise<readonly WorkItem[]> =>
-  (await readWorkItemRecords(repository)).map(({ item }) => item)
+export const readWorkItems = async (
+  repository: string,
+  roadmapDirectory: WorkItemDirectory
+): Promise<readonly WorkItem[]> => (await readWorkItemRecords(repository, roadmapDirectory)).map(({ item }) => item)
 
-const workItemRecord = async (repository: string, id: string): Promise<WorkItemRecord> => {
-  const matches = (await readWorkItemRecords(repository)).filter((record) => record.item.id === id)
+const workItemRecord = async (
+  repository: string,
+  roadmapDirectory: WorkItemDirectory,
+  id: string
+): Promise<WorkItemRecord> => {
+  const matches = (await readWorkItemRecords(repository, roadmapDirectory)).filter((record) => record.item.id === id)
   // The CLI resolves this exact cardinality before calling the publisher; retain the core guard for future callers.
   /* v8 ignore next */
   if (matches.length !== 1) throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
@@ -155,19 +164,24 @@ const renderHorizon = (contents: string, horizon: WorkItemHorizon): string => {
 
 export const updateWorkItemHorizon = async (
   repository: string,
+  roadmapDirectory: WorkItemDirectory,
   id: string,
   horizon: WorkItemHorizon
 ): Promise<WorkItem> => {
-  const record = await workItemRecord(repository, id)
+  const record = await workItemRecord(repository, roadmapDirectory, id)
   const content = renderHorizon(record.contents, horizon)
-  const writes = await prepareWrites(repository, [{ path: join(ROADMAP_DIRECTORY, record.file), content }])
+  const writes = await prepareWrites(repository, [{ path: join(roadmapDirectory, record.file), content }])
   await publishWrites(writes, false)
   const { candidate: _candidate, ...item } = record.item
   return { ...item, horizon, ...(horizon === 'future' ? { candidate: true } : {}) }
 }
 
-export const pruneDoneWorkItems = async (repository: string, id?: string): Promise<readonly WorkItem[]> => {
-  const records = await readWorkItemRecords(repository)
+export const pruneDoneWorkItems = async (
+  repository: string,
+  roadmapDirectory: WorkItemDirectory,
+  id?: string
+): Promise<readonly WorkItem[]> => {
+  const records = await readWorkItemRecords(repository, roadmapDirectory)
   const selected =
     id === undefined
       ? records.filter(({ item }) => item.status === 'done')
