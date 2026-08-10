@@ -3,11 +3,11 @@ id: KI-TOOL-CLI-038
 area: CLI
 title: Resolve code audit
 theme: cli
-horizon: soon
-status: draft
+horizon: next
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 268b256ae8539a36011e3503f68bc2e2fe6557ea
 ---
 
 ## Goal
@@ -16,23 +16,75 @@ Improve the CLI's test-contract fidelity and preserve codebase navigability by r
 
 ## Context
 
-The code audit found no high-severity concern and confirmed that the CLI's `run(args, context)` seam and isolated sandbox are strong architectural test boundaries. It identified four maintainability and test-contract improvements: retain separate stdout and stderr assertions in the shared test helper; make the boundary guard resolve imports rather than match a narrow pattern; remove the `core` to `agents` dependency inversion; and split responsibility hotspots only where existing domain seams make the result clearer.
+The code audit found no high-severity concern and confirmed that the CLI's `run(args, context)` seam and isolated sandbox are strong architectural test boundaries. This delivery addresses its two bounded test-contract improvements: retain stdout and stderr separately in the shared test helper, and make the boundary guard resolve imports rather than match a narrow pattern.
 
 ## Boundary
 
-Do not change the public CLI contract, introduce a broad rewrite, or apply the separate portable `ki-engineering` standards change here. Do not split files merely to meet a size target or replace clear local duplication with a generic abstraction.
+Do not change the public CLI contract, introduce a broad rewrite, or apply the separate portable `ki-engineering` standards change here. The `core` to `agents` dependency direction and responsibility hotspots remain separate follow-up work. Do not replace clear local duplication with a generic abstraction.
 
-## Shaping
+## Current state
 
-Start with the two bounded test-harness improvements, each proved through the existing CLI contract suite. Then identify a neutral home for the shared bootstrap inventory and replace broad imports with narrow domain dependencies. Assess `repository-reporting`, `trade-core`, and the repository command factory individually; extract a module only when its responsibility, callers, and verification boundary are clear.
+`Sandbox.run()` merges both streams into `output`; the optional capture callback is the only way to assert an individual stream. The CLI boundary guard matches only one relative-import spelling and misses nested imports such as `../../../core/runtime.ts`.
 
-Promotion requires an implementation order that keeps every change independently reviewable, exact public-contract assertions for stream routing and import-boundary enforcement, and a scoped verification matrix for each selected structural refactor.
+## Steps
+
+- [x] Expose separate `stdout` and `stderr` transcripts from `Sandbox.run()` while retaining its merged chronological `output` for existing assertions.
+- [x] Assert normal output and parser diagnostics through their respective stream transcripts in the root CLI contract tests.
+- [x] Replace the test-boundary import regex with relative-specifier resolution and prove that it detects a nested product import without flagging the shared sandbox.
+
+## Files touched
+
+- `src/tests/cli/_cli_helper.ts`
+- `src/tests/cli/root/unknown.test.ts`
+- `src/tests/cli/root/test-boundary.test.ts`
+
+## Verify
+
+- `bunx vitest run src/tests/cli/root/unknown.test.ts src/tests/cli/root/test-boundary.test.ts`
+- `bunx tsc --noEmit`
+- `bun run test:coverage`
+- `bunx @biomejs/biome check src/tests/cli/_cli_helper.ts src/tests/cli/root/unknown.test.ts src/tests/cli/root/test-boundary.test.ts`
+
+## Dependencies / blocks
+
+No local work-item dependencies. This delivery has no external coordination or migration prerequisite.
+
+## Review
+
+### Delivered
+
+The bounded test-contract slice is ready for review. It strengthens the test harness and test-boundary guard without changing the public CLI.
+
+### Summary of changes
+
+`Sandbox.run()` now records separate `stdout` and `stderr` transcripts as well as its existing merged chronological `output`. The new stream properties are non-enumerable so existing exact assertions over `{ exitCode, output }` remain valid. Root CLI tests verify that version output reaches stdout and parser diagnostics reach stderr.
+
+The import-boundary guard now resolves each static or dynamic import specifier relative to its test file and rejects any resolved product-code import outside the shared CLI sandbox. A temporary nested fixture proves it detects `../../../core/runtime.ts` while the real CLI tests remain clean.
+
+### Verification
+
+- `bunx vitest run src/tests/cli/root/unknown.test.ts src/tests/cli/root/test-boundary.test.ts` — passed (3 tests).
+- `bunx tsc --noEmit` — passed.
+- `bunx @biomejs/biome check src/tests/cli/_cli_helper.ts src/tests/cli/root/unknown.test.ts src/tests/cli/root/test-boundary.test.ts` — passed.
+- `bun run test:coverage` — passed (39 files, 585 tests; 100% statements, branches, functions, and lines).
+
+### Outstanding concerns
+
+The audit's dependency-direction and responsibility-hotspot findings remain intentionally out of scope for this narrow test-contract delivery. They need separately scoped work before any structural refactor.
+
+### Post-change review
+
+No public CLI behaviour changed. The test harness retains the established combined transcript and only adds independently assertable stream transcripts. The boundary guard now detects the nested import form that motivated the audit finding.
+
+### Mini recap
+
+This item completes the first, low-risk audit response: improve the architectural test boundary before considering broader code movement or module splits.
 
 ## Discussion
 
 ### Audit findings
 
-The audit observed that the shared CLI test helper merges stdout and stderr, obscuring an important Unix CLI contract. Its import-boundary test does not resolve realistic nested product imports. It also found small `core` to `agents` dependency inversions and a few modules that combine otherwise distinct responsibilities.
+The audit observed that the shared CLI test helper merges stdout and stderr, obscuring an important Unix CLI contract. Its import-boundary test does not resolve realistic nested product imports.
 
 ### Delivery approach
 

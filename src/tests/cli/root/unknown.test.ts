@@ -6,6 +6,7 @@ describe('[ki unknown]', () => {
     const box = await sandbox()
     const unknown = await box.run('ki unknown')
     const unknownWithHelp = await box.run('ki unknown -h')
+    const version = await box.run('ki --version')
     const longOption = await box.run('ki --unknown')
     const shortOptionWithHelp = await box.run('ki -x -h')
     const optionAfterHelp = await box.run('ki manage diag -h --repo')
@@ -33,7 +34,12 @@ describe('[ki unknown]', () => {
       expect(result.exitCode).toBe(2)
       expect(result.output).toContain("ki: error: unknown subcommand 'unknown' for 'ki'\n")
       expect(result.output).toContain('Usage: ki')
+      expect(result.stdout).toBe('')
+      expect(result.stderr).toBe(result.output)
     }
+    expect(version.exitCode).toBe(0)
+    expect(version.stdout).toBe(version.output)
+    expect(version.stderr).toBe('')
     for (const result of [longOption, shortOptionWithHelp]) {
       expect(result.exitCode).toBe(2)
       expect(result.output).toContain("ki: error: unknown option '")

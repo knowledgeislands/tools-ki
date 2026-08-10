@@ -68,6 +68,11 @@ const executablePath = new URL('../../../bin/ki', import.meta.url).pathname
 
 export interface CommandResult {
   readonly exitCode: number
+  /** Transcript emitted on the CLI's standard-output stream. */
+  readonly stdout: string
+  /** Transcript emitted on the CLI's standard-error stream. */
+  readonly stderr: string
+  /** Merged chronological transcript, retained for existing command assertions. */
   readonly output: string
 }
 
@@ -245,11 +250,15 @@ const create = async (): Promise<Sandbox> => {
     }
   ): Promise<CommandResult> => {
     let output = ''
+    let stdout = ''
+    let stderr = ''
     const write =
       (stream: 'stdout' | 'stderr') =>
       (chunk: string): void => {
         if (stream === 'stdout' && options?.stdoutFailure) throw options.stdoutFailure
         options?.captureOutput?.(stream, chunk)
+        if (stream === 'stdout') stdout += chunk
+        else stderr += chunk
         output += chunk
       }
     const executable = options?.executable ?? executablePath
@@ -284,7 +293,12 @@ const create = async (): Promise<Sandbox> => {
     })
     const tokens = typeof command === 'string' ? command.split(' ').filter(Boolean) : [...command]
     if (tokens[0] !== 'ki') throw new Error(`sandbox run() commands must start with "ki": ${command}`)
-    return { exitCode: await runCli(tokens.slice(1), context), output }
+    // Existing tests compare `{ exitCode, output }` exactly. The named stream transcripts are
+    // intentionally non-enumerable so that strengthening the harness preserves that contract.
+    return Object.defineProperties(
+      { exitCode: await runCli(tokens.slice(1), context), output },
+      { stdout: { value: stdout }, stderr: { value: stderr } }
+    ) as CommandResult
   }
 
   return {
