@@ -56,3 +56,24 @@ Deliver the five named ready CLI review and resilience items in one bounded batc
 ## Approval
 
 Approved by: Kris Brown, 10 August 2026, in this conversation.
+
+## Run ledger
+
+| Item | Start | Result | Evidence | Next human action |
+| --- | --- | --- | --- | --- |
+| CLI-040 | ready | awaiting-review | `cb93ee0` → `378ab9c`; 38 trade CLI contracts, typecheck, coverage, Biome | Review the packet |
+| CLI-037 | ready | awaiting-review | `e4dc56f` → `378ab9c`; 104 artifact CLI contracts, typecheck, coverage, Biome | Review the packet |
+| CLI-041 | ready | awaiting-review | `4aa3e4d` → `378ab9c`; 78 repository-progress CLI contracts, typecheck, coverage, Biome | Review the packet |
+| CLI-042 | ready | awaiting-review | `0314bdd` → `378ab9c`; 18 initialization contracts, typecheck, coverage, Biome | Review the packet |
+| CLI-036 | ready | awaiting-review | `76fc8a7` → `378ab9c`; registry, repair, and open contracts, typecheck, coverage, Biome | Review the packet |
+
+## Batch recap
+
+All five items reached the authorised review target. The shared command-index work was serialized; the trade split and managed-artifact work ran independently. A Sol review found no concern in the three modularity extractions and found five safety flaws in the new registry/artifact work. Those flaws were corrected and covered before the final full gate passed.
+
+No item was accepted, marked done, pruned, pushed, or released.
+
+### Proposed learning routes
+
+- `ki-implement` — propose a safety-sensitive state-change review prompt covering producer lifecycle ordering, live-operation locks, recovery ownership, physical-path containment, and symlink refusal. This is unapproved cross-repository work.
+- `ki-batch` — no change proposed: its existing requirement to serialise overlapping file ownership and retain an integration owner was sufficient.
