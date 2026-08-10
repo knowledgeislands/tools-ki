@@ -1,8 +1,14 @@
 import { mkdir, realpath } from 'node:fs/promises'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../core/configuration.ts'
+import {
+  declaredKnowledgeBaseStoreRoles,
+  declaredRepositoryIdentity,
+  readRepositoryDeclaration
+} from '../../core/configuration.ts'
+import { KiError } from '../../core/errors.ts'
 import { localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
+import { sourceStoreDirectory } from '../../core/local-stores.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 import type { RegistrySelection } from './index.ts'
@@ -11,7 +17,8 @@ export const createRegistryAddCommand = (context: KiContext, selectedRepositorie
   new Command('add')
     .description('add explicitly selected local KI repository roots without applying repairs')
     .option('--dry-run', 'report registrations without writing')
-    .action(async (options: { dryRun?: boolean }) => {
+    .option('--sources <absolute-path>', 'local source store for one Knowledge Base that declares sources')
+    .action(async (options: { dryRun?: boolean; sources?: string }) => {
       const repositories = await resolveRepositoryTargets({
         ...selectedRepositories(),
         configurationDirectory: context.paths.config,
@@ -19,9 +26,31 @@ export const createRegistryAddCommand = (context: KiContext, selectedRepositorie
         workingDirectory: context.workingDirectory,
         homeDirectory: context.homeDirectory
       })
-      for (const repository of repositories) {
-        const identity = declaredRepositoryIdentity(await readRepositoryDeclaration(repository.configuration))
-        const registryWrite = await localRegistryWrite(context.paths.state, registryEntry(repository.root, identity))
+      const declarations = await Promise.all(
+        repositories.map(async (repository) => ({
+          repository,
+          declaration: await readRepositoryDeclaration(repository.configuration)
+        }))
+      )
+      const sourcesTargets = declarations.filter(({ declaration }) =>
+        declaredKnowledgeBaseStoreRoles(declaration).includes('sources')
+      )
+      if (sourcesTargets.length && repositories.length !== 1)
+        throw new KiError(
+          'ki registry add selects a KB that declares sources; select exactly one repository with --sources',
+          1
+        )
+      if (sourcesTargets.length && !options.sources)
+        throw new KiError('ki registry add requires --sources for a KB that declares sources', 1)
+      if (!sourcesTargets.length && options.sources)
+        throw new KiError('ki registry add --sources requires one selected KB that declares sources', 1)
+      const sources = options.sources ? await sourceStoreDirectory(options.sources) : undefined
+      for (const { repository, declaration } of declarations) {
+        const identity = declaredRepositoryIdentity(declaration)
+        const registryWrite = await localRegistryWrite(
+          context.paths.state,
+          registryEntry(repository.root, identity, sourcesTargets.length ? sources : undefined)
+        )
         await mkdir(context.paths.state, { recursive: true })
         const writes = registryWrite ? await prepareWrites(await realpath(context.paths.state), [registryWrite]) : []
         for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)

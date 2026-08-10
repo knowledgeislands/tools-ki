@@ -119,7 +119,12 @@ export const createDevCommand = (context: KiContext): Command => {
     .action(async () => {
       const agents = await configured(context)
       const configuration = await inspectUserConfiguration(context.paths.config)
-      const installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
+      const installation = await restoreCanonicalHarness(
+        context.paths.config,
+        context.paths.data,
+        context.paths.state,
+        context.fetcher
+      )
       const skills = await installedBootstrapSkillSources(context.paths.data)
       const projections = await installBootstrapSkills(skills, agents, { replace: true })
       const refreshed = await refreshUserConfiguration(

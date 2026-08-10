@@ -88,6 +88,10 @@ reserved registered-estate selector.
 Create the explicit KI identity declaration for one existing Git repository
 and register its physical root in the machine-local registry.
 .TP
+.B ki repo [repo-options] open --target <zed|vscode> [--stores|--no-stores]
+Open selected canonical repositories and, by default, their locally registered
+Knowledge Base source stores.
+.TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run registered native repository audits.
 .TP
@@ -130,7 +134,7 @@ Refresh uniquely resolved capabilities declared by selected KI repositories.
 .SS Registry management
 \&
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run] [--sources <absolute-path>]
 Record selected canonical KI repository roots in the machine-local registry
 without applying repository repairs.
 .TP
@@ -436,6 +440,14 @@ never runs
 \fBgit init\fR, guesses identity, activates repository skills, creates a
 Agora, accepts repository selectors, or overwrites an existing
 \fB.ki-config.toml\fR.
+.TP
+.B ki repo [repo-options] open --target <zed|vscode> [--stores|--no-stores]
+Open every selected canonical repository in the requested local target. By
+default, a Knowledge Base that declares the \fBsources\fR store role opens its
+notes root followed by its locally registered sources root. The sources binding
+must be a direct directory recorded with the canonical repository; it is never
+made an estate member or Agora participant. \fB--no-stores\fR opens canonical
+notes roots only, while \fB--stores\fR makes the default explicit.
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run the native read-only operations registered by each selected repository's

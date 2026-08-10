@@ -29,7 +29,7 @@ const manageCommands = [
   'update'
 ]
 const agoraCommands = ['list', 'show', 'roots', 'open']
-const repoCommands = ['audit', 'conform', 'diag', 'educate', 'init', 'roadmap', 'repair', 'skill', 'upgrade']
+const repoCommands = ['audit', 'conform', 'diag', 'educate', 'init', 'open', 'roadmap', 'repair', 'skill', 'upgrade']
 const registryCommands = ['add', 'list']
 
 const commandNames = (output: string): string[] =>
@@ -51,6 +51,7 @@ describe('[ki command inventory]', () => {
     expect(commandNames(agora.output)).toEqual(agoraCommands)
     expect(commandNames(repository.output)).toEqual([
       'init',
+      'open',
       'audit',
       'conform',
       'diag',
@@ -70,7 +71,7 @@ describe('[ki command inventory]', () => {
     expect(bash.output).toContain(`'manage') printf '%s\\n' '${manageCommands.join(' ')}'`)
     expect(bash.output).toContain(`'agora') printf '%s\\n' '${agoraCommands.join(' ')}'`)
     expect(bash.output).toContain(
-      "'repo') printf '%s\\n' 'init audit conform diag roadmap educate repair skill upgrade'"
+      "'repo') printf '%s\\n' 'init open audit conform diag roadmap educate repair skill upgrade'"
     )
     expect(bash.output).toContain(`'registry') printf '%s\\n' '${registryCommands.join(' ')}'`)
   })
@@ -91,7 +92,9 @@ describe('[ki command inventory]', () => {
       expect(changelog).toContain(`\`ki repo ${command}`)
     }
     expect(manual).toContain('.B ki registry list')
-    expect(manual).toContain('.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]')
+    expect(manual).toContain(
+      '.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run] [--sources <absolute-path>]'
+    )
     for (const command of registryCommands) expect(changelog).toContain(`\`ki registry ${command}`)
 
     for (const command of agoraCommands) expect(manual).toContain(`.B ki agora ${command}`)

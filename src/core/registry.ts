@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { acquireVerifiedArchive, extractArchive, type Fetcher } from './acquire.ts'
@@ -14,6 +14,7 @@ import {
   parkedPayloadEntry,
   readInstalledHarness
 } from './harness.ts'
+import { createInstallStagingArtifact } from './managed-artifacts.ts'
 
 export type { Fetcher } from './acquire.ts'
 
@@ -219,6 +220,7 @@ const requireCapabilities = (harness: InstalledHarness, options: HarnessInstalla
 export const installHarness = async (
   configurationDirectory: string,
   dataDirectory: string,
+  stateDirectory: string,
   identifier: string,
   fetcher: Fetcher,
   options: HarnessInstallationOptions = {}
@@ -241,16 +243,22 @@ export const installHarness = async (
 
   const payload = await acquireVerifiedArchive(fetcher, release)
 
-  const staging = await mkdtemp(join(ownerDirectory, '.install-'))
+  const artifact = await createInstallStagingArtifact(stateDirectory, dataDirectory, owner)
+  const staging = artifact.staging
   try {
+    await mkdir(staging)
+    await artifact.transition('active')
     await extractArchive(payload, staging)
     requireCapabilities(await inspectHarnessRoot(staging, identifier), options)
     if (!existing) {
+      await artifact.transition('retired')
       await rename(staging, destination)
+      await artifact.retire()
       return { installed: true, replaced: false, archiveSha256: release.sha256 }
     }
     const previous = join(ownerDirectory, parkedPayloadEntry(randomUUID(), name))
     await rename(destination, previous)
+    await artifact.transition('retired')
     /* v8 ignore start -- Recovery needs a filesystem failure after the old verified payload is parked; no CLI input can cause it. */
     try {
       await rename(staging, destination)
@@ -260,9 +268,12 @@ export const installHarness = async (
     }
     /* v8 ignore stop */
     await rm(previous, { recursive: true, force: true })
+    await artifact.retire()
     return { installed: true, replaced: true, archiveSha256: release.sha256 }
   } catch (error) {
+    await artifact.transition('recoverable')
     await rm(staging, { recursive: true, force: true })
+    await artifact.retire()
     throw error
   }
 }
@@ -293,9 +304,12 @@ export const planOrphanRecovery = async (dataDirectory: string): Promise<readonl
   return Promise.all(orphans.map((orphan) => plannedRecovery(dataDirectory, orphan)))
 }
 
-export const recoverInstallOrphans = async (dataDirectory: string): Promise<readonly OrphanRecovery[]> => {
-  const planned = await planOrphanRecovery(dataDirectory)
-  for (const recovery of planned) {
+export const recoverInstallOrphans = async (
+  dataDirectory: string,
+  planned?: readonly OrphanRecovery[]
+): Promise<readonly OrphanRecovery[]> => {
+  const selected = planned ?? (await planOrphanRecovery(dataDirectory))
+  for (const recovery of selected) {
     if (recovery.action === 'restore')
       await rename(
         recovery.orphan.path,
@@ -303,7 +317,7 @@ export const recoverInstallOrphans = async (dataDirectory: string): Promise<read
       )
     if (recovery.action === 'remove') await rm(recovery.orphan.path, { recursive: true, force: true })
   }
-  return planned
+  return selected
 }
 
 const canonicalHarnessDirectory = (dataDirectory: string): string =>
@@ -401,9 +415,10 @@ export const canonicalHarnessDevelopmentEnabled = async (dataDirectory: string, 
 export const restoreCanonicalHarness = async (
   configurationDirectory: string,
   dataDirectory: string,
+  stateDirectory: string,
   fetcher: Fetcher
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
-  installHarness(configurationDirectory, dataDirectory, canonicalHarnessIdentifier, fetcher, {
+  installHarness(configurationDirectory, dataDirectory, stateDirectory, canonicalHarnessIdentifier, fetcher, {
     replace: await canonicalDevelopmentProjection(dataDirectory),
     requiredCapabilities: minimumBootstrapUserSkills,
     requiredCapabilitiesContext: 'canonical-bootstrap'

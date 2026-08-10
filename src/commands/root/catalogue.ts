@@ -33,6 +33,7 @@ export type RootCommandName = (typeof rootCommandNames)[number]
 
 export const repoHelpCommandNames = [
   'init',
+  'open',
   'audit',
   'conform',
   'diag',

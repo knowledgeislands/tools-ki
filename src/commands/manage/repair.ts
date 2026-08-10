@@ -12,6 +12,7 @@ import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness.ts'
+import { acquireManagedArtifactRecovery } from '../../core/managed-artifacts.ts'
 import { canonicalHarnessDevelopmentEnabled, planOrphanRecovery, recoverInstallOrphans } from '../../core/registry.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
 
@@ -36,17 +37,39 @@ export const createRepairCommand = (context: KiContext): Command =>
 
       // Interrupted-install residue is recovered before anything reads the harness tree, so a
       // parked payload is back in place by the time skill projections are resolved against it.
-      const orphans = dryRun
-        ? await planOrphanRecovery(context.paths.data)
-        : await recoverInstallOrphans(context.paths.data)
-      for (const recovery of orphans) {
-        if (recovery.action === 'refuse') {
-          results.push(`✗ Install residue ${recovery.orphan.path}: ${recovery.detail}`)
+      const managed = await acquireManagedArtifactRecovery(context.paths.state, context.paths.data)
+      try {
+        const protectedPaths = new Set(managed.protected.map((artifact) => artifact.path))
+        const planned = (await planOrphanRecovery(context.paths.data)).filter(
+          (recovery) => !protectedPaths.has(recovery.orphan.path)
+        )
+        const orphans = dryRun ? planned : await recoverInstallOrphans(context.paths.data, planned)
+        for (const artifact of managed.protected) {
+          results.push(`✗ Install residue ${artifact.path}: ${artifact.detail}`)
           failed = true
-          continue
         }
-        const verb = recovery.action === 'restore' ? 'restore' : 'remove'
-        results.push(`${dryRun ? `would ${verb}` : `${verb}d`} ${recovery.orphan.path}: ${recovery.detail}`)
+        for (const recovery of orphans) {
+          if (recovery.action === 'refuse') {
+            results.push(`✗ Install residue ${recovery.orphan.path}: ${recovery.detail}`)
+            failed = true
+            continue
+          }
+          const verb = recovery.action === 'restore' ? 'restore' : 'remove'
+          results.push(`${dryRun ? `would ${verb}` : `${verb}d`} ${recovery.orphan.path}: ${recovery.detail}`)
+        }
+        if (!dryRun) {
+          const recoveredPaths = new Set(
+            orphans.filter((recovery) => recovery.action !== 'refuse').map((recovery) => recovery.orphan.path)
+          )
+          await Promise.all(
+            managed.leases.map(async (lease) => {
+              if (recoveredPaths.has(lease.path)) await lease.retire()
+              else await lease.release()
+            })
+          )
+        }
+      } finally {
+        await Promise.all(managed.leases.map((lease) => lease.release()))
       }
 
       if (configuration.state === 'missing') {

@@ -11,6 +11,9 @@ export interface LocalRegistryEntry {
   readonly key: string
   readonly repository: string
   readonly path: string
+  readonly stores?: {
+    readonly sources: string
+  }
 }
 
 export interface LocalRegistryInspection {
@@ -65,19 +68,35 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
         continue
       }
       for (const field of Object.keys(entry))
-        if (!['repository', 'path'].includes(field)) errors.push(`repositories.${key} has unrecognised key ${field}`)
+        if (!['repository', 'path', 'stores'].includes(field))
+          errors.push(`repositories.${key} has unrecognised key ${field}`)
       if (!validKey(key)) errors.push(`repositories.${key} key must be a stable local repository name`)
       if (!canonicalRepositoryIdentity(entry['repository']))
         errors.push(`repositories.${key} repository must be a canonical HTTPS GitHub repository`)
       if (typeof entry['path'] !== 'string' || !isAbsolute(entry['path']))
         errors.push(`repositories.${key} path must be an absolute path`)
+      const stores = entry['stores']
+      if (stores !== undefined && !isRecord(stores)) errors.push(`repositories.${key}.stores must be a table`)
+      if (isRecord(stores)) {
+        for (const field of Object.keys(stores))
+          if (field !== 'sources') errors.push(`repositories.${key}.stores has unrecognised key ${field}`)
+        if (typeof stores['sources'] !== 'string' || !isAbsolute(stores['sources']))
+          errors.push(`repositories.${key}.stores.sources must be an absolute path`)
+      }
       if (
         validKey(key) &&
         canonicalRepositoryIdentity(entry['repository']) &&
         typeof entry['path'] === 'string' &&
-        isAbsolute(entry['path'])
+        isAbsolute(entry['path']) &&
+        (stores === undefined ||
+          (isRecord(stores) && typeof stores['sources'] === 'string' && isAbsolute(stores['sources'])))
       )
-        repositories.push({ key, repository: entry['repository'], path: entry['path'] })
+        repositories.push({
+          key,
+          repository: entry['repository'],
+          path: entry['path'],
+          ...(isRecord(stores) ? { stores: { sources: stores['sources'] as string } } : {})
+        })
     }
   }
   for (const field of ['repository', 'path'] as const) {
@@ -101,10 +120,10 @@ export const requiredLocalRegistry = async (stateDirectory: string): Promise<rea
   return inspection.repositories
 }
 
-export const registryEntry = (repository: string, identity: string): LocalRegistryEntry => {
+export const registryEntry = (repository: string, identity: string, sources?: string): LocalRegistryEntry => {
   const key = basename(repository)
   if (!KEY.test(key)) throw new KiError(`repository root ${repository} has no valid local repository name`, 1)
-  return { key, repository: identity, path: repository }
+  return { key, repository: identity, path: repository, ...(sources ? { stores: { sources } } : {}) }
 }
 
 export const renderLocalRegistry = (repositories: readonly LocalRegistryEntry[]): string =>
@@ -118,7 +137,14 @@ export const renderLocalRegistry = (repositories: readonly LocalRegistryEntry[])
         '',
         `[repositories.${JSON.stringify(repository.key)}]`,
         `repository = ${JSON.stringify(repository.repository)}`,
-        `path = ${JSON.stringify(repository.path)}`
+        `path = ${JSON.stringify(repository.path)}`,
+        ...(repository.stores
+          ? [
+              '',
+              `[repositories.${JSON.stringify(repository.key)}.stores]`,
+              `sources = ${JSON.stringify(repository.stores.sources)}`
+            ]
+          : [])
       ]),
     ''
   ].join('\n')
@@ -139,7 +165,7 @@ export const localRegistryWriteMany = async (
   let repositories = inspection.repositories
   for (const entry of additions) {
     const byIdentity = repositories.find((candidate) => candidate.repository === entry.repository)
-    if (byIdentity && byIdentity.key !== entry.key)
+    if (byIdentity && byIdentity.key !== entry.key && (!byIdentity.stores || !entry.stores))
       throw new KiError(`local KI repository registry key ${byIdentity.key} already identifies ${entry.repository}`, 1)
     const byKey = repositories.find((candidate) => candidate.key === entry.key)
     if (byKey && byKey.repository !== entry.repository)

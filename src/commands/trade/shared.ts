@@ -1,16 +1,13 @@
 import { grammarError } from '../../core/errors.ts'
 import {
   isObservationPolicy,
-  isTradeIdentifier,
   isTradeKind,
   isTradeRepository,
   type ObservationPolicy,
   type RouteDirection,
-  type RouteState,
-  type TradeKind,
-  type TradeLifecycle,
-  type TradeRecord
-} from '../../core/trade-core.ts'
+  type TradeKind
+} from '../../core/trade-configuration.ts'
+import { isTradeIdentifier, type RouteState, type TradeLifecycle, type TradeRecord } from '../../core/trade-core.ts'
 
 export const repository = (value: string | undefined, option: string): string => {
   if (!value || !isTradeRepository(value))

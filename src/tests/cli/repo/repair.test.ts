@@ -176,6 +176,31 @@ describe('[ki repo repair]', () => {
     expect(repair.output).toContain('Registry: local KI repository registry is invalid: unrecognised key extra')
   })
 
+  test('requires an explicit complete sources binding before repairing a Knowledge Base', async () => {
+    const box = await preparedRepository()
+    const root = await realpath(box.project.path)
+    const sources = await box.root.mkdir('sources')
+    await box.project.write(
+      '.ki-config.toml',
+      repositoryConfiguration.replace(
+        'repository = "https://github.com/example/project"',
+        'repository = "https://github.com/example/project"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]'
+      )
+    )
+
+    const missing = await box.run('ki repo repair')
+    await box.state.write(
+      'ki/registry.toml',
+      `schema = 1\n\n[repositories."project"]\nrepository = "https://github.com/example/project"\npath = ${JSON.stringify(root)}\n\n[repositories."project".stores]\nsources = ${JSON.stringify(sources)}\n`
+    )
+    const complete = await box.run('ki repo repair')
+
+    expect(missing.exitCode).toBe(1)
+    expect(missing.output).toContain(`run ki registry add --repo ${root} --sources <absolute-path>`)
+    expect(complete.exitCode).toBe(0)
+    expect(complete.output).toContain(`Registry: complete ${root}`)
+  })
+
   // Health inspects the projection path itself, and lstat resolves the components above it, so a
   // symlinked skills *directory* is invisible to classification: the projection reads as an
   // ordinary missing one, and the refusal only arrives once linking validates the container.

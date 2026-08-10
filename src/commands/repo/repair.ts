@@ -3,9 +3,14 @@ import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
-import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../core/configuration.ts'
+import {
+  declaredKnowledgeBaseStoreRoles,
+  declaredRepositoryIdentity,
+  readRepositoryDeclaration
+} from '../../core/configuration.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
-import { localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
+import { inspectLocalRegistry, localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
+import { registeredKnowledgeBaseStoreRoots } from '../../core/local-stores.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
@@ -36,15 +41,37 @@ export const createRepairCommand = (
       for (const repository of repositories) {
         const entries: string[] = []
         try {
-          const identity = declaredRepositoryIdentity(await readRepositoryDeclaration(repository.configuration))
-          const registryWrite = await localRegistryWrite(context.paths.state, registryEntry(repository.root, identity))
-          if (registryWrite) {
-            await mkdir(context.paths.state, { recursive: true })
-            const writes = await prepareWrites(await realpath(context.paths.state), [registryWrite])
-            for (const write of writes) entries.push(`${dryRun ? 'would write' : 'write'} ${write.path}`)
-            await publishWrites(writes, dryRun)
-            entries.push(`✓ Registry: ${dryRun ? 'would register' : 'registered'} ${repository.root}`)
-          } else entries.push(`✓ Registry: already registered ${repository.root}`)
+          const declaration = await readRepositoryDeclaration(repository.configuration)
+          const identity = declaredRepositoryIdentity(declaration)
+          if (declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) {
+            const registry = await inspectLocalRegistry(context.paths.state)
+            if (registry.state === 'invalid')
+              throw new KiError(`local KI repository registry is invalid: ${registry.errors.join('; ')}`, 1)
+            const entry = registry.repositories.find(
+              (candidate) => candidate.repository === identity && candidate.path === repository.root
+            )
+            try {
+              await registeredKnowledgeBaseStoreRoots(declaration, entry)
+            } catch {
+              throw new KiError(
+                `Knowledge Base ${repository.root} declares sources; run ki registry add --repo ${repository.root} --sources <absolute-path>`,
+                1
+              )
+            }
+            entries.push(`✓ Registry: complete ${repository.root}`)
+          } else {
+            const registryWrite = await localRegistryWrite(
+              context.paths.state,
+              registryEntry(repository.root, identity)
+            )
+            if (registryWrite) {
+              await mkdir(context.paths.state, { recursive: true })
+              const writes = await prepareWrites(await realpath(context.paths.state), [registryWrite])
+              for (const write of writes) entries.push(`${dryRun ? 'would write' : 'write'} ${write.path}`)
+              await publishWrites(writes, dryRun)
+              entries.push(`✓ Registry: ${dryRun ? 'would register' : 'registered'} ${repository.root}`)
+            } else entries.push(`✓ Registry: already registered ${repository.root}`)
+          }
         } catch (error) {
           entries.push(`✗ Registry: ${(error as Error).message}`)
           reports.push({ root: repository.root, entries })

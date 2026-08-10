@@ -21,6 +21,8 @@ export interface RepositoryDeclaration {
   readonly skills: readonly DeclaredSkill[]
 }
 
+export type KnowledgeBaseStoreRole = 'notes' | 'sources' | 'legacy'
+
 export interface RepositoryInitialisation {
   readonly title: string
   readonly description: string
@@ -139,6 +141,28 @@ export const declaredRepositoryIdentity = (declaration: RepositoryDeclaration): 
   if (!canonicalRepositoryIdentity(identity))
     throw new KiError('[skills.ki-repo].repository must be a canonical HTTPS GitHub repository', 1)
   return identity
+}
+
+export const declaredKnowledgeBaseStoreRoles = (
+  declaration: RepositoryDeclaration
+): readonly KnowledgeBaseStoreRole[] => {
+  const configuration = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration
+  const repositoryType = configuration?.['repo_type']
+  const storeRoles = configuration?.['store_roles']
+  if (repositoryType === undefined) {
+    if (storeRoles !== undefined) throw new KiError('[skills.ki-repo].store_roles requires repo_type = "kb"', 1)
+    return []
+  }
+  if (repositoryType !== 'kb') throw new KiError('[skills.ki-repo].repo_type must be "kb" when declared', 1)
+  if (!Array.isArray(storeRoles) || !storeRoles.length || storeRoles.some((role) => typeof role !== 'string'))
+    throw new KiError('[skills.ki-repo].store_roles must be a non-empty array of named KB stores', 1)
+  const roles = storeRoles as string[]
+  if (roles.some((role) => !['notes', 'sources', 'legacy'].includes(role)))
+    throw new KiError('[skills.ki-repo].store_roles may contain only notes, sources, or legacy', 1)
+  if (new Set(roles).size !== roles.length)
+    throw new KiError('[skills.ki-repo].store_roles must not repeat a store role', 1)
+  if (!roles.includes('notes')) throw new KiError('[skills.ki-repo].store_roles must include notes', 1)
+  return roles as KnowledgeBaseStoreRole[]
 }
 
 // Declare a skill in a repository's .ki-config.toml by appending its [skills.<name>] table. A

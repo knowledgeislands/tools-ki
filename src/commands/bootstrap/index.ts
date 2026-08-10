@@ -93,7 +93,12 @@ export const createBootstrapCommand = (context: KiContext): Command =>
             replace: true,
             finalize: async () => {
               await reconcileConfiguration(skills)
-              restored = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
+              restored = await restoreCanonicalHarness(
+                context.paths.config,
+                context.paths.data,
+                context.paths.state,
+                context.fetcher
+              )
             }
           })
         } catch (error) {
@@ -109,7 +114,12 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         /* v8 ignore next -- The canonical release digest is pinned in `src/core/registry.ts` and shadows any configured entry, so no fixture archive can verify and this restoration cannot succeed in a sandbox. */
         installation = restored
       } else {
-        installation = await restoreCanonicalHarness(context.paths.config, context.paths.data, context.fetcher)
+        installation = await restoreCanonicalHarness(
+          context.paths.config,
+          context.paths.data,
+          context.paths.state,
+          context.fetcher
+        )
         const skills = await installedBootstrapSkillSources(context.paths.data)
         projections = await installBootstrapSkills(skills, agents, {
           replace: options.refresh,

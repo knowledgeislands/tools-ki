@@ -3,6 +3,19 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
+const artifactId = '11111111-1111-4111-8111-111111111111'
+
+const manifest = (state: 'creating' | 'recoverable', path: string, lock: string): string =>
+  [
+    'schema = 1',
+    `id = ${JSON.stringify(artifactId)}`,
+    'operation = "harness-install"',
+    `state = ${JSON.stringify(state)}`,
+    `paths = [${JSON.stringify(path)}]`,
+    `lock = ${JSON.stringify(lock)}`,
+    ''
+  ].join('\n')
+
 describe('[ki manage repair]', () => {
   test('recreates a configured missing user-skill link without repairing repository projections', async () => {
     const box = await sandbox()
@@ -136,6 +149,38 @@ describe('[ki manage repair]', () => {
       expect(cleanup.output).toContain(`${orphan} [removable] unpromoted extraction from an interrupted install`)
       expect(repair.output).toContain(`removed ${orphan}`)
       await expect(lstat(orphan)).rejects.toThrow()
+    })
+
+    test('preserves a live manifest-backed install staging directory', async () => {
+      const box = await sandbox()
+      const orphan = await box.data.mkdir(`ki/harnesses/example/.install-${artifactId}`)
+      const lock = `${box.state.path}/ki/managed-artifacts/locks/${artifactId}`
+      await box.state.write(`ki/managed-artifacts/${artifactId}.toml`, manifest('creating', orphan, lock))
+      await box.state.mkdir(`ki/managed-artifacts/locks/${artifactId}`)
+
+      const repair = await box.run('ki manage repair')
+
+      expect(repair.exitCode).toBe(1)
+      expect(repair.output).toContain(`✗ Install residue ${orphan}: managed artifact operation is live`)
+      expect((await lstat(orphan)).isDirectory()).toBe(true)
+      expect((await lstat(`${box.state.path}/ki/managed-artifacts/${artifactId}.toml`)).isFile()).toBe(true)
+      expect((await lstat(lock)).isDirectory()).toBe(true)
+    })
+
+    test('recovers a lock-free manifest-backed staging directory and retires its record', async () => {
+      const box = await sandbox()
+      const orphan = await box.data.mkdir(`ki/harnesses/example/.install-${artifactId}`)
+      const lock = `${box.state.path}/ki/managed-artifacts/locks/${artifactId}`
+      await box.state.mkdir('ki/managed-artifacts/locks')
+      await box.state.write(`ki/managed-artifacts/${artifactId}.toml`, manifest('recoverable', orphan, lock))
+
+      const repair = await box.run('ki manage repair')
+
+      expect(repair.exitCode).toBe(1)
+      expect(repair.output).toContain(`removed ${orphan}`)
+      await expect(lstat(orphan)).rejects.toThrow()
+      await expect(lstat(`${box.state.path}/ki/managed-artifacts/${artifactId}.toml`)).rejects.toThrow()
+      await expect(lstat(lock)).rejects.toThrow()
     })
 
     test('restores a parked payload when the harness it replaced is absent', async () => {

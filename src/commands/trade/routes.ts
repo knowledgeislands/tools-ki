@@ -4,13 +4,12 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
 import { estateNetwork, renderEstateRoutesPage } from '../../core/route-network.ts'
+import { addTradeRoute, removeTradeRoute } from '../../core/trade-configuration.ts'
 import {
-  addTradeRoute,
   inspectEstateRoutes,
   inspectRoutes,
   localRegisteredConfiguration,
-  localRegisteredRepository,
-  removeTradeRoute
+  localRegisteredRepository
 } from '../../core/trade-core.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
 import { kind, repository, routeDirection, routeState } from './shared.ts'

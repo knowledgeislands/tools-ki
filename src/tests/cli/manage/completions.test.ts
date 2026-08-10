@@ -48,6 +48,7 @@ const commandPaths = [
   'repo conform',
   'repo educate',
   'repo init',
+  'repo open',
   'repo repair',
   'repo roadmap',
   'repo roadmap demote',
@@ -118,6 +119,7 @@ describe('[ki manage completion]', () => {
       expect(output).toContain("'repo:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'repo roadmap:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'registry:--repo') printf '%s\\n' 'path'")
+      expect(output).toContain("'registry add:--sources') printf '%s\\n' 'path'")
       expect(output).toContain("'acquire chatgpt import:0') printf '%s\\n' 'path'")
       expect(output).toContain("'manage docs:0') printf '%s\\n' 'overview site manual roadmap'")
       expect(output).toContain("'trade prepare:--observation') printf '%s\\n' 'unattended receipt decision completion'")

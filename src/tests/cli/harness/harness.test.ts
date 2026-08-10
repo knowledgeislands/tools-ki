@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { lstat, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { makeHarnessArchive } from '../_archive_helper.ts'
 import { sandbox } from '../_cli_helper.ts'
@@ -408,8 +408,32 @@ releases = [
 
       expect(installed).toEqual({ exitCode: 0, output: `installed example/harness\tarchive ${sha256}\n` })
       expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)
+      expect(await readdir(`${box.state.path}/ki/managed-artifacts`)).toEqual(['locks'])
+      expect(await readdir(`${box.state.path}/ki/managed-artifacts/locks`)).toEqual([])
       await expect(lstat(`${box.data.path}/ki/harnesses/example/harness/docs`)).rejects.toThrow()
       await expect(lstat(`${box.data.path}/ki/harnesses/example/harness/package.json`)).rejects.toThrow()
+    })
+
+    test('refuses an unsafe managed-artifacts directory before creating install staging', async () => {
+      const box = await sandbox()
+      const { payload, sha256 } = makeHarnessArchive({
+        'source-revision/skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n'
+      })
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]\nreleases = [{ id = "example/harness", url = "https://releases.example.test/harness.tar.gz", sha256 = "${sha256}" }]\n`
+      )
+      await box.state.write('ki/managed-artifacts-target', 'not a directory\n')
+      await symlink(`${box.state.path}/ki/managed-artifacts-target`, `${box.state.path}/ki/managed-artifacts`)
+      box.setFetcher(async () => new Response(payload))
+
+      const installed = await box.run('ki harness install example/harness')
+
+      expect(installed).toEqual({
+        exitCode: 1,
+        output: 'ki: error: managed artifacts directory must be a directory\n'
+      })
+      expect(await readdir(`${box.data.path}/ki/harnesses/example`)).toEqual([])
     })
 
     test('extracts a payload whose tar path uses the header prefix field', async () => {
