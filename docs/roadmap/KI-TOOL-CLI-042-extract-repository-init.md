@@ -4,10 +4,10 @@ area: CLI
 title: Extract repository initialization
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 0314bddd97e1dbc8a6f0ada800bb1d4a76ef318e
 ---
 
 ## Goal
