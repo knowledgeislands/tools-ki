@@ -23,10 +23,9 @@ export const refreshHarnesses = async (
       context.paths.state,
       harness.id,
       context.fetcher,
-      {
-        replace: true,
-        requiredCapabilities: retainedCapabilities(harness)
-      }
+      context.runner,
+      context.environment,
+      { replace: true, requiredCapabilities: retainedCapabilities(harness) }
     )
     lines.push(`${harness.id}: refreshed archive ${result.archiveSha256}`)
   }

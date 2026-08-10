@@ -3,11 +3,18 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { KiError } from './errors.ts'
+import type { Environment } from './paths.ts'
 import type { HarnessRelease } from './registry.ts'
+import type { Runner } from './runner.ts'
 
 const decoder = new TextDecoder('utf-8', { fatal: true })
 
 export type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+
+export interface HarnessAcquisitionContext {
+  readonly environment: Environment
+  readonly runner: Runner
+}
 
 const safeRelativePath = (value: string): boolean =>
   Boolean(value) && !value.startsWith('/') && value.split('/').every((part) => part && part !== '.' && part !== '..')
@@ -113,10 +120,36 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
  * digest is only meaningful against the exact bytes served at the configured
  * URL.
  */
-export const acquireVerifiedArchive = async (fetcher: Fetcher, release: HarnessRelease): Promise<Uint8Array> => {
+const githubCliToken = async (context: HarnessAcquisitionContext): Promise<string> => {
+  let result: Awaited<ReturnType<Runner>>
+  try {
+    result = await context.runner('gh', ['auth', 'token'], context.environment)
+  } catch {
+    throw new KiError('could not obtain GitHub authentication; install gh and run gh auth login', 1)
+  }
+  const token = result.output.trim()
+  if (result.exitCode !== 0 || !token)
+    throw new KiError('could not obtain GitHub authentication; install gh and run gh auth login', 1)
+  return token
+}
+
+const releaseHeaders = async (
+  release: HarnessRelease,
+  context: HarnessAcquisitionContext
+): Promise<Readonly<Record<string, string>> | undefined> => {
+  if (release.auth !== 'github-cli') return undefined
+  return { Authorization: `Bearer ${await githubCliToken(context)}` }
+}
+
+export const acquireVerifiedArchive = async (
+  fetcher: Fetcher,
+  release: HarnessRelease,
+  context: HarnessAcquisitionContext
+): Promise<Uint8Array> => {
+  const headers = await releaseHeaders(release, context)
   let response: Response
   try {
-    response = await fetcher(release.url, { redirect: 'error' })
+    response = await fetcher(release.url, { redirect: 'error', ...(headers === undefined ? {} : { headers }) })
   } catch {
     throw new KiError(`could not download configured harness ${release.id}`, 1)
   }

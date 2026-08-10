@@ -61,7 +61,9 @@ export const createHarnessCommand = (context: KiContext): Command =>
             context.paths.data,
             context.paths.state,
             identifier,
-            context.fetcher
+            context.fetcher,
+            context.runner,
+            context.environment
           )
           await recordInstalledHarness(context.paths.config, identifier, true)
           context.stdout.write(
@@ -97,6 +99,8 @@ export const createHarnessCommand = (context: KiContext): Command =>
             context.paths.state,
             identifier,
             context.fetcher,
+            context.runner,
+            context.environment,
             {
               replace: true
             }

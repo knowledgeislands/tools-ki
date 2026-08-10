@@ -22,6 +22,8 @@ Homebrew and Cargo demonstrate useful separation between an installed tool, name
 
 `ki` owns an XDG-managed registry of verified compatible harnesses. `$XDG_CONFIG_HOME/ki/config.toml` records configured harness identities and immutable acquisition evidence. `$XDG_DATA_HOME/ki/harnesses/<owner>/<repository>/` holds each verified installed harness, while `$XDG_CACHE_HOME/ki` and `$XDG_STATE_HOME/ki` hold disposable acquisition material and locks or mutable state. Standard XDG defaults apply when a variable is unset; KI defines no separate home variable.
 
+A private GitHub archive opts in explicitly through `auth = "github-cli"` on its configured release. That form is valid only for the matching commit-pinned `https://codeload.github.com/<owner>/<repository>/tar.gz/<revision>` URL. For it alone, `ki` asks the authenticated GitHub CLI for a token and sends it only on the no-redirect archive request; it never stores, prints, or permits credentials in the release URL. Public releases use the unchanged unauthenticated path.
+
 The base `knowledgeislands/ki-agentic-harness` is always registered and required. `ki harness install <harness-id>` validates the configured immutable archive, its checksum, and its extracted capability inventory before atomically installing or replacing the harness. `ki harness uninstall <harness-id>` removes an explicitly installed non-base harness only with ownership proof. Harness and capability selection use the verified installed root; users cannot select an arbitrary capability version.
 
 Capability references are qualified identities from the compatible-harness contract. A skill is `<harness-id>:<skill-name>`. A bare skill name is accepted only when exactly one installed harness supplies it; `ki` stores and reports its resolved qualified identity and rejects ambiguity.
@@ -38,6 +40,7 @@ Native operations are imported in process only after harness and inventory valid
 
 - `tools-ki` becomes the sole owner of registry layout, command grammar, physical repository resolution, reporting, activation, migration, and native execution.
 - The base harness and an organisation harness can coexist without merging their source trees or treating either checkout as installed state.
+- A private GitHub harness can use the user's existing GitHub CLI authentication without placing a token in KI configuration or sending it to another host.
 - User commands do not resolve the CWD, while every `ki repo` command can discover one repository or use an explicit override.
 - The active implementation surface comprises `ki --help`, `ki --version`, `ki acquire`, `ki bootstrap`, `ki dev`, `ki manage`, `ki harness`, `ki repo`, and `ki skill`.
 - Release and Homebrew delivery remain separate from harness registration and do not authorise a tag, publication, or push.

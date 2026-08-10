@@ -581,6 +581,16 @@ repositories nor changes state.
 .PP
 Use these commands to install, inspect, and remove compatible harness payloads
 in the user-managed KI environment.
+.PP
+A configured private GitHub archive may declare
+.B auth = "github-cli"
+only with its matching commit-pinned
+.B https://codeload.github.com/<owner>/<repository>/tar.gz/<revision>
+URL. KI obtains the credential through
+.B gh auth token
+and sends it only on that no-redirect archive request; it neither stores nor
+prints the token. Authenticate the GitHub CLI first with
+.BR gh\ auth\ login .
 .TP
 .B ki harness info <harness-id>
 Inspect one user-installed compatible harness and its capability

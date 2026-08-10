@@ -123,7 +123,9 @@ export const createDevCommand = (context: KiContext): Command => {
         context.paths.config,
         context.paths.data,
         context.paths.state,
-        context.fetcher
+        context.fetcher,
+        context.runner,
+        context.environment
       )
       const skills = await installedBootstrapSkillSources(context.paths.data)
       const projections = await installBootstrapSkills(skills, agents, { replace: true })

@@ -210,6 +210,16 @@ describe('[ki harness]', () => {
         'must be an HTTPS URL without credentials'
       ],
       [
+        'an unsupported release authentication method',
+        `[harnesses]\nreleases = [{ id = "example/harness", url = "https://codeload.github.com/example/harness/tar.gz/revision", sha256 = "${'a'.repeat(64)}", auth = "token" }]\n`,
+        'auth must be github-cli'
+      ],
+      [
+        'GitHub CLI authentication for a non-codeload URL',
+        `[harnesses]\nreleases = [{ id = "example/harness", url = "https://releases.example.test/archive.tar.gz", sha256 = "${'a'.repeat(64)}", auth = "github-cli" }]\n`,
+        'github-cli authentication requires https://codeload.github.com/example/harness/tar.gz/<revision>'
+      ],
+      [
         'a scalar harnesses configuration',
         'harnesses = "example/harness"\n',
         'ki configuration harnesses must be a TOML table'
@@ -434,6 +444,67 @@ releases = [
         output: 'ki: error: managed artifacts directory must be a directory\n'
       })
       expect(await readdir(`${box.data.path}/ki/harnesses/example`)).toEqual([])
+    })
+
+    test('installs a private GitHub harness through the authenticated GitHub CLI', async () => {
+      const box = await sandbox()
+      const { payload, sha256 } = makeHarnessArchive({
+        'source-revision/skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n'
+      })
+      const url = 'https://codeload.github.com/example/harness/tar.gz/0123456789abcdef'
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]\nreleases = [{ id = "example/harness", url = "${url}", sha256 = "${sha256}", auth = "github-cli" }]\n`
+      )
+      box.setRunner(async (command, arguments_, environment) => {
+        expect(command).toBe('gh')
+        expect(arguments_).toEqual(['auth', 'token'])
+        expect(environment).toMatchObject(box.env)
+        return { exitCode: 0, output: 'test-token\n' }
+      })
+      box.setFetcher(async (input, options) => {
+        expect(input).toBe(url)
+        expect(options).toEqual({ redirect: 'error', headers: { Authorization: 'Bearer test-token' } })
+        return new Response(payload)
+      })
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result).toEqual({ exitCode: 0, output: `installed example/harness\tarchive ${sha256}\n` })
+    })
+
+    test('does not expose GitHub CLI output when private-harness authentication fails', async () => {
+      const box = await sandbox()
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]\nreleases = [{ id = "example/harness", url = "https://codeload.github.com/example/harness/tar.gz/revision", sha256 = "${'a'.repeat(64)}", auth = "github-cli" }]\n`
+      )
+      box.setRunner(async () => ({ exitCode: 1, output: 'sensitive credential diagnostic\n' }))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result).toEqual({
+        exitCode: 1,
+        output: 'ki: error: could not obtain GitHub authentication; install gh and run gh auth login\n'
+      })
+    })
+
+    test('reports a missing GitHub CLI without exposing its startup error', async () => {
+      const box = await sandbox()
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]\nreleases = [{ id = "example/harness", url = "https://codeload.github.com/example/harness/tar.gz/revision", sha256 = "${'a'.repeat(64)}", auth = "github-cli" }]\n`
+      )
+      box.setRunner(async () => {
+        throw new Error('sensitive local command diagnostic')
+      })
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result).toEqual({
+        exitCode: 1,
+        output: 'ki: error: could not obtain GitHub authentication; install gh and run gh auth login\n'
+      })
     })
 
     test('extracts a payload whose tar path uses the header prefix field', async () => {
