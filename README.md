@@ -8,7 +8,7 @@ The home of `ki`, the Knowledge Islands command-line interface (CLI).
 
 [Arcadia Principal](https://github.com/knowledgeislands/ki-arcadia-principal) remains the source of Knowledge Islands philosophy and model, and [Techne Principal](https://github.com/knowledgeislands/ki-techne-principal) translates that philosophy into engineering practice. The [KI Website](https://github.com/knowledgeislands/ki-website) may vendor source-labelled CLI material for public publication, while this repository remains canonical for the executable and its release artifacts. The mirrored [ecosystem decision](docs/decisions/GDR-KI-FUNDAMENTALS-001-knowledge-islands-ecosystem-fundamentals.md) defines the six authorities and publication flows.
 
-The seed delivery established the `ki` command channel. The active TypeScript command host provides help, `--version`, XDG inspection, and a user-assisted `ki acquire chatgpt import` command that produces a Knowledge Export Package (KEP).
+The active TypeScript command host provides local capability, repository, Agora, and trade operations, plus a user-assisted `ki acquire chatgpt import` command that produces a Knowledge Export Package (KEP). The sections below describe the current public surface; use `ki --help` or the tracked [ki(1) manual](man/ki.1) for exact grammar.
 
 ## Acquire a local ChatGPT capture
 

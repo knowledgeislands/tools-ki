@@ -69,6 +69,8 @@ A separate GitHub account controlled by the same person can add a small operatio
 
 ## Publish a release
 
+Before creating the tag, verify that the candidate version in `package.json` and `ki --version` agree with the intended `vX.Y.Z` tag. Review the README, user guides, and `ki(1)` for the same public command surface; after changing the manual, update its date, run `bun run ki:tools:lint-man`, and inspect its rendered output. The V1 baseline in `CHANGELOG.md` remains the current command inventory until V1 is released, so keep it current even while individual 0.x tags are recorded only in Git history.
+
 The release workflow is manually dispatched from protected `main`, then checks out the exact requested release tag. Create and push an exact semantic version tag only after the intended release commit is on `main`:
 
 ```sh

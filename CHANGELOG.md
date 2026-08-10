@@ -87,7 +87,10 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki trade routes remove`
 - `ki trade routes list [--estate] [--incomplete] [--html]`
 - `ki trade routes check`
-- `ki trade new`
+- `ki trade prepare`
+- `ki trade observe`
+- `ki trade submit`
+- `ki trade abandon`
 - `ki trade receive`
 - `ki trade list`
 - `ki trade show`
@@ -113,10 +116,10 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context.
 - `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.
-- `ki trade routes list [--estate] [--incomplete]` is a framed local or registered-estate route inventory; `--html` renders the estate as a self-contained interactive force-directed network instead, written to the cache and opened in a browser, drawing one arc per direction with per-kind chips so a reciprocated pair separates. The viewer runtime is vendored into the page, which therefore opens with no network. Both listings now show only the furthest-advanced lifecycle stage of a trade rather than the full publication, delivery and decision triplet.
-- `ki trade new` creates a local export once this repository declares the route; receiver activation remains reciprocal.
+- `ki trade routes list [--estate] [--incomplete]` is a framed local or registered-estate route inventory; `--html` renders the estate as a self-contained interactive force-directed network instead, written to the cache and opened in a browser, drawing one arc per direction with per-kind chips so a reciprocated pair separates. The viewer runtime is vendored into the page, which therefore opens with no network.
+- `ki trade prepare` creates a mutable local export once this repository declares the route; the receiver may observe it before `ki trade submit` freezes it, and `ki trade abandon --yes` removes it while it remains mutable. Receiver activation remains reciprocal.
 - Trade pairing compares the payload the sender authored — its field values as parsed and its prose — rather than raw bytes, so a receiver that formats its own Markdown does not read as having tampered with a record.
-- `ki trade list` is a framed registered-estate inventory.
+- `ki trade list` is a framed registered-estate inventory of preparations, outbound submissions, and received imports, including their observation and cleanup state.
 - `ki repo audit` and `ki repo conform` report the span in which a skill gathers its evidence, which precedes every criterion and on a subprocess-backed rubric is nearly the whole operation. The host names that span itself, so a session that emits nothing is still reported as gathering evidence rather than as a stalled item count; a session that takes the optional emitter refines it with its own named stages and steps, and a step carrying its own counters draws a determinate bar.
 - `.ki-config.toml` names each harness once in `[repo]` and declares each governing skill by its bare name under `[skills]`, resolving that name against the declared harness list rather than against whichever harnesses happen to be installed. A skill from a harness outside that list keeps a quoted, fully-qualified key. Trade routes are re-keyed by partner: one entry per peer carrying its `export` and `import` kinds, with a direction it does not trade simply absent. The previous fully-qualified top-level shape is not read: an unmigrated file fails naming the shape expected, with no dual parse or fallback.
 

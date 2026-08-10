@@ -1,4 +1,4 @@
-.TH KI 1 "2026-08-09" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-08-10" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -23,7 +23,8 @@ Print the CLI version.
 .TP
 .B ki bootstrap [--refresh]
 Detect agents, install the canonical harness, and install core user skills.
-On refresh, migrate retired local repository paths into machine-local registry state.
+On refresh, migrate retired local repository paths into machine-local registry
+state.
 .SS Local management
 \&
 .TP
@@ -210,7 +211,8 @@ Write absolute physical roots for machine consumption. The default format is
 newline-delimited. Use --null or -0 for pathnames that may contain line feeds.
 .TP
 .B ki agora open <name> --target zed
-Open one declared Agora or the registered estate through the explicit Zed target.
+Open one declared Agora or the registered estate through the explicit Zed
+target.
 .SS Acquisition
 \&
 .TP
@@ -429,7 +431,8 @@ required: \fB--title\fR, \fB--description\fR, a stable uppercase
 \fB--repo-code\fR, canonical HTTPS GitHub \fB--repository\fR, one or more \fB--runtime\fR values selected from
 \fBclaude-code\fR and \fBchatgpt-codex\fR, and \fB--visibility public|private\fR.
 It atomically creates the minimal canonical \fBki-repo\fR declaration and
-registers the physical root in \fB$XDG_STATE_HOME/ki/registry.toml\fR. It never runs
+registers the physical root in \fB$XDG_STATE_HOME/ki/registry.toml\fR. It
+never runs
 \fBgit init\fR, guesses identity, activates repository skills, creates a
 Agora, accepts repository selectors, or overwrites an existing
 \fB.ki-config.toml\fR.
@@ -467,8 +470,8 @@ targets.
 Conform uses the same progress controls and reporter-level vocabulary as audit,
 names both the target and supplier for every skill, and renders FAIL, WARN, and
 FIXED findings by default while retaining every terminal per-skill result.
-For a local invocation it records each selected canonical root in the machine-local
-registry before evaluating findings. Registration is
+For a local invocation it records each selected canonical root in the
+machine-local registry before evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
 .TP
@@ -544,15 +547,17 @@ repository. It changes neither user nor repository skill activation.
 \&
 .PP
 Use these root-level commands to record and list canonical KI repository roots
-in \fB$XDG_STATE_HOME/ki/registry.toml\fR. Registry membership is an inventory, not a
+in \fB$XDG_STATE_HOME/ki/registry.toml\fR. Registry membership is an
+inventory, not a
 repository-operation or conformance verdict. The repository key names each
 record; each record holds a canonical HTTPS GitHub repository identity and
 physical checkout path.
 .TP
 .B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
-Record selected canonical KI repository roots in \fB$XDG_STATE_HOME/ki/registry.toml\fR
-without applying repository repairs. This explicit inventory action validates the
-selected root's declared canonical identity and preserves existing entries. It never
+Record selected canonical KI repository roots in
+\fB$XDG_STATE_HOME/ki/registry.toml\fR without applying repository repairs.
+This explicit inventory action validates the selected root's declared canonical
+identity and preserves existing entries. It never
 searches outside the supplied target selection.
 .TP
 .B ki registry list
@@ -684,7 +689,8 @@ Write absolute physical roots for machine consumption. The default format is
 newline-delimited. Use --null or -0 for pathnames that may contain line feeds.
 .TP
 .B ki agora open <name> --target zed
-Open one declared Agora or the registered estate through the explicit Zed target.
+Open one declared Agora or the registered estate through the explicit Zed
+target.
 .SS Acquisition
 \&
 .PP
