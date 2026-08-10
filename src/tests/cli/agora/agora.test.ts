@@ -80,7 +80,7 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (3 members)\n│  ╰─ team [declared] team (3 members)\n╰─ summary: AGORAS=2 MEMBERS=6\n'
+        '╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (3 members)\n│  ╰─ team [declared] team (3 members)\n╰─ summary: AGORAS=2 MEMBERS=3\n'
     })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 0,
