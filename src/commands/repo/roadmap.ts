@@ -136,12 +136,10 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
   const groups = textHorizonGroups(items)
   const roadmap = result.diagnostic
     ? [{ label: `❌ ${result.diagnostic}` }]
-    : !items.length
-      ? [{ label: 'items: none' }]
-      : groups.map(({ horizon, items: group }) => ({
-          label: `${horizon} (${group.length})`,
-          children: group.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
-        }))
+    : groups.map(({ horizon, items: group }) => ({
+        label: `${horizon} (${group.length})`,
+        children: group.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
+      }))
   const { inbound, outbound } = countTradeDirections(result.trades)
   const tradeSummary = result.tradeDiagnostic
     ? 'unavailable'
