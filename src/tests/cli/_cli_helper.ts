@@ -162,6 +162,8 @@ export interface Sandbox {
       readonly installation?: KiInstallationMode
       readonly platform?: NodeJS.Platform
       readonly stdoutFailure?: Error
+      /** Receives each write with its destination stream. */
+      readonly captureOutput?: (stream: 'stdout' | 'stderr', chunk: string) => void
       /** Receives the interrupt handler a live display registers, so a test can fire it. */
       readonly captureInterrupt?: (handler: () => void) => void
       /** Receives the refresh handler a live display registers, so a test can fire it. */
@@ -234,6 +236,8 @@ const create = async (): Promise<Sandbox> => {
       readonly installation?: KiInstallationMode
       readonly platform?: NodeJS.Platform
       readonly stdoutFailure?: Error
+      /** Receives each write with its destination stream. */
+      readonly captureOutput?: (stream: 'stdout' | 'stderr', chunk: string) => void
       /** Receives the interrupt handler a live display registers, so a test can fire it. */
       readonly captureInterrupt?: (handler: () => void) => void
       /** Receives the refresh handler a live display registers, so a test can fire it. */
@@ -241,14 +245,17 @@ const create = async (): Promise<Sandbox> => {
     }
   ): Promise<CommandResult> => {
     let output = ''
-    const write = (chunk: string): void => {
-      if (options?.stdoutFailure) throw options.stdoutFailure
-      output += chunk
-    }
+    const write =
+      (stream: 'stdout' | 'stderr') =>
+      (chunk: string): void => {
+        if (stream === 'stdout' && options?.stdoutFailure) throw options.stdoutFailure
+        options?.captureOutput?.(stream, chunk)
+        output += chunk
+      }
     const executable = options?.executable ?? executablePath
     const context = await createContext({
-      stdout: { write },
-      stderr: { write, isTTY: options?.interactive, columns: options?.columns },
+      stdout: { write: write('stdout'), isTTY: options?.interactive, columns: options?.columns },
+      stderr: { write: write('stderr'), isTTY: options?.interactive, columns: options?.columns },
       executable,
       installation: options?.installation,
       ...(options?.platform === undefined ? {} : { platform: options.platform }),

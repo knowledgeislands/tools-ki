@@ -257,7 +257,13 @@ describe('[ki repo]', () => {
 
       const help = await box.run('ki repo audit --help')
       const never = await box.run('ki repo audit --progress never', { interactive: true, now: () => 0 })
-      const always = await box.run('ki repo audit --progress always', { now: () => 0 })
+      const writes: Record<'stdout' | 'stderr', string> = { stdout: '', stderr: '' }
+      const always = await box.run('ki repo audit --progress always', {
+        now: () => 0,
+        captureOutput: (stream, chunk) => {
+          writes[stream] += chunk
+        }
+      })
       const multi = await box.run('ki repo audit --progress always --progress-style multi', { now: () => 0 })
       const multiInteractive = await box.run('ki repo audit --progress-style multi', {
         interactive: true,
@@ -277,6 +283,8 @@ describe('[ki repo]', () => {
         `╭─ KI REPO AUDIT\n│  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})\n│  ╰─ ✦ 1 skill selected\n│     ╰─ example/harness:ki-example\n├─ loading`
       )
       expect(always.output.indexOf('╭─ KI REPO AUDIT')).toBeLessThan(always.output.indexOf('├─ loading'))
+      expect(writes.stdout).toContain('├─ loading')
+      expect(writes.stderr).toBe('')
       expect(multi.output).toContain('[ki-example]')
       // One row per skill plus the totals row, so the rewind spans two lines.
       expect(multiInteractive.output).toContain('\x1b[2A')

@@ -198,9 +198,9 @@ const createProgressTracker = (
   skills: readonly TrackedSkill[],
   phase: string
 ): ProgressTracker | undefined => {
-  const enabled = options.progress === 'always' || (options.progress === 'auto' && context.stderr.isTTY === true)
+  const enabled = options.progress === 'always' || (options.progress === 'auto' && context.stdout.isTTY === true)
   if (!enabled) return undefined
-  const interactive = context.stderr.isTTY === true
+  const interactive = context.stdout.isTTY === true
   const started = context.now()
   let phaseStarted = started
   let activePhase: ProgressPhase = 'loading'
@@ -231,22 +231,22 @@ const createProgressTracker = (
   }
   const hideCursor = (): void => {
     if (!interactive || cursorHidden) return
-    context.stderr.write(CURSOR_HIDE)
+    context.stdout.write(CURSOR_HIDE)
     cursorHidden = true
   }
   const showCursor = (): void => {
     if (!cursorHidden) return
-    context.stderr.write(CURSOR_SHOW)
+    context.stdout.write(CURSOR_SHOW)
     cursorHidden = false
   }
   const releaseInterrupt = context.onInterrupt(() => {
     showCursor()
-    context.stderr.write('\n')
+    context.stdout.write('\n')
   })
   const renderOptions = (
     label = activePhase.padEnd(rootLabelWidth),
     placement: RenderOptions['placement'] = 'root'
-  ): RenderOptions => ({ columns: context.stderr.columns, label, placement, tick })
+  ): RenderOptions => ({ columns: context.stdout.columns, label, placement, tick })
   const closePhase = (): void => {
     timings.push({ phase: activePhase, elapsed: context.now() - phaseStarted })
   }
@@ -311,15 +311,15 @@ const createProgressTracker = (
   const writeRows = (rows: readonly string[], final: boolean): void => {
     const lineBreak = interactive ? '\r\n' : '\n'
     if (rows.length === 1 && renderedRows <= 1) {
-      context.stderr.write(`${interactive ? '\r\x1b[2K' : ''}${rows[0]}${final || !interactive ? lineBreak : ''}`)
+      context.stdout.write(`${interactive ? '\r\x1b[2K' : ''}${rows[0]}${final || !interactive ? lineBreak : ''}`)
       renderedRows = final ? 0 : 1
       return
     }
     // Only rewind over rows this tracker drew; a list taller than the terminal would
     // otherwise scroll and the cursor-up would overwrite unrelated output.
-    const height = Math.max(1, Math.floor(terminalColumns(context.stderr.columns) / 2))
+    const height = Math.max(1, Math.floor(terminalColumns(context.stdout.columns) / 2))
     const rewind = interactive && renderedRows > 1 && renderedRows <= height ? `\x1b[${renderedRows}A` : ''
-    context.stderr.write(
+    context.stdout.write(
       `${rewind}${rows.map((row) => `${interactive ? '\r\x1b[2K' : ''}${row}${lineBreak}`).join('')}`
     )
     renderedRows = final ? 0 : rows.length
@@ -351,7 +351,7 @@ const createProgressTracker = (
     const summary = [...timings, { phase: activePhase, elapsed: context.now() - phaseStarted }]
       .map(({ phase: label, elapsed: duration }) => `${label} ${elapsed(duration)}`)
       .join(' · ')
-    context.stderr.write(
+    context.stdout.write(
       `${treeProgressPrefix('timings'.padEnd(rootLabelWidth), 'last-root')}${summary} · total ${elapsed(context.now() - started)}\n`
     )
   }
