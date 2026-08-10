@@ -4,10 +4,10 @@ area: CLI
 title: Track install staging artifacts
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: e4dc56fb0c421d3c8d485f304dd248d1bb76158f
 ---
 
 ## Goal
