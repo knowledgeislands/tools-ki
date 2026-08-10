@@ -39,9 +39,6 @@ VENDOR = "cross-repository-vendoring"
 export = ["work", "knowledge"]
 import = ["work", "knowledge"]
 
-[skills.ki-trades.routes."knowledgeislands/ki-website"]
-export = ["knowledge"]
-
 [skills.ki-trades.routes."knowledgeislands/tools-mgit"]
 export = ["work", "knowledge"]
 import = ["work", "knowledge"]
