@@ -4,10 +4,10 @@ title: Compose KB store roles
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 76fc8a7c7e1154b1bc69397702adb3f181df7d32
 transferred_from: KI-TOOL-CLI-018
 ---
 
