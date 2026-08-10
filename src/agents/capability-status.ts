@@ -1,7 +1,7 @@
-import { inspectUserConfiguration } from '../agents/index.ts'
-import { KiError } from './errors.ts'
-import { discoverInstalledHarnesses, type InstalledHarness } from './harness.ts'
-import { readHarnessRegistry } from './registry.ts'
+import { KiError } from '../core/errors.ts'
+import { discoverInstalledHarnesses, type InstalledHarness } from '../core/harness.ts'
+import { readHarnessRegistry } from '../core/registry.ts'
+import { inspectUserConfiguration } from './configuration.ts'
 
 export interface MissingCapability {
   readonly name: string

@@ -1,6 +1,6 @@
 import { Command } from 'commander'
+import { collectCapabilityStatus } from '../../agents/capability-status.ts'
 import type { KiContext } from '../../context.ts'
-import { collectCapabilityStatus } from '../../core/capability-status.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
 
 export const createMissingCommand = (context: KiContext): Command =>

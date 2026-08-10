@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
-import { minimumBootstrapUserSkills } from '../agents/internal.ts'
 import { acquireVerifiedArchive, extractArchive, type Fetcher } from './acquire.ts'
+import { minimumBootstrapUserSkills } from './bootstrap-capabilities.ts'
 import { KiError } from './errors.ts'
 import {
   canonicalHarnessIdentifier,
