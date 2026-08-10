@@ -6,9 +6,9 @@ theme: cross-repository-vendoring
 horizon: waiting-for
 status: draft
 blocks: []
-blocked-by: []
-baseline-ref: null
-transferred-from: knowledgeislands/ki-agentic-harness:foundation-tooling
+blocked_by: []
+baseline_ref: null
+transferred_from: knowledgeislands/ki-agentic-harness:foundation-tooling
 ---
 
 ## Goal
@@ -46,7 +46,7 @@ The contract is verified when a single provider-to-receiver path runs end to end
 
 ## Dependencies / blocks
 
-`KI-TOOL-CLI-025` introduced the `[repo] harnesses` list and was delivered, accepted, and pruned on 2026-08-09. This item now waits for a concrete cross-Harness case: a named compatible provider, a named consumer, and an immutable archive, registry entry, or signed release that supplies its publication evidence. This external condition cannot appear in `blocked-by`, which permits only local work-item identifiers.
+`KI-TOOL-CLI-025` introduced the `[repo] harnesses` list and was delivered, accepted, and pruned on 2026-08-09. This item now waits for a concrete cross-Harness case: a named compatible provider, a named consumer, and an immutable archive, registry entry, or signed release that supplies its publication evidence. This external condition cannot appear in `blocked_by`, which permits only local work-item identifiers.
 
 That list is the anchor for a provenance contract: it is where a repository names the harnesses it draws skills from, so it is where a provider's identity, version or digest evidence, and acquisition path would be recorded. Designing provenance before the declaration it must attach to would have designed it against a shape that was about to change — which is why the block was held rather than worked around. Resolution now binds a bare skill name against that declared list rather than against whichever harnesses happen to be installed, so a provenance entry has a stable, version-controlled subject to attach to.
 

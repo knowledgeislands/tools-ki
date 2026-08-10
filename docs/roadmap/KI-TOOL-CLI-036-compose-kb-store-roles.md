@@ -7,9 +7,9 @@ horizon: future
 status: draft
 candidate: true
 blocks: []
-blocked-by: []
-baseline-ref: null
-transferred-from: KI-TOOL-CLI-018
+blocked_by: []
+baseline_ref: null
+transferred_from: KI-TOOL-CLI-018
 ---
 
 ## Goal
