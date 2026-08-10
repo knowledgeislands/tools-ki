@@ -4,7 +4,7 @@ title: Compose KB store roles
 area: CLI
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 76fc8a7c7e1154b1bc69397702adb3f181df7d32
@@ -31,14 +31,14 @@ The local registry represents canonical KI repositories only. It has no per-KB `
 
 - [x] Select `ki repo open` as the first target, using the existing repository-selection rules for one repository, groups, and other supported target sets.
 - [x] Keep Agora opening separate and include available stores for every selected Knowledge Base by default, including multi-repository selections.
-- [ ] Extend the local registry's canonical KB entry with an optional `stores.sources` absolute path. The KB's `.ki-config.toml` remains the authority for whether `sources` exists.
-- [ ] Extend the existing `ki registry add` transaction with `--sources <absolute-path>`. A selected KB that declares `sources` requires exactly one selected target and this option; an add of the same canonical KB replaces its repository path and source binding together. Do not add or rename a command.
-- [ ] Reject registration when a declared source is missing, non-absolute, not a direct directory, or a symlink. Preserve the existing registry entry on failure.
-- [ ] Make automatic registration by `ki repo conform` and `ki repo repair` subject to the same complete-composition invariant. A KB with declared sources must already have a valid matching source binding; otherwise the operation fails and directs the user to `ki registry add`.
-- [ ] Open each selected repository's `notes` root followed by its registered `sources` root; a complete registry entry makes missing-source fallback unnecessary.
+- [x] Extend the local registry's canonical KB entry with an optional `stores.sources` absolute path. The KB's `.ki-config.toml` remains the authority for whether `sources` exists.
+- [x] Extend the existing `ki registry add` transaction with `--sources <absolute-path>`. A selected KB that declares `sources` requires exactly one selected target and this option; an add of the same canonical KB replaces its repository path and source binding together. Do not add or rename a command.
+- [x] Reject registration when a declared source is missing, non-absolute, not a direct directory, or a symlink. Preserve the existing registry entry on failure.
+- [x] Make automatic registration by `ki repo conform` and `ki repo repair` subject to the same complete-composition invariant. A KB with declared sources must already have a valid matching source binding; otherwise the operation fails and directs the user to `ki registry add`.
+- [x] Open each selected repository's `notes` root followed by its registered `sources` root; a complete registry entry makes missing-source fallback unnecessary.
 - [x] Define mutually exclusive `--stores` and `--no-stores` switches: inclusion is the default, and individual roles are not independently selectable.
-- [ ] Implement the target's composition using only local bindings without adding stores to canonical repository discovery.
-- [ ] Exercise valid, missing, malformed, unsafe, and deterministic-order cases at the CLI boundary.
+- [x] Implement the target's composition using only local bindings without adding stores to canonical repository discovery.
+- [x] Exercise valid, missing, malformed, unsafe, and deterministic-order cases at the CLI boundary.
 
 ## Files touched
 
@@ -60,6 +60,32 @@ None. The user approved the complete-composition registration invariant on 10 Au
 - One worker may implement the declaration and local-registry schema, rendering, and CLI contract coverage for registration.
 - A second worker may inspect and prepare the repository-open command and its CLI coverage after the registry schema is settled; it must not edit the registry module concurrently.
 - The orchestrator integrates the automatic-registration callers, runs the complete verification gate, and reviews every CLI contract.
+
+## Review
+
+### Delivered
+
+`ki registry add --sources` now records a complete local KB composition, and `ki repo open` opens notes followed by sources by default.
+
+### Summary of changes
+
+Added KB-role parsing, source-store validation, atomic source-bound registry replacement, complete-binding guards, editor opening, completion/man/changelog coverage, and CLI contracts.
+
+### Verification
+
+Focused registry, repair, open, completion, and inventory contracts passed; `bunx tsc --noEmit`, `bun run test:coverage`, and Biome passed.
+
+### Outstanding concerns
+
+None. `legacy` remains intentionally unsupported by this delivery.
+
+### Post-change review
+
+Sol found that a source-bound KB could be silently downgraded by ordinary registration. Replacement now requires both entries to carry complete source bindings, with a regression contract.
+
+### Mini recap
+
+The local registry can own machine-specific source paths without treating sources as repositories or Agora members.
 
 ## Discussion
 

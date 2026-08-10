@@ -4,7 +4,7 @@ area: CLI
 title: Split trade configuration
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: cb93ee03d8a8ff333f99d38922161f2edb677342
@@ -28,9 +28,9 @@ The first 345 lines of `trade-core.ts` contain configuration models, validators,
 
 ## Steps
 
-- [ ] Extract the trade configuration types, validators, parsing, rendering, and route mutations to `src/core/trade-configuration.ts`.
-- [ ] Update trade-core and command consumers to import their owning configuration contract directly, with no compatibility re-export.
-- [ ] Verify exact CLI trade contracts, type safety, coverage, formatting, and the intended internal import boundary.
+- [x] Extract the trade configuration types, validators, parsing, rendering, and route mutations to `src/core/trade-configuration.ts`.
+- [x] Update trade-core and command consumers to import their owning configuration contract directly, with no compatibility re-export.
+- [x] Verify exact CLI trade contracts, type safety, coverage, formatting, and the intended internal import boundary.
 
 ## Files touched
 
@@ -55,6 +55,32 @@ No local dependency blocks this refactor. Existing end-to-end trade command test
 ## Delegation
 
 A worker may inspect or perform the mechanical configuration extraction only within the listed files. The orchestrator reviews the resulting dependency graph and runs the full stated verification before this item can reach review.
+
+## Review
+
+### Delivered
+
+Trade configuration and route mutation now live in `trade-configuration.ts`; trade lifecycle remains in `trade-core.ts`.
+
+### Summary of changes
+
+Moved configuration types, validators, TOML parsing/rendering, and route mutation; updated direct consumers without compatibility exports or cycles.
+
+### Verification
+
+The 38-contract trade CLI suite, import-boundary inspection, `bunx tsc --noEmit`, `bun run test:coverage`, and Biome passed.
+
+### Outstanding concerns
+
+None. Trade protocol and public output were unchanged.
+
+### Post-change review
+
+Sol found no substantive issue or module cycle in this extraction.
+
+### Mini recap
+
+Keeping declaration syntax and mutation together makes the lifecycle core substantially easier to navigate.
 
 ## Discussion
 

@@ -4,7 +4,7 @@ area: CLI
 title: Extract repository initialization
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 0314bddd97e1dbc8a6f0ada800bb1d4a76ef318e
@@ -28,9 +28,9 @@ The `init` command occupies one distinct branch in the repository factory but ha
 
 ## Steps
 
-- [ ] Move the `ki repo init` command construction and implementation to `src/commands/repo/init.ts`.
-- [ ] Reduce the repository factory to root setup, shared selection, and child-command composition.
-- [ ] Prove exact initialization success, validation, rollback, and option-isolation contracts at the CLI boundary.
+- [x] Move the `ki repo init` command construction and implementation to `src/commands/repo/init.ts`.
+- [x] Reduce the repository factory to root setup, shared selection, and child-command composition.
+- [x] Prove exact initialization success, validation, rollback, and option-isolation contracts at the CLI boundary.
 
 ## Files touched
 
@@ -52,6 +52,32 @@ No local dependency blocks this extraction. The `init` branch is independent of 
 ## Delegation
 
 A worker may inspect or perform the mechanical `init` extraction only within the listed files. The orchestrator reviews the atomic-write and command-isolation evidence and runs the full stated verification before this item can reach review.
+
+## Review
+
+### Delivered
+
+Repository initialization now has a focused command module, leaving the repository factory as a command-composition boundary.
+
+### Summary of changes
+
+Moved init option parsing, validation, transactional writes, rollback, and output unchanged to `commands/repo/init.ts`.
+
+### Verification
+
+The 18-contract initialization and registry suite, `bunx tsc --noEmit`, `bun run test:coverage`, and Biome passed.
+
+### Outstanding concerns
+
+None. Initialization grammar and atomicity are unchanged.
+
+### Post-change review
+
+Sol found no substantive issue in this extraction.
+
+### Mini recap
+
+The initialization branch was a true command seam and no new abstraction was needed.
 
 ## Discussion
 

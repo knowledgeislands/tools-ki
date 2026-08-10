@@ -4,7 +4,7 @@ area: CLI
 title: Separate repository progress
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 4aa3e4d491aede9d8dd9c196c4b85f81ad9c2896
@@ -28,9 +28,9 @@ Progress wrappers (`runPreparedWithProgress`, `runWithProgress`, and `runWithEvi
 
 ## Steps
 
-- [ ] Extract the progress model, terminal tracker, and execution wrappers to `src/core/repository-progress.ts`.
-- [ ] Update the repository command factory to import progress and final-report contracts from their owning modules, without compatibility re-exports.
-- [ ] Prove exact interactive and non-interactive audit and conform output contracts after the extraction.
+- [x] Extract the progress model, terminal tracker, and execution wrappers to `src/core/repository-progress.ts`.
+- [x] Update the repository command factory to import progress and final-report contracts from their owning modules, without compatibility re-exports.
+- [x] Prove exact interactive and non-interactive audit and conform output contracts after the extraction.
 
 ## Files touched
 
@@ -55,6 +55,32 @@ No local dependency blocks this refactor. The existing repository CLI contract s
 ## Delegation
 
 A worker may inspect or perform the mechanical progress extraction only within the listed files. The orchestrator reviews interactive and non-interactive output evidence and runs the full stated verification before this item can reach review.
+
+## Review
+
+### Delivered
+
+In-flight repository progress is now in `repository-progress.ts`; final audit and conform reporting remain in `repository-reporting.ts`.
+
+### Summary of changes
+
+Moved terminal progress state, options, and execution wrappers while keeping result-frame rendering separate and type-only linked.
+
+### Verification
+
+The 78-contract repository progress suite, `bunx tsc --noEmit`, `bun run test:coverage`, and Biome passed.
+
+### Outstanding concerns
+
+None. Interactive and non-interactive CLI output is unchanged.
+
+### Post-change review
+
+Sol found no substantive issue or module cycle in this extraction.
+
+### Mini recap
+
+Progress is an in-flight operation concern; final reporting is a completed-result concern.
 
 ## Discussion
 
