@@ -924,6 +924,7 @@ export const renderConciseConformSummary = (
  */
 export const renderConformReports = (
   reporter: TreeReporter,
+  repository: string,
   reports: readonly SkillReport[],
   reporterLevels: readonly ReporterLevel[]
 ): void => {
@@ -942,6 +943,6 @@ export const renderConformReports = (
     })
   }
   reporter.finish({
-    label: `summary: ${conformSummaryCounts(skillSummaries)}`
+    label: `summary: KI REPO CONFORM on ${basename(repository)} ${conformSummaryCounts(skillSummaries)}`
   })
 }

@@ -370,9 +370,15 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               'conform'
             )
             const findings = conformed.flatMap(({ conform }) => conform.findings)
-            const renderReports = (reports: Parameters<typeof renderConformReports>[1]): void => {
+            const renderReports = (reports: Parameters<typeof renderConformReports>[2]): void => {
               if (output.concise) renderConciseConformSummary(context, repository.root, reports)
-              else renderConformReports(reporter as NonNullable<typeof reporter>, reports, output.reporterLevels)
+              else
+                renderConformReports(
+                  reporter as NonNullable<typeof reporter>,
+                  repository.root,
+                  reports,
+                  output.reporterLevels
+                )
             }
             const renderInitialReports = () =>
               renderReports(conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })))
