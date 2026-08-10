@@ -61,17 +61,17 @@ Approved by: Kris Brown, 10 August 2026, in this conversation.
 
 | Item | Start | Result | Evidence | Next human action |
 | --- | --- | --- | --- | --- |
-| CLI-040 | ready | awaiting-review | `cb93ee0` → `378ab9c`; 38 trade CLI contracts, typecheck, coverage, Biome | Review the packet |
-| CLI-037 | ready | awaiting-review | `e4dc56f` → `378ab9c`; 104 artifact CLI contracts, typecheck, coverage, Biome | Review the packet |
-| CLI-041 | ready | awaiting-review | `4aa3e4d` → `378ab9c`; 78 repository-progress CLI contracts, typecheck, coverage, Biome | Review the packet |
-| CLI-042 | ready | awaiting-review | `0314bdd` → `378ab9c`; 18 initialization contracts, typecheck, coverage, Biome | Review the packet |
-| CLI-036 | ready | awaiting-review | `76fc8a7` → `378ab9c`; registry, repair, and open contracts, typecheck, coverage, Biome | Review the packet |
+| CLI-040 | ready | done → pruned | `cb93ee0` → `378ab9c`; 38 trade CLI contracts, typecheck, coverage, Biome | None |
+| CLI-037 | ready | done → pruned | `e4dc56f` → `378ab9c`; 104 artifact CLI contracts, typecheck, coverage, Biome | None |
+| CLI-041 | ready | done → pruned | `4aa3e4d` → `378ab9c`; 78 repository-progress CLI contracts, typecheck, coverage, Biome | None |
+| CLI-042 | ready | done → pruned | `0314bdd` → `378ab9c`; 18 initialization contracts, typecheck, coverage, Biome | None |
+| CLI-036 | ready | done → pruned | `76fc8a7` → `378ab9c`; registry, repair, and open contracts, typecheck, coverage, Biome | None |
 
 ## Batch recap
 
 All five items reached the authorised review target. The shared command-index work was serialized; the trade split and managed-artifact work ran independently. A Sol review found no concern in the three modularity extractions and found five safety flaws in the new registry/artifact work. Those flaws were corrected and covered before the final full gate passed.
 
-No item was accepted, marked done, pruned, pushed, or released.
+Kris Brown accepted all five review packets on 10 August 2026. Their `done` records were retained in commit `b1dce56`, then the explicitly selected set was pruned. No work was pushed or released.
 
 ### Proposed learning routes
 
