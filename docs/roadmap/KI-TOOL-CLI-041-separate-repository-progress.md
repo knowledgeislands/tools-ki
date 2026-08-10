@@ -4,7 +4,7 @@ area: CLI
 title: Separate repository progress
 theme: cli
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
@@ -51,6 +51,10 @@ Progress wrappers (`runPreparedWithProgress`, `runWithProgress`, and `runWithEvi
 ## Dependencies / blocks
 
 No local dependency blocks this refactor. The existing repository CLI contract suite covers both progress and final result frames.
+
+## Delegation
+
+A worker may inspect or perform the mechanical progress extraction only within the listed files. The orchestrator reviews interactive and non-interactive output evidence and runs the full stated verification before this item can reach review.
 
 ## Discussion
 

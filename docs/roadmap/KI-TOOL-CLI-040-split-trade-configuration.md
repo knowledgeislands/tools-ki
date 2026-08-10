@@ -4,7 +4,7 @@ area: CLI
 title: Split trade configuration
 theme: cli
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
@@ -51,6 +51,10 @@ The first 345 lines of `trade-core.ts` contain configuration models, validators,
 ## Dependencies / blocks
 
 No local dependency blocks this refactor. Existing end-to-end trade command tests cover route declaration, mutation, observation, release, and cleanup.
+
+## Delegation
+
+A worker may inspect or perform the mechanical configuration extraction only within the listed files. The orchestrator reviews the resulting dependency graph and runs the full stated verification before this item can reach review.
 
 ## Discussion
 

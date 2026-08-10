@@ -4,7 +4,7 @@ area: CLI
 title: Extract repository initialization
 theme: cli
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
@@ -48,6 +48,10 @@ The `init` command occupies one distinct branch in the repository factory but ha
 ## Dependencies / blocks
 
 No local dependency blocks this extraction. The `init` branch is independent of the planned progress and trade-configuration refactors.
+
+## Delegation
+
+A worker may inspect or perform the mechanical `init` extraction only within the listed files. The orchestrator reviews the atomic-write and command-isolation evidence and runs the full stated verification before this item can reach review.
 
 ## Discussion
 
