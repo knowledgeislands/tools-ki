@@ -314,7 +314,7 @@ test('audits, conforms, and lists the local ki-repo registry without discovering
   expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(repository)}`)
   expect(listed).toEqual({ exitCode: 0, output: `${repository}\n` })
   expect((await box.run('ki repo audit')).output).toContain(
-    '╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0'
+    '╰─ summary: KI REPO AUDIT on project PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0'
   )
 })
 

@@ -210,7 +210,7 @@ describe('[ki repo]', () => {
 ├─ results
 │  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
 │     ╰─ i info [Example (EXAMPLE-1)] — ok
-╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
     })
@@ -320,7 +320,7 @@ describe('[ki repo]', () => {
 │     ╰─ example/harness:ki-example
 ├─ results
 │  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
-╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
     })
@@ -406,7 +406,7 @@ describe('[ki repo]', () => {
       expect(progressOutput.startsWith(header)).toBe(true)
       expect(standardOutput).toBe(`│  ├─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
 │  ╰─ ✓ example/harness:ki-extra PASS · FAIL=0 WARN=0
-╰─ summary: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `)
       // Loading and evidence are retained before item audit; each item then reports at both edges
       // of its await, so a running frame precedes every completion.
@@ -453,7 +453,7 @@ describe('[ki repo]', () => {
 ├─ results
 │  ├─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
 │  ╰─ ✓ example/harness:ki-extra PASS · FAIL=0 WARN=0
-╰─ summary: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
     })
@@ -672,7 +672,7 @@ describe('[ki repo]', () => {
 ├─ results
 │  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
 │     ╰─ i info [Example (EXAMPLE-1)] some/file.ts — ok
-╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
 `
       })
     })
@@ -744,7 +744,9 @@ export default {
 
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('! warn [Hybrid evidence (DIRECT-1)]')
-      expect(result.output).toContain('╰─ summary: PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1')
+      expect(result.output).toContain(
+        '╰─ summary: KI REPO AUDIT on project PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1'
+      )
     })
   })
 })

@@ -231,9 +231,15 @@ describe('[ki repo target sets]', () => {
       const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, '--repo', third, 'audit'])
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('╰─ summary: PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0')
-      expect(result.output).toContain('╰─ summary: PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1')
-      expect(result.output).toContain('╰─ summary: PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0')
+      expect(result.output).toContain(
+        '╰─ summary: KI REPO AUDIT on first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0'
+      )
+      expect(result.output).toContain(
+        '╰─ summary: KI REPO AUDIT on second PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1'
+      )
+      expect(result.output).toContain(
+        '╰─ summary: KI REPO AUDIT on third PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0'
+      )
       expect(result.output).toContain(
         `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✓ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n│  ├─ ! second PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1\n│  ╰─ × third PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0\n╰─ totals: PASS=1 WARN=1 FAIL=1 · FINDINGS: FAIL=1 WARN=1`
       )

@@ -5,7 +5,7 @@ import { prepareWrites, publishWrites } from './transaction.ts'
 
 const ROADMAP_DIRECTORY = 'docs/roadmap'
 const ISSUE_LEDGER = '_ISSUES.md'
-const requiredFields = ['id', 'title', 'theme', 'horizon', 'status', 'blocks', 'blocked-by', 'baseline-ref'] as const
+const requiredFields = ['id', 'title', 'theme', 'horizon', 'status', 'blocks', 'blocked_by', 'baseline_ref'] as const
 type RequiredField = (typeof requiredFields)[number]
 type WorkItemField =
   | RequiredField
@@ -69,7 +69,7 @@ const frontmatter = (contents: string, file: string): Readonly<WorkItemFields> =
   if (!match?.[1]) throw itemError(file, 'must declare canonical frontmatter')
   const fields: WorkItemFields = {}
   for (const line of match[1].split('\n')) {
-    const entry = /^([a-z-]+): (.+)$/.exec(line)
+    const entry = /^([a-z_-]+): (.+)$/.exec(line)
     if (!entry?.[1] || entry[2] === undefined) throw itemError(file, 'frontmatter must contain simple key-value fields')
     const [, key, value] = entry
     if (!allowedFields.has(key as WorkItemField) || Object.hasOwn(fields, key))
@@ -96,9 +96,9 @@ const readItem = async (directory: string, file: string): Promise<WorkItemRecord
   if (!statuses.has(fields.status as WorkItemStatus)) throw itemError(file, 'has an invalid lifecycle status')
   if (fields.horizon === 'future' ? fields.candidate !== 'true' : fields.candidate !== undefined)
     throw itemError(file, 'must use candidate: true only for future items')
-  const baseline = fields['baseline-ref']
+  const baseline = fields['baseline_ref']
   if (baseline !== 'null' && !/^[a-f0-9]{40}$/.test(baseline as string))
-    throw itemError(file, 'baseline-ref must be null or a full commit ID')
+    throw itemError(file, 'baseline_ref must be null or a full commit ID')
   const item: WorkItem = {
     id,
     title: fields.title as string,
@@ -106,7 +106,7 @@ const readItem = async (directory: string, file: string): Promise<WorkItemRecord
     horizon: fields.horizon as WorkItemHorizon,
     status: fields.status as WorkItemStatus,
     blocks: parseList(fields.blocks as string, file, 'blocks'),
-    blockedBy: parseList(fields['blocked-by'] as string, file, 'blocked-by'),
+    blockedBy: parseList(fields['blocked_by'] as string, file, 'blocked_by'),
     baselineRef: baseline === 'null' ? null : (baseline as string),
     ...(fields.candidate ? { candidate: true } : {}),
     ...(fields['transferred-from'] ? { transferredFrom: fields['transferred-from'] } : {})

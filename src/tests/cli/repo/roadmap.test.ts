@@ -10,8 +10,8 @@ const item = (overrides: Record<string, string> = {}): string => {
     horizon: 'next',
     status: 'draft',
     blocks: '[]',
-    'blocked-by': '[]',
-    'baseline-ref': 'null',
+    blocked_by: '[]',
+    baseline_ref: 'null',
     ...overrides
   }
   return `---\n${Object.entries(fields)
@@ -183,7 +183,7 @@ describe('[ki repo roadmap]', () => {
         horizon: 'future',
         status: 'awaiting-review',
         candidate: 'true',
-        'baseline-ref': 'a'.repeat(40)
+        baseline_ref: 'a'.repeat(40)
       })
     )
     const root = await realpath(`${box.project.path}/repo`)
@@ -418,11 +418,7 @@ describe('[ki repo roadmap]', () => {
       ],
       ['id.md', item({ id: 'wrong' }), 'must use a matching work-item identifier'],
       ['KI-TOOL-CLI-003-invalid.md', item({ theme: 'Wrong' }), 'has invalid title, theme, or horizon'],
-      [
-        'KI-TOOL-CLI-003-baseline.md',
-        item({ 'baseline-ref': 'wrong' }),
-        'baseline-ref must be null or a full commit ID'
-      ],
+      ['KI-TOOL-CLI-003-baseline.md', item({ baseline_ref: 'wrong' }), 'baseline_ref must be null or a full commit ID'],
       ['KI-TOOL-CLI-003-future.md', item({ horizon: 'future' }), 'must use candidate: true only for future items'],
       ['KI-TOOL-CLI-003-candidate.md', item({ candidate: 'true' }), 'must use candidate: true only for future items'],
       ['KI-TOOL-CLI-003-list.md', item({ blocks: '[wrong]' }), 'blocks must be an identifier array']
