@@ -71,6 +71,7 @@ ids = ["example:skill", "example:skill"]
 
     const human = await box.run('ki manage diag')
 
+    expect(human.exitCode).toBe(1)
     expect(human.output).toContain('├─ warnings (3)')
     expect(human.output).toContain('! unrecognised key unexpected')
     expect(human.output).toContain('├─ errors (4)')
@@ -90,6 +91,7 @@ ids = ["example:skill", "example:skill"]
     const invalid = await box.run('ki manage diag')
 
     expect(valid.output).toContain(`╰─ repository: ${repository}`)
+    expect(invalid.exitCode).toBe(1)
     expect(invalid.output).toContain('errors (1)')
     expect(invalid.output).toContain('unrecognised key extra')
   })

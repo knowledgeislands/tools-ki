@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
+import { KiExit } from '../../core/errors.ts'
 import { inspectLocalRegistry } from '../../core/local-registry.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
 import { renderTree, type TreeEntry } from '../../core/tree-rendering.ts'
@@ -92,4 +93,5 @@ export const createDiagCommand = (context: KiContext): Command =>
       })
 
       context.stdout.write(`${renderTree({ title: 'KI MANAGE DIAG', entries }).join('\n')}\n`)
+      if (configuration.errors.length || registry.errors.length) throw new KiExit(1)
     })
