@@ -57,7 +57,7 @@ export const createRepoOpenCommand = (
           (candidate) => candidate.repository === identity && candidate.path === repository.root
         )
         try {
-          roots.push(...(await registeredKnowledgeBaseStoreRoots(declaration, entry)))
+          roots.push(...(await registeredKnowledgeBaseStoreRoots(entry)))
         } catch {
           throw new KiError(
             `Knowledge Base ${repository.root} declares sources; run ki registry add --repo ${repository.root} --sources <absolute-path>`,

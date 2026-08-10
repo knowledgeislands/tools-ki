@@ -131,4 +131,41 @@ describe('[ki repo open]', () => {
       output: 'ki: error: ki repo open --stores and --no-stores are mutually exclusive\n'
     })
   })
+
+  test('rejects an invalid local registry before opening a declared sources store', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', repositoryConfiguration('https://github.com/example/knowledge', true))
+    await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
+
+    expect(await box.run('ki repo open --target vscode')).toEqual({
+      exitCode: 1,
+      output: 'ki: error: local KI repository registry is invalid: unrecognised key extra\n'
+    })
+  })
+
+  test('reports editor launch failures at each supported opening boundary', async () => {
+    const cases = [
+      { target: 'zed', stage: 'window', output: 'window failed\n', expected: 'window failed' },
+      { target: 'zed', stage: 'window', output: '', expected: 'zed failed' },
+      { target: 'zed', stage: 'root', output: 'root failed\n', expected: 'root failed' },
+      { target: 'zed', stage: 'root', output: '', expected: 'zed failed' },
+      { target: 'vscode', stage: 'window', output: 'window failed\n', expected: 'window failed' },
+      { target: 'vscode', stage: 'window', output: '', expected: 'code failed' }
+    ] as const
+
+    for (const scenario of cases) {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', repositoryConfiguration('https://github.com/example/project'))
+      box.setRunner(async (_command, arguments_) => {
+        if (scenario.target === 'zed' && scenario.stage === 'root' && arguments_[0] === '-n')
+          return { exitCode: 0, output: '' }
+        return { exitCode: 7, output: scenario.output }
+      })
+
+      expect(await box.run(`ki repo open --target ${scenario.target}`)).toEqual({
+        exitCode: 7,
+        output: `ki: error: could not open repositories: ${scenario.expected}\n`
+      })
+    }
+  })
 })

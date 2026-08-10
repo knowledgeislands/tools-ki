@@ -63,6 +63,8 @@ const manifestPath = (stateDirectory: string, id: string): string =>
   join(artifactsDirectory(stateDirectory), `${id}.toml`)
 
 const physicalDirectory = async (path: string, description: string): Promise<void> => {
+  // A directory cannot vanish between its caller's validation and this check without a filesystem race.
+  /* v8 ignore next */
   const state = await lstat(path).catch(() => undefined)
   if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError(`${description} must be a directory`, 1)
 }
@@ -98,6 +100,8 @@ const validState = (value: unknown): value is ArtifactState =>
   value === 'creating' || value === 'active' || value === 'recoverable' || value === 'retired'
 
 const readManifest = async (path: string): Promise<ManagedArtifact> => {
+  // The directory scan supplied this path; its disappearance before inspection is a filesystem race.
+  /* v8 ignore next */
   const file = await lstat(path).catch(() => undefined)
   if (!file?.isFile() || file.isSymbolicLink()) throw new Error('manifest must be a regular file')
   let parsed: unknown
@@ -129,18 +133,20 @@ const installPath = async (dataDirectory: string, path: string): Promise<boolean
   if (!harnesses) return false
   if (!contained(harnesses, path)) return false
   const relativePath = relative(harnesses, path).split('/')
-  return (
-    relativePath.length === 2 &&
-    harnessOwner.test(relativePath[0] ?? '') &&
-    (relativePath[1] ?? '').startsWith('.install-')
-  )
+  if (relativePath.length !== 2) return false
+  const [owner, name] = relativePath as [string, string]
+  return harnessOwner.test(owner) && name.startsWith('.install-')
 }
 
 const expectedLock = (stateDirectory: string, artifact: ManagedArtifact): boolean =>
   artifact.lock === join(locksDirectory(stateDirectory), artifact.id)
 
 const acquireLock = async (path: string): Promise<boolean> => {
+  // The locks directory was verified before this acquisition; its disappearance is a filesystem race.
+  /* v8 ignore next */
   const parent = await lstat(dirname(path)).catch(() => undefined)
+  // Only the same filesystem race can make the checked parent non-physical here.
+  /* v8 ignore next */
   if (!parent?.isDirectory() || parent.isSymbolicLink()) return false
   try {
     await mkdir(path)

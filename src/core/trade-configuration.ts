@@ -47,12 +47,6 @@ export const isObservationPolicy = (value: string): value is ObservationPolicy =
 
 const repositoryIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
 
-const addressParts = (address: string): readonly [string, string] => {
-  if (!addressExpression.test(address))
-    throw tradeError('trade record address must use canonical lower-case owner/repository form')
-  return address.split('/') as [string, string]
-}
-
 interface DirectionalRoutes {
   readonly exportsTo: Readonly<Record<TradeKind, readonly string[]>>
   readonly importsFrom: Readonly<Record<TradeKind, readonly string[]>>
@@ -215,8 +209,7 @@ export const removeTradeRoute = async (
   const routes = direction === 'export' ? existing.exportsTo : existing.importsFrom
   if (!routes[kind].includes(repository))
     throw tradeError(`${direction} ${kind} trade route ${repository} is not declared locally`)
-  const peer = repositoryIdentity(repository)
-  const [owner, name] = addressParts(peer)
+  const [owner, name] = repositoryIdentity(repository).split('/') as [string, string]
   // A preparation and its submitted successor share one path, so the outbound area is a
   // single root; the separate preparation root this once probed no longer exists.
   const root =

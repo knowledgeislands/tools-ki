@@ -176,6 +176,23 @@ describe('[ki repo repair]', () => {
     expect(repair.output).toContain('Registry: local KI repository registry is invalid: unrecognised key extra')
   })
 
+  test('rejects an invalid sources registry before repairing a Knowledge Base', async () => {
+    const box = await preparedRepository()
+    await box.project.write(
+      '.ki-config.toml',
+      repositoryConfiguration.replace(
+        'repository = "https://github.com/example/project"',
+        'repository = "https://github.com/example/project"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]'
+      )
+    )
+    await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
+
+    const repair = await box.run('ki repo repair')
+
+    expect(repair.exitCode).toBe(1)
+    expect(repair.output).toContain('Registry: local KI repository registry is invalid: unrecognised key extra')
+  })
+
   test('requires an explicit complete sources binding before repairing a Knowledge Base', async () => {
     const box = await preparedRepository()
     const root = await realpath(box.project.path)

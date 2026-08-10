@@ -815,6 +815,8 @@ describe('[ki trade]', () => {
       `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = 1\n`
     )
     expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
+    await box.project.write('receiver/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\nskills = "none"\n')
+    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write(
       'receiver/.ki-config.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "not-a-repository"\n'

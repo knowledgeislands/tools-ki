@@ -519,6 +519,14 @@ test('rejects malformed state records and conflicting local bindings', async () 
     'repositories.one has unrecognised key extra'
   )
   await invalid(
+    `schema = 1\nrepositories = { one = { repository = "https://github.com/example/one", path = ${JSON.stringify(root)}, stores = "invalid" } }\n`,
+    'repositories.one.stores must be a table'
+  )
+  await invalid(
+    `schema = 1\n[repositories.one]\nrepository = "https://github.com/example/one"\npath = ${JSON.stringify(root)}\n\n[repositories.one.stores]\nsources = "relative"\nextra = true\n`,
+    'repositories.one.stores has unrecognised key extra'
+  )
+  await invalid(
     'schema = 1\n[repositories."Bad Key"]\nrepository = "not-a-url"\npath = "relative"\n',
     'repositories.Bad Key key must be a stable local repository name'
   )
@@ -619,9 +627,54 @@ test('refuses incomplete and unsafe declared Knowledge Base source bindings with
   expect(await box.state.read('ki/registry.toml')).toEqual(before)
 })
 
+test('requires source binding options to match exactly one selected Knowledge Base', async () => {
+  const box = await sandbox()
+  const knowledge = await realpath(box.project.path)
+  const ordinary = await box.root.mkdir('ordinary')
+  const sources = await box.root.mkdir('sources')
+  await box.project.write(
+    '.ki-config.toml',
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
+  )
+  await box.root.write(
+    'ordinary/.ki-config.toml',
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/ordinary"\n'
+  )
+
+  expect(
+    (await box.run(['ki', 'registry', '--repo', knowledge, '--repo', ordinary, 'add', '--sources', sources])).output
+  ).toContain('select exactly one repository with --sources')
+  expect((await box.run(['ki', 'registry', '--repo', ordinary, 'add', '--sources', sources])).output).toContain(
+    '--sources requires one selected KB that declares sources'
+  )
+})
+
+test('rejects every malformed Knowledge Base store-role declaration through the registry boundary', async () => {
+  const box = await sandbox()
+  const base =
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\n'
+  const cases = [
+    ['store_roles = ["notes"]', 'store_roles requires repo_type = "kb"'],
+    ['repo_type = "project"\nstore_roles = ["notes"]', 'repo_type must be "kb" when declared'],
+    ['repo_type = "kb"', 'store_roles must be a non-empty array of named KB stores'],
+    ['repo_type = "kb"\nstore_roles = ["notes", "other"]', 'store_roles may contain only notes, sources, or legacy'],
+    ['repo_type = "kb"\nstore_roles = ["notes", "notes"]', 'store_roles must not repeat a store role'],
+    ['repo_type = "kb"\nstore_roles = ["sources"]', 'store_roles must include notes']
+  ] as const
+
+  for (const [declaration, detail] of cases) {
+    await box.project.write('.ki-config.toml', `${base}${declaration}\n`)
+    const result = await box.run('ki registry add')
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain(detail)
+  }
+})
+
 test('does not automatically register a Knowledge Base whose declared sources lack a complete binding', async () => {
   const box = await sandbox()
   const root = await realpath(box.project.path)
+  const other = await box.root.mkdir('other')
+  const sources = await box.root.mkdir('sources')
   await box.config.write('ki/config.toml', localConfiguration)
   await box.project.write(
     '.ki-config.toml',
@@ -633,4 +686,29 @@ test('does not automatically register a Knowledge Base whose declared sources la
     output: `ki: error: Knowledge Base ${root} declares sources; run ki registry add --repo ${root} --sources <absolute-path>\n`
   })
   await expect(box.state.read('ki/registry.toml')).rejects.toThrow()
+
+  await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
+  expect(await box.run('ki repo conform')).toEqual({
+    exitCode: 1,
+    output: 'ki: error: local KI repository registry is invalid: unrecognised key extra\n'
+  })
+
+  await box.setupExampleHarness({ name: 'ki-repo', rubric })
+  const registered = `schema = 1
+
+[repositories.other]
+repository = "https://github.com/example/other"
+path = ${JSON.stringify(other)}
+
+[repositories.project]
+repository = "https://github.com/example/knowledge"
+path = ${JSON.stringify(root)}
+
+[repositories.project.stores]
+sources = ${JSON.stringify(sources)}
+`
+  await box.state.write('ki/registry.toml', registered)
+
+  expect((await box.run('ki repo conform')).exitCode).toBe(0)
+  expect(await box.state.read('ki/registry.toml')).toEqual(registered)
 })

@@ -97,7 +97,7 @@ const localRepositoryRegistryWrites = async (
       (candidate) => candidate.repository === identity && candidate.path === repository.root
     )
     try {
-      await registeredKnowledgeBaseStoreRoots(declaration, entry)
+      await registeredKnowledgeBaseStoreRoots(entry)
     } catch {
       throw new KiError(
         `Knowledge Base ${repository.root} declares sources; run ki registry add --repo ${repository.root} --sources <absolute-path>`,

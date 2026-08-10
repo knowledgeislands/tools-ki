@@ -306,10 +306,9 @@ export const planOrphanRecovery = async (dataDirectory: string): Promise<readonl
 
 export const recoverInstallOrphans = async (
   dataDirectory: string,
-  planned?: readonly OrphanRecovery[]
+  planned: readonly OrphanRecovery[]
 ): Promise<readonly OrphanRecovery[]> => {
-  const selected = planned ?? (await planOrphanRecovery(dataDirectory))
-  for (const recovery of selected) {
+  for (const recovery of planned) {
     if (recovery.action === 'restore')
       await rename(
         recovery.orphan.path,
@@ -317,7 +316,7 @@ export const recoverInstallOrphans = async (
       )
     if (recovery.action === 'remove') await rm(recovery.orphan.path, { recursive: true, force: true })
   }
-  return selected
+  return planned
 }
 
 const canonicalHarnessDirectory = (dataDirectory: string): string =>

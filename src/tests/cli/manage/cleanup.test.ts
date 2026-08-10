@@ -1,4 +1,4 @@
-import { lstat, symlink } from 'node:fs/promises'
+import { lstat, realpath, symlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -209,5 +209,20 @@ describe('[ki manage cleanup]', () => {
       exitCode: 0,
       output: `╭─ KI MANAGE CLEANUP\n├─ eligible (0)\n│  ╰─ none\n├─ artifacts (1)\n│  ╰─ artifact ${first} [refused: foreign] declared path or lock is outside the harness-install boundary\n╰─ summary: ELIGIBLE=0 CANDIDATES=0 LIVE=0 INTERRUPTED_RECOVERABLE=0 MANUALLY_ALTERED=0 FOREIGN=1 UNREADABLE_MANIFESTS=0\n`
     })
+  })
+
+  test('reports a recorded install staging directory that has disappeared', async () => {
+    const box = await sandbox()
+    const owner = await realpath(await box.data.mkdir('ki/harnesses/example'))
+    const path = `${owner}/.install-${first}`
+    const lock = `${box.state.path}/ki/managed-artifacts/locks/${first}`
+    await box.state.mkdir('ki/managed-artifacts/locks')
+    await box.state.write(`ki/managed-artifacts/${first}.toml`, manifest(first, 'recoverable', path, lock))
+
+    const cleanup = await box.run('ki manage cleanup')
+
+    expect(cleanup.output).toContain(
+      `artifact ${first} [refused: manually-altered] declared staging path is not a physical directory`
+    )
   })
 })

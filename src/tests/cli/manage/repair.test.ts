@@ -5,10 +5,10 @@ import { sandbox } from '../_cli_helper.ts'
 
 const artifactId = '11111111-1111-4111-8111-111111111111'
 
-const manifest = (state: 'creating' | 'recoverable', path: string, lock: string): string =>
+const manifest = (state: 'creating' | 'active' | 'recoverable', path: string, lock: string, id = artifactId): string =>
   [
     'schema = 1',
-    `id = ${JSON.stringify(artifactId)}`,
+    `id = ${JSON.stringify(id)}`,
     'operation = "harness-install"',
     `state = ${JSON.stringify(state)}`,
     `paths = [${JSON.stringify(path)}]`,
@@ -181,6 +181,62 @@ describe('[ki manage repair]', () => {
       await expect(lstat(orphan)).rejects.toThrow()
       await expect(lstat(`${box.state.path}/ki/managed-artifacts/${artifactId}.toml`)).rejects.toThrow()
       await expect(lstat(lock)).rejects.toThrow()
+    })
+
+    test('classifies recovery records before touching interrupted install residue', async () => {
+      const ignored = await sandbox()
+      const mismatchedId = '22222222-2222-4222-8222-222222222222'
+      const mismatchedPath = await ignored.data.mkdir(`ki/harnesses/example/.install-${mismatchedId}`)
+      const mismatchedLock = `${ignored.state.path}/ki/managed-artifacts/locks/${mismatchedId}`
+      await ignored.state.write('ki/managed-artifacts/broken.toml', 'schema = 2\n')
+      await ignored.state.write(
+        'ki/managed-artifacts/not-the-id.toml',
+        manifest('recoverable', mismatchedPath, mismatchedLock, mismatchedId)
+      )
+
+      await ignored.run('ki manage repair')
+
+      expect((await lstat(`${ignored.state.path}/ki/managed-artifacts/broken.toml`)).isFile()).toBe(true)
+      expect((await lstat(`${ignored.state.path}/ki/managed-artifacts/not-the-id.toml`)).isFile()).toBe(true)
+
+      const unsafe = await sandbox()
+      const unsafePath = await unsafe.data.mkdir(`ki/harnesses/example/.install-${artifactId}`)
+      const unsafeLock = `${unsafe.state.path}/ki/managed-artifacts/locks/${artifactId}`
+      await unsafe.state.write(
+        `ki/managed-artifacts/${artifactId}.toml`,
+        manifest('recoverable', unsafePath, unsafeLock)
+      )
+
+      const unsafeRepair = await unsafe.run('ki manage repair')
+
+      expect(unsafeRepair.output).toContain(`✗ Install residue ${unsafePath}: managed artifact lock is unsafe`)
+      expect((await lstat(unsafePath)).isDirectory()).toBe(true)
+
+      const active = await sandbox()
+      const activePath = await active.data.mkdir(`ki/harnesses/example/.install-${artifactId}`)
+      const activeLock = `${active.state.path}/ki/managed-artifacts/locks/${artifactId}`
+      await active.state.mkdir('ki/managed-artifacts/locks')
+      await active.state.write(`ki/managed-artifacts/${artifactId}.toml`, manifest('active', activePath, activeLock))
+
+      const activeRepair = await active.run('ki manage repair')
+
+      expect(activeRepair.output).toContain(`✗ Install residue ${activePath}: managed artifact is not recoverable`)
+      await expect(lstat(activeLock)).rejects.toThrow()
+
+      const absent = await sandbox()
+      const absentOwner = await realpath(await absent.data.mkdir('ki/harnesses/example'))
+      const absentPath = `${absentOwner}/.install-${artifactId}`
+      const absentLock = `${absent.state.path}/ki/managed-artifacts/locks/${artifactId}`
+      await absent.state.mkdir('ki/managed-artifacts/locks')
+      await absent.state.write(
+        `ki/managed-artifacts/${artifactId}.toml`,
+        manifest('recoverable', absentPath, absentLock)
+      )
+
+      await absent.run('ki manage repair')
+
+      expect((await lstat(`${absent.state.path}/ki/managed-artifacts/${artifactId}.toml`)).isFile()).toBe(true)
+      await expect(lstat(absentLock)).rejects.toThrow()
     })
 
     test('restores a parked payload when the harness it replaced is absent', async () => {

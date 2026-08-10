@@ -1,6 +1,5 @@
 import { lstat } from 'node:fs/promises'
 import { isAbsolute } from 'node:path'
-import { declaredKnowledgeBaseStoreRoles, type RepositoryDeclaration } from './configuration.ts'
 import { KiError } from './errors.ts'
 import type { LocalRegistryEntry } from './local-registry.ts'
 
@@ -13,10 +12,8 @@ export const sourceStoreDirectory = async (path: string): Promise<string> => {
 }
 
 export const registeredKnowledgeBaseStoreRoots = async (
-  declaration: RepositoryDeclaration,
   entry: LocalRegistryEntry | undefined
 ): Promise<readonly string[]> => {
-  if (!declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) return []
   const sources = entry?.stores?.sources
   if (!sources) throw new KiError('declared sources store is not registered', 1)
   return [await sourceStoreDirectory(sources)]
