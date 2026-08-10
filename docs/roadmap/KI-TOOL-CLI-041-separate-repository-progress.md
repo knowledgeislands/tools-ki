@@ -4,10 +4,10 @@ area: CLI
 title: Separate repository progress
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 4aa3e4d491aede9d8dd9c196c4b85f81ad9c2896
 ---
 
 ## Goal
