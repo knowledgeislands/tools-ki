@@ -37,14 +37,18 @@ VENDOR = "cross-repository-vendoring"
 
 [skills.ki-trades.routes."knowledgeislands/ki-agentic-harness"]
 export = ["work", "knowledge"]
-import = ["work"]
+import = ["work", "knowledge"]
 
 [skills.ki-trades.routes."knowledgeislands/ki-website"]
 export = ["work", "knowledge"]
 
 [skills.ki-trades.routes."knowledgeislands/tools-mgit"]
-export = ["work"]
-import = ["work"]
+export = ["work", "knowledge"]
+import = ["work", "knowledge"]
+
+[skills.ki-trades.routes."knowledgeislands/ki-arcadia-principal"]
+export = ["work", "knowledge"]
+import = ["work", "knowledge"]
 
 [skills.ki-trades.routes."krisb/dotfiles"]
 export = ["work", "knowledge"]
