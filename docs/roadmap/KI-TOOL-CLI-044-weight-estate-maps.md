@@ -4,7 +4,7 @@ title: Weight estate maps
 area: CLI
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 0e0938fa4d9a41f73403e66c078ee381b8795ed2
@@ -30,12 +30,12 @@ Do not change route declarations, trade kinds, reciprocity rules, receipt author
 
 ## Steps
 
-- [ ] Extend the portable `ki-trades` declaration with an optional bounded non-negative `map_bonus` presentation field. Preserve its separation from trade permissions and lifecycle, reject malformed values, and document the field in the canonical trade standard.
-- [ ] Carry each registered repository's declared map bonus into the estate projection. Derive per-pair active lane capacity, node weighted in/out degree, the `knowledgeislands` organisation uplift, total influence, and an inferred source, sink, peer, or hub role without naming individual repositories in renderer code.
-- [ ] Add deterministic lane distance, spring strength, node size, collision, charge, and line-width values to the generated HTML payload. Use those values in the D3 force simulation and SVG while retaining drag, zoom, directional arcs, kind chips, and incomplete-route treatment.
-- [ ] Explain the derived and declared contributions in lane and node hover details and the legend, so visual prominence is inspectable rather than implicit.
-- [ ] Declare `map_bonus = 1` for Arcadia Principal and Techne Principal. The organisation uplift applies automatically to every `knowledgeislands/*` identity; no other repository gets a name-specific renderer rule.
-- [ ] Extend CLI contract coverage for payload metrics, valid and invalid map bonuses, derived organisation and declared bonuses, and self-contained HTML output. Update the user documentation, manual, changelog, and portable trade standard.
+- [x] Extend the portable `ki-trades` declaration with an optional bounded non-negative `map_bonus` presentation field. Preserve its separation from trade permissions and lifecycle, reject malformed values, and document the field in the canonical trade standard.
+- [x] Carry each registered repository's declared map bonus into the estate projection. Derive per-pair active lane capacity, node weighted in/out degree, the `knowledgeislands` organisation uplift, total influence, and an inferred source, sink, peer, or hub role without naming individual repositories in renderer code.
+- [x] Add deterministic lane distance, spring strength, node size, collision, charge, and line-width values to the generated HTML payload. Use those values in the D3 force simulation and SVG while retaining drag, zoom, directional arcs, kind chips, and incomplete-route treatment.
+- [x] Explain the derived and declared contributions in lane and node hover details and the legend, so visual prominence is inspectable rather than implicit.
+- [x] Declare `map_bonus = 1` for Arcadia Principal and Techne Principal. The organisation uplift applies automatically to every `knowledgeislands/*` identity; no other repository gets a name-specific renderer rule.
+- [x] Extend CLI contract coverage for payload metrics, valid and invalid map bonuses, derived organisation and declared bonuses, and self-contained HTML output. Update the user documentation, manual, changelog, and portable trade standard.
 
 ## Files touched
 
@@ -50,6 +50,44 @@ Expected public material: `README.md`, `man/ki.1`, and `CHANGELOG.md` in tools-k
 ## Dependencies / blocks
 
 No external dependency is required. The user has approved the presentation model and the Arcadia/Techne configuration updates. The renderer must continue to treat the route estate as its source of truth; `map_bonus` may alter presentation only and cannot enable a route or affect trade authority.
+
+## Review
+
+### Delivered
+
+- Estate maps now derive visible topology from active typed routes and small, inspectable presentation-only bonuses.
+- Arcadia Principal and Techne Principal each declare `map_bonus = 1`; every `knowledgeislands/*` repository receives the same derived organisation uplift.
+
+### Summary of changes
+
+- Added bounded `map_bonus` parsing, round-trip rendering, canonical rubric validation, and a generated rubric update.
+- Added active lane capacity, node influence, inferred map roles, and deterministic distance, spring, width, size, charge, and collision inputs to the HTML payload and D3 simulation.
+- Updated hover details, legend, README, manual, changelog, canonical standard, and CLI-level contract coverage.
+
+### Verification
+
+- `bun run test` — 620 tests passed.
+- `bun run test:coverage` — 620 tests passed; 100% statements, branches, functions, and lines.
+- `bunx tsc --noEmit`
+- `bunx vitest run src/tests/cli/trade/trade.test.ts` — 42 tests passed.
+- `bunx rumdl check README.md CHANGELOG.md`
+- `mandoc -T lint man/ki.1`
+- Harness `bunx tsc --noEmit`, focused `ki-trades` rubric test, and focused trade audits for Harness, Arcadia Principal, and Techne Principal all passed.
+
+### Outstanding concerns
+
+- `ki repo audit --repo .` still reports the pre-existing `ki-engineering` formatting fault in `src/core/registry.ts`, unchanged since baseline commit `0e0938f`.
+- The same audit's sandboxed coverage subprocess cannot bind its installer test's loopback listener. The identical full coverage command passes outside that sandbox.
+
+### Post-change review
+
+- Active typed directions alone supply lane capacity and route-degree influence; incomplete routes remain visible but do not distort the force layout.
+- `map_bonus` is a bounded declaration for presentation only. It cannot activate a route or alter submission, receipt, decision, lifecycle, or repository authority.
+- The renderer derives roles and organisation uplift generically; it contains no individual repository identity rules.
+
+### Mini recap
+
+The estate map now makes its visual hierarchy explainable: topology provides the base, small declared bonuses provide deliberate emphasis, and every contribution is visible in the generated HTML.
 
 ## Discussion
 
