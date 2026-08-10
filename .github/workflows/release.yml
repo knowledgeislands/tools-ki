@@ -44,6 +44,11 @@ jobs:
           fi
           git fetch --no-tags origin "refs/tags/$REQUESTED_VERSION:refs/tags/$REQUESTED_VERSION"
           tag_commit=$(git rev-parse --verify "$REQUESTED_VERSION^{commit}")
+          package_version=$(git show "$tag_commit:package.json" | node -p '(() => { const version = JSON.parse(require("node:fs").readFileSync(0, "utf8")).version; if (typeof version !== "string") throw new Error("package.json version must be a string"); return version })()')
+          if [[ "v$package_version" != "$REQUESTED_VERSION" ]]; then
+            printf 'ki release: tag %s does not match package version %s\n' "$REQUESTED_VERSION" "$package_version" >&2
+            exit 2
+          fi
           git fetch --no-tags origin "$DEFAULT_BRANCH"
           git merge-base --is-ancestor "$tag_commit" "origin/$DEFAULT_BRANCH"
           printf 'version=%s\n' "$REQUESTED_VERSION" >> "$GITHUB_OUTPUT"
