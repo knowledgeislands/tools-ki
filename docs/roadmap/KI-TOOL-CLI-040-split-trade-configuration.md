@@ -4,10 +4,10 @@ area: CLI
 title: Split trade configuration
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: cb93ee03d8a8ff333f99d38922161f2edb677342
 ---
 
 ## Goal
