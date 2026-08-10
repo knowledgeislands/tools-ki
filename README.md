@@ -44,6 +44,8 @@ An Agora is declared portably by a registered owner repository under `[skills.ki
 
 `estate` is the reserved system selector for every locally registered canonical KI repository. Use `ki agora list`, `ki agora show <id>`, and `ki agora open <id> --target zed` to inspect or open a declared Agora or the estate. Opening requires an explicit permitted target; it currently supports the portable `zed-workspace` policy through Zed.
 
+`ki agora roots <id>` is the versioned machine interface for a resolved group's physical roots. It writes newline-delimited absolute roots in deterministic registry-key order; use `--null` (or `-0`) for safe NUL-delimited path handling. It fails before writing any root when the selector cannot resolve or has no members, and it never clones, repairs, or treats source or legacy stores as Agora members.
+
 ## Select repository targets
 
 Every `ki repo` operation accepts repeated `--repo <path-or-pattern>` options or one `--agora <name>` option. The two explicit selectors are mutually exclusive. Literal paths and patterns resolve to physical KI repository roots in deterministic order; an unmatched pattern, invalid root, or duplicate root stops the operation before any target runs.
@@ -67,6 +69,8 @@ To start a KI repository, run `ki repo init` in an existing Git worktree root, o
 ```sh
 ki agora list
 ki agora show estate
+ki agora roots estate | xargs -n 1 sh -c 'git -C "$1" status --short' _
+ki agora roots estate --null | xargs -0 -n 1 sh -c 'git -C "$1" status --short' _
 ki agora open estate --target zed
 ki repo init --repository https://github.com/example/example --title 'Example repository' --description 'An explicit KI repository identity.' --repo-code EXAMPLE --runtime claude-code --runtime chatgpt-codex --visibility private
 ki manage diag

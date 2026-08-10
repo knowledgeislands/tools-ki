@@ -60,6 +60,7 @@ describe('[ki --help]', () => {
     expect(localSet.output).toContain('validate and remember a local harness checkout')
     expect(localOn.output).toContain('configured local harness checkout')
     expect(agora.output).toContain('resolve declared named Agoras and the registered estate')
+    expect(agora.output).toContain('write resolved Agora roots for machine consumption')
     expect(agora.output).toContain('open one Agora through an explicit local target')
     expect(retiredWorkspace.exitCode).toBe(2)
   })

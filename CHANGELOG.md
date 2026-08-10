@@ -43,6 +43,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki agora list`
 - `ki agora show <agora>`
+- `ki agora roots <agora> [--null]`
 - `ki agora open <agora> --target zed`
 
 #### Repository options
@@ -108,6 +109,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki manage completion <shell>` emits Bash and Zsh scripts derived from the registered command tree, including nested commands, options, closed values, and local path completion.
 - Registered repository declarations define reciprocal named Agoras; the reserved `estate` selector derives the full locally registered canonical repository set for selection and Zed opening.
+- `ki agora roots <agora>` exposes a stable machine interface for resolved registered Agora roots: newline-delimited by default, or NUL-delimited with `--null` (`-0`).
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context.
 - `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.

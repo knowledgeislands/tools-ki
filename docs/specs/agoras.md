@@ -34,6 +34,14 @@ _Verify:_ `src/tests/cli/agora/agora.test.ts` — malformed registered repositor
 
 _Verify:_ `src/tests/cli/agora/agora.test.ts` — list, show, open, and launch-failure coverage.
 
+### AGORA-006 — Machine-readable physical roots
+
+`ki agora roots <name>` MUST resolve a named Agora or `estate` through the registered reciprocal-Agora resolver and write its ordered absolute physical roots to standard output. By default it MUST write one line feed after every root; `--null` (or `-0`) MUST instead write one NUL byte after every root. Callers that need to preserve arbitrary pathnames MUST use `--null`.
+
+The command MUST fail without writing roots when resolution fails or selects no members. Its line and NUL byte encodings are the V1 compatibility contract; a future encoding MUST use a new explicit option rather than changing either existing format.
+
+_Verify:_ `src/tests/cli/agora/agora.test.ts` — `writes deterministic machine-readable roots for named Agoras and the estate` and `fails without roots for unresolved Agora selectors`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

@@ -36,7 +36,12 @@ const localRegistry = (
 
 const registered = async (
   box: Sandbox,
-  declarations: readonly { readonly path: string; readonly identity: string; readonly agora?: string }[]
+  declarations: readonly {
+    readonly path: string
+    readonly key?: string
+    readonly identity: string
+    readonly agora?: string
+  }[]
 ): Promise<Record<string, string>> => {
   const roots: Record<string, string> = {}
   for (const declaration of declarations) {
@@ -47,7 +52,7 @@ const registered = async (
     'ki/registry.toml',
     localRegistry(
       declarations.map((declaration) => ({
-        key: declaration.path,
+        key: declaration.key ?? declaration.path,
         identity: declaration.identity,
         root: roots[declaration.path] as string
       }))
@@ -57,6 +62,97 @@ const registered = async (
 }
 
 describe('[ki agora]', () => {
+  test('writes deterministic machine-readable roots for named Agoras and the estate', async () => {
+    const box = await sandbox()
+    const homeIdentity = 'https://github.com/example/home'
+    const memberIdentity = 'https://github.com/example/member'
+    const otherIdentity = 'https://github.com/example/other'
+    const memberPath = 'member with space\nand line feed'
+    const roots = await registered(box, [
+      {
+        path: 'home',
+        identity: homeIdentity,
+        agora: home('team', 'Shared delivery', { [memberIdentity]: 'maintainer' })
+      },
+      {
+        path: memberPath,
+        key: 'member',
+        identity: memberIdentity,
+        agora: membership('team', homeIdentity, 'maintainer')
+      },
+      { path: 'other', identity: otherIdentity }
+    ])
+
+    const named = `${roots['home']}\n${roots[memberPath]}\n`
+    const estate = `${roots['home']}\n${roots[memberPath]}\n${roots['other']}\n`
+
+    expect(await box.run('ki agora roots team')).toEqual({ exitCode: 0, output: named })
+    expect(await box.run('ki agora roots estate')).toEqual({ exitCode: 0, output: estate })
+    expect(await box.run('ki agora roots team --null')).toEqual({
+      exitCode: 0,
+      output: `${roots['home']}\0${roots[memberPath]}\0`
+    })
+    expect(await box.run('ki agora roots team -0')).toEqual({
+      exitCode: 0,
+      output: `${roots['home']}\0${roots[memberPath]}\0`
+    })
+  })
+
+  test('fails without roots for unknown, empty, missing, or non-reciprocal Agora selectors', async () => {
+    const box = await sandbox()
+    const capture = async (
+      command: string
+    ): Promise<{
+      readonly result: Awaited<ReturnType<typeof box.run>>
+      readonly stdout: string
+      readonly stderr: string
+    }> => {
+      let stdout = ''
+      let stderr = ''
+      const result = await box.run(command, {
+        captureOutput: (stream, chunk) => {
+          if (stream === 'stdout') stdout += chunk
+          else stderr += chunk
+        }
+      })
+      return { result, stdout, stderr }
+    }
+
+    await box.state.write('ki/registry.toml', localRegistry([]))
+    const empty = await capture('ki agora roots estate')
+    expect(empty).toMatchObject({ result: { exitCode: 2 }, stdout: '' })
+    expect(empty.stderr).toContain('Agora estate has no members')
+
+    const unknown = await capture('ki agora roots unknown')
+    expect(unknown).toMatchObject({ result: { exitCode: 2 }, stdout: '' })
+    expect(unknown.stderr).toContain('is not declared by a registered Agora home')
+
+    const homeIdentity = 'https://github.com/example/home'
+    const memberIdentity = 'https://github.com/example/member'
+    await registered(box, [
+      {
+        path: 'home',
+        identity: homeIdentity,
+        agora: home('team', 'Shared delivery', { [memberIdentity]: 'maintainer' })
+      }
+    ])
+    const missing = await capture('ki agora roots team')
+    expect(missing).toMatchObject({ result: { exitCode: 2 }, stdout: '' })
+    expect(missing.stderr).toContain('is not registered locally')
+
+    await registered(box, [
+      {
+        path: 'home',
+        identity: homeIdentity,
+        agora: home('team', 'Shared delivery', { [memberIdentity]: 'maintainer' })
+      },
+      { path: 'member', identity: memberIdentity }
+    ])
+    const nonReciprocal = await capture('ki agora roots team')
+    expect(nonReciprocal).toMatchObject({ result: { exitCode: 2 }, stdout: '' })
+    expect(nonReciprocal.stderr).toContain('does not declare matching consent')
+  })
+
   test('lists, shows, selects, and opens the registered estate and a reciprocal declared Agora', async () => {
     const box = await sandbox()
     const homeIdentity = 'https://github.com/example/home'

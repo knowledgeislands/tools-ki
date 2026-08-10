@@ -28,7 +28,7 @@ const manageCommands = [
   'search',
   'update'
 ]
-const agoraCommands = ['list', 'show', 'open']
+const agoraCommands = ['list', 'show', 'roots', 'open']
 const repoCommands = ['audit', 'conform', 'diag', 'educate', 'init', 'roadmap', 'repair', 'skill', 'upgrade']
 const registryCommands = ['add', 'list']
 

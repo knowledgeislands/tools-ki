@@ -12,6 +12,7 @@ const commandPaths = [
   'agora',
   'agora list',
   'agora open',
+  'agora roots',
   'agora show',
   'bootstrap',
   'dev',
