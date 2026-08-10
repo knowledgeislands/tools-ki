@@ -215,6 +215,19 @@ describe('[ki repo]', () => {
       })
     })
 
+    test('renders only the final audit summary in concise mode', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+
+      const result = await box.run('ki repo audit --concise --progress always')
+
+      expect(result).toEqual({
+        exitCode: 0,
+        output: 'summary: KI REPO AUDIT on project PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n'
+      })
+    })
+
     test('filters complete outcome levels by default and renders every level on request', async () => {
       const box = await sandbox()
       await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
@@ -270,12 +283,14 @@ describe('[ki repo]', () => {
         now: () => 0
       })
       const invalidProgress = await box.run('ki repo audit --progress later')
+      const invalidConciseProgress = await box.run('ki repo audit --concise --progress later')
       const invalidStyle = await box.run('ki repo audit --progress-style rows')
       const invalidLevels = await box.run('ki repo audit --reporter-levels nope')
 
       expect(help.output).toContain('--progress <mode>')
       expect(help.output).toContain('--progress-style <style>')
       expect(help.output).toContain('--reporter-levels <levels>')
+      expect(help.output).toContain('--concise')
       expect(never.output).not.toContain('\r\x1b[2K')
       expect(always.output).toContain('├─ loading')
       expect(always.output).not.toContain('\r\x1b[2K')
@@ -290,6 +305,8 @@ describe('[ki repo]', () => {
       expect(multiInteractive.output).toContain('\x1b[2A')
       expect(invalidProgress).toMatchObject({ exitCode: 2 })
       expect(invalidProgress.output).toContain('--progress accepts auto, always, or never')
+      expect(invalidConciseProgress).toMatchObject({ exitCode: 2 })
+      expect(invalidConciseProgress.output).toContain('--progress accepts auto, always, or never')
       expect(invalidStyle).toMatchObject({ exitCode: 2 })
       expect(invalidStyle.output).toContain('--progress-style accepts single or multi')
       expect(invalidLevels).toMatchObject({ exitCode: 2 })

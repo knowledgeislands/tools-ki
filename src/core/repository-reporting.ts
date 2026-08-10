@@ -32,6 +32,7 @@ interface OperationOptions {
   readonly progress: ProgressMode
   readonly progressStyle: ProgressStyle
   readonly reporterLevels: readonly ReporterLevel[]
+  readonly concise: boolean
 }
 
 const REPORTER_LEVELS: readonly ReporterLevel[] = ['fail', 'warn', 'fixed', 'info', 'not-applicable', 'pass']
@@ -61,13 +62,24 @@ const parseReporterLevels = (value: string | undefined, operation: 'audit' | 'co
   return [...new Set(levels)]
 }
 
+const operationProgress = (options: { readonly progress?: string; readonly concise?: boolean }): ProgressMode => {
+  const progress = parseProgressMode(options.progress)
+  return options.concise ? 'never' : progress
+}
+
 export const operationOptions = (
   operation: 'audit' | 'conform',
-  options: { readonly progress?: string; readonly progressStyle?: string; readonly reporterLevels?: string }
+  options: {
+    readonly progress?: string
+    readonly progressStyle?: string
+    readonly reporterLevels?: string
+    readonly concise?: boolean
+  }
 ): OperationOptions => ({
-  progress: parseProgressMode(options.progress),
+  progress: operationProgress(options),
   progressStyle: parseProgressStyle(options.progressStyle),
-  reporterLevels: parseReporterLevels(options.reporterLevels, operation)
+  reporterLevels: parseReporterLevels(options.reporterLevels, operation),
+  concise: Boolean(options.concise)
 })
 
 const truncate = (text: string, width: number): string => {
@@ -657,6 +669,26 @@ const auditSkillSummary = (
 const auditSummaryIcon = (summary: Pick<AuditRepositorySummary, 'failingSkills' | 'warningSkills'>): string =>
   summary.failingSkills ? REPORT_ICON.fail : summary.warningSkills ? REPORT_ICON.warn : REPORT_ICON.pass
 
+const auditSummaryLabel = (summary: AuditRepositorySummary): string =>
+  `summary: KI REPO AUDIT on ${basename(summary.repository)} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
+
+const auditRepositorySummary = (
+  repository: string,
+  reports: readonly AuditSkillReport[],
+  registrationFailure?: string
+): AuditRepositorySummary => {
+  const skillSummaries = reports.map((report) => auditSkillSummary(report.findings))
+  return {
+    repository,
+    passingSkills: skillSummaries.filter((item) => item.level === 'pass').length,
+    warningSkills: skillSummaries.filter((item) => item.level === 'warn').length,
+    failingSkills: skillSummaries.filter((item) => item.level === 'fail').length + Number(Boolean(registrationFailure)),
+    failingFindings:
+      skillSummaries.reduce((total, summary) => total + summary.fails, 0) + Number(Boolean(registrationFailure)),
+    warningFindings: skillSummaries.reduce((total, summary) => total + summary.warnings, 0)
+  }
+}
+
 const renderOperationFrameStart = (
   context: KiContext,
   operation: 'AUDIT' | 'CONFORM',
@@ -704,17 +736,7 @@ export const renderAuditResults = (
   registrationFailure?: string
 ): AuditRepositorySummary => {
   const skillSummaries = reports.map((report) => auditSkillSummary(report.findings))
-  const failingFindings =
-    skillSummaries.reduce((total, summary) => total + summary.fails, 0) + Number(Boolean(registrationFailure))
-  const warningFindings = skillSummaries.reduce((total, summary) => total + summary.warnings, 0)
-  const summary: AuditRepositorySummary = {
-    repository,
-    passingSkills: skillSummaries.filter((item) => item.level === 'pass').length,
-    warningSkills: skillSummaries.filter((item) => item.level === 'warn').length,
-    failingSkills: skillSummaries.filter((item) => item.level === 'fail').length + Number(Boolean(registrationFailure)),
-    failingFindings,
-    warningFindings
-  }
+  const summary = auditRepositorySummary(repository, reports, registrationFailure)
   const results = reporter.section('results', reports.length + Number(Boolean(registrationFailure)))
   for (const [index, report] of reports.entries()) {
     const reportSummary = skillSummaries[index]
@@ -732,8 +754,20 @@ export const renderAuditResults = (
       label: `${REPORT_ICON.fail} local repository registration FAIL [Local repository registration (REPO-REG-1)] — ${registrationFailure}`
     })
   reporter.finish({
-    label: `summary: KI REPO AUDIT on ${basename(repository)} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
+    label: auditSummaryLabel(summary)
   })
+  return summary
+}
+
+/** Render the final audit line without a report frame or per-skill findings. */
+export const renderConciseAuditSummary = (
+  context: KiContext,
+  repository: string,
+  reports: readonly AuditSkillReport[],
+  registrationFailure?: string
+): AuditRepositorySummary => {
+  const summary = auditRepositorySummary(repository, reports, registrationFailure)
+  context.stdout.write(`${auditSummaryLabel(summary)}\n`)
   return summary
 }
 
@@ -764,6 +798,26 @@ export const renderMultiRepositoryAuditSummary = (
         }
       ]
     }).join('\n')}\n`
+  )
+}
+
+/** Render aggregate audit counts without the multi-repository report frame. */
+export const renderConciseMultiRepositoryAuditSummary = (
+  context: KiContext,
+  summaries: readonly AuditRepositorySummary[]
+): void => {
+  const totals = summaries.reduce(
+    (total, summary) => ({
+      passingSkills: total.passingSkills + summary.passingSkills,
+      warningSkills: total.warningSkills + summary.warningSkills,
+      failingSkills: total.failingSkills + summary.failingSkills,
+      failingFindings: total.failingFindings + summary.failingFindings,
+      warningFindings: total.warningFindings + summary.warningFindings
+    }),
+    { passingSkills: 0, warningSkills: 0, failingSkills: 0, failingFindings: 0, warningFindings: 0 }
+  )
+  context.stdout.write(
+    `totals: KI REPO AUDIT PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} · FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}\n`
   )
 }
 
@@ -843,6 +897,26 @@ const conformSkillSummary = (findings: readonly RenderedFinding[]): ConformSkill
   return { level: fails ? 'fail' : warnings ? 'warn' : fixed ? 'fixed' : 'pass', fails, warnings, fixed }
 }
 
+const conformSummaryCounts = (skillSummaries: readonly ConformSkillSummary[]): string => {
+  const countSkills = (level: ReporterLevel): number => skillSummaries.filter((item) => item.level === level).length
+  const countFindings = (level: ReporterLevel): number =>
+    skillSummaries.reduce(
+      (total, item) => total + (level === 'fail' ? item.fails : level === 'warn' ? item.warnings : item.fixed),
+      0
+    )
+  return `PASS=${countSkills('pass')} WARN=${countSkills('warn')} FAIL=${countSkills('fail')} FIXED=${countSkills('fixed')} · FINDINGS: FAIL=${countFindings('fail')} WARN=${countFindings('warn')} FIXED=${countFindings('fixed')}`
+}
+
+/** Render the final conform line without a report frame or per-skill findings. */
+export const renderConciseConformSummary = (
+  context: KiContext,
+  repository: string,
+  reports: readonly SkillReport[]
+): void => {
+  const skillSummaries = reports.map((report) => conformSkillSummary(withFixed(report)))
+  context.stdout.write(`summary: KI REPO CONFORM on ${basename(repository)} ${conformSummaryCounts(skillSummaries)}\n`)
+}
+
 /**
  * The host owns presentation just as it owns execution. Rubric contracts return
  * structured outcomes; this renderer keeps their item title and evidence subject intact
@@ -855,12 +929,6 @@ export const renderConformReports = (
 ): void => {
   const reportFindings = reports.map((report) => ({ report, findings: withFixed(report) }))
   const skillSummaries = reportFindings.map(({ findings }) => conformSkillSummary(findings))
-  const countSkills = (level: ReporterLevel): number => skillSummaries.filter((item) => item.level === level).length
-  const countFindings = (level: ReporterLevel): number =>
-    skillSummaries.reduce(
-      (total, item) => total + (level === 'fail' ? item.fails : level === 'warn' ? item.warnings : item.fixed),
-      0
-    )
   const results = reporter.section('results', reportFindings.length)
   for (const [index, { report, findings }] of reportFindings.entries()) {
     const reportSummary = skillSummaries[index]
@@ -874,6 +942,6 @@ export const renderConformReports = (
     })
   }
   reporter.finish({
-    label: `summary: PASS=${countSkills('pass')} WARN=${countSkills('warn')} FAIL=${countSkills('fail')} FIXED=${countSkills('fixed')} · FINDINGS: FAIL=${countFindings('fail')} WARN=${countFindings('warn')} FIXED=${countFindings('fixed')}`
+    label: `summary: ${conformSummaryCounts(skillSummaries)}`
   })
 }

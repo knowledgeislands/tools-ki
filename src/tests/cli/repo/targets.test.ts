@@ -198,6 +198,7 @@ describe('[ki repo target sets]', () => {
       const second = await realpath(`${box.root.path}/second`)
 
       const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'audit', '--progress', 'always'])
+      const concise = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'audit', '--concise'])
 
       expect(result.exitCode).toBe(0)
       expect(result.output.match(/╭─ KI REPO AUDIT\n/g)).toHaveLength(2)
@@ -205,6 +206,11 @@ describe('[ki repo target sets]', () => {
       expect(result.output).toContain(
         `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✓ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n│  ╰─ ✓ second PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n╰─ totals: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0`
       )
+      expect(concise).toEqual({
+        exitCode: 0,
+        output:
+          'summary: KI REPO AUDIT on first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\nsummary: KI REPO AUDIT on second PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\ntotals: KI REPO AUDIT PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n'
+      })
     })
 
     test('recaps every repository verdict and aggregate finding volume', async () => {

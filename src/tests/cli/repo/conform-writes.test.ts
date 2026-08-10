@@ -113,7 +113,21 @@ describe('[ki repo conform writes]', () => {
     expect(result.output).toContain('--progress <mode>')
     expect(result.output).toContain('--progress-style <style>')
     expect(result.output).toContain('--reporter-levels <levels>')
+    expect(result.output).toContain('--concise')
     expect(result.output).toContain('FAIL,WARN,FIXED')
+  })
+
+  test('renders only the final conform summary in concise mode', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.setupExampleHarness({ rubric: rubric('[]') })
+
+    const result = await box.run('ki repo conform --concise --progress always')
+
+    expect(result).toEqual({
+      exitCode: 0,
+      output: 'summary: KI REPO CONFORM on project PASS=1 WARN=0 FAIL=0 FIXED=0 · FINDINGS: FAIL=0 WARN=0 FIXED=0\n'
+    })
   })
 
   test('renders a repository summary before conform progress at regular and narrow widths', async () => {

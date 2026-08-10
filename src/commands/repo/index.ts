@@ -18,6 +18,9 @@ import {
   operationOptions,
   renderAuditFrameStart,
   renderAuditResults,
+  renderConciseAuditSummary,
+  renderConciseConformSummary,
+  renderConciseMultiRepositoryAuditSummary,
   renderConformFrameStart,
   renderConformReports,
   renderEducation,
@@ -51,6 +54,7 @@ interface RepositoryConformOptions {
   readonly progress?: string
   readonly progressStyle?: string
   readonly reporterLevels?: string
+  readonly concise?: boolean
 }
 
 const localRepositoryRegistration = async (
@@ -215,7 +219,12 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .action(async (options: { skill?: string }) => {
           const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
           for (const { skills } of selected) {
-            const output = { progress: 'auto' as const, progressStyle: 'single' as const, reporterLevels: [] }
+            const output = {
+              progress: 'auto' as const,
+              progressStyle: 'single' as const,
+              reporterLevels: [],
+              concise: false
+            }
             const educations = await runWithProgress(context, skills, (skill) => educateSkill(skill), output, 'educate')
             if (!educations.length) context.stdout.write('ki repo educate: no declared skills\n')
             else context.stdout.write(`${educations.flatMap(renderEducation).join('\n')}\n`)
@@ -229,15 +238,22 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
         .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN)')
+        .option('--concise', 'render only one final summary per repository')
         .action(
-          async (options: { skill?: string; progress?: string; progressStyle?: string; reporterLevels?: string }) => {
+          async (options: {
+            skill?: string
+            progress?: string
+            progressStyle?: string
+            reporterLevels?: string
+            concise?: boolean
+          }) => {
             const output = operationOptions('audit', options)
             const selected = await resolveSkills(context, { ...options, ...selectedRepositories() })
             let failed = false
             const summaries: AuditRepositorySummary[] = []
             for (const [index, { repository, skills }] of selected.entries()) {
-              if (index) context.stdout.write('\n')
-              const reporter = renderAuditFrameStart(context, repository.root, skills)
+              if (index && !output.concise) context.stdout.write('\n')
+              const reporter = output.concise ? undefined : renderAuditFrameStart(context, repository.root, skills)
               try {
                 const results = await runWithEvidenceProgress(
                   context,
@@ -266,22 +282,27 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 )
                 const findings = results.flatMap(({ audit }) => audit.findings)
                 const registration = await localRepositoryRegistration(context, repository.root, skills)
+                const reports = results.map(({ skill, audit }) => ({ skill, findings: audit.findings }))
                 summaries.push(
-                  renderAuditResults(
-                    reporter,
-                    repository.root,
-                    results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
-                    output.reporterLevels,
-                    registration
-                  )
+                  output.concise
+                    ? renderConciseAuditSummary(context, repository.root, reports, registration)
+                    : renderAuditResults(
+                        reporter as NonNullable<typeof reporter>,
+                        repository.root,
+                        reports,
+                        output.reporterLevels,
+                        registration
+                      )
                 )
                 failed ||= Boolean(registration) || findings.some((finding) => finding.level === 'fail')
               } catch (error) {
-                reporter.finish({ label: 'audit failed' })
+                reporter?.finish({ label: 'audit failed' })
                 throw error
               }
             }
-            if (summaries.length > 1) renderMultiRepositoryAuditSummary(context, summaries)
+            if (summaries.length > 1)
+              if (output.concise) renderConciseMultiRepositoryAuditSummary(context, summaries)
+              else renderMultiRepositoryAuditSummary(context, summaries)
             if (failed) throw new KiError('repository audit found failures', 1)
           }
         )
@@ -295,6 +316,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
         .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN,FIXED)')
+        .option('--concise', 'render only one final summary per repository')
         .action(async (options: RepositoryConformOptions) => {
           const output = operationOptions('conform', options)
           const repositories = await resolveRepositoryTargets({
@@ -306,12 +328,14 @@ export const createRepositoryOperations = (context: KiContext): Command => {
           })
           const harnesses = await discoverInstalledHarnesses(context.paths.data)
           for (const repository of repositories) {
+            const report = (value: string): void => {
+              if (!output.concise) context.stdout.write(value)
+            }
             // The local registry is an inventory of selected KI repository roots, not a
             // conformance verdict. Publish it before parsing declarations or evaluating
             // the selected skills so a failing repository stays discoverable for repair.
             const registryWrites = await localRepositoryRegistryWrites(context, repository)
-            for (const write of registryWrites)
-              context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
+            for (const write of registryWrites) report(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
             await publishWrites(registryWrites, Boolean(options.dryRun))
 
             const resolved = await resolveSkillsForRepositories([repository], harnesses, options.skill)
@@ -320,7 +344,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             /* v8 ignore next */
             if (!selected) throw new KiError('repository conform lost its selected repository before resolution', 1)
             const { skills } = selected
-            const reporter = renderConformFrameStart(context, repository.root, skills)
+            const reporter = output.concise ? undefined : renderConformFrameStart(context, repository.root, skills)
             const conformed = await runWithProgress(
               context,
               skills,
@@ -346,12 +370,12 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               'conform'
             )
             const findings = conformed.flatMap(({ conform }) => conform.findings)
+            const renderReports = (reports: Parameters<typeof renderConformReports>[1]): void => {
+              if (output.concise) renderConciseConformSummary(context, repository.root, reports)
+              else renderConformReports(reporter as NonNullable<typeof reporter>, reports, output.reporterLevels)
+            }
             const renderInitialReports = () =>
-              renderConformReports(
-                reporter,
-                conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })),
-                output.reporterLevels
-              )
+              renderReports(conformed.map(({ prepared, conform }) => ({ skill: prepared, findings: conform.findings })))
             const reAuditAndRender = async (): Promise<boolean> => {
               const reaudited = await runPreparedWithProgress(
                 context,
@@ -386,14 +410,12 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               )
               const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
               const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
-              renderConformReports(
-                reporter,
+              renderReports(
                 reaudited.map(({ prepared, audit }, index) => ({
                   skill: prepared,
                   findings: audit.findings,
                   fixed: fixedBySkill[index]
-                })),
-                output.reporterLevels
+                }))
               )
               return auditFindings.some((finding) => finding.level === 'fail')
             }
@@ -403,7 +425,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 userHome: context.homeDirectory,
                 dryRun: Boolean(options.dryRun),
                 allowCommands: Boolean(options.allowCommands),
-                write: (value) => context.stdout.write(value)
+                write: report
               })
               if (published && !options.dryRun) await reAuditAndRender()
               else renderInitialReports()
@@ -431,9 +453,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 'user-home rubric conform actions must be guarded direct writes; conform commands are not permitted',
                 1
               )
-            for (const write of writes) context.stdout.write(`proposed write ${write.path}\n`)
-            for (const command of commands)
-              context.stdout.write(`proposed run ${renderRepositoryConformCommand(command)}\n`)
+            for (const write of writes) report(`proposed write ${write.path}\n`)
+            for (const command of commands) report(`proposed run ${renderRepositoryConformCommand(command)}\n`)
             let publicationError: unknown
             try {
               await publishWrites(writes, Boolean(options.dryRun))
@@ -445,14 +466,13 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               throw publicationError
             }
             if (options.dryRun) {
-              for (const write of writes) context.stdout.write(`would apply write ${write.path}\n`)
-              for (const command of commands)
-                context.stdout.write(`would run ${renderRepositoryConformCommand(command)}\n`)
+              for (const write of writes) report(`would apply write ${write.path}\n`)
+              for (const command of commands) report(`would run ${renderRepositoryConformCommand(command)}\n`)
               renderInitialReports()
               continue
             }
-            for (const write of writes) context.stdout.write(`applied write ${write.path}\n`)
-            for (const command of commands) context.stdout.write(`run ${renderRepositoryConformCommand(command)}\n`)
+            for (const write of writes) report(`applied write ${write.path}\n`)
+            for (const command of commands) report(`run ${renderRepositoryConformCommand(command)}\n`)
             await runRepositoryConformCommands(repository.root, commands)
             if (await reAuditAndRender()) throw new KiError('repository conform re-audit found failures', 1)
           }
