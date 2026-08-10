@@ -4,10 +4,10 @@ title: Centralize CLI icons
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: c8bb7491dcea534796b0ce71734a17dcf7f61220
 ---
 
 ## Goal
