@@ -20,6 +20,8 @@ export type ObservationPolicy = (typeof observationPolicies)[number]
 export interface TradeConfiguration {
   readonly repository: string
   readonly identity: string
+  /** Presentation-only uplift for the generated estate map; it grants no trade capability. */
+  readonly mapBonus: number
   readonly exportsTo: Readonly<Record<TradeKind, readonly string[]>>
   readonly importsFrom: Readonly<Record<TradeKind, readonly string[]>>
 }
@@ -53,6 +55,13 @@ interface DirectionalRoutes {
 }
 
 const emptyRoutes = (): { work: string[]; knowledge: string[] } => ({ work: [], knowledge: [] })
+
+const mapBonus = (value: unknown, path: string): number => {
+  if (value === undefined) return 0
+  if (!Number.isInteger(value) || (value as number) < 0 || (value as number) > 3)
+    throw tradeError(`${path} [${TRADES_TABLE}].map_bonus must be an integer from 0 through 3`)
+  return value as number
+}
 
 /**
  * Reads the partner-keyed route map. Each partner is named once, carrying the kinds it trades in
@@ -115,11 +124,12 @@ const parseConfiguration = (contents: string, path: string): TradeConfiguration 
   const repository = repositoryDeclaration.repository
   const declaration = skillTable(parsed, 'ki-trades')
   if (!isRecord(declaration)) throw tradeError(`${path} does not declare [${TRADES_TABLE}]`)
-  const unknown = Object.keys(declaration).find((key) => key !== 'routes')
+  const unknown = Object.keys(declaration).find((key) => key !== 'map_bonus' && key !== 'routes')
   if (unknown) throw tradeError(`${path} [${TRADES_TABLE}] has unrecognised key ${unknown}`)
   return {
     repository,
     identity: repositoryIdentity(repository),
+    mapBonus: mapBonus(declaration['map_bonus'], path),
     ...parseRoutes(declaration, path, repository)
   }
 }
@@ -144,7 +154,11 @@ const renderTradeDeclaration = (configuration: TradeConfiguration): string => {
         ...renderDirection('import', routeKinds(configuration.importsFrom, partner))
       ].join(', ')} }`
   )
-  return [`[${TRADES_TABLE}]`, ...(routes.length ? ['', `[${TRADES_TABLE}.routes]`, ...routes] : [])].join('\n')
+  return [
+    `[${TRADES_TABLE}]`,
+    ...(configuration.mapBonus ? [`map_bonus = ${configuration.mapBonus}`] : []),
+    ...(routes.length ? ['', `[${TRADES_TABLE}.routes]`, ...routes] : [])
+  ].join('\n')
 }
 
 const writeTradeConfiguration = async (path: string, configuration: TradeConfiguration): Promise<void> => {

@@ -204,7 +204,7 @@ export interface RouteInspection {
 }
 
 export interface EstateRouteInspection extends RouteInspection {
-  readonly source: Pick<TradeConfiguration, 'identity' | 'repository'>
+  readonly source: Pick<TradeConfiguration, 'identity' | 'repository' | 'mapBonus'>
 }
 
 const declaredRoutes = (
@@ -246,7 +246,11 @@ export const inspectEstateRoutes = async (context: KiContext): Promise<readonly 
     return configuration
       ? inspectRoutesInEstate(repositories, configuration).map((route) => ({
           ...route,
-          source: { identity: configuration.identity, repository: configuration.repository }
+          source: {
+            identity: configuration.identity,
+            repository: configuration.repository,
+            mapBonus: configuration.mapBonus
+          }
         }))
       : []
   })

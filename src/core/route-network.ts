@@ -5,9 +5,9 @@ import type { EstateRouteInspection, RouteState } from './trade-core.ts'
 /**
  * Renders the registered estate's declared trade routes as one self-contained interactive page.
  *
- * The page carries the estate as data and lets a force simulation arrange it, so nothing here
- * decides where a repository sits. A reader who disagrees with the arrangement drags it, which is
- * the whole reason this replaced a computed layout.
+ * The page carries the estate as data and lets a force simulation arrange it. The derived route
+ * metrics shape that simulation rather than fixing any repository's position, and a reader can
+ * still drag a repository when a different arrangement is useful.
  *
  * D3 is vendored rather than fetched, so the page opens with no network. Identities are
  * constrained to lower-case `owner/name` over `[a-z0-9._-]`, so no value reaching this module can
@@ -15,13 +15,27 @@ import type { EstateRouteInspection, RouteState } from './trade-core.ts'
  */
 
 export interface EstateNetwork {
-  readonly nodes: readonly { readonly id: string; readonly owner: string; readonly name: string }[]
+  readonly nodes: readonly {
+    readonly id: string
+    readonly owner: string
+    readonly name: string
+    readonly inbound: number
+    readonly outbound: number
+    readonly organisationBonus: number
+    readonly mapBonus: number
+    readonly influence: number
+    readonly role: 'source' | 'sink' | 'peer' | 'hub'
+  }[]
   readonly links: readonly {
     readonly source: string
     readonly target: string
     readonly kinds: readonly string[]
     readonly states: readonly string[]
     readonly active: boolean
+    readonly laneCapacity: number
+    readonly targetDistance: number
+    readonly springStrength: number
+    readonly strokeWidth: number
   }[]
   readonly incomplete: boolean
 }
@@ -53,6 +67,15 @@ const endpoints = (route: EstateRouteInspection): readonly [string, string] =>
     ? [route.source.identity, identityOf(route.repository)]
     : [identityOf(route.repository), route.source.identity]
 
+const pairKey = (left: string, right: string): string =>
+  left.localeCompare(right) <= 0 ? `${left}\n${right}` : `${right}\n${left}`
+
+const nodeRole = (inbound: number, outbound: number, mapBonus: number): 'source' | 'sink' | 'peer' | 'hub' => {
+  if (!inbound) return 'source'
+  if (!outbound) return 'sink'
+  return mapBonus ? 'hub' : 'peer'
+}
+
 /**
  * Collapses declarations onto the direction they run rather than the pair they connect, so a
  * reciprocated pair stays two links and a pair reciprocating one trade kind but not the other
@@ -60,12 +83,25 @@ const endpoints = (route: EstateRouteInspection): readonly [string, string] =>
  */
 export const estateNetwork = (inspected: readonly EstateRouteInspection[], incomplete: boolean): EstateNetwork => {
   const selected = incomplete ? inspected.filter((route) => route.state !== 'active') : inspected
-  const links = new Map<string, { kinds: Set<string>; states: Set<RouteState>; source: string; target: string }>()
+  const links = new Map<
+    string,
+    { kinds: Set<string>; activeKinds: Set<string>; states: Set<RouteState>; source: string; target: string }
+  >()
+  const mapBonuses = new Map<string, number>()
   for (const route of selected) {
     const [source, target] = endpoints(route)
+    mapBonuses.set(route.source.identity, route.source.mapBonus)
+    if (route.peer?.configuration) mapBonuses.set(route.peer.configuration.identity, route.peer.configuration.mapBonus)
     const key = `${source} ${target}`
-    const link = links.get(key) ?? { kinds: new Set<string>(), states: new Set<RouteState>(), source, target }
+    const link = links.get(key) ?? {
+      kinds: new Set<string>(),
+      activeKinds: new Set<string>(),
+      states: new Set<RouteState>(),
+      source,
+      target
+    }
     link.kinds.add(route.kind)
+    if (route.state === 'active') link.activeKinds.add(route.kind)
     link.states.add(route.state)
     links.set(key, link)
   }
@@ -73,19 +109,55 @@ export const estateNetwork = (inspected: readonly EstateRouteInspection[], incom
   const identities = [...new Set(ordered.flatMap((link) => [link.source, link.target]))].sort((left, right) =>
     left.localeCompare(right)
   )
-  return {
-    nodes: identities.map((id) => ({
+  const laneCapacities = new Map<string, number>()
+  for (const link of ordered) {
+    const key = pairKey(link.source, link.target)
+    laneCapacities.set(key, (laneCapacities.get(key) ?? 0) + link.activeKinds.size)
+  }
+  const degrees = new Map<string, { inbound: number; outbound: number }>()
+  for (const link of ordered) {
+    const capacity = link.activeKinds.size
+    const source = degrees.get(link.source) ?? { inbound: 0, outbound: 0 }
+    const target = degrees.get(link.target) ?? { inbound: 0, outbound: 0 }
+    source.outbound += capacity
+    target.inbound += capacity
+    degrees.set(link.source, source)
+    degrees.set(link.target, target)
+  }
+  const nodes = identities.map((id) => {
+    const [owner, name] = id.split('/') as [string, string]
+    const degree = degrees.get(id) as { inbound: number; outbound: number }
+    const organisationBonus = owner === 'knowledgeislands' ? 1 : 0
+    const mapBonus = mapBonuses.get(id) ?? 0
+    const influence = degree.inbound + degree.outbound + organisationBonus + mapBonus
+    return {
       id,
-      owner: id.slice(0, id.indexOf('/')),
-      name: id.slice(id.indexOf('/') + 1)
-    })),
-    links: ordered.map((link) => ({
-      source: link.source,
-      target: link.target,
-      kinds: [...link.kinds].sort(),
-      states: [...link.states].sort(),
-      active: [...link.states].every((state) => state === 'active')
-    })),
+      owner,
+      name,
+      inbound: degree.inbound,
+      outbound: degree.outbound,
+      organisationBonus,
+      mapBonus,
+      influence,
+      role: nodeRole(degree.inbound, degree.outbound, mapBonus)
+    }
+  })
+  return {
+    nodes,
+    links: ordered.map((link) => {
+      const laneCapacity = laneCapacities.get(pairKey(link.source, link.target)) as number
+      return {
+        source: link.source,
+        target: link.target,
+        kinds: [...link.kinds].sort(),
+        states: [...link.states].sort(),
+        active: [...link.states].every((state) => state === 'active'),
+        laneCapacity,
+        targetDistance: 180 + laneCapacity * 42,
+        springStrength: Number((0.16 + laneCapacity * 0.03).toFixed(2)),
+        strokeWidth: Number((1.4 + laneCapacity * 0.2).toFixed(1))
+      }
+    }),
     incomplete
   }
 }
@@ -107,6 +179,7 @@ footer { border-top: 1px solid var(--rule); padding: 10px 24px; display: flex; f
   font-size: 11px; color: var(--muted); align-items: center; }
 footer span { display: inline-flex; align-items: center; gap: 6px; }
 .node rect { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+.node.hub rect { stroke-width: 2; }
 .node text.owner { fill: var(--muted); font-size: 10px; }
 .node text.name { fill: var(--ink); font-size: 12px; }
 .node { cursor: grab; }
@@ -134,7 +207,11 @@ svg.append('defs').html(
   '<marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">' +
   '<path d="M 0 0 L 10 5 L 0 10 z" fill="var(--edge)"/></marker>'
 )
-const measure = (node) => { node.w = Math.max(node.owner.length, node.name.length) * 7.3 + 26; node.h = 42 }
+const measure = (node) => {
+  const influence = Math.min(node.influence, 16)
+  node.w = Math.max(node.owner.length, node.name.length) * 7.3 + 26 + influence * 1.4
+  node.h = 42 + influence * 0.7
+}
 data.nodes.forEach(measure)
 const radius = (node) => Math.hypot(node.w, node.h) / 2
 // Where a ray leaving a node's centre crosses its label box, so an arrow stops on the edge of the
@@ -148,6 +225,7 @@ const edgeOf = (node, towardX, towardY) => {
 
 const link = root.append('g').selectAll('path').data(data.links).join('path')
   .attr('class', (d) => 'link' + (d.active ? '' : ' incomplete'))
+  .attr('stroke-width', (d) => d.strokeWidth)
   .attr('marker-end', 'url(#arrow)')
 const chips = root.append('g').selectAll('g').data(data.links).join('g')
 chips.each(function (d) {
@@ -157,7 +235,7 @@ chips.each(function (d) {
     .html((kind) => iconPaths[kind].map((path) => '<path d="' + path + '"/>').join(''))
 })
 
-const node = root.append('g').selectAll('g').data(data.nodes).join('g').attr('class', 'node')
+const node = root.append('g').selectAll('g').data(data.nodes).join('g').attr('class', (d) => 'node ' + d.role)
 node.append('rect').attr('rx', 6)
   .attr('width', (d) => d.w).attr('height', (d) => d.h)
   .attr('x', (d) => -d.w / 2).attr('y', (d) => -d.h / 2)
@@ -166,9 +244,9 @@ node.append('text').attr('class', 'name').attr('text-anchor', 'middle').attr('y'
 
 const sized = () => ({ w: svg.node().clientWidth, h: svg.node().clientHeight })
 const simulation = d3.forceSimulation(data.nodes)
-  .force('link', d3.forceLink(data.links).id((d) => d.id).distance(300).strength(0.28))
-  .force('charge', d3.forceManyBody().strength(-3200))
-  .force('collide', d3.forceCollide((d) => radius(d) + 26))
+  .force('link', d3.forceLink(data.links).id((d) => d.id).distance((d) => d.targetDistance).strength((d) => d.springStrength))
+  .force('charge', d3.forceManyBody().strength((d) => -1800 - d.influence * 140))
+  .force('collide', d3.forceCollide((d) => radius(d) + 20 + d.influence * 1.5))
   .force('centre', d3.forceCenter(sized().w / 2, sized().h / 2))
   .on('tick', tick)
 
@@ -216,16 +294,19 @@ node.call(d3.drag()
 svg.call(d3.zoom().scaleExtent([0.2, 4]).on('zoom', (event) => root.attr('transform', event.transform)))
 
 const describe = (d) => d.source.id + ' \\u2192 ' + d.target.id + ' \\u00b7 ' +
-  d.kinds.join(' + ') + ' \\u00b7 ' + d.states.join(', ')
+  d.kinds.join(' + ') + ' \\u00b7 capacity ' + d.laneCapacity + '/4 \\u00b7 ' +
+  d.targetDistance + ' px \\u00b7 spring ' + d.springStrength + ' \\u00b7 ' + d.states.join(', ')
 link.on('mousemove', (event, d) => {
   detail.style('opacity', 1).style('left', (event.clientX + 14) + 'px')
     .style('top', (event.clientY + 14) + 'px').text(describe(d))
 }).on('mouseleave', () => detail.style('opacity', 0))
 node.on('mousemove', (event, d) => {
-  const out = data.links.filter((l) => l.source.id === d.id).length
-  const into = data.links.filter((l) => l.target.id === d.id).length
   detail.style('opacity', 1).style('left', (event.clientX + 14) + 'px')
-    .style('top', (event.clientY + 14) + 'px').text(d.id + ' \\u00b7 sends ' + out + ' \\u00b7 receives ' + into)
+    .style('top', (event.clientY + 14) + 'px').text(
+      d.id + ' \\u00b7 ' + d.role + ' \\u00b7 sends ' + d.outbound + ' \\u00b7 receives ' + d.inbound +
+      ' \\u00b7 influence ' + d.influence + ' (routes ' + (d.inbound + d.outbound) +
+      ' + organisation ' + d.organisationBonus + ' + declared ' + d.mapBonus + ')'
+    )
 }).on('mouseleave', () => detail.style('opacity', 0))
 
 addEventListener('resize', () => {
@@ -238,6 +319,7 @@ const legend = [
   `<span>${tradeKindIcon('knowledge')} knowledge</span>`,
   '<span>solid — active</span>',
   '<span>dashed — awaiting reciprocity</span>',
+  '<span>lane capacity sets distance, spring, and width; influence combines routes and map bonuses</span>',
   '<span>one arc per direction; drag a repository, scroll to zoom</span>'
 ].join('')
 

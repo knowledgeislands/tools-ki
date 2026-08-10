@@ -39,7 +39,12 @@ const routeLines = (exportsTo: Directions, importsFrom: Directions): readonly st
   ]
 }
 
-const repositoryConfiguration = (identity: string, exportsTo: Directions = {}, importsFrom: Directions = {}): string =>
+const repositoryConfiguration = (
+  identity: string,
+  exportsTo: Directions = {},
+  importsFrom: Directions = {},
+  mapBonus?: number | string
+): string =>
   [
     '[repo]',
     'harnesses = ["example/harness"]',
@@ -51,6 +56,7 @@ const repositoryConfiguration = (identity: string, exportsTo: Directions = {}, i
     'repo_code = "TEST"',
     '',
     `[${tradesTable}]`,
+    ...(mapBonus === undefined ? [] : [`map_bonus = ${JSON.stringify(mapBonus)}`]),
     ...routeLines(exportsTo, importsFrom),
     ''
   ].join('\n')
@@ -471,7 +477,17 @@ describe('[ki trade]', () => {
       'example/source',
       'example/third'
     ])
-    expect(payload.links).toEqual([
+    expect(
+      payload.links.map(
+        ({
+          laneCapacity: _laneCapacity,
+          targetDistance: _targetDistance,
+          springStrength: _springStrength,
+          strokeWidth: _strokeWidth,
+          ...link
+        }: Record<string, unknown>) => link
+      )
+    ).toEqual([
       {
         source: 'example/fourth',
         target: 'example/source',
@@ -497,6 +513,23 @@ describe('[ki trade]', () => {
         active: false
       }
     ])
+    expect(
+      payload.links.map(
+        (link: { laneCapacity: number; targetDistance: number; springStrength: number; strokeWidth: number }) => ({
+          laneCapacity: link.laneCapacity,
+          targetDistance: link.targetDistance,
+          springStrength: link.springStrength,
+          strokeWidth: link.strokeWidth
+        })
+      )
+    ).toEqual([
+      { laneCapacity: 0, targetDistance: 180, springStrength: 0.16, strokeWidth: 1.4 },
+      { laneCapacity: 3, targetDistance: 306, springStrength: 0.25, strokeWidth: 2 },
+      { laneCapacity: 1, targetDistance: 222, springStrength: 0.19, strokeWidth: 1.6 },
+      { laneCapacity: 3, targetDistance: 306, springStrength: 0.25, strokeWidth: 2 },
+      { laneCapacity: 1, targetDistance: 222, springStrength: 0.19, strokeWidth: 1.6 },
+      { laneCapacity: 0, targetDistance: 180, springStrength: 0.16, strokeWidth: 1.4 }
+    ])
     expect(payload.incomplete).toBe(false)
     // Self-contained: the viewer runtime ships in the page, so nothing is fetched when it opens.
     expect(page).toContain('forceSimulation')
@@ -506,7 +539,105 @@ describe('[ki trade]', () => {
     expect(page).toContain('m15 12-8.373 8.373')
     expect(page).toContain('M12 7v14')
     expect(page).toContain('knowledge</span>')
+    expect(page).toContain('lane capacity sets distance, spring, and width')
     expect(opened).toEqual([['open', join(box.home.path, '.cache/ki/estate-routes.html')]])
+  })
+
+  test('derives map influence from active routes, organisation membership, and declared bonuses', async () => {
+    const box = await sandbox()
+    const source = await realpath(box.project.path)
+    const hub = await box.project.mkdir('hub')
+    const peer = await box.project.mkdir('peer')
+    const sink = await box.project.mkdir('sink')
+    const hubHome = home('knowledgeislands/hub')
+    const peerHome = home('knowledgeislands/peer')
+    const sinkHome = home('knowledgeislands/sink')
+    const sourceHome = home('knowledgeislands/source')
+    await box.project.write(
+      '.ki-config.toml',
+      repositoryConfiguration('knowledgeislands/source', { knowledge: [hubHome] })
+    )
+    await box.project.write(
+      'hub/.ki-config.toml',
+      repositoryConfiguration(
+        'knowledgeislands/hub',
+        { work: [peerHome, sinkHome] },
+        { knowledge: [sourceHome, peerHome] },
+        1
+      )
+    )
+    await box.project.write(
+      'peer/.ki-config.toml',
+      repositoryConfiguration('knowledgeislands/peer', { knowledge: [hubHome] }, { work: [hubHome] })
+    )
+    await box.project.write(
+      'sink/.ki-config.toml',
+      repositoryConfiguration('knowledgeislands/sink', {}, { work: [hubHome] })
+    )
+    await configureEstate(box, [source, hub, peer, sink])
+    box.setRunner(async () => ({ exitCode: 0, output: '' }))
+
+    await box.run('ki trade routes list --estate --html')
+
+    const page = await box.home.read('.cache/ki/estate-routes.html')
+    const payload = JSON.parse(/window\.__estate = (.*?)<\/script>/u.exec(page)?.[1] as string)
+    expect(payload.nodes).toEqual([
+      {
+        id: 'knowledgeislands/hub',
+        owner: 'knowledgeislands',
+        name: 'hub',
+        inbound: 2,
+        outbound: 2,
+        organisationBonus: 1,
+        mapBonus: 1,
+        influence: 6,
+        role: 'hub'
+      },
+      {
+        id: 'knowledgeislands/peer',
+        owner: 'knowledgeislands',
+        name: 'peer',
+        inbound: 1,
+        outbound: 1,
+        organisationBonus: 1,
+        mapBonus: 0,
+        influence: 3,
+        role: 'peer'
+      },
+      {
+        id: 'knowledgeislands/sink',
+        owner: 'knowledgeislands',
+        name: 'sink',
+        inbound: 1,
+        outbound: 0,
+        organisationBonus: 1,
+        mapBonus: 0,
+        influence: 2,
+        role: 'sink'
+      },
+      {
+        id: 'knowledgeislands/source',
+        owner: 'knowledgeislands',
+        name: 'source',
+        inbound: 0,
+        outbound: 1,
+        organisationBonus: 1,
+        mapBonus: 0,
+        influence: 2,
+        role: 'source'
+      }
+    ])
+    expect(
+      payload.links.find(
+        (link: { source: string; target: string }) =>
+          link.source === 'knowledgeislands/hub' && link.target === 'knowledgeislands/peer'
+      )
+    ).toMatchObject({
+      laneCapacity: 2,
+      targetDistance: 264,
+      springStrength: 0.22,
+      strokeWidth: 1.8
+    })
   })
 
   test('narrows the network to incomplete routes and reports a failure to open it', async () => {
@@ -524,6 +655,33 @@ describe('[ki trade]', () => {
     expect(payload.incomplete).toBe(true)
     expect(payload.nodes).toHaveLength(3)
     expect(payload.links.map((link: { source: string }) => link.source)).toEqual(['example/fourth', 'example/third'])
+  })
+
+  test('leaves an unresolved repository without a declared map bonus', async () => {
+    const box = await sandbox()
+    const source = await realpath(box.project.path)
+    await box.project.write(
+      '.ki-config.toml',
+      repositoryConfiguration('example/source', { work: [home('example/unresolved')] })
+    )
+    await configureEstate(box, [source])
+    box.setRunner(async () => ({ exitCode: 0, output: '' }))
+
+    await box.run('ki trade routes list --estate --html')
+
+    const page = await box.home.read('.cache/ki/estate-routes.html')
+    const payload = JSON.parse(/window\.__estate = (.*?)<\/script>/u.exec(page)?.[1] as string)
+    expect(payload.nodes).toContainEqual({
+      id: 'example/unresolved',
+      owner: 'example',
+      name: 'unresolved',
+      inbound: 0,
+      outbound: 0,
+      organisationBonus: 0,
+      mapBonus: 0,
+      influence: 0,
+      role: 'source'
+    })
   })
 
   test('renders an empty estate network and refuses a network of the local route list', async () => {
@@ -806,6 +964,14 @@ describe('[ki trade]', () => {
 
     await box.project.write('.ki-config.toml', `${repositoryOnly}[${tradesTable}]\nunknown = true\n`)
     expect((await box.run('ki trade routes list')).output).toContain('has unrecognised key unknown')
+
+    for (const value of ['-1', '4', '1.5', '"one"']) {
+      await box.project.write('.ki-config.toml', `${repositoryOnly}[${tradesTable}]\nmap_bonus = ${value}\n`)
+      expect((await box.run('ki trade routes list')).output).toContain('map_bonus must be an integer from 0 through 3')
+    }
+    await box.project.write('.ki-config.toml', repositoryConfiguration('example/source', {}, {}, 1))
+    await box.run(['ki', 'trade', 'routes', 'add', receiverHome, '--direction', 'export', '--kind', 'work'])
+    expect(await box.project.read('.ki-config.toml')).toContain('map_bonus = 1')
 
     // Each partner is named once by a key TOML itself keeps unique, so what remains checkable is the
     // key's form, the entry's shape, and the kinds it carries.
