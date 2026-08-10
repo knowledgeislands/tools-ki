@@ -14,6 +14,8 @@ import {
   parkedPayloadEntry,
   readInstalledHarness
 } from './harness.ts'
+import type { Environment } from './paths.ts'
+import type { Runner } from './runner.ts'
 
 export type { Fetcher } from './acquire.ts'
 
@@ -28,6 +30,7 @@ export interface HarnessRelease {
   readonly id: string
   readonly url: string
   readonly sha256: string
+  readonly auth?: 'github-cli'
 }
 
 export interface HarnessInstallationOptions {
@@ -79,6 +82,30 @@ const ensureDirectory = async (path: string, description: string): Promise<void>
   await physicalDirectory(path, description)
 }
 
+const githubCodeloadPath = (identifier: string, path: string): boolean => {
+  const [owner, repository] = identifier.split('/') as [string, string]
+  const prefix = `/${owner}/${repository}/tar.gz/`
+  const revision = path.slice(prefix.length)
+  return path.startsWith(prefix) && Boolean(revision) && !revision.includes('/')
+}
+
+const parseReleaseAuthentication = (
+  value: unknown,
+  identifier: string,
+  url: URL,
+  description: string
+): 'github-cli' | undefined => {
+  if (value === undefined) return undefined
+  if (value !== 'github-cli') throw new KiError(`${description} auth must be github-cli`, 1)
+  if (url.hostname !== 'codeload.github.com' || !githubCodeloadPath(identifier, url.pathname)) {
+    throw new KiError(
+      `${description} github-cli authentication requires https://codeload.github.com/${identifier}/tar.gz/<revision>`,
+      1
+    )
+  }
+  return value
+}
+
 const parseRelease = (value: unknown, index: number): HarnessRelease => {
   const description = `harnesses[${index}]`
   if (!isRecord(value)) throw new KiError(`${description} must be a table`, 1)
@@ -95,7 +122,7 @@ const parseRelease = (value: unknown, index: number): HarnessRelease => {
     throw new KiError(`${description} url must be an HTTPS URL without credentials`, 1)
   const digest = stringField(value, 'sha256', description)
   if (!sha256.test(digest)) throw new KiError(`${description} sha256 must be lowercase SHA-256`, 1)
-  return { id, url, sha256: digest }
+  return { id, url, sha256: digest, auth: parseReleaseAuthentication(value['auth'], id, parsedUrl, description) }
 }
 
 export const readHarnessRegistry = async (configurationDirectory: string): Promise<readonly HarnessRelease[]> => {
@@ -221,6 +248,8 @@ export const installHarness = async (
   dataDirectory: string,
   identifier: string,
   fetcher: Fetcher,
+  runner: Runner,
+  environment: Environment,
   options: HarnessInstallationOptions = {}
 ): Promise<HarnessInstallation> => {
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
@@ -239,7 +268,7 @@ export const installHarness = async (
     if (!options.replace) return { installed: false, replaced: false, archiveSha256: release.sha256 }
   }
 
-  const payload = await acquireVerifiedArchive(fetcher, release)
+  const payload = await acquireVerifiedArchive(fetcher, release, { runner, environment })
 
   const staging = await mkdtemp(join(ownerDirectory, '.install-'))
   try {
@@ -401,9 +430,11 @@ export const canonicalHarnessDevelopmentEnabled = async (dataDirectory: string, 
 export const restoreCanonicalHarness = async (
   configurationDirectory: string,
   dataDirectory: string,
-  fetcher: Fetcher
+  fetcher: Fetcher,
+  runner: Runner,
+  environment: Environment
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
-  installHarness(configurationDirectory, dataDirectory, canonicalHarnessIdentifier, fetcher, {
+  installHarness(configurationDirectory, dataDirectory, canonicalHarnessIdentifier, fetcher, runner, environment, {
     replace: await canonicalDevelopmentProjection(dataDirectory),
     requiredCapabilities: minimumBootstrapUserSkills,
     requiredCapabilitiesContext: 'canonical-bootstrap'

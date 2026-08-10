@@ -17,10 +17,15 @@ export const refreshHarnesses = async (
       lines.push(`${harness.id}: unavailable (no configured immutable release)`)
       continue
     }
-    const result = await installHarness(context.paths.config, context.paths.data, harness.id, context.fetcher, {
-      replace: true,
-      requiredCapabilities: retainedCapabilities(harness)
-    })
+    const result = await installHarness(
+      context.paths.config,
+      context.paths.data,
+      harness.id,
+      context.fetcher,
+      context.runner,
+      context.environment,
+      { replace: true, requiredCapabilities: retainedCapabilities(harness) }
+    )
     lines.push(`${harness.id}: refreshed archive ${result.archiveSha256}`)
   }
   return lines

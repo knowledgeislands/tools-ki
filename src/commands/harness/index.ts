@@ -56,7 +56,14 @@ export const createHarnessCommand = (context: KiContext): Command =>
         .description('install one configured compatible harness')
         .argument('<harness-id>', 'configured harness identifier')
         .action(async (identifier: string) => {
-          const result = await installHarness(context.paths.config, context.paths.data, identifier, context.fetcher)
+          const result = await installHarness(
+            context.paths.config,
+            context.paths.data,
+            identifier,
+            context.fetcher,
+            context.runner,
+            context.environment
+          )
           await recordInstalledHarness(context.paths.config, identifier, true)
           context.stdout.write(
             result.installed
@@ -90,6 +97,8 @@ export const createHarnessCommand = (context: KiContext): Command =>
             context.paths.data,
             identifier,
             context.fetcher,
+            context.runner,
+            context.environment,
             {
               replace: true
             }

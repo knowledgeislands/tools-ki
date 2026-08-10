@@ -26,6 +26,20 @@ Use `--dry-run` to validate without creating output. The command is local only: 
 
 Use a harness identifier such as `example/harness`.
 
+### Private GitHub harnesses
+
+An immutable private GitHub harness archive may opt into the local GitHub CLI credential without placing a token in configuration. Use the commit-pinned codeload URL, record its SHA-256, and declare `auth = "github-cli"`:
+
+```toml
+[[harnesses.releases]]
+id = "example/private-harness"
+url = "https://codeload.github.com/example/private-harness/tar.gz/<commit-sha>"
+sha256 = "<archive-sha256>"
+auth = "github-cli"
+```
+
+`ki` runs `gh auth token` only for that exact codeload URL, sends the returned token only as its HTTPS authorization header, follows no redirects, and never records or displays the token. Authenticate the GitHub CLI first with `gh auth login`. Public archive releases need no `auth` field and do not invoke `gh`.
+
 For the installation and activation boundary, read the [capability lifecycle guide](https://knowledgeislands.info/guidance/cli/capability-lifecycle/).
 
 ## Update verified installations
