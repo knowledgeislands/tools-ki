@@ -4,7 +4,7 @@ area: CLI
 title: Split trade configuration
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: cb93ee03d8a8ff333f99d38922161f2edb677342
@@ -81,6 +81,10 @@ Sol found no substantive issue or module cycle in this extraction.
 ### Mini recap
 
 Keeping declaration syntax and mutation together makes the lifecycle core substantially easier to navigate.
+
+## Done
+
+Approved by Kris Brown in this conversation on 10 August 2026. The review packet is accepted and this record is done.
 
 ## Discussion
 

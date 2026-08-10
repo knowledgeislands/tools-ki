@@ -4,7 +4,7 @@ area: CLI
 title: Track install staging artifacts
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: e4dc56fb0c421d3c8d485f304dd248d1bb76158f
@@ -81,6 +81,10 @@ Sol found lifecycle ordering, lock-bypass repair, unsafe lock-directory, and sym
 ### Mini recap
 
 Persisted ownership is useful only when its lifecycle, locks, recovery, and path checks form one safety boundary.
+
+## Done
+
+Approved by Kris Brown in this conversation on 10 August 2026. The review packet is accepted and this record is done.
 
 ## Discussion
 

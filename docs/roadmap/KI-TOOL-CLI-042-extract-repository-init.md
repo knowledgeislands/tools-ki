@@ -4,7 +4,7 @@ area: CLI
 title: Extract repository initialization
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 0314bddd97e1dbc8a6f0ada800bb1d4a76ef318e
@@ -78,6 +78,10 @@ Sol found no substantive issue in this extraction.
 ### Mini recap
 
 The initialization branch was a true command seam and no new abstraction was needed.
+
+## Done
+
+Approved by Kris Brown in this conversation on 10 August 2026. The review packet is accepted and this record is done.
 
 ## Discussion
 

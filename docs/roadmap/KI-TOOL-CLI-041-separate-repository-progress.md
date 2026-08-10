@@ -4,7 +4,7 @@ area: CLI
 title: Separate repository progress
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 4aa3e4d491aede9d8dd9c196c4b85f81ad9c2896
@@ -81,6 +81,10 @@ Sol found no substantive issue or module cycle in this extraction.
 ### Mini recap
 
 Progress is an in-flight operation concern; final reporting is a completed-result concern.
+
+## Done
+
+Approved by Kris Brown in this conversation on 10 August 2026. The review packet is accepted and this record is done.
 
 ## Discussion
 

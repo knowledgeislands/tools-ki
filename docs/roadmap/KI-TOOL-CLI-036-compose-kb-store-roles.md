@@ -4,7 +4,7 @@ title: Compose KB store roles
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 76fc8a7c7e1154b1bc69397702adb3f181df7d32
@@ -86,6 +86,10 @@ Sol found that a source-bound KB could be silently downgraded by ordinary regist
 ### Mini recap
 
 The local registry can own machine-specific source paths without treating sources as repositories or Agora members.
+
+## Done
+
+Approved by Kris Brown in this conversation on 10 August 2026. The review packet is accepted and this record is done.
 
 ## Discussion
 
