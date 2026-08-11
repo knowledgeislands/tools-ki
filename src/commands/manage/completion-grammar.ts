@@ -54,6 +54,7 @@ const noValue: CompletionValueStrategy = { kind: 'none' }
 
 const optionValueStrategy = (path: string, option: Option): CompletionValueStrategy => {
   const name = option.long as string
+  if (option.argChoices) return { kind: 'values', values: option.argChoices }
   if (name === '--direction' && path === 'trade list')
     return { kind: 'values', values: ['prepare', 'import', 'export'] }
   if (name === '--observation') return { kind: 'values', values: ['unattended', 'receipt', 'decision', 'completion'] }

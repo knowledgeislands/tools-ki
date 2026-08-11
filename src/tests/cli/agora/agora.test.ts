@@ -236,10 +236,9 @@ describe('[ki agora]', () => {
       exitCode: 10,
       output: 'ki: error: could not open Agora estate: code failed\n'
     })
-    expect(await box.run('ki agora open estate --target terminal')).toEqual({
-      exitCode: 2,
-      output: 'ki: error: Agora open --target supports zed or vscode\n'
-    })
+    const invalidTarget = await box.run('ki agora open estate --target terminal')
+    expect(invalidTarget.exitCode).toBe(2)
+    expect(invalidTarget.output).toContain('Allowed choices are zed, vscode.')
   })
 
   test('sorts multiple declared Agoras by identifier', async () => {

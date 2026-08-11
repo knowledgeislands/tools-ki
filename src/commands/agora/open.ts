@@ -1,14 +1,16 @@
-import { Command } from 'commander'
+import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { resolveAgora } from '../../core/agora.ts'
 import { KiError } from '../../core/errors.ts'
+
+type OpenTarget = 'zed' | 'vscode'
 
 export const createAgoraOpenCommand = (context: KiContext): Command =>
   new Command('open')
     .description('open one Agora through an explicit local target')
     .argument('<agora>', 'Agora name')
-    .requiredOption('--target <target>', 'local target to open')
-    .action(async (value: string, options: { target: string }) => {
+    .addOption(new Option('--target <target>', 'local target to open').choices(['zed', 'vscode']).makeOptionMandatory())
+    .action(async (value: string, options: { target: OpenTarget }) => {
       const profile = await resolveAgora(context.paths.state, value)
       if (!profile.members[0]) throw new KiError(`Agora ${profile.id} has no members`, 2)
       if (options.target === 'zed') {
@@ -26,7 +28,7 @@ export const createAgoraOpenCommand = (context: KiContext): Command =>
               result.exitCode
             )
         }
-      } else if (options.target === 'vscode') {
+      } else {
         const result = await context.runner(
           'code',
           ['--new-window', ...profile.members.map((member) => member.root)],
@@ -37,8 +39,6 @@ export const createAgoraOpenCommand = (context: KiContext): Command =>
             `could not open Agora ${profile.id}: ${result.output.trim() || 'code failed'}`,
             result.exitCode
           )
-      } else {
-        throw new KiError('Agora open --target supports zed or vscode', 2)
       }
       context.stdout.write(
         `ki agora open ${profile.id} --target ${options.target}: opened ${profile.members.length} repositories\n`
