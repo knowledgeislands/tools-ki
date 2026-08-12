@@ -14,9 +14,9 @@ import {
   parkedPayloadEntry,
   readInstalledHarness
 } from './harness.ts'
+import { createInstallStagingArtifact } from './managed-artifacts.ts'
 import type { Environment } from './paths.ts'
 import type { Runner } from './runner.ts'
-import { createInstallStagingArtifact } from './managed-artifacts.ts'
 
 export type { Fetcher } from './acquire.ts'
 
@@ -448,11 +448,20 @@ export const restoreCanonicalHarness = async (
   runner: Runner,
   environment: Environment
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
-  installHarness(configurationDirectory, dataDirectory, stateDirectory, canonicalHarnessIdentifier, fetcher, runner, environment, {
-    replace: await canonicalDevelopmentProjection(dataDirectory),
-    requiredCapabilities: minimumBootstrapUserSkills,
-    requiredCapabilitiesContext: 'canonical-bootstrap'
-  })
+  installHarness(
+    configurationDirectory,
+    dataDirectory,
+    stateDirectory,
+    canonicalHarnessIdentifier,
+    fetcher,
+    runner,
+    environment,
+    {
+      replace: await canonicalDevelopmentProjection(dataDirectory),
+      requiredCapabilities: minimumBootstrapUserSkills,
+      requiredCapabilitiesContext: 'canonical-bootstrap'
+    }
+  )
 
 export const uninstallHarness = async (dataDirectory: string, identifier: string): Promise<void> => {
   // The public command validates both conditions before calling this filesystem primitive; retain its defensive core guard.
