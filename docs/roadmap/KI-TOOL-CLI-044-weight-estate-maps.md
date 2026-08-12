@@ -4,7 +4,7 @@ title: Weight estate maps
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 0e0938fa4d9a41f73403e66c078ee381b8795ed2
@@ -88,6 +88,10 @@ No external dependency is required. The user has approved the presentation model
 ### Mini recap
 
 The estate map now makes its visual hierarchy explainable: topology provides the base, small declared bonuses provide deliberate emphasis, and every contribution is visible in the generated HTML.
+
+## Done
+
+Approved by Kris Brown in this conversation on 12 August 2026. The review packet is accepted and this record is done.
 
 ## Discussion
 

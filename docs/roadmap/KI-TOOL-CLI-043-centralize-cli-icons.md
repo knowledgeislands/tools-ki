@@ -4,7 +4,7 @@ title: Centralize CLI icons
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: c8bb7491dcea534796b0ce71734a17dcf7f61220
@@ -88,6 +88,10 @@ No external dependency is required. The selection of semantic roles must remain 
 ### Mini recap
 
 Estate routes are now readable pair-by-pair in terminals and remain explorable in a self-contained HTML network, with one presentation vocabulary across the affected CLI surfaces.
+
+## Done
+
+Approved by Kris Brown in this conversation on 12 August 2026. The review packet is accepted and this record is done.
 
 ## Discussion
 
