@@ -4,7 +4,7 @@ title: Unify repository run progress
 area: CLI
 theme: cli
 horizon: now
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
@@ -40,14 +40,18 @@ Four defects, observed on `ki repo audit --repo .` and `ki repo conform` against
 
 ## Steps
 
-- [ ] Give the timings row a caller-supplied position so it uses `last-root` only when no root row follows, and cover both the single-timings audit shape and the two-timings conform shape.
-- [ ] Open a phase only on an actual transition, so a repeated `evidence()` or `planned()` call cannot reset `phaseStarted`; confirm by measurement that each reported phase sums to the reported total.
-- [ ] Emit the same evidence stage events from the conform path so it renders per-skill child rows exactly as audit does.
-- [ ] Give conform its own `evidence` root row rather than borrowing the conform bar's detail line.
-- [ ] Rename conform's second pass from `verify` to `re-audit` across the renderer, its tests, and any user-facing material that names it.
-- [ ] Carry the harness `cost` field through `validateItem` and the local `MechanicalRubric` type, and weight the phase bar by it so an item declaring `cost: 60` advances the bar sixty times as far as an unweighted one.
-- [ ] Skip conform's re-audit when no write and no command was staged, reporting plainly that there was nothing to verify rather than silently omitting the pass, and keep the pass unchanged whenever anything was staged.
-- [ ] Reconcile the presentation vocabulary with the `KI-TOOL-CLI-043` icon registry rather than adding new ad-hoc symbols.
+- [ ] Give the timings row a caller-supplied position so it uses `last-root` only when no root row follows. Check: an audit run renders one `╰─` for the whole tree, and a conform run renders `├─ timings` for its first pass.
+- [ ] Open a phase only on an actual transition, so a repeated `evidence()` or `planned()` call cannot reset `phaseStarted`. Check: the reported phases sum to the reported total, measured on a run of at least ten seconds rather than asserted from the code.
+- [ ] Skip conform's re-audit when no write and no command was staged, reporting plainly that there was nothing to verify rather than silently omitting the pass. Check: a clean conform reports one pass and runs `test:coverage` once; a conform that stages a write still runs and reports the re-audit in full.
+- [ ] Emit the same evidence stage events from the conform path so it renders per-skill child rows exactly as audit does. Check: a conform run shows the five `ki-engineering` command rows.
+- [ ] Give conform its own `evidence` root row rather than borrowing the conform bar's detail line. Check: no conform frame renders a conform counter beside an evidence detail string.
+- [ ] Rename conform's second pass from `verify` to `re-audit` across the renderer, its tests, and any user-facing material that names it. Check: `grep -rn "verify" src/commands/repo/` returns no phase label, and `README.md` and `man/ki.1` agree.
+- [ ] Carry the harness `cost` field through `validateItem` and the local `MechanicalRubric` type, and weight the phase bar by it. Check: an item declaring `cost: 60` advances the bar sixty times as far as an unweighted one, and an item declaring no `cost` still counts as one unit.
+- [ ] Reconcile the presentation vocabulary with the `KI-TOOL-CLI-043` icon registry rather than adding new ad-hoc symbols. Check: no new literal glyph is introduced outside the registry.
+
+## Delegation
+
+Single lane, no subagents. Every step converges on `src/core/repository-progress.ts`, so parallel lanes would contend on one file for no scheduling gain, and the sequencing above is what keeps a failure attributable.
 
 ## Files touched
 
@@ -68,6 +72,10 @@ A conform run against a clean repository must report one pass and no re-audit, w
 No external dependency. Builds on the presentation surface established by `KI-TOOL-CLI-041` and the icon registry from `KI-TOOL-CLI-043`, both delivered and pruned.
 
 ## Discussion
+
+### Step order
+
+The steps run from self-contained rendering repairs to the one change that alters a data contract, so each stage is independently verifiable and a failure is easy to isolate. The first two touch only `repository-progress.ts` internals. The re-audit skip is the sole behavioural change and is deliberately separated from the rendering work, so a regression there cannot be mistaken for a presentation bug. The conform parity steps follow. Carrying `cost` is last because it widens the load boundary and would otherwise sit underneath every earlier verification.
 
 ### Naming the second pass
 
