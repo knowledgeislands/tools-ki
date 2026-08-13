@@ -12,7 +12,7 @@ baseline_ref: null
 
 ## Goal
 
-Give `ki repo audit` and `ki repo conform` one honest progress model: the same phase and per-skill evidence presentation, timings that agree with the total they sit beside, and tree punctuation that closes the tree exactly once.
+Give `ki repo audit` and `ki repo conform` one honest progress model: the same phase and per-skill evidence presentation, timings that agree with the total they sit beside, tree punctuation that closes the tree exactly once, and a bar weighted by declared effort. Stop conform re-auditing when it staged nothing to verify.
 
 ## Context
 
@@ -22,7 +22,9 @@ The reader-facing cost is concrete. A run that takes 32.2s reports `loading 0.0s
 
 ## Boundary
 
-Do not change what audit or conform actually execute, their findings, exit codes, or result tree; do not introduce a new progress dependency or an alternate renderer; do not make the phase model a public scripting contract; and do not alter the non-TTY path, which correctly emits no progress frames at all.
+Do not change which rubric items audit or conform evaluate, their findings, exit codes, or result tree; do not introduce a new progress dependency or an alternate renderer; do not make the phase model a public scripting contract; and do not alter the non-TTY path, which correctly emits no progress frames at all.
+
+The single permitted execution change is skipping conform's re-audit pass when nothing was staged, because that pass exists only to prove staged writes landed clean. Do not extend it into caching, result reuse between invocations, or skipping any item on the grounds that its inputs look unchanged: rubric items do not declare their input surface, so any such key would be inferred, and a stale `PASS` from a correctness gate is a worse failure than a slow one.
 
 ## Current state
 
@@ -32,6 +34,7 @@ Four defects, observed on `ki repo audit --repo .` and `ki repo conform` against
 - **Zeroed phase timings** — `evidence()` calls `openPhase('evidence')` unconditionally at line 417, outside the guard that protects the matching `closePhase()`. Because `evidence()` fires once per gathered session, every call resets `phaseStarted`, so the recorded phase elapsed is the gap since the last tick rather than the phase duration. `planned()` calls `openPhase(phase)` unconditionally at line 431 and is the likely cause of the same zero for the audit phase; this half is inference from the code and needs a measurement to confirm. `total` is computed from `started`, which nothing resets, which is why the total remains correct while its parts read `0.0s`.
 - **Conform has no per-skill evidence rows** — audit renders nested children under `evidence`; conform renders one flat root bar. The evidence-row machinery is driven by `report()` stage events, so conform either does not emit those events or does not receive the same tracker callbacks.
 - **Conform phase labels misdescribe the work** — evidence gathering renders inside the conform bar as `conform […] gathering evidence · 42/181 23% 5.5s` with no evidence root row of its own, and the second pass is labelled `verify` although it runs the audit rubric.
+- **Conform re-audits even when it staged nothing** — `src/commands/repo/index.ts:430-433` applies writes and commands and then calls `reAuditAndRender()` unconditionally, with no short circuit for an empty `writes` and `commands` pair. An observed run reported `conform 28.4s` followed by `verify 27.3s` at `FIXED=0`, so a full second 181-item pass, including a second `bun run test:coverage`, ran to verify writes that never happened. The pass exists to prove staged writes landed clean, so when nothing is staged its premise is already satisfied by the initial audit.
 - **The declared `cost` weighting is discarded at the load boundary** — the harness rubric type documents `cost` as "relative expected effort against the other criteria in the same catalogue, used to weight progress", and ten items across five skills declare one: `TEST-5` 60, `DEPS-1` 12, `KNIP-2` 8, `TSC-1` 5, `BIO-1` 4, `SYNC-1` 2. The local `MechanicalRubric` in `src/core/rubric.ts` omits the field, and `validateItem` in `src/core/runtime-loader.ts` destructures only `code`, `title`, `description`, `sources`, `mechanical`, and `judgment`, so the value never enters the CLI. Every one of the 181 items therefore advances the bar equally, and the declared sixty-fold difference between a coverage run and an `lstat` is invisible. The declared weights track the measured durations closely enough to be useful as they stand, so this needs no persisted timing history.
 - **An evidence bar sweeps repeatedly with no completion signal** — this is working as designed, not a defect, and is recorded here only so it is not mistaken for one. Evidence stages carry no known total, so `barZones` renders an animated band cycling on `tick % (width + band)` rather than progress toward an end. A stage therefore sweeps once per cycle for as long as it runs: `test:coverage` at 8.8s crosses roughly three times while `syncpack` at 0.1s never completes one crossing. `ki-engineering` shells out to five commands and renders one row each, and the rubric invokes `test:coverage` exactly once at `audit-evidence.ts:1243` with no other skill invoking it, so there is no duplicate execution to fix. The open question is presentational only: whether a long indeterminate stage should show elapsed time against a typical duration instead of an unbounded loop.
 
@@ -43,11 +46,12 @@ Four defects, observed on `ki repo audit --repo .` and `ki repo conform` against
 - [ ] Give conform its own `evidence` root row rather than borrowing the conform bar's detail line.
 - [ ] Rename conform's second pass from `verify` to `re-audit` across the renderer, its tests, and any user-facing material that names it.
 - [ ] Carry the harness `cost` field through `validateItem` and the local `MechanicalRubric` type, and weight the phase bar by it so an item declaring `cost: 60` advances the bar sixty times as far as an unweighted one.
+- [ ] Skip conform's re-audit when no write and no command was staged, reporting plainly that there was nothing to verify rather than silently omitting the pass, and keep the pass unchanged whenever anything was staged.
 - [ ] Reconcile the presentation vocabulary with the `KI-TOOL-CLI-043` icon registry rather than adding new ad-hoc symbols.
 
 ## Files touched
 
-Expected implementation: `src/core/repository-progress.ts`, and the conform and audit command modules that construct the tracker.
+Expected implementation: `src/core/repository-progress.ts`, `src/core/rubric.ts` and `src/core/runtime-loader.ts` for the `cost` field, and `src/commands/repo/index.ts` for the re-audit short circuit and tracker construction.
 
 Expected tests: `src/tests/cli/repo/` progress coverage driving both commands through the `sandbox()` seam.
 
@@ -55,7 +59,9 @@ Expected material: `README.md`, `man/ki.1`, and `CHANGELOG.md` where the progres
 
 ## Verify
 
-`bun run test`, `bun run test:coverage`, `bunx tsc --noEmit`, `bunx biome check`, `ki repo audit --repo .`, and a captured TTY run of both commands showing the phase breakdown summing to the total, one tree closure, and per-skill rows under both.
+`bun run test`, `bun run test:coverage`, `bunx tsc --noEmit`, `bunx biome check`, `ki repo audit --repo .`, and a captured TTY run of both commands showing the phase breakdown summing to the total, one tree closure, per-skill rows under both, and a bar that advances proportionally to declared `cost`.
+
+A conform run against a clean repository must report one pass and no re-audit, while a conform run that stages a write must still run and report the re-audit. Cover both through the `sandbox()` seam.
 
 ## Dependencies / blocks
 
@@ -66,6 +72,10 @@ No external dependency. Builds on the presentation surface established by `KI-TO
 ### Naming the second pass
 
 `verify` named a reassurance rather than an activity: the pass runs the audit rubric a second time to prove conform's writes land clean. `re-audit` names what it does, and keeps the vocabulary shared with the audit command instead of inventing a conform-only word.
+
+### Why the re-audit skip is not caching
+
+Skipping a pass because nothing was staged is an argument from the pass's own premise: it verifies staged writes, and there were none. Skipping an item because its inputs look unchanged is an argument from inferred state, and rubric items do not declare what they read. The first is sound with the information already present; the second needs a contract that does not exist. Caching and any per-item `inputs` declaration are deliberately out of scope here.
 
 ### One model for both commands
 
