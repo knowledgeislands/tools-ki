@@ -83,9 +83,11 @@ const validateRemediation = (
 const validateMechanical = (value: unknown, identity: string, code: string): MechanicalRubric<unknown> | undefined => {
   if (value === undefined) return undefined
   if (!isRecord(value)) throw new KiError(`${identity} rubric item ${code} mechanical aspect must be a table`, 1)
-  const { level, overrideLevels, heuristic, remediation: rawRemediation, audit, conform, conformOn } = value
+  const { level, cost, overrideLevels, heuristic, remediation: rawRemediation, audit, conform, conformOn } = value
   if (typeof level !== 'string' || !(VIOLATION_LEVELS as readonly string[]).includes(level))
     throw new KiError(`${identity} rubric item ${code} has an invalid level`, 1)
+  if (cost !== undefined && (typeof cost !== 'number' || !Number.isFinite(cost) || cost <= 0))
+    throw new KiError(`${identity} rubric item ${code} cost must be a positive finite number`, 1)
   if (heuristic !== undefined && typeof heuristic !== 'boolean')
     throw new KiError(`${identity} rubric item ${code} heuristic must be boolean`, 1)
   if (
@@ -105,6 +107,7 @@ const validateMechanical = (value: unknown, identity: string, code: string): Mec
     )
   return {
     level: level as ViolationLevel,
+    ...(cost === undefined ? {} : { cost }),
     ...(overrideLevels === undefined ? {} : { overrideLevels: validateLevels(overrideLevels, identity, code) }),
     ...(heuristic === undefined ? {} : { heuristic }),
     remediation,

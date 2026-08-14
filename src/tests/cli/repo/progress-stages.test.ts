@@ -79,7 +79,7 @@ describe('[ki repo audit evidence progress]', () => {
     expect(result.output).toMatch(/├─ loading +\[/)
     expect(result.output).toMatch(/├─ evidence +\[/)
     expect(result.output).toMatch(/├─ audit +\[/)
-    expect(result.output).toMatch(/╰─ timings +loading 0\.0s · evidence 0\.0s · audit 0\.0s · total 0\.0s/)
+    expect(result.output).toMatch(/├─ timings +loading 0\.0s · evidence 0\.0s · audit 0\.0s · total 0\.0s/)
     const barColumns = result.output
       .split('\n')
       .filter((line) => /^(├─ (loading|evidence|audit)|│ {2}├─ ki-example)/.test(line))
@@ -99,6 +99,32 @@ describe('[ki repo audit evidence progress]', () => {
     )
   })
 
+  test('accounts repeated phase reports without resetting their elapsed time', async () => {
+    const box = await withRubric(`
+      emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
+      emit({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
+    `)
+    let clock = 0
+
+    const result = await box.run('ki repo audit --progress always', {
+      columns: 240,
+      now: () => {
+        clock += 29
+        return clock
+      }
+    })
+    const match = result.output.match(
+      /timings +loading ([\d.]+)s · evidence ([\d.]+)s · audit ([\d.]+)s · total ([\d.]+)s/
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(match).not.toBeNull()
+    const [, loading = '0', evidence = '0', audit = '0', total = '0'] = match ?? []
+    expect(Number(evidence)).toBeGreaterThan(0)
+    expect(Number(audit)).toBeGreaterThan(0)
+    expect(Number(loading) + Number(evidence) + Number(audit)).toBeCloseTo(Number(total), 5)
+  })
+
   test('shows a counted step as a determinate share of its own work', async () => {
     const box = await withRubric(`
       emit({ kind: 'step', label: 'preflight', completed: 1, total: 1 })
@@ -114,6 +140,26 @@ describe('[ki repo audit evidence progress]', () => {
     expect(plainFrames(result.output)).toContain('evidence engineering evidence scanning complete · 0.0s')
     // The counted step fills three quarters of its own bar, where the enclosing stage animated.
     expect(barFor(result.output, 'scanning · 3/4')).toBe(`${'#'.repeat(29)}${'.'.repeat(9)}`)
+  })
+
+  test('renders conform evidence as its own root with the same retained child rows', async () => {
+    const box = await withRubric(`
+      emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
+      emit({ kind: 'step', label: 'biome check', code: 'BIO-1' })
+      emit({ kind: 'step', label: 'tsc --noEmit', code: 'TSC-1' })
+      emit({ kind: 'step', label: 'vitest run', code: 'TEST-4' })
+      emit({ kind: 'step', label: 'vitest run --coverage', code: 'TEST-5' })
+      emit({ kind: 'step', label: 'syncpack lint', code: 'SYNC-1' })
+      emit({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
+    `)
+
+    const result = await box.run('ki repo conform --progress always', { columns: 240, now: () => 0 })
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toMatch(/├─ evidence +\[/)
+    for (const command of ['biome check', 'tsc --noEmit', 'vitest run', 'vitest run --coverage', 'syncpack lint'])
+      expect(result.output).toContain(`engineering evidence ${command}`)
+    expect(result.output).not.toMatch(/├─ conform .*gathering evidence/)
   })
 
   test('updates a repeated uncounted step instead of retaining another child', async () => {

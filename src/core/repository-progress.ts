@@ -14,8 +14,10 @@ const FALLBACK_TERMINAL_COLUMNS = 80
 const REFRESH_INTERVAL_MS = 250
 type ProgressMode = 'auto' | 'always' | 'never'
 type ProgressStyle = 'single' | 'multi'
+type TimingsPlacement = 'root' | 'last-root'
 export type ReporterLevel = FindingLevel | 'fixed'
-type ProgressPhase = 'loading' | 'evidence' | 'audit' | 'conform' | 'educate' | 'verify'
+type ProgressPhase = 'loading' | 'evidence' | 'audit' | 'conform' | 'educate' | 're-audit'
+const PROGRESS_PHASES: readonly ProgressPhase[] = ['loading', 'evidence', 'audit', 'conform', 'educate', 're-audit']
 
 interface OperationOptions {
   readonly progress: ProgressMode
@@ -140,7 +142,9 @@ const progressLine = (model: BarModel, { columns, label, placement, tick }: Rend
   return `${prefix}${bracketBar(model, barWidth, tick)} ${truncate(model.text, remaining - barWidth)}`.padEnd(width)
 }
 
-const elapsed = (milliseconds: number): string => `${(Math.max(0, milliseconds) / 1000).toFixed(1)}s`
+const elapsedTenths = (milliseconds: number): number => Math.round(Math.max(0, milliseconds) / 100)
+const formatTenths = (tenths: number): string => `${(tenths / 10).toFixed(1)}s`
+const elapsed = (milliseconds: number): string => formatTenths(elapsedTenths(milliseconds))
 
 interface ProgressTracker {
   readonly loading: (loaded: number, total: number) => void
@@ -197,7 +201,8 @@ const createProgressTracker = (
   context: KiContext,
   options: OperationOptions,
   skills: readonly TrackedSkill[],
-  phase: string
+  phase: string,
+  timingsPlacement: TimingsPlacement
 ): ProgressTracker | undefined => {
   const enabled = options.progress === 'always' || (options.progress === 'auto' && context.stdout.isTTY === true)
   if (!enabled) return undefined
@@ -209,6 +214,8 @@ const createProgressTracker = (
   let complete = 0
   let inFlight = 0
   let total: number | undefined
+  let completedItems = 0
+  let totalItems: number | undefined
   let tick = 0
   let lastFrame: string | undefined
   let cursorHidden = false
@@ -222,6 +229,8 @@ const createProgressTracker = (
   const rootLabelWidth = childLabelWidth + 3
   let loading: { readonly loaded: number; readonly total: number } | undefined
   let evidence: { readonly gathered: number; readonly total: number } | undefined
+  let batchedEvidence = false
+  let completedEvidence = 0
   const states = new Map<string, SkillProgressState>(skills.map((skill) => [skill.identity, PENDING_STATE]))
   const skillState = (identity: string): SkillProgressState => {
     const state = states.get(identity)
@@ -248,12 +257,12 @@ const createProgressTracker = (
     label = activePhase.padEnd(rootLabelWidth),
     placement: RenderOptions['placement'] = 'root'
   ): RenderOptions => ({ columns: context.stdout.columns, label, placement, tick })
-  const closePhase = (): void => {
-    timings.push({ phase: activePhase, elapsed: context.now() - phaseStarted })
-  }
   const openPhase = (next: ProgressPhase): void => {
+    if (activePhase === next) return
+    const transitioned = context.now()
+    timings.push({ phase: activePhase, elapsed: transitioned - phaseStarted })
     activePhase = next
-    phaseStarted = context.now()
+    phaseStarted = transitioned
   }
   const countsOf = (done: number, of: number): string =>
     `${done}/${of} ${of === 0 ? 100 : Math.round((done / of) * 100)}%`
@@ -262,8 +271,8 @@ const createProgressTracker = (
     const clock = elapsed(context.now() - phaseStarted)
     if (loading) return `${countsOf(loading.loaded, loading.total)} ${clock}`
     if (evidence) return `${countsOf(evidence.gathered, evidence.total)} ${clock}`
-    if (total === undefined) return clock
-    return `${countsOf(complete, total)} ${clock}`
+    if (totalItems === undefined) return clock
+    return `${countsOf(completedItems, totalItems)} ${clock}`
   }
   const summaryText = (detail: string): string => `${detail} · ${counters()}`
   const barModel = (text: string): BarModel => {
@@ -349,11 +358,17 @@ const createProgressTracker = (
     releaseInterrupt()
   }
   const renderTimings = (): void => {
-    const summary = [...timings, { phase: activePhase, elapsed: context.now() - phaseStarted }]
-      .map(({ phase: label, elapsed: duration }) => `${label} ${elapsed(duration)}`)
-      .join(' · ')
+    const finished = context.now()
+    const byPhase = new Map<ProgressPhase, number>()
+    for (const timing of [...timings, { phase: activePhase, elapsed: finished - phaseStarted }])
+      byPhase.set(timing.phase, (byPhase.get(timing.phase) ?? 0) + timing.elapsed)
+    const rendered = [...byPhase]
+      .sort(([left], [right]) => PROGRESS_PHASES.indexOf(left) - PROGRESS_PHASES.indexOf(right))
+      .map(([label, duration]) => [label, elapsedTenths(duration)] as const)
+    const summary = rendered.map(([label, duration]) => `${label} ${formatTenths(duration)}`).join(' · ')
+    const total = rendered.reduce((sum, [, duration]) => sum + duration, 0)
     context.stdout.write(
-      `${treeProgressPrefix('timings'.padEnd(rootLabelWidth), 'last-root')}${summary} · total ${elapsed(context.now() - started)}\n`
+      `${treeProgressPrefix('timings'.padEnd(rootLabelWidth), timingsPlacement)}${summary} · total ${formatTenths(total)}\n`
     )
   }
   const activeEvidenceRow = (identity: string): EvidenceProgressRow | undefined => {
@@ -402,15 +417,19 @@ const createProgressTracker = (
     evidenceRows[evidenceRows.indexOf(row)] = updated
     activeEvidenceRows.set(identity, updated)
   }
+  const itemCost = (skill: PreparedSkill, code: string): number =>
+    skill.items.find((item) => item.code === code)?.item.mechanical.cost ?? 1
+  const skillCost = (skill: PreparedSkill): number =>
+    skill.items.reduce((sum, item) => sum + (item.item.mechanical.cost ?? 1), 0)
   return {
     loading: (loaded, definitions) => {
       loading = { loaded, total: definitions }
       render('loading definitions')
     },
     evidence: (gathered, sessions) => {
+      batchedEvidence = true
       if (loading) {
         render('loading definitions complete', true)
-        closePhase()
         loading = undefined
       }
       evidence = { gathered, total: sessions }
@@ -420,21 +439,20 @@ const createProgressTracker = (
     planned: (planned) => {
       if (loading) {
         render('loading definitions complete', true)
-        closePhase()
         loading = undefined
       }
       if (evidence) {
         render('gathering evidence complete', true)
-        closePhase()
         evidence = undefined
       }
       openPhase(phase as ProgressPhase)
-      total = planned.reduce((count, skill) => count + skill.items.length, 0)
+      totalItems = planned.reduce((count, skill) => count + skill.items.length, 0)
+      total = planned.reduce((sum, skill) => sum + skillCost(skill), 0)
       for (const skill of planned)
         states.set(skill.skill.identity, {
           complete: 0,
           started: 0,
-          total: skill.items.length,
+          total: skillCost(skill),
           planned: true,
           staged: false,
           status: 'pending'
@@ -442,30 +460,33 @@ const createProgressTracker = (
       render('starting')
     },
     start: (skill, code) => {
-      inFlight = 1
+      const cost = itemCost(skill, code)
+      inFlight = cost
       lastRunning = code
       const { identity, declaration } = skill.skill
       const state = skillState(identity)
       states.set(identity, {
         ...state,
-        started: state.complete + 1,
+        started: state.complete + cost,
         planned: true,
         staged: false,
-        total: skill.items.length,
+        total: skillCost(skill),
         status: `running ${code}`
       })
       render(`${declaration.name} running ${code}`)
     },
     item: (skill, code) => {
-      complete += 1
+      const cost = itemCost(skill, code)
+      complete += cost
+      completedItems += 1
       inFlight = 0
       const { identity, declaration } = skill.skill
       const state = skillState(identity)
-      const done = state.complete + 1
+      const done = state.complete + cost
       states.set(identity, {
         complete: done,
         started: done,
-        total: skill.items.length,
+        total: skillCost(skill),
         planned: true,
         staged: false,
         status: code
@@ -475,10 +496,22 @@ const createProgressTracker = (
     report: (skill, event) => {
       const { identity, declaration } = skill.skill
       const currentStages = stages.get(identity) ?? []
+      let closesReportedEvidence = false
       if (event.kind === 'stage') {
-        if (event.label === EVIDENCE_STAGE_LABEL && event.edge === 'start') stages.set(identity, currentStages)
-        else if (event.label === EVIDENCE_STAGE_LABEL) completeEvidenceRow(identity)
-        else if (event.edge === 'start') {
+        if (event.label === EVIDENCE_STAGE_LABEL && event.edge === 'start') {
+          if (!batchedEvidence) {
+            evidence = { gathered: completedEvidence, total: skills.length }
+            openPhase('evidence')
+          }
+          stages.set(identity, currentStages)
+        } else if (event.label === EVIDENCE_STAGE_LABEL) {
+          completeEvidenceRow(identity)
+          if (!batchedEvidence) {
+            completedEvidence += 1
+            evidence = { gathered: completedEvidence, total: skills.length }
+            closesReportedEvidence = true
+          }
+        } else if (event.edge === 'start') {
           const nextStages = [...currentStages, event.label]
           stages.set(identity, nextStages)
           updateEvidenceRow(identity, declaration.name, nextStages.join(' '))
@@ -502,6 +535,12 @@ const createProgressTracker = (
         staged: stateRow !== undefined,
         status: stateRow?.detail ?? state.status
       })
+      if (closesReportedEvidence) {
+        render('gathering evidence complete', true)
+        evidence = undefined
+        openPhase(phase as ProgressPhase)
+        return
+      }
       render('gathering evidence')
     },
     complete: () => {
@@ -537,11 +576,14 @@ export const runPreparedWithProgress = async <Result>(
   run: (skill: PreparedSkill, progress: ItemProgressCodes) => Promise<Result>,
   options: OperationOptions,
   phase: string,
+  timingsPlacement: TimingsPlacement = 'last-root',
   existing?: ProgressTracker
 ): Promise<Result[]> => {
   const progress =
     existing ??
-    (prepared.length ? createProgressTracker(context, options, trackedPreparedSkills(prepared), phase) : undefined)
+    (prepared.length
+      ? createProgressTracker(context, options, trackedPreparedSkills(prepared), phase, timingsPlacement)
+      : undefined)
   const results: Result[] = []
   try {
     progress?.planned(prepared)
@@ -567,9 +609,12 @@ export const runWithProgress = async <Result>(
   skills: readonly ResolvedSkill[],
   run: (skill: PreparedSkill, progress: ItemProgressCodes) => Promise<Result>,
   options: OperationOptions,
-  phase: string
+  phase: string,
+  timingsPlacement: TimingsPlacement = 'last-root'
 ): Promise<Result[]> => {
-  const progress = skills.length ? createProgressTracker(context, options, trackedSkills(skills), phase) : undefined
+  const progress = skills.length
+    ? createProgressTracker(context, options, trackedSkills(skills), phase, timingsPlacement)
+    : undefined
   const prepared: PreparedSkill[] = []
   try {
     progress?.loading(0, skills.length)
@@ -581,7 +626,7 @@ export const runWithProgress = async <Result>(
     progress?.failed()
     throw error
   }
-  return runPreparedWithProgress(context, prepared, run, options, phase, progress)
+  return runPreparedWithProgress(context, prepared, run, options, phase, timingsPlacement, progress)
 }
 
 /** Runs a counted session-evidence phase before the prepared skills' mechanical-item phase. */
@@ -594,9 +639,12 @@ export const runWithEvidenceProgress = async <Evidence, Result>(
   ) => Promise<Evidence>,
   run: (skill: PreparedSkill, evidence: Evidence, progress: ItemProgressCodes) => Promise<Result>,
   options: OperationOptions,
-  phase: string
+  phase: string,
+  timingsPlacement: TimingsPlacement = 'last-root'
 ): Promise<Result[]> => {
-  const progress = skills.length ? createProgressTracker(context, options, trackedSkills(skills), phase) : undefined
+  const progress = skills.length
+    ? createProgressTracker(context, options, trackedSkills(skills), phase, timingsPlacement)
+    : undefined
   const prepared: PreparedSkill[] = []
   const evidence = new Map<string, Evidence>()
   try {
@@ -629,6 +677,7 @@ export const runWithEvidenceProgress = async <Evidence, Result>(
     },
     options,
     phase,
+    timingsPlacement,
     progress
   )
 }

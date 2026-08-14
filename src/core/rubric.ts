@@ -59,6 +59,8 @@ export interface RubricExecution<Context, Result> {
 
 export interface MechanicalRubric<Context> {
   readonly level: ViolationLevel
+  /** Relative expected effort within this catalogue; omitted means one progress unit. */
+  readonly cost?: number
   readonly overrideLevels?: readonly ViolationLevel[]
   readonly heuristic?: boolean
   readonly remediation: MechanicalRemediation

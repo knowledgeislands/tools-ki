@@ -27,6 +27,7 @@ const item = (value) => {
     sources: value.sources ?? ['standard.md'],
     mechanical: {
       level: value.level,
+      ...(value.cost === undefined ? {} : { cost: value.cost }),
       remediation: value.remediation ?? (value.conform === undefined ? { class: 'diagnostic', guidance: 'Diagnose the reported evidence.' } : { class: 'automatic' }),
       audit: { phase: value.phase, run: value.audit },
       ...(value.conform === undefined ? {} : {
@@ -123,6 +124,17 @@ describe('[ki repo]', () => {
         output:
           'example/harness:ki-example\n  Concern: test governance\n  Scope: repository\n  F: Family\n    Test family.\n    Standard: standard.md\n    J-1 [J]: Judgment\n      Judgment test criterion.\n      Sources: standard.md\n      Review: Review the design.\n    EXAMPLE-1 [M]: Example\n      Mechanical test criterion.\n      Sources: standard.md\n'
       })
+    })
+
+    test('closes educate timings when no report row follows', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+
+      const result = await box.run('ki repo educate', { interactive: true, now: () => 0 })
+
+      expect(result.exitCode).toBe(0)
+      expect(stripVTControlCharacters(result.output)).toMatch(/╰─ timings +loading 0\.0s · educate 0\.0s · total 0\.0s/)
     })
 
     test('reports when the repository declares no skills', async () => {
@@ -494,6 +506,29 @@ describe('[ki repo]', () => {
       expect(result.exitCode).toBe(0)
       expect(result.output).toMatch(/├─ loading +\.\.\./)
       expect(result.output).not.toMatch(/├─ loading +\[/)
+    })
+
+    test('weights the phase bar by declared cost while an omitted cost remains one unit', async () => {
+      const run = async (items: string): Promise<string> => {
+        const box = await sandbox()
+        await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+        await box.setupExampleHarness({ rubric: rubric(`[{ code: 'F', title: 'Family', items: [${items}] }]`) })
+        return (await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })).output
+      }
+      const item = (code: string, cost?: number): string =>
+        `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: 'PRIMARY', audit: async () => []${cost === undefined ? '' : `, cost: ${cost}`} }`
+      const heavyFirst = await run(`${item('HEAVY-1', 60)}, ${item('LIGHT-1')}`)
+      const lightFirst = await run(`${item('LIGHT-1')}, ${item('HEAVY-1', 60)}`)
+      const runningWidth = (output: string, code: string): number =>
+        output
+          .split('\n')
+          .find((line) => line.includes(`running ${code}`))
+          ?.match(/\[([#>.]+)\]/)?.[1]
+          ?.replaceAll(/[^>]/g, '').length ?? 0
+
+      // The 38-column rendered bar quantises 60/61 to 37 columns and the default 1/61 to one.
+      expect(runningWidth(heavyFirst, 'HEAVY-1')).toBe(37)
+      expect(runningWidth(lightFirst, 'LIGHT-1')).toBe(1)
     })
 
     test('names the running item when an audit fails part-way through', async () => {

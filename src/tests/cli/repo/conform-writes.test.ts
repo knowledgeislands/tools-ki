@@ -160,11 +160,11 @@ describe('[ki repo conform writes]', () => {
     expect(regular.output).toContain('├─ loading')
     expect(narrow.output).toContain('\r\x1b[2K.')
     expect(invalidWidth.output).toContain('complete · 0/0 100% 0.0s')
-    // Loading is retained, then conform and verification are independently labelled rather than
-    // appearing to be one bar that restarted.
+    // Loading is retained, and a clean conform explains why it has no second pass.
     expect(regular.output).toContain('loading definitions complete')
     expect(regular.output).toContain('├─ conform')
-    expect(regular.output).toContain('├─ verify')
+    expect(regular.output).toContain('nothing staged; no re-audit required')
+    expect(regular.output.match(/timings/g)).toHaveLength(1)
     // Multi rows are redrawn as one panel while active, then the completed phase remains before
     // its successor. A two-row panel therefore rewinds two lines, never one shared visual row.
     expect(interactiveMulti.output).toContain('\x1b[2A')
@@ -238,6 +238,30 @@ describe('[ki repo conform writes]', () => {
     )
   })
 
+  test('does not re-audit a clean conform that staged no operation', async () => {
+    const box = await sandbox()
+    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.setupExampleHarness({
+      rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
+        kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', phase: 'PRIMARY',
+        audit: (() => {
+          let runs = 0
+          return async () => {
+            runs += 1
+            if (runs > 1) throw new Error('clean conform re-audited')
+            return [{ status: 'PASS', message: 'already conformed' }]
+          }
+        })()
+      }] }]`)
+    })
+
+    const result = await box.run('ki repo conform --progress always')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('nothing staged; no re-audit required')
+    expect(result.output.match(/timings/g)).toHaveLength(1)
+  })
+
   test('publishes a complete conform write set, supports dry-run, and re-audits', async () => {
     const box = await sandbox()
     await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
@@ -252,9 +276,11 @@ describe('[ki repo conform writes]', () => {
     )
     expect(beforeContent).toBe('before\n')
 
-    const conformed = await box.run('ki repo conform')
+    const conformed = await box.run('ki repo conform --progress always')
     const afterContent = await box.project.read('governed.txt')
     expect(conformed.output).toContain('applied write governed.txt\n')
+    expect(conformed.output).toContain('├─ re-audit')
+    expect(conformed.output).not.toContain('├─ verify')
     expect(conformed.output).toContain(
       '╰─ summary: KI REPO CONFORM on project PASS=1 WARN=0 FAIL=0 FIXED=0 · FINDINGS: FAIL=0 WARN=0 FIXED=0'
     )

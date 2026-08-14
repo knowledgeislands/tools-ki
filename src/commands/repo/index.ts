@@ -12,6 +12,7 @@ import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
 import { inspectLocalRegistry, localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
 import { registeredKnowledgeBaseStoreRoots } from '../../core/local-stores.ts'
+import { presentationText } from '../../core/presentation.ts'
 import { resolveRepositoryTargets } from '../../core/repository.ts'
 import {
   operationOptions,
@@ -42,6 +43,7 @@ import {
   runSkillConform
 } from '../../core/runtime.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../../core/transaction.ts'
+import { treeProgressPrefix } from '../../core/tree-rendering.ts'
 import { repoHelpCommandNames } from '../root/catalogue.ts'
 import { createRepoDiagCommand } from './diag.ts'
 import { createRepoInitCommand } from './init.ts'
@@ -175,7 +177,14 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               reporterLevels: [],
               concise: false
             }
-            const educations = await runWithProgress(context, skills, (skill) => educateSkill(skill), output, 'educate')
+            const educations = await runWithProgress(
+              context,
+              skills,
+              (skill) => educateSkill(skill),
+              output,
+              'educate',
+              'last-root'
+            )
             if (!educations.length) context.stdout.write('ki repo educate: no declared skills\n')
             else context.stdout.write(`${educations.flatMap(renderEducation).join('\n')}\n`)
           }
@@ -228,7 +237,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                     })
                   }),
                   output,
-                  'audit'
+                  'audit',
+                  'root'
                 )
                 const findings = results.flatMap(({ audit }) => audit.findings)
                 const registration = await localRepositoryRegistration(context, repository.root, skills)
@@ -317,7 +327,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 )
               }),
               output,
-              'conform'
+              'conform',
+              'root'
             )
             const findings = conformed.flatMap(({ conform }) => conform.findings)
             const renderReports = (reports: Parameters<typeof renderConformReports>[2]): void => {
@@ -362,7 +373,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                   }
                 },
                 output,
-                'verify'
+                're-audit',
+                'root'
               )
               const auditFindings = reaudited.flatMap(({ audit }) => audit.findings)
               const fixedBySkill = reaudited.map(({ conform, audit }) => detectFixed(conform.fixable, audit.items))
@@ -424,6 +436,13 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             if (options.dryRun) {
               for (const write of writes) report(`would apply write ${write.path}\n`)
               for (const command of commands) report(`would run ${renderRepositoryConformCommand(command)}\n`)
+              renderInitialReports()
+              continue
+            }
+            if (!writes.length && !commands.length) {
+              report(
+                `${treeProgressPrefix(`${presentationText('status.skip')}: nothing staged; no re-audit required`, 'root').trimEnd()}\n`
+              )
               renderInitialReports()
               continue
             }

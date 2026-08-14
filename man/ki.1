@@ -484,6 +484,9 @@ targets.
 Conform uses the same progress controls and reporter-level vocabulary as audit,
 names both the target and supplier for every skill, and renders FAIL, WARN, and
 FIXED findings by default while retaining every terminal per-skill result.
+Its second rubric pass is labelled \fBre-audit\fR. When no write or command was
+staged, conform reports that no re-audit is required and stops after the initial
+pass.
 For a local invocation it records each selected canonical root in the
 machine-local registry before evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository

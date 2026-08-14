@@ -15,6 +15,7 @@ const item = (value) => {
     sources: value.sources ?? ['standard.md'],
     mechanical: {
       level: value.level,
+      ...(value.cost === undefined ? {} : { cost: value.cost }),
       remediation: value.remediation ?? (value.conform === undefined ? { class: 'diagnostic', guidance: 'Diagnose the reported evidence.' } : { class: 'automatic' }),
       audit: { phase: value.phase, run: value.audit },
       ...(value.conform === undefined ? {} : {
@@ -129,6 +130,21 @@ describe('[ki repo validation]', () => {
         'a non-boolean heuristic',
         `[{ code: 'F', title: 'Family', items: [{ code: 'EXAMPLE-1', title: 'Example', mechanical: { level: 'FAIL', heuristic: 'yes', audit: { phase: 'PRIMARY', run: async () => [] } } }] }]`,
         'heuristic must be boolean'
+      ],
+      [
+        'a zero cost',
+        `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', cost: 0, phase: 'PRIMARY', audit: async () => [] }] }]`,
+        'cost must be a positive finite number'
+      ],
+      [
+        'a non-number cost',
+        `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', cost: 'heavy', phase: 'PRIMARY', audit: async () => [] }] }]`,
+        'cost must be a positive finite number'
+      ],
+      [
+        'an infinite cost',
+        `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'EXAMPLE-1', title: 'Example', level: 'FAIL', cost: Number.POSITIVE_INFINITY, phase: 'PRIMARY', audit: async () => [] }] }]`,
+        'cost must be a positive finite number'
       ],
       [
         'an invalid conform-on status',
