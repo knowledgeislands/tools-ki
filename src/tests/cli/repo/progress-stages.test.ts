@@ -162,6 +162,39 @@ describe('[ki repo audit evidence progress]', () => {
     expect(result.output).not.toMatch(/├─ conform .*gathering evidence/)
   })
 
+  test('retains one aggregate conform evidence root across quick skills', async () => {
+    const box = await sandbox()
+    await box.project.write(
+      '.ki-config.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-first]\n[skills.ki-second]\n[skills.ki-third]\n'
+    )
+    await box.setupExampleHarness({ rubric: emittingRubric('', 'ki-first'), name: 'ki-first' })
+    await box.setupExampleHarness({
+      rubric: emittingRubric(
+        `
+          emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
+          emit({ kind: 'step', label: 'biome check', code: 'BIO-1' })
+          emit({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
+        `,
+        'ki-second'
+      ),
+      name: 'ki-second'
+    })
+    await box.setupExampleHarness({ rubric: emittingRubric('', 'ki-third'), name: 'ki-third' })
+
+    const result = await box.run('ki repo conform --progress always', {
+      interactive: true,
+      columns: 240,
+      now: () => 0
+    })
+    const output = stripVTControlCharacters(result.output)
+
+    expect(result.exitCode).toBe(0)
+    expect(output.match(/├─ evidence .*gathering evidence complete/g)).toHaveLength(1)
+    expect(output).toMatch(/├─ evidence .*gathering evidence complete · 3\/3 100% 0\.0s/)
+    expect(output).toContain('engineering evidence biome check complete')
+  })
+
   test('updates a repeated uncounted step instead of retaining another child', async () => {
     const box = await withRubric(`
       emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })

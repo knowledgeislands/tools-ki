@@ -264,6 +264,8 @@ const createProgressTracker = (
     activePhase = next
     phaseStarted = transitioned
   }
+  const closedPhaseElapsed = (phase: ProgressPhase): number =>
+    timings.reduce((sum, timing) => sum + (timing.phase === phase ? timing.elapsed : 0), 0)
   const countsOf = (done: number, of: number): string =>
     `${done}/${of} ${of === 0 ? 100 : Math.round((done / of) * 100)}%`
   /** The trailing counters; the leading detail names the work, which matters more when width is short. */
@@ -299,6 +301,20 @@ const createProgressTracker = (
       progressLine(evidenceRowModel(row), renderOptions(row.skill.padEnd(childLabelWidth), 'child'))
     )
   ]
+  const completedDirectEvidenceFrame = (): readonly string[] => [
+    progressLine(
+      {
+        complete: completedEvidence,
+        started: completedEvidence,
+        total: skills.length,
+        text: `gathering evidence complete · ${countsOf(completedEvidence, skills.length)} ${elapsed(closedPhaseElapsed('evidence'))}`
+      },
+      renderOptions('evidence'.padEnd(rootLabelWidth))
+    ),
+    ...evidenceRows.map((row) =>
+      progressLine(evidenceRowModel(row), renderOptions(row.skill.padEnd(childLabelWidth), 'child'))
+    )
+  ]
   const singleFrame = (text: string): readonly string[] =>
     activePhase === 'evidence' ? evidenceFrame(text) : [progressLine(barModel(text), renderOptions())]
   const multiFrame = (): readonly string[] =>
@@ -328,18 +344,23 @@ const createProgressTracker = (
     // Only rewind over rows this tracker drew; a list taller than the terminal would
     // otherwise scroll and the cursor-up would overwrite unrelated output.
     const height = Math.max(1, Math.floor(terminalColumns(context.stdout.columns) / 2))
-    const rewind = interactive && renderedRows > 1 && renderedRows <= height ? `\x1b[${renderedRows}A` : ''
+    const canRewind = interactive && renderedRows > 1 && renderedRows <= height
+    const rewind = canRewind ? `\x1b[${renderedRows}A` : ''
+    const staleRows = canRewind ? Math.max(0, renderedRows - rows.length) : 0
+    const clearStaleRows = staleRows ? `${'\r\x1b[2K\r\n'.repeat(staleRows)}\x1b[${staleRows}A` : ''
     context.stdout.write(
-      `${rewind}${rows.map((row) => `${interactive ? '\r\x1b[2K' : ''}${row}${lineBreak}`).join('')}`
+      `${rewind}${rows.map((row) => `${interactive ? '\r\x1b[2K' : ''}${row}${lineBreak}`).join('')}${clearStaleRows}`
     )
     renderedRows = final ? 0 : rows.length
   }
   // Retained so a refresh can redraw the current state with a fresh clock.
   let lastDetail = 'starting'
-  const render = (detail: string, final = false): void => {
+  const render = (detail: string, final = false, retainDirectEvidence = false): void => {
     lastDetail = detail
     tick += 1
-    const rows = options.progressStyle === 'single' ? singleFrame(summaryText(detail)) : multiFrame()
+    const activeRows = options.progressStyle === 'single' ? singleFrame(summaryText(detail)) : multiFrame()
+    const rows =
+      retainDirectEvidence && !batchedEvidence ? [...completedDirectEvidenceFrame(), ...activeRows] : activeRows
     const frame = rows.join('\n')
     // Coalesce identical consecutive frames; a fast rubric otherwise redraws the same line.
     if (!final && frame === lastFrame) return
@@ -536,7 +557,7 @@ const createProgressTracker = (
         status: stateRow?.detail ?? state.status
       })
       if (closesReportedEvidence) {
-        render('gathering evidence complete', true)
+        render('gathering evidence')
         evidence = undefined
         openPhase(phase as ProgressPhase)
         return
@@ -549,7 +570,7 @@ const createProgressTracker = (
         const state = skillState(skill.identity)
         states.set(skill.identity, { ...state, complete: state.total, started: state.total, status: 'complete' })
       }
-      render('complete', true)
+      render('complete', true, completedEvidence > 0)
       renderTimings()
       finish()
     },

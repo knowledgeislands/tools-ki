@@ -165,10 +165,10 @@ describe('[ki repo conform writes]', () => {
     expect(regular.output).toContain('├─ conform')
     expect(regular.output).toContain('nothing staged; no re-audit required')
     expect(regular.output.match(/timings/g)).toHaveLength(1)
-    // Multi rows are redrawn as one panel while active, then the completed phase remains before
-    // its successor. A two-row panel therefore rewinds two lines, never one shared visual row.
+    // Multi rows are redrawn as one panel while active. When evidence temporarily shrinks that
+    // panel, the renderer clears the stale second row and restores the cursor below the live row.
     expect(interactiveMulti.output).toContain('\x1b[2A')
-    expect(interactiveMulti.output).not.toContain('\x1b[1A')
+    expect(interactiveMulti.output).toContain('\r\x1b[2K\r\n\x1b[1A')
     expect(multiple.output).toContain('│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra')
   })
 
