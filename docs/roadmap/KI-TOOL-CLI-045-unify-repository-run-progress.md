@@ -4,7 +4,7 @@ title: Unify repository run progress
 area: CLI
 theme: cli
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked_by: []
 baseline_ref: ae10b6f31fd8591bb52d160d68b939d3615a459a
@@ -103,13 +103,15 @@ No approved deviation was needed. The required pre-change measurement confirmed 
 
 ### Outstanding concerns
 
-The implementation has no unresolved or unchecked issue. One repository-state expectation in the handoff and `AGENTS.md` disagreed with measured evidence: both the immutable-baseline preflight and final audit returned `PASS=17 WARN=0 FAIL=0`, not the expected `PASS=16 WARN=1 FAIL=0` with `TOOL-RELEASE-MARKERS`. This item did not alter release markers or their audit rule, so no out-of-scope change was made to manufacture or suppress that warning; the discrepancy remains for separate triage if desired.
+Review feedback identified one unresolved presentation issue: direct conform evidence retains a completed root row for every quick skill instead of one logical evidence-phase root. The item has returned to implementation for that focused correction.
+
+One repository-state expectation in the handoff and `AGENTS.md` also disagreed with measured evidence: both the immutable-baseline preflight and final audit returned `PASS=17 WARN=0 FAIL=0`, not the expected `PASS=16 WARN=1 FAIL=0` with `TOOL-RELEASE-MARKERS`. This item did not alter release markers or their audit rule, so no out-of-scope change was made to manufacture or suppress that warning; the discrepancy remains for separate triage if desired.
 
 ### Post-change review
 
 The goal is met: audit and conform now share honest phases and evidence rows, displayed timings reconcile, the output tree closes once, cost controls visual progress, and clean conform avoids only the pass whose premise is absent. The approved file and behavior scope held, including the deliberate last placement of the rubric load-boundary change.
 
-Regression risk is concentrated in progress state transitions, rounded timing display, and optional-cost loading. CLI-level coverage exercises each boundary and both conform branches, the full suite and 100% coverage gate pass, and the captured TTY runs agree with the tests. The record is ready for human acceptance review.
+Regression risk is concentrated in progress state transitions, rounded timing display, and optional-cost loading. The repeated conform evidence roots show that the first CLI coverage did not exercise enough consecutive quick evidence sessions. The record is back in progress until that case is corrected and the full verification is refreshed.
 
 ### Mini recap
 
@@ -134,3 +136,7 @@ Skipping a pass because nothing was staged is an argument from the pass's own pr
 ### One model for both commands
 
 Audit and conform run the same rubric over the same skills and differ only in whether they write. A reader who has learned audit's progress shape should not have to learn a second one, so conform adopts audit's phase and evidence model rather than the two converging on a compromise.
+
+### Review correction
+
+The first review found that conform retained `gathering evidence complete` once per quick skill before the useful long-running evidence children appeared. Those rows are fragments of one logical evidence phase, not separate completed phases. The correction must retain one aggregate root, preserve useful per-skill children, and keep timing attribution across the interleaved conform work.
