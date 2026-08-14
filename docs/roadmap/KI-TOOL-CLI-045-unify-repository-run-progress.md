@@ -4,7 +4,7 @@ title: Unify repository run progress
 area: CLI
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: ae10b6f31fd8591bb52d160d68b939d3615a459a
@@ -40,14 +40,14 @@ Four defects, observed on `ki repo audit --repo .` and `ki repo conform` against
 
 ## Steps
 
-- [ ] Give the timings row a caller-supplied position so it uses `last-root` only when no root row follows. Check: an audit run renders one `╰─` for the whole tree, and a conform run renders `├─ timings` for its first pass.
-- [ ] Open a phase only on an actual transition, so a repeated `evidence()` or `planned()` call cannot reset `phaseStarted`. Check: the reported phases sum to the reported total, measured on a run of at least ten seconds rather than asserted from the code.
-- [ ] Skip conform's re-audit when no write and no command was staged, reporting plainly that there was nothing to verify rather than silently omitting the pass. Check: a clean conform reports one pass and runs `test:coverage` once; a conform that stages a write still runs and reports the re-audit in full.
-- [ ] Emit the same evidence stage events from the conform path so it renders per-skill child rows exactly as audit does. Check: a conform run shows the five `ki-engineering` command rows.
-- [ ] Give conform its own `evidence` root row rather than borrowing the conform bar's detail line. Check: no conform frame renders a conform counter beside an evidence detail string.
-- [ ] Rename conform's second pass from `verify` to `re-audit` across the renderer, its tests, and any user-facing material that names it. Check: `grep -rn "verify" src/commands/repo/` returns no phase label, and `README.md` and `man/ki.1` agree.
-- [ ] Carry the harness `cost` field through `validateItem` and the local `MechanicalRubric` type, and weight the phase bar by it. Check: an item declaring `cost: 60` advances the bar sixty times as far as an unweighted one, and an item declaring no `cost` still counts as one unit.
-- [ ] Reconcile the presentation vocabulary with the `KI-TOOL-CLI-043` icon registry rather than adding new ad-hoc symbols. Check: no new literal glyph is introduced outside the registry.
+- [x] Give the timings row a caller-supplied position so it uses `last-root` only when no root row follows. Check: an audit run renders one `╰─` for the whole tree, and a conform run renders `├─ timings` for its first pass.
+- [x] Open a phase only on an actual transition, so a repeated `evidence()` or `planned()` call cannot reset `phaseStarted`. Check: the reported phases sum to the reported total, measured on a run of at least ten seconds rather than asserted from the code.
+- [x] Skip conform's re-audit when no write and no command was staged, reporting plainly that there was nothing to verify rather than silently omitting the pass. Check: a clean conform reports one pass and runs `test:coverage` once; a conform that stages a write still runs and reports the re-audit in full.
+- [x] Emit the same evidence stage events from the conform path so it renders per-skill child rows exactly as audit does. Check: a conform run shows the five `ki-engineering` command rows.
+- [x] Give conform its own `evidence` root row rather than borrowing the conform bar's detail line. Check: no conform frame renders a conform counter beside an evidence detail string.
+- [x] Rename conform's second pass from `verify` to `re-audit` across the renderer, its tests, and any user-facing material that names it. Check: `grep -rn "verify" src/commands/repo/` returns no phase label, and `README.md` and `man/ki.1` agree.
+- [x] Carry the harness `cost` field through `validateItem` and the local `MechanicalRubric` type, and weight the phase bar by it. Check: an item declaring `cost: 60` advances the bar sixty times as far as an unweighted one, and an item declaring no `cost` still counts as one unit.
+- [x] Reconcile the presentation vocabulary with the `KI-TOOL-CLI-043` icon registry rather than adding new ad-hoc symbols. Check: no new literal glyph is introduced outside the registry.
 
 ## Delegation
 
@@ -70,6 +70,52 @@ A conform run against a clean repository must report one pass and no re-audit, w
 ## Dependencies / blocks
 
 No external dependency. Builds on the presentation surface established by `KI-TOOL-CLI-041` and the icon registry from `KI-TOOL-CLI-043`, both delivered and pruned.
+
+## Review
+
+### Delivered
+
+Delivered the approved unified repository-progress model from immutable baseline `ae10b6f31fd8591bb52d160d68b939d3615a459a`, with implementation evidence in `f23e30b26c0d6486f7a2897f34d37626762ab7f9`.
+
+The execution boundary held: audit and conform still evaluate every selected rubric item, and the only execution change skips conform's re-audit when both its staged writes and commands are empty. No caching, cross-invocation result reuse, input inference, alternate renderer, public scripting contract, or non-TTY progress path was introduced.
+
+### Summary of changes
+
+- `src/core/repository-progress.ts` now assigns timings their caller-selected tree position, records only real phase transitions, aggregates repeated phase spans, reconciles displayed rounded phase durations with their total, gives conform the shared evidence model, and weights bars by rubric cost while retaining item-count text.
+- `src/commands/repo/index.ts` selects root timing placement for audit and conform, names the second pass `re-audit`, and reports an icon-registry-backed skip row before omitting a clean conform's unnecessary re-audit.
+- `src/core/rubric.ts` and `src/core/runtime-loader.ts` carry and validate the optional positive finite `cost` field. This load-boundary change was made after the presentation and execution work as planned.
+- CLI tests under `src/tests/cli/repo/` cover timing reconciliation, tree placement, evidence parity, clean and staged conform paths, weighted and default costs, load validation, and educate's terminal timing placement through `sandbox()`.
+- `README.md`, `man/ki.1`, and `CHANGELOG.md` describe the `re-audit` name, clean skip, and unified progress behavior.
+
+No approved deviation was needed. The required pre-change measurement confirmed the recorded Step 2 inference: a 29.3-second audit reported `audit 0.0s` because repeated `planned()` calls reopened the same phase.
+
+### Verification
+
+- `bun run test` — passed 41 files and 628 tests.
+- `bun run test:coverage` — passed at 100% statements, branches, functions, and lines.
+- `bunx tsc --noEmit` — passed.
+- `bunx biome check` — passed across 143 files with no fixes required.
+- `ki repo audit --repo .` — passed with `PASS=17 WARN=0 FAIL=0` and no findings.
+- Captured final TTY audit — `loading 0.0s · evidence 31.7s · audit 0.0s · total 31.7s`; five `ki-engineering` evidence command rows appeared, the weighted `TEST-5` transition visibly advanced the bar, and the complete tree had one root closure.
+- Captured final clean TTY conform — one 27.5-second pass, five `ki-engineering` evidence command rows, one timings row, one root closure, `nothing staged; no re-audit required`, and `FIXED=0`.
+- CLI regression coverage proves a staged write still renders and runs `re-audit`, a clean conform invokes its audit only once, a `cost: 60` item occupies 37 rendered bar columns where a default-cost item occupies one, and no conform frame mixes a conform counter with evidence detail.
+- `rg -n 'verify' src/commands/repo` returned no old phase label; the remaining matches are the `re-audit` implementation wording. The skip status uses `presentationText('status.skip')`; no literal status glyph was added.
+
+### Outstanding concerns
+
+The implementation has no unresolved or unchecked issue. One repository-state expectation in the handoff and `AGENTS.md` disagreed with measured evidence: both the immutable-baseline preflight and final audit returned `PASS=17 WARN=0 FAIL=0`, not the expected `PASS=16 WARN=1 FAIL=0` with `TOOL-RELEASE-MARKERS`. This item did not alter release markers or their audit rule, so no out-of-scope change was made to manufacture or suppress that warning; the discrepancy remains for separate triage if desired.
+
+### Post-change review
+
+The goal is met: audit and conform now share honest phases and evidence rows, displayed timings reconcile, the output tree closes once, cost controls visual progress, and clean conform avoids only the pass whose premise is absent. The approved file and behavior scope held, including the deliberate last placement of the rubric load-boundary change.
+
+Regression risk is concentrated in progress state transitions, rounded timing display, and optional-cost loading. CLI-level coverage exercises each boundary and both conform branches, the full suite and 100% coverage gate pass, and the captured TTY runs agree with the tests. The record is ready for human acceptance review.
+
+### Mini recap
+
+`KI-TOOL-CLI-045` delivered unified, cost-weighted repository run progress and removed the empty clean-conform re-audit from baseline `ae10b6f` in implementation commit `f23e30b`. All engineering gates and the required real TTY scenarios pass; the only concern is the pre-existing release-marker audit-total discrepancy recorded above.
+
+Proposed learning route: none automatically. The timing-reset cause, displayed-rounding edge case, and clean-versus-staged conform distinction are implementation-local and are now preserved by CLI regression tests; the release-marker discrepancy can enter the selected change-management queue separately if the reviewer chooses.
 
 ## Discussion
 
