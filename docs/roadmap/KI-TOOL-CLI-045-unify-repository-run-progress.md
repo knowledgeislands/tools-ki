@@ -4,10 +4,10 @@ title: Unify repository run progress
 area: CLI
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: ae10b6f31fd8591bb52d160d68b939d3615a459a
 ---
 
 ## Goal
