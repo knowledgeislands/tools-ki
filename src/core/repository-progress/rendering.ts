@@ -13,7 +13,7 @@ export interface BarModel {
 export interface RenderOptions {
   readonly columns: number | undefined
   readonly label: string
-  readonly placement?: 'root' | 'child' | 'last-child' | 'last-root'
+  readonly placement?: 'root' | 'last-root'
   readonly tick: number
 }
 

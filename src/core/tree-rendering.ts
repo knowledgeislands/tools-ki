@@ -42,13 +42,11 @@ const renderEntries = (entries: readonly TreeEntry[], prefix = ''): readonly str
     return renderEntry(entry, prefix, last)
   })
 
-type TreeProgressPlacement = 'root' | 'child' | 'last-child' | 'last-root'
+type TreeProgressPlacement = 'root' | 'last-root'
 
 /** Formats one live or retained progress row without exposing tree characters to operations. */
 export const treeProgressPrefix = (label = 'progress', placement: TreeProgressPlacement = 'root'): string => {
-  const child = placement === 'child' || placement === 'last-child'
-  const last = placement === 'last-child' || placement === 'last-root'
-  return `${child ? VERTICAL : ''}${last ? LAST_BRANCH : BRANCH} ${label} `
+  return `${placement === 'last-root' ? LAST_BRANCH : BRANCH} ${label} `
 }
 
 /** Streams a title, known-count sections, and a terminal summary without exposing tree layout to callers. */
