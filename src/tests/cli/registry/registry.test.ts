@@ -313,9 +313,7 @@ test('audits, conforms, and lists the local ki-repo registry without discovering
   expect(repeatedConform.exitCode).toBe(0)
   expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(repository)}`)
   expect(listed).toEqual({ exitCode: 0, output: `${repository}\n` })
-  expect((await box.run('ki repo audit')).output).toContain(
-    '╰─ summary: KI REPO AUDIT on project PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0'
-  )
+  expect((await box.run('ki repo audit')).output).toContain('╰─ summary: KI REPO AUDIT on project PASS · 1 skill')
 })
 
 test('registers a selected KI repository carrying a canonical identity', async () => {
