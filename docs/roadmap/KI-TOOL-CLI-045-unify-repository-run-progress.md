@@ -4,7 +4,7 @@ title: Unify repository run progress
 area: CLI
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: ae10b6f31fd8591bb52d160d68b939d3615a459a
@@ -138,6 +138,10 @@ The refactor improves comprehension without widening the API: callers continue i
 `KI-TOOL-CLI-045` now delivers Homebrew-like activity progress, one-time completion receipts, compact clean results and summaries, focused progress and reporting modules behind compatible barrels, and the approved clean-conform re-audit skip. All 627 tests, all four coverage metrics at 100%, the engineering gates, and the final full-catalogue audit pass.
 
 Proposed learning route: none automatically. The timing-reset cause, stable-panel transitions, displayed-rounding edge case, clean-summary rules, and clean-versus-staged conform distinction are implementation-local and preserved by CLI regression tests.
+
+## Done
+
+Accepted by the user on 2026-08-15 after review of the six-heading packet and the complete 17-skill repository audit.
 
 ## Discussion
 
