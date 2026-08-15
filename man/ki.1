@@ -456,18 +456,21 @@ Run the native read-only operations registered by each selected repository's
 declared capabilities. The host verifies every selected harness inventory and
 integrity-covered operation before importing it in process; it never dispatches
 repository-vendored runners.
-Progress defaults to \fBauto\fR, which follows stderr's TTY state; \fBalways\fR
+Progress defaults to \fBauto\fR, which follows the output stream's TTY state; \fBalways\fR
 also renders deterministic progress in redirected output, and \fBnever\fR
 suppresses it.
-On a terminal, progress defaults to stable per-skill rows: completed skills
-collapse to one line, only the active skill expands its evidence, queued skills
-remain visible, and the evidence and operation phase rows stay together below
-them. Use \fB--progress-style single\fR for one aggregate live row. Redirected
-\fB--progress always\fR output defaults to that compact single-row form.
+On a terminal, progress is a compact receipt stream with one mutable activity
+row. Its moving bar means work is active; it does not estimate completion from
+item count or declared cost. Evidence-ready skills appear once with a full bar,
+then collapse to one timed evidence receipt before rubric results begin.
+Loading and the operation also finish as timed receipts, with total elapsed time
+on the operation receipt. Queued skills are not printed. Use
+\fB--progress-style single\fR to suppress temporary per-skill evidence receipts.
+Redirected \fB--progress always\fR output defaults to that single-row form.
 Progress also names the span in which a skill gathers its evidence, before any
 criterion runs, together with whatever stages and steps that skill reports
-inside it; a span of unknown extent shows an elapsed clock rather than an item
-count it has not yet begun.
+inside it; a span of unknown extent shows activity and an elapsed clock rather
+than a completion estimate.
 Each per-skill result names the assessed repository first and its supplying
 harness skill in brackets. Audit renders FAIL and WARN findings by default, but
 always shows a terminal per-skill result so a clean assessment is visible;
