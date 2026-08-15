@@ -4,7 +4,7 @@ title: Unify repository run progress
 area: CLI
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: ae10b6f31fd8591bb52d160d68b939d3615a459a
@@ -55,7 +55,7 @@ Single lane, no subagents. Every step converges on `src/core/repository-progress
 
 ## Files touched
 
-Expected implementation: `src/core/repository-progress.ts`, `src/core/rubric.ts` and `src/core/runtime-loader.ts` for the `cost` field, and `src/commands/repo/index.ts` for the re-audit short circuit and tracker construction.
+Implementation: `src/core/repository-progress.ts` and its focused `src/core/repository-progress/` modules, `src/core/repository-reporting.ts` and its focused `src/core/repository-reporting/` modules, `src/core/rubric.ts` and `src/core/runtime-loader.ts` for the `cost` field, and `src/commands/repo/index.ts` for the re-audit short circuit and tracker construction.
 
 Expected tests: `src/tests/cli/repo/` progress coverage driving both commands through the `sandbox()` seam.
 
@@ -75,48 +75,49 @@ No external dependency. Builds on the presentation surface established by `KI-TO
 
 ### Delivered
 
-Delivered the approved unified repository-progress model from immutable baseline `ae10b6f31fd8591bb52d160d68b939d3615a459a`, with implementation evidence in `f23e30b26c0d6486f7a2897f34d37626762ab7f9` and review correction `a9d08cebc0a0a0a9a328b167a302d493007c4289`.
+Delivered the approved unified repository-progress model from immutable baseline `ae10b6f31fd8591bb52d160d68b939d3615a459a`. The original implementation is in `f23e30b`, its first review correction is in `a9d08ce`, and the human-comprehension and presentation review pass is in `c60d5e0`, `e83402c`, `2fcb1aa`, and `61b13c8`, with complete CLI coverage in `172a235` and `d9f30f0`.
 
 The execution boundary held: audit and conform still evaluate every selected rubric item, and the only execution change skips conform's re-audit when both its staged writes and commands are empty. No caching, cross-invocation result reuse, input inference, alternate renderer, public scripting contract, or non-TTY progress path was introduced.
 
 ### Summary of changes
 
-- `src/core/repository-progress.ts` now assigns timings their caller-selected tree position, records only real phase transitions, aggregates repeated phase spans, reconciles displayed rounded phase durations with their total, gives conform the shared evidence model, and weights bars by rubric cost while retaining item-count text. The review correction consolidates interleaved conform evidence into one retained aggregate root and clears stale terminal rows when its live panel shrinks.
+- Repository progress now renders one stable TTY row per skill with registry-backed queued, active, completed, and failed states. Only the active skill expands its evidence children; completed and queued skills remain visible; shared evidence and operation phase rows stay below the skills. Redirected output keeps the compact single-row style, and `--progress-style single|multi` remains an explicit override.
+- `src/core/repository-progress.ts` is now a small barrel over focused options, rendering, run-orchestration, and tracker modules. `src/core/repository-reporting.ts` is likewise a barrel over audit, conform, education, and shared reporting modules. The split preserves the public imports while separating responsibilities that had accumulated in two large files.
+- The progress tracker assigns timings their caller-selected tree position, records only real phase transitions, aggregates repeated phase spans, reconciles displayed rounded phase durations with their total, gives conform the shared evidence model, and weights bars by rubric cost while retaining item-count text. Interleaved conform evidence forms one retained aggregate root, and shrinking live panels clear stale terminal rows.
 - `src/commands/repo/index.ts` selects root timing placement for audit and conform, names the second pass `re-audit`, and reports an icon-registry-backed skip row before omitting a clean conform's unnecessary re-audit.
 - `src/core/rubric.ts` and `src/core/runtime-loader.ts` carry and validate the optional positive finite `cost` field. This load-boundary change was made after the presentation and execution work as planned.
-- CLI tests under `src/tests/cli/repo/` cover timing reconciliation, tree placement, evidence parity, consecutive quick conform sessions, shrinking-panel cursor cleanup, clean and staged conform paths, weighted and default costs, load validation, and educate's terminal timing placement through `sandbox()`.
-- `README.md`, `man/ki.1`, and `CHANGELOG.md` describe the `re-audit` name, clean skip, and unified progress behavior.
+- Clean skill rows now end at `PASS` instead of repeating zero counters. Clean audit and conform summaries use `PASS · N skills`; exceptional outcomes and multi-repository recaps retain their diagnostic counters.
+- CLI tests cover the behavior through `sandbox()`, including stable rows, active-only evidence expansion, failed progress, timing reconciliation, tree placement, evidence parity, clean and staged conform paths, weighted and default costs, and load validation. `README.md`, `man/ki.1`, and `CHANGELOG.md` describe the stable TTY model, compact redirected output, clean summaries, `re-audit`, and the clean skip.
 
-No approved deviation was needed. The required pre-change measurement confirmed the recorded Step 2 inference: a 29.3-second audit reported `audit 0.0s` because repeated `planned()` calls reopened the same phase.
+The reviewer explicitly approved doing the focused core refactor inside this item, so no separate roadmap record was created. The required pre-change measurement confirmed the recorded Step 2 inference: a 29.3-second audit reported `audit 0.0s` because repeated `planned()` calls reopened the same phase.
 
 ### Verification
 
 - `bun run test` — passed 41 files and 629 tests.
-- `bun run test:coverage` — passed at 100% statements, branches, functions, and lines.
+- `bun run test:coverage` — passed at 100% statements, branches, functions, and lines: 5,769/5,769 statements, 3,397/3,397 branches, 1,286/1,286 functions, and 4,909/4,909 lines.
 - `bunx tsc --noEmit` — passed.
-- `bunx biome check` — passed across 143 files with no fixes required.
-- `ki repo audit --repo .` — passed with `PASS=17 WARN=0 FAIL=0` and no findings.
-- Captured final TTY audit — `loading 0.0s · evidence 31.7s · audit 0.0s · total 31.7s`; five `ki-engineering` evidence command rows appeared, the weighted `TEST-5` transition visibly advanced the bar, and the complete tree had one root closure.
-- Captured final clean TTY conform — one 27.5-second pass, five `ki-engineering` evidence command rows, one timings row, one root closure, `nothing staged; no re-audit required`, and `FIXED=0`.
-- Captured post-review 17-skill TTY conform dry run — exactly one completed evidence root, the five `ki-engineering` command children retained, one root closure, and reconciled `evidence 28.5s · total 28.5s`; dry-run preserved the repository while exercising the same initial evidence renderer.
-- CLI regression coverage proves a staged write still renders and runs `re-audit`, a clean conform invokes its audit only once, a `cost: 60` item occupies 37 rendered bar columns where a default-cost item occupies one, and no conform frame mixes a conform counter with evidence detail.
+- `bunx biome check` — passed across 151 files with no fixes required.
+- `ki repo audit --repo .` — passed all 17 skills with no warnings or failures and rendered `summary: KI REPO AUDIT on tools-ki PASS · 17 skills`.
+- Captured final TTY audit — `loading 0.1s · evidence 34.7s · audit 0.1s · total 34.9s`; stable skill rows remained in place, only `ki-engineering` expanded to its five evidence children while active, and the complete tree had one root closure.
+- Captured final clean TTY conform — `loading 0.1s · evidence 33.6s · conform 0.1s · total 33.8s`; it retained the same stable skill model, reported `nothing staged; no re-audit required`, rendered `summary: KI REPO CONFORM on tools-ki PASS · 17 skills`, and left the working tree unchanged.
+- CLI regression coverage proves a staged write still renders and runs `re-audit`, a clean conform invokes its audit only once, a failed active skill receives the registered failure glyph, a `cost: 60` item occupies 37 rendered bar columns where a default-cost item occupies one, and no conform frame mixes a conform counter with evidence detail.
 - `rg -n 'verify' src/commands/repo` returned no old phase label; the remaining matches are the `re-audit` implementation wording. The skip status uses `presentationText('status.skip')`; no literal status glyph was added.
 
 ### Outstanding concerns
 
-The implementation has no unresolved or unchecked issue. One repository-state expectation in the handoff and `AGENTS.md` disagreed with measured evidence: both the immutable-baseline preflight and final audit returned `PASS=17 WARN=0 FAIL=0`, not the expected `PASS=16 WARN=1 FAIL=0` with `TOOL-RELEASE-MARKERS`. This item did not alter release markers or their audit rule, so no out-of-scope change was made to manufacture or suppress that warning; the discrepancy remains for separate triage if desired.
+The implementation has no unresolved or unchecked issue. The handoff expected a standing `TOOL-RELEASE-MARKERS` warning, but both the immutable-baseline preflight and the final audit measured all 17 skills passing. This item did not alter release markers or their audit rule, so no out-of-scope change was made to manufacture or suppress a warning.
 
 ### Post-change review
 
-The goal is met: audit and conform now share honest phases and evidence rows, displayed timings reconcile, the output tree closes once, cost controls visual progress, and clean conform avoids only the pass whose premise is absent. The approved file and behavior scope held, including the deliberate last placement of the rubric load-boundary change.
+The goal is met: audit and conform share honest phases and stable per-skill rows, displayed timings reconcile, the output tree closes once, cost controls visual progress, clean output removes redundant zero counters, and clean conform avoids only the pass whose premise is absent. Redirected output remains compact and non-progress output remains deterministic.
 
-Regression risk is concentrated in progress state transitions, shrinking terminal panels, rounded timing display, and optional-cost loading. The review correction now exercises consecutive quick evidence sessions and the cursor cleanup needed when a child panel contracts. The full suite, 100% coverage gate, and a safe full-catalogue TTY dry run pass, so the record is ready again for human acceptance review.
+The refactor improves comprehension without widening the API: callers continue importing the same two barrel modules, while progress options, rendering, orchestration, tracking, and each reporting concern now have clear homes. Regression risk remains concentrated in progress state transitions, shrinking terminal panels, rounded timings, summary conditionals, and optional-cost loading; the CLI suite and full-catalogue TTY runs exercise each of those boundaries. The record is ready again for human acceptance review.
 
 ### Mini recap
 
-`KI-TOOL-CLI-045` delivered unified, cost-weighted repository run progress and removed the empty clean-conform re-audit from baseline `ae10b6f` in implementation commit `f23e30b`. Review correction `a9d08ce` consolidated quick conform sessions under one retained evidence root. All 629 tests, 100% coverage, and the required real TTY scenarios pass; the only concern is the pre-existing release-marker audit-total discrepancy recorded above.
+`KI-TOOL-CLI-045` now delivers stable, cost-weighted repository progress; compact clean results and summaries; focused progress and reporting modules behind compatible barrels; and the approved clean-conform re-audit skip. All 629 tests, all four coverage metrics at 100%, the engineering gates, and both real TTY scenarios pass.
 
-Proposed learning route: none automatically. The timing-reset cause, displayed-rounding edge case, and clean-versus-staged conform distinction are implementation-local and are now preserved by CLI regression tests; the release-marker discrepancy can enter the selected change-management queue separately if the reviewer chooses.
+Proposed learning route: none automatically. The timing-reset cause, stable-panel transitions, displayed-rounding edge case, clean-summary rules, and clean-versus-staged conform distinction are implementation-local and preserved by CLI regression tests.
 
 ## Discussion
 
