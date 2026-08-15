@@ -445,8 +445,8 @@ describe('[ki repo]', () => {
       expect(progress).toMatch(/✓ ki-example +\[#+\] evidence ready/)
       expect(progress).toMatch(/✓ ki-extra +\[#+\] evidence ready/)
       expect(progress).toMatch(/✓ evidence +\[#+\] evidence gathered · 2 skills/)
-      expect(progress).toMatch(/✦ ki-example +\[[#>.]*>[#>.]*\] EXAMPLE-1/)
-      expect(progress).toMatch(/✦ ki-extra +\[[#>.]*>[#>.]*\] EXTRA-1/)
+      expect(progress).toMatch(/✦ ki-example +\[[#>.]*>[#>.]*\] checking/)
+      expect(progress).toMatch(/✦ ki-extra +\[[#>.]*>[#>.]*\] checking/)
       expect(progress).toMatch(/✓ audit +\[#+\] complete · 0\.0s · total 0\.0s/)
       expect(progressOutput.split('\x1b[2A')).toHaveLength(3)
 
@@ -455,8 +455,8 @@ describe('[ki repo]', () => {
       expect(firstBar).toHaveLength(38)
 
       const multi = await box.run('ki repo audit --progress-style multi', { interactive: true, now: () => 0 })
-      expect(stripVTControlCharacters(multi.output)).toContain('EXAMPLE-1')
-      expect(stripVTControlCharacters(multi.output)).toContain('EXTRA-1')
+      expect(stripVTControlCharacters(multi.output)).toContain('ki-example')
+      expect(stripVTControlCharacters(multi.output)).toContain('ki-extra')
 
       const nonInteractive = await box.run('ki repo audit')
       expect(nonInteractive).toEqual({
@@ -498,15 +498,15 @@ describe('[ki repo]', () => {
         `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: 'PRIMARY', audit: async () => []${cost === undefined ? '' : `, cost: ${cost}`} }`
       const heavyFirst = await run(`${item('HEAVY-1', 60)}, ${item('LIGHT-1')}`)
       const lightFirst = await run(`${item('LIGHT-1')}, ${item('HEAVY-1', 60)}`)
-      const activityBar = (output: string, code: string): string =>
+      const activityBar = (output: string): string =>
         output
           .split('\n')
-          .find((line) => line.includes(code))
+          .find((line) => line.includes('checking'))
           ?.match(/\[([#>.]+)\]/)?.[1] ?? ''
 
-      expect(activityBar(heavyFirst, 'HEAVY-1')).toContain('>')
-      expect(activityBar(lightFirst, 'LIGHT-1')).toContain('>')
-      expect(activityBar(heavyFirst, 'HEAVY-1')).toBe(activityBar(lightFirst, 'LIGHT-1'))
+      expect(activityBar(heavyFirst)).toContain('>')
+      expect(activityBar(lightFirst)).toContain('>')
+      expect(activityBar(heavyFirst)).toBe(activityBar(lightFirst))
     })
 
     test('names the running item when an audit fails part-way through', async () => {

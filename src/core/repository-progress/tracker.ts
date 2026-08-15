@@ -66,7 +66,7 @@ export const createProgressTracker = (
   let completedEvidence = 0
   let evidenceReceiptWritten = false
   let activeSkill: TrackedSkill | undefined
-  let operationDetail = 'starting'
+  let operationDetail = ''
   let operationDetailStarted = started
   let lastRunning: string | undefined
 
@@ -198,7 +198,9 @@ export const createProgressTracker = (
     },
     start: (skill, code) => {
       lastRunning = code
-      setOperationActivity(trackedSkill(skill.skill.identity), code)
+      const next = trackedSkill(skill.skill.identity)
+      if (activeSkill?.identity !== next.identity || operationDetail !== 'checking')
+        setOperationActivity(next, 'checking')
     },
     item: () => {},
     skillComplete: (skill) => {
