@@ -4,7 +4,7 @@ title: Unify repository run progress
 area: CLI
 theme: cli
 horizon: now
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked_by: []
 baseline_ref: ae10b6f31fd8591bb52d160d68b939d3615a459a
@@ -140,3 +140,7 @@ Audit and conform run the same rubric over the same skills and differ only in wh
 ### Review correction
 
 The first review found that conform retained `gathering evidence complete` once per quick skill before the useful long-running evidence children appeared. Those rows are fragments of one logical evidence phase, not separate completed phases. The correction now keeps those interleaved sessions live without committing their partial roots, clears stale rows when a detailed evidence panel shrinks, and retains one final aggregate root with its useful children. Execution order and the rubric/runtime boundary remain unchanged.
+
+### Second review correction
+
+The second review found that periodically redrawing a multi-row panel produces excessive permanent output when a terminal recorder strips or cannot honour cursor movement. The approved correction replaces that panel with a receipt stream and one mutable activity row: queued skills are hidden, evidence-ready skills render once with a full bar, only the current skill animates, and the temporary evidence receipts collapse to one timed phase receipt. The activity bar is deliberately indeterminate and no longer claims that declared cost predicts elapsed work; actual elapsed time remains visible.
