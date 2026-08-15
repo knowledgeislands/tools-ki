@@ -511,10 +511,12 @@ describe('[ki repo]', () => {
         }] }]`)
       })
 
-      const result = await box.run('ki repo audit --progress always', { now: () => 0 })
+      const result = await box.run('ki repo audit --progress always', { interactive: true, now: () => 0 })
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('failed at EXAMPLE-1 · 0/1 0% 0.0s')
+      const output = stripVTControlCharacters(result.output)
+      expect(output).toContain('✗ ki-example')
+      expect(output).toContain('failed at EXAMPLE-1 · 0/1 0% 0.0s')
     })
 
     test('advances the elapsed clock between item events', async () => {
