@@ -212,7 +212,14 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             const summaries: AuditRepositorySummary[] = []
             for (const [index, { repository, skills }] of selected.entries()) {
               if (index && !output.concise) context.stdout.write('\n')
-              const reporter = output.concise ? undefined : renderAuditFrameStart(context, repository.root, skills)
+              const reporter = output.concise
+                ? undefined
+                : renderAuditFrameStart(
+                    context,
+                    repository.root,
+                    skills,
+                    context.stdout.isTTY === true && output.progress !== 'never'
+                  )
               try {
                 const results = await runWithEvidenceProgress(
                   context,
@@ -304,7 +311,14 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             /* v8 ignore next */
             if (!selected) throw new KiError('repository conform lost its selected repository before resolution', 1)
             const { skills } = selected
-            const reporter = output.concise ? undefined : renderConformFrameStart(context, repository.root, skills)
+            const reporter = output.concise
+              ? undefined
+              : renderConformFrameStart(
+                  context,
+                  repository.root,
+                  skills,
+                  context.stdout.isTTY === true && output.progress !== 'never'
+                )
             const conformed = await runWithProgress(
               context,
               skills,

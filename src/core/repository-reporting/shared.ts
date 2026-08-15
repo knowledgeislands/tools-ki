@@ -36,18 +36,21 @@ export const renderOperationFrameStart = (
   context: KiContext,
   operation: 'AUDIT' | 'CONFORM',
   repository: string,
-  skills: readonly { readonly identity: string }[]
+  skills: readonly { readonly identity: string }[],
+  compact = false
 ): TreeReporter => {
   const count = skills.length
   return createTreeReporter((output) => context.stdout.write(output), {
     title: `KI REPO ${operation}`,
-    context: [
-      { label: `📁 ${basename(repository)} (${repository})` },
-      {
-        label: `✦ ${count} skill${count === 1 ? '' : 's'} selected`,
-        children: skills.map((skill) => ({ label: skill.identity }))
-      }
-    ]
+    context: compact
+      ? [{ label: `📁 ${basename(repository)} · ${count} skill${count === 1 ? '' : 's'}` }]
+      : [
+          { label: `📁 ${basename(repository)} (${repository})` },
+          {
+            label: `✦ ${count} skill${count === 1 ? '' : 's'} selected`,
+            children: skills.map((skill) => ({ label: skill.identity }))
+          }
+        ]
   })
 }
 

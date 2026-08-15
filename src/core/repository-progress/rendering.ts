@@ -2,10 +2,9 @@ import { treeProgressPrefix } from '../tree-rendering.ts'
 
 const FALLBACK_TERMINAL_COLUMNS = 80
 
-/** A progress bar distinguishes completed, running, and pending work. */
+/** A progress bar distinguishes indeterminate activity from a completed or stopped receipt. */
 export interface BarModel {
   readonly complete: number
-  readonly started: number
   /** Undefined while the total is not yet known, which renders an animated sweep. */
   readonly total: number | undefined
   readonly text: string
@@ -36,13 +35,12 @@ const barZones = (model: BarModel, width: number, tick: number): readonly [numbe
     return [Math.max(0, Math.min(width, offset - band)), Math.max(0, Math.min(width, offset))]
   }
   const total = model.total
+  // ProgressDisplay is the sole caller: determinate bars are complete or stopped and use a total of one.
+  /* v8 ignore next */
   if (total <= 0) return [width, width]
   const scale = (value: number): number => Math.max(0, Math.min(width, Math.round((value / total) * width)))
   const complete = scale(model.complete)
-  // An item in flight always occupies at least one column. Without this a run with more
-  // items than the bar has columns rounds the band away entirely and shows no work starting.
-  if (model.started <= model.complete) return [complete, complete]
-  return [Math.min(complete, width - 1), Math.max(Math.min(complete, width - 1) + 1, scale(model.started))]
+  return [complete, complete]
 }
 
 /** Keeps the bar beside its status so all terminal themes expose its three states. */

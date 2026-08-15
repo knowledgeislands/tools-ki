@@ -46,17 +46,12 @@ const withRubric = async (body: string): Promise<Awaited<ReturnType<typeof sandb
   return box
 }
 
-// A plain stream keeps the phase and every retained evidence child beside its own bar.
-const plainFrames = (output: string): readonly string[] =>
-  output
+const visibleLines = (output: string): readonly string[] =>
+  stripVTControlCharacters(output)
+    .replaceAll('\r', '\n')
     .split('\n')
-    .filter((line) => /^(├─ (loading|evidence|audit)|│ {2}├─ )/.test(line))
-    .map((line) =>
-      stripVTControlCharacters(line)
-        .replace(/^├─ \w+\s+\[[#>.]*\] /, 'audit ')
-        .replace(/^│ {2}├─ [\w-]+\s+\[[#>.]*\] /, 'evidence ')
-        .trimEnd()
-    )
+    .map((line) => line.trimEnd())
+    .filter(Boolean)
 
 const barFor = (output: string, text: string): string =>
   output
@@ -65,7 +60,7 @@ const barFor = (output: string, text: string): string =>
     ?.match(/\[([#>.]+)\]/)?.[1] ?? ''
 
 describe('[ki repo audit evidence progress]', () => {
-  test('names the stages and steps a session reports while it gathers evidence', async () => {
+  test('names live evidence work and keeps only timed phase receipts', async () => {
     const box = await withRubric(`
       emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
       emit({ kind: 'step', label: 'biome check', code: 'BIO-1' })
@@ -76,30 +71,16 @@ describe('[ki repo audit evidence progress]', () => {
     const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toMatch(/├─ loading +\[/)
-    expect(result.output).toMatch(/├─ evidence +\[/)
-    expect(result.output).toMatch(/├─ audit +\[/)
-    expect(result.output).toMatch(/├─ timings +loading 0\.0s · evidence 0\.0s · audit 0\.0s · total 0\.0s/)
-    const barColumns = result.output
-      .split('\n')
-      .filter((line) => /^(├─ (loading|evidence|audit)|│ {2}├─ ki-example)/.test(line))
-      .map((line) => line.indexOf('['))
-    expect(new Set(barColumns)).toEqual(new Set([17]))
-    // Loading and the counted evidence phase stay visible before item audit begins. A stage
-    // or step becomes a retained evidence child; its completed bar proves it did not restart.
-    expect(plainFrames(result.output)).toEqual(
-      expect.arrayContaining([
-        'audit loading definitions complete · 1/1 100% 0.0s',
-        'audit gathering evidence · 0/1 0% 0.0s',
-        'evidence engineering evidence biome check complete · 0.0s',
-        'evidence engineering evidence tsc --noEmit complete · 0.0s',
-        'audit gathering evidence complete · 1/1 100% 0.0s',
-        'audit complete · 1/1 100% 0.0s'
-      ])
-    )
+    expect(result.output).toContain('engineering evidence biome check · 0.0s')
+    expect(result.output).toContain('engineering evidence tsc --noEmit · 0.0s')
+    expect(result.output).toMatch(/✓ loading +\[#+\] definitions loaded · 1 skill · 0\.0s/)
+    expect(result.output).toMatch(/✓ evidence +\[#+\] evidence gathered · 1 skill · 0\.0s/)
+    expect(result.output).toMatch(/✓ audit +\[#+\] complete · 0\.0s · total 0\.0s/)
+    expect(result.output).not.toContain('timings')
+    expect(result.output).not.toMatch(/\d+\/\d+ \d+%/)
   })
 
-  test('accounts repeated phase reports without resetting their elapsed time', async () => {
+  test('accounts repeated phase reports without resetting elapsed time', async () => {
     const box = await withRubric(`
       emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
       emit({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
@@ -113,21 +94,17 @@ describe('[ki repo audit evidence progress]', () => {
         return clock
       }
     })
-    const match = result.output.match(
-      /timings +loading ([\d.]+)s · evidence ([\d.]+)s · audit ([\d.]+)s · total ([\d.]+)s/
-    )
+    const evidence = result.output.match(/evidence gathered · 1 skill · ([\d.]+)s/)?.[1]
+    const completion = result.output.match(/✓ audit .*complete · ([\d.]+)s · total ([\d.]+)s/)?.slice(1)
 
     expect(result.exitCode).toBe(0)
-    expect(match).not.toBeNull()
-    const [, loading = '0', evidence = '0', audit = '0', total = '0'] = match ?? []
     expect(Number(evidence)).toBeGreaterThan(0)
-    expect(Number(audit)).toBeGreaterThan(0)
-    expect(Number(loading) + Number(evidence) + Number(audit)).toBeCloseTo(Number(total), 5)
+    expect(Number(completion?.[0])).toBeGreaterThan(0)
+    expect(Number(completion?.[1])).toBeGreaterThan(Number(evidence))
   })
 
-  test('shows a counted step as a determinate share of its own work', async () => {
+  test('keeps a counted evidence step indeterminate instead of treating it as estimated completion', async () => {
     const box = await withRubric(`
-      emit({ kind: 'step', label: 'preflight', completed: 1, total: 1 })
       emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
       emit({ kind: 'step', label: 'scanning', completed: 1, total: 4 })
       emit({ kind: 'step', label: 'scanning', completed: 3, total: 4 })
@@ -137,12 +114,11 @@ describe('[ki repo audit evidence progress]', () => {
     const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    expect(plainFrames(result.output)).toContain('evidence engineering evidence scanning complete · 0.0s')
-    // The counted step fills three quarters of its own bar, where the enclosing stage animated.
-    expect(barFor(result.output, 'scanning · 3/4')).toBe(`${'#'.repeat(29)}${'.'.repeat(9)}`)
+    expect(barFor(result.output, 'engineering evidence scanning')).toContain('>')
+    expect(result.output).not.toContain('3/4')
   })
 
-  test('renders conform evidence as its own root with the same retained child rows', async () => {
+  test('renders conform evidence as live activity and one aggregate receipt', async () => {
     const box = await withRubric(`
       emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
       emit({ kind: 'step', label: 'biome check', code: 'BIO-1' })
@@ -156,100 +132,55 @@ describe('[ki repo audit evidence progress]', () => {
     const result = await box.run('ki repo conform --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toMatch(/├─ evidence +\[/)
     for (const command of ['biome check', 'tsc --noEmit', 'vitest run', 'vitest run --coverage', 'syncpack lint'])
       expect(result.output).toContain(`engineering evidence ${command}`)
-    expect(result.output).not.toMatch(/├─ conform .*gathering evidence/)
+    expect(result.output).toMatch(/✓ evidence +\[#+\] evidence gathered · 1 skill · 0\.0s/)
+    expect(result.output).not.toMatch(/conform .*engineering evidence/)
   })
 
-  test('retains one aggregate conform evidence root across quick skills', async () => {
+  test('shows evidence-ready skills as full receipts, then collapses them once', async () => {
     const box = await sandbox()
     await box.project.write(
       '.ki-config.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-first]\n[skills.ki-second]\n[skills.ki-third]\n'
     )
     await box.setupExampleHarness({ rubric: emittingRubric('', 'ki-first'), name: 'ki-first' })
-    await box.setupExampleHarness({
-      rubric: emittingRubric(
-        `
-          emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
-          emit({ kind: 'step', label: 'biome check', code: 'BIO-1' })
-          emit({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
-        `,
-        'ki-second'
-      ),
-      name: 'ki-second'
-    })
+    await box.setupExampleHarness({ rubric: emittingRubric('', 'ki-second'), name: 'ki-second' })
     await box.setupExampleHarness({ rubric: emittingRubric('', 'ki-third'), name: 'ki-third' })
 
-    const result = await box.run('ki repo conform --progress always', {
+    const result = await box.run('ki repo conform --progress-style multi', {
       interactive: true,
       columns: 240,
       now: () => 0
     })
-    const output = stripVTControlCharacters(result.output)
+    const lines = visibleLines(result.output)
 
     expect(result.exitCode).toBe(0)
-    expect(output).toMatch(/├─ evidence .*gathering evidence complete · 3\/3 100% 0\.0s/)
-    expect(output).toContain('engineering evidence biome check complete')
+    for (const skill of ['ki-first', 'ki-second', 'ki-third']) {
+      const receipt = lines.find((line) => line.includes(`✓ ${skill}`) && line.includes('evidence ready'))
+      expect(receipt).toMatch(/\[#+\]/)
+      expect(lines.filter((line) => line.includes(`✓ ${skill}`) && line.includes('evidence ready'))).toHaveLength(1)
+    }
+    expect(result.output).toContain('\x1b[3A')
+    expect(result.output).not.toContain('\x1b[4A')
+    expect(lines.some((line) => line.includes('queued'))).toBe(false)
+    expect(lines.some((line) => line.includes('pending'))).toBe(false)
+    expect(lines.some((line) => /✓ evidence .*evidence gathered · 3 skills · 0\.0s/.test(line))).toBe(true)
   })
 
-  test('updates a repeated uncounted step instead of retaining another child', async () => {
-    const box = await withRubric(`
-      emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
-      emit({ kind: 'step', label: 'scanning' })
-      emit({ kind: 'step', label: 'scanning' })
-      emit({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
-    `)
-
-    const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
-
-    expect(result.exitCode).toBe(0)
-    expect(plainFrames(result.output)).toContain('evidence engineering evidence scanning complete · 0.0s')
-  })
-
-  test('reverts to the item count when a session ends a stage it never opened', async () => {
-    // An unbalanced end pops one level, which is the host's own bracket; a step reported after
-    // it still names its work rather than being dropped on the floor.
+  test('keeps repeated and unbalanced evidence reports readable on the live row', async () => {
     const box = await withRubric(`
       emit({ kind: 'stage', edge: 'end', label: 'never opened' })
+      emit({ kind: 'step', label: 'scanning' })
+      emit({ kind: 'step', label: 'scanning' })
       emit({ kind: 'step', label: 'orphaned work' })
     `)
 
     const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    expect(plainFrames(result.output)).toContain('evidence orphaned work complete · 0.0s')
-  })
-
-  test('renders an open stage as an unmeasured row in the per-skill layout', async () => {
-    const box = await withRubric(`
-      emit({ kind: 'stage', edge: 'start', label: 'engineering evidence' })
-      emit({ kind: 'stage', edge: 'end', label: 'engineering evidence' })
-    `)
-
-    const result = await box.run('ki repo audit --progress always --progress-style multi', {
-      interactive: true,
-      now: () => 0
-    })
-    const single = await box.run('ki repo audit --progress always --progress-style single', {
-      interactive: true,
-      now: () => 0
-    })
-
-    expect(result.exitCode).toBe(0)
-    expect(stripVTControlCharacters(result.output)).toContain('│  ├─ ki-example')
-    expect(stripVTControlCharacters(result.output)).toContain('✦ ki-example')
-    expect(stripVTControlCharacters(result.output)).toContain('running EXAMPLE-1')
-    // A live evidence panel rewinds its parent and child together; completed rows remain before
-    // the next phase rather than reusing the same visual row.
-    expect(result.output).toContain('\x1b[2A')
-    expect(result.output).toContain('\r\x1b[2K\r\n\x1b[1A')
-    const evidenceComplete = single.output.indexOf('gathering evidence complete')
-    const auditStart = single.output.indexOf('starting', evidenceComplete)
-    // Frames fill the terminal width. An explicit CRLF resolves the terminal's deferred
-    // wrap before the next phase begins, so their physical rows cannot overlap.
-    expect(single.output.slice(evidenceComplete, auditStart)).toContain('\r\n\r\x1b[2K')
+    expect(result.output.match(/scanning · 0\.0s/g)).toHaveLength(2)
+    expect(result.output).toContain('orphaned work · 0.0s')
   })
 
   test('strips terminal control sequences from a rubric-supplied label', async () => {
@@ -260,7 +191,7 @@ describe('[ki repo audit evidence progress]', () => {
     const result = await box.run('ki repo audit --progress always', { columns: 240, now: () => 0 })
 
     expect(result.exitCode).toBe(0)
-    expect(plainFrames(result.output)).toContain('evidence red command complete · 0.0s')
+    expect(result.output).toContain('red command · 0.0s')
     expect(result.output).not.toContain('\x1b[31m')
   })
 

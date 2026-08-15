@@ -54,8 +54,9 @@ const conformSkillLabel = (identity: string, summary: ConformSkillSummary): stri
 export const renderConformFrameStart = (
   context: KiContext,
   repository: string,
-  skills: readonly { readonly identity: string }[]
-): TreeReporter => renderOperationFrameStart(context, 'CONFORM', repository, skills)
+  skills: readonly { readonly identity: string }[],
+  compact = false
+): TreeReporter => renderOperationFrameStart(context, 'CONFORM', repository, skills, compact)
 
 /** Render the final conform line without a report frame or per-skill findings. */
 export const renderConciseConformSummary = (

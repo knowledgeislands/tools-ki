@@ -158,18 +158,18 @@ describe('[ki repo conform writes]', () => {
     const multiple = await box.run('ki repo conform --progress always')
 
     expect(regular.output).toContain('╭─ KI REPO CONFORM')
-    expect(regular.output).toContain('├─ loading')
+    expect(regular.output).toContain('├─ ✦ loading')
     expect(narrow.output).toContain('\r\x1b[2K.')
-    expect(invalidWidth.output).toContain('complete · 0/0 100% 0.0s')
-    // Loading is retained, and a clean conform explains why it has no second pass.
-    expect(regular.output).toContain('loading definitions complete')
-    expect(regular.output).toContain('├─ conform')
+    expect(invalidWidth.output).toContain('complete · 0.0s · total 0.0s')
+    // Timed receipts remain, and a clean conform explains why it has no second pass.
+    expect(regular.output).toContain('definitions loaded · 1 skill')
+    expect(regular.output).toContain('├─ ✓ conform')
     expect(regular.output).toContain('nothing staged; no re-audit required')
-    expect(regular.output.match(/timings/g)).toHaveLength(1)
-    // Stable skill and phase rows are redrawn as one panel while active.
-    expect(interactiveMulti.output).toContain('\x1b[2A')
+    expect(regular.output).not.toContain('timings')
+    // Evidence receipts are written once and collapsed once before the aggregate.
+    expect(interactiveMulti.output).toContain('\x1b[1A')
     expect(stripVTControlCharacters(interactiveMulti.output)).toContain('✓ ki-example')
-    expect(stripVTControlCharacters(interactiveMulti.output)).toContain('gathering evidence complete')
+    expect(stripVTControlCharacters(interactiveMulti.output)).toContain('evidence gathered · 1 skill')
     expect(multiple.output).toContain('│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra')
   })
 
@@ -258,7 +258,7 @@ describe('[ki repo conform writes]', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('nothing staged; no re-audit required')
-    expect(result.output.match(/timings/g)).toHaveLength(1)
+    expect(result.output).not.toContain('timings')
   })
 
   test('publishes a complete conform write set, supports dry-run, and re-audits', async () => {
@@ -276,7 +276,7 @@ describe('[ki repo conform writes]', () => {
     const conformed = await box.run('ki repo conform --progress always')
     const afterContent = await box.project.read('governed.txt')
     expect(conformed.output).toContain('applied write governed.txt\n')
-    expect(conformed.output).toContain('├─ re-audit')
+    expect(conformed.output).toContain('├─ ✓ re-audit')
     expect(conformed.output).not.toContain('├─ verify')
     expect(conformed.output).toContain('╰─ summary: KI REPO CONFORM on project PASS · 1 skill')
     expect(afterContent).toBe('after\n')

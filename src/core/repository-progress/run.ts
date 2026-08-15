@@ -3,7 +3,13 @@ import { KiError } from '../errors.ts'
 import type { ResolvedSkill } from '../resolution.ts'
 import { type PreparedSkill, prepareSkill, type RubricProgressReport } from '../runtime.ts'
 import type { OperationOptions } from './options.ts'
-import { createProgressTracker, type ProgressTracker, type TimingsPlacement, type TrackedSkill } from './tracker.ts'
+import {
+  type CompletionPlacement,
+  createProgressTracker,
+  type OperationPhase,
+  type ProgressTracker,
+  type TrackedSkill
+} from './tracker.ts'
 
 /** Reports the item edges a live progress line needs, narrowed to the item code the renderer displays. */
 interface ItemProgressCodes {
@@ -24,14 +30,14 @@ export const runPreparedWithProgress = async <Result>(
   prepared: readonly PreparedSkill[],
   run: (skill: PreparedSkill, progress: ItemProgressCodes) => Promise<Result>,
   options: OperationOptions,
-  phase: string,
-  timingsPlacement: TimingsPlacement = 'last-root',
+  phase: OperationPhase,
+  completionPlacement: CompletionPlacement = 'last-root',
   existing?: ProgressTracker
 ): Promise<Result[]> => {
   const progress =
     existing ??
     (prepared.length
-      ? createProgressTracker(context, options, trackedPreparedSkills(prepared), phase, timingsPlacement)
+      ? createProgressTracker(context, options, trackedPreparedSkills(prepared), phase, completionPlacement)
       : undefined)
   const results: Result[] = []
   try {
@@ -58,11 +64,11 @@ export const runWithProgress = async <Result>(
   skills: readonly ResolvedSkill[],
   run: (skill: PreparedSkill, progress: ItemProgressCodes) => Promise<Result>,
   options: OperationOptions,
-  phase: string,
-  timingsPlacement: TimingsPlacement = 'last-root'
+  phase: OperationPhase,
+  completionPlacement: CompletionPlacement = 'last-root'
 ): Promise<Result[]> => {
   const progress = skills.length
-    ? createProgressTracker(context, options, trackedSkills(skills), phase, timingsPlacement)
+    ? createProgressTracker(context, options, trackedSkills(skills), phase, completionPlacement)
     : undefined
   const prepared: PreparedSkill[] = []
   try {
@@ -75,7 +81,7 @@ export const runWithProgress = async <Result>(
     progress?.failed()
     throw error
   }
-  return runPreparedWithProgress(context, prepared, run, options, phase, timingsPlacement, progress)
+  return runPreparedWithProgress(context, prepared, run, options, phase, completionPlacement, progress)
 }
 
 /** Runs a counted session-evidence phase before the prepared skills' mechanical-item phase. */
@@ -88,11 +94,11 @@ export const runWithEvidenceProgress = async <Evidence, Result>(
   ) => Promise<Evidence>,
   run: (skill: PreparedSkill, evidence: Evidence, progress: ItemProgressCodes) => Promise<Result>,
   options: OperationOptions,
-  phase: string,
-  timingsPlacement: TimingsPlacement = 'last-root'
+  phase: OperationPhase,
+  completionPlacement: CompletionPlacement = 'last-root'
 ): Promise<Result[]> => {
   const progress = skills.length
-    ? createProgressTracker(context, options, trackedSkills(skills), phase, timingsPlacement)
+    ? createProgressTracker(context, options, trackedSkills(skills), phase, completionPlacement)
     : undefined
   const prepared: PreparedSkill[] = []
   const evidence = new Map<string, Evidence>()
@@ -126,7 +132,7 @@ export const runWithEvidenceProgress = async <Evidence, Result>(
     },
     options,
     phase,
-    timingsPlacement,
+    completionPlacement,
     progress
   )
 }

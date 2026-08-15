@@ -68,8 +68,9 @@ const auditRepositorySummary = (
 export const renderAuditFrameStart = (
   context: KiContext,
   repository: string,
-  skills: readonly { readonly identity: string }[]
-): TreeReporter => renderOperationFrameStart(context, 'AUDIT', repository, skills)
+  skills: readonly { readonly identity: string }[],
+  compact = false
+): TreeReporter => renderOperationFrameStart(context, 'AUDIT', repository, skills, compact)
 
 /** Render the result portion and close one framed audit report. */
 export const renderAuditResults = (

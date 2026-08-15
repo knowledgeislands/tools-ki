@@ -7,7 +7,7 @@ export type ReporterLevel = FindingLevel | 'fixed'
 
 export interface OperationOptions {
   readonly progress: ProgressMode
-  /** Defaults to stable rows on a TTY and a single aggregate row in a plain stream. */
+  /** Defaults to evidence receipts on a TTY and one aggregate activity row in a plain stream. */
   readonly progressStyle: ProgressStyle | undefined
   readonly reporterLevels: readonly ReporterLevel[]
   readonly concise: boolean
