@@ -37,13 +37,13 @@ export const runPreparedWithProgress = async <Result>(
   try {
     progress?.planned(prepared)
     for (const skill of prepared) {
-      results.push(
-        await run(skill, {
-          onItemStart: (code) => progress?.start(skill, code),
-          onItemComplete: (code) => progress?.item(skill, code),
-          ...(progress ? { onProgressEvent: (event) => progress.report(skill, event) } : {})
-        })
-      )
+      const result = await run(skill, {
+        onItemStart: (code) => progress?.start(skill, code),
+        onItemComplete: (code) => progress?.item(skill, code),
+        ...(progress ? { onProgressEvent: (event) => progress.report(skill, event) } : {})
+      })
+      results.push(result)
+      progress?.skillComplete(skill)
     }
   } catch (error) {
     progress?.failed()

@@ -459,7 +459,11 @@ repository-vendored runners.
 Progress defaults to \fBauto\fR, which follows stderr's TTY state; \fBalways\fR
 also renders deterministic progress in redirected output, and \fBnever\fR
 suppresses it.
-Use \fB--progress-style multi\fR for stable per-skill rows.
+On a terminal, progress defaults to stable per-skill rows: completed skills
+collapse to one line, only the active skill expands its evidence, queued skills
+remain visible, and the evidence and operation phase rows stay together below
+them. Use \fB--progress-style single\fR for one aggregate live row. Redirected
+\fB--progress always\fR output defaults to that compact single-row form.
 Progress also names the span in which a skill gathers its evidence, before any
 criterion runs, together with whatever stages and steps that skill reports
 inside it; a span of unknown extent shows an elapsed clock rather than an item
@@ -469,6 +473,9 @@ harness skill in brackets. Audit renders FAIL and WARN findings by default, but
 always shows a terminal per-skill result so a clean assessment is visible;
 \fB--reporter-levels\fR accepts a case-insensitive comma-separated selection
 from FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS, or \fBall\fR.
+A clean skill result ends at PASS, and a clean repository summary reports PASS
+with its skill count; diagnostic counters remain for WARN, FAIL, and FIXED
+outcomes.
 .TP
 .B ki repo [repo-options] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Stage the same capabilities' safe writes, then apply them and re-audit. All

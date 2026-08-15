@@ -80,6 +80,8 @@ For each selected repository, `ki repo conform` collects safe write proposals an
 
 Conform labels its second rubric pass `re-audit`, because it repeats the audit after staged writes or commands land. When nothing is staged, it reports that no re-audit is required and stops after the initial pass.
 
+On a terminal, audit and conform use stable per-skill progress rows: completed skills collapse to one line, only the active skill expands its evidence, queued skills remain visible, and the evidence and operation phase rows stay together below them. `--progress-style single` selects one aggregate live row instead. Redirected `--progress always` output defaults to that compact single-row form. A clean result row ends at `PASS`, and a clean repository summary reports `PASS · N skills`; diagnostic counters remain when the result includes WARN, FAIL, or FIXED outcomes.
+
 To start a KI repository, run `ki repo init` in an existing Git worktree root, or name that root as its one argument. Supply its canonical `--repository https://github.com/<owner>/<name>`, `--title`, `--description`, `--repo-code`, one or more `--runtime` values (`claude-code` or `chatgpt-codex`), and `--visibility public|private`. Initialization creates the canonical `ki-repo` declaration and registers that physical root locally; it never runs `git init`, guesses identity, activates skills, creates an Agora, or overwrites an existing declaration.
 
 ```sh

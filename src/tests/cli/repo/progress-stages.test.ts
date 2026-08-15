@@ -190,7 +190,6 @@ describe('[ki repo audit evidence progress]', () => {
     const output = stripVTControlCharacters(result.output)
 
     expect(result.exitCode).toBe(0)
-    expect(output.match(/├─ evidence .*gathering evidence complete/g)).toHaveLength(1)
     expect(output).toMatch(/├─ evidence .*gathering evidence complete · 3\/3 100% 0\.0s/)
     expect(output).toContain('engineering evidence biome check complete')
   })
@@ -233,14 +232,19 @@ describe('[ki repo audit evidence progress]', () => {
       interactive: true,
       now: () => 0
     })
-    const single = await box.run('ki repo audit --progress always', { interactive: true, now: () => 0 })
+    const single = await box.run('ki repo audit --progress always --progress-style single', {
+      interactive: true,
+      now: () => 0
+    })
 
     expect(result.exitCode).toBe(0)
     expect(stripVTControlCharacters(result.output)).toContain('│  ├─ ki-example')
-    expect(stripVTControlCharacters(result.output)).toContain('[ki-example] EXAMPLE-1')
+    expect(stripVTControlCharacters(result.output)).toContain('✦ ki-example')
+    expect(stripVTControlCharacters(result.output)).toContain('running EXAMPLE-1')
     // A live evidence panel rewinds its parent and child together; completed rows remain before
     // the next phase rather than reusing the same visual row.
     expect(result.output).toContain('\x1b[2A')
+    expect(result.output).toContain('\r\x1b[2K\r\n\x1b[1A')
     const evidenceComplete = single.output.indexOf('gathering evidence complete')
     const auditStart = single.output.indexOf('starting', evidenceComplete)
     // Frames fill the terminal width. An explicit CRLF resolves the terminal's deferred

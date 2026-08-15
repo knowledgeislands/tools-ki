@@ -1,5 +1,6 @@
 import { lstat, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 import { describe, expect, test } from 'vitest'
 import { type SandboxArea, sandbox } from '../_cli_helper.ts'
 
@@ -165,10 +166,10 @@ describe('[ki repo conform writes]', () => {
     expect(regular.output).toContain('├─ conform')
     expect(regular.output).toContain('nothing staged; no re-audit required')
     expect(regular.output.match(/timings/g)).toHaveLength(1)
-    // Multi rows are redrawn as one panel while active. When evidence temporarily shrinks that
-    // panel, the renderer clears the stale second row and restores the cursor below the live row.
+    // Stable skill and phase rows are redrawn as one panel while active.
     expect(interactiveMulti.output).toContain('\x1b[2A')
-    expect(interactiveMulti.output).toContain('\r\x1b[2K\r\n\x1b[1A')
+    expect(stripVTControlCharacters(interactiveMulti.output)).toContain('✓ ki-example')
+    expect(stripVTControlCharacters(interactiveMulti.output)).toContain('gathering evidence complete')
     expect(multiple.output).toContain('│     ├─ example/harness:ki-example\n│     ╰─ example/harness:ki-extra')
   })
 

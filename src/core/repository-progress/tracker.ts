@@ -1,5 +1,6 @@
 import type { KiContext } from '../../context.ts'
 import { KiError } from '../errors.ts'
+import { presentation } from '../presentation.ts'
 import { EVIDENCE_STAGE_LABEL, type PreparedSkill, type RubricProgressReport } from '../runtime.ts'
 import { treeProgressPrefix } from '../tree-rendering.ts'
 import type { OperationOptions } from './options.ts'
@@ -27,6 +28,7 @@ export interface ProgressTracker {
   readonly planned: (skills: readonly PreparedSkill[]) => void
   readonly start: (skill: PreparedSkill, code: string) => void
   readonly item: (skill: PreparedSkill, code: string) => void
+  readonly skillComplete: (skill: PreparedSkill) => void
   readonly report: (skill: PreparedSkill, event: RubricProgressReport) => void
   readonly complete: () => void
   readonly failed: () => void
@@ -76,6 +78,7 @@ export const createProgressTracker = (
   const enabled = options.progress === 'always' || (options.progress === 'auto' && context.stdout.isTTY === true)
   if (!enabled) return undefined
   const interactive = context.stdout.isTTY === true
+  const progressStyle = options.progressStyle ?? (interactive ? 'multi' : 'single')
   const started = context.now()
   let phaseStarted = started
   let activePhase: ProgressPhase = 'loading'
@@ -89,6 +92,7 @@ export const createProgressTracker = (
   let lastFrame: string | undefined
   let cursorHidden = false
   let lastRunning: string | undefined
+  let activeSkillIdentity: string | undefined
   const stages = new Map<string, readonly string[]>()
   const evidenceRows: EvidenceProgressRow[] = []
   const activeEvidenceRows = new Map<string, EvidenceProgressRow>()
@@ -186,22 +190,78 @@ export const createProgressTracker = (
   ]
   const singleFrame = (text: string): readonly string[] =>
     activePhase === 'evidence' ? evidenceFrame(text) : [progressLine(barModel(text), renderOptions())]
-  const multiFrame = (): readonly string[] =>
-    activePhase === 'evidence'
-      ? evidenceFrame(summaryText('gathering evidence'))
-      : [
-          ...skills.map((skill) => {
-            const state = skillState(skill.identity)
-            const model: BarModel = {
-              complete: state.complete,
-              started: state.started,
-              total: state.planned && !state.staged ? state.total : undefined,
-              text: `[${skill.name}] ${state.status}`
-            }
-            return progressLine(model, renderOptions())
-          }),
-          progressLine(barModel(summaryText(lastRunning ? `running ${lastRunning}` : 'working')), renderOptions())
-        ]
+  const skillGlyph = (state: SkillProgressState, active: boolean): string => {
+    if (state.status === 'complete') return presentation('status.pass').terminal
+    if (state.status === 'failed') return presentation('status.fail').terminal
+    return presentation(active ? 'entity.skill' : 'status.skip').terminal
+  }
+  const skillBarModel = (state: SkillProgressState, active: boolean): BarModel => {
+    const unitTotal = Math.max(1, state.total)
+    if (state.status === 'complete')
+      return { complete: unitTotal, started: unitTotal, total: unitTotal, text: 'complete' }
+    if (!active) return { complete: state.complete, started: state.complete, total: unitTotal, text: state.status }
+    return {
+      complete: state.complete,
+      started: state.started,
+      total: state.staged || !state.planned ? undefined : unitTotal,
+      text: state.status
+    }
+  }
+  const skillFrame = (): readonly string[] =>
+    skills.flatMap((skill) => {
+      const state = skillState(skill.identity)
+      const active = skill.identity === activeSkillIdentity
+      const label = `${skillGlyph(state, active)} ${skill.name}`.padEnd(rootLabelWidth)
+      const row = progressLine(skillBarModel(state, active), renderOptions(label))
+      if (!active || activePhase !== 'evidence') return [row]
+      return [
+        row,
+        ...evidenceRows
+          .filter((evidenceRow) => evidenceRow.skill === skill.name)
+          .map((evidenceRow) =>
+            progressLine(
+              evidenceRowModel(evidenceRow),
+              renderOptions(evidenceRow.skill.padEnd(childLabelWidth), 'child')
+            )
+          )
+      ]
+    })
+  const phaseElapsed = (target: ProgressPhase): number =>
+    closedPhaseElapsed(target) + (activePhase === target ? context.now() - phaseStarted : 0)
+  const multiPhaseFrame = (detail: string): readonly string[] => {
+    const rows: string[] = []
+    if (evidence !== undefined || completedEvidence > 0) {
+      const evidenceActive = activePhase === 'evidence'
+      const evidenceComplete = evidence?.gathered ?? completedEvidence
+      rows.push(
+        progressLine(
+          {
+            complete: evidenceComplete,
+            started: evidenceActive ? Math.min(skills.length, evidenceComplete + 1) : evidenceComplete,
+            total: skills.length,
+            text: `${evidenceActive ? 'gathering evidence' : 'gathering evidence complete'} · ${countsOf(evidenceComplete, skills.length)} ${elapsed(phaseElapsed('evidence'))}`
+          },
+          renderOptions('evidence'.padEnd(rootLabelWidth))
+        )
+      )
+    }
+    if (total !== undefined && totalItems !== undefined) {
+      const operationActive = activePhase === phase
+      rows.push(
+        progressLine(
+          {
+            complete,
+            started: complete + inFlight,
+            total,
+            text: `${operationActive ? detail : 'waiting'} · ${countsOf(completedItems, totalItems)} ${elapsed(phaseElapsed(phase as ProgressPhase))}`
+          },
+          renderOptions(phase.padEnd(rootLabelWidth))
+        )
+      )
+    }
+    return rows
+  }
+  const multiFrame = (detail: string): readonly string[] => [...skillFrame(), ...multiPhaseFrame(detail)]
   let renderedRows = 0
   const writeRows = (rows: readonly string[], final: boolean): void => {
     const lineBreak = interactive ? '\r\n' : '\n'
@@ -227,9 +287,12 @@ export const createProgressTracker = (
   const render = (detail: string, final = false, retainDirectEvidence = false): void => {
     lastDetail = detail
     tick += 1
-    const activeRows = options.progressStyle === 'single' ? singleFrame(summaryText(detail)) : multiFrame()
+    const activeRows =
+      progressStyle === 'single' || activePhase === 'loading' ? singleFrame(summaryText(detail)) : multiFrame(detail)
     const rows =
-      retainDirectEvidence && !batchedEvidence ? [...completedDirectEvidenceFrame(), ...activeRows] : activeRows
+      progressStyle === 'single' && retainDirectEvidence && !batchedEvidence
+        ? [...completedDirectEvidenceFrame(), ...activeRows]
+        : activeRows
     const frame = rows.join('\n')
     // Coalesce identical consecutive frames; a fast rubric otherwise redraws the same line.
     if (!final && frame === lastFrame) return
@@ -323,6 +386,16 @@ export const createProgressTracker = (
         loading = undefined
       }
       evidence = { gathered, total: sessions }
+      completedEvidence = gathered
+      for (const [index, skill] of skills.entries()) {
+        const state = skillState(skill.identity)
+        states.set(skill.identity, {
+          ...state,
+          staged: index === gathered,
+          status: index < gathered ? 'evidence ready' : index === gathered ? 'gathering evidence' : 'queued'
+        })
+      }
+      activeSkillIdentity = skills[gathered]?.identity
       openPhase('evidence')
       render('gathering evidence')
     },
@@ -336,6 +409,7 @@ export const createProgressTracker = (
         evidence = undefined
       }
       openPhase(phase as ProgressPhase)
+      activeSkillIdentity = undefined
       totalItems = planned.reduce((count, skill) => count + skill.items.length, 0)
       total = planned.reduce((sum, skill) => sum + skillCost(skill), 0)
       for (const skill of planned)
@@ -354,6 +428,7 @@ export const createProgressTracker = (
       inFlight = cost
       lastRunning = code
       const { identity, declaration } = skill.skill
+      activeSkillIdentity = identity
       const state = skillState(identity)
       states.set(identity, {
         ...state,
@@ -383,8 +458,22 @@ export const createProgressTracker = (
       })
       render(`${declaration.name} ${code}`)
     },
+    skillComplete: (skill) => {
+      const { identity, declaration } = skill.skill
+      const state = skillState(identity)
+      states.set(identity, {
+        ...state,
+        complete: state.total,
+        started: state.total,
+        staged: false,
+        status: 'complete'
+      })
+      if (activeSkillIdentity === identity) activeSkillIdentity = undefined
+      render(`${declaration.name} complete`)
+    },
     report: (skill, event) => {
       const { identity, declaration } = skill.skill
+      activeSkillIdentity = identity
       const currentStages = stages.get(identity) ?? []
       let closesReportedEvidence = false
       if (event.kind === 'stage') {
@@ -420,10 +509,11 @@ export const createProgressTracker = (
       }
       const stateRow = activeEvidenceRow(identity)
       const state = skillState(identity)
+      const opensEvidence = event.kind === 'stage' && event.label === EVIDENCE_STAGE_LABEL && event.edge === 'start'
       states.set(identity, {
         ...state,
-        staged: stateRow !== undefined,
-        status: stateRow?.detail ?? state.status
+        staged: opensEvidence || stateRow !== undefined,
+        status: opensEvidence ? 'gathering evidence' : (stateRow?.detail ?? state.status)
       })
       if (closesReportedEvidence) {
         render('gathering evidence')
@@ -435,6 +525,7 @@ export const createProgressTracker = (
     },
     complete: () => {
       inFlight = 0
+      activeSkillIdentity = undefined
       for (const skill of skills) {
         const state = skillState(skill.identity)
         states.set(skill.identity, { ...state, complete: state.total, started: state.total, status: 'complete' })
@@ -445,7 +536,10 @@ export const createProgressTracker = (
     },
     failed: () => {
       inFlight = 0
-      for (const skill of skills) states.set(skill.identity, { ...skillState(skill.identity), status: 'failed' })
+      if (activeSkillIdentity) {
+        const state = skillState(activeSkillIdentity)
+        states.set(activeSkillIdentity, { ...state, staged: false, status: 'failed' })
+      }
       render(lastRunning ? `failed at ${lastRunning}` : 'failed', true)
       finish()
     }

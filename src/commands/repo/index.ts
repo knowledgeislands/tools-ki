@@ -195,7 +195,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .description('run registered audit operations for declared skills')
         .option('--skill <capability>', 'one declared resolved skill to audit')
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
-        .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
+        .option('--progress-style <style>', 'progress layout: single or multi (default: multi on a TTY)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN)')
         .option('--concise', 'render only one final summary per repository')
         .action(
@@ -274,7 +274,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
         .option('--dry-run', 'validate staged writes and report without applying them')
         .option('--allow-commands', 'attempt eligible command-backed conform groups during partial failures')
         .option('--progress <mode>', 'progress: auto, always, or never (default: auto)')
-        .option('--progress-style <style>', 'progress layout: single or multi (default: single)')
+        .option('--progress-style <style>', 'progress layout: single or multi (default: multi on a TTY)')
         .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN,FIXED)')
         .option('--concise', 'render only one final summary per repository')
         .action(async (options: RepositoryConformOptions) => {

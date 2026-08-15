@@ -7,7 +7,8 @@ export type ReporterLevel = FindingLevel | 'fixed'
 
 export interface OperationOptions {
   readonly progress: ProgressMode
-  readonly progressStyle: ProgressStyle
+  /** Defaults to stable rows on a TTY and a single aggregate row in a plain stream. */
+  readonly progressStyle: ProgressStyle | undefined
   readonly reporterLevels: readonly ReporterLevel[]
   readonly concise: boolean
 }
@@ -22,8 +23,8 @@ const parseProgressMode = (value: string | undefined): ProgressMode => {
   throw new KiError('--progress accepts auto, always, or never', 2)
 }
 
-const parseProgressStyle = (value: string | undefined): ProgressStyle => {
-  if (value === undefined || value === 'single' || value === 'multi') return value ?? 'single'
+const parseProgressStyle = (value: string | undefined): ProgressStyle | undefined => {
+  if (value === undefined || value === 'single' || value === 'multi') return value
   throw new KiError('--progress-style accepts single or multi', 2)
 }
 
