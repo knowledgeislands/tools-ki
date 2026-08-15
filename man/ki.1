@@ -456,8 +456,8 @@ Run the native read-only operations registered by each selected repository's
 declared capabilities. The host verifies every selected harness inventory and
 integrity-covered operation before importing it in process; it never dispatches
 repository-vendored runners.
-Progress defaults to \fBauto\fR, which follows the output stream's TTY state; \fBalways\fR
-also renders deterministic progress in redirected output, and \fBnever\fR
+Progress defaults to \fBauto\fR, which follows the output stream's TTY state;
+\fBalways\fR also renders deterministic progress in redirected output, and \fBnever\fR
 suppresses it.
 On a terminal, progress is a compact receipt stream with one mutable activity
 row. Its moving bar means work is active; it does not estimate completion from
@@ -471,14 +471,13 @@ Progress also names the span in which a skill gathers its evidence, before any
 criterion runs, together with whatever stages and steps that skill reports
 inside it; a span of unknown extent shows activity and an elapsed clock rather
 than a completion estimate.
-Each per-skill result names the assessed repository first and its supplying
-harness skill in brackets. Audit renders FAIL and WARN findings by default, but
-always shows a terminal per-skill result so a clean assessment is visible;
+Per-skill result rows name the assessed repository first and its supplying
+harness skill in brackets, and appear only for WARN, FAIL, or FIXED outcomes.
+Audit renders FAIL and WARN findings by default;
 \fB--reporter-levels\fR accepts a case-insensitive comma-separated selection
 from FAIL, WARN, FIXED, INFO, NOT_APPLICABLE, and PASS, or \fBall\fR.
-A clean skill result ends at PASS, and a clean repository summary reports PASS
-with its skill count; diagnostic counters remain for WARN, FAIL, and FIXED
-outcomes.
+A clean repository summary reports PASS with its skill count.
+Diagnostic counters remain for WARN, FAIL, and FIXED outcomes.
 .TP
 .B ki repo [repo-options] conform [--skill <skill>] [--dry-run] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Stage the same capabilities' safe writes, then apply them and re-audit. All

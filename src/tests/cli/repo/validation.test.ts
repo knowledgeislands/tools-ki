@@ -674,18 +674,20 @@ describe('[ki repo validation]', () => {
       await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       const item = (
         code: string,
-        phase: string
-      ) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: 'FAIL', phase: '${phase}',
-        audit: async () => [{ status: 'INFO', message: '${code}' }] }`
+        phase: string,
+        level: 'FAIL' | 'WARN' = 'FAIL',
+        status: 'INFO' | 'VIOLATION' = 'INFO'
+      ) => `{ kind: 'mechanical', code: '${code}', title: '${code}', level: '${level}', phase: '${phase}',
+        audit: async () => [{ status: '${status}', message: '${code}' }] }`
       await box.setupExampleHarness({
         rubric: rubric(`[
-          { code: 'FC', title: 'C', items: [${item('C1', 'INSPECT')}] },
+          { code: 'FC', title: 'C', items: [${item('C1', 'INSPECT', 'WARN', 'VIOLATION')}] },
           { code: 'FB', title: 'B', items: [${item('B1', 'PREPARE')}] },
           { code: 'FA', title: 'A', items: [${item('A1', 'PREPARE')}, ${item('A2', 'PREPARE')}] }
         ]`)
       })
 
-      const result = await box.run('ki repo audit --reporter-levels info')
+      const result = await box.run('ki repo audit --reporter-levels info,warn')
 
       const first = result.output.indexOf('[B1 (B1)] — B1')
       const second = result.output.indexOf('[A1 (A1)] — A1')
@@ -927,8 +929,6 @@ ${optionalDeps.length ? `ki-optional-depends-on: [${optionalDeps.join(', ')}]\n`
       expect(result.output.indexOf('example/harness:ki-foundation')).toBeLessThan(
         result.output.indexOf('example/harness:ki-feature')
       )
-      expect(result.output).toContain('[Order (R-1)] — ki-foundation')
-      expect(result.output).toContain('[Order (R-1)] — ki-feature')
     })
 
     test('uses a stable topological order independent of declaration and dependency-list order', async () => {
@@ -989,7 +989,6 @@ ${optionalDeps.length ? `ki-optional-depends-on: [${optionalDeps.join(', ')}]\n`
       const active = await box.run('ki repo audit --skill ki-batch --reporter-levels info')
 
       expect(absent.exitCode).toBe(0)
-      expect(absent.output).toContain('[Order (R-1)] — ki-batch')
       expect(active.exitCode).toBe(0)
       expect(active.output.indexOf('example/harness:ki-delegation')).toBeLessThan(
         active.output.indexOf('example/harness:ki-batch')

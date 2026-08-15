@@ -26,13 +26,13 @@ export default {
       description: 'Emits terminal styling in a finding.',
       sources: ['standard.md'],
       mechanical: {
-        level: 'FAIL',
+        level: 'WARN',
         remediation: { class: 'diagnostic', guidance: 'Diagnose the reported evidence.' },
         audit: {
           phase: 'PRIMARY',
           run: () => [
             {
-              status: 'INFO',
+              status: 'VIOLATION',
               message: 'default user model pinned: claude-fable-5\\u001b[1m; \\u001b]8;;https://example.test\\u0007linked\\u001b]8;;\\u0007\\nfirst continuation'
             },
             { status: 'INFO', message: 'second line\\nsecond continuation' }
@@ -45,7 +45,7 @@ export default {
 `
   })
 
-  const result = await box.run('ki repo audit --reporter-levels info')
+  const result = await box.run('ki repo audit --reporter-levels info,warn')
 
   expect(result.exitCode).toBe(0)
   expect(result.output.match(/default user model pinned: claude-fable-5; linked/g)).toHaveLength(1)

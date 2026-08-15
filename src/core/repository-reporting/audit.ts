@@ -1,6 +1,5 @@
 import { basename } from 'node:path'
 import type { KiContext } from '../../context.ts'
-import { KiError } from '../errors.ts'
 import type { ReporterLevel } from '../repository-progress.ts'
 import type { Finding, PreparedSkill } from '../runtime.ts'
 import { renderTree, type TreeReporter } from '../tree-rendering.ts'
@@ -44,7 +43,7 @@ const auditSummaryLabel = (summary: AuditRepositorySummary): string => {
 
 const auditSkillLabel = (identity: string, summary: ReturnType<typeof auditSkillSummary>): string => {
   const result = `${REPORT_ICON[summary.level]} ${identity} ${REPORT_LABEL[summary.level].toUpperCase()}`
-  return summary.level === 'pass' ? result : `${result} · FAIL=${summary.fails} WARN=${summary.warnings}`
+  return `${result} · FAIL=${summary.fails} WARN=${summary.warnings}`
 }
 
 const auditRepositorySummary = (
@@ -80,24 +79,24 @@ export const renderAuditResults = (
   reporterLevels: readonly ReporterLevel[],
   registrationFailure?: string
 ): AuditRepositorySummary => {
-  const skillSummaries = reports.map((report) => auditSkillSummary(report.findings))
   const summary = auditRepositorySummary(repository, reports, registrationFailure)
-  const results = reporter.section('results', reports.length + Number(Boolean(registrationFailure)))
-  for (const [index, report] of reports.entries()) {
-    const reportSummary = skillSummaries[index]
-    // The aligned map above is fixed by reports.map(); preserve a guard for future changes.
-    /* v8 ignore next */
-    if (!reportSummary) throw new KiError(`audit report lost summary for ${report.skill.skill.identity}`, 1)
-    const visible = report.findings.filter((entry) => reporterLevels.includes(entry.level))
-    results.entry({
-      label: auditSkillLabel(report.skill.skill.identity, reportSummary),
-      children: visible.map(findingEntry)
-    })
+  const resultReports = reports
+    .map((report) => ({ report, summary: auditSkillSummary(report.findings) }))
+    .filter(({ summary }) => summary.level !== 'pass')
+  if (resultReports.length > 0 || registrationFailure) {
+    const results = reporter.section('results', resultReports.length + Number(Boolean(registrationFailure)))
+    for (const { report, summary: reportSummary } of resultReports) {
+      const visible = report.findings.filter((entry) => reporterLevels.includes(entry.level))
+      results.entry({
+        label: auditSkillLabel(report.skill.skill.identity, reportSummary),
+        children: visible.map(findingEntry)
+      })
+    }
+    if (registrationFailure)
+      results.entry({
+        label: `${REPORT_ICON.fail} local repository registration FAIL [Local repository registration (REPO-REG-1)] — ${registrationFailure}`
+      })
   }
-  if (registrationFailure)
-    results.entry({
-      label: `${REPORT_ICON.fail} local repository registration FAIL [Local repository registration (REPO-REG-1)] — ${registrationFailure}`
-    })
   reporter.finish({ label: auditSummaryLabel(summary) })
   return summary
 }

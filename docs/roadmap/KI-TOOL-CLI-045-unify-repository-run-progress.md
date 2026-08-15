@@ -146,3 +146,7 @@ The first review found that conform retained `gathering evidence complete` once 
 ### Second review correction
 
 The second review found that periodically redrawing a multi-row panel produces excessive permanent output when a terminal recorder strips or cannot honour cursor movement. The approved correction replaces that panel with a receipt stream and one mutable activity row: queued skills are hidden, evidence-ready skills render once with a full bar, only the current skill animates, and the temporary evidence receipts collapse to one timed phase receipt. The activity bar is deliberately indeterminate and no longer claims that declared cost predicts elapsed work; actual elapsed time remains visible.
+
+### Third review correction
+
+The receipt stream made the all-pass `results` tree redundant: it repeated completed evidence without adding a decision. Clean audit and conform runs now end at their compact summaries. Detailed per-skill rows remain for WARN, FAIL, FIXED, and registration-failure outcomes, where they identify action a reader needs to take.

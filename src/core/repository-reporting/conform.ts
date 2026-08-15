@@ -1,6 +1,5 @@
 import { basename } from 'node:path'
 import type { KiContext } from '../../context.ts'
-import { KiError } from '../errors.ts'
 import type { ReporterLevel } from '../repository-progress.ts'
 import type { TreeReporter } from '../tree-rendering.ts'
 import {
@@ -45,9 +44,7 @@ const conformSummaryCounts = (skillSummaries: readonly ConformSkillSummary[]): s
 
 const conformSkillLabel = (identity: string, summary: ConformSkillSummary): string => {
   const result = `${REPORT_ICON[summary.level]} ${identity} ${REPORT_LABEL[summary.level].toUpperCase()}`
-  return summary.level === 'pass'
-    ? result
-    : `${result} · FAIL=${summary.fails} WARN=${summary.warnings} FIXED=${summary.fixed}`
+  return `${result} · FAIL=${summary.fails} WARN=${summary.warnings} FIXED=${summary.fixed}`
 }
 
 /** Begin one framed conform report before its live progress stream starts. */
@@ -77,17 +74,18 @@ export const renderConformReports = (
 ): void => {
   const reportFindings = reports.map((report) => ({ report, findings: withFixed(report) }))
   const skillSummaries = reportFindings.map(({ findings }) => conformSkillSummary(findings))
-  const results = reporter.section('results', reportFindings.length)
-  for (const [index, { report, findings }] of reportFindings.entries()) {
-    const reportSummary = skillSummaries[index]
-    // The aligned map above is fixed by reportFindings.map(); preserve a guard for future changes.
-    /* v8 ignore next */
-    if (!reportSummary) throw new KiError(`conform report lost summary for ${report.skill.skill.identity}`, 1)
-    const visible = findings.filter((finding) => reporterLevels.includes(finding.level))
-    results.entry({
-      label: conformSkillLabel(report.skill.skill.identity, reportSummary),
-      children: visible.map(findingEntry)
-    })
+  const resultReports = reportFindings
+    .map(({ report, findings }) => ({ report, findings, summary: conformSkillSummary(findings) }))
+    .filter(({ summary }) => summary.level !== 'pass')
+  if (resultReports.length > 0) {
+    const results = reporter.section('results', resultReports.length)
+    for (const { report, findings, summary: reportSummary } of resultReports) {
+      const visible = findings.filter((finding) => reporterLevels.includes(finding.level))
+      results.entry({
+        label: conformSkillLabel(report.skill.skill.identity, reportSummary),
+        children: visible.map(findingEntry)
+      })
+    }
   }
   reporter.finish({
     label: `summary: KI REPO CONFORM on ${basename(repository)} ${conformSummaryCounts(skillSummaries)}`

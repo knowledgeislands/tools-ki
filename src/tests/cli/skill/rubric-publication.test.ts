@@ -109,7 +109,8 @@ describe('[ki generated rubric publication]', () => {
 
     const clean = await box.run('ki repo audit --reporter-levels all')
     expect(clean.exitCode).toBe(0)
-    expect(clean.output).toContain('publication is in sync')
+    expect(clean.output).not.toContain('├─ results')
+    expect(clean.output).toContain('PASS · 1 skill')
 
     const repeated = await box.run('ki repo conform')
     expect(repeated.exitCode).toBe(0)

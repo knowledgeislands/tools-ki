@@ -233,7 +233,7 @@ describe('[ki repo conform writes]', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('╭─ KI REPO CONFORM')
-    expect(result.output).toContain('│  ╰─ ✓ example/harness:ki-example PASS')
+    expect(result.output).not.toContain('├─ results')
     expect(result.output).toContain('╰─ summary: KI REPO CONFORM on project PASS · 1 skill')
   })
 
@@ -588,7 +588,7 @@ describe('[ki repo conform writes]', () => {
     const result = await box.run('ki repo conform --dry-run')
 
     expect(result.output).toContain('proposed write governed.txt\n')
-    expect(result.output).toContain('├─ results')
+    expect(result.output).not.toContain('├─ results')
     expect(await box.project.read('governed.txt')).toBe('before\n')
   })
 
