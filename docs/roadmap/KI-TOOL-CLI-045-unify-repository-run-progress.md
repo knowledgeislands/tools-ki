@@ -73,6 +73,24 @@ A conform run against a clean repository must report one pass and no re-audit, w
 
 No external dependency. Builds on the presentation surface established by `KI-TOOL-CLI-041` and the icon registry from `KI-TOOL-CLI-043`, both delivered and pruned.
 
+## Documentation impact
+
+### Decision Records
+
+No decision record is needed: this correction applies the established lifecycle record shape.
+
+### Specifications
+
+No specification change is needed: the CLI progress and reporting contract remains covered by its existing CLI tests and user-facing documentation.
+
+### Guides
+
+No guide change is needed: the README and man page remain the user-facing operation guidance.
+
+### Roadmap
+
+This record retains the implementation and review evidence; no additional roadmap item is needed.
+
 ## Review
 
 ### Delivered
