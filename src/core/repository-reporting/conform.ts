@@ -35,7 +35,19 @@ const conformSummaryCounts = (skillSummaries: readonly ConformSkillSummary[]): s
       (total, item) => total + (level === 'fail' ? item.fails : level === 'warn' ? item.warnings : item.fixed),
       0
     )
-  return `PASS=${countSkills('pass')} WARN=${countSkills('warn')} FAIL=${countSkills('fail')} FIXED=${countSkills('fixed')} · FINDINGS: FAIL=${countFindings('fail')} WARN=${countFindings('warn')} FIXED=${countFindings('fixed')}`
+  const passing = countSkills('pass')
+  const warning = countSkills('warn')
+  const failing = countSkills('fail')
+  const fixed = countSkills('fixed')
+  if (!warning && !failing && !fixed) return `PASS · ${passing} skill${passing === 1 ? '' : 's'}`
+  return `PASS=${passing} WARN=${warning} FAIL=${failing} FIXED=${fixed} · FINDINGS: FAIL=${countFindings('fail')} WARN=${countFindings('warn')} FIXED=${countFindings('fixed')}`
+}
+
+const conformSkillLabel = (identity: string, summary: ConformSkillSummary): string => {
+  const result = `${REPORT_ICON[summary.level]} ${identity} ${REPORT_LABEL[summary.level].toUpperCase()}`
+  return summary.level === 'pass'
+    ? result
+    : `${result} · FAIL=${summary.fails} WARN=${summary.warnings} FIXED=${summary.fixed}`
 }
 
 /** Begin one framed conform report before its live progress stream starts. */
@@ -72,7 +84,7 @@ export const renderConformReports = (
     if (!reportSummary) throw new KiError(`conform report lost summary for ${report.skill.skill.identity}`, 1)
     const visible = findings.filter((finding) => reporterLevels.includes(finding.level))
     results.entry({
-      label: `${REPORT_ICON[reportSummary.level]} ${report.skill.skill.identity} ${REPORT_LABEL[reportSummary.level].toUpperCase()} · FAIL=${reportSummary.fails} WARN=${reportSummary.warnings} FIXED=${reportSummary.fixed}`,
+      label: conformSkillLabel(report.skill.skill.identity, reportSummary),
       children: visible.map(findingEntry)
     })
   }

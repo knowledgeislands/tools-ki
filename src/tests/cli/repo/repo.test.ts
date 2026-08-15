@@ -220,9 +220,9 @@ describe('[ki repo]', () => {
 │  ╰─ ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
 ├─ results
-│  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
+│  ╰─ ✓ example/harness:ki-example PASS
 │     ╰─ i info [Example (EXAMPLE-1)] — ok
-╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill
 `
       })
     })
@@ -236,7 +236,7 @@ describe('[ki repo]', () => {
 
       expect(result).toEqual({
         exitCode: 0,
-        output: 'summary: KI REPO AUDIT on project PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n'
+        output: 'summary: KI REPO AUDIT on project PASS · 1 skill\n'
       })
     })
 
@@ -356,8 +356,8 @@ describe('[ki repo]', () => {
 │  ╰─ ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
 ├─ results
-│  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
-╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
+│  ╰─ ✓ example/harness:ki-example PASS
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill
 `
       })
     })
@@ -441,9 +441,9 @@ describe('[ki repo]', () => {
 
       expect(result.exitCode).toBe(0)
       expect(progressOutput.startsWith(header)).toBe(true)
-      expect(standardOutput).toBe(`│  ├─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
-│  ╰─ ✓ example/harness:ki-extra PASS · FAIL=0 WARN=0
-╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
+      expect(standardOutput).toBe(`│  ├─ ✓ example/harness:ki-example PASS
+│  ╰─ ✓ example/harness:ki-extra PASS
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 2 skills
 `)
       // Loading and evidence are retained before item audit; each item then reports at both edges
       // of its await, so a running frame precedes every completion.
@@ -488,9 +488,9 @@ describe('[ki repo]', () => {
 │     ├─ example/harness:ki-example
 │     ╰─ example/harness:ki-extra
 ├─ results
-│  ├─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
-│  ╰─ ✓ example/harness:ki-extra PASS · FAIL=0 WARN=0
-╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
+│  ├─ ✓ example/harness:ki-example PASS
+│  ╰─ ✓ example/harness:ki-extra PASS
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 2 skills
 `
       })
     })
@@ -730,9 +730,9 @@ describe('[ki repo]', () => {
 │  ╰─ ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
 ├─ results
-│  ╰─ ✓ example/harness:ki-example PASS · FAIL=0 WARN=0
+│  ╰─ ✓ example/harness:ki-example PASS
 │     ╰─ i info [Example (EXAMPLE-1)] some/file.ts — ok
-╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill
 `
       })
     })

@@ -268,7 +268,7 @@ describe('[ki repo audit evidence progress]', () => {
     const result = await box.run('ki repo audit --progress never')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('PASS=1 WARN=0 FAIL=0')
+    expect(result.output).toContain('PASS · 1 skill')
     expect(result.output).not.toContain('├─ progress')
   })
 

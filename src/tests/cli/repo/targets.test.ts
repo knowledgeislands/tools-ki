@@ -172,7 +172,7 @@ describe('[ki repo target sets]', () => {
 
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain(`╭─ KI REPO AUDIT\n│  ├─ 📁 project (${root})`)
-      expect(result.output).toContain('PASS=1 WARN=0 FAIL=0')
+      expect(result.output).toContain('PASS · 1 skill')
     })
 
     test('fails loudly when an mGit document names no members and no repository is discoverable', async () => {
@@ -209,7 +209,7 @@ describe('[ki repo target sets]', () => {
       expect(concise).toEqual({
         exitCode: 0,
         output:
-          'summary: KI REPO AUDIT on first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\nsummary: KI REPO AUDIT on second PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\ntotals: KI REPO AUDIT PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n'
+          'summary: KI REPO AUDIT on first PASS · 1 skill\nsummary: KI REPO AUDIT on second PASS · 1 skill\ntotals: KI REPO AUDIT PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n'
       })
     })
 
@@ -237,9 +237,7 @@ describe('[ki repo target sets]', () => {
       const result = await box.run(['ki', 'repo', '--repo', first, '--repo', second, '--repo', third, 'audit'])
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain(
-        '╰─ summary: KI REPO AUDIT on first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0'
-      )
+      expect(result.output).toContain('╰─ summary: KI REPO AUDIT on first PASS · 1 skill')
       expect(result.output).toContain(
         '╰─ summary: KI REPO AUDIT on second PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1'
       )

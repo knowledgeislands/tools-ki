@@ -31,8 +31,21 @@ const auditSkillSummary = (
 const auditSummaryIcon = (summary: Pick<AuditRepositorySummary, 'failingSkills' | 'warningSkills'>): string =>
   summary.failingSkills ? REPORT_ICON.fail : summary.warningSkills ? REPORT_ICON.warn : REPORT_ICON.pass
 
-const auditSummaryLabel = (summary: AuditRepositorySummary): string =>
-  `summary: KI REPO AUDIT on ${basename(summary.repository)} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
+const skillCount = (count: number): string => `${count} skill${count === 1 ? '' : 's'}`
+
+const auditPassed = (summary: Pick<AuditRepositorySummary, 'failingSkills' | 'warningSkills'>): boolean =>
+  summary.failingSkills === 0 && summary.warningSkills === 0
+
+const auditSummaryLabel = (summary: AuditRepositorySummary): string => {
+  const prefix = `summary: KI REPO AUDIT on ${basename(summary.repository)}`
+  if (auditPassed(summary)) return `${prefix} PASS · ${skillCount(summary.passingSkills)}`
+  return `${prefix} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
+}
+
+const auditSkillLabel = (identity: string, summary: ReturnType<typeof auditSkillSummary>): string => {
+  const result = `${REPORT_ICON[summary.level]} ${identity} ${REPORT_LABEL[summary.level].toUpperCase()}`
+  return summary.level === 'pass' ? result : `${result} · FAIL=${summary.fails} WARN=${summary.warnings}`
+}
 
 const auditRepositorySummary = (
   repository: string,
@@ -76,7 +89,7 @@ export const renderAuditResults = (
     if (!reportSummary) throw new KiError(`audit report lost summary for ${report.skill.skill.identity}`, 1)
     const visible = report.findings.filter((entry) => reporterLevels.includes(entry.level))
     results.entry({
-      label: `${REPORT_ICON[reportSummary.level]} ${report.skill.skill.identity} ${REPORT_LABEL[reportSummary.level].toUpperCase()} · FAIL=${reportSummary.fails} WARN=${reportSummary.warnings}`,
+      label: auditSkillLabel(report.skill.skill.identity, reportSummary),
       children: visible.map(findingEntry)
     })
   }
