@@ -4,7 +4,7 @@ title: Adopt audit host contract
 area: CLI
 theme: cli
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
@@ -25,27 +25,33 @@ Do not invoke `ki` as a subprocess or write directly into a Harness checkout. Re
 
 ## Current state
 
-`ki` receives and records trade decisions but does not yet expose the repository-skill inspection, proposal, preflight, and publication capability required by the remediation contract.
+`ki` validates and executes native rubric sessions but does not yet expose the repository-skill activation capability required by the remediation contract. The Harness contract defines `repositorySkills.inspect(names)` as host-resolved active, missing, or blocked evidence and `repositorySkills.propose(names)` as the only native mutation request.
 
 ## Steps
 
-- [ ] Define the native host seam for repository-skill inspection and proposed remediation.
-- [ ] Fail closed for ambiguous, incompatible, unavailable, untrusted, unsafe, altered, and zero-compatible-agent states.
-- [ ] Plan and dry-run an exact runtime-derived group, then publish only after complete preflight.
-- [ ] Re-audit after publication and report `FIXED` only from the resulting evidence.
+- [ ] Extend the rubric context contract and runtime-loader validation with the optional `repositorySkills` capability, keeping malformed or unsupported declarations fail-closed.
+- [ ] Derive compatible repository-skill activation evidence from declared verified Harnesses through the existing host resolution path; distinguish active, missing, and blocked names without exposing filesystem or subprocess capability to a rubric.
+- [ ] Build a native proposal that preflights the complete exact runtime-derived group before changing any activation link, preserves configuration bytes and user settings, and becomes a no-op when already active.
+- [ ] Wire audit and conform orchestration so a rubric can inspect in audit, propose in conform, preview the exact group in dry-run, publish only after preflight, and re-audit before reporting `FIXED`.
+- [ ] Add CLI sandbox cases for valid activation, every blocked state, dry-run, partial-publication reporting, repeated conform, and re-audit evidence.
 
 ## Files touched
 
-Expected implementation scope includes the native operation host, rubric session loading, remediation reporting, and CLI sandbox tests.
+Expected implementation scope:
+
+- `src/core/rubric.ts` and `src/core/runtime-loader.ts` for the portable session capability and validation.
+- `src/core/runtime.ts`, repository-skill resolution helpers, and `src/commands/repo/index.ts` for host-owned evidence, proposal, publication, and rendering.
+- `src/tests/cli/repo/conform-execution.test.ts` and adjacent CLI contract tests.
+- `docs/specs/repository-operations.md` if the public conform behaviour gains a requirement.
 
 ## Verify
 
-- CLI sandbox tests cover the success path and every blocked preflight state.
+- CLI sandbox tests drive the public audit and conform commands through `sandbox()`, covering the success path and every blocked preflight state.
 - `bun run test:coverage`, `bunx tsc --noEmit`, `bunx biome check`, and `ki repo audit --repo .` pass.
 
 ## Dependencies / blocks
 
-No local work-item dependencies.
+No local work-item dependencies. The sender's `TRD-65db6d36` is adopted and remains retained until its decision-observation release is visible.
 
 ## Documentation impact
 
@@ -55,11 +61,11 @@ No decision record is needed until planning identifies a material architecture d
 
 ### Specifications
 
-Update the trade or native-operation specification only if the final behaviour changes an existing public contract.
+Update `docs/specs/repository-operations.md` with the conform capability and fail-closed publication contract.
 
 ### Guides
 
-No guide impact is expected before the implementation is planned.
+Add a guide only if the final command introduces an operator decision beyond existing `ki repo conform` usage.
 
 ### Roadmap
 
