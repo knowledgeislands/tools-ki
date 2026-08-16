@@ -316,6 +316,8 @@ describe('[ki trade]', () => {
     const listed = await box.run('ki trade list')
 
     expect(listed.exitCode).toBe(0)
+    expect(listed.output).toContain(`${id} import`)
+    expect(listed.output).not.toContain(`${id} export`)
     // The compact observation badge describes what the sender now awaits from the receiver.
     expect(listed.output).toContain('[? decision]')
     expect(listed.output).not.toContain('unrecognised trade field')
@@ -830,8 +832,8 @@ describe('[ki trade]', () => {
     expect(received).toEqual({ exitCode: 0, output: `ki trade receive: received ${id}\n` })
     expect(listed.output).toContain(`${id} import [✓ release] ← [⚒ work] source [adopted] Route contract`)
     expect(allListed.output).toContain(`${id} import [✓ release] ← [⚒ work] source [adopted]`)
-    expect(allListed.output).toContain(`${id} export [⚒ work] → [✓ release] receiver [adopted]`)
-    expect(plainListed.output).toContain(`${id} export [work] → [release] receiver [adopted]`)
+    expect(allListed.output).not.toContain(`${id} export`)
+    expect(plainListed.output).not.toContain(`${id} export`)
     expect(shown.output).toContain(`Repository: ${sourceHome} [export]\n${outbound.trimEnd()}`)
     expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
     expect(pruned).toEqual({ exitCode: 0, output: `ki trade prune: pruned ${id}\n` })

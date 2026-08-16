@@ -50,7 +50,11 @@ const renderTradeList = async (
   icons: boolean
 ): Promise<string> => {
   const receivableIds = new Set(receivable.map((record) => record.id))
-  const visible = trades.filter((trade) => trade.direction !== 'outbound' || !receivableIds.has(trade.record.id))
+  const receivedIds = new Set(trades.filter((trade) => trade.direction === 'inbound').map((trade) => trade.record.id))
+  const visible = trades.filter(
+    (trade) =>
+      trade.direction !== 'outbound' || (!receivableIds.has(trade.record.id) && !receivedIds.has(trade.record.id))
+  )
   const pending = receivable.map((record) => ({
     label: `${record.id} import ${renderTradeRelation(
       record,
@@ -193,7 +197,7 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
       context.stdout.write(`ki trade receive: ${result.existing ? 'existing' : 'received'} ${result.id}\n`)
     }),
   new Command('list')
-    .description('list trades visible in the registered repository estate')
+    .description('list trade records in the registered estate and imports awaiting local receipt')
     .option('--direction <direction>', 'prepare, import, or export')
     .option('--status <status>', 'receiver decision status')
     .option('--kind <work|knowledge>', 'trade kind')
