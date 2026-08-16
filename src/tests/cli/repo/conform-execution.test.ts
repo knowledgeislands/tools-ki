@@ -65,6 +65,59 @@ export default {
 }
 `
 describe('[ki repo conform execution]', () => {
+  test('activates a proposed declared runtime skill and re-audits it', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('chatgpt-codex')
+    await box.run('ki bootstrap')
+    await box.project.write(
+      '.ki-config.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+    )
+    const rubricWithRuntimeProposal = `
+export default {
+  contract: 1,
+  name: 'ki-repo',
+  concern: 'runtime activation',
+  scope: { kind: 'repository' },
+  families: [{
+    code: 'RUNTIMES', title: 'Runtime activation', description: 'Runtime activation', standard: 'standard.md', selectContext: (root) => root,
+    items: [{
+      code: 'RUNTIMES-2', title: 'Runtime skill', description: 'A runtime skill must be active.', sources: ['standard.md'],
+      mechanical: {
+        level: 'FAIL', remediation: { class: 'automatic', guidance: 'Activate the runtime skill.' },
+        audit: { phase: 'INSPECT', run: (context) => context.states.every((state) => state.status === 'active') ? [{ status: 'PASS', message: 'runtime skill active' }] : [{ status: 'VIOLATION', message: context.states.map((state) => state.message).join('; ') }] },
+        conform: { phase: 'PRIMARY', run: (context) => context.request() }
+      }
+    }]
+  }],
+  createSession: async ({ repositorySkills }) => {
+    const states = repositorySkills?.inspect(['ki-runtime']) ?? []
+    return {
+      subjects: [{ families: ['RUNTIMES'], context: async () => ({ states, request: () => repositorySkills?.propose(['ki-runtime']) }) }],
+      proposal: async () => ({ writes: [], commands: [] })
+    }
+  }
+}
+`
+    await box.setupExampleHarness({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
+    await box.setupExampleHarness({
+      name: 'ki-runtime',
+      rubric: rubricWithRuntimeProposal.replace("name: 'ki-repo'", "name: 'ki-runtime'")
+    })
+
+    const dryRun = await box.run('ki repo conform --dry-run')
+    expect(dryRun.exitCode).toBe(1)
+    expect(dryRun.output).toContain('proposed activate repository skill ki-runtime')
+
+    const conformed = await box.run('ki repo conform')
+    expect(conformed.exitCode).toBe(0)
+    expect(conformed.output).toContain('activate repository skill ki-runtime')
+    expect(await box.project.isSymlink('.agents/skills/ki-runtime')).toBe(true)
+
+    const repeated = await box.run('ki repo conform')
+    expect(repeated.exitCode).toBe(0)
+    expect(repeated.output).toContain('nothing staged')
+  })
   test('refuses conflicting user-home writes proposed by separate skills', async () => {
     const box = await sandbox()
     await box.project.write(

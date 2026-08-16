@@ -111,6 +111,19 @@ export interface RubricContextOptions {
   readonly emit?: RubricEmitter
   /** Host-validated generated-publication evidence for this skill's catalogue. */
   readonly publication: RubricPublication
+  /** Host-resolved repository-skill evidence and native activation proposal seam. */
+  readonly repositorySkills?: RepositorySkillActivation
+}
+
+export interface RepositorySkillActivationState {
+  readonly name: string
+  readonly status: 'active' | 'missing' | 'blocked'
+  readonly message: string
+}
+
+export interface RepositorySkillActivation {
+  inspect: (names: readonly string[]) => readonly RepositorySkillActivationState[]
+  propose: (names: readonly string[]) => void
 }
 
 /**

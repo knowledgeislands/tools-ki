@@ -14,7 +14,8 @@ import {
   type RubricFamily,
   type RubricItem,
   type RubricProgressEvent,
-  type RubricPublication,
+ type RubricPublication,
+ type RepositorySkillActivation,
   type RubricScope,
   type RubricSession,
   type RubricSubject,
@@ -28,7 +29,8 @@ export interface RepositoryRuntimeScope {
   readonly kind: 'repository'
   readonly repository: string
   readonly userHome: string
-  readonly lstat: typeof lstat
+ readonly lstat: typeof lstat
+ readonly repositorySkills?: RepositorySkillActivation
 }
 
 export type RuntimeScope = RepositoryRuntimeScope
@@ -387,6 +389,7 @@ const gatherSkillAudit = async (
       repository: scope.repository,
       userHome: scope.userHome,
       configuration: skill.declaration.configuration,
+      ...(scope.repositorySkills ? { repositorySkills: scope.repositorySkills } : {}),
       // Withheld when nothing is displaying, so a rubric can tell that emitting is pointless
       // rather than formatting reports no one will read.
       ...(emit ? { emit: (event: RubricProgressEvent) => emit(validateProgressEvent(event, skill.identity)) } : {}),

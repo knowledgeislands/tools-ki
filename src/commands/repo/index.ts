@@ -1,6 +1,7 @@
 import { mkdir, realpath } from 'node:fs/promises'
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
+import { createRepositorySkillActivation } from '../../agents/repository-skill-activation.ts'
 import type { KiContext } from '../../context.ts'
 import {
   declaredKnowledgeBaseStoreRoles,
@@ -142,6 +143,26 @@ const resolveSkillsForRepositories = async (
     }))
   )
 
+const repositorySkillActivation = async (
+  context: KiContext,
+  repository: { readonly root: string; readonly configuration: string },
+  selected: readonly { readonly declaration: { readonly name: string } }[]
+) => {
+  if (!selected.some((skill) => skill.declaration.name === 'ki-repo')) return undefined
+  const declaration = await readRepositoryDeclaration(repository.configuration)
+  const runtimeConfiguration = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration
+  if (!runtimeConfiguration || !Object.hasOwn(runtimeConfiguration, 'supported_runtimes')) return undefined
+  const harnesses = await discoverInstalledHarnesses(context.paths.data)
+  const skills = resolveDeclaredSkills(declaration, harnesses)
+  return createRepositorySkillActivation({
+    configurationDirectory: context.paths.config,
+    homeDirectory: context.homeDirectory,
+    repository: repository.root,
+    repositoryConfiguration: repository.configuration,
+    skills
+  })
+}
+
 export const createRepositoryOperations = (context: KiContext): Command => {
   const command = new Command('repo')
     .description('run operations for one or more KI repositories')
@@ -221,6 +242,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                     context.stdout.isTTY === true && output.progress !== 'never'
                   )
               try {
+                const repositorySkills = await repositorySkillActivation(context, repository, skills)
                 const results = await runWithEvidenceProgress(
                   context,
                   skills,
@@ -230,7 +252,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                         kind: 'repository',
                         repository: repository.root,
                         userHome: context.homeDirectory,
-                        lstat: context.lstat
+                        lstat: context.lstat,
+                        ...(repositorySkills ? { repositorySkills: repositorySkills.rubric } : {})
                       },
                       skill,
                       evidenceProgress
@@ -311,6 +334,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
             /* v8 ignore next */
             if (!selected) throw new KiError('repository conform lost its selected repository before resolution', 1)
             const { skills } = selected
+            const repositorySkills = await repositorySkillActivation(context, repository, skills)
             const reporter = output.concise
               ? undefined
               : renderConformFrameStart(
@@ -330,7 +354,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                     kind: 'repository',
                     repository: repository.root,
                     userHome: context.homeDirectory,
-                    lstat: context.lstat
+                    lstat: context.lstat,
+                    ...(repositorySkills ? { repositorySkills: repositorySkills.rubric } : {})
                   },
                   skill,
                   {
@@ -367,15 +392,17 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                   // protects a future refactor from pairing an audit with the wrong conform set.
                   /* v8 ignore next */
                   if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
-                  return {
+              const reAuditRepositorySkills = await repositorySkillActivation(context, repository, skills)
+              return {
                     prepared: skill,
                     conform: previous.conform,
-                    audit: await runSkillAudit(
-                      {
-                        kind: 'repository',
-                        repository: repository.root,
-                        userHome: context.homeDirectory,
-                        lstat: context.lstat
+              audit: await runSkillAudit(
+                {
+                  kind: 'repository',
+                  repository: repository.root,
+                  userHome: context.homeDirectory,
+                  lstat: context.lstat,
+                  ...(reAuditRepositorySkills ? { repositorySkills: reAuditRepositorySkills.rubric } : {})
                       },
                       skill,
                       {
@@ -400,6 +427,23 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                 }))
               )
               return auditFindings.some((finding) => finding.level === 'fail')
+            }
+            if (repositorySkills?.hasProposals()) {
+              for (const name of repositorySkills.proposedNames()) report(`proposed activate repository skill ${name}\n`)
+              if (options.dryRun) {
+                renderInitialReports()
+                throw new KiError('repository conform dry-run left proposed runtime-skill activation unapplied', 1)
+              }
+              try {
+                for (const name of repositorySkills.proposedNames()) report(`activate repository skill ${name}\n`)
+                await repositorySkills.apply()
+              } catch (error) {
+                if (repositorySkills.started()) await reAuditAndRender()
+                else renderInitialReports()
+                throw error
+              }
+              if (await reAuditAndRender()) throw new KiError('repository conform re-audit found failures', 1)
+              continue
             }
             if (findings.some((finding) => finding.level === 'fail')) {
               const published = await publishIndependentConformGroups(conformed, {
@@ -437,6 +481,7 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               )
             for (const write of writes) report(`proposed write ${write.path}\n`)
             for (const command of commands) report(`proposed run ${renderRepositoryConformCommand(command)}\n`)
+            for (const name of repositorySkills?.proposedNames() ?? []) report(`proposed activate repository skill ${name}\n`)
             let publicationError: unknown
             try {
               await publishWrites(writes, Boolean(options.dryRun))
@@ -453,12 +498,22 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               renderInitialReports()
               continue
             }
-            if (!writes.length && !commands.length) {
+            if (!writes.length && !commands.length && !repositorySkills?.hasProposals()) {
               report(
                 `${treeProgressPrefix(`${presentationText('status.skip')}: nothing staged; no re-audit required`, 'root').trimEnd()}\n`
               )
               renderInitialReports()
               continue
+            }
+            if (repositorySkills?.hasProposals()) {
+              for (const name of repositorySkills.proposedNames()) report(`activate repository skill ${name}\n`)
+              try {
+                await repositorySkills.apply()
+              } catch (error) {
+                if (repositorySkills.started()) await reAuditAndRender()
+                else renderInitialReports()
+                throw error
+              }
             }
             for (const write of writes) report(`applied write ${write.path}\n`)
             for (const command of commands) report(`run ${renderRepositoryConformCommand(command)}\n`)
