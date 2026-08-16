@@ -4,7 +4,7 @@ title: Adopt audit host contract
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 1a33b054986e8d55b343c4e4222be42de38ad914
@@ -96,6 +96,10 @@ Rubrics only inspect and propose; the CLI owns resolution, preflight, publicatio
 ### Mini recap
 
 Delivered adopted trade `TRD-65db6d36` as `KI-TOOL-CLI-046`. Received `TRD-4a875479` remains unconsidered.
+
+## Done
+
+Accepted by the repository owner on 2026-08-16. The delivered runtime-skill remediation host contract remains retained as the closure record for adopted trade `TRD-65db6d36`.
 
 ## Discussion
 
