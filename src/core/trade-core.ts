@@ -6,6 +6,15 @@ import { parse } from 'smol-toml'
 import type { KiContext } from '../context.ts'
 import { REPOSITORY_CONFIGURATION_FILE } from './configuration.ts'
 import { KiError } from './errors.ts'
+import {
+  parseTradeAddress as addressParts,
+  assertTradeIdentifier as identifier,
+  isTradeIdentifier
+} from './trade-identifiers.ts'
+import { sameSenderPayload } from './trade-payload.ts'
+
+export { isTradeIdentifier } from './trade-identifiers.ts'
+
 import { requiredLocalRegistry } from './local-registry.ts'
 import { type RepositoryLocation, resolveRepository } from './repository.ts'
 import {
@@ -20,8 +29,6 @@ import {
   tradeKinds
 } from './trade-configuration.ts'
 
-const addressExpression = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
-const identifierExpression = /^TRD-[0-9a-f]{8}$/
 const timestampExpression = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
 const commitExpression = /^[0-9a-f]{40}$/
 const tradePhases = ['preparing', 'submitted', 'received'] as const
@@ -126,21 +133,7 @@ const hasRepository = (value: unknown): value is { readonly repository: unknown 
 
 const tradeError = (message: string): KiError => new KiError(message, 2)
 
-export const isTradeIdentifier = (value: string): boolean => identifierExpression.test(value)
-
 const repositoryIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
-
-const addressParts = (address: string): readonly [string, string] => {
-  if (!addressExpression.test(address))
-    throw tradeError('trade record address must use canonical lower-case owner/repository form')
-  return address.split('/') as [string, string]
-}
-
-const identifier = (value: string): string => {
-  if (!isTradeIdentifier(value))
-    throw tradeError('trade id must use TRD- followed by eight lower-case hexadecimal characters')
-  return value
-}
 
 const registeredRoots = async (context: KiContext): Promise<readonly string[]> => {
   return (await requiredLocalRegistry(context.paths.state)).map((repository) => repository.path)
@@ -768,22 +761,6 @@ const peerDirectories = async (root: string, area: '+' | '-'): Promise<readonly 
  * trade could complete its lifecycle in a repository with ordinary Markdown hygiene. A receiver
  * that alters a field value or the prose still fails, which is the guard's reason to exist.
  */
-const senderPayloadProjection = (record: TradeRecord): string =>
-  JSON.stringify([
-    record.id,
-    record.title,
-    record.createdAt,
-    record.sender,
-    record.receiver,
-    record.kind,
-    record.sourceRef,
-    record.observation,
-    record.body.trim()
-  ])
-
-const sameSenderPayload = (outbound: TradeRecord, inbound: TradeRecord): boolean =>
-  senderPayloadProjection(outbound) === senderPayloadProjection(inbound)
-
 export const locateTrades = async (
   context: KiContext,
   options: { readonly id?: string; readonly direction?: TradeDirection; readonly repository?: string } = {}

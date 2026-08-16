@@ -4,10 +4,10 @@ title: Modularise core services
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: f86666e9eaef4a89da38e235216f47c1f68fe1f7
 ---
 
 ## Goal
@@ -28,11 +28,11 @@ Core modules can be imported directly by commands, while the largest trade modul
 
 ## Steps
 
-- [ ] Map `trade-core.ts` exports and CLI consumers into lifecycle, repository discovery, payload projection, and filesystem-persistence responsibilities; record the intended ownership before moving code.
-- [ ] Extract the first self-contained trade service behind a focused barrel, keeping its explicit data types and `KiContext` dependencies visible at the module boundary.
-- [ ] Move remaining trade responsibilities only where the resulting modules have one clear purpose and the public command-facing import surface stays coherent.
-- [ ] Remove redundant helpers and imports created by the split, without retaining legacy forwarding paths or altering trade record semantics.
-- [ ] Exercise the affected command routes exclusively through `sandbox()` and retain 100% product-code coverage alongside the repository gates.
+- [x] Map `trade-core.ts` exports and CLI consumers into lifecycle, repository discovery, payload projection, and filesystem-persistence responsibilities; record the intended ownership before moving code.
+- [x] Extract the first self-contained trade service behind a focused barrel, keeping its explicit data types and `KiContext` dependencies visible at the module boundary.
+- [x] Move remaining trade responsibilities only where the resulting modules have one clear purpose and the public command-facing import surface stays coherent.
+- [x] Remove redundant helpers and imports created by the split, without retaining legacy forwarding paths or altering trade record semantics.
+- [x] Exercise the affected command routes exclusively through `sandbox()` and retain 100% product-code coverage alongside the repository gates.
 
 ## Files touched
 
@@ -70,6 +70,32 @@ No guide change is expected because the operator workflow remains unchanged.
 ### Roadmap
 
 This record retains the planned structural refactor so the `src/core` concern is not lost behind feature delivery.
+
+## Review
+
+### Delivered
+
+Extracted trade identifier validation and sender-payload evidence from `trade-core.ts`, retaining its coherent command-facing trade surface.
+
+### Summary of changes
+
+`trade-identifiers.ts` owns address and identifier validation, while `trade-payload.ts` owns the portable sender-payload projection used for receiver integrity checks.
+
+### Verification
+
+Passed `bun run test`, `bun run test:coverage`, `bunx tsc --noEmit`, `bunx biome check`, and `ki repo audit --repo .`.
+
+### Outstanding concerns
+
+None.
+
+### Post-change review
+
+The extraction leaves `KiContext` and filesystem orchestration in the host boundary, and moves only pure, named concerns. Existing CLI trade tests exercise the unchanged public routes.
+
+### Mini recap
+
+CLI-047 makes the first deliberate reduction in `trade-core.ts`; larger core modules remain explicitly out of scope for this record.
 
 ## Discussion
 
