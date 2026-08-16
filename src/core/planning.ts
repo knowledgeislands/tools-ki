@@ -11,14 +11,14 @@ export interface RepositoryPlanningSource {
 export const readRepositoryPlanningSource = async (configuration: string): Promise<RepositoryPlanningSource> => {
   const declaration = await readRepositoryDeclaration(configuration)
   const repository = declaration.skills.find((skill) => skill.name === 'ki-repo')
-  const changeManagement = declaration.skills.find((skill) => skill.name === 'ki-change-management')
+  const changeManagement = declaration.skills.find((skill) => skill.name === 'ki-work')
   const repoType = repository?.configuration['repo_type']
   const adapter = changeManagement?.configuration['adapter']
 
   if (repoType !== 'kb') return { adapter: 'roadmap', directory: 'docs/roadmap' }
   if (adapter !== 'kb-streams')
     throw new KiError(
-      'Knowledge Base roadmap operations require [skills.ki-change-management].adapter = "kb-streams"',
+      'Knowledge Base roadmap operations require [skills.ki-work].adapter = "kb-streams"',
       2
     )
   return { adapter, directory: 'Streams/Roadmap' }

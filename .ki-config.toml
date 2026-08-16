@@ -21,13 +21,13 @@ visibility = "public"
 
 [skills.ki-engineering]
 
-[skills.ki-change-management]
+[skills.ki-work]
 adapter = "roadmap"
 
-[skills.ki-change-management-roadmap]
+[skills.ki-work-roadmap]
 themes = ["cli", "cross-repository-vendoring"]
 
-[skills.ki-change-management-roadmap.areas]
+[skills.ki-work-roadmap.areas]
 CLI = "cli"
 VENDOR = "cross-repository-vendoring"
 

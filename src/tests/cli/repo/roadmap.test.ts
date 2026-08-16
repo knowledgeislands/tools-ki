@@ -43,7 +43,7 @@ repository = "https://github.com/example/knowledge"
 repo_type = "kb"
 store_roles = ["notes"]
 
-[skills.ki-change-management]
+[skills.ki-work]
 adapter = "kb-streams"
 
 [skills.ki-decision-records]
@@ -100,7 +100,7 @@ describe('[ki repo roadmap]', () => {
     expect(malformed.output).toContain('has an invalid lifecycle status')
     expect(misconfigured.exitCode).toBe(1)
     expect(misconfigured.output).toContain(
-      'Knowledge Base roadmap operations require [skills.ki-change-management].adapter = "kb-streams"'
+      'Knowledge Base roadmap operations require [skills.ki-work].adapter = "kb-streams"'
     )
     await expect(box.project.read('malformed/docs/roadmap')).rejects.toThrow()
   })
