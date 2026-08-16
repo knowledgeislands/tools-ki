@@ -8,8 +8,11 @@ kind: work
 source_ref: "KI-HARNESS-GOV-009"
 observation: decision
 phase: received
-decision_status: unconsidered
+decision_status: adopted
 received_from_ref: c39e8157a4b7390015a8308cba764bf281eb93a2
+reviewed_at: 2026-08-16T07:18:00Z
+rationale: The native host owns this runtime-specific remediation boundary; adopt it as a separately planned local work item before implementation.
+adopted_as: KI-TOOL-CLI-046
 ---
 
 # TRD-65db6d36: Implement audit remediation host contract
