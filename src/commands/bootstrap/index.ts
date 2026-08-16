@@ -14,7 +14,7 @@ import {
 } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { canonicalHarnessIdentifier } from '../../core/harness.ts'
-import { canonicalHarnessDevelopmentEnabled, restoreCanonicalHarness } from '../../core/registry.ts'
+import { canonicalHarnessDevelopmentEnabled, restoreCanonicalHarness } from '../../core/storage/index.ts'
 
 export const createBootstrapCommand = (context: KiContext): Command =>
   new Command('bootstrap')
@@ -113,7 +113,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         // installBootstrapSkills only returns after its finalize callback has completed.
         /* v8 ignore next -- The guard protects a future change to that callback contract. */
         if (!restored) throw new Error('canonical harness restoration did not complete')
-        /* v8 ignore next -- The canonical release digest is pinned in `src/core/registry.ts` and shadows any configured entry, so no fixture archive can verify and this restoration cannot succeed in a sandbox. */
+        /* v8 ignore next -- The canonical release digest is pinned in `src/core/storage/registry.ts` and shadows any configured entry, so no fixture archive can verify and this restoration cannot succeed in a sandbox. */
         installation = restored
       } else {
         installation = await restoreCanonicalHarness(
@@ -131,7 +131,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
         })
       }
       // A sandbox always starts from an installed canonical payload, and its fresh-install arm
-      // needs a download that the pinned release digest in `src/core/registry.ts` forbids.
+      // needs a download that the pinned release digest in `src/core/storage/registry.ts` forbids.
       /* v8 ignore next */
       context.stdout.write(
         `canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`

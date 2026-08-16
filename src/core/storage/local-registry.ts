@@ -1,7 +1,7 @@
 import { lstat, readFile } from 'node:fs/promises'
 import { basename, isAbsolute, join } from 'node:path'
 import { parse } from 'smol-toml'
-import { KiError } from './errors.ts'
+import { KiError } from '../errors.ts'
 
 const REGISTRY_FILE = 'registry.toml'
 const REPOSITORY = /^https:\/\/github\.com\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/

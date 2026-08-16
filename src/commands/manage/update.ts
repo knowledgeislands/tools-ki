@@ -3,7 +3,7 @@ import type { KiContext } from '../../context.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
 import { installerEnvironment, requireCurrentInstallerReceipt } from '../../core/installation.ts'
-import { renderTree } from '../../core/tree-rendering.ts'
+import { renderTree } from '../../core/presentation/index.ts'
 import { refreshHarnesses } from '../harness/refresh.ts'
 
 const updateExecutable = async (context: KiContext): Promise<string> => {

@@ -3,8 +3,8 @@ import { join } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
+import { type PairTableRow, renderPairTable, renderTree } from '../../core/presentation/index.ts'
 import { estateNetwork, renderEstateRoutesPage } from '../../core/route-network.ts'
-import { type PairTableRow, renderPairTable } from '../../core/table-rendering.ts'
 import {
   inspectEstateRoutes,
   inspectRoutes,
@@ -12,7 +12,6 @@ import {
   localRegisteredRepository
 } from '../../core/trade/index.ts'
 import { addTradeRoute, removeTradeRoute } from '../../core/trade-configuration.ts'
-import { renderTree } from '../../core/tree-rendering.ts'
 import { kind, repository, routeDirection, routeState, tradeKindText } from './shared.ts'
 
 interface RouteOptions {

@@ -1,8 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { type ManagedArtifactReport, reportManagedArtifacts } from '../../core/managed-artifacts.ts'
-import { planOrphanRecovery } from '../../core/registry.ts'
-import { renderTree } from '../../core/tree-rendering.ts'
+import { renderTree } from '../../core/presentation/index.ts'
+import { type ManagedArtifactReport, planOrphanRecovery, reportManagedArtifacts } from '../../core/storage/index.ts'
 
 const eligibility: Record<'restore' | 'remove' | 'refuse', string> = {
   restore: 'restorable',

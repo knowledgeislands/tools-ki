@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { listAgoras } from '../../core/agora.ts'
-import { renderTree } from '../../core/tree-rendering.ts'
+import { renderTree } from '../../core/presentation/index.ts'
 
 export const createAgoraListCommand = (context: KiContext): Command =>
   new Command('list').description('list the registered estate and declared Agoras').action(async () => {

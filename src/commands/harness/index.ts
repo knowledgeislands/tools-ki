@@ -8,14 +8,14 @@ import {
   type InstalledHarness,
   readInstalledHarness
 } from '../../core/harness.ts'
+import { renderTree } from '../../core/presentation/index.ts'
 import {
   installHarness,
   isCanonicalHarnessDevelopmentLinked,
   recordInstalledHarness,
   requireWritableHarnessRegistry,
   uninstallHarness
-} from '../../core/registry.ts'
-import { renderTree } from '../../core/tree-rendering.ts'
+} from '../../core/storage/index.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 

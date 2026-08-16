@@ -1,7 +1,7 @@
 import { basename } from 'node:path'
 import type { KiContext } from '../../context.ts'
+import type { TreeReporter } from '../presentation/index.ts'
 import type { ReporterLevel } from '../repository-progress.ts'
-import type { TreeReporter } from '../tree-rendering.ts'
 import {
   findingEntry,
   REPORT_ICON,

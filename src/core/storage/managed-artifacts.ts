@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, rmdir, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { parse } from 'smol-toml'
-import { KiError } from './errors.ts'
+import { KiError } from '../errors.ts'
 
 const artifactIdentifier = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const harnessOwner = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/

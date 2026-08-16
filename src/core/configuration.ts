@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { parse } from 'smol-toml'
 import { KiError } from './errors.ts'
 import { type SupportedRuntime, supportedRuntimes } from './harness.ts'
-import { canonicalRepositoryIdentity } from './local-registry.ts'
+import { canonicalRepositoryIdentity } from './storage/index.ts'
 
 export const REPOSITORY_CONFIGURATION_FILE = '.ki-config.toml'
 export const DEFAULT_HARNESS = 'knowledgeislands/ki-agentic-harness'

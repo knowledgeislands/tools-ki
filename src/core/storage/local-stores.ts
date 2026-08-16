@@ -1,6 +1,6 @@
 import { lstat } from 'node:fs/promises'
 import { isAbsolute } from 'node:path'
-import { KiError } from './errors.ts'
+import { KiError } from '../errors.ts'
 import type { LocalRegistryEntry } from './local-registry.ts'
 
 export const sourceStoreDirectory = async (path: string): Promise<string> => {

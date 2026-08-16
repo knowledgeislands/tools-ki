@@ -15,8 +15,8 @@ import { sameSenderPayload } from './payload.ts'
 
 export { isTradeIdentifier } from './identifiers.ts'
 
-import { requiredLocalRegistry } from '../local-registry.ts'
 import { type RepositoryLocation, resolveRepository } from '../repository/index.ts'
+import { requiredLocalRegistry } from '../storage/index.ts'
 import {
   isObservationPolicy,
   isTradeKind,

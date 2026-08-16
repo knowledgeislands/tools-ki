@@ -1,5 +1,5 @@
 import { grammarError } from '../../core/errors.ts'
-import { presentation, presentationText } from '../../core/presentation.ts'
+import { presentation, presentationText } from '../../core/presentation/index.ts'
 import { isTradeIdentifier, type RouteState, type TradeLifecycle, type TradeRecord } from '../../core/trade/index.ts'
 import {
   isObservationPolicy,

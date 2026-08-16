@@ -1,5 +1,5 @@
 import d3Runtime from '../assets/d3-runtime.txt' with { type: 'text' }
-import { presentation } from './presentation.ts'
+import { presentation } from './presentation/index.ts'
 import type { EstateRouteInspection, RouteState } from './trade/index.ts'
 
 /**

@@ -6,7 +6,7 @@ import { repositorySupportedRuntimes, runtimeForAgent } from '../../agents/runti
 import type { KiContext } from '../../context.ts'
 import { readRepositoryDeclaration } from '../../core/configuration.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
-import { presentation } from '../../core/presentation.ts'
+import { presentation } from '../../core/presentation/index.ts'
 import { type ResolvedSkill, resolveDeclaredSkills } from '../../core/resolution.ts'
 
 type Health = 'healthy' | 'repairable' | 'unrepairable'

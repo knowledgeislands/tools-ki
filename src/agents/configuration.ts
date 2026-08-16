@@ -3,8 +3,8 @@ import { isAbsolute, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../core/configuration.ts'
 import { KiError } from '../core/errors.ts'
-import { canonicalRepositoryIdentity, registryEntry, renderLocalRegistry } from '../core/local-registry.ts'
 import type { Runner } from '../core/runner.ts'
+import { canonicalRepositoryIdentity, registryEntry, renderLocalRegistry } from '../core/storage/index.ts'
 import {
   agentDescriptors,
   bootstrapConfigurationPath,

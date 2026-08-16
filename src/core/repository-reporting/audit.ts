@@ -1,8 +1,8 @@
 import { basename } from 'node:path'
 import type { KiContext } from '../../context.ts'
+import { renderTree, type TreeReporter } from '../presentation/index.ts'
 import type { ReporterLevel } from '../repository-progress.ts'
 import type { Finding, PreparedSkill } from '../runtime.ts'
-import { renderTree, type TreeReporter } from '../tree-rendering.ts'
 import { findingEntry, REPORT_ICON, REPORT_LABEL, renderOperationFrameStart } from './shared.ts'
 
 interface AuditSkillReport {

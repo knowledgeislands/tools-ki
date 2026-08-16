@@ -6,9 +6,8 @@ import {
   readRepositoryDeclaration
 } from '../../core/configuration.ts'
 import { KiError } from '../../core/errors.ts'
-import { inspectLocalRegistry } from '../../core/local-registry.ts'
-import { registeredKnowledgeBaseStoreRoots } from '../../core/local-stores.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
+import { inspectLocalRegistry, registeredKnowledgeBaseStoreRoots } from '../../core/storage/index.ts'
 
 interface OpenOptions {
   readonly target: string

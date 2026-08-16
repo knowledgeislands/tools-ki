@@ -2,7 +2,7 @@ import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
 import { type RepositoryDeclaration, readRepositoryDeclaration } from './configuration.ts'
 import { KiError } from './errors.ts'
-import { canonicalRepositoryIdentity, requiredLocalRegistry } from './local-registry.ts'
+import { canonicalRepositoryIdentity, requiredLocalRegistry } from './storage/index.ts'
 
 export const ESTATE_AGORA = 'estate'
 

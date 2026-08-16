@@ -3,8 +3,8 @@ import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
-import { inspectLocalRegistry } from '../../core/local-registry.ts'
-import { renderTree } from '../../core/tree-rendering.ts'
+import { renderTree } from '../../core/presentation/index.ts'
+import { inspectLocalRegistry } from '../../core/storage/index.ts'
 
 const treeEntries = (items: readonly string[]) =>
   items.length ? items.map((label) => ({ label })) : [{ label: 'none' }]

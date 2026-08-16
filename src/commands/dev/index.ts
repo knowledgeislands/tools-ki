@@ -14,14 +14,14 @@ import {
 import type { KiContext } from '../../context.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
+import { resolveInstalledSkill } from '../../core/resolution.ts'
+import { loadRubricDefinition } from '../../core/rubric/loader.ts'
+import { prepareRubricPublication } from '../../core/rubric/publication.ts'
 import {
   canonicalHarnessDevelopmentEnabled,
   enableCanonicalHarnessDevelopment,
   restoreCanonicalHarness
-} from '../../core/registry.ts'
-import { resolveInstalledSkill } from '../../core/resolution.ts'
-import { loadRubricDefinition } from '../../core/rubric/loader.ts'
-import { prepareRubricPublication } from '../../core/rubric/publication.ts'
+} from '../../core/storage/index.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 
 const configured = (context: KiContext) =>
@@ -136,7 +136,7 @@ export const createDevCommand = (context: KiContext): Command => {
         configuration.local ?? undefined
       )
       // A sandbox always starts from an installed canonical payload, and its fresh-install arm
-      // needs a download that the pinned release digest in `src/core/registry.ts` forbids.
+      // needs a download that the pinned release digest in `src/core/storage/registry.ts` forbids.
       /* v8 ignore next */
       context.stdout.write(
         `development harness disabled; canonical harness ${installation.installed ? 'installed' : 'already installed'}\tarchive ${installation.archiveSha256}\n`

@@ -4,8 +4,8 @@ import { dirname, join, relative } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { KiError } from './errors.ts'
 import type { Environment } from './paths.ts'
-import type { HarnessRelease } from './registry.ts'
 import type { Runner } from './runner.ts'
+import type { HarnessRelease } from './storage/index.ts'
 
 const decoder = new TextDecoder('utf-8', { fatal: true })
 

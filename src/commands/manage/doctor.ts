@@ -13,9 +13,8 @@ import type { KiContext } from '../../context.ts'
 import { readRepositoryDeclaration } from '../../core/configuration.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness } from '../../core/harness.ts'
-import { presentation } from '../../core/presentation.ts'
-import { canonicalHarnessDevelopmentEnabled } from '../../core/registry.ts'
-import { renderTree } from '../../core/tree-rendering.ts'
+import { presentation, renderTree } from '../../core/presentation/index.ts'
+import { canonicalHarnessDevelopmentEnabled } from '../../core/storage/index.ts'
 
 type CheckStatus = 'pass' | 'fail' | 'skip'
 

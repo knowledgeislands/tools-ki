@@ -9,12 +9,15 @@ import {
   readRepositoryDeclaration
 } from '../../core/configuration.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
-import { inspectLocalRegistry, localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
-import { registeredKnowledgeBaseStoreRoots } from '../../core/local-stores.ts'
-import { presentation } from '../../core/presentation.ts'
+import { presentation, renderTree } from '../../core/presentation/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
+import {
+  inspectLocalRegistry,
+  localRegistryWrite,
+  registeredKnowledgeBaseStoreRoots,
+  registryEntry
+} from '../../core/storage/index.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
-import { renderTree } from '../../core/tree-rendering.ts'
 import { describeRepositoryProjection, inspectRepositoryHealth } from './repository-health.ts'
 
 export const createRepairCommand = (

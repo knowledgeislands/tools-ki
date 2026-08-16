@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { requiredLocalRegistry } from '../../core/local-registry.ts'
+import { requiredLocalRegistry } from '../../core/storage/index.ts'
 
 export const createRegistryListCommand = (context: KiContext): Command =>
   new Command('list').description('list KI repositories registered on this machine').action(async () => {

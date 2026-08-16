@@ -12,10 +12,13 @@ import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness.ts'
-import { acquireManagedArtifactRecovery } from '../../core/managed-artifacts.ts'
-import { presentation } from '../../core/presentation.ts'
-import { canonicalHarnessDevelopmentEnabled, planOrphanRecovery, recoverInstallOrphans } from '../../core/registry.ts'
-import { renderTree } from '../../core/tree-rendering.ts'
+import { presentation, renderTree } from '../../core/presentation/index.ts'
+import {
+  acquireManagedArtifactRecovery,
+  canonicalHarnessDevelopmentEnabled,
+  planOrphanRecovery,
+  recoverInstallOrphans
+} from '../../core/storage/index.ts'
 
 const managedSkillName = (identity: string): string => identity.slice(identity.indexOf(':') + 1)
 

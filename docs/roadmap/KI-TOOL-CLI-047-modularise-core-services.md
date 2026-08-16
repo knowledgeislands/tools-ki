@@ -20,24 +20,24 @@ Make the largest `src/core` responsibilities easier to understand and change by 
 
 ## Boundary
 
-This is a comprehension-first structural refactor. Preserve public CLI behaviour, trade semantics, injected `KiContext` capabilities, and CLI-contract coverage. Do not add compatibility shims, cache results, alter another repository, or combine unrelated feature work.
+This is a comprehension-first structural refactor. Preserve public CLI behaviour, trade semantics, injected `KiContext` capabilities, and CLI-contract coverage. Group coherent core domains behind focused entry points without compatibility shims, caching, or unrelated feature work.
 
 ## Current state
 
-Core modules can be imported directly by commands, while the largest trade module has several cohesive but interleaved concerns. The initial refactor target is the trade lifecycle and discovery boundary; other large modules remain out of scope unless the extraction requires a shared type-only dependency.
+Trade, repository, and rubric domains now have focused entry points. The remaining flat clusters include storage, presentation, and harness/acquisition responsibilities; this record continues until core ownership is consistently visible in the directory structure.
 
 ## Steps
 
 - [x] Map `trade-core.ts` exports and CLI consumers into lifecycle, repository discovery, payload projection, and filesystem-persistence responsibilities; record the intended ownership before moving code.
 - [x] Extract the first self-contained trade service behind a focused barrel, keeping its explicit data types and `KiContext` dependencies visible at the module boundary.
-- [ ] Move remaining trade responsibilities only where the resulting modules have one clear purpose and the public command-facing import surface stays coherent.
+- [ ] Move remaining core responsibilities into coherent domain folders and subfolders where useful, keeping command-facing imports at focused entry points.
 - [x] Remove redundant helpers and imports created by the split, without retaining legacy forwarding paths or altering trade record semantics.
 - [x] Exercise the affected command routes exclusively through `sandbox()` and retain 100% product-code coverage alongside the repository gates.
 
 ## Files touched
 
-- `src/core/trade-core.ts` and new focused `src/core/trade-*.ts` modules — trade-service extraction.
-- `src/commands/` — only import adjustments required by the new core boundary.
+- `src/core/` domain folders — focused trade, repository, rubric, storage, presentation, and harness/acquisition boundaries.
+- `src/commands/` and `src/agents/` — only import adjustments required by the new core boundaries.
 - `src/tests/cli/` — end-to-end CLI contract evidence through `sandbox()`.
 - `docs/roadmap/KI-TOOL-CLI-047-modularise-core-services.md` — delivery and review evidence.
 

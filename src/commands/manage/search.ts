@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
-import { renderTree } from '../../core/tree-rendering.ts'
+import { renderTree } from '../../core/presentation/index.ts'
 
 interface CapabilityMatch {
   readonly harness: string
