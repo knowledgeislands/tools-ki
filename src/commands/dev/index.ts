@@ -20,8 +20,8 @@ import {
   restoreCanonicalHarness
 } from '../../core/registry.ts'
 import { resolveInstalledSkill } from '../../core/resolution.ts'
-import { prepareRubricPublication } from '../../core/rubric-publication.ts'
-import { loadRubricDefinition } from '../../core/runtime-loader.ts'
+import { loadRubricDefinition } from '../../core/rubric/loader.ts'
+import { prepareRubricPublication } from '../../core/rubric/publication.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 
 const configured = (context: KiContext) =>

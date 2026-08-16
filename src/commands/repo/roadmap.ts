@@ -4,7 +4,7 @@ import type { KiContext } from '../../context.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
 import { readRepositoryPlanningSource, type WorkItemDirectory } from '../../core/planning.ts'
 import { presentation } from '../../core/presentation.ts'
-import { resolveRepositoryTargets } from '../../core/repository.ts'
+import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade/index.ts'
 import { renderTree, type TreeEntry } from '../../core/tree-rendering.ts'
 import {

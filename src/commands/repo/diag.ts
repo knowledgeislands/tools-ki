@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
 import { presentation } from '../../core/presentation.ts'
-import { resolveRepositoryTargets } from '../../core/repository.ts'
+import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
 import { describeRepositoryProjection, inspectRepositoryHealth } from './repository-health.ts'
 

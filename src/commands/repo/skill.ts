@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import { addRepoSkill, removeRepoSkill } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
-import { resolveRepositoryTargets } from '../../core/repository.ts'
+import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 
 export const createRepoSkillCommand = (
   context: KiContext,

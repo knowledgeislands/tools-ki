@@ -1,9 +1,9 @@
 import { lstat, readFile, realpath } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { KiError } from './errors.ts'
-import type { ResolvedSkill } from './resolution.ts'
-import type { ConformWrite, RubricPublication, SkillRubricDefinition } from './rubric.ts'
-import { renderRubricMarkdown } from './rubric-render.ts'
+import { KiError } from '../errors.ts'
+import type { ResolvedSkill } from '../resolution.ts'
+import type { ConformWrite, RubricPublication, SkillRubricDefinition } from './index.ts'
+import { renderRubricMarkdown } from './render.ts'
 
 const publicationPath = 'references/rubric.md'
 

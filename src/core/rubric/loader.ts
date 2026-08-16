@@ -3,8 +3,8 @@
 // established containment and rejected symlinks before this loader runs.
 
 import { pathToFileURL } from 'node:url'
-import { KiError } from './errors.ts'
-import type { ResolvedSkill } from './resolution.ts'
+import { KiError } from '../errors.ts'
+import type { ResolvedSkill } from '../resolution.ts'
 import {
   type MechanicalRubric,
   RUBRIC_CONTRACT_VERSION,
@@ -17,7 +17,7 @@ import {
   type SkillRubricDefinition,
   VIOLATION_LEVELS,
   type ViolationLevel
-} from './rubric.ts'
+} from './index.ts'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)

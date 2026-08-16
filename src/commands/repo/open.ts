@@ -8,7 +8,7 @@ import {
 import { KiError } from '../../core/errors.ts'
 import { inspectLocalRegistry } from '../../core/local-registry.ts'
 import { registeredKnowledgeBaseStoreRoots } from '../../core/local-stores.ts'
-import { resolveRepositoryTargets } from '../../core/repository.ts'
+import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 
 interface OpenOptions {
   readonly target: string

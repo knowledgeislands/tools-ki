@@ -23,13 +23,13 @@ The command surface follows established conventions rather than inventing its ow
 
 Bun is both the runtime and the compiler. It executes `src/main.ts` and its TypeScript module graph directly for development and testing, and `bun build --compile` compiles that same source into a standalone platform-specific executable for release; no separate transpile step or intermediate JavaScript build exists.
 
-The executable composes typed, in-process command modules through Commander, giving the host one command tree rather than a shell dispatch table. `src/commands/` holds thin Commander bindings, `src/core/` holds the engine — parsing models, diagnostics, XDG paths, repository resolution, capability discovery, and operation execution — and `src/agents/` holds agent-facing capability integration.
+The executable composes typed, in-process command modules through Commander, giving the host one command tree rather than a shell dispatch table. `src/commands/` holds thin Commander bindings, `src/core/` holds the engine â parsing models, diagnostics, XDG paths, repository resolution, capability discovery, and operation execution â and `src/agents/` holds agent-facing capability integration.
 
 Tests exercise the CLI contract, not internals: see AGENTS.md's "Test the contract, not the units" convention. Every test drives the in-process `run(args, context)` seam, asserting stdout, exit code, and on-disk effects, rather than unit-testing internal functions.
 
 ## Consequences
 
-- Native `ki repo audit` and `ki repo conform` call verified TypeScript capability APIs directly — for example, an installed skill's rubric definition imports the host's `src/core/rubric.ts` contract — rather than executing repository-vendored scripts.
+- Native `ki repo audit` and `ki repo conform` call verified TypeScript capability APIs directly â for example, an installed skill's rubric definition imports the host's `src/core/rubric/index.ts` contract â rather than executing repository-vendored scripts.
 - Release and distribution ship a single compiled binary per platform. Bun is a development and build dependency only; a released, installed `ki` executable does not require Bun (or Node) on the target machine.
 - The command tree, the `commands/` / `core/` / `agents/` module layout, and the interface-level test contract are the standard new command groups must follow.
 - The tool conforms to the `ki-engineering` standard alongside the `ki-tools` container standard.

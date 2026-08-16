@@ -5,7 +5,7 @@ import type { KiContext } from '../../context.ts'
 import { REPOSITORY_CONFIGURATION_FILE, renderRepositoryConfiguration } from '../../core/configuration.ts'
 import { KiError } from '../../core/errors.ts'
 import { localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
-import { resolveRepositoryInitialisationTarget } from '../../core/repository.ts'
+import { resolveRepositoryInitialisationTarget } from '../../core/repository/index.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 
 export const createRepoInitCommand = (

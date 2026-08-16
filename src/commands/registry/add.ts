@@ -9,7 +9,7 @@ import {
 import { KiError } from '../../core/errors.ts'
 import { localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
 import { sourceStoreDirectory } from '../../core/local-stores.ts'
-import { resolveRepositoryTargets } from '../../core/repository.ts'
+import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 import type { RegistrySelection } from './index.ts'
 

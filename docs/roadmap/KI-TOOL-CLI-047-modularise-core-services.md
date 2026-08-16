@@ -4,7 +4,7 @@ title: Modularise core services
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: in-progress
 blocks: []
 blocked_by: []
 baseline_ref: f86666e9eaef4a89da38e235216f47c1f68fe1f7
@@ -30,7 +30,7 @@ Core modules can be imported directly by commands, while the largest trade modul
 
 - [x] Map `trade-core.ts` exports and CLI consumers into lifecycle, repository discovery, payload projection, and filesystem-persistence responsibilities; record the intended ownership before moving code.
 - [x] Extract the first self-contained trade service behind a focused barrel, keeping its explicit data types and `KiContext` dependencies visible at the module boundary.
-- [x] Move remaining trade responsibilities only where the resulting modules have one clear purpose and the public command-facing import surface stays coherent.
+- [ ] Move remaining trade responsibilities only where the resulting modules have one clear purpose and the public command-facing import surface stays coherent.
 - [x] Remove redundant helpers and imports created by the split, without retaining legacy forwarding paths or altering trade record semantics.
 - [x] Exercise the affected command routes exclusively through `sandbox()` and retain 100% product-code coverage alongside the repository gates.
 
