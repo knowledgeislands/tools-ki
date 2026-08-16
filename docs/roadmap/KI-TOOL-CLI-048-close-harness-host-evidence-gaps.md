@@ -4,10 +4,10 @@ title: Close Harness evidence gaps
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: f86666e9eaef4a89da38e235216f47c1f68fe1f7
 transferred_from: knowledgeislands/ki-agentic-harness:KI-HARNESS-REV-001
 ---
 
@@ -29,11 +29,11 @@ The host resolves compatible skills for runtime activation, but its evidence con
 
 ## Steps
 
-- [ ] Map each adopted trade concern to its current host boundary and record the exact receiver-owned behaviour, including the intentionally unsupported cases.
-- [ ] Strengthen activation-link and declared-capability validation so invalid, stale, or unverifiable evidence fails closed before a rubric can act on it.
-- [ ] Define deterministic local-development selection and verified Harness provenance without widening a rubric's filesystem or subprocess capabilities.
-- [ ] Make conform publication and post-publication observation report only evidence the host can prove, including partial-publication and receipt-batch boundaries.
-- [ ] Cover the public CLI contract through `sandbox()` for valid activation, each blocked state, local development, provenance, and completion observation.
+- [x] Map each adopted trade concern to its current host boundary and record the exact receiver-owned behaviour, including the intentionally unsupported cases.
+- [x] Strengthen activation-link and declared-capability validation so invalid, stale, or unverifiable evidence fails closed before a rubric can act on it.
+- [x] Define deterministic local-development selection and verified Harness provenance without widening a rubric's filesystem or subprocess capabilities.
+- [x] Make conform publication and post-publication observation report only evidence the host can prove, including partial-publication and receipt-batch boundaries.
+- [x] Cover the public CLI contract through `sandbox()` for valid activation, each blocked state, local development, provenance, and completion observation.
 
 ## Files touched
 
@@ -74,4 +74,4 @@ This is the receiver-owned adoption of `TRD-4a875479` from KI Agentic Harness.
 
 ## Discussion
 
-Plan the concerns as one host-evidence contract only if investigation confirms they share one coherent behaviour boundary; otherwise split the record before implementation.
+The activation host is the only rubric-facing boundary: a rubric receives immutable states and can propose only missing declared names. Harness discovery supplies resolved capability provenance, including the active validated local-development projection; the host does not accept a rubric-provided source path, filesystem handle, or command. Conform observes activation only by re-auditing the same selected skills after publication; partial direct publication remains governed by the existing independent-group boundary.

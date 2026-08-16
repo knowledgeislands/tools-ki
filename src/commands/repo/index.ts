@@ -11,10 +11,8 @@ import {
 import { publishIndependentConformGroups } from '../../core/conform-publication.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness.ts'
-import { inspectLocalRegistry, localRegistryWrite, registryEntry } from '../../core/local-registry.ts'
-import { registeredKnowledgeBaseStoreRoots } from '../../core/local-stores.ts'
-import { presentationText } from '../../core/presentation.ts'
-import { resolveRepositoryTargets } from '../../core/repository.ts'
+import { presentationText, treeProgressPrefix } from '../../core/presentation/index.ts'
+import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import {
   operationOptions,
   runPreparedWithProgress,
@@ -43,8 +41,13 @@ import {
   runSkillAudit,
   runSkillConform
 } from '../../core/runtime.ts'
+import {
+  inspectLocalRegistry,
+  localRegistryWrite,
+  registeredKnowledgeBaseStoreRoots,
+  registryEntry
+} from '../../core/storage/index.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../../core/transaction.ts'
-import { treeProgressPrefix } from '../../core/tree-rendering.ts'
 import { repoHelpCommandNames } from '../root/catalogue.ts'
 import { createRepoDiagCommand } from './diag.ts'
 import { createRepoInitCommand } from './init.ts'
@@ -392,17 +395,17 @@ export const createRepositoryOperations = (context: KiContext): Command => {
                   // protects a future refactor from pairing an audit with the wrong conform set.
                   /* v8 ignore next */
                   if (!previous) throw new KiError(`repository conform lost ${skill.skill.identity} before re-audit`, 1)
-              const reAuditRepositorySkills = await repositorySkillActivation(context, repository, skills)
-              return {
+                  const reAuditRepositorySkills = await repositorySkillActivation(context, repository, skills)
+                  return {
                     prepared: skill,
                     conform: previous.conform,
-              audit: await runSkillAudit(
-                {
-                  kind: 'repository',
-                  repository: repository.root,
-                  userHome: context.homeDirectory,
-                  lstat: context.lstat,
-                  ...(reAuditRepositorySkills ? { repositorySkills: reAuditRepositorySkills.rubric } : {})
+                    audit: await runSkillAudit(
+                      {
+                        kind: 'repository',
+                        repository: repository.root,
+                        userHome: context.homeDirectory,
+                        lstat: context.lstat,
+                        ...(reAuditRepositorySkills ? { repositorySkills: reAuditRepositorySkills.rubric } : {})
                       },
                       skill,
                       {
@@ -429,7 +432,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               return auditFindings.some((finding) => finding.level === 'fail')
             }
             if (repositorySkills?.hasProposals()) {
-              for (const name of repositorySkills.proposedNames()) report(`proposed activate repository skill ${name}\n`)
+              for (const name of repositorySkills.proposedNames())
+                report(`proposed activate repository skill ${name}\n`)
               if (options.dryRun) {
                 renderInitialReports()
                 throw new KiError('repository conform dry-run left proposed runtime-skill activation unapplied', 1)
@@ -481,7 +485,8 @@ export const createRepositoryOperations = (context: KiContext): Command => {
               )
             for (const write of writes) report(`proposed write ${write.path}\n`)
             for (const command of commands) report(`proposed run ${renderRepositoryConformCommand(command)}\n`)
-            for (const name of repositorySkills?.proposedNames() ?? []) report(`proposed activate repository skill ${name}\n`)
+            for (const name of repositorySkills?.proposedNames() ?? [])
+              report(`proposed activate repository skill ${name}\n`)
             let publicationError: unknown
             try {
               await publishWrites(writes, Boolean(options.dryRun))

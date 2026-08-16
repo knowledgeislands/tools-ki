@@ -64,16 +64,8 @@ export default {
   families
 }
 `
-describe('[ki repo conform execution]', () => {
-  test('activates a proposed declared runtime skill and re-audits it', async () => {
-    const box = await sandbox()
-    await box.setupAgentHome('chatgpt-codex')
-    await box.run('ki bootstrap')
-    await box.project.write(
-      '.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
-    )
-    const rubricWithRuntimeProposal = `
+
+const runtimeActivationRubric = (runtimeSkill: string): string => `
 export default {
   contract: 1,
   name: 'ki-repo',
@@ -91,14 +83,25 @@ export default {
     }]
   }],
   createSession: async ({ repositorySkills }) => {
-    const states = repositorySkills?.inspect(['ki-runtime']) ?? []
+    const states = repositorySkills?.inspect(['${runtimeSkill}']) ?? []
     return {
-      subjects: [{ families: ['RUNTIMES'], context: async () => ({ states, request: () => repositorySkills?.propose(['ki-runtime']) }) }],
+      subjects: [{ families: ['RUNTIMES'], context: async () => ({ states, request: () => repositorySkills?.propose(['${runtimeSkill}']) }) }],
       proposal: async () => ({ writes: [], commands: [] })
     }
   }
 }
 `
+
+describe('[ki repo conform execution]', () => {
+  test('activates a proposed declared runtime skill and re-audits it', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('chatgpt-codex')
+    await box.run('ki bootstrap')
+    await box.project.write(
+      '.ki-config.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+    )
+    const rubricWithRuntimeProposal = runtimeActivationRubric('ki-runtime')
     await box.setupExampleHarness({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
     await box.setupExampleHarness({
       name: 'ki-runtime',
@@ -118,6 +121,73 @@ export default {
     expect(repeated.exitCode).toBe(0)
     expect(repeated.output).toContain('nothing staged')
   })
+  test('refuses a proposed runtime activation with an unsafe managed-skill entry', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('chatgpt-codex')
+    await box.run('ki bootstrap')
+    await box.project.write(
+      '.ki-config.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+    )
+    const rubricWithRuntimeProposal = runtimeActivationRubric('ki-runtime')
+    await box.setupExampleHarness({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
+    await box.setupExampleHarness({
+      name: 'ki-runtime',
+      rubric: rubricWithRuntimeProposal.replace("name: 'ki-repo'", "name: 'ki-runtime'")
+    })
+    await box.project.write('.agents/skills/ki-runtime', 'foreign skill\n')
+
+    const audit = await box.run('ki repo audit')
+    const conform = await box.run('ki repo conform')
+
+    expect(audit.exitCode).toBe(1)
+    expect(audit.output).toContain('ki-runtime has an unsafe or incompatible managed-skill link')
+    expect(conform.exitCode).toBe(1)
+    expect(conform.output).toContain('repository skill ki-runtime is not available for activation')
+    expect(await box.project.read('.agents/skills/ki-runtime')).toBe('foreign skill\n')
+  })
+  test.each([
+    {
+      title: 'no configured compatible runtime',
+      runtime: 'claude-code',
+      requested: 'ki-runtime',
+      declaration: '[skills.ki-runtime]\n',
+      message: 'ki-runtime has no compatible configured runtime'
+    },
+    {
+      title: 'an undeclared repository skill',
+      runtime: 'chatgpt-codex',
+      requested: 'ki-unlisted',
+      declaration: '',
+      message: 'ki-unlisted is not a declared repository skill'
+    }
+  ])(
+    'reports $title as blocked before a rubric can activate it',
+    async ({ runtime, requested, declaration, message }) => {
+      const box = await sandbox()
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await box.project.write(
+        '.ki-config.toml',
+        `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["${runtime}"]\n\n${declaration}`
+      )
+      const rubricWithRuntimeProposal = runtimeActivationRubric(requested)
+      await box.setupExampleHarness({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
+      if (declaration)
+        await box.setupExampleHarness({
+          name: requested,
+          rubric: rubricWithRuntimeProposal.replace("name: 'ki-repo'", `name: '${requested}'`)
+        })
+
+      const audit = await box.run('ki repo audit')
+      const conform = await box.run('ki repo conform')
+
+      expect(audit.exitCode).toBe(1)
+      expect(audit.output).toContain(message)
+      expect(conform.exitCode).toBe(1)
+      expect(conform.output).toContain(`repository skill ${requested} is not available for activation`)
+    }
+  )
   test('refuses conflicting user-home writes proposed by separate skills', async () => {
     const box = await sandbox()
     await box.project.write(

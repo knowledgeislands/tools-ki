@@ -1,13 +1,12 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
-
-import type { RepositorySkillActivation, RepositorySkillActivationState } from '../core/rubric.ts'
-import type { ResolvedSkill } from '../core/resolution.ts'
 import { KiError } from '../core/errors.ts'
+import type { ResolvedSkill } from '../core/resolution.ts'
+import type { RepositorySkillActivation, RepositorySkillActivationState } from '../core/rubric/index.ts'
 import { configuredAgents } from './configuration.ts'
 import { agentSkillDirectory } from './detection.ts'
-import { linkManagedSkill } from './skills.ts'
 import { compatibleWithSkill, repositorySupportedRuntimes, runtimeForAgent } from './runtimes.ts'
+import { linkManagedSkill } from './skills.ts'
 
 type ActivationTarget = {
   readonly path: string
@@ -67,9 +66,13 @@ export const createRepositorySkillActivation = async (options: {
     if (!skill) return []
     return agents
       .filter(
-        (agent) => runtimes.includes(runtimeForAgent(agent)) && compatibleWithSkill(agent, skill.capability.supportedRuntimes)
+        (agent) =>
+          runtimes.includes(runtimeForAgent(agent)) && compatibleWithSkill(agent, skill.capability.supportedRuntimes)
       )
-      .map((agent) => ({ path: join(agentSkillDirectory(agent, 'repo', options.repository), skill.capability.name), skill }))
+      .map((agent) => ({
+        path: join(agentSkillDirectory(agent, 'repo', options.repository), skill.capability.name),
+        skill
+      }))
   }
   const inspect = async (names: readonly string[]): Promise<RepositorySkillActivationState[]> =>
     Promise.all(
@@ -77,7 +80,11 @@ export const createRepositorySkillActivation = async (options: {
         const targets = targetsFor(name)
         if (!targets.length) return { name, status: 'blocked', message: `${name} has no compatible configured runtime` }
         const states = await Promise.all(targets.map(stateForTarget))
-        const status = states.includes('blocked') ? 'blocked' : states.every((state) => state === 'active') ? 'active' : 'missing'
+        const status = states.includes('blocked')
+          ? 'blocked'
+          : states.every((state) => state === 'active')
+            ? 'active'
+            : 'missing'
         return { name, status, message: messageForState(name, status) }
       })
     )
@@ -89,12 +96,14 @@ export const createRepositorySkillActivation = async (options: {
     rubric: {
       inspect: (names) =>
         validNames(names).map(
-          (name) => initial.get(name) ?? { name, status: 'blocked', message: `${name} is not a declared repository skill` }
+          (name) =>
+            initial.get(name) ?? { name, status: 'blocked', message: `${name} is not a declared repository skill` }
         ),
       propose: (names) => {
         for (const name of validNames(names)) {
           const state = initial.get(name)
-          if (state?.status !== 'missing') throw new KiError(`repository skill ${name} is not available for activation`, 1)
+          if (state?.status !== 'missing')
+            throw new KiError(`repository skill ${name} is not available for activation`, 1)
           proposed.add(name)
         }
       }
@@ -115,13 +124,18 @@ export const createRepositorySkillActivation = async (options: {
         if (!skill) throw new KiError(`${state.name} is not a declared repository skill`, 1)
         for (const agent of agents.filter(
           (candidate) =>
-            runtimes.includes(runtimeForAgent(candidate)) && compatibleWithSkill(candidate, skill.capability.supportedRuntimes)
+            runtimes.includes(runtimeForAgent(candidate)) &&
+            compatibleWithSkill(candidate, skill.capability.supportedRuntimes)
         )) {
           didStart = true
-          await linkManagedSkill(agent, { scope: 'repo', repository: options.repository }, {
-            name: skill.capability.name,
-            source: join(skill.harness.root, skill.capability.source)
-          })
+          await linkManagedSkill(
+            agent,
+            { scope: 'repo', repository: options.repository },
+            {
+              name: skill.capability.name,
+              source: join(skill.harness.root, skill.capability.source)
+            }
+          )
         }
         applied.push(state.name)
       }
