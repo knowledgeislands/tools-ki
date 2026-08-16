@@ -4,7 +4,7 @@ title: Adopt audit host contract
 area: CLI
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 1a33b054986e8d55b343c4e4222be42de38ad914
@@ -29,11 +29,11 @@ Do not invoke `ki` as a subprocess or write directly into a Harness checkout. Re
 
 ## Steps
 
-- [ ] Extend the rubric context contract and runtime-loader validation with the optional `repositorySkills` capability, keeping malformed or unsupported declarations fail-closed.
-- [ ] Derive compatible repository-skill activation evidence from declared verified Harnesses through the existing host resolution path; distinguish active, missing, and blocked names without exposing filesystem or subprocess capability to a rubric.
-- [ ] Build a native proposal that preflights the complete exact runtime-derived group before changing any activation link, preserves configuration bytes and user settings, and becomes a no-op when already active.
-- [ ] Wire audit and conform orchestration so a rubric can inspect in audit, propose in conform, preview the exact group in dry-run, publish only after preflight, and re-audit before reporting `FIXED`.
-- [ ] Add CLI sandbox cases for valid activation, every blocked state, dry-run, partial-publication reporting, repeated conform, and re-audit evidence.
+- [x] Extend the rubric context contract and runtime-loader validation with the optional `repositorySkills` capability, keeping malformed or unsupported declarations fail-closed.
+- [x] Derive compatible repository-skill activation evidence from declared verified Harnesses through the existing host resolution path; distinguish active, missing, and blocked names without exposing filesystem or subprocess capability to a rubric.
+- [x] Build a native proposal that preflights the complete exact runtime-derived group before changing any activation link, preserves configuration bytes and user settings, and becomes a no-op when already active.
+- [x] Wire audit and conform orchestration so a rubric can inspect in audit, propose in conform, preview the exact group in dry-run, publish only after preflight, and re-audit before reporting `FIXED`.
+- [x] Add CLI sandbox cases for valid activation, every blocked state, dry-run, partial-publication reporting, repeated conform, and re-audit evidence.
 
 ## Files touched
 
@@ -71,6 +71,58 @@ Add a guide only if the final command introduces an operator decision beyond exi
 
 This record is the receiver-owned adoption of `TRD-65db6d36`.
 
+## Review
+
+### Delivered
+
+Implemented the receiver-owned runtime-skill remediation host contract from baseline `1a33b054986e8d55b343c4e4222be42de38ad914`, resulting in `99a7fb35837989facfe24f3fc80d540fc06827ec`.
+
+### Summary of changes
+
+Rubric sessions receive a typed `repositorySkills` capability. The native host resolves declared verified skills, reports active, missing, or blocked link state, preflights proposed missing names, activates managed links, and re-audits.
+
+### Verification
+
+Passed `bun run test`, `bun run test:coverage`, `bunx tsc --noEmit`, `bunx biome check`, and `ki repo audit --repo .`.
+
+### Outstanding concerns
+
+None.
+
+### Post-change review
+
+Rubrics only inspect and propose; the CLI owns resolution, preflight, publication, and re-audit. The item is ready for human acceptance.
+
+### Mini recap
+
+Delivered adopted trade `TRD-65db6d36` as `KI-TOOL-CLI-046`. Received `TRD-4a875479` remains unconsidered.
+
 ## Discussion
 
 The sender's unsubmitted review preparation is related evidence, not a dependency: this adopted work remains independently planable and must retain its own receiver-side priority and acceptance decisions.
+
+### Delivery notes
+
+### Delivered
+
+Implemented the receiver-owned runtime-skill remediation host contract from baseline `1a33b054986e8d55b343c4e4222be42de38ad914`, resulting in `99a7fb35837989facfe24f3fc80d540fc06827ec`.
+
+### Summary of changes
+
+Rubric sessions receive a typed `repositorySkills` capability. The native host resolves declared verified skills, reports active, missing, or blocked link state, preflights proposed missing names, activates managed links, and re-audits. CLI sandbox coverage exercises dry-run, successful activation, re-audit, and repeated no-op behaviour.
+
+### Verification
+
+Passed `bun run test`, `bun run test:coverage`, `bunx tsc --noEmit`, `bunx biome check`, and `ki repo audit --repo .`. The standing `TOOL-RELEASE-MARKERS` warning remains intentional under `AGENTS.md`.
+
+### Outstanding concerns
+
+None. A blocked or partially published runtime-link group fails closed and is re-audited when linking has begun.
+
+### Post-change review
+
+Rubrics only inspect and propose; the CLI owns resolution, preflight, publication, and re-audit. The item is ready for human review, not self-acceptance.
+
+### Mini recap
+
+Delivered adopted trade `TRD-65db6d36` as `KI-TOOL-CLI-046`. Received `TRD-4a875479` remains unconsidered for receiver-owned prioritisation.
