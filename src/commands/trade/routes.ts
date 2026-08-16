@@ -5,13 +5,13 @@ import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
 import { estateNetwork, renderEstateRoutesPage } from '../../core/route-network.ts'
 import { type PairTableRow, renderPairTable } from '../../core/table-rendering.ts'
-import { addTradeRoute, removeTradeRoute } from '../../core/trade-configuration.ts'
 import {
   inspectEstateRoutes,
   inspectRoutes,
   localRegisteredConfiguration,
   localRegisteredRepository
-} from '../../core/trade-core.ts'
+} from '../../core/trade/index.ts'
+import { addTradeRoute, removeTradeRoute } from '../../core/trade-configuration.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
 import { kind, repository, routeDirection, routeState, tradeKindText } from './shared.ts'
 
@@ -93,8 +93,8 @@ const renderEstateRouteList = (
     .map((pair) => ({
       left: pair.left,
       right: pair.right,
-      forward: `→ ${[...pair.forward].sort().join(', ') || '—'}`,
-      reverse: `← ${[...pair.reverse].sort().join(', ') || '—'}`
+      forward: `â ${[...pair.forward].sort().join(', ') || 'â'}`,
+      reverse: `â ${[...pair.reverse].sort().join(', ') || 'â'}`
     }))
   return [
     ...renderPairTable('KI TRADE ROUTES', rows, columns),

@@ -1,5 +1,6 @@
 import { grammarError } from '../../core/errors.ts'
 import { presentation, presentationText } from '../../core/presentation.ts'
+import { isTradeIdentifier, type RouteState, type TradeLifecycle, type TradeRecord } from '../../core/trade/index.ts'
 import {
   isObservationPolicy,
   isTradeKind,
@@ -8,7 +9,6 @@ import {
   type RouteDirection,
   type TradeKind
 } from '../../core/trade-configuration.ts'
-import { isTradeIdentifier, type RouteState, type TradeLifecycle, type TradeRecord } from '../../core/trade-core.ts'
 
 export const repository = (value: string | undefined, option: string): string => {
   if (!value || !isTradeRepository(value))
@@ -104,6 +104,6 @@ export const renderTradeRelation = (
   const peer = displayTradePeer(record, direction)
   const decision = lifecycle.decisionStatus ? ` ${badge(lifecycle.decisionStatus, '', false)}` : ''
   const relation =
-    direction === 'inbound' ? `${observation} ← ${tradeKind} ${peer}` : `${tradeKind} → ${observation} ${peer}`
+    direction === 'inbound' ? `${observation} â ${tradeKind} ${peer}` : `${tradeKind} â ${observation} ${peer}`
   return `${relation}${decision}`
 }

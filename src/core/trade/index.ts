@@ -3,20 +3,20 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { lstat, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, relative } from 'node:path'
 import { parse } from 'smol-toml'
-import type { KiContext } from '../context.ts'
-import { REPOSITORY_CONFIGURATION_FILE } from './configuration.ts'
-import { KiError } from './errors.ts'
+import type { KiContext } from '../../context.ts'
+import { REPOSITORY_CONFIGURATION_FILE } from '../configuration.ts'
+import { KiError } from '../errors.ts'
 import {
   parseTradeAddress as addressParts,
   assertTradeIdentifier as identifier,
   isTradeIdentifier
-} from './trade-identifiers.ts'
-import { sameSenderPayload } from './trade-payload.ts'
+} from './identifiers.ts'
+import { sameSenderPayload } from './payload.ts'
 
-export { isTradeIdentifier } from './trade-identifiers.ts'
+export { isTradeIdentifier } from './identifiers.ts'
 
-import { requiredLocalRegistry } from './local-registry.ts'
-import { type RepositoryLocation, resolveRepository } from './repository.ts'
+import { requiredLocalRegistry } from '../local-registry.ts'
+import { type RepositoryLocation, resolveRepository } from '../repository.ts'
 import {
   isObservationPolicy,
   isTradeKind,
@@ -27,7 +27,7 @@ import {
   type TradeConfiguration,
   type TradeKind,
   tradeKinds
-} from './trade-configuration.ts'
+} from '../trade-configuration.ts'
 
 const timestampExpression = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
 const commitExpression = /^[0-9a-f]{40}$/

@@ -1,4 +1,4 @@
-import type { TradeRecord } from './trade-core.ts'
+import type { TradeRecord } from './index.ts'
 
 const senderPayloadProjection = (record: TradeRecord): string =>
   JSON.stringify([

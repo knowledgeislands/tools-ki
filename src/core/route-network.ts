@@ -1,6 +1,6 @@
 import d3Runtime from '../assets/d3-runtime.txt' with { type: 'text' }
 import { presentation } from './presentation.ts'
-import type { EstateRouteInspection, RouteState } from './trade-core.ts'
+import type { EstateRouteInspection, RouteState } from './trade/index.ts'
 
 /**
  * Renders the registered estate's declared trade routes as one self-contained interactive page.
@@ -317,26 +317,26 @@ addEventListener('resize', () => {
 const legend = [
   `<span>${tradeKindIcon('work')} work</span>`,
   `<span>${tradeKindIcon('knowledge')} knowledge</span>`,
-  '<span>solid — active</span>',
-  '<span>dashed — awaiting reciprocity</span>',
+  '<span>solid â active</span>',
+  '<span>dashed â awaiting reciprocity</span>',
   '<span>lane capacity sets distance, spring, and width; influence combines routes and map bonuses</span>',
   '<span>one arc per direction; drag a repository, scroll to zoom</span>'
 ].join('')
 
 export const renderEstateRoutesPage = (network: EstateNetwork): string => {
   const scope = network.incomplete ? 'incomplete routes only' : 'all declared routes'
-  const summary = `${network.nodes.length} repositories · ${network.links.length} routes · ${scope}`
+  const summary = `${network.nodes.length} repositories Â· ${network.links.length} routes Â· ${scope}`
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Knowledge Islands trade routes — registered estate</title>
+<title>Knowledge Islands trade routes â registered estate</title>
 <style>${STYLE}</style>
 </head>
 <body>
 <header>
-<h1>Knowledge Islands trade routes — registered estate</h1>
+<h1>Knowledge Islands trade routes â registered estate</h1>
 <p>${summary}</p>
 </header>
 <svg id="canvas"></svg>

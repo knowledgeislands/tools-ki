@@ -1,4 +1,4 @@
-import { KiError } from './errors.ts'
+import { KiError } from '../errors.ts'
 
 const addressExpression = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
 const identifierExpression = /^TRD-[0-9a-f]{8}$/

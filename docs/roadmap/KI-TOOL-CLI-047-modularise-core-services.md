@@ -75,11 +75,11 @@ This record retains the planned structural refactor so the `src/core` concern is
 
 ### Delivered
 
-Extracted trade identifier validation and sender-payload evidence from `trade-core.ts`, retaining its coherent command-facing trade surface.
+Moved the trade domain behind `src/core/trade/index.ts`, with focused identifier validation and sender-payload evidence modules.
 
 ### Summary of changes
 
-`trade-identifiers.ts` owns address and identifier validation, while `trade-payload.ts` owns the portable sender-payload projection used for receiver integrity checks.
+`trade/identifiers.ts` owns address and identifier validation, while `trade/payload.ts` owns the portable sender-payload projection used for receiver integrity checks. Commands and internal consumers now import the domain entry point.
 
 ### Verification
 

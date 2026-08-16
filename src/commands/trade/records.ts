@@ -13,7 +13,7 @@ import {
   releaseTrade,
   submitTrade,
   tradeLifecycle
-} from '../../core/trade-core.ts'
+} from '../../core/trade/index.ts'
 import { renderTree } from '../../core/tree-rendering.ts'
 import { count, kind, observation, renderTradeRelation, repository, requireText, tradeId } from './shared.ts'
 
@@ -160,7 +160,7 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
       context.stdout.write(`ki trade prepare: created ${record.id} for ${record.receiver} [${record.observation}]\n`)
     }),
   new Command('observe')
-    .description('inspect one sender’s committed mutable preparation')
+    .description('inspect one senderâs committed mutable preparation')
     .argument('<trade-id>', 'trade identifier')
     .action(async (id: string) => {
       const observed = await observeTradePreparation(context, tradeId(id))
