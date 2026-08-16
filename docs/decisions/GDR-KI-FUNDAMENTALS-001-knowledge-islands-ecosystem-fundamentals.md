@@ -3,8 +3,7 @@ id: GDR-KI-FUNDAMENTALS-001
 title: 'Knowledge Islands ecosystem fundamentals'
 date: 2026-08-06
 status: current
-type: Governance Decision Record
-type_url: https://knowledgeislands.info/specifications/decision-records/gdr
+decision_type_url: https://knowledgeislands.info/specifications/decision-records/gdr
 decision_type: governance
 shared_record: true
 ---

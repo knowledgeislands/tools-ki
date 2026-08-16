@@ -3,8 +3,7 @@ id: ADR-KI-TOOLS-002
 title: 'Compatible harness registry and native operations'
 date: 2026-08-06
 status: current
-type: Architecture Decision Record
-type_url: https://knowledgeislands.info/specifications/decision-records/adr
+decision_type_url: https://knowledgeislands.info/specifications/decision-records/adr
 decision_type: architecture
 decision_depends_on:
   - ADR-KI-TOOLS-001
