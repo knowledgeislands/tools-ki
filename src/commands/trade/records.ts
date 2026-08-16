@@ -46,24 +46,43 @@ const directionLabel = { preparation: 'prepare', inbound: 'import', outbound: 'e
 const renderTradeList = async (
   trades: Awaited<ReturnType<typeof locateTrades>>,
   estate: Awaited<ReturnType<typeof locateTrades>>,
+  receivable: readonly Awaited<ReturnType<typeof previewReceivableTrades>>[number][],
   icons: boolean
 ): Promise<string> => {
-  const results = trades.length
+  const receivableIds = new Set(receivable.map((record) => record.id))
+  const visible = trades.filter((trade) => trade.direction !== 'outbound' || !receivableIds.has(trade.record.id))
+  const pending = receivable.map((record) => ({
+    label: `${record.id} import ${renderTradeRelation(
+      record,
+      'inbound',
+      {
+        publicationStatus: 'submitted',
+        deliveryStatus: 'awaiting-receipt',
+        releaseEligible: false,
+        pruneEligible: false
+      },
+      icons
+    )} ${record.title}`
+  }))
+  const results = visible.length
     ? await Promise.all(
-        trades.map(async (trade) => {
+        visible.map(async (trade) => {
           const lifecycle = await tradeLifecycle(trade, estate)
           return {
             label: `${trade.record.id} ${directionLabel[trade.direction]} ${renderTradeRelation(trade.record, trade.direction, lifecycle, icons)} ${trade.record.title}`
           }
         })
       )
-    : [{ label: 'trades: none' }]
+    : []
   return renderTree({
     title: 'KI TRADES',
     entries: [
-      { label: 'results', children: results },
       {
-        label: `summary: TRADES=${trades.length} PREPARATIONS=${trades.filter((trade) => trade.direction === 'preparation').length} IMPORTS=${trades.filter((trade) => trade.direction === 'inbound').length} EXPORTS=${trades.filter((trade) => trade.direction === 'outbound').length}`
+        label: 'results',
+        children: [...pending, ...results].length ? [...pending, ...results] : [{ label: 'trades: none' }]
+      },
+      {
+        label: `summary: TRADES=${visible.length + receivable.length} PREPARATIONS=${visible.filter((trade) => trade.direction === 'preparation').length} IMPORTS=${visible.filter((trade) => trade.direction === 'inbound').length} AWAITING_RECEIPT=${receivable.length} EXPORTS=${visible.filter((trade) => trade.direction === 'outbound').length}`
       }
     ]
   }).join('\n')
@@ -196,7 +215,21 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
           (!options.status || trade.record.decisionStatus === options.status) &&
           (!options.kind || trade.record.kind === kind(options.kind))
       )
-      context.stdout.write(`${await renderTradeList(selected, estate, options.icons !== false)}\n`)
+      const receivable = (
+        options.direction || options.status || options.repo || options.kind
+          ? []
+          : await previewReceivableTrades(context)
+      ).filter(
+        (record) =>
+          !estate.some(
+            (trade) =>
+              trade.direction === 'inbound' &&
+              trade.record.id === record.id &&
+              trade.record.sender === record.sender &&
+              trade.record.receiver === record.receiver
+          )
+      )
+      context.stdout.write(`${await renderTradeList(selected, estate, receivable, options.icons !== false)}\n`)
     }),
   new Command('show')
     .description('show every visible copy of one trade')

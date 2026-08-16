@@ -1083,7 +1083,8 @@ describe('[ki trade]', () => {
     const { box } = await configuredPair()
     expect(await box.run('ki trade list')).toEqual({
       exitCode: 0,
-      output: '╭─ KI TRADES\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 PREPARATIONS=0 IMPORTS=0 EXPORTS=0\n'
+      output:
+        '╭─ KI TRADES\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 PREPARATIONS=0 IMPORTS=0 AWAITING_RECEIPT=0 EXPORTS=0\n'
     })
     expect(await box.run('ki trade show TRD-00000000')).toEqual({
       exitCode: 2,
@@ -1155,11 +1156,15 @@ describe('[ki trade]', () => {
 
     box.cd('receiver')
     const preview = await box.run(['ki', 'trade', 'receive', '--all'])
+    const inventory = await box.run(['ki', 'trade', 'list'])
     const askedDirectly = await box.run(['ki', 'trade', 'receive', preparingId])
 
     expect(preview.exitCode).toBe(0)
     expect(preview.output).toContain(submittedId)
     expect(preview.output).not.toContain(preparingId)
+    expect(inventory.output).toContain(`${submittedId} import`)
+    expect(inventory.output).toContain('AWAITING_RECEIPT=1')
+    expect(inventory.output).not.toContain(`${preparingId} import`)
     // Silence in a preview is not a refusal: asking for it by id still says why.
     expect(askedDirectly.exitCode).not.toBe(0)
   })
@@ -1266,7 +1271,8 @@ describe('[ki trade]', () => {
 
     expect(await box.run('ki trade list')).toEqual({
       exitCode: 0,
-      output: '╭─ KI TRADES\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 PREPARATIONS=0 IMPORTS=0 EXPORTS=0\n'
+      output:
+        '╭─ KI TRADES\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 PREPARATIONS=0 IMPORTS=0 AWAITING_RECEIPT=0 EXPORTS=0\n'
     })
     const created = await createTrade(box, 'work')
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string

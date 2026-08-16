@@ -42,7 +42,7 @@ _Verify:_ `src/tests/cli/trade/trade.test.ts` — `applies observation-led compl
 
 ### TRADE-007 — Lifecycle inventory
 
-`ki trade list` MUST distinguish mutable preparations, submitted exports, and received imports; report observation policy, delivery and decision state; and identify release or prune eligibility from mutually observable repository evidence.
+`ki trade list` MUST distinguish mutable preparations, submitted exports, and received imports; report observation policy, delivery and decision state; and identify release or prune eligibility from mutually observable repository evidence. Its unfiltered local view MUST additionally show each submitted, reciprocally routable inbound trade that has not yet been received as awaiting receipt; sender-local preparations are not receivable inbound work.
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `creates, receives, displays, releases, and prunes a work trade while each command writes only its local repository`.
 
