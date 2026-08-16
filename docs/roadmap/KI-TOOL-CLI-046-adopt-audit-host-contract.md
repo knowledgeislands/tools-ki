@@ -4,10 +4,10 @@ title: Adopt audit host contract
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 1a33b054986e8d55b343c4e4222be42de38ad914
 transferred_from: knowledgeislands/ki-agentic-harness:KI-HARNESS-GOV-009
 ---
 
