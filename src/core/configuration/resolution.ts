@@ -1,6 +1,6 @@
-import type { DeclaredSkill, RepositoryDeclaration } from './configuration.ts'
-import { KiError } from './errors.ts'
-import type { HarnessCapability, InstalledHarness } from './harness/index.ts'
+import { KiError } from '../errors.ts'
+import type { HarnessCapability, InstalledHarness } from '../harness/index.ts'
+import type { DeclaredSkill, RepositoryDeclaration } from './declaration.ts'
 
 export interface ResolvedSkill {
   readonly identity: string

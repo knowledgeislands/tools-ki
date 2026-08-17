@@ -1,7 +1,7 @@
-import type { KiContext } from '../../context.ts'
-import { KiError } from '../errors.ts'
-import type { ResolvedSkill } from '../resolution.ts'
-import { type PreparedSkill, prepareSkill, type RubricProgressReport } from '../runtime/index.ts'
+import type { KiContext } from '../../../context.ts'
+import type { ResolvedSkill } from '../../configuration/index.ts'
+import { KiError } from '../../errors.ts'
+import { type PreparedSkill, prepareSkill, type RubricProgressReport } from '../../runtime/index.ts'
 import type { OperationOptions } from './options.ts'
 import {
   type CompletionPlacement,

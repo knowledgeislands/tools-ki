@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { resolveAgora } from '../../core/agora.ts'
+import { resolveAgora } from '../../core/agora/index.ts'
 import { KiError } from '../../core/errors.ts'
 
 export const createAgoraRootsCommand = (context: KiContext): Command =>

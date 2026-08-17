@@ -1,7 +1,7 @@
 import { lstat, readFile, realpath } from 'node:fs/promises'
 import { join, relative } from 'node:path'
+import type { ResolvedSkill } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
-import type { ResolvedSkill } from '../resolution.ts'
 import type { ConformWrite, RubricPublication, SkillRubricDefinition } from './index.ts'
 import { renderRubricMarkdown } from './render.ts'
 

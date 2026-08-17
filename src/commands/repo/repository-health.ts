@@ -4,10 +4,9 @@ import { agentSkillDirectory, compatibleWithSkill, configuredAgents } from '../.
 import type { InstalledAgent } from '../../agents/internal.ts'
 import { repositorySupportedRuntimes, runtimeForAgent } from '../../agents/runtimes.ts'
 import type { KiContext } from '../../context.ts'
-import { readRepositoryDeclaration } from '../../core/configuration.ts'
+import { type ResolvedSkill, readRepositoryDeclaration, resolveDeclaredSkills } from '../../core/configuration/index.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { presentation } from '../../core/presentation/index.ts'
-import { type ResolvedSkill, resolveDeclaredSkills } from '../../core/resolution.ts'
 
 type Health = 'healthy' | 'repairable' | 'unrepairable'
 

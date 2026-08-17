@@ -1,8 +1,8 @@
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import { parse } from 'smol-toml'
-import { resolveAgora } from '../agora.ts'
-import { REPOSITORY_CONFIGURATION_FILE } from '../configuration.ts'
+import { resolveAgora } from '../agora/index.ts'
+import { REPOSITORY_CONFIGURATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
@@ -293,3 +293,7 @@ export const resolveRepositoryTargets = async (
     throw new KiError('repository selection resolved no repositories; refusing to report success over nothing', 2)
   return targets
 }
+
+export * from './progress/index.ts'
+export * from './reporting/index.ts'
+export * from './subprocess.ts'

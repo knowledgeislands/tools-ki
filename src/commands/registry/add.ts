@@ -5,7 +5,7 @@ import {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
   readRepositoryDeclaration
-} from '../../core/configuration.ts'
+} from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { localRegistryWrite, registryEntry, sourceStoreDirectory } from '../../core/storage/index.ts'

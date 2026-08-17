@@ -4,7 +4,7 @@ import { lstat, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises
 import { basename, dirname, join, relative } from 'node:path'
 import { parse } from 'smol-toml'
 import type { KiContext } from '../../context.ts'
-import { REPOSITORY_CONFIGURATION_FILE } from '../configuration.ts'
+import { REPOSITORY_CONFIGURATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import {
   parseTradeAddress as addressParts,
@@ -27,7 +27,7 @@ import {
   type TradeConfiguration,
   type TradeKind,
   tradeKinds
-} from '../trade-configuration.ts'
+} from './configuration.ts'
 
 const timestampExpression = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
 const commitExpression = /^[0-9a-f]{40}$/

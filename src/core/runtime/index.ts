@@ -5,8 +5,8 @@
 
 import { type lstat, realpath } from 'node:fs/promises'
 import { stripVTControlCharacters } from 'node:util'
+import type { ResolvedSkill } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
-import type { ResolvedSkill } from '../resolution.ts'
 import {
   type AuditOutcome,
   type ConformCommand,

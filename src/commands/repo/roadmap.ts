@@ -2,18 +2,19 @@ import { basename } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
-import { readRepositoryPlanningSource, type WorkItemDirectory } from '../../core/planning.ts'
 import { presentation, renderTree, type TreeEntry } from '../../core/presentation/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade/index.ts'
 import {
   pruneDoneWorkItems,
+  readRepositoryPlanningSource,
   readWorkItems,
   updateWorkItemHorizon,
   type WorkItem,
+  type WorkItemDirectory,
   type WorkItemHorizon,
   workItemHorizons
-} from '../../core/work-items.ts'
+} from '../../core/work/index.ts'
 import { renderTradeRelation } from '../trade/shared.ts'
 
 interface RoadmapOptions {

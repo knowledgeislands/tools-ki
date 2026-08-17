@@ -3,8 +3,8 @@
 // established containment and rejected symlinks before this loader runs.
 
 import { pathToFileURL } from 'node:url'
+import type { ResolvedSkill } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
-import type { ResolvedSkill } from '../resolution.ts'
 import {
   type MechanicalRubric,
   RUBRIC_CONTRACT_VERSION,

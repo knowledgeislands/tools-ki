@@ -1,7 +1,7 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { ResolvedSkill } from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
-import type { ResolvedSkill } from '../core/resolution.ts'
 import type { RepositorySkillActivation, RepositorySkillActivationState } from '../core/rubric/index.ts'
 import { configuredAgents } from './configuration.ts'
 import { agentSkillDirectory } from './detection.ts'

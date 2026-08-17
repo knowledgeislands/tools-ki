@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { KiError } from './errors.ts'
+import { KiError } from '../errors.ts'
 
 export interface RepositoryConformCommand {
   readonly program: string

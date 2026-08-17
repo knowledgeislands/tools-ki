@@ -1,6 +1,5 @@
 import { grammarError } from '../../core/errors.ts'
 import { presentation, presentationText } from '../../core/presentation/index.ts'
-import { isTradeIdentifier, type RouteState, type TradeLifecycle, type TradeRecord } from '../../core/trade/index.ts'
 import {
   isObservationPolicy,
   isTradeKind,
@@ -8,7 +7,8 @@ import {
   type ObservationPolicy,
   type RouteDirection,
   type TradeKind
-} from '../../core/trade-configuration.ts'
+} from '../../core/trade/configuration.ts'
+import { isTradeIdentifier, type RouteState, type TradeLifecycle, type TradeRecord } from '../../core/trade/index.ts'
 
 export const repository = (value: string | undefined, option: string): string => {
   if (!value || !isTradeRepository(value))

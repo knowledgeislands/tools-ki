@@ -6,20 +6,15 @@ import type { KiContext } from '../../context.ts'
 import {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
-  readRepositoryDeclaration
-} from '../../core/configuration.ts'
+  readRepositoryDeclaration,
+  resolveDeclaredSkills
+} from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { presentationText, treeProgressPrefix } from '../../core/presentation/index.ts'
-import { resolveRepositoryTargets } from '../../core/repository/index.ts'
-import {
-  operationOptions,
-  runPreparedWithProgress,
-  runWithEvidenceProgress,
-  runWithProgress
-} from '../../core/repository-progress.ts'
 import {
   type AuditRepositorySummary,
+  operationOptions,
   renderAuditFrameStart,
   renderAuditResults,
   renderConciseAuditSummary,
@@ -28,10 +23,14 @@ import {
   renderConformFrameStart,
   renderConformReports,
   renderEducation,
-  renderMultiRepositoryAuditSummary
-} from '../../core/repository-reporting.ts'
-import { renderRepositoryConformCommand, runRepositoryConformCommands } from '../../core/repository-subprocess.ts'
-import { resolveDeclaredSkills } from '../../core/resolution.ts'
+  renderMultiRepositoryAuditSummary,
+  renderRepositoryConformCommand,
+  resolveRepositoryTargets,
+  runPreparedWithProgress,
+  runRepositoryConformCommands,
+  runWithEvidenceProgress,
+  runWithProgress
+} from '../../core/repository/index.ts'
 import {
   detectFixed,
   educateSkill,

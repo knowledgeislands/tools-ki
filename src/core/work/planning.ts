@@ -1,5 +1,5 @@
-import { readRepositoryDeclaration } from './configuration.ts'
-import { KiError } from './errors.ts'
+import { readRepositoryDeclaration } from '../configuration/index.ts'
+import { KiError } from '../errors.ts'
 
 export type WorkItemDirectory = 'docs/roadmap' | 'Streams/Roadmap'
 
@@ -17,9 +17,6 @@ export const readRepositoryPlanningSource = async (configuration: string): Promi
 
   if (repoType !== 'kb') return { adapter: 'roadmap', directory: 'docs/roadmap' }
   if (adapter !== 'kb-streams')
-    throw new KiError(
-      'Knowledge Base roadmap operations require [skills.ki-work].adapter = "kb-streams"',
-      2
-    )
+    throw new KiError('Knowledge Base roadmap operations require [skills.ki-work].adapter = "kb-streams"', 2)
   return { adapter, directory: 'Streams/Roadmap' }
 }

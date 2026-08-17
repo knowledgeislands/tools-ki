@@ -5,10 +5,10 @@ export {
   renderConciseAuditSummary,
   renderConciseMultiRepositoryAuditSummary,
   renderMultiRepositoryAuditSummary
-} from './repository-reporting/audit.ts'
+} from './audit.ts'
 export {
   renderConciseConformSummary,
   renderConformFrameStart,
   renderConformReports
-} from './repository-reporting/conform.ts'
-export { renderEducation } from './repository-reporting/education.ts'
+} from './conform.ts'
+export { renderEducation } from './education.ts'

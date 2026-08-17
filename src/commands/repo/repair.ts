@@ -7,7 +7,7 @@ import {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
   readRepositoryDeclaration
-} from '../../core/configuration.ts'
+} from '../../core/configuration/index.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
 import { presentation, renderTree } from '../../core/presentation/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'

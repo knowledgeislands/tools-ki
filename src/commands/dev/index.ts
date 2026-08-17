@@ -12,9 +12,9 @@ import {
   setLocalBootstrapHarness
 } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
+import { resolveInstalledSkill } from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
-import { resolveInstalledSkill } from '../../core/resolution.ts'
 import { loadRubricDefinition } from '../../core/rubric/loader.ts'
 import { prepareRubricPublication } from '../../core/rubric/publication.ts'
 import {

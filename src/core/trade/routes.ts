@@ -1,6 +1,6 @@
-import d3Runtime from '../assets/d3-runtime.txt' with { type: 'text' }
-import { presentation } from './presentation/index.ts'
-import type { EstateRouteInspection, RouteState } from './trade/index.ts'
+import d3Runtime from '../../assets/d3-runtime.txt' with { type: 'text' }
+import { presentation } from '../presentation/index.ts'
+import type { EstateRouteInspection, RouteState } from './index.ts'
 
 /**
  * Renders the registered estate's declared trade routes as one self-contained interactive page.

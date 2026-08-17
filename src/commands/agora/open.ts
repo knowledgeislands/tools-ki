@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { resolveAgora } from '../../core/agora.ts'
+import { resolveAgora } from '../../core/agora/index.ts'
 import { KiError } from '../../core/errors.ts'
 
 type OpenTarget = 'zed' | 'vscode'

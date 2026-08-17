@@ -1,6 +1,10 @@
 import { lstat, mkdir, readlink, realpath, symlink, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import { declareRepositorySkill, readRepositoryDeclaration, undeclareRepositorySkill } from '../core/configuration.ts'
+import {
+  declareRepositorySkill,
+  readRepositoryDeclaration,
+  undeclareRepositorySkill
+} from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
 import { discoverInstalledHarnesses, type SupportedRuntime } from '../core/harness/index.ts'
 import { resolveRepository } from '../core/repository/index.ts'

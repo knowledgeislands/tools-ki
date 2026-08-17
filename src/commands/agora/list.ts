@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { listAgoras } from '../../core/agora.ts'
+import { listAgoras } from '../../core/agora/index.ts'
 import { renderTree } from '../../core/presentation/index.ts'
 
 export const createAgoraListCommand = (context: KiContext): Command =>

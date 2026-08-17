@@ -1,10 +1,9 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { readRepositoryDeclaration } from '../../core/configuration.ts'
+import { readRepositoryDeclaration, resolveDeclaredSkills } from '../../core/configuration/index.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { renderTree } from '../../core/presentation/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
-import { resolveDeclaredSkills } from '../../core/resolution.ts'
 import { refreshHarnesses } from '../harness/refresh.ts'
 
 export const createUpgradeCommand = (

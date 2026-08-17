@@ -1,7 +1,7 @@
 import { lstat, readdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { parse } from 'smol-toml'
-import { KiError } from './errors.ts'
+import { KiError } from '../errors.ts'
 
 const TRADES_TABLE = 'skills.ki-trades'
 const REPOSITORY_TABLE = 'skills.ki-repo'
