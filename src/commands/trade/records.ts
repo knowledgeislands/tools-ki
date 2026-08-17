@@ -20,7 +20,7 @@ import {
   receiveTradeBatch,
   type TradeCleanupOperation,
   type TradeListResult
-} from '../../core/trade/operations/records.ts'
+} from '../../core/trade/operations/index.ts'
 import { renderTree } from '../presentation/index.ts'
 import { count, kind, observation, renderTradeRelation, repository, requireText, tradeId } from './shared.ts'
 
