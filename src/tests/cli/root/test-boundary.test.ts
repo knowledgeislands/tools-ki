@@ -69,7 +69,7 @@ describe('[CLI test boundary]', () => {
     const violation = join(tests, 'nested/deep.test.ts')
     await mkdir(dirname(violation), { recursive: true })
     const from = String.fromCharCode(102, 114, 111, 109)
-    await writeFile(violation, `${['import { run }', `${from} '../../../core/runtime.ts'`].join(' ')}\n`)
+    await writeFile(violation, `${['import { run }', `${from} '../../../core/runtime/index.ts'`].join(' ')}\n`)
 
     expect(await productImportViolations(tests)).toEqual([violation])
   })
