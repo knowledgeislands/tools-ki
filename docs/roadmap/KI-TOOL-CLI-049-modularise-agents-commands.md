@@ -4,7 +4,7 @@ title: Modularise agents and commands
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: f661e1d4a0099e12cf2b98d919025bd3c0444533
@@ -40,7 +40,11 @@ Only cross-domain infrastructure primitives remain directly under `src/core`: `e
 - [x] Rename the former transaction module as the `src/core/filesystem` publication boundary.
 - [x] Exercise affected commands exclusively through `sandbox()` and retain 100% product-code coverage.
 
-## Check
+## Files touched
+
+`src/agents/**`, `src/commands/**`, `src/core/**`, CLI sandbox tests under `src/tests/cli/**`, and the corresponding decisions, guides, specifications, and roadmap record.
+
+## Verify
 
 - `bun run test`
 - `bun run test:coverage`
@@ -48,13 +52,27 @@ Only cross-domain infrastructure primitives remain directly under `src/core`: `e
 - `bunx biome check`
 - `ki repo audit --repo .`
 
-## Dependencies
+## Dependencies / blocks
 
-No local work item blocks this record. The accepted CLI-047 core-domain refactor established the starting structure; CLI-048's runtime-host behaviour remains unchanged.
+None.
 
 ## Documentation impact
 
-No user-facing guide or decision-record change is required because the public CLI contract is unchanged. This roadmap record retains the source-layout and operation-boundary evidence.
+### Decision Records
+
+Updated the architecture decisions to reflect the current command, operation, presentation, filesystem, and agent-vendor boundaries.
+
+### Specifications
+
+Updated the behavioural specifications and source hooks without changing the public CLI contract.
+
+### Guides
+
+Updated the contributor architecture guide and consolidated superseded implementation detail into the current boundaries.
+
+### Roadmap
+
+Retain this accepted record as the implementation and verification evidence; no follow-on roadmap item is required.
 
 ## Review
 
@@ -83,6 +101,10 @@ The dependency direction is now one-way: commands adapt the CLI host into typed 
 ### Mini recap
 
 CLI-049 completes the agreed application-layer cleanup without changing user-visible behaviour. The resulting structure supports future command work through focused operations and ordered semantic events rather than expanding Commander action bodies.
+
+## Done
+
+Accepted by the repository owner on 2026-08-17. The command, operation, presentation, agent, and filesystem boundaries are retained as the durable completion record.
 
 ## Discussion
 
