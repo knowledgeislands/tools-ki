@@ -1,17 +1,15 @@
 import { basename } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { KiError, KiExit } from '../../core/errors.ts'
-import { resolveRepositoryTargets } from '../../core/repository/index.ts'
+import { KiExit } from '../../core/errors.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade/index.ts'
 import {
-  pruneDoneWorkItems,
-  readRepositoryPlanningSource,
-  readWorkItems,
-  updateWorkItemHorizon,
+  listRoadmap,
+  moveRoadmapItem,
+  pruneRoadmap,
+  type RoadmapListResult,
+  type RoadmapOperationContext,
   type WorkItem,
-  type WorkItemDirectory,
-  type WorkItemHorizon,
   workItemHorizons
 } from '../../core/work/index.ts'
 import { presentation, renderTree, type TreeEntry } from '../presentation/index.ts'
@@ -23,28 +21,23 @@ interface RoadmapOptions {
   readonly icons?: boolean
 }
 
-interface RoadmapResult {
-  readonly repository: string
-  readonly trades: readonly LocatedTrade[]
-  readonly tradeDiagnostic?: string
-  readonly items?: readonly WorkItem[]
-  readonly diagnostic?: string
-}
+type RepositorySelection = () => { readonly repositories: readonly string[]; readonly agora?: string }
 
 const horizonOrder = workItemHorizons
 const statusOrder = ['done', 'awaiting-review', 'in-progress', 'ready', 'draft'] as const
 
-const filterItems = (items: readonly WorkItem[], options: RoadmapOptions): readonly WorkItem[] =>
-  items.filter(
-    (item) =>
-      (!options.horizon || item.horizon === options.horizon) && (!options.status || item.status === options.status)
-  )
+const operationContext = (context: KiContext): RoadmapOperationContext => ({
+  configurationDirectory: context.paths.config,
+  stateDirectory: context.paths.state,
+  workingDirectory: context.workingDirectory,
+  homeDirectory: context.homeDirectory,
+  locateTrades: () => locateTrades(context)
+})
 
 const orderItemsForText = (items: readonly WorkItem[]): readonly WorkItem[] =>
   [...items].sort(
     (left, right) =>
-      horizonOrder.indexOf(left.horizon as (typeof horizonOrder)[number]) -
-        horizonOrder.indexOf(right.horizon as (typeof horizonOrder)[number]) ||
+      horizonOrder.indexOf(left.horizon) - horizonOrder.indexOf(right.horizon) ||
       statusOrder.indexOf(left.status) - statusOrder.indexOf(right.status) ||
       left.id.localeCompare(right.id)
   )
@@ -94,7 +87,7 @@ const countTradeDirections = (
   return { inbound, outbound }
 }
 
-const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[], icons = true): string => {
+const renderTextResult = (result: RoadmapListResult, estate: readonly LocatedTrade[], icons = true): string => {
   const context = [
     { label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.repository})` }
   ]
@@ -124,163 +117,57 @@ const renderTextResult = (result: RoadmapResult, estate: readonly LocatedTrade[]
   }).join('\n')
 }
 
-const resolveTargets = async (
+const listCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
+  new Command('list')
+    .description('list governed work items')
+    .option('--horizon <horizon>', 'only items at this horizon')
+    .option('--status <status>', 'only items at this status')
+    .option('--no-icons', 'omit decorative trade badge icons')
+    .action(async (options: RoadmapOptions) => {
+      const { estate, results } = await listRoadmap(operationContext(context), selectedRepositories(), options)
+      context.stdout.write(
+        `${results.map((result) => renderTextResult(result, estate, options.icons !== false)).join('\n\n')}\n`
+      )
+      if (results.some((result) => result.tradeDiagnostic || result.diagnostic)) throw new KiExit(1)
+    })
+
+const pruneCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
+  new Command('prune')
+    .description('delete completed governed work items')
+    .argument('[id]', 'canonical completed work-item identifier')
+    .action(async (id: string | undefined) => {
+      const removed = await pruneRoadmap(operationContext(context), selectedRepositories(), id)
+      const entries = removed.flatMap(({ repository, items }) =>
+        items.map((item) => `${repository}: ${item.id} [done] ${item.title}`)
+      )
+      if (!entries.length) context.stdout.write('ki repo roadmap prune: no done work items\n')
+      else
+        context.stdout.write(
+          `${entries.map((entry) => `pruned ${entry}`).join('\n')}\nki repo roadmap prune: removed ${entries.length} done work item(s)\n`
+        )
+    })
+
+const moveCommand = (
   context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
-) =>
-  resolveRepositoryTargets({
-    ...selectedRepositories(),
-    configurationDirectory: context.paths.config,
-    stateDirectory: context.paths.state,
-    workingDirectory: context.workingDirectory,
-    homeDirectory: context.homeDirectory
-  })
-
-const oneMutationTarget = async (
-  context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string },
-  operation: 'prune' | 'promote' | 'demote'
-) => {
-  const repositories = await resolveTargets(context, selectedRepositories)
-  const repository = repositories[0]
-  if (repositories.length !== 1 || !repository)
-    throw new KiError(`ki repo roadmap ${operation} requires exactly one repository target`, 2)
-  return repository
-}
-
-const moveHorizon = (item: WorkItem, operation: 'promote' | 'demote', requested?: string): WorkItemHorizon => {
-  const current = horizonOrder.indexOf(item.horizon)
-  const direction = operation === 'promote' ? -1 : 1
-  const target = requested === undefined ? current + direction : horizonOrder.indexOf(requested as WorkItemHorizon)
-  if (requested !== undefined && target === -1)
-    throw new KiError(`roadmap ${operation} horizon must be one of ${horizonOrder.join(', ')}`, 2)
-  if (target < 0 || target >= horizonOrder.length)
-    throw new KiError(`work item ${item.id} is already at the ${operation} limit`, 2)
-  if ((operation === 'promote' && target >= current) || (operation === 'demote' && target <= current))
-    throw new KiError(
-      `roadmap ${operation} must move ${item.id} ${operation === 'promote' ? 'toward now' : 'toward future'}`,
-      2
-    )
-  return horizonOrder[target] as WorkItemHorizon
-}
-
-const selectedItem = async (repository: string, directory: WorkItemDirectory, id: string): Promise<WorkItem> => {
-  const items = (await readWorkItems(repository, directory)).filter((item) => item.id === id)
-  if (items.length !== 1) throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
-  return items[0] as WorkItem
-}
-
-export const createRepoRoadmapCommand = (
-  context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
+  selectedRepositories: RepositorySelection,
+  operation: 'promote' | 'demote'
 ): Command =>
+  new Command(operation)
+    .description(operation === 'promote' ? 'move one work item toward now' : 'move one work item toward future')
+    .argument('<id>', 'canonical work-item identifier')
+    .argument(
+      '[horizon]',
+      operation === 'promote' ? 'direct destination horizon toward now' : 'direct destination horizon toward future'
+    )
+    .action(async (id: string, horizon: string | undefined) => {
+      const result = await moveRoadmapItem(operationContext(context), selectedRepositories(), operation, id, horizon)
+      context.stdout.write(`ki repo roadmap ${operation}: ${result.id} ${result.from} -> ${result.to}\n`)
+    })
+
+export const createRepoRoadmapCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('roadmap')
     .description('inspect and mechanically maintain governed work items')
-    .addCommand(
-      new Command('list')
-        .description('list governed work items')
-        .option('--horizon <horizon>', 'only items at this horizon')
-        .option('--status <status>', 'only items at this status')
-        .option('--no-icons', 'omit decorative trade badge icons')
-        .action(async (options: RoadmapOptions) => {
-          const repositories = await resolveTargets(context, selectedRepositories)
-          const tradeInventory: { readonly trades: readonly LocatedTrade[]; readonly diagnostic?: string } =
-            await locateTrades(context)
-              .then((trades) => ({ trades }))
-              .catch((error) => ({
-                trades: [] as readonly LocatedTrade[],
-                // locateTrades normalizes every failure to a KiError before this boundary.
-                /* v8 ignore next */
-                diagnostic: error instanceof Error ? error.message : String(error)
-              }))
-          const results = await Promise.all(
-            repositories.map(async (repository) => {
-              try {
-                const planning = await readRepositoryPlanningSource(repository.configuration)
-                return {
-                  repository: repository.root,
-                  trades: tradeInventory.trades.filter((trade) => trade.root === repository.root),
-                  ...(tradeInventory.diagnostic ? { tradeDiagnostic: tradeInventory.diagnostic } : {}),
-                  items: filterItems(await readWorkItems(repository.root, planning.directory), options)
-                }
-              } catch (error) {
-                /* v8 ignore next -- inventory failures are always KiError instances. */
-                const message = error instanceof Error ? error.message : String(error)
-                return {
-                  repository: repository.root,
-                  trades: tradeInventory.trades.filter((trade) => trade.root === repository.root),
-                  ...(tradeInventory.diagnostic ? { tradeDiagnostic: tradeInventory.diagnostic } : {}),
-                  diagnostic: message
-                }
-              }
-            })
-          )
-          context.stdout.write(
-            `${results.map((result) => renderTextResult(result, tradeInventory.trades, options.icons !== false)).join('\n\n')}\n`
-          )
-          if (results.some((result) => result.tradeDiagnostic || ('diagnostic' in result && result.diagnostic)))
-            throw new KiExit(1)
-        })
-    )
-    .addCommand(
-      new Command('prune')
-        .description('delete completed governed work items')
-        .argument('[id]', 'canonical completed work-item identifier')
-        .action(async (id: string | undefined) => {
-          const repositories =
-            id === undefined
-              ? await resolveTargets(context, selectedRepositories)
-              : [await oneMutationTarget(context, selectedRepositories, 'prune')]
-          const sources = await Promise.all(
-            repositories.map(async (repository) => ({
-              repository,
-              planning: await readRepositoryPlanningSource(repository.configuration)
-            }))
-          )
-          await Promise.all(
-            sources.map(({ repository, planning }) => readWorkItems(repository.root, planning.directory))
-          )
-          const removed = await Promise.all(
-            sources.map(async ({ repository, planning }) => ({
-              repository,
-              items: await pruneDoneWorkItems(repository.root, planning.directory, id)
-            }))
-          )
-          const entries = removed.flatMap(({ repository, items }) =>
-            items.map((item) => `${repository.root}: ${item.id} [done] ${item.title}`)
-          )
-          if (!entries.length) context.stdout.write('ki repo roadmap prune: no done work items\n')
-          else
-            context.stdout.write(
-              `${entries.map((entry) => `pruned ${entry}`).join('\n')}\nki repo roadmap prune: removed ${entries.length} done work item(s)\n`
-            )
-        })
-    )
-    .addCommand(
-      new Command('promote')
-        .description('move one work item toward now')
-        .argument('<id>', 'canonical work-item identifier')
-        .argument('[horizon]', 'direct destination horizon toward now')
-        .action(async (id: string, horizon: string | undefined) => {
-          const repository = await oneMutationTarget(context, selectedRepositories, 'promote')
-          const planning = await readRepositoryPlanningSource(repository.configuration)
-          const item = await selectedItem(repository.root, planning.directory, id)
-          const destination = moveHorizon(item, 'promote', horizon)
-          await updateWorkItemHorizon(repository.root, planning.directory, id, destination)
-          context.stdout.write(`ki repo roadmap promote: ${id} ${item.horizon} -> ${destination}\n`)
-        })
-    )
-    .addCommand(
-      new Command('demote')
-        .description('move one work item toward future')
-        .argument('<id>', 'canonical work-item identifier')
-        .argument('[horizon]', 'direct destination horizon toward future')
-        .action(async (id: string, horizon: string | undefined) => {
-          const repository = await oneMutationTarget(context, selectedRepositories, 'demote')
-          const planning = await readRepositoryPlanningSource(repository.configuration)
-          const item = await selectedItem(repository.root, planning.directory, id)
-          const destination = moveHorizon(item, 'demote', horizon)
-          await updateWorkItemHorizon(repository.root, planning.directory, id, destination)
-          context.stdout.write(`ki repo roadmap demote: ${id} ${item.horizon} -> ${destination}\n`)
-        })
-    )
+    .addCommand(listCommand(context, selectedRepositories))
+    .addCommand(pruneCommand(context, selectedRepositories))
+    .addCommand(moveCommand(context, selectedRepositories, 'promote'))
+    .addCommand(moveCommand(context, selectedRepositories, 'demote'))
