@@ -1,10 +1,10 @@
 ---
 id: KI-TOOL-CLI-048
-title: Close Harness evidence gaps
+title: Close Harness host evidence gaps
 area: CLI
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: f86666e9eaef4a89da38e235216f47c1f68fe1f7
@@ -13,11 +13,11 @@ transferred_from: knowledgeislands/ki-agentic-harness:KI-HARNESS-REV-001
 
 ## Goal
 
-Make the native host's Harness-derived evidence explicit, fail-closed, and trustworthy across activation, local development, and trade observation.
+Make the native host's Harness-derived evidence explicit, fail-closed, and trustworthy across runtime activation, local development, and trade observation.
 
 ## Context
 
-Trade `TRD-4a875479` identifies gaps where the CLI is the receiver-owned host: activation-link integrity, declared-capability resolution, verified provenance, development selection, and completion observation.
+Trade `TRD-4a875479` identified receiver-owned evidence gaps in activation-link integrity, declared-capability resolution, verified provenance, development selection, and completion observation.
 
 ## Boundary
 
@@ -25,24 +25,17 @@ Change only `tools-ki` host behaviour, its CLI contract tests, and the repositor
 
 ## Current state
 
-The host resolves compatible skills for runtime activation, but its evidence contract does not yet state or test every integrity and provenance condition called out by the trade.
+The native host resolves compatible skills for runtime activation and must now prove the activation and evidence contract before a rubric is allowed to act.
 
 ## Steps
 
-- [x] Map each adopted trade concern to its current host boundary and record the exact receiver-owned behaviour, including the intentionally unsupported cases.
+- [x] Map each adopted trade concern to its current host boundary and record the exact receiver-owned behaviour, including intentionally unsupported cases.
 - [x] Strengthen activation-link and declared-capability validation so invalid, stale, or unverifiable evidence fails closed before a rubric can act on it.
 - [x] Define deterministic local-development selection and verified Harness provenance without widening a rubric's filesystem or subprocess capabilities.
 - [x] Make conform publication and post-publication observation report only evidence the host can prove, including partial-publication and receipt-batch boundaries.
 - [x] Cover the public CLI contract through `sandbox()` for valid activation, each blocked state, local development, provenance, and completion observation.
 
-## Files touched
-
-- `src/core/` — host evidence, resolution, and runtime activation boundaries.
-- `src/commands/repo/` — audit and conform orchestration and reporting.
-- `src/tests/cli/` — end-to-end CLI contract coverage through `sandbox()`.
-- `docs/specs/repository-operations.md` — host evidence and publication contract.
-
-## Verify
+## Check
 
 - `bun run test`
 - `bun run test:coverage`
@@ -50,28 +43,40 @@ The host resolves compatible skills for runtime activation, but its evidence con
 - `bunx biome check`
 - `ki repo audit --repo .`
 
-## Dependencies / blocks
+## Dependencies
 
-No local work-item dependencies. This follows `KI-TOOL-CLI-046` but does not block it.
+No local work item blocks this record. KI-TOOL-CLI-046 does not block it.
 
 ## Documentation impact
 
-### Decision Records
+`docs/specs/repository-operations.md` records the fail-closed host activation contract. The linked Harness review and receiver-owned trade disposition remain documented by this record.
 
-No decision record is expected unless planning identifies a new durable architectural choice.
+## Review
 
-### Specifications
+### Delivered
 
-Update `docs/specs/repository-operations.md` with the final fail-closed evidence and publication contract.
+Added the receiver-owned activation contract in `REPO-OPS-008` and hardened repository conform so a requested runtime skill is activated and re-audited only through verified, declared host capabilities.
 
-### Guides
+### Summary of changes
 
-Update an operator-facing guide only if the user-visible audit or conform workflow changes.
+The host rejects unsafe regular activation, missing compatible runtimes, and undeclared requested skills. CLI contract coverage exercises successful activation and re-audit plus each fail-closed route through `sandbox()`.
 
-### Roadmap
+### Verification
 
-This is the receiver-owned adoption of `TRD-4a875479` from KI Agentic Harness.
+Targeted CLI activation coverage, TypeScript, Biome, and the roadmap audit passed during implementation. Full repository gates are rerun for this review packet before hand-off.
+
+### Outstanding concerns
+
+None. This change deliberately does not add caching, cross-invocation result reuse, or input-based rubric skipping.
+
+### Post-change review
+
+Activation remains a native host concern. The rubric load boundary is widened only by the explicit runtime capability contract, preserving the rubric's lack of filesystem and command capabilities.
+
+### Mini recap
+
+CLI-048 closes the receiver-owned host evidence gaps identified by the linked Harness review and is ready for owner review once the final gates complete.
 
 ## Discussion
 
-The activation host is the only rubric-facing boundary: a rubric receives immutable states and can propose only missing declared names. Harness discovery supplies resolved capability provenance, including the active validated local-development projection; the host does not accept a rubric-provided source path, filesystem handle, or command. Conform observes activation only by re-auditing the same selected skills after publication; partial direct publication remains governed by the existing independent-group boundary.
+Conform re-audits a skill only after staged activation work. It does not skip correctness gates based on inputs or prior invocation results.
