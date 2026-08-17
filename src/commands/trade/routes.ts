@@ -10,8 +10,9 @@ import {
   localRegisteredConfiguration,
   localRegisteredRepository
 } from '../../core/trade/index.ts'
-import { estateNetwork, renderEstateRoutesPage } from '../../core/trade/routes.ts'
+import { estateNetwork } from '../../core/trade/routes.ts'
 import { type PairTableRow, renderPairTable, renderTree } from '../presentation/index.ts'
+import { renderEstateRoutesPage } from './presentation/estate-page.ts'
 import { kind, repository, routeDirection, routeState, tradeKindText } from './shared.ts'
 
 interface RouteOptions {
