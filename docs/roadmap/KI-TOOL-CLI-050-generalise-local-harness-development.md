@@ -4,7 +4,7 @@ title: Generalise local Harness development
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: [KI-TOOL-VENDOR-001]
 blocked_by: []
 baseline_ref: 1cca1edf19bb27a8d963172ce989937aa95906c7
@@ -116,6 +116,10 @@ The implementation stays within the approved boundary: it generalises the existi
 ### Mini recap
 
 CLI-050 is ready for human review. Once accepted, KI-TOOL-VENDOR-001 can be reassessed against the simpler installed-Harness and namespace model.
+
+## Done
+
+Accepted by the user on 2026-08-17. The reviewed CLI contract, verification evidence, and recorded external audit exception were approved without further changes.
 
 ## Discussion
 
