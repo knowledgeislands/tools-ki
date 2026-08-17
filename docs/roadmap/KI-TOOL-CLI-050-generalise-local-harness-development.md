@@ -4,10 +4,10 @@ title: Generalise local Harness development
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: [KI-TOOL-VENDOR-001]
 blocked_by: []
-baseline_ref: null
+baseline_ref: 1cca1edf19bb27a8d963172ce989937aa95906c7
 ---
 
 ## Goal
