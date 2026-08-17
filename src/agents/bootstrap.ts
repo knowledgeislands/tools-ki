@@ -1,7 +1,7 @@
 import { lstat, mkdir, readdir, readlink, realpath, symlink, unlink, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { minimumBootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
 import { KiError } from '../core/errors.ts'
+import { minimumBootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
 import {
   canonicalHarnessIdentifier,
   discoverInstalledHarnesses,
@@ -182,7 +182,7 @@ export const installBootstrapSkills = async (
     for (const agent of agents) {
       for (const skill of skills) {
         const snapshot = snapshots[projections.length]
-        // snapshots and projections traverse the same agents Ã skills product above and here.
+        // snapshots and projections traverse the same agents × skills product above and here.
         /* v8 ignore next */
         if (!snapshot) throw new KiError('bootstrap skill projection plan is incomplete', 1)
         applied.push(snapshot)

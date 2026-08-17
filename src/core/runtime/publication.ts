@@ -99,7 +99,7 @@ export const publishIndependentConformGroups = async (
     for (const command of groupCommands) write(`proposed run ${renderRepositoryConformCommand(command)}\n`)
     if (group.blockingFinding) {
       const { skill, finding } = group.blockingFinding
-      write(`withheld ${label}: blocking ${skill} [${finding.title} (${finding.code})] Ã¢ÂÂ ${finding.message}\n`)
+      write(`withheld ${label}: blocking ${skill} [${finding.title} (${finding.code})] — ${finding.message}\n`)
       continue
     }
     if (group.entries.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length)) {

@@ -116,7 +116,7 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
 /**
  * Downloads a configured harness release and verifies its bytes against the
  * immutable SHA-256 evidence recorded in the release registry, returning the
- * verified archive payload for extraction. Never follows redirects Ã¢ÂÂ the
+ * verified archive payload for extraction. Never follows redirects — the
  * digest is only meaningful against the exact bytes served at the configured
  * URL.
  */

@@ -42,11 +42,11 @@ export const renderOperationFrameStart = (
   return createTreeReporter((output) => context.stdout.write(output), {
     title: `KI REPO ${operation}`,
     context: compact
-      ? [{ label: `Ã°ÂÂÂ ${basename(repository)} ÃÂ· ${count} skill${count === 1 ? '' : 's'}` }]
+      ? [{ label: `📁 ${basename(repository)} · ${count} skill${count === 1 ? '' : 's'}` }]
       : [
-          { label: `Ã°ÂÂÂ ${basename(repository)} (${repository})` },
+          { label: `📁 ${basename(repository)} (${repository})` },
           {
-            label: `Ã¢ÂÂ¦ ${count} skill${count === 1 ? '' : 's'} selected`,
+            label: `✦ ${count} skill${count === 1 ? '' : 's'} selected`,
             children: skills.map((skill) => ({ label: skill.identity }))
           }
         ]
@@ -62,7 +62,7 @@ const formatFinding = (finding: RenderedFinding): string => {
   const safeMessage = stripVTControlCharacters(finding.message)
   const subject = finding.subject ? ` ${finding.subject}` : ''
   const prefix = `${REPORT_ICON[finding.level]} ${REPORT_LABEL[finding.level]}`
-  return `${prefix} [${finding.title} (${finding.code})]${subject} Ã¢ÂÂ ${safeMessage.replace(/\r?\n/g, '\n    ')}`
+  return `${prefix} [${finding.title} (${finding.code})]${subject} — ${safeMessage.replace(/\r?\n/g, '\n    ')}`
 }
 
 export const findingEntry = (finding: RenderedFinding): TreeEntry => {

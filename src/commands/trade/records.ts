@@ -160,7 +160,7 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
       context.stdout.write(`ki trade prepare: created ${record.id} for ${record.receiver} [${record.observation}]\n`)
     }),
   new Command('observe')
-    .description('inspect one senderâs committed mutable preparation')
+    .description('inspect one sender’s committed mutable preparation')
     .argument('<trade-id>', 'trade identifier')
     .action(async (id: string) => {
       const observed = await observeTradePreparation(context, tradeId(id))

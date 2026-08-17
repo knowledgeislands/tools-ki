@@ -201,7 +201,7 @@ export const installStagingPrefix = '.install-'
 export const parkedPayloadPrefix = '.replace-'
 
 // The parked name carries the destination it must be restored to, because a payload does not
-// record its own identity Ã¢ÂÂ `inspectHarnessRoot` is told which harness it is reading.
+// record its own identity — `inspectHarnessRoot` is told which harness it is reading.
 export const parkedPayloadEntry = (uuid: string, name: string): string => `${parkedPayloadPrefix}${uuid}-${name}`
 
 const parkedDestination = (entry: string): string | undefined => {

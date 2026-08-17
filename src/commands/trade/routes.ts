@@ -92,8 +92,8 @@ const renderEstateRouteList = (
     .map((pair) => ({
       left: pair.left,
       right: pair.right,
-      forward: `â ${[...pair.forward].sort().join(', ') || 'â'}`,
-      reverse: `â ${[...pair.reverse].sort().join(', ') || 'â'}`
+      forward: `→ ${[...pair.forward].sort().join(', ') || '—'}`,
+      reverse: `← ${[...pair.reverse].sort().join(', ') || '—'}`
     }))
   return [
     ...renderPairTable('KI TRADE ROUTES', rows, columns),

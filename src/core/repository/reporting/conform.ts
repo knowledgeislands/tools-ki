@@ -38,13 +38,13 @@ const conformSummaryCounts = (skillSummaries: readonly ConformSkillSummary[]): s
   const warning = countSkills('warn')
   const failing = countSkills('fail')
   const fixed = countSkills('fixed')
-  if (!warning && !failing && !fixed) return `PASS Â· ${passing} skill${passing === 1 ? '' : 's'}`
-  return `PASS=${passing} WARN=${warning} FAIL=${failing} FIXED=${fixed} Â· FINDINGS: FAIL=${countFindings('fail')} WARN=${countFindings('warn')} FIXED=${countFindings('fixed')}`
+  if (!warning && !failing && !fixed) return `PASS · ${passing} skill${passing === 1 ? '' : 's'}`
+  return `PASS=${passing} WARN=${warning} FAIL=${failing} FIXED=${fixed} · FINDINGS: FAIL=${countFindings('fail')} WARN=${countFindings('warn')} FIXED=${countFindings('fixed')}`
 }
 
 const conformSkillLabel = (identity: string, summary: ConformSkillSummary): string => {
   const result = `${REPORT_ICON[summary.level]} ${identity} ${REPORT_LABEL[summary.level].toUpperCase()}`
-  return `${result} Â· FAIL=${summary.fails} WARN=${summary.warnings} FIXED=${summary.fixed}`
+  return `${result} · FAIL=${summary.fails} WARN=${summary.warnings} FIXED=${summary.fixed}`
 }
 
 /** Begin one framed conform report before its live progress stream starts. */

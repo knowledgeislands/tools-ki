@@ -104,6 +104,6 @@ export const renderTradeRelation = (
   const peer = displayTradePeer(record, direction)
   const decision = lifecycle.decisionStatus ? ` ${badge(lifecycle.decisionStatus, '', false)}` : ''
   const relation =
-    direction === 'inbound' ? `${observation} â ${tradeKind} ${peer}` : `${tradeKind} â ${observation} ${peer}`
+    direction === 'inbound' ? `${observation} ← ${tradeKind} ${peer}` : `${tradeKind} → ${observation} ${peer}`
   return `${relation}${decision}`
 }

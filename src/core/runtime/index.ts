@@ -1,5 +1,5 @@
 // Executes a loaded rubric definition (CLI-004 T1.2): runs mechanical items' audit in
-// phase order, renders findings, and ÃÂ¢ÃÂÃÂ for conform ÃÂ¢ÃÂÃÂ collects ConformProposals from
+// phase order, renders findings, and — for conform — collects ConformProposals from
 // violated items into host-owned guarded publication (see ./transaction.ts). Judgment items
 // are catalogue data only; the runtime never executes them.
 
@@ -92,7 +92,7 @@ export interface SkillConformResult {
   readonly writes: readonly NativeWrite[]
   readonly commands: readonly ConformCommand[]
   readonly scope: RubricScope
-  /** Items whose pre-conform audit produced at least one VIOLATION outcome ÃÂ¢ÃÂÃÂ candidates for a post-conform FIXED line. */
+  /** Items whose pre-conform audit produced at least one VIOLATION outcome — candidates for a post-conform FIXED line. */
   readonly fixable: readonly ItemAuditState[]
 }
 
