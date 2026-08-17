@@ -1,102 +1,89 @@
 ---
 id: KI-TOOL-VENDOR-001
-title: Define cross-repository skill provenance
+title: Enforce Harness prefix ownership
 area: VENDOR
 theme: cross-repository-vendoring
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
-transferred_from: knowledgeislands/ki-agentic-harness:foundation-tooling
 ---
 
 ## Goal
 
-Allow a repository to use skills from another compatible Harness with explicit, reproducible provenance and a safe local-development override.
+Keep capability ownership obvious by allowing only one installed Harness to own a declared capability prefix. A repository should name `ki-*` or `hnr-*` skills directly because the local estate already determines their sole provider; users should not need qualified capability selectors or a second provenance model.
 
 ## Context
 
-`humansnotrobots/hnr-agentic-harness` is now a concrete external provider with the `hnr-backend-conventions` and `hnr-frontend-conventions` capabilities. `tools-ki` discovers that Harness locally, while the HNR Harness correctly declares `knowledgeislands/ki-agentic-harness` as its governance dependency. The canonical Knowledge Islands Harness does not and must never depend on HNR.
+`tools-ki` already installs immutable Harness releases with verified archive digests and records each Harness by owner/repository identity. CLI-050 made the existing singular local-development override work for any installed Harness.
 
-HNR release `v0.1.1` identifies commit `792dd375ca4440acecae13d28e441773fccb7af5`, but publishes no immutable asset, digest, signature, or capability manifest. The current `ki dev local` surface overrides only the canonical Harness, so external Harness development still depends on whichever installed payload happens to be present.
+Repository skill resolution still permits two declared Harnesses to publish the same skill name and introduces `[skills."<harness-id>:<skill-name>"]` to disambiguate them. That solves a configuration state which the intended operating model does not support: competing Harnesses in the same namespace are alternatives, not collaborators.
+
+The source Harness already declares `[skills.ki-repo-harness]` in `.ki-config.toml`. That owning skill is the natural place for an explicit provider-authored `prefix` value and for the rubric that checks it.
 
 ## Boundary
 
-This work defines compatible-Harness publication, acquisition, provenance, and named local-development sources. Production resolution remains pinned to immutable provider evidence. A development override is explicit, local, mutable, and never presented as production provenance.
+Define `[skills.ki-repo-harness].prefix` as the explicit capability namespace for a compatible Harness. Require every published skill name to begin with `<prefix>-`, reject an installed estate containing two Harnesses with the same prefix, and resolve repository skills by their bare names.
 
-The dependency is one-way: HNR may depend on the canonical Knowledge Islands Harness for governance, but the canonical Harness remains independent of every external provider. This is a Harness relationship, not an npm development dependency and not ambient checkout discovery.
+Update the canonical KI Harness source and `ki-repo-harness` standard and rubric under the user's explicit cross-repository authorization. Exercise a second `hnr` Harness through `tools-ki` fixtures without changing the HNR repository.
+
+Do not add release receipts, dependency provenance, qualified capability identities, concurrent local overrides, remote discovery, signatures, or a new metadata file.
 
 ## Current state
 
-- `tools-ki` has delivered declared multi-Harness selection through `[repo].harnesses`.
-- The local Harness inventory resolves HNR as a compatible provider with two capabilities.
-- The HNR repository already selects the canonical Knowledge Islands Harness in `.ki-config.toml`.
-- HNR has a tagged GitHub release but no published immutable payload or provenance metadata.
-- `ki dev local` can switch only the canonical Harness and cannot target HNR independently.
+- Compatible Harness inspection derives skill capabilities but does not read a Harness prefix from `.ki-config.toml`.
+- Installation and discovery allow different Harness identities to expose the same capability namespace.
+- Repository declarations accept both bare and Harness-qualified skill table names.
+- `ki-repo-harness` checks for a keyless marker but does not require or validate a prefix.
 
 ## Steps
 
-- [x] Name `humansnotrobots/hnr-agentic-harness` as the provider, `tools-ki` as the reference consumer, and the canonical-Harness-to-HNR dependency direction.
-- [ ] Specify the provider identity, immutable artifact digest, release evidence, capability manifest, supported runtimes, and acquisition fields.
-- [ ] Generalise the development-source contract so `ki dev local` can set, enable, inspect, and disable a local checkout for one named compatible Harness without changing production provenance.
-- [ ] Define the HNR-owned publication slice: immutable archive, digest, capability manifest, release evidence, and compatibility with its canonical Harness dependency.
-- [ ] Record acquired provider evidence in receiver-owned state and resolve declared skills only from verified installed payloads or an explicit active development source.
-- [ ] Define conflict, offline, incompatible-runtime, missing-artifact, failed-upgrade, and rollback behaviour while retaining the last verified installed version.
-- [ ] Cover the public pathways through CLI `sandbox()` tests, including named development activation and deterministic failure diagnostics.
-- [ ] Align the behaviour specification, architecture decision, contributor guide, and help text with the delivered contract.
+- [ ] Extend the `ki-repo-harness` standard, structured rubric, generated publication, exemplars, and canonical declaration with a required valid `prefix` and a mechanical check that published skill names use it.
+- [ ] Parse and expose the declared prefix during compatible Harness inspection, refusing missing, malformed, unsafe, or capability-inconsistent declarations.
+- [ ] Reject acquisition, replacement, local-development activation, and installed-estate discovery when two different Harness identities claim the same prefix, without disturbing an existing valid installation.
+- [ ] Remove Harness-qualified repository skill declarations and resolution; bare skill names resolve uniquely across the prefix-safe declared estate.
+- [ ] Update CLI fixtures and boundary tests for canonical `ki`, external `hnr`, malformed metadata, capability-prefix mismatch, collision refusal, safe replacement, and direct repository resolution.
+- [ ] Update the Harness lifecycle specification, architecture decision, README, manual, and relevant developer guidance to explain the prefix authority and its practical goal.
 
 ## Files touched
 
-Expected local surfaces include `src/commands/dev/`, `src/core/harness/`, Harness acquisition and storage modules, CLI sandbox tests, and the corresponding decisions, guides, specifications, and help text. Provider-owned HNR publication changes remain in the HNR repository and require their own bounded commit.
+- `src/core/harness/`, `src/core/storage/`, `src/core/configuration/`, and their command-facing callers.
+- CLI sandbox helpers and Harness, repository, management, bootstrap, and development tests.
+- `docs/specs/harnesses.md`, ADR-KI-TOOLS-002, README, manual, and local-development guidance where affected.
+- In `ki-agentic-harness`: `.ki-config.toml` and `skills/repo-structure/ki-repo-harness/` standard, rubric catalogue, tests, generated publication, and exemplars.
 
 ## Verify
 
-- `bun run test`
 - `bun run test:coverage`
 - `bunx tsc --noEmit`
 - `bunx biome check`
 - `bunx knip`
-- `ki repo audit --repo .`
-- A receiver acquires and resolves both HNR capabilities from immutable evidence.
-- A named HNR local-development source takes effect only while explicitly enabled and restores the verified installed payload when disabled.
+- `ki repo audit --skill ki-work-roadmap --repo .`
+- In `ki-agentic-harness`, run the focused `ki-repo-harness` rubric tests, regenerate its rubric, and run its declared repository gates.
 
 ## Dependencies / blocks
 
-None. Contract design, named development-source support, receiver storage, and CLI verification can proceed locally. The final production proof includes the HNR-owned publication slice rather than treating its absence as a reason to defer the whole item.
+CLI-050 is complete. This item has no remaining dependency and does not require an HNR repository change to prove the generic contract.
 
 ## Documentation impact
 
 ### Decision Records
 
-Record the one-way Harness dependency, immutable production provenance, and explicit mutable development-source boundary.
+Revise ADR-KI-TOOLS-002 to replace qualified capability disambiguation with explicit prefix ownership and estate-level collision refusal.
 
 ### Specifications
 
-Define compatible-Harness publication, acquisition, named development overrides, resolution, diagnostics, and rollback behaviour.
+Add behaviour-level requirements for prefix metadata, prefix-consistent capabilities, unique installed prefixes, and bare-name resolution.
 
 ### Guides
 
-Document how provider authors publish evidence and how contributors enable or disable a named local Harness checkout safely.
+Explain how Harness authors select a stable prefix and how a prefix collision is resolved by choosing one competing Harness.
 
 ### Roadmap
 
-This record moves from Waiting for a concrete provider into Next now that HNR supplies the provider and capability surface.
+Replace the earlier provenance-heavy intent with the explicit goal and bounded prefix contract above; no follow-on provenance item is implied.
 
 ## Discussion
 
-### Dependency direction
-
-The HNR Harness depends on the canonical Knowledge Islands Harness for portable governance. The canonical Harness is the root contract and never gains a dependency on HNR or another compatible Harness.
-
-### Development override
-
-The current canonical-only `ki dev local` model should become a named Harness development-source model. A local HNR checkout may replace its verified installed payload during explicit development, without requiring a particular installed HNR version and without becoming provenance evidence.
-
-### Production provenance
-
-Production use still requires stable provider identity, immutable version and digest evidence, a declared capability surface, a reproducible acquisition path, and receiver-owned installation state. A nearby checkout, mutable branch, or unpinned archive is insufficient.
-
-### Provider publication
-
-HNR `v0.1.1` proves that a real provider and release lifecycle exist, but its current source archive is not the completed publication contract. The executable slice must add a provider-authored immutable payload and evidence before claiming end-to-end production provenance.
+The immutable archive URL and SHA-256 already provide reproducible installation evidence. Prefix ownership addresses a different problem: it prevents an incoherent local estate from creating ambiguous capability providers. Keeping those concerns separate avoids making ordinary repository declarations carry provider-resolution machinery they do not need.
