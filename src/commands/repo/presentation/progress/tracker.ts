@@ -1,7 +1,8 @@
-import { presentation } from '../../../commands/presentation/index.ts'
-import type { KiContext } from '../../../context.ts'
-import { KiError } from '../../errors.ts'
-import { EVIDENCE_STAGE_LABEL, type PreparedSkill, type RubricProgressReport } from '../../runtime/index.ts'
+import type { KiContext } from '../../../../context.ts'
+import { KiError } from '../../../../core/errors.ts'
+import type { ProgressTracker } from '../../../../core/repository/progress/run.ts'
+import { EVIDENCE_STAGE_LABEL } from '../../../../core/runtime/index.ts'
+import { presentation } from '../../../presentation/index.ts'
 import { createProgressDisplay } from './display.ts'
 import type { OperationOptions } from './options.ts'
 import { elapsed } from './rendering.ts'
@@ -9,18 +10,6 @@ import { elapsed } from './rendering.ts'
 export type CompletionPlacement = 'root' | 'last-root'
 type ProgressPhase = 'loading' | 'evidence' | 'audit' | 'conform' | 'educate' | 're-audit'
 export type OperationPhase = Exclude<ProgressPhase, 'loading' | 'evidence'>
-
-export interface ProgressTracker {
-  readonly loading: (loaded: number, total: number) => void
-  readonly evidence: (gathered: number, total: number) => void
-  readonly planned: (skills: readonly PreparedSkill[]) => void
-  readonly start: (skill: PreparedSkill, code: string) => void
-  readonly item: (skill: PreparedSkill, code: string) => void
-  readonly skillComplete: (skill: PreparedSkill) => void
-  readonly report: (skill: PreparedSkill, event: RubricProgressReport) => void
-  readonly complete: () => void
-  readonly failed: () => void
-}
 
 /** Identity keys the tracker; the bare declaration name is what a reader sees. */
 export interface TrackedSkill {

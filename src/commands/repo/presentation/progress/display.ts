@@ -1,4 +1,4 @@
-import type { KiContext } from '../../../context.ts'
+import type { KiContext } from '../../../../context.ts'
 import { progressLine, type RenderOptions } from './rendering.ts'
 
 const REFRESH_INTERVAL_MS = 250

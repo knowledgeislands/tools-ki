@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
-import type { TreeReporter } from '../../../commands/presentation/index.ts'
-import type { KiContext } from '../../../context.ts'
+import type { KiContext } from '../../../../context.ts'
+import type { TreeReporter } from '../../../presentation/index.ts'
 import type { ReporterLevel } from '../progress/index.ts'
 import {
   findingEntry,

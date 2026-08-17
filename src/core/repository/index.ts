@@ -294,6 +294,4 @@ export const resolveRepositoryTargets = async (
   return targets
 }
 
-export * from './progress/index.ts'
-export * from './reporting/index.ts'
 export * from './subprocess.ts'

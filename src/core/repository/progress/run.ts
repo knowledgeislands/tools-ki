@@ -1,44 +1,33 @@
-import type { KiContext } from '../../../context.ts'
 import type { ResolvedSkill } from '../../configuration/index.ts'
 import { KiError } from '../../errors.ts'
 import { type PreparedSkill, prepareSkill, type RubricProgressReport } from '../../runtime/index.ts'
-import type { OperationOptions } from './options.ts'
-import {
-  type CompletionPlacement,
-  createProgressTracker,
-  type OperationPhase,
-  type ProgressTracker,
-  type TrackedSkill
-} from './tracker.ts'
 
 /** Reports the item edges a live progress line needs, narrowed to the item code the renderer displays. */
-interface ItemProgressCodes {
+export interface ItemProgressCodes {
   readonly onItemStart: (code: string) => void
   readonly onItemComplete: (code: string) => void
   /** Undefined while nothing is displaying, which is how a rubric learns not to emit at all. */
   readonly onProgressEvent?: (event: RubricProgressReport) => void
 }
 
-const trackedSkills = (skills: readonly ResolvedSkill[]): readonly TrackedSkill[] =>
-  skills.map((skill) => ({ identity: skill.identity, name: skill.declaration.name }))
-
-const trackedPreparedSkills = (skills: readonly PreparedSkill[]): readonly TrackedSkill[] =>
-  trackedSkills(skills.map(({ skill }) => skill))
+/** Semantic execution edges observed by a caller; no display or output policy crosses this boundary. */
+export interface ProgressTracker {
+  readonly loading: (loaded: number, total: number) => void
+  readonly evidence: (gathered: number, total: number) => void
+  readonly planned: (skills: readonly PreparedSkill[]) => void
+  readonly start: (skill: PreparedSkill, code: string) => void
+  readonly item: (skill: PreparedSkill, code: string) => void
+  readonly skillComplete: (skill: PreparedSkill) => void
+  readonly report: (skill: PreparedSkill, event: RubricProgressReport) => void
+  readonly complete: () => void
+  readonly failed: () => void
+}
 
 export const runPreparedWithProgress = async <Result>(
-  context: KiContext,
   prepared: readonly PreparedSkill[],
   run: (skill: PreparedSkill, progress: ItemProgressCodes) => Promise<Result>,
-  options: OperationOptions,
-  phase: OperationPhase,
-  completionPlacement: CompletionPlacement = 'last-root',
-  existing?: ProgressTracker
+  progress?: ProgressTracker
 ): Promise<Result[]> => {
-  const progress =
-    existing ??
-    (prepared.length
-      ? createProgressTracker(context, options, trackedPreparedSkills(prepared), phase, completionPlacement)
-      : undefined)
   const results: Result[] = []
   try {
     progress?.planned(prepared)
@@ -60,16 +49,10 @@ export const runPreparedWithProgress = async <Result>(
 }
 
 export const runWithProgress = async <Result>(
-  context: KiContext,
   skills: readonly ResolvedSkill[],
   run: (skill: PreparedSkill, progress: ItemProgressCodes) => Promise<Result>,
-  options: OperationOptions,
-  phase: OperationPhase,
-  completionPlacement: CompletionPlacement = 'last-root'
+  progress?: ProgressTracker
 ): Promise<Result[]> => {
-  const progress = skills.length
-    ? createProgressTracker(context, options, trackedSkills(skills), phase, completionPlacement)
-    : undefined
   const prepared: PreparedSkill[] = []
   try {
     progress?.loading(0, skills.length)
@@ -81,25 +64,19 @@ export const runWithProgress = async <Result>(
     progress?.failed()
     throw error
   }
-  return runPreparedWithProgress(context, prepared, run, options, phase, completionPlacement, progress)
+  return runPreparedWithProgress(prepared, run, progress)
 }
 
 /** Runs a counted session-evidence phase before the prepared skills' mechanical-item phase. */
 export const runWithEvidenceProgress = async <Evidence, Result>(
-  context: KiContext,
   skills: readonly ResolvedSkill[],
   gather: (
     skill: PreparedSkill,
     progress: { readonly onProgressEvent?: (event: RubricProgressReport) => void }
   ) => Promise<Evidence>,
   run: (skill: PreparedSkill, evidence: Evidence, progress: ItemProgressCodes) => Promise<Result>,
-  options: OperationOptions,
-  phase: OperationPhase,
-  completionPlacement: CompletionPlacement = 'last-root'
+  progress?: ProgressTracker
 ): Promise<Result[]> => {
-  const progress = skills.length
-    ? createProgressTracker(context, options, trackedSkills(skills), phase, completionPlacement)
-    : undefined
   const prepared: PreparedSkill[] = []
   const evidence = new Map<string, Evidence>()
   try {
@@ -121,7 +98,6 @@ export const runWithEvidenceProgress = async <Evidence, Result>(
     throw error
   }
   return runPreparedWithProgress(
-    context,
     prepared,
     async (skill, itemProgress) => {
       const gathered = evidence.get(skill.skill.identity)
@@ -130,9 +106,6 @@ export const runWithEvidenceProgress = async <Evidence, Result>(
       if (gathered === undefined) throw new KiError(`progress lost evidence for ${skill.skill.identity}`, 1)
       return run(skill, gathered, itemProgress)
     },
-    options,
-    phase,
-    completionPlacement,
     progress
   )
 }

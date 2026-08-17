@@ -1,4 +1,4 @@
-import { treeProgressPrefix } from '../../../commands/presentation/index.ts'
+import { treeProgressPrefix } from '../../../presentation/index.ts'
 
 const FALLBACK_TERMINAL_COLUMNS = 80
 

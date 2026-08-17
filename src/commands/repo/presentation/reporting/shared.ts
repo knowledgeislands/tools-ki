@@ -1,13 +1,8 @@
 import { basename } from 'node:path'
 import { stripVTControlCharacters } from 'node:util'
-import {
-  createTreeReporter,
-  presentation,
-  type TreeEntry,
-  type TreeReporter
-} from '../../../commands/presentation/index.ts'
-import type { KiContext } from '../../../context.ts'
-import type { Finding, FixedItem, PreparedSkill } from '../../runtime/index.ts'
+import type { KiContext } from '../../../../context.ts'
+import type { Finding, FixedItem, PreparedSkill } from '../../../../core/runtime/index.ts'
+import { createTreeReporter, presentation, type TreeEntry, type TreeReporter } from '../../../presentation/index.ts'
 import type { ReporterLevel } from '../progress/index.ts'
 
 export type RenderedFinding = (Finding | FixedItem) & { readonly level: ReporterLevel }

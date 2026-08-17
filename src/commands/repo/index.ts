@@ -13,23 +13,9 @@ import { KiError } from '../../core/errors.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import {
-  type AuditRepositorySummary,
-  operationOptions,
-  renderAuditFrameStart,
-  renderAuditResults,
-  renderConciseAuditSummary,
-  renderConciseConformSummary,
-  renderConciseMultiRepositoryAuditSummary,
-  renderConformFrameStart,
-  renderConformReports,
-  renderEducation,
-  renderMultiRepositoryAuditSummary,
   renderRepositoryConformCommand,
   resolveRepositoryTargets,
-  runPreparedWithProgress,
-  runRepositoryConformCommands,
-  runWithEvidenceProgress,
-  runWithProgress
+  runRepositoryConformCommands
 } from '../../core/repository/index.ts'
 import {
   detectFixed,
@@ -51,6 +37,22 @@ import { repoHelpCommandNames } from '../root/catalogue.ts'
 import { createRepoDiagCommand } from './diag.ts'
 import { createRepoInitCommand } from './init.ts'
 import { createRepoOpenCommand } from './open.ts'
+import {
+  type AuditRepositorySummary,
+  operationOptions,
+  renderAuditFrameStart,
+  renderAuditResults,
+  renderConciseAuditSummary,
+  renderConciseConformSummary,
+  renderConciseMultiRepositoryAuditSummary,
+  renderConformFrameStart,
+  renderConformReports,
+  renderEducation,
+  renderMultiRepositoryAuditSummary,
+  runPreparedWithProgress,
+  runWithEvidenceProgress,
+  runWithProgress
+} from './presentation/index.ts'
 import { createRepairCommand } from './repair.ts'
 import { createRepoRoadmapCommand } from './roadmap.ts'
 import { createRepoSkillCommand } from './skill.ts'
