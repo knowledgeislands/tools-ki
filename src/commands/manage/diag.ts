@@ -2,9 +2,9 @@ import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
-import { presentation, renderTree, type TreeEntry } from '../../core/presentation/index.ts'
 import { canonicalHarnessDevelopmentEnabled, inspectLocalRegistry } from '../../core/storage/index.ts'
 import { KI_VERSION } from '../../version.ts'
+import { presentation, renderTree, type TreeEntry } from '../presentation/index.ts'
 
 const field = (label: string, value: string): string => `${label}: ${value}`
 

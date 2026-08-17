@@ -1,6 +1,6 @@
+import { presentation } from '../../../commands/presentation/index.ts'
 import type { KiContext } from '../../../context.ts'
 import { KiError } from '../../errors.ts'
-import { presentation } from '../../presentation/index.ts'
 import { EVIDENCE_STAGE_LABEL, type PreparedSkill, type RubricProgressReport } from '../../runtime/index.ts'
 import { createProgressDisplay } from './display.ts'
 import type { OperationOptions } from './options.ts'

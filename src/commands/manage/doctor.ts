@@ -17,8 +17,8 @@ import {
   discoverInstalledHarnesses,
   type InstalledHarness
 } from '../../core/harness/index.ts'
-import { presentation, renderTree } from '../../core/presentation/index.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../../core/storage/index.ts'
+import { presentation, renderTree } from '../presentation/index.ts'
 
 type CheckStatus = 'pass' | 'fail' | 'skip'
 

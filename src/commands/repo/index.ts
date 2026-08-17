@@ -12,7 +12,6 @@ import {
 import { KiError } from '../../core/errors.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
-import { presentationText, treeProgressPrefix } from '../../core/presentation/index.ts'
 import {
   type AuditRepositorySummary,
   operationOptions,
@@ -47,6 +46,7 @@ import {
   registeredKnowledgeBaseStoreRoots,
   registryEntry
 } from '../../core/storage/index.ts'
+import { presentationText, treeProgressPrefix } from '../presentation/index.ts'
 import { repoHelpCommandNames } from '../root/catalogue.ts'
 import { createRepoDiagCommand } from './diag.ts'
 import { createRepoInitCommand } from './init.ts'

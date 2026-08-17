@@ -2,7 +2,6 @@ import { basename } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
-import { presentation, renderTree, type TreeEntry } from '../../core/presentation/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade/index.ts'
 import {
@@ -15,6 +14,7 @@ import {
   type WorkItemHorizon,
   workItemHorizons
 } from '../../core/work/index.ts'
+import { presentation, renderTree, type TreeEntry } from '../presentation/index.ts'
 import { renderTradeRelation } from '../trade/shared.ts'
 
 interface RoadmapOptions {

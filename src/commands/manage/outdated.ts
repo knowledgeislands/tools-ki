@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import { collectCapabilityStatus } from '../../agents/capability-status.ts'
 import type { KiContext } from '../../context.ts'
-import { renderTree } from '../../core/presentation/index.ts'
+import { renderTree } from '../presentation/index.ts'
 
 export const createOutdatedCommand = (context: KiContext): Command =>
   new Command('outdated')

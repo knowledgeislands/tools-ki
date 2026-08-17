@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
+import { renderTree, type TreeReporter } from '../../../commands/presentation/index.ts'
 import type { KiContext } from '../../../context.ts'
-import { renderTree, type TreeReporter } from '../../presentation/index.ts'
 import type { Finding, PreparedSkill } from '../../runtime/index.ts'
 import type { ReporterLevel } from '../progress/index.ts'
 import { findingEntry, REPORT_ICON, REPORT_LABEL, renderOperationFrameStart } from './shared.ts'

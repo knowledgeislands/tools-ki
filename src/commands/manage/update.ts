@@ -3,8 +3,8 @@ import type { KiContext } from '../../context.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { installerEnvironment, requireCurrentInstallerReceipt } from '../../core/harness/installation.ts'
-import { renderTree } from '../../core/presentation/index.ts'
 import { refreshHarnesses } from '../harness/refresh.ts'
+import { renderTree } from '../presentation/index.ts'
 
 const updateExecutable = async (context: KiContext): Promise<string> => {
   if (context.installation === 'local') {

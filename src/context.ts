@@ -1,9 +1,9 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import type { Output } from './commands/presentation/index.ts'
 import type { Fetcher } from './core/harness/acquire.ts'
 import type { Environment, KiInstallationMode, KiPaths } from './core/paths.ts'
 import { resolveKiPaths, userHome } from './core/paths.ts'
-import type { Output } from './core/presentation/index.ts'
 import { type Runner, runCommand } from './core/runtime/runner.ts'
 
 export interface KiContext {

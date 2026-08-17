@@ -1,7 +1,6 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
-import { renderTree } from '../../core/presentation/index.ts'
 import {
   abandonTrade,
   createTradePreparation,
@@ -15,6 +14,7 @@ import {
   submitTrade,
   tradeLifecycle
 } from '../../core/trade/index.ts'
+import { renderTree } from '../presentation/index.ts'
 import { count, kind, observation, renderTradeRelation, repository, requireText, tradeId } from './shared.ts'
 
 interface PrepareOptions {

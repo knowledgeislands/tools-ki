@@ -1,8 +1,8 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
-import { presentation, renderTree } from '../../core/presentation/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
+import { presentation, renderTree } from '../presentation/index.ts'
 import { describeRepositoryProjection, inspectRepositoryHealth } from './repository-health.ts'
 
 export const createRepoDiagCommand = (
