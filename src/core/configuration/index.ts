@@ -1,11 +1,5 @@
-export type {
-  DeclaredSkill,
-  KnowledgeBaseStoreRole,
-  RepositoryDeclaration,
-  RepositoryInitialisation
-} from './declaration.ts'
+export type { RepositoryDeclaration } from './declaration.ts'
 export {
-  DEFAULT_HARNESS,
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
   declareRepositorySkill,

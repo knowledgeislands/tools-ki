@@ -2,7 +2,5 @@ export {
   type NativeWrite,
   prepareScopedWrites,
   prepareWrites,
-  publishWrites,
-  type ScopedNativeWrite,
-  type WriteScope
+  publishWrites
 } from './publication.ts'
