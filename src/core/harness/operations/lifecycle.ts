@@ -72,11 +72,8 @@ export const reinstallInstalledHarness = async (
     `harness ${identifier} is not installed; run ki harness install ${identifier} first`
   )
   await requireInactive(port, harness, 'reinstall')
-  if (identifier === canonicalHarnessIdentifier && (await port.canonicalDevelopmentLinked())) {
-    throw new KiError(
-      `the canonical harness ${identifier} is development-linked; run ki dev local off before reinstalling`,
-      1
-    )
+  if (await port.developmentLinked(identifier)) {
+    throw new KiError(`harness ${identifier} is development-linked; run ki dev local off before reinstalling`, 1)
   }
   const installation = await port.install(identifier, { replace: true })
   await port.recordInstalled(identifier, true)
@@ -88,6 +85,9 @@ export const uninstallInstalledHarness = async (port: HarnessUninstallationPort,
   const harness = await installedHarness(port, identifier)
   if (identifier === canonicalHarnessIdentifier) {
     throw new KiError(`the canonical harness ${identifier} cannot be uninstalled`, 1)
+  }
+  if (await port.developmentLinked(identifier)) {
+    throw new KiError(`harness ${identifier} is development-linked; run ki dev local off before uninstalling`, 1)
   }
   await requireInactive(port, harness, 'uninstall')
   await port.requireWritableRegistry()

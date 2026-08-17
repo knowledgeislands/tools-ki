@@ -1,6 +1,6 @@
 export interface BootstrapConfigurationInspection {
   readonly state: 'missing' | 'valid' | 'invalid'
-  readonly local: string | null
+  readonly local: { readonly harness: string; readonly path: string } | null
   readonly skills: readonly string[]
 }
 
@@ -30,10 +30,11 @@ export interface BootstrapOperationPort<Agent, Skill, Projection> {
   readonly inspectConfiguration: () => Promise<BootstrapConfigurationInspection>
   readonly readConfiguration: () => Promise<string>
   readonly restoreConfiguration: (contents: string) => Promise<void>
-  readonly developmentEnabled: (local: string) => Promise<boolean>
-  readonly inspectLocalHarness: (
-    local: string
-  ) => Promise<{ readonly harness: string; readonly skills: readonly Skill[] }>
+  readonly developmentEnabled: (local: { readonly harness: string; readonly path: string }) => Promise<boolean>
+  readonly inspectLocalHarness: (local: {
+    readonly harness: string
+    readonly path: string
+  }) => Promise<{ readonly harness: string; readonly skills: readonly Skill[] }>
   readonly migrateLegacyRepositories: () => Promise<number>
   readonly configureAgents: (options: {
     readonly refresh?: boolean
@@ -42,7 +43,7 @@ export interface BootstrapOperationPort<Agent, Skill, Projection> {
   readonly installedSkills: (options?: { readonly preserveHarnessRoot?: boolean }) => Promise<readonly Skill[]>
   readonly refreshConfiguration: (
     agents: readonly Agent[],
-    local: string | undefined,
+    local: { readonly harness: string; readonly path: string } | undefined,
     options: { readonly dropLegacyRepositories: boolean }
   ) => Promise<BootstrapRefreshResult>
   readonly clearLocalHarness: () => Promise<void>

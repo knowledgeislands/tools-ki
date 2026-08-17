@@ -31,10 +31,11 @@ export interface HarnessReinstallationPort
   extends HarnessInventoryPort,
     HarnessInstallationPort,
     HarnessActivationPort {
-  readonly canonicalDevelopmentLinked: () => Promise<boolean>
+  readonly developmentLinked: (identifier: string) => Promise<boolean>
 }
 
 export interface HarnessUninstallationPort extends HarnessInventoryPort, HarnessActivationPort {
+  readonly developmentLinked: (identifier: string) => Promise<boolean>
   readonly recordInstalled: (identifier: string, installed: boolean) => Promise<void>
   readonly requireWritableRegistry: () => Promise<void>
   readonly uninstall: (identifier: string) => Promise<void>

@@ -6,21 +6,27 @@ This area specifies the controlled local Harness projection; see the [Specificat
 
 ### DEV-001 — Separate local source selection
 
-`ki dev local set` MUST validate and remember a local Harness checkout without activating it.
+`ki dev local set <harness-id> <path>` MUST require a Harness already present in the installed estate, validate the checkout as that Harness, and remember both identity and path without activating it.
 
 _Verify:_ `src/tests/cli/dev/dev.test.ts` — `remembers a local source without activating it`.
 
 ### DEV-002 — Reversible local activation
 
-`ki dev local on` MUST switch the canonical Harness to the configured local checkout, and `ki dev local off` MUST restore the verified canonical Harness and re-project managed skills.
+`ki dev local on` MUST switch only the remembered installed Harness to its configured local checkout, and `ki dev local off` MUST restore that Harness from its configured verified archive and re-project its managed skills without changing neighbouring Harnesses.
 
-_Verify:_ `src/tests/cli/dev/dev.test.ts` — `switches the canonical harness to a local development checkout` and `restores the verified canonical harness and re-projects skills`.
+_Verify:_ `src/tests/cli/dev/dev.test.ts` — `switches one non-canonical installed harness without changing its neighbours` and `switches the canonical harness to a local development checkout`.
 
 ### DEV-003 — Recognised projection only
 
-`ki dev` MUST refuse an unfamiliar or unsafe canonical development link rather than adopting it.
+`ki dev` MUST refuse an unfamiliar or unsafe development link for the remembered Harness rather than adopting it.
 
 _Verify:_ `src/tests/cli/dev/dev.test.ts` — `refuses to replace an unfamiliar canonical development link`.
+
+### DEV-004 — Canonical bootstrap protection
+
+The canonical Harness local source MUST retain its required bootstrap capabilities; another installed Harness is validated against its own discovered capability surface and MUST NOT be required to provide canonical bootstrap skills.
+
+_Verify:_ `src/tests/cli/dev/dev.test.ts` — `requires the local harness to contain the canonical bootstrap skill` and `switches one non-canonical installed harness without changing its neighbours`.
 
 ## Gaps
 

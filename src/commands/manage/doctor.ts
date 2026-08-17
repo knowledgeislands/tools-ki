@@ -5,7 +5,7 @@ import {
   compatibleWithSkill,
   configuredAgents,
   inspectUserConfiguration,
-  localBootstrapHarness
+  localHarness
 } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { readRepositoryDeclaration } from '../../core/configuration/index.ts'
@@ -17,7 +17,7 @@ import {
   type ManageDoctorCheck,
   type ManageDoctorPort
 } from '../../core/manage/index.ts'
-import { canonicalHarnessDevelopmentEnabled } from '../../core/storage/index.ts'
+import { harnessDevelopmentEnabled } from '../../core/storage/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
 
 const mark = (status: ManageCheckStatus): string => presentation(`status.${status}`).terminal
@@ -37,8 +37,8 @@ const doctorPort = (context: KiContext): ManageDoctorPort => ({
       supports: (runtimes) => compatibleWithSkill(agent, runtimes)
     })),
   discoverHarnesses: () => discoverInstalledHarnesses(context.paths.data),
-  localDevelopmentEnabled: (source) => canonicalHarnessDevelopmentEnabled(context.paths.data, source),
-  inspectLocalHarness: (source) => localBootstrapHarness(source),
+  localDevelopmentEnabled: (identifier, source) => harnessDevelopmentEnabled(context.paths.data, identifier, source),
+  inspectLocalHarness: (source, identifier) => localHarness(source, identifier),
   readRepositorySkills: async (path) => (await readRepositoryDeclaration(path)).skills,
   lstat: (path) => lstat(path).catch(() => undefined),
   realpath: (path) => realpath(path).catch(() => undefined)

@@ -5,7 +5,7 @@ import {
   compatibleWithSkill,
   configuredAgents,
   inspectUserConfiguration,
-  localBootstrapHarness
+  localHarness
 } from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
@@ -14,7 +14,7 @@ import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../co
 import { type ManageRepairItem, type ManageRepairPort, runManageRepair } from '../../core/manage/index.ts'
 import {
   acquireManagedArtifactRecovery,
-  canonicalHarnessDevelopmentEnabled,
+  harnessDevelopmentEnabled,
   planOrphanRecovery,
   recoverInstallOrphans
 } from '../../core/storage/index.ts'
@@ -48,8 +48,8 @@ const repairPort = (context: KiContext): ManageRepairPort => ({
       }
     })),
   discoverHarnesses: () => discoverInstalledHarnesses(context.paths.data),
-  localDevelopmentEnabled: (source) => canonicalHarnessDevelopmentEnabled(context.paths.data, source),
-  inspectLocalHarness: (source) => localBootstrapHarness(source),
+  localDevelopmentEnabled: (identifier, source) => harnessDevelopmentEnabled(context.paths.data, identifier, source),
+  inspectLocalHarness: (source, identifier) => localHarness(source, identifier),
   realpath,
   linkedTo
 })

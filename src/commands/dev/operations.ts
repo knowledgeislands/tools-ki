@@ -2,8 +2,8 @@ import {
   configuredAgents,
   inspectUserConfiguration,
   installBootstrapSkills,
-  installedBootstrapSkillSources,
-  localBootstrapHarness,
+  installedHarnessSkillSources,
+  localHarness,
   refreshUserConfiguration,
   setLocalBootstrapHarness
 } from '../../agents/index.ts'
@@ -15,18 +15,15 @@ import {
   type DisableDevelopmentPort,
   discoverInstalledHarnesses,
   type EnableDevelopmentPort,
+  readInstalledHarness,
   type SetDevelopmentSourcePort
 } from '../../core/harness/index.ts'
 import { loadRubricDefinition } from '../../core/rubric/loader.ts'
 import { prepareRubricPublication } from '../../core/rubric/publication.ts'
-import {
-  canonicalHarnessDevelopmentEnabled,
-  enableCanonicalHarnessDevelopment,
-  restoreCanonicalHarness
-} from '../../core/storage/index.ts'
+import { enableHarnessDevelopment, harnessDevelopmentEnabled, restoreHarness } from '../../core/storage/index.ts'
 
 type DevelopmentAgent = Awaited<ReturnType<typeof configuredAgents>>[number]
-type DevelopmentSkill = Awaited<ReturnType<typeof installedBootstrapSkillSources>>[number]
+type DevelopmentSkill = Awaited<ReturnType<typeof installedHarnessSkillSources>>[number]
 type DevelopmentProjection = Awaited<ReturnType<typeof installBootstrapSkills>>[number]
 
 const agents = (context: KiContext): Promise<readonly DevelopmentAgent[]> =>
@@ -41,8 +38,14 @@ const projectionView = ({ agent, skill, installed }: DevelopmentProjection) => (
 export const setDevelopmentSourcePort = (
   context: KiContext
 ): SetDevelopmentSourcePort<DevelopmentAgent, DevelopmentSkill> => ({
-  developmentEnabled: () => canonicalHarnessDevelopmentEnabled(context.paths.data),
-  inspectLocalHarness: localBootstrapHarness,
+  developmentEnabled: async () => {
+    const { local } = await inspectUserConfiguration(context.paths.config)
+    return local ? harnessDevelopmentEnabled(context.paths.data, local.harness, local.path) : false
+  },
+  requireInstalledHarness: async (identifier) => {
+    await readInstalledHarness(context.paths.data, identifier)
+  },
+  inspectLocalHarness: localHarness,
   configuredAgents: () => agents(context),
   setLocalHarness: (harness) => setLocalBootstrapHarness(context.paths.config, context.homeDirectory, harness)
 })
@@ -51,9 +54,9 @@ export const enableDevelopmentPort = (
   context: KiContext
 ): EnableDevelopmentPort<DevelopmentAgent, DevelopmentSkill, DevelopmentProjection> => ({
   inspectConfiguration: () => inspectUserConfiguration(context.paths.config),
-  inspectLocalHarness: localBootstrapHarness,
+  inspectLocalHarness: localHarness,
   configuredAgents: () => agents(context),
-  enableDevelopment: (harness) => enableCanonicalHarnessDevelopment(context.paths.data, harness),
+  enableDevelopment: (identifier, harness) => enableHarnessDevelopment(context.paths.data, identifier, harness),
   installSkills: (skills, configured) => installBootstrapSkills(skills, configured, { replace: true }),
   refreshConfiguration: (configured, local) =>
     refreshUserConfiguration(context.paths.config, context.paths.data, configured, local),
@@ -65,16 +68,17 @@ export const disableDevelopmentPort = (
 ): DisableDevelopmentPort<DevelopmentAgent, DevelopmentSkill, DevelopmentProjection> => ({
   configuredAgents: () => agents(context),
   inspectConfiguration: () => inspectUserConfiguration(context.paths.config),
-  restoreCanonicalHarness: () =>
-    restoreCanonicalHarness(
+  restoreHarness: (identifier) =>
+    restoreHarness(
       context.paths.config,
       context.paths.data,
       context.paths.state,
+      identifier,
       context.fetcher,
       context.runner,
       context.environment
     ),
-  installedSkills: () => installedBootstrapSkillSources(context.paths.data),
+  installedSkills: (identifier) => installedHarnessSkillSources(context.paths.data, identifier),
   installSkills: (skills, configured) => installBootstrapSkills(skills, configured, { replace: true }),
   refreshConfiguration: (configured, local) =>
     refreshUserConfiguration(context.paths.config, context.paths.data, configured, local),

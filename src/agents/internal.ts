@@ -1,7 +1,6 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
 import { KiError } from '../core/errors.ts'
-import type { minimumBootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
 import type { AgentDescriptor } from './shared/types.ts'
 import { chatgptCodex, claudeCode } from './vendors/index.ts'
 
@@ -18,7 +17,7 @@ export interface BootstrapConfiguration {
 }
 
 export interface ManagedUserSkill {
-  readonly name: (typeof minimumBootstrapUserSkills)[number]
+  readonly name: string
   readonly source: string
 }
 
@@ -32,7 +31,13 @@ export interface HarnessSection {
 }
 
 export interface LocalSection {
+  readonly harness?: unknown
   readonly path?: unknown
+}
+
+export interface LocalDevelopmentConfiguration {
+  readonly harness: string
+  readonly path: string
 }
 
 export interface RepositoriesSection {
@@ -45,7 +50,7 @@ export interface UserConfigurationInspection {
   readonly agents: readonly string[]
   readonly harnesses: readonly string[]
   readonly skills: readonly string[]
-  readonly local: string | null
+  readonly local: LocalDevelopmentConfiguration | null
   readonly repositories: readonly string[]
   readonly warnings: readonly string[]
   readonly errors: readonly string[]

@@ -4,7 +4,9 @@ export {
   configureBootstrapAgents,
   installBootstrapSkills,
   installedBootstrapSkillSources,
+  installedHarnessSkillSources,
   localBootstrapHarness,
+  localHarness,
   refreshUserConfiguration
 } from './bootstrap.ts'
 export {

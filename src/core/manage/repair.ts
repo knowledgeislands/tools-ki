@@ -29,8 +29,8 @@ export interface ManageRepairPort {
   readonly recoverOrphans: (planned: readonly OrphanRecovery[]) => Promise<readonly OrphanRecovery[]>
   readonly configuredAgents: () => Promise<readonly ManageRepairAgent[]>
   readonly discoverHarnesses: () => Promise<readonly ManageHarness[]>
-  readonly localDevelopmentEnabled: (source: string) => Promise<boolean>
-  readonly inspectLocalHarness: (source: string) => Promise<ManageLocalHarness>
+  readonly localDevelopmentEnabled: (identifier: string, source: string) => Promise<boolean>
+  readonly inspectLocalHarness: (source: string, identifier: string) => Promise<ManageLocalHarness>
   readonly realpath: (path: string) => Promise<string>
   readonly linkedTo: (path: string, expected: string) => Promise<boolean>
 }
@@ -111,8 +111,11 @@ export const runManageRepair = async (
     items.push({ kind: 'status', status: 'pass', label: 'Configuration', detail: configuration.path })
     const [agents, installed] = await Promise.all([port.configuredAgents(), port.discoverHarnesses()])
     const localSources = new Map<string, string>()
-    if (configuration.local && (await port.localDevelopmentEnabled(configuration.local))) {
-      const local = await port.inspectLocalHarness(configuration.local)
+    if (
+      configuration.local &&
+      (await port.localDevelopmentEnabled(configuration.local.harness, configuration.local.path))
+    ) {
+      const local = await port.inspectLocalHarness(configuration.local.path, configuration.local.harness)
       for (const skill of local.skills) localSources.set(skill.name, skill.source)
     }
 
@@ -132,8 +135,9 @@ export const runManageRepair = async (
         continue
       }
       const expected =
-        (identity.startsWith(`${options.canonicalHarnessIdentifier}:`) ? localSources.get(name) : undefined) ??
-        (await port.realpath(join(resolved.harness.root, resolved.capability.source)))
+        (configuration.local && identity.startsWith(`${configuration.local.harness}:`)
+          ? localSources.get(name)
+          : undefined) ?? (await port.realpath(join(resolved.harness.root, resolved.capability.source)))
       const compatible = agents.filter((agent) => agent.supports(resolved.capability.supportedRuntimes))
       if (!compatible.length) {
         items.push({

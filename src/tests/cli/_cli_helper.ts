@@ -129,9 +129,9 @@ const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
   writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
 
 // The same fixture, but written under an arbitrary local directory rather than the
-// installed-harness data root — for exercising `ki dev local set <path>` against a local
+// installed-harness data root — for exercising `ki dev local set <harness-id> <path>` against a local
 // development checkout instead of an installed harness. Returns the checkout's real
-// path, since callers select it through `ki dev local set <path>` before enabling it.
+// path, since callers select it through the named set command before enabling it.
 const setupLocalCanonicalHarness = async (root: SandboxArea, relativePath: string): Promise<string> => {
   await writeBootstrapHarness(root, relativePath)
   return realpath(join(root.path, relativePath))

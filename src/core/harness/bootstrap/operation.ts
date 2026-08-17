@@ -13,7 +13,7 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
   const previous = await port.inspectConfiguration()
   const previousConfiguration = previous.state === 'valid' ? await port.readConfiguration() : undefined
   const activeLocal =
-    previous.local !== null && (await port.developmentEnabled(previous.local))
+    previous.local?.harness === port.canonicalHarnessIdentifier && (await port.developmentEnabled(previous.local))
       ? await port.inspectLocalHarness(previous.local)
       : undefined
   const migrated = options.refresh ? await port.migrateLegacyRepositories() : 0

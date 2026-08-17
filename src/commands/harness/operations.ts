@@ -11,7 +11,7 @@ import {
 } from '../../core/harness/index.ts'
 import {
   installHarness,
-  isCanonicalHarnessDevelopmentLinked,
+  isHarnessDevelopmentLinked,
   readHarnessRegistry,
   recordInstalledHarness,
   requireWritableHarnessRegistry,
@@ -49,11 +49,12 @@ export const harnessReinstallationPort = (context: KiContext): HarnessReinstalla
   discoverInstalled: () => discoverInstalledHarnesses(context.paths.data),
   ...harnessInstallationPort(context),
   activeSkillDeclarations: () => activeSkillDeclarations(context),
-  canonicalDevelopmentLinked: () => isCanonicalHarnessDevelopmentLinked(context.paths.data)
+  developmentLinked: (identifier) => isHarnessDevelopmentLinked(context.paths.data, identifier)
 })
 
 export const harnessUninstallationPort = (context: KiContext): HarnessUninstallationPort => ({
   discoverInstalled: () => discoverInstalledHarnesses(context.paths.data),
+  developmentLinked: (identifier) => isHarnessDevelopmentLinked(context.paths.data, identifier),
   activeSkillDeclarations: () => activeSkillDeclarations(context),
   recordInstalled: (identifier, installed) => recordInstalledHarness(context.paths.config, identifier, installed),
   requireWritableRegistry: () => requireWritableHarnessRegistry(context.paths.config),

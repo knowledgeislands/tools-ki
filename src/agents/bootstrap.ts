@@ -14,6 +14,7 @@ import {
   type BootstrapConfiguration,
   bootstrapConfigurationPath,
   type InstalledAgent,
+  type LocalDevelopmentConfiguration,
   type ManagedUserSkill,
   requiredPhysicalDirectory,
   skillCapability
@@ -59,6 +60,41 @@ export const localBootstrapHarness = async (
   return { harness: inspected.root, skills: await bootstrapSkillSources(inspected, 'local harness') }
 }
 
+const harnessSkillSources = async (
+  harness: { readonly root: string; readonly capabilities: readonly HarnessCapability[] },
+  description: string
+): Promise<readonly ManagedUserSkill[]> =>
+  Promise.all(
+    harness.capabilities.map(async (capability) => ({
+      name: capability.name,
+      source: await requiredPhysicalDirectory(
+        join(harness.root, capability.source),
+        `${description} ${capability.name} skill`
+      )
+    }))
+  )
+
+export const localHarness = async (
+  harnessDirectory: string,
+  identifier: string
+): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
+  const inspected = await inspectHarnessRoot(resolve(harnessDirectory), identifier)
+  if (identifier === canonicalHarnessIdentifier)
+    return {
+      harness: inspected.root,
+      skills: await bootstrapSkillSources(inspected, `local harness ${identifier}`)
+    }
+  return { harness: inspected.root, skills: await harnessSkillSources(inspected, `local harness ${identifier}`) }
+}
+
+export const installedHarnessSkillSources = async (
+  dataDirectory: string,
+  identifier: string
+): Promise<readonly ManagedUserSkill[]> => {
+  const harness = await readInstalledHarness(dataDirectory, identifier)
+  return harnessSkillSources(harness, `installed harness ${identifier}`)
+}
+
 export const configureBootstrapAgents = async (options: {
   readonly homeDirectory: string
   readonly configurationDirectory: string
@@ -98,7 +134,7 @@ export const configureBootstrapAgents = async (options: {
 const discoverManagedUserSkills = async (
   agents: readonly InstalledAgent[],
   harnesses: Awaited<ReturnType<typeof discoverInstalledHarnesses>>,
-  localSkills: readonly ManagedUserSkill[] = []
+  local?: { readonly harness: string; readonly skills: readonly ManagedUserSkill[] }
 ): Promise<readonly string[]> => {
   const identities = new Map<string, string>()
   for (const harness of harnesses) {
@@ -107,7 +143,7 @@ const discoverManagedUserSkills = async (
       identities.set(source, `${harness.id}:${capability.name}`)
     }
   }
-  for (const skill of localSkills) identities.set(skill.source, `${canonicalHarnessIdentifier}:${skill.name}`)
+  if (local) for (const skill of local.skills) identities.set(skill.source, `${local.harness}:${skill.name}`)
   const skills = new Set<string>()
   for (const agent of agents) {
     skillCapability(agent)
@@ -127,14 +163,18 @@ export const refreshUserConfiguration = async (
   configurationDirectory: string,
   dataDirectory: string,
   agents: readonly InstalledAgent[],
-  local?: string,
+  local?: LocalDevelopmentConfiguration,
   options: { readonly dropLegacyRepositories?: boolean } = {}
 ): Promise<{ readonly harnesses: number; readonly skills: number }> => {
   const installed = await discoverInstalledHarnesses(dataDirectory)
   const existing = await inspectUserConfiguration(configurationDirectory)
   const harnesses = installed.map((harness) => harness.id).sort((left, right) => left.localeCompare(right))
-  const localSkills = local ? (await localBootstrapHarness(local)).skills : []
-  const skills = await discoverManagedUserSkills(agents, installed, localSkills)
+  const localSkills = local ? (await localHarness(local.path, local.harness)).skills : []
+  const skills = await discoverManagedUserSkills(
+    agents,
+    installed,
+    local ? { harness: local.harness, skills: localSkills } : undefined
+  )
   await writeFile(
     bootstrapConfigurationPath(configurationDirectory),
     renderConfiguration(agents, harnesses, skills, local, options.dropLegacyRepositories ? [] : existing.repositories),

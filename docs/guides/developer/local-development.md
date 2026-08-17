@@ -37,17 +37,17 @@ Before sourcing either script, parse its generated form:
 Keep a local harness source separate from its active projection:
 
 ```sh
-ki dev local set /path/to/ki-agentic-harness
+ki dev local set knowledgeislands/ki-agentic-harness /path/to/ki-agentic-harness
 ki dev local on
 # make and test harness changes
 ki dev local off
 ```
 
-`set` validates and remembers the physical checkout without changing the installed canonical harness or managed user-skill links.
+`set` accepts any Harness identity already present in the installed KI estate. It validates and remembers that identity and physical checkout without changing the installed Harness or managed user-skill links.
 
-`on` activates the remembered checkout and reconciles every KI-managed core user-skill link to its current local source on every invocation.
+`on` activates the remembered checkout and reconciles that Harness's KI-managed user-skill links to their current local sources on every invocation. Other installed Harnesses remain unchanged.
 
-`off` restores the verified canonical harness and reprojects those links to it, while retaining the remembered checkout for the next `on`.
+`off` restores the remembered Harness from its configured verified archive and reprojects those links to it, while retaining the remembered identity and checkout for the next `on`.
 
 Use `ki manage diag` to see the remembered source and whether local mode is off or on; use `ki manage doctor` to identify missing, broken, or wrong-target managed links while mode is on, direct-CWD legacy `.ki-meta/` or `.ki/` directories, and invalid direct-CWD `.ki-config.toml` declarations.
 

@@ -41,6 +41,8 @@ export interface HarnessInstallationOptions {
   readonly requiredCapabilitiesContext?: 'canonical-bootstrap'
   /** Replace an existing verified harness only after the replacement is fully inspected. */
   readonly replace?: boolean
+  /** Restore the exact Harness whose recognised development projection is active. */
+  readonly allowDevelopmentReplace?: boolean
 }
 
 export interface HarnessInstallation {
@@ -268,6 +270,8 @@ export const installHarness = async (
   if (existing) {
     requireCapabilities(await readInstalledHarness(dataDirectory, identifier), options)
     if (!options.replace) return { installed: false, replaced: false, archiveSha256: release.sha256 }
+    if ((await harnessDevelopmentProjection(dataDirectory, identifier)) && !options.allowDevelopmentReplace)
+      throw new KiError(`harness ${identifier} is development-linked; run ki dev local off before replacing it`, 1)
   }
 
   const payload = await acquireVerifiedArchive(fetcher, release, { runner, environment })
@@ -348,8 +352,10 @@ export const recoverInstallOrphans = async (
   return planned
 }
 
-const canonicalHarnessDirectory = (dataDirectory: string): string =>
-  join(dataDirectory, 'harnesses', 'knowledgeislands', 'ki-agentic-harness')
+const harnessDirectory = (dataDirectory: string, identifier: string): string => {
+  const [owner, name] = identifier.split('/') as [string, string]
+  return join(dataDirectory, 'harnesses', owner, name)
+}
 
 const localPayloadDirectory = async (local: string, payload: (typeof payloadRoots)[number]): Promise<string> => {
   const source = resolve(local, payload)
@@ -357,7 +363,11 @@ const localPayloadDirectory = async (local: string, payload: (typeof payloadRoot
   return realpath(source)
 }
 
-export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, local: string): Promise<string> => {
+export const enableHarnessDevelopment = async (
+  dataDirectory: string,
+  identifier: string,
+  local: string
+): Promise<string> => {
   const harness = await realpath(resolve(local))
   await physicalDirectory(harness, 'local harness')
   const sources = new Map(
@@ -365,26 +375,23 @@ export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, l
       payloadRoots.map(async (payload) => [payload, await localPayloadDirectory(harness, payload)] as const)
     )
   )
-  const destination = canonicalHarnessDirectory(dataDirectory)
+  const destination = harnessDirectory(dataDirectory, identifier)
+  const [owner] = identifier.split('/') as [string, string]
   await ensureDirectory(join(dataDirectory, 'harnesses'), 'installed harnesses directory')
-  await ensureDirectory(dirname(destination), 'installed harness owner knowledgeislands')
-  const state = await lstat(destination).catch(() => undefined)
-  if (!state) await mkdir(destination)
-  await physicalDirectory(destination, `installed harness ${canonicalHarnessIdentifier}`)
+  await ensureDirectory(dirname(destination), `installed harness owner ${owner}`)
+  await physicalDirectory(destination, `installed harness ${identifier}`)
   const entries = await readdir(destination, { withFileTypes: true })
+  const retired: readonly string[] = identifier === canonicalHarnessIdentifier ? retiredCanonicalPayloadRoots : []
   if (
     entries.some(
       (entry) =>
-        (!payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) &&
-          !retiredCanonicalPayloadRoots.includes(entry.name as (typeof retiredCanonicalPayloadRoots)[number])) ||
+        (!payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) && !retired.includes(entry.name)) ||
         (!entry.isDirectory() && !entry.isSymbolicLink())
     )
   ) {
-    throw new KiError(`installed harness ${canonicalHarnessIdentifier} has unrecognised state`, 1)
+    throw new KiError(`installed harness ${identifier} has unrecognised state`, 1)
   }
-  await Promise.all(
-    retiredCanonicalPayloadRoots.map((payload) => rm(join(destination, payload), { recursive: true, force: true }))
-  )
+  await Promise.all(retired.map((payload) => rm(join(destination, payload), { recursive: true, force: true })))
   for (const payload of payloadRoots) {
     const target = join(destination, payload)
     const targetState = await lstat(target).catch(() => undefined)
@@ -394,8 +401,7 @@ export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, l
     if (!source) throw new KiError(`local harness must provide ${payload}`, 1)
     if (targetState?.isSymbolicLink()) {
       const actual = await realpath(target).catch(() => undefined)
-      if (actual !== source)
-        throw new KiError(`installed harness ${canonicalHarnessIdentifier} ${payload} link is unfamiliar`, 1)
+      if (actual !== source) throw new KiError(`installed harness ${identifier} ${payload} link is unfamiliar`, 1)
       continue
     }
     if (targetState) await rm(target, { recursive: true })
@@ -404,11 +410,11 @@ export const enableCanonicalHarnessDevelopment = async (dataDirectory: string, l
   return harness
 }
 
-const canonicalDevelopmentProjection = async (dataDirectory: string): Promise<boolean> => {
-  const destination = canonicalHarnessDirectory(dataDirectory)
+const harnessDevelopmentProjection = async (dataDirectory: string, identifier: string): Promise<boolean> => {
+  const destination = harnessDirectory(dataDirectory, identifier)
   const state = await lstat(destination).catch(() => undefined)
   if (!state) return false
-  await physicalDirectory(destination, `installed harness ${canonicalHarnessIdentifier}`)
+  await physicalDirectory(destination, `installed harness ${identifier}`)
   const entries = await readdir(destination, { withFileTypes: true })
   return (
     entries.length === payloadRoots.length &&
@@ -418,13 +424,17 @@ const canonicalDevelopmentProjection = async (dataDirectory: string): Promise<bo
   )
 }
 
-export const isCanonicalHarnessDevelopmentLinked = (dataDirectory: string): Promise<boolean> =>
-  canonicalDevelopmentProjection(dataDirectory)
+export const isHarnessDevelopmentLinked = (dataDirectory: string, identifier: string): Promise<boolean> =>
+  harnessDevelopmentProjection(dataDirectory, identifier)
 
 // A partial projection is not an active local harness. With the configured source,
 // verify every payload link resolves to its expected local directory too.
-export const canonicalHarnessDevelopmentEnabled = async (dataDirectory: string, local?: string): Promise<boolean> => {
-  if (!(await canonicalDevelopmentProjection(dataDirectory))) return false
+export const harnessDevelopmentEnabled = async (
+  dataDirectory: string,
+  identifier: string,
+  local?: string
+): Promise<boolean> => {
+  if (!(await harnessDevelopmentProjection(dataDirectory, identifier))) return false
   if (!local) return true
   const harness = await realpath(resolve(local)).catch(() => undefined)
   if (!harness) return false
@@ -432,13 +442,33 @@ export const canonicalHarnessDevelopmentEnabled = async (dataDirectory: string, 
     payloadRoots.map(async (payload) => {
       const [source, target] = await Promise.all([
         realpath(join(harness, payload)).catch(() => undefined),
-        realpath(join(canonicalHarnessDirectory(dataDirectory), payload)).catch(() => undefined)
+        realpath(join(harnessDirectory(dataDirectory, identifier), payload)).catch(() => undefined)
       ])
       return Boolean(source && source === target)
     })
   )
   return links.every(Boolean)
 }
+
+export const restoreHarness = async (
+  configurationDirectory: string,
+  dataDirectory: string,
+  stateDirectory: string,
+  identifier: string,
+  fetcher: Fetcher,
+  runner: Runner,
+  environment: Environment
+): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
+  installHarness(configurationDirectory, dataDirectory, stateDirectory, identifier, fetcher, runner, environment, {
+    replace: await harnessDevelopmentProjection(dataDirectory, identifier),
+    allowDevelopmentReplace: true,
+    ...(identifier === canonicalHarnessIdentifier
+      ? {
+          requiredCapabilities: minimumBootstrapUserSkills,
+          requiredCapabilitiesContext: 'canonical-bootstrap' as const
+        }
+      : {})
+  })
 
 export const restoreCanonicalHarness = async (
   configurationDirectory: string,
@@ -448,19 +478,14 @@ export const restoreCanonicalHarness = async (
   runner: Runner,
   environment: Environment
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
-  installHarness(
+  restoreHarness(
     configurationDirectory,
     dataDirectory,
     stateDirectory,
     canonicalHarnessIdentifier,
     fetcher,
     runner,
-    environment,
-    {
-      replace: await canonicalDevelopmentProjection(dataDirectory),
-      requiredCapabilities: minimumBootstrapUserSkills,
-      requiredCapabilitiesContext: 'canonical-bootstrap'
-    }
+    environment
   )
 
 export const uninstallHarness = async (dataDirectory: string, identifier: string): Promise<void> => {

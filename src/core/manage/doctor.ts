@@ -14,7 +14,7 @@ export interface ManageConfiguration {
   readonly state: 'missing' | 'valid' | 'invalid'
   readonly harnesses: readonly string[]
   readonly skills: readonly string[]
-  readonly local: string | null
+  readonly local: { readonly harness: string; readonly path: string } | null
   readonly errors: readonly string[]
 }
 
@@ -52,8 +52,8 @@ export interface ManageDoctorPort {
   readonly inspectConfiguration: () => Promise<ManageConfiguration>
   readonly configuredAgents: () => Promise<readonly ManageAgent[]>
   readonly discoverHarnesses: () => Promise<readonly ManageHarness[]>
-  readonly localDevelopmentEnabled: (source?: string) => Promise<boolean>
-  readonly inspectLocalHarness: (source: string) => Promise<ManageLocalHarness>
+  readonly localDevelopmentEnabled: (identifier: string, source?: string) => Promise<boolean>
+  readonly inspectLocalHarness: (source: string, identifier: string) => Promise<ManageLocalHarness>
   readonly readRepositorySkills: (path: string) => Promise<readonly unknown[]>
   readonly lstat: (path: string) => Promise<ManagePathState | undefined>
   readonly realpath: (path: string) => Promise<string | undefined>
@@ -165,21 +165,23 @@ export const inspectManageDoctor = async (
     checks.push({ status: 'skip', label: 'User skills', detail: 'agents are unavailable' })
     return checks
   }
-  const activeLocal = configuration.local ? await port.localDevelopmentEnabled(configuration.local) : false
+  const activeLocal = configuration.local
+    ? await port.localDevelopmentEnabled(configuration.local.harness, configuration.local.path)
+    : false
   const localSources = new Map<string, string>()
   if (activeLocal && configuration.local) {
     try {
-      const local = await port.inspectLocalHarness(configuration.local)
+      const local = await port.inspectLocalHarness(configuration.local.path, configuration.local.harness)
       for (const skill of local.skills) localSources.set(skill.name, skill.source)
       checks.push({ status: 'pass', label: 'Local development', detail: `active ${local.harness}` })
     } catch (error) {
       checks.push({ status: 'fail', label: 'Local development', detail: (error as Error).message })
     }
-  } else if (configuration.local && (await port.localDevelopmentEnabled())) {
+  } else if (configuration.local && (await port.localDevelopmentEnabled(configuration.local.harness))) {
     checks.push({
       status: 'fail',
       label: 'Local development',
-      detail: 'canonical payload links do not match the configured local source'
+      detail: `${configuration.local.harness} payload links do not match the configured local source`
     })
   }
   for (const agent of agents) {

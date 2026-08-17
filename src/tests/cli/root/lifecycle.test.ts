@@ -139,7 +139,7 @@ describe('[ki harness lifecycle]', () => {
     await box.setupCanonicalHarness()
     await box.config.write('ki/config.toml', userConfiguration())
     const local = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
-    expect((await box.run(`ki dev local set ${local}`)).exitCode).toBe(0)
+    expect((await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${local}`)).exitCode).toBe(0)
     expect((await box.run('ki dev local on')).exitCode).toBe(0)
 
     const reinstalled = await box.run('ki harness reinstall knowledgeislands/ki-agentic-harness')
@@ -148,7 +148,7 @@ describe('[ki harness lifecycle]', () => {
     expect(reinstalled).toEqual({
       exitCode: 1,
       output:
-        'ki: error: the canonical harness knowledgeislands/ki-agentic-harness is development-linked; run ki dev local off before reinstalling\n'
+        'ki: error: harness knowledgeislands/ki-agentic-harness is development-linked; run ki dev local off before reinstalling\n'
     })
     expect(removed).toEqual({
       exitCode: 1,

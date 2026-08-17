@@ -33,6 +33,8 @@ Every `ki repo` operation accepts the shared `--repo <path-or-pattern>` selector
 
 Native operations are imported in process only after harness and inventory validation. `ki repo audit` is read-only. `ki repo conform` validates every proposed path against its declared scope, honours dry-run, publishes each approved file atomically, and re-audits whenever it stages a change. Repository operations never dispatch `.ki/bin`, `.ki/bootstrap`, copied `govern.ts`, package-script aliases, or an ad-hoc child process. Local harness development is an explicit, verified projection under `ki dev`, never an unregistered repository-operation fallback. Legacy state is an explicit fail-closed migration input only.
 
+Local development selects one Harness already present in the installed estate and remembers its identity with the physical checkout path. Activation substitutes only that Harness's managed payload roots; deactivation restores the same configured verified release. The canonical Harness alone retains its bootstrap-capability requirement, and neighbouring installed Harnesses remain unchanged throughout the transition.
+
 ## Consequences
 
 - `tools-ki` is the sole owner of registry layout, command grammar, physical repository resolution, reporting, activation, migration, and native execution.

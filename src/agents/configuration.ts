@@ -3,6 +3,7 @@ import { isAbsolute, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
+import { canonicalHarnessIdentifier } from '../core/harness/index.ts'
 import type { Runner } from '../core/runtime/runner.ts'
 import { canonicalRepositoryIdentity, registryEntry, renderLocalRegistry } from '../core/storage/index.ts'
 import {
@@ -12,6 +13,7 @@ import {
   type HarnessSection,
   type InstalledAgent,
   isRecord,
+  type LocalDevelopmentConfiguration,
   type LocalSection,
   type RepositoriesSection,
   type StringListSection,
@@ -22,7 +24,7 @@ export const renderConfiguration = (
   agents: readonly InstalledAgent[],
   harnesses: readonly string[] = [],
   skills: readonly string[] = [],
-  local?: string,
+  local?: LocalDevelopmentConfiguration,
   repositories: readonly string[] = []
 ): string =>
   [
@@ -43,7 +45,9 @@ export const renderConfiguration = (
       const separator = skill.lastIndexOf(':')
       return ['', `[skills.${skill.slice(separator + 1)}]`, `harness = ${JSON.stringify(skill.slice(0, separator))}`]
     }),
-    ...(local ? ['', '[local]', `path = ${JSON.stringify(local)}`] : []),
+    ...(local
+      ? ['', '[local]', `harness = ${JSON.stringify(local.harness)}`, `path = ${JSON.stringify(local.path)}`]
+      : []),
     ...(repositories.length
       ? [
           '',
@@ -204,16 +208,23 @@ export const inspectUserConfiguration = async (
       : (inspectSection(configuration.local, 'local', errors) as LocalSection)
   if (localSection) {
     for (const key of Object.keys(localSection)) {
-      if (key !== 'path') warnings.push(`local has unrecognised key ${key}`)
+      if (key !== 'harness' && key !== 'path') warnings.push(`local has unrecognised key ${key}`)
     }
   }
   const local =
-    localSection === undefined
-      ? null
-      : typeof localSection.path === 'string' && localSection.path
-        ? localSection.path
-        : null
-  if (localSection !== undefined && local === null) errors.push('local.path must be a non-empty path string')
+    localSection !== undefined &&
+    (localSection.harness === undefined || (typeof localSection.harness === 'string' && localSection.harness)) &&
+    typeof localSection.path === 'string' &&
+    localSection.path
+      ? {
+          harness:
+            typeof localSection.harness === 'string' && localSection.harness
+              ? localSection.harness
+              : canonicalHarnessIdentifier,
+          path: localSection.path
+        }
+      : null
+  if (localSection !== undefined && local === null) errors.push('local must declare non-empty harness and path strings')
   const repositoriesSection =
     configuration.repositories === undefined
       ? undefined
@@ -271,9 +282,15 @@ export const readConfiguration = async (
     !Array.isArray(agentSection.ids) ||
     agentSection.ids.some((agent) => typeof agent !== 'string') ||
     (localSection !== undefined &&
-      (localSection === null || typeof localSection.path !== 'string' || !localSection.path))
+      (localSection === null ||
+        (localSection.harness !== undefined && (typeof localSection.harness !== 'string' || !localSection.harness)) ||
+        typeof localSection.path !== 'string' ||
+        !localSection.path))
   ) {
-    throw new KiError('ki configuration must declare an agents.ids string array and an optional local.path', 1)
+    throw new KiError(
+      'ki configuration must declare an agents.ids string array and optional local harness and path strings',
+      1
+    )
   }
   const agents = agentSection.ids as string[]
   if (new Set(agents).size !== agents.length) throw new KiError('agent configuration repeats an agent', 1)
@@ -302,7 +319,7 @@ export const clearLocalBootstrapHarness = async (configurationDirectory: string)
 export const setLocalBootstrapHarness = async (
   configurationDirectory: string,
   homeDirectory: string,
-  local: string
+  local: LocalDevelopmentConfiguration
 ): Promise<void> => {
   const agents = await configuredAgents({ homeDirectory, configurationDirectory })
   const inspection = await inspectUserConfiguration(configurationDirectory)

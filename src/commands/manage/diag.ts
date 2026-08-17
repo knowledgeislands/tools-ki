@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
-import { canonicalHarnessDevelopmentEnabled, inspectLocalRegistry } from '../../core/storage/index.ts'
+import { harnessDevelopmentEnabled, inspectLocalRegistry } from '../../core/storage/index.ts'
 import { KI_VERSION } from '../../version.ts'
 import { presentation, renderTree, type TreeEntry } from '../presentation/index.ts'
 
@@ -26,7 +26,7 @@ export const createDiagCommand = (context: KiContext): Command =>
 
       if (configuration.state !== 'missing') {
         const localMode = configuration.local
-          ? (await canonicalHarnessDevelopmentEnabled(context.paths.data, configuration.local))
+          ? (await harnessDevelopmentEnabled(context.paths.data, configuration.local.harness, configuration.local.path))
             ? 'on'
             : 'off'
           : 'not configured'
@@ -36,7 +36,11 @@ export const createDiagCommand = (context: KiContext): Command =>
           { label: `skills (${configuration.skills.length})`, children: treeEntries(configuration.skills) },
           {
             label: 'local',
-            children: [{ label: field('source', configuration.local ?? 'none') }, { label: field('mode', localMode) }]
+            children: [
+              { label: field('harness', configuration.local?.harness ?? 'none') },
+              { label: field('source', configuration.local?.path ?? 'none') },
+              { label: field('mode', localMode) }
+            ]
           }
         )
       } else configurationEntries.push({ label: field('Action', 'run ki bootstrap') })

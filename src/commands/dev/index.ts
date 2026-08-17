@@ -45,23 +45,23 @@ const reportProjections = (context: KiContext, projections: readonly Development
 
 export const createDevCommand = (context: KiContext): Command => {
   const command = new Command('dev').description(
-    'switch the canonical harness between a local checkout and its verified archive'
+    'switch one installed harness between a local checkout and its verified archive'
   )
-  const local = command.command('local').description('manage the canonical local development harness')
+  const local = command.command('local').description('manage local development for one installed harness')
   local
-    .command('set <local-harness-path>')
-    .description('validate and remember a local harness checkout without enabling it')
-    .action(async (path: string) => {
-      const result = await setDevelopmentSource(setDevelopmentSourcePort(context), path)
-      context.stdout.write(`development harness set ${result.harness}\n`)
+    .command('set <harness-id> <local-harness-path>')
+    .description('validate and remember a checkout for one installed harness without enabling it')
+    .action(async (identifier: string, path: string) => {
+      const result = await setDevelopmentSource(setDevelopmentSourcePort(context), identifier, path)
+      context.stdout.write(`development harness set ${result.identifier}\t${result.harness}\n`)
       context.stdout.write(`configured ${result.agents} agents\n`)
     })
   local
     .command('on')
-    .description('link the canonical harness payload to the configured local harness checkout')
+    .description('link the remembered installed harness payload to its local checkout')
     .action(async () => {
       const result = await enableDevelopment(enableDevelopmentPort(context))
-      context.stdout.write(`development harness enabled ${result.harness}\n`)
+      context.stdout.write(`development harness enabled ${result.identifier}\t${result.harness}\n`)
       context.stdout.write(
         `refreshed ki configuration: ${result.agents} agents, ${result.harnesses} harnesses, ${result.skills} skills\n`
       )
@@ -75,7 +75,7 @@ export const createDevCommand = (context: KiContext): Command => {
       // A sandbox cannot verify the pinned canonical archive needed by the fresh-install arm.
       /* v8 ignore next */
       context.stdout.write(
-        `development harness disabled; canonical harness ${result.installed ? 'installed' : 'already installed'}\tarchive ${result.archiveSha256}\n`
+        `development harness disabled ${result.identifier}; verified harness ${result.installed ? 'installed' : 'already installed'}\tarchive ${result.archiveSha256}\n`
       )
       context.stdout.write(
         `refreshed ki configuration: ${result.agents} agents, ${result.harnesses} harnesses, ${result.skills} skills\n`

@@ -127,7 +127,7 @@ ids = [
     const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('chatgpt-codex')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     const repository = await realpath(box.project.path)
     const existing = await box.config.read('ki/config.toml')
     await box.config.write(
@@ -138,7 +138,7 @@ ids = [
       '.ki-config.toml',
       '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
     )
-    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     expect(await box.config.read('ki/config.toml')).toContain('[repositories]')
 
     const migrated = await box.run('ki bootstrap --refresh')
@@ -159,7 +159,9 @@ ids = [
 
     expect(migrated.output).toContain('migrated local KI repository registry: 1 repositories')
     expect(refreshed.exitCode).toBe(0)
-    expect(await box.config.read('ki/config.toml')).toContain(`[local]\npath = ${JSON.stringify(harnessPath)}\n`)
+    expect(await box.config.read('ki/config.toml')).toContain(
+      `[local]\nharness = "knowledgeislands/ki-agentic-harness"\npath = ${JSON.stringify(harnessPath)}\n`
+    )
     expect(await box.config.read('ki/config.toml')).not.toContain('[repositories]')
     expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(repository)}`)
     expect(await box.state.read('ki/registry.toml')).toContain('repository = "https://github.com/example/project"')
@@ -260,7 +262,7 @@ ids = ["chatgpt-codex", 5]
 
     expect(bootstrapped.exitCode).toBe(1)
     expect(bootstrapped.output).toContain(
-      'ki configuration must declare an agents.ids string array and an optional local.path'
+      'ki configuration must declare an agents.ids string array and optional local harness and path strings'
     )
   })
 
@@ -313,11 +315,13 @@ ids = ["claude-code"]
 
     expect(rejectedAgents).toEqual({
       exitCode: 1,
-      output: 'ki: error: ki configuration must declare an agents.ids string array and an optional local.path\n'
+      output:
+        'ki: error: ki configuration must declare an agents.ids string array and optional local harness and path strings\n'
     })
     expect(rejectedLocal).toEqual({
       exitCode: 1,
-      output: 'ki: error: ki configuration must declare an agents.ids string array and an optional local.path\n'
+      output:
+        'ki: error: ki configuration must declare an agents.ids string array and optional local harness and path strings\n'
     })
   })
 
@@ -393,7 +397,7 @@ ids = ["claude-code"]
     const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     await box.run('ki dev local on')
     const configuration = await box.config.read('ki/config.toml')
     await box.setupAgentHome('chatgpt-codex')

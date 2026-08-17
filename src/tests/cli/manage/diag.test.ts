@@ -238,7 +238,7 @@ extra = true
     const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
 
     const off = await box.run('ki manage diag')
     await box.run('ki dev local on')
@@ -255,7 +255,7 @@ extra = true
     const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     await box.run('ki dev local on')
     const hooks = 'ki/harnesses/knowledgeislands/ki-agentic-harness/hooks'
     await unlink(`${box.data.path}/${hooks}`)
@@ -272,7 +272,7 @@ extra = true
     const otherHarnessPath = await box.setupLocalCanonicalHarness('dev/other/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     await box.run('ki dev local on')
     const hooks = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/hooks`
     await unlink(hooks)
@@ -288,7 +288,7 @@ extra = true
     const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     await box.run('ki dev local on')
     await rm(`${harnessPath}/hooks`, { recursive: true })
 
@@ -302,7 +302,7 @@ extra = true
     const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     await box.run('ki dev local on')
     await rm(harnessPath, { recursive: true })
 
@@ -330,7 +330,7 @@ local = "not-a-table"
     expect(diag.output).toContain('× harnesses must be a TOML table')
     expect(diag.output).toContain('× harnesses must declare an ids array')
     expect(diag.output).toContain('× local must be a TOML table')
-    expect(diag.output).toContain('× local.path must be a non-empty path string')
+    expect(diag.output).toContain('× local must declare non-empty harness and path strings')
   })
 
   test('reports duplicate, unrecognised, and malformed entries throughout a sectioned configuration', async () => {
@@ -373,6 +373,6 @@ path = ""
     expect(diag.output).toContain('× harnesses[0] sha256 must be lowercase SHA-256')
     expect(diag.output).toContain('× skills.scalar must be a TOML table')
     expect(diag.output).toContain('× skills.empty must declare a harness string')
-    expect(diag.output).toContain('× local.path must be a non-empty path string')
+    expect(diag.output).toContain('× local must declare non-empty harness and path strings')
   })
 })

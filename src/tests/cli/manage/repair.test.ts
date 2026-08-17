@@ -118,7 +118,7 @@ describe('[ki manage repair]', () => {
     const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.run(`ki dev local set ${harnessPath}`)
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     await box.run('ki dev local on')
     const recap = `${box.home.path}/.claude/skills/ki-recap`
     await unlink(recap)

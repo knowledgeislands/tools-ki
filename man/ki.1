@@ -227,14 +227,14 @@ Create a deterministic Knowledge Export Package from a local ChatGPT capture.
 .SS Development
 \&
 .TP
-.B ki dev local set <local-harness-path>
-Validate and remember a local checkout without enabling it.
+.B ki dev local set <harness-id> <local-harness-path>
+Validate and remember a checkout for one installed harness without enabling it.
 .TP
 .B ki dev local on
-Switch the canonical harness to the remembered local checkout.
+Switch the remembered installed harness to its local checkout.
 .TP
 .B ki dev local off
-Restore the verified canonical harness archive.
+Restore the remembered harness from its verified archive.
 .TP
 .B ki dev skill rubric <skill> [--write]
 Check or regenerate a skill's rubric catalogue.
@@ -757,13 +757,14 @@ discover a repository, or extract reusable knowledge.
 .SS Development
 \&
 .PP
-Use these commands to switch the canonical harness between its verified archive
-and a local development checkout.
+Use these commands to switch one harness already present in the installed KI
+estate between its verified archive and a local development checkout.
 .TP
-.B ki dev local set <local-harness-path>
-Validate and remember a local checkout without changing the active canonical
-payload or managed user-skill links. The checkout
-must contain the core bootstrap skill at
+.B ki dev local set <harness-id> <local-harness-path>
+Validate the identity against the installed estate and remember it with the
+local checkout without changing the active payload or managed user-skill links.
+When the selected harness is the canonical harness, the checkout must contain
+the core bootstrap skill at
 .IR skills/keystone/ki-bootstrap/SKILL.md
 and physical
 .IR skills ,
@@ -774,17 +775,18 @@ payload directories.
 .TP
 .B ki dev local on
 Enable the remembered local checkout for development. KI replaces only the
-canonical harness's managed payload directories with links to that checkout,
-records the local path in
-.BR [local].path ,
-and reconciles all seven managed core user-skill links to that source on every
-run.
+selected harness's managed payload directories with links to that checkout,
+records its identity and path in
+.BR [local] ,
+and reconciles that harness's managed user-skill links to the local source on
+every run. Other installed harnesses remain unchanged.
 .TP
 .B ki dev local off
-Remove that recognised local payload projection, reinstall the verified
-canonical archive, retain
-.BR [local].path ,
-and reconcile all seven managed core user-skill links to the restored archive.
+Remove that recognised local payload projection, reinstall the selected
+harness's verified archive, retain its
+.B [local]
+identity and path, and reconcile its managed user-skill links to the restored
+archive.
 .TP
 .B ki dev skill rubric <skill> [--write]
 Check or regenerate a skill's rubric catalogue.

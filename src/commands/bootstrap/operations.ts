@@ -13,7 +13,7 @@ import {
 } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { type BootstrapOperationPort, canonicalHarnessIdentifier } from '../../core/harness/index.ts'
-import { canonicalHarnessDevelopmentEnabled, restoreCanonicalHarness } from '../../core/storage/index.ts'
+import { harnessDevelopmentEnabled, restoreCanonicalHarness } from '../../core/storage/index.ts'
 
 type BootstrapAgent = Awaited<ReturnType<typeof configureBootstrapAgents>>['agents'][number]
 type BootstrapSkill = Awaited<ReturnType<typeof installedBootstrapSkillSources>>[number]
@@ -28,8 +28,8 @@ export const bootstrapOperationPort = (
     inspectConfiguration: () => inspectUserConfiguration(context.paths.config),
     readConfiguration: () => readFile(configurationPath, 'utf8'),
     restoreConfiguration: (contents) => writeFile(configurationPath, contents, 'utf8'),
-    developmentEnabled: (local) => canonicalHarnessDevelopmentEnabled(context.paths.data, local),
-    inspectLocalHarness: localBootstrapHarness,
+    developmentEnabled: (local) => harnessDevelopmentEnabled(context.paths.data, local.harness, local.path),
+    inspectLocalHarness: (local) => localBootstrapHarness(local.path),
     migrateLegacyRepositories: () =>
       migrateLegacyRepositoryRegistry(context.paths.config, context.paths.state, context.runner, context.environment),
     configureAgents: (options) =>

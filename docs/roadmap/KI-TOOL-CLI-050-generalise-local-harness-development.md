@@ -4,7 +4,7 @@ title: Generalise local Harness development
 area: CLI
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: [KI-TOOL-VENDOR-001]
 blocked_by: []
 baseline_ref: 1cca1edf19bb27a8d963172ce989937aa95906c7
@@ -38,12 +38,12 @@ The canonical Harness retains its existing bootstrap-capability protections. A n
 
 ## Steps
 
-- [ ] Add the remembered Harness identity to the existing local configuration contract and render, inspect, refresh, and diagnose it consistently.
-- [ ] Inspect a requested local source against its named installed Harness, require that identity to exist in the installed estate, and retain canonical bootstrap checks only for the canonical identity.
-- [ ] Generalise payload linking, active-link detection, restoration, and replacement guards from the canonical directory to one named installed Harness while preserving safe rollback and unfamiliar-state refusal.
-- [ ] Reproject managed user skills from the active local source under the selected Harness identity, leaving skills from every other installed Harness unchanged.
-- [ ] Update `ki dev local set` grammar, output, help, completion, README, manual, development specification, local-development guide, and ADR wording for the named installed-Harness contract.
-- [ ] Cover canonical and non-canonical set/on/off cycles, estate validation, independent installed Harnesses, managed projections, repeated transitions, unsafe links, failed restoration, and deterministic diagnostics through the CLI `sandbox()` seam.
+- [x] Add the remembered Harness identity to the existing local configuration contract and render, inspect, refresh, and diagnose it consistently.
+- [x] Inspect a requested local source against its named installed Harness, require that identity to exist in the installed estate, and retain canonical bootstrap checks only for the canonical identity.
+- [x] Generalise payload linking, active-link detection, restoration, and replacement guards from the canonical directory to one named installed Harness while preserving safe rollback and unfamiliar-state refusal.
+- [x] Reproject managed user skills from the active local source under the selected Harness identity, leaving skills from every other installed Harness unchanged.
+- [x] Update `ki dev local set` grammar, output, help, completion, README, manual, development specification, local-development guide, and ADR wording for the named installed-Harness contract.
+- [x] Cover canonical and non-canonical set/on/off cycles, estate validation, independent installed Harnesses, managed projections, repeated transitions, unsafe links, failed restoration, and deterministic diagnostics through the CLI `sandbox()` seam.
 
 ## Files touched
 
@@ -84,6 +84,38 @@ Show the named `set` command and the reversible on/off lifecycle for canonical a
 ### Roadmap
 
 Complete this prerequisite before resuming KI-TOOL-VENDOR-001.
+
+## Review
+
+### Delivered
+
+`ki dev local` now substitutes any Harness already installed in the local estate while retaining one explicit, reversible local override.
+
+### Summary of changes
+
+The local configuration records a Harness identity alongside its checkout path, with schema-1 path-only configuration read as the canonical Harness and upgraded on the next configuration write. Set, enable, disable, restoration, replacement guards, managed-skill projection, diagnostics, help, and documentation now operate on the selected installed Harness. Canonical bootstrap requirements remain canonical-only, and unrelated installed Harnesses remain untouched.
+
+### Verification
+
+- `bun run test:coverage` — 41 files and 643 tests passed; statements, branches, functions, and lines are all 100%.
+- `bunx tsc --noEmit` — passed.
+- `bunx biome check` — passed across 196 files.
+- `bunx knip` — passed with two existing configuration hints.
+- `ki repo audit --skill ki-authoring --repo .` — passed.
+- `ki repo audit --skill ki-work-roadmap --repo .` — passed.
+- `ki repo audit --repo .` — the local repository checks passed, but the aggregate command failed its GitHub live-state check because Dependabot alerts are disabled and automated-security-fixes could not be read.
+
+### Outstanding concerns
+
+The aggregate repository audit remains blocked by repository-level GitHub security settings outside this implementation. No CLI-050 product or documentation concern remains open.
+
+### Post-change review
+
+The implementation stays within the approved boundary: it generalises the existing singular local-development mechanism and does not add concurrent overrides, provider provenance, prefix policy, or capability qualification. CLI tests exercise the public command seam and demonstrate that a non-canonical Harness can be linked, protected from replacement, restored from its immutable installed source, and reprojected without changing its neighbours.
+
+### Mini recap
+
+CLI-050 is ready for human review. Once accepted, KI-TOOL-VENDOR-001 can be reassessed against the simpler installed-Harness and namespace model.
 
 ## Discussion
 
