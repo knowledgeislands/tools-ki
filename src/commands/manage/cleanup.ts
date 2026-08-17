@@ -1,5 +1,6 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
+import { inspectManageCleanup } from '../../core/manage/index.ts'
 import { type ManagedArtifactReport, planOrphanRecovery, reportManagedArtifacts } from '../../core/storage/index.ts'
 import { renderTree } from '../presentation/index.ts'
 
@@ -24,26 +25,29 @@ const artifactSummary = (reports: readonly ManagedArtifactReport[]): string => {
 
 export const createCleanupCommand = (context: KiContext): Command =>
   new Command('cleanup').description('report eligible KI-managed stale state').action(async () => {
-    const reports = await reportManagedArtifacts(context.paths.state, context.paths.data)
-    const ownedPaths = new Set(reports.flatMap((report) => (report.path ? [report.path] : [])))
-    // Existing prefix-based recovery remains visible until it is represented by a valid manifest.
-    // `ki manage repair` remains the sole mutation owner for both report families.
-    const planned = (await planOrphanRecovery(context.paths.data)).filter(
-      (recovery) => !ownedPaths.has(recovery.orphan.path)
-    )
-    const eligible = planned.length
-      ? planned.map((recovery) => ({
+    const result = await inspectManageCleanup({
+      reportArtifacts: () => reportManagedArtifacts(context.paths.state, context.paths.data),
+      planOrphanRecovery: () => planOrphanRecovery(context.paths.data)
+    })
+    const eligible = result.eligible.length
+      ? result.eligible.map((recovery) => ({
           label: `${recovery.orphan.path} [${eligibility[recovery.action]}] ${recovery.detail}`
         }))
       : [{ label: 'none' }]
-    const artifacts = reports.length ? reports.map((report) => ({ label: report.label })) : [{ label: 'none' }]
+    const artifacts = result.artifacts.length
+      ? result.artifacts.map((report) => ({ label: report.label }))
+      : [{ label: 'none' }]
     context.stdout.write(
       `${renderTree({
         title: 'KI MANAGE CLEANUP',
         entries: [
-          { label: `eligible (${planned.length})`, children: eligible },
-          ...(reports.length ? [{ label: `artifacts (${reports.length})`, children: artifacts }] : []),
-          { label: `summary: ELIGIBLE=${planned.length}${reports.length ? ` ${artifactSummary(reports)}` : ''}` }
+          { label: `eligible (${result.eligible.length})`, children: eligible },
+          ...(result.artifacts.length
+            ? [{ label: `artifacts (${result.artifacts.length})`, children: artifacts }]
+            : []),
+          {
+            label: `summary: ELIGIBLE=${result.eligible.length}${result.artifacts.length ? ` ${artifactSummary(result.artifacts)}` : ''}`
+          }
         ]
       }).join('\n')}\n`
     )
