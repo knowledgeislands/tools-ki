@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
-import { minimumBootstrapUserSkills } from '../harness/bootstrap-capabilities.ts'
 import { KiError } from '../errors.ts'
 import { acquireVerifiedArchive, extractArchive, type Fetcher } from '../harness/acquire.ts'
+import { minimumBootstrapUserSkills } from '../harness/bootstrap-capabilities.ts'
 import {
   canonicalHarnessIdentifier,
   discoverInstallOrphans,
