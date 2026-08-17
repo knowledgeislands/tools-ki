@@ -1,10 +1,9 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { minimumBootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
 import { KiError } from '../core/errors.ts'
-import chatgptCodex from './chatgpt-codex.ts'
-import claudeCode from './claude-code.ts'
-import type { AgentDescriptor } from './types.ts'
+import type { minimumBootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
+import type { AgentDescriptor } from './shared/types.ts'
+import { chatgptCodex, claudeCode } from './vendors/index.ts'
 
 export const agentDescriptors = [claudeCode, chatgptCodex] as const satisfies readonly AgentDescriptor[]
 

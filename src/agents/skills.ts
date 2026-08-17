@@ -9,9 +9,9 @@ import { KiError } from '../core/errors.ts'
 import { discoverInstalledHarnesses, type SupportedRuntime } from '../core/harness/index.ts'
 import { resolveRepository } from '../core/repository/index.ts'
 import { configuredAgents, inspectUserConfiguration, setConfiguredUserSkills } from './configuration.ts'
-import { agentSkillDirectory } from './detection.ts'
 import { type InstalledAgent, requiredPhysicalDirectory } from './internal.ts'
 import { compatibleWithSkill, repositorySupportedRuntimes, runtimeForAgent } from './runtimes.ts'
+import { agentSkillDirectory } from './shared/index.ts'
 
 // One scope at which a KI-managed skill is linked for an agent: the user's home, or a
 // repository root. Carries exactly the data `agentSkillDirectory` needs to resolve the

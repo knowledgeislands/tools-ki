@@ -4,8 +4,8 @@ import type { ResolvedSkill } from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
 import type { RepositorySkillActivation, RepositorySkillActivationState } from '../core/rubric/index.ts'
 import { configuredAgents } from './configuration.ts'
-import { agentSkillDirectory } from './detection.ts'
 import { compatibleWithSkill, repositorySupportedRuntimes, runtimeForAgent } from './runtimes.ts'
+import { agentSkillDirectory } from './shared/index.ts'
 import { linkManagedSkill } from './skills.ts'
 
 type ActivationTarget = {

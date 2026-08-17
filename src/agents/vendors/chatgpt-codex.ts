@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import type { AgentDescriptor } from './types.ts'
+import type { AgentDescriptor } from '../shared/types.ts'
 
 const descriptor = {
   id: 'chatgpt-codex',

@@ -10,7 +10,6 @@ import {
   readInstalledHarness
 } from '../core/harness/index.ts'
 import { inspectUserConfiguration, readConfiguration, renderConfiguration } from './configuration.ts'
-import { detectAgents } from './detection.ts'
 import {
   type BootstrapConfiguration,
   bootstrapConfigurationPath,
@@ -19,6 +18,7 @@ import {
   requiredPhysicalDirectory,
   skillCapability
 } from './internal.ts'
+import { detectAgents } from './shared/index.ts'
 import { linkManagedSkill } from './skills.ts'
 
 interface BootstrapSkillLinkSnapshot {

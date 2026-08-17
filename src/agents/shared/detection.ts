@@ -1,5 +1,5 @@
 import { join, resolve } from 'node:path'
-import { agentDescriptors, type InstalledAgent, physicalDirectory, skillCapability } from './internal.ts'
+import { agentDescriptors, type InstalledAgent, physicalDirectory, skillCapability } from '../internal.ts'
 
 export const detectAgents = async (homeDirectory: string): Promise<readonly InstalledAgent[]> => {
   const agents: InstalledAgent[] = []
