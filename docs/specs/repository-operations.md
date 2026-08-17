@@ -14,7 +14,7 @@ _Verify:_ `src/tests/cli/repo/targets.test.ts` — `runs audit independently for
 
 `ki repo conform` MUST refuse a publication target outside the repository publication scope.
 
-_Verify:_ `src/tests/cli/repo/conform-writes.test.ts` — `refuses a publication request outside the repository publication scope`.
+_Verify:_ `src/tests/cli/repo/conform-execution.test.ts` — `refuses an unsafe direct conform write before publication`.
 
 ### REPO-OPS-003 — Repository repair scope
 
@@ -51,6 +51,12 @@ _Verify:_ `src/tests/cli/repo/diag.test.ts` — `reports selected repository pro
 When a repository rubric inspects or proposes a declared repository skill, the host MUST expose only its resolved compatible runtime projections. A missing projection is activatable only when every target is absent; a regular entry, dangling link, or link to another source is blocked and MUST remain unchanged. An undeclared skill or a declared skill with no compatible configured runtime is blocked before the rubric can activate it. After publishing an activation, `ki repo conform` MUST re-audit the same selected skills and report only that observed result.
 
 _Verify:_ `src/tests/cli/repo/conform-execution.test.ts` — `activates a proposed declared runtime skill and re-audits it`, `refuses a proposed runtime activation with an unsafe managed-skill entry`, and `reports $title as blocked before a rubric can activate it`.
+
+### REPO-OPS-009 — Conditional conform re-audit
+
+After publishing staged writes or running staged commands, `ki repo conform` MUST re-audit the same selected skills and report that second pass as `re-audit`. When conform stages no operation, it MUST skip that second pass and report that no re-audit is required.
+
+_Verify:_ `src/tests/cli/repo/conform-writes.test.ts` — `does not re-audit a clean conform that staged no operation`, `publishes a complete conform write set, supports dry-run, and re-audits`, and `runs an eligible guarded command only with explicit authority and re-audits it`.
 
 ## Gaps
 

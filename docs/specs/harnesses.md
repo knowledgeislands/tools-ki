@@ -14,13 +14,13 @@ _Verify:_ `src/tests/cli/harness/harness.test.ts` — `refuses an archive that d
 
 `ki harness reinstall` MUST keep the installed Harness intact when a replacement payload is invalid.
 
-_Verify:_ `src/tests/cli/harness/harness.test.ts` — `keeps an installed harness intact when a replacement payload is invalid`.
+_Verify:_ `src/tests/cli/root/lifecycle.test.ts` — `keeps an installed harness intact when a replacement payload is invalid`.
 
 ### HARN-003 — Protected canonical and active state
 
 `ki harness` MUST refuse removal of the canonical Harness and refuse replacement or removal of a Harness while it supplies an active user skill.
 
-_Verify:_ `src/tests/cli/harness/harness.test.ts` — `blocks replacement and removal while a supplied user skill is active` and `refuses to uninstall the canonical harness`.
+_Verify:_ `src/tests/cli/root/lifecycle.test.ts` — `blocks replacement and removal while a supplied user skill is active`; `src/tests/cli/harness/harness.test.ts` — `refuses to uninstall the canonical harness`.
 
 ## Gaps
 

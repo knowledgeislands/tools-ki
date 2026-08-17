@@ -8,19 +8,19 @@ This area specifies named, repository-declared groups; see the [Specifications i
 
 `ki` MUST resolve a named Agora only from a registered repository's `[skills.ki-agora.homes.<id>]` declaration. The declaration MUST name its declaring repository's canonical identity as `owner`; that repository is a projection participant without separately declaring membership.
 
-_Verify:_ `src/core/agora.ts` — `homeDeclarations` and `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers owner inclusion and invalid owners.
+_Verify:_ `src/core/agora/index.ts` — `homeDeclarations` and `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers owner inclusion and invalid owners.
 
 ### AGORA-002 — Reciprocal additional membership
 
 Every member other than the owner MUST be registered locally and reciprocally declare the declared owner and matching role.
 
-_Verify:_ `src/core/agora.ts` — `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers one-sided and malformed membership declarations.
+_Verify:_ `src/core/agora/index.ts` — `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers one-sided and malformed membership declarations.
 
 ### AGORA-003 — Globally unique names
 
 An Agora identifier MUST be declared by no more than one registered owner. Listing or resolving duplicates MUST fail and identify every owner.
 
-_Verify:_ `src/core/agora.ts` — `uniqueProfiles`; `src/tests/cli/agora/agora.test.ts` covers duplicate identifiers.
+_Verify:_ `src/core/agora/index.ts` — `uniqueProfiles`; `src/tests/cli/agora/agora.test.ts` covers duplicate identifiers.
 
 ### AGORA-004 — Validated declared configuration
 
@@ -40,7 +40,7 @@ _Verify:_ `src/tests/cli/agora/agora.test.ts` — list, show, open, and launch-f
 
 The command MUST fail without writing roots when resolution fails or selects no members. Its line and NUL byte encodings are the V1 compatibility contract; a future encoding MUST use a new explicit option rather than changing either existing format.
 
-_Verify:_ `src/tests/cli/agora/agora.test.ts` — `writes deterministic machine-readable roots for named Agoras and the estate` and `fails without roots for unresolved Agora selectors`.
+_Verify:_ `src/tests/cli/agora/agora.test.ts` — `writes deterministic machine-readable roots for named Agoras and the estate` and `fails without roots for unknown, empty, missing, or non-reciprocal Agora selectors`.
 
 ## Gaps
 

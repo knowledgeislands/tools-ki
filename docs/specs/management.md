@@ -8,7 +8,7 @@ This area specifies the user-oriented management interface; see the [Specificati
 
 `ki manage list` MUST list installed capabilities and declared user skills without inspecting the current repository.
 
-_Verify:_ `src/tests/cli/manage/inventory.test.ts` — `lists installed capabilities and declared user skills without inspecting the current repository`.
+_Verify:_ `src/tests/cli/manage/list.test.ts` — `lists installed capabilities and declared user skills without inspecting the current repository`.
 
 ### MANAGE-002 — Managed-state diagnosis
 

@@ -8,7 +8,7 @@ This area specifies the CLI host's local trade operations; see the [Specificatio
 
 `ki trade prepare` MUST create a mutable local preparation only on a declared export route, MUST require an `unattended`, `receipt`, `decision`, or `completion` observation policy, and MAY run before the receiver has activated the reciprocal route. `ki trade submit` MUST freeze that preparation as the outbound submission; `ki trade abandon` MUST require explicit confirmation before removing an unsubmitted preparation.
 
-_Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and submission identity, then abandons mutable work` and `creates declared outbound trades before receiver activation and rejects malformed or retired inputs`.
+_Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and record validity, then abandons mutable work` and `creates declared outbound trades before receiver activation and rejects malformed or retired inputs`.
 
 ### TRADE-002 — Committed receipt
 
@@ -32,7 +32,7 @@ _Verify:_ `src/tests/cli/trade/trade.test.ts` — `lists incomplete route declar
 
 `ki trade observe` MUST read a sender's committed preparation without receiving it, compare it with the commit last observed by this receiver, and fall back to the complete current contents when no usable earlier Git evidence exists.
 
-_Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and submission identity, then abandons mutable work`.
+_Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and record validity, then abandons mutable work`.
 
 ### TRADE-006 — Observation-led cleanup
 
@@ -50,7 +50,7 @@ _Verify:_ `src/tests/cli/trade/trade.test.ts` — `creates, receives, displays, 
 
 `ki trade routes remove` MUST refuse to remove a route while a local preparation, submission, or received copy depends on it.
 
-_Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and submission identity, then abandons mutable work`.
+_Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and record validity, then abandons mutable work`.
 
 ## Gaps
 
