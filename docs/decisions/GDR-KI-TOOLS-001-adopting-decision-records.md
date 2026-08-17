@@ -20,5 +20,5 @@ decision_type: governance
 ## Consequences
 
 - Significant CLI-platform decisions have a durable current-state home.
-- The shared ecosystem record is mirrored in this collection alongside the other four primary repositories.
+- The shared ecosystem record is mirrored in this collection alongside the other five primary repositories.
 - Routine implementation and roadmap work remain outside the Decision Records collection.
