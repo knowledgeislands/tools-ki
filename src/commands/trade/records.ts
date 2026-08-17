@@ -14,6 +14,13 @@ import {
   submitTrade,
   tradeLifecycle
 } from '../../core/trade/index.ts'
+import {
+  cleanupTradeBatch,
+  listTradeRecords,
+  receiveTradeBatch,
+  type TradeCleanupOperation,
+  type TradeListResult
+} from '../../core/trade/operations/records.ts'
 import { renderTree } from '../presentation/index.ts'
 import { count, kind, observation, renderTradeRelation, repository, requireText, tradeId } from './shared.ts'
 
@@ -43,18 +50,8 @@ interface ListOptions {
 
 const directionLabel = { preparation: 'prepare', inbound: 'import', outbound: 'export' } as const
 
-const renderTradeList = async (
-  trades: Awaited<ReturnType<typeof locateTrades>>,
-  estate: Awaited<ReturnType<typeof locateTrades>>,
-  receivable: readonly Awaited<ReturnType<typeof previewReceivableTrades>>[number][],
-  icons: boolean
-): Promise<string> => {
-  const receivableIds = new Set(receivable.map((record) => record.id))
-  const receivedIds = new Set(trades.filter((trade) => trade.direction === 'inbound').map((trade) => trade.record.id))
-  const visible = trades.filter(
-    (trade) =>
-      trade.direction !== 'outbound' || (!receivableIds.has(trade.record.id) && !receivedIds.has(trade.record.id))
-  )
+const renderTradeList = async (result: TradeListResult, icons: boolean): Promise<string> => {
+  const { trades, receivable } = result
   const pending = receivable.map((record) => ({
     label: `${record.id} import ${renderTradeRelation(
       record,
@@ -68,16 +65,10 @@ const renderTradeList = async (
       icons
     )} ${record.title}`
   }))
-  const results = visible.length
-    ? await Promise.all(
-        visible.map(async (trade) => {
-          const lifecycle = await tradeLifecycle(trade, estate)
-          return {
-            label: `${trade.record.id} ${directionLabel[trade.direction]} ${renderTradeRelation(trade.record, trade.direction, lifecycle, icons)} ${trade.record.title}`
-          }
-        })
-      )
-    : []
+  const results = trades.map(({ trade, lifecycle }) => ({
+    label: `${trade.record.id} ${directionLabel[trade.direction]} ${renderTradeRelation(trade.record, trade.direction, lifecycle, icons)} ${trade.record.title}`
+  }))
+  const visible = trades.map(({ trade }) => trade)
   return renderTree({
     title: 'KI TRADES',
     entries: [
@@ -102,13 +93,13 @@ const receiveAll = async (context: KiContext, options: BatchOptions): Promise<vo
   const records = await previewReceivableTrades(context)
   context.stdout.write(`${renderPreview('receive --all', records)}\n`)
   if (!options.yes) return
-  for (const record of records) await receiveTrade(context, record.id)
+  await receiveTradeBatch(records, (id) => receiveTrade(context, id))
   context.stdout.write(`ki trade receive: received ${count(records.length, 'trade')}\n`)
 }
 
 const cleanup = async (
   context: KiContext,
-  operation: 'release' | 'prune',
+  operation: TradeCleanupOperation,
   id: string | undefined,
   options: BatchOptions
 ): Promise<void> => {
@@ -120,18 +111,19 @@ const cleanup = async (
     context.stdout.write(`ki trade ${operation}: ${operation === 'release' ? 'released' : 'pruned'} ${value}\n`)
     return
   }
-  const records = await eligibleTradeCleanup(context, operation)
+  const trades = await eligibleTradeCleanup(context, operation)
   context.stdout.write(
     `${renderPreview(
       `${operation} --eligible`,
-      records.map((trade) => trade.record)
+      trades.map((trade) => trade.record)
     )}\n`
   )
   if (!options.yes) return
-  for (const trade of records)
-    await (operation === 'release' ? releaseTrade(context, trade.record.id) : pruneTrade(context, trade.record.id))
+  await cleanupTradeBatch(operation, trades, (selected, trade) =>
+    selected === 'release' ? releaseTrade(context, trade) : pruneTrade(context, trade)
+  )
   context.stdout.write(
-    `ki trade ${operation}: ${operation === 'release' ? 'released' : 'pruned'} ${count(records.length, 'trade')}\n`
+    `ki trade ${operation}: ${operation === 'release' ? 'released' : 'pruned'} ${count(trades.length, 'trade')}\n`
   )
 }
 
@@ -207,33 +199,24 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
       if (options.direction && !['prepare', 'import', 'export'].includes(options.direction))
         throw grammarError('--direction accepts prepare, import, or export')
       const selectedRepository = options.repo ? repository(options.repo, '--repo') : undefined
-      const estate = await locateTrades(context)
-      const selected = estate.filter(
-        (trade) =>
-          (!options.direction ||
-            trade.direction ===
-              ({ prepare: 'preparation', import: 'inbound', export: 'outbound' } as const)[
+      const result = await listTradeRecords(
+        {
+          direction: options.direction
+            ? ({ prepare: 'preparation', import: 'inbound', export: 'outbound' } as const)[
                 options.direction as 'prepare'
-              ]) &&
-          (!selectedRepository || trade.repository === selectedRepository) &&
-          (!options.status || trade.record.decisionStatus === options.status) &&
-          (!options.kind || trade.record.kind === kind(options.kind))
+              ]
+            : undefined,
+          repository: selectedRepository,
+          status: options.status,
+          kind: options.kind ? kind(options.kind) : undefined
+        },
+        {
+          locate: () => locateTrades(context),
+          previewReceivable: () => previewReceivableTrades(context),
+          lifecycle: tradeLifecycle
+        }
       )
-      const receivable = (
-        options.direction || options.status || options.repo || options.kind
-          ? []
-          : await previewReceivableTrades(context)
-      ).filter(
-        (record) =>
-          !estate.some(
-            (trade) =>
-              trade.direction === 'inbound' &&
-              trade.record.id === record.id &&
-              trade.record.sender === record.sender &&
-              trade.record.receiver === record.receiver
-          )
-      )
-      context.stdout.write(`${await renderTradeList(selected, estate, receivable, options.icons !== false)}\n`)
+      context.stdout.write(`${await renderTradeList(result, options.icons !== false)}\n`)
     }),
   new Command('show')
     .description('show every visible copy of one trade')
