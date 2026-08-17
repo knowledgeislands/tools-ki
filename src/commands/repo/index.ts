@@ -8,7 +8,6 @@ import {
   declaredRepositoryIdentity,
   readRepositoryDeclaration
 } from '../../core/configuration.ts'
-import { publishIndependentConformGroups } from '../../core/conform-publication.ts'
 import { KiError } from '../../core/errors.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { presentationText, treeProgressPrefix } from '../../core/presentation/index.ts'
@@ -40,7 +39,8 @@ import {
   runGatheredSkillAudit,
   runSkillAudit,
   runSkillConform
-} from '../../core/runtime.ts'
+} from '../../core/runtime/index.ts'
+import { publishIndependentConformGroups } from '../../core/runtime/publication.ts'
 import {
   inspectLocalRegistry,
   localRegistryWrite,

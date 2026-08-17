@@ -2,7 +2,7 @@ import { basename } from 'node:path'
 import type { KiContext } from '../../context.ts'
 import { renderTree, type TreeReporter } from '../presentation/index.ts'
 import type { ReporterLevel } from '../repository-progress.ts'
-import type { Finding, PreparedSkill } from '../runtime.ts'
+import type { Finding, PreparedSkill } from '../runtime/index.ts'
 import { findingEntry, REPORT_ICON, REPORT_LABEL, renderOperationFrameStart } from './shared.ts'
 
 interface AuditSkillReport {
@@ -37,13 +37,13 @@ const auditPassed = (summary: Pick<AuditRepositorySummary, 'failingSkills' | 'wa
 
 const auditSummaryLabel = (summary: AuditRepositorySummary): string => {
   const prefix = `summary: KI REPO AUDIT on ${basename(summary.repository)}`
-  if (auditPassed(summary)) return `${prefix} PASS · ${skillCount(summary.passingSkills)}`
-  return `${prefix} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
+  if (auditPassed(summary)) return `${prefix} PASS Â· ${skillCount(summary.passingSkills)}`
+  return `${prefix} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} Â· FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
 }
 
 const auditSkillLabel = (identity: string, summary: ReturnType<typeof auditSkillSummary>): string => {
   const result = `${REPORT_ICON[summary.level]} ${identity} ${REPORT_LABEL[summary.level].toUpperCase()}`
-  return `${result} · FAIL=${summary.fails} WARN=${summary.warnings}`
+  return `${result} Â· FAIL=${summary.fails} WARN=${summary.warnings}`
 }
 
 const auditRepositorySummary = (
@@ -94,7 +94,7 @@ export const renderAuditResults = (
     }
     if (registrationFailure)
       results.entry({
-        label: `${REPORT_ICON.fail} local repository registration FAIL [Local repository registration (REPO-REG-1)] — ${registrationFailure}`
+        label: `${REPORT_ICON.fail} local repository registration FAIL [Local repository registration (REPO-REG-1)] â ${registrationFailure}`
       })
   }
   reporter.finish({ label: auditSummaryLabel(summary) })
@@ -133,13 +133,13 @@ export const renderMultiRepositoryAuditSummary = (
   const totals = auditTotals(summaries)
   context.stdout.write(
     `\n${renderTree({
-      title: 'KI REPO AUDIT · MULTI-REPOSITORY SUMMARY',
+      title: 'KI REPO AUDIT Â· MULTI-REPOSITORY SUMMARY',
       context: summaries.map((summary) => ({
-        label: `${auditSummaryIcon(summary)} ${basename(summary.repository)} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
+        label: `${auditSummaryIcon(summary)} ${basename(summary.repository)} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} Â· FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
       })),
       entries: [
         {
-          label: `totals: PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} · FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}`
+          label: `totals: PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} Â· FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}`
         }
       ]
     }).join('\n')}\n`
@@ -153,6 +153,6 @@ export const renderConciseMultiRepositoryAuditSummary = (
 ): void => {
   const totals = auditTotals(summaries)
   context.stdout.write(
-    `totals: KI REPO AUDIT PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} · FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}\n`
+    `totals: KI REPO AUDIT PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} Â· FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}\n`
   )
 }

@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
-import { acquireVerifiedArchive, extractArchive, type Fetcher } from '../harness/acquire.ts'
 import { minimumBootstrapUserSkills } from '../bootstrap-capabilities.ts'
 import { KiError } from '../errors.ts'
+import { acquireVerifiedArchive, extractArchive, type Fetcher } from '../harness/acquire.ts'
 import {
   canonicalHarnessIdentifier,
   discoverInstallOrphans,
@@ -15,7 +15,7 @@ import {
   readInstalledHarness
 } from '../harness/index.ts'
 import type { Environment } from '../paths.ts'
-import type { Runner } from '../runner.ts'
+import type { Runner } from '../runtime/runner.ts'
 import { createInstallStagingArtifact } from './managed-artifacts.ts'
 
 export type { Fetcher } from '../harness/acquire.ts'

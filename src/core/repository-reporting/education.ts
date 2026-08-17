@@ -1,4 +1,4 @@
-import type { educateSkill } from '../runtime.ts'
+import type { educateSkill } from '../runtime/index.ts'
 
 export const renderEducation = (education: Awaited<ReturnType<typeof educateSkill>>): string[] => [
   education.identity,

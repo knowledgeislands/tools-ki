@@ -4,7 +4,7 @@ import { dirname, join, relative } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
-import type { Runner } from '../runner.ts'
+import type { Runner } from '../runtime/runner.ts'
 import type { HarnessRelease } from '../storage/index.ts'
 
 const decoder = new TextDecoder('utf-8', { fatal: true })
@@ -116,7 +116,7 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
 /**
  * Downloads a configured harness release and verifies its bytes against the
  * immutable SHA-256 evidence recorded in the release registry, returning the
- * verified archive payload for extraction. Never follows redirects â the
+ * verified archive payload for extraction. Never follows redirects Ã¢ÂÂ the
  * digest is only meaningful against the exact bytes served at the configured
  * URL.
  */

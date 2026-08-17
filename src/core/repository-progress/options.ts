@@ -1,5 +1,5 @@
 import { KiError } from '../errors.ts'
-import type { FindingLevel } from '../runtime.ts'
+import type { FindingLevel } from '../runtime/index.ts'
 
 export type ProgressMode = 'auto' | 'always' | 'never'
 export type ProgressStyle = 'single' | 'multi'

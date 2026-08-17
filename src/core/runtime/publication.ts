@@ -1,6 +1,6 @@
-import { renderRepositoryConformCommand, runRepositoryConformCommands } from './repository-subprocess.ts'
-import type { Finding, PreparedSkill, SkillConformResult } from './runtime.ts'
-import { prepareScopedWrites, prepareWrites, publishWrites } from './transaction.ts'
+import { renderRepositoryConformCommand, runRepositoryConformCommands } from '../repository-subprocess.ts'
+import { prepareScopedWrites, prepareWrites, publishWrites } from '../transaction.ts'
+import type { Finding, PreparedSkill, SkillConformResult } from './index.ts'
 
 /** A skill's complete conform proposal, retained with its audit evidence. */
 export interface ConformedSkill {
@@ -99,7 +99,7 @@ export const publishIndependentConformGroups = async (
     for (const command of groupCommands) write(`proposed run ${renderRepositoryConformCommand(command)}\n`)
     if (group.blockingFinding) {
       const { skill, finding } = group.blockingFinding
-      write(`withheld ${label}: blocking ${skill} [${finding.title} (${finding.code})] — ${finding.message}\n`)
+      write(`withheld ${label}: blocking ${skill} [${finding.title} (${finding.code})] â ${finding.message}\n`)
       continue
     }
     if (group.entries.some(({ conform }) => conform.scope.kind === 'user-home' && conform.commands.length)) {

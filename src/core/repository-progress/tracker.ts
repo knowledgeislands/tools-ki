@@ -1,7 +1,7 @@
 import type { KiContext } from '../../context.ts'
 import { KiError } from '../errors.ts'
 import { presentation } from '../presentation/index.ts'
-import { EVIDENCE_STAGE_LABEL, type PreparedSkill, type RubricProgressReport } from '../runtime.ts'
+import { EVIDENCE_STAGE_LABEL, type PreparedSkill, type RubricProgressReport } from '../runtime/index.ts'
 import { createProgressDisplay } from './display.ts'
 import type { OperationOptions } from './options.ts'
 import { elapsed } from './rendering.ts'
@@ -86,12 +86,12 @@ export const createProgressTracker = (
     if (loadingFinished) return
     display.receipt(
       `${passGlyph} loading`,
-      `definitions loaded · ${skillCount(loadingTotal)} · ${elapsed(phaseElapsed('loading'))}`
+      `definitions loaded Â· ${skillCount(loadingTotal)} Â· ${elapsed(phaseElapsed('loading'))}`
     )
     loadingFinished = true
   }
   const evidenceText = (activity: EvidenceActivity): string =>
-    `${activity.detail} · ${elapsed(context.now() - activity.detailStarted)}`
+    `${activity.detail} Â· ${elapsed(context.now() - activity.detailStarted)}`
   const showEvidenceActivity = (activity: EvidenceActivity): void => {
     display.activity(`${activeGlyph} ${activity.name}`, () => evidenceText(activity))
   }
@@ -130,7 +130,7 @@ export const createProgressTracker = (
     if (detailedEvidence)
       display.receipt(
         `${passGlyph} ${activity.name}`,
-        `evidence ready · ${elapsed(context.now() - activity.started)}`,
+        `evidence ready Â· ${elapsed(context.now() - activity.started)}`,
         { temporary: true }
       )
     evidenceActivity = undefined
@@ -141,7 +141,7 @@ export const createProgressTracker = (
     display.collapseTemporary()
     display.receipt(
       `${passGlyph} evidence`,
-      `evidence gathered · ${skillCount(completedEvidence)} · ${elapsed(phaseElapsed('evidence'))}`
+      `evidence gathered Â· ${skillCount(completedEvidence)} Â· ${elapsed(phaseElapsed('evidence'))}`
     )
     evidenceReceiptWritten = true
   }
@@ -152,7 +152,7 @@ export const createProgressTracker = (
     operationDetail = detail
     display.activity(
       skill ? `${activeGlyph} ${skill.name}` : `${activeGlyph} ${phase}`,
-      () => `${operationDetail} · ${elapsed(context.now() - operationDetailStarted)}`
+      () => `${operationDetail} Â· ${elapsed(context.now() - operationDetailStarted)}`
     )
   }
   const trackedSkill = (identity: string): TrackedSkill => {
@@ -170,7 +170,7 @@ export const createProgressTracker = (
     loading: (_loaded, total) => {
       loadingTotal = total
       if (!loadingShown) {
-        display.activity(`${activeGlyph} loading`, () => `loading definitions · ${elapsed(phaseElapsed('loading'))}`)
+        display.activity(`${activeGlyph} loading`, () => `loading definitions Â· ${elapsed(phaseElapsed('loading'))}`)
         loadingShown = true
       }
     },
@@ -248,7 +248,7 @@ export const createProgressTracker = (
       const totalDuration = context.now() - started
       display.receipt(
         `${passGlyph} ${phase}`,
-        `complete · ${elapsed(operationDuration)} · total ${elapsed(totalDuration)}`,
+        `complete Â· ${elapsed(operationDuration)} Â· total ${elapsed(totalDuration)}`,
         { placement: completionPlacement }
       )
       display.finish()
@@ -257,7 +257,7 @@ export const createProgressTracker = (
       const totalDuration = context.now() - started
       display.failure(
         `${failGlyph} ${activeSkill?.name ?? activePhase}`,
-        `${lastRunning ? `failed at ${lastRunning}` : 'failed'} · total ${elapsed(totalDuration)}`,
+        `${lastRunning ? `failed at ${lastRunning}` : 'failed'} Â· total ${elapsed(totalDuration)}`,
         completionPlacement
       )
       display.finish()
