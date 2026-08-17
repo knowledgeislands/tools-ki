@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
-import { acquireVerifiedArchive, extractArchive, type Fetcher } from '../acquire.ts'
+import { acquireVerifiedArchive, extractArchive, type Fetcher } from '../harness/acquire.ts'
 import { minimumBootstrapUserSkills } from '../bootstrap-capabilities.ts'
 import { KiError } from '../errors.ts'
 import {
@@ -13,12 +13,12 @@ import {
   inspectHarnessRoot,
   parkedPayloadEntry,
   readInstalledHarness
-} from '../harness.ts'
+} from '../harness/index.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runner.ts'
 import { createInstallStagingArtifact } from './managed-artifacts.ts'
 
-export type { Fetcher } from '../acquire.ts'
+export type { Fetcher } from '../harness/acquire.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const sha256 = /^[a-f0-9]{64}$/

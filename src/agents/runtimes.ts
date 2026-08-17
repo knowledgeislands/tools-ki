@@ -1,6 +1,6 @@
 import { readRepositoryDeclaration } from '../core/configuration.ts'
 import { KiError } from '../core/errors.ts'
-import { type SupportedRuntime, supportedRuntimes } from '../core/harness.ts'
+import { type SupportedRuntime, supportedRuntimes } from '../core/harness/index.ts'
 import type { InstalledAgent } from './internal.ts'
 
 const agentRuntimes = {

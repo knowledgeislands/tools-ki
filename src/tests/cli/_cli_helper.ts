@@ -1,29 +1,29 @@
 // Shared end-to-end test harness for the `ki` CLI. Every test creates its own sandbox()
-// — a throwaway HOME/XDG_CONFIG_HOME/XDG_DATA_HOME/project quartet with methods to
-// populate and run against it — so no test assembles that layout or a raw path by hand.
+// â a throwaway HOME/XDG_CONFIG_HOME/XDG_DATA_HOME/project quartet with methods to
+// populate and run against it â so no test assembles that layout or a raw path by hand.
 // Cleanup is registered per sandbox via `onTestFinished`, tied to the test that created
 // it, rather than a shared registry that a concurrent test could sweep prematurely.
 //
-// <mkdtemp>/                  (root — content outside the four areas below)
-// │   └── dev/                (a local checkout selected by `ki dev local set` — populated by setupLocalCanonicalHarness())
-// │       └── knowledgeislands/
-// │           └── ki-agentic-harness/   (skills/, subagents/, hooks/ are real, never symlinks — `ki dev local on` validates each root)
-// │               ├── skills/
-// │               ├── subagents/
-// │               └── hooks/
-// ├── home/                   ($HOME — dotfiles a real `ki` install would read)
-// ├── config/                 ($XDG_CONFIG_HOME)
-// │   └── ki/config.toml
-// ├── data/                   ($XDG_DATA_HOME — installed harnesses/skills project here)
-// │   └── ki/harnesses/
-// │       └── knowledgeislands/
-// │           └── ki-agentic-harness/   (installed mode: real, from the archive. After `ki dev local on`: symlinked to root/dev/.../<payload>)
-// │               ├── skills/
-// │               ├── subagents/
-// │               └── hooks/
-// ├── state/                  ($XDG_STATE_HOME — machine-local mutable KI registry)
-// │   └── ki/registry.toml
-// └── project/                (run()'s default cwd; cd() moves relative to here)
+// <mkdtemp>/                  (root â content outside the four areas below)
+// â   âââ dev/                (a local checkout selected by `ki dev local set` â populated by setupLocalCanonicalHarness())
+// â       âââ knowledgeislands/
+// â           âââ ki-agentic-harness/   (skills/, subagents/, hooks/ are real, never symlinks â `ki dev local on` validates each root)
+// â               âââ skills/
+// â               âââ subagents/
+// â               âââ hooks/
+// âââ home/                   ($HOME â dotfiles a real `ki` install would read)
+// âââ config/                 ($XDG_CONFIG_HOME)
+// â   âââ ki/config.toml
+// âââ data/                   ($XDG_DATA_HOME â installed harnesses/skills project here)
+// â   âââ ki/harnesses/
+// â       âââ knowledgeislands/
+// â           âââ ki-agentic-harness/   (installed mode: real, from the archive. After `ki dev local on`: symlinked to root/dev/.../<payload>)
+// â               âââ skills/
+// â               âââ subagents/
+// â               âââ hooks/
+// âââ state/                  ($XDG_STATE_HOME â machine-local mutable KI registry)
+// â   âââ ki/registry.toml
+// âââ project/                (run()'s default cwd; cd() moves relative to here)
 
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -31,11 +31,11 @@ import { dirname, join } from 'node:path'
 import { onTestFinished } from 'vitest'
 import { run as runCli } from '../../cli.ts'
 import { createContext } from '../../context.ts'
-import type { Fetcher } from '../../core/acquire.ts'
+import type { Fetcher } from '../../core/harness/acquire.ts'
 import type { KiInstallationMode } from '../../core/paths.ts'
 import type { Runner } from '../../core/runner.ts'
 
-// `ki bootstrap` detects the active agent from which of these home directories exists —
+// `ki bootstrap` detects the active agent from which of these home directories exists â
 // kept here as a literal, not imported from src/agents, so this black-box CLI harness
 // exercises detection through observable behavior rather than sharing implementation.
 type AgentId = 'chatgpt-codex' | 'claude-code'
@@ -61,7 +61,7 @@ const bootstrapHarnessSkills = [
   'ki-recap'
 ] as const
 
-// This tools-ki checkout's own `bin/ki` — never spawned (run() drives the CLI in-process),
+// This tools-ki checkout's own `bin/ki` â never spawned (run() drives the CLI in-process),
 // only used to populate `executable`/`_` in the synthetic context so commands that inspect
 // their own invocation path see a real, resolvable one.
 const executablePath = new URL('../../../bin/ki', import.meta.url).pathname
@@ -77,7 +77,7 @@ export interface CommandResult {
 }
 
 // A named root within a sandbox. Callers address content by a path relative to that
-// root, so no test ever computes a filesystem path with `join` — the sandbox owns the
+// root, so no test ever computes a filesystem path with `join` â the sandbox owns the
 // layout, the test only names what goes in it.
 export interface SandboxArea {
   readonly path: string
@@ -129,7 +129,7 @@ const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
   writeBootstrapHarness(data, 'ki/harnesses/knowledgeislands/ki-agentic-harness')
 
 // The same fixture, but written under an arbitrary local directory rather than the
-// installed-harness data root — for exercising `ki dev local set <path>` against a local
+// installed-harness data root â for exercising `ki dev local set <path>` against a local
 // development checkout instead of an installed harness. Returns the checkout's real
 // path, since callers select it through `ki dev local set <path>` before enabling it.
 const setupLocalCanonicalHarness = async (root: SandboxArea, relativePath: string): Promise<string> => {
@@ -223,9 +223,9 @@ const create = async (): Promise<Sandbox> => {
   }
 
   // Drives the real `ki` command tree in-process, always starting from this sandbox's
-  // own env (a real HOME/XDG_* always exists by construction — no forgotten-override
+  // own env (a real HOME/XDG_* always exists by construction â no forgotten-override
   // footgun) and, by default, this sandbox's empty project directory. Overridden via
-  // setEnv() and cd() — like a real shell, cd() moves relative to wherever the
+  // setEnv() and cd() â like a real shell, cd() moves relative to wherever the
   // sandbox currently is, so repeated calls compose. Commands are written exactly
   // as typed at a shell, `ki ...`, so the literal command a test asserts against is
   // unambiguous at the call site.

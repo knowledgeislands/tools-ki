@@ -1,7 +1,7 @@
 import { lstat, readFile, realpath } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { parse } from 'smol-toml'
-import { KiError } from './errors.ts'
+import { KiError } from '../errors.ts'
 
 export interface InstallerReceipt {
   readonly executable: string

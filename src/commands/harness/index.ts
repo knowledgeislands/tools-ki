@@ -7,7 +7,7 @@ import {
   discoverInstalledHarnesses,
   type InstalledHarness,
   readInstalledHarness
-} from '../../core/harness.ts'
+} from '../../core/harness/index.ts'
 import { renderTree } from '../../core/presentation/index.ts'
 import {
   installHarness,

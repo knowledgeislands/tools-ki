@@ -1,5 +1,5 @@
 import { KiError } from '../core/errors.ts'
-import { discoverInstalledHarnesses, type InstalledHarness } from '../core/harness.ts'
+import { discoverInstalledHarnesses, type InstalledHarness } from '../core/harness/index.ts'
 import { readHarnessRegistry } from '../core/storage/index.ts'
 import { inspectUserConfiguration } from './configuration.ts'
 

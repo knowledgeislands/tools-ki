@@ -1,8 +1,8 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { KiError } from '../../core/errors.ts'
-import { discoverInstalledHarnesses } from '../../core/harness.ts'
-import { installerEnvironment, requireCurrentInstallerReceipt } from '../../core/installation.ts'
+import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
+import { installerEnvironment, requireCurrentInstallerReceipt } from '../../core/harness/installation.ts'
 import { renderTree } from '../../core/presentation/index.ts'
 import { refreshHarnesses } from '../harness/refresh.ts'
 

@@ -12,7 +12,7 @@ import {
 import type { KiContext } from '../../context.ts'
 import { readRepositoryDeclaration } from '../../core/configuration.ts'
 import { KiExit } from '../../core/errors.ts'
-import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness } from '../../core/harness.ts'
+import { canonicalHarnessIdentifier, discoverInstalledHarnesses, type InstalledHarness } from '../../core/harness/index.ts'
 import { presentation, renderTree } from '../../core/presentation/index.ts'
 import { canonicalHarnessDevelopmentEnabled } from '../../core/storage/index.ts'
 

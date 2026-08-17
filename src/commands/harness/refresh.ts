@@ -1,5 +1,5 @@
 import type { KiContext } from '../../context.ts'
-import type { InstalledHarness } from '../../core/harness.ts'
+import type { InstalledHarness } from '../../core/harness/index.ts'
 import { installHarness, readHarnessRegistry } from '../../core/storage/index.ts'
 
 const retainedCapabilities = (harness: InstalledHarness): readonly string[] =>

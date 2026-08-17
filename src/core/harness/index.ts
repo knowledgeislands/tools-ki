@@ -1,7 +1,7 @@
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
-import { KiError } from './errors.ts'
-import { RUBRIC_MODULE_PATH } from './rubric/index.ts'
+import { KiError } from '../errors.ts'
+import { RUBRIC_MODULE_PATH } from '../rubric/index.ts'
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const harnessComponent = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
@@ -201,7 +201,7 @@ export const installStagingPrefix = '.install-'
 export const parkedPayloadPrefix = '.replace-'
 
 // The parked name carries the destination it must be restored to, because a payload does not
-// record its own identity â `inspectHarnessRoot` is told which harness it is reading.
+// record its own identity Ã¢ÂÂ `inspectHarnessRoot` is told which harness it is reading.
 export const parkedPayloadEntry = (uuid: string, name: string): string => `${parkedPayloadPrefix}${uuid}-${name}`
 
 const parkedDestination = (entry: string): string | undefined => {

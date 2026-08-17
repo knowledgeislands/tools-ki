@@ -10,7 +10,7 @@ import {
 } from '../../core/configuration.ts'
 import { publishIndependentConformGroups } from '../../core/conform-publication.ts'
 import { KiError } from '../../core/errors.ts'
-import { discoverInstalledHarnesses } from '../../core/harness.ts'
+import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { presentationText, treeProgressPrefix } from '../../core/presentation/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import {

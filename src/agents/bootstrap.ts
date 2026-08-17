@@ -8,7 +8,7 @@ import {
   type HarnessCapability,
   inspectHarnessRoot,
   readInstalledHarness
-} from '../core/harness.ts'
+} from '../core/harness/index.ts'
 import { inspectUserConfiguration, readConfiguration, renderConfiguration } from './configuration.ts'
 import { detectAgents } from './detection.ts'
 import {
@@ -182,7 +182,7 @@ export const installBootstrapSkills = async (
     for (const agent of agents) {
       for (const skill of skills) {
         const snapshot = snapshots[projections.length]
-        // snapshots and projections traverse the same agents × skills product above and here.
+        // snapshots and projections traverse the same agents Ã skills product above and here.
         /* v8 ignore next */
         if (!snapshot) throw new KiError('bootstrap skill projection plan is incomplete', 1)
         applied.push(snapshot)

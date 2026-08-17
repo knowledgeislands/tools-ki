@@ -1,6 +1,6 @@
 import type { DeclaredSkill, RepositoryDeclaration } from './configuration.ts'
 import { KiError } from './errors.ts'
-import type { HarnessCapability, InstalledHarness } from './harness.ts'
+import type { HarnessCapability, InstalledHarness } from './harness/index.ts'
 
 export interface ResolvedSkill {
   readonly identity: string
@@ -63,7 +63,7 @@ const orderedSkills = (skills: readonly ResolvedSkill[]): readonly ResolvedSkill
   return ordered
 }
 
-/** Resolves one installed skill by capability name, independent of any repository declaration — the same duplicate/unknown-provider guards `ki skill user add` applies. */
+/** Resolves one installed skill by capability name, independent of any repository declaration â the same duplicate/unknown-provider guards `ki skill user add` applies. */
 export const resolveInstalledSkill = (harnesses: readonly InstalledHarness[], name: string): ResolvedSkill => {
   const candidates = skillCandidates(harnesses, name)
   if (!candidates.length) throw new KiError(`no installed harness provides skill ${name}`, 1)

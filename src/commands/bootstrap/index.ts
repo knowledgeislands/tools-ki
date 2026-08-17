@@ -13,7 +13,7 @@ import {
   setConfiguredUserSkills
 } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
-import { canonicalHarnessIdentifier } from '../../core/harness.ts'
+import { canonicalHarnessIdentifier } from '../../core/harness/index.ts'
 import { canonicalHarnessDevelopmentEnabled, restoreCanonicalHarness } from '../../core/storage/index.ts'
 
 export const createBootstrapCommand = (context: KiContext): Command =>

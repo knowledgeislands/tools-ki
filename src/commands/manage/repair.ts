@@ -11,7 +11,7 @@ import {
 import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
-import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness.ts'
+import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { presentation, renderTree } from '../../core/presentation/index.ts'
 import {
   acquireManagedArtifactRecovery,
