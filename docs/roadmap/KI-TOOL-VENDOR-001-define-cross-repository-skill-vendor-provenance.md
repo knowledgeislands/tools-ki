@@ -6,7 +6,7 @@ theme: cross-repository-vendoring
 horizon: next
 status: draft
 blocks: []
-blocked_by: []
+blocked_by: [KI-TOOL-CLI-050]
 baseline_ref: null
 transferred_from: knowledgeislands/ki-agentic-harness:foundation-tooling
 ---
