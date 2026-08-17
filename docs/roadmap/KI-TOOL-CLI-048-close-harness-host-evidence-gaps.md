@@ -4,7 +4,7 @@ title: Close Harness host evidence gaps
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: f86666e9eaef4a89da38e235216f47c1f68fe1f7
@@ -76,6 +76,10 @@ Activation remains a native host concern. The rubric load boundary is widened on
 ### Mini recap
 
 CLI-048 closes the receiver-owned host evidence gaps identified by the linked Harness review and is ready for owner review once the final gates complete.
+
+## Done
+
+Accepted by the repository owner on 2026-08-17. The receiver-owned host evidence contract is retained as the durable completion record.
 
 ## Discussion
 
