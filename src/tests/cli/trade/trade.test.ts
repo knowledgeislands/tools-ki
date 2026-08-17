@@ -798,6 +798,7 @@ describe('[ki trade]', () => {
 
     box.cd('receiver')
     const received = await box.run(['ki', 'trade', 'receive', id])
+    const receiverListed = await box.run('ki trade list')
     const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
     const receivedInbound = await box.project.read(inboundPath)
     await box.project.write(
@@ -830,6 +831,7 @@ describe('[ki trade]', () => {
 
     expect(created.output).toBe(`ki trade submit: submitted ${id} for example/receiver [decision]\n`)
     expect(received).toEqual({ exitCode: 0, output: `ki trade receive: received ${id}\n` })
+    expect(receiverListed.output.match(new RegExp(id, 'g'))).toHaveLength(1)
     expect(listed.output).toContain(`${id} import [✓ release] ← [⚒ work] source [adopted] Route contract`)
     expect(allListed.output).toContain(`${id} import [✓ release] ← [⚒ work] source [adopted]`)
     expect(allListed.output).not.toContain(`${id} export`)

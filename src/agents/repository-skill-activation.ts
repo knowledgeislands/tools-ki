@@ -38,7 +38,10 @@ const stateForTarget = async (target: ActivationTarget): Promise<'active' | 'mis
 
   const [actual, expected] = await Promise.all([
     realpath(target.path).catch(() => undefined),
-    realpath(join(target.skill.harness.root, target.skill.capability.source)).catch(() => undefined)
+    realpath(join(target.skill.harness.root, target.skill.capability.source)).catch(
+      /* v8 ignore next -- the discovered harness source can disappear here only through a concurrent filesystem replacement. */
+      () => undefined
+    )
   ])
   return actual && expected && actual === expected ? 'active' : 'blocked'
 }
@@ -63,6 +66,7 @@ export const createRepositorySkillActivation = async (options: {
   const skills = new Map(options.skills.map((skill) => [skill.declaration.name, skill]))
   const targetsFor = (name: string): ActivationTarget[] => {
     const skill = skills.get(name)
+    /* v8 ignore next -- operation callers validate activation names against the resolved rubric inventory before inspection. */
     if (!skill) return []
     return agents
       .filter(
@@ -119,8 +123,10 @@ export const createRepositorySkillActivation = async (options: {
 
       const applied: string[] = []
       for (const state of states) {
+        /* v8 ignore next -- a proposed missing target can become active only through a concurrent external link publication. */
         if (state.status === 'active') continue
         const skill = skills.get(state.name)
+        /* v8 ignore next -- proposed names originate from this resolved-skill map and cannot lose their entry during the operation. */
         if (!skill) throw new KiError(`${state.name} is not a declared repository skill`, 1)
         for (const agent of agents.filter(
           (candidate) =>

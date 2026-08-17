@@ -209,7 +209,6 @@ export const conformRepositories = async (
       )
     for (const write of writes) observer.event({ kind: 'proposed-write', path: write.path })
     for (const command of commands) observer.event({ kind: 'proposed-run', command })
-    for (const name of repositorySkills?.proposedNames() ?? []) observer.event({ kind: 'proposed-activation', name })
     let publicationError: unknown
     try {
       await publishWrites(writes, options.dryRun)
@@ -230,16 +229,6 @@ export const conformRepositories = async (
       observer.event({ kind: 'nothing-staged' })
       observer.reports(repository.root, initialReports())
       continue
-    }
-    if (repositorySkills?.hasProposals()) {
-      for (const name of repositorySkills.proposedNames()) observer.event({ kind: 'activate', name })
-      try {
-        await repositorySkills.apply()
-      } catch (error) {
-        if (repositorySkills.started()) await reAuditAndReport()
-        else observer.reports(repository.root, initialReports())
-        throw error
-      }
     }
     for (const write of writes) observer.event({ kind: 'applied-write', path: write.path })
     for (const command of commands) observer.event({ kind: 'run', command })

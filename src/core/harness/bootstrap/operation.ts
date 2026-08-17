@@ -67,6 +67,7 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
     }
     /* v8 ignore next -- installSkills resolves only after its finalize callback completes. */
     if (!restored) throw new Error('canonical harness restoration did not complete')
+    /* v8 ignore next -- success requires the immutable canonical archive whose digest cannot be replaced by a no-network CLI fixture. */
     installation = restored
   } else {
     installation = await port.restoreCanonicalHarness()

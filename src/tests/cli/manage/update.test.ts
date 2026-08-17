@@ -60,6 +60,25 @@ describe('[ki manage update and ki repo upgrade]', () => {
     })
   })
 
+  test('updates an installer-managed executable before refreshing an empty harness inventory', async () => {
+    const box = await sandbox()
+    await box.root.write('installer.sh', '')
+    await box.root.write('ki.1', '')
+    await box.state.write(
+      'ki/installation.toml',
+      receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
+    )
+    box.setRunner(async () => ({ exitCode: 0, output: '' }))
+
+    const updated = await box.run('ki manage update')
+
+    expect(updated).toEqual({
+      exitCode: 0,
+      output:
+        '╭─ KI MANAGE UPDATE\n├─ CLI\n│  ╰─ CLI executable: updated with the verified installer\n├─ harnesses (0)\n│  ╰─ none\n╰─ summary: HARNESS_RESULTS=0\n'
+    })
+  })
+
   test('rejects malformed, incompatible, mismatched, and incomplete installer receipts before invoking an update', async () => {
     const malformed = await sandbox()
     await malformed.state.write('ki/installation.toml', '[broken\n')

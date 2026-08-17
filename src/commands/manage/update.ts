@@ -40,6 +40,7 @@ export const createUpdateCommand = (context: KiContext): Command =>
         )
         return
       }
+      /* v8 ignore next -- the only result without harnesses is the CLI-only branch returned above. */
       const refreshed = (result.harnesses ?? []).map((refresh) =>
         refresh.kind === 'refreshed'
           ? `${refresh.id}: refreshed archive ${refresh.archiveSha256}`

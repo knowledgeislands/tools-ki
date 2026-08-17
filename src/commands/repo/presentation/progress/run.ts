@@ -18,7 +18,5 @@ export const repositoryOperationProgress = (
   resolved: (skills, phase, completion) =>
     skills.length ? createProgressTracker(context, options, trackedSkills(skills), phase, completion) : undefined,
   prepared: (skills, phase, completion) =>
-    skills.length
-      ? createProgressTracker(context, options, trackedPreparedSkills(skills), phase, completion)
-      : undefined
+    createProgressTracker(context, options, trackedPreparedSkills(skills), phase, completion)
 })
