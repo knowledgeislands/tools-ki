@@ -1,6 +1,6 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { minimumBootstrapUserSkills } from '../core/bootstrap-capabilities.ts'
+import type { minimumBootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
 import { KiError } from '../core/errors.ts'
 import chatgptCodex from './chatgpt-codex.ts'
 import claudeCode from './claude-code.ts'

@@ -1,6 +1,6 @@
 import { lstat, mkdir, readdir, readlink, realpath, symlink, unlink, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { minimumBootstrapUserSkills } from '../core/bootstrap-capabilities.ts'
+import { minimumBootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
 import { KiError } from '../core/errors.ts'
 import {
   canonicalHarnessIdentifier,
