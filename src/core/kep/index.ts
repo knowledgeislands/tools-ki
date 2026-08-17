@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
 import { cp, lstat, mkdir, readdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
-import type { KiContext } from '../../context.ts'
 import { KiError } from '../errors.ts'
 
 const CONNECTOR_ID = 'knowledgeislands.chatgpt.local-capture'
@@ -33,6 +32,16 @@ interface Payload {
 export interface ImportOptions {
   readonly output: string
   readonly dryRun?: boolean
+}
+
+export interface ImportCaptureResult {
+  readonly output: string
+  readonly packageId: string
+  readonly recordCount: number
+  readonly assetCount: number
+  readonly relationshipCount: number
+  readonly omissions: readonly string[]
+  readonly dryRun: boolean
 }
 
 const digest = (value: string | Uint8Array): string => createHash('sha256').update(value).digest('hex')
@@ -292,30 +301,7 @@ const writeKep = async (capture: Capture, payload: Payload, output: string): Pro
   }
 }
 
-const emitResult = (
-  context: KiContext,
-  capture: Capture,
-  payload: Payload,
-  output: string,
-  options: ImportOptions
-): void => {
-  context.stdout.write(`${options.dryRun ? 'KEP plan' : 'KEP created'}: ${output}\n`)
-  context.stdout.write(`Package: ${payload.packageId}\n`)
-  context.stdout.write(
-    `Inventory: ${capture.recordCount} records, ${capture.assetCount} assets, ${capture.relationshipCount} relationships\n`
-  )
-  context.stdout.write(`Omissions: ${JSON.stringify(capture.metadata.omissions)}\n`)
-  context.stdout.write(
-    'Limitations: local user-provided capture only; no browser, network, credentials, repository discovery, or knowledge extraction.\n'
-  )
-  if (options.dryRun) context.stdout.write('Dry run: no files written.\n')
-}
-
-export const importCapture = async (
-  context: KiContext,
-  captureArgument: string,
-  options: ImportOptions
-): Promise<void> => {
+export const importCapture = async (captureArgument: string, options: ImportOptions): Promise<ImportCaptureResult> => {
   const captureState = await lstat(captureArgument).catch(() => undefined)
   if (captureState?.isSymbolicLink()) throw operationalError('capture-directory must not be a symbolic link')
   const captureDirectory = await physicalDirectory(captureArgument, 'capture-directory')
@@ -323,5 +309,13 @@ export const importCapture = async (
   const capture = await loadCapture(captureArgument)
   const payload = await calculatePayload(capture)
   if (!options.dryRun) await writeKep(capture, payload, output)
-  emitResult(context, capture, payload, output, options)
+  return {
+    output,
+    packageId: payload.packageId,
+    recordCount: capture.recordCount,
+    assetCount: capture.assetCount,
+    relationshipCount: capture.relationshipCount,
+    omissions: capture.metadata.omissions,
+    dryRun: Boolean(options.dryRun)
+  }
 }

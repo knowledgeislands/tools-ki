@@ -3,9 +3,9 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { lstat, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, relative } from 'node:path'
 import { parse } from 'smol-toml'
-import type { KiContext } from '../../context.ts'
 import { REPOSITORY_CONFIGURATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
+import type { Runner } from '../runtime/runner.ts'
 import {
   parseTradeAddress as addressParts,
   assertTradeIdentifier as identifier,
@@ -31,6 +31,15 @@ import {
 
 const timestampExpression = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
 const commitExpression = /^[0-9a-f]{40}$/
+
+export interface TradeContext {
+  readonly workingDirectory: string
+  readonly homeDirectory: string
+  readonly environment: NodeJS.ProcessEnv
+  readonly paths: { readonly state: string }
+  readonly runner: Runner
+  readonly now: () => number
+}
 const tradePhases = ['preparing', 'submitted', 'received'] as const
 const decisionStatuses = [
   'unconsidered',
@@ -135,11 +144,11 @@ const tradeError = (message: string): KiError => new KiError(message, 2)
 
 const repositoryIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
 
-const registeredRoots = async (context: KiContext): Promise<readonly string[]> => {
+const registeredRoots = async (context: TradeContext): Promise<readonly string[]> => {
   return (await requiredLocalRegistry(context.paths.state)).map((repository) => repository.path)
 }
 
-const registeredRepositories = async (context: KiContext): Promise<readonly RegisteredRepository[]> => {
+const registeredRepositories = async (context: TradeContext): Promise<readonly RegisteredRepository[]> => {
   const repositories: RegisteredRepository[] = []
   for (const root of await registeredRoots(context)) {
     const path = join(root, REPOSITORY_CONFIGURATION_FILE)
@@ -169,10 +178,10 @@ const registeredRepositories = async (context: KiContext): Promise<readonly Regi
   return repositories
 }
 
-export const localRepository = async (context: KiContext): Promise<RepositoryLocation> =>
+export const localRepository = async (context: TradeContext): Promise<RepositoryLocation> =>
   resolveRepository({ workingDirectory: context.workingDirectory, homeDirectory: context.homeDirectory })
 
-export const localRegisteredRepository = async (context: KiContext): Promise<RepositoryLocation> => {
+export const localRegisteredRepository = async (context: TradeContext): Promise<RepositoryLocation> => {
   const repository = await localRepository(context)
   if (!(await registeredRoots(context)).includes(repository.root))
     throw tradeError('current KI repository is not registered in the local KI repository estate')
@@ -180,7 +189,7 @@ export const localRegisteredRepository = async (context: KiContext): Promise<Rep
 }
 
 export const localRegisteredConfiguration = async (
-  context: KiContext
+  context: TradeContext
 ): Promise<{ readonly repository: RepositoryLocation; readonly configuration: TradeConfiguration }> => {
   const repository = await localRegisteredRepository(context)
   return { repository, configuration: await readTradeConfiguration(repository.configuration) }
@@ -228,11 +237,11 @@ const inspectRoutesInEstate = (
   })
 
 export const inspectRoutes = async (
-  context: KiContext,
+  context: TradeContext,
   local: TradeConfiguration
 ): Promise<readonly RouteInspection[]> => inspectRoutesInEstate(await registeredRepositories(context), local)
 
-export const inspectEstateRoutes = async (context: KiContext): Promise<readonly EstateRouteInspection[]> => {
+export const inspectEstateRoutes = async (context: TradeContext): Promise<readonly EstateRouteInspection[]> => {
   const repositories = await registeredRepositories(context)
   return repositories.flatMap((source) => {
     const configuration = source.configuration
@@ -250,7 +259,7 @@ export const inspectEstateRoutes = async (context: KiContext): Promise<readonly 
 }
 
 export const requireActiveRoute = async (
-  context: KiContext,
+  context: TradeContext,
   local: TradeConfiguration,
   repository: string,
   direction: RouteDirection,
@@ -492,7 +501,7 @@ const senderContents = (
   ].join('\n')
 
 export const createTradePreparation = async (
-  context: KiContext,
+  context: TradeContext,
   options: {
     readonly to: string
     readonly kind: TradeKind
@@ -528,7 +537,7 @@ export const createTradePreparation = async (
   return recordFromContents(contents, path, 'preparation')
 }
 
-export const submitTrade = async (context: KiContext, id: string): Promise<TradeRecord> => {
+export const submitTrade = async (context: TradeContext, id: string): Promise<TradeRecord> => {
   const { trade } = await localTrade(context, 'preparation', identifier(id))
   // Preparation and submission share one path, so submission rewrites the phase field in
   // place rather than relocating the record.
@@ -539,7 +548,7 @@ export const submitTrade = async (context: KiContext, id: string): Promise<Trade
   return submitted
 }
 
-export const abandonTrade = async (context: KiContext, id: string): Promise<void> => {
+export const abandonTrade = async (context: TradeContext, id: string): Promise<void> => {
   const { trade } = await localTrade(context, 'preparation', identifier(id))
   await rm(trade.path)
 }
@@ -553,7 +562,7 @@ const readDirectory = async (path: string): Promise<readonly string[]> => {
 }
 
 const committedFile = async (
-  context: KiContext,
+  context: TradeContext,
   root: string,
   path: string
 ): Promise<{ readonly contents: string; readonly ref: string }> => {
@@ -577,7 +586,7 @@ const copyInboundContents = (record: TradeRecord, receivedFromRef: string): stri
   )
 
 const receivableTrade = async (
-  context: KiContext,
+  context: TradeContext,
   local: Awaited<ReturnType<typeof localRegisteredConfiguration>>,
   id: string
 ): Promise<{
@@ -613,7 +622,7 @@ const receivableTrade = async (
 }
 
 export const receiveTrade = async (
-  context: KiContext,
+  context: TradeContext,
   requestedId: string
 ): Promise<{ readonly id: string; readonly existing: boolean }> => {
   const local = await localRegisteredConfiguration(context)
@@ -630,7 +639,7 @@ export const receiveTrade = async (
   return { id: candidate.record.id, existing: false }
 }
 
-export const previewReceivableTrades = async (context: KiContext): Promise<readonly TradeRecord[]> => {
+export const previewReceivableTrades = async (context: TradeContext): Promise<readonly TradeRecord[]> => {
   const local = await localRegisteredConfiguration(context)
   const ids = new Set<string>()
   for (const sender of await registeredRepositories(context)) {
@@ -662,7 +671,7 @@ export interface ObservedPreparation {
 }
 
 export const observeTradePreparation = async (
-  context: KiContext,
+  context: TradeContext,
   requestedId: string
 ): Promise<ObservedPreparation> => {
   const id = identifier(requestedId)
@@ -762,7 +771,7 @@ const peerDirectories = async (root: string, area: '+' | '-'): Promise<readonly 
  * that alters a field value or the prose still fails, which is the guard's reason to exist.
  */
 export const locateTrades = async (
-  context: KiContext,
+  context: TradeContext,
   options: { readonly id?: string; readonly direction?: TradeDirection; readonly repository?: string } = {}
 ): Promise<readonly LocatedTrade[]> => {
   if (options.id) identifier(options.id)
@@ -867,7 +876,7 @@ export const tradeLifecycle = (trade: LocatedTrade, estate: readonly LocatedTrad
 }
 
 const localTrade = async (
-  context: KiContext,
+  context: TradeContext,
   direction: TradeDirection,
   id: string
 ): Promise<{
@@ -882,7 +891,7 @@ const localTrade = async (
   return { local, trade: candidates[0] as LocatedTrade }
 }
 
-const peerForRecord = async (context: KiContext, identity: string): Promise<ActiveRegisteredRepository> => {
+const peerForRecord = async (context: TradeContext, identity: string): Promise<ActiveRegisteredRepository> => {
   const candidates = (await registeredRepositories(context)).filter(
     (candidate): candidate is ActiveRegisteredRepository =>
       Boolean(candidate.configuration && candidate.configuration.identity === identity)
@@ -893,7 +902,7 @@ const peerForRecord = async (context: KiContext, identity: string): Promise<Acti
 }
 
 export const eligibleTradeCleanup = async (
-  context: KiContext,
+  context: TradeContext,
   operation: 'release' | 'prune'
 ): Promise<readonly LocatedTrade[]> => {
   const local = await localRegisteredConfiguration(context)
@@ -908,7 +917,7 @@ export const eligibleTradeCleanup = async (
   return eligible
 }
 
-export const releaseTrade = async (context: KiContext, id: string): Promise<void> => {
+export const releaseTrade = async (context: TradeContext, id: string): Promise<void> => {
   const { local, trade } = await localTrade(context, 'outbound', identifier(id))
   if (trade.record.sender !== local.configuration.identity)
     throw tradeError(`outbound trade ${id} is not owned by the current repository`)
@@ -927,7 +936,7 @@ export const releaseTrade = async (context: KiContext, id: string): Promise<void
   await rm(trade.path)
 }
 
-export const pruneTrade = async (context: KiContext, id: string): Promise<void> => {
+export const pruneTrade = async (context: TradeContext, id: string): Promise<void> => {
   const { local, trade } = await localTrade(context, 'inbound', identifier(id))
   if (trade.record.receiver !== local.configuration.identity)
     throw tradeError(`inbound trade ${id} is not addressed to the current repository`)
