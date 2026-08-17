@@ -275,4 +275,5 @@ export const discoverInstallOrphans = async (dataDirectory: string): Promise<rea
   return orphans.sort((left, right) => left.path.localeCompare(right.path))
 }
 
+export * from './bootstrap/index.ts'
 export * from './operations/index.ts'
