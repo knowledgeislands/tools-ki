@@ -9,6 +9,7 @@ import {
   readRepositoryDeclaration
 } from '../../core/configuration/index.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
+import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { presentation, renderTree } from '../../core/presentation/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import {
@@ -17,7 +18,6 @@ import {
   registeredKnowledgeBaseStoreRoots,
   registryEntry
 } from '../../core/storage/index.ts'
-import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 import { describeRepositoryProjection, inspectRepositoryHealth } from './repository-health.ts'
 
 export const createRepairCommand = (

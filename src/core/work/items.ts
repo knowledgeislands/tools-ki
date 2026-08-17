@@ -1,7 +1,7 @@
 import { lstat, readdir, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { KiError } from '../errors.ts'
-import { prepareWrites, publishWrites } from '../transaction.ts'
+import { prepareWrites, publishWrites } from '../filesystem/index.ts'
 import type { WorkItemDirectory } from './planning.ts'
 
 const ISSUE_LEDGER = '_ISSUES.md'

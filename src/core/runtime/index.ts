@@ -1,12 +1,13 @@
 // Executes a loaded rubric definition (CLI-004 T1.2): runs mechanical items' audit in
 // phase order, renders findings, and — for conform — collects ConformProposals from
-// violated items into host-owned guarded publication (see ./transaction.ts). Judgment items
+// violated items into host-owned guarded filesystem publication. Judgment items
 // are catalogue data only; the runtime never executes them.
 
 import { type lstat, realpath } from 'node:fs/promises'
 import { stripVTControlCharacters } from 'node:util'
 import type { ResolvedSkill } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
+import type { NativeWrite } from '../filesystem/index.ts'
 import {
   type AuditOutcome,
   type ConformCommand,
@@ -23,7 +24,6 @@ import {
 } from '../rubric/index.ts'
 import { loadRubricDefinition } from '../rubric/loader.ts'
 import { prepareRubricPublication } from '../rubric/publication.ts'
-import type { NativeWrite } from '../transaction.ts'
 
 export interface RepositoryRuntimeScope {
   readonly kind: 'repository'

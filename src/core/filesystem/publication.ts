@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { link, lstat, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
-import { KiError } from './errors.ts'
+import { KiError } from '../errors.ts'
 
 export interface NativeWrite {
   readonly path: string

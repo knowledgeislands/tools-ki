@@ -14,6 +14,7 @@ import {
 import type { KiContext } from '../../context.ts'
 import { resolveInstalledSkill } from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
+import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { loadRubricDefinition } from '../../core/rubric/loader.ts'
 import { prepareRubricPublication } from '../../core/rubric/publication.ts'
@@ -22,7 +23,6 @@ import {
   enableCanonicalHarnessDevelopment,
   restoreCanonicalHarness
 } from '../../core/storage/index.ts'
-import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 
 const configured = (context: KiContext) =>
   configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config })

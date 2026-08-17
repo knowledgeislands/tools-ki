@@ -7,9 +7,9 @@ import {
   readRepositoryDeclaration
 } from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
+import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { localRegistryWrite, registryEntry, sourceStoreDirectory } from '../../core/storage/index.ts'
-import { prepareWrites, publishWrites } from '../../core/transaction.ts'
 import type { RegistrySelection } from './index.ts'
 
 export const createRegistryAddCommand = (context: KiContext, selectedRepositories: () => RegistrySelection): Command =>
