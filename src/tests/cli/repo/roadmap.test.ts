@@ -71,7 +71,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('├─ roadmap (2)')
     expect(result.output).toContain('KBS-001 [awaiting-review] Native proposal')
     expect(result.output).toContain('KBS-002 [draft] Later proposal')
-    expect(result.output).toContain('╰─ summary: ITEMS=2 HORIZONS=2 TRADES=0 IMPORTS=0 EXPORTS=0')
+    expect(result.output).toContain('╰─ summary: ITEMS=2 ACTIVE=2 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0')
     expect(result.output).not.toContain('_ISSUES')
     expect(await box.project.read('knowledge/Streams/Roadmap/KBS-001-native-proposal.md')).toBe(before)
     expect(await box.project.read('knowledge/Streams/Roadmap/_ISSUES.md')).toBe(ledger)
@@ -170,6 +170,10 @@ describe('[ki repo roadmap]', () => {
         baseline_ref: 'a'.repeat(40)
       })
     )
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-CLI-011-done.md',
+      item({ id: 'KI-TOOL-CLI-011', title: 'Done', status: 'done' })
+    )
     const root = await realpath(`${box.project.path}/repo`)
     await box.state.write(
       'ki/registry.toml',
@@ -178,18 +182,22 @@ describe('[ki repo roadmap]', () => {
 
     const text = await box.run('ki repo --repo repo roadmap list --horizon next --status draft')
     const accepted = await box.run('ki repo --repo repo roadmap list --status awaiting-review')
+    const done = await box.run('ki repo --repo repo roadmap list --status done')
     const empty = await box.run('ki repo --repo repo roadmap list --horizon now')
     const agora = await box.run('ki repo --agora estate roadmap list --status awaiting-review')
     const format = await box.run('ki repo --repo repo roadmap list --format json')
 
     expect(text).toEqual({
       exitCode: 0,
-      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 HORIZONS=1 TRADES=0 IMPORTS=0 EXPORTS=0\n`
+      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 ACTIVE=1 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0\n`
     })
     expect(accepted.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
+    expect(accepted.output).toContain('summary: ITEMS=1 ACTIVE=1 DONE=0')
+    expect(done.output).toContain('summary: ITEMS=1 ACTIVE=0 DONE=1')
     expect(accepted.output).not.toContain('KI-TOOL-CLI-003')
     expect(agora.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
     expect(empty.output).toContain('├─ roadmap (0)\n├─ trades (0)')
+    expect(empty.output).toContain('summary: ITEMS=0 ACTIVE=0 DONE=0')
     expect(empty.output).not.toContain('items: none')
     expect(format.exitCode).toBe(2)
     expect(format.output).toContain("unknown option '--format' for 'ki repo roadmap list'")

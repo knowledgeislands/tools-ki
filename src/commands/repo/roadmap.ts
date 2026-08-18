@@ -100,6 +100,8 @@ const renderTextResult = (result: RoadmapListResult, estate: readonly LocatedTra
         children: group.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
       }))
   const { inbound, outbound } = countTradeDirections(result.trades)
+  const done = items.filter((item) => item.status === 'done').length
+  const active = items.length - done
   const tradeSummary = result.tradeDiagnostic
     ? 'unavailable'
     : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
@@ -112,7 +114,7 @@ const renderTextResult = (result: RoadmapListResult, estate: readonly LocatedTra
         label: `trades (${result.trades.length})`,
         children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, icons)
       },
-      { label: `summary: ITEMS=${items.length} HORIZONS=${groups.length} TRADES=${tradeSummary}` }
+      { label: `summary: ITEMS=${items.length} ACTIVE=${active} DONE=${done} TRADES=${tradeSummary}` }
     ]
   }).join('\n')
 }
