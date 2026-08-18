@@ -36,6 +36,18 @@ describe('[ki dev]', () => {
       expect(result.output).toContain('installed harness knowledgeislands/ki-agentic-harness must be a directory')
     })
 
+    test('accepts a local source for a legacy installed slot without Harness metadata', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('claude-code')
+      await box.run('ki bootstrap')
+      await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/.ki-config.toml`)
+
+      const result = await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
+
+      expect(result.exitCode).toBe(0)
+    })
+
     test('switches the canonical harness to a local development checkout', async () => {
       const box = await sandbox()
       const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
@@ -95,8 +107,7 @@ harness = "knowledgeislands/ki-agentic-harness"
 [skills.ki-recap]
 harness = "knowledgeislands/ki-agentic-harness"
 
-[local]
-harness = "knowledgeislands/ki-agentic-harness"
+[locals."knowledgeislands/ki-agentic-harness"]
 path = ${JSON.stringify(harnessPath)}
 `
       expect(dataIsSymlink).toBe(true)
@@ -128,7 +139,7 @@ path = ${JSON.stringify(harnessPath)}
         await realpath(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills/keystone/ki-bootstrap`)
       )
       expect(await box.config.read('ki/config.toml')).toContain(
-        `[local]\nharness = "knowledgeislands/ki-agentic-harness"\npath = ${JSON.stringify(harnessPath)}\n`
+        `[locals."knowledgeislands/ki-agentic-harness"]\npath = ${JSON.stringify(harnessPath)}\n`
       )
     })
 
@@ -166,10 +177,11 @@ path = ${JSON.stringify(harnessPath)}
       expect(await realpath(canonical)).toBe(harnessPath)
     })
 
-    test('switches one non-canonical installed harness without changing its neighbours', async () => {
+    test('switches every configured harness together and can restore one by identifier', async () => {
       const box = await sandbox()
       const skill = '---\nname: hnr-example\nki-depends-on: []\n---\n'
       const installed = 'ki/harnesses/humansnotrobots/hnr-agentic-harness'
+      const canonicalLocal = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
       await box.setupAgentHome('chatgpt-codex')
       await box.run('ki bootstrap')
       await box.data.write(`${installed}/.ki-config.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
@@ -187,13 +199,14 @@ path = ${JSON.stringify(harnessPath)}
         ['subagents', 'hooks'].map((payload) => box.root.mkdir(`dev/humansnotrobots/hnr-agentic-harness/${payload}`))
       )
 
+      await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${canonicalLocal}`)
       const set = await box.run(`ki dev local set humansnotrobots/hnr-agentic-harness ${local}`)
       const on = await box.run('ki dev local on')
 
       expect(set.exitCode).toBe(0)
       expect(on.exitCode).toBe(0)
       expect(await box.data.isSymlink(installed)).toBe(true)
-      expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness')).toBe(false)
+      expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness')).toBe(true)
       expect(await realpath(`${box.home.path}/.agents/skills/hnr-example`)).toBe(`${local}/skills/hnr-example`)
 
       const archive = makeHarnessArchive({ 'source/skills/hnr-example/SKILL.md': skill }, { harnessPrefix: 'hnr' })
@@ -219,10 +232,11 @@ path = ${JSON.stringify(harnessPath)}
         'harness humansnotrobots/hnr-agentic-harness is development-linked; run ki dev local off before uninstalling'
       )
 
-      const off = await box.run('ki dev local off')
+      const off = await box.run('ki dev local off humansnotrobots/hnr-agentic-harness')
 
       expect(off.exitCode).toBe(0)
       expect(await box.data.isSymlink(installed)).toBe(false)
+      expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness')).toBe(true)
       expect(await realpath(`${box.home.path}/.agents/skills/hnr-example`)).toBe(
         await realpath(`${box.data.path}/${installed}/skills/hnr-example`)
       )
@@ -268,7 +282,7 @@ path = ${JSON.stringify(harnessPath)}
       await box.run('ki bootstrap')
       await enableLocal(box, harnessPath)
 
-      const off = await box.run('ki dev local off')
+      const off = await box.run('ki dev local off knowledgeislands/ki-agentic-harness')
 
       expect(off.exitCode).toBe(1)
       expect(off.output).toContain('could not download configured harness knowledgeislands/ki-agentic-harness')
@@ -340,7 +354,7 @@ path = ${JSON.stringify(harnessPath)}
     test('refuses to switch before the environment is bootstrapped', async () => {
       const box = await sandbox()
 
-      const off = await box.run('ki dev local off')
+      const off = await box.run('ki dev local off knowledgeislands/ki-agentic-harness')
 
       expect(off.exitCode).toBe(1)
       expect(off.output).toContain('run `ki bootstrap` first')
@@ -500,7 +514,7 @@ path = ${JSON.stringify(harnessPath)}
 
       expect(result).toEqual({
         exitCode: 1,
-        output: 'ki: error: no local development source is configured; run ki dev local set <harness-id> <path>\n'
+        output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n'
       })
     })
 
@@ -515,6 +529,30 @@ path = ${JSON.stringify(harnessPath)}
         exitCode: 1,
         output: 'ki: error: no local development source is configured; run ki dev local set <harness-id> <path>\n'
       })
+    })
+
+    test('requires an explicitly selected harness to have a configured source', async () => {
+      const box = await sandbox()
+      await box.setupAgentHome('claude-code')
+      await box.run('ki bootstrap')
+
+      const on = await box.run('ki dev local on knowledgeislands/ki-agentic-harness')
+      const off = await box.run('ki dev local off knowledgeislands/ki-agentic-harness')
+
+      expect(on.output).toContain('no local development source is configured for knowledgeislands/ki-agentic-harness')
+      expect(off.output).toContain('no local development source is configured for knowledgeislands/ki-agentic-harness')
+    })
+
+    test('refuses an invalid local-source configuration before applying it to all Harnesses', async () => {
+      const box = await sandbox()
+      await box.config.write(
+        'ki/config.toml',
+        'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[locals.invalid]\npath = "/somewhere"\n'
+      )
+
+      const result = await box.run('ki dev local on')
+
+      expect(result.output).toContain('locals.invalid must name a harness owner/name identifier')
     })
 
     test('dev on reports already-enabled when projections are already installed', async () => {

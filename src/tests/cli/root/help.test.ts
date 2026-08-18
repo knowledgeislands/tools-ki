@@ -59,7 +59,7 @@ describe('[ki --help]', () => {
     expect(repository.output).toContain('educate')
     expect(repository.output).toContain('repair')
     expect(localSet.output).toContain('validate and remember a checkout for one installed harness')
-    expect(localOn.output).toContain('remembered installed harness payload')
+    expect(localOn.output).toContain('every configured harness')
     expect(agora.output).toContain('resolve declared named Agoras and the registered estate')
     expect(agora.output).toContain('write resolved Agora roots for machine consumption')
     expect(agora.output).toContain('open one Agora through an explicit local target')

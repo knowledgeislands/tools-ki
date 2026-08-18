@@ -15,7 +15,6 @@ import {
   type DisableDevelopmentPort,
   discoverInstalledHarnesses,
   type EnableDevelopmentPort,
-  readInstalledHarness,
   type SetDevelopmentSourcePort
 } from '../../core/harness/index.ts'
 import { loadRubricDefinition } from '../../core/rubric/loader.ts'
@@ -23,6 +22,7 @@ import { prepareRubricPublication } from '../../core/rubric/publication.ts'
 import {
   enableHarnessDevelopment,
   harnessDevelopmentEnabled,
+  installedHarnessSlot,
   isHarnessDevelopmentLinked,
   restoreHarness
 } from '../../core/storage/index.ts'
@@ -43,14 +43,8 @@ const projectionView = ({ agent, skill, installed }: DevelopmentProjection) => (
 export const setDevelopmentSourcePort = (
   context: KiContext
 ): SetDevelopmentSourcePort<DevelopmentAgent, DevelopmentSkill> => ({
-  developmentEnabled: async () => {
-    const { local } = await inspectUserConfiguration(context.paths.config)
-    return local ? harnessDevelopmentEnabled(context.paths.data, local.harness, local.path) : false
-  },
-  requireInstalledHarness: async (identifier) => {
-    const harness = await readInstalledHarness(context.paths.data, identifier)
-    return { prefix: harness.prefix }
-  },
+  developmentEnabled: (identifier) => harnessDevelopmentEnabled(context.paths.data, identifier),
+  requireInstalledHarness: (identifier) => installedHarnessSlot(context.paths.data, identifier),
   inspectLocalHarness: localHarness,
   configuredAgents: () => agents(context),
   setLocalHarness: (harness) => setLocalBootstrapHarness(context.paths.config, context.homeDirectory, harness)
@@ -64,8 +58,8 @@ export const enableDevelopmentPort = (
   configuredAgents: () => agents(context),
   enableDevelopment: (identifier, harness) => enableHarnessDevelopment(context.paths.data, identifier, harness),
   installSkills: (skills, configured) => installBootstrapSkills(skills, configured, { replace: true }),
-  refreshConfiguration: (configured, local) =>
-    refreshUserConfiguration(context.paths.config, context.paths.data, configured, local),
+  refreshConfiguration: (configured, locals) =>
+    refreshUserConfiguration(context.paths.config, context.paths.data, configured, locals),
   projectionView
 })
 
@@ -86,8 +80,8 @@ export const disableDevelopmentPort = (
     ),
   installedSkills: (identifier) => installedHarnessSkillSources(context.paths.data, identifier),
   installSkills: (skills, configured) => installBootstrapSkills(skills, configured, { replace: true }),
-  refreshConfiguration: (configured, local) =>
-    refreshUserConfiguration(context.paths.config, context.paths.data, configured, local),
+  refreshConfiguration: (configured, locals) =>
+    refreshUserConfiguration(context.paths.config, context.paths.data, configured, locals),
   projectionView
 })
 

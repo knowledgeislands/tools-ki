@@ -10,7 +10,6 @@ export {
   refreshUserConfiguration
 } from './bootstrap.ts'
 export {
-  clearLocalBootstrapHarness,
   configuredAgents,
   inspectUserConfiguration,
   migrateLegacyRepositoryRegistry,

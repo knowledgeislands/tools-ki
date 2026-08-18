@@ -4,7 +4,7 @@ import type { PreparedRubricPublication } from '../../rubric/publication.ts'
 import type { BootstrapInstallationResult, BootstrapRefreshResult } from '../bootstrap/index.ts'
 
 export interface DevelopmentConfigurationInspection {
-  readonly local: { readonly harness: string; readonly path: string } | null
+  readonly locals: readonly { readonly harness: string; readonly path: string }[]
   readonly skills: readonly string[]
 }
 
@@ -21,8 +21,8 @@ export interface DevelopmentSource<Skill> {
 }
 
 export interface SetDevelopmentSourcePort<Agent, Skill> {
-  readonly developmentEnabled: () => Promise<boolean>
-  readonly requireInstalledHarness: (identifier: string) => Promise<{ readonly prefix: string }>
+  readonly developmentEnabled: (identifier: string) => Promise<boolean>
+  readonly requireInstalledHarness: (identifier: string) => Promise<{ readonly prefix?: string }>
   readonly inspectLocalHarness: (path: string, identifier: string) => Promise<DevelopmentSource<Skill>>
   readonly configuredAgents: () => Promise<readonly Agent[]>
   readonly setLocalHarness: (local: { readonly harness: string; readonly path: string }) => Promise<void>
@@ -36,7 +36,7 @@ export interface EnableDevelopmentPort<Agent, Skill, Projection> {
   readonly installSkills: (skills: readonly Skill[], agents: readonly Agent[]) => Promise<readonly Projection[]>
   readonly refreshConfiguration: (
     agents: readonly Agent[],
-    local: { readonly harness: string; readonly path: string } | undefined
+    locals: readonly { readonly harness: string; readonly path: string }[]
   ) => Promise<BootstrapRefreshResult>
   readonly projectionView: (projection: Projection) => DevelopmentProjectionView
 }
@@ -49,7 +49,7 @@ export interface DisableDevelopmentPort<Agent, Skill, Projection> {
   readonly installSkills: (skills: readonly Skill[], agents: readonly Agent[]) => Promise<readonly Projection[]>
   readonly refreshConfiguration: (
     agents: readonly Agent[],
-    local: { readonly harness: string; readonly path: string } | undefined
+    locals: readonly { readonly harness: string; readonly path: string }[]
   ) => Promise<BootstrapRefreshResult>
   readonly projectionView: (projection: Projection) => DevelopmentProjectionView
 }

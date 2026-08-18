@@ -1,5 +1,7 @@
 import { Command } from 'commander'
+import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
+import { KiError } from '../../core/errors.ts'
 import {
   type DevelopmentProjectionView,
   type DevelopmentRubricEvent,
@@ -43,11 +45,44 @@ const reportProjections = (context: KiContext, projections: readonly Development
   }
 }
 
+const configuredLocalHarnesses = async (context: KiContext): Promise<readonly string[]> => {
+  const configuration = await inspectUserConfiguration(context.paths.config)
+  if (configuration.state === 'missing')
+    throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
+  if (configuration.state === 'invalid')
+    throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
+  if (!configuration.locals.length)
+    throw new KiError('no local development source is configured; run ki dev local set <harness-id> <path>', 1)
+  return configuration.locals.map((local) => local.harness)
+}
+
+const reportEnabled = async (context: KiContext, identifier: string): Promise<void> => {
+  const result = await enableDevelopment(enableDevelopmentPort(context), identifier)
+  context.stdout.write(`development harness enabled ${result.identifier}\t${result.harness}\n`)
+  context.stdout.write(
+    `refreshed ki configuration: ${result.agents} agents, ${result.harnesses} harnesses, ${result.skills} skills\n`
+  )
+  reportProjections(context, result.projections)
+}
+
+const reportDisabled = async (context: KiContext, identifier: string): Promise<void> => {
+  const result = await disableDevelopment(disableDevelopmentPort(context), identifier)
+  // A sandbox cannot verify the pinned canonical archive needed by the fresh-install arm.
+  /* v8 ignore next */
+  context.stdout.write(
+    `development harness disabled ${result.identifier}; verified harness ${result.installed ? 'installed' : 'already installed'}\tarchive ${result.archiveSha256}\n`
+  )
+  context.stdout.write(
+    `refreshed ki configuration: ${result.agents} agents, ${result.harnesses} harnesses, ${result.skills} skills\n`
+  )
+  reportProjections(context, result.projections)
+}
+
 export const createDevCommand = (context: KiContext): Command => {
   const command = new Command('dev').description(
-    'switch one installed harness between a local checkout and its verified archive'
+    'switch installed harnesses independently between local checkouts and verified archives'
   )
-  const local = command.command('local').description('manage local development for one installed harness')
+  const local = command.command('local').description('manage local development for installed harnesses')
   local
     .command('set <harness-id> <local-harness-path>')
     .description('validate and remember a checkout for one installed harness without enabling it')
@@ -57,30 +92,18 @@ export const createDevCommand = (context: KiContext): Command => {
       context.stdout.write(`configured ${result.agents} agents\n`)
     })
   local
-    .command('on')
-    .description('link the remembered installed harness payload to its local checkout')
-    .action(async () => {
-      const result = await enableDevelopment(enableDevelopmentPort(context))
-      context.stdout.write(`development harness enabled ${result.identifier}\t${result.harness}\n`)
-      context.stdout.write(
-        `refreshed ki configuration: ${result.agents} agents, ${result.harnesses} harnesses, ${result.skills} skills\n`
-      )
-      reportProjections(context, result.projections)
+    .command('on [harness-id]')
+    .description('switch one configured harness, or every configured harness, to its complete local checkout root')
+    .action(async (identifier?: string) => {
+      const identifiers = identifier ? [identifier] : await configuredLocalHarnesses(context)
+      for (const harness of identifiers) await reportEnabled(context, harness)
     })
   local
-    .command('off')
-    .description('restore the verified canonical harness archive')
-    .action(async () => {
-      const result = await disableDevelopment(disableDevelopmentPort(context))
-      // A sandbox cannot verify the pinned canonical archive needed by the fresh-install arm.
-      /* v8 ignore next */
-      context.stdout.write(
-        `development harness disabled ${result.identifier}; verified harness ${result.installed ? 'installed' : 'already installed'}\tarchive ${result.archiveSha256}\n`
-      )
-      context.stdout.write(
-        `refreshed ki configuration: ${result.agents} agents, ${result.harnesses} harnesses, ${result.skills} skills\n`
-      )
-      reportProjections(context, result.projections)
+    .command('off [harness-id]')
+    .description('restore one configured harness, or every configured harness, from its verified archive')
+    .action(async (identifier?: string) => {
+      const identifiers = identifier ? [identifier] : await configuredLocalHarnesses(context)
+      for (const harness of identifiers) await reportDisabled(context, harness)
     })
   command.addCommand(
     new Command('skill').description('development-only skill operations').addCommand(createRubricCommand(context))

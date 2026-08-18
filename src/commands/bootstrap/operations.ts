@@ -1,7 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
-  clearLocalBootstrapHarness,
   configureBootstrapAgents,
   inspectUserConfiguration,
   installBootstrapSkills,
@@ -40,9 +39,8 @@ export const bootstrapOperationPort = (
       }),
     installedSkills: (options) =>
       installedBootstrapSkillSources(context.paths.data, canonicalHarnessIdentifier, options),
-    refreshConfiguration: (agents, local, options) =>
-      refreshUserConfiguration(context.paths.config, context.paths.data, agents, local, options),
-    clearLocalHarness: () => clearLocalBootstrapHarness(context.paths.config),
+    refreshConfiguration: (agents, locals, options) =>
+      refreshUserConfiguration(context.paths.config, context.paths.data, agents, locals, options),
     setConfiguredSkills: (skills) => setConfiguredUserSkills(context.paths.config, context.homeDirectory, skills),
     installSkills: (skills, agents, options) => installBootstrapSkills(skills, agents, options),
     restoreCanonicalHarness: () =>

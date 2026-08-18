@@ -284,7 +284,7 @@ harness = "example/harness"
 
     const doctor = await box.run('ki manage doctor')
 
-    expect(doctor.output).toContain(`✓ Local development: active ${harnessPath}`)
+    expect(doctor.output).toContain(`✓ Local development knowledgeislands/ki-agentic-harness: active ${harnessPath}`)
     expect(doctor.output).toContain('✗ User skill ki-recap: link target does not match local development source')
     expect(doctor.exitCode).toBe(1)
   })
@@ -304,7 +304,7 @@ harness = "example/harness"
     const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain(
-      '✗ Local development: knowledgeislands/ki-agentic-harness active root does not match the configured local source'
+      '✗ Local development knowledgeislands/ki-agentic-harness: active root does not match the configured local source'
     )
     expect(doctor.exitCode).toBe(1)
   })
@@ -321,12 +321,12 @@ harness = "example/harness"
     const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain(
-      '✗ Local development: local harness knowledgeislands/ki-agentic-harness does not provide ki-recap'
+      '✗ Local development knowledgeislands/ki-agentic-harness: local harness knowledgeislands/ki-agentic-harness does not provide ki-recap'
     )
     expect(doctor.exitCode).toBe(1)
   })
 
-  test('checks local sources even when the installed harness inventory is unavailable', async () => {
+  test('reports unresolved skills when the unified active harness inventory is unavailable', async () => {
     const box = await sandbox()
     const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('claude-code')
@@ -338,7 +338,9 @@ harness = "example/harness"
     const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain('✗ Harness inventory: installed harnesses directory contains an unsafe owner entry')
-    expect(doctor.output).toContain('✓ User skill ki-recap: linked')
+    expect(doctor.output).toContain(
+      '✗ User skill ki-recap: configured skill cannot be resolved from the active source knowledgeislands/ki-agentic-harness'
+    )
     expect(doctor.exitCode).toBe(1)
   })
 

@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import type { ManagedArtifactRecoveryControl, OrphanRecovery } from '../storage/index.ts'
-import type { ManageAgent, ManageConfiguration, ManageHarness, ManageLocalHarness } from './doctor.ts'
+import type { ManageAgent, ManageConfiguration, ManageHarness } from './doctor.ts'
 
 export type ManageRepairItem =
   | { readonly kind: 'status'; readonly status: 'pass' | 'fail'; readonly label: string; readonly detail: string }
@@ -29,8 +29,6 @@ export interface ManageRepairPort {
   readonly recoverOrphans: (planned: readonly OrphanRecovery[]) => Promise<readonly OrphanRecovery[]>
   readonly configuredAgents: () => Promise<readonly ManageRepairAgent[]>
   readonly discoverHarnesses: () => Promise<readonly ManageHarness[]>
-  readonly localDevelopmentEnabled: (identifier: string, source: string) => Promise<boolean>
-  readonly inspectLocalHarness: (source: string, identifier: string) => Promise<ManageLocalHarness>
   readonly realpath: (path: string) => Promise<string>
   readonly linkedTo: (path: string, expected: string) => Promise<boolean>
 }
@@ -110,15 +108,6 @@ export const runManageRepair = async (
   } else {
     items.push({ kind: 'status', status: 'pass', label: 'Configuration', detail: configuration.path })
     const [agents, installed] = await Promise.all([port.configuredAgents(), port.discoverHarnesses()])
-    const localSources = new Map<string, string>()
-    if (
-      configuration.local &&
-      (await port.localDevelopmentEnabled(configuration.local.harness, configuration.local.path))
-    ) {
-      const local = await port.inspectLocalHarness(configuration.local.path, configuration.local.harness)
-      for (const skill of local.skills) localSources.set(skill.name, skill.source)
-    }
-
     for (const identity of configuration.skills) {
       const name = managedSkillName(identity)
       const resolved = installed
@@ -134,10 +123,7 @@ export const runManageRepair = async (
         failed = true
         continue
       }
-      const expected =
-        (configuration.local && identity.startsWith(`${configuration.local.harness}:`)
-          ? localSources.get(name)
-          : undefined) ?? (await port.realpath(join(resolved.harness.root, resolved.capability.source)))
+      const expected = await port.realpath(join(resolved.harness.root, resolved.capability.source))
       const compatible = agents.filter((agent) => agent.supports(resolved.capability.supportedRuntimes))
       if (!compatible.length) {
         items.push({

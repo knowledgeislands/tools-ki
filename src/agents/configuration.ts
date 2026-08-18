@@ -3,7 +3,6 @@ import { isAbsolute, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
-import { canonicalHarnessIdentifier } from '../core/harness/index.ts'
 import type { Runner } from '../core/runtime/runner.ts'
 import { canonicalRepositoryIdentity, registryEntry, renderLocalRegistry } from '../core/storage/index.ts'
 import {
@@ -14,7 +13,7 @@ import {
   type InstalledAgent,
   isRecord,
   type LocalDevelopmentConfiguration,
-  type LocalSection,
+  type LocalSourceSection,
   type RepositoriesSection,
   type StringListSection,
   type UserConfigurationInspection
@@ -24,7 +23,7 @@ export const renderConfiguration = (
   agents: readonly InstalledAgent[],
   harnesses: readonly string[] = [],
   skills: readonly string[] = [],
-  local?: LocalDevelopmentConfiguration,
+  locals: readonly LocalDevelopmentConfiguration[] = [],
   repositories: readonly string[] = []
 ): string =>
   [
@@ -45,9 +44,9 @@ export const renderConfiguration = (
       const separator = skill.lastIndexOf(':')
       return ['', `[skills.${skill.slice(separator + 1)}]`, `harness = ${JSON.stringify(skill.slice(0, separator))}`]
     }),
-    ...(local
-      ? ['', '[local]', `harness = ${JSON.stringify(local.harness)}`, `path = ${JSON.stringify(local.path)}`]
-      : []),
+    ...locals
+      .toSorted((left, right) => left.harness.localeCompare(right.harness))
+      .flatMap((local) => ['', `[locals.${JSON.stringify(local.harness)}]`, `path = ${JSON.stringify(local.path)}`]),
     ...(repositories.length
       ? [
           '',
@@ -87,7 +86,7 @@ export const inspectUserConfiguration = async (
       agents: [],
       harnesses: [],
       skills: [],
-      local: null,
+      locals: [],
       repositories: [],
       warnings: [],
       errors: []
@@ -99,7 +98,7 @@ export const inspectUserConfiguration = async (
       agents: [],
       harnesses: [],
       skills: [],
-      local: null,
+      locals: [],
       repositories: [],
       warnings: [],
       errors: ['configuration must be a regular file']
@@ -115,7 +114,7 @@ export const inspectUserConfiguration = async (
       agents: [],
       harnesses: [],
       skills: [],
-      local: null,
+      locals: [],
       repositories: [],
       warnings: [],
       errors: ['configuration must be valid TOML']
@@ -131,7 +130,7 @@ export const inspectUserConfiguration = async (
       agents: [],
       harnesses: [],
       skills: [],
-      local: null,
+      locals: [],
       repositories: [],
       warnings: [],
       errors: ['configuration must be a TOML table']
@@ -143,11 +142,11 @@ export const inspectUserConfiguration = async (
     agents?: unknown
     harnesses?: unknown
     skills?: unknown
-    local?: unknown
+    locals?: unknown
     repositories?: unknown
   }
   const warnings = Object.keys(configuration)
-    .filter((key) => !['schema', 'agents', 'harnesses', 'skills', 'local', 'repositories'].includes(key))
+    .filter((key) => !['schema', 'agents', 'harnesses', 'skills', 'locals', 'repositories'].includes(key))
     .map((key) => `unrecognised key ${key}`)
   const errors: string[] = []
   if (configuration.schema !== 1) errors.push('schema must equal 1')
@@ -202,29 +201,23 @@ export const inspectUserConfiguration = async (
         errors.push(`harnesses[${index}] sha256 must be lowercase SHA-256`)
     }
   }
-  const localSection =
-    configuration.local === undefined
-      ? undefined
-      : (inspectSection(configuration.local, 'local', errors) as LocalSection)
-  if (localSection) {
-    for (const key of Object.keys(localSection)) {
-      if (key !== 'harness' && key !== 'path') warnings.push(`local has unrecognised key ${key}`)
+  const localsSection = configuration.locals === undefined ? {} : inspectSection(configuration.locals, 'locals', errors)
+  const locals: LocalDevelopmentConfiguration[] = []
+  for (const [harness, value] of Object.entries(localsSection)) {
+    if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(harness)) {
+      errors.push(`locals.${harness} must name a harness owner/name identifier`)
+      continue
     }
+    const source = inspectSection(value, `locals.${harness}`, errors) as LocalSourceSection
+    for (const key of Object.keys(source)) {
+      if (key !== 'path') warnings.push(`locals.${harness} has unrecognised key ${key}`)
+    }
+    if (typeof source.path !== 'string' || !source.path) {
+      errors.push(`locals.${harness}.path must be a non-empty string`)
+      continue
+    }
+    locals.push({ harness, path: source.path })
   }
-  const local =
-    localSection !== undefined &&
-    (localSection.harness === undefined || (typeof localSection.harness === 'string' && localSection.harness)) &&
-    typeof localSection.path === 'string' &&
-    localSection.path
-      ? {
-          harness:
-            typeof localSection.harness === 'string' && localSection.harness
-              ? localSection.harness
-              : canonicalHarnessIdentifier,
-          path: localSection.path
-        }
-      : null
-  if (localSection !== undefined && local === null) errors.push('local must declare non-empty harness and path strings')
   const repositoriesSection =
     configuration.repositories === undefined
       ? undefined
@@ -244,7 +237,7 @@ export const inspectUserConfiguration = async (
     agents,
     harnesses,
     skills,
-    local,
+    locals: locals.toSorted((left, right) => left.harness.localeCompare(right.harness)),
     repositories,
     warnings,
     errors
@@ -268,27 +261,24 @@ export const readConfiguration = async (
   // A successfully parsed TOML document is always a table; this only guards a future parser change.
   /* v8 ignore next */
   if (!isRecord(parsed)) throw new KiError('agent configuration must use schema 1', 1)
-  const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown; local?: unknown }
+  const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown; locals?: unknown }
   const agentSection = isRecord(configuration.agents) ? (configuration.agents as StringListSection) : undefined
-  const localSection =
-    configuration.local === undefined
-      ? undefined
-      : isRecord(configuration.local)
-        ? (configuration.local as LocalSection)
-        : null
+  const localsSection =
+    configuration.locals === undefined ? {} : isRecord(configuration.locals) ? configuration.locals : null
+  const validLocals =
+    localsSection !== null &&
+    Object.values(localsSection).every(
+      (source) => isRecord(source) && typeof source['path'] === 'string' && Boolean(source['path'])
+    )
   if (
     configuration.schema !== 1 ||
     !agentSection ||
     !Array.isArray(agentSection.ids) ||
     agentSection.ids.some((agent) => typeof agent !== 'string') ||
-    (localSection !== undefined &&
-      (localSection === null ||
-        (localSection.harness !== undefined && (typeof localSection.harness !== 'string' || !localSection.harness)) ||
-        typeof localSection.path !== 'string' ||
-        !localSection.path))
+    !validLocals
   ) {
     throw new KiError(
-      'ki configuration must declare an agents.ids string array and optional local harness and path strings',
+      'ki configuration must declare an agents.ids string array and optional locals.<harness-id>.path strings',
       1
     )
   }
@@ -309,13 +299,6 @@ export const configuredAgents = async (options: {
   return configured
 }
 
-export const clearLocalBootstrapHarness = async (configurationDirectory: string): Promise<void> => {
-  const path = bootstrapConfigurationPath(configurationDirectory)
-  const contents = await readFile(path, 'utf8')
-  const expression = /(?:^|\n)\[local\]\npath\s*=.*(?:\n|$)/m
-  await writeFile(path, contents.replace(expression, ''), 'utf8')
-}
-
 export const setLocalBootstrapHarness = async (
   configurationDirectory: string,
   homeDirectory: string,
@@ -323,9 +306,10 @@ export const setLocalBootstrapHarness = async (
 ): Promise<void> => {
   const agents = await configuredAgents({ homeDirectory, configurationDirectory })
   const inspection = await inspectUserConfiguration(configurationDirectory)
+  const locals = [...inspection.locals.filter((candidate) => candidate.harness !== local.harness), local]
   await writeFile(
     bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(agents, inspection.harnesses, inspection.skills, local, inspection.repositories),
+    renderConfiguration(agents, inspection.harnesses, inspection.skills, locals, inspection.repositories),
     'utf8'
   )
 }
@@ -339,7 +323,7 @@ export const setConfiguredUserSkills = async (
   const inspection = await inspectUserConfiguration(configurationDirectory)
   await writeFile(
     bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(agents, inspection.harnesses, skills, inspection.local ?? undefined, inspection.repositories),
+    renderConfiguration(agents, inspection.harnesses, skills, inspection.locals, inspection.repositories),
     'utf8'
   )
 }

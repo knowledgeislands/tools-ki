@@ -115,7 +115,7 @@ export const configureBootstrapAgents = async (options: {
     : await readConfiguration(options.configurationDirectory, options.homeDirectory)
   const existing = options.refresh
     ? await inspectUserConfiguration(options.configurationDirectory)
-    : { harnesses: [], skills: [], local: null, repositories: [] }
+    : { harnesses: [], skills: [], locals: [], repositories: [] }
   const agents = options.refresh || !configured ? await detectAgents(options.homeDirectory) : configured
   if (!configured) {
     await mkdir(options.configurationDirectory, { recursive: true })
@@ -125,7 +125,7 @@ export const configureBootstrapAgents = async (options: {
         agents,
         existing.harnesses,
         existing.skills,
-        existing.local ?? undefined,
+        existing.locals,
         options.dropLegacyRepositories ? [] : existing.repositories
       ),
       {
@@ -138,8 +138,7 @@ export const configureBootstrapAgents = async (options: {
 
 const discoverManagedUserSkills = async (
   agents: readonly InstalledAgent[],
-  harnesses: Awaited<ReturnType<typeof discoverInstalledHarnesses>>,
-  local?: { readonly harness: string; readonly skills: readonly ManagedUserSkill[] }
+  harnesses: Awaited<ReturnType<typeof discoverInstalledHarnesses>>
 ): Promise<readonly string[]> => {
   const identities = new Map<string, string>()
   for (const harness of harnesses) {
@@ -148,7 +147,6 @@ const discoverManagedUserSkills = async (
       identities.set(source, `${harness.id}:${capability.name}`)
     }
   }
-  if (local) for (const skill of local.skills) identities.set(skill.source, `${local.harness}:${skill.name}`)
   const skills = new Set<string>()
   for (const agent of agents) {
     skillCapability(agent)
@@ -168,21 +166,16 @@ export const refreshUserConfiguration = async (
   configurationDirectory: string,
   dataDirectory: string,
   agents: readonly InstalledAgent[],
-  local?: LocalDevelopmentConfiguration,
+  locals: readonly LocalDevelopmentConfiguration[] = [],
   options: { readonly dropLegacyRepositories?: boolean } = {}
 ): Promise<{ readonly harnesses: number; readonly skills: number }> => {
   const installed = await discoverInstalledHarnesses(dataDirectory)
   const existing = await inspectUserConfiguration(configurationDirectory)
   const harnesses = installed.map((harness) => harness.id).sort((left, right) => left.localeCompare(right))
-  const localSkills = local ? (await localHarness(local.path, local.harness)).skills : []
-  const skills = await discoverManagedUserSkills(
-    agents,
-    installed,
-    local ? { harness: local.harness, skills: localSkills } : undefined
-  )
+  const skills = await discoverManagedUserSkills(agents, installed)
   await writeFile(
     bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(agents, harnesses, skills, local, options.dropLegacyRepositories ? [] : existing.repositories),
+    renderConfiguration(agents, harnesses, skills, locals, options.dropLegacyRepositories ? [] : existing.repositories),
     {
       encoding: 'utf8'
     }

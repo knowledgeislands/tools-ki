@@ -363,6 +363,19 @@ const harnessDirectory = (dataDirectory: string, identifier: string): string => 
   return join(dataDirectory, 'harnesses', owner, name)
 }
 
+export const installedHarnessSlot = async (
+  dataDirectory: string,
+  identifier: string
+): Promise<{ readonly prefix?: string }> => {
+  const destination = harnessDirectory(dataDirectory, identifier)
+  const state = await lstat(destination).catch(() => undefined)
+  if (!state?.isDirectory() && !state?.isSymbolicLink())
+    throw new KiError(`installed harness ${identifier} must be a directory`, 1)
+  const metadata = await lstat(join(destination, harnessMetadataFile)).catch(() => undefined)
+  if (!metadata) return {}
+  return { prefix: (await readInstalledHarness(dataDirectory, identifier)).prefix }
+}
+
 const localPayloadDirectory = async (local: string, payload: (typeof payloadRoots)[number]): Promise<string> => {
   const source = resolve(local, payload)
   await physicalDirectory(source, `local harness ${payload} directory`)

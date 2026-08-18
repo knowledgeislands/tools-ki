@@ -189,7 +189,7 @@ releases = [42]
 
 [skills.foo]
 
-[local]
+[locals."knowledgeislands/ki-agentic-harness"]
 path = "/somewhere"
 extra = true
 `
@@ -200,7 +200,7 @@ extra = true
     expect(diag.output).toContain('× agents.ids must be an array of non-empty strings')
     expect(diag.output).toContain('× skills.foo must declare a harness string')
     expect(diag.output).toContain('× harnesses[0] must be a table')
-    expect(diag.output).toContain('! local has unrecognised key extra')
+    expect(diag.output).toContain('! locals.knowledgeislands/ki-agentic-harness has unrecognised key extra')
   })
 
   test('reports invalid legacy repository migration input without using it as the active registry', async () => {
@@ -232,8 +232,7 @@ extra = true
     expect(diag.output).toContain('│  │  ╰─ knowledgeislands/ki-agentic-harness:ki-recap')
     expect(diag.output).toContain('├─ registry\n│  ├─ Status: missing')
     expect(diag.output).toContain('│  ╰─ repositories (0)\n│     ╰─ none')
-    expect(diag.output).toContain('source: none')
-    expect(diag.output).toContain('mode: not configured')
+    expect(diag.output).toContain('locals (0)')
   })
 
   test('reports a remembered local source as off, then on when its projection is active', async () => {
@@ -331,7 +330,7 @@ extra = true
     expect(diag.output).toContain('mode: off')
   })
 
-  test('reports scalar sections and an invalid local section as configuration errors', async () => {
+  test('reports scalar sections and an invalid locals section as configuration errors', async () => {
     const box = await sandbox()
     await box.config.write(
       'ki/config.toml',
@@ -339,7 +338,7 @@ extra = true
 agents = "not-a-table"
 harnesses = "not-a-table"
 skills = "not-a-table"
-local = "not-a-table"
+locals = "not-a-table"
 `
     )
 
@@ -349,8 +348,7 @@ local = "not-a-table"
     expect(diag.output).toContain('× skills must be a TOML table')
     expect(diag.output).toContain('× harnesses must be a TOML table')
     expect(diag.output).toContain('× harnesses must declare an ids array')
-    expect(diag.output).toContain('× local must be a TOML table')
-    expect(diag.output).toContain('× local must declare non-empty harness and path strings')
+    expect(diag.output).toContain('× locals must be a TOML table')
   })
 
   test('reports duplicate, unrecognised, and malformed entries throughout a sectioned configuration', async () => {
@@ -376,7 +374,7 @@ scalar = 3
 [skills.empty]
 harness = ""
 
-[local]
+[locals."example/harness"]
 path = ""
 `
     )
@@ -393,6 +391,6 @@ path = ""
     expect(diag.output).toContain('× harnesses[0] sha256 must be lowercase SHA-256')
     expect(diag.output).toContain('× skills.scalar must be a TOML table')
     expect(diag.output).toContain('× skills.empty must declare a harness string')
-    expect(diag.output).toContain('× local must declare non-empty harness and path strings')
+    expect(diag.output).toContain('× locals.example/harness.path must be a non-empty string')
   })
 })

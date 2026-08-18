@@ -25,22 +25,24 @@ export const createDiagCommand = (context: KiContext): Command =>
       ]
 
       if (configuration.state !== 'missing') {
-        const localMode = configuration.local
-          ? (await harnessDevelopmentEnabled(context.paths.data, configuration.local.harness, configuration.local.path))
-            ? 'on'
-            : 'off'
-          : 'not configured'
+        const locals = await Promise.all(
+          configuration.locals.map(async (local) => ({
+            ...local,
+            mode: (await harnessDevelopmentEnabled(context.paths.data, local.harness, local.path)) ? 'on' : 'off'
+          }))
+        )
         configurationEntries.push(
           { label: `agents (${configuration.agents.length})`, children: treeEntries(configuration.agents) },
           { label: `harnesses (${configuration.harnesses.length})`, children: treeEntries(configuration.harnesses) },
           { label: `skills (${configuration.skills.length})`, children: treeEntries(configuration.skills) },
           {
-            label: 'local',
-            children: [
-              { label: field('harness', configuration.local?.harness ?? 'none') },
-              { label: field('source', configuration.local?.path ?? 'none') },
-              { label: field('mode', localMode) }
-            ]
+            label: `locals (${locals.length})`,
+            children: locals.length
+              ? locals.map((local) => ({
+                  label: local.harness,
+                  children: [{ label: field('source', local.path) }, { label: field('mode', local.mode) }]
+                }))
+              : [{ label: 'none' }]
           }
         )
       } else configurationEntries.push({ label: field('Action', 'run ki bootstrap') })

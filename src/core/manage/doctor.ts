@@ -14,7 +14,7 @@ export interface ManageConfiguration {
   readonly state: 'missing' | 'valid' | 'invalid'
   readonly harnesses: readonly string[]
   readonly skills: readonly string[]
-  readonly local: { readonly harness: string; readonly path: string } | null
+  readonly locals: readonly { readonly harness: string; readonly path: string }[]
   readonly errors: readonly string[]
 }
 
@@ -165,24 +165,24 @@ export const inspectManageDoctor = async (
     checks.push({ status: 'skip', label: 'User skills', detail: 'agents are unavailable' })
     return checks
   }
-  const activeLocal = configuration.local
-    ? await port.localDevelopmentEnabled(configuration.local.harness, configuration.local.path)
-    : false
-  const localSources = new Map<string, string>()
-  if (activeLocal && configuration.local) {
-    try {
-      const local = await port.inspectLocalHarness(configuration.local.path, configuration.local.harness)
-      for (const skill of local.skills) localSources.set(skill.name, skill.source)
-      checks.push({ status: 'pass', label: 'Local development', detail: `active ${local.harness}` })
-    } catch (error) {
-      checks.push({ status: 'fail', label: 'Local development', detail: (error as Error).message })
+  const activeLocals = new Set<string>()
+  for (const source of configuration.locals) {
+    const active = await port.localDevelopmentEnabled(source.harness, source.path)
+    if (active) {
+      try {
+        const local = await port.inspectLocalHarness(source.path, source.harness)
+        activeLocals.add(source.harness)
+        checks.push({ status: 'pass', label: `Local development ${source.harness}`, detail: `active ${local.harness}` })
+      } catch (error) {
+        checks.push({ status: 'fail', label: `Local development ${source.harness}`, detail: (error as Error).message })
+      }
+    } else if (await port.localDevelopmentEnabled(source.harness)) {
+      checks.push({
+        status: 'fail',
+        label: `Local development ${source.harness}`,
+        detail: 'active root does not match the configured local source'
+      })
     }
-  } else if (configuration.local && (await port.localDevelopmentEnabled(configuration.local.harness))) {
-    checks.push({
-      status: 'fail',
-      label: 'Local development',
-      detail: `${configuration.local.harness} active root does not match the configured local source`
-    })
   }
   for (const agent of agents) {
     const ready = (await physicalDirectory(port, agent.home)) && (await physicalDirectory(port, agent.userSkills))
@@ -203,10 +203,7 @@ export const inspectManageDoctor = async (
     const resolved = installed
       .flatMap((harness) => harness.capabilities.map((capability) => ({ harness, capability })))
       .find(({ harness, capability }) => identity === `${harness.id}:${capability.name}`)
-    const expected =
-      (identity.startsWith(`${options.canonicalHarnessIdentifier}:`) ? localSources.get(name) : undefined) ??
-      (resolved ? await port.realpath(join(resolved.harness.root, resolved.capability.source)) : undefined)
-    if (!expected) {
+    if (!resolved) {
       checks.push({
         status: 'fail',
         label: `User skill ${name}`,
@@ -214,9 +211,8 @@ export const inspectManageDoctor = async (
       })
       continue
     }
-    const compatibleAgents = resolved
-      ? agents.filter((agent) => agent.supports(resolved.capability.supportedRuntimes))
-      : agents
+    const expected = await port.realpath(join(resolved.harness.root, resolved.capability.source))
+    const compatibleAgents = agents.filter((agent) => agent.supports(resolved.capability.supportedRuntimes))
     if (compatibleAgents.length === 0) {
       checks.push({ status: 'fail', label: `User skill ${name}`, detail: 'no compatible configured agent' })
       continue
@@ -230,7 +226,7 @@ export const inspectManageDoctor = async (
       detail: absent
         ? 'not linked for every compatible configured agent'
         : wrongTarget
-          ? `link target does not match ${activeLocal ? 'local development' : 'installed harness'} source`
+          ? `link target does not match ${activeLocals.has(identity.slice(0, identity.indexOf(':'))) ? 'local development' : 'installed harness'} source`
           : 'linked'
     })
   }

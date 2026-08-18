@@ -4,20 +4,14 @@ import {
   agentSkillDirectory,
   compatibleWithSkill,
   configuredAgents,
-  inspectUserConfiguration,
-  localHarness
+  inspectUserConfiguration
 } from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { type ManageRepairItem, type ManageRepairPort, runManageRepair } from '../../core/manage/index.ts'
-import {
-  acquireManagedArtifactRecovery,
-  harnessDevelopmentEnabled,
-  planOrphanRecovery,
-  recoverInstallOrphans
-} from '../../core/storage/index.ts'
+import { acquireManagedArtifactRecovery, planOrphanRecovery, recoverInstallOrphans } from '../../core/storage/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
 
 const linkedTo = async (path: string, expected: string): Promise<boolean> => {
@@ -48,8 +42,6 @@ const repairPort = (context: KiContext): ManageRepairPort => ({
       }
     })),
   discoverHarnesses: () => discoverInstalledHarnesses(context.paths.data),
-  localDevelopmentEnabled: (identifier, source) => harnessDevelopmentEnabled(context.paths.data, identifier, source),
-  inspectLocalHarness: (source, identifier) => localHarness(source, identifier),
   realpath,
   linkedTo
 })

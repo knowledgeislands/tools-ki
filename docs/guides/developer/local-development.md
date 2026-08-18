@@ -38,20 +38,21 @@ Keep a local harness source separate from its active projection:
 
 ```sh
 ki dev local set knowledgeislands/ki-agentic-harness /path/to/ki-agentic-harness
+ki dev local set humansnotrobots/hnr-agentic-harness /path/to/hnr-agentic-harness
 ki dev local on
 # make and test harness changes
 ki dev local off
 ```
 
-`set` accepts any Harness identity already present in the installed KI estate. It validates and remembers that identity and physical checkout without changing the installed Harness or managed user-skill links.
+`set` accepts any Harness identity already present in the installed KI estate. It validates and remembers that identity and physical checkout without changing the installed Harness or managed user-skill links. Each installed Harness can have its own remembered source.
 
 The checkout must retain the installed Harness's `[skills.ki-repo-harness].prefix`; local mode is a mutable source for the same provider identity, not a way to change or claim a capability namespace.
 
-`on` makes the checkout the complete active Harness root and reconciles that Harness's KI-managed user-skill links to their current local sources on every invocation. Metadata and payloads therefore always come from the same checkout; local mode never assembles a hybrid from an installed archive and selected linked directories. Other installed Harnesses remain unchanged.
+`on` makes each selected checkout the complete active Harness root and reconciles that Harness's KI-managed user-skill links to their current local sources on every invocation. Metadata and payloads therefore always come from the same checkout; local mode never assembles a hybrid from an installed archive and selected linked directories. `on <harness-id>` selects one remembered Harness; `on` without an ID selects all of them.
 
-`off` restores the remembered Harness from its configured verified archive and reprojects those links to it, while retaining the remembered identity and checkout for the next `on`.
+`off` restores selected Harnesses from their configured verified archives and reprojects their links, while retaining each remembered identity and checkout for the next `on`. `off <harness-id>` selects one remembered Harness; `off` without an ID selects all of them.
 
-Use `ki manage diag` to see the remembered source and whether local mode is off or on; use `ki manage doctor` to identify missing, broken, or wrong-target managed links while mode is on, direct-CWD legacy `.ki-meta/` or `.ki/` directories, and invalid direct-CWD `.ki-config.toml` declarations.
+Use `ki manage diag` to see every remembered source and whether its local mode is off or on; use `ki manage doctor` to identify missing, broken, or wrong-target managed links while mode is on, direct-CWD legacy `.ki-meta/` or `.ki/` directories, and invalid direct-CWD `.ki-config.toml` declarations.
 
 ## Command structure
 

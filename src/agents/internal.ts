@@ -30,8 +30,7 @@ export interface HarnessSection {
   readonly releases?: unknown
 }
 
-export interface LocalSection {
-  readonly harness?: unknown
+export interface LocalSourceSection {
   readonly path?: unknown
 }
 
@@ -50,7 +49,7 @@ export interface UserConfigurationInspection {
   readonly agents: readonly string[]
   readonly harnesses: readonly string[]
   readonly skills: readonly string[]
-  readonly local: LocalDevelopmentConfiguration | null
+  readonly locals: readonly LocalDevelopmentConfiguration[]
   readonly repositories: readonly string[]
   readonly warnings: readonly string[]
   readonly errors: readonly string[]

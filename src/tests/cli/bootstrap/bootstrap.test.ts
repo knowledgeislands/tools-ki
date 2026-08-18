@@ -160,7 +160,7 @@ ids = [
     expect(migrated.output).toContain('migrated local KI repository registry: 1 repositories')
     expect(refreshed.exitCode).toBe(0)
     expect(await box.config.read('ki/config.toml')).toContain(
-      `[local]\nharness = "knowledgeislands/ki-agentic-harness"\npath = ${JSON.stringify(harnessPath)}\n`
+      `[locals."knowledgeislands/ki-agentic-harness"]\npath = ${JSON.stringify(harnessPath)}\n`
     )
     expect(await box.config.read('ki/config.toml')).not.toContain('[repositories]')
     expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(repository)}`)
@@ -262,7 +262,7 @@ ids = ["chatgpt-codex", 5]
 
     expect(bootstrapped.exitCode).toBe(1)
     expect(bootstrapped.output).toContain(
-      'ki configuration must declare an agents.ids string array and optional local harness and path strings'
+      'ki configuration must declare an agents.ids string array and optional locals.<harness-id>.path strings'
     )
   })
 
@@ -291,7 +291,7 @@ ids = ["claude-code", "claude-code"]
     expect(bootstrapped).toEqual({ exitCode: 1, output: 'ki: error: agent configuration must be a regular file\n' })
   })
 
-  test('rejects a non-table agents or local section', async () => {
+  test('rejects a non-table agents or locals section', async () => {
     const agentSection = await sandbox()
     await agentSection.config.write(
       'ki/config.toml',
@@ -303,7 +303,7 @@ agents = "not-a-table"
     await localSection.config.write(
       'ki/config.toml',
       `schema = 1
-local = "not-a-table"
+locals = "not-a-table"
 
 [agents]
 ids = ["claude-code"]
@@ -316,12 +316,12 @@ ids = ["claude-code"]
     expect(rejectedAgents).toEqual({
       exitCode: 1,
       output:
-        'ki: error: ki configuration must declare an agents.ids string array and optional local harness and path strings\n'
+        'ki: error: ki configuration must declare an agents.ids string array and optional locals.<harness-id>.path strings\n'
     })
     expect(rejectedLocal).toEqual({
       exitCode: 1,
       output:
-        'ki: error: ki configuration must declare an agents.ids string array and optional local harness and path strings\n'
+        'ki: error: ki configuration must declare an agents.ids string array and optional locals.<harness-id>.path strings\n'
     })
   })
 
@@ -417,7 +417,7 @@ ids = ["claude-code"]
       `${harnessPath}/skills/keystone/ki-bootstrap`
     )
     expect(doctor.exitCode).toBe(0)
-    expect(doctor.output).toContain(`✓ Local development: active ${harnessPath}`)
+    expect(doctor.output).toContain(`✓ Local development knowledgeislands/ki-agentic-harness: active ${harnessPath}`)
     expect(doctor.output).not.toContain('✗')
   })
 

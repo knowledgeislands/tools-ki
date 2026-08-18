@@ -230,11 +230,13 @@ Create a deterministic Knowledge Export Package from a local ChatGPT capture.
 .B ki dev local set <harness-id> <local-harness-path>
 Validate and remember a checkout for one installed harness without enabling it.
 .TP
-.B ki dev local on
-Switch the remembered installed harness to its local checkout.
+.B ki dev local on [harness-id]
+Switch one remembered installed harness, or all remembered harnesses, to their
+local checkouts.
 .TP
-.B ki dev local off
-Restore the remembered harness from its verified archive.
+.B ki dev local off [harness-id]
+Restore one remembered harness, or all remembered harnesses, from their
+verified archives.
 .TP
 .B ki dev skill rubric <skill> [--write]
 Check or regenerate a skill's rubric catalogue.
@@ -621,7 +623,7 @@ be added.
 Replace one inactive installed harness with a verified archive. The command
 refuses a harness that supplies active user skills. The canonical harness must
 first be restored with
-.B ki dev local off
+.B ki dev local off knowledgeislands/ki-agentic-harness
 when it is development-linked.
 .TP
 .B ki harness uninstall <harness-id>
@@ -757,8 +759,9 @@ discover a repository, or extract reusable knowledge.
 .SS Development
 \&
 .PP
-Use these commands to switch one harness already present in the installed KI
-estate between its verified archive and a local development checkout.
+Use these commands to switch Harnesses already present in the installed KI
+estate between their verified archives and independent local development
+checkouts.
 .TP
 .B ki dev local set <harness-id> <local-harness-path>
 Validate the identity against the installed estate and remember it with the
@@ -773,21 +776,21 @@ and
 .IR hooks
 payload directories.
 .TP
-.B ki dev local on
-Enable the remembered local checkout for development. KI replaces the selected
-harness's complete active root with that checkout, so its metadata and payloads
-always have one source,
-records its identity and path in
-.BR [local] ,
-and reconciles that harness's managed user-skill links to the local source on
-every run. Other installed harnesses remain unchanged.
+.B ki dev local on [harness-id]
+Enable selected local checkouts for development. KI replaces each selected
+Harness's complete active root with its checkout, so its metadata and payloads
+always have one source, records each identity and path below
+.BR [locals] ,
+and reconciles its managed user-skill links to the local source on every run.
+An explicit Harness ID selects one source; omitting it selects all remembered
+sources.
 .TP
-.B ki dev local off
-Remove that recognised local Harness root, reinstall the selected
-harness's verified archive, retain its
-.B [local]
-identity and path, and reconcile its managed user-skill links to the restored
-archive.
+.B ki dev local off [harness-id]
+Remove each selected recognised local Harness root, reinstall its verified
+archive, retain its entry below
+.BR [locals] ,
+and reconcile its managed user-skill links to the restored archive. An explicit
+Harness ID selects one source; omitting it selects all remembered sources.
 .TP
 .B ki dev skill rubric <skill> [--write]
 Check or regenerate a skill's rubric catalogue.

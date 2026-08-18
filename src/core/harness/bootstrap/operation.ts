@@ -12,9 +12,10 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
 ): Promise<void> => {
   const previous = await port.inspectConfiguration()
   const previousConfiguration = previous.state === 'valid' ? await port.readConfiguration() : undefined
+  const canonicalLocal = previous.locals.find((local) => local.harness === port.canonicalHarnessIdentifier)
   const activeLocal =
-    previous.local?.harness === port.canonicalHarnessIdentifier && (await port.developmentEnabled(previous.local))
-      ? await port.inspectLocalHarness(previous.local)
+    canonicalLocal && (await port.developmentEnabled(canonicalLocal))
+      ? await port.inspectLocalHarness(canonicalLocal)
       : undefined
   const migrated = options.refresh ? await port.migrateLegacyRepositories() : 0
   const configuration = await port.configureAgents({
@@ -29,12 +30,11 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
   let refreshed: BootstrapRefreshResult | undefined
   const reconcileConfiguration = async (skills: readonly Skill[]): Promise<void> => {
     if (options.refresh) {
-      refreshed = await port.refreshConfiguration(agents, previous.local ?? undefined, {
+      refreshed = await port.refreshConfiguration(agents, previous.locals, {
         dropLegacyRepositories: true
       })
       return
     }
-    await port.clearLocalHarness()
     const selected = new Map<string, string>(
       (await port.inspectConfiguration()).skills.map(
         (identity) => [identity.slice(identity.lastIndexOf(':') + 1), identity] as const
