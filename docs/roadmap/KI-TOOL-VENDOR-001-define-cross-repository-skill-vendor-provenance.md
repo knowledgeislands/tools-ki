@@ -4,7 +4,7 @@ title: Enforce Harness prefix ownership
 area: VENDOR
 theme: cross-repository-vendoring
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 30e01527d17dd20b989f8216f373d87432b1d97a
@@ -16,7 +16,7 @@ Keep capability ownership obvious by allowing only one installed Harness to own 
 
 ## Context
 
-`tools-ki` already installs immutable Harness releases with verified archive digests and records each Harness by owner/repository identity. CLI-050 made the existing singular local-development override work for any installed Harness.
+`tools-ki` already installs immutable Harness releases with verified archive digests and records each Harness by owner/repository identity. CLI-050 made local-development selection work for any installed Harness; this item completes the model by keeping an independent complete-root source for every locally developed Harness.
 
 Repository skill resolution still permits two declared Harnesses to publish the same skill name and introduces `[skills."<harness-id>:<skill-name>"]` to disambiguate them. That solves a configuration state which the intended operating model does not support: competing Harnesses in the same namespace are alternatives, not collaborators.
 
@@ -28,7 +28,7 @@ Define `[skills.ki-repo-harness].prefix` as the explicit capability namespace fo
 
 Update the canonical KI Harness source and `ki-repo-harness` standard and rubric under the user's explicit cross-repository authorization. Exercise a second `hnr` Harness through `tools-ki` fixtures without changing the HNR repository.
 
-Do not add release receipts, dependency provenance, qualified capability identities, concurrent local overrides, remote discovery, signatures, or a new metadata file.
+Do not add release receipts, dependency provenance, qualified capability identities, remote discovery, signatures, or a new metadata file.
 
 ## Current state
 
@@ -45,7 +45,7 @@ Do not add release receipts, dependency provenance, qualified capability identit
 - [x] Remove Harness-qualified repository skill declarations and resolution; bare skill names resolve uniquely across the prefix-safe declared estate.
 - [x] Update CLI fixtures and boundary tests for canonical `ki`, external `hnr`, malformed metadata, capability-prefix mismatch, collision refusal, safe replacement, and direct repository resolution.
 - [x] Update the Harness lifecycle specification, architecture decision, README, manual, and relevant developer guidance to explain the prefix authority and its practical goal.
-- [ ] Make local development select one complete Harness root from the local checkout, never a hybrid of installed metadata and locally linked payload directories.
+- [x] Make local development record independent sources for installed Harnesses and select complete Harness roots from their local checkouts, never hybrids of installed metadata and locally linked payload directories; optional IDs target one and omitted IDs target all.
 
 ## Files touched
 
@@ -84,6 +84,37 @@ Explain how Harness authors select a stable prefix and how a prefix collision is
 ### Roadmap
 
 Replace the earlier provenance-heavy intent with the explicit goal and bounded prefix contract above; no follow-on provenance item is implied.
+
+## Review
+
+### Delivered
+
+Harness prefix ownership and bare capability resolution are complete, and local development now supports an independent complete-root source for every installed Harness. `ki dev local on|off <harness-id>` targets one Harness; omitting the ID targets all configured local Harnesses.
+
+### Summary of changes
+
+The CLI reads provider prefixes from Harness-owned `ki-repo-harness` metadata, rejects prefix collisions, resolves bare repository skills, stores local sources below `[locals."<harness-id>"]`, and switches only complete Harness roots. Activation refreshes inventory before and after projection so newly discovered and previously configured managed skills are both reconciled.
+
+Implementation commits are `659f5b4`, `3475da3`, and `1eb9251`. The KI Harness declaration and rubric are in `eee19b84`; the HNR Harness prefix declaration is in `5983296`.
+
+### Verification
+
+- `bun run test:coverage`: 664 tests pass with 100% statements, branches, functions, and lines.
+- `bunx tsc --noEmit`, `bunx biome check`, `bunx knip`, `bunx rumdl check .`, and `git diff --check`: pass; Knip reports only its two standing configuration hints.
+- `ki repo audit --skill ki-work-roadmap --repo .`: pass.
+- Live estate: two installed Harnesses, both complete-root local sources active; `ki manage doctor` reports `PASS=16 FAIL=0 SKIP=0`, and `ki manage diag` reports valid configuration and registry state.
+
+### Outstanding concerns
+
+None for local development. No Harness release is required while both sources remain in local mode; released installations will receive this contract only through their normal future CLI and Harness releases.
+
+### Post-change review
+
+The final review found and corrected one activation-order defect exposed by the live two-Harness estate: HNR declarations could be refreshed after its projection pass. Configuration is now refreshed around projection and the union of existing and newly discovered declarations is reconciled, with boundary coverage for all-Harness activation and single-Harness restoration.
+
+### Mini recap
+
+VENDOR-001 now achieves the stated goal without qualified capability identities or a second provenance system: prefixes make ownership unambiguous, archive digests retain release provenance, and local mode is deterministic because each active Harness is one complete source root.
 
 ## Discussion
 
