@@ -16,12 +16,13 @@ export interface DevelopmentProjectionView {
 
 export interface DevelopmentSource<Skill> {
   readonly harness: string
+  readonly prefix: string
   readonly skills: readonly Skill[]
 }
 
 export interface SetDevelopmentSourcePort<Agent, Skill> {
   readonly developmentEnabled: () => Promise<boolean>
-  readonly requireInstalledHarness: (identifier: string) => Promise<void>
+  readonly requireInstalledHarness: (identifier: string) => Promise<{ readonly prefix: string }>
   readonly inspectLocalHarness: (path: string, identifier: string) => Promise<DevelopmentSource<Skill>>
   readonly configuredAgents: () => Promise<readonly Agent[]>
   readonly setLocalHarness: (local: { readonly harness: string; readonly path: string }) => Promise<void>

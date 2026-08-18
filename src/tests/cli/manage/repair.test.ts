@@ -92,14 +92,14 @@ describe('[ki manage repair]', () => {
     const unavailableRepair = await unavailable.run('ki manage repair')
     const incompatible = await sandbox()
     await incompatible.setupAgentHome('claude-code')
-    await incompatible.setupExampleHarness()
+    await incompatible.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
     await incompatible.data.write(
-      'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
-      '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
+      'ki/harnesses/example/harness/skills/example-skill/SKILL.md',
+      '---\nname: example-skill\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
     )
     await incompatible.config.write(
       'ki/config.toml',
-      'schema = 1\n\n[agents]\nids = ["claude-code"]\n\n[harnesses]\nids = ["example/harness"]\n\n[skills.ki-example]\nharness = "example/harness"\n'
+      'schema = 1\n\n[agents]\nids = ["claude-code"]\n\n[harnesses]\nids = ["example/harness"]\n\n[skills.example-skill]\nharness = "example/harness"\n'
     )
     const incompatibleRepair = await incompatible.run('ki manage repair')
 
@@ -109,7 +109,7 @@ describe('[ki manage repair]', () => {
     })
     expect(incompatibleRepair).toEqual({
       exitCode: 1,
-      output: expect.stringContaining('User skill ki-example: no compatible configured agent')
+      output: expect.stringContaining('User skill example-skill: no compatible configured agent')
     })
   })
 

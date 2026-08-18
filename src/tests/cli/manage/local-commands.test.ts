@@ -5,18 +5,18 @@ describe('[ki local utility commands]', () => {
   test('searches verified installed capabilities case-insensitively in deterministic order without repository discovery', async () => {
     const box = await sandbox()
     await box.setupCanonicalHarness()
-    await box.setupExampleHarness()
+    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
     await box.project.write('.ki-config.toml', '[not valid TOML\n')
-    const example = await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')
+    const example = await box.data.read('ki/harnesses/example/harness/skills/example-skill/SKILL.md')
 
     const result = await box.run('ki manage search SKILL')
 
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI MANAGE SEARCH\n├─ query: SKILL\n├─ matches (8)\n│  ├─ example/harness skill ki-example\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-accept\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-batch\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-bootstrap\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-implement\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-next\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-plan\n│  ╰─ knowledgeislands/ki-agentic-harness skill ki-recap\n╰─ summary: MATCHES=8\n'
+        '╭─ KI MANAGE SEARCH\n├─ query: SKILL\n├─ matches (8)\n│  ├─ example/harness skill example-skill\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-accept\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-batch\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-bootstrap\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-implement\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-next\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-plan\n│  ╰─ knowledgeislands/ki-agentic-harness skill ki-recap\n╰─ summary: MATCHES=8\n'
     })
-    expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(example)
+    expect(await box.data.read('ki/harnesses/example/harness/skills/example-skill/SKILL.md')).toBe(example)
   })
 
   test('searches harness identifiers and reports an explicit successful empty result', async () => {

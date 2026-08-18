@@ -173,9 +173,10 @@ describe('[ki dev skill rubric]', () => {
     expect(result.output).toContain('no installed harness provides skill does-not-exist')
   })
 
-  test('refuses a skill provided by multiple installed harnesses', async () => {
+  test('refuses an installed Harness prefix collision before resolving a skill', async () => {
     const box = await sandbox()
     await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+    await box.data.write('ki/harnesses/second/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
     await box.data.write(
       'ki/harnesses/second/harness/skills/ki-example/SKILL.md',
       '---\nname: ki-example\nki-depends-on: []\n---\n'
@@ -184,6 +185,6 @@ describe('[ki dev skill rubric]', () => {
     const result = await box.run('ki dev skill rubric ki-example')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('is provided by multiple installed harnesses')
+    expect(result.output).toContain('harness prefix ki is already owned by installed harness')
   })
 })

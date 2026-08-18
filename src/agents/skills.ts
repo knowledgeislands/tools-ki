@@ -100,7 +100,6 @@ const installedSkillSource = async (
   )
   const [match] = matches
   if (!match) throw new KiError(`no installed harness provides skill ${name}`, 1)
-  if (matches.length > 1) throw new KiError(`skill ${name} is provided by multiple installed harnesses`, 1)
   const source = await requiredPhysicalDirectory(
     join(match.harness.root, match.capability.source),
     `installed harness ${match.harness.id} ${name} skill`

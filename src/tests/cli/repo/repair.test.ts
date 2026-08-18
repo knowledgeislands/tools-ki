@@ -4,7 +4,7 @@ import { sandbox } from '../_cli_helper.ts'
 
 const repositoryConfiguration = `
 [repo]
-harnesses = ["example/harness"]
+harnesses = ["knowledgeislands/ki-agentic-harness"]
 
 [skills.ki-repo]
 repository = "https://github.com/example/project"
@@ -20,9 +20,9 @@ visibility = "private"
 const preparedRepository = async () => {
   const box = await sandbox()
   await box.setupAgentHome('chatgpt-codex')
+  await box.run('ki bootstrap')
   await box.setupExampleHarness({ name: 'ki-repo' })
   await box.setupExampleHarness()
-  await box.run('ki bootstrap')
   await box.project.write('.ki-config.toml', repositoryConfiguration)
   return box
 }
@@ -76,14 +76,16 @@ describe('[ki repo repair]', () => {
     const repaired = await box.run('ki repo repair')
     await box.project.write(
       '.ki-config.toml',
-      repositoryConfiguration.replace('[skills.ki-example]', '[skills."missing/harness:ki-missing"]')
+      repositoryConfiguration
+        .replace('knowledgeislands/ki-agentic-harness', 'missing/harness')
+        .replace('[skills.ki-example]', '[skills.ki-missing]')
     )
     const unresolved = await box.run('ki repo repair')
 
     expect(repaired.exitCode).toBe(0)
     expect(await readlink(projection)).not.toBe(`${box.root.path}/old-skill`)
     expect(unresolved.exitCode).toBe(1)
-    expect(unresolved.output).toContain('declared harness missing/harness is not installed')
+    expect(unresolved.output).toContain('missing/harness is not installed')
   })
 
   test('recreates a dangling projection and refuses an unsafe declaration', async () => {

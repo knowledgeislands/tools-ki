@@ -100,7 +100,7 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const rubricWithRuntimeProposal = runtimeActivationRubric('ki-runtime')
     await box.setupExampleHarness({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
@@ -129,7 +129,7 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-zeta]\n\n[skills.ki-alpha]\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-zeta]\n\n[skills.ki-alpha]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime')
       .replace("repositorySkills?.inspect(['ki-runtime'])", "repositorySkills?.inspect(['ki-zeta', 'ki-alpha'])")
@@ -158,7 +158,7 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime').replace(
       "? [{ status: 'PASS', message: 'runtime skill active' }]",
@@ -185,7 +185,7 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const rubricWithRuntimeProposal = runtimeActivationRubric('ki-runtime')
     await box.setupExampleHarness({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
@@ -227,7 +227,7 @@ describe('[ki repo conform execution]', () => {
       await box.run('ki bootstrap')
       await box.project.write(
         '.ki-config.toml',
-        `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["${runtime}"]\n\n${declaration}`
+        `[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["${runtime}"]\n\n${declaration}`
       )
       const rubricWithRuntimeProposal = runtimeActivationRubric(requested)
       await box.setupExampleHarness({ rubric: rubricWithRuntimeProposal, name: 'ki-repo' })
@@ -260,7 +260,7 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime')
     await box.setupExampleHarness({
@@ -287,7 +287,7 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime')
     await box.setupExampleHarness({ rubric: runtimeRubric, name: 'ki-repo' })
@@ -310,7 +310,7 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime')
     await box.setupExampleHarness({ rubric: runtimeRubric, name: 'ki-repo' })
@@ -338,7 +338,7 @@ describe('[ki repo conform execution]', () => {
     await box.run('ki bootstrap')
     await box.project.write(
       '.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-runtime]\n'
     )
     const runtimeRubric = runtimeActivationRubric('ki-runtime')
     const blockedBeforeApply = runtimeRubric

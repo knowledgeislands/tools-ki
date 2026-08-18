@@ -55,7 +55,7 @@ describe('[ki manage missing and ki manage outdated]', () => {
   test('reports unavailable release evidence rather than claiming unrecorded harnesses are current', async () => {
     const box = await sandbox()
     await box.setupCanonicalHarness()
-    await box.setupExampleHarness()
+    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
 
     const result = await box.run('ki manage outdated')
 

@@ -16,6 +16,7 @@ export type ArchiveEntry =
 
 export interface ArchiveOptions {
   readonly terminatingBlocks?: boolean
+  readonly harnessPrefix?: string | null
 }
 
 const octal = (value: number, length: number): string => `${value.toString(8).padStart(length - 1, '0')}\0`
@@ -27,10 +28,41 @@ export interface HarnessArchive {
 
 export const makeHarnessArchive = (
   files: Readonly<Record<string, ArchiveEntry>>,
-  { terminatingBlocks = true }: ArchiveOptions = {}
+  { terminatingBlocks = true, harnessPrefix = 'ki' }: ArchiveOptions = {}
 ): HarnessArchive => {
   const chunks: Uint8Array[] = []
-  for (const [path, entry] of Object.entries(files)) {
+  const firstPayload = Object.entries(files).find(([path, entry]) => {
+    const rawPath = typeof entry !== 'string' && entry.prefix ? `${entry.prefix}/${path}` : path
+    const parts = rawPath.split('/')
+    return (
+      ['skills', 'subagents', 'hooks'].includes(parts[0] as string) ||
+      (!parts[0]?.startsWith('.') && ['skills', 'subagents', 'hooks'].includes(parts[1] as string))
+    )
+  })
+  const firstEntryPrefix = firstPayload && typeof firstPayload[1] !== 'string' ? firstPayload[1].prefix : undefined
+  const firstRawPath = firstPayload
+    ? firstEntryPrefix
+      ? `${firstEntryPrefix}/${firstPayload[0]}`
+      : firstPayload[0]
+    : ''
+  const firstParts = firstRawPath.split('/')
+  const nestedPrefix =
+    firstParts.length > 1 && ['skills', 'subagents', 'hooks'].includes(firstParts[1] as string)
+      ? firstParts[0]
+      : undefined
+  const metadataPath = nestedPrefix && !firstEntryPrefix ? `${nestedPrefix}/.ki-config.toml` : '.ki-config.toml'
+  const metadataContents = `[skills.ki-repo-harness]\nprefix = ${JSON.stringify(harnessPrefix)}\n`
+  const entries =
+    harnessPrefix === null || files[metadataPath] !== undefined
+      ? files
+      : {
+          [metadataPath]:
+            firstEntryPrefix && nestedPrefix
+              ? { contents: metadataContents, prefix: nestedPrefix, type: '0' }
+              : metadataContents,
+          ...files
+        }
+  for (const [path, entry] of Object.entries(entries)) {
     const contents = typeof entry === 'string' ? entry : (entry.contents ?? '')
     const encoded = new TextEncoder().encode(contents)
     const header = new Uint8Array(512)

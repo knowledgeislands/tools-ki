@@ -45,6 +45,8 @@ ki dev local off
 
 `set` accepts any Harness identity already present in the installed KI estate. It validates and remembers that identity and physical checkout without changing the installed Harness or managed user-skill links.
 
+The checkout must retain the installed Harness's `[skills.ki-repo-harness].prefix`; local mode is a mutable source for the same provider identity, not a way to change or claim a capability namespace.
+
 `on` activates the remembered checkout and reconciles that Harness's KI-managed user-skill links to their current local sources on every invocation. Other installed Harnesses remain unchanged.
 
 `off` restores the remembered Harness from its configured verified archive and reprojects those links to it, while retaining the remembered identity and checkout for the next `on`.

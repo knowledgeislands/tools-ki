@@ -892,6 +892,7 @@ describe('[ki repo validation]', () => {
         readonly optionalDeps?: readonly string[]
       }[]
     ): Promise<void> => {
+      await data.write('ki/harnesses/example/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
       for (const { name, deps, optionalDeps = [] } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
         const list = `[${deps.join(', ')}]`
@@ -1047,51 +1048,42 @@ ${optionalDeps.length ? `ki-optional-depends-on: [${optionalDeps.join(', ')}]\n`
       expect(result.output).toContain('declared skill ki-missing is provided by no declared harness (example/harness)')
     })
 
-    test('uses the declared provider when another installed harness provides the same skill', async () => {
+    test('resolves bare skill names across distinct Harness prefixes', async () => {
       const box = await sandbox()
       await installSkillsHarness(box.data, [{ name: 'ki-shared', deps: [] }])
-      const base = 'ki/harnesses/other/harness/skills/ki-shared'
-      await box.data.write(`${base}/SKILL.md`, '---\nname: ki-shared\nki-depends-on: []\n---\n')
-      await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-shared]\n')
+      const root = 'ki/harnesses/other/harness'
+      await box.data.write(`${root}/.ki-config.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
+      await box.data.write(`${root}/skills/hnr-shared/SKILL.md`, '---\nname: hnr-shared\nki-depends-on: []\n---\n')
+      await box.data.write(
+        `${root}/skills/hnr-shared/scripts/rubric/items/index.ts`,
+        rubric(
+          "[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'R-1', title: 'Order', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'INFO', message: 'hnr-shared' }] }] }]",
+          'hnr-shared'
+        )
+      )
+      await box.project.write(
+        '.ki-config.toml',
+        '[repo]\nharnesses = ["example/harness", "other/harness"]\n\n[skills.ki-shared]\n\n[skills.hnr-shared]\n'
+      )
 
       const result = await box.run('ki repo audit')
 
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('example/harness:ki-shared')
-      expect(result.output).not.toContain('other/harness:ki-shared')
+      expect(result.output).toContain('other/harness:hnr-shared')
     })
 
-    test('refuses a bare name two declared harnesses both provide, and binds a qualified key', async () => {
+    test('rejects a Harness-qualified repository skill declaration', async () => {
       const box = await sandbox()
-      await installSkillsHarness(box.data, [{ name: 'ki-shared', deps: [] }])
-      const other = 'ki/harnesses/other/harness/skills/ki-shared'
-      await box.data.write(`${other}/SKILL.md`, '---\nname: ki-shared\nki-depends-on: []\n---\n')
-      await box.data.write(
-        `${other}/scripts/rubric/items/index.ts`,
-        rubric(
-          "[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'R-1', title: 'Order', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'INFO', message: 'ki-shared' }] }] }]",
-          'ki-shared'
-        )
+      await box.project.write(
+        '.ki-config.toml',
+        '[repo]\nharnesses = ["other/harness"]\n\n[skills."other/harness:hnr-shared"]\n'
       )
-      const harnesses = '[repo]\nharnesses = ["example/harness", "other/harness"]\n\n'
-      await box.project.write('.ki-config.toml', `${harnesses}[skills.ki-shared]\n`)
 
-      const ambiguous = await box.run('ki repo audit')
+      const result = await box.run('ki repo audit')
 
-      await box.project.write('.ki-config.toml', `${harnesses}[skills."other/harness:ki-shared"]\n`)
-      const qualified = await box.run('ki repo audit')
-
-      await box.project.write('.ki-config.toml', `${harnesses}[skills."other/harness:ki-missing"]\n`)
-      const absent = await box.run('ki repo audit')
-
-      expect(ambiguous.exitCode).toBe(1)
-      expect(ambiguous.output).toContain(
-        'declared skill ki-shared is provided by more than one declared harness; qualify it as [skills."<harness-id>:ki-shared"]'
-      )
-      expect(qualified.exitCode).toBe(0)
-      expect(qualified.output).toContain('other/harness:ki-shared')
-      expect(absent.exitCode).toBe(1)
-      expect(absent.output).toContain('installed harness other/harness does not provide declared skill ki-missing')
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('must be [skills.<prefix>-<name>]')
     })
 
     test('selecting one skill by --skill pulls in its declared dependency', async () => {
@@ -1105,7 +1097,7 @@ ${optionalDeps.length ? `ki-optional-depends-on: [${optionalDeps.join(', ')}]\n`
         '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-feature]\n\n[skills.ki-foundation]\n'
       )
 
-      const result = await box.run('ki repo audit --skill example/harness:ki-feature --reporter-levels info')
+      const result = await box.run('ki repo audit --skill ki-feature --reporter-levels info')
 
       expect(result.exitCode).toBe(0)
       expect(result.output.indexOf('example/harness:ki-foundation')).toBeLessThan(

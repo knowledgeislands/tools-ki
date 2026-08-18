@@ -5,7 +5,7 @@ import { sandbox } from '../_cli_helper.ts'
 
 const repositoryConfiguration = `
 [repo]
-harnesses = ["example/harness"]
+harnesses = ["knowledgeislands/ki-agentic-harness"]
 
 [skills.ki-repo]
 title = "Example"
@@ -118,9 +118,12 @@ ids = ["example:skill", "example:skill"]
   test('leaves direct repository projection health to ki repo diag', async () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
-    await box.setupExampleHarness({ name: 'ki-repo' })
-    await box.setupExampleHarness()
     await box.run('ki bootstrap')
+    await box.setupExampleHarness({
+      name: 'ki-repo',
+      identifier: 'knowledgeislands/ki-agentic-harness'
+    })
+    await box.setupExampleHarness({ identifier: 'knowledgeislands/ki-agentic-harness' })
     await box.project.write('.ki-config.toml', repositoryConfiguration)
     const managed = await box.run('ki manage diag')
     const repository = await box.run('ki repo diag')

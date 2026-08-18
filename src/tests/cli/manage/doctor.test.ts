@@ -51,7 +51,7 @@ describe('[ki manage doctor]', () => {
       output: expect.stringContaining('✓ Repository configuration: 0 declared skills')
     })
     expect(legacyDeclaration.output).toContain(
-      '✗ Repository configuration: declared skill repository must be [skills.<skill-name>], or [skills."<harness-id>:<skill-name>"] for a harness outside [repo] harnesses'
+      '✗ Repository configuration: declared skill repository must be [skills.<prefix>-<name>]'
     )
     expect(directory.output).toContain('✗ Repository configuration: .ki-config.toml must be a regular file')
     expect(symbolic.output).toContain('✗ Repository configuration: .ki-config.toml must be a regular file')
@@ -189,27 +189,27 @@ harness = "example/harness"
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
     await box.setupAgentHome('chatgpt-codex')
-    await box.setupExampleHarness()
+    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
     await box.data.write(
-      'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
-      '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
+      'ki/harnesses/example/harness/skills/example-skill/SKILL.md',
+      '---\nname: example-skill\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
     )
     await box.run('ki bootstrap')
-    await box.run('ki skill add ki-example')
+    await box.run('ki skill add example-skill')
 
     const doctor = await box.run('ki manage doctor')
 
-    expect(doctor.output).toContain('✓ User skill ki-example: linked')
+    expect(doctor.output).toContain('✓ User skill example-skill: linked')
     expect(doctor.exitCode).toBe(0)
   })
 
   test('reports a runtime-bound user skill with no compatible configured agent', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
-    await box.setupExampleHarness()
+    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
     await box.data.write(
-      'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
-      '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
+      'ki/harnesses/example/harness/skills/example-skill/SKILL.md',
+      '---\nname: example-skill\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
     )
     await box.config.write(
       'ki/config.toml',
@@ -221,14 +221,14 @@ ids = ["claude-code"]
 [harnesses]
 ids = ["example/harness"]
 
-[skills.ki-example]
+[skills.example-skill]
 harness = "example/harness"
 `
     )
 
     const doctor = await box.run('ki manage doctor')
 
-    expect(doctor.output).toContain('✗ User skill ki-example: no compatible configured agent')
+    expect(doctor.output).toContain('✗ User skill example-skill: no compatible configured agent')
     expect(doctor.exitCode).toBe(1)
   })
 

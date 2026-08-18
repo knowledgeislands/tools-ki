@@ -8,11 +8,9 @@ export const REPOSITORY_CONFIGURATION_FILE = '.ki-config.toml'
 export const DEFAULT_HARNESS = 'knowledgeislands/ki-agentic-harness'
 
 export interface DeclaredSkill {
-  /** The skill's key under `[skills]`: its bare name, or `<harness-id>:<name>` for an out-of-list provider. */
+  /** The skill's bare capability name under `[skills]`. */
   readonly key: string
   readonly name: string
-  /** Set only by the quoted out-of-list exception; otherwise the provider is resolved from the declared harnesses. */
-  readonly harness?: string
   readonly configuration: Readonly<Record<string, unknown>>
 }
 
@@ -75,15 +73,7 @@ export const renderRepositoryConfiguration = (initialisation: RepositoryInitiali
 }
 
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
-const skillName = /^ki-[a-z0-9][a-z0-9-]*$/
-
-const qualifiedSkill = (key: string): { readonly harness: string; readonly name: string } | undefined => {
-  const separator = key.indexOf(':')
-  if (separator === -1 || key.indexOf(':', separator + 1) !== -1) return undefined
-  const harness = key.slice(0, separator)
-  const name = key.slice(separator + 1)
-  return harnessIdentifier.test(harness) && skillName.test(name) ? { harness, name } : undefined
-}
+const skillName = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
 const shapeError = (detail: string): KiError => new KiError(`.ki-config.toml ${detail}`, 1)
 
@@ -105,21 +95,9 @@ const declaredSkills = (parsed: Record<string, unknown>): readonly DeclaredSkill
   if (!isRecord(skills)) throw shapeError('[skills] must be a table')
   const declared = Object.entries(skills).map(([key, configuration]) => {
     if (!isRecord(configuration)) throw new KiError(`declared skill ${key} must use a TOML table`, 1)
-    if (skillName.test(key)) return { key, name: key, configuration }
-    const qualified = qualifiedSkill(key)
-    if (!qualified)
-      throw new KiError(
-        `declared skill ${key} must be [skills.<skill-name>], or [skills."<harness-id>:<skill-name>"] for a harness outside [repo] harnesses`,
-        1
-      )
-    return { key, ...qualified, configuration }
+    if (!skillName.test(key)) throw new KiError(`declared skill ${key} must be [skills.<prefix>-<name>]`, 1)
+    return { key, name: key, configuration }
   })
-  const names = new Set<string>()
-  for (const declaration of declared) {
-    if (names.has(declaration.name))
-      throw new KiError(`declared skill ${declaration.name} is repeated by multiple providers`, 1)
-    names.add(declaration.name)
-  }
   return declared
 }
 
@@ -165,8 +143,7 @@ export const declaredKnowledgeBaseStoreRoles = (
   return roles as KnowledgeBaseStoreRole[]
 }
 
-// Declare a skill in a repository's .ki-config.toml by appending its [skills.<name>] table. A
-// provider outside the declared harness list keeps its quoted qualified key, so it stays visible.
+// Declare a skill in a repository's .ki-config.toml by appending its [skills.<name>] table.
 // Text-appended (not re-serialised) to preserve the file's comments and formatting.
 export const declareRepositorySkill = async (
   configurationPath: string,
@@ -175,10 +152,11 @@ export const declareRepositorySkill = async (
 ): Promise<boolean> => {
   const declaration = await readRepositoryDeclaration(configurationPath)
   if (declaration.skills.some((skill) => skill.name === name)) return false
-  const key = declaration.harnesses.includes(harness) ? name : JSON.stringify(`${harness}:${name}`)
+  if (!declaration.harnesses.includes(harness))
+    throw new KiError(`repository must declare harness ${harness} before adding skill ${name}`, 1)
   const contents = await readFile(configurationPath, 'utf8')
   const base = contents.endsWith('\n') ? contents : `${contents}\n`
-  await writeFile(configurationPath, `${base}\n[skills.${key}]\n`, 'utf8')
+  await writeFile(configurationPath, `${base}\n[skills.${name}]\n`, 'utf8')
   return true
 }
 

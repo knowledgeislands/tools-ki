@@ -26,6 +26,8 @@ Use `--dry-run` to validate without creating output. The command is local only: 
 
 Use a harness identifier such as `example/harness`.
 
+A compatible Harness declares its stable capability namespace in its root `.ki-config.toml`, for example `[skills.ki-repo-harness]` with `prefix = "ki"`. Every published skill uses that prefix (`ki-*`), and `ki` refuses a second installed Harness claiming it. Distinct prefixes such as `ki` and `hnr` coexist; competing Harnesses using the same prefix do not.
+
 ### Private GitHub harnesses
 
 An immutable private GitHub harness archive may opt into the local GitHub CLI credential without placing a token in configuration. Use the commit-pinned codeload URL, record its SHA-256, and declare `auth = "github-cli"`:

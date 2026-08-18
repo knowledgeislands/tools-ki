@@ -68,6 +68,7 @@ export default {
 `
 
 const setupPrefixCollisionHarness = async (data: SandboxArea): Promise<void> => {
+  await data.write('ki/harnesses/example/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
   for (const { name, code, marker } of [
     { name: 'ki-repo-website', code: 'WEB-1', marker: 'website.txt' },
     { name: 'ki-repo-website-cloudflare', code: 'WCF-1', marker: 'cloudflare.txt' }
@@ -99,6 +100,7 @@ const setupSkill = async (
   dependencies: readonly string[],
   definition: string
 ): Promise<void> => {
+  await data.write('ki/harnesses/example/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
   const base = `ki/harnesses/example/harness/skills/${name}`
   await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: [${dependencies.join(', ')}]\n---\n`)
   await data.write(`${base}/scripts/rubric/items/index.ts`, definition)

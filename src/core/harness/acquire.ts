@@ -45,10 +45,9 @@ interface ParsedTarEntry {
 }
 
 /**
- * Parses every payload entry (under `skills/`, `subagents/`, or `hooks/`, optionally
- * nested one level under a harness-source prefix) out of a decompressed tar archive
- * without writing anything to disk. Runtime projections such as `.agents/skills/`
- * are source metadata, not harness payloads.
+ * Parses every payload entry and the root `.ki-config.toml` Harness declaration,
+ * optionally nested one level under a harness-source prefix, without writing anything
+ * to disk. Runtime projections such as `.agents/skills/` are source metadata, not payloads.
  */
 const parsePayloadEntries = (archive: Uint8Array): readonly ParsedTarEntry[] => {
   let payloadPrefix: string | undefined
@@ -66,15 +65,20 @@ const parsePayloadEntries = (archive: Uint8Array): readonly ParsedTarEntry[] => 
     if (!safeRelativePath(path) || contentsEnd > archive.length)
       throw new KiError('harness archive contains an unsafe entry', 1)
     const parts = path.split('/')
-    const direct = parts[0] === 'skills' || parts[0] === 'subagents' || parts[0] === 'hooks'
+    const directPayload = parts[0] === 'skills' || parts[0] === 'subagents' || parts[0] === 'hooks'
+    const directMetadata = parts.length === 1 && parts[0] === '.ki-config.toml'
     const nested =
-      !parts[0]?.startsWith('.') && (parts[1] === 'skills' || parts[1] === 'subagents' || parts[1] === 'hooks')
-    if (direct || nested) {
-      const entryPrefix = direct ? '' : (parts[0] as string)
+      !parts[0]?.startsWith('.') &&
+      (parts[1] === 'skills' ||
+        parts[1] === 'subagents' ||
+        parts[1] === 'hooks' ||
+        (parts.length === 2 && parts[1] === '.ki-config.toml'))
+    if (directPayload || directMetadata || nested) {
+      const entryPrefix = directPayload || directMetadata ? '' : (parts[0] as string)
       if (payloadPrefix !== undefined && payloadPrefix !== entryPrefix)
         throw new KiError('harness archive mixes payload roots', 1)
       payloadPrefix = entryPrefix
-      const payloadPath = parts.slice(direct ? 0 : 1).join('/')
+      const payloadPath = parts.slice(directPayload || directMetadata ? 0 : 1).join('/')
       entries.push({ payloadPath, type, contentsStart, contentsEnd })
     }
     offset = contentsStart + Math.ceil(size / 512) * 512
@@ -91,7 +95,7 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
   }
   const entries = parsePayloadEntries(archive)
 
-  let retained = 0
+  let retainedPayload = 0
   for (const entry of entries) {
     if (entry.type === '5') {
       if (entry.contentsEnd !== entry.contentsStart) throw new KiError('harness archive directory has contents', 1)
@@ -107,10 +111,10 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
     else {
       await mkdir(dirname(destination), { recursive: true })
       await writeFile(destination, archive.subarray(entry.contentsStart, entry.contentsEnd), { flag: 'wx' })
-      retained += 1
+      if (entry.payloadPath !== '.ki-config.toml') retainedPayload += 1
     }
   }
-  if (retained === 0) throw new KiError('harness archive contains no skills, agents, or hooks payload', 1)
+  if (retainedPayload === 0) throw new KiError('harness archive contains no skills, agents, or hooks payload', 1)
 }
 
 /**

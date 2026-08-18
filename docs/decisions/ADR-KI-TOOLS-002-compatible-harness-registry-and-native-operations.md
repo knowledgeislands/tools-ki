@@ -21,9 +21,9 @@ The `ki` host runs native repository operations without repository-vendored runn
 
 A private GitHub archive opts in through `auth = "github-cli"` and a matching commit-pinned codeload URL. For that form alone, `ki` obtains a GitHub CLI token for a no-redirect request; it never stores or prints the token, accepts credentials in a release URL, or sends the token to another host. Public releases remain unauthenticated.
 
-The base `knowledgeislands/ki-agentic-harness` is always registered and required. Harness installation validates the immutable archive, checksum, and capability inventory before atomic replacement. Uninstallation requires ownership proof and cannot remove the base harness. Capability selection always resolves from a verified installed root rather than an arbitrary version.
+The base `knowledgeislands/ki-agentic-harness` is always registered and required. Harness installation validates the immutable archive, checksum, explicit `[skills.ki-repo-harness].prefix`, and capability inventory before atomic replacement. Uninstallation requires ownership proof and cannot remove the base harness. Capability selection always resolves from a verified installed root rather than an arbitrary version.
 
-Capability references are qualified identities from the compatible-harness contract. A skill is `<harness-id>:<skill-name>`. A bare skill name is accepted only when exactly one installed harness supplies it; `ki` stores and reports its resolved qualified identity and rejects ambiguity.
+Each Harness owns one lowercase alphanumeric prefix and every published skill begins with that prefix followed by `-`. The installed estate refuses a second Harness claiming an existing prefix. Repositories therefore declare skills by bare capability name and must include the providing Harness in `[repo].harnesses`; competing Harnesses in one namespace are alternatives, not simultaneously qualified providers.
 
 The public grammar makes mutation scope explicit: `ki repo skill add|remove` changes a resolved repository and its managed runtime projection, while `ki skill add|remove` changes the selected user runtime. User inventory does not resolve a repository; harness inventory remains harness-focused.
 
@@ -39,6 +39,7 @@ Local development selects one Harness already present in the installed estate an
 
 - `tools-ki` is the sole owner of registry layout, command grammar, physical repository resolution, reporting, activation, migration, and native execution.
 - The base harness and an organisation harness can coexist without merging their source trees or treating either checkout as installed state.
+- A prefix collision is resolved by choosing one Harness; repository configuration does not carry a provider-disambiguation syntax.
 - A private GitHub harness can use the user's existing GitHub CLI authentication without placing a token in KI configuration or sending it to another host.
 - User commands do not resolve the CWD, while every `ki repo` command can discover one repository or use an explicit override.
 - Release and Homebrew delivery remain separate from harness registration and do not authorise a tag, publication, or push.

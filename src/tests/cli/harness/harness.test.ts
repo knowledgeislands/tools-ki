@@ -32,9 +32,10 @@ describe('[ki harness]', () => {
     test('renders every installed harness in order', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
+      await box.data.write('ki/harnesses/other/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
       await box.data.write(
-        'ki/harnesses/other/harness/skills/ki-other/SKILL.md',
-        '---\nname: ki-other\nki-depends-on: []\n---\n'
+        'ki/harnesses/other/harness/skills/other-example/SKILL.md',
+        '---\nname: other-example\nki-depends-on: []\n---\n'
       )
 
       const listed = await box.run('ki harness list')
@@ -81,6 +82,7 @@ describe('[ki harness]', () => {
     test('renders an installed harness with no capabilities', async () => {
       const box = await sandbox()
       await box.data.mkdir('ki/harnesses/empty/harness/skills')
+      await box.data.write('ki/harnesses/empty/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "empty"\n')
 
       const info = await box.run('ki harness info empty/harness')
 
@@ -422,6 +424,101 @@ releases = [
       expect(await readdir(`${box.state.path}/ki/managed-artifacts/locks`)).toEqual([])
       await expect(lstat(`${box.data.path}/ki/harnesses/example/harness/docs`)).rejects.toThrow()
       await expect(lstat(`${box.data.path}/ki/harnesses/example/harness/package.json`)).rejects.toThrow()
+    })
+
+    test('requires provider-authored Harness prefix metadata', async () => {
+      const box = await sandbox()
+      const skill = '---\nname: ki-example\nki-depends-on: []\n---\n'
+      const { payload, sha256 } = makeHarnessArchive(
+        { 'source/skills/ki-example/SKILL.md': skill },
+        { harnessPrefix: null }
+      )
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]\nreleases = [{ id = "example/harness", url = "https://releases.example.test/example.tgz", sha256 = "${sha256}" }]\n`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('.ki-config.toml must be a regular file')
+      await expect(lstat(`${box.data.path}/ki/harnesses/example/harness`)).rejects.toThrow()
+    })
+
+    test.each([
+      ['invalid TOML', 'not = [toml', '.ki-config.toml must be valid TOML'],
+      [
+        'an invalid prefix',
+        '[skills.ki-repo-harness]\nprefix = "not-valid"\n',
+        'must declare a lowercase alphanumeric [skills.ki-repo-harness] prefix'
+      ],
+      [
+        'a scalar skills declaration',
+        'skills = "invalid"\n',
+        'must declare a lowercase alphanumeric [skills.ki-repo-harness] prefix'
+      ],
+      [
+        'a scalar ki-repo-harness declaration',
+        '[skills]\nki-repo-harness = "invalid"\n',
+        'must declare a lowercase alphanumeric [skills.ki-repo-harness] prefix'
+      ]
+    ])('refuses %s in Harness prefix metadata', async (_case, metadata, message) => {
+      const box = await sandbox()
+      const { payload, sha256 } = makeHarnessArchive({
+        'source/.ki-config.toml': metadata,
+        'source/skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n'
+      })
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]\nreleases = [{ id = "example/harness", url = "https://releases.example.test/example.tgz", sha256 = "${sha256}" }]\n`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(message)
+    })
+
+    test('requires published skills to use the declared Harness prefix', async () => {
+      const box = await sandbox()
+      const { payload, sha256 } = makeHarnessArchive(
+        { 'source/skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' },
+        { harnessPrefix: 'hnr' }
+      )
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]\nreleases = [{ id = "example/harness", url = "https://releases.example.test/example.tgz", sha256 = "${sha256}" }]\n`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('skill ki-example must begin with declared prefix hnr-')
+    })
+
+    test('refuses a second installed Harness claiming the same prefix', async () => {
+      const box = await sandbox()
+      const first = makeHarnessArchive({
+        'source/skills/ki-first/SKILL.md': '---\nname: ki-first\nki-depends-on: []\n---\n'
+      })
+      const second = makeHarnessArchive({
+        'source/skills/ki-second/SKILL.md': '---\nname: ki-second\nki-depends-on: []\n---\n'
+      })
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]\nreleases = [\n  { id = "first/harness", url = "https://releases.example.test/first.tgz", sha256 = "${first.sha256}" },\n  { id = "second/harness", url = "https://releases.example.test/second.tgz", sha256 = "${second.sha256}" },\n]\n`
+      )
+      box.setFetcher(async (input) => new Response(String(input).includes('first') ? first.payload : second.payload))
+
+      expect((await box.run('ki harness install first/harness')).exitCode).toBe(0)
+      const result = await box.run('ki harness install second/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('harness prefix ki is already owned by installed harness first/harness')
+      await expect(lstat(`${box.data.path}/ki/harnesses/second/harness`)).rejects.toThrow()
     })
 
     test('refuses an unsafe managed-artifacts directory before creating install staging', async () => {

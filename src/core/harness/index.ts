@@ -1,5 +1,6 @@
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
+import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
 import { RUBRIC_MODULE_PATH } from '../rubric/index.ts'
 
@@ -28,7 +29,45 @@ export interface HarnessCapability {
 export interface InstalledHarness {
   readonly id: string
   readonly root: string
+  readonly prefix: string
   readonly capabilities: readonly HarnessCapability[]
+}
+
+const prefixPattern = /^[a-z][a-z0-9]*$/
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const harnessPrefix = async (root: string, identifier: string): Promise<string> => {
+  const path = join(root, '.ki-config.toml')
+  const state = await lstat(path).catch(() => undefined)
+  if (!state?.isFile() || state.isSymbolicLink())
+    throw new KiError(`installed harness ${identifier} .ki-config.toml must be a regular file`, 1)
+  let configuration: unknown
+  try {
+    configuration = parse(await readFile(path, 'utf8'))
+  } catch {
+    throw new KiError(`installed harness ${identifier} .ki-config.toml must be valid TOML`, 1)
+  }
+  const skills = (configuration as Record<string, unknown>)['skills']
+  const declaration = isRecord(skills) ? skills['ki-repo-harness'] : undefined
+  const prefix = isRecord(declaration) ? declaration['prefix'] : undefined
+  if (typeof prefix !== 'string' || !prefixPattern.test(prefix))
+    throw new KiError(
+      `installed harness ${identifier} must declare a lowercase alphanumeric [skills.ki-repo-harness] prefix`,
+      1
+    )
+  return prefix
+}
+
+export const requireUniqueHarnessPrefixes = (harnesses: readonly InstalledHarness[]): void => {
+  const owners = new Map<string, string>()
+  for (const harness of harnesses) {
+    const existing = owners.get(harness.prefix)
+    if (existing && existing !== harness.id)
+      throw new KiError(`harness prefix ${harness.prefix} is already owned by installed harness ${existing}`, 1)
+    owners.set(harness.prefix, harness.id)
+  }
 }
 
 const contained = (root: string, path: string): boolean => {
@@ -173,7 +212,17 @@ export const inspectHarnessRoot = async (rootPath: string, identifier: string): 
   /* v8 ignore next */
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   const root = await physicalDirectory(rootPath, `installed harness ${identifier}`)
-  return { id: identifier, root, capabilities: await discoverCapabilities(root, identifier) }
+  const [prefix, capabilities] = await Promise.all([
+    harnessPrefix(root, identifier),
+    discoverCapabilities(root, identifier)
+  ])
+  const mismatched = capabilities.find((capability) => !capability.name.startsWith(`${prefix}-`))
+  if (mismatched)
+    throw new KiError(
+      `installed harness ${identifier} skill ${mismatched.name} must begin with declared prefix ${prefix}-`,
+      1
+    )
+  return { id: identifier, root, prefix, capabilities }
 }
 
 export const readInstalledHarness = async (dataDirectory: string, identifier: string): Promise<InstalledHarness> => {
@@ -253,7 +302,11 @@ export const discoverInstalledHarnesses = async (dataDirectory: string): Promise
       identifiers.push(`${owner.name}/${name.name}`)
     }
   }
-  return Promise.all(identifiers.sort().map((identifier) => readInstalledHarness(dataDirectory, identifier)))
+  const installed = await Promise.all(
+    identifiers.sort().map((identifier) => readInstalledHarness(dataDirectory, identifier))
+  )
+  requireUniqueHarnessPrefixes(installed)
+  return installed
 }
 
 // Reports interrupted-install residue without touching it. Recovery is `recoverInstallOrphans`,

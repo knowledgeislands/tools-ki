@@ -22,6 +22,24 @@ _Verify:_ `src/tests/cli/root/lifecycle.test.ts` — `keeps an installed harness
 
 _Verify:_ `src/tests/cli/root/lifecycle.test.ts` — `blocks replacement and removal while a supplied user skill is active`; `src/tests/cli/harness/harness.test.ts` — `refuses to uninstall the canonical harness`.
 
+### HARN-004 — Explicit capability prefix
+
+Every installed Harness MUST declare a lowercase alphanumeric `prefix` in `[skills.ki-repo-harness]` in its root `.ki-config.toml`, and every published skill name MUST begin with `<prefix>-`.
+
+_Verify:_ `src/tests/cli/harness/harness.test.ts` — `requires provider-authored Harness prefix metadata`; `requires published skills to use the declared Harness prefix`.
+
+### HARN-005 — Unique installed prefix ownership
+
+`ki` MUST refuse installation or discovery of two different Harness identities claiming the same prefix, preserving the valid installed Harness when acquisition detects a collision.
+
+_Verify:_ `src/tests/cli/harness/harness.test.ts` — `refuses a second installed Harness claiming the same prefix`.
+
+### HARN-006 — Bare repository capability names
+
+A repository MUST declare skills by bare `<prefix>-<name>` keys and MUST include the providing Harness in `[repo].harnesses`; Harness-qualified skill keys are invalid.
+
+_Verify:_ `src/tests/cli/repo/validation.test.ts` — `resolves bare skill names across distinct Harness prefixes`; `rejects a Harness-qualified repository skill declaration`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

@@ -110,14 +110,26 @@ const area = (path: string): SandboxArea => {
 // without a rubric module at all, for exercising skills that provide no native governance.
 const setupExampleHarness = async (
   data: SandboxArea,
-  { rubric, name = 'ki-example' }: { rubric?: string; name?: string } = {}
+  {
+    rubric,
+    name = 'ki-example',
+    identifier = 'example/harness',
+    prefix = name.split('-')[0] as string
+  }: { rubric?: string; name?: string; identifier?: string; prefix?: string } = {}
 ): Promise<void> => {
-  const base = `ki/harnesses/example/harness/skills/${name}`
+  const canonical = 'knowledgeislands/ki-agentic-harness'
+  const canonicalInstalled = await lstat(join(data.path, 'ki/harnesses', canonical)).catch(() => undefined)
+  const selectedIdentifier =
+    identifier === 'example/harness' && prefix === 'ki' && canonicalInstalled?.isDirectory() ? canonical : identifier
+  const root = `ki/harnesses/${selectedIdentifier}`
+  await data.write(`${root}/.ki-config.toml`, `[skills.ki-repo-harness]\nprefix = ${JSON.stringify(prefix)}\n`)
+  const base = `${root}/skills/${name}`
   await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
   if (rubric !== undefined) await data.write(`${base}/scripts/rubric/items/index.ts`, rubric)
 }
 
 const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<void> => {
+  await area.write(`${base}/.ki-config.toml`, '[skills.ki-repo-harness]\nprefix = "ki"\n')
   await Promise.all(['subagents', 'hooks'].map((payload) => area.mkdir(`${base}/${payload}`)))
   for (const skill of bootstrapHarnessSkills) {
     const group = skill === 'ki-bootstrap' ? 'keystone' : 'change-management'
@@ -146,7 +158,12 @@ export interface Sandbox {
   readonly project: SandboxArea
   readonly env: Record<string, string>
   readonly executable: string
-  readonly setupExampleHarness: (skill?: { readonly rubric?: string; readonly name?: string }) => Promise<void>
+  readonly setupExampleHarness: (skill?: {
+    readonly rubric?: string
+    readonly name?: string
+    readonly identifier?: string
+    readonly prefix?: string
+  }) => Promise<void>
   readonly setupCanonicalHarness: () => Promise<void>
   readonly setupLocalCanonicalHarness: (relativePath: string) => Promise<string>
   readonly setupAgentHome: (agentId: AgentId) => Promise<void>

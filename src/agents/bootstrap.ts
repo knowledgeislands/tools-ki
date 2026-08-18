@@ -77,14 +77,19 @@ const harnessSkillSources = async (
 export const localHarness = async (
   harnessDirectory: string,
   identifier: string
-): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
+): Promise<{ readonly harness: string; readonly prefix: string; readonly skills: readonly ManagedUserSkill[] }> => {
   const inspected = await inspectHarnessRoot(resolve(harnessDirectory), identifier)
   if (identifier === canonicalHarnessIdentifier)
     return {
       harness: inspected.root,
+      prefix: inspected.prefix,
       skills: await bootstrapSkillSources(inspected, `local harness ${identifier}`)
     }
-  return { harness: inspected.root, skills: await harnessSkillSources(inspected, `local harness ${identifier}`) }
+  return {
+    harness: inspected.root,
+    prefix: inspected.prefix,
+    skills: await harnessSkillSources(inspected, `local harness ${identifier}`)
+  }
 }
 
 export const installedHarnessSkillSources = async (

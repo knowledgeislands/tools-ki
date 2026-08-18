@@ -16,8 +16,13 @@ export const setDevelopmentSource = async <Agent, Skill>(
   if (await port.developmentEnabled()) {
     throw new KiError('local development is active; run ki dev local off before setting a new source', 1)
   }
-  await port.requireInstalledHarness(identifier)
+  const installed = await port.requireInstalledHarness(identifier)
   const local = await port.inspectLocalHarness(path, identifier)
+  if (local.prefix !== installed.prefix)
+    throw new KiError(
+      `local harness ${identifier} declares prefix ${local.prefix}; installed harness declares ${installed.prefix}`,
+      1
+    )
   const agents = await port.configuredAgents()
   await port.setLocalHarness({ harness: identifier, path: local.harness })
   return { identifier, harness: local.harness, agents: agents.length }

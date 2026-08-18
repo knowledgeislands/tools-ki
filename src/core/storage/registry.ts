@@ -7,12 +7,14 @@ import { acquireVerifiedArchive, extractArchive, type Fetcher } from '../harness
 import { minimumBootstrapUserSkills } from '../harness/bootstrap-capabilities.ts'
 import {
   canonicalHarnessIdentifier,
+  discoverInstalledHarnesses,
   discoverInstallOrphans,
   type InstalledHarness,
   type InstallOrphan,
   inspectHarnessRoot,
   parkedPayloadEntry,
-  readInstalledHarness
+  readInstalledHarness,
+  requireUniqueHarnessPrefixes
 } from '../harness/index.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
@@ -23,6 +25,7 @@ export type { Fetcher } from '../harness/acquire.ts'
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const sha256 = /^[a-f0-9]{64}$/
 const payloadRoots = ['skills', 'subagents', 'hooks'] as const
+const harnessMetadataFile = '.ki-config.toml'
 // The first canonical archive used `agents/`; `ki dev local on` may replace that
 // recognised retired layout with the current `subagents/` projection.
 const retiredCanonicalPayloadRoots = ['agents'] as const
@@ -282,7 +285,10 @@ export const installHarness = async (
     await mkdir(staging)
     await artifact.transition('active')
     await extractArchive(payload, staging)
-    requireCapabilities(await inspectHarnessRoot(staging, identifier), options)
+    const candidate = await inspectHarnessRoot(staging, identifier)
+    requireCapabilities(candidate, options)
+    const installed = await discoverInstalledHarnesses(dataDirectory)
+    requireUniqueHarnessPrefixes([...installed.filter((harness) => harness.id !== identifier), candidate])
     if (!existing) {
       await artifact.transition('retired')
       await rename(staging, destination)
@@ -385,8 +391,12 @@ export const enableHarnessDevelopment = async (
   if (
     entries.some(
       (entry) =>
-        (!payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) && !retired.includes(entry.name)) ||
-        (!entry.isDirectory() && !entry.isSymbolicLink())
+        (entry.name !== harnessMetadataFile &&
+          !payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) &&
+          !retired.includes(entry.name)) ||
+        (entry.name === harnessMetadataFile
+          ? !entry.isFile() || entry.isSymbolicLink()
+          : !entry.isDirectory() && !entry.isSymbolicLink())
     )
   ) {
     throw new KiError(`installed harness ${identifier} has unrecognised state`, 1)
@@ -417,9 +427,11 @@ const harnessDevelopmentProjection = async (dataDirectory: string, identifier: s
   await physicalDirectory(destination, `installed harness ${identifier}`)
   const entries = await readdir(destination, { withFileTypes: true })
   return (
-    entries.length === payloadRoots.length &&
+    entries.length === payloadRoots.length + 1 &&
     entries.every(
-      (entry) => payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) && entry.isSymbolicLink()
+      (entry) =>
+        (entry.name === harnessMetadataFile && entry.isFile() && !entry.isSymbolicLink()) ||
+        (payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) && entry.isSymbolicLink())
     )
   )
 }
@@ -508,9 +520,10 @@ export const uninstallHarness = async (dataDirectory: string, identifier: string
     !entries.length ||
     entries.some(
       (entry) =>
-        !payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) ||
-        !entry.isDirectory() ||
-        entry.isSymbolicLink()
+        (entry.name !== harnessMetadataFile && !payloadRoots.includes(entry.name as (typeof payloadRoots)[number])) ||
+        (entry.name === harnessMetadataFile
+          ? !entry.isFile() || entry.isSymbolicLink()
+          : !entry.isDirectory() || entry.isSymbolicLink())
     )
   ) {
     throw new KiError(`installed harness ${identifier} has unrecognised state and will not be removed`, 1)

@@ -43,7 +43,8 @@ export const setDevelopmentSourcePort = (
     return local ? harnessDevelopmentEnabled(context.paths.data, local.harness, local.path) : false
   },
   requireInstalledHarness: async (identifier) => {
-    await readInstalledHarness(context.paths.data, identifier)
+    const harness = await readInstalledHarness(context.paths.data, identifier)
+    return { prefix: harness.prefix }
   },
   inspectLocalHarness: localHarness,
   configuredAgents: () => agents(context),

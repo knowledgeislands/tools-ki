@@ -4,9 +4,18 @@ import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 
 describe('[ki skill]', () => {
+  const canonicalHarness = 'knowledgeislands/ki-agentic-harness'
+  const setupKiHarness = async (
+    box: Sandbox,
+    options: { readonly rubric?: string; readonly name?: string } = {}
+  ): Promise<void> => {
+    await box.setupCanonicalHarness()
+    await box.setupExampleHarness({ ...options, identifier: canonicalHarness })
+  }
+
   const bootstrapClaudeCode = async (box: Sandbox): Promise<void> => {
     await box.setupAgentHome('claude-code')
-    await box.setupExampleHarness()
+    await setupKiHarness(box)
     await box.run('ki bootstrap')
   }
 
@@ -46,7 +55,7 @@ describe('[ki skill]', () => {
       const portable = await sandbox()
       await portable.setupAgentHome('claude-code')
       await portable.setupAgentHome('chatgpt-codex')
-      await portable.setupExampleHarness()
+      await setupKiHarness(portable)
       await portable.run('ki bootstrap')
 
       const portableAdded = await portable.run('ki skill add ki-example')
@@ -61,9 +70,9 @@ describe('[ki skill]', () => {
       const chatgptCodex = await sandbox()
       await chatgptCodex.setupAgentHome('claude-code')
       await chatgptCodex.setupAgentHome('chatgpt-codex')
-      await chatgptCodex.setupExampleHarness()
+      await setupKiHarness(chatgptCodex)
       await chatgptCodex.data.write(
-        'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+        `ki/harnesses/${canonicalHarness}/skills/ki-example/SKILL.md`,
         '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
       )
       await chatgptCodex.run('ki bootstrap')
@@ -78,9 +87,9 @@ describe('[ki skill]', () => {
     test('refuses incompatible or invalid runtime metadata before mutating user state', async () => {
       const incompatible = await sandbox()
       await incompatible.setupAgentHome('claude-code')
-      await incompatible.setupExampleHarness()
+      await setupKiHarness(incompatible)
       await incompatible.data.write(
-        'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+        `ki/harnesses/${canonicalHarness}/skills/ki-example/SKILL.md`,
         '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
       )
       await incompatible.run('ki bootstrap')
@@ -96,9 +105,9 @@ describe('[ki skill]', () => {
 
       const invalid = await sandbox()
       await invalid.setupAgentHome('claude-code')
-      await invalid.setupExampleHarness()
+      await setupKiHarness(invalid)
       await invalid.data.write(
-        'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+        `ki/harnesses/${canonicalHarness}/skills/ki-example/SKILL.md`,
         '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: []\n---\n'
       )
       await invalid.run('ki bootstrap')
@@ -112,11 +121,11 @@ describe('[ki skill]', () => {
       const box = await sandbox()
       await box.setupAgentHome('claude-code')
       await box.setupAgentHome('chatgpt-codex')
-      await box.setupExampleHarness()
+      await setupKiHarness(box)
       await box.run('ki bootstrap')
       await box.run('ki skill add ki-example')
       await box.data.write(
-        'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+        `ki/harnesses/${canonicalHarness}/skills/ki-example/SKILL.md`,
         '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [claude-code]\n---\n'
       )
 
@@ -134,7 +143,15 @@ describe('[ki skill]', () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)
       const link = join(box.home.path, '.claude', 'skills', 'ki-example')
-      const source = join(box.data.path, 'ki', 'harnesses', 'example', 'harness', 'skills', 'ki-example')
+      const source = join(
+        box.data.path,
+        'ki',
+        'harnesses',
+        'knowledgeislands',
+        'ki-agentic-harness',
+        'skills',
+        'ki-example'
+      )
 
       const added = await box.run('ki skill add ki-example')
       const linkStat = await lstat(link)
@@ -144,7 +161,7 @@ describe('[ki skill]', () => {
       expect(added).toEqual({ exitCode: 0, output: 'ki skill add: linked ki-example for claude-code\n' })
       expect(linkStat.isSymbolicLink()).toBe(true)
       expect(linkTarget).toBe(sourceTarget)
-      expect(configAfterAdd).toContain('[skills.ki-example]\nharness = "example/harness"')
+      expect(configAfterAdd).toContain('[skills.ki-example]\nharness = "knowledgeislands/ki-agentic-harness"')
 
       const removed = await box.run('ki skill remove ki-example')
       const configAfterRemove = await box.config.read('ki/config.toml')
@@ -177,7 +194,7 @@ describe('[ki skill]', () => {
       const replaced = await box.run('ki skill add ki-example --replace')
       const linkTargetAfterReplace = await realpath(link)
       const sourceTarget = await realpath(
-        join(box.data.path, 'ki', 'harnesses', 'example', 'harness', 'skills', 'ki-example')
+        join(box.data.path, 'ki', 'harnesses', 'knowledgeislands', 'ki-agentic-harness', 'skills', 'ki-example')
       )
       expect(replaced).toEqual({ exitCode: 0, output: 'ki skill add: linked ki-example for claude-code\n' })
       expect(linkTargetAfterReplace).toBe(sourceTarget)
@@ -242,11 +259,12 @@ ids = []
       expect(removed.output).toContain('claude-code ki-example skill is not KI-managed')
     })
 
-    test('reports an unavailable or ambiguous user skill provider', async () => {
+    test('reports an unavailable skill and an installed Harness prefix collision', async () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)
 
       const unavailable = await box.run('ki skill add not-installed')
+      await box.data.write('ki/harnesses/other/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
       await box.data.write(
         'ki/harnesses/other/harness/skills/ki-example/SKILL.md',
         '---\nname: ki-example\nki-depends-on: []\n---\n'
@@ -254,7 +272,7 @@ ids = []
       const ambiguous = await box.run('ki skill add ki-example')
 
       expect(unavailable.output).toContain('no installed harness provides skill not-installed')
-      expect(ambiguous.output).toContain('skill ki-example is provided by multiple installed harnesses')
+      expect(ambiguous.output).toContain('harness prefix ki is already owned by installed harness')
     })
   })
 
@@ -302,14 +320,14 @@ ids = []
       const box = await sandbox()
       await box.setupAgentHome('claude-code')
       await box.setupAgentHome('chatgpt-codex')
-      await box.setupExampleHarness()
+      await setupKiHarness(box)
       await box.data.write(
-        'ki/harnesses/example/harness/skills/ki-example/SKILL.md',
+        `ki/harnesses/${canonicalHarness}/skills/ki-example/SKILL.md`,
         '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
       )
       await box.project.write(
         '.ki-config.toml',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["chatgpt-codex"]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["chatgpt-codex"]\n'
       )
       await box.run('ki bootstrap')
 
@@ -321,7 +339,7 @@ ids = []
 
       await box.project.write(
         '.ki-config.toml',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
       )
       const refused = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
 
@@ -363,7 +381,7 @@ ids = []
       await bootstrapClaudeCode(box)
       await writeFile(
         join(box.project.path, '.ki-config.toml'),
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
       )
       const projectRoot = await realpath(box.project.path)
       const link = join(projectRoot, '.claude', 'skills', 'ki-example')
@@ -408,14 +426,14 @@ ids = []
       for (const spelling of spellings) {
         const box = await sandbox()
         await bootstrapClaudeCode(box)
-        await box.setupExampleHarness()
-        await box.setupExampleHarness({ name: 'ki-repo' })
+        await setupKiHarness(box)
+        await setupKiHarness(box, { name: 'ki-repo' })
         // The decoy line looks like a table header and is not one, because it sits inside a
         // multi-line string. Read alone it is not valid TOML, so the key reader must decline it
         // rather than fail the removal.
         await writeFile(
           join(box.project.path, '.ki-config.toml'),
-          `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\nnotes = """\n[not a header]\n"""\n\n${spelling}\n`
+          `[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\nnotes = """\n[not a header]\n"""\n\n${spelling}\n`
         )
         const projectRoot = await realpath(box.project.path)
 
@@ -435,19 +453,19 @@ ids = []
       // removal it did not perform.
       const box = await sandbox()
       await bootstrapClaudeCode(box)
-      await box.setupExampleHarness()
-      await box.setupExampleHarness({ name: 'ki-repo' })
+      await setupKiHarness(box)
+      await setupKiHarness(box, { name: 'ki-repo' })
       const configuration = join(box.project.path, '.ki-config.toml')
       await writeFile(
         configuration,
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[skills.ki-example]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[skills.ki-example]\n'
       )
       await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
       // Replace the header with an inline table under [skills] carrying the same key, which parses
       // to the same declaration but presents no [skills.ki-example] header for the editor to remove.
       await writeFile(
         configuration,
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills]\nki-example = {}\nki-repo = { supported_runtimes = ["claude-code"] }\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills]\nki-example = {}\nki-repo = { supported_runtimes = ["claude-code"] }\n'
       )
 
       const removed = await box.run(`ki repo --repo ${box.project.path} skill remove ki-example`)
@@ -462,20 +480,18 @@ ids = []
       await bootstrapClaudeCode(box)
       await box.project.write(
         '.ki-config.toml',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]'
       )
 
       const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
 
       expect(added.exitCode).toBe(0)
       expect(await box.project.read('.ki-config.toml')).toBe(
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[skills.ki-example]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[skills.ki-example]\n'
       )
     })
 
-    // A provider outside [repo] harnesses keeps its quoted qualified key, so the exception to
-    // bare-name declaration stays visible in the file rather than reading like every other skill.
-    test('declares a skill from an undeclared harness under its quoted qualified key', async () => {
+    test('refuses to declare a skill from a Harness absent from the repository declaration', async () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)
       await box.project.write(
@@ -485,8 +501,10 @@ ids = []
 
       const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
 
-      expect(added.exitCode).toBe(0)
-      expect(await box.project.read('.ki-config.toml')).toContain('[skills."example/harness:ki-example"]')
+      expect(added.exitCode).toBe(1)
+      expect(added.output).toContain(
+        'repository must declare harness knowledgeislands/ki-agentic-harness before adding skill ki-example'
+      )
     })
 
     test('refuses to remove a foreign repository skill directory', async () => {
@@ -494,7 +512,7 @@ ids = []
       await bootstrapClaudeCode(box)
       await box.project.write(
         '.ki-config.toml',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
       )
       const link = join(box.project.path, '.claude', 'skills', 'ki-example')
       await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
@@ -511,7 +529,7 @@ ids = []
       await bootstrapClaudeCode(box)
       await box.project.write(
         '.ki-config.toml',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\nsetting = true\n\n[skills.ki-example.nested]\nvalue = 2\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-example]\nsetting = true\n\n[skills.ki-example.nested]\nvalue = 2\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1'
       )
 
       const repeated = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
@@ -523,7 +541,7 @@ ids = []
       // Each removed table takes the blank line before it, so the two removals close the gap that
       // separated [repo] from the declaration that followed it.
       expect(configuration).toBe(
-        '[repo]\nharnesses = ["example/harness"]\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1'
       )
     })
 
@@ -542,7 +560,7 @@ ids = []
       })
     })
 
-    test('rejects an unshaped file, a malformed declaration key, and a repeated skill name', async () => {
+    test('rejects an unshaped file and malformed declaration keys', async () => {
       const box = await sandbox()
       const preamble = '[repo]\nharnesses = ["example/harness"]\n\n'
       const run = async (configuration: string) => {
@@ -559,10 +577,9 @@ ids = []
       const repeatedHarness = await run('[repo]\nharnesses = ["example/harness", "example/harness"]\n')
       // Ahead of every header, so the key belongs to the document rather than to [repo].
       const skillsScalar = await run('skills = 1\n\n[repo]\nharnesses = ["example/harness"]\n')
-      const notASkill = await run(`${preamble}[skills.not-a-skill]\n`)
+      const notASkill = await run(`${preamble}[skills.invalid]\n`)
       const malformedProvider = await run(`${preamble}[skills."invalid:ki-example"]\n`)
       const repeatedSeparator = await run(`${preamble}[skills."example/harness:ki-example:again"]\n`)
-      const duplicate = await run(`${preamble}[skills.ki-example]\n[skills."other/harness:ki-example"]\n`)
 
       expect(unmigrated.output).toContain('.ki-config.toml must declare [repo] with a harnesses array')
       expect(missingHarnesses.output).toContain('.ki-config.toml must declare [repo] with a harnesses array')
@@ -572,12 +589,11 @@ ids = []
         )
       expect(repeatedHarness.output).toContain('[repo] harnesses must not repeat a harness')
       expect(skillsScalar.output).toContain('.ki-config.toml [skills] must be a table')
-      expect(notASkill.output).toContain('declared skill not-a-skill must be [skills.<skill-name>]')
-      expect(malformedProvider.output).toContain('declared skill invalid:ki-example must be [skills.<skill-name>]')
+      expect(notASkill.output).toContain('declared skill invalid must be [skills.<prefix>-<name>]')
+      expect(malformedProvider.output).toContain('declared skill invalid:ki-example must be [skills.<prefix>-<name>]')
       expect(repeatedSeparator.output).toContain(
-        'declared skill example/harness:ki-example:again must be [skills.<skill-name>]'
+        'declared skill example/harness:ki-example:again must be [skills.<prefix>-<name>]'
       )
-      expect(duplicate.output).toContain('declared skill ki-example is repeated by multiple providers')
     })
 
     test('ignores non-skill tables in a repository catalogue', async () => {
@@ -623,7 +639,7 @@ ids = []
       const box = await sandbox()
       await bootstrapClaudeCode(box)
       const configuration =
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
       await box.root.write('first/.ki-config.toml', configuration)
       await box.root.write('second/.ki-config.toml', configuration)
       const first = await realpath(`${box.root.path}/first`)

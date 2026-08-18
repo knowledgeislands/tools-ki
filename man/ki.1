@@ -810,8 +810,10 @@ to inspect the effective values.
 Required repository configuration at a KI repository root.
 \fB[repo]\fR names the harnesses that provide the repository's skills, and each
 governing skill is declared by its bare name under \fB[skills]\fR, carrying its
-own configuration. A skill drawn from a harness outside that list keeps a
-quoted, fully-qualified \fB[skills."<harness-id>:<skill-name>"]\fR key.
+own configuration. A provider must appear in the Harness list before its skill
+can be added; Harness-qualified skill keys are invalid. Installed Harnesses
+declare distinct capability prefixes through \fB[skills.ki-repo-harness]\fR in
+their own root configuration.
 Repository identity and metadata live in \fB[skills.ki-repo]\fR, and trade
 routes in \fB[skills.ki-trades.routes]\fR, keyed once per partner.
 .SH DEVELOPMENT INSTALLATIONS

@@ -227,9 +227,10 @@ describe('[ki manage update and ki repo upgrade]', () => {
   test('reports unconfigured harnesses without mutating them', async () => {
     const box = await sandbox()
     await box.setupExampleHarness()
+    await box.data.write('ki/harnesses/other/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
     await box.data.write(
-      'ki/harnesses/other/harness/skills/ki-other/SKILL.md',
-      '---\nname: ki-other\nki-depends-on: []\n---\n'
+      'ki/harnesses/other/harness/skills/other-skill/SKILL.md',
+      '---\nname: other-skill\nki-depends-on: []\n---\n'
     )
 
     const result = await box.run('ki manage update')
@@ -243,11 +244,15 @@ describe('[ki manage update and ki repo upgrade]', () => {
     const box = await sandbox()
     const payload = archive()
     await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/skills/ki-other/SKILL.md', skill.replace('ki-example', 'ki-other'))
+    await box.data.write('ki/harnesses/other/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
+    await box.data.write(
+      'ki/harnesses/other/harness/skills/other-skill/SKILL.md',
+      skill.replace('ki-example', 'other-skill')
+    )
     await box.config.write('ki/config.toml', configuration(payload.sha256))
     await box.project.write(
       '.ki-config.toml',
-      '[repo]\nharnesses = ["example/harness", "other/harness"]\n\n[skills.ki-example]\n[skills.ki-other]\n'
+      '[repo]\nharnesses = ["example/harness", "other/harness"]\n\n[skills.ki-example]\n[skills.other-skill]\n'
     )
     box.setFetcher(async () => new Response(payload.payload))
 
@@ -299,7 +304,11 @@ describe('[ki manage update and ki repo upgrade]', () => {
 
     const box = await sandbox()
     await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/skills/example/SKILL.md', skill)
+    await box.data.write('ki/harnesses/other/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
+    await box.data.write(
+      'ki/harnesses/other/harness/skills/other-skill/SKILL.md',
+      skill.replace('ki-example', 'other-skill')
+    )
     await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     const declared = await box.run('ki repo upgrade')
 

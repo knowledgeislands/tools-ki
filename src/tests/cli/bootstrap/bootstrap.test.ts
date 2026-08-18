@@ -349,19 +349,19 @@ ids = ["claude-code"]
   test('uses a configured agent’s repository skill path when linking a repository skill', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
-    await box.setupExampleHarness()
+    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
     await box.project.write(
       '.ki-config.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
     )
     await box.run('ki bootstrap')
 
-    const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
+    const added = await box.run(`ki repo --repo ${box.project.path} skill add example-skill`)
 
     expect(added.exitCode).toBe(0)
-    expect(added.output).toContain('ki repo skill add: linked ki-example into ')
+    expect(added.output).toContain('ki repo skill add: linked example-skill into ')
     expect(added.output).toContain(' for claude-code\n')
-    expect(await box.project.isSymlink('.claude/skills/ki-example')).toBe(true)
+    expect(await box.project.isSymlink('.claude/skills/example-skill')).toBe(true)
   })
 
   test('reports an empty detected inventory when creating and refreshing configuration', async () => {
@@ -426,11 +426,11 @@ ids = ["claude-code"]
   test('refresh ignores a dangling managed link and a non-link skill entry', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
-    await box.setupExampleHarness()
+    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
     await box.run('ki bootstrap')
-    await box.run('ki skill add ki-example')
+    await box.run('ki skill add example-skill')
     const skillDirectory = join(box.home.path, '.claude', 'skills')
-    const target = join(skillDirectory, 'ki-example')
+    const target = join(skillDirectory, 'example-skill')
     await unlink(target)
     await symlink(join(box.root.path, 'missing-skill'), target, 'dir')
     await mkdir(join(skillDirectory, 'notes'))
@@ -440,21 +440,21 @@ ids = ["claude-code"]
 
     expect(refreshed.exitCode).toBe(0)
     expect(refreshed.output).toContain('refreshed ki configuration: 1 agents, 2 harnesses, 7 skills')
-    expect(config).not.toContain('[skills.ki-example]')
+    expect(config).not.toContain('[skills.example-skill]')
   })
 
   test('keeps user skills beyond the minimum on bootstrap and refresh', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
-    await box.setupExampleHarness()
+    await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
     await box.run('ki bootstrap')
-    const added = await box.run('ki skill add ki-example')
+    const added = await box.run('ki skill add example-skill')
 
     expect(added.exitCode).toBe(0)
     await box.run('ki bootstrap')
-    expect(await box.config.read('ki/config.toml')).toContain('[skills.ki-example]')
+    expect(await box.config.read('ki/config.toml')).toContain('[skills.example-skill]')
 
     await box.run('ki bootstrap --refresh')
-    expect(await box.config.read('ki/config.toml')).toContain('[skills.ki-example]')
+    expect(await box.config.read('ki/config.toml')).toContain('[skills.example-skill]')
   })
 })
