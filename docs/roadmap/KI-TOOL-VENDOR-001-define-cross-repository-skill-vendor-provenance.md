@@ -4,7 +4,7 @@ title: Enforce Harness prefix ownership
 area: VENDOR
 theme: cross-repository-vendoring
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 30e01527d17dd20b989f8216f373d87432b1d97a
@@ -115,6 +115,10 @@ The final review found and corrected one activation-order defect exposed by the 
 ### Mini recap
 
 VENDOR-001 now achieves the stated goal without qualified capability identities or a second provenance system: prefixes make ownership unambiguous, archive digests retain release provenance, and local mode is deterministic because each active Harness is one complete source root.
+
+## Done
+
+Accepted by the repository owner on 2026-08-18. Harness prefix ownership, bare repository skill resolution, complete-root multi-Harness local development, and aligned public CLI documentation are retained as the durable completion record.
 
 ## Discussion
 
