@@ -4,10 +4,10 @@ title: Enforce Harness prefix ownership
 area: VENDOR
 theme: cross-repository-vendoring
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 30e01527d17dd20b989f8216f373d87432b1d97a
 ---
 
 ## Goal
