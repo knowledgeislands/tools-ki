@@ -66,16 +66,15 @@ const expectedRendered = [
   ''
 ].join('\n')
 
-// Simulates a dev-linked harness install without going through `ki dev local on` (which only
-// projects the canonical knowledgeislands/ki-agentic-harness): writes the real skill payload
-// under the sandbox root, then symlinks the installed harness's `skills` payload root at it —
-// the same signal `enableCanonicalHarnessDevelopment` establishes for the canonical harness.
+// Simulates a complete local Harness root without going through `ki dev local on`.
 const devLinkExampleHarness = async (box: Awaited<ReturnType<typeof sandbox>>, rubricSource: string): Promise<void> => {
+  await box.root.write('local/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
   await box.root.write('local/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
   await box.root.write('local/skills/ki-example/scripts/rubric/items/index.ts', rubricSource)
-  const installedSkills = join(box.data.path, 'ki/harnesses/example/harness/skills')
-  await rm(installedSkills, { recursive: true, force: true })
-  await symlink(join(box.root.path, 'local/skills'), installedSkills)
+  await Promise.all(['subagents', 'hooks'].map((payload) => box.root.mkdir(`local/${payload}`)))
+  const installed = join(box.data.path, 'ki/harnesses/example/harness')
+  await rm(installed, { recursive: true, force: true })
+  await symlink(join(box.root.path, 'local'), installed)
 }
 
 describe('[ki dev skill rubric]', () => {
@@ -95,9 +94,7 @@ describe('[ki dev skill rubric]', () => {
 
     const written = await box.run('ki dev skill rubric ki-example --write')
     expect(written.exitCode).toBe(0)
-    expect(written.output).toMatch(
-      /^write .*ki\/harnesses\/example\/harness\/skills\/ki-example\/references\/rubric\.md\n$/
-    )
+    expect(written.output).toMatch(/^write .*local\/skills\/ki-example\/references\/rubric\.md\n$/)
     expect(await box.data.read(target)).toBe(expectedRendered)
 
     const checked = await box.run('ki dev skill rubric ki-example')

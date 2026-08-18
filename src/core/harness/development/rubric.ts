@@ -1,13 +1,5 @@
-import { join } from 'node:path'
 import { KiError } from '../../errors.ts'
 import type { DevelopmentRubricEvent, DevelopmentRubricPort } from './types.ts'
-
-const developmentLinked = async (port: DevelopmentRubricPort, harnessRoot: string): Promise<boolean> => {
-  /* v8 ignore next -- Skill resolution already required this directory; this protects concurrent mutation. */
-  const state = await port.lstat(join(harnessRoot, 'skills')).catch(() => undefined)
-  /* v8 ignore next -- lstat can only return a stat object or undefined. */
-  return state?.isSymbolicLink() ?? false
-}
 
 export const inspectDevelopmentRubric = async (
   port: DevelopmentRubricPort,
@@ -18,7 +10,7 @@ export const inspectDevelopmentRubric = async (
   const resolved = await port.resolveSkill(skill)
   const publication = await port.preparePublication(resolved)
   if (write) {
-    if (!(await developmentLinked(port, resolved.harness.root))) {
+    if (!(await port.developmentLinked(resolved.harness.id))) {
       throw new KiError(
         `${resolved.identity} is an installed payload; run ki dev local on before writing its rubric catalogue`,
         1

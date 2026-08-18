@@ -774,15 +774,16 @@ and
 payload directories.
 .TP
 .B ki dev local on
-Enable the remembered local checkout for development. KI replaces only the
-selected harness's managed payload directories with links to that checkout,
+Enable the remembered local checkout for development. KI replaces the selected
+harness's complete active root with that checkout, so its metadata and payloads
+always have one source,
 records its identity and path in
 .BR [local] ,
 and reconciles that harness's managed user-skill links to the local source on
 every run. Other installed harnesses remain unchanged.
 .TP
 .B ki dev local off
-Remove that recognised local payload projection, reinstall the selected
+Remove that recognised local Harness root, reinstall the selected
 harness's verified archive, retain its
 .B [local]
 identity and path, and reconcile its managed user-skill links to the restored

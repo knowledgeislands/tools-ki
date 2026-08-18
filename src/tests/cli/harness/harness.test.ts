@@ -920,7 +920,7 @@ releases = [
       expect(info.output).toContain('installed harness payload skills/ki-example/linked must not be a symlink')
     })
 
-    test('accepts an external payload-root development link', async () => {
+    test('rejects an external payload-root link', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
       const payload = `${box.data.path}/ki/harnesses/example/harness/skills`
@@ -931,11 +931,35 @@ releases = [
 
       const info = await box.run('ki harness info example/harness')
 
-      expect(info).toEqual({
-        exitCode: 0,
-        output:
-          '╭─ KI HARNESS\n├─ example/harness\n├─ capabilities (1)\n│  ╰─ skill ki-external\n╰─ summary: CAPABILITIES=1\n'
-      })
+      expect(info.exitCode).toBe(1)
+      expect(info.output).toContain('installed harness payload skills must not be a symlink')
+    })
+
+    test('rejects a broken local Harness root link', async () => {
+      const box = await sandbox()
+      await box.setupExampleHarness()
+      const root = `${box.data.path}/ki/harnesses/example/harness`
+      await rm(root, { recursive: true })
+      await symlink(`${box.root.path}/missing-harness`, root, 'dir')
+
+      const info = await box.run('ki harness info example/harness')
+
+      expect(info.exitCode).toBe(1)
+      expect(info.output).toContain('installed harness example/harness local development link is broken')
+    })
+
+    test('rejects a local Harness root link resolving to a regular file', async () => {
+      const box = await sandbox()
+      await box.setupExampleHarness()
+      const root = `${box.data.path}/ki/harnesses/example/harness`
+      await box.root.write('not-a-harness', 'unsafe\n')
+      await rm(root, { recursive: true })
+      await symlink(`${box.root.path}/not-a-harness`, root, 'dir')
+
+      const info = await box.run('ki harness info example/harness')
+
+      expect(info.exitCode).toBe(1)
+      expect(info.output).toContain('installed harness example/harness must be a directory')
     })
 
     test.each([
@@ -1012,7 +1036,7 @@ releases = [
       const info = await box.run('ki harness info example/harness')
 
       expect(info.exitCode).toBe(1)
-      expect(info.output).toContain('installed harness payload skills must be a directory')
+      expect(info.output).toContain('installed harness payload skills must not be a symlink')
     })
 
     test('rejects unsafe owner and harness-name entries in the installed inventory', async () => {

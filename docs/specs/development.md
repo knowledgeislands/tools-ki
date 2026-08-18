@@ -12,15 +12,15 @@ _Verify:_ `src/tests/cli/dev/dev.test.ts` — `remembers a local source without 
 
 ### DEV-002 — Reversible local activation
 
-`ki dev local on` MUST switch only the remembered installed Harness to its configured local checkout, and `ki dev local off` MUST restore that Harness from its configured verified archive and re-project its managed skills without changing neighbouring Harnesses.
+`ki dev local on` MUST switch the complete active root of only the remembered installed Harness to its configured local checkout, and `ki dev local off` MUST restore that Harness from its configured verified archive and re-project its managed skills without changing neighbouring Harnesses. Metadata and payloads MUST come from the same active root.
 
 _Verify:_ `src/tests/cli/dev/dev.test.ts` — `switches one non-canonical installed harness without changing its neighbours` and `switches the canonical harness to a local development checkout`.
 
 ### DEV-003 — Recognised projection only
 
-`ki dev` MUST refuse an unfamiliar or unsafe development link for the remembered Harness rather than adopting it.
+`ki dev` MUST refuse an unfamiliar or unsafe development root link for the remembered Harness rather than adopting it. Installed Harness inspection MUST reject payload-root links so a physical installed root cannot combine archive metadata with external payloads.
 
-_Verify:_ `src/tests/cli/dev/dev.test.ts` — `refuses to replace an unfamiliar canonical development link`.
+_Verify:_ `src/tests/cli/dev/dev.test.ts` — `refuses to replace an unfamiliar canonical development link`; `src/tests/cli/harness/harness.test.ts` — `rejects an external payload-root link`.
 
 ### DEV-004 — Canonical bootstrap protection
 

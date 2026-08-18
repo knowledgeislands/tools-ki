@@ -412,9 +412,7 @@ ids = ["claude-code"]
     expect(bootstrapped.output).toContain('could not download configured harness knowledgeislands/ki-agentic-harness')
     expect(bootstrapped.output).not.toContain('skill points elsewhere')
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
-    for (const payload of ['skills', 'subagents', 'hooks']) {
-      expect(await box.data.isSymlink(`ki/harnesses/knowledgeislands/ki-agentic-harness/${payload}`)).toBe(true)
-    }
+    expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness')).toBe(true)
     expect(await realpath(`${box.home.path}/.claude/skills/ki-bootstrap`)).toBe(
       `${harnessPath}/skills/keystone/ki-bootstrap`
     )

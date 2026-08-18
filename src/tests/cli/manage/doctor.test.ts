@@ -289,7 +289,7 @@ harness = "example/harness"
     expect(doctor.exitCode).toBe(1)
   })
 
-  test('reports canonical payload links that point away from the configured local source', async () => {
+  test('reports a canonical Harness root that points away from the configured local source', async () => {
     const box = await sandbox()
     const harnessPath = await box.setupLocalCanonicalHarness('dev/current/knowledgeislands/ki-agentic-harness')
     const otherHarnessPath = await box.setupLocalCanonicalHarness('dev/other/knowledgeislands/ki-agentic-harness')
@@ -297,14 +297,14 @@ harness = "example/harness"
     await box.run('ki bootstrap')
     await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     await box.run('ki dev local on')
-    const link = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/hooks`
+    const link = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`
     await unlink(link)
-    await symlink(`${otherHarnessPath}/hooks`, link, 'dir')
+    await symlink(otherHarnessPath, link, 'dir')
 
     const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain(
-      '✗ Local development: knowledgeislands/ki-agentic-harness payload links do not match the configured local source'
+      '✗ Local development: knowledgeislands/ki-agentic-harness active root does not match the configured local source'
     )
     expect(doctor.exitCode).toBe(1)
   })

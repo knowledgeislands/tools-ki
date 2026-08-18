@@ -44,12 +44,34 @@ export default {
 
 const projectLinkedHarness = async (box: Awaited<ReturnType<typeof sandbox>>): Promise<void> => {
   await box.setupExampleHarness()
-  await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+  await box.project.write(
+    '.ki-config.toml',
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n\n[skills.ki-repo-harness]\nprefix = "ki"\n'
+  )
   await box.project.write('skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
   await box.project.write('skills/ki-example/scripts/rubric/items/index.ts', publicationRubric)
-  const installedSkills = join(box.data.path, 'ki/harnesses/example/harness/skills')
-  await rm(installedSkills, { recursive: true, force: true })
-  await symlink(join(box.project.path, 'skills'), installedSkills)
+  await box.project.write('skills/ki-repo-harness/SKILL.md', '---\nname: ki-repo-harness\nki-depends-on: []\n---\n')
+  await box.project.write(
+    'skills/ki-repo-harness/scripts/rubric/items/index.ts',
+    `export default {
+      contract: 1,
+      name: 'ki-repo-harness',
+      concern: 'Harness fixture',
+      createSession: async () => ({ subjects: [{ families: ['HARNESS'], context: () => ({}) }], proposal: () => ({ writes: [] }) }),
+      families: [{
+        code: 'HARNESS', title: 'Harness', description: 'Harness fixture.', standard: 'standard.md', selectContext: (context) => context,
+        items: [{
+          code: 'HARNESS-1', title: 'Harness fixture', description: 'The Harness fixture is present.', sources: ['standard.md'],
+          mechanical: { level: 'WARN', remediation: { class: 'diagnostic', guidance: 'Restore the fixture.' }, audit: { phase: 'PRIMARY', run: () => [{ status: 'PASS', message: 'Harness fixture present.', subject: '.ki-config.toml' }] } }
+        }]
+      }]
+    }
+    `
+  )
+  await Promise.all(['subagents', 'hooks'].map((payload) => box.project.mkdir(payload)))
+  const installed = join(box.data.path, 'ki/harnesses/example/harness')
+  await rm(installed, { recursive: true, force: true })
+  await symlink(box.project.path, installed)
 }
 
 const auditProposalRubric = `
@@ -110,7 +132,7 @@ describe('[ki generated rubric publication]', () => {
     const clean = await box.run('ki repo audit --reporter-levels all')
     expect(clean.exitCode).toBe(0)
     expect(clean.output).not.toContain('├─ results')
-    expect(clean.output).toContain('PASS · 1 skill')
+    expect(clean.output).toContain('PASS · 2 skills')
 
     const repeated = await box.run('ki repo conform')
     expect(repeated.exitCode).toBe(0)

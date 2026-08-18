@@ -76,7 +76,7 @@ export interface DisabledDevelopmentResult extends BootstrapRefreshResult, Boots
 export interface DevelopmentRubricPort {
   readonly resolveSkill: (skill: string) => Promise<ResolvedSkill>
   readonly preparePublication: (skill: ResolvedSkill) => Promise<PreparedRubricPublication>
-  readonly lstat: typeof import('node:fs/promises').lstat
+  readonly developmentLinked: (identifier: string) => Promise<boolean>
   readonly publish: (root: string, write: ConformWrite) => Promise<void>
 }
 

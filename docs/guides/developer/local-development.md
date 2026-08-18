@@ -47,7 +47,7 @@ ki dev local off
 
 The checkout must retain the installed Harness's `[skills.ki-repo-harness].prefix`; local mode is a mutable source for the same provider identity, not a way to change or claim a capability namespace.
 
-`on` activates the remembered checkout and reconciles that Harness's KI-managed user-skill links to their current local sources on every invocation. Other installed Harnesses remain unchanged.
+`on` makes the checkout the complete active Harness root and reconciles that Harness's KI-managed user-skill links to their current local sources on every invocation. Metadata and payloads therefore always come from the same checkout; local mode never assembles a hybrid from an installed archive and selected linked directories. Other installed Harnesses remain unchanged.
 
 `off` restores the remembered Harness from its configured verified archive and reprojects those links to it, while retaining the remembered identity and checkout for the next `on`.
 

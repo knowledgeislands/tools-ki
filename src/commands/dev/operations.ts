@@ -20,7 +20,12 @@ import {
 } from '../../core/harness/index.ts'
 import { loadRubricDefinition } from '../../core/rubric/loader.ts'
 import { prepareRubricPublication } from '../../core/rubric/publication.ts'
-import { enableHarnessDevelopment, harnessDevelopmentEnabled, restoreHarness } from '../../core/storage/index.ts'
+import {
+  enableHarnessDevelopment,
+  harnessDevelopmentEnabled,
+  isHarnessDevelopmentLinked,
+  restoreHarness
+} from '../../core/storage/index.ts'
 
 type DevelopmentAgent = Awaited<ReturnType<typeof configuredAgents>>[number]
 type DevelopmentSkill = Awaited<ReturnType<typeof installedHarnessSkillSources>>[number]
@@ -90,6 +95,6 @@ export const developmentRubricPort = (context: KiContext): DevelopmentRubricPort
   resolveSkill: async (skill) => resolveInstalledSkill(await discoverInstalledHarnesses(context.paths.data), skill),
   preparePublication: async (skill) =>
     prepareRubricPublication(skill, await loadRubricDefinition(skill), undefined, context.lstat),
-  lstat: context.lstat,
+  developmentLinked: (identifier) => isHarnessDevelopmentLinked(context.paths.data, identifier),
   publish: async (root, write) => publishWrites(await prepareWrites(root, [write]), false)
 })

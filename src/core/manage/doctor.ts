@@ -181,7 +181,7 @@ export const inspectManageDoctor = async (
     checks.push({
       status: 'fail',
       label: 'Local development',
-      detail: `${configuration.local.harness} payload links do not match the configured local source`
+      detail: `${configuration.local.harness} active root does not match the configured local source`
     })
   }
   for (const agent of agents) {

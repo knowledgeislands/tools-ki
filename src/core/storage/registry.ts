@@ -369,6 +369,42 @@ const localPayloadDirectory = async (local: string, payload: (typeof payloadRoot
   return realpath(source)
 }
 
+const recognisedInstalledRoot = async (
+  destination: string,
+  identifier: string,
+  localSources: ReadonlyMap<(typeof payloadRoots)[number], string>
+): Promise<'physical' | 'local'> => {
+  const state = await lstat(destination).catch(() => undefined)
+  if (!state) throw new KiError(`installed harness ${identifier} must be a directory`, 1)
+  if (state.isSymbolicLink()) return 'local'
+  await physicalDirectory(destination, `installed harness ${identifier}`)
+  const retired: readonly string[] = identifier === canonicalHarnessIdentifier ? retiredCanonicalPayloadRoots : []
+  const entries = await readdir(destination, { withFileTypes: true })
+  for (const entry of entries) {
+    if (entry.name === harnessMetadataFile) {
+      if (!entry.isFile() || entry.isSymbolicLink())
+        throw new KiError(`installed harness ${identifier} has unrecognised state`, 1)
+      continue
+    }
+    if (retired.includes(entry.name)) {
+      if (!entry.isDirectory() || entry.isSymbolicLink())
+        throw new KiError(`installed harness ${identifier} has unrecognised state`, 1)
+      continue
+    }
+    if (!payloadRoots.includes(entry.name as (typeof payloadRoots)[number]))
+      throw new KiError(`installed harness ${identifier} has unrecognised state`, 1)
+    if (entry.isSymbolicLink()) {
+      const expected = localSources.get(entry.name as (typeof payloadRoots)[number])
+      const actual = await realpath(join(destination, entry.name)).catch(() => undefined)
+      if (!expected || actual !== expected)
+        throw new KiError(`installed harness ${identifier} ${entry.name} link is unfamiliar`, 1)
+      continue
+    }
+    if (!entry.isDirectory()) throw new KiError(`installed harness ${identifier} has unrecognised state`, 1)
+  }
+  return 'physical'
+}
+
 export const enableHarnessDevelopment = async (
   dataDirectory: string,
   identifier: string,
@@ -382,65 +418,48 @@ export const enableHarnessDevelopment = async (
     )
   )
   const destination = harnessDirectory(dataDirectory, identifier)
-  const [owner] = identifier.split('/') as [string, string]
+  const [owner, name] = identifier.split('/') as [string, string]
   await ensureDirectory(join(dataDirectory, 'harnesses'), 'installed harnesses directory')
   await ensureDirectory(dirname(destination), `installed harness owner ${owner}`)
-  await physicalDirectory(destination, `installed harness ${identifier}`)
-  const entries = await readdir(destination, { withFileTypes: true })
-  const retired: readonly string[] = identifier === canonicalHarnessIdentifier ? retiredCanonicalPayloadRoots : []
-  if (
-    entries.some(
-      (entry) =>
-        (entry.name !== harnessMetadataFile &&
-          !payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) &&
-          !retired.includes(entry.name)) ||
-        (entry.name === harnessMetadataFile
-          ? !entry.isFile() || entry.isSymbolicLink()
-          : !entry.isDirectory() && !entry.isSymbolicLink())
-    )
-  ) {
-    throw new KiError(`installed harness ${identifier} has unrecognised state`, 1)
+  const state = await recognisedInstalledRoot(destination, identifier, sources)
+  if (state === 'local') {
+    const actual = await realpath(destination).catch(() => undefined)
+    if (actual !== harness) throw new KiError(`installed harness ${identifier} root link is unfamiliar`, 1)
+    return harness
   }
-  await Promise.all(retired.map((payload) => rm(join(destination, payload), { recursive: true, force: true })))
-  for (const payload of payloadRoots) {
-    const target = join(destination, payload)
-    const targetState = await lstat(target).catch(() => undefined)
-    const source = sources.get(payload)
-    // The map is constructed from every payloadRoots member directly above; this only guards a future refactor.
-    /* v8 ignore next */
-    if (!source) throw new KiError(`local harness must provide ${payload}`, 1)
-    if (targetState?.isSymbolicLink()) {
-      const actual = await realpath(target).catch(() => undefined)
-      if (actual !== source) throw new KiError(`installed harness ${identifier} ${payload} link is unfamiliar`, 1)
-      continue
-    }
-    if (targetState) await rm(target, { recursive: true })
-    await symlink(source, target, 'dir')
+  const previous = join(dirname(destination), parkedPayloadEntry(randomUUID(), name))
+  await rename(destination, previous)
+  /* v8 ignore start -- Requires a filesystem failure after the verified installed root is parked; no CLI input can cause it. */
+  try {
+    await symlink(harness, destination, 'dir')
+  } catch (error) {
+    await rename(previous, destination).catch(() => undefined)
+    throw error
   }
+  /* v8 ignore stop */
+  await rm(previous, { recursive: true, force: true })
   return harness
 }
 
 const harnessDevelopmentProjection = async (dataDirectory: string, identifier: string): Promise<boolean> => {
   const destination = harnessDirectory(dataDirectory, identifier)
   const state = await lstat(destination).catch(() => undefined)
-  if (!state) return false
-  await physicalDirectory(destination, `installed harness ${identifier}`)
-  const entries = await readdir(destination, { withFileTypes: true })
-  return (
-    entries.length === payloadRoots.length + 1 &&
-    entries.every(
-      (entry) =>
-        (entry.name === harnessMetadataFile && entry.isFile() && !entry.isSymbolicLink()) ||
-        (payloadRoots.includes(entry.name as (typeof payloadRoots)[number]) && entry.isSymbolicLink())
-    )
+  if (!state?.isSymbolicLink()) return false
+  const root = await realpath(destination).catch(() => undefined)
+  if (!root) return false
+  const rootState = await lstat(root).catch(
+    // realpath above just resolved this target; only concurrent removal reaches this fallback.
+    /* v8 ignore next */
+    () => undefined
   )
+  return Boolean(rootState?.isDirectory())
 }
 
 export const isHarnessDevelopmentLinked = (dataDirectory: string, identifier: string): Promise<boolean> =>
   harnessDevelopmentProjection(dataDirectory, identifier)
 
-// A partial projection is not an active local harness. With the configured source,
-// verify every payload link resolves to its expected local directory too.
+// Local development replaces the complete active Harness root, so metadata and payloads always
+// come from one source. With the configured source, verify that root resolves to the checkout.
 export const harnessDevelopmentEnabled = async (
   dataDirectory: string,
   identifier: string,
@@ -448,18 +467,15 @@ export const harnessDevelopmentEnabled = async (
 ): Promise<boolean> => {
   if (!(await harnessDevelopmentProjection(dataDirectory, identifier))) return false
   if (!local) return true
-  const harness = await realpath(resolve(local)).catch(() => undefined)
-  if (!harness) return false
-  const links = await Promise.all(
-    payloadRoots.map(async (payload) => {
-      const [source, target] = await Promise.all([
-        realpath(join(harness, payload)).catch(() => undefined),
-        realpath(join(harnessDirectory(dataDirectory, identifier), payload)).catch(() => undefined)
-      ])
-      return Boolean(source && source === target)
-    })
-  )
-  return links.every(Boolean)
+  const [harness, active] = await Promise.all([
+    realpath(resolve(local)).catch(() => undefined),
+    realpath(harnessDirectory(dataDirectory, identifier)).catch(
+      // The projection check above just resolved this same active root; only concurrent replacement can invalidate it.
+      /* v8 ignore next */
+      () => undefined
+    )
+  ])
+  return Boolean(harness && harness === active)
 }
 
 export const restoreHarness = async (
