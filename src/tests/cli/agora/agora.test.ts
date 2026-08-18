@@ -341,11 +341,13 @@ describe('[ki agora]', () => {
     const shown = await box.run('ki agora show team')
     const selected = await box.run('ki repo --agora team roadmap list')
     const estate = await box.run('ki repo --agora estate roadmap list')
+    const estateAlias = await box.run('ki repo --estate roadmap list')
     expect(shown).toEqual({
       exitCode: 2,
       output: 'ki: error: Agora team member https://github.com/example/member does not declare matching consent\n'
     })
     expect(selected).toEqual(shown)
+    expect(estateAlias).toEqual(estate)
     expect(estate.exitCode).toBe(1)
     expect(estate.output).toContain('📁 home')
     expect(estate.output).toContain('📁 member')

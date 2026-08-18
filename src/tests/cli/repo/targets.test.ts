@@ -92,6 +92,7 @@ describe('[ki repo target sets]', () => {
         'roadmap',
         'list'
       ])
+      const conflictingEstate = await box.run(['ki', 'repo', '--repo', 'repos/a', '--estate', 'roadmap', 'list'])
 
       expect(immediate.output).toContain(`(${root}/repos/a)\n├─ roadmap (0)`)
       expect(recursive.output).toContain(`(${root}/repos/a/nested)\n├─ roadmap (0)`)
@@ -100,7 +101,8 @@ describe('[ki repo target sets]', () => {
       expect(missingBase.output).toContain('has no existing directory')
       expect(unmatched.output).toContain('matched no repositories')
       expect(duplicate.output).toContain('selects duplicate repository')
-      expect(conflictingSelectors.output).toContain('--repo and --agora cannot be used together')
+      expect(conflictingSelectors.output).toContain('--repo, --agora, and --estate cannot be used together')
+      expect(conflictingEstate.output).toContain('--repo, --agora, and --estate cannot be used together')
     })
 
     test('expands mGit standard, nested, and container members through supported roadmap listing', async () => {

@@ -54,6 +54,12 @@ When repository progress is enabled, `ki repo audit` MUST render elapsed time an
 
 _Verify:_ `src/tests/cli/repo/repo.test.ts` — `renders a compact TTY receipt stream without changing non-interactive output` and `uses the same activity bar regardless of declared item cost`; `src/tests/cli/repo/progress-stages.test.ts` — `keeps a counted evidence step indeterminate instead of treating it as estimated completion` and `shows evidence-ready skills as full receipts, then collapses them once`.
 
+### REPO-AUDIT-009 — Registered-estate selector
+
+`ki repo --estate <operation>` MUST select the same repositories as `ki repo --agora estate <operation>` and MUST be mutually exclusive with `--repo` and `--agora`.
+
+_Verify:_ `src/tests/cli/agora/agora.test.ts` — `rejects a one-sided home declaration before selecting or opening it`; `src/tests/cli/repo/targets.test.ts` — `selects literal roots and standard glob patterns deterministically`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this pilot.

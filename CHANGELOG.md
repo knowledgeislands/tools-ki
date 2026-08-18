@@ -50,6 +50,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki repo --repo <path-or-pattern>`
 - `ki repo --agora <name>`
+- `ki repo --estate`
 
 #### Repository management
 

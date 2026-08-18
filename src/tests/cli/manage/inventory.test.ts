@@ -93,7 +93,7 @@ describe('[ki command inventory]', () => {
     }
     expect(manual).toContain('.B ki registry list')
     expect(manual).toContain(
-      '.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run] [--sources <absolute-path>]'
+      '.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--sources <absolute-path>]'
     )
     for (const command of registryCommands) expect(changelog).toContain(`\`ki registry ${command}`)
 

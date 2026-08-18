@@ -183,7 +183,7 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
     'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private --repository https://example.test/project'
   )
   const selectors = await box.run(
-    'ki repo --repo ignored init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private'
+    'ki repo --estate init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private'
   )
 
   expect(nonGit).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target must be an existing Git repository\n' })
@@ -217,7 +217,10 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
     exitCode: 2,
     output: 'ki: error: ki repo init --repository must be a canonical HTTPS GitHub repository\n'
   })
-  expect(selectors).toEqual({ exitCode: 2, output: 'ki: error: ki repo init does not accept --repo or --agora\n' })
+  expect(selectors).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki repo init does not accept --repo, --agora, or --estate\n'
+  })
   await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
 })
 
@@ -462,6 +465,14 @@ test('lists registered repositories as a newline-delimited absolute-path stream'
   const box = await sandbox()
   const first = await box.root.mkdir('first')
   const second = await box.root.mkdir('second')
+  await box.root.write(
+    'first/.ki-config.toml',
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/first"\n'
+  )
+  await box.root.write(
+    'second/.ki-config.toml',
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/second"\n'
+  )
   await box.state.write(
     'ki/registry.toml',
     localRegistry([
@@ -470,7 +481,12 @@ test('lists registered repositories as a newline-delimited absolute-path stream'
     ])
   )
 
-  expect(await box.run('ki registry list')).toEqual({ exitCode: 0, output: `${first}\n${second}\n` })
+  const expected = { exitCode: 0, output: `${first}\n${second}\n` }
+  expect(await box.run('ki registry list')).toEqual(expected)
+  expect(await box.run('ki registry --estate list')).toEqual(expected)
+  expect(await box.run('ki registry --estate add --dry-run')).toEqual(
+    await box.run('ki registry --agora estate add --dry-run')
+  )
 })
 
 test('rejects relative repository registry paths in local state', async () => {

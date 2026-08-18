@@ -22,6 +22,12 @@ _Verify:_ `src/tests/cli/registry/registry.test.ts` — `refuses non-Git targets
 
 _Verify:_ `src/tests/cli/registry/registry.test.ts` — `lists registered repositories as a newline-delimited absolute-path stream`.
 
+### REGISTRY-004 — Registered-estate selector
+
+`ki registry --estate <operation>` MUST select the same repositories as `ki registry --agora estate <operation>`.
+
+_Verify:_ `src/tests/cli/registry/registry.test.ts` — `lists registered repositories as a newline-delimited absolute-path stream`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

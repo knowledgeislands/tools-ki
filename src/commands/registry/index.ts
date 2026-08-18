@@ -6,6 +6,7 @@ import { createRegistryListCommand } from './list.ts'
 export interface RegistrySelection {
   readonly repositories: readonly string[]
   readonly agora?: string
+  readonly estate?: boolean
 }
 
 export const createRegistryCommand = (context: KiContext): Command => {
@@ -18,9 +19,10 @@ export const createRegistryCommand = (context: KiContext): Command => {
       []
     )
     .option('--agora <name>', 'declared named Agora or the registered estate')
+    .option('--estate', 'select every repository in the registered estate')
   const selectedRepositories = (): RegistrySelection => {
-    const options = command.opts<{ repo: readonly string[]; agora?: string }>()
-    return { repositories: options.repo, agora: options.agora }
+    const options = command.opts<{ repo: readonly string[]; agora?: string; estate?: boolean }>()
+    return { repositories: options.repo, agora: options.agora, estate: options.estate }
   }
   return command
     .addCommand(createRegistryAddCommand(context, selectedRepositories))

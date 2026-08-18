@@ -81,6 +81,10 @@ patterns.
 .B ki repo [--agora <name>] [command]
 Use the physical KI repositories resolved from one declared named Agora or the
 reserved registered-estate selector.
+.TP
+.B ki repo [--estate] [command]
+Select every repository in the registered estate. This is shorthand for
+\fBki repo --agora estate\fR.
 .SS Repository management
 \&
 .TP
@@ -134,7 +138,7 @@ Refresh uniquely resolved capabilities declared by selected KI repositories.
 .SS Registry management
 \&
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run] [--sources <absolute-path>]
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--sources <absolute-path>]
 Record selected canonical KI repository roots in the machine-local registry
 without applying repository repairs.
 .TP
@@ -414,8 +418,8 @@ rejects unmatched patterns, invalid roots, and duplicate physical roots.
 .TP
 .B --agora <name>
 Select every member of one declared named Agora, or every registered canonical
-repository through the reserved \fBestate\fR selector. This option and
-\fB--repo\fR are mutually exclusive. Each member must be a physical KI
+repository through the reserved \fBestate\fR selector. This option,
+\fB--repo\fR, and \fB--estate\fR are mutually exclusive. Each member must be a physical KI
 repository. With neither selector, KI checks a regular direct-CWD
 \fB.mgit-config.toml\fR and follows it only when it names member
 repositories; a document that names none describes the repository it sits in,
@@ -423,6 +427,10 @@ so KI discovers one repository from the current working directory instead. It
 never searches ancestor directories for an mGit configuration or invokes
 \fBmgit\fR. Selection never resolves to no repository: every selector either
 selects at least one repository or fails with a message and a non-zero exit.
+.TP
+.B --estate
+Select every repository in the registered estate. This is shorthand for
+\fB--agora estate\fR and is mutually exclusive with \fB--repo\fR and \fB--agora\fR.
 .SS Repository management
 \&
 .PP
@@ -581,7 +589,7 @@ repository-operation or conformance verdict. The repository key names each
 record; each record holds a canonical HTTPS GitHub repository identity and
 physical checkout path.
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] add [--dry-run]
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run]
 Record selected canonical KI repository roots in
 \fB$XDG_STATE_HOME/ki/registry.toml\fR without applying repository repairs.
 This explicit inventory action validates the selected root's declared canonical

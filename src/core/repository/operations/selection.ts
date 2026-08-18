@@ -22,6 +22,7 @@ export const selectRepositorySkills = async (
   const repositories = await resolveRepositoryTargets({
     repositories: options.repositories,
     agora: options.agora,
+    estate: options.estate,
     configurationDirectory: context.configurationDirectory,
     stateDirectory: context.stateDirectory,
     workingDirectory: context.workingDirectory,

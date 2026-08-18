@@ -222,6 +222,7 @@ const distinctTargets = (targets: readonly RepositoryLocation[], source: string)
 interface RepositorySelection {
   readonly repositories: readonly string[]
   readonly agora?: string
+  readonly estate?: boolean
   readonly configurationDirectory: string
   readonly stateDirectory: string
   readonly workingDirectory: string
@@ -229,7 +230,9 @@ interface RepositorySelection {
 }
 
 const selectRepositoryTargets = async (options: RepositorySelection): Promise<readonly RepositoryLocation[]> => {
-  if (options.repositories.length && options.agora) throw new KiError('--repo and --agora cannot be used together', 2)
+  const selectorCount =
+    Number(options.repositories.length > 0) + Number(Boolean(options.agora)) + Number(Boolean(options.estate))
+  if (selectorCount > 1) throw new KiError('--repo, --agora, and --estate cannot be used together', 2)
   if (options.repositories.length) {
     const targets: RepositoryLocation[] = []
     for (const value of options.repositories) {
@@ -250,8 +253,9 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
     }
     return distinctTargets(targets, '--repo')
   }
-  if (options.agora) {
-    const selected = await resolveAgora(options.stateDirectory, options.agora)
+  const agora = options.estate ? 'estate' : options.agora
+  if (agora) {
+    const selected = await resolveAgora(options.stateDirectory, agora)
     if (!selected.members.length) throw new KiError(`Agora ${selected.id} has no members`, 2)
     const targets = await Promise.all(
       selected.members.map((member) =>

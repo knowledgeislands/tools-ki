@@ -51,6 +51,7 @@ export interface RepositoryOperationContext {
 export interface RepositorySelection {
   readonly repositories: readonly string[]
   readonly agora?: string
+  readonly estate?: boolean
   readonly skill?: string
 }
 

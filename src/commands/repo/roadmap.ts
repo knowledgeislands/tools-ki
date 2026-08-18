@@ -21,7 +21,11 @@ interface RoadmapOptions {
   readonly icons?: boolean
 }
 
-type RepositorySelection = () => { readonly repositories: readonly string[]; readonly agora?: string }
+type RepositorySelection = () => {
+  readonly repositories: readonly string[]
+  readonly agora?: string
+  readonly estate?: boolean
+}
 
 const horizonOrder = workItemHorizons
 const statusOrder = ['done', 'awaiting-review', 'in-progress', 'ready', 'draft'] as const

@@ -10,7 +10,11 @@ import { localRegistryWrite, registryEntry } from '../../core/storage/index.ts'
 
 export const createRepoInitCommand = (
   context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
+  selectedRepositories: () => {
+    readonly repositories: readonly string[]
+    readonly agora?: string
+    readonly estate?: boolean
+  }
 ): Command =>
   new Command('init')
     .description('initialize one existing Git repository with an explicit KI identity')
@@ -39,8 +43,8 @@ export const createRepoInitCommand = (
         }
       ) => {
         const selection = selectedRepositories()
-        if (selection.repositories.length || selection.agora)
-          throw new KiError('ki repo init does not accept --repo or --agora', 2)
+        if (selection.repositories.length || selection.agora || selection.estate)
+          throw new KiError('ki repo init does not accept --repo, --agora, or --estate', 2)
         const configuration = renderRepositoryConfiguration({
           title: options.title ?? '',
           description: options.description ?? '',

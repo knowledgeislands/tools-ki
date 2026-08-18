@@ -14,6 +14,7 @@ import { readRepositoryPlanningSource, type WorkItemDirectory } from './planning
 export interface RoadmapSelection {
   readonly repositories: readonly string[]
   readonly agora?: string
+  readonly estate?: boolean
 }
 
 export interface RoadmapOperationContext {

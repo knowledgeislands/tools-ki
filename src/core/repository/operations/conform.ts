@@ -57,6 +57,7 @@ const repositoryTargets = (context: RepositoryOperationContext, selection: Repos
   resolveRepositoryTargets({
     repositories: selection.repositories,
     agora: selection.agora,
+    estate: selection.estate,
     configurationDirectory: context.configurationDirectory,
     stateDirectory: context.stateDirectory,
     workingDirectory: context.workingDirectory,

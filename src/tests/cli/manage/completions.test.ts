@@ -90,6 +90,7 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain("'repo roadmap')")
     expect(zsh.output).toContain("'repo skill')")
     expect(zsh.output).toContain("'trade routes')")
+    expect(zsh.output).toContain('--estate:select every repository in the registered estate')
     expect(zsh.output).toContain('--estate:list route declarations across the registered repository estate')
     expect(zsh.output).toContain('--incomplete:show only routes that are not active')
     expect(zsh.output).toContain('--table:render estate routes as repository pairs')

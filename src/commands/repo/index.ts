@@ -102,9 +102,14 @@ export const createRepositoryOperations = (context: KiContext): Command => {
       []
     )
     .option('--agora <name>', 'declared named Agora or the registered estate')
-  const selectedRepositories = (): { readonly repositories: readonly string[]; readonly agora?: string } => {
-    const options = command.opts<{ repo: readonly string[]; agora?: string }>()
-    return { repositories: options.repo, agora: options.agora }
+    .option('--estate', 'select every repository in the registered estate')
+  const selectedRepositories = (): {
+    readonly repositories: readonly string[]
+    readonly agora?: string
+    readonly estate?: boolean
+  } => {
+    const options = command.opts<{ repo: readonly string[]; agora?: string; estate?: boolean }>()
+    return { repositories: options.repo, agora: options.agora, estate: options.estate }
   }
   command
     .addCommand(createRepoOpenCommand(context, selectedRepositories))
