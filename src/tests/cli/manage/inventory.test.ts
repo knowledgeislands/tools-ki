@@ -97,6 +97,15 @@ describe('[ki command inventory]', () => {
     )
     for (const command of registryCommands) expect(changelog).toContain(`\`ki registry ${command}`)
 
+    expect(changelog).toContain('`ki dev local set <harness-id> <local-harness-path>`')
+    expect(changelog).toContain('`ki dev local on [harness-id]`')
+    expect(changelog).toContain('`ki dev local off [harness-id]`')
+    expect(changelog).toContain('Harness-qualified skill keys are invalid')
+    expect(changelog).not.toContain('`ki dev local set <local-harness-path>`')
+    expect(changelog).not.toContain('keeps a quoted, fully-qualified key')
+    expect(manual).toContain('.B ki dev local off <harness-id>.')
+    expect(manual).not.toContain('.B ki dev local off knowledgeislands/ki-agentic-harness')
+
     for (const command of agoraCommands) expect(manual).toContain(`.B ki agora ${command}`)
     expect(manual.indexOf('.SS Repository options')).toBeLessThan(manual.indexOf('.SS Repository management'))
     expect(manual.indexOf('.SS Repository management')).toBeLessThan(manual.indexOf('.SS Registry management'))

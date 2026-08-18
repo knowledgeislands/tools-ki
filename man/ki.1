@@ -620,11 +620,10 @@ Install a harness from which capabilities, such as skills and subagents, can
 be added.
 .TP
 .B ki harness reinstall <harness-id>
-Replace one inactive installed harness with a verified archive. The command
-refuses a harness that supplies active user skills. The canonical harness must
-first be restored with
-.B ki dev local off knowledgeislands/ki-agentic-harness
-when it is development-linked.
+Replace one inactive installed Harness with a verified archive. The command
+refuses a Harness that supplies active user skills. A development-linked
+Harness must first be restored with
+.B ki dev local off <harness-id>.
 .TP
 .B ki harness uninstall <harness-id>
 Remove one non-canonical harness with only recognised payload directories. The

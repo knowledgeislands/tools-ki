@@ -17,7 +17,7 @@
 // ├── data/                   ($XDG_DATA_HOME — installed harnesses/skills project here)
 // │   └── ki/harnesses/
 // │       └── knowledgeislands/
-// │           └── ki-agentic-harness/   (installed mode: real, from the archive. After `ki dev local on`: symlinked to root/dev/.../<payload>)
+// │           └── ki-agentic-harness/   (installed mode: real, from the archive. After `ki dev local on`: this complete root is symlinked to root/dev/.../ki-agentic-harness)
 // │               ├── skills/
 // │               ├── subagents/
 // │               └── hooks/
