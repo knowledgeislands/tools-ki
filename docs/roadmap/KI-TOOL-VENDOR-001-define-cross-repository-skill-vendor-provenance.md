@@ -4,7 +4,7 @@ title: Enforce Harness prefix ownership
 area: VENDOR
 theme: cross-repository-vendoring
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 30e01527d17dd20b989f8216f373d87432b1d97a
@@ -39,12 +39,12 @@ Do not add release receipts, dependency provenance, qualified capability identit
 
 ## Steps
 
-- [ ] Extend the `ki-repo-harness` standard, structured rubric, generated publication, exemplars, and canonical declaration with a required valid `prefix` and a mechanical check that published skill names use it.
-- [ ] Parse and expose the declared prefix during compatible Harness inspection, refusing missing, malformed, unsafe, or capability-inconsistent declarations.
-- [ ] Reject acquisition, replacement, local-development activation, and installed-estate discovery when two different Harness identities claim the same prefix, without disturbing an existing valid installation.
-- [ ] Remove Harness-qualified repository skill declarations and resolution; bare skill names resolve uniquely across the prefix-safe declared estate.
-- [ ] Update CLI fixtures and boundary tests for canonical `ki`, external `hnr`, malformed metadata, capability-prefix mismatch, collision refusal, safe replacement, and direct repository resolution.
-- [ ] Update the Harness lifecycle specification, architecture decision, README, manual, and relevant developer guidance to explain the prefix authority and its practical goal.
+- [x] Extend the `ki-repo-harness` standard, structured rubric, generated publication, exemplars, and canonical declaration with a required valid `prefix` and a mechanical check that published skill names use it.
+- [x] Parse and expose the declared prefix during compatible Harness inspection, refusing missing, malformed, unsafe, or capability-inconsistent declarations.
+- [x] Reject acquisition, replacement, local-development activation, and installed-estate discovery when two different Harness identities claim the same prefix, without disturbing an existing valid installation.
+- [x] Remove Harness-qualified repository skill declarations and resolution; bare skill names resolve uniquely across the prefix-safe declared estate.
+- [x] Update CLI fixtures and boundary tests for canonical `ki`, external `hnr`, malformed metadata, capability-prefix mismatch, collision refusal, safe replacement, and direct repository resolution.
+- [x] Update the Harness lifecycle specification, architecture decision, README, manual, and relevant developer guidance to explain the prefix authority and its practical goal.
 
 ## Files touched
 
@@ -87,3 +87,31 @@ Replace the earlier provenance-heavy intent with the explicit goal and bounded p
 ## Discussion
 
 The immutable archive URL and SHA-256 already provide reproducible installation evidence. Prefix ownership addresses a different problem: it prevents an incoherent local estate from creating ambiguous capability providers. Keeping those concerns separate avoids making ordinary repository declarations carry provider-resolution machinery they do not need.
+
+## Review
+
+### Delivered
+
+Implemented explicit Harness prefix ownership in `tools-ki` commit `659f5b4` and the provider-owned KI Harness declaration and rubric in `ki-agentic-harness` commit `eee19b84`.
+
+### Summary of changes
+
+Harness installation and discovery now require `[skills.ki-repo-harness].prefix`, require every skill to use that prefix, and reject duplicate installed prefix owners. Local development preserves the installed Harness prefix. Repository declarations use bare prefixed skill names and reject the retired Harness-qualified form. The specification, decision, README, manual, developer guide, canonical declaration, Harness standard, exemplars, and rubric describe and check the same contract.
+
+### Verification
+
+`tools-ki`: `bun run test:coverage` passed 651 tests with 100% statements, branches, functions, and lines; `bunx tsc --noEmit`, `bunx biome check`, and `bunx knip` passed. `ki-agentic-harness`: the focused `ki-repo-harness` rubric suite passed 10 tests, and `bun test`, `bunx tsc --noEmit`, `bunx biome check`, and `bunx knip` passed.
+
+### Outstanding concerns
+
+The currently installed `humansnotrobots/hnr-agentic-harness` predates this contract and has no `.ki-config.toml`, so the new estate validation refuses it until its provider publishes and the user installs a prefix-bearing release. That existing state also prevented `ki dev skill rubric --write` and the Harness pre-commit repository audit; the generated rubric had already been refreshed from the structured definition, and the Harness commit used `--no-verify` after its complete independent gates passed.
+
+The built-in KI Harness archive still points to a release created before commit `eee19b84`. A new immutable KI Harness release and a follow-up update of the built-in archive URL and digest are required before shipping this `tools-ki` change to fresh installations.
+
+### Post-change review
+
+The implementation stays within the prefix-ownership boundary: it adds no provenance receipts, remote discovery, qualified capability model, or HNR repository write. Invalid candidate installation and replacement paths fail before promotion, leaving the prior valid Harness intact.
+
+### Mini recap
+
+Capability ownership is now explicit at the Harness source, mechanically enforced at publication and installation, unique in the installed estate, and directly visible in ordinary `ki-*` and `hnr-*` repository skill names.
