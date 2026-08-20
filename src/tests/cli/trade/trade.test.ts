@@ -465,7 +465,7 @@ describe('[ki trade]', () => {
       return { exitCode: 0, output: '' }
     })
 
-    const rendered = await box.run('ki trade routes list --estate --html')
+    const rendered = await box.run('ki trade routes list --estate --html', { platform: 'darwin' })
 
     expect(rendered.exitCode).toBe(0)
     expect(rendered.output).toContain('estate network written to')

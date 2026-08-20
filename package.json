@@ -1,7 +1,7 @@
 {
   "name": "@knowledgeislands/ki",
   "description": "Knowledge Islands command-line interface.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": "kris@kris.me.uk",
   "bugs": {
     "url": "https://github.com/knowledgeislands/tools-ki/issues"
