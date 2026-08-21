@@ -34,6 +34,7 @@ interface AgoraHome {
   readonly id: string
   readonly owner: string
   readonly purpose: string
+  readonly order: readonly string[]
   readonly members: Readonly<Record<string, string>>
 }
 
@@ -128,7 +129,20 @@ const homeDeclarations = (repository: RegisteredRepository): readonly AgoraHome[
       if (typeof role !== 'string' || !ROLE.test(role)) throw profileError(id, `member ${identity} has an invalid role`)
       roles[identity] = role
     }
-    return { id, owner: home['owner'], purpose: home['purpose'], members: roles }
+    const declaredOrder = home['order']
+    if (declaredOrder !== undefined && !Array.isArray(declaredOrder))
+      throw profileError(id, 'order must be an array of canonical HTTPS GitHub repositories')
+    const order: string[] = []
+    const participants = new Set([home['owner'], ...Object.keys(roles)])
+    for (const identity of declaredOrder ?? []) {
+      if (!canonicalRepositoryIdentity(identity))
+        throw profileError(id, 'order entries must be canonical HTTPS GitHub repositories')
+      if (order.includes(identity)) throw profileError(id, `order repeats participant ${identity}`)
+      if (!participants.has(identity))
+        throw profileError(id, `order participant ${identity} is not the owner or a member`)
+      order.push(identity)
+    }
+    return { id, owner: home['owner'], purpose: home['purpose'], order, members: roles }
   })
 }
 
@@ -164,12 +178,18 @@ const profileFromHome = (
       return { key: member.key, root: member.root, repository: member.repository, role }
     })
   ]
+  const byRepository = new Map(members.map((member) => [member.repository, member]))
+  const ordered = declaration.order.map((identity) => byRepository.get(identity) as AgoraMember)
+  const orderedIdentities = new Set(declaration.order)
+  const remainder = members
+    .filter((member) => !orderedIdentities.has(member.repository))
+    .sort((left, right) => left.key.localeCompare(right.key, 'en'))
   return {
     id: declaration.id,
     name: declaration.id,
     purpose: declaration.purpose,
     home: { key: home.key, root: home.root, repository: home.repository },
-    members: members.sort((left, right) => left.key.localeCompare(right.key, 'en')),
+    members: [...ordered, ...remainder],
     system: false
   }
 }

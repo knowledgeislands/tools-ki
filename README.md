@@ -56,11 +56,11 @@ Neither command changes user or repository skill activation; read the [update an
 
 ## Agoras
 
-An Agora is declared portably by a registered owner repository under `[skills.ki-agora.homes.<id>]`. Each home names its own canonical repository identity, which `ki` verifies against the local registry and includes in the resolved projection. Its other declared members reciprocate under `[skills.ki-agora.memberships.<id>]`; `ki` resolves the declaration only when every member is also locally registered and agrees with its owner and role.
+An Agora is declared portably by a registered owner repository under `[skills.ki-agora.homes.<id>]`. Each home names its own canonical repository identity, which `ki` verifies against the local registry and includes in the resolved projection. Its other declared members reciprocate under `[skills.ki-agora.memberships.<id>]`; `ki` resolves the declaration only when every member is also locally registered and agrees with its owner and role. A home may declare `order` as a duplicate-free prefix of those canonical participant identities.
 
 `estate` is the reserved system selector for every locally registered canonical KI repository. Use `ki agora list`, `ki agora show <id>`, and `ki agora open <id> --target zed` to inspect or open a declared Agora or the estate. Opening requires an explicit permitted target; it currently supports the portable `zed-workspace` policy through Zed.
 
-`ki agora roots <id>` is the versioned machine interface for a resolved group's physical roots. It writes newline-delimited absolute roots in deterministic registry-key order; use `--null` (or `-0`) for safe NUL-delimited path handling. It fails before writing any root when the selector cannot resolve or has no members, and it never clones, repairs, or treats source or legacy stores as Agora members.
+`ki agora roots <id>` is the versioned machine interface for a resolved group's physical roots. A named Agora places its declared `order` prefix first and appends unlisted participants in registry-key order; an Agora without `order` and the system `estate` retain registry-key order throughout. The command writes newline-delimited absolute roots; use `--null` (or `-0`) for safe NUL-delimited path handling. It fails before writing any root when the selector cannot resolve or has no members, and it never clones, repairs, or treats source or legacy stores as Agora members.
 
 ## Select repository targets
 

@@ -42,6 +42,14 @@ The command MUST fail without writing roots when resolution fails or selects no 
 
 _Verify:_ `src/tests/cli/agora/agora.test.ts` — `writes deterministic machine-readable roots for named Agoras and the estate` and `fails without roots for unknown, empty, missing, or non-reciprocal Agora selectors`.
 
+### AGORA-007 — Declared projection order
+
+A named Agora home MAY declare `order` as a duplicate-free ordered prefix of canonical repository identities already participating as its owner or reciprocal members. Every named-Agora consumer MUST place that prefix first and append unlisted participants in lexical local-registry-key order. Without `order`, named Agoras MUST retain lexical local-registry-key order. The system-managed `estate` projection MUST remain in lexical local-registry-key order.
+
+`ki` MUST reject an `order` value that is not an array or contains a non-canonical, repeated, or non-participating repository identity.
+
+_Verify:_ `src/core/agora/index.ts` — `homeDeclarations` and `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers ordered and absent-order projections through show, roots, open, and repository selection, plus malformed declarations.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

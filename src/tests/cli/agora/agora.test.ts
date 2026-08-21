@@ -8,9 +8,10 @@ const home = (
   id: string,
   purpose: string,
   members: Record<string, string>,
-  owner = 'https://github.com/example/home'
+  owner = 'https://github.com/example/home',
+  order?: readonly string[]
 ): string =>
-  `[skills.ki-agora.homes.${id}]\nowner = ${JSON.stringify(owner)}\npurpose = ${JSON.stringify(purpose)}\nmembers = { ${Object.entries(
+  `[skills.ki-agora.homes.${id}]\nowner = ${JSON.stringify(owner)}\npurpose = ${JSON.stringify(purpose)}\n${order ? `order = ${JSON.stringify(order)}\n` : ''}members = { ${Object.entries(
     members
   )
     .map(([identity, role]) => `${JSON.stringify(identity)} = ${JSON.stringify(role)}`)
@@ -192,6 +193,60 @@ describe('[ki agora]', () => {
       `zed -e ${roots['other']}`,
       `zed -e ${roots['member']}`,
       `zed -e ${roots['home']}`
+    ])
+  })
+
+  test('honors a declared participant prefix through every named Agora consumer', async () => {
+    const box = await sandbox()
+    const homeIdentity = 'https://github.com/example/home'
+    const memberIdentity = 'https://github.com/example/member'
+    const otherIdentity = 'https://github.com/example/other'
+    const roots = await registered(box, [
+      {
+        path: 'home',
+        identity: homeIdentity,
+        agora: home(
+          'team',
+          'Shared delivery',
+          { [otherIdentity]: 'reviewer', [memberIdentity]: 'maintainer' },
+          homeIdentity,
+          [otherIdentity, homeIdentity]
+        )
+      },
+      { path: 'member', identity: memberIdentity, agora: membership('team', homeIdentity, 'maintainer') },
+      { path: 'other', identity: otherIdentity, agora: membership('team', homeIdentity, 'reviewer') }
+    ])
+    const calls: string[] = []
+    box.setRunner(async (command, arguments_) => {
+      calls.push(`${command} ${arguments_.join(' ')}`)
+      return { exitCode: 0, output: '' }
+    })
+
+    const shown = await box.run('ki agora show team')
+    expect(shown.exitCode).toBe(0)
+    expect(shown.output.indexOf(`other: ${otherIdentity} (`)).toBeLessThan(
+      shown.output.indexOf(`home: ${homeIdentity} (`)
+    )
+    expect(shown.output.indexOf(`home: ${homeIdentity} (`)).toBeLessThan(
+      shown.output.indexOf(`member: ${memberIdentity} (`)
+    )
+    expect(await box.run('ki agora roots team')).toEqual({
+      exitCode: 0,
+      output: `${roots['other']}\n${roots['home']}\n${roots['member']}\n`
+    })
+    const selected = await box.run('ki repo --agora team roadmap list')
+    expect(selected.exitCode).toBe(1)
+    expect(selected.output.indexOf('📁 other')).toBeLessThan(selected.output.indexOf('📁 home'))
+    expect(selected.output.indexOf('📁 home')).toBeLessThan(selected.output.indexOf('📁 member'))
+    expect(await box.run('ki agora open team --target zed')).toEqual({
+      exitCode: 0,
+      output: 'ki agora open team --target zed: opened 3 repositories\n'
+    })
+    expect(calls).toEqual([
+      'zed -n',
+      `zed -e ${roots['member']}`,
+      `zed -e ${roots['home']}`,
+      `zed -e ${roots['other']}`
     ])
   })
 
@@ -460,6 +515,19 @@ describe('[ki agora]', () => {
       [
         '[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = { "https://github.com/example/member" = "Bad" }\n',
         'has an invalid role'
+      ],
+      ['[skills.ki-agora.homes.team]\npurpose = "x"\norder = "bad"\nmembers = {}\n', 'order must be an array'],
+      [
+        '[skills.ki-agora.homes.team]\npurpose = "x"\norder = ["https://example.com/nope"]\nmembers = {}\n',
+        'order entries must be canonical HTTPS'
+      ],
+      [
+        `[skills.ki-agora.homes.team]\npurpose = "x"\norder = [${JSON.stringify(identity)}, ${JSON.stringify(identity)}]\nmembers = {}\n`,
+        'order repeats participant'
+      ],
+      [
+        '[skills.ki-agora.homes.team]\npurpose = "x"\norder = ["https://github.com/example/unknown"]\nmembers = {}\n',
+        'is not the owner or a member'
       ]
     ] as const
     for (const [agora, message] of cases) await configure(repository(identity, ownedHome(agora)), message)
