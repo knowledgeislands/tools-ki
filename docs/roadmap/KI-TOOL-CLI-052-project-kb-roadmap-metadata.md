@@ -4,7 +4,7 @@ area: CLI
 title: Project KB roadmap metadata
 theme: cli
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
