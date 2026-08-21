@@ -4,7 +4,7 @@ area: CLI
 title: Honor Agora projection order
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 3b881b5ae47f4d6856b18aae29b6e708b071ed0c
@@ -35,10 +35,10 @@ The existing Agora CLI suite drives all relevant behavior through the in-process
 
 ## Steps
 
-- [ ] Extend the parsed home contract with optional `order`, validating that it is an array of unique canonical repository identities and that every entry is the owner or a declared member.
-- [ ] Resolve named Agora members by the declared prefix followed by unlisted participants in lexical local-key order, while leaving the `estate` construction unchanged.
-- [ ] Extend CLI-level Agora coverage for owner placement, partial prefixes, absent-order compatibility, duplicate and unknown entries, and consistent order through show, roots, open, and repository selection.
-- [ ] Update the Agora specification and README to describe declared prefix ordering and the lexical remainder and estate behavior.
+- [x] Extend the parsed home contract with optional `order`, validating that it is an array of unique canonical repository identities and that every entry is the owner or a declared member.
+- [x] Resolve named Agora members by the declared prefix followed by unlisted participants in lexical local-key order, while leaving the `estate` construction unchanged.
+- [x] Extend CLI-level Agora coverage for owner placement, partial prefixes, absent-order compatibility, duplicate and unknown entries, and consistent order through show, roots, open, and repository selection.
+- [x] Update the Agora specification and README to describe declared prefix ordering and the lexical remainder and estate behavior.
 
 ## Files touched
 
@@ -77,6 +77,32 @@ Update README's Agora configuration and roots-order explanation. No separate ope
 ### Roadmap
 
 Completion resolves adopted trade `TRD-ace87343`. It does not block `KI-TOOL-CLI-052`, whose KB Streams projection defect is independently executable.
+
+## Review
+
+### Delivered
+
+Implemented the approved named-Agora ordering boundary from immutable baseline `3b881b5ae47f4d6856b18aae29b6e708b071ed0c`; implementation evidence is commit `1816131fea639f79a77c9f64768b10ad611c8ebe`. The change does not alter reciprocal membership, local registration, Agora authority, profile naming, or the system-managed `estate` order.
+
+### Summary of changes
+
+`src/core/agora/index.ts` now parses and validates an optional canonical-identity `order` prefix and resolves named members as that prefix plus a lexical local-key remainder. `src/tests/cli/agora/agora.test.ts` exercises the prefix through show, roots, open, and repository selection while retaining absent-order and estate coverage; malformed arrays, identities, duplicates, and non-participants are rejected. `docs/specs/agoras.md` adds `AGORA-007`, and README documents the user-facing behavior. No approved deviation or delegation occurred.
+
+### Verification
+
+`bunx vitest run src/tests/cli/agora/agora.test.ts` passed 13 tests. `bun run test:coverage` passed all 665 tests with 100% statements, branches, functions, and lines. `bunx tsc --noEmit` and `bun run build` passed. `ki repo audit --repo .` passed all 17 selected skills with no warnings or failures.
+
+### Outstanding concerns
+
+None. Releasing or pruning adopted trade `TRD-ace87343` remains outside this implementation and follows the trade lifecycle separately.
+
+### Post-change review
+
+The resolver remains the single policy boundary used by every named Agora consumer, so no command-specific ordering branches were introduced. Validation occurs before projection use, the absent-order path preserves the prior lexical behavior, and `estate()` remains unchanged. The implementation satisfies the goal and approved boundary with CLI-level regression evidence and is ready for human acceptance.
+
+### Mini recap
+
+CLI-051 delivers validated declared ordering for named Agora projections, full CLI-consumer coverage, and synchronized specification and README guidance. All required gates pass and no implementation concern remains. The specification and README are the durable learning routes; no additional automatic promotion is proposed.
 
 ## Discussion
 
