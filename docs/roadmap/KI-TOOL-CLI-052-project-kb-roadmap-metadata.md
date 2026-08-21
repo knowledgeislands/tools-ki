@@ -4,10 +4,10 @@ area: CLI
 title: Project KB roadmap metadata
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 1db20e7df538892db0f3b7b02f76572a527f38f7
 ---
 
 # KI-TOOL-CLI-052: Project KB roadmap metadata
