@@ -8,8 +8,11 @@ kind: work
 source_ref: "ki-agora CONFIG-1"
 observation: decision
 phase: received
-decision_status: unconsidered
+decision_status: adopted
 received_from_ref: 27285e8facca76fc0230085b2569a4eac46a48e6
+reviewed_at: 2026-08-21T16:55:02Z
+rationale: "The change affects a public configuration contract and several CLI consumers, so it requires separately planned and reviewed local work."
+adopted_as: KI-TOOL-CLI-051
 ---
 
 # TRD-ace87343: Honor declared Agora projection order
