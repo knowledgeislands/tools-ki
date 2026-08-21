@@ -4,10 +4,10 @@ area: CLI
 title: Honor Agora projection order
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 3b881b5ae47f4d6856b18aae29b6e708b071ed0c
 transferred_from: TRD-ace87343
 ---
 
