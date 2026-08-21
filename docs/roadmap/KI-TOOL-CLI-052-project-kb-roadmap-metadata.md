@@ -4,7 +4,7 @@ area: CLI
 title: Project KB roadmap metadata
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 1db20e7df538892db0f3b7b02f76572a527f38f7
@@ -34,10 +34,10 @@ The focused roadmap suite covers basic KB selection and mutation but its fixture
 
 ## Steps
 
-- [ ] Thread the selected adapter identity through work-item reads and mutations instead of reducing the planning source to a directory string.
-- [ ] Keep the project-roadmap parser's closed field contract while allowing `kb-streams` to project required common lifecycle fields alongside adapter-owned metadata, still rejecting repeated or malformed common fields.
-- [ ] Add CLI tests with representative KB note metadata, mixed project and KB repository selection, filtering, promotion, and pruning; prove mutations preserve unconsumed metadata exactly apart from the requested horizon field.
-- [ ] Update the repository-operations specification to state that KB roadmap reporting is a common-field projection and native KB governance remains the metadata authority.
+- [x] Thread the selected adapter identity through work-item reads and mutations instead of reducing the planning source to a directory string.
+- [x] Keep the project-roadmap parser's closed field contract while allowing `kb-streams` to project required common lifecycle fields alongside adapter-owned metadata, still rejecting repeated or malformed common fields.
+- [x] Add CLI tests with representative KB note metadata, mixed project and KB repository selection, filtering, promotion, and pruning; prove mutations preserve unconsumed metadata exactly apart from the requested horizon field.
+- [x] Update the repository-operations specification to state that KB roadmap reporting is a common-field projection and native KB governance remains the metadata authority.
 
 ## Files touched
 
@@ -77,6 +77,32 @@ No guide change is expected because the public command grammar and operator work
 
 This independently fixes estate-wide roadmap visibility for valid KB Streams repositories. It neither blocks nor is blocked by `KI-TOOL-CLI-051`.
 
+## Review
+
+### Delivered
+
+Implemented the approved adapter-aware roadmap projection from immutable baseline `1db20e7df538892db0f3b7b02f76572a527f38f7`; implementation evidence is commit `d7f674c8f52ed239692823b907f2678372921493`. The change preserves the strict project-roadmap contract and does not take semantic ownership of Knowledge Base metadata.
+
+### Summary of changes
+
+The selected planning adapter now reaches every read, prune, and horizon-mutation boundary. The project adapter retains its closed field set; `kb-streams` validates the shared lifecycle while leaving additional scalar or indented adapter-owned metadata opaque, rejects repeated or malformed common fields, and ignores its `_ISSUES.md` ledger and `Roadmap.md` navigation note. Horizon changes continue editing the original bytes rather than reserializing metadata. CLI coverage uses block-list metadata, mixed project and KB selection, common-field failures, and byte-exact mutation preservation. `REPO-OPS-005` and new `REPO-OPS-010` codify the behavior. No delegation occurred.
+
+### Verification
+
+`bunx vitest run src/tests/cli/repo/roadmap.test.ts` passed 17 tests. `bun run test:coverage` passed all 666 tests with 100% statements, branches, functions, and lines. `bunx tsc --noEmit` and `bun run build` passed. `ki repo audit --repo .` passed all 17 selected skills with no warnings or failures. Live `ki repo --agora ki-all roadmap list --no-icons` projected all 22 Arcadia records and the Techne record without KB-metadata diagnostics.
+
+### Outstanding concerns
+
+The live estate command still returns non-zero because `homebrew-tap` and `ki-plugins` have no physical `docs/roadmap` directory. Those are pre-existing repository-projection gaps outside CLI-052; Arcadia and Techne themselves project successfully.
+
+### Post-change review
+
+Adapter identity is retained at the parser and publisher boundaries instead of inferred from a path. Shared lifecycle validation remains explicit, project typo detection remains closed, and opaque KB metadata is never normalized. The implementation meets the approved goal and boundary with focused, full-suite, audit, and live-fleet evidence and is ready for human acceptance.
+
+### Mini recap
+
+CLI-052 restores Arcadia and Techne roadmap visibility while keeping native KB governance authoritative for note metadata. The specification is the durable learning route; the two unrelated repositories missing roadmap directories should be handled as separate forward work if fleet-wide zero-exit roadmap listing is desired.
+
 ## Discussion
 
 ### Adapter authority
@@ -85,7 +111,7 @@ The CLI needs the common lifecycle fields to report and perform bounded roadmap 
 
 ### Strictness boundary
 
-Ordinary `docs/roadmap` records retain their closed field grammar so typos remain visible. A `Streams/Roadmap` projection may carry additional simple frontmatter fields, but duplicate keys and malformed or missing common lifecycle fields must still fail.
+Ordinary `docs/roadmap` records retain their closed field grammar so typos remain visible. A `Streams/Roadmap` projection may carry additional adapter-owned frontmatter fields and their indented continuations, but duplicate keys and malformed or missing common lifecycle fields must still fail.
 
 ### Preservation
 
