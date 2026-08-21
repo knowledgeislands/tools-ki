@@ -4,7 +4,7 @@ area: CLI
 title: Honor Agora projection order
 theme: cli
 horizon: now
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
