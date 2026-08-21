@@ -15,7 +15,7 @@ const item = (overrides: Record<string, string> = {}): string => {
     ...overrides
   }
   return `---\n${Object.entries(fields)
-    .map(([key, value]) => `${key}: ${value}`)
+    .map(([key, value]) => `${key}:${value.startsWith('\n') ? value : ` ${value}`}`)
     .join('\n')}\n---\n\n## Context\n\nTest item.\n\n## Boundary\n\nNone.\n\n## Discussion\n\n### Test\n\nTest.\n`
 }
 
@@ -49,14 +49,28 @@ adapter = "kb-streams"
 [skills.ki-decision-records]
 ${extra}`
 
+const knowledgeBaseMetadata = {
+  note_type: 'roadmap',
+  priority: '1',
+  tags: '\n  - roadmap\n  - delivery',
+  aliases: '\n  - Native proposal',
+  author: 'Knowledge Islands',
+  purpose: 'Track shared delivery',
+  dependencies: '[KBS-099]'
+}
+
 describe('[ki repo roadmap]', () => {
   test('lists flat Knowledge Base work items from the declared Streams roadmap and ignores its ledger', async () => {
     const box = await sandbox()
     await box.project.write('knowledge/.ki-config.toml', knowledgeBaseConfiguration())
     await box.project.write('knowledge/Streams/Roadmap/_ISSUES.md', 'last_id: 2\n')
     await box.project.write(
+      'knowledge/Streams/Roadmap/Roadmap.md',
+      '---\nnote_type: stream-roadmap-index\ntitle: Roadmap\n---\n\n# Roadmap\n'
+    )
+    await box.project.write(
       'knowledge/Streams/Roadmap/KBS-001-native-proposal.md',
-      item({ id: 'KBS-001', title: 'Native proposal', status: 'awaiting-review' })
+      item({ id: 'KBS-001', title: 'Native proposal', status: 'awaiting-review', ...knowledgeBaseMetadata })
     )
     await box.project.write(
       'knowledge/Streams/Roadmap/KBS-002-later-proposal.md',
@@ -64,6 +78,7 @@ describe('[ki repo roadmap]', () => {
     )
     const before = await box.project.read('knowledge/Streams/Roadmap/KBS-001-native-proposal.md')
     const ledger = await box.project.read('knowledge/Streams/Roadmap/_ISSUES.md')
+    const index = await box.project.read('knowledge/Streams/Roadmap/Roadmap.md')
 
     const result = await box.run('ki repo --repo knowledge roadmap list')
 
@@ -73,9 +88,31 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('KBS-002 [draft] Later proposal')
     expect(result.output).toContain('╰─ summary: ITEMS=2 ACTIVE=2 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0')
     expect(result.output).not.toContain('_ISSUES')
+    expect(result.output).not.toContain('Roadmap.md')
     expect(await box.project.read('knowledge/Streams/Roadmap/KBS-001-native-proposal.md')).toBe(before)
     expect(await box.project.read('knowledge/Streams/Roadmap/_ISSUES.md')).toBe(ledger)
+    expect(await box.project.read('knowledge/Streams/Roadmap/Roadmap.md')).toBe(index)
     await expect(box.project.read('knowledge/docs/roadmap')).rejects.toThrow()
+  })
+
+  test('projects adapter-owned KB metadata alongside a strict project roadmap in one selection', async () => {
+    const box = await sandbox()
+    await box.project.write('knowledge/.ki-config.toml', knowledgeBaseConfiguration())
+    await box.project.write(
+      'knowledge/Streams/Roadmap/KBS-001-native-proposal.md',
+      item({ id: 'KBS-001', title: 'Native proposal', ...knowledgeBaseMetadata })
+    )
+    await box.project.write('project/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-project-item.md', item())
+
+    const result = await box.run(
+      'ki repo --repo project --repo knowledge roadmap list --horizon next --status draft --no-icons'
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
+    expect(result.output).toContain('KBS-001 [draft] Native proposal')
+    expect(result.output).not.toContain('unsupported or repeated field note_type')
   })
 
   test('diagnoses unavailable, malformed, and misconfigured Knowledge Base roadmaps without falling back', async () => {
@@ -88,10 +125,28 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('malformed/Streams/Roadmap/KBS-002-invalid.md', item({ id: 'KBS-002', status: 'closed' }))
     await box.project.write('misconfigured/.ki-config.toml', configuration.replace('kb-streams', 'roadmap'))
     await box.project.write('misconfigured/docs/roadmap/KI-TOOL-CLI-003-project-item.md', item())
+    await box.project.write('repeated/.ki-config.toml', configuration)
+    await box.project.write(
+      'repeated/Streams/Roadmap/KBS-001-repeated.md',
+      item({ id: 'KBS-001', ...knowledgeBaseMetadata }).replace(
+        'title: Inspect governed work',
+        'title: Inspect governed work\ntitle: Repeated title'
+      )
+    )
+    await box.project.write('structured-common/.ki-config.toml', configuration)
+    await box.project.write(
+      'structured-common/Streams/Roadmap/KBS-001-structured-common.md',
+      item({ id: 'KBS-001', ...knowledgeBaseMetadata }).replace(
+        'title: Inspect governed work',
+        'title:\n  - Invalid common structure'
+      )
+    )
 
     const missing = await box.run('ki repo --repo missing roadmap list')
     const malformed = await box.run('ki repo --repo malformed roadmap list')
     const misconfigured = await box.run('ki repo --repo misconfigured roadmap list')
+    const repeated = await box.run('ki repo --repo repeated roadmap list')
+    const structuredCommon = await box.run('ki repo --repo structured-common roadmap list')
 
     expect(missing.exitCode).toBe(1)
     expect(missing.output).toContain('has no physical Streams/Roadmap directory')
@@ -102,6 +157,10 @@ describe('[ki repo roadmap]', () => {
     expect(misconfigured.output).toContain(
       'Knowledge Base roadmap operations require [skills.ki-work].adapter = "kb-streams"'
     )
+    expect(repeated.exitCode).toBe(1)
+    expect(repeated.output).toContain('has unsupported or repeated field title')
+    expect(structuredCommon.exitCode).toBe(1)
+    expect(structuredCommon.output).toContain('frontmatter must contain simple key-value fields')
     await expect(box.project.read('malformed/docs/roadmap')).rejects.toThrow()
   })
 
@@ -138,15 +197,21 @@ describe('[ki repo roadmap]', () => {
     const box = await sandbox()
     await box.project.write('knowledge/.ki-config.toml', knowledgeBaseConfiguration())
     await box.project.write('knowledge/Streams/Roadmap/_ISSUES.md', 'last_id: 2\n')
-    await box.project.write('knowledge/Streams/Roadmap/KBS-001-next.md', item({ id: 'KBS-001' }))
+    await box.project.write(
+      'knowledge/Streams/Roadmap/KBS-001-next.md',
+      item({ id: 'KBS-001', ...knowledgeBaseMetadata })
+    )
     await box.project.write(
       'knowledge/Streams/Roadmap/KBS-002-done.md',
       item({ id: 'KBS-002', title: 'Done item', status: 'done' })
     )
 
+    const before = await box.project.read('knowledge/Streams/Roadmap/KBS-001-next.md')
     expect((await box.run('ki repo --repo knowledge roadmap promote KBS-001')).exitCode).toBe(0)
     expect((await box.run('ki repo --repo knowledge roadmap prune KBS-002')).exitCode).toBe(0)
-    await expect(box.project.read('knowledge/Streams/Roadmap/KBS-001-next.md')).resolves.toContain('horizon: now')
+    await expect(box.project.read('knowledge/Streams/Roadmap/KBS-001-next.md')).resolves.toBe(
+      before.replace('horizon: next', 'horizon: now')
+    )
     await expect(box.project.read('knowledge/Streams/Roadmap/KBS-002-done.md')).rejects.toThrow()
     await expect(box.project.read('knowledge/Streams/Roadmap/_ISSUES.md')).resolves.toBe('last_id: 2\n')
     await expect(box.project.read('knowledge/docs/roadmap')).rejects.toThrow()

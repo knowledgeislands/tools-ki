@@ -2,9 +2,10 @@ import { lstat, readdir, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { KiError } from '../errors.ts'
 import { prepareWrites, publishWrites } from '../filesystem/index.ts'
-import type { WorkItemDirectory } from './planning.ts'
+import type { RepositoryPlanningAdapter, RepositoryPlanningSource } from './planning.ts'
 
 const ISSUE_LEDGER = '_ISSUES.md'
+const KB_ROADMAP_INDEX = 'Roadmap.md'
 const requiredFields = ['id', 'title', 'theme', 'horizon', 'status', 'blocks', 'blocked_by', 'baseline_ref'] as const
 type RequiredField = (typeof requiredFields)[number]
 type WorkItemField =
@@ -64,30 +65,44 @@ const parseScalar = (value: string): string => {
   return (quote === "'" || quote === '"') && value.endsWith(quote) ? value.slice(1, -1) : value
 }
 
-const frontmatter = (contents: string, file: string): Readonly<WorkItemFields> => {
+const frontmatter = (contents: string, file: string, adapter: RepositoryPlanningAdapter): Readonly<WorkItemFields> => {
   const match = /^---\n([\s\S]*?)\n---(?:\n|$)/.exec(contents)
   if (!match?.[1]) throw itemError(file, 'must declare canonical frontmatter')
   const fields: WorkItemFields = {}
+  const seen = new Set<string>()
+  let adapterField: string | undefined
   for (const line of match[1].split('\n')) {
-    const entry = /^([a-z_-]+): (.+)$/.exec(line)
-    if (!entry?.[1] || entry[2] === undefined) throw itemError(file, 'frontmatter must contain simple key-value fields')
+    const entry = /^([a-z_-]+):(?: (.*))?$/.exec(line)
+    if (!entry?.[1]) {
+      if (adapter === 'kb-streams' && adapterField && (line === '' || /^\s+/.test(line))) continue
+      throw itemError(file, 'frontmatter must contain simple key-value fields')
+    }
     const [, key, value] = entry
-    if (!allowedFields.has(key as WorkItemField) || Object.hasOwn(fields, key))
+    const common = allowedFields.has(key as WorkItemField)
+    if (seen.has(key) || (adapter === 'roadmap' && !common))
       throw itemError(file, `has unsupported or repeated field ${key}`)
+    seen.add(key)
+    adapterField = common ? undefined : key
+    if (!common) continue
+    if (!value) throw itemError(file, 'frontmatter must contain simple key-value fields')
     fields[key as WorkItemField] = parseScalar(value)
   }
   for (const field of requiredFields) if (!fields[field]) throw itemError(file, `must declare ${field}`)
   return fields
 }
 
-const readItem = async (directory: string, file: string): Promise<WorkItemRecord> => {
+const readItem = async (
+  directory: string,
+  file: string,
+  adapter: RepositoryPlanningAdapter
+): Promise<WorkItemRecord> => {
   /* v8 ignore next -- readWorkItems only passes .md directory entries. */
   if (!file.endsWith('.md')) throw itemError(file, 'must use the .md extension')
   const path = join(directory, file)
   const state = await lstat(path)
   if (!state.isFile() || state.isSymbolicLink()) throw itemError(file, 'must be a regular file')
   const contents = await readFile(path, 'utf8')
-  const fields = frontmatter(contents, file)
+  const fields = frontmatter(contents, file, adapter)
   const id = fields.id as string
   if (!/^[A-Z][A-Z0-9-]*-\d{3}$/.test(id) || !file.startsWith(`${id}-`))
     throw itemError(file, 'must use a matching work-item identifier')
@@ -116,8 +131,9 @@ const readItem = async (directory: string, file: string): Promise<WorkItemRecord
 
 const readWorkItemRecords = async (
   repository: string,
-  roadmapDirectory: WorkItemDirectory
+  planning: RepositoryPlanningSource
 ): Promise<readonly WorkItemRecord[]> => {
+  const roadmapDirectory = planning.directory
   const directory = join(repository, roadmapDirectory)
   const state = await lstat(directory).catch(() => undefined)
   if (!state?.isDirectory() || state.isSymbolicLink())
@@ -125,23 +141,28 @@ const readWorkItemRecords = async (
   const entries = await readdir(directory)
   const records = await Promise.all(
     entries
-      .filter((entry) => entry.endsWith('.md') && entry !== ISSUE_LEDGER)
-      .map((entry) => readItem(directory, entry))
+      .filter(
+        (entry) =>
+          entry.endsWith('.md') &&
+          entry !== ISSUE_LEDGER &&
+          (planning.adapter !== 'kb-streams' || entry !== KB_ROADMAP_INDEX)
+      )
+      .map((entry) => readItem(directory, entry, planning.adapter))
   )
   return records.sort((left, right) => left.item.id.localeCompare(right.item.id))
 }
 
 export const readWorkItems = async (
   repository: string,
-  roadmapDirectory: WorkItemDirectory
-): Promise<readonly WorkItem[]> => (await readWorkItemRecords(repository, roadmapDirectory)).map(({ item }) => item)
+  planning: RepositoryPlanningSource
+): Promise<readonly WorkItem[]> => (await readWorkItemRecords(repository, planning)).map(({ item }) => item)
 
 const workItemRecord = async (
   repository: string,
-  roadmapDirectory: WorkItemDirectory,
+  planning: RepositoryPlanningSource,
   id: string
 ): Promise<WorkItemRecord> => {
-  const matches = (await readWorkItemRecords(repository, roadmapDirectory)).filter((record) => record.item.id === id)
+  const matches = (await readWorkItemRecords(repository, planning)).filter((record) => record.item.id === id)
   // The CLI resolves this exact cardinality before calling the publisher; retain the core guard for future callers.
   /* v8 ignore next */
   if (matches.length !== 1) throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
@@ -164,13 +185,13 @@ const renderHorizon = (contents: string, horizon: WorkItemHorizon): string => {
 
 export const updateWorkItemHorizon = async (
   repository: string,
-  roadmapDirectory: WorkItemDirectory,
+  planning: RepositoryPlanningSource,
   id: string,
   horizon: WorkItemHorizon
 ): Promise<WorkItem> => {
-  const record = await workItemRecord(repository, roadmapDirectory, id)
+  const record = await workItemRecord(repository, planning, id)
   const content = renderHorizon(record.contents, horizon)
-  const writes = await prepareWrites(repository, [{ path: join(roadmapDirectory, record.file), content }])
+  const writes = await prepareWrites(repository, [{ path: join(planning.directory, record.file), content }])
   await publishWrites(writes, false)
   const { candidate: _candidate, ...item } = record.item
   return { ...item, horizon, ...(horizon === 'future' ? { candidate: true } : {}) }
@@ -178,10 +199,10 @@ export const updateWorkItemHorizon = async (
 
 export const pruneDoneWorkItems = async (
   repository: string,
-  roadmapDirectory: WorkItemDirectory,
+  planning: RepositoryPlanningSource,
   id?: string
 ): Promise<readonly WorkItem[]> => {
-  const records = await readWorkItemRecords(repository, roadmapDirectory)
+  const records = await readWorkItemRecords(repository, planning)
   const selected =
     id === undefined
       ? records.filter(({ item }) => item.status === 'done')

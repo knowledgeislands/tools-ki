@@ -2,9 +2,10 @@ import { readRepositoryDeclaration } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 
 export type WorkItemDirectory = 'docs/roadmap' | 'Streams/Roadmap'
+export type RepositoryPlanningAdapter = 'roadmap' | 'kb-streams'
 
 export interface RepositoryPlanningSource {
-  readonly adapter: 'roadmap' | 'kb-streams'
+  readonly adapter: RepositoryPlanningAdapter
   readonly directory: WorkItemDirectory
 }
 

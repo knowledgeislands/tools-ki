@@ -9,7 +9,7 @@ import {
   type WorkItemHorizon,
   workItemHorizons
 } from './items.ts'
-import { readRepositoryPlanningSource, type WorkItemDirectory } from './planning.ts'
+import { type RepositoryPlanningSource, readRepositoryPlanningSource } from './planning.ts'
 
 export interface RoadmapSelection {
   readonly repositories: readonly string[]
@@ -87,8 +87,8 @@ const filterItems = (items: readonly WorkItem[], options: RoadmapListOptions): r
       (!options.horizon || item.horizon === options.horizon) && (!options.status || item.status === options.status)
   )
 
-const selectedItem = async (repository: string, directory: WorkItemDirectory, id: string): Promise<WorkItem> => {
-  const items = (await readWorkItems(repository, directory)).filter((item) => item.id === id)
+const selectedItem = async (repository: string, planning: RepositoryPlanningSource, id: string): Promise<WorkItem> => {
+  const items = (await readWorkItems(repository, planning)).filter((item) => item.id === id)
   if (items.length !== 1) throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
   return items[0] as WorkItem
 }
@@ -133,7 +133,7 @@ export const listRoadmap = async (
           repository: repository.root,
           trades,
           ...(inventory.diagnostic ? { tradeDiagnostic: inventory.diagnostic } : {}),
-          items: filterItems(await readWorkItems(repository.root, planning.directory), options)
+          items: filterItems(await readWorkItems(repository.root, planning), options)
         }
       } catch (error) {
         /* v8 ignore next -- inventory failures are always KiError instances. */
@@ -163,11 +163,11 @@ export const pruneRoadmap = async (
       planning: await readRepositoryPlanningSource(repository.configuration)
     }))
   )
-  await Promise.all(sources.map(({ repository, planning }) => readWorkItems(repository.root, planning.directory)))
+  await Promise.all(sources.map(({ repository, planning }) => readWorkItems(repository.root, planning)))
   return Promise.all(
     sources.map(async ({ repository, planning }) => ({
       repository: repository.root,
-      items: await pruneDoneWorkItems(repository.root, planning.directory, id)
+      items: await pruneDoneWorkItems(repository.root, planning, id)
     }))
   )
 }
@@ -181,8 +181,8 @@ export const moveRoadmapItem = async (
 ): Promise<RoadmapMoveResult> => {
   const repository = await oneMutationTarget(context, selection, operation)
   const planning = await readRepositoryPlanningSource(repository.configuration)
-  const item = await selectedItem(repository.root, planning.directory, id)
+  const item = await selectedItem(repository.root, planning, id)
   const destination = moveHorizon(item, operation, requested)
-  await updateWorkItemHorizon(repository.root, planning.directory, id, destination)
+  await updateWorkItemHorizon(repository.root, planning, id, destination)
   return { id, from: item.horizon, to: destination }
 }

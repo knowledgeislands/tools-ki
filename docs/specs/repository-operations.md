@@ -30,7 +30,7 @@ _Verify:_ `src/tests/cli/manage/update.test.ts` — `upgrades the uniquely resol
 
 ### REPO-OPS-005 — Governed roadmap inventory
 
-`ki repo roadmap list` MUST resolve repository type from `[skills.ki-repo]` and render flat work items from the selected local adapter: `docs/roadmap/` for a project roadmap or `Streams/Roadmap/` for KB Streams, with the colocated `_ISSUES.md` treated as its ledger rather than a work item.
+`ki repo roadmap list` MUST resolve repository type from `[skills.ki-repo]` and render flat work items from the selected local adapter: `docs/roadmap/` for a project roadmap or `Streams/Roadmap/` for KB Streams, with the colocated `_ISSUES.md` ledger and KB `Roadmap.md` navigation note treated as adapter-owned surfaces rather than work items.
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `lists flat Knowledge Base work items from the declared Streams roadmap and ignores its ledger` and `lists and filters grouped governed work items without JSON output`.
 
@@ -57,6 +57,14 @@ _Verify:_ `src/tests/cli/repo/conform-execution.test.ts` — `activates a propos
 After publishing staged writes or running staged commands, `ki repo conform` MUST re-audit the same selected skills and report that second pass as `re-audit`. When conform stages no operation, it MUST skip that second pass and report that no re-audit is required.
 
 _Verify:_ `src/tests/cli/repo/conform-writes.test.ts` — `does not re-audit a clean conform that staged no operation`, `publishes a complete conform write set, supports dry-run, and re-audits`, and `runs an eligible guarded command only with explicit authority and re-audits it`.
+
+### REPO-OPS-010 — Adapter-owned roadmap metadata
+
+For the `kb-streams` adapter, `ki repo roadmap` MUST project and validate the common work lifecycle fields while accepting additional frontmatter fields, including opaque indented continuations attached to those fields, whose semantics remain owned by native Knowledge Base governance. It MUST continue rejecting missing, malformed, or repeated common fields. Project roadmaps MUST retain their closed frontmatter field contract.
+
+A KB Streams horizon mutation MUST preserve every unconsumed frontmatter field and body byte except for the requested `horizon` change and the contract-owned `candidate` field required by or prohibited outside the `future` horizon.
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `projects adapter-owned KB metadata alongside a strict project roadmap in one selection`, `diagnoses unavailable, malformed, and misconfigured Knowledge Base roadmaps without falling back`, `rejects every malformed canonical frontmatter shape`, and `promotes and prunes flat Knowledge Base work items without changing the ledger`.
 
 ## Gaps
 
