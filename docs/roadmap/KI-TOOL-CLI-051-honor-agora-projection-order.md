@@ -4,7 +4,7 @@ area: CLI
 title: Honor Agora projection order
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 3b881b5ae47f4d6856b18aae29b6e708b071ed0c
@@ -103,6 +103,10 @@ The resolver remains the single policy boundary used by every named Agora consum
 ### Mini recap
 
 CLI-051 delivers validated declared ordering for named Agora projections, full CLI-consumer coverage, and synchronized specification and README guidance. All required gates pass and no implementation concern remains. The specification and README are the durable learning routes; no additional automatic promotion is proposed.
+
+## Done
+
+Accepted on 2026-08-21. The reviewed delivery satisfies the approved boundary, and refreshed focused tests, type checking, build, and trade audit passed.
 
 ## Discussion
 

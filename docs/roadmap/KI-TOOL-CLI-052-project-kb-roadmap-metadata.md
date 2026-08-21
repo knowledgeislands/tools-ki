@@ -4,7 +4,7 @@ area: CLI
 title: Project KB roadmap metadata
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 1db20e7df538892db0f3b7b02f76572a527f38f7
@@ -102,6 +102,10 @@ Adapter identity is retained at the parser and publisher boundaries instead of i
 ### Mini recap
 
 CLI-052 restores Arcadia and Techne roadmap visibility while keeping native KB governance authoritative for note metadata. The specification is the durable learning route; the two unrelated repositories missing roadmap directories should be handled as separate forward work if fleet-wide zero-exit roadmap listing is desired.
+
+## Done
+
+Accepted on 2026-08-21. The reviewed delivery satisfies the approved boundary; the recorded unrelated estate projection gap does not block closure, and refreshed focused tests, type checking, and build passed.
 
 ## Discussion
 
