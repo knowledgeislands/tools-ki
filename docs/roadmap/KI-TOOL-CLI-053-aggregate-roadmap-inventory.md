@@ -4,7 +4,7 @@ area: CLI
 title: Aggregate roadmap inventory
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 8ab25fbd88ed4e9e02070bbe9d07ddc940cbe4bf
@@ -30,10 +30,10 @@ The list operation reads each selected adapter directory through `readWorkItems(
 
 ## Steps
 
-- [ ] Distinguish an absent physical adapter roadmap directory from invalid or unsafe roadmap evidence in list-only core reads.
-- [ ] Add `--aggregate` to render one selected-set inventory grouped by horizon and repository while retaining repository identity, trade context, and meaningful diagnostics.
-- [ ] Add lifecycle-status completion values and CLI contract coverage for aggregate output, absent roadmaps, and completion candidates.
-- [ ] Update the repository-operations and shell-integration specifications and README for the changed list contract.
+- [x] Distinguish an absent physical adapter roadmap directory from invalid or unsafe roadmap evidence in list-only core reads.
+- [x] Add `--aggregate` to render one selected-set inventory grouped by horizon and repository while retaining repository identity, trade context, and meaningful diagnostics.
+- [x] Add lifecycle-status completion values and CLI contract coverage for aggregate output, absent roadmaps, and completion candidates.
+- [x] Update the repository-operations and shell-integration specifications and README for the changed list contract.
 
 ## Files touched
 
@@ -72,6 +72,32 @@ No guide is needed; README command documentation is the appropriate user-facing 
 ### Roadmap
 
 This item has no follow-on dependency. A later acceptance decision will retain or prune this record under the normal lifecycle.
+
+## Review
+
+### Delivered
+
+Implemented in `084a9e2bee651a89f0d9a2262143a119e4038aa8` (`feat(roadmap): aggregate selected roadmap inventory`).
+
+### Summary of changes
+
+`roadmap list` now represents an absent selected adapter directory as `no roadmap` with a successful result, while malformed, unsafe, unreadable, and misconfigured sources remain diagnostics. `--aggregate` renders a single horizon-and-repository inventory, with separate no-roadmap and diagnostics sections; it preserves repository identity and does not create shared priority. Generated completion now offers all lifecycle statuses after `--status`, alongside the existing horizon values.
+
+### Verification
+
+`bunx vitest run src/tests/cli/repo/roadmap.test.ts src/tests/cli/manage/completions.test.ts` passed. `bun run test:coverage` passed with 668 tests and 100% statements, branches, functions, and lines. `bunx tsc --noEmit`, `bun run build`, and `ki repo audit --repo .` passed. `ki repo --agora ki-all roadmap list --aggregate --no-icons` succeeded with 16 repositories, 14 roadmaps, and 2 no-roadmap repositories.
+
+### Outstanding concerns
+
+None. Aggregate horizons remain each repository's local classification, not an estate-wide ordering.
+
+### Post-change review
+
+Reviewed normal, absent, malformed, unsafe, unreadable, and unavailable-trade paths; all preserve the intended exit status and diagnostic distinction.
+
+### Mini recap
+
+The Agora scan now works as an inventory. Repositories without a roadmap no longer make it fail, and shell completion exposes the legal roadmap filters.
 
 ## Discussion
 
