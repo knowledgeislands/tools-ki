@@ -4,7 +4,7 @@ area: CLI
 title: Aggregate roadmap inventory
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 8ab25fbd88ed4e9e02070bbe9d07ddc940cbe4bf
@@ -98,6 +98,10 @@ Reviewed normal, absent, malformed, unsafe, unreadable, and unavailable-trade pa
 ### Mini recap
 
 The Agora scan now works as an inventory. Repositories without a roadmap no longer make it fail, and shell completion exposes the legal roadmap filters.
+
+## Done
+
+Accepted by the user on 2026-08-22. Retained as completed roadmap history.
 
 ## Discussion
 
