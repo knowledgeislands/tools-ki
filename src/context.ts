@@ -57,9 +57,17 @@ const processInterval = (milliseconds: number, handler: () => void): (() => void
 
 /* v8 ignore start -- Real signal delivery is a process concern; tests inject this capability at the same boundary. */
 const processInterrupt = (handler: () => void): (() => void) => {
-  process.on('SIGINT', handler)
+  const interrupt = (): void => {
+    // Installing a SIGINT listener suppresses Node's default termination. Let the display
+    // restore the terminal, then remove this listener and re-deliver the signal so every
+    // in-progress operation stops with the conventional exit status.
+    handler()
+    process.off('SIGINT', interrupt)
+    process.kill(process.pid, 'SIGINT')
+  }
+  process.on('SIGINT', interrupt)
   return () => {
-    process.off('SIGINT', handler)
+    process.off('SIGINT', interrupt)
   }
 }
 /* v8 ignore stop */
