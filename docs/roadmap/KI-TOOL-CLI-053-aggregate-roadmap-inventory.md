@@ -4,10 +4,10 @@ area: CLI
 title: Aggregate roadmap inventory
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 8ab25fbd88ed4e9e02070bbe9d07ddc940cbe4bf
 ---
 
 # KI-TOOL-CLI-053: Aggregate roadmap inventory
