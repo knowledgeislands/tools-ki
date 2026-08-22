@@ -31,7 +31,7 @@ The list operation reads each selected adapter directory through `readWorkItems(
 ## Steps
 
 - [x] Distinguish an absent physical adapter roadmap directory from invalid or unsafe roadmap evidence in list-only core reads.
-- [x] Add `--aggregate` to render one selected-set inventory grouped by horizon and repository while retaining repository identity, trade context, and meaningful diagnostics.
+- [x] Add `--aggregate` to render one selected-set inventory grouped by horizon, using repository-aligned item identifiers while retaining no-roadmap, trade, and diagnostic context.
 - [x] Add lifecycle-status completion values and CLI contract coverage for aggregate output, absent roadmaps, and completion candidates.
 - [x] Update the repository-operations and shell-integration specifications and README for the changed list contract.
 
@@ -77,11 +77,11 @@ This item has no follow-on dependency. A later acceptance decision will retain o
 
 ### Delivered
 
-Implemented in `084a9e2bee651a89f0d9a2262143a119e4038aa8` (`feat(roadmap): aggregate selected roadmap inventory`).
+Implemented in `084a9e2bee651a89f0d9a2262143a119e4038aa8` (`feat(roadmap): aggregate selected roadmap inventory`) and refined in `6a92812aed37d31d5aa78cc1eec5fab49cd2ef1f` (`refactor(roadmap): flatten aggregate items`).
 
 ### Summary of changes
 
-`roadmap list` now represents an absent selected adapter directory as `no roadmap` with a successful result, while malformed, unsafe, unreadable, and misconfigured sources remain diagnostics. `--aggregate` renders a single horizon-and-repository inventory, with separate no-roadmap and diagnostics sections; it preserves repository identity and does not create shared priority. Generated completion now offers all lifecycle statuses after `--status`, alongside the existing horizon values.
+`roadmap list` now represents an absent selected adapter directory as `no roadmap` with a successful result, while malformed, unsafe, unreadable, and misconfigured sources remain diagnostics. `--aggregate` renders a single horizon inventory whose item identifiers carry repository-aligned prefixes; separate no-roadmap, trade, and diagnostics sections name repositories where needed. It does not create shared priority. Generated completion now offers all lifecycle statuses after `--status`, alongside the existing horizon values.
 
 ### Verification
 
@@ -89,11 +89,11 @@ Implemented in `084a9e2bee651a89f0d9a2262143a119e4038aa8` (`feat(roadmap): aggre
 
 ### Outstanding concerns
 
-None. Aggregate horizons remain each repository's local classification, not an estate-wide ordering.
+None. Aggregate horizons remain each repository's local classification, not an estate-wide ordering; item identifiers provide the needed origin context.
 
 ### Post-change review
 
-Reviewed normal, absent, malformed, unsafe, unreadable, and unavailable-trade paths; all preserve the intended exit status and diagnostic distinction.
+Reviewed normal, absent, malformed, unsafe, unreadable, and unavailable-trade paths; all preserve the intended exit status and diagnostic distinction. The aggregate view is flat beneath each horizon, without redundant repository branches.
 
 ### Mini recap
 
@@ -103,7 +103,7 @@ The Agora scan now works as an inventory. Repositories without a roadmap no long
 
 ### Aggregate meaning
 
-`--aggregate` is a presentation switch, not a new planning authority. It groups records by their local horizons and preserves each repository label, so readers can scan one inventory without inferring estate-wide priority.
+`--aggregate` is a presentation switch, not a new planning authority. It groups records by their local horizons and uses the repository-aligned item identifier instead of repeating a repository label, so readers can scan one inventory without inferring estate-wide priority.
 
 ### Absence versus failure
 
