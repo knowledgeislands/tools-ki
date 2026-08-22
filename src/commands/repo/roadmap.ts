@@ -136,19 +136,17 @@ const renderAggregateResult = (
   const absent = results.filter((result) => result.roadmap === 'absent')
   const diagnostics = results.filter((result) => result.diagnostic)
   const horizonEntries = horizonOrder.flatMap((horizon) => {
-    const repositories = results.flatMap((result) => {
-      const grouped = orderItemsForText((result.items ?? []).filter((item) => item.horizon === horizon))
-      return grouped.length
-        ? [
-            {
-              label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${grouped.length})`,
-              children: grouped.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
-            }
-          ]
-        : []
-    })
-    const count = repositories.reduce((total, repository) => total + repository.children.length, 0)
-    return count ? [{ label: `${horizon} (${count})`, children: repositories }] : []
+    const grouped = orderItemsForText(
+      results.flatMap((result) => result.items ?? []).filter((item) => item.horizon === horizon)
+    )
+    return grouped.length
+      ? [
+          {
+            label: `${horizon} (${grouped.length})`,
+            children: grouped.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
+          }
+        ]
+      : []
   })
   entries.push({ label: `roadmap (${items.length})`, children: horizonEntries })
   if (absent.length)

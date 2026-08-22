@@ -103,7 +103,7 @@ ki repo --agora estate audit
 
 `ki repo roadmap list` reads the canonical work-item records in selected repositories without changing them. A selected repository without its declared roadmap directory contributes no roadmap and does not make the list fail; malformed, unsafe, unreadable, or misconfigured roadmap evidence remains a diagnostic and returns status `1`.
 
-Its default deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, its import and export trade context, diagnostics, and a compact summary. Use `--aggregate` for one selected-set inventory grouped by local horizon and repository; it is a scanning view, not a cross-repository priority queue. Use `--horizon <value>` or `--status <value>` to filter records before rendering.
+Its default deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, its import and export trade context, diagnostics, and a compact summary. Use `--aggregate` for one selected-set inventory grouped by local horizon; item identifiers carry the repository-aligned prefix, while no-roadmap and diagnostic sections name their repositories. It is a scanning view, not a cross-repository priority queue. Use `--horizon <value>` or `--status <value>` to filter records before rendering.
 
 Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report; any such diagnostic makes the command exit with status `1`.
 

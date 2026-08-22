@@ -74,7 +74,7 @@ _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `treats absent Knowledge Base
 
 ### REPO-OPS-012 — Aggregate roadmap inventory
 
-With `--aggregate`, `ki repo roadmap list` MUST render one selected-set inventory grouped by local horizon and repository, preserve every item’s repository identity, identify selected repositories that contribute no roadmap, and MUST NOT imply a shared cross-repository priority order.
+With `--aggregate`, `ki repo roadmap list` MUST render one selected-set inventory grouped by local horizon, using each item’s canonical identifier as its identity. It MUST identify selected repositories that contribute no roadmap and MUST NOT imply a shared cross-repository priority order.
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `aggregates selected roadmaps while treating absent roots as empty`.
 
