@@ -4,6 +4,7 @@ import type { LocatedTrade } from '../trade/index.ts'
 import {
   pruneDoneWorkItems,
   readWorkItems,
+  readWorkItemsIfPresent,
   updateWorkItemHorizon,
   type WorkItem,
   type WorkItemHorizon,
@@ -35,6 +36,7 @@ export interface RoadmapListResult {
   readonly trades: readonly LocatedTrade[]
   readonly tradeDiagnostic?: string
   readonly items?: readonly WorkItem[]
+  readonly roadmap?: 'absent'
   readonly diagnostic?: string
 }
 
@@ -127,13 +129,15 @@ export const listRoadmap = async (
   const results = await Promise.all(
     repositories.map(async (repository): Promise<RoadmapListResult> => {
       const trades = inventory.estate.filter((trade) => trade.root === repository.root)
+      const tradeContext = inventory.diagnostic ? { tradeDiagnostic: inventory.diagnostic } : {}
       try {
         const planning = await readRepositoryPlanningSource(repository.configuration)
+        const items = await readWorkItemsIfPresent(repository.root, planning)
         return {
           repository: repository.root,
           trades,
-          ...(inventory.diagnostic ? { tradeDiagnostic: inventory.diagnostic } : {}),
-          items: filterItems(await readWorkItems(repository.root, planning), options)
+          ...tradeContext,
+          ...(items === undefined ? { roadmap: 'absent' as const } : { items: filterItems(items, options) })
         }
       } catch (error) {
         /* v8 ignore next -- inventory failures are always KiError instances. */
@@ -141,7 +145,7 @@ export const listRoadmap = async (
         return {
           repository: repository.root,
           trades,
-          ...(inventory.diagnostic ? { tradeDiagnostic: inventory.diagnostic } : {}),
+          ...tradeContext,
           diagnostic
         }
       }

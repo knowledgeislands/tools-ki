@@ -60,6 +60,12 @@ _Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `reports no eligible
 
 _Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `prints canonical documentation URLs without launching or fetching content`.
 
+### MANAGE-010 — Closed option-value completion
+
+`ki manage completion` MUST offer every closed value for a value-taking public CLI option after that option is supplied, including roadmap horizons and lifecycle statuses.
+
+_Verify:_ `src/tests/cli/manage/completions.test.ts` — `emits loadable scripts whose Bash completion reaches repo roadmap`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

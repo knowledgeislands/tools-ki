@@ -111,6 +111,8 @@ describe('[ki manage completion]', () => {
     expect(bash.output).toContain("'acquire chatgpt')")
     expect(bash.output).toContain("'dev local')")
     expect(bash.output).toContain("'repo roadmap list:--horizon')")
+    expect(bash.output).toContain("'repo roadmap list:--status')")
+    expect(zsh.output).toContain('--aggregate:render one selected-set roadmap inventory')
     expect(bash.output).toContain("'acquire chatgpt import:--output')")
     expect(bash.output).toContain("'-V --version -h --help'")
     expect(bash.output).toContain('compgen -f')
@@ -181,6 +183,39 @@ describe('[ki manage completion]', () => {
     const candidates = completion.stdout.trim().split('\n')
     expect(candidates).toEqual(expect.arrayContaining(['list', 'prune', 'promote', 'demote']))
     expect(candidates).not.toContain('plan')
+
+    const statusCompletion = await execute(
+      'bash',
+      [
+        '-c',
+        `source completion.bash; COMP_WORDS=(ki repo roadmap list --status ""); COMP_CWORD=5; _ki; printf "%s\\n" "\${COMPREPLY[@]}"`
+      ],
+      { cwd: box.root.path }
+    )
+    expect(statusCompletion.stdout.trim().split('\n')).toEqual([
+      'draft',
+      'ready',
+      'in-progress',
+      'awaiting-review',
+      'done'
+    ])
+
+    const horizonCompletion = await execute(
+      'bash',
+      [
+        '-c',
+        `source completion.bash; COMP_WORDS=(ki repo roadmap list --horizon ""); COMP_CWORD=5; _ki; printf "%s\\n" "\${COMPREPLY[@]}"`
+      ],
+      { cwd: box.root.path }
+    )
+    expect(horizonCompletion.stdout.trim().split('\n')).toEqual([
+      'now',
+      'next',
+      'soon',
+      'waiting-for',
+      'parked',
+      'future'
+    ])
   })
 
   test('rejects retired root and plural completion command names', async () => {

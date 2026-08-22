@@ -1,6 +1,29 @@
 import { realpath, symlink } from 'node:fs/promises'
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
+
+// A normal CLI invocation cannot force a filesystem stat failure other than a
+// missing path. This narrow boundary injection verifies that such a failure
+// remains a diagnostic rather than being mistaken for an absent roadmap.
+const roadmapStatFailure = vi.hoisted(() => ({ path: undefined as string | undefined }))
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const original = await importOriginal<typeof import('node:fs/promises')>()
+  return {
+    ...original,
+    lstat: (...arguments_: Parameters<typeof original.lstat>) => {
+      if (roadmapStatFailure.path === String(arguments_[0])) {
+        const error = Object.assign(new Error('roadmap stat failure'), { code: 'EACCES' })
+        return Promise.reject(error)
+      }
+      return original.lstat(...arguments_)
+    }
+  }
+})
+
+afterEach(() => {
+  roadmapStatFailure.path = undefined
+})
 
 const item = (overrides: Record<string, string> = {}): string => {
   const fields = {
@@ -115,7 +138,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).not.toContain('unsupported or repeated field note_type')
   })
 
-  test('diagnoses unavailable, malformed, and misconfigured Knowledge Base roadmaps without falling back', async () => {
+  test('treats absent Knowledge Base roadmaps as empty but diagnoses malformed and misconfigured ones', async () => {
     const box = await sandbox()
     const configuration = knowledgeBaseConfiguration()
     await box.project.write('missing/.ki-config.toml', configuration)
@@ -148,8 +171,8 @@ describe('[ki repo roadmap]', () => {
     const repeated = await box.run('ki repo --repo repeated roadmap list')
     const structuredCommon = await box.run('ki repo --repo structured-common roadmap list')
 
-    expect(missing.exitCode).toBe(1)
-    expect(missing.output).toContain('has no physical Streams/Roadmap directory')
+    expect(missing.exitCode).toBe(0)
+    expect(missing.output).toContain('○ no roadmap')
     expect(missing.output).not.toContain('KI-TOOL-CLI-003')
     expect(malformed.exitCode).toBe(1)
     expect(malformed.output).toContain('has an invalid lifecycle status')
@@ -171,6 +194,7 @@ describe('[ki repo roadmap]', () => {
     const configuration = knowledgeBaseConfiguration('\n[skills.ki-trades]\n')
     await box.project.write('knowledge/.ki-config.toml', configuration)
     await box.project.write('broken/.ki-config.toml', configuration.replace('example/knowledge', 'example/broken'))
+    await box.project.write('broken/Streams/Roadmap', 'not a directory\n')
     await box.project.write(
       'knowledge/Streams/Roadmap/KBS-001-native-proposal.md',
       item({ id: 'KBS-001', title: 'Native proposal', status: 'awaiting-review' })
@@ -185,12 +209,17 @@ describe('[ki repo roadmap]', () => {
     )
 
     const result = await box.run('ki repo --repo knowledge --repo broken roadmap list')
+    const aggregate = await box.run('ki repo --repo knowledge --repo broken roadmap list --aggregate --no-icons')
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('trades (0)')
     expect(result.output).toContain('❌ unavailable:')
     expect(result.output).toContain('TRADES=unavailable')
-    expect(result.output).toContain('has no physical Streams/Roadmap directory')
+    expect(result.output).toContain('has no physical')
+    expect(aggregate.exitCode).toBe(1)
+    expect(aggregate.output).toContain('trades (0)')
+    expect(aggregate.output).toContain('❌ unavailable:')
+    expect(aggregate.output).toContain('TRADES=unavailable')
   })
 
   test('promotes and prunes flat Knowledge Base work items without changing the ledger', async () => {
@@ -281,6 +310,47 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
   })
 
+  test('aggregates selected roadmaps while treating absent roots as empty', async () => {
+    const box = await sandbox()
+    await box.project.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('first/docs/roadmap/KI-TOOL-CLI-003-now.md', item({ horizon: 'now' }))
+    await box.project.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'second/docs/roadmap/KI-TOOL-CLI-004-next.md',
+      item({ id: 'KI-TOOL-CLI-004', title: 'Next work' })
+    )
+    await box.project.write('absent/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+
+    const result = await box.run('ki repo --repo first --repo second --repo absent roadmap list --aggregate --no-icons')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('╭─ KI AGGREGATE ROADMAP')
+    expect(result.output).toContain('now (1)')
+    expect(result.output).toContain('next (1)')
+    expect(result.output).toContain('📁 first (1)')
+    expect(result.output).toContain('📁 second (1)')
+    expect(result.output).toContain('no roadmap (1)')
+    expect(result.output).toContain('📁 absent')
+    expect(result.output).toContain('summary: REPOSITORIES=3 ROADMAPS=2 NO_ROADMAP=1 ITEMS=2 ACTIVE=2 DONE=0 TRADES=0')
+  })
+
+  test('keeps malformed and unreadable roadmap roots as aggregate diagnostics', async () => {
+    const box = await sandbox()
+    await box.project.write('file/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('file/docs/roadmap', 'not a directory\n')
+    await box.project.write('unreadable/.ki-config.toml', knowledgeBaseConfiguration())
+    const unreadable = await box.project.mkdir('unreadable')
+    roadmapStatFailure.path = `${unreadable}/Streams/Roadmap`
+
+    const result = await box.run('ki repo --repo file --repo unreadable roadmap list --aggregate --no-icons')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('diagnostics (2)')
+    expect(result.output).toContain('has no physical')
+    expect(result.output).toContain('roadmap stat failure')
+    expect(result.output).toContain('NO_ROADMAP=0')
+  })
+
   test('isolates missing, malformed, invalid-status, and unsafe roadmap entries', async () => {
     const box = await sandbox()
     await box.project.write('valid/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
@@ -321,7 +391,8 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain(
       `│  ╰─ 📁 valid (${valid})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work`
     )
-    expect(result.output).toContain(`│  ╰─ ❌ repository ${missing} has no physical docs/roadmap directory`)
+    expect(result.output).toContain(`│  ╰─ ○ no roadmap`)
+    expect(result.output).not.toContain(`repository ${missing} has no physical docs/roadmap directory`)
     expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md has an invalid lifecycle status`)
     expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md must be a regular file`)
     expect(result.exitCode).toBe(1)

@@ -18,6 +18,7 @@ import { renderTradeRelation } from '../trade/shared.ts'
 interface RoadmapOptions {
   readonly horizon?: string
   readonly status?: string
+  readonly aggregate?: boolean
   readonly icons?: boolean
 }
 
@@ -99,10 +100,12 @@ const renderTextResult = (result: RoadmapListResult, estate: readonly LocatedTra
   const groups = textHorizonGroups(items)
   const roadmap = result.diagnostic
     ? [{ label: `${presentation('status.unavailable').terminal} ${result.diagnostic}` }]
-    : groups.map(({ horizon, items: group }) => ({
-        label: `${horizon} (${group.length})`,
-        children: group.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
-      }))
+    : result.roadmap === 'absent'
+      ? [{ label: `${presentation('status.skip').terminal} no roadmap` }]
+      : groups.map(({ horizon, items: group }) => ({
+          label: `${horizon} (${group.length})`,
+          children: group.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
+        }))
   const { inbound, outbound } = countTradeDirections(result.trades)
   const done = items.filter((item) => item.status === 'done').length
   const active = items.length - done
@@ -123,17 +126,80 @@ const renderTextResult = (result: RoadmapListResult, estate: readonly LocatedTra
   }).join('\n')
 }
 
+const renderAggregateResult = (
+  results: readonly RoadmapListResult[],
+  estate: readonly LocatedTrade[],
+  icons = true
+): string => {
+  const entries: TreeEntry[] = []
+  const items = results.flatMap((result) => result.items ?? [])
+  const absent = results.filter((result) => result.roadmap === 'absent')
+  const diagnostics = results.filter((result) => result.diagnostic)
+  const horizonEntries = horizonOrder.flatMap((horizon) => {
+    const repositories = results.flatMap((result) => {
+      const grouped = orderItemsForText((result.items ?? []).filter((item) => item.horizon === horizon))
+      return grouped.length
+        ? [
+            {
+              label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${grouped.length})`,
+              children: grouped.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
+            }
+          ]
+        : []
+    })
+    const count = repositories.reduce((total, repository) => total + repository.children.length, 0)
+    return count ? [{ label: `${horizon} (${count})`, children: repositories }] : []
+  })
+  entries.push({ label: `roadmap (${items.length})`, children: horizonEntries })
+  if (absent.length)
+    entries.push({
+      label: `no roadmap (${absent.length})`,
+      children: absent.map((result) => ({
+        label: `${presentation('entity.repository').terminal} ${basename(result.repository)}`
+      }))
+    })
+  if (diagnostics.length)
+    entries.push({
+      label: `diagnostics (${diagnostics.length})`,
+      children: diagnostics.map((result) => ({
+        label: `${presentation('status.unavailable').terminal} ${basename(result.repository)}: ${result.diagnostic}`
+      }))
+    })
+  const tradeResults = results.filter((result) => result.trades.length || result.tradeDiagnostic)
+  const tradeCount = results.reduce((total, result) => total + result.trades.length, 0)
+  if (tradeResults.length)
+    entries.push({
+      label: `trades (${tradeCount})`,
+      children: tradeResults.map((result) => ({
+        label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.trades.length})`,
+        children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, icons)
+      }))
+    })
+  const done = items.filter((item) => item.status === 'done').length
+  const active = items.length - done
+  const tradeDiagnostic = results.some((result) => result.tradeDiagnostic)
+  entries.push({
+    label:
+      `summary: REPOSITORIES=${results.length} ROADMAPS=${results.length - absent.length} ` +
+      `NO_ROADMAP=${absent.length} ITEMS=${items.length} ACTIVE=${active} DONE=${done} ` +
+      `TRADES=${tradeDiagnostic ? 'unavailable' : tradeCount}`
+  })
+  return renderTree({ title: 'KI AGGREGATE ROADMAP', entries }).join('\n')
+}
+
 const listCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('list')
     .description('list governed work items')
+    .option('--aggregate', 'render one selected-set roadmap inventory')
     .option('--horizon <horizon>', 'only items at this horizon')
     .option('--status <status>', 'only items at this status')
     .option('--no-icons', 'omit decorative trade badge icons')
     .action(async (options: RoadmapOptions) => {
       const { estate, results } = await listRoadmap(operationContext(context), selectedRepositories(), options)
-      context.stdout.write(
-        `${results.map((result) => renderTextResult(result, estate, options.icons !== false)).join('\n\n')}\n`
-      )
+      const output = options.aggregate
+        ? renderAggregateResult(results, estate, options.icons !== false)
+        : results.map((result) => renderTextResult(result, estate, options.icons !== false)).join('\n\n')
+      context.stdout.write(`${output}\n`)
       if (results.some((result) => result.tradeDiagnostic || result.diagnostic)) throw new KiExit(1)
     })
 

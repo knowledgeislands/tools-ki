@@ -54,6 +54,15 @@ interface WorkItemRecord {
 
 const itemError = (file: string, message: string): KiError => new KiError(`work item ${file} ${message}`, 2)
 
+const roadmapDirectoryState = async (directory: string) => {
+  try {
+    return await lstat(directory)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
 const parseList = (value: string, file: string, field: string): readonly string[] => {
   if (!/^\[(?:[A-Z0-9-]+(?:, [A-Z0-9-]+)*)?\]$/.test(value))
     throw itemError(file, `${field} must be an identifier array`)
@@ -135,7 +144,7 @@ const readWorkItemRecords = async (
 ): Promise<readonly WorkItemRecord[]> => {
   const roadmapDirectory = planning.directory
   const directory = join(repository, roadmapDirectory)
-  const state = await lstat(directory).catch(() => undefined)
+  const state = await roadmapDirectoryState(directory)
   if (!state?.isDirectory() || state.isSymbolicLink())
     throw new KiError(`repository ${repository} has no physical ${roadmapDirectory} directory`, 2)
   const entries = await readdir(directory)
@@ -156,6 +165,16 @@ export const readWorkItems = async (
   repository: string,
   planning: RepositoryPlanningSource
 ): Promise<readonly WorkItem[]> => (await readWorkItemRecords(repository, planning)).map(({ item }) => item)
+
+/** Lists no records when a repository has not created its selected adapter root yet. */
+export const readWorkItemsIfPresent = async (
+  repository: string,
+  planning: RepositoryPlanningSource
+): Promise<readonly WorkItem[] | undefined> => {
+  const directory = join(repository, planning.directory)
+  if (!(await roadmapDirectoryState(directory))) return undefined
+  return readWorkItems(repository, planning)
+}
 
 const workItemRecord = async (
   repository: string,

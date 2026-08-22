@@ -48,7 +48,7 @@ For the installation and activation boundary, read the [capability lifecycle gui
 
 `ki manage update` refreshes installed harnesses with configured immutable releases and updates the executable only when a verified installer receipt proves that it owns the running regular installation.
 
-`ki manage completion bash` and `ki manage completion zsh` print corresponding completion source derived from the registered CLI tree. Bash and Zsh cover every command path and valid option name; closed values complete locally, path-bearing repository selectors, capture directories, and output directories delegate to the shell, and opaque identifiers remain user-entered.
+`ki manage completion bash` and `ki manage completion zsh` print corresponding completion source derived from the registered CLI tree. Bash and Zsh cover every command path and valid option name; closed values such as roadmap horizons and statuses complete locally, path-bearing repository selectors, capture directories, and output directories delegate to the shell, and opaque identifiers remain user-entered.
 
 `ki repo upgrade` refreshes the uniquely resolved providers declared by one or more selected KI repositories.
 
@@ -101,9 +101,9 @@ ki repo --agora estate audit
 
 ## Inspect governed work
 
-`ki repo roadmap list` reads the canonical work-item records in selected repositories without changing them.
+`ki repo roadmap list` reads the canonical work-item records in selected repositories without changing them. A selected repository without its declared roadmap directory contributes no roadmap and does not make the list fail; malformed, unsafe, unreadable, or misconfigured roadmap evidence remains a diagnostic and returns status `1`.
 
-Its deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, its import and export trade context, diagnostics, and a compact summary. Use `--horizon <value>` or `--status <value>` to filter records before rendering.
+Its default deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, its import and export trade context, diagnostics, and a compact summary. Use `--aggregate` for one selected-set inventory grouped by local horizon and repository; it is a scanning view, not a cross-repository priority queue. Use `--horizon <value>` or `--status <value>` to filter records before rendering.
 
 Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report; any such diagnostic makes the command exit with status `1`.
 

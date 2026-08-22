@@ -66,6 +66,18 @@ A KB Streams horizon mutation MUST preserve every unconsumed frontmatter field a
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `projects adapter-owned KB metadata alongside a strict project roadmap in one selection`, `diagnoses unavailable, malformed, and misconfigured Knowledge Base roadmaps without falling back`, `rejects every malformed canonical frontmatter shape`, and `promotes and prunes flat Knowledge Base work items without changing the ledger`.
 
+### REPO-OPS-011 — Absent roadmap projection
+
+`ki repo roadmap list` MUST treat a selected repository with no physical directory for its declared local roadmap adapter as contributing no roadmap rather than as a diagnostic or non-zero result. It MUST continue reporting malformed, unsafe, unreadable, or misconfigured roadmap evidence as diagnostics that make the command non-zero.
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `treats absent Knowledge Base roadmaps as empty but diagnoses malformed and misconfigured ones` and `isolates missing, malformed, invalid-status, and unsafe roadmap entries`.
+
+### REPO-OPS-012 — Aggregate roadmap inventory
+
+With `--aggregate`, `ki repo roadmap list` MUST render one selected-set inventory grouped by local horizon and repository, preserve every item’s repository identity, identify selected repositories that contribute no roadmap, and MUST NOT imply a shared cross-repository priority order.
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `aggregates selected roadmaps while treating absent roots as empty`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

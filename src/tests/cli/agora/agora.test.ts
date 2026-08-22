@@ -183,7 +183,7 @@ describe('[ki agora]', () => {
       exitCode: 0,
       output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (3)\n│  ├─ home: ${homeIdentity} (${roots['home']})\n│  ├─ member: ${memberIdentity} (${roots['member']})\n│  ╰─ other: ${otherIdentity} (${roots['other']})\n╰─ summary: MEMBERS=3\n`
     })
-    expect(await box.run('ki repo --agora team roadmap list')).toMatchObject({ exitCode: 1 })
+    expect(await box.run('ki repo --agora team roadmap list')).toMatchObject({ exitCode: 0 })
     expect(await box.run('ki agora open team --target zed')).toEqual({
       exitCode: 0,
       output: 'ki agora open team --target zed: opened 3 repositories\n'
@@ -235,7 +235,7 @@ describe('[ki agora]', () => {
       output: `${roots['other']}\n${roots['home']}\n${roots['member']}\n`
     })
     const selected = await box.run('ki repo --agora team roadmap list')
-    expect(selected.exitCode).toBe(1)
+    expect(selected.exitCode).toBe(0)
     expect(selected.output.indexOf('📁 other')).toBeLessThan(selected.output.indexOf('📁 home'))
     expect(selected.output.indexOf('📁 home')).toBeLessThan(selected.output.indexOf('📁 member'))
     expect(await box.run('ki agora open team --target zed')).toEqual({
@@ -403,7 +403,7 @@ describe('[ki agora]', () => {
     })
     expect(selected).toEqual(shown)
     expect(estateAlias).toEqual(estate)
-    expect(estate.exitCode).toBe(1)
+    expect(estate.exitCode).toBe(0)
     expect(estate.output).toContain('📁 home')
     expect(estate.output).toContain('📁 member')
   })
