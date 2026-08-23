@@ -44,6 +44,10 @@ export interface ImportCaptureResult {
   readonly dryRun: boolean
 }
 
+export interface StageCaptureResult extends ImportCaptureResult {
+  readonly staged: boolean
+}
+
 const digest = (value: string | Uint8Array): string => createHash('sha256').update(value).digest('hex')
 
 const operationalError = (message: string): KiError => new KiError(message)
@@ -318,4 +322,47 @@ export const importCapture = async (captureArgument: string, options: ImportOpti
     omissions: capture.metadata.omissions,
     dryRun: Boolean(options.dryRun)
   }
+}
+
+/**
+ * Stage one validated provider capture in a repository's Harbour. The payload
+ * hash is the incremental checkpoint: identical source material resolves to
+ * the existing package, while changed material receives a new immutable KEP.
+ */
+export const stageCapture = async (
+  captureArgument: string,
+  repository: string,
+  options: { readonly dryRun?: boolean }
+): Promise<StageCaptureResult> => {
+  const capture = await loadCapture(captureArgument)
+  const payload = await calculatePayload(capture)
+  const repositoryRoot = await physicalDirectory(repository, 'repository must be an existing physical directory')
+  const inbound = await physicalDirectory(join(repositoryRoot, '+'), 'repository inbound working area (+) is required')
+  const stageParent = join(inbound, '_ACQUIRE', 'chatgpt')
+  const output = join(stageParent, payload.payloadSha256)
+  const result = {
+    output,
+    packageId: payload.packageId,
+    recordCount: capture.recordCount,
+    assetCount: capture.assetCount,
+    relationshipCount: capture.relationshipCount,
+    omissions: capture.metadata.omissions,
+    dryRun: Boolean(options.dryRun)
+  }
+  if (options.dryRun) return { ...result, staged: false }
+
+  await mkdir(stageParent, { recursive: true })
+  await physicalDirectory(stageParent, 'repository acquisition staging area is unsafe')
+  const existing = await lstat(output).catch(() => undefined)
+  if (existing) {
+    if (!existing.isDirectory() || existing.isSymbolicLink())
+      throw operationalError('existing acquisition stage is not a safe directory')
+    const manifest = await readFile(join(output, 'kep.toml'), 'utf8').catch(() => undefined)
+    if (!manifest?.includes(`package_id = "${payload.packageId}"`))
+      throw operationalError('existing acquisition stage does not match the captured payload')
+    return { ...result, staged: true }
+  }
+
+  await writeKep(capture, payload, output)
+  return { ...result, staged: false }
 }

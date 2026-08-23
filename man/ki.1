@@ -228,6 +228,10 @@ target.
 .TP
 .B ki acquire chatgpt import <capture-directory> --output <kep-directory> [--dry-run]
 Create a deterministic Knowledge Export Package from a local ChatGPT capture.
+.TP
+.B ki space acquire chatgpt import <capture-directory> [--dry-run]
+Stage a local ChatGPT capture in the current KI repository Harbour, using its
+payload checksum as an incremental checkpoint.
 .SS Development
 \&
 .TP
@@ -763,6 +767,12 @@ Validate a user-prepared local ChatGPT capture and create a deterministic
 Knowledge Export Package (KEP).
 The command does not control a browser, contact ChatGPT, read credentials,
 discover a repository, or extract reusable knowledge.
+.TP
+.B ki space acquire chatgpt import <capture-directory> [--dry-run]
+Validate a user-prepared local ChatGPT capture and stage its immutable KEP in
+the current repository's + Harbour. An unchanged payload resolves to its
+existing content-addressed stage. The command does not contact ChatGPT,
+extract knowledge, archive, or delete a source session.
 .SS Development
 \&
 .PP

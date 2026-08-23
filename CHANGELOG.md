@@ -102,6 +102,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 #### Acquisition
 
 - `ki acquire chatgpt import`
+- `ki space acquire chatgpt import`
 
 #### Development
 
