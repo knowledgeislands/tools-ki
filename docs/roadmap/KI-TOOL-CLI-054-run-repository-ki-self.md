@@ -4,10 +4,10 @@ area: CLI
 title: Run repository ki-self
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 0ff99aca76fa7e7b900cd53e3e3fffdf8026116d
 ---
 
 ## Goal
