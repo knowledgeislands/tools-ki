@@ -4,7 +4,11 @@ import { agentSkillDirectory, compatibleWithSkill, configuredAgents } from '../.
 import type { InstalledAgent } from '../../agents/internal.ts'
 import { repositorySupportedRuntimes, runtimeForAgent } from '../../agents/runtimes.ts'
 import type { KiContext } from '../../context.ts'
-import { type ResolvedSkill, readRepositoryDeclaration, resolveDeclaredSkills } from '../../core/configuration/index.ts'
+import {
+  type ResolvedSkill,
+  readRepositoryDeclaration,
+  resolveRepositoryDeclaredSkills
+} from '../../core/configuration/index.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { presentation } from '../presentation/index.ts'
 
@@ -23,6 +27,7 @@ export interface RepositoryHealth {
   readonly configuration: string
   readonly health: Health
   readonly diagnostic?: string
+  readonly localProviders: readonly ResolvedSkill[]
   readonly projections: readonly RepositoryProjection[]
 }
 
@@ -42,12 +47,15 @@ const stateDescription: Record<RepositoryProjection['state'], string> = {
 export const describeRepositoryProjection = (projection: RepositoryProjection): string =>
   `${presentation(projection.state === 'linked' ? 'status.pass' : 'status.fail').terminal} ${projection.agent.descriptor.id} ${projection.skill.declaration.name}: ${stateDescription[projection.state]}`
 
+export const describeRepositoryLocalProvider = (skill: ResolvedSkill): string =>
+  `${presentation('status.pass').terminal} ${skill.identity}: canonical repository source`
+
 const inspectProjection = async (
   agent: InstalledAgent,
   root: string,
   skill: ResolvedSkill
 ): Promise<RepositoryProjection> => {
-  const expected = await realpath(join(skill.harness.root, skill.capability.source))
+  const expected = await realpath(join(skill.provider.root, skill.capability.source))
   const path = join(agentSkillDirectory(agent, 'repo', root), skill.declaration.name)
   const state = await lstat(path).catch(() => undefined)
   if (!state) return { agent, skill, expected, state: 'missing', path }
@@ -62,6 +70,7 @@ const failure = (root: string, configuration: string, detail: string): Repositor
   configuration,
   health: 'unrepairable',
   diagnostic: detail,
+  localProviders: [],
   projections: []
 })
 
@@ -77,18 +86,21 @@ export const inspectRepositoryHealth = async (
       configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config }),
       repositorySupportedRuntimes(location.configuration)
     ])
-    const skills = resolveDeclaredSkills(declarations, harnesses)
+    const skills = await resolveRepositoryDeclaredSkills(location.root, declarations, harnesses)
+    const localProviders = skills.filter((skill) => skill.provider.kind === 'repository-local')
     const projections = (
       await Promise.all(
-        skills.flatMap((skill) =>
-          agents
-            .filter(
-              (agent) =>
-                runtimes.includes(runtimeForAgent(agent)) &&
-                compatibleWithSkill(agent, skill.capability.supportedRuntimes)
-            )
-            .map((agent) => inspectProjection(agent, location.root, skill))
-        )
+        skills
+          .filter((skill) => skill.provider.kind === 'installed-harness')
+          .flatMap((skill) =>
+            agents
+              .filter(
+                (agent) =>
+                  runtimes.includes(runtimeForAgent(agent)) &&
+                  compatibleWithSkill(agent, skill.capability.supportedRuntimes)
+              )
+              .map((agent) => inspectProjection(agent, location.root, skill))
+          )
       )
     ).sort((left, right) => left.path.localeCompare(right.path))
     const broken = projections.filter((projection) => projection.state !== 'linked')
@@ -101,6 +113,7 @@ export const inspectRepositoryHealth = async (
       root: location.root,
       configuration: location.configuration,
       health,
+      localProviders,
       projections
     }
   } catch (error) {

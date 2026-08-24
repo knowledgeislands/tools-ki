@@ -78,6 +78,12 @@ With `--aggregate`, `ki repo roadmap list` MUST render one selected-set inventor
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `aggregates selected roadmaps while treating absent roots as empty`.
 
+### REPO-OPS-013 — Repository-local self governance
+
+For a selected physical repository that explicitly declares `[skills.ki-self]`, native repository operations MUST resolve only the physical contained `.agents/skills/ki-self/` source as `repository-local:ki-self`, validate its canonical identity and catalogue before import, and exclude it from installed-Harness upgrade and managed runtime projection; every other declared skill MUST continue to require a declared installed Harness provider.
+
+_Verify:_ `src/tests/cli/repo/local-provider.test.ts` — `[ki repo] repository-local ki-self provider`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

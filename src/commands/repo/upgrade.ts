@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { readRepositoryDeclaration, resolveDeclaredSkills } from '../../core/configuration/index.ts'
+import { readRepositoryDeclaration, resolveRepositoryDeclaredSkills } from '../../core/configuration/index.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { refreshHarnesses } from '../harness/refresh.ts'
@@ -23,8 +23,20 @@ export const createUpgradeCommand = (
       const harnesses = await discoverInstalledHarnesses(context.paths.data)
       const reports: { readonly root: string; readonly providers: readonly string[] }[] = []
       for (const repository of repositories) {
-        const skills = resolveDeclaredSkills(await readRepositoryDeclaration(repository.configuration), harnesses)
-        const selected = [...new Map(skills.map((skill) => [skill.harness.id, skill.harness])).values()]
+        const skills = await resolveRepositoryDeclaredSkills(
+          repository.root,
+          await readRepositoryDeclaration(repository.configuration),
+          harnesses
+        )
+        const selected = [
+          ...new Map(
+            skills.flatMap((skill) =>
+              skill.provider.kind === 'installed-harness'
+                ? [[skill.provider.harness.id, skill.provider.harness] as const]
+                : []
+            )
+          ).values()
+        ]
         reports.push({
           root: repository.root,
           providers: selected.length ? await refreshHarnesses(context, selected) : []

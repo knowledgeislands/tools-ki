@@ -38,7 +38,7 @@ const stateForTarget = async (target: ActivationTarget): Promise<'active' | 'mis
 
   const [actual, expected] = await Promise.all([
     realpath(target.path).catch(() => undefined),
-    realpath(join(target.skill.harness.root, target.skill.capability.source)).catch(
+    realpath(join(target.skill.provider.root, target.skill.capability.source)).catch(
       /* v8 ignore next -- the discovered harness source can disappear here only through a concurrent filesystem replacement. */
       () => undefined
     )
@@ -63,7 +63,11 @@ export const createRepositorySkillActivation = async (options: {
     configuredAgents({ configurationDirectory: options.configurationDirectory, homeDirectory: options.homeDirectory }),
     repositorySupportedRuntimes(options.repositoryConfiguration)
   ])
-  const skills = new Map(options.skills.map((skill) => [skill.declaration.name, skill]))
+  const skills = new Map(
+    options.skills
+      .filter((skill) => skill.provider.kind === 'installed-harness')
+      .map((skill) => [skill.declaration.name, skill])
+  )
   const targetsFor = (name: string): ActivationTarget[] => {
     const skill = skills.get(name)
     /* v8 ignore next -- operation callers validate activation names against the resolved rubric inventory before inspection. */
@@ -139,7 +143,7 @@ export const createRepositorySkillActivation = async (options: {
             { scope: 'repo', repository: options.repository },
             {
               name: skill.capability.name,
-              source: join(skill.harness.root, skill.capability.source)
+              source: join(skill.provider.root, skill.capability.source)
             }
           )
         }

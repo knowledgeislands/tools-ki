@@ -13,7 +13,7 @@ decision_depends_on:
 
 ## Context
 
-The `ki` host runs native repository operations without repository-vendored runners and supports explicitly installed compatible harnesses alongside its required base `knowledgeislands/ki-agentic-harness`. Capability identity, installation trust, and user and repository activation have distinct boundaries.
+The `ki` host runs native repository operations without repository-vendored runners and supports explicitly installed compatible harnesses alongside its required base `knowledgeislands/ki-agentic-harness`. Capability identity, installation trust, and user and repository activation have distinct boundaries. A governed repository may additionally own one mutable `ki-self` source for rules specific to that repository; treating it as an installed portable capability would erase both its ownership and the installed-Harness trust boundary.
 
 ## Decision
 
@@ -35,6 +35,8 @@ Native operations are imported in process only after harness and inventory valid
 
 Local development records an independent physical checkout for any Harness already present in the installed estate. Activation substitutes each selected Harness's complete active root, so its metadata and payloads have one local source; deactivation restores the same configured verified release as the complete active root. An optional Harness ID selects one source, while omitting it applies the transition to all recorded sources. A physical installed root containing linked payload roots is invalid. The canonical Harness alone retains its bootstrap-capability requirement.
 
+The only repository-authored native provider is an explicitly declared `ki-self` at the exact physical `.agents/skills/ki-self/` path beneath the selected physical repository root. The host validates that source and its catalogue before import, reports it as `repository-local:ki-self`, and excludes it from Harness upgrade and managed runtime projection. Every other declared skill still resolves only through a declared installed Harness.
+
 ## Consequences
 
 - `tools-ki` is the sole owner of registry layout, command grammar, physical repository resolution, reporting, activation, migration, and native execution.
@@ -43,6 +45,7 @@ Local development records an independent physical checkout for any Harness alrea
 - A private GitHub harness can use the user's existing GitHub CLI authentication without placing a token in KI configuration or sending it to another host.
 - User commands do not resolve the CWD, while every `ki repo` command can discover one repository or use an explicit override.
 - Release and Homebrew delivery remain separate from harness registration and do not authorise a tag, publication, or push.
+- Repository-local governance remains mutable with its owning repository without becoming a portable provider, activation source, or general local-code execution path.
 
 ## References
 

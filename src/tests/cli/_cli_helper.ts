@@ -128,6 +128,18 @@ const setupExampleHarness = async (
   if (rubric !== undefined) await data.write(`${base}/scripts/rubric/items/index.ts`, rubric)
 }
 
+const setupRepositoryLocalSkill = async (
+  project: SandboxArea,
+  {
+    rubric,
+    name = 'ki-self',
+    source = '.agents/skills/ki-self'
+  }: { readonly rubric?: string; readonly name?: string; readonly source?: string } = {}
+): Promise<void> => {
+  await project.write(`${source}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
+  if (rubric !== undefined) await project.write(`${source}/scripts/rubric/items/index.ts`, rubric)
+}
+
 const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<void> => {
   await area.write(`${base}/.ki-config.toml`, '[skills.ki-repo-harness]\nprefix = "ki"\n')
   await Promise.all(['subagents', 'hooks'].map((payload) => area.mkdir(`${base}/${payload}`)))
@@ -163,6 +175,11 @@ export interface Sandbox {
     readonly name?: string
     readonly identifier?: string
     readonly prefix?: string
+  }) => Promise<void>
+  readonly setupRepositoryLocalSkill: (skill?: {
+    readonly rubric?: string
+    readonly name?: string
+    readonly source?: string
   }) => Promise<void>
   readonly setupCanonicalHarness: () => Promise<void>
   readonly setupLocalCanonicalHarness: (relativePath: string) => Promise<string>
@@ -328,6 +345,7 @@ const create = async (): Promise<Sandbox> => {
     env,
     executable: executablePath,
     setupExampleHarness: (skill) => setupExampleHarness(data, skill),
+    setupRepositoryLocalSkill: (skill) => setupRepositoryLocalSkill(project, skill),
     setupCanonicalHarness: () => setupCanonicalHarness(data),
     setupLocalCanonicalHarness: (relativePath) => setupLocalCanonicalHarness(root, relativePath),
     setupAgentHome: async (agentId) => {

@@ -1,70 +1,65 @@
-# KI Self rubric
+<!-- GENERATED FILE: produced by `ki dev skill rubric`. Do not hand-edit; edit scripts/rubric/items/, then rerun `ki dev skill rubric <skill> --write`. -->
 
-This rubric governs the repository-local `ki-self` source and the `tools-ki` host conditions it owns. It is deliberately narrower than [AGENTS.md](../../../../AGENTS.md): contribution practices remain there; these criteria provide durable, reviewable product governance.
+# Generated rubric — tools-ki repository-local governance
 
-## Classification
+> **Generated publication.** The TypeScript rubric items under `scripts/rubric/items/` are canonical. Edit those definitions, then rerun `ki dev skill rubric ki-self --write`.
 
-### SELF-CLASS-001 — Bootstrap inventory
+Line-by-line criteria for auditing ki-self. Classifications are derived from item aspects: **[M]** mechanical, **[J]** judgment, **[M + J]** hybrid, and **[M-heuristic + J]** hybrid with heuristic mechanical evidence. Sources are cited as declared by each canonical item.
 
-The bootstrap user-skill inventory has one named, typed authority.
+## Contents
 
-Evidence: `minimumBootstrapUserSkills` in `src/agents/internal.ts`.
+- [RUBRIC — Rubric publication](#rubric--rubric-publication)
+- [CLASSIFICATION — Skill classification](#classification--skill-classification)
+- [REPAIR — Bootstrap and repair](#repair--bootstrap-and-repair)
+- [PRESENTATION — Human-facing presentation](#presentation--human-facing-presentation)
 
-### SELF-CLASS-002 — Managed-skill categories
+## RUBRIC — Rubric publication
 
-A bootstrap skill is a required user-scope starting capability; a configured skill is every persisted managed identity; a resolved source is the capability selected for one identity; and a projection is the corresponding agent-runtime link. Do not collapse these classifications.
+→ [standard](references/rubric.md)
 
-Evidence: `src/agents/bootstrap.ts`, `src/commands/manage/repair.ts`, and CLI contract tests.
+Keeps the human-readable local rubric derived from this executable catalogue.
 
-### SELF-CLASS-003 — Capability discovery
+- **SELF-RUBRIC-001 [M] — Generated publication** — The committed rubric publication matches the native catalogue. (scripts/rubric/items/index.ts, references/rubric.md)
+  - _Remediation:_ automatic
 
-Harness capability discovery, rather than a `skills/<kind>/...` path assumption, supplies a source for every classified managed skill.
+## CLASSIFICATION — Skill classification
 
-Evidence: `inspectHarnessRoot`, `bootstrapSkillSources`, and local-development repair coverage.
+→ [standard](references/rubric.md#classification)
 
-## Bootstrap and repair
+Preserves the host distinctions between bootstrap inventory, managed projections, and capability sources.
 
-### SELF-BOOTSTRAP-001 — Shared bootstrap inventory
+- **SELF-CLASS-001 [M] — Bootstrap inventory authority** — The minimum bootstrap user-skill inventory has one named typed authority. (src/core/harness/bootstrap-capabilities.ts)
+  - _Remediation:_ diagnostic — Restore minimumBootstrapUserSkills as the single typed inventory.
+- **SELF-CLASS-002 [M] — Managed user scope** — Bootstrap and repair retain explicit user-scoped managed-skill projection. (src/agents/bootstrap.ts, src/commands/manage/repair.ts)
+  - _Remediation:_ diagnostic — Restore explicit user scope at the managed-skill activation boundary.
+- **SELF-CLASS-003 [M] — Capability source discovery** — Bootstrap resolves classified capability sources rather than reconstructing category paths. (src/agents/bootstrap.ts)
+  - _Remediation:_ diagnostic — Resolve managed skills through inspected capability.source metadata.
 
-Bootstrap, refresh, and local-development activation all consume the authoritative bootstrap inventory. A required member missing from a canonical harness fails before projection.
+## REPAIR — Bootstrap and repair
 
-Evidence: `src/agents/bootstrap.ts` and bootstrap CLI tests.
+→ [standard](references/rubric.md#bootstrap-and-repair)
 
-### SELF-REPAIR-001 — Configured-skill coverage
+Keeps bootstrap validation and repair coverage complete and automation-visible.
 
-`ki manage repair` examines every configured managed identity, not only bootstrap members, and reports unavailable sources or incompatible agents as an error.
+- **SELF-BOOTSTRAP-001 [M] — Shared bootstrap inventory** — Bootstrap and canonical Harness restoration consume the authoritative minimum inventory. (src/agents/bootstrap.ts, src/core/storage/registry.ts)
+  - _Remediation:_ diagnostic — Route every bootstrap and restoration consumer through minimumBootstrapUserSkills.
+- **SELF-REPAIR-001 [M] — Configured skill coverage** — Repair and diagnostics inspect every configured managed identity. (src/core/manage/repair.ts, src/core/manage/doctor.ts)
+  - _Remediation:_ diagnostic — Iterate the complete configured skill inventory in repair and doctor.
+- **SELF-REPAIR-002 [M] — Local capability resolution** — Local Harness development resolves sources through inspected capability metadata. (src/agents/bootstrap.ts)
+  - _Remediation:_ diagnostic — Keep localBootstrapHarness on inspectHarnessRoot and capability.source.
+- **SELF-REPAIR-003 [M] — Automation failure signal** — A failed manage repair result exits non-zero after rendering its summary. (src/commands/manage/repair.ts)
+  - _Remediation:_ diagnostic — Preserve FAIL summary rendering and KiExit(1) for repair failure.
 
-Evidence: `src/commands/manage/repair.ts` and repair CLI tests.
+## PRESENTATION — Human-facing presentation
 
-### SELF-REPAIR-002 — Local capability resolution
+→ [standard](references/rubric.md#presentation)
 
-When canonical local-harness development is active, repair resolves its sources through inspected capabilities. It must not reconstruct a skill path from a category or directory convention.
+Keeps inventories and diagnostics framed while preserving direct contract-oriented streams.
 
-Evidence: `localBootstrapHarness()` and local-development repair CLI tests.
-
-### SELF-REPAIR-003 — Automation failure signal
-
-A repair failure is observable to automation: its summary is `FAIL` and the command exits non-zero.
-
-Evidence: repair CLI tests.
-
-## Presentation
-
-### SELF-OUTPUT-001 — Human-facing report frame
-
-Human-facing inventories, diagnostics, inspections, repairs, and upgrade reports use a titled tree frame. Group labels retain useful counts; state is expressed with black-and-white glyphs; and the final line gives a compact summary.
-
-Evidence: `src/commands/manage/{list,diag,repair,update}.ts`, `src/commands/{agora,repo,trade}/`, and their CLI contract tests.
-
-### SELF-OUTPUT-002 — Contract-oriented output boundary
-
-Do not frame output whose contract is a plain stream, a complete canonical record, a generated asset, or an immediate action receipt. Keep those interfaces concise and stable for their direct consumer.
-
-Evidence: `ki registry list`, `ki manage docs`, generated completions, `ki trade show`, and action commands such as `ki skill add` and `ki trade receive`.
-
-## Judgment
-
-- Decide whether a proposed local requirement is specific to the `ki` host before adding it here. Promote reusable governance to the harness instead.
-- Keep a rubric rule tied to a classification and evidence surface. Do not encode temporary implementation detail or use the rubric to duplicate ordinary contribution instructions.
-- Treat a human-readable display pattern as local until evidence shows it is useful across compatible CLI repositories; then promote it to `ki-tools` rather than expanding this skill indefinitely.
-- Native `ki repo audit --skill ki-self` execution, rubric publication, and runtime projection are governed by the harness decision requested in [TRD-af376594](../../../../-/_TRADES/knowledgeislands/ki-agentic-harness/TRD-af376594.md). Until then, this committed rubric is the source contract, not a claimed host capability.
+- **SELF-OUTPUT-001 [M] — Human-facing report frame** — Representative human-facing inventory and diagnostic commands retain titled tree summaries. (src/commands/agora/list.ts, src/commands/manage/diag.ts, src/commands/manage/list.ts, src/commands/manage/repair.ts, src/commands/manage/update.ts, src/commands/repo/diag.ts, src/commands/repo/repair.ts, src/commands/repo/upgrade.ts, src/commands/trade/records.ts)
+  - _Remediation:_ diagnostic — Restore renderTree with a title and compact summary on human-facing reports.
+- **SELF-OUTPUT-002 [J] — Contract output boundary** — Plain streams, canonical records, generated assets, and action receipts remain direct interfaces. (references/rubric.md)
+  - _Evidence scope:_ Changed CLI presentation and its consumer-facing contract tests.
+  - _Review prompt:_ Do contract-oriented outputs remain concise, stable, and unframed where framing would alter their interface?
+  - _Outcomes:_ conforming; gap identified
+  - _Conforming guidance:_ Keep tree framing for human reports; preserve direct output for machine or action contracts.

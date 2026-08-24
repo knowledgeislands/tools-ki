@@ -136,27 +136,62 @@ const frontmatterSupportedRuntimes = (
   return runtimes as readonly SupportedRuntime[]
 }
 
-const enumeratePayloadFiles = async (root: string, directory: string): Promise<readonly string[]> => {
+const enumeratePayloadFiles = async (
+  root: string,
+  directory: string,
+  description = 'installed harness payload'
+): Promise<readonly string[]> => {
   const path = join(root, directory)
   const state = await lstat(path).catch(() => undefined)
   if (!state) return []
-  if (state.isSymbolicLink()) throw new KiError(`installed harness payload ${directory} must not be a symlink`, 1)
-  const physicalDirectoryPath = await physicalDirectory(path, `installed harness payload ${directory}`)
+  if (state.isSymbolicLink()) throw new KiError(`${description} ${directory} must not be a symlink`, 1)
+  const physicalDirectoryPath = await physicalDirectory(path, `${description} ${directory}`)
   // A physical child of a physical harness root cannot resolve outside that root; this guards a future path refactor.
   /* v8 ignore next */
   if (!contained(root, physicalDirectoryPath)) {
-    throw new KiError(`installed harness payload ${directory} escapes the harness`, 1)
+    throw new KiError(`${description} ${directory} escapes its root`, 1)
   }
   const entries = await readdir(physicalDirectoryPath, { withFileTypes: true })
   const files: string[] = []
   for (const entry of entries) {
     const relativePath = `${directory}/${entry.name}`
-    if (entry.isSymbolicLink()) throw new KiError(`installed harness payload ${relativePath} must not be a symlink`, 1)
-    if (entry.isDirectory()) files.push(...(await enumeratePayloadFiles(root, relativePath)))
+    if (entry.isSymbolicLink()) throw new KiError(`${description} ${relativePath} must not be a symlink`, 1)
+    if (entry.isDirectory()) files.push(...(await enumeratePayloadFiles(root, relativePath, description)))
     else if (entry.isFile()) files.push(relativePath)
-    else throw new KiError(`installed harness payload ${relativePath} must be a regular file or directory`, 1)
+    else throw new KiError(`${description} ${relativePath} must be a regular file or directory`, 1)
   }
   return files
+}
+
+const skillCapability = async (root: string, source: string, files: readonly string[]): Promise<HarnessCapability> => {
+  const file = `${source}/SKILL.md`
+  if (!files.includes(file)) throw new KiError(`${file} must be a regular file`, 1)
+  const metadata = frontmatter(await readFile(join(root, file), 'utf8'), file)
+  const { name } = metadata
+  if (!name) throw new KiError(`${file} must declare name`, 1)
+  const rubricPath = `${source}/${RUBRIC_MODULE_PATH}`
+  const rubricModule = files.includes(rubricPath) ? rubricPath : undefined
+  return {
+    kind: 'skill',
+    name,
+    source,
+    dependsOn: frontmatterDependencies(metadata['ki-depends-on'], file, 'ki-depends-on', true),
+    optionalDependsOn: frontmatterDependencies(
+      metadata['ki-optional-depends-on'],
+      file,
+      'ki-optional-depends-on',
+      false
+    ),
+    supportedRuntimes: frontmatterSupportedRuntimes(metadata['ki-supported-runtimes'], file),
+    ...(rubricModule ? { rubricModule } : {})
+  }
+}
+
+/** Inspects one physical skill source using the same metadata contract as installed Harness payloads. */
+export const inspectSkillCapability = async (rootPath: string, source: string): Promise<HarnessCapability> => {
+  const root = await physicalDirectory(rootPath, 'repository-local skill root')
+  const files = await enumeratePayloadFiles(root, source, 'repository-local skill source')
+  return skillCapability(root, source, files)
 }
 
 const discoverCapabilities = async (root: string, identifier: string): Promise<readonly HarnessCapability[]> => {
@@ -166,26 +201,7 @@ const discoverCapabilities = async (root: string, identifier: string): Promise<r
   const capabilities: HarnessCapability[] = []
   for (const file of files) {
     if (!file.startsWith('skills/') || !file.endsWith('/SKILL.md')) continue
-    const source = dirname(file)
-    const metadata = frontmatter(await readFile(join(root, file), 'utf8'), file)
-    const { name } = metadata
-    if (!name) throw new KiError(`${file} must declare name`, 1)
-    const rubricPath = `${source}/${RUBRIC_MODULE_PATH}`
-    const rubricModule = files.includes(rubricPath) ? rubricPath : undefined
-    capabilities.push({
-      kind: 'skill',
-      name,
-      source,
-      dependsOn: frontmatterDependencies(metadata['ki-depends-on'], file, 'ki-depends-on', true),
-      optionalDependsOn: frontmatterDependencies(
-        metadata['ki-optional-depends-on'],
-        file,
-        'ki-optional-depends-on',
-        false
-      ),
-      supportedRuntimes: frontmatterSupportedRuntimes(metadata['ki-supported-runtimes'], file),
-      rubricModule
-    })
+    capabilities.push(await skillCapability(root, dirname(file), files))
   }
   const names = new Set<string>()
   for (const capability of capabilities) {

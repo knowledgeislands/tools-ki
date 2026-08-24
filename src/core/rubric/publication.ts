@@ -44,7 +44,7 @@ export const prepareRubricPublication = async (
   publicationRoot?: string,
   stat: typeof lstat = lstat
 ): Promise<PreparedRubricPublication> => {
-  const source = await realpath(join(skill.harness.root, skill.capability.source))
+  const source = await realpath(join(skill.provider.root, skill.capability.source))
   const target = join(source, publicationPath)
   const existing = await readPublication(target, stat)
   const rendered = renderRubricMarkdown(definition)
@@ -60,7 +60,7 @@ export const prepareRubricPublication = async (
 
   return {
     evidence,
-    displayTarget: join(skill.harness.root, skill.capability.source, publicationPath),
+    displayTarget: join(skill.provider.root, skill.capability.source, publicationPath),
     publicationRoot: root,
     proposal: () => {
       if (!writePath)

@@ -10,7 +10,12 @@ export const inspectDevelopmentRubric = async (
   const resolved = await port.resolveSkill(skill)
   const publication = await port.preparePublication(resolved)
   if (write) {
-    if (!(await port.developmentLinked(resolved.harness.id))) {
+    // This command resolves only installed skills; repository-local providers are not development Harnesses.
+    /* v8 ignore next -- resolveInstalledSkill supplies the port result. */
+    if (resolved.provider.kind !== 'installed-harness') {
+      throw new KiError(`${resolved.identity} is not an installed Harness capability`, 1)
+    }
+    if (!(await port.developmentLinked(resolved.provider.harness.id))) {
       throw new KiError(
         `${resolved.identity} is an installed payload; run ki dev local on before writing its rubric catalogue`,
         1

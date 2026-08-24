@@ -8,5 +8,6 @@ export {
   renderRepositoryConfiguration,
   undeclareRepositorySkill
 } from './declaration.ts'
+export { resolveRepositoryDeclaredSkills } from './local-provider.ts'
 export type { ResolvedSkill } from './resolution.ts'
-export { resolveDeclaredSkills, resolveInstalledSkill } from './resolution.ts'
+export { resolveInstalledSkill } from './resolution.ts'

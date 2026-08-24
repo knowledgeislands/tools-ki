@@ -3,7 +3,11 @@ import type { KiContext } from '../../context.ts'
 import { KiExit } from '../../core/errors.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
-import { describeRepositoryProjection, inspectRepositoryHealth } from './repository-health.ts'
+import {
+  describeRepositoryLocalProvider,
+  describeRepositoryProjection,
+  inspectRepositoryHealth
+} from './repository-health.ts'
 
 export const createRepoDiagCommand = (
   context: KiContext,
@@ -38,6 +42,7 @@ export const createRepoDiagCommand = (
                 : [
                     { label: `Configuration: ${health.configuration}` },
                     { label: `Status: ${health.health}` },
+                    ...health.localProviders.map((skill) => ({ label: describeRepositoryLocalProvider(skill) })),
                     ...health.projections.map((projection) => ({ label: describeRepositoryProjection(projection) }))
                   ]
             }))

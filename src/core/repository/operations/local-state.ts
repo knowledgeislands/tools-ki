@@ -4,7 +4,7 @@ import {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
   readRepositoryDeclaration,
-  resolveDeclaredSkills
+  resolveRepositoryDeclaredSkills
 } from '../../configuration/index.ts'
 import { KiError } from '../../errors.ts'
 import { prepareWrites } from '../../filesystem/index.ts'
@@ -79,7 +79,9 @@ export const repositorySkillActivation = async (
   const runtimeConfiguration = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration
   if (!runtimeConfiguration || !Object.hasOwn(runtimeConfiguration, 'supported_runtimes')) return undefined
   const harnesses = await discoverInstalledHarnesses(context.dataDirectory)
-  const skills = resolveDeclaredSkills(declaration, harnesses)
+  const skills = (await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses)).filter(
+    (skill) => skill.provider.kind === 'installed-harness'
+  )
   return context.createSkillActivation({
     repository: repository.root,
     repositoryConfiguration: repository.configuration,

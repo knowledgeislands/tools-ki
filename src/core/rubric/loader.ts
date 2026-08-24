@@ -191,7 +191,7 @@ const validateFamily = (
 export const loadRubricDefinition = async (skill: ResolvedSkill): Promise<SkillRubricDefinition<unknown>> => {
   const { rubricModule } = skill.capability
   if (!rubricModule) throw new KiError(`${skill.identity} does not provide a rubric catalogue`, 1)
-  const modulePath = `${skill.harness.root}/${rubricModule}`
+  const modulePath = `${skill.provider.root}/${rubricModule}`
 
   let module: Record<string, unknown>
   try {
