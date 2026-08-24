@@ -4,7 +4,7 @@ area: CLI
 title: Run repository ki-self
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 0ff99aca76fa7e7b900cd53e3e3fffdf8026116d
@@ -112,6 +112,10 @@ The implementation meets the goal and preserves the boundary: local execution is
 ### Mini recap
 
 CLI-054 delivers native repository self-governance without general local-skill execution, with matching host, source-contract, tests, and user guidance. Durable learning is already routed into the `tools-ki` decision/specification/guide and the approved Harness standards/decisions; no additional automatic promotion is proposed. The only follow-up is the explicitly authorised handling of the uncommitted Harness companion diff.
+
+## Done
+
+Accepted by the user on 2026-08-24. The tools-ki delivery is recorded in `e5453b9320d047ea723baa56d8d28a13a61f0f87`; the approved Harness companion contract is recorded in `adcb39c6638a9118e03e26b2dbe79fe5d59cb1e6`, resolving the review packet's sole outstanding concern. This acceptance action did not push either repository.
 
 ## Discussion
 
