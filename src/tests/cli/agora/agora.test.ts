@@ -319,6 +319,36 @@ describe('[ki agora]', () => {
     expect(listed.output.indexOf('alpha [declared]')).toBeLessThan(listed.output.indexOf('zeta [declared]'))
   })
 
+  test('lists resolvable Agoras before reporting broken declarations', async () => {
+    const box = await sandbox()
+    const homeIdentity = 'https://github.com/example/home'
+    const missingIdentity = 'https://github.com/example/missing'
+    const roots = await registered(box, [
+      {
+        path: 'home',
+        identity: homeIdentity,
+        agora: `${home('healthy', 'Healthy', {})}\n${home('broken', 'Broken', { [missingIdentity]: 'member' })}\n${home('also-broken', 'Also broken', { [missingIdentity]: 'member' })}`
+      }
+    ])
+
+    expect(await box.run('ki agora list')).toEqual({
+      exitCode: 1,
+      output: `╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (1 members)\n│  ╰─ healthy [declared] healthy (1 members)\n├─ broken (2)\n│  ├─ Agora also-broken member ${missingIdentity} is not registered locally\n│  ╰─ Agora broken member ${missingIdentity} is not registered locally\n╰─ summary: AGORAS=2 MEMBERS=1 BROKEN=2\n`
+    })
+    expect((await box.run('ki agora show healthy')).exitCode).toBe(0)
+    expect(await box.run('ki agora roots healthy')).toEqual({ exitCode: 0, output: `${roots['home']}\n` })
+    expect((await box.run('ki repo --agora healthy roadmap list')).exitCode).toBe(0)
+    box.setRunner(async () => ({ exitCode: 0, output: '' }))
+    expect(await box.run('ki agora open healthy --target zed')).toEqual({
+      exitCode: 0,
+      output: 'ki agora open healthy --target zed: opened 1 repositories\n'
+    })
+    expect(await box.run('ki agora show broken')).toEqual({
+      exitCode: 2,
+      output: `ki: error: Agora broken member ${missingIdentity} is not registered locally\n`
+    })
+  })
+
   test('rejects a local registry identity that disagrees with its repository declaration', async () => {
     const box = await sandbox()
     const root = await box.project.mkdir('repository')
@@ -424,9 +454,9 @@ describe('[ki agora]', () => {
     ])
 
     expect(await box.run('ki agora list')).toEqual({
-      exitCode: 2,
+      exitCode: 1,
       output:
-        'ki: error: Agora team is declared by multiple owners: https://github.com/example/first, https://github.com/example/second\n'
+        '╭─ KI AGORAS\n├─ agoras (1)\n│  ╰─ estate [system] Registered estate (2 members)\n├─ broken (1)\n│  ╰─ Agora team is declared by multiple owners: https://github.com/example/first, https://github.com/example/second\n╰─ summary: AGORAS=1 MEMBERS=2 BROKEN=1\n'
     })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 2,

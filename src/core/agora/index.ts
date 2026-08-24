@@ -25,6 +25,11 @@ export interface AgoraProfile {
   readonly system: boolean
 }
 
+export interface AgoraListReport {
+  readonly profiles: readonly AgoraProfile[]
+  readonly broken: readonly string[]
+}
+
 interface Membership {
   readonly home: string
   readonly role: string
@@ -42,6 +47,11 @@ interface RegisteredRepository extends AgoraMember {
   readonly declaration: RepositoryDeclaration
 }
 
+interface AgoraCandidate {
+  readonly home: RegisteredRepository
+  readonly declaration: AgoraHome
+}
+
 const table = (value: unknown): Record<string, unknown> | undefined =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined
 
@@ -49,6 +59,13 @@ const agoraError = (root: string, message: string): KiError =>
   new KiError(`registered repository ${root} ${message}`, 2)
 
 const profileError = (id: string, message: string): KiError => new KiError(`Agora ${id} ${message}`, 2)
+
+const kiErrorMessage = (error: unknown): string => {
+  // Every caller catches only the KiError outcomes emitted by this module's private declaration and profile resolvers.
+  /* v8 ignore next */
+  if (!(error instanceof KiError)) throw error
+  return error.message
+}
 
 const skillConfiguration = (
   declaration: RepositoryDeclaration,
@@ -104,46 +121,48 @@ const registeredRepositories = async (stateDirectory: string): Promise<readonly 
   return repositories.sort((left, right) => left.key.localeCompare(right.key, 'en'))
 }
 
-const homeDeclarations = (repository: RegisteredRepository): readonly AgoraHome[] => {
+const homeDeclarationEntries = (repository: RegisteredRepository): readonly (readonly [string, unknown])[] => {
   const configuration = skillConfiguration(repository.declaration, 'ki-agora')
   if (!configuration || configuration['homes'] === undefined) return []
   const homes = table(configuration['homes'])
   if (!homes) throw agoraError(repository.root, '[skills.ki-agora].homes must be a table')
-  return Object.entries(homes).map(([id, value]) => {
-    if (!AGORA_ID.test(id)) throw profileError(id, 'must use a stable lower-case hyphenated identifier')
-    const home = table(value)
-    if (!home) throw profileError(id, 'home declaration must be a table')
-    if (!canonicalRepositoryIdentity(home['owner']))
-      throw profileError(id, 'owner must be a canonical HTTPS GitHub repository')
-    if (home['owner'] !== repository.repository)
-      throw profileError(id, 'owner must match its declaring registered repository')
-    if (typeof home['purpose'] !== 'string' || !home['purpose'].trim())
-      throw profileError(id, 'home requires a non-empty purpose')
-    const members = table(home['members'])
-    if (!members) throw profileError(id, 'members must be a repository-to-role table')
-    const roles: Record<string, string> = {}
-    for (const [identity, role] of Object.entries(members)) {
-      if (!canonicalRepositoryIdentity(identity))
-        throw profileError(id, `member ${identity} must be a canonical HTTPS GitHub repository`)
-      if (identity === repository.repository) throw profileError(id, 'must not list its home repository as a member')
-      if (typeof role !== 'string' || !ROLE.test(role)) throw profileError(id, `member ${identity} has an invalid role`)
-      roles[identity] = role
-    }
-    const declaredOrder = home['order']
-    if (declaredOrder !== undefined && !Array.isArray(declaredOrder))
-      throw profileError(id, 'order must be an array of canonical HTTPS GitHub repositories')
-    const order: string[] = []
-    const participants = new Set([home['owner'], ...Object.keys(roles)])
-    for (const identity of declaredOrder ?? []) {
-      if (!canonicalRepositoryIdentity(identity))
-        throw profileError(id, 'order entries must be canonical HTTPS GitHub repositories')
-      if (order.includes(identity)) throw profileError(id, `order repeats participant ${identity}`)
-      if (!participants.has(identity))
-        throw profileError(id, `order participant ${identity} is not the owner or a member`)
-      order.push(identity)
-    }
-    return { id, owner: home['owner'], purpose: home['purpose'], order, members: roles }
-  })
+  return Object.entries(homes)
+}
+
+const homeDeclaration = (repository: RegisteredRepository, id: string, value: unknown): AgoraHome => {
+  if (!AGORA_ID.test(id)) throw profileError(id, 'must use a stable lower-case hyphenated identifier')
+  const home = table(value)
+  if (!home) throw profileError(id, 'home declaration must be a table')
+  if (!canonicalRepositoryIdentity(home['owner']))
+    throw profileError(id, 'owner must be a canonical HTTPS GitHub repository')
+  if (home['owner'] !== repository.repository)
+    throw profileError(id, 'owner must match its declaring registered repository')
+  if (typeof home['purpose'] !== 'string' || !home['purpose'].trim())
+    throw profileError(id, 'home requires a non-empty purpose')
+  const members = table(home['members'])
+  if (!members) throw profileError(id, 'members must be a repository-to-role table')
+  const roles: Record<string, string> = {}
+  for (const [identity, role] of Object.entries(members)) {
+    if (!canonicalRepositoryIdentity(identity))
+      throw profileError(id, `member ${identity} must be a canonical HTTPS GitHub repository`)
+    if (identity === repository.repository) throw profileError(id, 'must not list its home repository as a member')
+    if (typeof role !== 'string' || !ROLE.test(role)) throw profileError(id, `member ${identity} has an invalid role`)
+    roles[identity] = role
+  }
+  const declaredOrder = home['order']
+  if (declaredOrder !== undefined && !Array.isArray(declaredOrder))
+    throw profileError(id, 'order must be an array of canonical HTTPS GitHub repositories')
+  const order: string[] = []
+  const participants = new Set([home['owner'], ...Object.keys(roles)])
+  for (const identity of declaredOrder ?? []) {
+    if (!canonicalRepositoryIdentity(identity))
+      throw profileError(id, 'order entries must be canonical HTTPS GitHub repositories')
+    if (order.includes(identity)) throw profileError(id, `order repeats participant ${identity}`)
+    if (!participants.has(identity))
+      throw profileError(id, `order participant ${identity} is not the owner or a member`)
+    order.push(identity)
+  }
+  return { id, owner: home['owner'], purpose: home['purpose'], order, members: roles }
 }
 
 const membershipDeclaration = (repository: RegisteredRepository, id: string): Membership | undefined => {
@@ -194,27 +213,11 @@ const profileFromHome = (
   }
 }
 
-const profileCandidates = (repositories: readonly RegisteredRepository[]): AgoraProfile[] =>
-  repositories.flatMap((home) =>
-    homeDeclarations(home).map((declaration) => profileFromHome(home, declaration, repositories))
+const duplicateOwnersError = (id: string, owners: readonly string[]): KiError =>
+  profileError(
+    id,
+    `is declared by multiple owners: ${[...owners].sort((left, right) => left.localeCompare(right, 'en')).join(', ')}`
   )
-
-const uniqueProfiles = (profiles: readonly AgoraProfile[]): AgoraProfile[] => {
-  const byId = new Map<string, AgoraProfile[]>()
-  for (const profile of profiles) byId.set(profile.id, [...(byId.get(profile.id) ?? []), profile])
-  for (const [id, candidates] of byId) {
-    if (candidates.length < 2) continue
-    throw profileError(
-      id,
-      `is declared by multiple owners: ${candidates
-        .map((profile) => profile.home?.repository)
-        .filter((owner): owner is string => Boolean(owner))
-        .sort((left, right) => left.localeCompare(right, 'en'))
-        .join(', ')}`
-    )
-  }
-  return [...profiles]
-}
 
 const estate = (repositories: readonly RegisteredRepository[]): AgoraProfile => ({
   id: ESTATE_AGORA,
@@ -224,20 +227,71 @@ const estate = (repositories: readonly RegisteredRepository[]): AgoraProfile => 
   system: true
 })
 
-export const listAgoras = async (stateDirectory: string): Promise<readonly AgoraProfile[]> => {
+export const listAgoras = async (stateDirectory: string): Promise<AgoraListReport> => {
   const repositories = await registeredRepositories(stateDirectory)
-  return [
-    estate(repositories),
-    ...uniqueProfiles(profileCandidates(repositories)).sort((left, right) => left.id.localeCompare(right.id, 'en'))
-  ]
+  const declarations: AgoraCandidate[] = []
+  const broken: string[] = []
+  for (const home of repositories) {
+    let entries: readonly (readonly [string, unknown])[]
+    try {
+      entries = homeDeclarationEntries(home)
+    } catch (error) {
+      broken.push(kiErrorMessage(error))
+      continue
+    }
+    for (const [id, value] of entries) {
+      try {
+        declarations.push({ home, declaration: homeDeclaration(home, id, value) })
+      } catch (error) {
+        broken.push(kiErrorMessage(error))
+      }
+    }
+  }
+
+  const byId = new Map<string, typeof declarations>()
+  for (const candidate of declarations)
+    byId.set(candidate.declaration.id, [...(byId.get(candidate.declaration.id) ?? []), candidate])
+
+  const profiles: AgoraProfile[] = []
+  for (const [id, candidates] of byId) {
+    if (candidates.length > 1) {
+      broken.push(
+        duplicateOwnersError(
+          id,
+          candidates.map((candidate) => candidate.home.repository)
+        ).message
+      )
+      continue
+    }
+    const candidate = candidates[0] as AgoraCandidate
+    try {
+      profiles.push(profileFromHome(candidate.home, candidate.declaration, repositories))
+    } catch (error) {
+      broken.push(kiErrorMessage(error))
+    }
+  }
+
+  return {
+    profiles: [estate(repositories), ...profiles.sort((left, right) => left.id.localeCompare(right.id, 'en'))],
+    broken: broken.sort((left, right) => left.localeCompare(right, 'en'))
+  }
 }
 
 export const resolveAgora = async (stateDirectory: string, id: string): Promise<AgoraProfile> => {
   if (!AGORA_ID.test(id)) throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
   const repositories = await registeredRepositories(stateDirectory)
   if (id === ESTATE_AGORA) return estate(repositories)
-  const profiles = uniqueProfiles(profileCandidates(repositories))
-  const candidates = profiles.filter((profile) => profile.id === id)
+  const candidates = repositories.flatMap((home): AgoraCandidate[] =>
+    homeDeclarationEntries(home)
+      .filter(([candidateId]) => candidateId === id)
+      .map(([candidateId, value]) => ({ home, declaration: homeDeclaration(home, candidateId, value) }))
+  )
   if (!candidates.length) throw profileError(id, 'is not declared by a registered Agora home')
-  return candidates[0] as AgoraProfile
+  if (candidates.length > 1)
+    throw duplicateOwnersError(
+      id,
+      candidates.map((candidate) => candidate.home.repository)
+    )
+  const candidate = candidates[0] as AgoraCandidate
+  return profileFromHome(candidate.home, candidate.declaration, repositories)
 }
