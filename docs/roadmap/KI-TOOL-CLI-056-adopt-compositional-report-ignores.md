@@ -4,7 +4,7 @@ title: Adopt compositional report ignores
 area: CLI
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: cef9b02b04e32f486aab197460a6db836b4866cd
@@ -34,11 +34,11 @@ The selected `ki-work-roadmap` and `ki-trades` audits pass before this item. A c
 
 ## Steps
 
-- [ ] Run the complete declared repository conform operation so the active Harness reconciles `.gitignore` through its sole composer.
-- [ ] Inspect the conform diff and preserve repository-specific rules beneath the terminal unmanaged header; do not hand-edit any managed marker block.
-- [ ] Set Vitest's coverage reports directory to `reports/coverage` and remove imports used only by the temporary-directory path.
-- [ ] Confirm any generated output considered for removal is untracked and reproducible before removing it; retain `dist/` as build output.
-- [ ] Run the complete repository audit and the repository's TypeScript, coverage, and formatting gates.
+- [x] Run the complete declared repository conform operation so the active Harness reconciles `.gitignore` through its sole composer.
+- [x] Inspect the conform diff and preserve repository-specific rules beneath the terminal unmanaged header; do not hand-edit any managed marker block.
+- [x] Set Vitest's coverage reports directory to `reports/coverage` and remove imports used only by the temporary-directory path.
+- [x] Confirm any generated output considered for removal is untracked and reproducible before removing it; retain `dist/` as build output.
+- [x] Run the complete repository audit and the repository's TypeScript, coverage, and formatting gates.
 
 ## Files touched
 
@@ -77,6 +77,39 @@ No guide change is planned unless implementation reveals a user-visible generate
 ### Roadmap
 
 Retain this record through implementation review and acceptance. The adopted inbound trade remains linked as its source.
+
+## Review
+
+### Delivered
+
+Delivered the approved local configuration boundary from immutable baseline `cef9b02b04e32f486aab197460a6db836b4866cd`. The Harness composer now owns the marker-bounded `.gitignore` blocks, Vitest writes disposable coverage reports beneath `reports/coverage`, repository-specific ignores remain in the terminal unmanaged section, and `dist/` remains build output. No tracked or non-reproducible generated output was removed, and no other repository was changed.
+
+### Summary of changes
+
+- `.gitignore` now contains the `ki-repo` and `ki-engineering` managed ignore blocks produced by the complete conform operation, followed by the preserved repository-specific `.claude/agents/` rule.
+- `vitest.config.ts` now uses the repository-relative `reports/coverage` directory and no longer imports temporary-directory path helpers.
+- The generated coverage tree is ignored by the managed `reports/` rule and remains untracked.
+
+### Verification
+
+- `ki repo conform --repo . --progress never --concise` — PASS across all 18 declared skills after the completed configuration change.
+- `ki repo audit --repo . --progress never` — PASS across all 18 declared skills.
+- `bunx tsc --noEmit` — PASS.
+- `bun run test:coverage` — PASS: 42 files and 685 tests; 100% statements, branches, functions, and lines.
+- `bunx biome check` — PASS with no fixes; Biome reported one informational schema-version notice.
+- `git check-ignore -v reports/coverage reports/coverage/lcov.info` — both paths resolve to the managed `reports/` rule; `git ls-files 'reports/**' 'coverage/**'` returns no tracked output.
+
+### Outstanding concerns
+
+Biome reports that `biome.json` references schema `2.5.7` while the installed CLI is `2.5.10`. This informational, pre-existing toolchain drift did not fail the gate and is outside this item's approved boundary.
+
+### Post-change review
+
+The delivered changes meet the goal without introducing another ignore writer or a compatibility path. The main regression risk was hiding tracked output or losing repository-specific rules; the tracked-output check and preserved terminal unmanaged section address both. The item is ready for acceptance review.
+
+### Mini recap
+
+`KI-TOOL-CLI-056` adopted the Harness report-output convention locally, verified the full repository governance and engineering gates, and leaves only an unrelated informational Biome schema notice. No durable learning needs promotion beyond the existing Harness Decision Record and this retained work record.
 
 ## Discussion
 
