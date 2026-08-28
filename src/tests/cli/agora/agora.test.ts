@@ -181,7 +181,11 @@ describe('[ki agora]', () => {
     })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (3)\n│  ├─ home: ${homeIdentity} (${roots['home']})\n│  ├─ member: ${memberIdentity} (${roots['member']})\n│  ╰─ other: ${otherIdentity} (${roots['other']})\n╰─ summary: MEMBERS=3\n`
+      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (3)\n│  ├─ home\n│  ├─ member\n│  ╰─ other\n╰─ summary: MEMBERS=3\n`
+    })
+    expect(await box.run('ki agora show team --verbose')).toEqual({
+      exitCode: 0,
+      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (3)\n│  ├─ home\n│  │  ├─ repository: ${homeIdentity}\n│  │  ╰─ path: ${roots['home']}\n│  ├─ member\n│  │  ├─ repository: ${memberIdentity}\n│  │  ╰─ path: ${roots['member']}\n│  ╰─ other\n│     ├─ repository: ${otherIdentity}\n│     ╰─ path: ${roots['other']}\n╰─ summary: MEMBERS=3\n`
     })
     expect(await box.run('ki repo --agora team roadmap list')).toMatchObject({ exitCode: 0 })
     expect(await box.run('ki agora open team --target zed')).toEqual({
@@ -222,13 +226,11 @@ describe('[ki agora]', () => {
       return { exitCode: 0, output: '' }
     })
 
-    const shown = await box.run('ki agora show team')
+    const shown = await box.run('ki agora show team --verbose')
     expect(shown.exitCode).toBe(0)
-    expect(shown.output.indexOf(`other: ${otherIdentity} (`)).toBeLessThan(
-      shown.output.indexOf(`home: ${homeIdentity} (`)
-    )
-    expect(shown.output.indexOf(`home: ${homeIdentity} (`)).toBeLessThan(
-      shown.output.indexOf(`member: ${memberIdentity} (`)
+    expect(shown.output.indexOf(`path: ${roots['other']}`)).toBeLessThan(shown.output.indexOf(`path: ${roots['home']}`))
+    expect(shown.output.indexOf(`path: ${roots['home']}`)).toBeLessThan(
+      shown.output.indexOf(`path: ${roots['member']}`)
     )
     expect(await box.run('ki agora roots team')).toEqual({
       exitCode: 0,
@@ -264,7 +266,7 @@ describe('[ki agora]', () => {
 
     expect(await box.run('ki agora show estate')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ estate\n│  ├─ name: Registered estate\n│  ╰─ purpose: Every locally registered canonical KI repository.\n├─ members (2)\n│  ├─ first: https://github.com/example/first (${roots['first']})\n│  ╰─ second: https://github.com/example/second (${roots['second']})\n╰─ summary: MEMBERS=2\n`
+      output: `╭─ KI AGORA\n├─ estate\n│  ├─ name: Registered estate\n│  ╰─ purpose: Every locally registered canonical KI repository.\n├─ members (2)\n│  ├─ first\n│  ╰─ second\n╰─ summary: MEMBERS=2\n`
     })
     expect(await box.run('ki agora open estate')).toMatchObject({ exitCode: 2 })
     expect(await box.run('ki agora open estate --target vscode')).toEqual({

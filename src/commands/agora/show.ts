@@ -7,10 +7,18 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
   new Command('show')
     .description('show one declared Agora or the registered estate')
     .argument('<agora>', 'Agora name')
-    .action(async (value: string) => {
+    .option('-v, --verbose', 'show repository URLs and local paths')
+    .action(async (value: string, options: { readonly verbose?: boolean }) => {
       const profile = await resolveAgora(context.paths.state, value)
       const members = profile.members.length
-        ? profile.members.map((member) => ({ label: `${member.key}: ${member.repository} (${member.root})` }))
+        ? profile.members.map((member) => ({
+            label: member.key,
+            ...(options.verbose
+              ? {
+                  children: [{ label: `repository: ${member.repository}` }, { label: `path: ${member.root}` }]
+                }
+              : {})
+          }))
         : [{ label: 'none' }]
       context.stdout.write(
         `${renderTree({

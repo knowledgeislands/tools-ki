@@ -213,8 +213,10 @@ Prune one eligible local inbound copy, or preview and confirm a batch.
 .B ki agora list
 List declared named Agoras and the registered estate.
 .TP
-.B ki agora show <name>
-Show one declared Agora or the registered estate.
+.B ki agora show <name> [--verbose]
+Show one declared Agora or the registered estate. The default lists member
+names;
+--verbose also shows canonical repository URLs and local paths.
 .TP
 .B ki agora roots <name> [--null]
 Write absolute physical roots for machine consumption. The default format is
@@ -746,8 +748,10 @@ registered canonical KI repositories.
 .B ki agora list
 List declared named Agoras and the registered estate.
 .TP
-.B ki agora show <name>
-Show one declared Agora or the registered estate.
+.B ki agora show <name> [--verbose]
+Show one declared Agora or the registered estate. The default lists member
+names;
+--verbose also shows canonical repository URLs and local paths.
 .TP
 .B ki agora roots <name> [--null]
 Write absolute physical roots for machine consumption. The default format is
