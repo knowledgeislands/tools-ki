@@ -4,10 +4,10 @@ title: Adopt compositional report ignores
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: cef9b02b04e32f486aab197460a6db836b4866cd
 ---
 
 # KI-TOOL-CLI-056: Adopt compositional report ignores
