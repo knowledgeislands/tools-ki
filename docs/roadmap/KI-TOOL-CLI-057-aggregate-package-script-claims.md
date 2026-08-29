@@ -4,7 +4,7 @@ title: Aggregate package script claims
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 317d0ccaf8f9b013ec2381d88fc69f4c92f3d0b9
@@ -109,6 +109,10 @@ The host neither interprets package commands nor trusts repository configuration
 ### Mini recap
 
 `KI-TOOL-CLI-057` is ready to close under `KI-TOOL-BATCH-002`: the receiver dependency for `KI-HARNESS-GOV-007` is delivered, fully covered, locally built, and audited. Closure recheck must confirm the six-part packet, exact batch grant, green gates, and absence of push, release, prune, or sibling-repository write.
+
+## Done
+
+Accepted at `2026-08-29T23:24:12Z` under the exact closure grant in `KI-TOOL-BATCH-002`. The canonical review packet, bound authorization, roadmap and authoring audits, built-binary engineering audit, TypeScript and Biome gates, and clean working tree were rechecked immediately before closure. The earlier full gate remains 696 passing tests at 100% coverage.
 
 ## Discussion
 
