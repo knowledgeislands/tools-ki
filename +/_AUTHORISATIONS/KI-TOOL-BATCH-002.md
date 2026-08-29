@@ -47,3 +47,15 @@ The admitted record must independently reach `awaiting-review`, pass its review-
 ## Run ledger
 
 <!-- ki-batch-run: KI-TOOL-BATCH-002-RUN-001 ff8414289c9e4098aa4f12a8a370436f652922d09f5210dec8fe0c8ee8ec4669 -->
+
+### `KI-TOOL-CLI-057`
+
+- **Admitted state and baseline:** `ready`; `tools-ki` baseline `317d0ccaf8f9b013ec2381d88fc69f4c92f3d0b9`.
+- **Result:** `done`; started by `6d5d8b9`, delivered for review by `e58ff49`, and accepted by `cba86e1`.
+- **Delivery evidence:** The imported catalogue validates exact `packageScripts`; repository operations aggregate a deterministic `{ script, skill }` inventory from every declared resolved skill, even under filtered execution, and pass it through the rubric session boundary. Duplicate claims fail before audit or conform execution.
+- **Verification:** All 696 tests passed with 100% statements, branches, functions, and lines. TypeScript, Biome, build, roadmap, authoring, and both built and installed engineering-audit gates passed. CLI fixtures cover malformed and absent claims, several owners, duplicate ownership, filtered selection, undeclared providers, and `script_exclusions` non-ownership.
+- **Decision and stops:** Implemented only host aggregation and observable failure/input contract. No owner-specific command judgment, Website policy, estate migration, arbitrary skill scan, compatibility map, sibling-repository write, push, release, or prune occurred. No delegation was used.
+
+## Batch recap
+
+The single admitted record reached `done` under the exact consolidated-acceptance grant. `tools-ki` now supplies the receiver dependency required by `KI-HARNESS-GOV-007`; the Harness remains responsible for consuming the inventory and completing its own script-ownership contract. The run made no destructive or irreversible change, external coordination, push, release, or prune.
