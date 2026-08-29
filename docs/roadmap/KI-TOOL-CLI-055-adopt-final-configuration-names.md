@@ -4,7 +4,7 @@ title: Adopt final configuration names
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: f86dec42ead8ca1e9d0dcd253c701b064807a449
@@ -108,6 +108,10 @@ The cutover has one name at every product boundary and no hidden migration surfa
 ### Mini recap
 
 CLI-055 is ready for human review: final names only, complete estate source cutover, no compatibility, full product coverage clean, and one explicit publication concern.
+
+## Done
+
+Accepted by user on 2026-08-29. The reviewed delivery is recorded in `4aa46ae`; its six-part review packet is complete, and the explicit archive-pin, governance-audit, and remote-synchronisation follow-ons remain visible. The acceptance action did not push the repository.
 
 ## Discussion
 
