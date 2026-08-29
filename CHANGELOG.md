@@ -115,7 +115,6 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `.ki.toml` is the sole repository and Harness declaration filename across source checkouts, release archives, installed Harnesses, local development, repository discovery, and diagnostics; retired filenames have no compatibility or migration path.
 - Direct-CWD mGit selection consumes only schema-one `.mgit.toml` workspace or repository manifests, including configured groups and child-workspace recursion, without invoking `mgit`.
-
 - `ki manage completion <shell>` emits Bash and Zsh scripts derived from the registered command tree, including nested commands, options, closed values, and local path completion.
 - Registered repository declarations define reciprocal named Agoras; the reserved `estate` selector derives the full locally registered canonical repository set for selection and Zed opening.
 - `ki agora roots <agora>` exposes a stable machine interface for resolved registered Agora roots: newline-delimited by default, or NUL-delimited with `--null` (`-0`).
