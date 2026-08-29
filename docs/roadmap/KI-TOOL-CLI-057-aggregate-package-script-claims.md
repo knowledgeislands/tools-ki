@@ -4,10 +4,10 @@ title: Aggregate package script claims
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 317d0ccaf8f9b013ec2381d88fc69f4c92f3d0b9
 ---
 
 ## Goal
