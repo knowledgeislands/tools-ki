@@ -4,7 +4,7 @@ title: Adopt compositional report ignores
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: cef9b02b04e32f486aab197460a6db836b4866cd
@@ -110,6 +110,10 @@ The delivered changes meet the goal without introducing another ignore writer or
 ### Mini recap
 
 `KI-TOOL-CLI-056` adopted the Harness report-output convention locally, verified the full repository governance and engineering gates, and leaves only an unrelated informational Biome schema notice. No durable learning needs promotion beyond the existing Harness Decision Record and this retained work record.
+
+## Done
+
+Accepted by the user on 2026-08-29. The reviewed delivery is recorded in `cbdc7412e37598ada93907ff48b4af7c9d725a04`; its six-part review packet is complete, the delivery paths remain unchanged from that commit, and the informational Biome schema notice remains non-blocking. This acceptance action did not push the repository.
 
 ## Discussion
 
