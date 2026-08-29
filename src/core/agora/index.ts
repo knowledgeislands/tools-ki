@@ -6,7 +6,7 @@ import {
   readRepositoryDeclaration
 } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
-import { canonicalRepositoryIdentity, requiredLocalRegistry } from '../storage/index.ts'
+import { canonicalRepositoryIdentity, type LocalRegistryEntry, requiredLocalRegistry } from '../storage/index.ts'
 
 export const ESTATE_AGORA = 'estate'
 
@@ -50,6 +50,15 @@ interface RegisteredRepository extends AgoraMember {
   readonly declaration: RepositoryDeclaration
 }
 
+interface RegisteredRepositoryInventory {
+  readonly repositories: readonly RegisteredRepository[]
+  readonly failuresByRepository: ReadonlyMap<string, KiError>
+}
+
+type RegisteredRepositoryInspection =
+  | { readonly state: 'available'; readonly repository: RegisteredRepository }
+  | { readonly state: 'unavailable'; readonly error: KiError }
+
 interface AgoraCandidate {
   readonly home: RegisteredRepository
   readonly declaration: AgoraHome
@@ -76,35 +85,51 @@ const skillConfiguration = (
 ): Readonly<Record<string, unknown>> | undefined =>
   declaration.skills.find((skill) => skill.name === name)?.configuration
 
-const canonicalRepository = (root: string, declaration: RepositoryDeclaration): string => {
+const inspectRegisteredRepository = async (registered: LocalRegistryEntry): Promise<RegisteredRepositoryInspection> => {
+  const state = await lstat(registered.path).catch(() => undefined)
+  if (!state?.isDirectory() || state.isSymbolicLink())
+    return { state: 'unavailable', error: agoraError(registered.path, 'must be an existing physical directory') }
+  const root = await realpath(registered.path)
+  const declarationPath = join(root, REPOSITORY_DECLARATION_FILE)
+  const declarationState = await lstat(declarationPath).catch(() => undefined)
+  if (!declarationState?.isFile() || declarationState.isSymbolicLink())
+    return {
+      state: 'unavailable',
+      error: agoraError(root, `must contain a physical ${REPOSITORY_DECLARATION_FILE}`)
+    }
+  let declaration: RepositoryDeclaration
+  try {
+    declaration = await readRepositoryDeclaration(declarationPath)
+  } catch (error) {
+    return {
+      state: 'unavailable',
+      error: agoraError(root, `has invalid ${REPOSITORY_DECLARATION_FILE}: ${(error as Error).message}`)
+    }
+  }
   const configuration = skillConfiguration(declaration, 'ki-repo')
-  const repository = configuration?.['repository']
-  if (!canonicalRepositoryIdentity(repository))
-    throw agoraError(root, '[skills.ki-repo].repository must be a canonical HTTPS GitHub repository')
-  return repository
+  const identity = configuration?.['repository']
+  if (!canonicalRepositoryIdentity(identity))
+    return {
+      state: 'unavailable',
+      error: agoraError(root, '[skills.ki-repo].repository must be a canonical HTTPS GitHub repository')
+    }
+  if (identity !== registered.repository)
+    return {
+      state: 'unavailable',
+      error: agoraError(root, `declares ${identity}, but its local registry identity is ${registered.repository}`)
+    }
+  return {
+    state: 'available',
+    repository: { key: registered.key, root, repository: identity, declaration }
+  }
 }
 
 const registeredRepositories = async (stateDirectory: string): Promise<readonly RegisteredRepository[]> => {
   const repositories: RegisteredRepository[] = []
   for (const registered of await requiredLocalRegistry(stateDirectory)) {
-    const state = await lstat(registered.path).catch(() => undefined)
-    if (!state?.isDirectory() || state.isSymbolicLink())
-      throw agoraError(registered.path, 'must be an existing physical directory')
-    const root = await realpath(registered.path)
-    const declarationPath = join(root, REPOSITORY_DECLARATION_FILE)
-    const declarationState = await lstat(declarationPath).catch(() => undefined)
-    if (!declarationState?.isFile() || declarationState.isSymbolicLink())
-      throw agoraError(root, `must contain a physical ${REPOSITORY_DECLARATION_FILE}`)
-    let declaration: RepositoryDeclaration
-    try {
-      declaration = await readRepositoryDeclaration(declarationPath)
-    } catch (error) {
-      throw agoraError(root, `has invalid ${REPOSITORY_DECLARATION_FILE}: ${(error as Error).message}`)
-    }
-    const identity = canonicalRepository(root, declaration)
-    if (identity !== registered.repository)
-      throw agoraError(root, `declares ${identity}, but its local registry identity is ${registered.repository}`)
-    repositories.push({ key: registered.key, root, repository: identity, declaration })
+    const inspection = await inspectRegisteredRepository(registered)
+    if (inspection.state === 'unavailable') throw inspection.error
+    repositories.push(inspection.repository)
   }
 
   const keys = new Set<string>()
@@ -122,6 +147,20 @@ const registeredRepositories = async (stateDirectory: string): Promise<readonly 
     identities.add(repository.repository)
   }
   return repositories.sort((left, right) => left.key.localeCompare(right.key, 'en'))
+}
+
+const availableRegisteredRepositories = async (stateDirectory: string): Promise<RegisteredRepositoryInventory> => {
+  const repositories: RegisteredRepository[] = []
+  const failuresByRepository = new Map<string, KiError>()
+  for (const registered of await requiredLocalRegistry(stateDirectory)) {
+    const inspection = await inspectRegisteredRepository(registered)
+    if (inspection.state === 'available') repositories.push(inspection.repository)
+    else failuresByRepository.set(registered.repository, inspection.error)
+  }
+  return {
+    repositories: repositories.sort((left, right) => left.key.localeCompare(right.key, 'en')),
+    failuresByRepository
+  }
 }
 
 const homeDeclarationEntries = (repository: RegisteredRepository): readonly (readonly [string, unknown])[] => {
@@ -282,13 +321,21 @@ export const listAgoras = async (stateDirectory: string): Promise<AgoraListRepor
 
 export const resolveAgora = async (stateDirectory: string, id: string): Promise<AgoraProfile> => {
   if (!AGORA_ID.test(id)) throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
-  const repositories = await registeredRepositories(stateDirectory)
-  if (id === ESTATE_AGORA) return estate(repositories)
-  const candidates = repositories.flatMap((home): AgoraCandidate[] =>
-    homeDeclarationEntries(home)
-      .filter(([candidateId]) => candidateId === id)
-      .map(([candidateId, value]) => ({ home, declaration: homeDeclaration(home, candidateId, value) }))
-  )
+  if (id === ESTATE_AGORA) return estate(await registeredRepositories(stateDirectory))
+  const { repositories, failuresByRepository } = await availableRegisteredRepositories(stateDirectory)
+  const candidates: AgoraCandidate[] = []
+  for (const home of repositories) {
+    let entries: readonly (readonly [string, unknown])[]
+    try {
+      entries = homeDeclarationEntries(home)
+    } catch (error) {
+      kiErrorMessage(error)
+      continue
+    }
+    for (const [candidateId, value] of entries) {
+      if (candidateId === id) candidates.push({ home, declaration: homeDeclaration(home, candidateId, value) })
+    }
+  }
   if (!candidates.length) throw profileError(id, 'is not declared by a registered Agora home')
   if (candidates.length > 1)
     throw duplicateOwnersError(
@@ -296,5 +343,9 @@ export const resolveAgora = async (stateDirectory: string, id: string): Promise<
       candidates.map((candidate) => candidate.home.repository)
     )
   const candidate = candidates[0] as AgoraCandidate
+  for (const member of Object.keys(candidate.declaration.members)) {
+    const failure = failuresByRepository.get(member)
+    if (failure) throw failure
+  }
   return profileFromHome(candidate.home, candidate.declaration, repositories)
 }

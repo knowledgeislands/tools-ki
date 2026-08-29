@@ -351,6 +351,64 @@ describe('[ki agora]', () => {
     })
   })
 
+  test('isolates unrelated unavailable repositories when resolving a named Agora', async () => {
+    const box = await sandbox()
+    const homeIdentity = 'https://github.com/example/home'
+    const memberIdentity = 'https://github.com/example/member'
+    const malformedIdentity = 'https://github.com/example/malformed'
+    const unavailableIdentity = 'https://github.com/example/unavailable'
+    const roots = await registered(box, [
+      {
+        path: 'home',
+        identity: homeIdentity,
+        agora: home('legal', 'Legal repositories', { [memberIdentity]: 'maintainer' })
+      },
+      { path: 'member', identity: memberIdentity, agora: membership('legal', homeIdentity, 'maintainer') },
+      { path: 'malformed', identity: malformedIdentity, agora: '[skills.ki-agora]\nhomes = "invalid"\n' }
+    ])
+    const unavailableRoot = await box.project.mkdir('unavailable')
+    await box.state.write(
+      'ki/registry.toml',
+      localRegistry([
+        { key: 'home', identity: homeIdentity, root: roots['home'] as string },
+        { key: 'member', identity: memberIdentity, root: roots['member'] as string },
+        { key: 'malformed', identity: malformedIdentity, root: roots['malformed'] as string },
+        { key: 'unavailable', identity: unavailableIdentity, root: unavailableRoot }
+      ])
+    )
+    const calls: string[] = []
+    box.setRunner(async (command, arguments_) => {
+      calls.push(`${command} ${arguments_.join(' ')}`)
+      return { exitCode: 0, output: '' }
+    })
+
+    expect((await box.run('ki agora show legal')).exitCode).toBe(0)
+    expect(await box.run('ki agora open legal --target zed')).toEqual({
+      exitCode: 0,
+      output: 'ki agora open legal --target zed: opened 2 repositories\n'
+    })
+    expect(calls).toEqual(['zed -n', `zed -e ${roots['member']}`, `zed -e ${roots['home']}`])
+    expect(await box.run('ki agora show estate')).toEqual({
+      exitCode: 2,
+      output: `ki: error: registered repository ${unavailableRoot} must contain a physical .ki.toml\n`
+    })
+
+    await box.project.write(
+      'home/.ki.toml',
+      repository(
+        homeIdentity,
+        home('legal', 'Legal repositories', {
+          [memberIdentity]: 'maintainer',
+          [unavailableIdentity]: 'reviewer'
+        })
+      )
+    )
+    expect(await box.run('ki agora show legal')).toEqual({
+      exitCode: 2,
+      output: `ki: error: registered repository ${unavailableRoot} must contain a physical .ki.toml\n`
+    })
+  })
+
   test('rejects a local registry identity that disagrees with its repository declaration', async () => {
     const box = await sandbox()
     const root = await box.project.mkdir('repository')
