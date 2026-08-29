@@ -3,9 +3,9 @@ export {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
   declareRepositorySkill,
-  REPOSITORY_CONFIGURATION_FILE,
+  REPOSITORY_DECLARATION_FILE,
   readRepositoryDeclaration,
-  renderRepositoryConfiguration,
+  renderRepositoryDeclaration,
   undeclareRepositorySkill
 } from './declaration.ts'
 export { resolveRepositoryDeclaredSkills } from './local-provider.ts'

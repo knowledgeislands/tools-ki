@@ -44,7 +44,7 @@ export const localRepositoryRegistryWrites = async (
   if (configuration.state === 'missing') return []
   if (configuration.state === 'invalid')
     throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
-  const declaration = await readRepositoryDeclaration(repository.configuration)
+  const declaration = await readRepositoryDeclaration(repository.declaration)
   const identity = declaredRepositoryIdentity(declaration)
   if (declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) {
     const registry = await inspectLocalRegistry(context.stateDirectory)
@@ -75,7 +75,7 @@ export const repositorySkillActivation = async (
   selected: readonly ResolvedSkill[]
 ): Promise<RepositorySkillActivationHost | undefined> => {
   if (!selected.some((skill) => skill.declaration.name === 'ki-repo')) return undefined
-  const declaration = await readRepositoryDeclaration(repository.configuration)
+  const declaration = await readRepositoryDeclaration(repository.declaration)
   const runtimeConfiguration = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration
   if (!runtimeConfiguration || !Object.hasOwn(runtimeConfiguration, 'supported_runtimes')) return undefined
   const harnesses = await discoverInstalledHarnesses(context.dataDirectory)
@@ -84,7 +84,7 @@ export const repositorySkillActivation = async (
   )
   return context.createSkillActivation({
     repository: repository.root,
-    repositoryConfiguration: repository.configuration,
+    repositoryDeclaration: repository.declaration,
     skills
   })
 }

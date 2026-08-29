@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { lstat, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, relative } from 'node:path'
 import { parse } from 'smol-toml'
-import { REPOSITORY_CONFIGURATION_FILE } from '../configuration/index.ts'
+import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import type { Runner } from '../runtime/runner.ts'
 import {
@@ -151,7 +151,7 @@ const registeredRoots = async (context: TradeContext): Promise<readonly string[]
 const registeredRepositories = async (context: TradeContext): Promise<readonly RegisteredRepository[]> => {
   const repositories: RegisteredRepository[] = []
   for (const root of await registeredRoots(context)) {
-    const path = join(root, REPOSITORY_CONFIGURATION_FILE)
+    const path = join(root, REPOSITORY_DECLARATION_FILE)
     const state = await lstat(path).catch(() => undefined)
     if (!state?.isFile()) continue
     try {
@@ -192,7 +192,7 @@ export const localRegisteredConfiguration = async (
   context: TradeContext
 ): Promise<{ readonly repository: RepositoryLocation; readonly configuration: TradeConfiguration }> => {
   const repository = await localRegisteredRepository(context)
-  return { repository, configuration: await readTradeConfiguration(repository.configuration) }
+  return { repository, configuration: await readTradeConfiguration(repository.declaration) }
 }
 
 export type RouteState = 'active' | 'awaiting-receiver' | 'awaiting-sender' | 'ambiguous-repository'

@@ -24,7 +24,7 @@ export interface RepositoryProjection {
 
 export interface RepositoryHealth {
   readonly root: string
-  readonly configuration: string
+  readonly declaration: string
   readonly health: Health
   readonly diagnostic?: string
   readonly localProviders: readonly ResolvedSkill[]
@@ -33,7 +33,7 @@ export interface RepositoryHealth {
 
 interface RepositoryLocation {
   readonly root: string
-  readonly configuration: string
+  readonly declaration: string
 }
 
 const stateDescription: Record<RepositoryProjection['state'], string> = {
@@ -65,9 +65,9 @@ const inspectProjection = async (
   return { agent, skill, expected, state: actual === expected ? 'linked' : 'stale', path }
 }
 
-const failure = (root: string, configuration: string, detail: string): RepositoryHealth => ({
+const failure = (root: string, declaration: string, detail: string): RepositoryHealth => ({
   root,
-  configuration,
+  declaration,
   health: 'unrepairable',
   diagnostic: detail,
   localProviders: [],
@@ -80,11 +80,11 @@ export const inspectRepositoryHealth = async (
   location: RepositoryLocation
 ): Promise<RepositoryHealth> => {
   try {
-    const declarations = await readRepositoryDeclaration(location.configuration)
+    const declarations = await readRepositoryDeclaration(location.declaration)
     const [harnesses, agents, runtimes] = await Promise.all([
       discoverInstalledHarnesses(context.paths.data),
       configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config }),
-      repositorySupportedRuntimes(location.configuration)
+      repositorySupportedRuntimes(location.declaration)
     ])
     const skills = await resolveRepositoryDeclaredSkills(location.root, declarations, harnesses)
     const localProviders = skills.filter((skill) => skill.provider.kind === 'repository-local')
@@ -111,12 +111,12 @@ export const inspectRepositoryHealth = async (
         : 'healthy'
     return {
       root: location.root,
-      configuration: location.configuration,
+      declaration: location.declaration,
       health,
       localProviders,
       projections
     }
   } catch (error) {
-    return failure(location.root, location.configuration, (error as Error).message)
+    return failure(location.root, location.declaration, (error as Error).message)
   }
 }

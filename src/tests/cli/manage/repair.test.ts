@@ -22,7 +22,7 @@ describe('[ki manage repair]', () => {
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
     await unlink(`${box.home.path}/.claude/skills/ki-recap`)
-    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills]\n')
+    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills]\n')
 
     const repaired = await box.run('ki manage repair')
     const doctor = await box.run('ki manage doctor')

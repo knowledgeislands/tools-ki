@@ -47,7 +47,7 @@ export const createRepairCommand = (
       for (const repository of repositories) {
         const entries: string[] = []
         try {
-          const declaration = await readRepositoryDeclaration(repository.configuration)
+          const declaration = await readRepositoryDeclaration(repository.declaration)
           const identity = declaredRepositoryIdentity(declaration)
           if (declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) {
             const registry = await inspectLocalRegistry(context.paths.state)

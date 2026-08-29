@@ -6,6 +6,7 @@ import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
 import type { HarnessRelease } from '../storage/index.ts'
+import { HARNESS_DECLARATION_FILE } from './index.ts'
 
 const decoder = new TextDecoder('utf-8', { fatal: true })
 
@@ -45,7 +46,7 @@ interface ParsedTarEntry {
 }
 
 /**
- * Parses every payload entry and the root `.ki-config.toml` Harness declaration,
+ * Parses every payload entry and the root `.ki.toml` Harness source declaration,
  * optionally nested one level under a harness-source prefix, without writing anything
  * to disk. Runtime projections such as `.agents/skills/` are source metadata, not payloads.
  */
@@ -66,13 +67,13 @@ const parsePayloadEntries = (archive: Uint8Array): readonly ParsedTarEntry[] => 
       throw new KiError('harness archive contains an unsafe entry', 1)
     const parts = path.split('/')
     const directPayload = parts[0] === 'skills' || parts[0] === 'subagents' || parts[0] === 'hooks'
-    const directMetadata = parts.length === 1 && parts[0] === '.ki-config.toml'
+    const directMetadata = parts.length === 1 && parts[0] === HARNESS_DECLARATION_FILE
     const nested =
       !parts[0]?.startsWith('.') &&
       (parts[1] === 'skills' ||
         parts[1] === 'subagents' ||
         parts[1] === 'hooks' ||
-        (parts.length === 2 && parts[1] === '.ki-config.toml'))
+        (parts.length === 2 && parts[1] === HARNESS_DECLARATION_FILE))
     if (directPayload || directMetadata || nested) {
       const entryPrefix = directPayload || directMetadata ? '' : (parts[0] as string)
       if (payloadPrefix !== undefined && payloadPrefix !== entryPrefix)
@@ -94,6 +95,14 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
     throw new KiError('harness release must be a gzip-compressed tar archive', 1)
   }
   const entries = parsePayloadEntries(archive)
+  const metadata = entries.filter((entry) => entry.payloadPath === HARNESS_DECLARATION_FILE)
+  if (metadata.length !== 1)
+    throw new KiError(
+      metadata.length === 0
+        ? `harness archive must contain ${HARNESS_DECLARATION_FILE}`
+        : `harness archive must contain ${HARNESS_DECLARATION_FILE} exactly once`,
+      1
+    )
 
   let retainedPayload = 0
   for (const entry of entries) {
@@ -111,7 +120,7 @@ export const extractArchive = async (payload: Uint8Array, target: string): Promi
     else {
       await mkdir(dirname(destination), { recursive: true })
       await writeFile(destination, archive.subarray(entry.contentsStart, entry.contentsEnd), { flag: 'wx' })
-      if (entry.payloadPath !== '.ki-config.toml') retainedPayload += 1
+      if (entry.payloadPath !== HARNESS_DECLARATION_FILE) retainedPayload += 1
     }
   }
   if (retainedPayload === 0) throw new KiError('harness archive contains no skills, agents, or hooks payload', 1)

@@ -69,9 +69,9 @@ describe('[ki repo target sets]', () => {
   describe('multi-repository target sets', () => {
     test('expands literal and glob selections through supported roadmap listing', async () => {
       const box = await sandbox()
-      await box.project.write('repos/a/.ki-config.toml', '# a\n')
-      await box.project.write('repos/a/nested/.ki-config.toml', '# nested\n')
-      await box.project.write('repos/b/.ki-config.toml', '# b\n')
+      await box.project.write('repos/a/.ki.toml', '# a\n')
+      await box.project.write('repos/a/nested/.ki.toml', '# nested\n')
+      await box.project.write('repos/b/.ki.toml', '# b\n')
       await box.project.mkdir('empty')
       const root = await realpath(box.project.path)
 
@@ -105,16 +105,19 @@ describe('[ki repo target sets]', () => {
       expect(conflictingEstate.output).toContain('--repo, --agora, and --estate cannot be used together')
     })
 
-    test('expands mGit standard, nested, and container members through supported roadmap listing', async () => {
+    test('expands mGit standard, nested, bare, and child-workspace members', async () => {
       const box = await sandbox()
       await box.project.write(
-        '.mgit-config.toml',
-        'version = 1\n\n[members."first"]\ntype = "standard"\nsource = "https://example.test/first.git"\n\n[members."group"]\ntype = "dir"\n\n[members."nested"]\ntype = "nested"\n\n[members."archive.git"]\ntype = "bare"\n'
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "selected"\n\n[groups.default.members."first"]\nkind = "repository"\ntype = "standard"\nsource = "https://example.test/first.git"\n\n[groups.default.members."group"]\nkind = "workspace"\n\n[groups.default.members."nested"]\nkind = "repository"\ntype = "nested"\n\n[groups.default.members."archive.git"]\nkind = "repository"\ntype = "bare"\n\n[groups.selected.members."first"]\nkind = "repository"\n\n[groups.selected.members."group"]\nkind = "workspace"\n\n[groups.selected.members."nested"]\nkind = "repository"\n\n[groups.selected.members."archive.git"]\nkind = "repository"\n'
       )
-      await box.project.write('first/.ki-config.toml', '# first\n')
-      await box.project.write('group/.mgit-config.toml', 'version = 1\n\n[members."second"]\ntype = "standard"\n')
-      await box.project.write('group/second/.ki-config.toml', '# second\n')
-      await box.project.write('nested/main/.ki-config.toml', '# nested\n')
+      await box.project.write('first/.ki.toml', '# first\n')
+      await box.project.write(
+        'group/.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members."second"]\nkind = "repository"\ntype = "standard"\n'
+      )
+      await box.project.write('group/second/.ki.toml', '# second\n')
+      await box.project.write('nested/main/.ki.toml', '# nested\n')
 
       const result = await box.run('ki repo roadmap list')
 
@@ -127,27 +130,108 @@ describe('[ki repo target sets]', () => {
     test('reports every malformed mGit selection through supported roadmap listing', async () => {
       const box = await sandbox()
       const documents: readonly [string, number][] = [
-        ['version = [\n', 2],
-        ['[members."repo"]\ntype = "standard"\n', 2],
-        ['version = 1\nmembers = []\n', 2],
-        ['version = 1\n\n[members."../escape"]\ntype = "standard"\n', 2],
-        ['version = 1\n\n[members."repo"]\ntype = "standard"\nsource = 1\n', 2],
-        ['version = 1\n\n[members."repo"]\ntype = "unknown"\n', 2]
+        ['schema = [\n', 2],
+        ['kind = "repository"\n', 2],
+        ['schema = 1\nkind = "workspace"\ndefault = "default"\ngroups = []\n', 2],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members."../escape"]\nkind = "repository"\ntype = "standard"\n',
+          2
+        ],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\nsource = 1\n',
+          2
+        ],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "unknown"\n',
+          2
+        ],
+        ['schema = 1\nkind = "workspace"\ndefault = "default"\nextra = true\n\n[groups.default]\nmembers = {}\n', 2],
+        ['schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default]\nmembers = {}\nextra = true\n', 2],
+        ['schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default]\n', 2],
+        ['schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members]\nrepo = "invalid"\n', 2],
+        ['schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.repo]\nkind = "invalid"\n', 2],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.child]\nkind = "workspace"\nextra = true\n',
+          2
+        ],
+        ['schema = 1\nkind = "workspace"\ndefault = "bad group"\n\n[groups.default]\nmembers = {}\n', 2],
+        ['schema = 1\nkind = "workspace"\ndefault = "other"\n\n[groups.other]\nmembers = {}\n', 2],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default]\nmembers = {}\n\n[groups."bad group"]\nmembers = {}\n',
+          2
+        ],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "default"\ngroups.selected = "invalid"\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n',
+          2
+        ],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "missing"\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n',
+          2
+        ],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "selected"\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n\n[groups.selected]\n',
+          2
+        ],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "selected"\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n\n[groups.selected]\nmembers = []\n',
+          2
+        ],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "selected"\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n\n[groups.selected.members]\n"../repo" = { kind = "repository" }\n',
+          2
+        ],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "selected"\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n\n[groups.selected.members.repo]\nkind = "repository"\nextra = true\n',
+          2
+        ],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "selected"\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n\n[groups.selected.members.other]\nkind = "repository"\n',
+          2
+        ],
+        [
+          'schema = 1\nkind = "workspace"\ndefault = "selected"\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n\n[groups.selected.members.repo]\nkind = "workspace"\n',
+          2
+        ],
+        ['schema = 1\nkind = "repository"\nextra = true\n', 2],
+        ['schema = 1\nkind = "repository"\nsymlinks = []\n', 2],
+        ['schema = 1\nkind = "unknown"\n', 2]
       ]
 
       for (const [document, exitCode] of documents) {
-        await box.project.write('.mgit-config.toml', document)
+        await box.project.write('.mgit.toml', document)
         expect((await box.run('ki repo roadmap list')).exitCode).toBe(exitCode)
       }
     })
+
+    test('rejects unsafe manifests and non-workspace child manifests', async () => {
+      const unsafe = await sandbox()
+      await unsafe.project.mkdir('.mgit.toml')
+      const unsafeResult = await unsafe.run('ki repo roadmap list')
+
+      const child = await sandbox()
+      await child.project.write(
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.child]\nkind = "workspace"\n'
+      )
+      await child.project.write('child/.mgit.toml', 'schema = 1\nkind = "repository"\n')
+      const childResult = await child.run('ki repo roadmap list')
+
+      expect(unsafeResult.exitCode).toBe(2)
+      expect(unsafeResult.output).toContain('.mgit.toml must be a regular file')
+      expect(childResult.exitCode).toBe(2)
+      expect(childResult.output).toContain('child workspace child must contain workspace-kind .mgit.toml')
+    })
     // KI-TOOL-CLI-030 decision: an mGit document that names members selects those members and not
-    // the repository it sits in, even when that directory carries its own `.ki-config.toml`. A
+    // the repository it sits in, even when that directory carries its own `.ki.toml`. A
     // workspace root's declaration governs the workspace; its members are audited on their own.
     test('selects only the members of an mGit document that also sits in a KI repository', async () => {
       const box = await sandbox()
-      await box.project.write('.mgit-config.toml', 'version = 1\n\n[members."first"]\ntype = "standard"\n')
-      await box.project.write('.ki-config.toml', '# workspace root\n')
-      await box.project.write('first/.ki-config.toml', '# first\n')
+      await box.project.write(
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members."first"]\nkind = "repository"\ntype = "standard"\n'
+      )
+      await box.project.write('.ki.toml', '# workspace root\n')
+      await box.project.write('first/.ki.toml', '# first\n')
       const root = await realpath(box.project.path)
 
       const result = await box.run('ki repo roadmap list')
@@ -156,17 +240,13 @@ describe('[ki repo target sets]', () => {
       expect(result.output).not.toContain(`(${root})\n`)
     })
 
-    // KI-TOOL-CLI-030. `mgit register` writes `.mgit-config.toml` into an ordinary single
-    // repository to carry a `[symlinks]` table alone. Treating its presence as a workspace root
-    // selected nothing there, so `ki repo audit` completed over no repository and exited `0` — a
-    // silent success a governance sweep reads as a clean estate.
-    test('audits the repository an mGit document naming no members sits in', async () => {
+    test('audits the repository a repository-kind mGit manifest sits in', async () => {
       const box = await sandbox()
       await box.project.write(
-        '.mgit-config.toml',
-        'version = 1\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n'
+        '.mgit.toml',
+        'schema = 1\nkind = "repository"\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n'
       )
-      await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({ rubric: rubric('[]') })
       const root = await realpath(box.project.path)
 
@@ -177,11 +257,11 @@ describe('[ki repo target sets]', () => {
       expect(result.output).toContain('PASS · 1 skill')
     })
 
-    test('fails loudly when an mGit document names no members and no repository is discoverable', async () => {
+    test('fails loudly when a repository-kind mGit manifest has no discoverable KI repository', async () => {
       const box = await sandbox()
       await box.project.write(
-        '.mgit-config.toml',
-        'version = 1\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n'
+        '.mgit.toml',
+        'schema = 1\nkind = "repository"\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n'
       )
 
       const result = await box.run('ki repo audit')
@@ -193,8 +273,8 @@ describe('[ki repo target sets]', () => {
 
     test('runs audit independently for every preflighted explicit target', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.root.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({ rubric: rubric('[]') })
       const first = await realpath(`${box.root.path}/first`)
       const second = await realpath(`${box.root.path}/second`)
@@ -217,9 +297,9 @@ describe('[ki repo target sets]', () => {
 
     test('recaps every repository verdict and aggregate finding volume', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.root.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.root.write('third/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('third/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [
           {
@@ -253,8 +333,8 @@ describe('[ki repo target sets]', () => {
 
     test('conforms every explicit target independently after all targets preflight', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.root.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'MARK-1', title: 'Marker', level: 'FAIL', phase: 'PRIMARY',
@@ -277,7 +357,7 @@ describe('[ki repo target sets]', () => {
 
     test('does not mutate an earlier target when a later target fails preflight', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.root.mkdir('not-a-repository')
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
@@ -303,15 +383,15 @@ describe('[ki repo target sets]', () => {
 
       expect(result).toEqual({
         exitCode: 2,
-        output: 'ki: error: --repo must name a repository containing .ki-config.toml\n'
+        output: 'ki: error: --repo must name a repository containing .ki.toml\n'
       })
       await expect(lstat(`${first}/marker.txt`)).rejects.toThrow()
     })
 
     test('retains an earlier mutation when a later selected target fails', async () => {
       const box = await sandbox()
-      await box.root.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
-      await box.root.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.root.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({
         rubric: rubric(`[{ code: 'F', title: 'Family', items: [{
           kind: 'mechanical', code: 'MARK-1', title: 'Marker', level: 'FAIL', phase: 'PRIMARY',

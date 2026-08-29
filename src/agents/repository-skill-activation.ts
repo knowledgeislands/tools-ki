@@ -56,12 +56,12 @@ export const createRepositorySkillActivation = async (options: {
   readonly configurationDirectory: string
   readonly homeDirectory: string
   readonly repository: string
-  readonly repositoryConfiguration: string
+  readonly repositoryDeclaration: string
   readonly skills: readonly ResolvedSkill[]
 }): Promise<RepositorySkillActivationHost> => {
   const [agents, runtimes] = await Promise.all([
     configuredAgents({ configurationDirectory: options.configurationDirectory, homeDirectory: options.homeDirectory }),
-    repositorySupportedRuntimes(options.repositoryConfiguration)
+    repositorySupportedRuntimes(options.repositoryDeclaration)
   ])
   const skills = new Map(
     options.skills

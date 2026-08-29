@@ -40,7 +40,7 @@ export const createRepoDiagCommand = (
               children: health.diagnostic
                 ? [{ label: `${presentation('status.fail').terminal} Repository: ${health.diagnostic}` }]
                 : [
-                    { label: `Configuration: ${health.configuration}` },
+                    { label: `Declaration: ${health.declaration}` },
                     { label: `Status: ${health.health}` },
                     ...health.localProviders.map((skill) => ({ label: describeRepositoryLocalProvider(skill) })),
                     ...health.projections.map((projection) => ({ label: describeRepositoryProjection(projection) }))

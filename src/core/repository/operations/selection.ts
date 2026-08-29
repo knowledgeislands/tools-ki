@@ -13,7 +13,7 @@ export const resolveSkillsForRepositories = async (
       repository,
       skills: await resolveRepositoryDeclaredSkills(
         repository.root,
-        await readRepositoryDeclaration(repository.configuration),
+        await readRepositoryDeclaration(repository.declaration),
         harnesses,
         skill
       )

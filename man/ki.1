@@ -361,7 +361,7 @@ Check the user configuration, configured agent skill directories, installed
 harnesses, and configured KI user-skill links without changing state. It also
 reports direct-CWD legacy \fB.ki-meta/\fR and \fB.ki/\fR directories, without
 searching for or operating on a repository. It validates a regular direct-CWD
-\fB.ki-config.toml\fR declaration without resolving its providers. A failing
+\fB.ki.toml\fR declaration without resolving its providers. A failing
 check produces a non-zero exit status after the complete report.
 .TP
 .B ki manage repair [--dry-run]
@@ -425,13 +425,14 @@ rejects unmatched patterns, invalid roots, and duplicate physical roots.
 Select every member of one declared named Agora, or every registered canonical
 repository through the reserved \fBestate\fR selector. This option,
 \fB--repo\fR, and \fB--estate\fR are mutually exclusive. Each member must be a physical KI
-repository. With neither selector, KI checks a regular direct-CWD
-\fB.mgit-config.toml\fR and follows it only when it names member
-repositories; a document that names none describes the repository it sits in,
-so KI discovers one repository from the current working directory instead. It
-never searches ancestor directories for an mGit configuration or invokes
-\fBmgit\fR. Selection never resolves to no repository: every selector either
-selects at least one repository or fails with a message and a non-zero exit.
+repository. With neither selector, KI checks a regular direct-CWD schema-one
+\fB.mgit.toml\fR manifest. A workspace manifest selects its configured group,
+recurses through child workspaces, follows standard and nested repositories,
+and skips bare stores. A repository manifest falls through to ordinary
+single-repository discovery. KI never searches ancestor directories for an
+mGit manifest or invokes \fBmgit\fR. Selection never resolves to no repository:
+every selector either selects at least one repository or fails with a message
+and a non-zero exit.
 .TP
 .B --estate
 Select every repository in the registered estate. This is shorthand for
@@ -456,7 +457,7 @@ registers the physical root in \fB$XDG_STATE_HOME/ki/registry.toml\fR. It
 never runs
 \fBgit init\fR, guesses identity, activates repository skills, creates a
 Agora, accepts repository selectors, or overwrites an existing
-\fB.ki-config.toml\fR.
+\fB.ki.toml\fR.
 .TP
 .B ki repo [repo-options] open --target <zed|vscode> [--stores|--no-stores]
 Open every selected canonical repository in the requested local target. By
@@ -830,8 +831,8 @@ to inspect the effective values.
 .SH FILES
 \&
 .TP
-.I .ki-config.toml
-Required repository configuration at a KI repository root.
+.I .ki.toml
+Required repository declaration at a KI repository root.
 \fB[repo]\fR names the harnesses that provide the repository's skills, and each
 governing skill is declared by its bare name under \fB[skills]\fR, carrying its
 own configuration. A provider must appear in the Harness list before its skill

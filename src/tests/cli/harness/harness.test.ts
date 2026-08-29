@@ -32,7 +32,7 @@ describe('[ki harness]', () => {
     test('renders every installed harness in order', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()
-      await box.data.write('ki/harnesses/other/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
+      await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
       await box.data.write(
         'ki/harnesses/other/harness/skills/other-example/SKILL.md',
         '---\nname: other-example\nki-depends-on: []\n---\n'
@@ -82,7 +82,7 @@ describe('[ki harness]', () => {
     test('renders an installed harness with no capabilities', async () => {
       const box = await sandbox()
       await box.data.mkdir('ki/harnesses/empty/harness/skills')
-      await box.data.write('ki/harnesses/empty/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "empty"\n')
+      await box.data.write('ki/harnesses/empty/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "empty"\n')
 
       const info = await box.run('ki harness info empty/harness')
 
@@ -442,12 +442,30 @@ releases = [
       const result = await box.run('ki harness install example/harness')
 
       expect(result.exitCode).toBe(1)
-      expect(result.output).toContain('.ki-config.toml must be a regular file')
+      expect(result.output).toContain('harness archive must contain .ki.toml')
       await expect(lstat(`${box.data.path}/ki/harnesses/example/harness`)).rejects.toThrow()
     })
 
+    test('rejects repeated Harness declarations in an archive', async () => {
+      const box = await sandbox()
+      const { payload, sha256 } = makeHarnessArchive(
+        { 'skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n' },
+        { duplicateMetadata: true }
+      )
+      await box.config.write(
+        'ki/config.toml',
+        `[harnesses]\nreleases = [{ id = "example/harness", url = "https://releases.example.test/example.tgz", sha256 = "${sha256}" }]\n`
+      )
+      box.setFetcher(async () => new Response(payload))
+
+      const result = await box.run('ki harness install example/harness')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('harness archive must contain .ki.toml exactly once')
+    })
+
     test.each([
-      ['invalid TOML', 'not = [toml', '.ki-config.toml must be valid TOML'],
+      ['invalid TOML', 'not = [toml', '.ki.toml must be valid TOML'],
       [
         'an invalid prefix',
         '[skills.ki-repo-harness]\nprefix = "not-valid"\n',
@@ -466,7 +484,7 @@ releases = [
     ])('refuses %s in Harness prefix metadata', async (_case, metadata, message) => {
       const box = await sandbox()
       const { payload, sha256 } = makeHarnessArchive({
-        'source/.ki-config.toml': metadata,
+        'source/.ki.toml': metadata,
         'source/skills/ki-example/SKILL.md': '---\nname: ki-example\nki-depends-on: []\n---\n'
       })
       await box.config.write(
@@ -893,6 +911,17 @@ releases = [
 
       expect(info.exitCode).toBe(1)
       expect(info.output).toContain('must declare frontmatter')
+    })
+
+    test('rejects an installed Harness without its declaration', async () => {
+      const box = await sandbox()
+      await box.setupExampleHarness()
+      await rm(`${box.data.path}/ki/harnesses/example/harness/.ki.toml`)
+
+      const info = await box.run('ki harness info example/harness')
+
+      expect(info.exitCode).toBe(1)
+      expect(info.output).toContain('.ki.toml must be a regular file')
     })
 
     test('rejects an installed harness whose payload contains a symlink', async () => {

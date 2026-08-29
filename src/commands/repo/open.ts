@@ -46,7 +46,7 @@ export const createRepoOpenCommand = (
       for (const repository of repositories) {
         roots.push(repository.root)
         if (!includeStores) continue
-        const declaration = await readRepositoryDeclaration(repository.configuration)
+        const declaration = await readRepositoryDeclaration(repository.declaration)
         if (!declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) continue
         const registry = await inspectLocalRegistry(context.paths.state)
         if (registry.state === 'invalid')

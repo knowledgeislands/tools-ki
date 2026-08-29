@@ -122,7 +122,7 @@ const setupExampleHarness = async (
   const selectedIdentifier =
     identifier === 'example/harness' && prefix === 'ki' && canonicalInstalled?.isDirectory() ? canonical : identifier
   const root = `ki/harnesses/${selectedIdentifier}`
-  await data.write(`${root}/.ki-config.toml`, `[skills.ki-repo-harness]\nprefix = ${JSON.stringify(prefix)}\n`)
+  await data.write(`${root}/.ki.toml`, `[skills.ki-repo-harness]\nprefix = ${JSON.stringify(prefix)}\n`)
   const base = `${root}/skills/${name}`
   await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
   if (rubric !== undefined) await data.write(`${base}/scripts/rubric/items/index.ts`, rubric)
@@ -140,8 +140,8 @@ const setupRepositoryLocalSkill = async (
   if (rubric !== undefined) await project.write(`${source}/scripts/rubric/items/index.ts`, rubric)
 }
 
-const writeBootstrapHarness = async (area: SandboxArea, base: string): Promise<void> => {
-  await area.write(`${base}/.ki-config.toml`, '[skills.ki-repo-harness]\nprefix = "ki"\n')
+const writeBootstrapHarness = async (area: SandboxArea, base: string, metadataFile = '.ki.toml'): Promise<void> => {
+  await area.write(`${base}/${metadataFile}`, '[skills.ki-repo-harness]\nprefix = "ki"\n')
   await Promise.all(['subagents', 'hooks'].map((payload) => area.mkdir(`${base}/${payload}`)))
   for (const skill of bootstrapHarnessSkills) {
     const group = skill === 'ki-bootstrap' ? 'keystone' : 'change-management'
@@ -157,7 +157,7 @@ const setupCanonicalHarness = (data: SandboxArea): Promise<void> =>
 // development checkout instead of an installed harness. Returns the checkout's real
 // path, since callers select it through the named set command before enabling it.
 const setupLocalCanonicalHarness = async (root: SandboxArea, relativePath: string): Promise<string> => {
-  await writeBootstrapHarness(root, relativePath)
+  await writeBootstrapHarness(root, relativePath, '.ki.toml')
   return realpath(join(root.path, relativePath))
 }
 

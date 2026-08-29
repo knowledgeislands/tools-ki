@@ -28,7 +28,7 @@ export const createRegistryAddCommand = (context: KiContext, selectedRepositorie
       const declarations = await Promise.all(
         repositories.map(async (repository) => ({
           repository,
-          declaration: await readRepositoryDeclaration(repository.configuration)
+          declaration: await readRepositoryDeclaration(repository.declaration)
         }))
       )
       const sourcesTargets = declarations.filter(({ declaration }) =>

@@ -98,7 +98,7 @@ ids = ["example:skill", "example:skill"]
 
   test('does not inspect repository state for user diagnostics', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '# repo\n')
+    await box.project.write('.ki.toml', '# repo\n')
 
     const diag = await box.run('ki manage diag')
 
@@ -107,7 +107,7 @@ ids = ["example:skill", "example:skill"]
 
   test('does not expand a direct mGit container for diagnostics', async () => {
     const box = await sandbox()
-    await box.project.write('.mgit-config.toml', 'version = 1\n')
+    await box.project.write('.mgit.toml', 'schema = 1\nkind = "repository"\n')
 
     const diag = await box.run('ki manage diag')
 
@@ -124,7 +124,7 @@ ids = ["example:skill", "example:skill"]
       identifier: 'knowledgeislands/ki-agentic-harness'
     })
     await box.setupExampleHarness({ identifier: 'knowledgeislands/ki-agentic-harness' })
-    await box.project.write('.ki-config.toml', repositoryConfiguration)
+    await box.project.write('.ki.toml', repositoryConfiguration)
     const managed = await box.run('ki manage diag')
     const repository = await box.run('ki repo diag')
     const root = await realpath(box.project.path)
@@ -133,14 +133,14 @@ ids = ["example:skill", "example:skill"]
     expect(managed.output).not.toContain('Repository')
     expect(repository.exitCode).toBe(0)
     expect(repository.output).toContain(`╰─ ${root} (repairable)`)
-    expect(repository.output).toContain(`Configuration: ${root}/.ki-config.toml`)
+    expect(repository.output).toContain(`Declaration: ${root}/.ki.toml`)
     expect(repository.output).toContain('chatgpt-codex ki-example: projection is missing')
   })
 
   test('does not inspect an unsafe direct repository declaration', async () => {
     const box = await sandbox()
     await box.project.write('actual.toml', repositoryConfiguration)
-    await symlink(`${box.project.path}/actual.toml`, `${box.project.path}/.ki-config.toml`)
+    await symlink(`${box.project.path}/actual.toml`, `${box.project.path}/.ki.toml`)
 
     const diag = await box.run('ki manage diag')
 

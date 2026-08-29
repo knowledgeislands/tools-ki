@@ -24,7 +24,7 @@ describe('[ki manage list]', () => {
         ''
       ].join('\n')
     )
-    await box.project.write('.ki-config.toml', '[ki-example\n')
+    await box.project.write('.ki.toml', '[ki-example\n')
     const configuration = await box.config.read('ki/config.toml')
 
     const result = await box.run('ki manage list')
@@ -52,7 +52,7 @@ describe('[ki manage list]', () => {
   test('renders every installed harness in its capability section', async () => {
     const box = await sandbox()
     await box.setupExampleHarness()
-    await box.data.write('ki/harnesses/other/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
+    await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "other"\n')
     await box.data.write(
       'ki/harnesses/other/harness/skills/other-example/SKILL.md',
       '---\nname: other-example\nki-depends-on: []\n---\n'
@@ -86,10 +86,10 @@ describe('[ki manage list]', () => {
 
   test('rejects arguments and invalid user configuration without inspecting repository declarations', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', '[ki-example\n')
+    await box.project.write('.ki.toml', '[ki-example\n')
     const grammar = await box.run('ki manage list unexpected')
     const invalidDeclaration = await box.run('ki manage list')
-    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
     await box.config.write('ki/config.toml', '[agents\n')
     const invalidConfiguration = await box.run('ki manage list')
 

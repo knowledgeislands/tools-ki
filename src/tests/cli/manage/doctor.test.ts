@@ -24,7 +24,7 @@ describe('[ki manage doctor]', () => {
     const doctor = await box.run('ki manage doctor')
 
     expect(doctor.output).toContain(
-      '✗ Legacy repository state: .ki-meta/, .ki/ detected; remove after migrating to .ki-config.toml'
+      '✗ Legacy repository state: .ki-meta/, .ki/ detected; remove after migrating to .ki.toml'
     )
     expect(doctor.exitCode).toBe(1)
   })
@@ -33,28 +33,28 @@ describe('[ki manage doctor]', () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
-    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
 
     const valid = await box.run('ki manage doctor')
-    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.repository]\n')
+    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.repository]\n')
     const legacyDeclaration = await box.run('ki manage doctor')
-    await rm(`${box.project.path}/.ki-config.toml`)
-    await box.project.mkdir('.ki-config.toml')
+    await rm(`${box.project.path}/.ki.toml`)
+    await box.project.mkdir('.ki.toml')
     const directory = await box.run('ki manage doctor')
-    await rm(`${box.project.path}/.ki-config.toml`, { recursive: true })
+    await rm(`${box.project.path}/.ki.toml`, { recursive: true })
     await box.root.write('linked-config.toml', '# config\n')
-    await symlink(`${box.root.path}/linked-config.toml`, `${box.project.path}/.ki-config.toml`)
+    await symlink(`${box.root.path}/linked-config.toml`, `${box.project.path}/.ki.toml`)
     const symbolic = await box.run('ki manage doctor')
 
     expect(valid).toEqual({
       exitCode: 0,
-      output: expect.stringContaining('✓ Repository configuration: 0 declared skills')
+      output: expect.stringContaining('✓ Repository declaration: 0 declared skills')
     })
     expect(legacyDeclaration.output).toContain(
-      '✗ Repository configuration: declared skill repository must be [skills.<prefix>-<name>]'
+      '✗ Repository declaration: declared skill repository must be [skills.<prefix>-<name>]'
     )
-    expect(directory.output).toContain('✗ Repository configuration: .ki-config.toml must be a regular file')
-    expect(symbolic.output).toContain('✗ Repository configuration: .ki-config.toml must be a regular file')
+    expect(directory.output).toContain('✗ Repository declaration: .ki.toml must be a regular file')
+    expect(symbolic.output).toContain('✗ Repository declaration: .ki.toml must be a regular file')
   })
 
   test('reports broken environment with invalid config and missing harness', async () => {

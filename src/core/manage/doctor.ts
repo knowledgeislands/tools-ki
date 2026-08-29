@@ -80,20 +80,20 @@ const legacyRepositoryStructures = async (port: ManageDoctorPort, directory: str
   return present.filter((entry) => entry.present).map((entry) => entry.structure)
 }
 
-const repositoryConfigurationCheck = async (
+const repositoryDeclarationCheck = async (
   port: ManageDoctorPort,
   directory: string
 ): Promise<ManageDoctorCheck | undefined> => {
-  const path = join(directory, '.ki-config.toml')
+  const path = join(directory, '.ki.toml')
   const state = await port.lstat(path)
   if (!state) return undefined
   if (!state.isFile() || state.isSymbolicLink())
-    return { status: 'fail', label: 'Repository configuration', detail: '.ki-config.toml must be a regular file' }
+    return { status: 'fail', label: 'Repository declaration', detail: '.ki.toml must be a regular file' }
   try {
     const skills = await port.readRepositorySkills(path)
-    return { status: 'pass', label: 'Repository configuration', detail: `${skills.length} declared skills` }
+    return { status: 'pass', label: 'Repository declaration', detail: `${skills.length} declared skills` }
   } catch (error) {
-    return { status: 'fail', label: 'Repository configuration', detail: (error as Error).message }
+    return { status: 'fail', label: 'Repository declaration', detail: (error as Error).message }
   }
 }
 
@@ -124,11 +124,11 @@ export const inspectManageDoctor = async (
     checks.push({
       status: 'fail',
       label: 'Legacy repository state',
-      detail: `${legacy.map((structure) => `${structure}/`).join(', ')} detected; remove after migrating to .ki-config.toml`
+      detail: `${legacy.map((structure) => `${structure}/`).join(', ')} detected; remove after migrating to .ki.toml`
     })
   }
-  const repositoryConfiguration = await repositoryConfigurationCheck(port, options.workingDirectory)
-  if (repositoryConfiguration) checks.push(repositoryConfiguration)
+  const repositoryDeclaration = await repositoryDeclarationCheck(port, options.workingDirectory)
+  if (repositoryDeclaration) checks.push(repositoryDeclaration)
   if (configuration.state === 'valid') {
     checks.push({ status: 'pass', label: 'Configuration', detail: configuration.path })
   } else if (configuration.state === 'missing') {

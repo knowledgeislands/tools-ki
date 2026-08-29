@@ -35,7 +35,7 @@ describe('[ki repo open]', () => {
     const box = await sandbox()
     const notes = await realpath(box.project.path)
     const sources = await box.root.mkdir('sources')
-    await box.project.write('.ki-config.toml', repositoryConfiguration('https://github.com/example/knowledge', true))
+    await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/knowledge', true))
     await box.state.write(
       'ki/registry.toml',
       localRegistry([{ key: 'knowledge', repository: 'https://github.com/example/knowledge', path: notes, sources }])
@@ -56,7 +56,7 @@ describe('[ki repo open]', () => {
   test('opens only canonical notes roots with --no-stores and requires a complete binding otherwise', async () => {
     const box = await sandbox()
     const notes = await realpath(box.project.path)
-    await box.project.write('.ki-config.toml', repositoryConfiguration('https://github.com/example/knowledge', true))
+    await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/knowledge', true))
     const calls: string[] = []
     box.setRunner(async (command, arguments_) => {
       calls.push(`${command} ${arguments_.join(' ')}`)
@@ -80,8 +80,8 @@ describe('[ki repo open]', () => {
     const second = await box.root.mkdir('second')
     const firstSources = await box.root.mkdir('first-sources')
     const secondSources = await box.root.mkdir('second-sources')
-    await box.project.write('.ki-config.toml', repositoryConfiguration('https://github.com/example/first', true))
-    await box.root.write('second/.ki-config.toml', repositoryConfiguration('https://github.com/example/second', true))
+    await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/first', true))
+    await box.root.write('second/.ki.toml', repositoryConfiguration('https://github.com/example/second', true))
     await box.state.write(
       'ki/registry.toml',
       localRegistry([
@@ -120,7 +120,7 @@ describe('[ki repo open]', () => {
 
   test('rejects conflicting store switches and unsupported targets', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', repositoryConfiguration('https://github.com/example/project'))
+    await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/project'))
 
     expect(await box.run('ki repo open --target terminal')).toEqual({
       exitCode: 2,
@@ -134,7 +134,7 @@ describe('[ki repo open]', () => {
 
   test('rejects an invalid local registry before opening a declared sources store', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', repositoryConfiguration('https://github.com/example/knowledge', true))
+    await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/knowledge', true))
     await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
 
     expect(await box.run('ki repo open --target vscode')).toEqual({
@@ -155,7 +155,7 @@ describe('[ki repo open]', () => {
 
     for (const scenario of cases) {
       const box = await sandbox()
-      await box.project.write('.ki-config.toml', repositoryConfiguration('https://github.com/example/project'))
+      await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/project'))
       box.setRunner(async (_command, arguments_) => {
         if (scenario.target === 'zed' && scenario.stage === 'root' && arguments_[0] === '-n')
           return { exitCode: 0, output: '' }

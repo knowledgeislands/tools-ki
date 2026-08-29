@@ -131,7 +131,7 @@ export const listRoadmap = async (
       const trades = inventory.estate.filter((trade) => trade.root === repository.root)
       const tradeContext = inventory.diagnostic ? { tradeDiagnostic: inventory.diagnostic } : {}
       try {
-        const planning = await readRepositoryPlanningSource(repository.configuration)
+        const planning = await readRepositoryPlanningSource(repository.declaration)
         const items = await readWorkItemsIfPresent(repository.root, planning)
         return {
           repository: repository.root,
@@ -164,7 +164,7 @@ export const pruneRoadmap = async (
   const sources = await Promise.all(
     repositories.map(async (repository) => ({
       repository,
-      planning: await readRepositoryPlanningSource(repository.configuration)
+      planning: await readRepositoryPlanningSource(repository.declaration)
     }))
   )
   await Promise.all(sources.map(({ repository, planning }) => readWorkItems(repository.root, planning)))
@@ -184,7 +184,7 @@ export const moveRoadmapItem = async (
   requested?: string
 ): Promise<RoadmapMoveResult> => {
   const repository = await oneMutationTarget(context, selection, operation)
-  const planning = await readRepositoryPlanningSource(repository.configuration)
+  const planning = await readRepositoryPlanningSource(repository.declaration)
   const item = await selectedItem(repository.root, planning, id)
   const destination = moveHorizon(item, operation, requested)
   await updateWorkItemHorizon(repository.root, planning, id, destination)

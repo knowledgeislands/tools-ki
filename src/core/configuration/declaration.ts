@@ -1,10 +1,11 @@
 import { readFile, writeFile } from 'node:fs/promises'
+import { basename } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
 import { type SupportedRuntime, supportedRuntimes } from '../harness/index.ts'
 import { canonicalRepositoryIdentity } from '../storage/index.ts'
 
-export const REPOSITORY_CONFIGURATION_FILE = '.ki-config.toml'
+export const REPOSITORY_DECLARATION_FILE = '.ki.toml'
 export const DEFAULT_HARNESS = 'knowledgeislands/ki-agentic-harness'
 
 export interface DeclaredSkill {
@@ -38,7 +39,7 @@ const initialisationField = (value: string | undefined, name: string): string =>
   return value
 }
 
-export const renderRepositoryConfiguration = (initialisation: RepositoryInitialisation): string => {
+export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisation): string => {
   const title = initialisationField(initialisation.title, 'title')
   const description = initialisationField(initialisation.description, 'description')
   const repoCode = initialisationField(initialisation.repoCode, 'repo-code')
@@ -75,24 +76,25 @@ export const renderRepositoryConfiguration = (initialisation: RepositoryInitiali
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const skillName = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 
-const shapeError = (detail: string): KiError => new KiError(`.ki-config.toml ${detail}`, 1)
+const shapeError = (path: string, detail: string): KiError => new KiError(`${basename(path)} ${detail}`, 1)
 
-const declaredHarnesses = (parsed: Record<string, unknown>): readonly string[] => {
+const declaredHarnesses = (parsed: Record<string, unknown>, path: string): readonly string[] => {
   const repository = parsed['repo']
   if (!isRecord(repository) || !Array.isArray(repository['harnesses']))
-    throw shapeError('must declare [repo] with a harnesses array')
+    throw shapeError(path, 'must declare [repo] with a harnesses array')
   const harnesses = repository['harnesses']
   if (!harnesses.length || harnesses.some((harness) => typeof harness !== 'string' || !harnessIdentifier.test(harness)))
-    throw shapeError('[repo] harnesses must be a non-empty array of <owner>/<name> harness identifiers')
+    throw shapeError(path, '[repo] harnesses must be a non-empty array of <owner>/<name> harness identifiers')
   const identifiers = harnesses as string[]
-  if (new Set(identifiers).size !== identifiers.length) throw shapeError('[repo] harnesses must not repeat a harness')
+  if (new Set(identifiers).size !== identifiers.length)
+    throw shapeError(path, '[repo] harnesses must not repeat a harness')
   return identifiers
 }
 
-const declaredSkills = (parsed: Record<string, unknown>): readonly DeclaredSkill[] => {
+const declaredSkills = (parsed: Record<string, unknown>, path: string): readonly DeclaredSkill[] => {
   const skills = parsed['skills']
   if (skills === undefined) return []
-  if (!isRecord(skills)) throw shapeError('[skills] must be a table')
+  if (!isRecord(skills)) throw shapeError(path, '[skills] must be a table')
   const declared = Object.entries(skills).map(([key, configuration]) => {
     if (!isRecord(configuration)) throw new KiError(`declared skill ${key} must use a TOML table`, 1)
     if (!skillName.test(key)) throw new KiError(`declared skill ${key} must be [skills.<prefix>-<name>]`, 1)
@@ -106,12 +108,15 @@ export const readRepositoryDeclaration = async (configurationPath: string): Prom
   try {
     parsed = parse(await readFile(configurationPath, 'utf8'))
   } catch {
-    throw shapeError('must be valid TOML')
+    throw shapeError(configurationPath, 'must be valid TOML')
   }
   // A successfully parsed TOML document is always a table; this only guards a future parser change.
   /* v8 ignore next */
-  if (!isRecord(parsed)) throw shapeError('must be a table')
-  return { harnesses: declaredHarnesses(parsed), skills: declaredSkills(parsed) }
+  if (!isRecord(parsed)) throw shapeError(configurationPath, 'must be a table')
+  return {
+    harnesses: declaredHarnesses(parsed, configurationPath),
+    skills: declaredSkills(parsed, configurationPath)
+  }
 }
 
 export const declaredRepositoryIdentity = (declaration: RepositoryDeclaration): string => {
@@ -143,7 +148,7 @@ export const declaredKnowledgeBaseStoreRoles = (
   return roles as KnowledgeBaseStoreRole[]
 }
 
-// Declare a skill in a repository's .ki-config.toml by appending its [skills.<name>] table.
+// Declare a skill in a repository's .ki.toml by appending its [skills.<name>] table.
 // Text-appended (not re-serialised) to preserve the file's comments and formatting.
 export const declareRepositorySkill = async (
   configurationPath: string,

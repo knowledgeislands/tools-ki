@@ -1,4 +1,4 @@
-import { realpath, symlink } from 'node:fs/promises'
+import { realpath, rm, symlink } from 'node:fs/promises'
 import { afterEach, expect, test, vi } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -96,9 +96,9 @@ test('initializes one explicit physical Git root and registers its complete KI i
 
   expect(result).toEqual({
     exitCode: 0,
-    output: `write .ki-config.toml\nwrite registry.toml\nki repo init: initialized ${root}\n`
+    output: `write .ki.toml\nwrite registry.toml\nki repo init: initialized ${root}\n`
   })
-  expect(await box.project.read('.ki-config.toml')).toEqual(
+  expect(await box.project.read('.ki.toml')).toEqual(
     '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\n' +
       'repository = "https://github.com/example/project"\n' +
       'title = "Example repository"\n' +
@@ -110,7 +110,7 @@ test('initializes one explicit physical Git root and registers its complete KI i
   expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(root)}`)
 })
 
-test('initializes an explicit directory but refuses non-root, linked, and already-declared targets', async () => {
+test('initializes an explicit directory but refuses non-root, linked, declared, and unsafe targets', async () => {
   const box = await sandbox()
   await box.config.write('ki/config.toml', localConfiguration)
   const repository = await box.root.mkdir('repository')
@@ -127,6 +127,9 @@ test('initializes an explicit directory but refuses non-root, linked, and alread
   const nestedTarget = await initialise(box, nested)
   const linkedTarget = await initialise(box, linked)
   const repeated = await initialise(box, repository)
+  await rm(`${repository}/.ki.toml`)
+  await box.root.mkdir('repository/.ki.toml')
+  const unsafe = await initialise(box, repository)
 
   expect(initialized.exitCode).toBe(0)
   expect(nestedTarget).toEqual({
@@ -137,7 +140,9 @@ test('initializes an explicit directory but refuses non-root, linked, and alread
     exitCode: 2,
     output: 'ki: error: ki repo init target must be an existing physical directory\n'
   })
-  expect(repeated).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target already has .ki-config.toml\n' })
+  expect(repeated).toEqual({ exitCode: 2, output: 'ki: error: ki repo init target already has .ki.toml\n' })
+  expect(unsafe.exitCode).toBe(2)
+  expect(unsafe.output).toContain('/.ki.toml must be a regular file')
 })
 
 test('refuses non-Git targets and invalid or incomplete explicit identity metadata before writing', async () => {
@@ -221,7 +226,7 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
     exitCode: 2,
     output: 'ki: error: ki repo init does not accept --repo, --agora, or --estate\n'
   })
-  await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
+  await expect(box.project.read('.ki.toml')).rejects.toThrow()
 })
 
 test('initializes a public repository without rewriting an existing local registry entry', async () => {
@@ -253,8 +258,8 @@ test('initializes a public repository without rewriting an existing local regist
     'public'
   ])
 
-  expect(result).toEqual({ exitCode: 0, output: `write .ki-config.toml\nki repo init: initialized ${repository}\n` })
-  expect(await box.root.read('registered-repository/.ki-config.toml')).toContain('visibility = "public"')
+  expect(result).toEqual({ exitCode: 0, output: `write .ki.toml\nki repo init: initialized ${repository}\n` })
+  expect(await box.root.read('registered-repository/.ki.toml')).toContain('visibility = "public"')
 })
 
 test('leaves no declaration when local registration cannot be prepared or published', async () => {
@@ -268,14 +273,14 @@ test('leaves no declaration when local registration cannot be prepared or publis
     exitCode: 1,
     output: 'ki: error: ki environment is not bootstrapped; run `ki bootstrap` first\n'
   })
-  await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
+  await expect(box.project.read('.ki.toml')).rejects.toThrow()
 
   await box.config.write('ki/config.toml', localConfiguration)
   await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\n')
   registryWriteFailure.path = await realpath(`${box.state.path}/ki/registry.toml`)
 
   await expect(initialise(box)).rejects.toThrow('registry write failure')
-  await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
+  await expect(box.project.read('.ki.toml')).rejects.toThrow()
   expect(await box.config.read('ki/config.toml')).toEqual(localConfiguration)
 })
 
@@ -289,14 +294,14 @@ test('refuses repository initialization when the bootstrapped local configuratio
     exitCode: 1,
     output: 'ki: error: ki configuration is invalid: configuration must be valid TOML\n'
   })
-  await expect(box.project.read('.ki-config.toml')).rejects.toThrow()
+  await expect(box.project.read('.ki.toml')).rejects.toThrow()
 })
 
 test('audits, conforms, and lists the local ki-repo registry without discovering other paths', async () => {
   const box = await sandbox()
   await box.setupExampleHarness({ name: 'ki-repo', rubric })
   await box.project.write(
-    '.ki-config.toml',
+    '.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
   )
   await box.config.write('ki/config.toml', localConfiguration)
@@ -322,7 +327,7 @@ test('audits, conforms, and lists the local ki-repo registry without discovering
 test('registers a selected KI repository carrying a canonical identity', async () => {
   const box = await sandbox()
   await box.project.write(
-    '.ki-config.toml',
+    '.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
   )
   await box.config.write('ki/config.toml', localConfiguration)
@@ -341,7 +346,7 @@ test('registers a selected KI repository carrying a canonical identity', async (
 
 test('refuses a repository registration without a declared canonical identity', async () => {
   const box = await sandbox()
-  await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\n')
+  await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\n')
 
   expect(await box.run('ki registry add')).toEqual({
     exitCode: 1,
@@ -353,7 +358,7 @@ test('refuses a repository whose local directory name cannot become a registry k
   const box = await sandbox()
   const repository = await box.root.mkdir('UPPER')
   await box.root.write(
-    'UPPER/.ki-config.toml',
+    'UPPER/.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
   )
 
@@ -366,7 +371,7 @@ test('refuses a repository whose local directory name cannot become a registry k
 test('preserves and extends an existing local repository registry in deterministic order', async () => {
   const box = await sandbox()
   await box.project.write(
-    '.ki-config.toml',
+    '.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
   )
   const later = await box.root.mkdir('z-later')
@@ -398,7 +403,7 @@ test('reports missing, invalid, and unsafe local registry configuration without 
   const box = await sandbox()
   await box.setupExampleHarness({ name: 'ki-repo', rubric })
   await box.project.write(
-    '.ki-config.toml',
+    '.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
   )
 
@@ -466,11 +471,11 @@ test('lists registered repositories as a newline-delimited absolute-path stream'
   const first = await box.root.mkdir('first')
   const second = await box.root.mkdir('second')
   await box.root.write(
-    'first/.ki-config.toml',
+    'first/.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/first"\n'
   )
   await box.root.write(
-    'second/.ki-config.toml',
+    'second/.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/second"\n'
   )
   await box.state.write(
@@ -508,7 +513,7 @@ test('rejects malformed state records and conflicting local bindings', async () 
   const box = await sandbox()
   const root = await realpath(box.project.path)
   await box.project.write(
-    '.ki-config.toml',
+    '.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
   )
   const list = (): Promise<{ readonly exitCode: number; readonly output: string }> => box.run('ki registry list')
@@ -589,10 +594,10 @@ test('registers and atomically replaces a declared Knowledge Base sources bindin
   const identity = 'https://github.com/example/knowledge'
   const configuration =
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
-  await box.root.write('first-notes/.ki-config.toml', configuration)
-  await box.root.write('second-notes/.ki-config.toml', configuration)
+  await box.root.write('first-notes/.ki.toml', configuration)
+  await box.root.write('second-notes/.ki.toml', configuration)
   await box.root.write(
-    'ordinary-notes/.ki-config.toml',
+    'ordinary-notes/.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\n'
   )
 
@@ -620,7 +625,7 @@ test('refuses incomplete and unsafe declared Knowledge Base source bindings with
   const identity = 'https://github.com/example/knowledge'
   const configuration =
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
-  await box.project.write('.ki-config.toml', configuration)
+  await box.project.write('.ki.toml', configuration)
   const before = `schema = 1\n\n[repositories."project"]\nrepository = ${JSON.stringify(identity)}\npath = ${JSON.stringify(root)}\n`
   await box.state.write('ki/registry.toml', before)
   await box.project.write('source-file', 'not a directory\n')
@@ -647,11 +652,11 @@ test('requires source binding options to match exactly one selected Knowledge Ba
   const ordinary = await box.root.mkdir('ordinary')
   const sources = await box.root.mkdir('sources')
   await box.project.write(
-    '.ki-config.toml',
+    '.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
   )
   await box.root.write(
-    'ordinary/.ki-config.toml',
+    'ordinary/.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/ordinary"\n'
   )
 
@@ -677,7 +682,7 @@ test('rejects every malformed Knowledge Base store-role declaration through the 
   ] as const
 
   for (const [declaration, detail] of cases) {
-    await box.project.write('.ki-config.toml', `${base}${declaration}\n`)
+    await box.project.write('.ki.toml', `${base}${declaration}\n`)
     const result = await box.run('ki registry add')
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain(detail)
@@ -691,7 +696,7 @@ test('does not automatically register a Knowledge Base whose declared sources la
   const sources = await box.root.mkdir('sources')
   await box.config.write('ki/config.toml', localConfiguration)
   await box.project.write(
-    '.ki-config.toml',
+    '.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
   )
 

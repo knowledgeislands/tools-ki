@@ -25,7 +25,7 @@ export const createUpgradeCommand = (
       for (const repository of repositories) {
         const skills = await resolveRepositoryDeclaredSkills(
           repository.root,
-          await readRepositoryDeclaration(repository.configuration),
+          await readRepositoryDeclaration(repository.declaration),
           harnesses
         )
         const selected = [

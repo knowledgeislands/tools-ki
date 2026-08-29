@@ -17,6 +17,7 @@ export type ArchiveEntry =
 export interface ArchiveOptions {
   readonly terminatingBlocks?: boolean
   readonly harnessPrefix?: string | null
+  readonly duplicateMetadata?: boolean
 }
 
 const octal = (value: number, length: number): string => `${value.toString(8).padStart(length - 1, '0')}\0`
@@ -28,7 +29,7 @@ export interface HarnessArchive {
 
 export const makeHarnessArchive = (
   files: Readonly<Record<string, ArchiveEntry>>,
-  { terminatingBlocks = true, harnessPrefix = 'ki' }: ArchiveOptions = {}
+  { terminatingBlocks = true, harnessPrefix = 'ki', duplicateMetadata = false }: ArchiveOptions = {}
 ): HarnessArchive => {
   const chunks: Uint8Array[] = []
   const firstPayload = Object.entries(files).find(([path, entry]) => {
@@ -50,7 +51,7 @@ export const makeHarnessArchive = (
     firstParts.length > 1 && ['skills', 'subagents', 'hooks'].includes(firstParts[1] as string)
       ? firstParts[0]
       : undefined
-  const metadataPath = nestedPrefix && !firstEntryPrefix ? `${nestedPrefix}/.ki-config.toml` : '.ki-config.toml'
+  const metadataPath = nestedPrefix && !firstEntryPrefix ? `${nestedPrefix}/.ki.toml` : '.ki.toml'
   const metadataContents = `[skills.ki-repo-harness]\nprefix = ${JSON.stringify(harnessPrefix)}\n`
   const entries =
     harnessPrefix === null || files[metadataPath] !== undefined
@@ -62,7 +63,12 @@ export const makeHarnessArchive = (
               : metadataContents,
           ...files
         }
-  for (const [path, entry] of Object.entries(entries)) {
+  const entryPairs = Object.entries(entries)
+  if (duplicateMetadata) {
+    const metadata = entryPairs.find(([path]) => path === metadataPath)
+    if (metadata) entryPairs.push(metadata)
+  }
+  for (const [path, entry] of entryPairs) {
     const contents = typeof entry === 'string' ? entry : (entry.contents ?? '')
     const encoded = new TextEncoder().encode(contents)
     const header = new Uint8Array(512)

@@ -46,7 +46,7 @@ const registered = async (
 ): Promise<Record<string, string>> => {
   const roots: Record<string, string> = {}
   for (const declaration of declarations) {
-    await box.project.write(`${declaration.path}/.ki-config.toml`, repository(declaration.identity, declaration.agora))
+    await box.project.write(`${declaration.path}/.ki.toml`, repository(declaration.identity, declaration.agora))
     roots[declaration.path] = await box.project.mkdir(declaration.path)
   }
   await box.state.write(
@@ -354,7 +354,7 @@ describe('[ki agora]', () => {
   test('rejects a local registry identity that disagrees with its repository declaration', async () => {
     const box = await sandbox()
     const root = await box.project.mkdir('repository')
-    await box.project.write('repository/.ki-config.toml', repository('https://github.com/example/declared'))
+    await box.project.write('repository/.ki.toml', repository('https://github.com/example/declared'))
     await box.state.write(
       'ki/registry.toml',
       localRegistry([{ key: 'repository', identity: 'https://github.com/example/registered', root }])
@@ -383,7 +383,7 @@ describe('[ki agora]', () => {
     expect((await box.run('ki agora open empty --target zed')).output).toContain('opened 1 repositories')
 
     await box.project.write(
-      'home/.ki-config.toml',
+      'home/.ki.toml',
       repository(homeIdentity, home('team', 'Shared delivery', { [memberIdentity]: 'maintainer' }))
     )
     box.setRunner(async () => ({ exitCode: 7, output: 'window failed\n' }))
@@ -498,7 +498,7 @@ describe('[ki agora]', () => {
     const identity = 'https://github.com/example/home'
     const homeRoot = await box.project.mkdir('home')
     const configure = async (document: string, message: string): Promise<void> => {
-      await box.project.write('home/.ki-config.toml', document)
+      await box.project.write('home/.ki.toml', document)
       await box.state.write('ki/registry.toml', localRegistry([{ key: 'home', identity, root: homeRoot }]))
       expect((await box.run('ki agora list')).output).toContain(message)
     }
@@ -510,8 +510,8 @@ describe('[ki agora]', () => {
     expect((await box.run('ki agora list')).output).toContain('must be an existing physical directory')
     const emptyRoot = await box.project.mkdir('empty')
     await box.state.write('ki/registry.toml', localRegistry([{ key: 'empty', identity, root: emptyRoot }]))
-    expect((await box.run('ki agora list')).output).toContain('must contain a physical .ki-config.toml')
-    await configure('[repo]\nharnesses = [\n', 'has invalid .ki-config.toml')
+    expect((await box.run('ki agora list')).output).toContain('must contain a physical .ki.toml')
+    await configure('[repo]\nharnesses = [\n', 'has invalid .ki.toml')
     await configure(
       '[repo]\nharnesses = ["example/harness"]\n',
       'repository must be a canonical HTTPS GitHub repository'
@@ -571,8 +571,8 @@ describe('[ki agora]', () => {
     const memberIdentity = 'https://github.com/example/member'
     const first = await box.project.mkdir('first')
     const second = await box.project.mkdir('second')
-    await box.project.write('first/.ki-config.toml', repository(homeIdentity))
-    await box.project.write('second/.ki-config.toml', repository(homeIdentity))
+    await box.project.write('first/.ki.toml', repository(homeIdentity))
+    await box.project.write('second/.ki.toml', repository(homeIdentity))
     await box.state.write(
       'ki/registry.toml',
       localRegistry([
@@ -591,36 +591,27 @@ describe('[ki agora]', () => {
       { path: 'member', identity: memberIdentity, agora: '[skills.ki-agora]\nmemberships = []\n' }
     ])
     expect((await box.run('ki agora show team')).output).toContain('memberships must be a table')
-    await box.project.write('member/.ki-config.toml', repository(memberIdentity, '[skills.ki-agora.memberships]\n'))
+    await box.project.write('member/.ki.toml', repository(memberIdentity, '[skills.ki-agora.memberships]\n'))
     expect((await box.run('ki agora show team')).output).toContain('does not declare matching consent')
     await box.project.write(
-      'member/.ki-config.toml',
+      'member/.ki.toml',
       repository(memberIdentity, '[skills.ki-agora]\nmemberships = { team = [] }\n')
     )
     expect((await box.run('ki agora show team')).output).toContain(
       'membership in https://github.com/example/member must be a table'
     )
-    await box.project.write(
-      'member/.ki-config.toml',
-      repository(memberIdentity, membership('team', 'invalid', 'member'))
-    )
+    await box.project.write('member/.ki.toml', repository(memberIdentity, membership('team', 'invalid', 'member')))
     expect((await box.run('ki agora show team')).output).toContain('has an invalid home')
     await box.project.write(
-      'member/.ki-config.toml',
+      'member/.ki.toml',
       repository(memberIdentity, membership('team', 'https://github.com/example/other', 'member'))
     )
     expect((await box.run('ki agora show team')).output).toContain('does not declare matching consent')
-    await box.project.write(
-      'member/.ki-config.toml',
-      repository(memberIdentity, membership('team', homeIdentity, 'Bad'))
-    )
+    await box.project.write('member/.ki.toml', repository(memberIdentity, membership('team', homeIdentity, 'Bad')))
     expect((await box.run('ki agora show team')).output).toContain('has an invalid role')
+    await box.project.write('member/.ki.toml', repository(memberIdentity, membership('team', homeIdentity, 'member')))
     await box.project.write(
-      'member/.ki-config.toml',
-      repository(memberIdentity, membership('team', homeIdentity, 'member'))
-    )
-    await box.project.write(
-      'home/.ki-config.toml',
+      'home/.ki.toml',
       repository(homeIdentity, home('missing', 'Missing member', { 'https://github.com/example/missing': 'member' }))
     )
     expect((await box.run('ki agora list')).output).toContain('is not registered locally')

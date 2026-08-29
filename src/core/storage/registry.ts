@@ -11,7 +11,7 @@ import {
   discoverInstallOrphans,
   type InstalledHarness,
   type InstallOrphan,
-  inspectHarnessRoot,
+  inspectInstalledHarnessRoot,
   parkedPayloadEntry,
   readInstalledHarness,
   requireUniqueHarnessPrefixes
@@ -25,7 +25,7 @@ export type { Fetcher } from '../harness/acquire.ts'
 const harnessIdentifier = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
 const sha256 = /^[a-f0-9]{64}$/
 const payloadRoots = ['skills', 'subagents', 'hooks'] as const
-const harnessMetadataFile = '.ki-config.toml'
+const harnessMetadataFile = '.ki.toml'
 // The first canonical archive used `agents/`; `ki dev local on` may replace that
 // recognised retired layout with the current `subagents/` projection.
 const retiredCanonicalPayloadRoots = ['agents'] as const
@@ -285,7 +285,7 @@ export const installHarness = async (
     await mkdir(staging)
     await artifact.transition('active')
     await extractArchive(payload, staging)
-    const candidate = await inspectHarnessRoot(staging, identifier)
+    const candidate = await inspectInstalledHarnessRoot(staging, identifier)
     requireCapabilities(candidate, options)
     const installed = await discoverInstalledHarnesses(dataDirectory)
     requireUniqueHarnessPrefixes([...installed.filter((harness) => harness.id !== identifier), candidate])
@@ -560,7 +560,7 @@ export const uninstallHarness = async (dataDirectory: string, identifier: string
   const removal = join(ownerDirectory, `.uninstall-${randomUUID()}`)
   await rename(destination, removal)
   try {
-    await inspectHarnessRoot(removal, identifier)
+    await inspectInstalledHarnessRoot(removal, identifier)
     await rm(removal, { recursive: true, force: true })
     return
     /* v8 ignore start -- Recovery needs a filesystem failure or replacement after the successful rename; no single CLI input can cause it. */

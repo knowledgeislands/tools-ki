@@ -134,7 +134,7 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
             direction,
             kind(options.kind),
             {
-              configurationPath: async () => (await localRegisteredRepository(context)).configuration,
+              configurationPath: async () => (await localRegisteredRepository(context)).declaration,
               mutate: addTradeRoute
             }
           )
@@ -156,7 +156,7 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
             direction,
             kind(options.kind),
             {
-              configurationPath: async () => (await localRegisteredConfiguration(context)).repository.configuration,
+              configurationPath: async () => (await localRegisteredConfiguration(context)).repository.declaration,
               mutate: removeTradeRoute
             }
           )

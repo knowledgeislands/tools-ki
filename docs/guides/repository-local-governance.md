@@ -4,7 +4,7 @@ Use a repository-local `ki-self` when a Knowledge Islands repository needs audit
 
 ## Declare the provider
 
-Add an explicit empty table to the repository's `.ki-config.toml`:
+Add an explicit empty table to the repository's `.ki.toml`:
 
 ```toml
 [skills.ki-self]

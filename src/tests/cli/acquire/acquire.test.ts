@@ -384,7 +384,7 @@ describe('[ki space acquire chatgpt import]', () => {
   test('stages a capture content-addressably in the current repository Harbour', async () => {
     const box = await sandbox()
     const capture = await makeCapture(box.root.path)
-    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
+    await box.project.write('.ki.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
     await box.project.mkdir('+')
 
     const first = await box.run(`ki space acquire chatgpt import ${capture.path}`)
@@ -408,7 +408,7 @@ describe('[ki space acquire chatgpt import]', () => {
       'no KI repository found from the current working directory'
     )
 
-    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
+    await box.project.write('.ki.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
     expect((await box.run(`ki space acquire chatgpt import ${capture.path} --dry-run`)).output).toContain(
       'repository inbound working area (+) is required'
     )
@@ -417,7 +417,7 @@ describe('[ki space acquire chatgpt import]', () => {
   test('plans a valid capture without writing a Harbour package', async () => {
     const box = await sandbox()
     const capture = await makeCapture(box.root.path)
-    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
+    await box.project.write('.ki.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
     await box.project.mkdir('+')
 
     const result = await box.run(`ki space acquire chatgpt import ${capture.path} --dry-run`)
@@ -435,7 +435,7 @@ describe('[ki space acquire chatgpt import]', () => {
   test('rejects unsafe or mismatched existing Harbour stages', async () => {
     const box = await sandbox()
     const capture = await makeCapture(box.root.path)
-    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
+    await box.project.write('.ki.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
     await box.project.mkdir('+')
 
     const staged = await box.run(`ki space acquire chatgpt import ${capture.path}`)

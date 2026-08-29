@@ -46,7 +46,7 @@ export default {
 describe('[ki repo] repository-local ki-self provider', () => {
   test('audits one explicitly declared physical canonical source', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', declaration())
+    await box.project.write('.ki.toml', declaration())
     await box.setupRepositoryLocalSkill({ rubric: rubric() })
 
     const result = await box.run('ki repo audit --skill ki-self --reporter-levels info')
@@ -57,7 +57,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
 
   test('conforms generated publication inside the selected repository and re-audits', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', declaration())
+    await box.project.write('.ki.toml', declaration())
     await box.setupRepositoryLocalSkill({ rubric: rubric('ki-self', true) })
 
     const result = await box.run('ki repo conform --skill ki-self')
@@ -72,7 +72,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
   test('ignores an undeclared local source without importing it', async () => {
     const box = await sandbox()
     const sentinel = join(box.project.path, 'imported.txt')
-    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.setupRepositoryLocalSkill({ rubric: rubric('ki-self', false, sentinel) })
 
     const result = await box.run('ki repo audit --skill ki-self')
@@ -84,7 +84,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
 
   test('does not resolve a foreign repository-local skill name', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', declaration('ki-other'))
+    await box.project.write('.ki.toml', declaration('ki-other'))
     await box.setupRepositoryLocalSkill({
       source: '.agents/skills/ki-other',
       name: 'ki-other',
@@ -99,7 +99,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
 
   test('rejects a declared source with no catalogue', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', declaration())
+    await box.project.write('.ki.toml', declaration())
     await box.setupRepositoryLocalSkill()
 
     const result = await box.run('ki repo audit --skill ki-self')
@@ -110,7 +110,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
 
   test('rejects a missing declared source', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', declaration())
+    await box.project.write('.ki.toml', declaration())
 
     const result = await box.run('ki repo audit --skill ki-self')
 
@@ -121,7 +121,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
   test('rejects a linked source before importing its catalogue', async () => {
     const box = await sandbox()
     const sentinel = join(box.project.path, 'imported.txt')
-    await box.project.write('.ki-config.toml', declaration())
+    await box.project.write('.ki.toml', declaration())
     await box.root.write('external-self/SKILL.md', '---\nname: ki-self\nki-depends-on: []\n---\n')
     await box.root.write('external-self/scripts/rubric/items/index.ts', rubric('ki-self', false, sentinel))
     await box.project.mkdir('.agents/skills')
@@ -137,7 +137,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
   test('rejects a canonical source that physically escapes through an ancestor link', async () => {
     const box = await sandbox()
     const sentinel = join(box.project.path, 'imported.txt')
-    await box.project.write('.ki-config.toml', declaration())
+    await box.project.write('.ki.toml', declaration())
     await box.root.write('external-agents/skills/ki-self/SKILL.md', '---\nname: ki-self\nki-depends-on: []\n---\n')
     await box.root.write(
       'external-agents/skills/ki-self/scripts/rubric/items/index.ts',
@@ -155,7 +155,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
   test('rejects a linked catalogue before importing it', async () => {
     const box = await sandbox()
     const sentinel = join(box.project.path, 'imported.txt')
-    await box.project.write('.ki-config.toml', declaration())
+    await box.project.write('.ki.toml', declaration())
     await box.setupRepositoryLocalSkill()
     await box.root.write('external-rubric.ts', rubric('ki-self', false, sentinel))
     await box.project.mkdir('.agents/skills/ki-self/scripts/rubric/items')
@@ -173,7 +173,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
 
   test('rejects a canonical directory whose skill names a foreign capability', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', declaration())
+    await box.project.write('.ki.toml', declaration())
     await box.setupRepositoryLocalSkill({ name: 'ki-other', rubric: rubric('ki-other') })
 
     const result = await box.run('ki repo audit --skill ki-self')
@@ -184,7 +184,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
 
   test('leaves installed Harness resolution unchanged for every other skill', async () => {
     const box = await sandbox()
-    await box.project.write('.ki-config.toml', declaration('ki-example'))
+    await box.project.write('.ki.toml', declaration('ki-example'))
     await box.setupExampleHarness({ rubric: rubric('ki-example') })
 
     const result = await box.run('ki repo audit --skill ki-example --reporter-levels info')
@@ -200,14 +200,14 @@ describe('[ki repo] repository-local ki-self provider', () => {
     await box.run('ki bootstrap')
     await box.setupExampleHarness({ name: 'ki-repo' })
     await box.project.write(
-      '.ki-config.toml',
+      '.ki.toml',
       '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-self]\n'
     )
     await box.setupRepositoryLocalSkill({ rubric: rubric() })
 
     const diagnostic = await box.run('ki repo diag')
     const repair = await box.run('ki repo repair')
-    await box.project.write('.ki-config.toml', declaration())
+    await box.project.write('.ki.toml', declaration())
     const upgrade = await box.run('ki repo upgrade')
 
     expect(diagnostic.output).toContain('repository-local:ki-self: canonical repository source')

@@ -264,7 +264,7 @@ ids = []
       await bootstrapClaudeCode(box)
 
       const unavailable = await box.run('ki skill add not-installed')
-      await box.data.write('ki/harnesses/other/harness/.ki-config.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
+      await box.data.write('ki/harnesses/other/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
       await box.data.write(
         'ki/harnesses/other/harness/skills/ki-example/SKILL.md',
         '---\nname: ki-example\nki-depends-on: []\n---\n'
@@ -282,10 +282,10 @@ ids = []
         const box = await sandbox()
         await box.setupAgentHome('claude-code')
         await box.setupExampleHarness()
-        await box.project.write('.ki-config.toml', configuration)
+        await box.project.write('.ki.toml', configuration)
         await box.run('ki bootstrap')
         const result = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
-        return { output: result.output, declared: await box.project.read('.ki-config.toml') }
+        return { output: result.output, declared: await box.project.read('.ki.toml') }
       }
 
       const missing = await run('[repo]\nharnesses = ["example/harness"]\n\n[other]\nvalue = true\n')
@@ -308,7 +308,7 @@ ids = []
       expect(unsupported.output).toContain('may contain only claude-code, claude-desktop, or chatgpt-codex')
       expect(repeated.output).toContain('repeats a runtime')
       expect(retired.output).toContain('codex is retired; use chatgpt-codex')
-      expect(invalidToml.output).toContain('.ki-config.toml must be valid TOML')
+      expect(invalidToml.output).toContain('.ki.toml must be valid TOML')
       expect(
         [missing, malformed, unsupported, repeated, invalidToml].every(
           (result) => !result.declared.includes('[skills.ki-example]')
@@ -326,7 +326,7 @@ ids = []
         '---\nname: ki-example\nki-depends-on: []\nki-supported-runtimes: [chatgpt-codex]\n---\n'
       )
       await box.project.write(
-        '.ki-config.toml',
+        '.ki.toml',
         '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["chatgpt-codex"]\n'
       )
       await box.run('ki bootstrap')
@@ -338,7 +338,7 @@ ids = []
       await expect(lstat(join(box.project.path, '.claude', 'skills', 'ki-example'))).rejects.toThrow()
 
       await box.project.write(
-        '.ki-config.toml',
+        '.ki.toml',
         '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
       )
       const refused = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
@@ -348,7 +348,7 @@ ids = []
         output: "ki: error: skill ki-example is incompatible with this repository's configured agents\n"
       })
       expect(await box.project.isSymlink('.agents/skills/ki-example')).toBe(true)
-      expect((await box.project.read('.ki-config.toml')).includes('[skills.ki-example]')).toBe(false)
+      expect((await box.project.read('.ki.toml')).includes('[skills.ki-example]')).toBe(false)
     })
 
     test('rejects non-directory repositories and missing or symbolic repository configuration files', async () => {
@@ -357,7 +357,7 @@ ids = []
       const missing = await box.root.mkdir('missing-configuration')
       const linked = await box.root.mkdir('linked-configuration')
       await box.root.write('repository-configuration.toml', '# external\n')
-      await symlink(`${box.root.path}/repository-configuration.toml`, `${linked}/.ki-config.toml`)
+      await symlink(`${box.root.path}/repository-configuration.toml`, `${linked}/.ki.toml`)
 
       const file = await box.run(`ki repo --repo ${box.root.path}/not-a-repository skill add ki-example`)
       const nonexistent = await box.run(`ki repo --repo ${box.root.path}/does-not-exist skill add ki-example`)
@@ -368,19 +368,17 @@ ids = []
       expect(nonexistent).toEqual({ exitCode: 2, output: 'ki: error: --repo must be an existing directory\n' })
       expect(absent).toEqual({
         exitCode: 2,
-        output: 'ki: error: --repo must name a repository containing .ki-config.toml\n'
+        output: 'ki: error: --repo must name a repository containing .ki.toml\n'
       })
-      expect(symbolic).toEqual({
-        exitCode: 2,
-        output: 'ki: error: --repo must name a repository containing .ki-config.toml\n'
-      })
+      expect(symbolic.exitCode).toBe(2)
+      expect(symbolic.output).toContain('/.ki.toml must be a regular file')
     })
 
     test('links and declares a repository skill, then removes and undeclares it', async () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)
       await writeFile(
-        join(box.project.path, '.ki-config.toml'),
+        join(box.project.path, '.ki.toml'),
         '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
       )
       const projectRoot = await realpath(box.project.path)
@@ -388,7 +386,7 @@ ids = []
 
       const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
       const linkStat = await lstat(link)
-      const configAfterAdd = await box.project.read('.ki-config.toml')
+      const configAfterAdd = await box.project.read('.ki.toml')
       expect(added).toEqual({
         exitCode: 0,
         output: `ki repo skill add: linked ki-example into ${projectRoot} for claude-code\n`
@@ -397,7 +395,7 @@ ids = []
       expect(configAfterAdd).toContain('[skills.ki-example]')
 
       const removed = await box.run(`ki repo --repo ${box.project.path} skill remove ki-example`)
-      const configAfterRemove = await box.project.read('.ki-config.toml')
+      const configAfterRemove = await box.project.read('.ki.toml')
       expect(removed).toEqual({
         exitCode: 0,
         output: `ki repo skill remove: removed ki-example in ${projectRoot} for claude-code\n`
@@ -432,7 +430,7 @@ ids = []
         // multi-line string. Read alone it is not valid TOML, so the key reader must decline it
         // rather than fail the removal.
         await writeFile(
-          join(box.project.path, '.ki-config.toml'),
+          join(box.project.path, '.ki.toml'),
           `[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\nnotes = """\n[not a header]\n"""\n\n${spelling}\n`
         )
         const projectRoot = await realpath(box.project.path)
@@ -443,7 +441,7 @@ ids = []
           exitCode: 0,
           output: `ki repo skill remove: removed ki-example in ${projectRoot} for claude-code\n`
         })
-        expect(await box.project.read('.ki-config.toml')).not.toContain('ki-example')
+        expect(await box.project.read('.ki.toml')).not.toContain('ki-example')
       }
     })
 
@@ -455,7 +453,7 @@ ids = []
       await bootstrapClaudeCode(box)
       await setupKiHarness(box)
       await setupKiHarness(box, { name: 'ki-repo' })
-      const configuration = join(box.project.path, '.ki-config.toml')
+      const configuration = join(box.project.path, '.ki.toml')
       await writeFile(
         configuration,
         '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[skills.ki-example]\n'
@@ -472,21 +470,21 @@ ids = []
 
       expect(removed.exitCode).toBe(1)
       expect(removed.output).toContain('could not be removed from')
-      expect(await box.project.read('.ki-config.toml')).toContain('ki-example = {}')
+      expect(await box.project.read('.ki.toml')).toContain('ki-example = {}')
     })
 
     test('declares a repository skill when its configuration has no final newline', async () => {
       const box = await sandbox()
       await bootstrapClaudeCode(box)
       await box.project.write(
-        '.ki-config.toml',
+        '.ki.toml',
         '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]'
       )
 
       const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
 
       expect(added.exitCode).toBe(0)
-      expect(await box.project.read('.ki-config.toml')).toBe(
+      expect(await box.project.read('.ki.toml')).toBe(
         '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[skills.ki-example]\n'
       )
     })
@@ -495,7 +493,7 @@ ids = []
       const box = await sandbox()
       await bootstrapClaudeCode(box)
       await box.project.write(
-        '.ki-config.toml',
+        '.ki.toml',
         '[repo]\nharnesses = ["other/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
       )
 
@@ -511,7 +509,7 @@ ids = []
       const box = await sandbox()
       await bootstrapClaudeCode(box)
       await box.project.write(
-        '.ki-config.toml',
+        '.ki.toml',
         '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
       )
       const link = join(box.project.path, '.claude', 'skills', 'ki-example')
@@ -528,13 +526,13 @@ ids = []
       const box = await sandbox()
       await bootstrapClaudeCode(box)
       await box.project.write(
-        '.ki-config.toml',
+        '.ki.toml',
         '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-example]\nsetting = true\n\n[skills.ki-example.nested]\nvalue = 2\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1'
       )
 
       const repeated = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
       const removed = await box.run(`ki repo --repo ${box.project.path} skill remove ki-example`)
-      const configuration = await box.project.read('.ki-config.toml')
+      const configuration = await box.project.read('.ki.toml')
 
       expect(repeated.exitCode).toBe(0)
       expect(removed.exitCode).toBe(0)
@@ -547,10 +545,7 @@ ids = []
 
     test('rejects a non-table declared skill before preparing an educational catalogue', async () => {
       const box = await sandbox()
-      await box.project.write(
-        '.ki-config.toml',
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills]\nki-example = []\n'
-      )
+      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills]\nki-example = []\n')
 
       const result = await box.run(`ki repo --repo ${box.project.path} educate`)
 
@@ -564,7 +559,7 @@ ids = []
       const box = await sandbox()
       const preamble = '[repo]\nharnesses = ["example/harness"]\n\n'
       const run = async (configuration: string) => {
-        await box.project.write('.ki-config.toml', configuration)
+        await box.project.write('.ki.toml', configuration)
         return box.run(`ki repo --repo ${box.project.path} educate`)
       }
 
@@ -581,14 +576,14 @@ ids = []
       const malformedProvider = await run(`${preamble}[skills."invalid:ki-example"]\n`)
       const repeatedSeparator = await run(`${preamble}[skills."example/harness:ki-example:again"]\n`)
 
-      expect(unmigrated.output).toContain('.ki-config.toml must declare [repo] with a harnesses array')
-      expect(missingHarnesses.output).toContain('.ki-config.toml must declare [repo] with a harnesses array')
+      expect(unmigrated.output).toContain('.ki.toml must declare [repo] with a harnesses array')
+      expect(missingHarnesses.output).toContain('.ki.toml must declare [repo] with a harnesses array')
       for (const result of [emptyHarnesses, malformedHarness])
         expect(result.output).toContain(
           '[repo] harnesses must be a non-empty array of <owner>/<name> harness identifiers'
         )
       expect(repeatedHarness.output).toContain('[repo] harnesses must not repeat a harness')
-      expect(skillsScalar.output).toContain('.ki-config.toml [skills] must be a table')
+      expect(skillsScalar.output).toContain('.ki.toml [skills] must be a table')
       expect(notASkill.output).toContain('declared skill invalid must be [skills.<prefix>-<name>]')
       expect(malformedProvider.output).toContain('declared skill invalid:ki-example must be [skills.<prefix>-<name>]')
       expect(repeatedSeparator.output).toContain(
@@ -598,7 +593,7 @@ ids = []
 
     test('ignores non-skill tables in a repository catalogue', async () => {
       const box = await sandbox()
-      await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[other]\nvalue = 1\n')
+      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[other]\nvalue = 1\n')
 
       const result = await box.run(`ki repo --repo ${box.project.path} educate`)
 
@@ -625,7 +620,7 @@ ids = []
         '---\nname: ki-d\nki-depends-on: []\n---\n'
       )
       await box.project.write(
-        '.ki-config.toml',
+        '.ki.toml',
         '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-a]\n[skills.ki-b]\n[skills.ki-c]\n[skills.ki-d]\n'
       )
 
@@ -640,8 +635,8 @@ ids = []
       await bootstrapClaudeCode(box)
       const configuration =
         '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
-      await box.root.write('first/.ki-config.toml', configuration)
-      await box.root.write('second/.ki-config.toml', configuration)
+      await box.root.write('first/.ki.toml', configuration)
+      await box.root.write('second/.ki.toml', configuration)
       const first = await realpath(`${box.root.path}/first`)
       const second = await realpath(`${box.root.path}/second`)
 

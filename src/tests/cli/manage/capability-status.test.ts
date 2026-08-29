@@ -39,7 +39,7 @@ describe('[ki manage missing and ki manage outdated]', () => {
         ''
       ].join('\n')
     )
-    await box.project.write('.ki-config.toml', '[ki-repository\n')
+    await box.project.write('.ki.toml', '[ki-repository\n')
     const configuration = await box.config.read('ki/config.toml')
 
     const result = await box.run('ki manage missing')

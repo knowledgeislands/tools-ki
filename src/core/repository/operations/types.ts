@@ -42,7 +42,7 @@ export interface RepositoryOperationContext {
   readonly inspectUserConfiguration: (configurationDirectory: string) => Promise<UserConfigurationInspection>
   readonly createSkillActivation: (options: {
     readonly repository: string
-    readonly repositoryConfiguration: string
+    readonly repositoryDeclaration: string
     readonly skills: readonly ResolvedSkill[]
   }) => Promise<RepositorySkillActivationHost>
   readonly progress: RepositoryOperationProgress

@@ -41,7 +41,7 @@ export default {
 
 const withRubric = async (body: string): Promise<Awaited<ReturnType<typeof sandbox>>> => {
   const box = await sandbox()
-  await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+  await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
   await box.setupExampleHarness({ rubric: emittingRubric(body) })
   return box
 }
@@ -141,7 +141,7 @@ describe('[ki repo audit evidence progress]', () => {
   test('shows evidence-ready skills as full receipts, then collapses them once', async () => {
     const box = await sandbox()
     await box.project.write(
-      '.ki-config.toml',
+      '.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-first]\n[skills.ki-second]\n[skills.ki-third]\n'
     )
     await box.setupExampleHarness({ rubric: emittingRubric('', 'ki-first'), name: 'ki-first' })

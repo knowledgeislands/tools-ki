@@ -6,7 +6,7 @@ import {
   canonicalHarnessIdentifier,
   discoverInstalledHarnesses,
   type HarnessCapability,
-  inspectHarnessRoot,
+  inspectHarnessSourceRoot,
   readInstalledHarness
 } from '../core/harness/index.ts'
 import { inspectUserConfiguration, readConfiguration, renderConfiguration } from './configuration.ts'
@@ -56,7 +56,7 @@ export const installedBootstrapSkillSources = async (
 export const localBootstrapHarness = async (
   harnessDirectory: string
 ): Promise<{ readonly harness: string; readonly skills: readonly ManagedUserSkill[] }> => {
-  const inspected = await inspectHarnessRoot(resolve(harnessDirectory), canonicalHarnessIdentifier)
+  const inspected = await inspectHarnessSourceRoot(resolve(harnessDirectory), canonicalHarnessIdentifier)
   return { harness: inspected.root, skills: await bootstrapSkillSources(inspected, 'local harness') }
 }
 
@@ -78,7 +78,7 @@ export const localHarness = async (
   harnessDirectory: string,
   identifier: string
 ): Promise<{ readonly harness: string; readonly prefix: string; readonly skills: readonly ManagedUserSkill[] }> => {
-  const inspected = await inspectHarnessRoot(resolve(harnessDirectory), identifier)
+  const inspected = await inspectHarnessSourceRoot(resolve(harnessDirectory), identifier)
   if (identifier === canonicalHarnessIdentifier)
     return {
       harness: inspected.root,

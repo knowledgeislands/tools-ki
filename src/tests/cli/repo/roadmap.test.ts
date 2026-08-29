@@ -85,7 +85,7 @@ const knowledgeBaseMetadata = {
 describe('[ki repo roadmap]', () => {
   test('lists flat Knowledge Base work items from the declared Streams roadmap and ignores its ledger', async () => {
     const box = await sandbox()
-    await box.project.write('knowledge/.ki-config.toml', knowledgeBaseConfiguration())
+    await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
     await box.project.write('knowledge/Streams/Roadmap/_ISSUES.md', 'last_id: 2\n')
     await box.project.write(
       'knowledge/Streams/Roadmap/Roadmap.md',
@@ -120,12 +120,12 @@ describe('[ki repo roadmap]', () => {
 
   test('projects adapter-owned KB metadata alongside a strict project roadmap in one selection', async () => {
     const box = await sandbox()
-    await box.project.write('knowledge/.ki-config.toml', knowledgeBaseConfiguration())
+    await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
     await box.project.write(
       'knowledge/Streams/Roadmap/KBS-001-native-proposal.md',
       item({ id: 'KBS-001', title: 'Native proposal', ...knowledgeBaseMetadata })
     )
-    await box.project.write('project/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('project/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-project-item.md', item())
 
     const result = await box.run(
@@ -141,14 +141,14 @@ describe('[ki repo roadmap]', () => {
   test('treats absent Knowledge Base roadmaps as empty but diagnoses malformed and misconfigured ones', async () => {
     const box = await sandbox()
     const configuration = knowledgeBaseConfiguration()
-    await box.project.write('missing/.ki-config.toml', configuration)
+    await box.project.write('missing/.ki.toml', configuration)
     await box.project.write('missing/docs/roadmap/KI-TOOL-CLI-003-project-item.md', item())
-    await box.project.write('malformed/.ki-config.toml', configuration)
+    await box.project.write('malformed/.ki.toml', configuration)
     await box.project.write('malformed/Streams/Roadmap/KBS-001-valid.md', item({ id: 'KBS-001', title: 'Valid' }))
     await box.project.write('malformed/Streams/Roadmap/KBS-002-invalid.md', item({ id: 'KBS-002', status: 'closed' }))
-    await box.project.write('misconfigured/.ki-config.toml', configuration.replace('kb-streams', 'roadmap'))
+    await box.project.write('misconfigured/.ki.toml', configuration.replace('kb-streams', 'roadmap'))
     await box.project.write('misconfigured/docs/roadmap/KI-TOOL-CLI-003-project-item.md', item())
-    await box.project.write('repeated/.ki-config.toml', configuration)
+    await box.project.write('repeated/.ki.toml', configuration)
     await box.project.write(
       'repeated/Streams/Roadmap/KBS-001-repeated.md',
       item({ id: 'KBS-001', ...knowledgeBaseMetadata }).replace(
@@ -156,7 +156,7 @@ describe('[ki repo roadmap]', () => {
         'title: Inspect governed work\ntitle: Repeated title'
       )
     )
-    await box.project.write('structured-common/.ki-config.toml', configuration)
+    await box.project.write('structured-common/.ki.toml', configuration)
     await box.project.write(
       'structured-common/Streams/Roadmap/KBS-001-structured-common.md',
       item({ id: 'KBS-001', ...knowledgeBaseMetadata }).replace(
@@ -192,8 +192,8 @@ describe('[ki repo roadmap]', () => {
     const knowledge = await box.project.mkdir('knowledge')
     const broken = await box.project.mkdir('broken')
     const configuration = knowledgeBaseConfiguration('\n[skills.ki-trades]\n')
-    await box.project.write('knowledge/.ki-config.toml', configuration)
-    await box.project.write('broken/.ki-config.toml', configuration.replace('example/knowledge', 'example/broken'))
+    await box.project.write('knowledge/.ki.toml', configuration)
+    await box.project.write('broken/.ki.toml', configuration.replace('example/knowledge', 'example/broken'))
     await box.project.write('broken/Streams/Roadmap', 'not a directory\n')
     await box.project.write(
       'knowledge/Streams/Roadmap/KBS-001-native-proposal.md',
@@ -224,7 +224,7 @@ describe('[ki repo roadmap]', () => {
 
   test('promotes and prunes flat Knowledge Base work items without changing the ledger', async () => {
     const box = await sandbox()
-    await box.project.write('knowledge/.ki-config.toml', knowledgeBaseConfiguration())
+    await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
     await box.project.write('knowledge/Streams/Roadmap/_ISSUES.md', 'last_id: 2\n')
     await box.project.write(
       'knowledge/Streams/Roadmap/KBS-001-next.md',
@@ -249,7 +249,7 @@ describe('[ki repo roadmap]', () => {
   test('lists and filters grouped governed work items without JSON output', async () => {
     const box = await sandbox()
     await box.project.write(
-      'repo/.ki-config.toml',
+      'repo/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/repo"\n'
     )
     await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
@@ -299,7 +299,7 @@ describe('[ki repo roadmap]', () => {
 
   test('ignores the canonical issue-allocation ledger when reading work items', async () => {
     const box = await sandbox()
-    await box.project.write('repo/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('repo/docs/roadmap/_ISSUES.md', 'last_id: 3\n')
     await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
 
@@ -312,14 +312,14 @@ describe('[ki repo roadmap]', () => {
 
   test('aggregates selected roadmaps while treating absent roots as empty', async () => {
     const box = await sandbox()
-    await box.project.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('first/docs/roadmap/KI-TOOL-CLI-003-now.md', item({ horizon: 'now' }))
-    await box.project.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write(
       'second/docs/roadmap/KI-TOOL-CLI-004-next.md',
       item({ id: 'KI-TOOL-CLI-004', title: 'Next work' })
     )
-    await box.project.write('absent/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('absent/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
 
     const result = await box.run('ki repo --repo first --repo second --repo absent roadmap list --aggregate --no-icons')
 
@@ -338,9 +338,9 @@ describe('[ki repo roadmap]', () => {
 
   test('keeps malformed and unreadable roadmap roots as aggregate diagnostics', async () => {
     const box = await sandbox()
-    await box.project.write('file/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('file/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('file/docs/roadmap', 'not a directory\n')
-    await box.project.write('unreadable/.ki-config.toml', knowledgeBaseConfiguration())
+    await box.project.write('unreadable/.ki.toml', knowledgeBaseConfiguration())
     const unreadable = await box.project.mkdir('unreadable')
     roadmapStatFailure.path = `${unreadable}/Streams/Roadmap`
 
@@ -355,15 +355,15 @@ describe('[ki repo roadmap]', () => {
 
   test('isolates missing, malformed, invalid-status, and unsafe roadmap entries', async () => {
     const box = await sandbox()
-    await box.project.write('valid/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('valid/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write(
       'valid/docs/roadmap/KI-TOOL-CLI-003-inspect.md',
       item({ blocks: '[KI-TOOL-CLI-010]', transferred_from: 'example/source' })
     )
-    await box.project.write('missing/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
-    await box.project.write('invalid-status/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('missing/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('invalid-status/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('invalid-status/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item({ status: 'closed' }))
-    await box.project.write('unsafe/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('unsafe/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('unsafe/docs/roadmap/target.md', item())
     await symlink(
       `${box.project.path}/unsafe/docs/roadmap/target.md`,
@@ -404,7 +404,7 @@ describe('[ki repo roadmap]', () => {
 
   test('orders non-empty text output by horizon, lifecycle, then identifier', async () => {
     const box = await sandbox()
-    await box.project.write('repo/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     const items = [
       ['KI-TOOL-CLI-006', 'Blocking draft', 'now', 'draft'],
       ['KI-TOOL-CLI-005', 'Blocking done', 'now', 'done'],
@@ -475,8 +475,8 @@ describe('[ki repo roadmap]', () => {
       ].join('\n')
     const record = (recordId: string, kind: 'work' | 'knowledge', status = ''): string =>
       `---\nid: ${recordId}\ntitle: Trade-aware planning\ncreated_at: 2026-08-05T12:00:00Z\nsender: example/source\nreceiver: example/receiver\nkind: ${kind}\nsource_ref: KI-TOOL-CLI-012\nobservation: decision\nphase: ${status ? 'received' : 'submitted'}${status}\n---\n# ${recordId}: Trade-aware planning\n\n## Context\n\nTrade context.\n\n## Submission\n\nShow trades with roadmap work.\n\n## Constraints\n\nRemain read-only.\n`
-    await box.project.write('source/.ki-config.toml', configuration(sourceHome, [receiverHome], []))
-    await box.project.write('receiver/.ki-config.toml', configuration(receiverHome, [], [sourceHome]))
+    await box.project.write('source/.ki.toml', configuration(sourceHome, [receiverHome], []))
+    await box.project.write('receiver/.ki.toml', configuration(receiverHome, [], [sourceHome]))
     await box.project.write('source/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
     await box.project.write('receiver/docs/roadmap/KI-TOOL-CLI-004-inspect.md', item({ id: 'KI-TOOL-CLI-004' }))
     await box.project.write(`source/-/_TRADES/example/receiver/${id}.md`, record(id, 'work'))
@@ -556,7 +556,7 @@ describe('[ki repo roadmap]', () => {
     ] as const
     for (const [index, [name, contents, message]] of cases.entries()) {
       const repository = `repo-${index}`
-      await box.project.write(`${repository}/.ki-config.toml`, '[repo]\nharnesses = ["example/harness"]\n')
+      await box.project.write(`${repository}/.ki.toml`, '[repo]\nharnesses = ["example/harness"]\n')
       await box.project.write(`${repository}/docs/roadmap/${name}`, contents)
       const result = await box.run(`ki repo --repo ${repository} roadmap list`)
       expect(result.exitCode).toBe(1)
@@ -566,7 +566,7 @@ describe('[ki repo roadmap]', () => {
 
   test('accepts quoted scalar frontmatter values', async () => {
     const box = await sandbox()
-    await box.project.write('repo/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write(
       'repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md',
       item({ id: "'KI-TOOL-CLI-003'", title: '"Inspect governed work"', theme: "'cli'" })
@@ -580,7 +580,7 @@ describe('[ki repo roadmap]', () => {
 
   test('accepts contract-owned optional frontmatter fields', async () => {
     const box = await sandbox()
-    await box.project.write('repo/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write(
       'repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md',
       item({
@@ -602,10 +602,10 @@ describe('[ki repo roadmap]', () => {
 
   test('prunes only completed items across selected repositories after every target is valid', async () => {
     const box = await sandbox()
-    await box.project.write('first/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('first/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
     await box.project.write('first/docs/roadmap/KI-TOOL-CLI-004-draft.md', item({ id: 'KI-TOOL-CLI-004' }))
-    await box.project.write('second/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write(
       'second/docs/roadmap/KI-TOOL-CLI-005-done.md',
       item({ id: 'KI-TOOL-CLI-005', status: 'done' })
@@ -655,7 +655,7 @@ describe('[ki repo roadmap]', () => {
     await expect(box.project.read('first/docs/roadmap/KI-TOOL-CLI-004-draft.md')).resolves.toContain('status: draft')
     expect(empty).toEqual({ exitCode: 0, output: 'ki repo roadmap prune: no done work items\n' })
 
-    await box.project.write('invalid/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('invalid/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write(
       'invalid/docs/roadmap/KI-TOOL-CLI-006-invalid.md',
       item({ id: 'KI-TOOL-CLI-006', status: 'closed' })
@@ -675,7 +675,7 @@ describe('[ki repo roadmap]', () => {
 
   test('promotes and demotes one explicit item with directional horizon validation', async () => {
     const box = await sandbox()
-    await box.project.write('repo/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write(
       'repo/docs/roadmap/KI-TOOL-CLI-003-next.md',
       `${item({ title: 'Priority item' })}\ncandidate: body content remains.\n`
@@ -685,7 +685,7 @@ describe('[ki repo roadmap]', () => {
       item({ id: 'KI-TOOL-CLI-004', title: 'Future item', horizon: 'future', candidate: 'true' })
     )
     await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-005-now.md', item({ id: 'KI-TOOL-CLI-005', horizon: 'now' }))
-    await box.project.write('other/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('other/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('other/docs/roadmap/KI-TOOL-CLI-003-item.md', item())
     const root = await realpath(`${box.project.path}/repo`)
     const other = await realpath(`${box.project.path}/other`)
@@ -732,7 +732,7 @@ describe('[ki repo roadmap]', () => {
 
   test('rejects ambiguous roadmap identifiers before changing or pruning a work item', async () => {
     const box = await sandbox()
-    await box.project.write('repo/.ki-config.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-first.md', item())
     await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-second.md', item({ title: 'Duplicate item' }))
 

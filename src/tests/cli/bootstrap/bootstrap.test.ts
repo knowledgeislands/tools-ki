@@ -135,7 +135,7 @@ ids = [
       `${existing}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`
     )
     await box.project.write(
-      '.ki-config.toml',
+      '.ki.toml',
       '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
     )
     await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
@@ -147,7 +147,7 @@ ids = [
       `${await box.config.read('ki/config.toml')}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`
     )
     await box.project.write(
-      '.ki-config.toml',
+      '.ki.toml',
       '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\n'
     )
     box.setRunner(async (command, arguments_) =>
@@ -177,7 +177,7 @@ ids = [
       'ki/config.toml',
       `${existing}\n[repositories]\npaths = [\n  ${JSON.stringify(repository)},\n]\n`
     )
-    await box.project.write('.ki-config.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
+    await box.project.write('.ki.toml', '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n')
     box.setRunner(async () => ({ exitCode: 1, output: 'no origin\n' }))
 
     const failed = await box.run('ki bootstrap --refresh')
@@ -351,7 +351,7 @@ ids = ["claude-code"]
     await box.setupAgentHome('claude-code')
     await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
     await box.project.write(
-      '.ki-config.toml',
+      '.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
     )
     await box.run('ki bootstrap')

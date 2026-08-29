@@ -41,7 +41,7 @@ describe('[ki dev]', () => {
       const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
       await box.setupAgentHome('claude-code')
       await box.run('ki bootstrap')
-      await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/.ki-config.toml`)
+      await rm(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/.ki.toml`)
 
       const result = await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
 
@@ -112,8 +112,8 @@ path = ${JSON.stringify(harnessPath)}
 `
       expect(dataIsSymlink).toBe(true)
       expect(await realpath(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`)).toBe(harnessPath)
-      expect(await box.data.read('ki/harnesses/knowledgeislands/ki-agentic-harness/.ki-config.toml')).toBe(
-        await box.root.read('dev/knowledgeislands/ki-agentic-harness/.ki-config.toml')
+      expect(await box.data.read('ki/harnesses/knowledgeislands/ki-agentic-harness/.ki.toml')).toBe(
+        await box.root.read('dev/knowledgeislands/ki-agentic-harness/.ki.toml')
       )
       expect(homeIsSymlink).toBe(true)
       expect(await readlink(`${box.home.path}/.agents/skills/ki-bootstrap`)).toBe(
@@ -184,14 +184,14 @@ path = ${JSON.stringify(harnessPath)}
       const canonicalLocal = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
       await box.setupAgentHome('chatgpt-codex')
       await box.run('ki bootstrap')
-      await box.data.write(`${installed}/.ki-config.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
+      await box.data.write(`${installed}/.ki.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
       await box.data.write(`${installed}/skills/hnr-example/SKILL.md`, skill)
       await Promise.all(['subagents', 'hooks'].map((payload) => box.data.mkdir(`${installed}/${payload}`)))
       await box.run('ki bootstrap --refresh')
       await box.run('ki skill add hnr-example')
       const local = await box.root.mkdir('dev/humansnotrobots/hnr-agentic-harness')
       await box.root.write(
-        'dev/humansnotrobots/hnr-agentic-harness/.ki-config.toml',
+        'dev/humansnotrobots/hnr-agentic-harness/.ki.toml',
         '[skills.ki-repo-harness]\nprefix = "hnr"\n'
       )
       await box.root.write('dev/humansnotrobots/hnr-agentic-harness/skills/hnr-example/SKILL.md', skill)
@@ -247,14 +247,14 @@ path = ${JSON.stringify(harnessPath)}
       await box.setupAgentHome('chatgpt-codex')
       await box.run('ki bootstrap')
       const installed = 'ki/harnesses/humansnotrobots/hnr-agentic-harness'
-      await box.data.write(`${installed}/.ki-config.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
+      await box.data.write(`${installed}/.ki.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
       await box.data.write(
         `${installed}/skills/hnr-example/SKILL.md`,
         '---\nname: hnr-example\nki-depends-on: []\n---\n'
       )
       await Promise.all(['subagents', 'hooks'].map((payload) => box.data.mkdir(`${installed}/${payload}`)))
       await box.root.write(
-        'dev/humansnotrobots/hnr-agentic-harness/.ki-config.toml',
+        'dev/humansnotrobots/hnr-agentic-harness/.ki.toml',
         '[skills.ki-repo-harness]\nprefix = "other"\n'
       )
       await box.root.write(
@@ -463,8 +463,8 @@ path = ${JSON.stringify(harnessPath)}
       await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
       const canonical = `${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`
       if (variant === 'metadata directory') {
-        await rm(`${canonical}/.ki-config.toml`)
-        await box.data.mkdir('ki/harnesses/knowledgeislands/ki-agentic-harness/.ki-config.toml')
+        await rm(`${canonical}/.ki.toml`)
+        await box.data.mkdir('ki/harnesses/knowledgeislands/ki-agentic-harness/.ki.toml')
       }
       if (variant === 'retired payload file') {
         await rm(`${canonical}/subagents`, { recursive: true })

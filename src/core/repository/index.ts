@@ -1,34 +1,15 @@
-import { lstat, readdir, readFile, realpath } from 'node:fs/promises'
+import { readdir, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
-import { parse } from 'smol-toml'
 import { resolveAgora } from '../agora/index.ts'
-import { REPOSITORY_CONFIGURATION_FILE } from '../configuration/index.ts'
+import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
+import { inspectRepositoryDeclarationState, repositoryDeclarationError } from './declaration.ts'
+import { physicalDirectory, type RepositoryLocation, targetFromDirectory } from './location.ts'
+import { MGIT_MANIFEST_FILE, repositoriesFromMgitManifest } from './mgit.ts'
 
-const MGIT_CONFIGURATION_FILE = '.mgit-config.toml'
-
-export interface RepositoryLocation {
-  readonly root: string
-  readonly configuration: string
-}
-
-const isConfigurationFile = async (path: string): Promise<boolean> => {
-  const state = await lstat(path).catch(() => undefined)
-  return Boolean(state?.isFile() && !state.isSymbolicLink())
-}
-
-const isRegularFile = async (path: string): Promise<boolean> => {
-  const state = await lstat(path).catch(() => undefined)
-  return Boolean(state?.isFile() && !state.isSymbolicLink())
-}
-
-const physicalDirectory = async (path: string, error: string): Promise<string> => {
-  const state = await lstat(path).catch(() => undefined)
-  if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError(error, 2)
-  return realpath(path)
-}
+export type { RepositoryLocation } from './location.ts'
 
 const isBoundary = (directory: string, homeDirectory: string): boolean =>
   directory === homeDirectory || directory === dirname(directory)
@@ -40,8 +21,14 @@ export const discoverRepository = async (
   const home = await realpath(homeDirectory).catch(() => resolve(homeDirectory))
   let candidate = await realpath(workingDirectory)
   while (!isBoundary(candidate, home)) {
-    const configuration = join(candidate, REPOSITORY_CONFIGURATION_FILE)
-    if (await isConfigurationFile(configuration)) return { root: candidate, configuration }
+    const state = await inspectRepositoryDeclarationState(candidate)
+    if (state.state === 'canonical') return { root: candidate, declaration: state.path }
+    if (state.state !== 'absent')
+      throw repositoryDeclarationError(
+        candidate,
+        state,
+        `no ${REPOSITORY_DECLARATION_FILE} found from the current working directory`
+      )
     candidate = dirname(candidate)
   }
   return null
@@ -60,7 +47,7 @@ export const resolveRepository = async (options: {
   return targetFromDirectory(
     options.repository,
     '--repo must be an existing directory',
-    '--repo must name a repository containing .ki-config.toml'
+    `--repo must name a repository containing ${REPOSITORY_DECLARATION_FILE}`
   )
 }
 
@@ -78,10 +65,12 @@ export const resolveRepositoryInitialisationTarget = async (options: {
   const reported = git.output.trim()
   const gitRoot = await physicalDirectory(reported, 'ki repo init target must be an existing Git repository')
   if (gitRoot !== root) throw new KiError('ki repo init target must be the Git repository root', 2)
-  const configuration = join(root, REPOSITORY_CONFIGURATION_FILE)
-  if (await lstat(configuration).catch(() => undefined))
-    throw new KiError(`ki repo init target already has ${REPOSITORY_CONFIGURATION_FILE}`, 2)
-  return { root, configuration }
+  const state = await inspectRepositoryDeclarationState(root)
+  if (state.state === 'canonical')
+    throw new KiError(`ki repo init target already has ${REPOSITORY_DECLARATION_FILE}`, 2)
+  if (state.state !== 'absent')
+    throw repositoryDeclarationError(root, state, `ki repo init target already has ${REPOSITORY_DECLARATION_FILE}`)
+  return { root, declaration: join(root, REPOSITORY_DECLARATION_FILE) }
 }
 
 const hasPattern = (value: string): boolean => /[*?]/.test(value)
@@ -126,90 +115,6 @@ const expandPattern = async (
   return (await walkDirectories(base)).filter((directory) => expression.test(directory))
 }
 
-const targetFromDirectory = async (
-  directory: string,
-  directoryMessage: string,
-  configurationMessage = directoryMessage
-): Promise<RepositoryLocation> => {
-  const root = await physicalDirectory(directory, directoryMessage)
-  const configuration = join(root, REPOSITORY_CONFIGURATION_FILE)
-  if (!(await isConfigurationFile(configuration))) throw new KiError(configurationMessage, 2)
-  return { root, configuration }
-}
-
-const safeEntryPath = (value: string): boolean =>
-  Boolean(value) && !isAbsolute(value) && !value.split(/[\\/]/).some((part) => !part || part === '.' || part === '..')
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-type MgitEntryKind = 'bare' | 'dir' | 'nested' | 'standard'
-
-interface MgitEntry {
-  readonly kind: MgitEntryKind
-  readonly path: string
-}
-
-interface MgitDocument {
-  readonly version?: unknown
-  readonly members?: unknown
-}
-
-interface MgitMemberDocument {
-  readonly type?: unknown
-  readonly source?: unknown
-}
-
-const mgitError = (configuration: string, message: string): KiError => new KiError(`${configuration} ${message}`, 2)
-
-const parseMgitConfiguration = (contents: string, configuration: string): readonly MgitEntry[] => {
-  let parsed: unknown
-  try {
-    parsed = parse(contents)
-  } catch {
-    throw mgitError(configuration, 'must be valid TOML')
-  }
-  /* v8 ignore next -- a TOML document always parses to a table. */
-  if (!isRecord(parsed)) throw mgitError(configuration, 'must be a table')
-  const document = parsed as MgitDocument
-  if (document.version !== 1) throw mgitError(configuration, 'version must equal 1')
-  if (document.members === undefined) return []
-  if (!isRecord(document.members)) throw mgitError(configuration, 'members must be a table')
-  return Object.entries(document.members).map(([path, value]) => {
-    const member = value as MgitMemberDocument
-    if (!safeEntryPath(path) || !isRecord(value)) throw mgitError(configuration, `has invalid member ${path}`)
-    if (typeof member.source !== 'undefined' && (typeof member.source !== 'string' || !member.source))
-      throw mgitError(configuration, `member ${path} must use a non-empty source string`)
-    if (member.type !== 'standard' && member.type !== 'nested' && member.type !== 'bare' && member.type !== 'dir')
-      throw mgitError(configuration, `member ${path} has an unsupported type`)
-    return { kind: member.type, path }
-  })
-}
-
-const repositoriesFromMgitConfiguration = async (directory: string): Promise<readonly RepositoryLocation[]> => {
-  const configuration = join(directory, MGIT_CONFIGURATION_FILE)
-  const contents = await readFile(configuration, 'utf8')
-  const entries = parseMgitConfiguration(contents, configuration)
-  const targets: RepositoryLocation[] = []
-  for (const entry of entries) {
-    if (entry.kind === 'bare') continue
-    const child = join(directory, entry.path)
-    if (entry.kind === 'dir')
-      targets.push(
-        ...(await repositoriesFromMgitConfiguration(
-          await physicalDirectory(child, `invalid ${MGIT_CONFIGURATION_FILE} directory target ${entry.path}`)
-        ))
-      )
-    else {
-      const checkout = entry.kind === 'nested' ? join(child, 'main') : child
-      targets.push(
-        await targetFromDirectory(checkout, `invalid ${MGIT_CONFIGURATION_FILE} repository target ${entry.path}`)
-      )
-    }
-  }
-  return targets
-}
-
 const distinctTargets = (targets: readonly RepositoryLocation[], source: string): readonly RepositoryLocation[] => {
   const seen = new Set<string>()
   for (const target of targets) {
@@ -241,7 +146,7 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
           await targetFromDirectory(
             resolve(options.workingDirectory, value),
             '--repo must be an existing directory',
-            '--repo must name a repository containing .ki-config.toml'
+            `--repo must name a repository containing ${REPOSITORY_DECLARATION_FILE}`
           )
         )
         continue
@@ -269,15 +174,8 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
     return distinctTargets(targets, `Agora ${selected.id}`)
   }
   const working = await realpath(options.workingDirectory)
-  const configuration = join(working, MGIT_CONFIGURATION_FILE)
-  // The presence of `.mgit-config.toml` is not by itself a workspace root: mgit also writes
-  // this file into an ordinary single repository to carry a `[symlinks]` table alone. Only a
-  // document that actually names member repositories describes a workspace; anything else
-  // describes the repository it sits in, so selection falls through to ordinary discovery.
-  if (await isRegularFile(configuration)) {
-    const members = distinctTargets(await repositoriesFromMgitConfiguration(working), MGIT_CONFIGURATION_FILE)
-    if (members.length) return members
-  }
+  const members = await repositoriesFromMgitManifest(working)
+  if (members) return distinctTargets(members, MGIT_MANIFEST_FILE)
   return [await resolveRepository({ workingDirectory: options.workingDirectory, homeDirectory: options.homeDirectory })]
 }
 

@@ -29,7 +29,7 @@ The public grammar makes mutation scope explicit: `ki repo skill add|remove` cha
 
 Status, installation, update, and repository-upgrade commands preserve this user, harness, and repository activation boundary.
 
-Every `ki repo` operation accepts the shared `--repo <path-or-pattern>` selector. Each target must physically resolve to a repository base containing a regular `.ki-config.toml`; without a selector, only the current working directory is considered. The host requires explicit dependencies, resolves operations from verified harnesses, and uses stable topological order with prerequisites first and independent capabilities ordered by canonical name.
+Every `ki repo` operation accepts the shared `--repo <path-or-pattern>` selector. Each target must physically resolve to a repository base containing a regular `.ki.toml`; without a selector, only the current working directory is considered. The host requires explicit dependencies, resolves operations from verified harnesses, and uses stable topological order with prerequisites first and independent capabilities ordered by canonical name.
 
 Native operations are imported in process only after harness and inventory validation. `ki repo audit` is read-only. `ki repo conform` validates every proposed path against its declared scope, honours dry-run, publishes each approved file atomically, and re-audits whenever it stages a change. Repository operations never dispatch `.ki/bin`, `.ki/bootstrap`, copied `govern.ts`, package-script aliases, or an ad-hoc child process. Local harness development is an explicit, verified projection under `ki dev`, never an unregistered repository-operation fallback. Legacy state is an explicit fail-closed migration input only.
 

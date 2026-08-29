@@ -23,7 +23,7 @@ const preparedRepository = async () => {
   await box.run('ki bootstrap')
   await box.setupExampleHarness({ name: 'ki-repo' })
   await box.setupExampleHarness()
-  await box.project.write('.ki-config.toml', repositoryConfiguration)
+  await box.project.write('.ki.toml', repositoryConfiguration)
   return box
 }
 
@@ -75,7 +75,7 @@ describe('[ki repo repair]', () => {
 
     const repaired = await box.run('ki repo repair')
     await box.project.write(
-      '.ki-config.toml',
+      '.ki.toml',
       repositoryConfiguration
         .replace('knowledgeislands/ki-agentic-harness', 'missing/harness')
         .replace('[skills.ki-example]', '[skills.ki-missing]')
@@ -97,16 +97,14 @@ describe('[ki repo repair]', () => {
     const dangling = await box.run('ki repo repair')
     const unsafeBox = await sandbox()
     await unsafeBox.project.write('actual.toml', repositoryConfiguration)
-    await symlink(`${unsafeBox.project.path}/actual.toml`, `${unsafeBox.project.path}/.ki-config.toml`)
+    await symlink(`${unsafeBox.project.path}/actual.toml`, `${unsafeBox.project.path}/.ki.toml`)
     await unsafeBox.run('ki bootstrap')
     const unsafe = await unsafeBox.run('ki repo repair')
 
     expect(dangling.exitCode).toBe(0)
     expect((await lstat(projection)).isSymbolicLink()).toBe(true)
-    expect(unsafe).toEqual({
-      exitCode: 2,
-      output: 'ki: error: no KI repository found from the current working directory\n'
-    })
+    expect(unsafe.exitCode).toBe(2)
+    expect(unsafe.output).toContain('/.ki.toml must be a regular file')
   })
 
   test('uses repository discovery by default and accepts explicit repository selectors', async () => {
@@ -126,7 +124,7 @@ describe('[ki repo repair]', () => {
   test('renders every explicitly selected repository repair', async () => {
     const box = await preparedRepository()
     await box.root.write(
-      'second/.ki-config.toml',
+      'second/.ki.toml',
       repositoryConfiguration.replace('https://github.com/example/project', 'https://github.com/example/second')
     )
     const [project, second] = await Promise.all([realpath(box.project.path), realpath(`${box.root.path}/second`)])
@@ -181,7 +179,7 @@ describe('[ki repo repair]', () => {
   test('rejects an invalid sources registry before repairing a Knowledge Base', async () => {
     const box = await preparedRepository()
     await box.project.write(
-      '.ki-config.toml',
+      '.ki.toml',
       repositoryConfiguration.replace(
         'repository = "https://github.com/example/project"',
         'repository = "https://github.com/example/project"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]'
@@ -200,7 +198,7 @@ describe('[ki repo repair]', () => {
     const root = await realpath(box.project.path)
     const sources = await box.root.mkdir('sources')
     await box.project.write(
-      '.ki-config.toml',
+      '.ki.toml',
       repositoryConfiguration.replace(
         'repository = "https://github.com/example/project"',
         'repository = "https://github.com/example/project"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]'

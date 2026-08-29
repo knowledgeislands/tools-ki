@@ -6,7 +6,7 @@ describe('[ki local utility commands]', () => {
     const box = await sandbox()
     await box.setupCanonicalHarness()
     await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
-    await box.project.write('.ki-config.toml', '[not valid TOML\n')
+    await box.project.write('.ki.toml', '[not valid TOML\n')
     const example = await box.data.read('ki/harnesses/example/harness/skills/example-skill/SKILL.md')
 
     const result = await box.run('ki manage search SKILL')

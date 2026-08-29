@@ -23,7 +23,7 @@ const preparedRepository = async () => {
   await box.run('ki bootstrap')
   await box.setupExampleHarness({ name: 'ki-repo' })
   await box.setupExampleHarness()
-  await box.project.write('.ki-config.toml', repositoryConfiguration)
+  await box.project.write('.ki.toml', repositoryConfiguration)
   return box
 }
 
@@ -37,7 +37,7 @@ describe('[ki repo diag]', () => {
     expect(diag.exitCode).toBe(0)
     expect(diag.output).toContain('╭─ KI REPO DIAG')
     expect(diag.output).toContain(`╰─ ${root} (repairable)`)
-    expect(diag.output).toContain(`Configuration: ${root}/.ki-config.toml`)
+    expect(diag.output).toContain(`Declaration: ${root}/.ki.toml`)
     expect(diag.output).toContain('chatgpt-codex ki-example: projection is missing')
     expect(diag.output).toContain('summary: REPOSITORIES=1 HEALTHY=0 REPAIRABLE=1 UNREPAIRABLE=0')
   })
@@ -45,7 +45,7 @@ describe('[ki repo diag]', () => {
   test('reports an unresolved declared provider as unrepairable', async () => {
     const box = await preparedRepository()
     await box.project.write(
-      '.ki-config.toml',
+      '.ki.toml',
       repositoryConfiguration
         .replace('knowledgeislands/ki-agentic-harness', 'missing/harness')
         .replace('[skills.ki-example]', '[skills.ki-missing]')

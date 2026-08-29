@@ -1,12 +1,15 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
-import { type RepositoryDeclaration, readRepositoryDeclaration } from '../configuration/index.ts'
+import {
+  REPOSITORY_DECLARATION_FILE,
+  type RepositoryDeclaration,
+  readRepositoryDeclaration
+} from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import { canonicalRepositoryIdentity, requiredLocalRegistry } from '../storage/index.ts'
 
 export const ESTATE_AGORA = 'estate'
 
-const REPOSITORY_CONFIGURATION_FILE = '.ki-config.toml'
 const AGORA_ID = /^[a-z][a-z0-9-]*[a-z0-9]$/
 const ROLE = /^[a-z][a-z0-9-]*[a-z0-9]$/
 export interface AgoraMember {
@@ -88,15 +91,15 @@ const registeredRepositories = async (stateDirectory: string): Promise<readonly 
     if (!state?.isDirectory() || state.isSymbolicLink())
       throw agoraError(registered.path, 'must be an existing physical directory')
     const root = await realpath(registered.path)
-    const configurationPath = join(root, REPOSITORY_CONFIGURATION_FILE)
-    const declarationState = await lstat(configurationPath).catch(() => undefined)
+    const declarationPath = join(root, REPOSITORY_DECLARATION_FILE)
+    const declarationState = await lstat(declarationPath).catch(() => undefined)
     if (!declarationState?.isFile() || declarationState.isSymbolicLink())
-      throw agoraError(root, `must contain a physical ${REPOSITORY_CONFIGURATION_FILE}`)
+      throw agoraError(root, `must contain a physical ${REPOSITORY_DECLARATION_FILE}`)
     let declaration: RepositoryDeclaration
     try {
-      declaration = await readRepositoryDeclaration(configurationPath)
+      declaration = await readRepositoryDeclaration(declarationPath)
     } catch (error) {
-      throw agoraError(root, `has invalid ${REPOSITORY_CONFIGURATION_FILE}: ${(error as Error).message}`)
+      throw agoraError(root, `has invalid ${REPOSITORY_DECLARATION_FILE}: ${(error as Error).message}`)
     }
     const identity = canonicalRepository(root, declaration)
     if (identity !== registered.repository)

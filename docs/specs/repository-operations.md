@@ -84,6 +84,12 @@ For a selected physical repository that explicitly declares `[skills.ki-self]`, 
 
 _Verify:_ `src/tests/cli/repo/local-provider.test.ts` — `[ki repo] repository-local ki-self provider`.
 
+### REPO-OPS-014 — Final repository and workspace declarations
+
+`ki` MUST use `.ki.toml` as the only KI repository declaration filename, and without an explicit repository or Agora selector MUST consume only a regular direct-CWD schema-one `.mgit.toml`: workspace manifests select the configured group and recurse through declared child workspaces, while repository manifests fall through to ordinary repository discovery. It MUST NOT provide retired-filename compatibility or migration behaviour.
+
+_Verify:_ `src/tests/cli/repo/repo.test.ts`, `src/tests/cli/repo/targets.test.ts`, and a bounded retired-name search across product and test sources.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

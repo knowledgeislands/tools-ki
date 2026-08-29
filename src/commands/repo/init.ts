@@ -2,7 +2,7 @@ import { mkdir, realpath, rm } from 'node:fs/promises'
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
-import { REPOSITORY_CONFIGURATION_FILE, renderRepositoryConfiguration } from '../../core/configuration/index.ts'
+import { REPOSITORY_DECLARATION_FILE, renderRepositoryDeclaration } from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
 import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { resolveRepositoryInitialisationTarget } from '../../core/repository/index.ts'
@@ -45,7 +45,7 @@ export const createRepoInitCommand = (
         const selection = selectedRepositories()
         if (selection.repositories.length || selection.agora || selection.estate)
           throw new KiError('ki repo init does not accept --repo, --agora, or --estate', 2)
-        const configuration = renderRepositoryConfiguration({
+        const declaration = renderRepositoryDeclaration({
           title: options.title ?? '',
           description: options.description ?? '',
           repoCode: options.repoCode ?? '',
@@ -70,7 +70,7 @@ export const createRepoInitCommand = (
           registryEntry(repository.root, options.repository)
         )
         const declarationWrites = await prepareWrites(repository.root, [
-          { path: REPOSITORY_CONFIGURATION_FILE, content: configuration, create: true }
+          { path: REPOSITORY_DECLARATION_FILE, content: declaration, create: true }
         ])
         if (registryWrite) await mkdir(context.paths.state, { recursive: true })
         const registryWrites = registryWrite
@@ -80,7 +80,7 @@ export const createRepoInitCommand = (
         try {
           await publishWrites(registryWrites, false)
         } catch (error) {
-          await rm(repository.configuration)
+          await rm(repository.declaration)
           throw error
         }
         for (const write of [...declarationWrites, ...registryWrites]) context.stdout.write(`write ${write.path}\n`)

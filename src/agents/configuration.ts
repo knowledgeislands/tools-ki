@@ -1,7 +1,11 @@
 import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
 import { parse } from 'smol-toml'
-import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../core/configuration/index.ts'
+import {
+  declaredRepositoryIdentity,
+  REPOSITORY_DECLARATION_FILE,
+  readRepositoryDeclaration
+} from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
 import type { Runner } from '../core/runtime/runner.ts'
 import { canonicalRepositoryIdentity, registryEntry, renderLocalRegistry } from '../core/storage/index.ts'
@@ -345,7 +349,7 @@ export const migrateLegacyRepositoryRegistry = async (
       try {
         return registryEntry(
           root,
-          declaredRepositoryIdentity(await readRepositoryDeclaration(join(root, '.ki-config.toml')))
+          declaredRepositoryIdentity(await readRepositoryDeclaration(join(root, REPOSITORY_DECLARATION_FILE)))
         )
       } catch {
         const remote = await runner('git', ['-C', root, 'remote', 'get-url', 'origin'], environment)
