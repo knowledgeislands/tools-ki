@@ -4,10 +4,10 @@ title: Migrate configuration readers
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: f86dec42ead8ca1e9d0dcd253c701b064807a449
 ---
 
 ## Goal
