@@ -9,15 +9,17 @@ export const resolveSkillsForRepositories = async (
   skill?: string
 ): Promise<readonly SelectedRepositorySkills[]> =>
   Promise.all(
-    repositories.map(async (repository) => ({
-      repository,
-      skills: await resolveRepositoryDeclaredSkills(
-        repository.root,
-        await readRepositoryDeclaration(repository.declaration),
-        harnesses,
-        skill
-      )
-    }))
+    repositories.map(async (repository) => {
+      const declaration = await readRepositoryDeclaration(repository.declaration)
+      const resolvedSkills = await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses)
+      return {
+        repository,
+        resolvedSkills,
+        skills: skill
+          ? await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses, skill)
+          : resolvedSkills
+      }
+    })
   )
 
 export const selectRepositorySkills = async (

@@ -1,6 +1,12 @@
 import type { ResolvedSkill } from '../../configuration/index.ts'
 import { KiError } from '../../errors.ts'
-import { type PreparedSkill, prepareSkill, type RubricProgressReport } from '../../runtime/index.ts'
+import type { PackageScriptClaim } from '../../rubric/index.ts'
+import {
+  aggregatePackageScriptClaims,
+  type PreparedSkill,
+  prepareSkill,
+  type RubricProgressReport
+} from '../../runtime/index.ts'
 
 /** Reports the item edges a live progress line needs, narrowed to the item code the renderer displays. */
 export interface ItemProgressCodes {
@@ -50,21 +56,40 @@ export const runPreparedWithProgress = async <Result>(
 
 export const runWithProgress = async <Result>(
   skills: readonly ResolvedSkill[],
-  run: (skill: PreparedSkill, progress: ItemProgressCodes) => Promise<Result>,
-  progress?: ProgressTracker
+  run: (
+    skill: PreparedSkill,
+    progress: ItemProgressCodes,
+    packageScriptClaims: readonly PackageScriptClaim[]
+  ) => Promise<Result>,
+  progress?: ProgressTracker,
+  resolvedSkills: readonly ResolvedSkill[] = skills
 ): Promise<Result[]> => {
-  const prepared: PreparedSkill[] = []
+  const inventory: PreparedSkill[] = []
+  let prepared: readonly PreparedSkill[] = []
+  let packageScriptClaims: readonly PackageScriptClaim[] = []
   try {
-    progress?.loading(0, skills.length)
-    for (const skill of skills) {
-      prepared.push(await prepareSkill(skill))
-      progress?.loading(prepared.length, skills.length)
+    progress?.loading(0, resolvedSkills.length)
+    for (const skill of resolvedSkills) {
+      inventory.push(await prepareSkill(skill))
+      progress?.loading(inventory.length, resolvedSkills.length)
     }
+    const byIdentity = new Map(inventory.map((candidate) => [candidate.skill.identity, candidate]))
+    prepared = skills.map((skill) => {
+      const selected = byIdentity.get(skill.identity)
+      /* v8 ignore next -- selected skills are resolved from the same declared inventory */
+      if (!selected) throw new KiError(`progress lost selected skill ${skill.identity}`, 1)
+      return selected
+    })
+    packageScriptClaims = aggregatePackageScriptClaims(inventory)
   } catch (error) {
     progress?.failed()
     throw error
   }
-  return runPreparedWithProgress(prepared, run, progress)
+  return runPreparedWithProgress(
+    prepared,
+    (skill, itemProgress) => run(skill, itemProgress, packageScriptClaims),
+    progress
+  )
 }
 
 /** Runs a counted session-evidence phase before the prepared skills' mechanical-item phase. */
@@ -72,24 +97,39 @@ export const runWithEvidenceProgress = async <Evidence, Result>(
   skills: readonly ResolvedSkill[],
   gather: (
     skill: PreparedSkill,
-    progress: { readonly onProgressEvent?: (event: RubricProgressReport) => void }
+    progress: { readonly onProgressEvent?: (event: RubricProgressReport) => void },
+    packageScriptClaims: readonly PackageScriptClaim[]
   ) => Promise<Evidence>,
   run: (skill: PreparedSkill, evidence: Evidence, progress: ItemProgressCodes) => Promise<Result>,
-  progress?: ProgressTracker
+  progress?: ProgressTracker,
+  resolvedSkills: readonly ResolvedSkill[] = skills
 ): Promise<Result[]> => {
-  const prepared: PreparedSkill[] = []
+  const inventory: PreparedSkill[] = []
   const evidence = new Map<string, Evidence>()
+  let prepared: readonly PreparedSkill[] = []
   try {
-    progress?.loading(0, skills.length)
-    for (const skill of skills) {
-      prepared.push(await prepareSkill(skill))
-      progress?.loading(prepared.length, skills.length)
+    progress?.loading(0, resolvedSkills.length)
+    for (const skill of resolvedSkills) {
+      inventory.push(await prepareSkill(skill))
+      progress?.loading(inventory.length, resolvedSkills.length)
     }
+    const byIdentity = new Map(inventory.map((prepared) => [prepared.skill.identity, prepared]))
+    prepared = skills.map((skill) => {
+      const selected = byIdentity.get(skill.identity)
+      /* v8 ignore next -- selected skills are resolved from the same declared inventory */
+      if (!selected) throw new KiError(`progress lost selected skill ${skill.identity}`, 1)
+      return selected
+    })
+    const packageScriptClaims = aggregatePackageScriptClaims(inventory)
     progress?.evidence(0, prepared.length)
     for (const skill of prepared) {
       evidence.set(
         skill.skill.identity,
-        await gather(skill, { ...(progress ? { onProgressEvent: (event) => progress.report(skill, event) } : {}) })
+        await gather(
+          skill,
+          { ...(progress ? { onProgressEvent: (event) => progress.report(skill, event) } : {}) },
+          packageScriptClaims
+        )
       )
       progress?.evidence(evidence.size, prepared.length)
     }

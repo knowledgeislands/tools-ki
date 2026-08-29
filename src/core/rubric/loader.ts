@@ -24,6 +24,16 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const nonEmptyString = (value: unknown): value is string => typeof value === 'string' && Boolean(value)
 
+const validatePackageScripts = (value: unknown, identity: string): readonly string[] => {
+  if (!Array.isArray(value) || value.some((script) => !nonEmptyString(script)))
+    throw new KiError(`${identity} rubric catalogue packageScripts must contain exact non-empty script names`, 1)
+  if (value.some((script) => !script.startsWith('ki:') || /\s|[*?[\]{}]/.test(script)))
+    throw new KiError(`${identity} rubric catalogue packageScripts must contain exact ki: script names`, 1)
+  if (new Set(value).size !== value.length)
+    throw new KiError(`${identity} rubric catalogue repeats packageScripts claim`, 1)
+  return value as readonly string[]
+}
+
 const safeRelativePath = (value: string): boolean =>
   Boolean(value) && !value.startsWith('/') && value.split('/').every((part) => part && part !== '.' && part !== '..')
 
@@ -201,7 +211,7 @@ export const loadRubricDefinition = async (skill: ResolvedSkill): Promise<SkillR
   }
   const candidate = module[RUBRIC_MODULE_EXPORT]
   if (!isRecord(candidate)) throw new KiError(`${skill.identity} rubric catalogue default export is not a table`, 1)
-  const { contract, name, concern, scope, createSession, families } = candidate
+  const { contract, name, concern, packageScripts, scope, createSession, families } = candidate
   if (contract !== RUBRIC_CONTRACT_VERSION)
     throw new KiError(`${skill.identity} rubric catalogue has an unsupported contract version`, 1)
   if (name !== skill.capability.name)
@@ -216,6 +226,7 @@ export const loadRubricDefinition = async (skill: ResolvedSkill): Promise<SkillR
     contract,
     name,
     concern,
+    ...(packageScripts === undefined ? {} : { packageScripts: validatePackageScripts(packageScripts, skill.identity) }),
     scope: validateScope(scope, skill.identity),
     createSession: createSession as SkillRubricDefinition<unknown>['createSession'],
     families: families.map((family) => validateFamily(family, skill.identity, seenFamilies, seenItems))

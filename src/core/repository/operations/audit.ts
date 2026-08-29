@@ -44,19 +44,20 @@ export const auditRepositories = async (
   const selected = await selectRepositorySkills(context, selection)
   const completed: RepositoryAuditResult[] = []
   let failed = false
-  for (const [index, { repository, skills }] of selected.entries()) {
+  for (const [index, { repository, skills, resolvedSkills }] of selected.entries()) {
     observer.repositoryStarted(repository.root, skills, index)
     try {
       const repositorySkills = await repositorySkillActivation(context, repository, skills)
       const results = await runWithEvidenceProgress(
         skills,
-        async (skill, evidenceProgress) =>
+        async (skill, evidenceProgress, packageScriptClaims) =>
           gatherSkillAuditEvidence(
             {
               kind: 'repository',
               repository: repository.root,
               userHome: context.homeDirectory,
               lstat: context.lstat,
+              packageScriptClaims,
               ...(repositorySkills ? { repositorySkills: repositorySkills.rubric } : {})
             },
             skill,
@@ -70,7 +71,8 @@ export const auditRepositories = async (
             onProgressEvent: itemProgress.onProgressEvent
           })
         }),
-        context.progress.resolved(skills, 'audit', 'root')
+        context.progress.resolved(skills, 'audit', 'root'),
+        resolvedSkills
       )
       const findings = results.flatMap(({ audit }) => audit.findings)
       const registration = await localRepositoryRegistration(context, repository.root, skills)

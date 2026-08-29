@@ -5,7 +5,7 @@ import { type SandboxArea, sandbox } from '../_cli_helper.ts'
 // Builds a full direct `scripts/rubric/items/index.ts` catalogue. Most tests use a
 // compact literal which this fixture expands into the real family/item contract;
 // dedicated catalogue tests below exercise the unabridged shape.
-const rubric = (families: string, skill = 'ki-example'): string => `
+const rubric = (families: string, skill = 'ki-example', catalogueMetadata = ''): string => `
 const item = (value) => {
   if (!value || typeof value !== 'object') return value
   if (value.kind === 'mechanical') return {
@@ -51,9 +51,10 @@ export default {
   contract: 1,
   name: '${skill}',
   concern: 'test governance',
-  createSession: async ({ repository }) => {
+  ${catalogueMetadata}
+  createSession: async ({ repository, packageScriptClaims }) => {
     const proposals = []
-    const context = { repository, propose: (proposal) => proposals.push(proposal) }
+    const context = { repository, packageScriptClaims, propose: (proposal) => proposals.push(proposal) }
     return {
       subjects: [{ families: Array.isArray(families) ? families.map(({ code }) => code) : [], context: () => context }],
       proposal: () => proposals.length === 1 ? proposals[0] : ({
@@ -843,6 +844,23 @@ describe('[ki repo validation]', () => {
       expect(result.output).toContain('rubric family F must have an items array')
     })
 
+    test.each([
+      ["packageScripts: 'ki:one',", 'packageScripts must contain exact non-empty script names'],
+      ['packageScripts: [42],', 'packageScripts must contain exact non-empty script names'],
+      ["packageScripts: ['site:build'],", 'packageScripts must contain exact ki: script names'],
+      ["packageScripts: ['ki:*'],", 'packageScripts must contain exact ki: script names'],
+      ["packageScripts: ['ki:one', 'ki:one'],", 'rubric catalogue repeats packageScripts claim']
+    ])('rejects invalid package-script metadata %#', async (catalogueMetadata, expected) => {
+      const box = await sandbox()
+      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.setupExampleHarness({ rubric: rubric('[]', 'ki-example', catalogueMetadata) })
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(expected)
+    })
+
     test('rejects a rubric definition with an unsupported contract version', async () => {
       const box = await sandbox()
       await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
@@ -890,10 +908,11 @@ describe('[ki repo validation]', () => {
         readonly name: string
         readonly deps: readonly string[]
         readonly optionalDeps?: readonly string[]
+        readonly packageScripts?: readonly string[]
       }[]
     ): Promise<void> => {
       await data.write('ki/harnesses/example/harness/.ki.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
-      for (const { name, deps, optionalDeps = [] } of specs) {
+      for (const { name, deps, optionalDeps = [], packageScripts = [] } of specs) {
         const base = `ki/harnesses/example/harness/skills/${name}`
         const list = `[${deps.join(', ')}]`
         const skillMarkdown = `---
@@ -905,12 +924,76 @@ ${optionalDeps.length ? `ki-optional-depends-on: [${optionalDeps.join(', ')}]\n`
         await data.write(
           `${base}/scripts/rubric/items/index.ts`,
           rubric(
-            `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'R-1', title: 'Order', level: 'FAIL', phase: 'PRIMARY', audit: async () => [{ status: 'INFO', message: '${name}' }] }] }]`,
-            name
+            `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'R-1', title: 'Order', level: 'FAIL', phase: 'PRIMARY', audit: async (context) => context.packageScriptClaims.length ? context.packageScriptClaims.flatMap((claim) => [{ status: 'INFO', message: claim.script }, { status: 'INFO', message: claim.skill }]) : [{ status: 'INFO', message: '${name}' }] }] }]`,
+            name,
+            packageScripts.length ? `packageScripts: ${JSON.stringify(packageScripts)},` : ''
           )
         )
       }
     }
+
+    test('supplies deterministic package-script claims from resolved skills only', async () => {
+      const box = await sandbox()
+      await installSkillsHarness(box.data, [
+        { name: 'ki-feature', deps: [], packageScripts: ['ki:z', 'ki:a'] },
+        { name: 'ki-engineering', deps: [], packageScripts: ['ki:deps:update'] },
+        { name: 'ki-empty', deps: [] },
+        { name: 'ki-unresolved', deps: [], packageScripts: ['ki:hidden'] }
+      ])
+      const expectedClaims = JSON.stringify([
+        { script: 'ki:a', skill: 'example/harness:ki-feature' },
+        { script: 'ki:deps:update', skill: 'example/harness:ki-engineering' },
+        { script: 'ki:z', skill: 'example/harness:ki-feature' }
+      ])
+      await box.data.write(
+        'ki/harnesses/example/harness/skills/ki-feature/scripts/rubric/items/index.ts',
+        rubric(
+          `[{ code: 'F', title: 'Family', items: [{ kind: 'mechanical', code: 'R-1', title: 'Claims', level: 'FAIL', phase: 'PRIMARY', audit: async (context) => [{ status: JSON.stringify(context.packageScriptClaims) === ${JSON.stringify(expectedClaims)} ? 'PASS' : 'VIOLATION', message: 'resolved package-script inventory' }] }] }]`,
+          'ki-feature',
+          `packageScripts: ${JSON.stringify(['ki:z', 'ki:a'])},`
+        )
+      )
+      await box.project.write(
+        '.ki.toml',
+        `[repo]
+harnesses = ["example/harness"]
+
+[skills.ki-feature]
+
+[skills.ki-engineering]
+script_exclusions = ["vendor:generate"]
+
+[skills.ki-empty]
+`
+      )
+
+      const result = await box.run('ki repo audit --skill ki-feature --reporter-levels info')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('example/harness:ki-feature')
+      expect(result.output).not.toContain('ki:hidden')
+      expect(result.output).not.toContain('vendor:generate')
+    })
+
+    test('rejects duplicate package-script claims before an audit runs', async () => {
+      const box = await sandbox()
+      await installSkillsHarness(box.data, [
+        { name: 'ki-first', deps: [], packageScripts: ['ki:shared'] },
+        { name: 'ki-second', deps: [], packageScripts: ['ki:shared'] }
+      ])
+      await box.project.write(
+        '.ki.toml',
+        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-first]\n\n[skills.ki-second]\n'
+      )
+
+      const result = await box.run('ki repo audit --reporter-levels info')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(
+        'package script ki:shared is claimed by both example/harness:ki-first and example/harness:ki-second'
+      )
+      expect(result.output).not.toContain('R-1')
+    })
 
     test('audits declared skills in dependency order', async () => {
       const box = await sandbox()

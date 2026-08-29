@@ -11,6 +11,7 @@ import type { NativeWrite } from '../filesystem/index.ts'
 import {
   type AuditOutcome,
   type ConformCommand,
+  type PackageScriptClaim,
   type RepositorySkillActivation,
   RUBRIC_PHASES,
   type RubricFamily,
@@ -31,6 +32,7 @@ export interface RepositoryRuntimeScope {
   readonly userHome: string
   readonly lstat: typeof lstat
   readonly repositorySkills?: RepositorySkillActivation
+  readonly packageScriptClaims: readonly PackageScriptClaim[]
 }
 
 export type RuntimeScope = RepositoryRuntimeScope
@@ -330,6 +332,20 @@ export const prepareSkill = async (skill: ResolvedSkill): Promise<PreparedSkill>
   return { skill, definition, items: orderedMechanicalItems(definition) }
 }
 
+export const aggregatePackageScriptClaims = (prepared: readonly PreparedSkill[]): readonly PackageScriptClaim[] => {
+  const claims = prepared.flatMap(({ skill, definition }) =>
+    (definition.packageScripts ?? []).map((script) => ({ script, skill: skill.identity }))
+  )
+  claims.sort((first, second) => first.script.localeCompare(second.script) || first.skill.localeCompare(second.skill))
+  for (let index = 1; index < claims.length; index += 1) {
+    const previous = claims[index - 1] as PackageScriptClaim
+    const current = claims[index] as PackageScriptClaim
+    if (previous.script === current.script)
+      throw new KiError(`package script ${current.script} is claimed by both ${previous.skill} and ${current.skill}`, 1)
+  }
+  return claims
+}
+
 /**
  * Item progress is reported at both edges of the await. A caller rendering a live
  * line needs the item that is running, not the one that has finished; reporting
@@ -389,6 +405,7 @@ const gatherSkillAudit = async (
       repository: scope.repository,
       userHome: scope.userHome,
       configuration: skill.declaration.configuration,
+      packageScriptClaims: scope.packageScriptClaims,
       ...(scope.repositorySkills ? { repositorySkills: scope.repositorySkills } : {}),
       // Withheld when nothing is displaying, so a rubric can tell that emitting is pointless
       // rather than formatting reports no one will read.

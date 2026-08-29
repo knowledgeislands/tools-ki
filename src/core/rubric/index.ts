@@ -103,6 +103,8 @@ export interface RubricContextOptions {
   readonly repository: string
   readonly userHome: string
   readonly configuration: Readonly<Record<string, unknown>>
+  /** Exact, duplicate-free claims aggregated from this repository's resolved skills. */
+  readonly packageScriptClaims: readonly PackageScriptClaim[]
   /**
    * Reports progress while the session works. Absent when the host is not displaying
    * progress; a rubric must produce identical findings either way and must never depend on
@@ -113,6 +115,11 @@ export interface RubricContextOptions {
   readonly publication: RubricPublication
   /** Host-resolved repository-skill evidence and native activation proposal seam. */
   readonly repositorySkills?: RepositorySkillActivation
+}
+
+export interface PackageScriptClaim {
+  readonly script: string
+  readonly skill: string
 }
 
 export interface RepositorySkillActivationState {
@@ -177,6 +184,8 @@ export interface SkillRubricDefinition<RootContext = unknown> {
   readonly contract: typeof RUBRIC_CONTRACT_VERSION
   readonly name: string
   readonly concern: string
+  /** Exact package.json script keys owned by this skill. */
+  readonly packageScripts?: readonly string[]
   readonly scope?: RubricScope
   /**
    * Builds one operation-scoped session. AUDIT callbacks remain read-only;

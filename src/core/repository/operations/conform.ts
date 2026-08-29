@@ -1,6 +1,7 @@
 import { KiError } from '../../errors.ts'
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../../filesystem/index.ts'
 import { discoverInstalledHarnesses } from '../../harness/index.ts'
+import type { PackageScriptClaim } from '../../rubric/index.ts'
 import {
   detectFixed,
   type Finding,
@@ -85,31 +86,37 @@ export const conformRepositories = async (
     // The one-element input above guarantees this result; retain a guard for a future resolver change.
     /* v8 ignore next */
     if (!selected) throw new KiError('repository conform lost its selected repository before resolution', 1)
-    const { skills } = selected
+    const { skills, resolvedSkills } = selected
+    let packageScriptClaims: readonly PackageScriptClaim[] = []
     const repositorySkills = await repositorySkillActivation(context, repository, skills)
     observer.repositoryStarted(repository.root, skills)
     const conformed: readonly ConformedRepositorySkill[] = await runWithProgress(
       skills,
-      async (skill, itemProgress) => ({
-        skill: skill.skill,
-        prepared: skill,
-        conform: await runSkillConform(
-          {
-            kind: 'repository',
-            repository: repository.root,
-            userHome: context.homeDirectory,
-            lstat: context.lstat,
-            ...(repositorySkills ? { repositorySkills: repositorySkills.rubric } : {})
-          },
-          skill,
-          {
-            onItemStart: (item) => itemProgress.onItemStart(item.code),
-            onItemComplete: (item) => itemProgress.onItemComplete(item.code),
-            onProgressEvent: itemProgress.onProgressEvent
-          }
-        )
-      }),
-      context.progress.resolved(skills, 'conform', 'root')
+      async (skill, itemProgress, claims) => {
+        packageScriptClaims = claims
+        return {
+          skill: skill.skill,
+          prepared: skill,
+          conform: await runSkillConform(
+            {
+              kind: 'repository',
+              repository: repository.root,
+              userHome: context.homeDirectory,
+              lstat: context.lstat,
+              packageScriptClaims,
+              ...(repositorySkills ? { repositorySkills: repositorySkills.rubric } : {})
+            },
+            skill,
+            {
+              onItemStart: (item) => itemProgress.onItemStart(item.code),
+              onItemComplete: (item) => itemProgress.onItemComplete(item.code),
+              onProgressEvent: itemProgress.onProgressEvent
+            }
+          )
+        }
+      },
+      context.progress.resolved(skills, 'conform', 'root'),
+      resolvedSkills
     )
     const findings = conformed.flatMap(({ conform }) => conform.findings)
     const initialReports = (): readonly RepositoryConformReport[] =>
@@ -134,6 +141,7 @@ export const conformRepositories = async (
                 repository: repository.root,
                 userHome: context.homeDirectory,
                 lstat: context.lstat,
+                packageScriptClaims,
                 ...(reAuditRepositorySkills ? { repositorySkills: reAuditRepositorySkills.rubric } : {})
               },
               skill,

@@ -58,4 +58,6 @@ export interface RepositorySelection {
 export interface SelectedRepositorySkills {
   readonly repository: RepositoryLocation
   readonly skills: readonly ResolvedSkill[]
+  /** All repository-declared resolved skills, independent of an execution filter. */
+  readonly resolvedSkills: readonly ResolvedSkill[]
 }
