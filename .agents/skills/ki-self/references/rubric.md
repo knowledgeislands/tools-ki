@@ -46,7 +46,7 @@ Keeps bootstrap validation and repair coverage complete and automation-visible.
 - **SELF-REPAIR-001 [M] — Configured skill coverage** — Repair and diagnostics inspect every configured managed identity. (src/core/manage/repair.ts, src/core/manage/doctor.ts)
   - _Remediation:_ diagnostic — Iterate the complete configured skill inventory in repair and doctor.
 - **SELF-REPAIR-002 [M] — Local capability resolution** — Local Harness development resolves sources through inspected capability metadata. (src/agents/bootstrap.ts)
-  - _Remediation:_ diagnostic — Keep localBootstrapHarness on inspectHarnessRoot and capability.source.
+  - _Remediation:_ diagnostic — Keep localBootstrapHarness on inspectHarnessSourceRoot and capability.source.
 - **SELF-REPAIR-003 [M] — Automation failure signal** — A failed manage repair result exits non-zero after rendering its summary. (src/commands/manage/repair.ts)
   - _Remediation:_ diagnostic — Preserve FAIL summary rendering and KiExit(1) for repair failure.
 

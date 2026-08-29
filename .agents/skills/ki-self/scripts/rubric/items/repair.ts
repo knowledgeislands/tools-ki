@@ -52,13 +52,15 @@ export const REPAIR: RubricFamily<SelfRubricContext, SelfRubricContext> = {
       sources: ['src/agents/bootstrap.ts'],
       mechanical: {
         level: 'FAIL',
-        remediation: diagnosticRemediation('Keep localBootstrapHarness on inspectHarnessRoot and capability.source.'),
+        remediation: diagnosticRemediation(
+          'Keep localBootstrapHarness on inspectHarnessSourceRoot and capability.source.'
+        ),
         audit: {
           phase: 'PRIMARY',
           run: (context) =>
             sourceContains(context, 'src/agents/bootstrap.ts', [
               'localBootstrapHarness',
-              'inspectHarnessRoot',
+              'inspectHarnessSourceRoot',
               'capability.source'
             ])
         }
