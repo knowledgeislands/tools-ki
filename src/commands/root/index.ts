@@ -9,7 +9,6 @@ import { createManageCommand } from '../manage/index.ts'
 import { createRegistryCommand } from '../registry/index.ts'
 import { createRepositoryOperations } from '../repo/index.ts'
 import { createSkillCommand } from '../skill/index.ts'
-import { createSpaceCommand } from '../space/index.ts'
 import { createTradeCommand } from '../trade/index.ts'
 import { type RootCommandName, rootHelpCommandNames } from './catalogue.ts'
 
@@ -25,8 +24,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   manage: (context) => createManageCommand(context),
   repo: (context) => createRepositoryOperations(context),
   registry: (context) => createRegistryCommand(context),
-  skill: (context) => createSkillCommand(context),
-  space: (context) => createSpaceCommand(context)
+  skill: (context) => createSkillCommand(context)
 }
 
 export const addRootCommands = (program: Command, context: KiContext): void => {

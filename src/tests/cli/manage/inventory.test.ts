@@ -12,7 +12,6 @@ const rootHelpCommands = [
   'harness',
   'trade',
   'acquire',
-  'space',
   'dev'
 ]
 
