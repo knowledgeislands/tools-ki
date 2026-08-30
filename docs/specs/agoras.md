@@ -30,7 +30,7 @@ _Verify:_ `src/tests/cli/agora/agora.test.ts` — malformed registered repositor
 
 ### AGORA-005 — Inspection and opening
 
-`ki agora list` and `ki agora show` MUST expose the resolved owner-inclusive group, while `ki agora open` MUST launch the selected Zed workspace and report a launch failure.
+`ki agora list` and `ki agora show` MUST expose the resolved owner-inclusive group, while `ki agora open` MUST launch the resolved group through an explicitly selected supported local target and report a launch failure.
 
 _Verify:_ `src/tests/cli/agora/agora.test.ts` — list, show, open, and launch-failure coverage.
 

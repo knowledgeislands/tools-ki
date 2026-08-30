@@ -122,10 +122,9 @@ describe('[ki repo open]', () => {
     const box = await sandbox()
     await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/project'))
 
-    expect(await box.run('ki repo open --target terminal')).toEqual({
-      exitCode: 2,
-      output: 'ki: error: ki repo open --target supports zed or vscode\n'
-    })
+    const invalidTarget = await box.run('ki repo open --target terminal')
+    expect(invalidTarget.exitCode).toBe(2)
+    expect(invalidTarget.output).toContain('Allowed choices are zed, vscode.')
     expect(await box.run('ki repo open --target zed --stores --no-stores')).toEqual({
       exitCode: 2,
       output: 'ki: error: ki repo open --stores and --no-stores are mutually exclusive\n'

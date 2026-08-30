@@ -1,4 +1,4 @@
-import { Command } from 'commander'
+import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import {
   declaredKnowledgeBaseStoreRoles,
@@ -6,11 +6,12 @@ import {
   readRepositoryDeclaration
 } from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
+import { type OpenTargetName, openLocalTarget, openTargetNames } from '../../core/open-target/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { inspectLocalRegistry, registeredKnowledgeBaseStoreRoots } from '../../core/storage/index.ts'
 
 interface OpenOptions {
-  readonly target: string
+  readonly target: OpenTargetName
   readonly stores?: boolean
 }
 
@@ -28,7 +29,7 @@ export const createRepoOpenCommand = (
 ): Command =>
   new Command('open')
     .description('open selected repositories with their declared local stores')
-    .requiredOption('--target <target>', 'local target to open')
+    .addOption(new Option('--target <target>', 'local target to open').choices(openTargetNames).makeOptionMandatory())
     .option('--stores', 'include declared local stores (default)')
     .option('--no-stores', 'open canonical repository roots only')
     .action(async (options: OpenOptions, command: Command) => {
@@ -64,19 +65,15 @@ export const createRepoOpenCommand = (
           )
         }
       }
-      if (options.target === 'zed') {
-        const window = await context.runner('zed', ['-n'], context.environment)
-        if (window.exitCode)
-          throw new KiError(`could not open repositories: ${window.output.trim() || 'zed failed'}`, window.exitCode)
-        for (const root of roots) {
-          const result = await context.runner('zed', ['-e', root], context.environment)
-          if (result.exitCode)
-            throw new KiError(`could not open repositories: ${result.output.trim() || 'zed failed'}`, result.exitCode)
-        }
-      } else if (options.target === 'vscode') {
-        const result = await context.runner('code', ['--new-window', ...roots], context.environment)
-        if (result.exitCode)
-          throw new KiError(`could not open repositories: ${result.output.trim() || 'code failed'}`, result.exitCode)
-      } else throw new KiError('ki repo open --target supports zed or vscode', 2)
+      const result = await openLocalTarget(options.target, roots, {
+        runner: context.runner,
+        environment: context.environment
+      })
+      if (result.exitCode)
+        throw new KiError(
+          `could not open repositories: ${result.output.trim() || result.failureMessage}`,
+          result.exitCode
+        )
+
       context.stdout.write(`ki repo open --target ${options.target}: opened ${repositories.length} repositories\n`)
     })
