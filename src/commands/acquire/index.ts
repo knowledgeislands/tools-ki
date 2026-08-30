@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { type ImportCaptureResult, type ImportOptions, importCapture } from '../../core/kep/index.ts'
+import { type ImportCaptureResult, type ImportOptions, importCapture } from '../../core/acquire/index.ts'
 
 const renderImportResult = (result: ImportCaptureResult): string =>
   [
