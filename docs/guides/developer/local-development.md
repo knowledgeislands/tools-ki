@@ -70,6 +70,8 @@ Repository selection, execution, progress events, and subprocess handling are gr
 
 Tests exercise this composition through `run(args, context)` and the `sandbox()` helper in `src/tests/cli/_cli_helper.ts`. Add coverage at that CLI boundary: assert stdout, stderr, exit status, and sandbox filesystem effects rather than coupling tests to internal modules.
 
+Trade lifecycle code keeps `src/core/trade/index.ts` as its explicit public facade. Its leaf modules separate the public model, registered-estate and route authority, record codec, sender preparation, receiver delivery and observation, inventory, and lifecycle mutation. Runtime operations follow the same facade rule under `src/core/runtime/`, with dependency-neutral contracts and focused preparation, audit, education, and conform modules; `publication.ts` and `runner.ts` remain separate runtime services.
+
 ## Build a compiled executable
 
 Build and run a standalone executable for the current platform without changing any installation:
