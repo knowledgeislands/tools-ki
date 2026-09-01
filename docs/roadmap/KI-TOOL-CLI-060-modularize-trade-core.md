@@ -4,10 +4,10 @@ area: CLI
 title: Modularize trade lifecycle core
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 5dacaf38218881f8dec561c1a757f3f70a84fd2e
 ---
 
 # Modularize trade lifecycle core
