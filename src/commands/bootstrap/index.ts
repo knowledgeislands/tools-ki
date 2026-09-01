@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { type BootstrapOperationEvent, bootstrapEnvironment } from '../../core/harness/index.ts'
-import { bootstrapOperationPort } from './operations.ts'
+import { bootstrapPort } from './ports.ts'
 
 const renderBootstrapEvent = (event: BootstrapOperationEvent): string => {
   switch (event.kind) {
@@ -27,7 +27,7 @@ export const createBootstrapCommand = (context: KiContext): Command =>
     .description('configure detected agents and install KI core user skills')
     .option('--refresh', 'reconcile agents, harnesses, and skills from installed state')
     .action(async (options: { refresh?: boolean }) => {
-      await bootstrapEnvironment(bootstrapOperationPort(context), options, (event) =>
+      await bootstrapEnvironment(bootstrapPort(context), options, (event) =>
         context.stdout.write(renderBootstrapEvent(event))
       )
     })

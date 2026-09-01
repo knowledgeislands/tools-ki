@@ -23,7 +23,7 @@ export const harnessQueryPort = (context: KiContext): HarnessQueryPort => ({
   readInstalled: (identifier) => readInstalledHarness(context.paths.data, identifier)
 })
 
-const install =
+const harnessInstaller =
   (context: KiContext): HarnessInstallationPort['install'] =>
   (identifier, options) =>
     installHarness(
@@ -41,7 +41,7 @@ const activeSkillDeclarations = async (context: KiContext): Promise<readonly str
   (await inspectUserConfiguration(context.paths.config)).skills
 
 export const harnessInstallationPort = (context: KiContext): HarnessInstallationPort => ({
-  install: install(context),
+  install: harnessInstaller(context),
   recordInstalled: (identifier, installed) => recordInstalledHarness(context.paths.config, identifier, installed)
 })
 
@@ -63,5 +63,5 @@ export const harnessUninstallationPort = (context: KiContext): HarnessUninstalla
 
 export const harnessRefreshPort = (context: KiContext): HarnessRefreshPort => ({
   configuredReleaseIds: async () => (await readHarnessRegistry(context.paths.config)).map((release) => release.id),
-  install: install(context)
+  install: harnessInstaller(context)
 })

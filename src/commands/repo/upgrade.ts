@@ -3,8 +3,8 @@ import type { KiContext } from '../../context.ts'
 import { readRepositoryDeclaration, resolveRepositoryDeclaredSkills } from '../../core/configuration/index.ts'
 import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
-import { refreshHarnesses } from '../harness/refresh.ts'
 import { renderTree } from '../presentation/index.ts'
+import { refreshHarnesses } from '../shared/harness-refresh.ts'
 
 export const createUpgradeCommand = (
   context: KiContext,

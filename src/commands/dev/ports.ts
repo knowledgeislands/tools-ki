@@ -85,7 +85,7 @@ export const disableDevelopmentPort = (
   projectionView
 })
 
-export const developmentRubricPort = (context: KiContext): DevelopmentRubricPort => ({
+export const developmentSkillRubricPort = (context: KiContext): DevelopmentRubricPort => ({
   resolveSkill: async (skill) => resolveInstalledSkill(await discoverInstalledHarnesses(context.paths.data), skill),
   preparePublication: async (skill) =>
     prepareRubricPublication(skill, await loadRubricDefinition(skill), undefined, context.lstat),

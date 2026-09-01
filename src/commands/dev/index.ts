@@ -11,11 +11,11 @@ import {
   setDevelopmentSource
 } from '../../core/harness/index.ts'
 import {
-  developmentRubricPort,
+  developmentSkillRubricPort,
   disableDevelopmentPort,
   enableDevelopmentPort,
   setDevelopmentSourcePort
-} from './operations.ts'
+} from './ports.ts'
 
 const renderRubricEvent = (event: DevelopmentRubricEvent): string => {
   switch (event.kind) {
@@ -34,7 +34,7 @@ const createRubricCommand = (context: KiContext): Command =>
     .argument('<skill>', 'skill capability name whose rubric to render')
     .option('--write', 'publish the rendered catalogue to references/rubric.md (dev-linked harness installs only)')
     .action(async (skill: string, options: { write?: boolean }) => {
-      await inspectDevelopmentRubric(developmentRubricPort(context), skill, Boolean(options.write), (event) =>
+      await inspectDevelopmentRubric(developmentSkillRubricPort(context), skill, Boolean(options.write), (event) =>
         context.stdout.write(renderRubricEvent(event))
       )
     })

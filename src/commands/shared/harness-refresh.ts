@@ -1,6 +1,6 @@
 import type { KiContext } from '../../context.ts'
 import { type InstalledHarness, refreshInstalledHarnesses } from '../../core/harness/index.ts'
-import { harnessRefreshPort } from './operations.ts'
+import { harnessRefreshPort } from './harness-ports.ts'
 
 export const refreshHarnesses = async (
   context: KiContext,

@@ -13,7 +13,7 @@ import {
   harnessQueryPort,
   harnessReinstallationPort,
   harnessUninstallationPort
-} from './operations.ts'
+} from '../shared/harness-ports.ts'
 
 export const createHarnessCommand = (context: KiContext): Command =>
   new Command('harness')

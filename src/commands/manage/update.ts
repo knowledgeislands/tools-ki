@@ -2,8 +2,8 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { discoverInstalledHarnesses, refreshInstalledHarnesses } from '../../core/harness/index.ts'
 import { runManageUpdate } from '../../core/manage/index.ts'
-import { harnessRefreshPort } from '../harness/operations.ts'
 import { renderTree } from '../presentation/index.ts'
+import { harnessRefreshPort } from '../shared/harness-ports.ts'
 
 const cliResult = (result: Awaited<ReturnType<typeof runManageUpdate>>['cli']): string =>
   result.kind === 'updated'

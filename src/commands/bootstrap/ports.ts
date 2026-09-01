@@ -18,7 +18,7 @@ type BootstrapAgent = Awaited<ReturnType<typeof configureBootstrapAgents>>['agen
 type BootstrapSkill = Awaited<ReturnType<typeof installedBootstrapSkillSources>>[number]
 type BootstrapProjection = Awaited<ReturnType<typeof installBootstrapSkills>>[number]
 
-export const bootstrapOperationPort = (
+export const bootstrapPort = (
   context: KiContext
 ): BootstrapOperationPort<BootstrapAgent, BootstrapSkill, BootstrapProjection> => {
   const configurationPath = join(context.paths.config, 'config.toml')
