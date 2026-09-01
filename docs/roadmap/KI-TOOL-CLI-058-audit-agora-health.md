@@ -4,7 +4,7 @@ area: CLI
 title: Audit Agora health
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: cac651ed3fb5e01c1261090735d70347da6e51af
@@ -97,6 +97,10 @@ The implementation matches the planned grammar, deterministic reporting, and exi
 ### Mini recap
 
 Agora declarations now have a focused local verification command suitable for people and exit-status automation. No learning requires promotion beyond the specification and user documentation delivered with the command.
+
+## Done
+
+Accepted on 2026-09-01 under the exact closure authority in `KI-TOOL-BATCH-003` after rechecking the canonical review packet and current repository evidence. The record is retained; no pruning is authorized.
 
 ## Discussion
 

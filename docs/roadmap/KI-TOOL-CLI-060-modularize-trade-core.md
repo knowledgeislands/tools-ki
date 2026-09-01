@@ -4,7 +4,7 @@ area: CLI
 title: Modularize trade lifecycle core
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 5dacaf38218881f8dec561c1a757f3f70a84fd2e
@@ -113,6 +113,10 @@ The resulting modules follow independently cohesive trade responsibilities rathe
 ### Mini recap
 
 Trade lifecycle expansion now has clear module homes for estate authority, codec, delivery, inventory, and mutation without changing the protocol. The developer guide records the facade rule; no further learning requires promotion.
+
+## Done
+
+Accepted on 2026-09-01 under the exact closure authority in `KI-TOOL-BATCH-003` after rechecking the canonical review packet and current repository evidence. The record is retained; no pruning is authorized.
 
 ## Discussion
 

@@ -4,7 +4,7 @@ area: CLI
 title: Inspect editor projection drift
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: eddb7e2dd824bf73b37a7b200d3c0f23ee15e905
@@ -105,6 +105,10 @@ The implementation keeps target-specific decoding behind Agora-owned adapters an
 ### Mini recap
 
 Users can now explain drift between a resolved Agora and one explicit VS Code or Zed workspace without granting mutation authority. The durable application-storage decision is recorded in `ADR-KI-TOOLS-003`; no further learning requires promotion.
+
+## Done
+
+Accepted on 2026-09-01 under the exact closure authority in `KI-TOOL-BATCH-003` after rechecking the canonical review packet and current repository evidence. The record is retained; no pruning is authorized.
 
 ## Discussion
 

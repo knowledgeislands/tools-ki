@@ -4,7 +4,7 @@ area: CLI
 title: Modularize runtime operation core
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 80cc698a67f67766ba3065db6a10a5478b8bd125
@@ -109,6 +109,10 @@ The split follows operation boundaries already visible at repository callers, pr
 ### Mini recap
 
 Runtime preparation, audit, education, and conform work now have clear cohesive module homes without changing observable repository operations. The developer guide records the boundary; no further learning requires promotion.
+
+## Done
+
+Accepted on 2026-09-01 under the exact closure authority in `KI-TOOL-BATCH-003` after rechecking the canonical review packet and current repository evidence. The record is retained; no pruning is authorized.
 
 ## Discussion
 
