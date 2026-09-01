@@ -7,7 +7,7 @@ import {
   describeRepositoryLocalProvider,
   describeRepositoryProjection,
   inspectRepositoryHealth
-} from './repository-health.ts'
+} from './shared/repository-health.ts'
 
 export const createRepoDiagCommand = (
   context: KiContext,

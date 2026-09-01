@@ -18,7 +18,7 @@ import {
   registryEntry
 } from '../../core/storage/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
-import { describeRepositoryProjection, inspectRepositoryHealth } from './repository-health.ts'
+import { describeRepositoryProjection, inspectRepositoryHealth } from './shared/repository-health.ts'
 
 export const createRepairCommand = (
   context: KiContext,

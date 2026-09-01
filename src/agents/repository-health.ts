@@ -1,16 +1,15 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { join } from 'node:path'
-import { agentSkillDirectory, compatibleWithSkill, configuredAgents } from '../../agents/index.ts'
-import type { InstalledAgent } from '../../agents/internal.ts'
-import { repositorySupportedRuntimes, runtimeForAgent } from '../../agents/runtimes.ts'
-import type { KiContext } from '../../context.ts'
 import {
   type ResolvedSkill,
   readRepositoryDeclaration,
   resolveRepositoryDeclaredSkills
-} from '../../core/configuration/index.ts'
-import { discoverInstalledHarnesses } from '../../core/harness/index.ts'
-import { presentation } from '../presentation/index.ts'
+} from '../core/configuration/index.ts'
+import { discoverInstalledHarnesses } from '../core/harness/index.ts'
+import { configuredAgents } from './configuration.ts'
+import type { InstalledAgent } from './internal.ts'
+import { compatibleWithSkill, repositorySupportedRuntimes, runtimeForAgent } from './runtimes.ts'
+import { agentSkillDirectory } from './shared/index.ts'
 
 type Health = 'healthy' | 'repairable' | 'unrepairable'
 
@@ -31,24 +30,16 @@ export interface RepositoryHealth {
   readonly projections: readonly RepositoryProjection[]
 }
 
-interface RepositoryLocation {
+export interface RepositoryLocation {
   readonly root: string
   readonly declaration: string
 }
 
-const stateDescription: Record<RepositoryProjection['state'], string> = {
-  linked: 'linked',
-  missing: 'projection is missing',
-  dangling: 'projection is dangling',
-  stale: 'projection target is stale',
-  foreign: 'projection is not a KI-managed link'
+export interface RepositoryHealthOptions {
+  readonly configurationDirectory: string
+  readonly dataDirectory: string
+  readonly homeDirectory: string
 }
-
-export const describeRepositoryProjection = (projection: RepositoryProjection): string =>
-  `${presentation(projection.state === 'linked' ? 'status.pass' : 'status.fail').terminal} ${projection.agent.descriptor.id} ${projection.skill.declaration.name}: ${stateDescription[projection.state]}`
-
-export const describeRepositoryLocalProvider = (skill: ResolvedSkill): string =>
-  `${presentation('status.pass').terminal} ${skill.identity}: canonical repository source`
 
 const inspectProjection = async (
   agent: InstalledAgent,
@@ -76,14 +67,17 @@ const failure = (root: string, declaration: string, detail: string): RepositoryH
 
 /** Inspect one resolved physical declaration and every compatible repository projection. */
 export const inspectRepositoryHealth = async (
-  context: KiContext,
+  options: RepositoryHealthOptions,
   location: RepositoryLocation
 ): Promise<RepositoryHealth> => {
   try {
     const declarations = await readRepositoryDeclaration(location.declaration)
     const [harnesses, agents, runtimes] = await Promise.all([
-      discoverInstalledHarnesses(context.paths.data),
-      configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config }),
+      discoverInstalledHarnesses(options.dataDirectory),
+      configuredAgents({
+        homeDirectory: options.homeDirectory,
+        configurationDirectory: options.configurationDirectory
+      }),
       repositorySupportedRuntimes(location.declaration)
     ])
     const skills = await resolveRepositoryDeclaredSkills(location.root, declarations, harnesses)

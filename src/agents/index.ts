@@ -16,6 +16,13 @@ export {
   setConfiguredUserSkills,
   setLocalBootstrapHarness
 } from './configuration.ts'
+export {
+  inspectRepositoryHealth,
+  type RepositoryHealth,
+  type RepositoryHealthOptions,
+  type RepositoryLocation,
+  type RepositoryProjection
+} from './repository-health.ts'
 export { compatibleWithSkill } from './runtimes.ts'
 export { agentSkillDirectory } from './shared/index.ts'
 export { addRepoSkill, addUserSkill, removeRepoSkill, removeUserSkill } from './skills.ts'
