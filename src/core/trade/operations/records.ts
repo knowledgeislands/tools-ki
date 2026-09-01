@@ -1,5 +1,5 @@
 import type { TradeKind } from '../configuration.ts'
-import type { LocatedTrade, TradeDirection, TradeLifecycle, TradeRecord } from '../index.ts'
+import type { LocatedTrade, TradeDirection, TradeLifecycle, TradeRecord } from '../model.ts'
 
 export interface TradeListSelection {
   readonly direction?: TradeDirection

@@ -1,6 +1,6 @@
 import { KiError } from '../errors.ts'
 import { resolveRepositoryTargets } from '../repository/index.ts'
-import type { LocatedTrade } from '../trade/index.ts'
+import type { LocatedTrade } from '../trade/model.ts'
 import {
   pruneDoneWorkItems,
   readWorkItems,

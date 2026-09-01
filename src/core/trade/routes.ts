@@ -1,4 +1,4 @@
-import type { EstateRouteInspection, RouteState } from './index.ts'
+import type { EstateRouteInspection, RouteState } from './estate.ts'
 
 export interface EstateNetwork {
   readonly nodes: readonly {

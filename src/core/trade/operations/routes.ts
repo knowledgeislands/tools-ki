@@ -1,5 +1,5 @@
 import type { RouteDirection, TradeConfiguration, TradeKind } from '../configuration.ts'
-import type { EstateRouteInspection, RouteInspection } from '../index.ts'
+import type { EstateRouteInspection, RouteInspection } from '../estate.ts'
 
 type RouteMutation = (
   path: string,
