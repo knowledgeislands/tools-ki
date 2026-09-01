@@ -4,7 +4,7 @@ area: CLI
 title: Modularize runtime operation core
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 80cc698a67f67766ba3065db6a10a5478b8bd125
@@ -30,14 +30,14 @@ Do not change rubric contracts, execution ordering, progress events, conform saf
 
 ## Steps
 
-- [ ] Extract shared runtime data contracts into `types.ts` without changing their names or shapes.
-- [ ] Extract rubric loading, mechanical-item ordering, and package-script claim aggregation into `preparation.ts`.
-- [ ] Extract evidence gathering, progress and session validation, subject execution, finding projection, and audit entry points into `audit.ts`.
-- [ ] Extract the static catalogue projection used by repository education into `education.ts`.
-- [ ] Extract conform proposal validation, remediation ordering and execution, and fixed-item detection into `conform.ts`, preserving every safety rule and the existing coverage-guard rationale.
-- [ ] Replace `index.ts` with an explicit barrel preserving the current public runtime surface and keep internal cross-module helpers out of that barrel.
-- [ ] Remove runtime publication's repository-barrel back-edge through direct type and subprocess imports.
-- [ ] Refresh the developer module map and verify unchanged behavior through the existing CLI contracts.
+- [x] Extract shared runtime data contracts into `types.ts` without changing their names or shapes.
+- [x] Extract rubric loading, mechanical-item ordering, and package-script claim aggregation into `preparation.ts`.
+- [x] Extract evidence gathering, progress and session validation, subject execution, finding projection, and audit entry points into `audit.ts`.
+- [x] Extract the static catalogue projection used by repository education into `education.ts`.
+- [x] Extract conform proposal validation, remediation ordering and execution, and fixed-item detection into `conform.ts`, preserving every safety rule and the existing coverage-guard rationale.
+- [x] Replace `index.ts` with an explicit barrel preserving the current public runtime surface and keep internal cross-module helpers out of that barrel.
+- [x] Remove runtime publication's repository-barrel back-edge through direct type and subprocess imports.
+- [x] Refresh the developer module map and verify unchanged behavior through the existing CLI contracts.
 
 ## Files touched
 
@@ -83,6 +83,32 @@ Update the developer module map to name the runtime preparation, audit, educatio
 ### Roadmap
 
 Attach the completed steps and verification evidence to this record before moving it to awaiting review.
+
+## Review
+
+### Delivered
+
+Delivered the approved behavior-preserving runtime-core extraction. Baseline `80cc698a67f67766ba3065db6a10a5478b8bd125` became implementation commit `e2f6c8b930256f1cb2afe7270e7afa3f934bdf69`, with the shared developer map recorded by `b3da3b61ebd2b708f70c1237372a9ca6075150c6`; rubric contracts, ordering, progress, conform safety, findings, coverage policy, and command output remained unchanged.
+
+### Summary of changes
+
+Extracted dependency-neutral runtime contracts and focused preparation, audit, education, and conform modules behind an explicit stable barrel. Runtime publication now imports repository subprocess capabilities directly, removing the repository-barrel back-edge, while the fixed-item coverage guard remains with its unchanged same-catalogue rationale.
+
+### Verification
+
+The targeted repository validation, audit, education, progress, conform, user-scope, and publication suites passed; TypeScript, scoped Biome, build, and runtime Knip inspection passed. The integrated `bun run test:coverage` gate passed all 702 tests at 100% statements, branches, functions, and lines; the complete build, TypeScript, Biome, Knip, man-page lint, and 18-skill repository audit also passed.
+
+### Outstanding concerns
+
+None. Stable runtime facade contracts remain explicitly public, and no internal helper leaked through the barrel.
+
+### Post-change review
+
+The split follows operation boundaries already visible at repository callers, preserves dependency direction and exact behavior, and leaves publication and runner as separate services. The resulting core is ready for future runtime expansion and for acceptance.
+
+### Mini recap
+
+Runtime preparation, audit, education, and conform work now have clear cohesive module homes without changing observable repository operations. The developer guide records the boundary; no further learning requires promotion.
 
 ## Discussion
 
