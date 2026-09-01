@@ -4,10 +4,10 @@ area: CLI
 title: Modularize runtime operation core
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 80cc698a67f67766ba3065db6a10a5478b8bd125
 ---
 
 # Modularize runtime operation core
