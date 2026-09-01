@@ -62,6 +62,24 @@ _Verify:_ `src/tests/cli/agora/audit.test.ts` covers healthy, mixed, unavailable
 
 _Verify:_ `src/tests/cli/agora/audit.test.ts` asserts output and exit status through the CLI seam; `src/tests/cli/root/help.test.ts` and `src/tests/cli/manage/completions.test.ts` verify command discovery.
 
+### AGORA-010 — Read-only editor projection observation
+
+`ki agora inspect <name> --target <zed|vscode> --workspace <selector>` MUST observe only the explicitly selected local editor workspace, MUST validate a target-owned source before reading workspace roots, and MUST NOT change editor, repository, or registry state, as established by [ADR-KI-TOOLS-003](../decisions/ADR-KI-TOOLS-003-read-only-editor-projection-observation.md).
+
+_Verify:_ `src/tests/cli/agora/inspect.test.ts` covers physical VS Code workspace files, stable and preview Zed databases, schema validation, explicit selectors, read-only evidence, and fail-closed unsupported sources.
+
+### AGORA-011 — Shared projection classification
+
+`ki agora inspect` MUST compare target-observed roots with the canonical resolved Agora profile through one target-neutral classifier and MUST report matched members, missing members, extra registered repositories, unregistered KI repositories, and external roots deterministically.
+
+_Verify:_ `src/tests/cli/agora/inspect.test.ts` exercises every classification using paths with spaces, JSONC relative paths, file URIs, non-file URIs, and duplicate-free deterministic totals.
+
+### AGORA-012 — Projection inspection exit status
+
+`ki agora inspect` MUST exit `0` for an exact projection, `1` after rendering drift or when the selected target source cannot be supported safely, and `2` for invalid selectors or Agora resolution failures.
+
+_Verify:_ `src/tests/cli/agora/inspect.test.ts` asserts exact, drift, unavailable, malformed, remote, ambiguous, invalid-selector, and invalid-resolution outcomes through the CLI seam; `src/tests/cli/root/help.test.ts` and `src/tests/cli/manage/completions.test.ts` verify command discovery.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

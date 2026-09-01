@@ -11,6 +11,7 @@ const commandPaths = [
   'acquire chatgpt import',
   'agora',
   'agora audit',
+  'agora inspect',
   'agora list',
   'agora open',
   'agora roots',
@@ -97,6 +98,8 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain('--table:render estate routes as repository pairs')
     expect(zsh.output).toContain("'agora open:--target') printf '%s\\n' 'zed vscode'")
     expect(bash.output).toContain("'agora open:--target') printf '%s\\n' 'zed vscode'")
+    expect(zsh.output).toContain("'agora inspect:--target') printf '%s\\n' 'zed vscode'")
+    expect(bash.output).toContain("'agora inspect:--target') printf '%s\\n' 'zed vscode'")
     expect(zsh.output).toContain("'acquire chatgpt')")
     expect(zsh.output).toContain("'dev local')")
     expect(zsh.output).toContain('import:import a local capture into an immutable Knowledge Export Package')

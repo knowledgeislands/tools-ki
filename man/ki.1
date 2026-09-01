@@ -218,6 +218,12 @@ Audit every declared Agora, one named Agora, or the registered estate. Exit 0
 when healthy, 1 when findings are reported, and 2 for an invalid or unknown
 explicit selector.
 .TP
+.B ki agora inspect <name> --target <zed|vscode> --workspace <selector>
+Compare one explicitly selected local editor workspace with a resolved Agora.
+VS Code selectors are absolute physical .code-workspace files; Zed selectors
+are decimal workspace IDs. Read-only. Exit 0 for exact, 1 for drift or an
+unsupported source, and 2 for invalid selection or resolution.
+.TP
 .B ki agora show <name> [--verbose]
 Show one declared Agora or the registered estate. The default lists member
 names;
@@ -754,6 +760,12 @@ List declared named Agoras and the registered estate.
 Audit every declared Agora, one named Agora, or the registered estate without
 changing repository or registry state. Exit 0 when healthy, 1 when findings
 are reported, and 2 for an invalid or unknown explicit selector.
+.TP
+.B ki agora inspect <name> --target <zed|vscode> --workspace <selector>
+Compare one explicitly selected local editor workspace with a resolved Agora.
+VS Code selectors are absolute physical .code-workspace files; Zed selectors
+are decimal workspace IDs. Read-only. Exit 0 for exact, 1 for drift or an
+unsupported source, and 2 for invalid selection or resolution.
 .TP
 .B ki agora show <name> [--verbose]
 Show one declared Agora or the registered estate. The default lists member

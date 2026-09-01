@@ -1,4 +1,4 @@
-import type { OpenTargetOptions, OpenTargetPort } from './types.ts'
+import type { ObserveTargetPort, OpenTargetOptions, OpenTargetPort, TargetObservation } from './types.ts'
 import { vscodeOpenTarget } from './vscode.ts'
 import { zedOpenTarget } from './zed.ts'
 
@@ -27,3 +27,11 @@ export const openLocalTarget = async (
   const result = await adapter.open(roots, port, options)
   return { ...result, failureMessage: adapter.failureMessage }
 }
+
+export const observeLocalTarget = (
+  target: OpenTargetName,
+  selector: string,
+  port: ObserveTargetPort
+): Promise<TargetObservation> => openTargets[target].observe(selector, port)
+
+export type { TargetObservation } from './types.ts'

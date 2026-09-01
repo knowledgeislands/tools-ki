@@ -62,6 +62,8 @@ An Agora is declared portably by a registered owner repository under `[skills.ki
 
 `ki agora audit [id]` checks declaration and reciprocal-membership health without modifying the repository estate. With no identifier it reports every declared profile; a named profile or `estate` limits the report. Exit status is `0` for healthy selections, `1` when findings are reported, and `2` for invalid or unknown explicit selectors.
 
+`ki agora inspect <id> --target <zed|vscode> --workspace <selector>` compares one explicitly selected local editor workspace with the canonical resolved Agora. VS Code selectors are absolute physical `.code-workspace` files; Zed selectors are decimal workspace IDs resolved from the local stable or preview database. The command is read-only, reports matched, missing, extra registered, unregistered KI, and external roots, then exits `0` for an exact projection, `1` for drift or an unsupported source, and `2` for invalid selection or resolution.
+
 `ki agora roots <id>` is the versioned machine interface for a resolved group's physical roots. A named Agora places its declared `order` prefix first and appends unlisted participants in registry-key order; an Agora without `order` and the system `estate` retain registry-key order throughout. The command writes newline-delimited absolute roots; use `--null` (or `-0`) for safe NUL-delimited path handling. It fails before writing any root when the selector cannot resolve or has no members, and it never clones, repairs, or treats source or legacy stores as Agora members.
 
 ## Select repository targets
@@ -92,6 +94,7 @@ To start a KI repository, run `ki repo init` in an existing Git worktree root, o
 ki agora list
 ki agora audit
 ki agora audit estate
+ki agora inspect estate --target vscode --workspace "$PWD/knowledge-islands.code-workspace"
 ki agora show estate
 ki agora roots estate | xargs -n 1 sh -c 'git -C "$1" status --short' _
 ki agora roots estate --null | xargs -0 -n 1 sh -c 'git -C "$1" status --short' _
