@@ -1,6 +1,6 @@
 import { prepareScopedWrites, prepareWrites, publishWrites } from '../filesystem/index.ts'
-import { renderRepositoryConformCommand, runRepositoryConformCommands } from '../repository/index.ts'
-import type { Finding, PreparedSkill, SkillConformResult } from './index.ts'
+import { renderRepositoryConformCommand, runRepositoryConformCommands } from '../repository/subprocess.ts'
+import type { Finding, PreparedSkill, SkillConformResult } from './types.ts'
 
 /** A skill's complete conform proposal, retained with its audit evidence. */
 export interface ConformedSkill {
