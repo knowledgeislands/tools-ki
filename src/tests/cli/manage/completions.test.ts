@@ -10,6 +10,7 @@ const commandPaths = [
   'acquire chatgpt',
   'acquire chatgpt import',
   'agora',
+  'agora audit',
   'agora list',
   'agora open',
   'agora roots',

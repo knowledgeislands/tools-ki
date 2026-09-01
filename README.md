@@ -60,6 +60,8 @@ An Agora is declared portably by a registered owner repository under `[skills.ki
 
 `estate` is the reserved system selector for every locally registered canonical KI repository. Use `ki agora list`, `ki agora show <id>`, and `ki agora open <id> --target zed` to inspect or open a declared Agora or the estate. Opening requires an explicit permitted target; supported local-client adapters are `zed` and `vscode`.
 
+`ki agora audit [id]` checks declaration and reciprocal-membership health without modifying the repository estate. With no identifier it reports every declared profile; a named profile or `estate` limits the report. Exit status is `0` for healthy selections, `1` when findings are reported, and `2` for invalid or unknown explicit selectors.
+
 `ki agora roots <id>` is the versioned machine interface for a resolved group's physical roots. A named Agora places its declared `order` prefix first and appends unlisted participants in registry-key order; an Agora without `order` and the system `estate` retain registry-key order throughout. The command writes newline-delimited absolute roots; use `--null` (or `-0`) for safe NUL-delimited path handling. It fails before writing any root when the selector cannot resolve or has no members, and it never clones, repairs, or treats source or legacy stores as Agora members.
 
 ## Select repository targets
@@ -88,6 +90,8 @@ To start a KI repository, run `ki repo init` in an existing Git worktree root, o
 
 ```sh
 ki agora list
+ki agora audit
+ki agora audit estate
 ki agora show estate
 ki agora roots estate | xargs -n 1 sh -c 'git -C "$1" status --short' _
 ki agora roots estate --null | xargs -0 -n 1 sh -c 'git -C "$1" status --short' _

@@ -213,6 +213,11 @@ Prune one eligible local inbound copy, or preview and confirm a batch.
 .B ki agora list
 List declared named Agoras and the registered estate.
 .TP
+.B ki agora audit [name]
+Audit every declared Agora, one named Agora, or the registered estate. Exit 0
+when healthy, 1 when findings are reported, and 2 for an invalid or unknown
+explicit selector.
+.TP
 .B ki agora show <name> [--verbose]
 Show one declared Agora or the registered estate. The default lists member
 names;
@@ -744,6 +749,11 @@ registered canonical KI repositories.
 .TP
 .B ki agora list
 List declared named Agoras and the registered estate.
+.TP
+.B ki agora audit [name]
+Audit every declared Agora, one named Agora, or the registered estate without
+changing repository or registry state. Exit 0 when healthy, 1 when findings
+are reported, and 2 for an invalid or unknown explicit selector.
 .TP
 .B ki agora show <name> [--verbose]
 Show one declared Agora or the registered estate. The default lists member

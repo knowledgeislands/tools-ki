@@ -50,6 +50,18 @@ A named Agora home MAY declare `order` as a duplicate-free ordered prefix of can
 
 _Verify:_ `src/core/agora/index.ts` — `homeDeclarations` and `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers ordered and absent-order projections through show, roots, open, and repository selection, plus malformed declarations.
 
+### AGORA-008 — Explicit health audit
+
+`ki agora audit [name]` MUST report deterministic health findings from the canonical Agora resolver without changing repository declarations, the local registry, or peer repositories; with no name it audits every declared profile, while an explicit name selects only that declared profile or the registered `estate`.
+
+_Verify:_ `src/tests/cli/agora/audit.test.ts` covers healthy, mixed, unavailable, duplicate, non-reciprocal, malformed, estate, and explicitly selected profiles.
+
+### AGORA-009 — Health audit exit status
+
+`ki agora audit` MUST exit `0` when every selected profile is healthy, `1` after rendering any selected health finding, and `2` for invalid grammar or an unknown explicit profile selector.
+
+_Verify:_ `src/tests/cli/agora/audit.test.ts` asserts output and exit status through the CLI seam; `src/tests/cli/root/help.test.ts` and `src/tests/cli/manage/completions.test.ts` verify command discovery.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.
