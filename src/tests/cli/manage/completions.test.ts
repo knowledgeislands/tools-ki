@@ -100,6 +100,8 @@ describe('[ki manage completion]', () => {
     expect(bash.output).toContain("'agora open:--target') printf '%s\\n' 'zed vscode'")
     expect(zsh.output).toContain("'agora inspect:--target') printf '%s\\n' 'zed vscode'")
     expect(bash.output).toContain("'agora inspect:--target') printf '%s\\n' 'zed vscode'")
+    expect(zsh.output).toContain("'agora inspect') printf '%s\\n' '--target --workspace'")
+    expect(bash.output).toContain("'agora inspect:--workspace')")
     expect(zsh.output).toContain("'acquire chatgpt')")
     expect(zsh.output).toContain("'dev local')")
     expect(zsh.output).toContain('import:import a local capture into an immutable Knowledge Export Package')

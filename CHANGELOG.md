@@ -42,9 +42,11 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 #### Agora management
 
 - `ki agora list`
+- `ki agora audit [agora]`
+- `ki agora inspect <agora> --target <zed|vscode> --workspace <selector>`
 - `ki agora show <agora> [--verbose]`
 - `ki agora roots <agora> [--null]`
-- `ki agora open <agora> --target zed`
+- `ki agora open <agora> --target <zed|vscode>`
 
 #### Repository options
 

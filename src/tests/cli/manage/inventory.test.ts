@@ -29,6 +29,11 @@ const manageCommands = [
   'update'
 ]
 const agoraCommands = ['audit', 'inspect', 'list', 'show', 'roots', 'open']
+const agoraChangelogCommands = [
+  '`ki agora audit [agora]`',
+  '`ki agora inspect <agora> --target <zed|vscode> --workspace <selector>`',
+  '`ki agora open <agora> --target <zed|vscode>`'
+]
 const repoCommands = ['audit', 'conform', 'diag', 'educate', 'init', 'open', 'roadmap', 'repair', 'skill', 'upgrade']
 const registryCommands = ['add', 'list']
 
@@ -107,6 +112,7 @@ describe('[ki command inventory]', () => {
     expect(manual).not.toContain('.B ki dev local off knowledgeislands/ki-agentic-harness')
 
     for (const command of agoraCommands) expect(manual).toContain(`.B ki agora ${command}`)
+    for (const command of agoraChangelogCommands) expect(changelog).toContain(command)
     expect(manual.indexOf('.SS Repository options')).toBeLessThan(manual.indexOf('.SS Repository management'))
     expect(manual.indexOf('.SS Repository management')).toBeLessThan(manual.indexOf('.SS Registry management'))
     expect(manual.indexOf('.SS Trades')).toBeLessThan(manual.indexOf('.SS Agora management'))
