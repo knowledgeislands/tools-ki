@@ -4,10 +4,10 @@ area: CLI
 title: Inspect editor projection drift
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: eddb7e2dd824bf73b37a7b200d3c0f23ee15e905
 ---
 
 # Inspect editor projection drift
