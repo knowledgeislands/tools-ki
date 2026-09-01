@@ -1,4 +1,4 @@
-import type { OpenTargetAdapter } from '../types.ts'
+import type { OpenTargetAdapter } from './types.ts'
 
 export const zedOpenTarget = {
   id: 'zed',

@@ -1,6 +1,6 @@
-import { vscodeOpenTarget } from './adapters/vscode.ts'
-import { zedOpenTarget } from './adapters/zed.ts'
 import type { OpenTargetOptions, OpenTargetPort } from './types.ts'
+import { vscodeOpenTarget } from './vscode.ts'
+import { zedOpenTarget } from './zed.ts'
 
 const openTargets = {
   [zedOpenTarget.id]: zedOpenTarget,

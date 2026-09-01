@@ -1,12 +1,12 @@
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
+import { type OpenTargetName, openLocalTarget, openTargetNames } from '../../core/agora/index.ts'
 import {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
   readRepositoryDeclaration
 } from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
-import { type OpenTargetName, openLocalTarget, openTargetNames } from '../../core/open-target/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { inspectLocalRegistry, registeredKnowledgeBaseStoreRoots } from '../../core/storage/index.ts'
 

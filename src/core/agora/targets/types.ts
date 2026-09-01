@@ -1,5 +1,5 @@
-import type { Environment } from '../paths.ts'
-import type { CommandResult, Runner } from '../runtime/runner.ts'
+import type { Environment } from '../../paths.ts'
+import type { CommandResult, Runner } from '../../runtime/runner.ts'
 
 export interface OpenTargetPort {
   readonly runner: Runner

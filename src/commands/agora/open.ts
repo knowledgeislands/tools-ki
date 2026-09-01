@@ -1,8 +1,7 @@
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { resolveAgora } from '../../core/agora/index.ts'
+import { type OpenTargetName, openLocalTarget, openTargetNames, resolveAgora } from '../../core/agora/index.ts'
 import { KiError } from '../../core/errors.ts'
-import { type OpenTargetName, openLocalTarget, openTargetNames } from '../../core/open-target/index.ts'
 
 export const createAgoraOpenCommand = (context: KiContext): Command =>
   new Command('open')
