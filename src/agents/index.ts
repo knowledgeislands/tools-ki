@@ -19,7 +19,6 @@ export {
 export {
   inspectRepositoryHealth,
   type RepositoryHealth,
-  type RepositoryHealthOptions,
   type RepositoryLocation,
   type RepositoryProjection
 } from './repository-health.ts'

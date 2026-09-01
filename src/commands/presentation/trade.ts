@@ -14,7 +14,7 @@ const owner = (repository: string): string => repository.slice(0, repository.ind
 
 const name = (repository: string): string => repository.slice(repository.indexOf('/') + 1)
 
-export const displayTradePeer = (
+const displayTradePeer = (
   record: Pick<TradeRecord, 'sender' | 'receiver'>,
   direction: 'preparation' | 'inbound' | 'outbound'
 ): string => {
