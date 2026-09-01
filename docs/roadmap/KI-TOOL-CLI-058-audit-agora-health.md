@@ -3,8 +3,8 @@ id: KI-TOOL-CLI-058
 area: CLI
 title: Audit Agora health
 theme: cli
-horizon: soon
-status: draft
+horizon: next
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
@@ -14,26 +14,64 @@ baseline_ref: null
 
 ## Goal
 
-Provide an explicit read-only Agora health command that gives people and automation a reliable pass/fail result with actionable diagnostics across the locally resolved Agora estate.
+Provide an explicit read-only Agora health command with reliable exit status and actionable diagnostics across the locally registered Agora estate.
 
 ## Context
 
-`ki agora list` exposes broken profiles as part of its inventory output, but it is not an explicit audit surface. An unregistered `mcp-acquire-whatsapp` checkout recently made both `ki-all` and `ki-mcps` unresolvable even though the repository already carried reciprocal membership declarations. A dedicated audit should make registration, declaration, reciprocity, duplicate-identifier, and member-order failures difficult to overlook.
+`ki agora list` presents healthy profiles alongside declaration failures but is an inventory view rather than a verification gate. The canonical resolver already detects unavailable registrations, malformed declarations, duplicate owners, missing members, and non-reciprocal consent.
 
 ## Boundary
 
-The audit must not register repositories, repair declarations, infer membership, edit peer repositories, or inspect editor-specific workspace state. Target projection drift belongs to `KI-TOOL-CLI-059`.
+The command must not register repositories, repair declarations, infer membership, edit peer repositories, inspect editor state, or add a second interpretation of Agora membership. The first delivery does not add JSON: stable exit status and deterministic diagnostics satisfy automation, while `ki agora roots` remains the pathname-safe machine interface.
 
-## Shaping
+## Current state
 
-Reuse the canonical Agora resolver and its existing diagnostics rather than introduce a second interpretation of membership. Define whether the command audits all profiles by default and optionally accepts one name, establish stable non-zero exit behaviour for any broken selected profile, and decide whether machine-readable output extends the existing roots interface or needs a separate explicit format. Promote when the public command shape and specification evidence are settled.
+The command layer lacks a focused audit contract over the resolver's existing health findings. `ki agora audit [agora]` will audit every declared profile when no name is supplied and one named profile when selected. Exit status will be `0` when every selection is healthy, `1` when health findings exist, and `2` for invalid grammar or an unknown explicit selector.
+
+## Steps
+
+- [ ] Add an Agora health model that preserves canonical resolver diagnostics without duplicating declaration interpretation.
+- [ ] Add `ki agora audit [agora]` and register it in command help and completion grammar.
+- [ ] Render deterministic profile and diagnostic totals with established Agora presentation and exit semantics.
+- [ ] Specify the command contract and document concise human and automation examples.
+- [ ] Add CLI contract tests for healthy, mixed, unavailable, duplicate, non-reciprocal, unknown, and explicitly selected profiles.
+
+## Files touched
+
+- `src/core/agora/`
+- `src/commands/agora/`
+- `src/tests/cli/agora/`
+- `docs/specs/agoras.md`
+- `README.md`
+
+## Verify
+
+- Focused Agora CLI tests cover report ordering, diagnostics, selection, and exit status.
+- Completion and root help tests expose the new command without changing existing surfaces.
+- `bun run test:coverage`, `bun run build`, and the complete repository audit pass.
+
+## Dependencies / blocks
+
+No local work-item dependency. This item is independent of `KI-TOOL-CLI-059`: it verifies declared Agora state, while that item compares a verified declaration with an editor projection.
+
+## Documentation impact
+
+### Decision Records
+
+No Decision Record is expected. The work extends the accepted Agora resolver and command architecture without introducing a new architectural choice.
+
+### Specifications
+
+Add the normative behavior and exit semantics to `docs/specs/agoras.md`.
+
+### Guides
+
+Add concise human and automation examples to the README. Update the developer guide only if implementation changes the existing Agora resolver boundary.
+
+### Roadmap
+
+Check each delivery step and attach the final verification evidence before moving the record to awaiting review.
 
 ## Discussion
 
-### Audit versus inventory
-
-`list` should remain a human inventory that can show healthy and broken entries together. `audit` should be a verification gate whose exit status is safe to use in scheduled checks and repository-management workflows.
-
-### Repair authority
-
-Diagnostics should name the missing or conflicting registration and the repositories carrying each declaration. Any repair remains an explicit registry or repository-authorised operation.
+The command emits one terminal format. It reports every selected profile and diagnostic through the human-facing presentation layer while using exit status as its stable automation contract. No durable delegation packet is needed because the core model, command adapter, specification, and contract tests form one bounded implementation lane.

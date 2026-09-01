@@ -3,8 +3,8 @@ id: KI-TOOL-CLI-059
 area: CLI
 title: Inspect editor projection drift
 theme: cli
-horizon: soon
-status: draft
+horizon: next
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
@@ -14,30 +14,66 @@ baseline_ref: null
 
 ## Goal
 
-Let a user compare current or retained editor project groupings with resolved Agoras and the registered estate, then safely recreate an intended Agora projection when appropriate.
+Compare one resolved Agora with an explicitly selected local editor workspace and explain projection drift without modifying the editor or repository estate.
 
 ## Context
 
-Zed preserves per-project layout and recent-project state even after a containing window closes, while its current CLI can create a window and add each resolved Agora member. Its local SQLite workspace database also exposes retained project, session, and window associations, but that database is application-owned and not a portable API. VS Code provides durable `.code-workspace` files whose folder paths can be compared directly. Today `ki agora open` projects declarations into either editor but cannot inspect the target in reverse or explain missing, extra, external, or unregistered roots.
+`ki agora open` projects a resolved Agora into Zed or VS Code through Agora-owned target adapters. It cannot inspect a target in reverse or classify missing declared members, extra registered repositories, external paths, or unregistered KI repositories. VS Code exposes durable `.code-workspace` files; Zed retains local workspaces in an application-owned SQLite database whose schema is not a portable API.
 
 ## Boundary
 
-Do not write an editor database, promise byte-for-byte restoration of a closed operating-system window, store local paths in portable Agora declarations, or treat an editor grouping as repository consent. Unknown and external folders must remain visible without being misclassified as Agora members.
+The implementation must not write editor state, guess an active or most-recent workspace, promise restoration of a closed window, treat editor grouping as repository consent, store local paths in portable declarations, or hide unknown external folders. The Zed adapter must open its database read-only and fail before reading workspace data when its explicitly supported schema is absent.
 
-## Shaping
+## Current state
 
-Define one target-observation interface with target-specific adapters. The report should identify exact matches, missing declared members, extra registered repositories, external paths, and unregistered KI repositories. Prefer documented editor interfaces; any Zed database reader must be read-only, schema-version-aware, and fail safely when unsupported. Decide how a user selects the active or retained Zed grouping and the configured VS Code workspace directory. Reuse `ki agora open` for reconstruction after the user chooses a resolved profile. Promote after the observation contract, privacy boundary, and unsupported-version behaviour are specified.
+The Agora target boundary supports opening but not observation. `ki agora inspect <agora> --target <zed|vscode> --workspace <selector>` will normalize observed physical roots and report exact, missing, extra registered, external, and unregistered KI paths. For VS Code, `<selector>` is an absolute `.code-workspace` file. For Zed, it is an explicit decimal workspace identifier from the detected stable or preview local database. Exit status will be `0` for an exact projection, `1` for drift or unsupported observation, and `2` for invalid grammar, selectors, or Agora resolution.
+
+## Steps
+
+- [ ] Extend `core/agora/targets` with a target-neutral observation model and adapter contract alongside the open contract.
+- [ ] Implement VS Code workspace parsing with physical path normalization and support for paths containing spaces.
+- [ ] Implement guarded, read-only Zed workspace observation for explicit workspace identifiers and known schemas.
+- [ ] Add deterministic comparison and classification against the resolved Agora and local registry.
+- [ ] Add `ki agora inspect`, terminal reporting, completion, specification, and privacy documentation.
+- [ ] Add fixture-driven CLI tests for exact, missing, extra, external, unregistered, malformed, unsupported-schema, and unavailable-target cases.
+
+## Files touched
+
+- `src/core/agora/targets/`
+- `src/commands/agora/`
+- `src/tests/cli/agora/`
+- `docs/specs/agoras.md`
+- `README.md`
+
+## Verify
+
+- Tests use fixture workspace files and databases rather than the user's live editor state.
+- Read-only failure injection proves that neither adapter writes its selected source.
+- Accessible terminal text distinguishes every classification without relying only on icons or colour.
+- `bun run test:coverage`, `bun run build`, and the complete repository audit pass.
+
+## Dependencies / blocks
+
+No local work-item dependency. The implementation consumes the existing canonical Agora resolver and target adapter boundary. It is independent of `KI-TOOL-CLI-058`, although delivering the audit first would give users a useful preflight.
+
+## Documentation impact
+
+### Decision Records
+
+Record an architecture decision only if implementation requires a target-observation dependency or application-database policy not already captured by the Agora adapter boundary.
+
+### Specifications
+
+Add normative observation, privacy, classification, and unsupported-schema behavior to `docs/specs/agoras.md`.
+
+### Guides
+
+Add concise target examples and limitations to the README. Do not document application-owned database layout as a portable KI contract.
+
+### Roadmap
+
+Check each delivery step and attach fixture-driven verification evidence before moving the record to awaiting review.
 
 ## Discussion
 
-### Zed reconstruction
-
-Zed has no portable workspace file equivalent to VS Code, but reopening the same project restores that project's saved layout. Recreating a window from an Agora can therefore recover the useful project collection and per-project context without editing Zed state directly.
-
-### Observation is not consent
-
-Reverse inspection can produce a candidate membership proposal, but only explicit home and member declarations establish the Agora. This keeps accidental editor additions from changing repository governance.
-
-### Related health gate
-
-`KI-TOOL-CLI-058` verifies the declared and registered model. This item compares that verified model with application-owned projections; neither item depends on the other's implementation.
+VS Code and Zed observation share one normalized comparison model but retain target-specific source selection. Their adapter tests are separable implementation lanes after the command contract is fixed, and their review remains joined because both publish the same classification and exit semantics.
