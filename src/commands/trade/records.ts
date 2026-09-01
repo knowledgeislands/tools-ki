@@ -21,8 +21,8 @@ import {
   type TradeCleanupOperation,
   type TradeListResult
 } from '../../core/trade/operations/index.ts'
-import { renderTree } from '../presentation/index.ts'
-import { count, kind, observation, renderTradeRelation, repository, requireText, tradeId } from './shared.ts'
+import { renderTradeRelation, renderTree } from '../presentation/index.ts'
+import { count, kind, observation, repository, requireText, tradeId } from './shared.ts'
 
 interface PrepareOptions {
   readonly kind?: string

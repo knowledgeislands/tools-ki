@@ -3,7 +3,7 @@ import type { EstateNetwork } from '../../../core/trade/routes.ts'
 import { presentation } from '../../presentation/index.ts'
 
 /**
- * Renders the registered estate's declared trade routes as one self-contained interactive page.
+ * Renders the selected registered estate's declared trade routes as one self-contained interactive page.
  *
  * The page carries the estate as data and lets a force simulation arrange it. The derived route
  * metrics shape that simulation rather than fixing any repository's position, and a reader can

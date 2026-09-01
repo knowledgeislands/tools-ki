@@ -12,8 +12,7 @@ import {
   type WorkItem,
   workItemHorizons
 } from '../../core/work/index.ts'
-import { presentation, renderTree, type TreeEntry } from '../presentation/index.ts'
-import { renderTradeRelation } from '../trade/shared.ts'
+import { presentation, renderTradeRelation, renderTree, type TreeEntry } from '../presentation/index.ts'
 
 interface RoadmapOptions {
   readonly horizon?: string

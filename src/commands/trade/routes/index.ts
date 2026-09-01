@@ -1,25 +1,25 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Command } from 'commander'
-import type { KiContext } from '../../context.ts'
-import { grammarError } from '../../core/errors.ts'
-import { addTradeRoute, removeTradeRoute } from '../../core/trade/configuration.ts'
+import type { KiContext } from '../../../context.ts'
+import { grammarError } from '../../../core/errors.ts'
+import { addTradeRoute, removeTradeRoute } from '../../../core/trade/configuration.ts'
 import {
   inspectEstateRoutes,
   inspectRoutes,
   localRegisteredConfiguration,
   localRegisteredRepository
-} from '../../core/trade/index.ts'
+} from '../../../core/trade/index.ts'
 import {
   checkTradeRoutes,
   inspectEstateTradeRoutes,
   inspectLocalTradeRoutes,
   mutateTradeRoute
-} from '../../core/trade/operations/index.ts'
-import { estateNetwork } from '../../core/trade/routes.ts'
-import { type PairTableRow, renderPairTable, renderTree } from '../presentation/index.ts'
-import { renderEstateRoutesPage } from './presentation/estate-page.ts'
-import { kind, repository, routeDirection, routeState, tradeKindText } from './shared.ts'
+} from '../../../core/trade/operations/index.ts'
+import { estateNetwork } from '../../../core/trade/routes.ts'
+import { type PairTableRow, renderPairTable, renderTree, routeState, tradeKindText } from '../../presentation/index.ts'
+import { kind, repository, routeDirection } from '../shared.ts'
+import { renderEstateRoutesPage } from './estate-page.ts'
 
 interface RouteOptions {
   readonly direction?: string

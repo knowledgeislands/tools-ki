@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { createTradeRecordCommands } from './records.ts'
-import { createTradeRoutesCommand } from './routes.ts'
+import { createTradeRoutesCommand } from './routes/index.ts'
 
 export const createTradeCommand = (context: KiContext): Command => {
   const command = new Command('trade').description(
