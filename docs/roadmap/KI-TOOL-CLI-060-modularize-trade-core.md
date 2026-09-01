@@ -4,7 +4,7 @@ area: CLI
 title: Modularize trade lifecycle core
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 5dacaf38218881f8dec561c1a757f3f70a84fd2e
@@ -30,13 +30,13 @@ Do not change trade file formats, lifecycle semantics, command output, route con
 
 ## Steps
 
-- [ ] Freeze the current `core/trade/index.ts` export map, call graph, error text, and coverage-guard justifications before moving code.
-- [ ] Extract the public trade model and registered-estate/route resolution into cohesive leaf modules without broadening the facade.
-- [ ] Extract record decoding, validation, rendering, phase handling, and storage paths into one codec boundary that preserves parsed-meaning comparison.
-- [ ] Extract sender preparation and receiver delivery/observation flows behind the unchanged public operations.
-- [ ] Extract physical trade inventory, lifecycle evaluation, and release/prune mutations while preserving deterministic ordering and safety checks.
-- [ ] Replace `index.ts` with an explicit barrel, update sibling core imports to avoid cycles, and remove any dead exports reported by Knip.
-- [ ] Verify all behavior through the existing CLI seam, then update the developer module map and attach final evidence.
+- [x] Freeze the current `core/trade/index.ts` export map, call graph, error text, and coverage-guard justifications before moving code.
+- [x] Extract the public trade model and registered-estate/route resolution into cohesive leaf modules without broadening the facade.
+- [x] Extract record decoding, validation, rendering, phase handling, and storage paths into one codec boundary that preserves parsed-meaning comparison.
+- [x] Extract sender preparation and receiver delivery/observation flows behind the unchanged public operations.
+- [x] Extract physical trade inventory, lifecycle evaluation, and release/prune mutations while preserving deterministic ordering and safety checks.
+- [x] Replace `index.ts` with an explicit barrel, update sibling core imports to avoid cycles, and remove any dead exports reported by Knip.
+- [x] Verify all behavior through the existing CLI seam, then update the developer module map and attach final evidence.
 
 ## Files touched
 
@@ -87,6 +87,32 @@ Update `docs/guides/developer/local-development.md` only to name the resulting t
 ### Roadmap
 
 Check each extraction and verification step, record the exact final module map, and attach the review packet evidence before moving the record to awaiting review.
+
+## Review
+
+### Delivered
+
+Delivered the approved behavior-preserving trade-core extraction. Baseline `5dacaf38218881f8dec561c1a757f3f70a84fd2e` became implementation commit `7b1d617486bc5596e230473e8427a90b7349f8e7`, with the shared developer map recorded by `b3da3b61ebd2b708f70c1237372a9ca6075150c6`; trade formats, lifecycle semantics, output, routes, authority, and public facade remained unchanged.
+
+### Summary of changes
+
+Replaced the monolithic trade entry point with explicit model, estate and route, record codec, preparation, delivery and observation, inventory, and lifecycle modules behind the same public barrel. Updated sibling imports to preserve an acyclic dependency graph, retained and revalidated coverage guards, and marked intentionally retained facade contracts as public for Knip.
+
+### Verification
+
+The targeted trade and repository-roadmap suites passed 61 tests, TypeScript passed, and the import graph and facade export map were reviewed. The integrated `bun run test:coverage` gate passed all 702 tests at 100% statements, branches, functions, and lines; build, Biome, Knip, man-page lint, and the complete 18-skill repository audit also passed.
+
+### Outstanding concerns
+
+None. Public contracts that no internal caller currently imports remain explicitly retained and annotated rather than being deleted as apparent dead code.
+
+### Post-change review
+
+The resulting modules follow independently cohesive trade responsibilities rather than arbitrary line-count splits. Commands still consume one explicit facade, leaf imports remain acyclic, error text and deterministic lifecycle behavior are unchanged, and the item is ready for acceptance.
+
+### Mini recap
+
+Trade lifecycle expansion now has clear module homes for estate authority, codec, delivery, inventory, and mutation without changing the protocol. The developer guide records the facade rule; no further learning requires promotion.
 
 ## Discussion
 
