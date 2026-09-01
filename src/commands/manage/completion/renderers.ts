@@ -1,12 +1,4 @@
-import { Command } from 'commander'
-import type { KiContext } from '../../context.ts'
-import { grammarError } from '../../core/errors.ts'
-import {
-  type CompletionNode,
-  type CompletionOption,
-  type CompletionValueStrategy,
-  completionGrammar
-} from './completion-grammar.ts'
+import type { CompletionNode, CompletionOption, CompletionValueStrategy } from './grammar.ts'
 
 const shellQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`
 
@@ -43,7 +35,7 @@ const argumentStrategies = (nodes: readonly CompletionNode[]): string =>
     )
     .join('\n')
 
-const renderBash = (nodes: readonly CompletionNode[]): string => `_ki_names() {
+export const renderBash = (nodes: readonly CompletionNode[]): string => `_ki_names() {
   case "$1" in
 ${caseBody(nodes, (node) => node.commands.map((command) => command.name).join(' '))}
   esac
@@ -106,7 +98,7 @@ const candidateValues = (node: CompletionNode): string =>
     ...node.options.flatMap((option) => option.names.map((name) => `${name}:${option.description}`))
   ].join('\n')
 
-const renderZsh = (nodes: readonly CompletionNode[]): string => `#compdef ki
+export const renderZsh = (nodes: readonly CompletionNode[]): string => `#compdef ki
 zstyle ':completion:*:ki-commands' verbose yes
 _ki_names() {
   case "$1" in
@@ -166,16 +158,3 @@ _ki() {
 }
 compdef _ki ki
 `
-
-export const createCompletionsCommand = (context: KiContext): Command =>
-  new Command('completion')
-    .description('print Bash or Zsh completion source')
-    .argument('<shell>', 'shell name: bash or zsh')
-    .action((shell: string, _options: Record<string, never>, command: Command) => {
-      let root = command
-      while (root.parent) root = root.parent
-      const grammar = completionGrammar(root)
-      if (shell === 'bash') return context.stdout.write(renderBash(grammar))
-      if (shell === 'zsh') return context.stdout.write(renderZsh(grammar))
-      throw grammarError('completion shell must be bash or zsh')
-    })

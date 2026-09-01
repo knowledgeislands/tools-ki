@@ -112,5 +112,5 @@ const collect = (
   return [node, ...command.commands.flatMap((child) => collect(child, [...path, child.name()], options))]
 }
 
-export const completionGrammar = (root: Command): readonly CompletionNode[] =>
+export const buildCompletionGrammar = (root: Command): readonly CompletionNode[] =>
   collect(root, [], [...root.options.map((value) => option('', value)), helpOption])

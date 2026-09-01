@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { createCleanupCommand } from './cleanup.ts'
-import { createCompletionsCommand } from './completions.ts'
+import { createCompletionCommand } from './completion/index.ts'
 import { createDiagCommand } from './diag.ts'
 import { createDocsCommand } from './docs.ts'
 import { createDoctorCommand } from './doctor.ts'
@@ -16,7 +16,7 @@ export const createManageCommand = (context: KiContext): Command =>
   new Command('manage')
     .description('inspect and maintain local KI state')
     .addCommand(createCleanupCommand(context))
-    .addCommand(createCompletionsCommand(context))
+    .addCommand(createCompletionCommand(context))
     .addCommand(createDiagCommand(context))
     .addCommand(createDocsCommand(context))
     .addCommand(createDoctorCommand(context))
