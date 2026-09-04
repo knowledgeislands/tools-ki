@@ -21,9 +21,12 @@ jobs:
           KI_DATA_HOME: ${{ runner.temp }}/ki/data
           KI_CONFIG_HOME: ${{ runner.temp }}/ki/config
           KI_CACHE_HOME: ${{ runner.temp }}/ki/cache
-          KI_STATE_HOME: ${{ runner.temp }}/ki/state
+          XDG_STATE_HOME: ${{ runner.temp }}/ki/state
+          KI_STATE_HOME: ${{ runner.temp }}/ki/state/ki
         run: |
           set -euo pipefail
+          mkdir -p "$HOME/.agents" "$HOME/.claude"
+          printf '{}\n' > "$HOME/.claude/settings.json"
           curl --fail --silent --show-error --location --max-redirs 3 --proto '=https' --proto-redir '=https' \
             --output "$RUNNER_TEMP/ki-install.sh" "https://raw.githubusercontent.com/knowledgeislands/tools-ki/$KI_VERSION/install.sh"
           bash "$RUNNER_TEMP/ki-install.sh" "$KI_VERSION"
@@ -33,6 +36,11 @@ jobs:
           ki manage diag | grep -F 'Installation: regular'
           ki manage diag | grep -F "Executable: $KI_CLI_INSTALL_DIR/ki"
           ki bootstrap
+          ki registry add --repo .
+          ki repo repair --repo .
+          project_key=${GITHUB_WORKSPACE//\//-}
+          mkdir -p "$HOME/.claude/projects/$project_key/memory"
+          touch "$HOME/.claude/projects/$project_key/memory/MEMORY.md"
           ki manage diag | grep -F 'Status: valid'
           ki harness list | grep -F 'knowledgeislands/ki-agentic-harness'
           {
@@ -41,6 +49,7 @@ jobs:
             printf 'KI_DATA_HOME=%s\n' "$KI_DATA_HOME"
             printf 'KI_CONFIG_HOME=%s\n' "$KI_CONFIG_HOME"
             printf 'KI_CACHE_HOME=%s\n' "$KI_CACHE_HOME"
+            printf 'XDG_STATE_HOME=%s\n' "$XDG_STATE_HOME"
             printf 'KI_STATE_HOME=%s\n' "$KI_STATE_HOME"
           } >> "$GITHUB_ENV"
           printf '%s\n' "$KI_CLI_INSTALL_DIR" >> "$GITHUB_PATH"
