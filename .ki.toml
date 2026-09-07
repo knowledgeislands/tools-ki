@@ -1,6 +1,10 @@
 # Knowledge Islands repository configuration.
 # Its presence declares conformance with the Knowledge Islands repository standard.
 
+# -----------------------------------------------------------------------------
+# Foundation
+# -----------------------------------------------------------------------------
+
 [repo]
 harnesses = ["knowledgeislands/ki-agentic-harness"]
 
@@ -14,17 +18,31 @@ visibility = "public"
 
 [skills.ki-authoring]
 
+# -----------------------------------------------------------------------------
+# Repository shape
+# -----------------------------------------------------------------------------
+
+[skills.ki-repo-project]
+
+[skills.ki-repo-tools]
+
+# -----------------------------------------------------------------------------
+# Governance runtime
+# -----------------------------------------------------------------------------
+
 [skills.ki-self]
 
 [skills.ki-specs]
 
 [skills.ki-guides]
 
-[skills.ki-repo-project]
-
-[skills.ki-repo-tools]
-
 [skills.ki-engineering]
+
+[skills.ki-decision-records]
+
+# -----------------------------------------------------------------------------
+# Change management
+# -----------------------------------------------------------------------------
 
 [skills.ki-work]
 adapter = "roadmap"
@@ -36,7 +54,19 @@ themes = ["cli", "cross-repository-vendoring"]
 CLI = "cli"
 VENDOR = "cross-repository-vendoring"
 
-[skills.ki-decision-records]
+[skills.ki-tokenomics]
+
+[skills.ki-housekeeping-claude]
+
+[skills.ki-tokenomics-claude]
+
+[skills.ki-tokenomics-codex]
+
+[skills.ki-git]
+
+# -----------------------------------------------------------------------------
+# Relationships
+# -----------------------------------------------------------------------------
 
 [skills.ki-trades]
 
@@ -56,16 +86,6 @@ import = ["work", "knowledge"]
 [skills.ki-trades.routes."krisb/dotfiles"]
 export = ["work", "knowledge"]
 import = ["work", "knowledge"]
-
-[skills.ki-tokenomics]
-
-[skills.ki-housekeeping-claude]
-
-[skills.ki-tokenomics-claude]
-
-[skills.ki-tokenomics-codex]
-
-[skills.ki-git]
 
 [skills.ki-agora]
 
