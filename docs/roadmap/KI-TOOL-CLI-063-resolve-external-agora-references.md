@@ -4,7 +4,7 @@ title: Resolve external Agora references
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: c242892f0fd91f06f4422bacc6e1b88a45accb93
@@ -110,6 +110,10 @@ The public CLI, core boundaries, documentation, completions, manual, and contrac
 ### Mini recap
 
 The durable learning is that an Agora may project a broader working set than its governed membership, but the distinction must remain typed at the resolution boundary. That contract is now captured in `docs/specs/agoras.md`; operational recovery and promotion guidance lives in `docs/guides/agora-references.md`.
+
+## Done
+
+Accepted by Kris Brown on 2026-09-07 after review of the delivered boundary, verification evidence, and outstanding concerns.
 
 ## Discussion
 
