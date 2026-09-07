@@ -3,10 +3,11 @@ import { resolveRepositoryTargets } from '../repository/index.ts'
 import type { LocatedTrade } from '../trade/model.ts'
 import {
   pruneDoneWorkItems,
+  readWorkItemInventoryIfPresent,
   readWorkItems,
-  readWorkItemsIfPresent,
   updateWorkItemHorizon,
   type WorkItem,
+  type WorkItemFault,
   type WorkItemHorizon,
   workItemHorizons
 } from './items.ts'
@@ -36,6 +37,7 @@ export interface RoadmapListResult {
   readonly trades: readonly LocatedTrade[]
   readonly tradeDiagnostic?: string
   readonly items?: readonly WorkItem[]
+  readonly faults?: readonly WorkItemFault[]
   readonly roadmap?: 'absent'
   readonly diagnostic?: string
 }
@@ -132,12 +134,14 @@ export const listRoadmap = async (
       const tradeContext = inventory.diagnostic ? { tradeDiagnostic: inventory.diagnostic } : {}
       try {
         const planning = await readRepositoryPlanningSource(repository.declaration)
-        const items = await readWorkItemsIfPresent(repository.root, planning)
+        const inventory = await readWorkItemInventoryIfPresent(repository.root, planning)
         return {
           repository: repository.root,
           trades,
           ...tradeContext,
-          ...(items === undefined ? { roadmap: 'absent' as const } : { items: filterItems(items, options) })
+          ...(inventory === undefined
+            ? { roadmap: 'absent' as const }
+            : { items: filterItems(inventory.items, options), faults: inventory.faults })
         }
       } catch (error) {
         /* v8 ignore next -- inventory failures are always KiError instances. */

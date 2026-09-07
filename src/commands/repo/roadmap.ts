@@ -96,15 +96,21 @@ const renderTextResult = (result: RoadmapListResult, estate: readonly LocatedTra
     { label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.repository})` }
   ]
   const items = result.items ?? []
+  const faults = result.faults ?? []
   const groups = textHorizonGroups(items)
   const roadmap = result.diagnostic
     ? [{ label: `${presentation('status.unavailable').terminal} ${result.diagnostic}` }]
     : result.roadmap === 'absent'
       ? [{ label: `${presentation('status.skip').terminal} no roadmap` }]
-      : groups.map(({ horizon, items: group }) => ({
-          label: `${horizon} (${group.length})`,
-          children: group.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
-        }))
+      : [
+          ...groups.map(({ horizon, items: group }) => ({
+            label: `${horizon} (${group.length})`,
+            children: group.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
+          })),
+          ...faults.map((fault) => ({
+            label: `${presentation('status.unavailable').terminal} ${fault.message}`
+          }))
+        ]
   const { inbound, outbound } = countTradeDirections(result.trades)
   const done = items.filter((item) => item.status === 'done').length
   const active = items.length - done
@@ -134,6 +140,11 @@ const renderAggregateResult = (
   const items = results.flatMap((result) => result.items ?? [])
   const absent = results.filter((result) => result.roadmap === 'absent')
   const diagnostics = results.filter((result) => result.diagnostic)
+  const faultEntries = results.flatMap((result) =>
+    (result.faults ?? []).map((fault) => ({
+      label: `${presentation('status.unavailable').terminal} ${basename(result.repository)}: ${fault.message}`
+    }))
+  )
   const horizonEntries = horizonOrder.flatMap((horizon) => {
     const grouped = orderItemsForText(
       results.flatMap((result) => result.items ?? []).filter((item) => item.horizon === horizon)
@@ -155,12 +166,15 @@ const renderAggregateResult = (
         label: `${presentation('entity.repository').terminal} ${basename(result.repository)}`
       }))
     })
-  if (diagnostics.length)
+  if (diagnostics.length || faultEntries.length)
     entries.push({
-      label: `diagnostics (${diagnostics.length})`,
-      children: diagnostics.map((result) => ({
-        label: `${presentation('status.unavailable').terminal} ${basename(result.repository)}: ${result.diagnostic}`
-      }))
+      label: `diagnostics (${diagnostics.length + faultEntries.length})`,
+      children: [
+        ...diagnostics.map((result) => ({
+          label: `${presentation('status.unavailable').terminal} ${basename(result.repository)}: ${result.diagnostic}`
+        })),
+        ...faultEntries
+      ]
     })
   const tradeResults = results.filter((result) => result.trades.length || result.tradeDiagnostic)
   const tradeCount = results.reduce((total, result) => total + result.trades.length, 0)
@@ -197,7 +211,8 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
         ? renderAggregateResult(results, estate, options.icons !== false)
         : results.map((result) => renderTextResult(result, estate, options.icons !== false)).join('\n\n')
       context.stdout.write(`${output}\n`)
-      if (results.some((result) => result.tradeDiagnostic || result.diagnostic)) throw new KiExit(1)
+      if (results.some((result) => result.tradeDiagnostic || result.diagnostic || result.faults?.length))
+        throw new KiExit(1)
     })
 
 const pruneCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>

@@ -52,6 +52,16 @@ interface WorkItemRecord {
   readonly contents: string
 }
 
+export interface WorkItemFault {
+  readonly file: string
+  readonly message: string
+}
+
+export interface WorkItemInventory {
+  readonly items: readonly WorkItem[]
+  readonly faults: readonly WorkItemFault[]
+}
+
 const itemError = (file: string, message: string): KiError => new KiError(`work item ${file} ${message}`, 2)
 
 const roadmapDirectoryState = async (directory: string) => {
@@ -138,17 +148,22 @@ const readItem = async (
   return { item, file, path, contents }
 }
 
-const readWorkItemRecords = async (
+interface WorkItemRecordInventory {
+  readonly records: readonly WorkItemRecord[]
+  readonly faults: readonly WorkItemFault[]
+}
+
+const readWorkItemRecordInventory = async (
   repository: string,
   planning: RepositoryPlanningSource
-): Promise<readonly WorkItemRecord[]> => {
+): Promise<WorkItemRecordInventory> => {
   const roadmapDirectory = planning.directory
   const directory = join(repository, roadmapDirectory)
   const state = await roadmapDirectoryState(directory)
   if (!state?.isDirectory() || state.isSymbolicLink())
     throw new KiError(`repository ${repository} has no physical ${roadmapDirectory} directory`, 2)
   const entries = await readdir(directory)
-  const records = await Promise.all(
+  const outcomes = await Promise.all(
     entries
       .filter(
         (entry) =>
@@ -156,9 +171,33 @@ const readWorkItemRecords = async (
           entry !== ISSUE_LEDGER &&
           (planning.adapter !== 'kb-streams' || entry !== KB_ROADMAP_INDEX)
       )
-      .map((entry) => readItem(directory, entry, planning.adapter))
+      .sort()
+      .map(async (entry): Promise<{ record: WorkItemRecord } | { fault: WorkItemFault }> => {
+        try {
+          return { record: await readItem(directory, entry, planning.adapter) }
+        } catch (error) {
+          // readItem normalizes every rejection to a KiError before this boundary.
+          /* v8 ignore next */
+          return { fault: { file: entry, message: error instanceof Error ? error.message : String(error) } }
+        }
+      })
   )
-  return records.sort((left, right) => left.item.id.localeCompare(right.item.id))
+  return {
+    records: outcomes
+      .flatMap((outcome) => ('record' in outcome ? [outcome.record] : []))
+      .sort((left, right) => left.item.id.localeCompare(right.item.id)),
+    faults: outcomes.flatMap((outcome) => ('fault' in outcome ? [outcome.fault] : []))
+  }
+}
+
+const readWorkItemRecords = async (
+  repository: string,
+  planning: RepositoryPlanningSource
+): Promise<readonly WorkItemRecord[]> => {
+  const { records, faults } = await readWorkItemRecordInventory(repository, planning)
+  const fault = faults[0]
+  if (fault) throw new KiError(fault.message, 2)
+  return records
 }
 
 export const readWorkItems = async (
@@ -166,14 +205,15 @@ export const readWorkItems = async (
   planning: RepositoryPlanningSource
 ): Promise<readonly WorkItem[]> => (await readWorkItemRecords(repository, planning)).map(({ item }) => item)
 
-/** Lists no records when a repository has not created its selected adapter root yet. */
-export const readWorkItemsIfPresent = async (
+/** Lists no inventory when a repository has not created its selected adapter root yet. One unreadable item becomes a fault; the readable items still list. */
+export const readWorkItemInventoryIfPresent = async (
   repository: string,
   planning: RepositoryPlanningSource
-): Promise<readonly WorkItem[] | undefined> => {
+): Promise<undefined | WorkItemInventory> => {
   const directory = join(repository, planning.directory)
   if (!(await roadmapDirectoryState(directory))) return undefined
-  return readWorkItems(repository, planning)
+  const { records, faults } = await readWorkItemRecordInventory(repository, planning)
+  return { items: records.map(({ item }) => item), faults }
 }
 
 const workItemRecord = async (

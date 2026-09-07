@@ -396,10 +396,36 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain(`│  ╰─ ○ no roadmap`)
     expect(result.output).not.toContain(`repository ${missing} has no physical docs/roadmap directory`)
     expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md has an invalid lifecycle status`)
-    expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md must be a regular file`)
+    expect(result.output).toContain(
+      `├─ roadmap (0)\n│  ├─ ❌ work item KI-TOOL-CLI-003-inspect.md must be a regular file\n│  ╰─ ❌ work item target.md must use a matching work-item identifier`
+    )
     expect(result.exitCode).toBe(1)
     expect(retiredFormat.exitCode).toBe(2)
     expect(retiredFormat.output).toContain("unknown option '--format' for 'ki repo roadmap list'")
+  })
+
+  test('keeps readable work items listed beside an invalid one', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-CLI-004-future.md',
+      item({ id: 'KI-TOOL-CLI-004', horizon: 'future' })
+    )
+
+    const result = await box.run('ki repo --repo repo roadmap list')
+    const aggregate = await box.run('ki repo --repo repo roadmap list --aggregate --no-icons')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain(
+      `├─ roadmap (1)\n│  ├─ next (1)\n│  │  ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work\n│  ╰─ ❌ work item KI-TOOL-CLI-004-future.md must use candidate: true only for future items`
+    )
+    expect(result.output).toContain('summary: ITEMS=1 ACTIVE=1 DONE=0')
+    expect(aggregate.exitCode).toBe(1)
+    expect(aggregate.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
+    expect(aggregate.output).toContain(
+      `├─ diagnostics (1)\n│  ╰─ ❌ repo: work item KI-TOOL-CLI-004-future.md must use candidate: true only for future items`
+    )
   })
 
   test('orders non-empty text output by horizon, lifecycle, then identifier', async () => {
