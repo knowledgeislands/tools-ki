@@ -4,7 +4,7 @@ title: Resolve external Agora references
 area: CLI
 theme: cli
 horizon: next
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: c242892f0fd91f06f4422bacc6e1b88a45accb93
@@ -28,12 +28,12 @@ Agora resolution projects registered owners and reciprocal members only. There i
 
 ## Steps
 
-- [ ] Define a machine-local association from canonical reference identity to one explicitly selected absolute Git checkout root.
-- [ ] Validate Git worktree status and canonical remote identity without requiring `.ki.toml` or KI registration.
-- [ ] Report `unassociated`, `missing`, `ambiguous`, and `remote-mismatch` diagnostics while omitting only unresolved reference roots.
-- [ ] Return explicit `owner`, `member`, and `reference` root classifications through resolution and projection seams.
-- [ ] Extend audit, roots, open, and editor projection commands without cloning, peer mutation, or automatic candidate selection.
-- [ ] Cover plain Git, unavailable association, duplicate candidates, promotion to reciprocal membership, and removal without peer mutation through the CLI test seam.
+- [x] Define a machine-local association from canonical reference identity to one explicitly selected absolute Git checkout root.
+- [x] Validate Git worktree status and canonical remote identity without requiring `.ki.toml` or KI registration.
+- [x] Report `unassociated`, `missing`, `ambiguous`, and `remote-mismatch` diagnostics while omitting only unresolved reference roots.
+- [x] Return explicit `owner`, `member`, and `reference` root classifications through resolution and projection seams.
+- [x] Extend audit, roots, open, and editor projection commands without cloning, peer mutation, or automatic candidate selection.
+- [x] Cover plain Git, unavailable association, duplicate candidates, promotion to reciprocal membership, and removal without peer mutation through the CLI test seam.
 
 ## Files touched
 
@@ -72,6 +72,44 @@ Document association, reassociation, unresolved recovery, promotion, and removal
 ### Roadmap
 
 This record is the receiver-owned host follow-on from `KI-HARNESS-GOV-052`.
+
+## Review
+
+### Delivered
+
+Implemented explicit machine-local associations for owner-declared external Agora references and integrated resolved reference roots into Agora inspection, audit, roots, open, and editor projection.
+
+The implementation commit is `c1b509b64940b10a8cb40dc6041f05d0a6534d4c` against immutable baseline `c242892f0fd91f06f4422bacc6e1b88a45accb93`. A prerequisite coverage repair for the concurrently landed VS Code reconciliation surface is committed separately as `c92bb5c4436644463d02593d162b40f8f0a67d59`.
+
+### Summary of changes
+
+- Added `ki agora reference set`, `list`, and `remove`, backed by a deterministic XDG state document.
+- Validated physical Git checkout roots and canonical GitHub origin identities through injected runner and environment capabilities.
+- Added typed owner, member, and reference roots plus unresolved-reference diagnostics without weakening reciprocal membership validation.
+- Kept `ki repo --agora` member-only while extending the Agora-specific roots, open, audit, inspect, list, and show surfaces.
+- Updated completions, help inventory, man page, changelog, specification, README, and an operational guide.
+
+### Verification
+
+- `bunx tsc --noEmit` passed.
+- `bun run test` passed: 46 files and 714 tests.
+- `bun run test:coverage` passed at 100% statements, branches, functions, and lines.
+- `bunx biome check` passed across 242 files.
+- `mandoc -T lint man/ki.1` passed.
+- Focused `ki-engineering`, `ki-repo-tools`, `ki-self`, `ki-authoring`, `ki-guides`, `ki-specs`, and `ki-agora` repository audits passed.
+- The whole-repository `ki-repo` audit had no failures; its two existing `.ki.toml` presentation warnings remain outside this item.
+
+### Outstanding concerns
+
+None within the approved scope. The two pre-existing `.ki.toml` presentation warnings are unchanged and are not Agora-reference defects.
+
+### Post-change review
+
+The public CLI, core boundaries, documentation, completions, manual, and contract tests agree on the explicit-association model. External references remain separate from governed reciprocal members, and all repository operations continue to target members only. No clone, network request, peer write, or referenced-checkout mutation path was introduced.
+
+### Mini recap
+
+The durable learning is that an Agora may project a broader working set than its governed membership, but the distinction must remain typed at the resolution boundary. That contract is now captured in `docs/specs/agoras.md`; operational recovery and promotion guidance lives in `docs/guides/agora-references.md`.
 
 ## Discussion
 
