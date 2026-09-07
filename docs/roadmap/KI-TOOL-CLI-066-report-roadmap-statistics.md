@@ -32,7 +32,7 @@ Extend the work-item codec with monotonic timestamp validation, preserve native 
 
 `src/core/work/items.ts` accepts a closed project-roadmap frontmatter schema and projects the common fields used by both local adapters, but it does not recognise creation or update timestamps. `ki repo roadmap list` already resolves repository selections and aggregates readable records; its output is deterministic human-readable text only. The only native roadmap mutations are horizon movement and pruning, and `KiContext.now` already provides an injectable clock for deterministic tests.
 
-The Harness timestamp contract remains `soon` and `draft`. Its accepted field, precision, compatibility, and mutation rules are the only outstanding readiness dependency for this record.
+The Harness timestamp contract is now selected and planned in `KI-HARNESS-GOV-056`, fixing the intended field, precision, compatibility, mutation, and concurrency semantics. Its implementation and publication remain the only outstanding readiness dependency for this record.
 
 ## Steps
 
@@ -71,7 +71,7 @@ The Harness timestamp contract remains `soon` and `draft`. Its accepted field, p
 
 ## Dependencies / blocks
 
-Implementation requires the accepted Harness timestamp contract from `KI-HARNESS-GOV-056`. The dependency remains narrative because roadmap dependency arrays are repository-local. Once that record is accepted, re-check this plan against its exact field, compatibility, and mutation rules before changing this record to `ready`.
+Implementation requires the published Harness timestamp contract from `KI-HARNESS-GOV-056`. The dependency remains narrative because roadmap dependency arrays are repository-local. Once that record is delivered, cite its commit, re-check this plan against the published contract, and change this record to `ready` without reshaping its agreed CLI boundary.
 
 No local roadmap item blocks the work. The first delivery covers the existing local `roadmap` and `kb-streams` adapters; future GitHub Issues or Linear adapters should project their native timestamps into the same statistics model when those adapters become executable.
 
@@ -101,7 +101,7 @@ Keep the Harness dependency visible here; do not create a local surrogate depend
 
 ### Harness dependency
 
-Implementation waits for the field names, precision, compatibility period, and mutation semantics to be accepted in `KI-HARNESS-GOV-056`. This cross-repository dependency remains narrative because roadmap dependency arrays are repository-local.
+The field names, precision, compatibility period, mutation semantics, and concurrency rule are fixed by the ready `KI-HARNESS-GOV-056` plan. CLI implementation waits for that contract to be delivered and published; this cross-repository dependency remains narrative because roadmap dependency arrays are repository-local.
 
 ### Historical records
 
