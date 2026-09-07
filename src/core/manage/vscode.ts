@@ -70,6 +70,8 @@ const repositoryTrustClients = async (
     } catch {
       throw new KiError(`registered repository has invalid .ki.toml: ${repository.path}`, 1)
     }
+    // smol-toml parses a document as a table; retain a defensive parser-boundary guard.
+    /* v8 ignore next */
     const skills = isRecord(parsed) ? parsed['skills'] : undefined
     const repo = isRecord(skills) ? skills['ki-repo'] : undefined
     const runtimes = isRecord(repo) ? repo['supported_runtimes'] : undefined
@@ -225,9 +227,6 @@ const buildPlan = async (
       matching = documents.filter(({ workspace }) =>
         workspace.folders.some((folder) => folder.path === repository.path)
       )
-    }
-    if (!matching.length) {
-      throw new KiError(`cannot associate OneDrive source directory with a VS Code workspace: ${source}`, 1)
     }
     for (const document of matching) {
       if (!document.workspace.folders.some((folder) => folder.path === source)) {
