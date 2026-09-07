@@ -26,13 +26,18 @@ const manageCommands = [
   'outdated',
   'repair',
   'search',
-  'update'
+  'update',
+  'vscode'
 ]
-const agoraCommands = ['audit', 'inspect', 'list', 'show', 'roots', 'open']
+const agoraCommands = ['audit', 'inspect', 'list', 'show', 'roots', 'open', 'reference']
+const agoraReferenceCommands = ['set', 'list', 'remove']
 const agoraChangelogCommands = [
   '`ki agora audit [agora]`',
   '`ki agora inspect <agora> --target <zed|vscode> --workspace <selector>`',
-  '`ki agora open <agora> --target <zed|vscode>`'
+  '`ki agora open <agora> --target <zed|vscode>`',
+  '`ki agora reference set <repository> <checkout> [--dry-run]`',
+  '`ki agora reference list`',
+  '`ki agora reference remove <repository> [--dry-run]`'
 ]
 const repoCommands = ['audit', 'conform', 'diag', 'educate', 'init', 'open', 'roadmap', 'repair', 'skill', 'upgrade']
 const registryCommands = ['add', 'list']
@@ -46,6 +51,7 @@ describe('[ki command inventory]', () => {
     const root = await box.run('ki --help')
     const manage = await box.run('ki manage --help')
     const agora = await box.run('ki agora --help')
+    const agoraReference = await box.run('ki agora reference --help')
     const repository = await box.run('ki repo --help')
     const registry = await box.run('ki registry --help')
     const zsh = await box.run('ki manage completion zsh')
@@ -54,6 +60,7 @@ describe('[ki command inventory]', () => {
     expect(commandNames(root.output)).toEqual(rootHelpCommands)
     expect(commandNames(manage.output)).toEqual(manageCommands)
     expect(commandNames(agora.output)).toEqual(agoraCommands)
+    expect(commandNames(agoraReference.output)).toEqual(agoraReferenceCommands)
     expect(commandNames(repository.output)).toEqual([
       'init',
       'open',
@@ -75,6 +82,7 @@ describe('[ki command inventory]', () => {
     expect(bash.output).toContain(`'') printf '%s\\n' '${rootHelpCommands.join(' ')}'`)
     expect(bash.output).toContain(`'manage') printf '%s\\n' '${manageCommands.join(' ')}'`)
     expect(bash.output).toContain(`'agora') printf '%s\\n' '${agoraCommands.join(' ')}'`)
+    expect(bash.output).toContain(`'agora reference') printf '%s\\n' '${agoraReferenceCommands.join(' ')}'`)
     expect(bash.output).toContain(
       "'repo') printf '%s\\n' 'init open audit conform diag roadmap educate repair skill upgrade'"
     )

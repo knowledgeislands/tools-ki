@@ -4,10 +4,10 @@ title: Resolve external Agora references
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: c242892f0fd91f06f4422bacc6e1b88a45accb93
 ---
 
 ## Goal

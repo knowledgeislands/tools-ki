@@ -6,17 +6,48 @@ import {
   readRepositoryDeclaration
 } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
+import type { Environment } from '../paths.ts'
+import type { Runner } from '../runtime/runner.ts'
 import { canonicalRepositoryIdentity, type LocalRegistryEntry, requiredLocalRegistry } from '../storage/index.ts'
+import {
+  inspectReferenceCheckout,
+  type ReferenceAssociation,
+  requiredReferenceAssociations
+} from './reference-associations.ts'
 
 export const ESTATE_AGORA = 'estate' as const
 
 const AGORA_ID = /^[a-z][a-z0-9-]*[a-z0-9]$/
 const ROLE = /^[a-z][a-z0-9-]*[a-z0-9]$/
-export interface AgoraMember {
+export type AgoraRootKind = 'owner' | 'member' | 'reference'
+
+export interface AgoraRoot {
   readonly key: string
   readonly root: string
   readonly repository: string
+  readonly kind: AgoraRootKind
+}
+
+export interface AgoraMember extends AgoraRoot {
+  readonly kind: 'owner' | 'member'
   readonly role?: string
+}
+
+export interface AgoraReference extends AgoraRoot {
+  readonly kind: 'reference'
+}
+
+export type AgoraReferenceDiagnosticStatus = 'unassociated' | 'missing' | 'ambiguous' | 'remote-mismatch'
+
+export interface AgoraReferenceDiagnostic {
+  readonly repository: string
+  readonly status: AgoraReferenceDiagnosticStatus
+  readonly detail: string
+}
+
+export interface AgoraRuntime {
+  readonly runner: Runner
+  readonly environment: Environment
 }
 
 export interface AgoraProfile {
@@ -25,6 +56,9 @@ export interface AgoraProfile {
   readonly purpose: string
   readonly home?: AgoraMember
   readonly members: readonly AgoraMember[]
+  readonly references: readonly AgoraReference[]
+  readonly roots: readonly AgoraRoot[]
+  readonly referenceDiagnostics: readonly AgoraReferenceDiagnostic[]
   readonly system: boolean
 }
 
@@ -53,10 +87,14 @@ interface AgoraHome {
   readonly owner: string
   readonly purpose: string
   readonly order: readonly string[]
+  readonly references: readonly string[]
   readonly members: Readonly<Record<string, string>>
 }
 
-interface RegisteredRepository extends AgoraMember {
+interface RegisteredRepository {
+  readonly key: string
+  readonly root: string
+  readonly repository: string
   readonly declaration: RepositoryDeclaration
 }
 
@@ -201,20 +239,32 @@ const homeDeclaration = (repository: RegisteredRepository, id: string, value: un
     if (typeof role !== 'string' || !ROLE.test(role)) throw profileError(id, `member ${identity} has an invalid role`)
     roles[identity] = role
   }
+  const declaredReferences = home['references']
+  if (declaredReferences !== undefined && !Array.isArray(declaredReferences))
+    throw profileError(id, 'references must be an array of canonical HTTPS GitHub repositories')
+  const references: string[] = []
+  for (const identity of declaredReferences ?? []) {
+    if (!canonicalRepositoryIdentity(identity))
+      throw profileError(id, 'reference entries must be canonical HTTPS GitHub repositories')
+    if (identity === repository.repository || roles[identity])
+      throw profileError(id, `reference ${identity} must not also be the owner or a member`)
+    if (references.includes(identity)) throw profileError(id, `references repeats repository ${identity}`)
+    references.push(identity)
+  }
   const declaredOrder = home['order']
   if (declaredOrder !== undefined && !Array.isArray(declaredOrder))
     throw profileError(id, 'order must be an array of canonical HTTPS GitHub repositories')
   const order: string[] = []
-  const participants = new Set([home['owner'], ...Object.keys(roles)])
+  const participants = new Set([home['owner'], ...Object.keys(roles), ...references])
   for (const identity of declaredOrder ?? []) {
     if (!canonicalRepositoryIdentity(identity))
       throw profileError(id, 'order entries must be canonical HTTPS GitHub repositories')
     if (order.includes(identity)) throw profileError(id, `order repeats participant ${identity}`)
     if (!participants.has(identity))
-      throw profileError(id, `order participant ${identity} is not the owner or a member`)
+      throw profileError(id, `order participant ${identity} is not the owner or a member or reference`)
     order.push(identity)
   }
-  return { id, owner: home['owner'], purpose: home['purpose'], order, members: roles }
+  return { id, owner: home['owner'], purpose: home['purpose'], order, references, members: roles }
 }
 
 const membershipDeclaration = (repository: RegisteredRepository, id: string): Membership | undefined => {
@@ -233,34 +283,104 @@ const membershipDeclaration = (repository: RegisteredRepository, id: string): Me
   return { home: membership['home'], role: membership['role'] }
 }
 
-const profileFromHome = (
+const membersFromHome = (
   home: RegisteredRepository,
   declaration: AgoraHome,
   repositories: readonly RegisteredRepository[]
-): AgoraProfile => {
-  const members = [
-    { key: home.key, root: home.root, repository: declaration.owner, role: 'owner' },
+): readonly AgoraMember[] => {
+  const members: AgoraMember[] = [
+    { key: home.key, root: home.root, repository: declaration.owner, kind: 'owner', role: 'owner' },
     ...Object.entries(declaration.members).map(([identity, role]) => {
       const member = repositories.find((candidate) => candidate.repository === identity)
       if (!member) throw profileError(declaration.id, `member ${identity} is not registered locally`)
       const consent = membershipDeclaration(member, declaration.id)
       if (!consent || consent.home !== home.repository || consent.role !== role)
         throw profileError(declaration.id, `member ${identity} does not declare matching consent`)
-      return { key: member.key, root: member.root, repository: member.repository, role }
+      return { key: member.key, root: member.root, repository: member.repository, kind: 'member' as const, role }
     })
   ]
-  const byRepository = new Map(members.map((member) => [member.repository, member]))
-  const ordered = declaration.order.map((identity) => byRepository.get(identity) as AgoraMember)
+  const order = new Map(declaration.order.map((identity, index) => [identity, index]))
+  return members.sort((left, right) => {
+    const leftOrder = order.get(left.repository)
+    const rightOrder = order.get(right.repository)
+    if (leftOrder !== undefined || rightOrder !== undefined)
+      return (leftOrder ?? Number.POSITIVE_INFINITY) - (rightOrder ?? Number.POSITIVE_INFINITY)
+    return left.key.localeCompare(right.key, 'en')
+  })
+}
+
+const resolveReferences = async (
+  declaration: AgoraHome,
+  associations: readonly ReferenceAssociation[],
+  runtime: AgoraRuntime
+): Promise<{
+  readonly references: readonly AgoraReference[]
+  readonly diagnostics: readonly AgoraReferenceDiagnostic[]
+}> => {
+  const references: AgoraReference[] = []
+  const diagnostics: AgoraReferenceDiagnostic[] = []
+  for (const repository of declaration.references) {
+    const candidates = associations.filter((association) => association.repository === repository)
+    if (!candidates.length) {
+      diagnostics.push({ repository, status: 'unassociated', detail: 'no local checkout is associated' })
+      continue
+    }
+    if (candidates.length > 1) {
+      diagnostics.push({
+        repository,
+        status: 'ambiguous',
+        detail: `${candidates.length} local checkouts are associated; select exactly one`
+      })
+      continue
+    }
+    const checkout = await inspectReferenceCheckout(
+      (candidates[0] as ReferenceAssociation).path,
+      repository,
+      runtime.runner,
+      runtime.environment
+    )
+    if (checkout.state !== 'available') {
+      diagnostics.push({ repository, status: checkout.state, detail: checkout.detail })
+      continue
+    }
+    references.push({
+      key: repository.slice('https://github.com/'.length),
+      root: checkout.root as string,
+      repository,
+      kind: 'reference'
+    })
+  }
+  return { references, diagnostics }
+}
+
+const profileFromHome = async (
+  home: RegisteredRepository,
+  declaration: AgoraHome,
+  repositories: readonly RegisteredRepository[],
+  associations: readonly ReferenceAssociation[],
+  runtime: AgoraRuntime
+): Promise<AgoraProfile> => {
+  const members = membersFromHome(home, declaration, repositories)
+  const referenceResult = await resolveReferences(declaration, associations, runtime)
+  const allRoots: readonly AgoraRoot[] = [...members, ...referenceResult.references]
+  const byRepository = new Map(allRoots.map((root) => [root.repository, root]))
+  const orderedRoots = declaration.order
+    .map((identity) => byRepository.get(identity))
+    .filter((root): root is AgoraRoot => Boolean(root))
   const orderedIdentities = new Set(declaration.order)
-  const remainder = members
-    .filter((member) => !orderedIdentities.has(member.repository))
+  const remainingRoots = allRoots
+    .filter((root) => !orderedIdentities.has(root.repository))
     .sort((left, right) => left.key.localeCompare(right.key, 'en'))
+  const roots = [...orderedRoots, ...remainingRoots]
   return {
     id: declaration.id,
     name: declaration.id,
     purpose: declaration.purpose,
-    home: { key: home.key, root: home.root, repository: home.repository },
-    members: [...ordered, ...remainder],
+    home: { key: home.key, root: home.root, repository: home.repository, kind: 'owner' },
+    members: roots.filter((root): root is AgoraMember => root.kind !== 'reference'),
+    references: roots.filter((root): root is AgoraReference => root.kind === 'reference'),
+    roots,
+    referenceDiagnostics: referenceResult.diagnostics,
     system: false
   }
 }
@@ -275,12 +395,16 @@ const estate = (repositories: readonly RegisteredRepository[]): AgoraProfile => 
   id: ESTATE_AGORA,
   name: 'Registered estate',
   purpose: 'Every locally registered canonical KI repository.',
-  members: repositories.map(({ key, root, repository }) => ({ key, root, repository })),
+  members: repositories.map(({ key, root, repository }) => ({ key, root, repository, kind: 'member' })),
+  references: [],
+  roots: repositories.map(({ key, root, repository }) => ({ key, root, repository, kind: 'member' })),
+  referenceDiagnostics: [],
   system: true
 })
 
-export const listAgoras = async (stateDirectory: string): Promise<AgoraListReport> => {
+export const listAgoras = async (stateDirectory: string, runtime: AgoraRuntime): Promise<AgoraListReport> => {
   const repositories = await registeredRepositories(stateDirectory)
+  const associations = await requiredReferenceAssociations(stateDirectory)
   const declarations: AgoraCandidate[] = []
   const broken: string[] = []
   for (const home of repositories) {
@@ -317,7 +441,7 @@ export const listAgoras = async (stateDirectory: string): Promise<AgoraListRepor
     }
     const candidate = candidates[0] as AgoraCandidate
     try {
-      profiles.push(profileFromHome(candidate.home, candidate.declaration, repositories))
+      profiles.push(await profileFromHome(candidate.home, candidate.declaration, repositories, associations, runtime))
     } catch (error) {
       broken.push(kiErrorMessage(error))
     }
@@ -329,10 +453,15 @@ export const listAgoras = async (stateDirectory: string): Promise<AgoraListRepor
   }
 }
 
-export const resolveAgora = async (stateDirectory: string, id: string): Promise<AgoraProfile> => {
+export const resolveAgora = async (
+  stateDirectory: string,
+  id: string,
+  runtime: AgoraRuntime
+): Promise<AgoraProfile> => {
   if (!AGORA_ID.test(id)) throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
   if (id === ESTATE_AGORA) return estate(await registeredRepositories(stateDirectory))
   const { repositories, failuresByRepository } = await availableRegisteredRepositories(stateDirectory)
+  const associations = await requiredReferenceAssociations(stateDirectory)
   const candidates: AgoraCandidate[] = []
   for (const home of repositories) {
     let entries: readonly (readonly [string, unknown])[]
@@ -357,15 +486,57 @@ export const resolveAgora = async (stateDirectory: string, id: string): Promise<
     const failure = failuresByRepository.get(member)
     if (failure) throw failure
   }
-  return profileFromHome(candidate.home, candidate.declaration, repositories)
+  return profileFromHome(candidate.home, candidate.declaration, repositories, associations, runtime)
+}
+
+export const resolveAgoraMembers = async (stateDirectory: string, id: string): Promise<readonly AgoraMember[]> => {
+  if (!AGORA_ID.test(id)) throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
+  if (id === ESTATE_AGORA) return estate(await registeredRepositories(stateDirectory)).members
+  const { repositories, failuresByRepository } = await availableRegisteredRepositories(stateDirectory)
+  const candidates: AgoraCandidate[] = []
+  for (const home of repositories) {
+    let entries: readonly (readonly [string, unknown])[]
+    try {
+      entries = homeDeclarationEntries(home)
+    } catch (error) {
+      kiErrorMessage(error)
+      continue
+    }
+    for (const [candidateId, value] of entries)
+      if (candidateId === id) candidates.push({ home, declaration: homeDeclaration(home, candidateId, value) })
+  }
+  if (!candidates.length) throw profileError(id, 'is not declared by a registered Agora home')
+  if (candidates.length > 1)
+    throw duplicateOwnersError(
+      id,
+      candidates.map((candidate) => candidate.home.repository)
+    )
+  const candidate = candidates[0] as AgoraCandidate
+  for (const member of Object.keys(candidate.declaration.members)) {
+    const failure = failuresByRepository.get(member)
+    if (failure) throw failure
+  }
+  return membersFromHome(candidate.home, candidate.declaration, repositories)
+}
+
+export const declaredAgoraReferenceIdentities = async (stateDirectory: string): Promise<readonly string[]> => {
+  const references = new Set<string>()
+  for (const repository of await registeredRepositories(stateDirectory)) {
+    for (const [id, value] of homeDeclarationEntries(repository)) {
+      const home = homeDeclaration(repository, id, value)
+      for (const reference of home.references) references.add(reference)
+    }
+  }
+  return [...references].sort((left, right) => left.localeCompare(right, 'en'))
 }
 
 const addHealthFinding = (findings: Map<string, string[]>, id: string, message: string): void => {
   findings.set(id, [...(findings.get(id) ?? []), message])
 }
 
-const healthProfiles = async (stateDirectory: string): Promise<AgoraHealthReport> => {
+const healthProfiles = async (stateDirectory: string, runtime: AgoraRuntime): Promise<AgoraHealthReport> => {
   const { repositories, failuresByRepository } = await availableRegisteredRepositories(stateDirectory)
+  const associations = await requiredReferenceAssociations(stateDirectory)
   const candidatesById = new Map<string, AgoraCandidate[]>()
   const findingsById = new Map<string, string[]>()
   const estateFindings: string[] = []
@@ -415,7 +586,13 @@ const healthProfiles = async (stateDirectory: string): Promise<AgoraHealthReport
     }
     if (unavailable) continue
     try {
-      profileFromHome(candidate.home, candidate.declaration, repositories)
+      const profile = await profileFromHome(candidate.home, candidate.declaration, repositories, associations, runtime)
+      for (const diagnostic of profile.referenceDiagnostics)
+        addHealthFinding(
+          findingsById,
+          id,
+          `reference ${diagnostic.repository} [${diagnostic.status}]: ${diagnostic.detail}`
+        )
     } catch (error) {
       addHealthFinding(findingsById, id, kiErrorMessage(error))
     }
@@ -435,7 +612,11 @@ const healthProfiles = async (stateDirectory: string): Promise<AgoraHealthReport
   }
 }
 
-export const auditAgoras = async (stateDirectory: string, id?: string): Promise<AgoraHealthReport> => {
+export const auditAgoras = async (
+  stateDirectory: string,
+  runtime: AgoraRuntime,
+  id?: string
+): Promise<AgoraHealthReport> => {
   if (id !== undefined && !AGORA_ID.test(id))
     throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
 
@@ -454,7 +635,7 @@ export const auditAgoras = async (stateDirectory: string, id?: string): Promise<
     }
   }
 
-  const report = await healthProfiles(stateDirectory)
+  const report = await healthProfiles(stateDirectory, runtime)
   if (id === undefined) return report
   const profile = report.profiles.find((candidate) => candidate.id === id)
   if (!profile) throw profileError(id, 'is not declared by a registered Agora home')

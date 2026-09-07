@@ -9,8 +9,11 @@ export const createAgoraRootsCommand = (context: KiContext): Command =>
     .argument('<agora>', 'Agora name')
     .option('-0, --null', 'write roots terminated with NUL instead of line feeds')
     .action(async (value: string, options: { null?: boolean }) => {
-      const profile = await resolveAgora(context.paths.state, value)
-      if (!profile.members.length) throw new KiError(`Agora ${profile.id} has no members`, 2)
+      const profile = await resolveAgora(context.paths.state, value, {
+        runner: context.runner,
+        environment: context.environment
+      })
+      if (!profile.roots.length) throw new KiError(`Agora ${profile.id} has no members`, 2)
       const separator = options.null ? '\0' : '\n'
-      context.stdout.write(`${profile.members.map((member) => member.root).join(separator)}${separator}`)
+      context.stdout.write(`${profile.roots.map((root) => root.root).join(separator)}${separator}`)
     })

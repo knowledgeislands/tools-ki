@@ -12,7 +12,7 @@ import { KiExit } from '../../core/errors.ts'
 import { renderTree } from '../presentation/index.ts'
 
 const pathLabel = (value: ProjectionPath): string => {
-  if (value.key) return `${value.key}: ${value.path}`
+  if (value.key) return `${value.key}${value.kind === 'reference' ? ' [reference]' : ''}: ${value.path}`
   if (value.repository) return `${value.repository}: ${value.path}`
   return value.path
 }
@@ -29,7 +29,10 @@ export const createAgoraInspectCommand = (context: KiContext): Command =>
     )
     .requiredOption('--workspace <selector>', 'explicit local editor workspace selector')
     .action(async (value: string, options: { readonly target: OpenTargetName; readonly workspace: string }) => {
-      const agora = await resolveAgora(context.paths.state, value)
+      const agora = await resolveAgora(context.paths.state, value, {
+        runner: context.runner,
+        environment: context.environment
+      })
       const observation = await observeLocalTarget(options.target, options.workspace, {
         environment: context.environment,
         platform: context.platform
@@ -59,7 +62,7 @@ export const createAgoraInspectCommand = (context: KiContext): Command =>
             { label: `unregistered KI (${report.unregisteredKi.length})`, children: paths(report.unregisteredKi) },
             { label: `external (${report.external.length})`, children: paths(report.external) },
             {
-              label: `summary: EXPECTED=${agora.members.length} OBSERVED=${observed} MATCHED=${report.matched.length} MISSING=${report.missing.length} EXTRA_REGISTERED=${report.extraRegistered.length} UNREGISTERED_KI=${report.unregisteredKi.length} EXTERNAL=${report.external.length}`
+              label: `summary: EXPECTED=${agora.roots.length} OBSERVED=${observed} MATCHED=${report.matched.length} MISSING=${report.missing.length} EXTRA_REGISTERED=${report.extraRegistered.length} UNREGISTERED_KI=${report.unregisteredKi.length} EXTERNAL=${report.external.length}`
             }
           ]
         }).join('\n')}\n`

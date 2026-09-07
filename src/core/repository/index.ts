@@ -1,6 +1,6 @@
 import { readdir, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
-import { resolveAgora } from '../agora/index.ts'
+import { resolveAgoraMembers } from '../agora/index.ts'
 import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
@@ -160,18 +160,18 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
   }
   const agora = options.estate ? 'estate' : options.agora
   if (agora) {
-    const selected = await resolveAgora(options.stateDirectory, agora)
-    if (!selected.members.length) throw new KiError(`Agora ${selected.id} has no members`, 2)
+    const members = await resolveAgoraMembers(options.stateDirectory, agora)
+    if (!members.length) throw new KiError(`Agora ${agora} has no members`, 2)
     const targets = await Promise.all(
-      selected.members.map((member) =>
+      members.map((member) =>
         targetFromDirectory(
           member.root,
-          `Agora ${selected.id} member ${member.repository} must be an existing physical directory`,
-          `Agora ${selected.id} member ${member.repository} is not a KI repository`
+          `Agora ${agora} member ${member.repository} must be an existing physical directory`,
+          `Agora ${agora} member ${member.repository} is not a KI repository`
         )
       )
     )
-    return distinctTargets(targets, `Agora ${selected.id}`)
+    return distinctTargets(targets, `Agora ${agora}`)
   }
   const working = await realpath(options.workingDirectory)
   const members = await repositoriesFromMgitManifest(working)

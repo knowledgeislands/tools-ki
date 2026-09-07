@@ -44,7 +44,7 @@ _Verify:_ `src/tests/cli/agora/agora.test.ts` — `writes deterministic machine-
 
 ### AGORA-007 — Declared projection order
 
-A named Agora home MAY declare `order` as a duplicate-free ordered prefix of canonical repository identities already participating as its owner or reciprocal members. Every named-Agora consumer MUST place that prefix first and append unlisted participants in lexical local-registry-key order. Without `order`, named Agoras MUST retain lexical local-registry-key order. The system-managed `estate` projection MUST remain in lexical local-registry-key order.
+A named Agora home MAY declare `order` as a duplicate-free ordered prefix of canonical repository identities already participating as its owner, reciprocal members, or external references. Every named-Agora consumer MUST place that prefix first and append unlisted participants in lexical local-key order. Without `order`, named Agoras MUST retain lexical local-key order. The system-managed `estate` projection MUST remain in lexical local-registry-key order.
 
 `ki` MUST reject an `order` value that is not an array or contains a non-canonical, repeated, or non-participating repository identity.
 
@@ -79,6 +79,24 @@ _Verify:_ `src/tests/cli/agora/inspect.test.ts` exercises every classification u
 `ki agora inspect` MUST exit `0` for an exact projection, `1` after rendering drift or when the selected target source cannot be supported safely, and `2` for invalid selectors or Agora resolution failures.
 
 _Verify:_ `src/tests/cli/agora/inspect.test.ts` asserts exact, drift, unavailable, malformed, remote, ambiguous, invalid-selector, and invalid-resolution outcomes through the CLI seam; `src/tests/cli/root/help.test.ts` and `src/tests/cli/manage/completions.test.ts` verify command discovery.
+
+### AGORA-013 — External reference associations
+
+An owner-declared Agora reference MUST remain distinct from reciprocal KI membership. `ki agora reference set <repository> <checkout>` MUST accept only a declared canonical reference identity and one explicitly selected absolute physical Git checkout root whose canonical `origin` matches that identity. The association MUST be machine-local, MUST NOT require `.ki.toml`, and MUST NOT register, clone, or mutate the referenced repository.
+
+_Verify:_ `src/tests/cli/agora/references.test.ts` — `associates a plain Git checkout and projects typed owner and reference roots`; `rejects unsafe selections and malformed association stores`.
+
+### AGORA-014 — Typed reference resolution
+
+Agora resolution MUST classify projected roots as `owner`, `member`, or `reference`. A declared reference with no usable unique association MUST produce an `unassociated`, `missing`, `ambiguous`, or `remote-mismatch` diagnostic and MUST be omitted from projected roots without invalidating or reclassifying the resolved owner and reciprocal members. `roots`, `open`, `inspect`, `show`, and `audit` MUST consume this shared resolution result.
+
+_Verify:_ `src/tests/cli/agora/references.test.ts` — reference projection and diagnostic coverage; `src/tests/cli/agora/inspect.test.ts` — target-neutral projection classification.
+
+### AGORA-015 — Local association lifecycle
+
+`ki agora reference list` MUST expose the machine-local association inventory. `ki agora reference set` MUST replace only the selected identity's association, and `ki agora reference remove` MUST remove only that local association. Promotion from reference to reciprocal membership MUST ignore stale association state and MUST NOT duplicate the root or mutate the promoted repository.
+
+_Verify:_ `src/tests/cli/agora/references.test.ts` — `keeps association mutation local and ignores stale state after promotion to membership`.
 
 ## Gaps
 

@@ -9,7 +9,11 @@ export const createAgoraAuditCommand = (context: KiContext): Command =>
     .description('audit declared Agora health')
     .argument('[agora]', 'Agora name')
     .action(async (value?: string) => {
-      const report = await auditAgoras(context.paths.state, value)
+      const report = await auditAgoras(
+        context.paths.state,
+        { runner: context.runner, environment: context.environment },
+        value
+      )
       const healthy = report.profiles.filter((profile) => !profile.findings.length).length
       const findings =
         report.estateFindings.length + report.profiles.reduce((total, profile) => total + profile.findings.length, 0)

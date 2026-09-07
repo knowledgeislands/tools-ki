@@ -4,6 +4,7 @@ import { createAgoraAuditCommand } from './audit.ts'
 import { createAgoraInspectCommand } from './inspect.ts'
 import { createAgoraListCommand } from './list.ts'
 import { createAgoraOpenCommand } from './open.ts'
+import { createAgoraReferenceCommand } from './reference/index.ts'
 import { createAgoraRootsCommand } from './roots.ts'
 import { createAgoraShowCommand } from './show.ts'
 
@@ -16,3 +17,4 @@ export const createAgoraCommand = (context: KiContext): Command =>
     .addCommand(createAgoraShowCommand(context))
     .addCommand(createAgoraRootsCommand(context))
     .addCommand(createAgoraOpenCommand(context))
+    .addCommand(createAgoraReferenceCommand(context))

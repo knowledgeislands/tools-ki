@@ -50,6 +50,9 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki agora show <agora> [--verbose]`
 - `ki agora roots <agora> [--null]`
 - `ki agora open <agora> --target <zed|vscode>`
+- `ki agora reference set <repository> <checkout> [--dry-run]`
+- `ki agora reference list`
+- `ki agora reference remove <repository> [--dry-run]`
 
 #### Repository options
 

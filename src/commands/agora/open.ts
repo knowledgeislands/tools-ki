@@ -9,12 +9,15 @@ export const createAgoraOpenCommand = (context: KiContext): Command =>
     .argument('<agora>', 'Agora name')
     .addOption(new Option('--target <target>', 'local target to open').choices(openTargetNames).makeOptionMandatory())
     .action(async (value: string, options: { target: OpenTargetName }) => {
-      const profile = await resolveAgora(context.paths.state, value)
-      if (!profile.members[0]) throw new KiError(`Agora ${profile.id} has no members`, 2)
+      const profile = await resolveAgora(context.paths.state, value, {
+        runner: context.runner,
+        environment: context.environment
+      })
+      if (!profile.roots[0]) throw new KiError(`Agora ${profile.id} has no members`, 2)
 
       const result = await openLocalTarget(
         options.target,
-        profile.members.map((member) => member.root),
+        profile.roots.map((root) => root.root),
         { runner: context.runner, environment: context.environment },
         { preserveProjectionOrder: true }
       )
@@ -25,6 +28,6 @@ export const createAgoraOpenCommand = (context: KiContext): Command =>
         )
 
       context.stdout.write(
-        `ki agora open ${profile.id} --target ${options.target}: opened ${profile.members.length} repositories\n`
+        `ki agora open ${profile.id} --target ${options.target}: opened ${profile.roots.length} repositories\n`
       )
     })

@@ -6,13 +6,14 @@ import {
   readRepositoryDeclaration
 } from '../configuration/index.ts'
 import { requiredLocalRegistry } from '../storage/index.ts'
-import type { AgoraMember, AgoraProfile } from './resolution.ts'
+import type { AgoraProfile, AgoraRoot, AgoraRootKind } from './resolution.ts'
 import type { TargetObservation } from './targets/index.ts'
 
 export interface ProjectionPath {
   readonly path: string
   readonly key?: string
   readonly repository?: string
+  readonly kind?: AgoraRootKind
 }
 
 export interface AgoraProjectionReport {
@@ -29,10 +30,11 @@ export interface AgoraProjectionReport {
 
 const byPath = (left: ProjectionPath, right: ProjectionPath): number => left.path.localeCompare(right.path, 'en')
 
-const projectionPath = (member: AgoraMember): ProjectionPath => ({
-  path: member.root,
-  key: member.key,
-  repository: member.repository
+const projectionPath = (root: AgoraRoot): ProjectionPath => ({
+  path: root.root,
+  key: root.key,
+  repository: root.repository,
+  kind: root.kind
 })
 
 const registeredPhysicalRoots = async (
@@ -64,7 +66,7 @@ export const compareAgoraProjection = async (
   target: string,
   observation: TargetObservation
 ): Promise<AgoraProjectionReport> => {
-  const expected = new Map(agora.members.map((member) => [member.root, member]))
+  const expected = new Map(agora.roots.map((root) => [root.root, root]))
   const registered = await registeredPhysicalRoots(stateDirectory)
   const matched = new Map<string, ProjectionPath>()
   const extraRegistered = new Map<string, ProjectionPath>()
@@ -97,7 +99,7 @@ export const compareAgoraProjection = async (
     else external.set(root, { path: root })
   }
 
-  const missing = agora.members.filter((member) => !matched.has(member.root)).map(projectionPath)
+  const missing = agora.roots.filter((root) => !matched.has(root.root)).map(projectionPath)
   const report = {
     agora,
     target,

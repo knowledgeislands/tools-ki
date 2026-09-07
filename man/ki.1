@@ -245,6 +245,16 @@ newline-delimited. Use --null or -0 for pathnames that may contain line feeds.
 .B ki agora open <name> --target <zed|vscode>
 Open one declared Agora or the registered estate through an explicit local
 target.
+.TP
+.B ki agora reference set <repository> <checkout> [--dry-run]
+Associate one owner-declared external reference with an explicitly selected
+absolute local Git checkout whose canonical origin matches.
+.TP
+.B ki agora reference list
+List machine-local external Agora reference associations.
+.TP
+.B ki agora reference remove <repository> [--dry-run]
+Remove only the selected machine-local reference association.
 .SS Acquisition
 \&
 .TP
@@ -806,6 +816,17 @@ newline-delimited. Use --null or -0 for pathnames that may contain line feeds.
 .B ki agora open <name> --target <zed|vscode>
 Open one declared Agora or the registered estate through an explicit local
 target.
+.TP
+.B ki agora reference set <repository> <checkout> [--dry-run]
+Associate one owner-declared external reference with an explicitly selected
+absolute local Git checkout whose canonical origin matches. The operation
+never registers, clones, or mutates the referenced repository.
+.TP
+.B ki agora reference list
+List machine-local external Agora reference associations.
+.TP
+.B ki agora reference remove <repository> [--dry-run]
+Remove only the selected machine-local reference association.
 .SS Acquisition
 \&
 .PP
