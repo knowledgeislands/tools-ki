@@ -63,6 +63,15 @@ Print canonical KI documentation locations.
 .B ki manage list
 List verified installed harnesses and capabilities with declared user skills and
 local registered repositories.
+.TP
+.B ki manage vscode check
+Report local VS Code projection drift.
+.TP
+.B ki manage vscode sync [--write]
+Preview or publish local VS Code projection changes.
+.TP
+.B ki manage vscode source create <repository> [--write]
+Preview or create and associate an opt-in repository source store.
 .SS User management
 \&
 .TP
@@ -404,6 +413,24 @@ Any other topic is invalid command grammar.
 List verified installed harnesses and their capabilities with declared user
 skills and local registered repositories. The command does not fetch, discover a
 repository, or change state.
+.TP
+.B ki manage vscode check
+Compare chezmoi-managed VS Code workspaces and trusted-folder source state with
+the local KI repository registry. Report a source diff and exit non-zero when
+drift exists. This command never writes.
+.TP
+.B ki manage vscode sync [--write]
+Preview the same reconciliation. With
+.BR --write ,
+publish the reviewed changes to chezmoi source state. This command never runs
+.BR "chezmoi apply" .
+.TP
+.B ki manage vscode source create <repository> [--write]
+Preview creation and workspace association of an opt-in OneDrive source store
+for one registered repository basename or absolute path. With
+.BR --write ,
+create the directory and publish corresponding chezmoi source-state changes.
+Ambiguous repository or legacy source-store matches fail closed.
 .SS User management
 \&
 .PP

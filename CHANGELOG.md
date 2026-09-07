@@ -33,6 +33,9 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki manage docs`
 - `ki manage list`
 - `ki manage search`
+- `ki manage vscode check`
+- `ki manage vscode sync [--write]`
+- `ki manage vscode source create <repository> [--write]`
 
 #### User management
 

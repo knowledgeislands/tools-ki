@@ -11,6 +11,7 @@ import { createOutdatedCommand } from './outdated.ts'
 import { createRepairCommand } from './repair.ts'
 import { createSearchCommand } from './search.ts'
 import { createUpdateCommand } from './update.ts'
+import { createVscodeCommand } from './vscode.ts'
 
 export const createManageCommand = (context: KiContext): Command =>
   new Command('manage')
@@ -26,3 +27,4 @@ export const createManageCommand = (context: KiContext): Command =>
     .addCommand(createRepairCommand(context))
     .addCommand(createSearchCommand(context))
     .addCommand(createUpdateCommand(context))
+    .addCommand(createVscodeCommand(context))
