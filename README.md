@@ -54,8 +54,6 @@ For the installation and activation boundary, read the [capability lifecycle gui
 
 Neither command changes user or repository skill activation; read the [update and upgrade guide](https://knowledgeislands.info/guidance/cli/update-upgrade/) for target selection and ownership boundaries.
 
-`ki manage vscode check` compares a chezmoi-managed VS Code workspace inventory and trusted-folder source with the local KI registry. Use `ki manage vscode sync --write` to publish reviewed source-state repairs, or `ki manage vscode source create <repository> --write` to create and associate an opt-in OneDrive source store. These commands update only chezmoi source state and never run `chezmoi apply`.
-
 ## Agoras
 
 An Agora is declared portably by a registered owner repository under `[skills.ki-agora.homes.<id>]`. Each home names its own canonical repository identity, which `ki` verifies against the local registry and includes in the resolved projection. Its other declared members reciprocate under `[skills.ki-agora.memberships.<id>]`; `ki` resolves the declaration only when every member is also locally registered and agrees with its owner and role. A home may declare `order` as a duplicate-free prefix of those canonical participant identities.
@@ -155,6 +153,8 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 ## Find local capabilities and documentation
 
 `ki manage search <query>` searches only verified installed harness capabilities, without contacting a registry or discovering a repository.
+
+`ki manage vscode check` compares a chezmoi-managed VS Code workspace inventory and trusted-folder source with the local KI registry. Use `ki manage vscode sync --write` to publish reviewed source-state repairs, or `ki manage vscode source create <repository> --write` to create and associate an opt-in OneDrive source store. These commands update only chezmoi source state and never run `chezmoi apply`; see the [VS Code projection management guide](docs/guides/vscode-management.md).
 
 `ki manage cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki manage diag` reports only machine-managed installation, configuration, registry, and path state. `ki repo diag` uses the standard repository discovery, `--repo`, or `--agora` selection rules to report each selected repository's declared skills and compatible local projections without changing state. `ki manage repair` reconciles missing, dangling, or stale configured user-skill projections; `--dry-run` changes nothing and unavailable or unsafe state remains reported for manual resolution. `ki repo repair` records each selected physical root before repairing only missing, dangling, or stale KI-managed projections, and `--dry-run` changes nothing. `ki manage doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories and validates a regular direct-CWD `.ki.toml`.
 

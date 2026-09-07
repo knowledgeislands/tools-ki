@@ -66,6 +66,26 @@ _Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `prints canonical do
 
 _Verify:_ `src/tests/cli/manage/completions.test.ts` — `emits loadable scripts whose Bash completion reaches repo roadmap`.
 
+## Local editor projections
+
+### MANAGE-011 — VS Code projection diagnosis
+
+`ki manage vscode check` MUST compare the chezmoi-managed VS Code workspace and trusted-folder source state with the local KI repository registry without writing.
+
+_Verify:_ `src/tests/cli/manage/vscode.test.ts` — `synchronises missing workspaces and runtime-scoped trusted folders` proves the check reports drift before the write and passes after reconciliation.
+
+### MANAGE-012 — Explicit VS Code projection publication
+
+`ki manage vscode sync` MUST preview source-state drift by default and MUST publish it only when `--write` is supplied, without running `chezmoi apply`.
+
+_Verify:_ `src/tests/cli/manage/vscode.test.ts` — `synchronises missing workspaces and runtime-scoped trusted folders`.
+
+### MANAGE-013 — Fail-closed source-store association
+
+`ki manage vscode source create` MUST preview an opt-in source store by default and MUST refuse ambiguous repository associations before writing.
+
+_Verify:_ `src/tests/cli/manage/vscode.test.ts` — `previews then creates and associates an opt-in source store` and `fails closed when a legacy source suffix matches multiple repositories`.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

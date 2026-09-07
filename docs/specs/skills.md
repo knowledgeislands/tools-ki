@@ -24,7 +24,7 @@ _Verify:_ `src/tests/cli/skill/skill.test.ts` — `refuses to remove a foreign u
 
 ### SKILL-004 — Published rubric fidelity
 
-`ki skill rubric` MUST render a skill's mechanical and judgment items in sync with its generated on-disk rubric.
+`ki dev skill rubric` MUST render a skill's mechanical and judgment items in sync with its generated on-disk rubric.
 
 _Verify:_ `src/tests/cli/skill/rubric.test.ts` — `renders mechanical and judgment items and reports in sync once written`.
 
