@@ -1,5 +1,4 @@
-import { lstat, readdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { readFile } from 'node:fs/promises'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
 
@@ -8,6 +7,7 @@ const REPOSITORY_TABLE = 'skills.ki-repo'
 const addressExpression = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
 const repositoryExpression =
   /^https:\/\/github\.com\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)$/
+const knowledgeSubtypeExpression = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 
 export const tradeKinds = ['work', 'knowledge'] as const
 
@@ -24,6 +24,9 @@ export interface TradeConfiguration {
   readonly mapBonus: number
   readonly exportsTo: Readonly<Record<TradeKind, readonly string[]>>
   readonly importsFrom: Readonly<Record<TradeKind, readonly string[]>>
+  readonly knowledgeSubtypes: Readonly<Record<string, string>>
+  readonly standingExports: Readonly<Record<string, readonly string[]>>
+  readonly standingImports: Readonly<Record<string, readonly string[]>>
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -44,6 +47,8 @@ export const isTradeRepository = (value: string): boolean => repositoryExpressio
 
 export const isTradeKind = (value: string): value is TradeKind => tradeKinds.includes(value as TradeKind)
 
+export const isKnowledgeSubtype = (value: string): boolean => knowledgeSubtypeExpression.test(value)
+
 export const isObservationPolicy = (value: string): value is ObservationPolicy =>
   observationPolicies.includes(value as ObservationPolicy)
 
@@ -52,6 +57,8 @@ const repositoryIdentity = (repository: string): string => repository.slice('htt
 interface DirectionalRoutes {
   readonly exportsTo: Readonly<Record<TradeKind, readonly string[]>>
   readonly importsFrom: Readonly<Record<TradeKind, readonly string[]>>
+  readonly standingExports: Readonly<Record<string, readonly string[]>>
+  readonly standingImports: Readonly<Record<string, readonly string[]>>
 }
 
 const emptyRoutes = (): { work: string[]; knowledge: string[] } => ({ work: [], knowledge: [] })
@@ -63,16 +70,89 @@ const mapBonus = (value: unknown, path: string): number => {
   return value as number
 }
 
+const parseKnowledgeSubtypes = (
+  declaration: Record<string, unknown>,
+  path: string
+): Readonly<Record<string, string>> => {
+  const value = declaration['subtypes']
+  if (value === undefined) return {}
+  if (!isRecord(value))
+    throw tradeError(`${path} [${TRADES_TABLE}.subtypes] must be a table of trade-kind vocabularies`)
+  const unknown = Object.keys(value).find((key) => key !== 'knowledge')
+  if (unknown)
+    throw tradeError(`${path} [${TRADES_TABLE}.subtypes].${unknown} is unsupported; standing intake is knowledge-only`)
+  const knowledge = value['knowledge']
+  if (knowledge === undefined) return {}
+  if (!isRecord(knowledge))
+    throw tradeError(`${path} [${TRADES_TABLE}.subtypes.knowledge] must be a subtype-to-description table`)
+  const subtypes: Record<string, string> = {}
+  for (const [subtype, description] of Object.entries(knowledge)) {
+    if (!isKnowledgeSubtype(subtype))
+      throw tradeError(`${path} knowledge subtype ${subtype} must use a lower-case hyphenated identifier`)
+    if (typeof description !== 'string' || !description.trim())
+      throw tradeError(`${path} knowledge subtype ${subtype} must have a non-empty receiver-owned description`)
+    subtypes[subtype] = description
+  }
+  return Object.fromEntries(Object.entries(subtypes).sort(([left], [right]) => left.localeCompare(right)))
+}
+
+const parseStandingDirection = (
+  route: Record<string, unknown>,
+  partner: string,
+  direction: RouteDirection,
+  ordinaryKinds: readonly TradeKind[],
+  knowledgeSubtypes: Readonly<Record<string, string>>,
+  path: string
+): readonly string[] => {
+  const standing = route['standing']
+  if (standing === undefined) return []
+  if (!isRecord(standing))
+    throw tradeError(`${path} route ${partner} standing must be a table declaring export or import knowledge subtypes`)
+  const unknownDirection = Object.keys(standing).find((key) => key !== 'export' && key !== 'import')
+  if (unknownDirection)
+    throw tradeError(`${path} route ${partner} standing direction ${unknownDirection} is unsupported`)
+  const declaration = standing[direction]
+  if (declaration === undefined) return []
+  if (!isRecord(declaration))
+    throw tradeError(`${path} route ${partner} standing ${direction} must be a table containing knowledge`)
+  const unknownKind = Object.keys(declaration).find((key) => key !== 'knowledge')
+  if (unknownKind) throw tradeError(`${path} route ${partner} standing ${direction} kind ${unknownKind} is unsupported`)
+  const value = declaration['knowledge']
+  if (!Array.isArray(value) || !value.length || value.some((subtype) => typeof subtype !== 'string'))
+    throw tradeError(`${path} route ${partner} standing ${direction} knowledge must be a non-empty subtype array`)
+  const subtypes = value as string[]
+  if (new Set(subtypes).size !== subtypes.length)
+    throw tradeError(`${path} route ${partner} standing ${direction} knowledge must not repeat a subtype`)
+  for (const subtype of subtypes) {
+    if (!isKnowledgeSubtype(subtype))
+      throw tradeError(
+        `${path} route ${partner} standing ${direction} subtype ${subtype} must be lower-case hyphenated`
+      )
+    if (direction === 'import' && !(subtype in knowledgeSubtypes))
+      throw tradeError(`${path} route ${partner} standing import subtype ${subtype} is not defined by the receiver`)
+  }
+  if (!ordinaryKinds.includes('knowledge'))
+    throw tradeError(`${path} route ${partner} standing ${direction} requires an ordinary knowledge ${direction} route`)
+  return [...subtypes].sort((left, right) => left.localeCompare(right))
+}
+
 /**
  * Reads the partner-keyed route map. Each partner is named once, carrying the kinds it trades in
  * each direction; a direction it does not trade is absent. TOML's own prohibition on defining a key
  * twice is what makes each partner unique, so no ordering or uniqueness rule is written here.
  */
-const parseRoutes = (declaration: Record<string, unknown>, path: string, repository: string): DirectionalRoutes => {
+const parseRoutes = (
+  declaration: Record<string, unknown>,
+  path: string,
+  repository: string,
+  knowledgeSubtypes: Readonly<Record<string, string>>
+): DirectionalRoutes => {
   const exportsTo = emptyRoutes()
   const importsFrom = emptyRoutes()
+  const standingExports: Record<string, readonly string[]> = {}
+  const standingImports: Record<string, readonly string[]> = {}
   const value = declaration['routes']
-  if (value === undefined) return { exportsTo, importsFrom }
+  if (value === undefined) return { exportsTo, importsFrom, standingExports, standingImports }
   if (!isRecord(value)) throw tradeError(`${path} [${TRADES_TABLE}.routes] must be a table`)
   for (const [partner, route] of Object.entries(value)) {
     if (!addressExpression.test(partner))
@@ -81,8 +161,9 @@ const parseRoutes = (declaration: Record<string, unknown>, path: string, reposit
     if (url === repository) throw tradeError(`${path} [${TRADES_TABLE}.routes] must not name the local repository`)
     if (!isRecord(route))
       throw tradeError(`${path} [${TRADES_TABLE}.routes].${partner} must be a table of export and import trade kinds`)
-    const unknown = Object.keys(route).find((key) => key !== 'export' && key !== 'import')
+    const unknown = Object.keys(route).find((key) => key !== 'export' && key !== 'import' && key !== 'standing')
     if (unknown) throw tradeError(`${path} [${TRADES_TABLE}.routes].${partner} has unrecognised key ${unknown}`)
+    const ordinaryKinds: Record<RouteDirection, readonly TradeKind[]> = { export: [], import: [] }
     for (const direction of ['export', 'import'] as const) {
       const kinds = route[direction]
       if (kinds === undefined) continue
@@ -95,14 +176,19 @@ const parseRoutes = (declaration: Record<string, unknown>, path: string, reposit
           `${path} [${TRADES_TABLE}.routes].${partner}.${direction} must be a non-empty array of work or knowledge`
         )
       const entries = kinds as TradeKind[]
+      ordinaryKinds[direction] = entries
       if (new Set(entries).size !== entries.length)
         throw tradeError(`${path} [${TRADES_TABLE}.routes].${partner}.${direction} must not repeat a trade kind`)
       for (const kind of entries) (direction === 'export' ? exportsTo : importsFrom)[kind].push(url)
     }
+    const exports = parseStandingDirection(route, partner, 'export', ordinaryKinds.export, knowledgeSubtypes, path)
+    const imports = parseStandingDirection(route, partner, 'import', ordinaryKinds.import, knowledgeSubtypes, path)
+    if (exports.length) standingExports[url] = exports
+    if (imports.length) standingImports[url] = imports
   }
   for (const routes of [exportsTo, importsFrom])
     for (const kind of tradeKinds) routes[kind].sort((left, right) => left.localeCompare(right))
-  return { exportsTo, importsFrom }
+  return { exportsTo, importsFrom, standingExports, standingImports }
 }
 
 const parseConfiguration = (contents: string, path: string): TradeConfiguration => {
@@ -124,126 +210,17 @@ const parseConfiguration = (contents: string, path: string): TradeConfiguration 
   const repository = repositoryDeclaration.repository
   const declaration = skillTable(parsed, 'ki-trades')
   if (!isRecord(declaration)) throw tradeError(`${path} does not declare [${TRADES_TABLE}]`)
-  const unknown = Object.keys(declaration).find((key) => key !== 'map_bonus' && key !== 'routes')
+  const unknown = Object.keys(declaration).find((key) => key !== 'map_bonus' && key !== 'routes' && key !== 'subtypes')
   if (unknown) throw tradeError(`${path} [${TRADES_TABLE}] has unrecognised key ${unknown}`)
+  const knowledgeSubtypes = parseKnowledgeSubtypes(declaration, path)
   return {
     repository,
     identity: repositoryIdentity(repository),
     mapBonus: mapBonus(declaration['map_bonus'], path),
-    ...parseRoutes(declaration, path, repository)
+    knowledgeSubtypes,
+    ...parseRoutes(declaration, path, repository, knowledgeSubtypes)
   }
 }
 
 export const readTradeConfiguration = async (path: string): Promise<TradeConfiguration> =>
   parseConfiguration(await readFile(path, 'utf8'), path)
-
-const routeKinds = (routes: Readonly<Record<TradeKind, readonly string[]>>, partner: string): readonly TradeKind[] =>
-  tradeKinds.filter((kind) => routes[kind].includes(partner))
-
-const renderDirection = (direction: RouteDirection, kinds: readonly TradeKind[]): readonly string[] =>
-  kinds.length ? [`${direction} = [${kinds.map((kind) => JSON.stringify(kind)).join(', ')}]`] : []
-
-const renderTradeDeclaration = (configuration: TradeConfiguration): string => {
-  const partners = [
-    ...new Set(tradeKinds.flatMap((kind) => [...configuration.exportsTo[kind], ...configuration.importsFrom[kind]]))
-  ].sort((left, right) => left.localeCompare(right))
-  const routes = partners.map(
-    (partner) =>
-      `${JSON.stringify(repositoryIdentity(partner))} = { ${[
-        ...renderDirection('export', routeKinds(configuration.exportsTo, partner)),
-        ...renderDirection('import', routeKinds(configuration.importsFrom, partner))
-      ].join(', ')} }`
-  )
-  return [
-    `[${TRADES_TABLE}]`,
-    ...(configuration.mapBonus ? [`map_bonus = ${configuration.mapBonus}`] : []),
-    ...(routes.length ? ['', `[${TRADES_TABLE}.routes]`, ...routes] : [])
-  ].join('\n')
-}
-
-const writeTradeConfiguration = async (path: string, configuration: TradeConfiguration): Promise<void> => {
-  const contents = await readFile(path, 'utf8')
-  const headers = [...contents.matchAll(/^\[([^\n]+)\]$/gmu)]
-  const isOwnedHeader = (header: string | undefined): boolean =>
-    header === TRADES_TABLE || Boolean(header?.startsWith(`${TRADES_TABLE}.`))
-  const owned = headers.filter((header) => isOwnedHeader(header[1]))
-  const start = owned[0]?.index
-  if (start === undefined) throw tradeError(`${path} does not declare [${TRADES_TABLE}] route tables`)
-  const end =
-    headers.find((header) => (header.index as number) > start && !isOwnedHeader(header[1]))?.index ?? contents.length
-  await writeFile(
-    path,
-    `${contents.slice(0, start)}${renderTradeDeclaration(configuration)}\n\n${contents.slice(end)}`,
-    'utf8'
-  )
-}
-
-const nextRoutes = (
-  routes: Readonly<Record<TradeKind, readonly string[]>>,
-  kind: TradeKind,
-  repository: string,
-  remove = false
-): Readonly<Record<TradeKind, readonly string[]>> => ({
-  ...routes,
-  [kind]: remove
-    ? routes[kind].filter((candidate) => candidate !== repository)
-    : [...new Set([...routes[kind], repository])].sort((left, right) => left.localeCompare(right))
-})
-
-export const addTradeRoute = async (
-  path: string,
-  repository: string,
-  direction: RouteDirection,
-  kind: TradeKind
-): Promise<TradeConfiguration> => {
-  /* v8 ignore next -- public CLI grammar validates canonical repository URLs before core route mutation. */
-  if (!isTradeRepository(repository))
-    throw tradeError('trade route repository must use canonical HTTPS GitHub repository form')
-  const existing = await readTradeConfiguration(path)
-  if (repository === existing.repository)
-    throw tradeError('trade route repository must differ from the local repository')
-  const configuration =
-    direction === 'export'
-      ? { ...existing, exportsTo: nextRoutes(existing.exportsTo, kind, repository) }
-      : { ...existing, importsFrom: nextRoutes(existing.importsFrom, kind, repository) }
-  await writeTradeConfiguration(path, configuration)
-  return configuration
-}
-
-export const removeTradeRoute = async (
-  path: string,
-  repository: string,
-  direction: RouteDirection,
-  kind: TradeKind
-): Promise<TradeConfiguration> => {
-  /* v8 ignore next -- public CLI grammar validates canonical repository URLs before core route mutation. */
-  if (!isTradeRepository(repository))
-    throw tradeError('trade route repository must use canonical HTTPS GitHub repository form')
-  const existing = await readTradeConfiguration(path)
-  const routes = direction === 'export' ? existing.exportsTo : existing.importsFrom
-  if (!routes[kind].includes(repository))
-    throw tradeError(`${direction} ${kind} trade route ${repository} is not declared locally`)
-  const [owner, name] = repositoryIdentity(repository).split('/') as [string, string]
-  // A preparation and its submitted successor share one path, so the outbound area is a
-  // single root; the separate preparation root this once probed no longer exists.
-  const root =
-    direction === 'export'
-      ? join(dirname(path), '-', '_TRADES', owner, name)
-      : join(dirname(path), '+', '_TRADES', owner, name)
-  const dependencies: string[] = []
-  const state = await lstat(root).catch(() => undefined)
-  if (state?.isDirectory())
-    for (const entry of await readdir(root, { withFileTypes: true })) {
-      if (!entry.isFile() || !entry.name.startsWith('TRD-') || !entry.name.endsWith('.md')) continue
-      const recordPath = join(root, entry.name)
-      if ((await readFile(recordPath, 'utf8')).includes(`\nkind: ${kind}\n`)) dependencies.push(entry.name.slice(0, -3))
-    }
-  if (dependencies.length)
-    throw tradeError(`${direction} ${kind} trade route ${repository} is used by ${dependencies.sort().join(', ')}`)
-  const configuration =
-    direction === 'export'
-      ? { ...existing, exportsTo: nextRoutes(existing.exportsTo, kind, repository, true) }
-      : { ...existing, importsFrom: nextRoutes(existing.importsFrom, kind, repository, true) }
-  await writeTradeConfiguration(path, configuration)
-  return configuration
-}

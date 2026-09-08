@@ -62,6 +62,7 @@ const optionValueStrategy = (path: string, option: Option): CompletionValueStrat
   if (closedOptionValues[name]) return { kind: 'values', values: closedOptionValues[name] }
   if (
     name === '--output' ||
+    name === '--capture' ||
     (name === '--repo' && /^(repo|registry)( |$)/.test(path)) ||
     (name === '--sources' && path === 'registry add')
   )

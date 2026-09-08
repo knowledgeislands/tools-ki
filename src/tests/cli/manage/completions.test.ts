@@ -86,6 +86,16 @@ const commandPaths = [
   'trade routes check',
   'trade routes list',
   'trade routes remove',
+  'trade standing',
+  'trade standing add',
+  'trade standing capture',
+  'trade standing check',
+  'trade standing list',
+  'trade standing remove',
+  'trade subtypes',
+  'trade subtypes add',
+  'trade subtypes list',
+  'trade subtypes remove',
   'trade show',
   'trade submit'
 ] as const
@@ -101,6 +111,8 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain("'repo roadmap')")
     expect(zsh.output).toContain("'repo skill')")
     expect(zsh.output).toContain("'trade routes')")
+    expect(zsh.output).toContain("'trade standing')")
+    expect(zsh.output).toContain("'trade subtypes')")
     expect(zsh.output).toContain('--estate:select every repository in the registered estate')
     expect(zsh.output).toContain('--estate:list route declarations across the registered repository estate')
     expect(zsh.output).toContain('--incomplete:show only routes that are not active')
@@ -123,6 +135,7 @@ describe('[ki manage completion]', () => {
     expect(bash.output).toContain(
       "'trade routes list') printf '%s\\n' '-V --version -h --help --estate --incomplete --table --html'"
     )
+    expect(bash.output).toContain("'trade standing capture:--capture')")
     expect(bash.output).toContain("'acquire chatgpt')")
     expect(bash.output).toContain("'dev local')")
     expect(bash.output).toContain("'repo roadmap list:--horizon')")
@@ -145,6 +158,7 @@ describe('[ki manage completion]', () => {
       expect(output).toContain("'manage docs:0') printf '%s\\n' 'overview site manual roadmap'")
       expect(output).toContain("'trade prepare:--observation') printf '%s\\n' 'unattended receipt decision completion'")
       expect(output).toContain("'trade prepare:--title') printf '%s\\n' ''")
+      expect(output).toContain("'trade standing capture:--capture')")
       expect(output).toContain("'repo init:--repository') printf '%s\\n' ''")
     }
   })

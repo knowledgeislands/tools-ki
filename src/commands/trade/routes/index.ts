@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../../context.ts'
 import { grammarError } from '../../../core/errors.ts'
-import { addTradeRoute, removeTradeRoute } from '../../../core/trade/configuration.ts'
+import { addTradeRoute, removeTradeRoute } from '../../../core/trade/configuration-mutations.ts'
 import {
   inspectEstateRoutes,
   inspectRoutes,

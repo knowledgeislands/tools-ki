@@ -97,6 +97,9 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki trade routes remove`
 - `ki trade routes list [--estate] [--incomplete] [--table|--html]`
 - `ki trade routes check`
+- `ki trade subtypes add|list|remove`
+- `ki trade standing add|list|check|remove`
+- `ki trade standing capture`
 - `ki trade prepare`
 - `ki trade observe`
 - `ki trade submit`
@@ -129,6 +132,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context.
 - `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.
 - `ki trade routes list [--estate] [--incomplete]` is a framed local route inventory or a paired registered-estate table. Estate rows are lexical repository pairs with left-to-right and right-to-left sub-rows, explicit missing directions, and a stacked form on narrow terminals; `--table` explicitly selects that default estate text renderer. `--html` renders the estate as a self-contained interactive force-directed network instead, written to the cache and opened in a browser, drawing one arc per direction with accessible locally vendored Lucide Hammer and Book Open chips so a reciprocated pair separates. `--table` and `--html` both require `--estate` and cannot be combined; the viewer has no icon-font or network dependency.
+- Receiver-owned knowledge subtype commands, exact two-sided standing import/export grants, active/incomplete inspection, and receiver-local `STI-*` capture with full source-commit and path verification. Standing intake is knowledge-only, adds no peer-write or roadmap authority, and leaves ordinary itemized trades as the fallback.
 - Estate maps derive lane capacity and node influence from active typed routes. Lane capacity controls target distance, spring, and width; node influence combines active route degree, the derived `knowledgeislands/*` organisation uplift, and an optional bounded `[skills.ki-trades].map_bonus`. These values are inspectable in the self-contained page and do not change trade authority.
 - Trade kinds, observations, report statuses, diagnostics, and repository entities use a bounded named presentation registry. Layout punctuation remains local to each renderer, while terminal knowledge consistently renders as `ⓘ` and HTML uses the matching accessible Lucide Book Open mark.
 - `ki trade prepare` creates a mutable local export once this repository declares the route; the receiver may observe it before `ki trade submit` freezes it, and `ki trade abandon --yes` removes it while it remains mutable. Receiver activation remains reciprocal.

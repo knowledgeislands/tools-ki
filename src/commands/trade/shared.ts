@@ -1,5 +1,6 @@
 import { grammarError } from '../../core/errors.ts'
 import {
+  isKnowledgeSubtype,
   isObservationPolicy,
   isTradeKind,
   isTradeRepository,
@@ -17,6 +18,11 @@ export const repository = (value: string | undefined, option: string): string =>
 
 export const kind = (value: string | undefined, option = '--kind'): TradeKind => {
   if (!value || !isTradeKind(value)) throw grammarError(`${option} accepts work or knowledge`)
+  return value
+}
+
+export const subtype = (value: string | undefined, option = '--subtype'): string => {
+  if (!value || !isKnowledgeSubtype(value)) throw grammarError(`${option} must use a lower-case hyphenated identifier`)
   return value
 }
 

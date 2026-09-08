@@ -190,6 +190,27 @@ Render the estate as an interactive network page with
 .B ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]
 Check local typed trade routes and their activation state.
 .TP
+.B ki trade subtypes add <subtype> --description <text>
+Define one receiver-owned knowledge subtype.
+.TP
+.B ki trade subtypes list
+List receiver-owned knowledge subtype definitions.
+.TP
+.B ki trade subtypes remove <subtype>
+Remove one subtype that no local standing import uses.
+.TP
+.B ki trade standing add|remove <repository> --direction export|import --subtype <subtype>
+Add or remove one exact local standing knowledge-intake declaration.
+.TP
+.B ki trade standing list [--incomplete]
+List local standing declarations and their activation state.
+.TP
+.B ki trade standing check [repository] [--direction export|import] [--subtype <subtype>]
+Check exact standing knowledge-intake activation.
+.TP
+.B ki trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>
+Append one validated receiver-local standing-intake provenance block.
+.TP
 .B ki trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
 Create one mutable local trade preparation on a declared export route.
 .TP
@@ -741,6 +762,49 @@ to override the platform opener.
 Check declared routes by kind. An export awaiting local receiver registration,
 receiver participation, or a reciprocal import awaits receiver activation; the
 equivalent import awaits sender activation.
+.TP
+.B ki trade subtypes add <subtype> --description <text>
+Define one lower-case receiver-owned knowledge subtype in the current
+repository. The description records the receiver's meaning for the subtype.
+.TP
+.B ki trade subtypes list
+List receiver-owned knowledge subtype definitions in the current repository.
+.TP
+.B ki trade subtypes remove <subtype>
+Remove one receiver-owned subtype only when no local standing import still
+names it.
+.TP
+.B ki trade standing add <repository> --direction export|import --subtype <subtype>
+Declare one local standing knowledge-intake direction layered on an existing
+ordinary knowledge route. An import subtype must be defined by the local
+receiver. The declaration remains inactive until the peer publishes the exact
+reciprocal direction and the receiver-owned definition is available.
+.TP
+.B ki trade standing remove <repository> --direction export|import --subtype <subtype>
+Remove only the current repository's standing declaration. Historical
+committed provenance remains local evidence, but the removed declaration no
+longer authorises new captures.
+.TP
+.B ki trade standing list [--incomplete]
+List local standing declarations and report whether each exact subtype
+relationship is active, awaiting ordinary route activation, awaiting
+reciprocity, ambiguous, or unknown to its receiver. With
+.BR --incomplete ,
+show only declarations that are not active.
+.TP
+.B ki trade standing check [repository] [--direction export|import] [--subtype <subtype>]
+Check all local standing declarations or select an exact repository,
+direction, and subtype.
+.TP
+.B ki trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>
+From the receiver repository, append one marked
+.B ki-trades/standing-intake/v1
+TOML provenance block to an existing local Markdown file. The command requires
+an active exact standing import, a full source commit, and a source path that
+resolves in the locally registered source checkout. It never writes to the
+source repository. Standing intake grants no roadmap, publication,
+implementation, acceptance, completion, Agora, or peer-write authority; use an
+itemized knowledge trade when the exact standing contract does not fit.
 .TP
 .B ki trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
 Create one mutable preparation in the current repository when it declares the

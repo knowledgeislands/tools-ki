@@ -4,10 +4,10 @@ title: Support standing knowledge intake
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 3274a8cc330a8e1baf8a222ac1bbf9d4417cd22f
 ---
 
 ## Goal

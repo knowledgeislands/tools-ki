@@ -48,9 +48,27 @@ _Verify:_ `src/tests/cli/trade/trade.test.ts` — `creates, receives, displays, 
 
 ### TRADE-008 — Route dependency protection
 
-`ki trade routes remove` MUST refuse to remove a route while a local preparation, submission, or received copy depends on it.
+`ki trade routes remove` MUST refuse to remove a route while a local preparation, submission, received copy, or standing subtype declaration depends on it.
 
-_Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and record validity, then abandons mutable work`.
+_Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and record validity, then abandons mutable work`; and `src/tests/cli/trade/standing-intake.test.ts` — `keeps one-sided and invalid grants closed without touching a peer`.
+
+### TRADE-009 — Receiver-owned knowledge subtypes
+
+`ki trade subtypes` MUST maintain lower-case, receiver-owned knowledge subtype definitions locally and MUST refuse removal while a local standing import depends on the subtype.
+
+_Verify:_ `src/tests/cli/trade/standing-intake.test.ts` — `defines reciprocal grants and appends one commit-pinned receiver-local capture` and `guards duplicate, self, absent, and export-side mutations`.
+
+### TRADE-010 — Exact standing grants
+
+`ki trade standing` MUST treat a standing knowledge grant as active only when the ordinary knowledge route is active, both repositories declare the exact reciprocal subtype direction, and the receiver owns that subtype definition; malformed, unknown, one-sided, cross-kind, ambiguous, or revoked declarations MUST NOT grant direct-capture authority.
+
+_Verify:_ `src/tests/cli/trade/standing-intake.test.ts` — `keeps one-sided and invalid grants closed without touching a peer` and `validates subtype and standing declarations before they become executable authority`.
+
+### TRADE-011 — Receiver-local standing capture
+
+`ki trade standing capture` MUST append a unique marked `STI-*` provenance block only to an existing Markdown file inside the current receiver repository, after validating an active exact-subtype import and a full source commit whose referenced path resolves in the registered source repository; it MUST NOT write to the source repository.
+
+_Verify:_ `src/tests/cli/trade/standing-intake.test.ts` — `defines reciprocal grants and appends one commit-pinned receiver-local capture` and `refuses malformed, unresolved, or non-local capture targets after an exact grant activates`.
 
 ## Gaps
 
