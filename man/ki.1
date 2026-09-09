@@ -1,4 +1,4 @@
-.TH KI 1 "2026-09-01" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-09-09" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -281,7 +281,11 @@ Remove only the selected machine-local reference association.
 .TP
 .B ki acquire chatgpt import <capture-directory> --output <kep-directory> [--dry-run]
 Create a deterministic Knowledge Export Package from a local ChatGPT capture.
-payload checksum as an incremental checkpoint.
+.TP
+.B ki acquire granola import
+.RI [--repo\  <path>]\ [--since\  <date>]\ [--until\  <date>]\ [--dry-run]
+Acquire complete selected Granola meeting history into verified immutable
+packages.
 .SS Development
 \&
 .TP
@@ -894,17 +898,27 @@ Remove only the selected machine-local reference association.
 .SS Acquisition
 \&
 .PP
-Use this command to create a deterministic local Knowledge Export Package
-without contacting external services.
+Use these commands to create verified immutable Knowledge Export Packages.
 .TP
 .B ki acquire chatgpt import <capture-directory> --output <kep-directory> [--dry-run]
 Validate a user-prepared local ChatGPT capture and create a deterministic
 Knowledge Export Package (KEP).
 The command does not control a browser, contact ChatGPT, read credentials,
 discover a repository, or extract reusable knowledge.
-the current repository's + Harbour. An unchanged payload resolves to its
-existing content-addressed stage. The command does not contact ChatGPT,
-extract knowledge, archive, or delete a source session.
+.TP
+.B ki acquire granola import
+.RI [--repo\  <path>]\ [--since\  <date>]\ [--until\  <date>]\ [--dry-run]
+Use the allowlisted read-only tools of the locally configured
+.B granola
+mcporter server to enumerate complete global and folder history, reconcile
+registered receiver selectors, and stage one content-addressed KEP per selected
+meeting version beneath
+.IR +/_ACQUIRE/granola/<payload-sha256>/ .
+The default interval is 1970-01-01 through the current UTC date.
+The command writes only the selected repository, advances its ledger after
+checksum verification, and reports explicit omissions and routing outcomes.
+It does not mutate Granola, harvest knowledge, archive meetings, delete source
+material, or write another repository.
 .SS Development
 \&
 .PP

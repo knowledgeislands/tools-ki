@@ -124,6 +124,7 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain("'agora inspect') printf '%s\\n' '--target --workspace'")
     expect(bash.output).toContain("'agora inspect:--workspace')")
     expect(zsh.output).toContain("'acquire chatgpt')")
+    expect(zsh.output).toContain("'acquire granola')")
     expect(zsh.output).toContain("'dev local')")
     expect(zsh.output).toContain('import:import a local capture into an immutable Knowledge Export Package')
     expect(zsh.output).toContain('-h:display help for command')
@@ -150,6 +151,7 @@ describe('[ki manage completion]', () => {
       expect(zsh.output).toContain(`'${path}')`)
     }
     for (const output of [bash.output, zsh.output]) {
+      expect(output).toContain("'acquire granola import:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'repo:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'repo roadmap:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'registry:--repo') printf '%s\\n' 'path'")

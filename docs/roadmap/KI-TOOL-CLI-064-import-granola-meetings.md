@@ -4,10 +4,10 @@ title: Import Granola meetings
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 5d77b1740b05583c76fa5dce65377a1f50413272
 ---
 
 ## Goal
@@ -20,7 +20,7 @@ Harness `KI-HARNESS-OPS-006` and `ki-housekeeping-granola` define the accepted r
 
 ## Boundary
 
-Do not mutate Granola, automate a browser, infer missing source fields, write another repository directly, hide unmatched or conflicting meetings, or conflate successful acquisition with harvesting or retirement. Reconcile the existing `ki space acquire` and ChatGPT `--output` compatibility deliberately.
+Do not mutate Granola, automate a browser, infer missing source fields, write another repository directly, hide unmatched or conflicting meetings, or conflate successful acquisition with harvesting or retirement. Preserve the existing `ki acquire chatgpt import --output` contract while generalising the provider-neutral KEP core.
 
 ## Current state
 
@@ -28,14 +28,14 @@ The CLI has a ChatGPT-specific acquisition path and KEP implementation but no Gr
 
 ## Steps
 
-- [ ] Establish one public `ki acquire granola import` operation using the existing repository-selection convention.
-- [ ] Generalise the KEP core into a provider-neutral builder and add one immutable package per Granola meeting version.
-- [ ] Enumerate global and folder-scoped history through saturation-aware ISO-date windows, deduplicating stable UUIDs and failing closed when completeness cannot be proven.
-- [ ] Implement explicit folder, unfoldered, residual, overlap, unmatched, and intentional-duplication receiver outcomes.
-- [ ] Preserve exact detail and transcript projections, hashes, provenance, query-derived folder evidence, and explicit omissions.
-- [ ] Stage atomically beneath `+/_ACQUIRE/granola/<payload-sha256>/` and advance the local ledger only after manifest verification.
-- [ ] Re-read and hash existing identities for amendment detection; never infer deletion from scope exit or missing results.
-- [ ] Cover interruption, corrupted stages, repeated checkpoints, saturated windows, conflicting receivers, unavailable fields, and no-mutation guarantees through the CLI seam.
+- [x] Establish one public `ki acquire granola import` operation using the existing repository-selection convention.
+- [x] Generalise the KEP core into a provider-neutral builder and add one immutable package per Granola meeting version.
+- [x] Enumerate global and folder-scoped history through saturation-aware ISO-date windows, deduplicating stable UUIDs and failing closed when completeness cannot be proven.
+- [x] Implement explicit folder, unfoldered, residual, overlap, unmatched, and intentional-duplication receiver outcomes.
+- [x] Preserve exact detail and transcript projections, hashes, provenance, query-derived folder evidence, and explicit omissions.
+- [x] Stage atomically beneath `+/_ACQUIRE/granola/<payload-sha256>/` and advance the local ledger only after manifest verification.
+- [x] Re-read and hash existing identities for amendment detection; never infer deletion from scope exit or missing results.
+- [x] Cover interruption, corrupted stages, repeated checkpoints, saturated windows, conflicting receivers, unavailable fields, and no-mutation guarantees through the CLI seam.
 
 ## Files touched
 

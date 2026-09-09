@@ -8,7 +8,7 @@ The home of `ki`, the Knowledge Islands command-line interface (CLI).
 
 [Arcadia Principal](https://github.com/knowledgeislands/ki-arcadia-principal) remains the source of Knowledge Islands philosophy and model, and [Techne Principal](https://github.com/knowledgeislands/ki-techne-principal) translates that philosophy into engineering practice. The [KI Website](https://github.com/knowledgeislands/ki-website) may vendor source-labelled CLI material for public publication, while this repository remains canonical for the executable and its release artifacts. The mirrored [ecosystem decision](docs/decisions/GDR-KI-FUNDAMENTALS-001-knowledge-islands-ecosystem-fundamentals.md) defines the six authorities and publication flows.
 
-The active TypeScript command host provides local capability, repository, Agora, and trade operations, plus a user-assisted `ki acquire chatgpt import` command that produces a Knowledge Export Package (KEP). The sections below describe the current public surface; use `ki --help` or the tracked [ki(1) manual](man/ki.1) for exact grammar.
+The active TypeScript command host provides local capability, repository, Agora, and trade operations, plus provider-aware `ki acquire` commands that produce verified Knowledge Export Packages (KEPs). The sections below describe the current public surface; use `ki --help` or the tracked [ki(1) manual](man/ki.1) for exact grammar.
 
 ## Acquire a local ChatGPT capture
 
@@ -19,6 +19,18 @@ ki acquire chatgpt import ./capture --output ./conversation.kep
 ```
 
 Use `--dry-run` to validate without creating output. The command is local only: it does not contact ChatGPT, automate a browser, read credentials, discover a repository, or extract knowledge.
+
+## Acquire Granola meetings
+
+With the official Granola MCP configured as `granola` in `mcporter`, acquire the complete selected history into the current registered repository's Harbour:
+
+```sh
+ki acquire granola import --since 2023-01-01
+```
+
+Use `--repo /path/to/repository` to select another eligible receiver and `--dry-run` to perform all reads and verification without writing. The command reconciles global and folder history, fails closed on incomplete or conflicting routing, creates one immutable content-addressed KEP per meeting version, and advances its receiver-local ledger only after verification. It never mutates Granola or writes another repository.
+
+Receiver folder, unfoldered, residual, and deliberate-duplication configuration plus recovery guidance are documented in [Acquire Granola meetings](docs/guides/granola-acquisition.md).
 
 ## Manage installed capabilities
 

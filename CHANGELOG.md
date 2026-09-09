@@ -113,6 +113,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 #### Acquisition
 
 - `ki acquire chatgpt import`
+- `ki acquire granola import [--repo <path>] [--since <date>] [--until <date>] [--dry-run]`
 
 #### Development
 
@@ -123,6 +124,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 ### Behaviours
 
+- Granola acquisition uses an allowlisted read-only MCP adapter, saturation-aware complete-history enumeration, registered receiver selectors, immutable per-meeting KEP versions, checksum-gated local ledgers, explicit omissions, and resumable exhaustive amendment reconciliation.
 - `.ki.toml` is the sole repository and Harness declaration filename across source checkouts, release archives, installed Harnesses, local development, repository discovery, and diagnostics; retired filenames have no compatibility or migration path.
 - Direct-CWD mGit selection consumes only schema-one `.mgit.toml` workspace or repository manifests, including configured groups and child-workspace recursion, without invoking `mgit`.
 - `ki manage completion <shell>` emits Bash and Zsh scripts derived from the registered command tree, including nested commands, options, closed values, and local path completion.
