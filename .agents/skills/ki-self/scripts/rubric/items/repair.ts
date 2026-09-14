@@ -13,7 +13,7 @@ export const REPAIR: RubricFamily<SelfRubricContext, SelfRubricContext> = {
       code: 'SELF-BOOTSTRAP-001',
       title: 'Shared bootstrap inventory',
       description: 'Bootstrap and canonical Harness restoration consume the authoritative minimum inventory.',
-      sources: ['src/agents/bootstrap.ts', 'src/core/storage/registry.ts'],
+      sources: ['src/agents/bootstrap.ts', 'src/core/storage/harness-installation.ts'],
       mechanical: {
         level: 'FAIL',
         remediation: diagnosticRemediation('Route every bootstrap and restoration consumer through minimumBootstrapUserSkills.'),
@@ -21,7 +21,7 @@ export const REPAIR: RubricFamily<SelfRubricContext, SelfRubricContext> = {
           phase: 'PRIMARY',
           run: (context) => [
             ...sourceContains(context, 'src/agents/bootstrap.ts', ['minimumBootstrapUserSkills']),
-            ...sourceContains(context, 'src/core/storage/registry.ts', [
+            ...sourceContains(context, 'src/core/storage/harness-installation.ts', [
               'requiredCapabilities: minimumBootstrapUserSkills'
             ])
           ]

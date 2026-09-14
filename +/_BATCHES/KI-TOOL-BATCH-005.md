@@ -35,3 +35,15 @@ CLI-068 must reach `awaiting-review` with its own review packet, pass current-ev
 ## Run ledger
 
 <!-- ki-batch-run: KI-TOOL-BATCH-005-RUN-001 67a4b895331ddb56ba72f87bec5c19f6e745d459bf1bab18e2649cc521c11c82 -->
+
+### CLI-068 — Harness storage lifecycle split
+
+- **Admitted state and baseline:** `ready` at `5628ddbf0b9f6ce9ac30889761f7528c0a86f9cd`.
+- **Result:** `awaiting-review` with a complete six-part review packet.
+- **Verification:** 162 focused CLI contracts passed; full coverage remained 100% on all four metrics; TypeScript, Biome, Knip, build, `ki-self`, `ki-engineering`, and the complete 18-skill repository audit passed.
+- **Decisions:** Preserved the storage barrel and public behaviour. Split only by stable lifecycle ownership. Applied the current canonical working-area README scaffold when the full audit exposed unrelated mechanical drift.
+- **Delegation:** None; the shared-working-tree refactor was completed serially.
+
+### CLI-067 — parked exclusion
+
+CLI-067 remained `in-progress` under its earlier baseline and was not modified. Six Techne records and 19 Legal records remain behind the explicit dirty-repository stop; the mandatory Harness and `tools-ki` timestamp cutovers remain gated on their migration.

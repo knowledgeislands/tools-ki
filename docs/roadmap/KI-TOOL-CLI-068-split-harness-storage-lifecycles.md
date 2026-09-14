@@ -4,12 +4,12 @@ area: CLI
 title: Split Harness storage lifecycles
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 5628ddbf0b9f6ce9ac30889761f7528c0a86f9cd
 created_at: 2026-09-14T14:04:03Z
-updated_at: 2026-09-14T17:41:21Z
+updated_at: 2026-09-14T17:59:40Z
 ---
 
 # Split Harness Storage Lifecycles
@@ -32,18 +32,20 @@ Preserve every public CLI contract, fault-injection seam, transactional guard, r
 
 ## Steps
 
-- [ ] Isolate immutable release-registry configuration parsing and installed-ID mutation in the existing registry module.
-- [ ] Move verified archive installation, replacement, restoration, and uninstall into an installation lifecycle module.
-- [ ] Move interrupted-install planning and recovery into a recovery module.
-- [ ] Move local development projection inspection, enablement, and state queries into a development module.
-- [ ] Keep only stable shared storage concepts shared, update the storage barrel, and remove obsolete cross-concern imports.
-- [ ] Prove every observable path through focused Harness, development, repair, and diagnostic CLI tests, then run full coverage and repository gates.
+- [x] Isolate immutable release-registry configuration parsing and installed-ID mutation in the existing registry module.
+- [x] Move verified archive installation, replacement, restoration, and uninstall into an installation lifecycle module.
+- [x] Move interrupted-install planning and recovery into a recovery module.
+- [x] Move local development projection inspection, enablement, and state queries into a development module.
+- [x] Keep only stable shared storage concepts shared, update the storage barrel, and remove obsolete cross-concern imports.
+- [x] Prove every observable path through focused Harness, development, repair, and diagnostic CLI tests, then run full coverage and repository gates.
 
 ## Files touched
 
 - `src/core/storage/registry.ts`
 - New focused modules under `src/core/storage/` for shared Harness storage concepts, installation, recovery, and development projection
 - `src/core/storage/index.ts`
+- Repository-local `ki-self` rubric source and generated publication for the moved bootstrap guard
+- Canonically conformed `+/README.md` and `-/README.md` working-area orientations required by the current repository audit
 - Existing CLI contract tests only if a public-boundary coverage gap is exposed
 - This roadmap record and the active batch authorisation
 
@@ -79,6 +81,36 @@ No user workflow changes, so no guide change is expected.
 ### Roadmap
 
 Record the exact module split, verification evidence, and any residual concern in this item.
+
+## Review
+
+### Delivered
+
+Split Harness storage responsibilities from the immutable baseline `5628ddbf0b9f6ce9ac30889761f7528c0a86f9cd` while preserving the existing storage barrel and every CLI-visible behaviour. Registry configuration, archive installation and removal, interrupted-install recovery, local development projection, and shared path contracts now have focused modules.
+
+### Summary of changes
+
+Reduced `src/core/storage/registry.ts` from 572 to 186 lines. Added `harness-installation.ts` at 206 lines, `harness-development.ts` at 141 lines, `harness-recovery.ts` at 44 lines, and `harness-paths.ts` at 28 lines. Updated `ki-self` to locate the canonical bootstrap inventory consumer at its new installation owner. The full audit also mechanically refreshed both working-area README orientations to the current Harness standard.
+
+### Verification
+
+- Focused Harness, development, repair, and diagnostic CLI suite — 162 tests passed.
+- `bun run test:coverage` — passed with 100% statements, branches, functions, and lines.
+- `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, and `bun run build` — passed.
+- `ki repo audit --skill ki-self --repo .` and `ki repo audit --skill ki-engineering --repo .` — passed.
+- `ki repo audit --repo .` — passed all 18 selected skills.
+
+### Outstanding concerns
+
+None. Knip retains its existing informational configuration hint for the intentionally ignored managed `.claude/skills/**` surface; it is not a source or dependency finding.
+
+### Post-change review
+
+The split follows lifecycle ownership rather than arbitrary file length. Installation depends on registry configuration and the development-link query, while commands continue to depend only on the storage barrel. No command port, exported barrel name, transaction guard, configuration shape, filesystem shape, or fault-injection seam changed.
+
+### Mini recap
+
+The pre-existing mixed-responsibility storage boundary is resolved without adding internal unit tests or compatibility shims. Existing CLI contract tests provide complete behavioural evidence, and no further modularity follow-up is required.
 
 ## Discussion
 

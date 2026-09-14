@@ -41,7 +41,7 @@ Preserves the host distinctions between bootstrap inventory, managed projections
 
 Keeps bootstrap validation and repair coverage complete and automation-visible.
 
-- **SELF-BOOTSTRAP-001 [M] — Shared bootstrap inventory** — Bootstrap and canonical Harness restoration consume the authoritative minimum inventory. (src/agents/bootstrap.ts, src/core/storage/registry.ts)
+- **SELF-BOOTSTRAP-001 [M] — Shared bootstrap inventory** — Bootstrap and canonical Harness restoration consume the authoritative minimum inventory. (src/agents/bootstrap.ts, src/core/storage/harness-installation.ts)
   - _Remediation:_ diagnostic — Route every bootstrap and restoration consumer through minimumBootstrapUserSkills.
 - **SELF-REPAIR-001 [M] — Configured skill coverage** — Repair and diagnostics inspect every configured managed identity. (src/core/manage/repair.ts, src/core/manage/doctor.ts)
   - _Remediation:_ diagnostic — Iterate the complete configured skill inventory in repair and doctor.

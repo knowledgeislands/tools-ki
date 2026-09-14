@@ -1,7 +1,7 @@
 # Outgoing working area
 
-`-` is this repository's top-level working area for temporary material prepared here for another repository or external recipient.
+`-` is this repository's top-level working area for temporary produced outputs awaiting use or delivery.
 
-For material received here to triage, use [the matching inbound working area](../+/README.md).
+For inputs to further repository work, use [the matching inbound working area](../+/README.md).
 
-It is not a canonical roadmap, plan, decision record, or knowledge-base destination. Remove each item after delivery or when it no longer has value to retain.
+Canonical work, decisions, and knowledge belong in their owning collections. Keep outputs only while useful; preserve durable outcomes and follow each specialist subarea's delivery and retention rules before cleanup.

@@ -16,7 +16,7 @@ export const SELF_SOURCE_PATHS = [
   'src/core/harness/bootstrap-capabilities.ts',
   'src/core/manage/doctor.ts',
   'src/core/manage/repair.ts',
-  'src/core/storage/registry.ts'
+  'src/core/storage/harness-installation.ts'
 ] as const
 
 export interface SelfRubricContext {
