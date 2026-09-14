@@ -4,7 +4,7 @@ title: Import Granola meetings
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 5d77b1740b05583c76fa5dce65377a1f50413272
@@ -114,6 +114,14 @@ The goal and approved scope are met, the ChatGPT contract remains green, public 
 
 CLI-064 now provides a complete, read-only, resumable path from Granola MCP observations to verified receiver-local meeting KEPs. Verification is clean and the only remaining action is human acceptance with local Granola credentials and receiver selectors. No new portable learning route is proposed: the implementation follows the existing Harness Granola contract.
 
+## Done
+
+Accepted 2026-09-14 by Kris Brown on the review packet above.
+
 ## Discussion
+
+### Acceptance
+
+The user explicitly signed off this delivery on 2026-09-14 with the live-account acceptance caveat understood. Any modifications discovered during Granola inbound acceptance will be handled later or as remedial work; they do not block acceptance of this implementation. No live import or local mcporter repair is claimed. Retain this done record until separately authorised pruning.
 
 The viable first delivery should favour an exhaustive, safe initial import and repeatable recovery over throughput optimisation. Source retirement remains a separate future operation with its own immediate human gate.

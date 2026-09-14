@@ -4,7 +4,7 @@ title: Support standing knowledge intake
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 3274a8cc330a8e1baf8a222ac1bbf9d4417cd22f
@@ -109,6 +109,14 @@ The delivered commands satisfy the stated goal and remain within the receiver-lo
 
 The delivery established that standing-intake configuration mutation is a cohesive concern separate from parsing, so it was split into `configuration-mutations.ts` rather than enlarging the codec. That applies the repository's existing modularity rule directly; no new durable learning route is proposed. Verification found and removed accidental unused core-barrel exports before review. No item-scoped work remains outside human acceptance.
 
+## Done
+
+Accepted 2026-09-14 by Kris Brown on the review packet above.
+
 ## Discussion
+
+### Acceptance
+
+The user explicitly signed off this delivery on 2026-09-14 after reviewing its completion and absence of outstanding dependencies. The delivered review packet remains the implementation evidence. The separately identified specification-metadata drift is being repaired under CLI-065 and does not reopen this accepted delivery. Retain this done record until separately authorised pruning.
 
 The viable first slice should favour explicit subcommands and closed validation over automatic capture. Route activation remains reciprocal evidence; a command may report the missing other side but must never create it.
