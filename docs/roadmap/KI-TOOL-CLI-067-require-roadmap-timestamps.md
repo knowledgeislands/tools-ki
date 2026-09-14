@@ -4,12 +4,12 @@ area: CLI
 title: Require roadmap timestamps
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 076d58c882c94b72255c9a99bd590e2765935fb5
 created_at: 2026-09-14T08:41:16Z
-updated_at: 2026-09-14T18:49:21Z
+updated_at: 2026-09-14T18:51:29Z
 ---
 
 # Require Roadmap Timestamps
@@ -127,7 +127,11 @@ The mandatory contract is consistent across the Harness standard, rubric, proces
 
 ### Mini recap
 
-CLI-067 has complete estate migration evidence, mandatory governance and CLI enforcement, current specification evidence, and a complete review packet. It is ready for the user-authorised acceptance already requested in this conversation.
+CLI-067 has complete estate migration evidence, mandatory governance and CLI enforcement, current specification evidence, and a complete review packet. The user-authorised acceptance requested in this conversation is recorded below.
+
+## Done
+
+Accepted on 2026-09-14 under the explicit user instruction to make CLI-067 done after rechecking the committed review packet, zero estate timestamp faults, and the final verification gates.
 
 ## Discussion
 
