@@ -4,12 +4,12 @@ area: CLI
 title: Split Harness storage lifecycles
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 5628ddbf0b9f6ce9ac30889761f7528c0a86f9cd
 created_at: 2026-09-14T14:04:03Z
-updated_at: 2026-09-14T17:37:18Z
+updated_at: 2026-09-14T17:41:21Z
 ---
 
 # Split Harness Storage Lifecycles
