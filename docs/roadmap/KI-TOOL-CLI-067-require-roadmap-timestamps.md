@@ -4,12 +4,12 @@ area: CLI
 title: Require roadmap timestamps
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 076d58c882c94b72255c9a99bd590e2765935fb5
 created_at: 2026-09-14T08:41:16Z
-updated_at: 2026-09-14T14:07:38Z
+updated_at: 2026-09-14T18:49:21Z
 ---
 
 # Require Roadmap Timestamps
@@ -52,15 +52,15 @@ The exact 27-repository backfill set is:
 
 ## Current state
 
-The original physical scan found 180 Markdown files without the pair. One Harness record was independently timestamped before execution, 153 records are now backfilled in timestamp-only commits across 25 repositories, 25 valid records remain stopped in two dirty repositories, and one pre-existing discussion draft has no canonical frontmatter and is not a work record. Every migrated record had sufficient Git history for deterministic derivation, and no derived `updated_at` precedes its `created_at`.
+The 180-file physical manifest is resolved: 179 canonical work records carry evidence-backed timestamp pairs across all 27 named repositories, and one discussion draft without canonical frontmatter is confirmed not to be a work record. The registered estate currently reports zero timestamp faults under the mandatory parser. The Harness contract and `tools-ki` validation cutover are complete.
 
 ## Steps
 
 - [x] Resolve the exact 180-record manifest from the named repositories and derive canonical UTC-second timestamps from Git history.
-- [ ] For each clean repository, insert only `created_at` and `updated_at`, verify the diff contains no removal or other addition, validate complete timestamp coverage, and commit the exact changed paths.
+- [x] For each clean repository, insert only `created_at` and `updated_at`, verify the diff contains no removal or other addition, validate complete timestamp coverage, and commit the exact changed paths.
 - [x] Stop without touching any repository that is dirty at its preflight; repeat only after it becomes clean under the existing authority.
-- [ ] Once all 27 repositories are migrated, update the canonical Harness standard, rubric, process guidance, and fixtures to require the complete timestamp pair.
-- [ ] Cut `tools-ki` validation over from optional compatibility to mandatory fields, update its contract tests and specification evidence, and run the full repository gates.
+- [x] Once all 27 repositories are migrated, update the canonical Harness standard, rubric, process guidance, and fixtures to require the complete timestamp pair.
+- [x] Cut `tools-ki` validation over from optional compatibility to mandatory fields, update its contract tests and specification evidence, and run the full repository gates.
 - [x] Run the focused engineering audit, including comprehension-first modularity review, change-aware consistency review, contract coverage, type-checking, Biome, Knip, and build verification.
 
 ## Files touched
@@ -99,6 +99,36 @@ Update process guidance and CLI help where they describe the roadmap item contra
 
 Keep this record current through migration, contract cutover, verification, and review handoff.
 
+## Review
+
+### Delivered
+
+Resolved the 180-file migration manifest across all 27 named repositories: 179 canonical roadmap records now carry evidence-backed timestamp pairs, while one physical Markdown discussion draft was excluded because it is not a canonical work record. The final dirty-repository exceptions were completed as isolated timestamp-only commits under explicit user authority, preserving every unrelated change. Published the mandatory Harness contract and removed the CLI compatibility path from baseline `076d58c882c94b72255c9a99bd590e2765935fb5`.
+
+### Summary of changes
+
+The final backfills landed in `ki-techne-principal` as `c162fe2` and `kit-legal` as `dafce99a`; the canonical Harness requirement landed as `b2d7c3cd`. In `tools-ki`, local work-item timestamps are required and non-optional, horizon moves always advance `updated_at`, and roadmap statistics version 2 reports age and inactivity without obsolete rollout-coverage counters. CLI contract fixtures, completion help, and REPO-OPS-015 evidence now describe the mandatory contract.
+
+### Verification
+
+- Registered-estate statistics under the mandatory parser: 34 repositories, 189 readable items, zero timestamp faults; 22 unrelated malformed-record faults remain outside this item.
+- Harness: 657 tests passed; TypeScript passed; focused `ki-work-roadmap` audit passed; `ki-skills` audit had no failures and one pre-existing refresh-cadence warning.
+- `tools-ki`: 753 tests passed with 100% statements, branches, functions, and lines; TypeScript, Biome, Knip, and build passed.
+- Focused `ki-self`, `ki-engineering`, `ki-authoring`, `ki-specs`, and `ki-work-roadmap` audits passed.
+- Full `tools-ki` repository audit passed all 18 skills on rerun with one external GitHub security-state warning; an earlier aggregate run timed out once in an unrelated installer test after the same test had passed in the full coverage gate.
+
+### Outstanding concerns
+
+The 22 pre-existing non-timestamp roadmap faults remain outside this migration. The GitHub API did not expose `security_and_analysis` during the final audit, so secret-scanning live state remains a warning rather than a local conformance failure.
+
+### Post-change review
+
+The mandatory contract is consistent across the Harness standard, rubric, process guidance, CLI parser, data model, mutation path, statistics output, help, tests, and specification. Parser, statistics, and presentation responsibilities remain in separate focused modules; testing stays at the CLI boundary. No compatibility shim or dual-path behaviour remains.
+
+### Mini recap
+
+CLI-067 has complete estate migration evidence, mandatory governance and CLI enforcement, current specification evidence, and a complete review packet. It is ready for the user-authorised acceptance already requested in this conversation.
+
 ## Discussion
 
 The migration is intentionally serial and timestamp-only. One executor preserves the per-repository cleanliness checks, exact commit boundaries, and stop conditions without introducing coordination risk.
@@ -113,6 +143,4 @@ The focused repository consistency review passed the registered `ki-engineering`
 
 ### Cross-repository boundary
 
-The registered estate spans independently owned Git repositories. Resolve and report the exact writable target set, dirty-tree exclusions, history fallbacks, verification commands, and per-repository commit boundaries before applying or committing the migration outside tools-ki.
-
-Twenty-seven repositories require backfill. Twenty-three are currently clean. The KI Harness, KI Techne Principal, Kit Legal, and tools-ki have working-tree changes; the Harness and Techne changes overlap roadmap or governing-contract paths, so migration must not touch them until those concurrent units settle or their owners approve an exact coordinated change.
+Explicit authority covered exact timestamp-only commits in the 27 named repositories and the Harness contract commit. The two repositories that remained dirty were changed only on the enumerated timestamp paths; unrelated staged, unstaged, and untracked work was preserved. No repository was pushed.

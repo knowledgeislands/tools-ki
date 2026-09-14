@@ -236,7 +236,7 @@ const renderStatisticsText = (
       if (!statistics)
         return { label: `${presentation('status.unavailable').terminal} ${basename(result.repository)}: unavailable` }
       return {
-        label: `${basename(result.repository)}: ITEMS=${statistics.items} TIMESTAMPED=${statistics.timestamped} MISSING=${statistics.missingTimestamps} ACTIVE=${statistics.active}`,
+        label: `${basename(result.repository)}: ITEMS=${statistics.items} ACTIVE=${statistics.active}`,
         children: [
           { label: `age: MEDIAN=${metric(statistics.medianAgeSeconds)} MAX=${metric(statistics.maximumAgeSeconds)}` },
           {
@@ -280,7 +280,7 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
 
 const statsCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('stats')
-    .description('report timestamp coverage, age, and inactivity')
+    .description('report roadmap age and inactivity')
     .option('--stale-after <duration>', 'report active records inactive for at least this duration')
     .option('--format <format>', 'output format: text or json', 'text')
     .action(async (options: { readonly staleAfter?: string; readonly format: string }) => {
@@ -291,7 +291,7 @@ const statsCommand = (context: KiContext, selectedRepositories: RepositorySelect
         selectedRepositories(),
         staleAfterSeconds
       )
-      if (options.format === 'json') context.stdout.write(`${JSON.stringify({ version: 1, ...report })}\n`)
+      if (options.format === 'json') context.stdout.write(`${JSON.stringify({ version: 2, ...report })}\n`)
       else
         context.stdout.write(
           `${renderStatisticsText(report.generatedAt, report.staleAfterSeconds, report.results, report.aggregate)}\n`

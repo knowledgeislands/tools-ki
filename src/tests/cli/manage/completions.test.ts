@@ -143,7 +143,7 @@ describe('[ki manage completion]', () => {
     expect(bash.output).toContain("'repo roadmap list:--horizon')")
     expect(bash.output).toContain("'repo roadmap list:--status')")
     expect(zsh.output).toContain('--aggregate:render one selected-set roadmap inventory')
-    expect(zsh.output).toContain('stats:report timestamp coverage, age, and inactivity')
+    expect(zsh.output).toContain('stats:report roadmap age and inactivity')
     expect(bash.output).toContain("'repo roadmap stats:--format')")
     expect(bash.output).toContain("'acquire chatgpt import:--output')")
     expect(bash.output).toContain("'-V --version -h --help'")

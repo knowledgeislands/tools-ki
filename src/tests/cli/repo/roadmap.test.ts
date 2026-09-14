@@ -25,7 +25,7 @@ afterEach(() => {
   roadmapStatFailure.path = undefined
 })
 
-const item = (overrides: Record<string, string> = {}): string => {
+const item = (overrides: Record<string, string | undefined> = {}): string => {
   const fields = {
     id: 'KI-TOOL-CLI-003',
     title: 'Inspect governed work',
@@ -35,9 +35,12 @@ const item = (overrides: Record<string, string> = {}): string => {
     blocks: '[]',
     blocked_by: '[]',
     baseline_ref: 'null',
+    created_at: '2026-09-01T00:00:00Z',
+    updated_at: '2026-09-01T00:00:00Z',
     ...overrides
   }
   return `---\n${Object.entries(fields)
+    .filter((entry): entry is [string, string] => entry[1] !== undefined)
     .map(([key, value]) => `${key}:${value.startsWith('\n') ? value : ` ${value}`}`)
     .join('\n')}\n---\n\n## Context\n\nTest item.\n\n## Boundary\n\nNone.\n\n## Discussion\n\n### Test\n\nTest.\n`
 }
@@ -236,10 +239,18 @@ describe('[ki repo roadmap]', () => {
     )
 
     const before = await box.project.read('knowledge/Streams/Roadmap/KBS-001-next.md')
-    expect((await box.run('ki repo --repo knowledge roadmap promote KBS-001')).exitCode).toBe(0)
+    expect(
+      (
+        await box.run('ki repo --repo knowledge roadmap promote KBS-001', {
+          now: () => Date.parse('2026-09-02T00:00:00Z')
+        })
+      ).exitCode
+    ).toBe(0)
     expect((await box.run('ki repo --repo knowledge roadmap prune KBS-002')).exitCode).toBe(0)
     await expect(box.project.read('knowledge/Streams/Roadmap/KBS-001-next.md')).resolves.toBe(
-      before.replace('horizon: next', 'horizon: now')
+      before
+        .replace('horizon: next', 'horizon: now')
+        .replace('updated_at: 2026-09-01T00:00:00Z', 'updated_at: 2026-09-02T00:00:00Z')
     )
     await expect(box.project.read('knowledge/Streams/Roadmap/KBS-002-done.md')).rejects.toThrow()
     await expect(box.project.read('knowledge/Streams/Roadmap/_ISSUES.md')).resolves.toBe('last_id: 2\n')
@@ -765,21 +776,27 @@ describe('[ki repo roadmap]', () => {
     expect(multiple.output).toContain('ki repo roadmap promote requires exactly one repository target')
   })
 
-  test('validates timestamp pairs, advances timestamped horizon moves, and reports statistics', async () => {
+  test('requires timestamp pairs, advances horizon-move timestamps, and reports statistics', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write(
       'repo/docs/roadmap/KI-TOOL-CLI-003-timestamped.md',
       item({ created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' })
     )
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-004-legacy.md', item({ id: 'KI-TOOL-CLI-004' }))
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-CLI-004-missing.md',
+      item({ id: 'KI-TOOL-CLI-004', created_at: undefined, updated_at: undefined })
+    )
     await box.project.write(
       'repo/docs/roadmap/KI-TOOL-CLI-005-invalid.md',
-      item({ id: 'KI-TOOL-CLI-005', created_at: '2026-09-02T00:00:00Z' })
+      item({ id: 'KI-TOOL-CLI-005', created_at: '2026-09-02T00:00:00Z', updated_at: undefined })
     )
 
     const list = await box.run('ki repo --repo repo roadmap list')
-    await rm(`${box.project.path}/repo/docs/roadmap/KI-TOOL-CLI-005-invalid.md`)
+    await Promise.all([
+      rm(`${box.project.path}/repo/docs/roadmap/KI-TOOL-CLI-004-missing.md`),
+      rm(`${box.project.path}/repo/docs/roadmap/KI-TOOL-CLI-005-invalid.md`)
+    ])
     const promoted = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-003', {
       now: () => Date.parse('2026-09-02T00:00:00Z')
     })
@@ -790,26 +807,23 @@ describe('[ki repo roadmap]', () => {
     const invalidDuration = await box.run('ki repo --repo repo roadmap stats --stale-after never')
 
     expect(list.exitCode).toBe(1)
-    expect(list.output).toContain('must declare created_at and updated_at together')
+    expect(list.output).toContain('must declare created_at')
+    expect(list.output).toContain('must declare updated_at')
     expect(promoted).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-CLI-003 next -> now\n' })
     expect(changed).toContain('updated_at: 2026-09-02T00:00:01Z')
     expect(stats.exitCode).toBe(0)
     expect(JSON.parse(stats.output)).toMatchObject({
-      version: 1,
+      version: 2,
       generatedAt: '2026-09-03T00:00:00Z',
       staleAfterSeconds: 1,
       aggregate: {
-        items: 2,
-        timestamped: 1,
-        missingTimestamps: 1,
+        items: 1,
         stale: ['KI-TOOL-CLI-003']
       },
       results: [
         {
           statistics: {
-            items: 2,
-            timestamped: 1,
-            missingTimestamps: 1,
+            items: 1,
             stale: ['KI-TOOL-CLI-003']
           }
         }
@@ -824,7 +838,10 @@ describe('[ki repo roadmap]', () => {
   test('reports timestamp diagnostics and empty statistics without hiding selected repositories', async () => {
     const box = await sandbox()
     await box.project.write('legacy/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
-    await box.project.write('legacy/docs/roadmap/KI-TOOL-CLI-003-item.md', item())
+    await box.project.write(
+      'legacy/docs/roadmap/KI-TOOL-CLI-003-item.md',
+      item({ created_at: undefined, updated_at: undefined })
+    )
     await box.project.write('future/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write(
       'future/docs/roadmap/KI-TOOL-CLI-004-item.md',
@@ -878,12 +895,12 @@ describe('[ki repo roadmap]', () => {
     expect(listed.output).toContain('created_at must be a canonical UTC timestamp')
     expect(listed.output).toContain('created_at must not be later than updated_at')
     expect(statistics.exitCode).toBe(1)
-    expect(statistics.output).toContain('legacy: ITEMS=1 TIMESTAMPED=0 MISSING=1 ACTIVE=1')
+    expect(statistics.output).toContain('legacy: ITEMS=0 ACTIVE=0')
     expect(statistics.output).toContain('age: MEDIAN=n/a MAX=n/a')
     expect(statistics.output).toContain('future timestamps: KI-TOOL-CLI-004')
-    expect(statistics.output).toContain('invalid: ITEMS=0 TIMESTAMPED=0 MISSING=0 ACTIVE=0')
+    expect(statistics.output).toContain('invalid: ITEMS=0 ACTIVE=0')
     expect(statistics.output).toContain('missing: no roadmap')
-    expect(statistics.output).toContain('aggregate: ITEMS=2 TIMESTAMPED=1 MISSING=1 ACTIVE=2')
+    expect(statistics.output).toContain('aggregate: ITEMS=1 ACTIVE=1')
     expect(paired.exitCode).toBe(0)
     expect(paired.output).toContain('age: MEDIAN=129600s MAX=172800s')
     expect(stale.output).toContain('stale (2): KI-TOOL-CLI-007, KI-TOOL-CLI-008')

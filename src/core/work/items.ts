@@ -6,7 +6,18 @@ import type { RepositoryPlanningAdapter, RepositoryPlanningSource } from './plan
 
 const ISSUE_LEDGER = '_ISSUES.md'
 const KB_ROADMAP_INDEX = 'Roadmap.md'
-const requiredFields = ['id', 'title', 'theme', 'horizon', 'status', 'blocks', 'blocked_by', 'baseline_ref'] as const
+const requiredFields = [
+  'id',
+  'title',
+  'theme',
+  'horizon',
+  'status',
+  'blocks',
+  'blocked_by',
+  'baseline_ref',
+  'created_at',
+  'updated_at'
+] as const
 type RequiredField = (typeof requiredFields)[number]
 type WorkItemField =
   | RequiredField
@@ -15,8 +26,6 @@ type WorkItemField =
   | 'transferred_from'
   | 'housekeeping-template'
   | 'scheduled-for'
-  | 'created_at'
-  | 'updated_at'
 type WorkItemFields = Partial<Record<WorkItemField, string>>
 
 const allowedFields = new Set<WorkItemField>([
@@ -45,8 +54,8 @@ export interface WorkItem {
   readonly blocks: readonly string[]
   readonly blockedBy: readonly string[]
   readonly baselineRef: null | string
-  readonly createdAt?: string
-  readonly updatedAt?: string
+  readonly createdAt: string
+  readonly updatedAt: string
   readonly candidate?: true
   readonly transferredFrom?: string
 }
@@ -90,8 +99,7 @@ const parseScalar = (value: string): string => {
   return (quote === "'" || quote === '"') && value.endsWith(quote) ? value.slice(1, -1) : value
 }
 
-const timestamp = (value: string | undefined, file: string, field: string): string | undefined => {
-  if (value === undefined) return undefined
+const timestamp = (value: string, file: string, field: string): string => {
   const milliseconds = Date.parse(value)
   const canonical = Number.isNaN(milliseconds) ? undefined : new Date(milliseconds).toISOString().replace('.000Z', 'Z')
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value) || canonical !== value)
@@ -148,11 +156,9 @@ const readItem = async (
   const baseline = fields['baseline_ref']
   if (baseline !== 'null' && !/^[a-f0-9]{40}$/.test(baseline as string))
     throw itemError(file, 'baseline_ref must be null or a full commit ID')
-  const createdAt = timestamp(fields.created_at, file, 'created_at')
-  const updatedAt = timestamp(fields.updated_at, file, 'updated_at')
-  if (Boolean(createdAt) !== Boolean(updatedAt))
-    throw itemError(file, 'must declare created_at and updated_at together')
-  if (createdAt && updatedAt && Date.parse(createdAt) > Date.parse(updatedAt))
+  const createdAt = timestamp(fields.created_at as string, file, 'created_at')
+  const updatedAt = timestamp(fields.updated_at as string, file, 'updated_at')
+  if (Date.parse(createdAt) > Date.parse(updatedAt))
     throw itemError(file, 'created_at must not be later than updated_at')
   const item: WorkItem = {
     id,
@@ -163,7 +169,8 @@ const readItem = async (
     blocks: parseList(fields.blocks as string, file, 'blocks'),
     blockedBy: parseList(fields['blocked_by'] as string, file, 'blocked_by'),
     baselineRef: baseline === 'null' ? null : (baseline as string),
-    ...(createdAt && updatedAt ? { createdAt, updatedAt } : {}),
+    createdAt,
+    updatedAt,
     ...(fields.candidate ? { candidate: true } : {}),
     ...(fields.transferred_from ? { transferredFrom: fields.transferred_from } : {})
   }
@@ -253,7 +260,7 @@ const workItemRecord = async (
 const utcSecond = (milliseconds: number): string =>
   new Date(Math.floor(milliseconds / 1000) * 1000).toISOString().replace('.000Z', 'Z')
 
-const renderHorizon = (contents: string, horizon: WorkItemHorizon, updatedAt?: string): string => {
+const renderHorizon = (contents: string, horizon: WorkItemHorizon, updatedAt: string): string => {
   return contents.replace(/^---\n([\s\S]*?)\n---/, (_frontmatter, fields: string) => {
     const withHorizon = fields.replace(/^horizon: .+$/m, `horizon: ${horizon}`)
     const next =
@@ -263,7 +270,7 @@ const renderHorizon = (contents: string, horizon: WorkItemHorizon, updatedAt?: s
             .split('\n')
             .filter((line) => !line.startsWith('candidate: '))
             .join('\n')
-    const withTimestamp = updatedAt ? next.replace(/^updated_at: .+$/m, `updated_at: ${updatedAt}`) : next
+    const withTimestamp = next.replace(/^updated_at: .+$/m, `updated_at: ${updatedAt}`)
     return `---\n${withTimestamp}\n---`
   })
 }
@@ -276,14 +283,12 @@ export const updateWorkItemHorizon = async (
   now: number
 ): Promise<WorkItem> => {
   const record = await workItemRecord(repository, planning, id)
-  const updatedAt = record.item.updatedAt
-    ? utcSecond(Math.max(now, Date.parse(record.item.updatedAt) + 1000))
-    : undefined
+  const updatedAt = utcSecond(Math.max(now, Date.parse(record.item.updatedAt) + 1000))
   const content = renderHorizon(record.contents, horizon, updatedAt)
   const writes = await prepareWrites(repository, [{ path: join(planning.directory, record.file), content }])
   await publishWrites(writes, false)
   const { candidate: _candidate, ...item } = record.item
-  return { ...item, horizon, ...(updatedAt ? { updatedAt } : {}), ...(horizon === 'future' ? { candidate: true } : {}) }
+  return { ...item, horizon, updatedAt, ...(horizon === 'future' ? { candidate: true } : {}) }
 }
 
 export const pruneDoneWorkItems = async (
