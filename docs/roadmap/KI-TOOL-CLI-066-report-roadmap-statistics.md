@@ -4,12 +4,12 @@ area: CLI
 title: Report roadmap statistics
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 576fec55424bf588ae3b80a63348c30e1c4e620c
 created_at: 2026-09-07T23:33:56Z
-updated_at: 2026-09-14T02:50:59Z
+updated_at: 2026-09-14T14:16:11Z
 ---
 
 # Report Roadmap Statistics
@@ -130,6 +130,10 @@ The public behaviour stays within the approved contract: no timestamps are fabri
 ### Mini recap
 
 Timestamp support is isolated in the common codec and pure statistics module, keeping rendering and mutation adapters small. The remaining work is review of the implementation evidence; no additional roadmap item is required.
+
+## Done
+
+Accepted 2026-09-14 by Kris Brown on the review packet above.
 
 ## Discussion
 
