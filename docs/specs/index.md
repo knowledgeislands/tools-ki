@@ -8,14 +8,22 @@ Specifications describe what the built CLI does. Decision Records explain why a 
 
 ## Reading a requirement
 
-Each numbered requirement states one current behaviour using RFC-2119 language and names a concrete verification hook.
+Each numbered requirement states one current behaviour using RFC-2119 language, declares its conformance state, and names concrete verification and evidence.
 
 ```markdown
 ### REPO-AUDIT-001 — Example behaviour
 
 The command MUST provide an observable behaviour.
 
+_Conformance:_ conforming
+
+_Conformance:_ conforming
+
 _Verify:_ a named CLI test asserts the behaviour.
+
+_Evidence:_ a recorded passing CLI test run.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 ```
 
 ## ID scheme

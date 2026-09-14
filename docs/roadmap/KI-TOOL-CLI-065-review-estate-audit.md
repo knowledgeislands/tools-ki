@@ -4,10 +4,10 @@ title: Review estate audit
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 1a70cd7ccd7e8130ca281dc28713a834ac1a71be
 ---
 
 ## Goal
@@ -32,9 +32,9 @@ All 97 requirements have verification references to existing CLI test files, but
 
 ## Steps
 
-- [ ] Check the existing verification references and run the contract suite with coverage.
-- [ ] Add truthful conformance and current evidence to every accepted requirement and align the index guidance.
-- [ ] Run specification, authoring, and roadmap audits and retain review evidence.
+- [x] Check the existing verification references and run the contract suite with coverage.
+- [x] Add truthful conformance and current evidence to every accepted requirement and align the index guidance.
+- [x] Run specification, authoring, and roadmap audits and retain review evidence.
 
 ## Files touched
 
@@ -73,6 +73,35 @@ No operating procedure changes; the corpus index explains how to read the metada
 ### Roadmap
 
 Retain this record's review evidence and unblock the clean preflight for CLI-066.
+
+## Review
+
+### Delivered
+
+Restored the specification corpus's required conformance and evidence metadata from immutable baseline `1a70cd7ccd7e8130ca281dc28713a834ac1a71be`. The repair covers all 97 accepted requirements across 12 area files and aligns the reader guidance in the index.
+
+### Summary of changes
+
+Each accepted requirement now declares `conforming`, retains its existing CLI verification reference, and records the 2026-09-14 passing full-suite evidence. The specification index now explains conformance and evidence alongside verification. No product behaviour or external repository changed.
+
+### Verification
+
+- `bun run test:coverage --reporter=dot` — 48 files, 751 tests, and 100% coverage across statements, branches, functions, and lines passed before the documentation-only repair.
+- `ki repo audit --skill ki-specs --repo .` — passed.
+- `ki repo audit --skill ki-authoring --repo .` — passed.
+- `ki repo audit --skill ki-work-roadmap --repo .` — passed.
+
+### Outstanding concerns
+
+None. Two specification test-description references were checked against the renamed current tests; their source paths and assertions remain valid.
+
+### Post-change review
+
+The repair resolves the identified CONFORMANCE-1 failures without overstating a new product claim: every requirement already named an existing CLI contract test, and the full suite supplied current execution evidence. CLI-066 can now begin from a clean applicable audit baseline.
+
+### Mini recap
+
+The audit finding was metadata drift after the specification contract gained conformance and evidence fields. The index and every accepted requirement now use that contract consistently. No further estate-audit item is required.
 
 ## Discussion
 

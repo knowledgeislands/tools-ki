@@ -8,19 +8,31 @@ This area specifies the user-oriented management interface; see the [Specificati
 
 `ki manage list` MUST list installed capabilities and declared user skills without inspecting the current repository.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/list.test.ts` — `lists installed capabilities and declared user skills without inspecting the current repository`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### MANAGE-002 — Managed-state diagnosis
 
 `ki manage doctor` MUST report configured skills whose active source cannot be resolved.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/doctor.test.ts` — `reports a configured skill whose active source cannot be resolved`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### MANAGE-003 — Deterministic capability search
 
 `ki manage search` MUST search verified installed capabilities case-insensitively in deterministic order without repository discovery.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `searches verified installed capabilities case-insensitively in deterministic order without repository discovery`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ## Updates and shell integration
 
@@ -28,43 +40,71 @@ _Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `searches verified i
 
 `ki manage update` MUST update the executable only when a persisted verified installer receipt proves it owns the running regular installation.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/update.test.ts` — `updates only an installer-managed executable through its persisted verified installer`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### MANAGE-005 — Generated shell completions
 
 `ki manage completion` MUST render supported shell completion scripts and reject unsupported shells.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/completions.test.ts` — `renders zsh and bash completion scripts` and `rejects an unsupported shell and requires a shell argument`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### MANAGE-006 — Managed-state diagnostics
 
 `ki manage diag` MUST report only machine-managed installation, user configuration, registry, and path state. It MUST NOT inspect a repository declaration or its projections.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/diag.test.ts` — `does not inspect repository state for user diagnostics` and `leaves direct repository projection health to ki repo diag`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### MANAGE-007 — Safe managed projection repair
 
 `ki manage repair` MUST repair only missing or stale KI-managed user-skill projections, preserve foreign state as unsafe, and support a no-write `--dry-run` preview.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/repair.test.ts` — `re-points a stale symbolic link and preserves a non-link as unsafe` and `reports a dry-run link repair without changing it`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### MANAGE-008 — Non-mutating cleanup report
 
 `ki manage cleanup` MUST report when no eligible KI-managed stale state exists without changing installed harnesses or unknown files.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `reports no eligible managed stale state without changing any installed harness or unknown file`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### MANAGE-009 — Canonical documentation lookup
 
 `ki manage docs` MUST print canonical KI documentation locations without launching applications or fetching their content.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `prints canonical documentation URLs without launching or fetching content`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### MANAGE-010 — Closed option-value completion
 
 `ki manage completion` MUST offer every closed value for a value-taking public CLI option after that option is supplied, including roadmap horizons and lifecycle statuses.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/completions.test.ts` — `emits loadable scripts whose Bash completion reaches repo roadmap`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ## Local editor projections
 
@@ -72,19 +112,31 @@ _Verify:_ `src/tests/cli/manage/completions.test.ts` — `emits loadable scripts
 
 `ki manage vscode check` MUST compare the chezmoi-managed VS Code workspace and trusted-folder source state with the local KI repository registry without writing.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/vscode.test.ts` — `synchronises missing workspaces and runtime-scoped trusted folders` proves the check reports drift before the write and passes after reconciliation.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### MANAGE-012 — Explicit VS Code projection publication
 
 `ki manage vscode sync` MUST preview source-state drift by default and MUST publish it only when `--write` is supplied, without running `chezmoi apply`.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/vscode.test.ts` — `synchronises missing workspaces and runtime-scoped trusted folders`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### MANAGE-013 — Fail-closed source-store association
 
 `ki manage vscode source create` MUST preview an opt-in source store by default and MUST refuse ambiguous repository associations before writing.
 
+_Conformance:_ conforming
+
 _Verify:_ `src/tests/cli/manage/vscode.test.ts` — `previews then creates and associates an opt-in source store` and `fails closed when a legacy source suffix matches multiple repositories`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ## Gaps
 
