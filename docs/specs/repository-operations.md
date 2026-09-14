@@ -146,6 +146,26 @@ _Verify:_ `src/tests/cli/repo/repo.test.ts`, `src/tests/cli/repo/targets.test.ts
 
 _Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
+### REPO-OPS-015 — Timestamped roadmap statistics
+
+`ki repo roadmap` MUST accept an optional paired `created_at` and `updated_at` canonical UTC-second timestamp on local work items, preserve an absent compatibility pair, and advance `updated_at` monotonically for a timestamped horizon move. `ki repo roadmap stats` MUST report per-repository and selected-set aggregate timestamp coverage, age, inactivity, optional active-item staleness, and a versioned JSON contract without fabricating timestamps for legacy records.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `validates timestamp pairs, advances timestamped horizon moves, and reports statistics`.
+
+_Evidence:_ The focused CLI contract test and full 2026-09-14 verification suite pass.
+
+### REPO-OPS-016 — Portable triage visibility
+
+`ki repo roadmap list` MUST accept and render the portable `triage` horizon without treating unadopted intake as malformed. Generic horizon promotion and demotion MUST NOT adopt or return an adopted record to Triage outside the planning workflow.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `orders horizons then lifecycle and canonical identifier` and `promotes and demotes one explicit item with directional horizon validation`.
+
+_Evidence:_ The focused CLI contract tests and full 2026-09-14 verification suite pass.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

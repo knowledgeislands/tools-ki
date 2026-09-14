@@ -12,6 +12,7 @@ import {
   workItemHorizons
 } from './items.ts'
 import { type RepositoryPlanningSource, readRepositoryPlanningSource } from './planning.ts'
+import { type RoadmapStatistics, roadmapStatistics } from './statistics.ts'
 
 export interface RoadmapSelection {
   readonly repositories: readonly string[]
@@ -24,6 +25,7 @@ export interface RoadmapOperationContext {
   readonly stateDirectory: string
   readonly workingDirectory: string
   readonly homeDirectory: string
+  readonly now: () => number
   readonly locateTrades: () => Promise<readonly LocatedTrade[]>
 }
 
@@ -56,6 +58,14 @@ export interface RoadmapMoveResult {
   readonly id: string
   readonly from: WorkItemHorizon
   readonly to: WorkItemHorizon
+}
+
+export interface RoadmapStatisticsResult {
+  readonly repository: string
+  readonly statistics?: RoadmapStatistics
+  readonly roadmap?: 'absent'
+  readonly diagnostic?: string
+  readonly faults: readonly WorkItemFault[]
 }
 
 type RoadmapMove = 'promote' | 'demote'
@@ -97,20 +107,27 @@ const selectedItem = async (repository: string, planning: RepositoryPlanningSour
   return items[0] as WorkItem
 }
 
+const movableHorizons = workItemHorizons.filter((horizon) => horizon !== 'triage')
+
 const moveHorizon = (item: WorkItem, operation: RoadmapMove, requested?: string): WorkItemHorizon => {
-  const current = workItemHorizons.indexOf(item.horizon)
+  const current = movableHorizons.indexOf(item.horizon as (typeof movableHorizons)[number])
   const direction = operation === 'promote' ? -1 : 1
-  const target = requested === undefined ? current + direction : workItemHorizons.indexOf(requested as WorkItemHorizon)
+  const target =
+    requested === undefined
+      ? current + direction
+      : movableHorizons.indexOf(requested as (typeof movableHorizons)[number])
   if (requested !== undefined && target === -1)
-    throw new KiError(`roadmap ${operation} horizon must be one of ${workItemHorizons.join(', ')}`, 2)
-  if (target < 0 || target >= workItemHorizons.length)
+    throw new KiError(`roadmap ${operation} horizon must be one of ${movableHorizons.join(', ')}`, 2)
+  if (current === -1)
+    throw new KiError(`work item ${item.id} at triage must be adopted through the planning workflow`, 2)
+  if (target < 0 || target >= movableHorizons.length)
     throw new KiError(`work item ${item.id} is already at the ${operation} limit`, 2)
   if ((operation === 'promote' && target >= current) || (operation === 'demote' && target <= current))
     throw new KiError(
       `roadmap ${operation} must move ${item.id} ${operation === 'promote' ? 'toward now' : 'toward future'}`,
       2
     )
-  return workItemHorizons[target] as WorkItemHorizon
+  return movableHorizons[target] as WorkItemHorizon
 }
 
 export const listRoadmap = async (
@@ -191,6 +208,38 @@ export const moveRoadmapItem = async (
   const planning = await readRepositoryPlanningSource(repository.declaration)
   const item = await selectedItem(repository.root, planning, id)
   const destination = moveHorizon(item, operation, requested)
-  await updateWorkItemHorizon(repository.root, planning, id, destination)
+  await updateWorkItemHorizon(repository.root, planning, id, destination, context.now())
   return { id, from: item.horizon, to: destination }
+}
+
+export const roadmapStatisticsForSelection = async (
+  context: RoadmapOperationContext,
+  selection: RoadmapSelection,
+  staleAfterSeconds?: number
+): Promise<{
+  readonly generatedAt: string
+  readonly staleAfterSeconds?: number
+  readonly aggregate: RoadmapStatistics
+  readonly results: readonly RoadmapStatisticsResult[]
+}> => {
+  const listed = await listRoadmap(context, selection, {})
+  const now = context.now()
+  const aggregate = roadmapStatistics(
+    listed.results.flatMap((result) => result.items ?? []),
+    now,
+    staleAfterSeconds
+  )
+  return {
+    generatedAt: new Date(Math.floor(now / 1000) * 1000).toISOString().replace('.000Z', 'Z'),
+    ...(staleAfterSeconds === undefined ? {} : { staleAfterSeconds }),
+    aggregate,
+    results: listed.results.map((result) => ({
+      repository: result.repository,
+      ...(result.roadmap ? { roadmap: result.roadmap } : {}),
+      /* v8 ignore next -- target resolution fails before a statistics projection can receive a repository diagnostic. */
+      ...(result.diagnostic ? { diagnostic: result.diagnostic } : {}),
+      faults: result.faults ?? [],
+      ...(result.items ? { statistics: roadmapStatistics(result.items, now, staleAfterSeconds) } : {})
+    }))
+  }
 }

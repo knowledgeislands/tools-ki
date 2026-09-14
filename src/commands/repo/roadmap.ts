@@ -1,7 +1,7 @@
 import { basename } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { KiExit } from '../../core/errors.ts'
+import { grammarError, KiExit } from '../../core/errors.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade/index.ts'
 import {
   listRoadmap,
@@ -9,6 +9,8 @@ import {
   pruneRoadmap,
   type RoadmapListResult,
   type RoadmapOperationContext,
+  type RoadmapStatisticsResult,
+  roadmapStatisticsForSelection,
   type WorkItem,
   workItemHorizons
 } from '../../core/work/index.ts'
@@ -35,6 +37,7 @@ const operationContext = (context: KiContext): RoadmapOperationContext => ({
   stateDirectory: context.paths.state,
   workingDirectory: context.workingDirectory,
   homeDirectory: context.homeDirectory,
+  now: context.now,
   locateTrades: () => locateTrades(context)
 })
 
@@ -198,6 +201,66 @@ const renderAggregateResult = (
   return renderTree({ title: 'KI AGGREGATE ROADMAP', entries }).join('\n')
 }
 
+const parseDuration = (value: string): number => {
+  const match = /^(\d+)([smhd])$/.exec(value)
+  if (!match || Number(match[1]) < 1) throw grammarError('stale-after must be a positive duration such as 7d')
+  const multipliers: Readonly<Record<string, number>> = { s: 1, m: 60, h: 3600, d: 86400 }
+  return Number(match[1]) * (multipliers[match[2] as string] as number)
+}
+
+const metric = (value: number | undefined): string => (value === undefined ? 'n/a' : `${value}s`)
+
+const renderStatisticsText = (
+  generatedAt: string,
+  staleAfterSeconds: number | undefined,
+  results: readonly RoadmapStatisticsResult[],
+  aggregate: NonNullable<RoadmapStatisticsResult['statistics']>
+): string => {
+  const renderedResults: readonly RoadmapStatisticsResult[] =
+    results.length > 1 ? [...results, { repository: 'aggregate', statistics: aggregate, faults: [] }] : results
+  return renderTree({
+    title: 'KI REPO ROADMAP STATISTICS',
+    context: [
+      { label: `generated ${generatedAt}` },
+      ...(staleAfterSeconds ? [{ label: `stale after ${staleAfterSeconds}s` }] : [])
+    ],
+    entries: renderedResults.map((result) => {
+      if (result.roadmap) return { label: `${basename(result.repository)}: no roadmap` }
+      /* v8 ignore next -- target resolution fails before a statistics report can receive a repository diagnostic. */
+      if (result.diagnostic)
+        return {
+          label: `${presentation('status.unavailable').terminal} ${basename(result.repository)}: ${result.diagnostic}`
+        }
+      const statistics = result.statistics
+      /* v8 ignore next -- roadmapStatisticsForSelection always projects statistics when a result is neither absent nor diagnostic. */
+      if (!statistics)
+        return { label: `${presentation('status.unavailable').terminal} ${basename(result.repository)}: unavailable` }
+      return {
+        label: `${basename(result.repository)}: ITEMS=${statistics.items} TIMESTAMPED=${statistics.timestamped} MISSING=${statistics.missingTimestamps} ACTIVE=${statistics.active}`,
+        children: [
+          { label: `age: MEDIAN=${metric(statistics.medianAgeSeconds)} MAX=${metric(statistics.maximumAgeSeconds)}` },
+          {
+            label: `inactivity: MEDIAN=${metric(statistics.medianInactivitySeconds)} MAX=${metric(statistics.maximumInactivitySeconds)}`
+          },
+          ...(staleAfterSeconds === undefined
+            ? []
+            : [{ label: `stale (${statistics.stale.length}): ${statistics.stale.join(', ') || 'none'}` }]),
+          ...(statistics.futureTimestamps.length
+            ? [
+                {
+                  label: `${presentation('status.unavailable').terminal} future timestamps: ${statistics.futureTimestamps.join(', ')}`
+                }
+              ]
+            : []),
+          ...result.faults.map((fault) => ({
+            label: `${presentation('status.unavailable').terminal} ${fault.message}`
+          }))
+        ]
+      }
+    })
+  }).join('\n')
+}
+
 const listCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('list')
     .description('list governed work items')
@@ -212,6 +275,32 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
         : results.map((result) => renderTextResult(result, estate, options.icons !== false)).join('\n\n')
       context.stdout.write(`${output}\n`)
       if (results.some((result) => result.tradeDiagnostic || result.diagnostic || result.faults?.length))
+        throw new KiExit(1)
+    })
+
+const statsCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
+  new Command('stats')
+    .description('report timestamp coverage, age, and inactivity')
+    .option('--stale-after <duration>', 'report active records inactive for at least this duration')
+    .option('--format <format>', 'output format: text or json', 'text')
+    .action(async (options: { readonly staleAfter?: string; readonly format: string }) => {
+      if (options.format !== 'text' && options.format !== 'json') throw grammarError('format must be text or json')
+      const staleAfterSeconds = options.staleAfter ? parseDuration(options.staleAfter) : undefined
+      const report = await roadmapStatisticsForSelection(
+        operationContext(context),
+        selectedRepositories(),
+        staleAfterSeconds
+      )
+      if (options.format === 'json') context.stdout.write(`${JSON.stringify({ version: 1, ...report })}\n`)
+      else
+        context.stdout.write(
+          `${renderStatisticsText(report.generatedAt, report.staleAfterSeconds, report.results, report.aggregate)}\n`
+        )
+      if (
+        report.results.some(
+          (result) => result.diagnostic || result.faults.length || result.statistics?.futureTimestamps.length
+        )
+      )
         throw new KiExit(1)
     })
 
@@ -252,6 +341,7 @@ export const createRepoRoadmapCommand = (context: KiContext, selectedRepositorie
   new Command('roadmap')
     .description('inspect and mechanically maintain governed work items')
     .addCommand(listCommand(context, selectedRepositories))
+    .addCommand(statsCommand(context, selectedRepositories))
     .addCommand(pruneCommand(context, selectedRepositories))
     .addCommand(moveCommand(context, selectedRepositories, 'promote'))
     .addCommand(moveCommand(context, selectedRepositories, 'demote'))

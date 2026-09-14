@@ -124,6 +124,9 @@ proven KI-managed projections.
 List governed work items in a framed deterministic horizon and lifecycle tree
 without changing their lifecycle.
 .TP
+.B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
+Report timestamp coverage, age, and inactivity for governed work items.
+.TP
 .B ki repo [repo-options] roadmap prune [id]
 Delete completed canonical work-item records.
 .TP
@@ -590,14 +593,27 @@ remains available for later repair and bulk maintenance.
 .B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>]
 List canonical governed work items from every selected repository without
 changing their lifecycle. The framed text output names each selected repository,
-then groups items by horizon from \fBnow\fR through \fBfuture\fR and by
-lifecycle from \fBdone\fR through \fBdraft\fR, with identifiers breaking ties.
+then groups items by horizon from \fBnow\fR through unadopted
+\fBtriage\fR and by lifecycle from \fBdone\fR through \fBdraft\fR, with
+identifiers breaking ties.
 \fB--horizon\fR
 and \fB--status\fR filter before rendering. A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
 selected repositories still report, and any roadmap or trade diagnostic makes
 the command exit with status 1 after rendering the inventory. The command
-never creates, transitions, accepts, prunes, or repairs a work item.
+never creates, transitions, accepts, prunes, or repairs a work item. Generic
+promote and demote operations exclude the unadopted \fBtriage\fR horizon.
+.TP
+.B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
+Report timestamp coverage and age and inactivity metrics for selected local
+roadmaps. Timestamp-free compatibility records remain readable and are reported
+as missing coverage. Multiple selected repositories add a selected-set
+aggregate. A positive stale duration uses seconds, minutes, hours, or days,
+such as
+.BR 7d .
+Use
+.B --format json
+for a versioned machine-readable report.
 .TP
 .B ki repo [repo-options] roadmap prune [id]
 Without an ID, delete every canonical work-item record whose lifecycle status

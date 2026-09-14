@@ -68,6 +68,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo conform`
 - `ki repo diag`
 - `ki repo roadmap list`
+- `ki repo roadmap stats [--stale-after <duration>] [--format <text|json>]`
 - `ki repo roadmap prune [id]`
 - `ki repo roadmap promote <id> [horizon]`
 - `ki repo roadmap demote <id> [horizon]`
@@ -131,7 +132,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - Registered repository declarations define reciprocal named Agoras; the reserved `estate` selector derives the full locally registered canonical repository set for selection and Zed opening.
 - `ki agora roots <agora>` exposes a stable machine interface for resolved registered Agora roots: newline-delimited by default, or NUL-delimited with `--null` (`-0`).
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
-- `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context.
+- `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context, including unadopted `triage` intake.
 - `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.
 - `ki trade routes list [--estate] [--incomplete]` is a framed local route inventory or a paired registered-estate table. Estate rows are lexical repository pairs with left-to-right and right-to-left sub-rows, explicit missing directions, and a stacked form on narrow terminals; `--table` explicitly selects that default estate text renderer. `--html` renders the estate as a self-contained interactive force-directed network instead, written to the cache and opened in a browser, drawing one arc per direction with accessible locally vendored Lucide Hammer and Book Open chips so a reciprocated pair separates. `--table` and `--html` both require `--estate` and cannot be combined; the viewer has no icon-font or network dependency.
 - Receiver-owned knowledge subtype commands, exact two-sided standing import/export grants, active/incomplete inspection, and receiver-local `STI-*` capture with full source-commit and path verification. Standing intake is knowledge-only, adds no peer-write or roadmap authority, and leaves ordinary itemized trades as the fallback.

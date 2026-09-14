@@ -1,4 +1,4 @@
-import { realpath, symlink } from 'node:fs/promises'
+import { realpath, rm, symlink } from 'node:fs/promises'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -443,7 +443,8 @@ describe('[ki repo roadmap]', () => {
       ['KI-TOOL-CLI-015', 'Soon', 'soon', 'draft'],
       ['KI-TOOL-CLI-016', 'Waiting', 'waiting-for', 'draft'],
       ['KI-TOOL-CLI-017', 'Parked', 'parked', 'draft'],
-      ['KI-TOOL-CLI-018', 'Future', 'future', 'draft']
+      ['KI-TOOL-CLI-018', 'Future', 'future', 'draft'],
+      ['KI-TOOL-CLI-019', 'Unadopted intake', 'triage', 'draft']
     ] as const
     for (const [id, title, horizon, status] of items) {
       await box.project.write(
@@ -468,8 +469,10 @@ describe('[ki repo roadmap]', () => {
       '│  ├─ soon',
       '│  ├─ waiting-for',
       '│  ├─ parked',
-      '│  ╰─ future',
-      '│     ╰─ KI-TOOL-CLI-018 [draft] Future'
+      '│  ├─ future',
+      '│  │  ╰─ KI-TOOL-CLI-018 [draft] Future',
+      '│  ╰─ triage',
+      '│     ╰─ KI-TOOL-CLI-019 [draft] Unadopted intake'
     ]
     let previous = -1
     for (const line of expectedOrder) {
@@ -711,6 +714,10 @@ describe('[ki repo roadmap]', () => {
       item({ id: 'KI-TOOL-CLI-004', title: 'Future item', horizon: 'future', candidate: 'true' })
     )
     await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-005-now.md', item({ id: 'KI-TOOL-CLI-005', horizon: 'now' }))
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-CLI-006-triage.md',
+      item({ id: 'KI-TOOL-CLI-006', horizon: 'triage' })
+    )
     await box.project.write('other/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('other/docs/roadmap/KI-TOOL-CLI-003-item.md', item())
     const root = await realpath(`${box.project.path}/repo`)
@@ -726,6 +733,7 @@ describe('[ki repo roadmap]', () => {
     const same = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-004 next')
     const promoteLimit = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-005')
     const demoteLimit = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-003')
+    const triage = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-006')
     const missing = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-999')
     const multiple = await box.run([
       'ki',
@@ -752,8 +760,135 @@ describe('[ki repo roadmap]', () => {
     expect(same.output).toContain('roadmap demote must move KI-TOOL-CLI-004 toward future')
     expect(promoteLimit.output).toContain('work item KI-TOOL-CLI-005 is already at the promote limit')
     expect(demoteLimit.output).toContain('work item KI-TOOL-CLI-003 is already at the demote limit')
+    expect(triage.output).toContain('work item KI-TOOL-CLI-006 at triage must be adopted through the planning workflow')
     expect(missing.output).toContain(`repository ${root} must contain exactly one work item KI-TOOL-CLI-999`)
     expect(multiple.output).toContain('ki repo roadmap promote requires exactly one repository target')
+  })
+
+  test('validates timestamp pairs, advances timestamped horizon moves, and reports statistics', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-CLI-003-timestamped.md',
+      item({ created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' })
+    )
+    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-004-legacy.md', item({ id: 'KI-TOOL-CLI-004' }))
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-CLI-005-invalid.md',
+      item({ id: 'KI-TOOL-CLI-005', created_at: '2026-09-02T00:00:00Z' })
+    )
+
+    const list = await box.run('ki repo --repo repo roadmap list')
+    await rm(`${box.project.path}/repo/docs/roadmap/KI-TOOL-CLI-005-invalid.md`)
+    const promoted = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-003', {
+      now: () => Date.parse('2026-09-02T00:00:00Z')
+    })
+    const changed = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-timestamped.md')
+    const stats = await box.run('ki repo --repo repo roadmap stats --stale-after 1s --format json', {
+      now: () => Date.parse('2026-09-03T00:00:00Z')
+    })
+    const invalidDuration = await box.run('ki repo --repo repo roadmap stats --stale-after never')
+
+    expect(list.exitCode).toBe(1)
+    expect(list.output).toContain('must declare created_at and updated_at together')
+    expect(promoted).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-CLI-003 next -> now\n' })
+    expect(changed).toContain('updated_at: 2026-09-02T00:00:01Z')
+    expect(stats.exitCode).toBe(0)
+    expect(JSON.parse(stats.output)).toMatchObject({
+      version: 1,
+      generatedAt: '2026-09-03T00:00:00Z',
+      staleAfterSeconds: 1,
+      aggregate: {
+        items: 2,
+        timestamped: 1,
+        missingTimestamps: 1,
+        stale: ['KI-TOOL-CLI-003']
+      },
+      results: [
+        {
+          statistics: {
+            items: 2,
+            timestamped: 1,
+            missingTimestamps: 1,
+            stale: ['KI-TOOL-CLI-003']
+          }
+        }
+      ]
+    })
+    expect(invalidDuration).toEqual({
+      exitCode: 2,
+      output: 'ki: error: stale-after must be a positive duration such as 7d\n'
+    })
+  })
+
+  test('reports timestamp diagnostics and empty statistics without hiding selected repositories', async () => {
+    const box = await sandbox()
+    await box.project.write('legacy/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('legacy/docs/roadmap/KI-TOOL-CLI-003-item.md', item())
+    await box.project.write('future/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'future/docs/roadmap/KI-TOOL-CLI-004-item.md',
+      item({
+        id: 'KI-TOOL-CLI-004',
+        created_at: '2026-09-04T00:00:00Z',
+        updated_at: '2026-09-04T00:00:00Z'
+      })
+    )
+    await box.project.write('invalid/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'invalid/docs/roadmap/KI-TOOL-CLI-005-invalid.md',
+      item({ id: 'KI-TOOL-CLI-005', created_at: 'not-a-timestamp', updated_at: '2026-09-01T00:00:00Z' })
+    )
+    await box.project.write(
+      'invalid/docs/roadmap/KI-TOOL-CLI-006-reversed.md',
+      item({ id: 'KI-TOOL-CLI-006', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' })
+    )
+    await box.project.write(
+      'invalid/docs/roadmap/KI-TOOL-CLI-009-calendar.md',
+      item({ id: 'KI-TOOL-CLI-009', created_at: '2026-02-31T00:00:00Z', updated_at: '2026-03-01T00:00:00Z' })
+    )
+    await box.project.write('missing/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('paired/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'paired/docs/roadmap/KI-TOOL-CLI-007-item.md',
+      item({ id: 'KI-TOOL-CLI-007', created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' })
+    )
+    await box.project.write(
+      'paired/docs/roadmap/KI-TOOL-CLI-008-item.md',
+      item({ id: 'KI-TOOL-CLI-008', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' })
+    )
+
+    const listed = await box.run('ki repo --repo invalid roadmap list')
+    const statistics = await box.run(
+      'ki repo --repo legacy --repo future --repo invalid --repo missing roadmap stats',
+      { now: () => Date.parse('2026-09-03T00:00:00Z') }
+    )
+    const paired = await box.run('ki repo --repo paired roadmap stats', {
+      now: () => Date.parse('2026-09-03T00:00:00Z')
+    })
+    const stale = await box.run('ki repo --repo paired roadmap stats --stale-after 1d', {
+      now: () => Date.parse('2026-09-03T00:00:00Z')
+    })
+    const fresh = await box.run('ki repo --repo paired roadmap stats --stale-after 7d', {
+      now: () => Date.parse('2026-09-03T00:00:00Z')
+    })
+    const invalidFormat = await box.run('ki repo --repo legacy roadmap stats --format csv')
+
+    expect(listed.exitCode).toBe(1)
+    expect(listed.output).toContain('created_at must be a canonical UTC timestamp')
+    expect(listed.output).toContain('created_at must not be later than updated_at')
+    expect(statistics.exitCode).toBe(1)
+    expect(statistics.output).toContain('legacy: ITEMS=1 TIMESTAMPED=0 MISSING=1 ACTIVE=1')
+    expect(statistics.output).toContain('age: MEDIAN=n/a MAX=n/a')
+    expect(statistics.output).toContain('future timestamps: KI-TOOL-CLI-004')
+    expect(statistics.output).toContain('invalid: ITEMS=0 TIMESTAMPED=0 MISSING=0 ACTIVE=0')
+    expect(statistics.output).toContain('missing: no roadmap')
+    expect(statistics.output).toContain('aggregate: ITEMS=2 TIMESTAMPED=1 MISSING=1 ACTIVE=2')
+    expect(paired.exitCode).toBe(0)
+    expect(paired.output).toContain('age: MEDIAN=129600s MAX=172800s')
+    expect(stale.output).toContain('stale (2): KI-TOOL-CLI-007, KI-TOOL-CLI-008')
+    expect(fresh.output).toContain('stale (0): none')
+    expect(invalidFormat).toEqual({ exitCode: 2, output: 'ki: error: format must be text or json\n' })
   })
 
   test('rejects ambiguous roadmap identifiers before changing or pruning a work item', async () => {

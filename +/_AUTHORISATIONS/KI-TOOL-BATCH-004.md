@@ -48,3 +48,15 @@ CLI-062 and CLI-064 close through ki-accept under exact human sign-off. CLI-065 
 ### CLI-062 and CLI-064 acceptance
 
 Both records were awaiting-review at `dd949e2eb01b440cd2b8590aa36c2d85196237df` with complete review packets and immutable delivery references. The user explicitly approved both, including CLI-064's unperformed live Granola trial and its later remedial treatment. Both now record done; no records were pruned and no live import is claimed.
+
+### CLI-065 estate audit
+
+The repository-wide specification audit failure was traced to missing explicit conformance metadata on 97 existing requirements. The specification estate was repaired without changing requirement meaning, the full repository audit passed, and CLI-065 reached `awaiting-review` in commit `576fec55424bf588ae3b80a63348c30e1c4e620c`.
+
+### CLI-066 roadmap compatibility and statistics
+
+The common local work-item codec now accepts the published timestamp pair, advances `updated_at` on timestamped CLI horizon mutations, and keeps timestamp-free compatibility records readable. `ki repo roadmap stats` supplies deterministic text and versioned JSON metrics. Final source validation also found the published unadopted `triage` horizon; list and statistics now include it while generic promote and demote refuse to adopt it.
+
+### Batch recap
+
+CLI-062 and CLI-064 are retained as `done`. CLI-065 and CLI-066 are retained as `awaiting-review`. No roadmap record was pruned, no peer repository was written, and nothing was pushed or released.
