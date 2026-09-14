@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-09-14T08:41:16Z
-updated_at: 2026-09-14T08:47:29Z
+updated_at: 2026-09-14T08:51:14Z
 ---
 
 # Require Roadmap Timestamps
@@ -39,6 +39,16 @@ Backfill selected local roadmap records first, validate every migrated repositor
 Prefer the earliest followed Git commit time for `created_at` and the latest current-path Git commit time for `updated_at`, normalised to canonical UTC seconds. Records without sufficient tracked history need an explicit fallback and report rather than a silent invented date. A single migration instant is an acceptable fallback if the migration report identifies it.
 
 The bounded estate probe found 180 physical records without `created_at`, including six records already excluded from readable statistics by other faults. Every one of the 180 has both earliest followed and latest current-path Git commit evidence, and none produces `created_at > updated_at`; no fallback timestamp is currently required.
+
+### Estate targets
+
+The exact 27-repository backfill set is:
+
+- HNR: `5g-emerge-testbed-website`, `hnr-agentic-harness`, and `kit-hnr`.
+- User configuration: `~/.local/share/chezmoi`.
+- Equal Remedy: `er-agentic-harness`.
+- Knowledge Islands: `homebrew-tap`, `ki-agentic-harness`, `ki-arcadia-principal`, `ki-specifications`, `ki-techne-principal`, `ki-website`, `mcp-acquire-whatsapp`, `mcp-git-audit`, `mcp-gsuite`, `mcp-housekeeping-chatgpt`, `mcp-housekeeping-claude`, `mcp-housekeeping-codex`, `mcp-ki-kb-fs`, `mcp-ki-kb-notion-mirror`, `mcp-m365`, `tools-git-almanac`, and `tools-ki`.
+- Other Kit repositories: `kit-legal`, `kit-midnight.ninja`, `kit-principal`, `kit-techmedix`, and `vallearmonia-website`.
 
 ### Cross-repository boundary
 
