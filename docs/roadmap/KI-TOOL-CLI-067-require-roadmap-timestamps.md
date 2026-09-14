@@ -4,12 +4,12 @@ area: CLI
 title: Require roadmap timestamps
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 076d58c882c94b72255c9a99bd590e2765935fb5
 created_at: 2026-09-14T08:41:16Z
-updated_at: 2026-09-14T13:41:18Z
+updated_at: 2026-09-14T13:44:06Z
 ---
 
 # Require Roadmap Timestamps
