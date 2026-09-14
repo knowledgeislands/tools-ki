@@ -4,12 +4,12 @@ title: Review estate audit
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 1a70cd7ccd7e8130ca281dc28713a834ac1a71be
 created_at: 2026-09-04T08:53:52Z
-updated_at: 2026-09-14T02:10:49Z
+updated_at: 2026-09-14T14:15:18Z
 ---
 
 ## Goal
@@ -104,6 +104,10 @@ The repair resolves the identified CONFORMANCE-1 failures without overstating a 
 ### Mini recap
 
 The audit finding was metadata drift after the specification contract gained conformance and evidence fields. The index and every accepted requirement now use that contract consistently. No further estate-audit item is required.
+
+## Done
+
+Accepted 2026-09-14 by Kris Brown on the review packet above.
 
 ## Discussion
 
