@@ -19,19 +19,12 @@ const requiredFields = [
   'updated_at'
 ] as const
 type RequiredField = (typeof requiredFields)[number]
-type WorkItemField =
-  | RequiredField
-  | 'area'
-  | 'candidate'
-  | 'transferred_from'
-  | 'housekeeping-template'
-  | 'scheduled-for'
+type WorkItemField = RequiredField | 'area' | 'transferred_from' | 'housekeeping-template' | 'scheduled-for'
 type WorkItemFields = Partial<Record<WorkItemField, string>>
 
 const allowedFields = new Set<WorkItemField>([
   ...requiredFields,
   'area',
-  'candidate',
   'transferred_from',
   'housekeeping-template',
   'scheduled-for',
@@ -56,7 +49,6 @@ export interface WorkItem {
   readonly baselineRef: null | string
   readonly createdAt: string
   readonly updatedAt: string
-  readonly candidate?: true
   readonly transferredFrom?: string
 }
 
@@ -151,8 +143,6 @@ const readItem = async (
   if (!fields.title || !/^[a-z0-9-]+$/.test(fields.theme as string) || !horizons.has(fields.horizon as WorkItemHorizon))
     throw itemError(file, 'has invalid title, theme, or horizon')
   if (!statuses.has(fields.status as WorkItemStatus)) throw itemError(file, 'has an invalid lifecycle status')
-  if (fields.horizon === 'future' ? fields.candidate !== 'true' : fields.candidate !== undefined)
-    throw itemError(file, 'must use candidate: true only for future items')
   const baseline = fields['baseline_ref']
   if (baseline !== 'null' && !/^[a-f0-9]{40}$/.test(baseline as string))
     throw itemError(file, 'baseline_ref must be null or a full commit ID')
@@ -171,7 +161,6 @@ const readItem = async (
     baselineRef: baseline === 'null' ? null : (baseline as string),
     createdAt,
     updatedAt,
-    ...(fields.candidate ? { candidate: true } : {}),
     ...(fields.transferred_from ? { transferredFrom: fields.transferred_from } : {})
   }
   return { item, file, path, contents }
@@ -263,14 +252,7 @@ const utcSecond = (milliseconds: number): string =>
 const renderHorizon = (contents: string, horizon: WorkItemHorizon, updatedAt: string): string => {
   return contents.replace(/^---\n([\s\S]*?)\n---/, (_frontmatter, fields: string) => {
     const withHorizon = fields.replace(/^horizon: .+$/m, `horizon: ${horizon}`)
-    const next =
-      horizon === 'future'
-        ? withHorizon.replace(/^horizon: .+$/m, '$&\ncandidate: true')
-        : withHorizon
-            .split('\n')
-            .filter((line) => !line.startsWith('candidate: '))
-            .join('\n')
-    const withTimestamp = next.replace(/^updated_at: .+$/m, `updated_at: ${updatedAt}`)
+    const withTimestamp = withHorizon.replace(/^updated_at: .+$/m, `updated_at: ${updatedAt}`)
     return `---\n${withTimestamp}\n---`
   })
 }
@@ -287,8 +269,7 @@ export const updateWorkItemHorizon = async (
   const content = renderHorizon(record.contents, horizon, updatedAt)
   const writes = await prepareWrites(repository, [{ path: join(planning.directory, record.file), content }])
   await publishWrites(writes, false)
-  const { candidate: _candidate, ...item } = record.item
-  return { ...item, horizon, updatedAt, ...(horizon === 'future' ? { candidate: true } : {}) }
+  return { ...record.item, horizon, updatedAt }
 }
 
 export const pruneDoneWorkItems = async (
