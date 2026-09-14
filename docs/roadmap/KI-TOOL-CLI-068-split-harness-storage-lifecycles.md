@@ -4,12 +4,12 @@ area: CLI
 title: Split Harness storage lifecycles
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 5628ddbf0b9f6ce9ac30889761f7528c0a86f9cd
 created_at: 2026-09-14T14:04:03Z
-updated_at: 2026-09-14T17:59:40Z
+updated_at: 2026-09-14T18:02:46Z
 ---
 
 # Split Harness Storage Lifecycles
@@ -111,6 +111,10 @@ The split follows lifecycle ownership rather than arbitrary file length. Install
 ### Mini recap
 
 The pre-existing mixed-responsibility storage boundary is resolved without adding internal unit tests or compatibility shims. Existing CLI contract tests provide complete behavioural evidence, and no further modularity follow-up is required.
+
+## Done
+
+Accepted 2026-09-14 under the user-approved BATCH-005 consolidated completion authority after rechecking the committed review packet and full repository audit.
 
 ## Discussion
 

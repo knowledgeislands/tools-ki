@@ -47,3 +47,11 @@ CLI-068 must reach `awaiting-review` with its own review packet, pass current-ev
 ### CLI-067 — parked exclusion
 
 CLI-067 remained `in-progress` under its earlier baseline and was not modified. Six Techne records and 19 Legal records remain behind the explicit dirty-repository stop; the mandatory Harness and `tools-ki` timestamp cutovers remain gated on their migration.
+
+### CLI-068 — accepted
+
+Committed implementation `a92cb99a282401d0b4e3cca49f8db67955240eb0` passed the current six-part review-packet check and complete 18-skill repository audit. The item closed through `ki-accept` under this authorisation's exact `done` completion target.
+
+## Batch recap
+
+CLI-068 completed and closed without public-contract change, delegation, external coordination, push, release, or remedial follow-up. CLI-067 remains the sole roadmap item and was parked without mutation because its 25 remaining estate records are in dirty repositories.
