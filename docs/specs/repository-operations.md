@@ -148,13 +148,13 @@ _Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite
 
 ### REPO-OPS-015 — Timestamped roadmap statistics
 
-`ki repo roadmap` MUST require paired `created_at` and `updated_at` canonical UTC-second timestamps on every local work item and advance `updated_at` monotonically on a horizon move. `ki repo roadmap stats` MUST report per-repository and selected-set aggregate age, inactivity, optional active-item staleness, and a version 2 JSON contract.
+`ki repo roadmap` MUST require paired `created_at` and `updated_at` canonical UTC-second timestamps on every local work item and advance `updated_at` monotonically on horizon move. `ki repo roadmap stats` MUST report per-repository and selected-set aggregate age, inactivity, and optional active-item staleness. Text output MUST render durations as compact days, hours, minutes, and seconds, omitting zero-valued leading components. The version 2 JSON contract MUST retain exact numeric seconds.
 
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `requires timestamp pairs, advances horizon-move timestamps, and reports statistics`.
 
-_Evidence:_ The focused CLI contract test and full 2026-09-14 verification suite pass.
+_Evidence:_ Focused CLI contract test and full 2026-09-15 verification suite pass.
 
 ### REPO-OPS-016 — Portable triage visibility
 

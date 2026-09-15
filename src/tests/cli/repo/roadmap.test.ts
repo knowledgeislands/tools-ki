@@ -874,7 +874,12 @@ describe('[ki repo roadmap]', () => {
     )
     await box.project.write(
       'paired/docs/roadmap/KI-TOOL-CLI-008-item.md',
-      item({ id: 'KI-TOOL-CLI-008', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' })
+      item({ id: 'KI-TOOL-CLI-008', created_at: '2026-09-01T00:57:58Z', updated_at: '2026-09-01T00:57:58Z' })
+    )
+    await box.project.write('current/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'current/docs/roadmap/KI-TOOL-CLI-010-item.md',
+      item({ id: 'KI-TOOL-CLI-010', created_at: '2026-09-03T00:00:00Z', updated_at: '2026-09-03T00:00:00Z' })
     )
 
     const listed = await box.run('ki repo --repo invalid roadmap list')
@@ -891,6 +896,9 @@ describe('[ki repo roadmap]', () => {
     const fresh = await box.run('ki repo --repo paired roadmap stats --stale-after 7d', {
       now: () => Date.parse('2026-09-03T00:00:00Z')
     })
+    const current = await box.run('ki repo --repo current roadmap stats', {
+      now: () => Date.parse('2026-09-03T00:00:00Z')
+    })
     const invalidFormat = await box.run('ki repo --repo legacy roadmap stats --format csv')
 
     expect(listed.exitCode).toBe(1)
@@ -904,9 +912,14 @@ describe('[ki repo roadmap]', () => {
     expect(statistics.output).toContain('missing: no roadmap')
     expect(statistics.output).toContain('aggregate: ITEMS=1 ACTIVE=1')
     expect(paired.exitCode).toBe(0)
-    expect(paired.output).toContain('age: MEDIAN=129600s MAX=172800s')
+    expect(paired.output).toContain('age: MEDIAN=1d 23h 31m 1s MAX=2d')
+    expect(paired.output).toContain('inactivity: MEDIAN=1d 23h 31m 1s MAX=2d')
+    expect(stale.output).toContain('stale after 1d')
     expect(stale.output).toContain('stale (2): KI-TOOL-CLI-007, KI-TOOL-CLI-008')
+    expect(fresh.output).toContain('stale after 7d')
     expect(fresh.output).toContain('stale (0): none')
+    expect(current.output).toContain('age: MEDIAN=0s MAX=0s')
+    expect(current.output).toContain('inactivity: MEDIAN=0s MAX=0s')
     expect(invalidFormat).toEqual({ exitCode: 2, output: 'ki: error: format must be text or json\n' })
   })
 

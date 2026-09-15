@@ -208,7 +208,18 @@ const parseDuration = (value: string): number => {
   return Number(match[1]) * (multipliers[match[2] as string] as number)
 }
 
-const metric = (value: number | undefined): string => (value === undefined ? 'n/a' : `${value}s`)
+const metric = (value: number | undefined): string => {
+  if (value === undefined) return 'n/a'
+  const days = Math.floor(value / 86_400)
+  const hours = Math.floor((value % 86_400) / 3_600)
+  const minutes = Math.floor((value % 3_600) / 60)
+  const seconds = value % 60
+  return (
+    [days ? `${days}d` : '', hours ? `${hours}h` : '', minutes ? `${minutes}m` : '', seconds ? `${seconds}s` : '']
+      .filter(Boolean)
+      .join(' ') || '0s'
+  )
+}
 
 const renderStatisticsText = (
   generatedAt: string,
@@ -222,7 +233,7 @@ const renderStatisticsText = (
     title: 'KI REPO ROADMAP STATISTICS',
     context: [
       { label: `generated ${generatedAt}` },
-      ...(staleAfterSeconds ? [{ label: `stale after ${staleAfterSeconds}s` }] : [])
+      ...(staleAfterSeconds ? [{ label: `stale after ${metric(staleAfterSeconds)}` }] : [])
     ],
     entries: renderedResults.map((result) => {
       if (result.roadmap) return { label: `${basename(result.repository)}: no roadmap` }

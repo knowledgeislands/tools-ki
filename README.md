@@ -126,7 +126,7 @@ ki repo --agora estate audit
 
 Its default deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, its import and export trade context, diagnostics, and a compact summary. Use `--aggregate` for one selected-set inventory grouped by local horizon; item identifiers carry the repository-aligned prefix, while no-roadmap and diagnostic sections name their repositories. It is a scanning view, not a cross-repository priority queue. Unadopted `triage` intake remains visible, but generic promote and demote operations do not adopt it. Use `--horizon <value>` or `--status <value>` to filter records before rendering.
 
-`ki repo roadmap stats` reports timestamp coverage, active count, median and maximum age and inactivity for timestamped records, with a selected-set aggregate when multiple repositories are selected. Records without the optional `created_at` / `updated_at` pair remain readable and count as missing coverage. `--stale-after <positive-duration>` accepts seconds, minutes, hours, or days such as `7d`; `--format json` emits the versioned automation contract.
+`ki repo roadmap stats` reports active count, median and maximum age and inactivity, plus a selected-set aggregate when multiple repositories are selected. Text output renders compact compound durations such as `1d 2h 3m 4s`; `--format json` retains exact numeric seconds in the versioned automation contract. `--stale-after <positive-duration>` accepts seconds, minutes, hours, or days such as `7d`.
 
 Malformed or unsafe work items become a diagnostic for only that selected repository, while other selected repositories still report; any such diagnostic makes the command exit with status `1`.
 
