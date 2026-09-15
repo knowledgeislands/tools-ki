@@ -4,12 +4,12 @@ area: CLI
 title: Align future item parsing
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 04ea8dc51a2ffefa2e4e0f65a4b7139abbb5c3f0
 created_at: 2026-09-14T19:04:19Z
-updated_at: 2026-09-14T22:01:51Z
+updated_at: 2026-09-15T07:34:14Z
 ---
 
 # Align future item parsing
@@ -107,6 +107,10 @@ The implementation removes the obsolete concept completely rather than retaining
 ### Mini recap
 
 CLI-069 is delivered and verified at `awaiting-review`. Native roadmap commands now accept standards-compliant Future items and reject the retired strict-project field without changing other roadmap semantics.
+
+## Done
+
+Accepted 2026-09-15 by Kris Brown on the review packet above.
 
 ## Discussion
 
