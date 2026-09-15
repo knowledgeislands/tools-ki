@@ -19,18 +19,19 @@ const requiredFields = [
   'updated_at'
 ] as const
 type RequiredField = (typeof requiredFields)[number]
-type WorkItemField = RequiredField | 'area' | 'transferred_from' | 'housekeeping-template' | 'scheduled-for'
+const optionalFields = [
+  'area',
+  'waiting_on_trades',
+  'intake_disposition',
+  'intake_disposition_target',
+  'transferred_from',
+  'housekeeping_template',
+  'scheduled_for'
+] as const
+type WorkItemField = RequiredField | (typeof optionalFields)[number]
 type WorkItemFields = Partial<Record<WorkItemField, string>>
 
-const allowedFields = new Set<WorkItemField>([
-  ...requiredFields,
-  'area',
-  'transferred_from',
-  'housekeeping-template',
-  'scheduled-for',
-  'created_at',
-  'updated_at'
-])
+const allowedFields = new Set<WorkItemField>([...requiredFields, ...optionalFields])
 export const workItemHorizons = ['now', 'next', 'soon', 'waiting-for', 'parked', 'future', 'triage'] as const
 export type WorkItemHorizon = (typeof workItemHorizons)[number]
 const horizons = new Set<WorkItemHorizon>(workItemHorizons)

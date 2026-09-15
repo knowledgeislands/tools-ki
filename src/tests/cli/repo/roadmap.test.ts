@@ -593,6 +593,16 @@ describe('[ki repo roadmap]', () => {
       ['KI-TOOL-CLI-003-invalid.md', item({ theme: 'Wrong' }), 'has invalid title, theme, or horizon'],
       ['KI-TOOL-CLI-003-baseline.md', item({ baseline_ref: 'wrong' }), 'baseline_ref must be null or a full commit ID'],
       ['KI-TOOL-CLI-003-candidate.md', item({ candidate: 'true' }), 'has unsupported or repeated field candidate'],
+      [
+        'KI-TOOL-CLI-003-housekeeping.md',
+        item({ 'housekeeping-template': 'HK-001' }),
+        'has unsupported or repeated field housekeeping-template'
+      ],
+      [
+        'KI-TOOL-CLI-003-scheduled.md',
+        item({ 'scheduled-for': '2026-08-09' }),
+        'has unsupported or repeated field scheduled-for'
+      ],
       ['KI-TOOL-CLI-003-list.md', item({ blocks: '[wrong]' }), 'blocks must be an identifier array']
     ] as const
     for (const [index, [name, contents, message]] of cases.entries()) {
@@ -626,9 +636,12 @@ describe('[ki repo roadmap]', () => {
       'repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md',
       item({
         area: 'CLI',
+        waiting_on_trades: '[TRD-12345678]',
+        intake_disposition: 'merged',
+        intake_disposition_target: 'KI-TOOL-CLI-002',
         transferred_from: 'example/source',
-        'housekeeping-template': 'HK-001',
-        'scheduled-for': '2026-08-09'
+        housekeeping_template: 'HK-001',
+        scheduled_for: '2026-08-09'
       })
     )
 
@@ -638,7 +651,8 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
     expect(result.output).not.toContain('has unsupported or repeated field area')
     expect(result.output).not.toContain('has unsupported or repeated field transferred_from')
-    expect(result.output).not.toContain('has unsupported or repeated field housekeeping-template')
+    expect(result.output).not.toContain('has unsupported or repeated field housekeeping_template')
+    expect(result.output).not.toContain('has unsupported or repeated field scheduled_for')
   })
 
   test('prunes only completed items across selected repositories after every target is valid', async () => {

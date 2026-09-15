@@ -96,15 +96,15 @@ _Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite
 
 ### REPO-OPS-010 — Adapter-owned roadmap metadata
 
-For the `kb-streams` adapter, `ki repo roadmap` MUST project and validate the common work lifecycle fields while accepting additional frontmatter fields, including opaque indented continuations attached to those fields, whose semantics remain owned by native Knowledge Base governance. It MUST continue rejecting missing, malformed, or repeated common fields. Project roadmaps MUST retain their closed frontmatter field contract.
+For the `kb-streams` adapter, `ki repo roadmap` MUST project and validate the common work lifecycle fields while accepting additional frontmatter fields, including opaque indented continuations attached to those fields, whose semantics remain owned by native Knowledge Base governance. It MUST continue rejecting missing, malformed, or repeated common fields. Project roadmaps MUST accept exactly the current shared frontmatter fields, including `waiting_on_trades`, terminal intake-disposition fields, `transferred_from`, `housekeeping_template`, and `scheduled_for`, while rejecting retired field spellings.
 
-A KB Streams horizon mutation MUST preserve every unconsumed frontmatter field and body byte except for the requested `horizon` change and the contract-owned `candidate` field required by or prohibited outside the `future` horizon.
+A KB Streams horizon mutation MUST preserve every unconsumed frontmatter field and body byte except for the requested `horizon` change and monotonic `updated_at` advancement.
 
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `projects adapter-owned KB metadata alongside a strict project roadmap in one selection`, `diagnoses unavailable, malformed, and misconfigured Knowledge Base roadmaps without falling back`, `rejects every malformed canonical frontmatter shape`, and `promotes and prunes flat Knowledge Base work items without changing the ledger`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-15 full suite: 753 tests and 100% V8 coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-011 — Absent roadmap projection
 
