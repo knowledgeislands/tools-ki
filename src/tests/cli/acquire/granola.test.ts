@@ -461,6 +461,36 @@ describe('[ki acquire granola import]', () => {
     expect(result.output).toContain(expected)
   })
 
+  test('ignores governance-only Granola declarations outside the selected receiver', async () => {
+    const box = await sandbox()
+    const target = await box.root.mkdir('target')
+    const governance = await box.root.mkdir('governance')
+    await setupReceivers(box, [
+      {
+        key: 'target',
+        repository: 'https://github.com/example/target',
+        path: target,
+        folderIds: ['folder-a']
+      },
+      {
+        key: 'governance',
+        repository: 'https://github.com/example/governance',
+        path: governance
+      }
+    ])
+    box.setRunner(
+      granolaFixtureRunner({
+        meetings: [{ id: 'meeting-a', date: '2026-01-02', title: 'Meeting A', folderIds: ['folder-a'] }],
+        folders: [{ id: 'folder-a', title: 'A' }]
+      }).runner
+    )
+
+    const result = await box.run(command(target))
+
+    expect(result.exitCode, result.output).toBe(0)
+    expect(result.output).toContain('Coverage: 1 discovered, 1 selected, 0 routed elsewhere')
+  })
+
   test('requires an available registered eligible target and validates selected folder identities', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')

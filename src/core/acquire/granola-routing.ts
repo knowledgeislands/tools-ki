@@ -46,7 +46,7 @@ const identifiers = (value: unknown, name: string): readonly string[] => {
   return [...items].sort((left, right) => left.localeCompare(right, 'en'))
 }
 
-const receiver = async (root: string): Promise<GranolaReceiver | undefined> => {
+const receiver = async (root: string, required: boolean): Promise<GranolaReceiver | undefined> => {
   const declaration = await readRepositoryDeclaration(join(root, '.ki.toml'))
   const skill = declaration.skills.find((candidate) => candidate.name === 'ki-housekeeping-granola')
   if (!skill) return undefined
@@ -58,10 +58,12 @@ const receiver = async (root: string): Promise<GranolaReceiver | undefined> => {
     throw new KiError('[skills.ki-housekeeping-granola].duplicate_folder_ids must be selected by folder_ids')
   const unfoldered = booleanValue(skill.configuration['unfoldered'], 'unfoldered')
   const residual = booleanValue(skill.configuration['residual'], 'residual')
-  if (!folderIds.length && !unfoldered && !residual)
+  if (!folderIds.length && !unfoldered && !residual) {
+    if (!required) return undefined
     throw new KiError(
       '[skills.ki-housekeeping-granola] must select a folder, unfoldered meetings, or residual meetings'
     )
+  }
   return {
     root,
     repository: declaredRepositoryIdentity(declaration),
@@ -85,7 +87,7 @@ export const granolaReceivers = async (options: {
     const physical = await realpath(entry.path).catch(() => {
       throw new KiError(`registered repository is unavailable: ${entry.repository}`)
     })
-    const configured = await receiver(physical)
+    const configured = await receiver(physical, physical === targetLocation.root)
     if (configured) receivers.push(configured)
   }
   const target = receivers.find((candidate) => candidate.root === targetLocation.root)
