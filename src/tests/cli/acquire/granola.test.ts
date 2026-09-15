@@ -37,6 +37,7 @@ const declaration = (receiver: ReceiverFixture): string =>
   ].join('\n')
 
 const setupReceivers = async (box: Sandbox, receivers: readonly ReceiverFixture[]): Promise<void> => {
+  box.setEnv({ KI_GRANOLA_REQUEST_INTERVAL_MS: '0' })
   for (const receiver of receivers) await writeFile(join(receiver.path, '.ki.toml'), declaration(receiver))
   await box.state.write(
     'ki/registry.toml',
@@ -371,7 +372,7 @@ describe('[ki acquire granola import]', () => {
     box.setRunner(granolaFixtureRunner({ meetings, folders }).runner)
     const omitted = await box.run(command(repository))
     expect(omitted.exitCode).toBe(0)
-    expect(omitted.output).toContain('Omissions: 1 meetings without an available transcript')
+    expect(omitted.output).toContain('Omissions: 1 meetings with unavailable detail or transcript')
     const [packageName] = await packageDirectories(repository)
     expect(await box.root.read(`target/+/_ACQUIRE/granola/${packageName}/kep.toml`)).toContain('"transcript"')
     expect(
@@ -489,6 +490,36 @@ describe('[ki acquire granola import]', () => {
 
     expect(result.exitCode, result.output).toBe(0)
     expect(result.output).toContain('Coverage: 1 discovered, 1 selected, 0 routed elsewhere')
+  })
+
+  test('preserves live Granola text projections while extracting stable identities', async () => {
+    const box = await sandbox()
+    const target = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      {
+        key: 'target',
+        repository: 'https://github.com/example/target',
+        path: target,
+        folderIds: ['folder-a']
+      }
+    ])
+    box.setRunner(
+      granolaFixtureRunner({
+        meetings: [{ id: 'meeting-a', date: '2026-01-02', title: 'Meeting & A', folderIds: ['folder-a'] }],
+        folders: [{ id: 'folder-a', title: 'A' }],
+        meetingResponseFormat: 'text'
+      }).runner
+    )
+
+    const result = await box.run(command(target))
+
+    expect(result.exitCode, result.output).toBe(0)
+    expect(result.output).toContain('Coverage: 1 discovered, 1 selected, 0 routed elsewhere')
+    const packages = await packageDirectories(target)
+    expect(packages).toHaveLength(1)
+    expect(await box.root.read(`target/+/_ACQUIRE/granola/${packages[0]}/source/originals/detail.json`)).toContain(
+      '<meeting id=\\"meeting-a\\"'
+    )
   })
 
   test('requires an available registered eligible target and validates selected folder identities', async () => {
@@ -615,7 +646,7 @@ describe('[ki acquire granola import]', () => {
           ? Promise.resolve({ exitCode: 0, output: '{"meetings":[{"id":"different"}]}\n' })
           : run()
       )
-    ).toContain('meeting detail identity differs')
+    ).toContain('meeting detail returned unrequested identity')
     expect(
       await exercise((tool, run) =>
         tool === 'get_meeting_transcript'
@@ -672,7 +703,7 @@ describe('[ki acquire granola import]', () => {
     expect(result.output).toContain(expected)
   })
 
-  test('rejects a non-file ledger, changed account, and folder results outside global discovery', async () => {
+  test('rejects a non-file ledger and changed account while retaining folder-only identities', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')
     await setupReceivers(box, [
@@ -716,16 +747,29 @@ describe('[ki acquire granola import]', () => {
         folderIds: ['folder-a']
       }
     ])
-    const extra: GranolaMeetingFixture = { id: 'meeting-extra', date: '2026-01-02', title: 'Extra' }
+    const extra: GranolaMeetingFixture = {
+      id: 'meeting-extra',
+      date: '2026-01-02',
+      title: 'Extra',
+      folderIds: ['folder-a'],
+      detailUnavailable: true,
+      transcript: null
+    }
     third.setRunner(
       granolaFixtureRunner({
-        meetings: [],
+        meetings: [extra],
         folders: [{ id: 'folder-a', title: 'A' }],
         onList: ({ folderId }) => (folderId ? [extra] : [])
       }).runner
     )
-    const outside = await third.run(command(thirdRepository))
-    expect(outside.output).toContain('absent from complete global discovery')
+    const folderOnly = await third.run(command(thirdRepository))
+    expect(folderOnly.exitCode, folderOnly.output).toBe(0)
+    expect(folderOnly.output).toContain('Coverage: 1 discovered, 1 selected, 0 routed elsewhere')
+    expect(folderOnly.output).toContain('Omissions: 1 meetings with unavailable detail or transcript')
+    const [folderOnlyPackage] = await packageDirectories(thirdRepository)
+    expect(await third.root.read(`target/+/_ACQUIRE/granola/${folderOnlyPackage}/kep.toml`)).toContain(
+      '"meeting_detail"'
+    )
   })
 
   test.each([
@@ -827,6 +871,30 @@ describe('[ki acquire granola import]', () => {
     expect(resumed.output).toContain(expected)
   })
 
+  test('retries an explicit Granola rate limit without weakening other source failures', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      {
+        key: 'target',
+        repository: 'https://github.com/example/target',
+        path: repository,
+        unfoldered: true
+      }
+    ])
+    const source = granolaFixtureRunner({
+      meetings: [{ id: 'meeting-a', date: '2026-01-01', title: 'First' }],
+      rateLimitDetailOnce: 'meeting-a'
+    })
+    box.setEnv({ KI_GRANOLA_RATE_LIMIT_BASE_MS: '0' })
+    box.setRunner(source.runner)
+
+    const acquired = await box.run(command(repository))
+
+    expect(acquired.exitCode, acquired.output).toBe(0)
+    expect(source.calls.filter((call) => call.tool === 'get_meetings')).toHaveLength(2)
+  })
+
   test('resumes verified packages after interruption and refuses corrupted staged evidence', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')
@@ -838,24 +906,25 @@ describe('[ki acquire granola import]', () => {
         unfoldered: true
       }
     ])
-    const meetings = [
-      { id: 'meeting-a', date: '2026-01-01', title: 'First' },
-      { id: 'meeting-b', date: '2026-01-02', title: 'Second' }
-    ]
-    const source = granolaFixtureRunner({ meetings, failDetailOnce: 'meeting-b' })
+    const meetings = Array.from({ length: 11 }, (_, index) => ({
+      id: `meeting-${String(index).padStart(2, '0')}`,
+      date: '2026-01-01',
+      title: `Meeting ${index}`
+    }))
+    const source = granolaFixtureRunner({ meetings, failDetailOnce: 'meeting-10' })
     box.setRunner(source.runner)
     const interrupted = await box.run(command(repository))
     expect(interrupted.exitCode).toBe(1)
-    expect(await packageDirectories(repository)).toHaveLength(1)
+    expect(await packageDirectories(repository)).toHaveLength(10)
     expect(await lstat(join(repository, '+/_ACQUIRE/granola/ledger.json')).catch(() => undefined)).toBeUndefined()
 
     const resumed = await box.run(command(repository))
     expect(resumed.exitCode).toBe(0)
-    expect(await packageDirectories(repository)).toHaveLength(2)
+    expect(await packageDirectories(repository)).toHaveLength(11)
     const ledger = JSON.parse(await box.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
       meetings: Record<string, { latest_payload_sha256: string }>
     }
-    const corrupted = ledger.meetings['meeting-a']?.latest_payload_sha256
+    const corrupted = ledger.meetings['meeting-00']?.latest_payload_sha256
     expect(corrupted).toBeDefined()
     await box.root.write(`target/+/_ACQUIRE/granola/${corrupted}/source/originals/detail.json`, '{"corrupt":true}\n')
     const refused = await box.run(command(repository))

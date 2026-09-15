@@ -6,6 +6,7 @@ export interface GranolaMeetingFixture {
   readonly title: string
   readonly folderIds?: readonly string[]
   readonly detail?: Readonly<Record<string, unknown>>
+  readonly detailUnavailable?: boolean
   readonly transcript?: Readonly<Record<string, unknown>> | null
 }
 
@@ -15,6 +16,7 @@ export interface GranolaFixture {
   readonly account?: Readonly<Record<string, unknown>>
   readonly missingTools?: readonly string[]
   readonly responseWrapper?: 'structured' | 'result' | 'content' | 'data'
+  readonly meetingResponseFormat?: 'structured' | 'text'
   readonly onList?: (options: {
     readonly since: string
     readonly until: string
@@ -22,6 +24,7 @@ export interface GranolaFixture {
     readonly matches: readonly GranolaMeetingFixture[]
   }) => readonly GranolaMeetingFixture[]
   readonly failDetailOnce?: string
+  readonly rateLimitDetailOnce?: string
 }
 
 export interface GranolaFixtureRunner {
@@ -36,9 +39,16 @@ const result = (value: unknown): { readonly exitCode: number; readonly output: s
   output: `${JSON.stringify(value)}\n`
 })
 
+const xmlAttribute = (value: string): string =>
+  value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+
+const textResult = (text: string): { readonly exitCode: number; readonly output: string } =>
+  result({ content: [{ type: 'text', text }] })
+
 export const granolaFixtureRunner = (fixture: GranolaFixture): GranolaFixtureRunner => {
   const calls: { tool: string; arguments: Readonly<Record<string, unknown>> }[] = []
   let failedDetail = false
+  let rateLimitedDetail = false
   const callResult = (value: unknown): { readonly exitCode: number; readonly output: string } => {
     if (fixture.responseWrapper === 'structured') return result({ structuredContent: value })
     if (fixture.responseWrapper === 'result') return result({ result: value })
@@ -71,22 +81,57 @@ export const granolaFixtureRunner = (fixture: GranolaFixture): GranolaFixtureRun
           meeting.date >= since && meeting.date <= until && (!folderId || meeting.folderIds?.includes(folderId))
       )
       const selected = fixture.onList?.({ since, until, folderId, matches }) ?? matches
+      if (fixture.meetingResponseFormat === 'text')
+        return textResult(
+          `Source material follows.\n<meetings_data count="${selected.length}">${selected
+            .map(
+              ({ id, date, title }) =>
+                `<meeting id="${xmlAttribute(id)}" title="${xmlAttribute(title)}" date="${xmlAttribute(date)}"></meeting>`
+            )
+            .join('')}</meetings_data>`
+        )
       return callResult({ meetings: selected.map(({ id, date, title }) => ({ id, date, title })) })
     }
     if (tool === 'get_meetings') {
-      const id = (parsed['meeting_ids'] as readonly string[] | undefined)?.[0]
-      if (id === fixture.failDetailOnce && !failedDetail) {
+      const ids = parsed['meeting_ids'] as readonly string[] | undefined
+      if (ids?.includes(fixture.rateLimitDetailOnce ?? '') && !rateLimitedDetail) {
+        rateLimitedDetail = true
+        return { exitCode: 1, output: 'Rate limit exceeded. Please slow down requests.' }
+      }
+      if (ids?.includes(fixture.failDetailOnce ?? '') && !failedDetail) {
         failedDetail = true
         return { exitCode: 1, output: 'temporary read failure' }
       }
-      const meeting = fixture.meetings.find((candidate) => candidate.id === id)
-      if (!meeting) return callResult({ meetings: [] })
-      return callResult({ meetings: [{ id: meeting.id, title: meeting.title, date: meeting.date, ...meeting.detail }] })
+      const meetings = (ids ?? [])
+        .map((id) => fixture.meetings.find((candidate) => candidate.id === id))
+        .filter((meeting): meeting is GranolaMeetingFixture => meeting !== undefined)
+      if (!meetings.length) return callResult({ meetings: [] })
+      const available = meetings.filter((meeting) => !meeting.detailUnavailable)
+      const notFound = meetings.filter((meeting) => meeting.detailUnavailable).map((meeting) => meeting.id)
+      if (fixture.meetingResponseFormat === 'text')
+        return textResult(
+          `Source material follows.\n<meetings_data count="${available.length}">${available
+            .map(
+              (meeting) =>
+                `<meeting id="${xmlAttribute(meeting.id)}" title="${xmlAttribute(meeting.title)}" date="${xmlAttribute(meeting.date)}"><summary>Summary for ${xmlAttribute(meeting.id)}</summary></meeting>`
+            )
+            .join('')}</meetings_data>`
+        )
+      return callResult({
+        meetings: available.map((meeting) => ({
+          id: meeting.id,
+          title: meeting.title,
+          date: meeting.date,
+          ...meeting.detail
+        })),
+        ...(notFound.length ? { not_found: notFound } : {})
+      })
     }
     if (tool === 'get_meeting_transcript') {
       const id = String(parsed['meeting_id'])
       const meeting = fixture.meetings.find((candidate) => candidate.id === id)
       if (meeting?.transcript === null) return { exitCode: 1, output: 'no transcript available on this plan' }
+      if (fixture.meetingResponseFormat === 'text') return textResult(`Transcript for ${id}`)
       return callResult(meeting?.transcript ?? { meeting_id: id, transcript: `Transcript for ${id}` })
     }
     return { exitCode: 1, output: `unexpected tool ${tool}` }

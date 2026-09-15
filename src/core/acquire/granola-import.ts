@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import type { KiContext } from '../../context.ts'
 import { KiError } from '../errors.ts'
 import { granolaReceivers, type RoutedGranolaMeeting, routeGranolaMeetings } from './granola-routing.ts'
-import { type GranolaTranscript, granolaSource, stableJson } from './granola-source.ts'
+import { type GranolaDetail, type GranolaTranscript, granolaSource, stableJson } from './granola-source.ts'
 import {
   enumerateGranolaMeetings,
   type GranolaWindowEvidence,
@@ -126,11 +126,11 @@ const transcriptFile = (transcript: GranolaTranscript): KepFile[] =>
 
 const meetingFiles = (
   meeting: RoutedGranolaMeeting,
-  detail: unknown,
+  detail: GranolaDetail,
   transcript: GranolaTranscript
 ): readonly KepFile[] => [
   { path: 'source/originals/listing.json', content: `${stableJson(meeting.projection)}\n` },
-  { path: 'source/originals/detail.json', content: `${stableJson(detail)}\n` },
+  { path: 'source/originals/detail.json', content: `${stableJson(detail.projection)}\n` },
   ...transcriptFile(transcript),
   {
     path: 'source/originals/folder-evidence.json',
@@ -156,10 +156,15 @@ const kepMetadata = (options: {
   readonly interval: { readonly since: string; readonly until: string }
   readonly identityCheckpointSha256: string
   readonly observedAt: string
+  readonly detail: GranolaDetail
   readonly transcript: GranolaTranscript
   readonly originalCount: number
 }): string => {
-  const omissions = [...KNOWN_OMISSIONS, ...(options.transcript.state === 'unavailable' ? ['transcript'] : [])].sort()
+  const omissions = [
+    ...KNOWN_OMISSIONS,
+    ...(options.detail.state === 'unavailable' ? ['meeting_detail'] : []),
+    ...(options.transcript.state === 'unavailable' ? ['transcript'] : [])
+  ].sort()
   return [
     'format = "kep"',
     'format_version = "0.1.0"',
@@ -212,6 +217,12 @@ const writeLedger = async (path: string, ledger: GranolaLedger): Promise<void> =
   }
 }
 
+const batches = <T>(items: readonly T[], size: number): readonly (readonly T[])[] => {
+  const result: T[][] = []
+  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size))
+  return result
+}
+
 export const importGranola = async (
   options: GranolaImportOptions,
   context: KiContext
@@ -232,16 +243,18 @@ export const importGranola = async (
   const folderMeetings = new Map(
     [...folderEnumerations.entries()].map(([id, result]) => [id, result.meetings] as const)
   )
-  for (const [folderId, meetings] of folderMeetings)
-    for (const meetingId of meetings.keys())
-      if (!global.meetings.has(meetingId))
-        throw new KiError(
-          `Granola folder ${folderId} returned meeting ${meetingId} absent from complete global discovery`
-        )
+  const discoveredMeetings = new Map(global.meetings)
+  for (const meetings of folderMeetings.values())
+    for (const [meetingId, meeting] of meetings) {
+      const existing = discoveredMeetings.get(meetingId)
+      if (existing && stableJson(existing.projection) !== stableJson(meeting.projection))
+        throw new KiError(`Granola meeting ${meetingId} has conflicting global and folder projections`)
+      if (!existing) discoveredMeetings.set(meetingId, meeting)
+    }
   const routing = routeGranolaMeetings({
     target,
     receivers,
-    meetings: global.meetings,
+    meetings: discoveredMeetings,
     folders,
     folderMeetings
   })
@@ -260,42 +273,47 @@ export const importGranola = async (
   let unchanged = 0
   let omissions = 0
   if (!options.dryRun) await mkdir(base, { recursive: true })
-  for (const meeting of routing.selected) {
-    const detail = await source.detail(meeting.id)
-    const transcript = await source.transcript(meeting.id)
-    if (transcript.state === 'unavailable') omissions += 1
-    const files = meetingFiles(meeting, detail, transcript)
-    const payload = await prepareKep(files)
-    const destination = join(base, payload.payloadSha256)
-    const destinationState = await lstat(destination).catch(() => undefined)
-    if (destinationState) await verifyKep(destination, payload.payloadSha256)
-    else if (!options.dryRun)
-      await publishKep({
-        directory: destination,
-        files,
-        payload,
-        metadata: kepMetadata({
-          payloadSha256: payload.payloadSha256,
-          packageId: payload.packageId,
-          accountSha256: source.accountSha256,
-          schemaSha256: source.schemaSha256,
-          meeting,
-          interval,
-          identityCheckpointSha256: identitySha256,
-          observedAt,
-          transcript,
-          originalCount: files.filter((file) => file.path.startsWith('source/originals/')).length
+  for (const batch of batches(routing.selected, 10)) {
+    const details = await source.details(batch.map((meeting) => meeting.id))
+    for (const meeting of batch) {
+      const detail = details.get(meeting.id)
+      if (!detail) throw new KiError(`Granola detail batch omitted ${meeting.id}`)
+      const transcript = await source.transcript(meeting.id)
+      if (detail.state === 'unavailable' || transcript.state === 'unavailable') omissions += 1
+      const files = meetingFiles(meeting, detail, transcript)
+      const payload = await prepareKep(files)
+      const destination = join(base, payload.payloadSha256)
+      const destinationState = await lstat(destination).catch(() => undefined)
+      if (destinationState) await verifyKep(destination, payload.payloadSha256)
+      else if (!options.dryRun)
+        await publishKep({
+          directory: destination,
+          files,
+          payload,
+          metadata: kepMetadata({
+            payloadSha256: payload.payloadSha256,
+            packageId: payload.packageId,
+            accountSha256: source.accountSha256,
+            schemaSha256: source.schemaSha256,
+            meeting,
+            interval,
+            identityCheckpointSha256: identitySha256,
+            observedAt,
+            detail,
+            transcript,
+            originalCount: files.filter((file) => file.path.startsWith('source/originals/')).length
+          })
         })
-      })
-    const old = meetings[meeting.id]
-    if (old?.latest_payload_sha256 === payload.payloadSha256) unchanged += 1
-    else if (old) amended += 1
-    else created += 1
-    meetings[meeting.id] = {
-      latest_payload_sha256: payload.payloadSha256,
-      versions: [...new Set([...(old?.versions ?? []), payload.payloadSha256])],
-      folder_ids: meeting.folderIds,
-      inferred_unfoldered: meeting.inferredUnfoldered
+      const old = meetings[meeting.id]
+      if (old?.latest_payload_sha256 === payload.payloadSha256) unchanged += 1
+      else if (old) amended += 1
+      else created += 1
+      meetings[meeting.id] = {
+        latest_payload_sha256: payload.payloadSha256,
+        versions: [...new Set([...(old?.versions ?? []), payload.payloadSha256])],
+        folder_ids: meeting.folderIds,
+        inferred_unfoldered: meeting.inferredUnfoldered
+      }
     }
   }
 
@@ -318,7 +336,7 @@ export const importGranola = async (
     repository: target.repository,
     since: interval.since,
     until: interval.until,
-    discovered: global.meetings.size,
+    discovered: discoveredMeetings.size,
     selected: routing.selected.length,
     excluded: routing.excluded,
     unfoldered: routing.unfoldered,
