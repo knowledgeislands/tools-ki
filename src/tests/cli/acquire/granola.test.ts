@@ -519,6 +519,8 @@ describe('[ki acquire granola import]', () => {
     expect(document).toContain('# Meeting & A')
     expect(document).toContain('Summary for meeting-a')
     expect(document).toContain('Transcript for meeting-a')
+    expect(document).not.toContain('"transcript"')
+    expect(document).not.toContain('source material')
   })
 
   test('requires an available registered eligible target and validates selected folder identities', async () => {

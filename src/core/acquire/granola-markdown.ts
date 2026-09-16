@@ -98,11 +98,42 @@ const isoDate = (value: string): string => {
   return Number.isNaN(parsed.valueOf()) ? 'undated' : parsed.toISOString().slice(0, 10)
 }
 
+const embeddedRecord = (value: string): Readonly<Record<string, unknown>> | undefined => {
+  const start = value.indexOf('{')
+  const end = value.lastIndexOf('}')
+  if (start === -1 || end < start) return undefined
+  try {
+    return record(JSON.parse(value.slice(start, end + 1)) as unknown)
+  } catch {
+    return undefined
+  }
+}
+
 const transcriptText = (transcript: GranolaTranscript): string | undefined => {
   if (transcript.state === 'unavailable') return undefined
-  if (typeof transcript.projection === 'string') return transcript.projection.trim()
+  if (typeof transcript.projection === 'string') {
+    const projection = transcript.projection.trim()
+    return (
+      stringField(embeddedRecord(projection), ['transcript', 'text', 'content']) ??
+      element(projection, 'transcript') ??
+      projection
+    )
+  }
   return stringField(transcript.projection, ['transcript', 'text', 'content'])
 }
+
+const readableNotes = (value: string): string =>
+  value
+    .split(/\r?\n/)
+    .map((line) => {
+      const list = /^( *)(?:[-+*])\s+/.exec(line)
+      if (!list) return line.trimEnd()
+      const indent = '  '.repeat(Math.floor((list[1]?.length ?? 0) / 4))
+      return `${indent}- ${line.slice(list[0].length).trimEnd()}`
+    })
+    .join('\n')
+    .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '_$1_')
+    .trim()
 
 const folderName = (folder: GranolaFolder): string | undefined =>
   stringField(folder.projection, ['name', 'title']) ??
@@ -131,10 +162,11 @@ export const renderGranolaMeeting = (options: {
     stringField(options.meeting.projection, ['date', 'meeting_date']) ??
     attribute(options.meeting.projection, 'date') ??
     'Unknown date'
-  const summary =
+  const summary = readableNotes(
     stringField(detail, ['summary', 'notes', 'generated_notes']) ??
-    element(detail, 'summary') ??
-    '_No notes available._'
+      element(detail, 'summary') ??
+      '_No notes available._'
+  )
   const participants = [
     ...listField(detail, ['participants', 'known_participants', 'attendees']),
     ...participantLines(element(detail, 'known_participants'))

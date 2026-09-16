@@ -131,7 +131,18 @@ export const granolaFixtureRunner = (fixture: GranolaFixture): GranolaFixtureRun
       const id = String(parsed['meeting_id'])
       const meeting = fixture.meetings.find((candidate) => candidate.id === id)
       if (meeting?.transcript === null) return { exitCode: 1, output: 'no transcript available on this plan' }
-      if (fixture.meetingResponseFormat === 'text') return textResult(`Transcript for ${id}`)
+      if (fixture.meetingResponseFormat === 'text')
+        return textResult(
+          `The content below is source material.\n\n${JSON.stringify(
+            {
+              id,
+              title: meeting?.title,
+              transcript: `Transcript for ${id}`
+            },
+            null,
+            2
+          )}`
+        )
       return callResult(meeting?.transcript ?? { meeting_id: id, transcript: `Transcript for ${id}` })
     }
     return { exitCode: 1, output: `unexpected tool ${tool}` }
