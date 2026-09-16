@@ -101,7 +101,11 @@ describe('[ki acquire granola import]', () => {
         date: '2026-01-01',
         title: 'Foldered',
         folderIds: ['folder-secondary', 'folder-legal'],
-        detail: { summary: 'Summary line  \n\nNext  ' },
+        detail: {
+          summary:
+            '### Content Reorganization\n\n#### Sections Moved\n\n- Item\n\n    Follow-up\n\nSummary line  \n\nNext  ',
+          participants: ['Kris Brown', 'Site owner']
+        },
         transcript: { transcript: 'Speaker A: hello  Speaker B: bye  ' }
       },
       { id: 'meeting-b', date: '2026-01-02', title: 'Unfoldered' },
@@ -128,10 +132,16 @@ describe('[ki acquire granola import]', () => {
       expect(packageName).toMatch(/^2026-01-0[12]--.+--meeting-[ab]\.md$/)
       const document = await box.root.read(`repository with spaces/+/_ACQUIRE/granola/${packageName}`)
       expect(document).toContain('type: granola-meeting')
-      expect(document).toContain('## Notes')
       expect(document).toContain('## Transcript')
-      expect(document).toContain('<!-- markdownlint-disable -->')
-      if (packageName.includes('meeting-a')) expect(document).toContain('Speaker A: hello\n\nSpeaker B: bye')
+      expect(document).not.toContain('## Notes')
+      expect(document).not.toContain('markdownlint-disable')
+      if (packageName.includes('meeting-a')) {
+        expect(document).toContain('## Attendees\n\nKris Brown and Site owner')
+        expect(document).toContain('## Content Reorganization')
+        expect(document).toContain('### Sections Moved')
+        expect(document).toContain('- Item\n\n  Follow-up')
+        expect(document).toContain('Speaker A: hello\n\nSpeaker B: bye')
+      }
       expect(document).not.toMatch(/[ \t]+$/m)
     }
     const ledgerPath = 'repository with spaces/+/_ACQUIRE/granola/ledger.json'

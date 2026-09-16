@@ -122,24 +122,56 @@ const transcriptText = (transcript: GranolaTranscript): string | undefined => {
   return stringField(transcript.projection, ['transcript', 'text', 'content'])
 }
 
-const readableNotes = (value: string): string =>
-  value
-    .split(/\r?\n/)
+const readableNotes = (value: string, title: string): string => {
+  const source = value.split(/\r?\n/)
+  const headings = source.flatMap((line) => {
+    const match = /^(#{1,6})\s+(.+)$/.exec(line.trimEnd())
+    return match?.[1] ? [match[1].length] : []
+  })
+  const minimumHeading = headings.length ? Math.min(...headings) : undefined
+  const lines = source
     .map((line) => {
+      const heading = /^(#{1,6})\s+(.+)$/.exec(line.trimEnd())
+      if (heading?.[1] && heading[2]) {
+        if (heading[1].length === minimumHeading && heading[2].trim().toLocaleLowerCase() === title.toLocaleLowerCase())
+          return ''
+        const level = Math.min(6, heading[1].length + (minimumHeading ? 2 - minimumHeading : 0))
+        return `${'#'.repeat(level)} ${heading[2].trim()}`
+      }
       const list = /^( *)(?:[-+*])\s+/.exec(line)
-      if (!list) return line.trimEnd()
+      if (!list) {
+        const continuation = /^( {4,})(\S.*)$/.exec(line)
+        if (continuation?.[1] && continuation[2])
+          return `${'  '.repeat(Math.floor(continuation[1].length / 4))}${continuation[2].trimEnd()}`
+        return line.trimEnd()
+      }
       const indent = '  '.repeat(Math.floor((list[1]?.length ?? 0) / 4))
       return `${indent}- ${line.slice(list[0].length).trimEnd()}`
     })
     .join('\n')
     .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '_$1_')
+    .replace(/\n{3,}/g, '\n\n')
     .trim()
+  const firstContent = lines.split('\n').find((line) => line.trim())
+  return firstContent?.startsWith('## ') ? lines : `## Summary\n\n${lines}`
+}
+
+const participantsText = (participants: readonly string[]): string => {
+  if (participants.length < 2) return participants[0] ?? ''
+  if (participants.length === 2) return `${participants[0]} and ${participants[1]}`
+  return `${participants.slice(0, -1).join(', ')}, and ${participants.at(-1)}`
+}
+
+const autolinkAddresses = (value: string): string =>
+  value
+    .replace(/(?<![<\w])([\w.+-]+@[\w.-]+\.[A-Za-z]{2,})(?![>\w])/g, '<$1>')
+    .replace(/(?<![<(])(https?:\/\/[^\s<>]+[^\s<>.,;:!?])/g, '<$1>')
 
 const readableTranscript = (value: string): string =>
-  value
+  autolinkAddresses(value)
     .replace(/\s+(?=(?:Me|Them|Speaker [A-Z]):\s)/g, '\n')
     .split(/\r?\n/)
-    .map((line) => line.trim())
+    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
     .filter(Boolean)
     .join('\n\n')
 
@@ -173,7 +205,8 @@ export const renderGranolaMeeting = (options: {
   const summary = readableNotes(
     stringField(detail, ['summary', 'notes', 'generated_notes']) ??
       element(detail, 'summary') ??
-      '_No notes available._'
+      '_No notes available._',
+    title
   )
   const participants = [
     ...listField(detail, ['participants', 'known_participants', 'attendees']),
@@ -220,22 +253,13 @@ export const renderGranolaMeeting = (options: {
     ...frontmatter,
     '',
     `# ${title}`,
-    '',
-    '## Notes',
-    '',
-    '<!-- markdownlint-disable -->',
+    ...(participants.length ? ['', '## Attendees', '', participantsText(participants)] : []),
     '',
     summary,
     '',
-    '<!-- markdownlint-enable -->',
-    '',
     '## Transcript',
     '',
-    '<!-- markdownlint-disable -->',
-    '',
     transcript ? readableTranscript(transcript) : '_Transcript unavailable from the source._',
-    '',
-    '<!-- markdownlint-enable -->',
     ''
   ]
   const content = sections.join('\n').replace(/[ \t]+$/gm, '')
