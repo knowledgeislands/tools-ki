@@ -137,6 +137,7 @@ const readableNotes = (value: string): string =>
 
 const readableTranscript = (value: string): string =>
   value
+    .replace(/\s+(?=(?:Me|Them|Speaker [A-Z]):\s)/g, '\n')
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
@@ -222,11 +223,19 @@ export const renderGranolaMeeting = (options: {
     '',
     '## Notes',
     '',
+    '<!-- markdownlint-disable -->',
+    '',
     summary,
+    '',
+    '<!-- markdownlint-enable -->',
     '',
     '## Transcript',
     '',
+    '<!-- markdownlint-disable -->',
+    '',
     transcript ? readableTranscript(transcript) : '_Transcript unavailable from the source._',
+    '',
+    '<!-- markdownlint-enable -->',
     ''
   ]
   const content = sections.join('\n').replace(/[ \t]+$/gm, '')
