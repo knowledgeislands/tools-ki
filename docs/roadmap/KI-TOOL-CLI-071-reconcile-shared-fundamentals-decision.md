@@ -4,12 +4,12 @@ area: CLI
 title: Reconcile Shared Fundamentals Decision
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: ac9c59b0877accb9b527fdb534f27ba7a8560967
 created_at: 2026-09-16T09:08:39Z
-updated_at: 2026-09-16T13:13:01Z
+updated_at: 2026-09-16T16:46:35Z
 ---
 
 # Reconcile Shared Fundamentals Decision
@@ -96,6 +96,10 @@ The change is confined to the approved projection and its local lifecycle eviden
 ### Mini recap
 
 CLI-071 is delivered and verified at `awaiting-review`; tools-ki now matches the approved shared Decision Record projection.
+
+## Done
+
+Accepted 2026-09-16 by Kris Brown on the review packet above.
 
 ## Discussion
 
