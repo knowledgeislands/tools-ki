@@ -5,6 +5,7 @@ export interface GranolaMeetingFixture {
   readonly date: string
   readonly title: string
   readonly folderIds?: readonly string[]
+  readonly listing?: Readonly<Record<string, unknown>>
   readonly detail?: Readonly<Record<string, unknown>>
   readonly detailUnavailable?: boolean
   readonly transcript?: Readonly<Record<string, unknown>> | null
@@ -90,7 +91,7 @@ export const granolaFixtureRunner = (fixture: GranolaFixture): GranolaFixtureRun
             )
             .join('')}</meetings_data>`
         )
-      return callResult({ meetings: selected.map(({ id, date, title }) => ({ id, date, title })) })
+      return callResult({ meetings: selected.map(({ id, date, title, listing }) => ({ id, date, title, ...listing })) })
     }
     if (tool === 'get_meetings') {
       const ids = parsed['meeting_ids'] as readonly string[] | undefined

@@ -206,8 +206,7 @@ const acquiredAtFromDocument = async (path: string): Promise<string | undefined>
   const match = /^acquired_at: (".*")$/m.exec(await readFile(path, 'utf8'))
   if (!match?.[1]) return undefined
   try {
-    const value = JSON.parse(match[1]) as unknown
-    return typeof value === 'string' ? value : undefined
+    return JSON.parse(match[1]) as string
   } catch {
     return undefined
   }
@@ -314,6 +313,7 @@ export const importGranola = async (
     const details = await source.details(batch.map((meeting) => meeting.id))
     for (const meeting of batch) {
       const detail = details.get(meeting.id)
+      /* v8 ignore next -- granolaSource.details either accounts for every requested identity or fails the batch. */
       if (!detail) throw new KiError(`Granola detail batch omitted ${meeting.id}`)
       const transcript = await source.transcript(meeting.id)
       const sourceSha256 = sourceHash({ detail, meeting, transcript })

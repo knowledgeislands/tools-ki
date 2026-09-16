@@ -135,7 +135,7 @@ const readableNotes = (value: string, title: string): string => {
       if (heading?.[1] && heading[2]) {
         if (heading[1].length === minimumHeading && heading[2].trim().toLocaleLowerCase() === title.toLocaleLowerCase())
           return ''
-        const level = Math.min(6, heading[1].length + (minimumHeading ? 2 - minimumHeading : 0))
+        const level = Math.min(6, heading[1].length + 2 - (minimumHeading as number))
         return `${'#'.repeat(level)} ${heading[2].trim()}`
       }
       const list = /^( *)(?:[-+*])\s+/.exec(line)
@@ -145,7 +145,7 @@ const readableNotes = (value: string, title: string): string => {
           return `${'  '.repeat(Math.floor(continuation[1].length / 4))}${continuation[2].trimEnd()}`
         return line.trimEnd()
       }
-      const indent = '  '.repeat(Math.floor((list[1]?.length ?? 0) / 4))
+      const indent = '  '.repeat(Math.floor((list[1] as string).length / 4))
       return `${indent}- ${line.slice(list[0].length).trimEnd()}`
     })
     .join('\n')
@@ -157,7 +157,7 @@ const readableNotes = (value: string, title: string): string => {
 }
 
 const participantsText = (participants: readonly string[]): string => {
-  if (participants.length < 2) return participants[0] ?? ''
+  if (participants.length < 2) return participants[0] as string
   if (participants.length === 2) return `${participants[0]} and ${participants[1]}`
   return `${participants.slice(0, -1).join(', ')}, and ${participants.at(-1)}`
 }
@@ -220,7 +220,7 @@ export const renderGranolaMeeting = (options: {
   ].sort()
   const selectedFolders = options.meeting.folderIds.map((id) => ({
     id,
-    name: folderName(options.folders.find((folder) => folder.id === id) ?? { id, projection: {} })
+    name: folderName(options.folders.find((folder) => folder.id === id) as GranolaFolder)
   }))
   const path = `${isoDate(date)}--${slug(title)}--${options.meeting.id}.md`
   if (path.includes('/') || path.includes('\\'))
