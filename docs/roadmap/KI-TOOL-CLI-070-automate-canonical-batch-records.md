@@ -119,7 +119,7 @@ CLI-070 is delivered and awaiting human review from baseline `1e5853783a9116d1de
 
 ## Done
 
-Accepted 2026-09-16 by Kris Brown on the review packet above, including verified help, completion, changelog, manual, README, guide, and command-inventory coverage.
+Accepted 2026-09-16 by Kris Brown on the review packet above.
 
 ## Discussion
 
