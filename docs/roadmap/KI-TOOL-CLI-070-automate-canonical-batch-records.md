@@ -4,12 +4,12 @@ area: CLI
 title: Automate Canonical Batch Records
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 1e5853783a9116d1de984871b776970d48ccb732
 created_at: 2026-09-14T22:08:09Z
-updated_at: 2026-09-16T11:27:10Z
+updated_at: 2026-09-16T13:03:54Z
 ---
 
 # Automate Canonical Batch Records
@@ -116,6 +116,10 @@ The implementation remains modular: CLI parsing is isolated in the command modul
 ### Mini recap
 
 CLI-070 is delivered and awaiting human review from baseline `1e5853783a9116d1de984871b776970d48ccb732`. No push or acceptance action was performed.
+
+## Done
+
+Accepted 2026-09-16 by Kris Brown on the review packet above, including verified help, completion, changelog, manual, README, guide, and command-inventory coverage.
 
 ## Discussion
 
