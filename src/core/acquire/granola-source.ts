@@ -139,6 +139,29 @@ const explicitlyUnavailableDetails = (value: unknown): ReadonlySet<string> => {
   return new Set(notFound as readonly string[])
 }
 
+const detailResponse = (response: unknown, meetingIds: readonly string[]): ReadonlyMap<string, GranolaDetail> => {
+  const requested = new Set(meetingIds)
+  const found = new Map<string, GranolaDetail>()
+  for (const meeting of meetingCollection(response, 'meeting detail')) {
+    if (!requested.has(meeting.id))
+      throw new KiError(`Granola meeting detail returned unrequested identity ${meeting.id}`)
+    if (found.has(meeting.id)) throw new KiError(`Granola meeting detail repeated identity ${meeting.id}`)
+    found.set(meeting.id, { state: 'available', projection: meeting.projection })
+  }
+  for (const meetingId of explicitlyUnavailableDetails(response)) {
+    if (!requested.has(meetingId))
+      throw new KiError(`Granola meeting detail marked unrequested identity ${meetingId} unavailable`)
+    if (found.has(meetingId))
+      throw new KiError(`Granola meeting detail both returned and marked ${meetingId} unavailable`)
+    found.set(meetingId, {
+      state: 'unavailable',
+      projection: { not_found: [meetingId] },
+      reason: 'provider returned no detail for a listed meeting identity'
+    })
+  }
+  return found
+}
+
 const identity = (value: unknown, names: readonly [string, ...string[]], label: string): string => {
   const item = record(value, label)
   for (const name of names) {
@@ -280,32 +303,14 @@ export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessE
       if (!meetingIds.length || meetingIds.length > 10 || new Set(meetingIds).size !== meetingIds.length)
         throw new KiError('Granola meeting detail batch must contain between one and ten unique identities')
       const response = await call(runner, environment, 'get_meetings', { meeting_ids: meetingIds }, gate)
-      const meetings = meetingCollection(response, 'meeting detail')
-      const requested = new Set(meetingIds)
-      const found = new Map<string, GranolaDetail>()
-      for (const meeting of meetings) {
-        if (!requested.has(meeting.id))
-          throw new KiError(`Granola meeting detail returned unrequested identity ${meeting.id}`)
-        if (found.has(meeting.id)) throw new KiError(`Granola meeting detail repeated identity ${meeting.id}`)
-        found.set(meeting.id, { state: 'available', projection: meeting.projection })
-      }
-      const unavailable = explicitlyUnavailableDetails(response)
-      for (const meetingId of unavailable) {
-        if (!requested.has(meetingId))
-          throw new KiError(`Granola meeting detail marked unrequested identity ${meetingId} unavailable`)
-        if (found.has(meetingId))
-          throw new KiError(`Granola meeting detail both returned and marked ${meetingId} unavailable`)
-        found.set(meetingId, {
-          state: 'unavailable',
-          projection: { not_found: [meetingId] },
-          reason: 'provider returned no detail for the listed meeting identity'
-        })
-      }
+      const found = new Map(detailResponse(response, meetingIds))
       const missing = meetingIds.filter((meetingId) => !found.has(meetingId))
-      if (missing.length && meetingIds.length === 1)
-        throw new KiError(`Granola meeting detail ${meetingIds[0]} did not return exactly one meeting`)
-      if (missing.length)
-        throw new KiError(`Granola meeting detail did not account for requested identity ${missing[0]}`)
+      for (const meetingId of missing) {
+        const retry = await call(runner, environment, 'get_meetings', { meeting_ids: [meetingId] }, gate)
+        const resolved = detailResponse(retry, [meetingId]).get(meetingId)
+        if (!resolved) throw new KiError(`Granola meeting detail ${meetingId} did not return exactly one meeting`)
+        found.set(meetingId, resolved)
+      }
       return found
     },
     transcript: async (meetingId) => {

@@ -1374,7 +1374,7 @@ describe('[ki acquire import --adapter granola]', () => {
     ).toContain('get_meeting_transcript failed: mcporter exited non-zero')
   })
 
-  test('rejects malformed request timing and incomplete multi-meeting detail batches', async () => {
+  test('rejects malformed request timing and resolves detail identities omitted from a batch', async () => {
     const invalidInterval = await sandbox()
     const intervalRepository = await invalidInterval.root.mkdir('target')
     await setupReceivers(invalidInterval, [
@@ -1458,18 +1458,34 @@ describe('[ki acquire import --adapter granola]', () => {
         { id: 'meeting-b', date: '2026-01-02', title: 'B' }
       ]
     }).runner
+    const detailCalls: string[][] = []
     batch.setRunner((executable, arguments_, environment) => {
       const tool = (arguments_[1] ?? '').replace('granola.', '')
-      if (tool === 'get_meetings')
+      if (tool === 'get_meetings') {
+        const argumentsIndex = arguments_.indexOf('--args')
+        const parsed = JSON.parse(arguments_[argumentsIndex + 1] ?? '{}') as {
+          readonly meeting_ids?: readonly string[]
+        }
+        const meetingIds = [...(parsed.meeting_ids ?? [])]
+        detailCalls.push(meetingIds)
+        if (meetingIds.length === 1)
+          return Promise.resolve({
+            exitCode: 0,
+            output: '{"meetings":[],"not_found":["meeting-b"]}\n'
+          })
         return Promise.resolve({
           exitCode: 0,
-          output: '{"meetings":[{"id":"meeting-a","title":"A","date":"2026-01-02"}]}\n'
+          output:
+            '{"content":[{"type":"text","text":"<meetings_data count=\\"1\\"><meeting id=\\"meeting-a\\"></meeting></meetings_data>"}]}\n'
         })
+      }
       return base(executable, arguments_, environment)
     })
-    expect((await batch.run(command(batchRepository))).output).toContain(
-      'meeting detail did not account for requested identity meeting-b'
-    )
+    const result = await batch.run(command(batchRepository))
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('2 new')
+    expect(result.output).toContain('1 omissions')
+    expect(detailCalls).toEqual([['meeting-a', 'meeting-b'], ['meeting-b']])
   })
 
   test.each([
