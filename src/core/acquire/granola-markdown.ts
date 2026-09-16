@@ -190,5 +190,6 @@ export const renderGranolaMeeting = (options: {
     transcript || '_Transcript unavailable from the source._',
     ''
   ]
-  return { content: sections.join('\n'), date, omissions, path, title }
+  const content = sections.join('\n').replace(/[ \t]+$/gm, '')
+  return { content, date, omissions, path, title }
 }
