@@ -25,7 +25,7 @@ const renderGranolaResult = (result: GranolaImportResult): string =>
     `Interval: ${result.since} through ${result.until} (complete exhaustive revalidation)`,
     `Coverage: ${result.discovered} discovered, ${result.selected} selected, ${result.excluded} routed elsewhere`,
     `Routing: ${result.unfoldered} unfoldered, ${result.duplicated} intentionally duplicated`,
-    `Packages: ${result.created} new, ${result.amended} amended, ${result.unchanged} unchanged`,
+    `Meetings: ${result.created} new, ${result.amended} amended, ${result.unchanged} unchanged`,
     `Omissions: ${result.omissions} meetings with unavailable detail or transcript`,
     `Ledger: ${result.ledgerChanged ? (result.dryRun ? 'would advance' : 'advanced after package verification') : 'unchanged'}`,
     'Boundary: read-only Granola MCP; no source mutation, harvesting, cross-repository write, archive, or deletion.',

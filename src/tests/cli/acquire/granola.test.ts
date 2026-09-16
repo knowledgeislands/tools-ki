@@ -1,4 +1,4 @@
-import { lstat, mkdir, readdir, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
@@ -70,12 +70,12 @@ const command = (repository: string, ...options: readonly string[]): readonly st
 
 const packageDirectories = async (repository: string): Promise<readonly string[]> =>
   (await readdir(join(repository, '+/_ACQUIRE/granola'), { withFileTypes: true }))
-    .filter((entry) => entry.isDirectory())
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
     .map((entry) => entry.name)
     .sort()
 
 describe('[ki acquire granola import]', () => {
-  test('stages verified immutable meeting KEPs and leaves unchanged repeats untouched', async () => {
+  test('stages one readable Markdown file per meeting and leaves unchanged repeats untouched', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('repository with spaces')
     const receiver: ReceiverFixture = {
@@ -119,17 +119,15 @@ describe('[ki acquire granola import]', () => {
 
     expect(first.exitCode, first.output).toBe(0)
     expect(first.output).toContain('Coverage: 3 discovered, 2 selected, 1 routed elsewhere')
-    expect(first.output).toContain('Packages: 2 new, 0 amended, 0 unchanged')
+    expect(first.output).toContain('Meetings: 2 new, 0 amended, 0 unchanged')
     const packages = await packageDirectories(repository)
     expect(packages).toHaveLength(2)
     for (const packageName of packages) {
-      expect(packageName).toMatch(/^[a-f0-9]{64}$/)
-      expect(await box.root.read(`repository with spaces/+/_ACQUIRE/granola/${packageName}/kep.toml`)).toContain(
-        `payload_sha256 = "${packageName}"`
-      )
-      expect(
-        await box.root.read(`repository with spaces/+/_ACQUIRE/granola/${packageName}/checksums/sha256sums.txt`)
-      ).toContain('source/originals/detail.json')
+      expect(packageName).toMatch(/^2026-01-0[12]--.+--meeting-[ab]\.md$/)
+      const document = await box.root.read(`repository with spaces/+/_ACQUIRE/granola/${packageName}`)
+      expect(document).toContain('type: granola-meeting')
+      expect(document).toContain('## Notes')
+      expect(document).toContain('## Transcript')
     }
     const ledgerPath = 'repository with spaces/+/_ACQUIRE/granola/ledger.json'
     const originalLedger = await box.root.read(ledgerPath)
@@ -137,7 +135,7 @@ describe('[ki acquire granola import]', () => {
     const repeatedSource = granolaFixtureRunner({ meetings, folders })
     box.setRunner(repeatedSource.runner)
     const repeated = await box.run(command(repository), { now: () => Date.parse('2026-01-05T12:00:00Z') })
-    expect(repeated.output).toContain('Packages: 0 new, 0 amended, 2 unchanged')
+    expect(repeated.output).toContain('Meetings: 0 new, 0 amended, 2 unchanged')
     expect(repeated.output).toContain('Ledger: unchanged')
     expect(await box.root.read(ledgerPath)).toBe(originalLedger)
 
@@ -151,8 +149,8 @@ describe('[ki acquire granola import]', () => {
     })
     box.setRunner(amendedSource.runner)
     const amended = await box.run(command(repository), { now: () => Date.parse('2026-01-06T12:00:00Z') })
-    expect(amended.output).toContain('Packages: 0 new, 1 amended, 1 unchanged')
-    expect(await packageDirectories(repository)).toHaveLength(3)
+    expect(amended.output).toContain('Meetings: 0 new, 1 amended, 1 unchanged')
+    expect(await packageDirectories(repository)).toHaveLength(2)
     const ledger = JSON.parse(await box.root.read(ledgerPath)) as {
       meetings: Record<string, { versions: string[] }>
     }
@@ -374,12 +372,9 @@ describe('[ki acquire granola import]', () => {
     expect(omitted.exitCode).toBe(0)
     expect(omitted.output).toContain('Omissions: 1 meetings with unavailable detail or transcript')
     const [packageName] = await packageDirectories(repository)
-    expect(await box.root.read(`target/+/_ACQUIRE/granola/${packageName}/kep.toml`)).toContain('"transcript"')
-    expect(
-      await lstat(join(repository, '+/_ACQUIRE/granola', packageName ?? '', 'source/originals/transcript.json')).catch(
-        () => undefined
-      )
-    ).toBeUndefined()
+    const document = await box.root.read(`target/+/_ACQUIRE/granola/${packageName}`)
+    expect(document).toContain('  - "transcript"')
+    expect(document).toContain('_Transcript unavailable from the source._')
   })
 
   test.each(['structured', 'result', 'content', 'data'] as const)(
@@ -517,9 +512,10 @@ describe('[ki acquire granola import]', () => {
     expect(result.output).toContain('Coverage: 1 discovered, 1 selected, 0 routed elsewhere')
     const packages = await packageDirectories(target)
     expect(packages).toHaveLength(1)
-    expect(await box.root.read(`target/+/_ACQUIRE/granola/${packages[0]}/source/originals/detail.json`)).toContain(
-      '<meeting id=\\"meeting-a\\"'
-    )
+    const document = await box.root.read(`target/+/_ACQUIRE/granola/${packages[0]}`)
+    expect(document).toContain('# Meeting & A')
+    expect(document).toContain('Summary for meeting-a')
+    expect(document).toContain('Transcript for meeting-a')
   })
 
   test('requires an available registered eligible target and validates selected folder identities', async () => {
@@ -767,87 +763,28 @@ describe('[ki acquire granola import]', () => {
     expect(folderOnly.output).toContain('Coverage: 1 discovered, 1 selected, 0 routed elsewhere')
     expect(folderOnly.output).toContain('Omissions: 1 meetings with unavailable detail or transcript')
     const [folderOnlyPackage] = await packageDirectories(thirdRepository)
-    expect(await third.root.read(`target/+/_ACQUIRE/granola/${folderOnlyPackage}/kep.toml`)).toContain(
-      '"meeting_detail"'
-    )
+    expect(await third.root.read(`target/+/_ACQUIRE/granola/${folderOnlyPackage}`)).toContain('  - "meeting_detail"')
   })
-
   test.each([
     {
-      name: 'missing package directory',
-      expected: 'KEP directory is not a physical directory',
-      mutate: async (packagePath: string) => rm(packagePath, { recursive: true })
+      name: 'missing meeting document',
+      expected: 'must be a physical file',
+      mutate: async (documentPath: string) => rm(documentPath)
     },
     {
-      name: 'symbolic package directory',
-      expected: 'KEP directory is not a physical directory',
-      mutate: async (packagePath: string, repository: string) => {
-        await rm(packagePath, { recursive: true })
-        await symlink(repository, packagePath)
+      name: 'symbolic meeting document',
+      expected: 'must be a physical file',
+      mutate: async (documentPath: string, repository: string) => {
+        await rm(documentPath)
+        await symlink(repository, documentPath)
       }
     },
     {
-      name: 'missing checksum manifest',
-      expected: 'KEP checksum manifest is missing',
-      mutate: async (packagePath: string) => rm(join(packagePath, 'checksums/sha256sums.txt'))
-    },
-    {
-      name: 'unterminated checksum manifest',
-      expected: 'KEP checksum manifest is malformed',
-      mutate: async (packagePath: string) => writeFile(join(packagePath, 'checksums/sha256sums.txt'), '')
-    },
-    {
-      name: 'invalid checksum manifest line',
-      expected: 'KEP checksum manifest is malformed',
-      mutate: async (packagePath: string) => writeFile(join(packagePath, 'checksums/sha256sums.txt'), 'invalid\n')
-    },
-    {
-      name: 'unsafe checksum manifest path',
-      expected: 'KEP checksum manifest is malformed',
-      mutate: async (packagePath: string) =>
-        writeFile(join(packagePath, 'checksums/sha256sums.txt'), `${'0'.repeat(64)}  ../outside\n`)
-    },
-    {
-      name: 'missing payload file',
-      expected: 'KEP payload file is missing',
-      mutate: async (packagePath: string) => {
-        const manifest = await readFile(join(packagePath, 'checksums/sha256sums.txt'), 'utf8')
-        const payloadPath = manifest.split('\n')[0]?.slice(66)
-        expect(payloadPath).toBeTruthy()
-        await rm(join(packagePath, payloadPath as string))
-      }
-    },
-    {
-      name: 'content-address mismatch',
-      expected: 'KEP payload checksum does not match its content-addressed directory',
-      mutate: async (packagePath: string, repository: string) => {
-        const replacement = '0'.repeat(64)
-        await rename(packagePath, join(repository, '+/_ACQUIRE/granola', replacement))
-        const ledgerPath = join(repository, '+/_ACQUIRE/granola/ledger.json')
-        const ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as {
-          meetings: Record<string, { latest_payload_sha256: string; versions: string[] }>
-        }
-        const meeting = ledger.meetings['meeting-a']
-        expect(meeting).toBeDefined()
-        if (meeting) {
-          meeting.latest_payload_sha256 = replacement
-          meeting.versions = [replacement]
-        }
-        await writeFile(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`)
-      }
-    },
-    {
-      name: 'missing metadata',
-      expected: 'KEP metadata is missing',
-      mutate: async (packagePath: string) => rm(join(packagePath, 'kep.toml'))
-    },
-    {
-      name: 'metadata payload mismatch',
-      expected: 'KEP metadata payload checksum differs',
-      mutate: async (packagePath: string) =>
-        writeFile(join(packagePath, 'kep.toml'), `payload_sha256 = "${'0'.repeat(64)}"\n`)
+      name: 'changed meeting document',
+      expected: 'checksum differs from ledger',
+      mutate: async (documentPath: string) => writeFile(documentPath, '# Changed\n')
     }
-  ])('refuses a $name when resuming', async ({ expected, mutate }) => {
+  ])('refuses $name when reconciling', async ({ expected, mutate }) => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')
     await setupReceivers(box, [
@@ -860,15 +797,15 @@ describe('[ki acquire granola import]', () => {
     ])
     const fixture = { meetings: [{ id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }] }
     box.setRunner(granolaFixtureRunner(fixture).runner)
-    const imported = await box.run(command(repository))
-    expect(imported.exitCode, imported.output).toBe(0)
-    const [packageName] = await packageDirectories(repository)
-    expect(packageName).toBeDefined()
-    await mutate(join(repository, '+/_ACQUIRE/granola', packageName as string), repository)
+    expect((await box.run(command(repository))).exitCode).toBe(0)
+    const [document] = await packageDirectories(repository)
+    expect(document).toBeDefined()
+    await mutate(join(repository, '+/_ACQUIRE/granola', document as string), repository)
 
-    const resumed = await box.run(command(repository))
-    expect(resumed.exitCode).toBe(1)
-    expect(resumed.output).toContain(expected)
+    const reconciled = await box.run(command(repository))
+
+    expect(reconciled.exitCode).toBe(1)
+    expect(reconciled.output).toContain(expected)
   })
 
   test('retries an explicit Granola rate limit without weakening other source failures', async () => {
@@ -919,16 +856,16 @@ describe('[ki acquire granola import]', () => {
     expect(await lstat(join(repository, '+/_ACQUIRE/granola/ledger.json')).catch(() => undefined)).toBeUndefined()
 
     const resumed = await box.run(command(repository))
-    expect(resumed.exitCode).toBe(0)
+    expect(resumed.exitCode, resumed.output).toBe(0)
     expect(await packageDirectories(repository)).toHaveLength(11)
     const ledger = JSON.parse(await box.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
-      meetings: Record<string, { latest_payload_sha256: string }>
+      meetings: Record<string, { path: string }>
     }
-    const corrupted = ledger.meetings['meeting-00']?.latest_payload_sha256
+    const corrupted = ledger.meetings['meeting-00']?.path
     expect(corrupted).toBeDefined()
-    await box.root.write(`target/+/_ACQUIRE/granola/${corrupted}/source/originals/detail.json`, '{"corrupt":true}\n')
+    await box.root.write(`target/+/_ACQUIRE/granola/${corrupted}`, '# Corrupt\n')
     const refused = await box.run(command(repository))
     expect(refused.exitCode).toBe(1)
-    expect(refused.output).toContain('KEP payload checksum differs')
+    expect(refused.output).toContain('checksum differs from ledger')
   })
 })
