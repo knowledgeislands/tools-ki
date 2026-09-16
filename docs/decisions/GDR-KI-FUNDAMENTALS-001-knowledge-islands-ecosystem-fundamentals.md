@@ -1,7 +1,7 @@
 ---
 id: GDR-KI-FUNDAMENTALS-001
 title: 'Knowledge Islands ecosystem fundamentals'
-date: 2026-08-06
+date: 2026-09-16
 status: current
 decision_type_url: https://knowledgeislands.info/specifications/decision-records/gdr
 decision_type: governance
@@ -59,7 +59,7 @@ ki-specifications
 
 `homebrew-tap` is a delivery repository for package-manager formulae, not a primary ecosystem authority. It implements the release transport owned by `tools-ki`.
 
-This file is copied verbatim into `ki-arcadia-principal`, `ki-techne-principal`, `ki-agentic-harness`, `tools-ki`, `ki-specifications`, and `ki-website`; the six paths are one shared record, not repository-specific variants. Any proposed modification must consider its effect on all six repositories and update every copy coherently.
+This decision is shared by `ki-arcadia-principal`, `ki-techne-principal`, `ki-agentic-harness`, `tools-ki`, `ki-specifications`, and `ki-website`. Its canonical decision projection is one shared identity; the Knowledge Base copies may additionally carry the excluded `note_type` container field. Any proposed modification must consider its effect on all six repositories and update every decision projection coherently.
 
 Cross-repository work is choreographed rather than centrally orchestrated. Each repository owns its priorities, plans, workspace, verification, and commits. A repository may place a concrete handoff in another repository's Stream or roadmap, naming its origin and whether it blocks or is blocked by the local item. Work should remain non-blocking and independently executable unless a genuine prerequisite requires otherwise.
 
