@@ -1,101 +1,155 @@
 # Knowledge package acquisition — ACQUIRE
 
-This area specifies the as-built `ki acquire` boundary; see the [Specifications index](index.md) for the corpus conventions and registered prefixes.
+This area specifies the as-built `ki acquire` boundary; see the [Specifications index](index.md) for corpus conventions and registered prefixes.
 
 ## Package construction
 
-### ACQUIRE-001 — Deterministic package layout
+### ACQUIRE-001 — Deterministic ChatGPT package layout
 
-`ki acquire` MUST create a deterministic Knowledge Exchange Package that conforms to the KIS-0002 payload layout.
+`ki acquire import --adapter chatgpt` MUST create a deterministic Knowledge Exchange Package conforming to the KIS-0002 payload layout.
 
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/acquire.test.ts` — `creates a deterministic KEP that conforms to the KIS-0002 payload layout`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-16 full coverage suite.
 
 ### ACQUIRE-002 — Safe capture validation
 
-`ki acquire` MUST reject malformed metadata, unsafe capture trees, symbolic captures, and unsafe output locations before publishing a package.
+ChatGPT acquisition MUST reject malformed metadata, unsafe capture trees, symbolic captures, unsafe output locations, and missing relationship assets before publishing a package.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/acquire/acquire.test.ts` — `rejects malformed metadata and unsafe capture trees` and `rejects missing capture elements and unsafe output locations`.
+_Verify:_ `src/tests/cli/acquire/acquire.test.ts` malformed-input and unsafe-path cases.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
 
 ### ACQUIRE-003 — No-write dry run
 
-`ki acquire --dry-run` MUST report the proposed package without writing it.
+Every adapter supporting import dry run MUST report its proposed result without writing repository or package state.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/acquire/acquire.test.ts` — `reports a dry run without writing`.
+_Verify:_ `src/tests/cli/acquire/acquire.test.ts` — `reports a dry run without writing`; `src/tests/cli/acquire/granola.test.ts` dry-run assertions.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
 
 ## Granola meetings
 
 ### ACQUIRE-004 — Read-only provider boundary
 
-`ki acquire granola import` MUST use only the allowlisted read-only Granola MCP discovery, listing, detail, and transcript operations without initiating OAuth, mutating Granola, harvesting knowledge, or writing another repository.
+`ki acquire import --adapter granola` MUST use only allowlisted read-only Granola MCP account, folder, meeting-list, meeting-detail, and transcript operations without initiating OAuth, mutating Granola, harvesting knowledge, or writing another repository.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `stages verified immutable meeting KEPs and leaves unchanged repeats untouched` and `fails helpfully when the read-only MCP contract or source projections are malformed`.
+_Verify:_ `src/tests/cli/acquire/granola.test.ts` provider-contract, read-only, and no-provider-mutation assertions.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
 
 ### ACQUIRE-005 — Complete identity enumeration
 
-Granola acquisition MUST enumerate the global population and every live folder across inclusive ISO-date windows, recursively split a 100-result window, deduplicate stable meeting identities, and fail when a saturated one-day window or conflicting projection prevents proof of completeness.
+Granola acquisition MUST enumerate the global population and every live folder across inclusive ISO-date windows, recursively split a saturated 100-result window, deduplicate stable identities, and fail when saturation or conflicting projections prevent proof of completeness.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `splits saturated date windows and fails closed on a saturated single day`.
+_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `splits saturated date windows and fails closed on a saturated single day` and conflicting-projection cases.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
 
 ### ACQUIRE-006 — Explicit receiver reconciliation
 
-Granola acquisition MUST route meetings through registered repositories' stable folder, unfoldered, and residual selectors; report exclusions and inferred-unfoldered identities; and fail closed on uncovered or conflicting receivers unless every duplicate folder mapping is explicitly intentional.
+Granola acquisition MUST route meetings through registered repositories' stable folder, unfoldered, and residual selectors; report exclusions and inferred-unfoldered identities; and fail closed on uncovered or conflicting receivers unless every duplicated folder mapping is explicit.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `fails closed on receiver conflicts and permits explicit intentional duplication`, `reports uncovered routing, invalid intervals, missing tools, and transcript omissions without invention`, and `requires an available registered eligible target and validates selected folder identities`.
+_Verify:_ `src/tests/cli/acquire/granola.test.ts` receiver-conflict, coverage, duplication, and peer-selector cases.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
 
-### ACQUIRE-007 — Verified immutable staging
+### ACQUIRE-007 — ~~Content-addressed Granola KEP publication~~ (deprecated)
 
-Granola acquisition MUST stage one content-addressed KEP for each selected meeting version beneath `+/_ACQUIRE/granola/<payload-sha256>/` and advance the receiver-local ledger only after every referenced package passes its checksum manifest.
+Deprecated in 2026-09-16 when receiver-local meeting Markdown and component checkpoints replaced immutable per-version KEP directories.
 
-_Conformance:_ conforming
+### ACQUIRE-008 — ~~Pre-ledger package recovery~~ (deprecated)
 
-_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `stages verified immutable meeting KEPs and leaves unchanged repeats untouched` and `resumes verified packages after interruption and refuses corrupted staged evidence`.
+Deprecated in 2026-09-16 when the schema-three in-progress journal became the authoritative interrupted-run recovery mechanism.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+### ACQUIRE-009 — ~~Granola KEP source projections~~ (deprecated)
 
-### ACQUIRE-008 — Resumable amendment reconciliation
+Deprecated in 2026-09-16 when explicit Markdown fields, component hashes, transcript state, and disposition evidence replaced KEP projection bundles.
 
-Granola acquisition MUST leave a byte-identical ledger on an unchanged exhaustive repeat, append a new immutable package when a meeting projection changes, and recover verified packages left by an interrupted pre-ledger run without rewriting earlier versions.
+## Adapter execution
 
-_Conformance:_ conforming
+### ACQUIRE-010 — Verified adapter declarations
 
-_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `stages verified immutable meeting KEPs and leaves unchanged repeats untouched` and `resumes verified packages after interruption and refuses corrupted staged evidence`.
-
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
-
-### ACQUIRE-009 — Faithful projections and omissions
-
-Each Granola KEP MUST retain canonical source listing, detail, folder-evidence, and available transcript projections while recording unavailable provider fields and transcripts as explicit omissions rather than invented content.
+`ki acquire` MUST discover adapters from verified machine-readable Harness skill metadata that declares adapter identity, supported actions, repository and invocation properties, capabilities, omissions, read-only boundary, checkpoint contract, and reset scopes; it MUST NOT infer executability from a skill name or parse prose instructions at runtime.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `reports uncovered routing, invalid intervals, missing tools, and transcript omissions without invention`.
+_Verify:_ `src/tests/cli/acquire/adapters.test.ts` valid, invalid, repeated-field, duplicate-adapter, and missing-executable cases.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+
+### ACQUIRE-011 — Action-first selection
+
+`ki acquire` MUST expose `list`, `import`, `status`, `reconcile`, and `reset` as actions; select exactly one adapter with `--adapter`, all applicable enabled adapters with `--all`, or infer only a sole enabled adapter; and reject the retired provider-first grammar.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/acquire/adapters.test.ts` selection, ambiguity, mutual-exclusion, unsupported-action, and retired-grammar cases.
+
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+
+### ACQUIRE-012 — Invocation-property isolation
+
+Common invocation options MAY be used with `--all`, but an adapter-specific invocation property MUST require explicit `--adapter <name>` and MUST be rejected with `--all` before provider contact or repository mutation; persistent declared adapter configuration MAY still apply during `--all`.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/acquire/adapters.test.ts` — `allows common options with --all and rejects adapter invocation properties before execution`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-16 full coverage suite.
+
+### ACQUIRE-013 — Separate detail and transcript observations
+
+Granola acquisition MUST hash mutable detail separately from transcript content, exclude transcript content from the detail hash, reuse a verified transcript by default, retry an unavailable transcript under a bounded policy, and support explicit single-adapter transcript refresh.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `separates mutable detail from cached transcripts and supports explicit refresh` and bounded-omission cases.
+
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+
+### ACQUIRE-014 — Atomic resumable generations
+
+Granola acquisition MUST atomically replace an in-progress journal and authoritative checkpoint, bind the journal to adapter, repository, account, source schema, interval, and identity selection, resume verified components without treating the journal as completion, and advance the checkpoint only after every selected identity verifies.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/acquire/granola.test.ts` interrupted-resume, missing-staged-component, corrupt-journal, incompatible-journal, and checkpoint-advancement cases.
+
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+
+### ACQUIRE-015 — Post-acquisition disposition
+
+A Granola checkpoint MUST represent staged, retained, harvested-local, trade-routed, superseded, and awaiting-review dispositions with applicable destination, document, trade, timestamp, and covered-source evidence; an unchanged disposed source MUST NOT be restaged, while later detail change MUST stage an amendment for renewed review.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/acquire/granola.test.ts` — `accepts harvested local dispositions and stages changed-source amendments for review`.
+
+_Evidence:_ The referenced CLI contract test passes in the 2026-09-16 full coverage suite.
+
+### ACQUIRE-016 — Governed local reset
+
+`ki acquire reset` MUST show its local reset plan before mutation, require explicit confirmation, distinguish adapter, source, component, and complete-rebuild scopes, reject incompatible scope combinations, and never authorize provider mutation.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/acquire/granola.test.ts` reset planning, confirmation, scope, and no-provider-call cases.
+
+_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
 
 ## Gaps
 
-No unbuilt candidate behaviour is in scope for this area.
+No unbuilt candidate behavior is in scope for this area.

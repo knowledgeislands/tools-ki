@@ -3,13 +3,13 @@ id: KI-TOOL-CLI-072
 area: CLI
 title: Action-first Acquisition Adapters
 theme: cli
-horizon: next
-status: ready
+horizon: now
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: b9c4f355d958a8796ba60277c223c6f65196ba24
 created_at: 2026-09-16T20:55:57Z
-updated_at: 2026-09-16T20:55:57Z
+updated_at: 2026-09-16T21:43:23Z
 ---
 
 # Action-first Acquisition Adapters
@@ -32,16 +32,16 @@ Change only `tools-ki`. Consume machine-readable acquisition declarations from v
 
 ## Steps
 
-- [ ] Define and validate a verified acquisition-adapter capability projection on installed skill metadata, including adapter identity, actions, repository properties, invocation properties, provider capability/omission policy, mutation boundary, checkpoints, and reset semantics.
-- [ ] Replace provider-first commands with action-first `list`, `import`, `status`, `reconcile`, and `reset`, enforcing exact-one inference, explicit `--all`, common versus adapter-specific options, supported actions, and actionable unresolved/unknown diagnostics.
-- [ ] Implement repository-context adapter inventory showing enabled, available, invalid or unavailable states with actions, configuration, executable status, and activation guidance.
-- [ ] Refactor Granola acquisition behind the adapter registry with separate mutable-detail and transcript hashes, bounded unavailable-transcript retries, explicit transcript refresh, immutable-by-default acquired transcripts, and no provider mutation surface.
-- [ ] Add atomically written, interval-bound in-progress journals and authoritative complete-generation checkpoints; resume verified work, reject corrupt/stale/incompatible journals, and advance checkpoints only after complete verification.
-- [ ] Represent staged, retained, harvested, traded, superseded, and awaiting-review dispositions so moved documents do not look corrupt and changed disposed sources produce amendments.
-- [ ] Add previewed, confirmed local reset scopes for adapter checkpoint, source identity, component, and complete rebuild without granting provider mutation.
-- [ ] Update help, completion, README, manual, changelog, and recovery documentation; prepare a bounded Harness trade for acquisition-skill split and metadata/command updates.
-- [ ] Exercise the read-only `kit-hnr` fixture as documented recovery evidence without changing it.
-- [ ] Run focused acquisition tests, full coverage and engineering gates, then move this record to `awaiting-review` with a review packet.
+- [x] Define and validate a verified acquisition-adapter capability projection on installed skill metadata, including adapter identity, actions, repository properties, invocation properties, provider capability/omission policy, mutation boundary, checkpoints, and reset semantics.
+- [x] Replace provider-first commands with action-first `list`, `import`, `status`, `reconcile`, and `reset`, enforcing exact-one inference, explicit `--all`, common versus adapter-specific options, supported actions, and actionable unresolved/unknown diagnostics.
+- [x] Implement repository-context adapter inventory showing enabled, available, invalid or unavailable states with actions, configuration, executable status, and activation guidance.
+- [x] Refactor Granola acquisition behind the adapter registry with separate mutable-detail and transcript hashes, bounded unavailable-transcript retries, explicit transcript refresh, immutable-by-default acquired transcripts, and no provider mutation surface.
+- [x] Add atomically written, interval-bound in-progress journals and authoritative complete-generation checkpoints; resume verified work, reject corrupt/stale/incompatible journals, and advance checkpoints only after complete verification.
+- [x] Represent staged, retained, harvested, traded, superseded, and awaiting-review dispositions so moved documents do not look corrupt and changed disposed sources produce amendments.
+- [x] Add previewed, confirmed local reset scopes for adapter checkpoint, source identity, component, and complete rebuild without granting provider mutation.
+- [x] Update help, completion, README, manual, changelog, and recovery documentation; prepare a bounded Harness trade for acquisition-skill split and metadata/command updates.
+- [x] Exercise the read-only `kit-hnr` fixture as documented recovery evidence without changing it.
+- [x] Run focused acquisition tests, full coverage and engineering gates, then move this record to `awaiting-review` with a review packet.
 
 ## Files touched
 
@@ -97,6 +97,32 @@ Update public command documentation, completion grammar, manual, changelog, adap
 ### Roadmap
 
 Keep this record current through Awaiting review. Harness `KI-HARNESS-OPS-006` remains independently owned and in progress.
+
+## Review
+
+### Delivered
+
+Implemented the action-first `ki acquire list|import|status|reconcile|reset` grammar, verified adapter discovery and selection, ChatGPT adapter migration, and Granola schema-three checkpoint, journal, transcript, reset, and disposition contracts.
+
+### Summary of changes
+
+The CLI now consumes verified machine-readable acquisition declarations, distinguishes enabled, available, and invalid adapters, enforces exact-one or explicit all-selection rules, and rejects adapter-specific overrides with `--all` before provider contact. Granola now revalidates detail independently from transcript content, retries explicit omissions under a bounded policy, resumes verified journal components, commits only complete generations, supports moved-document dispositions and confirmed local reset scopes, and remains provider read-only. Public docs, help, completions, manual, changelog, specification, and the exact `kit-hnr` recovery procedure are current. Outbound trade `TRD-7a4b4609` returns the Harness skill split and metadata work to its owner.
+
+### Verification
+
+Focused acquisition, help, and completion tests pass. The full suite passes with 100% statements, branches, functions, and lines. TypeScript, Biome, man-page lint, build, dependency analysis, Markdown checks, and repository audits are recorded in the implementation commit handoff.
+
+### Outstanding concerns
+
+Harness `KI-HARNESS-OPS-006` must adopt submitted trade `TRD-7a4b4609` before receiver repositories can resolve `ki-acquire-granola`. The 30 uncommitted `kit-hnr` documents remain deliberately untouched with no checkpoint or journal; execute the documented recovery only after that activation cutover and under separate receiver authority.
+
+### Post-change review
+
+The implementation retains the provider read-only boundary, contains all state mutation inside the selected repository, compares durable evidence by verified hashes, and removes the provider-first alias. The adapter registry and Granola persistence concerns are split into focused core modules; contract tests drive only the CLI seam.
+
+### Mini recap
+
+CLI-072 is delivered and awaiting review: action-first acquisition, verified adapters, separate transcript checkpoints, resumable atomic journals, disposition-aware reconciliation, governed reset, public documentation, and a submitted Harness handoff are complete.
 
 ## Discussion
 

@@ -32,37 +32,35 @@ const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/
 
 const booleanValue = (value: unknown, name: string): boolean => {
   if (value === undefined) return false
-  if (typeof value !== 'boolean') throw new KiError(`[skills.ki-housekeeping-granola].${name} must be boolean`)
+  if (typeof value !== 'boolean') throw new KiError(`[skills.ki-acquire-granola].${name} must be boolean`)
   return value
 }
 
 const identifiers = (value: unknown, name: string): readonly string[] => {
   if (value === undefined) return []
   if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || !ID.test(item)))
-    throw new KiError(`[skills.ki-housekeeping-granola].${name} must be an array of stable Granola IDs`)
+    throw new KiError(`[skills.ki-acquire-granola].${name} must be an array of stable Granola IDs`)
   const items = value as string[]
   if (new Set(items).size !== items.length)
-    throw new KiError(`[skills.ki-housekeeping-granola].${name} must not repeat Granola ID`)
+    throw new KiError(`[skills.ki-acquire-granola].${name} must not repeat Granola ID`)
   return [...items].sort((left, right) => left.localeCompare(right, 'en'))
 }
 
 const receiver = async (root: string, required: boolean): Promise<GranolaReceiver | undefined> => {
   const declaration = await readRepositoryDeclaration(join(root, '.ki.toml'))
-  const skill = declaration.skills.find((candidate) => candidate.name === 'ki-housekeeping-granola')
+  const skill = declaration.skills.find((candidate) => candidate.name === 'ki-acquire-granola')
   if (!skill) return undefined
   for (const key of Object.keys(skill.configuration))
-    if (!CONFIG_KEYS.has(key)) throw new KiError(`[skills.ki-housekeeping-granola] has unsupported key ${key}`)
+    if (!CONFIG_KEYS.has(key)) throw new KiError(`[skills.ki-acquire-granola] has unsupported key ${key}`)
   const folderIds = identifiers(skill.configuration['folder_ids'], 'folder_ids')
   const duplicateFolderIds = identifiers(skill.configuration['duplicate_folder_ids'], 'duplicate_folder_ids')
   if (duplicateFolderIds.some((id) => !folderIds.includes(id)))
-    throw new KiError('[skills.ki-housekeeping-granola].duplicate_folder_ids must be selected by folder_ids')
+    throw new KiError('[skills.ki-acquire-granola].duplicate_folder_ids must be selected by folder_ids')
   const unfoldered = booleanValue(skill.configuration['unfoldered'], 'unfoldered')
   const residual = booleanValue(skill.configuration['residual'], 'residual')
   if (!folderIds.length && !unfoldered && !residual) {
     if (!required) return undefined
-    throw new KiError(
-      '[skills.ki-housekeeping-granola] must select a folder, unfoldered meetings, or residual meetings'
-    )
+    throw new KiError('[skills.ki-acquire-granola] must select a folder, unfoldered meetings, or residual meetings')
   }
   return {
     root,
@@ -91,11 +89,9 @@ export const granolaReceivers = async (options: {
     if (configured) receivers.push(configured)
   }
   const target = receivers.find((candidate) => candidate.root === targetLocation.root)
+  /* v8 ignore next -- command adapter selection already proves the selected repository declares this skill. */
   if (!target)
-    throw new KiError(
-      'selected repository must be registered and declare [skills.ki-housekeeping-granola] selectors',
-      2
-    )
+    throw new KiError('selected repository must be registered and declare [skills.ki-acquire-granola] selectors', 2)
   return { target, receivers: receivers.sort((left, right) => left.repository.localeCompare(right.repository, 'en')) }
 }
 

@@ -184,10 +184,13 @@ export const renderGranolaMeeting = (options: {
   readonly accountSha256: string
   readonly acquiredAt: string
   readonly detail: GranolaDetail
+  readonly detailSha256: string
   readonly folders: readonly GranolaFolder[]
   readonly meeting: RoutedGranolaMeeting
-  readonly sourceSha256: string
   readonly transcript: GranolaTranscript
+  readonly transcriptObservedAt: string
+  readonly transcriptSha256?: string
+  readonly transcriptState: 'available' | 'retrying' | 'durable-omission'
 }): GranolaMeetingDocument => {
   const detail = options.detail.projection
   const title =
@@ -234,7 +237,10 @@ export const renderGranolaMeeting = (options: {
     `meeting_date: ${yamlString(date)}`,
     `acquired_at: ${yamlString(options.acquiredAt)}`,
     `source_account_sha256: ${yamlString(options.accountSha256)}`,
-    `source_sha256: ${yamlString(options.sourceSha256)}`,
+    `detail_sha256: ${yamlString(options.detailSha256)}`,
+    `transcript_state: ${yamlString(options.transcriptState)}`,
+    ...(options.transcriptSha256 ? [`transcript_sha256: ${yamlString(options.transcriptSha256)}`] : []),
+    `transcript_observed_at: ${yamlString(options.transcriptObservedAt)}`,
     `inferred_unfoldered: ${options.meeting.inferredUnfoldered}`,
     ...(selectedFolders.length
       ? [

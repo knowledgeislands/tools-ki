@@ -5,7 +5,7 @@ These guides explain how to develop, operate, and release `tools-ki`.
 - [Developer guides](developer/README.md) cover local CLI development and release management.
 - [Agora references](agora-references.md) explains how to associate, diagnose, remove, and promote external working-set repositories.
 - [Canonical batch records](batch-records.md) explains the deterministic mechanics and authority boundaries for exact-set batch envelopes.
-- [Granola acquisition](granola-acquisition.md) explains complete read-only meeting acquisition, receiver selectors, immutable staging, and recovery.
+- [Granola acquisition](granola-acquisition.md) explains adapter activation, read-only imports, resumable checkpoints, reset, disposition, and recovery.
 - [Repository-local governance](repository-local-governance.md) explains how repository authors run their own `ki-self` checks.
 - [Standing knowledge intake](standing-knowledge-intake.md) explains how to declare an exact reciprocal knowledge grant and append receiver-local, commit-pinned provenance.
 - [VS Code projection management](vscode-management.md) explains how to reconcile a chezmoi-managed workspace and trusted-folder inventory with the KI registry.

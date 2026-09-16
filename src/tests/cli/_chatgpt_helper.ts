@@ -35,7 +35,7 @@ const capture = (path: string): CaptureArea => {
   }
 }
 
-// A minimal but valid ki-chatgpt-capture tree, for exercising `ki acquire chatgpt import`
+// A minimal valid ki-chatgpt-capture tree for `ki acquire import --adapter chatgpt`
 // against a well-formed source:
 //
 // <root>/capture/

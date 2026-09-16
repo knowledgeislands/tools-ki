@@ -301,13 +301,20 @@ Remove only the selected machine-local reference association.
 .SS Acquisition
 \&
 .TP
-.B ki acquire chatgpt import <capture-directory> --output <kep-directory> [--dry-run]
-Create a deterministic Knowledge Export Package from a local ChatGPT capture.
+.B ki acquire list
+.RI [--repo\ <path>]
 .TP
-.B ki acquire granola import
-.RI [--repo\  <path>]\ [--since\  <date>]\ [--until\  <date>]\ [--dry-run]
-Acquire complete selected Granola meeting history into verified immutable
-packages.
+.B ki acquire import
+.RI [--adapter\ <name>|--all]\ [--repo\ <path>]\ [--since\ <date>]\ [--until\ <date>]\ [--dry-run]
+.TP
+.B ki acquire status
+.RI [--adapter\ <name>|--all]\ [--repo\ <path>]
+.TP
+.B ki acquire reconcile
+.RI [--adapter\ <name>|--all]\ [--repo\ <path>]
+.TP
+.B ki acquire reset
+.RI [--adapter\ <name>]\ [--repo\ <path>]\ [--source\ <identity>]\ [--component\ <name>]\ [--rebuild]\ [--confirm]
 .SS Development
 \&
 .TP
@@ -933,27 +940,54 @@ Remove only the selected machine-local reference association.
 .SS Acquisition
 \&
 .PP
-Use these commands to create verified immutable Knowledge Export Packages.
+Acquisition is action-first and adapter-driven. Installed Harness skills
+publish verified machine-readable adapter declarations; repository
+configuration enables them.
 .TP
-.B ki acquire chatgpt import <capture-directory> --output <kep-directory> [--dry-run]
-Validate a user-prepared local ChatGPT capture and create a deterministic
-Knowledge Export Package (KEP).
-The command does not control a browser, contact ChatGPT, read credentials,
-discover a repository, or extract reusable knowledge.
+.B ki acquire list
+.RI [--repo\ <path>]
+List enabled, available, and invalid acquisition adapters with owning
+skill, actions, configuration, executable status, and activation guidance.
 .TP
-.B ki acquire granola import
-.RI [--repo\  <path>]\ [--since\  <date>]\ [--until\  <date>]\ [--dry-run]
-Use the allowlisted read-only tools of the locally configured
-.B granola
-mcporter server to enumerate complete global and folder history, reconcile
-registered receiver selectors, and stage one content-addressed KEP per selected
-meeting version beneath
-.IR +/_ACQUIRE/granola/<payload-sha256>/ .
-The default interval is 1970-01-01 through the current UTC date.
-The command writes only the selected repository, advances its ledger after
-checksum verification, and reports explicit omissions and routing outcomes.
-It does not mutate Granola, harvest knowledge, archive meetings, delete source
-material, or write another repository.
+.B ki acquire import
+.RI [--adapter\ <name>|--all]\ [--repo\ <path>]\ [--since\ <date>]\ [--until\ <date>]\ [--dry-run]
+Run one selected adapter, every applicable enabled adapter, or infer the
+sole enabled adapter. Adapter-specific invocation properties require
+explicit
+.BR --adapter .
+ChatGPT accepts
+.B --capture
+and
+.BR --output .
+Granola accepts
+.BR --refresh-transcripts .
+.TP
+.B ki acquire status
+.RI [--adapter\ <name>|--all]\ [--repo\ <path>]
+Report local authoritative checkpoints, in-progress journals, transcript
+states, and post-acquisition dispositions without contacting the provider.
+.TP
+.B ki acquire reconcile
+.RI [--adapter\ <name>|--all]\ [--repo\ <path>]
+Verify local checkpoint and disposed-document evidence without mutating
+provider or repository state.
+.TP
+.B ki acquire reset
+.RI [--adapter\ <name>]\ [--repo\ <path>]\ [--source\ <identity>]\ [--component\ <name>]\ [--rebuild]\ [--confirm]
+Preview a local adapter, source, component, or complete-rebuild reset.
+Mutation requires
+.B --confirm
+and never authorizes provider mutation.
+.PP
+The Granola adapter uses only allowlisted read-only MCP operations. It
+enumerates complete global and folder identity evidence, revalidates
+mutable detail, reuses verified transcripts by default, records separate
+detail and transcript hashes, journals interrupted work atomically, and
+advances the authoritative checkpoint only after the selected generation
+verifies. It stages meeting Markdown beneath
+.IR +/_ACQUIRE/granola/ .
+Conflicting receiver mappings fail closed; acquisition never tags, edits,
+archives, deletes, or moves Granola data.
 .SS Development
 \&
 .PP

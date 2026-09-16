@@ -3,7 +3,45 @@ import { lstat, mkdir, readFile, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { makeCapture } from '../_chatgpt_helper.ts'
-import { type CommandResult, sandbox } from '../_cli_helper.ts'
+import { type CommandResult, sandbox as createSandbox, type Sandbox } from '../_cli_helper.ts'
+
+const sandbox = async (): Promise<Sandbox> => {
+  const box = await createSandbox()
+  await box.setupCanonicalHarness()
+  await box.data.write(
+    'ki/harnesses/knowledgeislands/ki-agentic-harness/skills/environment/ki-acquire-chatgpt/SKILL.md',
+    [
+      '---',
+      'name: ki-acquire-chatgpt',
+      'ki-depends-on: []',
+      'ki-acquire-adapter: chatgpt',
+      'ki-acquire-actions: [import]',
+      'ki-acquire-repository-properties: [capture_path, output_path]',
+      'ki-acquire-invocation-properties: [capture, output]',
+      'ki-acquire-capabilities: [local-capture]',
+      'ki-acquire-omissions: [provider-network]',
+      'ki-acquire-mutation-boundary: read-only',
+      'ki-acquire-checkpoint: kep',
+      'ki-acquire-reset-scopes: []',
+      '---',
+      ''
+    ].join('\n')
+  )
+  await box.project.write(
+    '.ki.toml',
+    [
+      '[repo]',
+      'harnesses = ["knowledgeislands/ki-agentic-harness"]',
+      '',
+      '[skills.ki-repo]',
+      'repository = "https://github.com/example/chatgpt-target"',
+      '',
+      '[skills.ki-acquire-chatgpt]',
+      ''
+    ].join('\n')
+  )
+  return box
+}
 
 const writeFailure = vi.hoisted(() => ({ enabled: false }))
 
@@ -23,15 +61,17 @@ afterEach(() => {
   writeFailure.enabled = false
 })
 
-describe('[ki acquire chatgpt import]', () => {
+describe('[ki acquire import --adapter chatgpt]', () => {
   test('creates a deterministic KEP that conforms to the KIS-0002 payload layout', async () => {
     const box = await sandbox()
     const capture = await makeCapture(box.root.path)
     const first = join(box.root.path, 'first.kep')
     const second = join(box.root.path, 'second.kep')
 
-    const firstResult = await box.run(`ki acquire chatgpt import ${capture.path} --output ${first}`)
-    const secondResult = await box.run(`ki acquire chatgpt import ${capture.path} --output ${second}`)
+    const firstResult = await box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${first}`)
+    const secondResult = await box.run(
+      `ki acquire import --adapter chatgpt --capture ${capture.path} --output ${second}`
+    )
     expect(firstResult.exitCode).toBe(0)
     expect(secondResult.exitCode).toBe(0)
 
@@ -67,7 +107,9 @@ describe('[ki acquire chatgpt import]', () => {
     const box = await sandbox()
     const capture = await makeCapture(box.root.path)
     const output = join(box.root.path, 'dry-run.kep')
-    const result = await box.run(`ki acquire chatgpt import ${capture.path} --output ${output} --dry-run`)
+    const result = await box.run(
+      `ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output} --dry-run`
+    )
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('KEP plan:')
@@ -87,12 +129,16 @@ describe('[ki acquire chatgpt import]', () => {
       'relationships/native.jsonl',
       '{"type":"message-asset","record":"records/conversation.md","asset":"assets/missing.png","message_id":"message-002"}\n'
     )
-    const missingAsset = await box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
+    const missingAsset = await box.run(
+      `ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output}`
+    )
     expect(missingAsset.exitCode).toBe(1)
     expect(missingAsset.output).toContain('missing asset')
 
     await mkdir(output)
-    const conflicting = await box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
+    const conflicting = await box.run(
+      `ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output}`
+    )
     expect(conflicting.exitCode).toBe(1)
     expect(conflicting.output).toContain('already exists')
   })
@@ -102,7 +148,7 @@ describe('[ki acquire chatgpt import]', () => {
     const capture = await makeCapture(box.root.path)
     const output = join(box.root.path, 'result.kep')
     const importCapture = (): Promise<CommandResult> =>
-      box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
+      box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output}`)
 
     await capture.write('capture.toml', 'format = "wrong"\n')
     const wrongFormat = await importCapture()
@@ -127,7 +173,7 @@ describe('[ki acquire chatgpt import]', () => {
     const capture = await makeCapture(box.root.path)
     const output = join(box.root.path, 'result.kep')
     const importCapture = (): Promise<CommandResult> =>
-      box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
+      box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output}`)
 
     await capture.writeMetadata(['unexpected = "field"'])
     const unexpectedField = await importCapture()
@@ -156,7 +202,7 @@ describe('[ki acquire chatgpt import]', () => {
     const capture = await makeCapture(box.root.path)
     const output = join(box.root.path, 'result.kep')
     const importCapture = (): Promise<CommandResult> =>
-      box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
+      box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output}`)
     const relationship = (content: string): Promise<void> => capture.write('relationships/native.jsonl', content)
 
     const duplicate = '{"type":"conversation-order","record":"records/conversation.md","position":1}'
@@ -194,7 +240,7 @@ ${duplicate}
     const capture = await makeCapture(box.root.path)
     const output = join(box.root.path, 'result.kep')
     const importCapture = (destination = output): Promise<CommandResult> =>
-      box.run(`ki acquire chatgpt import ${capture.path} --output ${destination}`)
+      box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${destination}`)
 
     await capture.remove('relationships/native.jsonl')
     const missingRelationships = await importCapture()
@@ -208,7 +254,7 @@ ${duplicate}
     expect(nestedOutput.output).toContain('output directory must be outside capture-directory')
 
     const missingCaptureDirectory = await box.run(
-      `ki acquire chatgpt import ${join(box.root.path, 'missing')} --output ${output}`
+      `ki acquire import --adapter chatgpt --capture ${join(box.root.path, 'missing')} --output ${output}`
     )
     expect(missingCaptureDirectory.output).toContain('capture-directory must be an existing directory')
   })
@@ -218,7 +264,7 @@ ${duplicate}
     const capture = await makeCapture(box.root.path)
     const output = join(box.root.path, 'result.kep')
     const importCapture = (): Promise<CommandResult> =>
-      box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
+      box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output}`)
 
     await capture.remove('originals/export.json')
     const emptyOriginals = await importCapture()
@@ -245,7 +291,7 @@ ${duplicate}
     const capture = await makeCapture(box.root.path)
     const output = join(box.root.path, 'result.kep')
     const importCapture = (destination = output): Promise<CommandResult> =>
-      box.run(`ki acquire chatgpt import ${capture.path} --output ${destination}`)
+      box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${destination}`)
     const relationship = (content: string): Promise<void> => capture.write('relationships/native.jsonl', content)
 
     await relationship('{"type":"conversation-order","record":"records/../conversation.md","position":1}\n')
@@ -301,9 +347,9 @@ ${duplicate}
     const output = join(box.root.path, 'result.kep')
     writeFailure.enabled = true
 
-    await expect(box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)).rejects.toThrow(
-      'write failure'
-    )
+    await expect(
+      box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output}`)
+    ).rejects.toThrow('write failure')
     await expect(lstat(output)).rejects.toThrow()
   })
 
@@ -312,7 +358,7 @@ ${duplicate}
     const capture = await makeCapture(box.root.path)
     const output = join(box.root.path, 'result.kep')
     const importCapture = (): Promise<CommandResult> =>
-      box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
+      box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output}`)
 
     await capture.write('assets/file with spaces.png', 'unsafe name\n')
     expect((await importCapture()).output).toContain('assets contains an unsafe path')
@@ -330,7 +376,11 @@ ${duplicate}
     ])
     await symlink(capture.path, join(box.root.path, 'capture-link'))
     expect(
-      (await box.run(`ki acquire chatgpt import ${join(box.root.path, 'capture-link')} --output ${output}`)).output
+      (
+        await box.run(
+          `ki acquire import --adapter chatgpt --capture ${join(box.root.path, 'capture-link')} --output ${output}`
+        )
+      ).output
     ).toContain('capture-directory must not be a symbolic link')
   })
 
@@ -339,7 +389,7 @@ ${duplicate}
     const capture = await makeCapture(box.root.path)
     const output = join(box.root.path, 'result.kep')
     const importCapture = (): Promise<CommandResult> =>
-      box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
+      box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output}`)
 
     await capture.mkdir('assets/nested')
     await capture.write('assets/nested/asset.txt', 'nested asset\n')
@@ -358,7 +408,9 @@ ${duplicate}
     const dryBox = await sandbox()
     const dryCapture = await makeCapture(dryBox.root.path)
     const dryOutput = join(box.root.path, 'dry-result.kep')
-    const dry = await box.run(`ki acquire chatgpt import ${dryCapture.path} --output ${dryOutput} --dry-run`)
+    const dry = await box.run(
+      `ki acquire import --adapter chatgpt --capture ${dryCapture.path} --output ${dryOutput} --dry-run`
+    )
     expect(dry.output).toContain('KEP plan:')
     expect(dry.output).toContain('Dry run: no files written.')
   })
@@ -372,7 +424,7 @@ ${duplicate}
     await Promise.all(['curl', 'git', 'open'].map(async (name) => symlink('/usr/bin/false', join(spies, name))))
     const parentPath = (process.env as NodeJS.ProcessEnv & { PATH?: string }).PATH
     box.setEnv({ PATH: `${spies}:${parentPath}` })
-    const result = await box.run(`ki acquire chatgpt import ${capture.path} --output ${output}`)
+    const result = await box.run(`ki acquire import --adapter chatgpt --capture ${capture.path} --output ${output}`)
 
     const kepToml = await readFile(join(output, 'kep.toml'), 'utf8')
     expect(result.exitCode).toBe(0)

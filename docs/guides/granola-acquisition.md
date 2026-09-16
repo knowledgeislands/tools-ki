@@ -1,82 +1,127 @@
 # Acquire Granola meetings
 
-Use `ki acquire granola import` to take a complete, read-only observation of Granola meetings selected for one registered Knowledge Islands repository. The command writes verified immutable Knowledge Export Packages (KEPs) to that repository's Harbour; it does not harvest their knowledge or change Granola.
+This guide is for operators acquiring Granola meeting evidence into a registered Knowledge Islands repository. It explains how to activate the repository adapter, run read-only imports, inspect resumable state, and recover safely; the accepted behavior is recorded in the [acquisition specification](../specs/acquisition.md).
 
 ## Prepare the source connection
 
-The command uses the locally installed `mcporter` executable and a configured server named `granola`. Authenticate that connection separately before acquisition:
+The Granola adapter uses the locally installed `mcporter` executable and a configured server named `granola`. Authenticate that connection before acquisition:
 
-```bash
+```sh
 mcporter auth granola
 ```
 
-Acquisition passes `--no-oauth` to every call. An expired or absent credential therefore fails visibly instead of opening a browser during an import. Granola remains the credential owner; no OAuth token enters repository configuration, a KEP, or the ledger.
+Acquisition passes `--no-oauth` on every provider call. Missing or expired credentials fail visibly instead of opening a browser. Tokens never enter repository configuration, staged documents, journals, or checkpoints.
 
-## Declare receiver selectors
+## Activate the repository adapter
 
-Every eligible receiver is a repository registered with `ki` that declares `ki-housekeeping-granola`. Select stable folder IDs rather than folder names:
+The installed Harness must publish a verified `ki-acquire-granola` skill declaration, and the repository must both select that Harness and declare the skill. Inspect the current repository context first:
+
+```sh
+ki acquire list
+```
+
+If the adapter is available but not enabled, use the existing skill workflow suggested by the listing, then add repository selectors to `.ki.toml`:
 
 ```toml
-[skills.ki-housekeeping-granola]
+[skills.ki-acquire-granola]
 folder_ids = ["stable-granola-folder-id"]
 unfoldered = true
 residual = true
 ```
 
-- `folder_ids` selects meetings returned by those folders.
-- `unfoldered = true` accepts meetings inferred from the complete global set minus every complete folder set.
-- `residual = true` accepts meetings whose folders have no configured receiver.
+`folder_ids` selects stable folder IDs, not names. `unfoldered` accepts identities proven to be outside every live folder. `residual` accepts meetings whose folders have no other configured receiver. At least one selector is required.
 
-At least one selector is required. Only one receiver should normally select a folder. Where deliberate duplication is required, every receiver selecting that folder must name its ID in `duplicate_folder_ids`:
+Only one receiver should normally select a folder. Where duplication is deliberate, every participating receiver names the folder ID explicitly:
 
 ```toml
 duplicate_folder_ids = ["stable-granola-folder-id"]
 ```
 
-The command reads selectors from all locally registered eligible repositories to prove coverage, but it writes only the explicitly selected receiver. Missing coverage, conflicting receivers, an unavailable configured folder, or a folder result absent from global discovery stops before publication.
+User-skill activation alone does not enable acquisition for a repository. The repository declaration remains required and must resolve through one of its declared Harnesses.
 
-## Run an acquisition
+## Run and inspect acquisition
 
-From the receiving repository:
+From the receiving repository, run:
 
-```bash
-ki acquire granola import
+```sh
+ki acquire import --adapter granola
 ```
 
-The default interval is `1970-01-01` through the current UTC date, providing a conservative complete-history start. Set explicit inclusive bounds when required:
+The default interval is `1970-01-01` through the current UTC date. Bound an inclusive interval when required:
 
-```bash
-ki acquire granola import --since 2023-01-01 --until 2026-09-09
+```sh
+ki acquire import --adapter granola --since 2023-01-01 --until 2026-09-16
 ```
 
 Select another registered receiver without changing directory:
 
-```bash
-ki acquire granola import --repo /path/to/repository --since 2023-01-01
+```sh
+ki acquire import --adapter granola --repo /path/to/repository --since 2023-01-01
 ```
 
-Use `--dry-run` to perform source reads, completeness checks, routing, content hashing, and existing-package verification without writing repository files.
+Use `--dry-run` to perform discovery, routing, provider reads, and validation without writing repository state. Use the single-adapter override only when transcripts must be re-read deliberately:
 
-## Understand completeness and output
+```sh
+ki acquire import --adapter granola --refresh-transcripts
+```
 
-Each run lists the global population and every live folder across the interval. A 100-result response is treated as saturated and split into smaller overlapping date windows. A saturated single-day window fails because completeness cannot be proven.
+That override is rejected with `--all`. Routine imports re-read mutable meeting detail but reuse a verified transcript checkpoint. A transcript is fetched when the meeting is new, no successful transcript checkpoint exists, an unavailable transcript remains within its bounded retry policy, or refresh is explicit.
 
-The initial implementation deliberately performs exhaustive content revalidation on every run: each selected meeting's detail and transcript projections are read again. This costs more source calls than a recent-only pass but makes amendment detection trustworthy while Granola exposes no update timestamp, ETag, content version, or deletion tombstone.
+Inspect local state without contacting Granola:
 
-New or changed meeting versions are staged beneath:
+```sh
+ki acquire status --adapter granola
+ki acquire reconcile --adapter granola
+```
+
+`status` reports checkpoint, transcript, disposition, and journal summaries. `reconcile` additionally verifies the checkpoint's staged or disposed document evidence.
+
+## Understand staged evidence and recovery
+
+Meeting Markdown is staged beneath `+/_ACQUIRE/granola/`. The authoritative `ledger.json` records one completely verified generation, with separate detail and transcript hashes and transcript retry state. The in-progress `journal.json` records the selected identities, verified staged paths and component hashes, failures, retry state, and remaining work.
+
+Both state files are replaced atomically. A failed run leaves the last committed checkpoint authoritative and keeps its journal for the next run. Rerunning the same command revalidates mutable detail and reuses already verified immutable transcripts and staged documents. A stale, corrupt, differently bound journal fails closed and is never treated as completion.
+
+Moving a staged document is not corruption when its checkpoint disposition records the new canonical destination and matching document hash. Supported dispositions distinguish staged, retained, harvested locally, routed through `ki-trades`, superseded, and awaiting review evidence. An unchanged disposed source is not staged again; later mutable-detail change creates an amendment awaiting renewed review.
+
+## Reset local acquisition state
+
+A reset never changes Granola. First preview the plan:
+
+```sh
+ki acquire reset --adapter granola
+ki acquire reset --adapter granola --source <meeting-uuid>
+ki acquire reset --adapter granola --source <meeting-uuid> --component transcript
+ki acquire reset --adapter granola --rebuild
+```
+
+Apply the exact reviewed plan by repeating it with `--confirm`. Component reset requires `--source`; `--rebuild` cannot be combined with a source or component.
+
+## Recover the interrupted kit-hnr import
+
+The current recovery fixture is:
 
 ```text
-+/_ACQUIRE/granola/<payload-sha256>/
+/Users/krisbrown/workspaces/hnr/kis/kit-hnr/+/_ACQUIRE/granola/
 ```
 
-The receiver-local `+/_ACQUIRE/granola/ledger.json` records source and schema hashes, complete identity-window evidence, selected meeting versions, and the last changed checkpoint. An unchanged repeat creates no package and leaves the ledger byte-identical. A changed detail, transcript, listing, or folder-evidence projection creates a new version without rewriting the previous package.
+It contains 30 uncommitted meeting documents and no authoritative checkpoint. Do not commit those files as a completed acquisition and do not delete them manually. After the Harness publishes `ki-acquire-granola` and `kit-hnr` declares that acquisition skill, inspect the repository first:
 
-Every package preserves canonical source projections and names unavailable fields in `kep.toml` omissions. An unavailable transcript is an explicit omission, never replaced with a summary.
+```sh
+ki acquire status --adapter granola --repo /Users/krisbrown/workspaces/hnr/kis/kit-hnr
+```
 
-## Recover safely
+Then rerun the same bounded interval used by the interrupted import:
 
-The command publishes each package atomically, verifies its checksum manifest, and updates the ledger last. If an import stops between those steps, rerun the same command: verified packages are reused and the ledger advances only after the complete run succeeds.
+```sh
+ki acquire import --adapter granola \
+  --repo /Users/krisbrown/workspaces/hnr/kis/kit-hnr \
+  --since <original-inclusive-start> \
+  --until <original-inclusive-end>
+```
 
-A missing, malformed, or checksum-invalid package already referenced by the ledger stops acquisition. Restore the committed Harbour evidence rather than deleting or regenerating it silently. A different connected Granola account also stops before source identities can be mixed.
+Because no pre-existing journal can attest the 30 files, the adapter re-reads provider detail and transcripts needed to verify them, writes a new journal before advancing work, accepts only same-identity staged paths, and publishes `ledger.json` only after the complete selected generation verifies. Review and commit the receiver repository separately; this tools-ki change does not grant authority to mutate or commit `kit-hnr`.
 
-Acquisition success is not permission to archive or delete a Granola meeting. Harvesting, cross-repository knowledge trades, and any eventual source retirement remain separate governed decisions. The as-built guarantees are recorded in the [acquisition specification](../specs/acquisition.md).
+## Safety boundary
+
+Granola operations are limited to account, folder, meeting-list, meeting-detail, and transcript reads. Acquisition never tags, edits, archives, deletes, or moves provider data; does not automate a browser; does not harvest knowledge; and does not write another repository. Folder membership is routing evidence rather than canonical classification, explicit provider omissions remain omissions, and conflicting receiver mappings fail closed.

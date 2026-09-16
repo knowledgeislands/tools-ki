@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { copyFile, lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { KiError } from '../errors.ts'
 
@@ -86,40 +86,4 @@ export const publishKep = async (options: PublishKepOptions): Promise<void> => {
     await rm(staging, { recursive: true, force: true })
     throw error
   }
-}
-
-const parseManifestLine = (line: string): readonly [string, string] => {
-  const match = /^([a-f0-9]{64}) {2}(.+)$/.exec(line)
-  if (!match?.[1] || !match[2] || !validPayloadPath(match[2])) throw new KiError('KEP checksum manifest is malformed')
-  return [match[1], match[2]]
-}
-
-export const verifyKep = async (directory: string, expectedPayloadSha256?: string): Promise<KepPayload> => {
-  const state = await lstat(directory).catch(() => undefined)
-  if (!state?.isDirectory() || state.isSymbolicLink()) throw new KiError('KEP directory is not a physical directory')
-  const manifest = await readFile(join(directory, 'checksums/sha256sums.txt'), 'utf8').catch(() => {
-    throw new KiError('KEP checksum manifest is missing')
-  })
-  const lines = manifest.endsWith('\n') ? manifest.slice(0, -1).split('\n') : []
-  if (!lines.length) throw new KiError('KEP checksum manifest is malformed')
-  const checksumLines: string[] = []
-  for (const line of lines) {
-    const [expected, path] = parseManifestLine(line)
-    const actual = digest(
-      await readFile(join(directory, path)).catch(() => {
-        throw new KiError(`KEP payload file is missing: ${path}`)
-      })
-    )
-    if (actual !== expected) throw new KiError(`KEP payload checksum differs: ${path}`)
-    checksumLines.push(line)
-  }
-  const payloadSha256 = digest(`${checksumLines.join('\n')}\n`)
-  if (expectedPayloadSha256 && payloadSha256 !== expectedPayloadSha256)
-    throw new KiError('KEP payload checksum does not match its content-addressed directory')
-  const metadata = await readFile(join(directory, 'kep.toml'), 'utf8').catch(() => {
-    throw new KiError('KEP metadata is missing')
-  })
-  if (!metadata.includes(`payload_sha256 = "${payloadSha256}"`))
-    throw new KiError('KEP metadata payload checksum differs from verified manifest')
-  return { checksumLines, payloadSha256, packageId: `kep:sha256:${payloadSha256}` }
 }
