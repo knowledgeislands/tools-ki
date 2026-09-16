@@ -4,12 +4,12 @@ area: CLI
 title: Automate Canonical Batch Records
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 1e5853783a9116d1de984871b776970d48ccb732
 created_at: 2026-09-14T22:08:09Z
-updated_at: 2026-09-15T05:30:00Z
+updated_at: 2026-09-16T11:27:10Z
 ---
 
 # Automate Canonical Batch Records
@@ -36,30 +36,34 @@ Ready through the user's explicit approval of the lean batch workflow. The Harne
 
 ## Steps
 
-- [ ] Add a focused `batch` command module behind the existing `run(args, context)` boundary.
-- [ ] Implement `prepare` with explicit repository identity, authority mode and evidence, expiry, ordered item IDs, and completion target; derive identity allocation, `policy: safe-local-v1`, run ID, and payload hash.
-- [ ] Implement read-only `validate` for canonical location, regular-file containment, exact supported fields, timestamps, identities, duplicate-free IDs, approval evidence, payload integrity, expiry, and run-marker binding.
-- [ ] Implement `run` as a deterministic lifecycle operation that validates the envelope and appends the derived run marker or a concise caller-supplied ledger result; it must not execute agent work or infer outcomes.
-- [ ] Implement `close` as a deterministic record operation requiring explicit caller-supplied completion evidence and a matching all-item target; keep `ki-accept` and the compatible Harness responsible for acceptance semantics.
-- [ ] Share one internal parser and canonical payload projection across all four operations without exporting an unstable library API.
-- [ ] Add CLI-driven sandbox tests for successful flows, stable hashes, altered payloads, retired and unsupported fields, missing outcome evidence, duplicate IDs, expiry, marker mismatch, non-canonical paths, and attempts to infer or upgrade authority.
-- [ ] Document the native mechanics and their Harness ownership boundary in CLI help and the relevant guide.
-- [ ] Run focused batch-command tests, the full suite, TypeScript, Biome, and repository audits.
+- [x] Add a focused `batch` command module behind the existing `run(args, context)` boundary.
+- [x] Implement `prepare` with explicit repository identity, authority mode and evidence, expiry, ordered item IDs, and completion target; derive identity allocation, `policy: safe-local-v1`, run ID, and payload hash.
+- [x] Implement read-only `validate` for canonical location, regular-file containment, exact supported fields, timestamps, identities, duplicate-free IDs, approval evidence, payload integrity, expiry, and run-marker binding.
+- [x] Implement `run` as a deterministic lifecycle operation that validates the envelope and appends the derived run marker or a concise caller-supplied ledger result; it must not execute agent work or infer outcomes.
+- [x] Implement `close` as a deterministic record operation requiring explicit caller-supplied completion evidence and a matching all-item target; keep `ki-accept` and the compatible Harness responsible for acceptance semantics.
+- [x] Share one internal parser and canonical payload projection across all four operations without exporting an unstable library API.
+- [x] Add CLI-driven sandbox tests for successful flows, stable hashes, altered payloads, retired and unsupported fields, missing outcome evidence, duplicate IDs, expiry, marker mismatch, non-canonical paths, and attempts to infer or upgrade authority.
+- [x] Document the native mechanics and their Harness ownership boundary in CLI help and the relevant guide.
+- [x] Run focused batch-command tests, the full suite, TypeScript, Biome, and repository audits.
 
 ## Files touched
 
-- `src/commands/batch.ts`
-- `src/core/batch-core.ts`
-- `src/cli.ts`
+- `src/commands/batch/index.ts`
+- `src/core/batch/codec.ts`
+- `src/core/batch/operations.ts`
+- `src/core/batch/index.ts`
+- Root command, completion, inventory, package, README, changelog, manual, and guide surfaces
 - `src/tests/cli/batch.test.ts`
-- CLI help and relevant guide or README surface
+- Granola acquisition modules and CLI fixtures needed to restore the mandatory repository-wide coverage gate
 
 ## Verify
 
-- `bun test src/tests/cli/batch.test.ts`
-- `bun run test`
+- `bunx vitest run src/tests/cli/batch.test.ts`
+- `bun run test:coverage`
 - `bunx tsc --noEmit`
 - `bunx biome check .`
+- `bunx knip`
+- `bun run build`
 - `ki repo audit --skill ki-engineering --repo .`
 - `ki repo audit --skill ki-work-roadmap --repo .`
 - `ki repo audit --skill ki-authoring --repo .`
@@ -87,6 +91,36 @@ Document command inputs, effects, and non-authority boundary where native CLI op
 
 This record owns the independently reviewable tools-ki implementation. Any broader orchestration or remote-agent execution remains separate work.
 
+## Review
+
+### Delivered
+
+Native `ki batch prepare`, `validate`, `run`, and `close` commands now automate the canonical exact-set batch record mechanics while preserving the Harness as the authority for selection, delivery, acceptance, and pruning.
+
+### Summary of changes
+
+Added a focused batch command and core boundary, canonical current-record parsing and hashing, guarded lifecycle mutations, root help and completion integration, CLI-driven coverage, and user-facing guide, manual, README, changelog, and inventory updates. The user separately approved narrow Granola acquisition test and invariant work needed to restore the mandatory 100% coverage gate after concurrent Granola changes landed.
+
+### Verification
+
+The 13-test batch suite covers the new batch command and core modules at 100% for statements, branches, functions, and lines. The complete 49-file, 779-test suite passes at 100% aggregate coverage. TypeScript, Biome, Knip, the compiled build, repository audits, and `git diff --check` pass; Knip retains only its existing `.claude/skills/**` configuration hint.
+
+### Outstanding concerns
+
+None. Structural validation intentionally does not claim that recorded human authority is legitimate, and the native commands do not execute work, accept outcomes, prune records, push, or release.
+
+### Post-change review
+
+The implementation remains modular: CLI parsing is isolated in the command module, record syntax and projections live in the codec, filesystem and lifecycle effects live in operations, and tests exercise only the public in-process CLI seam. The Granola additions are contract tests and removal of unreachable fallback branches, not a change to acquisition semantics.
+
+### Mini recap
+
+CLI-070 is delivered and awaiting human review from baseline `1e5853783a9116d1de984871b776970d48ccb732`. No push or acceptance action was performed.
+
 ## Discussion
+
+### Verification resolution
+
+CLI-070's focused suite and the repository-wide coverage gate both pass at 100%. The user explicitly approved the narrow Granola remedial coverage work after later acquisition commits expanded the uncovered surface.
 
 The four verbs deliberately separate proposal creation, read-only proof, run-account mutation, and close-account mutation. They make the common path scriptable while leaving selection, delivery, and acceptance with the process skills that have the necessary human context.

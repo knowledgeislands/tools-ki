@@ -63,7 +63,7 @@ const optionValueStrategy = (path: string, option: Option): CompletionValueStrat
   if (
     name === '--output' ||
     name === '--capture' ||
-    (name === '--repo' && /^(acquire|repo|registry)( |$)/.test(path)) ||
+    (name === '--repo' && /^(acquire|batch|repo|registry)( |$)/.test(path)) ||
     (name === '--sources' && path === 'registry add')
   )
     return { kind: 'path' }
@@ -71,7 +71,9 @@ const optionValueStrategy = (path: string, option: Option): CompletionValueStrat
 }
 
 const repeatableOption = (path: string, option: Option): boolean =>
-  (option.long === '--repo' && /^(repo|registry)$/.test(path)) || (option.long === '--runtime' && path === 'repo init')
+  (option.long === '--repo' && /^(repo|registry)$/.test(path)) ||
+  (option.long === '--item' && path === 'batch prepare') ||
+  (option.long === '--runtime' && path === 'repo init')
 
 const option = (path: string, value: Option): CompletionOption => ({
   names: optionNames(value),

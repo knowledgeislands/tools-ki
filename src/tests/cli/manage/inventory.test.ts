@@ -8,6 +8,7 @@ const rootHelpCommands = [
   'agora',
   'skill',
   'repo',
+  'batch',
   'registry',
   'harness',
   'trade',
@@ -40,6 +41,7 @@ const agoraChangelogCommands = [
   '`ki agora reference remove <repository> [--dry-run]`'
 ]
 const repoCommands = ['audit', 'conform', 'diag', 'educate', 'init', 'open', 'roadmap', 'repair', 'skill', 'upgrade']
+const batchCommands = ['close', 'prepare', 'run', 'validate']
 const registryCommands = ['add', 'list']
 
 const commandNames = (output: string): string[] =>
@@ -53,6 +55,7 @@ describe('[ki command inventory]', () => {
     const agora = await box.run('ki agora --help')
     const agoraReference = await box.run('ki agora reference --help')
     const repository = await box.run('ki repo --help')
+    const batch = await box.run('ki batch --help')
     const registry = await box.run('ki registry --help')
     const zsh = await box.run('ki manage completion zsh')
     const bash = await box.run('ki manage completion bash')
@@ -73,11 +76,13 @@ describe('[ki command inventory]', () => {
       'skill',
       'upgrade'
     ])
+    expect(commandNames(batch.output)).toEqual(['prepare', 'validate', 'run', 'close'])
     expect(commandNames(registry.output)).toEqual(registryCommands)
     for (const command of rootHelpCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of manageCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of agoraCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of repoCommands) expect(zsh.output).toContain(`${command}:`)
+    for (const command of batchCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of registryCommands) expect(zsh.output).toContain(`${command}:`)
     expect(bash.output).toContain(`'') printf '%s\\n' '${rootHelpCommands.join(' ')}'`)
     expect(bash.output).toContain(`'manage') printf '%s\\n' '${manageCommands.join(' ')}'`)
@@ -86,6 +91,7 @@ describe('[ki command inventory]', () => {
     expect(bash.output).toContain(
       "'repo') printf '%s\\n' 'init open audit conform diag roadmap educate repair skill upgrade'"
     )
+    expect(bash.output).toContain("'batch') printf '%s\\n' 'prepare validate run close'")
     expect(bash.output).toContain(`'registry') printf '%s\\n' '${registryCommands.join(' ')}'`)
   })
 

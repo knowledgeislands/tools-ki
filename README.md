@@ -120,6 +120,22 @@ ki repo repair --dry-run
 ki repo --agora estate audit
 ```
 
+## Automate canonical batch records
+
+`ki batch prepare`, `validate`, `run`, and `close` provide deterministic local file mechanics for an already-approved exact set of Ready roadmap items. The commands protect the authority payload, bind a run, append explicit item evidence, and require every named item to match the approved completion target before recording closure. They do not select or implement work, infer approval, change roadmap lifecycle, accept or prune items, push, or release.
+
+```sh
+ki batch prepare --item KI-EXAMPLE-001 --item KI-EXAMPLE-002 --approved \
+  --authority-mode reviewed-items --expires-at 2099-01-01T18:00:00Z \
+  --completion-target awaiting-review
+ki batch validate KI-EXAMPLE-BATCH-001
+ki batch run KI-EXAMPLE-BATCH-001
+```
+
+Replace the illustrative identifiers and expiry with the approved Ready items and active window for the selected repository.
+
+See [canonical batch records](docs/guides/batch-records.md) for result and close examples, retained-record handling, and the process-authority boundary.
+
 ## Inspect governed work
 
 `ki repo roadmap list` reads the canonical work-item records in selected repositories without changing them. A selected repository without its declared roadmap directory contributes no roadmap and does not make the list fail; malformed, unsafe, unreadable, or misconfigured roadmap evidence remains a diagnostic and returns status `1`.

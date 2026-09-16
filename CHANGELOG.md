@@ -78,6 +78,13 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo skill remove`
 - `ki repo upgrade`
 
+#### Batch records
+
+- `ki batch prepare --item <id> [--item <id>...] --approved --authority-mode <reviewed-items|outcome> --expires-at <timestamp> --completion-target <awaiting-review|done>`
+- `ki batch validate <record>`
+- `ki batch run <record>`
+- `ki batch close <record> --completion-target <awaiting-review|done> --evidence-commit <commit>`
+
 #### Registry management
 
 - `ki registry add`

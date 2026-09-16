@@ -1,4 +1,4 @@
-.TH KI 1 "2026-09-09" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-09-16" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -147,6 +147,25 @@ Remove KI-managed repository skill links and declarations.
 .TP
 .B ki repo [repo-options] upgrade
 Refresh uniquely resolved capabilities declared by selected KI repositories.
+.SS Batch records
+\&
+.TP
+.B ki batch prepare --item <id> [--item <id>...] --approved --authority-mode <reviewed-items|outcome> --expires-at <timestamp> --completion-target <awaiting-review|done> [--authority-evidence <text>] [--repo <path>]
+Create one current canonical exact-set batch record from caller-supplied
+approval evidence and Ready work items in dependency order.
+.TP
+.B ki batch validate <record> [--repo <path>]
+Validate a canonical batch record, its protected payload, expiry, run binding,
+repository identity, and named work items without writing.
+.TP
+.B ki batch run <record> [--repo <path>] [--item <id> --result <awaiting-review|done|parked|stopped> --baseline <commit|—> [--result-commit <commit>] [--exception <text>]]
+Start the derived run or append one explicit caller-supplied item result. This
+command does not execute agent work or change roadmap lifecycle.
+.TP
+.B ki batch close <record> [--repo <path>] --completion-target <awaiting-review|done> --evidence-commit <commit>
+Append structural closure evidence only after every named ledger result and
+canonical work item matches the approved all-item target. This command does
+not accept work.
 .SS Registry management
 \&
 .TP

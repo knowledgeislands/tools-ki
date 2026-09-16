@@ -1,6 +1,7 @@
 export const rootCommandNames = [
   'acquire',
   'agora',
+  'batch',
   'bootstrap',
   'dev',
   'harness',
@@ -22,6 +23,7 @@ export const rootHelpCommandNames = [
   'agora',
   'skill',
   'repo',
+  'batch',
   'registry',
   'harness',
   'trade',

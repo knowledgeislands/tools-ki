@@ -2,6 +2,7 @@ import type { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { createAcquireCommand } from '../acquire/index.ts'
 import { createAgoraCommand } from '../agora/index.ts'
+import { createBatchCommand } from '../batch/index.ts'
 import { createBootstrapCommand } from '../bootstrap/index.ts'
 import { createDevCommand } from '../dev/index.ts'
 import { createHarnessCommand } from '../harness/index.ts'
@@ -18,6 +19,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   acquire: (context) => createAcquireCommand(context),
   bootstrap: (context) => createBootstrapCommand(context),
   agora: (context) => createAgoraCommand(context),
+  batch: (context) => createBatchCommand(context),
   dev: (context) => createDevCommand(context),
   harness: (context) => createHarnessCommand(context),
   trade: (context) => createTradeCommand(context),
