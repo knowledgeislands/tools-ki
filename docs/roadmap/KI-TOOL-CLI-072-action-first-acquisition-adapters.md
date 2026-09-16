@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: b9c4f355d958a8796ba60277c223c6f65196ba24
 created_at: 2026-09-16T20:55:57Z
-updated_at: 2026-09-16T21:43:23Z
+updated_at: 2026-09-16T23:17:07Z
 ---
 
 # Action-first Acquisition Adapters
@@ -40,7 +40,7 @@ Change only `tools-ki`. Consume machine-readable acquisition declarations from v
 - [x] Represent staged, retained, harvested, traded, superseded, and awaiting-review dispositions so moved documents do not look corrupt and changed disposed sources produce amendments.
 - [x] Add previewed, confirmed local reset scopes for adapter checkpoint, source identity, component, and complete rebuild without granting provider mutation.
 - [x] Update help, completion, README, manual, changelog, and recovery documentation; prepare a bounded Harness trade for acquisition-skill split and metadata/command updates.
-- [x] Exercise the read-only `kit-hnr` fixture as documented recovery evidence without changing it.
+- [x] Verify the interrupted-import recovery contract against the receiver fixture without embedding receiver-specific operations in tools-ki documentation.
 - [x] Run focused acquisition tests, full coverage and engineering gates, then move this record to `awaiting-review` with a review packet.
 
 ## Files touched
@@ -92,7 +92,7 @@ No standalone Specification is expected. CLI behavior is locked by this record a
 
 ### Guides
 
-Update public command documentation, completion grammar, manual, changelog, adapter activation guidance, checkpoint/reset behavior, transcript refresh policy, and the exact non-mutating `kit-hnr` recovery command.
+Update public command documentation, completion grammar, manual, changelog, adapter activation guidance, checkpoint/reset behavior, and transcript refresh policy.
 
 ### Roadmap
 
@@ -106,7 +106,7 @@ Implemented the action-first `ki acquire list|import|status|reconcile|reset` gra
 
 ### Summary of changes
 
-The CLI now consumes verified machine-readable acquisition declarations, distinguishes enabled, available, and invalid adapters, enforces exact-one or explicit all-selection rules, and rejects adapter-specific overrides with `--all` before provider contact. Granola now revalidates detail independently from transcript content, retries explicit omissions under a bounded policy, resumes verified journal components, commits only complete generations, supports moved-document dispositions and confirmed local reset scopes, and remains provider read-only. Public docs, help, completions, manual, changelog, specification, and the exact `kit-hnr` recovery procedure are current. Outbound trade `TRD-7a4b4609` returns the Harness skill split and metadata work to its owner.
+The CLI now consumes verified machine-readable acquisition declarations, distinguishes enabled, available, and invalid adapters, enforces exact-one or explicit all-selection rules, and rejects adapter-specific overrides with `--all` before provider contact. Granola now revalidates detail independently from transcript content, retries explicit omissions under a bounded policy, resumes verified journal components, commits only complete generations, supports moved-document dispositions and confirmed local reset scopes, and remains provider read-only. Public docs, help, completions, manual, changelog, and specification are current. Outbound trade `TRD-7a4b4609` returns the Harness skill split and metadata work to its owner.
 
 ### Verification
 
@@ -114,7 +114,7 @@ Focused acquisition, help, and completion tests pass. The full suite passes with
 
 ### Outstanding concerns
 
-Harness `KI-HARNESS-OPS-006` must adopt submitted trade `TRD-7a4b4609` before receiver repositories can resolve `ki-acquire-granola`. The 30 uncommitted `kit-hnr` documents remain deliberately untouched with no checkpoint or journal; execute the documented recovery only after that activation cutover and under separate receiver authority.
+Harness `KI-HARNESS-OPS-006` must adopt submitted trade `TRD-7a4b4609` before receiver repositories can resolve `ki-acquire-granola` through the installed public command. Receiver recovery is an operational action under separate authority and is not a durable tools-ki concern.
 
 ### Post-change review
 

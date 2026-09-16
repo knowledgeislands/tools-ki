@@ -97,31 +97,6 @@ ki acquire reset --adapter granola --rebuild
 
 Apply the exact reviewed plan by repeating it with `--confirm`. Component reset requires `--source`; `--rebuild` cannot be combined with a source or component.
 
-## Recover the interrupted kit-hnr import
-
-The current recovery fixture is:
-
-```text
-/Users/krisbrown/workspaces/hnr/kis/kit-hnr/+/_ACQUIRE/granola/
-```
-
-It contains 30 uncommitted meeting documents and no authoritative checkpoint. Do not commit those files as a completed acquisition and do not delete them manually. After the Harness publishes `ki-acquire-granola` and `kit-hnr` declares that acquisition skill, inspect the repository first:
-
-```sh
-ki acquire status --adapter granola --repo /Users/krisbrown/workspaces/hnr/kis/kit-hnr
-```
-
-Then rerun the same bounded interval used by the interrupted import:
-
-```sh
-ki acquire import --adapter granola \
-  --repo /Users/krisbrown/workspaces/hnr/kis/kit-hnr \
-  --since <original-inclusive-start> \
-  --until <original-inclusive-end>
-```
-
-Because no pre-existing journal can attest the 30 files, the adapter re-reads provider detail and transcripts needed to verify them, writes a new journal before advancing work, accepts only same-identity staged paths, and publishes `ledger.json` only after the complete selected generation verifies. Review and commit the receiver repository separately; this tools-ki change does not grant authority to mutate or commit `kit-hnr`.
-
 ## Safety boundary
 
 Granola operations are limited to account, folder, meeting-list, meeting-detail, and transcript reads. Acquisition never tags, edits, archives, deletes, or moves provider data; does not automate a browser; does not harvest knowledge; and does not write another repository. Folder membership is routing evidence rather than canonical classification, explicit provider omissions remain omissions, and conflicting receiver mappings fail closed.
