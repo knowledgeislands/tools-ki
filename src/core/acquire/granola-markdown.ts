@@ -135,6 +135,13 @@ const readableNotes = (value: string): string =>
     .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '_$1_')
     .trim()
 
+const readableTranscript = (value: string): string =>
+  value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n\n')
+
 const folderName = (folder: GranolaFolder): string | undefined =>
   stringField(folder.projection, ['name', 'title']) ??
   attribute(folder.projection, 'name') ??
@@ -219,7 +226,7 @@ export const renderGranolaMeeting = (options: {
     '',
     '## Transcript',
     '',
-    transcript || '_Transcript unavailable from the source._',
+    transcript ? readableTranscript(transcript) : '_Transcript unavailable from the source._',
     ''
   ]
   const content = sections.join('\n').replace(/[ \t]+$/gm, '')

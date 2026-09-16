@@ -102,7 +102,7 @@ describe('[ki acquire granola import]', () => {
         title: 'Foldered',
         folderIds: ['folder-secondary', 'folder-legal'],
         detail: { summary: 'Summary line  \n\nNext  ' },
-        transcript: { transcript: 'Speaker: hello  \n   \nSpeaker: bye  ' }
+        transcript: { transcript: 'Speaker A: hello  \n   \nSpeaker B: bye  ' }
       },
       { id: 'meeting-b', date: '2026-01-02', title: 'Unfoldered' },
       { id: 'meeting-c', date: '2026-01-03', title: 'Peer', folderIds: ['folder-peer'] }
@@ -130,6 +130,7 @@ describe('[ki acquire granola import]', () => {
       expect(document).toContain('type: granola-meeting')
       expect(document).toContain('## Notes')
       expect(document).toContain('## Transcript')
+      if (packageName.includes('meeting-a')) expect(document).toContain('Speaker A: hello\n\nSpeaker B: bye')
       expect(document).not.toMatch(/[ \t]+$/m)
     }
     const ledgerPath = 'repository with spaces/+/_ACQUIRE/granola/ledger.json'
