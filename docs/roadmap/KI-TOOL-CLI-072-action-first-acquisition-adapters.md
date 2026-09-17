@@ -4,12 +4,12 @@ area: CLI
 title: Action-first Acquisition Adapters
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: b9c4f355d958a8796ba60277c223c6f65196ba24
 created_at: 2026-09-16T20:55:57Z
-updated_at: 2026-09-16T23:17:07Z
+updated_at: 2026-09-17T06:24:17Z
 ---
 
 # Action-first Acquisition Adapters
@@ -122,7 +122,11 @@ The implementation retains the provider read-only boundary, contains all state m
 
 ### Mini recap
 
-CLI-072 is delivered and awaiting review: action-first acquisition, verified adapters, separate transcript checkpoints, resumable atomic journals, disposition-aware reconciliation, governed reset, public documentation, and a submitted Harness handoff are complete.
+CLI-072 is delivered and accepted: action-first acquisition, verified adapters, separate transcript checkpoints, resumable atomic journals, disposition-aware reconciliation, governed reset, and public documentation are complete; Harness follow-up has direct roadmap owners.
+
+## Done
+
+Accepted 2026-09-17 by Kris Brown on the review packet above. Harness follow-up is owned directly by existing `KI-HARNESS-OPS-005` and `KI-HARNESS-OPS-006`; the redundant unreceived trade is withdrawn.
 
 ## Discussion
 
