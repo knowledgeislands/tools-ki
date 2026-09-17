@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
-import type { KiContext } from '../../context.ts'
-import { KiError } from '../errors.ts'
-import { renderGranolaMeeting } from './granola-markdown.ts'
-import { granolaReceivers, type RoutedGranolaMeeting, routeGranolaMeetings } from './granola-routing.ts'
-import { type GranolaDetail, type GranolaTranscript, granolaSource, sha256, stableJson } from './granola-source.ts'
+import type { KiContext } from '../../../context.ts'
+import { KiError } from '../../errors.ts'
+import { renderGranolaMeeting } from './markdown.ts'
+import { granolaReceivers, type RoutedGranolaMeeting, routeGranolaMeetings } from './routing.ts'
+import { type GranolaDetail, type GranolaTranscript, granolaSource, sha256, stableJson } from './source.ts'
 import {
   type GranolaCheckpoint,
   type GranolaCheckpointMeeting,
@@ -21,13 +21,13 @@ import {
   verifyGranolaCheckpoint,
   verifyGranolaDocument,
   writeAcquisitionStateAtomic
-} from './granola-state.ts'
+} from './state.ts'
 import {
   enumerateGranolaMeetings,
   type GranolaWindowEvidence,
   granolaInterval,
   identityCheckpointSha256
-} from './granola-windows.ts'
+} from './windows.ts'
 
 export interface GranolaImportOptions {
   readonly repository?: string

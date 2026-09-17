@@ -4,7 +4,7 @@ export {
   acquisitionAdapterInventory,
   selectAcquisitionAdapters
 } from './adapters.ts'
-export { importCapture } from './chatgpt-import.ts'
+export { importCapture } from './chatgpt/import.ts'
 export {
   type GranolaImportResult,
   type GranolaStatusResult,
@@ -12,4 +12,4 @@ export {
   importGranola,
   reconcileGranola,
   resetGranola
-} from './granola-import.ts'
+} from './granola/import.ts'

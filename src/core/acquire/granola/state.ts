@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { lstat, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, normalize } from 'node:path'
-import { KiError } from '../errors.ts'
-import { sha256 } from './granola-source.ts'
-import type { GranolaWindowEvidence } from './granola-windows.ts'
+import { KiError } from '../../errors.ts'
+import { sha256 } from './source.ts'
+import type { GranolaWindowEvidence } from './windows.ts'
 
 export type GranolaTranscriptState = 'available' | 'retrying' | 'durable-omission'
 export type GranolaDispositionState =

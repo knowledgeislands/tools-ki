@@ -1,10 +1,10 @@
 import { realpath } from 'node:fs/promises'
 import { join } from 'node:path'
-import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../configuration/index.ts'
-import { KiError } from '../errors.ts'
-import { resolveRepository } from '../repository/index.ts'
-import { requiredLocalRegistry } from '../storage/index.ts'
-import type { GranolaFolder, GranolaMeeting } from './granola-source.ts'
+import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../configuration/index.ts'
+import { KiError } from '../../errors.ts'
+import { resolveRepository } from '../../repository/index.ts'
+import { requiredLocalRegistry } from '../../storage/index.ts'
+import type { GranolaFolder, GranolaMeeting } from './source.ts'
 
 export interface GranolaReceiver {
   readonly root: string

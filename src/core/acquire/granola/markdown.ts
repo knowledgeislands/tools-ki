@@ -1,6 +1,6 @@
-import { KiError } from '../errors.ts'
-import type { RoutedGranolaMeeting } from './granola-routing.ts'
-import type { GranolaDetail, GranolaFolder, GranolaTranscript } from './granola-source.ts'
+import { KiError } from '../../errors.ts'
+import type { RoutedGranolaMeeting } from './routing.ts'
+import type { GranolaDetail, GranolaFolder, GranolaTranscript } from './source.ts'
 
 export interface GranolaMeetingDocument {
   readonly content: string

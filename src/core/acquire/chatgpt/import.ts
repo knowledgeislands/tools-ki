@@ -1,6 +1,6 @@
 import { lstat, readdir, readFile, realpath, stat } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
-import { KiError } from '../errors.ts'
+import { KiError } from '../../errors.ts'
 import { type KepFile, type KepPayload, prepareKep, publishKep } from './kep.ts'
 
 const CONNECTOR_ID = 'knowledgeislands.chatgpt.local-capture'

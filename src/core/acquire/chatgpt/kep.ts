@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { copyFile, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import { KiError } from '../errors.ts'
+import { KiError } from '../../errors.ts'
 
 export interface KepFile {
   readonly path: string

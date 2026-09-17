@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import { KiError } from '../errors.ts'
-import type { CommandResult, Runner } from '../runtime/runner.ts'
+import { KiError } from '../../errors.ts'
+import type { CommandResult, Runner } from '../../runtime/runner.ts'
 
 export interface GranolaSource {
   readonly accountSha256: string

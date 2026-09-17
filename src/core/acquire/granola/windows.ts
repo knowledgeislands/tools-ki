@@ -1,6 +1,6 @@
-import { KiError } from '../errors.ts'
-import type { GranolaMeeting, GranolaSource, GranolaWindow } from './granola-source.ts'
-import { sha256, stableJson } from './granola-source.ts'
+import { KiError } from '../../errors.ts'
+import type { GranolaMeeting, GranolaSource, GranolaWindow } from './source.ts'
+import { sha256, stableJson } from './source.ts'
 
 export interface GranolaWindowEvidence extends GranolaWindow {
   readonly scope: string
