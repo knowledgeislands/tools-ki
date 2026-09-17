@@ -9,6 +9,7 @@ Line-by-line criteria for auditing ki-self. Classifications are derived from ite
 ## Contents
 
 - [RUBRIC — Rubric publication](#rubric--rubric-publication)
+- [PRODUCT — Product engineering](#product--product-engineering)
 - [CLASSIFICATION — Skill classification](#classification--skill-classification)
 - [REPAIR — Bootstrap and repair](#repair--bootstrap-and-repair)
 - [PRESENTATION — Human-facing presentation](#presentation--human-facing-presentation)
@@ -21,6 +22,38 @@ Keeps the human-readable local rubric derived from this executable catalogue.
 
 - **SELF-RUBRIC-001 [M] — Generated publication** — The committed rubric publication matches the native catalogue. (scripts/rubric/items/index.ts, references/rubric.md)
   - _Remediation:_ automatic
+
+## PRODUCT — Product engineering
+
+→ [standard](references/standards-product-engineering.md)
+
+Keeps tools-ki architecture, executable-contract tests, and portable boundaries explicit.
+
+- **SELF-ARCH-001 [J] — Command and domain ownership** — Command modules own grammar, selection, and rendering while core modules own typed domain behaviour and repository effects. (references/standards-product-engineering.md, src/commands, src/core)
+  - _Evidence scope:_ Changed command and core modules, their imports, and public behaviour.
+  - _Review prompt:_ Do command, core, presentation, and provider boundaries retain one clear owner without hidden reverse dependencies?
+  - _Outcomes:_ conforming; gap identified
+  - _Conforming guidance:_ Move behaviour to its owning domain and expose one typed seam; do not add a compatibility coordinator.
+- **SELF-ARCH-002 [J] — Cohesive domain modules** — Modules group one domain concern and split only when responsibilities have independent reasons to change. (references/standards-product-engineering.md, src/core, src/commands)
+  - _Evidence scope:_ Large or cross-cutting changed modules and their callers.
+  - _Review prompt:_ Can a maintainer locate each policy and follow the ordinary flow without reconstructing unrelated lifecycle stages or abstractions?
+  - _Outcomes:_ conforming; gap identified
+  - _Conforming guidance:_ Extract a named domain seam when responsibilities evolve independently; never split solely by line count.
+- **SELF-TEST-001 [J] — Executable contract evidence** — Tests drive the in-process CLI seam with injected capabilities and no live network. (references/standards-product-engineering.md, src/tests/cli/_cli_helper.ts, src/context.ts)
+  - _Evidence scope:_ Changed product behaviour, failure paths, and provider interactions.
+  - _Review prompt:_ Does each supported behaviour remain observable through run(args, context), with provider and filesystem effects controlled at the same boundary?
+  - _Outcomes:_ conforming; gap identified
+  - _Conforming guidance:_ Add CLI contract evidence or expose a supported port; do not freeze an internal helper with a substitute unit test.
+- **SELF-TEST-002 [J] — Coverage exclusion proof** — Coverage exclusions document a whole-call-graph reason that no supported CLI input can reach the guarded branch. (references/standards-product-engineering.md, src)
+  - _Evidence scope:_ Every added or changed v8 ignore and every new caller of an excluded function.
+  - _Review prompt:_ Does each exclusion remain unreachable for every caller, with interface-level fault injection used only where one CLI invocation cannot produce the documented failure?
+  - _Outcomes:_ conforming; gap identified
+  - _Conforming guidance:_ Test reachable behaviour through the CLI, remove unsupported dead code, or document the complete boundary proof beside the narrow exclusion.
+- **SELF-PORT-001 [J] — Portable meaning and authority** — Portable claims use their normative owner and cross-boundary records compare semantic projections without expanding authority. (references/standards-product-engineering.md)
+  - _Evidence scope:_ Changed parsers, validators, cross-repository records, provider adapters, and normative documentation.
+  - _Review prompt:_ Are external claims grounded in the owning standard, semantic equality used where formatting is non-authoritative, and mutation authority kept explicit?
+  - _Outcomes:_ conforming; gap identified
+  - _Conforming guidance:_ Verify the normative source, compare the owned semantic projection, and fail closed at repository or provider boundaries.
 
 ## CLASSIFICATION — Skill classification
 
