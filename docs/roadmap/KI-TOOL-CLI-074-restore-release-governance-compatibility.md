@@ -4,12 +4,12 @@ area: CLI
 title: Restore release governance
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 47d3617470f82d5227be3c48249a6cd7875717c9
 created_at: 2026-09-17T06:51:55Z
-updated_at: 2026-09-18T06:16:00Z
+updated_at: 2026-09-18T05:20:00Z
 ---
 
 # Restore Release Governance
@@ -42,7 +42,7 @@ Design and verify an explicit bridge sequence that keeps every Harness archive i
 - [x] Run the complete engineering, repository, installer-link, packaging, and release-readiness gates.
 - [x] Push the verified bridge commit, confirm CI green, tag and publish immutable v0.4.0, and confirm clean installation.
 - [x] Update CI to install v0.4.0 and restore the current generic working-area README pair in a post-release cutover commit.
-- [ ] Confirm released v0.4.0 governs the restored checkout and CI remains green.
+- [x] Confirm released v0.4.0 governs the restored checkout and CI remains green.
 
 ## Files touched
 
@@ -94,6 +94,37 @@ Keep the release-management guide accurate if executing the bridge exposes any m
 ### Roadmap
 
 Record the transition Harness commit, archive digest, candidate evidence, publication evidence, and cutover evidence in this item. No delegation is planned because Harness pinning, working-area bytes, versioning, remote CI, publication, and cutover are serial authority boundaries.
+
+## Review
+
+### Delivered
+
+Published immutable [v0.4.0](https://github.com/knowledgeislands/tools-ki/releases/tag/v0.4.0) from release commit `1eceb6b020a3fe7a627740528af0fccf0da4bb79`, then cut CI and the restored current repository contracts over in `ae89bd6cd3e2675158b8a62cd7cf2439a8e46fc0`.
+
+### Summary of changes
+
+- Pinned the canonical Harness to transition commit `bcdc991946a81bb59f207ee47dba24c138f60abb` with verified archive SHA-256 `04247d3522b77ee884c30536a463a382de512a7cfbfc5a2654ee7c3ac22e5edf`.
+- Released the action-first acquisition, roadmap-governance, architecture, documentation, and audit baseline as v0.4.0 with signed checksum assets for three native targets.
+- Used explicit predecessor and candidate audits for the bridge, then restored the current working-area READMEs and `.gitignore` and returned CI to one complete audit using released v0.4.0.
+
+### Verification
+
+- Local release gates passed: 860 tests with 100% coverage, TypeScript, Biome, Knip, build, manual lint, Bash and Zsh completions, link installation, native packaging, and clean exact-version installation.
+- Clean detached-worktree audits passed for both released v0.3.6 predecessor governance and the complete v0.4.0 candidate contract across all 18 declared skills.
+- Bridge CI run `35309585380`, signed release run `35309891265`, and post-cutover CI run `35310148886` all completed successfully.
+- GitHub reports v0.4.0 immutable, non-draft, non-prerelease, with a signed checksum manifest and all three platform archives.
+
+### Outstanding concerns
+
+The Harness retains exact audit-only predecessor acceptance for the bridge README pair and `tools-ki` `.gitignore`. It does not alter CONFORM output, but should be removed through separately governed Harness work after the wider estate no longer needs the predecessor bytes.
+
+### Post-change review
+
+The release boundary remains immutable and provider-neutral, mandatory roadmap timestamps remain enforced, current repository contracts are restored, and released v0.4.0 now governs `main`. No unresolved release blocker remains.
+
+### Mini recap
+
+v0.4.0 is published and installed, the repository is cut over to it, and CLI-074 is ready for human acceptance.
 
 ## Discussion
 
