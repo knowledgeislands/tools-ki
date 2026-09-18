@@ -4,12 +4,12 @@ area: CLI
 title: Audit coverage exclusions
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 72a6a6757e0a1012ea40d05e0fe512fb793ae4a3
 created_at: 2026-09-17T06:46:58Z
-updated_at: 2026-09-18T03:13:01Z
+updated_at: 2026-09-18T03:33:54Z
 ---
 
 # Audit Coverage Exclusions
@@ -97,6 +97,10 @@ Public behaviour is unchanged. Avoiding mechanical comment rewrites keeps the au
 ### Mini recap
 
 Coverage remains a dead-code detector rather than a percentage-only gate: every exclusion was revalidated, none required removal or replacement, and the full engineering surface remains green.
+
+## Done
+
+Accepted 2026-09-18 by Kris Brown on the review packet above.
 
 ## Discussion
 

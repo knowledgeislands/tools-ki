@@ -4,12 +4,12 @@ area: CLI
 title: Standardise installer version pinning
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 72a6a6757e0a1012ea40d05e0fe512fb793ae4a3
 created_at: 2026-09-17T21:05:39Z
-updated_at: 2026-09-18T03:13:01Z
+updated_at: 2026-09-18T03:33:54Z
 ---
 
 # KI-TOOL-CLI-076: Standardise installer version pinning
@@ -110,6 +110,10 @@ The decision preserves shell portability, release ownership, and the convenient 
 ### Mini recap
 
 The canonical pinned form is now durable, documented, and mechanically evidenced in `tools-ki`; cross-tool adoption can proceed without reopening the interface choice.
+
+## Done
+
+Accepted 2026-09-18 by Kris Brown on the review packet above.
 
 ## Discussion
 

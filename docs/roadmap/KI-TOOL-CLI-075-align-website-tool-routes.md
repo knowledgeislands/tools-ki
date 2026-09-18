@@ -4,12 +4,12 @@ area: CLI
 title: Align website tool routes
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 72a6a6757e0a1012ea40d05e0fe512fb793ae4a3
 created_at: 2026-09-17T21:05:16Z
-updated_at: 2026-09-18T03:13:01Z
+updated_at: 2026-09-18T03:33:54Z
 ---
 
 # KI-TOOL-CLI-075: Align website tool routes
@@ -104,6 +104,10 @@ Help and completion grammar are unaffected because no command or option changed.
 ### Mini recap
 
 `ki manage docs overview` no longer sends users to a retired page, and releases now carry enough evidence for the website owner to advance the public tool registry safely.
+
+## Done
+
+Accepted 2026-09-18 by Kris Brown on the review packet above.
 
 ## Discussion
 
