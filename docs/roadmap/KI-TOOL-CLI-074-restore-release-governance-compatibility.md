@@ -3,13 +3,13 @@ id: KI-TOOL-CLI-074
 area: CLI
 title: Restore release governance
 theme: cli
-horizon: waiting-for
-status: draft
+horizon: now
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-09-17T06:51:55Z
-updated_at: 2026-09-18T03:50:38Z
+updated_at: 2026-09-18T04:26:00Z
 ---
 
 # Restore Release Governance
@@ -28,9 +28,72 @@ The current published Harness head is `460556d81f0d4d6dca9c195c088c6f5abe7547dc`
 
 Design and verify an explicit bridge sequence that keeps every Harness archive immutable, preserves proof that a released executable governs the checkout, and leaves both the bridge candidate and subsequent repository state auditable. Update a canonical Harness revision or digest only from verified archive evidence. Do not remove the governance job, use a mutable branch archive, weaken `WORK-1` permanently, publish from a failing candidate, or claim current local-source evidence substitutes for released-tool CI.
 
-## Waiting condition
+## Current state
 
-Wait for a bounded `ki-agentic-harness` revision that temporarily accepts both the v0.3.6 working-area README contract and the current contract, with an explicit retirement condition after the tool release cutover. Creating or committing that sibling-repository task requires separate authority. Execution also requires explicit authority to push the bridge commit, publish the selected `ki` version, create its tag and release, and push the follow-up cutover.
+`KI-HARNESS-GOV-075` is approved and ready to produce the bounded transition revision that temporarily accepts both the v0.3.6 working-area README contract and the current contract. The user has explicitly authorised the sibling change, bridge push, v0.4.0 tag and publication, and follow-up cutover. The tools release bridge begins only after the exact Harness commit and archive digest exist.
+
+## Steps
+
+- [ ] Implement and verify `KI-HARNESS-GOV-075`, then record its immutable commit and archive digest.
+- [ ] Restore the two generic working-area READMEs to their v0.3.6-compatible bytes for the bridge candidate.
+- [ ] Point `canonicalHarnessRelease` and its contract tests at the transition Harness archive.
+- [ ] Set the candidate version to `0.4.0`, add the dated changelog release entry, and align help, completions, manual, installer, and packaging evidence.
+- [ ] Prove released v0.3.6 governs the bridge checkout and the built v0.4.0 candidate governs it through the transition Harness.
+- [ ] Run the complete engineering, repository, installer-link, packaging, and release-readiness gates.
+- [ ] Push the verified bridge commit, confirm CI green, tag and publish immutable v0.4.0, and confirm clean installation.
+- [ ] Update CI to install v0.4.0 and restore the current generic working-area README pair in a post-release cutover commit.
+- [ ] Confirm released v0.4.0 governs the restored checkout and CI remains green.
+
+## Files touched
+
+- `+/README.md`
+- `-/README.md`
+- `src/core/storage/registry.ts`
+- matching CLI contract tests under `src/tests/cli/`
+- `package.json`
+- `bun.lock`
+- `CHANGELOG.md`
+- `.github/workflows/ci.yml`
+- public help, completion, and `man/ki.1` only if candidate verification exposes drift
+- `docs/roadmap/KI-TOOL-CLI-074-restore-release-governance-compatibility.md`
+
+## Verify
+
+```sh
+bun run test:coverage
+bunx tsc --noEmit
+bunx biome check
+bunx knip
+bun run build
+bun run ki:tools:lint-man
+./dist/ki --version
+./dist/ki repo audit --repo .
+ki repo audit --repo .
+```
+
+Also validate Bash and Zsh generated completions, disposable installer `--link` destinations, one native packaging target, the released-v0.3.6 bridge audit, green remote CI, immutable GitHub publication, and a clean exact-version installation before the post-release cutover.
+
+## Dependencies / blocks
+
+`KI-HARNESS-GOV-075` supplies the required transition commit and digest. Publication depends on green remote CI from the pushed bridge commit. The post-release cutover depends on immutable v0.4.0 publication and clean-install proof.
+
+## Documentation impact
+
+### Decision Records
+
+None. Existing release and repository-governance decisions already determine the bridge.
+
+### Specifications
+
+No normative behaviour changes beyond the action-first and acquisition contracts already recorded.
+
+### Guides
+
+Keep the release-management guide accurate if executing the bridge exposes any missing release step.
+
+### Roadmap
+
+Record the transition Harness commit, archive digest, candidate evidence, publication evidence, and cutover evidence in this item. No delegation is planned because Harness pinning, working-area bytes, versioning, remote CI, publication, and cutover are serial authority boundaries.
 
 ## Discussion
 
