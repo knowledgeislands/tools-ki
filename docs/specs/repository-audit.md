@@ -12,7 +12,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repo.test.ts` — `requires a resolved KI repository`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-AUDIT-002 — Declared mechanical audit
 
@@ -22,7 +22,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repo.test.ts` — `runs only a declared skill's mechanical rubric items`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-AUDIT-003 — Exact capability selection
 
@@ -32,7 +32,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repo.test.ts` — `selects an exact capability when another declared skill extends its name`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Results and output
 
@@ -44,7 +44,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repo.test.ts` — `runs only a declared skill's mechanical rubric items` and `filters complete outcome levels by default and renders every level on request`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-AUDIT-005 — Validated output controls
 
@@ -54,7 +54,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repo.test.ts` — `exposes and validates repository-operation output controls`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-AUDIT-006 — Failure exit status
 
@@ -64,7 +64,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repo.test.ts` — `fails when a FAIL-level item reports a violation`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-AUDIT-007 — Multi-repository summary
 
@@ -74,7 +74,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/targets.test.ts` — `runs audit independently for every preflighted explicit target` and `recaps every repository verdict and aggregate finding volume`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-AUDIT-008 — Honest interactive progress
 
@@ -84,7 +84,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repo.test.ts` — `renders a compact TTY receipt stream without changing non-interactive output` and `uses the same activity bar regardless of declared item cost`; `src/tests/cli/repo/progress-stages.test.ts` — `keeps a counted evidence step indeterminate instead of treating it as estimated completion` and `shows evidence-ready skills as full receipts, then collapses them once`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-AUDIT-009 — Registered-estate selector
 
@@ -94,7 +94,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/agora.test.ts` — `rejects a one-sided home declaration before selecting or opening it`; `src/tests/cli/repo/targets.test.ts` — `selects literal roots and standard glob patterns deterministically`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Gaps
 

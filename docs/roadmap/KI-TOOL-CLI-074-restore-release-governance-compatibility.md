@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-09-17T06:51:55Z
-updated_at: 2026-09-17T21:02:57Z
+updated_at: 2026-09-18T03:50:38Z
 ---
 
 # Restore Release Governance
@@ -22,7 +22,7 @@ Restore a green immutable-release governance path in which the released `ki`, it
 
 The 2026-09-17 release-readiness review found seven consecutive failing `main` CI runs through run `35190134780` at `e4d6140`. CI installs released `ki` v0.3.6, whose immutable canonical Harness pin is commit `65a223ca9c6d6f8f5b9b48c52e121f1e412d7e71` with archive digest `84244d24d76278d45c1ff36535b38f03dfee3012b728b43a77905f1f43e7e790`. That Harness requires the earlier byte-exact `+/README.md` and `-/README.md` contract, while this repository conforms to the newer contract.
 
-The current published Harness head is `569de66c7347d5792469d28f86bc39fb63be9ffa`, whose archive digest is `697a134c6b7b2be8b4405cae9015af544297ca4e2db34832c15b60b86416e065`; its `ki-repo` implementation matches the repository's current working-area contract. However, simply reverting the READMEs for a bridge release and pinning that current Harness is not sound: released v0.3.6 would pass the old files, but the candidate using the new Harness would fail those same files before publication.
+The current published Harness head is `460556d81f0d4d6dca9c195c088c6f5abe7547dc`, whose archive digest is `f2eab93cfd3b142a0f88cec32facfa0ed98151b3807abbbe2c505be01114310f`; its `ki-repo` implementation matches the repository's current working-area contract, but it does not yet include a dual-contract transition. However, simply reverting the READMEs for a bridge release and pinning that current Harness is not sound: released v0.3.6 would pass the old files, but the candidate using the new Harness would fail those same files before publication.
 
 ## Boundary
 

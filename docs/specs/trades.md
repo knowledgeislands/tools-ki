@@ -12,7 +12,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and record validity, then abandons mutable work` and `creates declared outbound trades before receiver activation and rejects malformed or retired inputs`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### TRADE-002 — Committed receipt
 
@@ -22,7 +22,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `receives all matching trades` and `validates receiver-only status fields`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### TRADE-003 — Route diagnostics
 
@@ -32,7 +32,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `reports malformed route declarations plus pending` and `ignores missing registered roots and missing trade paths without treating them as peer state`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### TRADE-004 — Estate route inspection
 
@@ -42,7 +42,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `lists incomplete route declarations across the registered estate`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### TRADE-005 — Preparation observation
 
@@ -52,7 +52,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and record validity, then abandons mutable work`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### TRADE-006 — Observation-led cleanup
 
@@ -62,7 +62,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `applies observation-led completion and eligible cleanup, including premature-release protection`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### TRADE-007 — Lifecycle inventory
 
@@ -72,7 +72,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `creates, receives, displays, releases, and prunes a work trade while each command writes only its local repository`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### TRADE-008 — Route dependency protection
 
@@ -82,7 +82,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `prepares, observes, guards routes and record validity, then abandons mutable work`; and `src/tests/cli/trade/standing-intake.test.ts` — `keeps one-sided and invalid grants closed without touching a peer`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### TRADE-009 — Receiver-owned knowledge subtypes
 
@@ -92,7 +92,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/standing-intake.test.ts` — `defines reciprocal grants and appends one commit-pinned receiver-local capture` and `guards duplicate, self, absent, and export-side mutations`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### TRADE-010 — Exact standing grants
 
@@ -102,7 +102,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/standing-intake.test.ts` — `keeps one-sided and invalid grants closed without touching a peer` and `validates subtype and standing declarations before they become executable authority`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### TRADE-011 — Receiver-local standing capture
 
@@ -112,7 +112,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/standing-intake.test.ts` — `defines reciprocal grants and appends one commit-pinned receiver-local capture` and `refuses malformed, unresolved, or non-local capture targets after an exact grant activates`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Gaps
 

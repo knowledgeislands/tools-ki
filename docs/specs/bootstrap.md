@@ -12,7 +12,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/bootstrap/bootstrap.test.ts` — `bootstraps without replacement and refreshes the detected installed inventory on request`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### BOOT-002 — Preserved user state on refresh
 
@@ -22,7 +22,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/bootstrap/bootstrap.test.ts` — `preserves registered local and repository settings while refreshing configuration`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### BOOT-003 — Complete core capability inventory
 
@@ -32,7 +32,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/bootstrap/bootstrap.test.ts` — `refuses an installed canonical harness missing a required bootstrap skill`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Gaps
 

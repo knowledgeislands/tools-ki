@@ -12,7 +12,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/harness/harness.test.ts` — `refuses an archive that does not match configured immutable evidence without creating an installation`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### HARN-002 — Safe replacement
 
@@ -22,7 +22,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/root/lifecycle.test.ts` — `keeps an installed harness intact when a replacement payload is invalid`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### HARN-003 — Protected canonical and active state
 
@@ -32,7 +32,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/root/lifecycle.test.ts` — `blocks replacement and removal while a supplied user skill is active`; `src/tests/cli/harness/harness.test.ts` — `refuses to uninstall the canonical harness`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### HARN-004 — Explicit capability prefix
 
@@ -42,7 +42,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/harness/harness.test.ts` — `requires provider-authored Harness prefix metadata`; `requires published skills to use the declared Harness prefix`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### HARN-005 — Unique installed prefix ownership
 
@@ -52,7 +52,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/harness/harness.test.ts` — `refuses a second installed Harness claiming the same prefix`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### HARN-006 — Bare repository capability names
 
@@ -62,7 +62,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/validation.test.ts` — `resolves bare skill names across distinct Harness prefixes`; `rejects a Harness-qualified repository skill declaration`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### HARN-007 — One Harness declaration filename
 
@@ -72,7 +72,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/harness/harness.test.ts`, `src/tests/cli/dev/dev.test.ts`, and a bounded retired-name search across product and test sources.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Gaps
 

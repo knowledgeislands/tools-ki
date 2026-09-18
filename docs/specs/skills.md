@@ -12,7 +12,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/skill/skill.test.ts` — `activates portable and runtime-bound skills only for compatible configured agents`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### SKILL-002 — Explicit repository activation
 
@@ -22,7 +22,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/skill/skill.test.ts` — `intersects repository and skill runtimes before linking or declaring` and `activates a repository skill in every preflighted target`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### SKILL-003 — Protected foreign state
 
@@ -32,7 +32,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/skill/skill.test.ts` — `refuses to remove a foreign user skill directory` and `refuses to remove a foreign repository skill directory`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### SKILL-004 — Published rubric fidelity
 
@@ -42,7 +42,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/skill/rubric.test.ts` — `renders mechanical and judgment items and reports in sync once written`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Gaps
 

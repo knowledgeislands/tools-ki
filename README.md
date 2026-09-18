@@ -181,6 +181,14 @@ The Homebrew tap will move to these same release artifacts after that first immu
 
 The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
+## Documentation map
+
+- [Decision Records](docs/decisions/README.md) explain why the platform is shaped as it is.
+- [Specifications](docs/specs/index.md) define the accepted observable behaviour and its verification evidence.
+- [Guides](docs/guides/README.md) explain how to develop, operate, and release `ki`.
+- [Roadmap](ROADMAP.md) shows active delivery work and its lifecycle state.
+- [Changelog](CHANGELOG.md) inventories the public V1 baseline while pre-V1 tags remain the shipped `0.x` release record.
+
 ## Find local capabilities and documentation
 
 `ki manage search <query>` searches only verified installed harness capabilities, without contacting a registry or discovering a repository.
@@ -192,5 +200,3 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 `ki manage docs` prints labelled public CLI, site, manual, and roadmap locations; `ki manage docs [overview|site|manual|roadmap]` prints one location. It never opens a browser or fetches content.
 
 The [local utility commands guide](https://knowledgeislands.info/guidance/cli/local-commands/) explains their local-only behaviour and safety boundaries. Use `ki --help` or `ki <command> --help` for exact grammar; the tracked manual remains authoritative.
-
-See the [roadmap](ROADMAP.md).

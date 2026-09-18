@@ -12,7 +12,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/acquire.test.ts` — `creates a deterministic KEP that conforms to the KIS-0002 payload layout`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-002 — Safe capture validation
 
@@ -22,7 +22,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/acquire.test.ts` malformed-input and unsafe-path cases.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-003 — No-write dry run
 
@@ -32,7 +32,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/acquire.test.ts` — `reports a dry run without writing`; `src/tests/cli/acquire/granola.test.ts` dry-run assertions.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Granola meetings
 
@@ -44,7 +44,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/granola.test.ts` provider-contract, read-only, and no-provider-mutation assertions.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-005 — Complete identity enumeration
 
@@ -54,7 +54,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/granola.test.ts` — `splits saturated date windows and fails closed on a saturated single day` and conflicting-projection cases.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-006 — Explicit receiver reconciliation
 
@@ -64,7 +64,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/granola.test.ts` receiver-conflict, coverage, duplication, and peer-selector cases.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-007 — ~~Content-addressed Granola KEP publication~~ (deprecated)
 
@@ -88,7 +88,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/adapters.test.ts` valid, invalid, repeated-field, duplicate-adapter, and missing-executable cases.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-011 — Action-first selection
 
@@ -98,7 +98,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/adapters.test.ts` selection, ambiguity, mutual-exclusion, unsupported-action, and retired-grammar cases.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-012 — Invocation-property isolation
 
@@ -108,7 +108,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/adapters.test.ts` — `allows common options with --all and rejects adapter invocation properties before execution`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-013 — Separate detail and transcript observations
 
@@ -118,7 +118,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/granola.test.ts` — `separates mutable detail from cached transcripts and supports explicit refresh` and bounded-omission cases.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-014 — Atomic resumable generations
 
@@ -128,7 +128,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/granola.test.ts` interrupted-resume, missing-staged-component, corrupt-journal, incompatible-journal, and checkpoint-advancement cases.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-015 — Post-acquisition disposition
 
@@ -138,7 +138,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/granola.test.ts` — `accepts harvested local dispositions and stages changed-source amendments for review`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### ACQUIRE-016 — Governed local reset
 
@@ -148,7 +148,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/acquire/granola.test.ts` reset planning, confirmation, scope, and no-provider-call cases.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-16 full coverage suite.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Gaps
 

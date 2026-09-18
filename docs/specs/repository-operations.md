@@ -12,7 +12,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/targets.test.ts` — `runs audit independently for every preflighted explicit target`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-002 — Declared safe conform writes
 
@@ -22,7 +22,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/conform-execution.test.ts` — `refuses an unsafe direct conform write before publication`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-003 — Repository repair scope
 
@@ -32,7 +32,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repair.test.ts` — `registers the selected physical root before repairing a missing compatible projection`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-004 — Declared provider upgrades
 
@@ -42,7 +42,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/update.test.ts` — `upgrades the uniquely resolved providers declared by the current repository`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-005 — Governed roadmap inventory
 
@@ -52,7 +52,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `lists flat Knowledge Base work items from the declared Streams roadmap and ignores its ledger` and `lists and filters grouped governed work items without JSON output`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-006 — Guarded roadmap maintenance
 
@@ -62,7 +62,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `promotes and prunes flat Knowledge Base work items without changing the ledger`, `prunes only completed items across selected repositories after every target is valid`, `promotes and demotes one explicit item with directional horizon validation`, and `rejects ambiguous roadmap identifiers before changing or pruning a work item`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-007 — Repository projection diagnostics
 
@@ -72,7 +72,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/diag.test.ts` — `reports selected repository projection health without changing it` and `reports an unresolved declared provider as unrepairable`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-008 — Fail-closed rubric activation evidence
 
@@ -82,7 +82,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/conform-execution.test.ts` — `activates a proposed declared runtime skill and re-audits it`, `refuses a proposed runtime activation with an unsafe managed-skill entry`, and `reports $title as blocked before a rubric can activate it`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-009 — Conditional conform re-audit
 
@@ -92,7 +92,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/conform-writes.test.ts` — `does not re-audit a clean conform that staged no operation`, `publishes a complete conform write set, supports dry-run, and re-audits`, and `runs an eligible guarded command only with explicit authority and re-audits it`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-010 — Adapter-owned roadmap metadata
 
@@ -104,7 +104,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `projects adapter-owned KB metadata alongside a strict project roadmap in one selection`, `diagnoses unavailable, malformed, and misconfigured Knowledge Base roadmaps without falling back`, `rejects every malformed canonical frontmatter shape`, and `promotes and prunes flat Knowledge Base work items without changing the ledger`.
 
-_Evidence:_ The referenced CLI contract tests pass in the 2026-09-15 full suite: 753 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-011 — Absent roadmap projection
 
@@ -114,7 +114,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `treats absent Knowledge Base roadmaps as empty but diagnoses malformed and misconfigured ones` and `isolates missing, malformed, invalid-status, and unsafe roadmap entries`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-012 — Aggregate roadmap inventory
 
@@ -124,7 +124,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `aggregates selected roadmaps while treating absent roots as empty`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-013 — Repository-local self governance
 
@@ -134,7 +134,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/local-provider.test.ts` — `[ki repo] repository-local ki-self provider`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-014 — Final repository and workspace declarations
 
@@ -144,7 +144,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repo.test.ts`, `src/tests/cli/repo/targets.test.ts`, and a bounded retired-name search across product and test sources.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-015 — Timestamped roadmap statistics
 
@@ -154,7 +154,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `requires timestamp pairs, advances horizon-move timestamps, and reports statistics`.
 
-_Evidence:_ Focused CLI contract test and full 2026-09-15 verification suite pass.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### REPO-OPS-016 — Portable triage visibility
 
@@ -164,7 +164,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `orders horizons then lifecycle and canonical identifier` and `promotes and demotes one explicit item with directional horizon validation`.
 
-_Evidence:_ The focused CLI contract tests and full 2026-09-14 verification suite pass.
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Gaps
 

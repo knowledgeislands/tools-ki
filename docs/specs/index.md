@@ -17,13 +17,9 @@ The command MUST provide an observable behaviour.
 
 _Conformance:_ conforming
 
-_Conformance:_ conforming
-
 _Verify:_ a named CLI test asserts the behaviour.
 
-_Evidence:_ a recorded passing CLI test run.
-
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ the named CLI contract test passes.
 ```
 
 ## ID scheme
@@ -38,7 +34,7 @@ Unbuilt or uncertain behaviour belongs in an area's unnumbered `## Gaps` section
 
 | File                     | Prefix       | Covers                                                         |
 | ------------------------ | ------------ | -------------------------------------------------------------- |
-| acquisition.md           | `ACQUIRE`    | Knowledge Exchange Package acquisition                         |
+| acquisition.md           | `ACQUIRE`    | Provider-neutral acquisition adapters and checkpoint recovery  |
 | agoras.md                | `AGORA`      | Named user-level repository groups                             |
 | bootstrap.md             | `BOOT`       | First-time user activation and refresh                         |
 | cli.md                   | `CLI`        | Root command discovery, version, and failure boundary          |

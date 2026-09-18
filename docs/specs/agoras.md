@@ -12,7 +12,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/core/agora/index.ts` — `homeDeclarations` and `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers owner inclusion and invalid owners.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-002 — Reciprocal additional membership
 
@@ -22,7 +22,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/core/agora/index.ts` — `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers one-sided and malformed membership declarations.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-003 — Globally unique names
 
@@ -32,7 +32,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/core/agora/index.ts` — `uniqueProfiles`; `src/tests/cli/agora/agora.test.ts` covers duplicate identifiers.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-004 — Validated declared configuration
 
@@ -42,7 +42,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/agora.test.ts` — malformed registered repository and Agora declaration coverage.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-005 — Inspection and opening
 
@@ -52,7 +52,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/agora.test.ts` — list, show, open, and launch-failure coverage.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-006 — Machine-readable physical roots
 
@@ -64,7 +64,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/agora.test.ts` — `writes deterministic machine-readable roots for named Agoras and the estate` and `fails without roots for unknown, empty, missing, or non-reciprocal Agora selectors`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-007 — Declared projection order
 
@@ -76,7 +76,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/core/agora/index.ts` — `homeDeclarations` and `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers ordered and absent-order projections through show, roots, open, and repository selection, plus malformed declarations.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-008 — Explicit health audit
 
@@ -86,7 +86,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/audit.test.ts` covers healthy, mixed, unavailable, duplicate, non-reciprocal, malformed, estate, and explicitly selected profiles.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-009 — Health audit exit status
 
@@ -96,7 +96,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/audit.test.ts` asserts output and exit status through the CLI seam; `src/tests/cli/root/help.test.ts` and `src/tests/cli/manage/completions.test.ts` verify command discovery.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-010 — Read-only editor projection observation
 
@@ -106,7 +106,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/inspect.test.ts` covers physical VS Code workspace files, stable and preview Zed databases, schema validation, explicit selectors, read-only evidence, and fail-closed unsupported sources.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-011 — Shared projection classification
 
@@ -116,7 +116,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/inspect.test.ts` exercises every classification using paths with spaces, JSONC relative paths, file URIs, non-file URIs, and duplicate-free deterministic totals.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-012 — Projection inspection exit status
 
@@ -126,7 +126,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/inspect.test.ts` asserts exact, drift, unavailable, malformed, remote, ambiguous, invalid-selector, and invalid-resolution outcomes through the CLI seam; `src/tests/cli/root/help.test.ts` and `src/tests/cli/manage/completions.test.ts` verify command discovery.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-013 — External reference associations
 
@@ -136,7 +136,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/references.test.ts` — `associates a plain Git checkout and projects typed owner and reference roots`; `rejects unsafe selections and malformed association stores`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-014 — Typed reference resolution
 
@@ -146,7 +146,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/references.test.ts` — reference projection and diagnostic coverage; `src/tests/cli/agora/inspect.test.ts` — target-neutral projection classification.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### AGORA-015 — Local association lifecycle
 
@@ -156,7 +156,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/references.test.ts` — `keeps association mutation local and ignores stale state after promotion to membership`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Gaps
 

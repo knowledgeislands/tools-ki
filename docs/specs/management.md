@@ -12,7 +12,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/list.test.ts` — `lists installed capabilities and declared user skills without inspecting the current repository`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### MANAGE-002 — Managed-state diagnosis
 
@@ -22,7 +22,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/doctor.test.ts` — `reports a configured skill whose active source cannot be resolved`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### MANAGE-003 — Deterministic capability search
 
@@ -32,7 +32,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `searches verified installed capabilities case-insensitively in deterministic order without repository discovery`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Updates and shell integration
 
@@ -44,7 +44,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/update.test.ts` — `updates only an installer-managed executable through its persisted verified installer`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### MANAGE-005 — Generated shell completions
 
@@ -54,7 +54,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/completions.test.ts` — `renders zsh and bash completion scripts` and `rejects an unsupported shell and requires a shell argument`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### MANAGE-006 — Managed-state diagnostics
 
@@ -64,7 +64,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/diag.test.ts` — `does not inspect repository state for user diagnostics` and `leaves direct repository projection health to ki repo diag`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### MANAGE-007 — Safe managed projection repair
 
@@ -74,7 +74,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/repair.test.ts` — `re-points a stale symbolic link and preserves a non-link as unsafe` and `reports a dry-run link repair without changing it`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### MANAGE-008 — Non-mutating cleanup report
 
@@ -84,7 +84,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `reports no eligible managed stale state without changing any installed harness or unknown file`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### MANAGE-009 — Canonical documentation lookup
 
@@ -94,7 +94,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/local-commands.test.ts` — `prints canonical documentation URLs without launching or fetching content`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### MANAGE-010 — Closed option-value completion
 
@@ -104,7 +104,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/completions.test.ts` — `emits loadable scripts whose Bash completion reaches repo roadmap`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Local editor projections
 
@@ -116,7 +116,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/vscode.test.ts` — `synchronises missing workspaces and runtime-scoped trusted folders` proves the check reports drift before the write and passes after reconciliation.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### MANAGE-012 — Explicit VS Code projection publication
 
@@ -126,7 +126,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/vscode.test.ts` — `synchronises missing workspaces and runtime-scoped trusted folders`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ### MANAGE-013 — Fail-closed source-store association
 
@@ -136,7 +136,7 @@ _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/manage/vscode.test.ts` — `previews then creates and associates an opt-in source store` and `fails closed when a legacy source suffix matches multiple repositories`.
 
-_Evidence:_ The referenced CLI contract test passes in the 2026-09-14 full suite: 751 tests and 100% V8 coverage across statements, branches, functions, and lines.
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
 ## Gaps
 
