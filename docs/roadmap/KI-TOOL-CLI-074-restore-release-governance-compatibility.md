@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 47d3617470f82d5227be3c48249a6cd7875717c9
 created_at: 2026-09-17T06:51:55Z
-updated_at: 2026-09-18T06:30:00Z
+updated_at: 2026-09-18T06:16:00Z
 ---
 
 # Restore Release Governance
@@ -34,14 +34,14 @@ Design and verify an explicit bridge sequence that keeps every Harness archive i
 
 ## Steps
 
-- [ ] Implement and verify `KI-HARNESS-GOV-075`, then record its immutable commit and archive digest.
-- [ ] Restore the two generic working-area READMEs to their v0.3.6-compatible bytes for the bridge candidate.
-- [ ] Point `canonicalHarnessRelease` and its contract tests at the transition Harness archive.
-- [ ] Set the candidate version to `0.4.0`, add the dated changelog release entry, and align help, completions, manual, installer, and packaging evidence.
-- [ ] Prove released v0.3.6 governs the bridge checkout and the built v0.4.0 candidate governs it through the transition Harness.
-- [ ] Run the complete engineering, repository, installer-link, packaging, and release-readiness gates.
-- [ ] Push the verified bridge commit, confirm CI green, tag and publish immutable v0.4.0, and confirm clean installation.
-- [ ] Update CI to install v0.4.0 and restore the current generic working-area README pair in a post-release cutover commit.
+- [x] Implement and verify `KI-HARNESS-GOV-075`, then record its immutable commit and archive digest.
+- [x] Restore the two generic working-area READMEs to their v0.3.6-compatible bytes for the bridge candidate.
+- [x] Point `canonicalHarnessRelease` and its contract tests at the transition Harness archive.
+- [x] Set the candidate version to `0.4.0`, add the dated changelog release entry, and align help, completions, manual, installer, and packaging evidence.
+- [x] Prove released v0.3.6 governs the bridge checkout and the built v0.4.0 candidate governs it through the transition Harness.
+- [x] Run the complete engineering, repository, installer-link, packaging, and release-readiness gates.
+- [x] Push the verified bridge commit, confirm CI green, tag and publish immutable v0.4.0, and confirm clean installation.
+- [x] Update CI to install v0.4.0 and restore the current generic working-area README pair in a post-release cutover commit.
 - [ ] Confirm released v0.4.0 governs the restored checkout and CI remains green.
 
 ## Files touched

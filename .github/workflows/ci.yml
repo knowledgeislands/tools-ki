@@ -16,7 +16,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install --yes zsh
       - name: Install and verify released KI
         env:
-          KI_VERSION: v0.3.6
+          KI_VERSION: v0.4.0
           KI_CLI_INSTALL_DIR: ${{ runner.temp }}/ki/bin
           KI_MAN_INSTALL_DIR: ${{ runner.temp }}/ki/man/man1
           KI_DATA_HOME: ${{ runner.temp }}/ki/data
@@ -54,24 +54,8 @@ jobs:
             printf 'KI_STATE_HOME=%s\n' "$KI_STATE_HOME"
           } >> "$GITHUB_ENV"
           printf '%s\n' "$KI_CLI_INSTALL_DIR" >> "$GITHUB_PATH"
-      - name: Audit predecessor repository contract
-        run: ki repo audit --repo . --skill ki-repo
-      - name: Audit current candidate contract
-        env:
-          KI_DATA_HOME: ${{ runner.temp }}/ki-candidate/data
-          KI_CONFIG_HOME: ${{ runner.temp }}/ki-candidate/config
-          KI_CACHE_HOME: ${{ runner.temp }}/ki-candidate/cache
-          XDG_STATE_HOME: ${{ runner.temp }}/ki-candidate/state
-          KI_STATE_HOME: ${{ runner.temp }}/ki-candidate/state/ki
-        run: |
-          set -euo pipefail
-          bun run build
-          export PATH="$GITHUB_WORKSPACE/dist:$PATH"
-          test "$(ki --version)" = "0.4.0"
-          ki bootstrap --refresh
-          ki registry add --repo .
-          ki repo repair --repo .
-          ki repo audit --repo .
+      - name: Audit
+        run: ki repo audit --repo .
 
   manual:
     name: Manual
