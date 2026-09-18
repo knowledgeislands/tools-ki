@@ -68,7 +68,7 @@ jobs:
           bun run build
           export PATH="$GITHUB_WORKSPACE/dist:$PATH"
           test "$(ki --version)" = "0.4.0"
-          ki bootstrap
+          ki bootstrap --refresh
           ki registry add --repo .
           ki repo repair --repo .
           ki repo audit --repo .
