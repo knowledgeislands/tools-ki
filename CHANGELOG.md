@@ -2,7 +2,15 @@
 
 All notable changes to this project are documented here.
 
-This changelog records the V1 release baseline. It does not retroactively track individual 0.x releases; their tags and commit history remain the record of that run-up.
+This changelog records the V1 release baseline. It does not retroactively reconstruct earlier 0.x releases; their tags and commit history remain the record of that run-up.
+
+## [0.4.0] — 2026-09-18
+
+### Changed
+
+- Added provider-neutral, action-first acquisition commands with verified adapter declarations, resumable journals, component checkpoints, governed reset, and disposition tracking.
+- Strengthened repository roadmap lifecycle, timestamp validation, audit presentation, batch authority, and human-readable statistics.
+- Consolidated CLI architecture, documentation, test coverage, release gates, and the canonical Harness pin for the working-area contract transition.
 
 ## [1.0.0] — in progress
 

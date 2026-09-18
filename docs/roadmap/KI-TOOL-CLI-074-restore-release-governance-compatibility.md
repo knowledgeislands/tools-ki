@@ -4,12 +4,12 @@ area: CLI
 title: Restore release governance
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 47d3617470f82d5227be3c48249a6cd7875717c9
 created_at: 2026-09-17T06:51:55Z
-updated_at: 2026-09-18T04:26:00Z
+updated_at: 2026-09-18T06:30:00Z
 ---
 
 # Restore Release Governance
