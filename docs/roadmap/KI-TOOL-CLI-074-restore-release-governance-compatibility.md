@@ -97,6 +97,12 @@ Record the transition Harness commit, archive digest, candidate evidence, public
 
 ## Discussion
 
+### Remote bridge finding
+
+Remote CI run `35308661890` proved two further immutable v0.3.6 differences: the predecessor `.gitignore` composition and the older roadmap schema, which rejects the now-mandatory `created_at` and `updated_at` pair. Harness commit `261569038e8c5811b87a99f7dd048a08357bb8cd` (archive SHA-256 `a0b3085ac56c447da685ca3e32dc0927d56351d7232a86a77f9f084dda568c72`) therefore adds byte-exact audit-only acceptance for the predecessor `tools-ki` `.gitignore`.
+
+There is no shared work-item frontmatter satisfying both schemas. During the bridge only, released v0.3.6 CI audits the predecessor repository contract through `--skill ki-repo`; the candidate retains mandatory timestamps and is verified against the complete current contract. Post-publication CI returns to the complete audit with released v0.4.0.
+
 ### Required bridge sequence
 
 1. In `ki-agentic-harness`, add narrowly bounded dual-contract `WORK-1` acceptance and tests, publish the immutable revision, and calculate its archive digest. Do not change either canonical README output: only the audit transition may accept the previous bytes temporarily.
