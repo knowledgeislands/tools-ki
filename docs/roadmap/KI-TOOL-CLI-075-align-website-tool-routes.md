@@ -3,13 +3,13 @@ id: KI-TOOL-CLI-075
 area: CLI
 title: Align website tool routes
 theme: cli
-horizon: triage
-status: draft
+horizon: now
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-09-17T21:05:16Z
-updated_at: 2026-09-17T21:05:16Z
+updated_at: 2026-09-18T03:04:16Z
 ---
 
 # KI-TOOL-CLI-075: Align website tool routes
@@ -33,6 +33,48 @@ The website's `/install/ki` endpoint redirects to this repository's `install.sh`
 This does not move release authority, installer behaviour, artifact hosting, or checksum verification to the website. The website is an indirection layer over what this repository publishes.
 
 This item does not redesign the `ki manage docs` command surface; it corrects one printed string and adds a release step.
+
+## Current state
+
+`src/commands/manage/docs.ts`, its CLI contract test, and `man/ki.1` still name the retired `/tooling/cli/` route. The other printed locations remain repository-owned or site-root routes and require no change. The release guide mentions updating the KI Website after a release but does not define the version-pinned handoff evidence.
+
+## Steps
+
+- [ ] Change the canonical overview location to `https://knowledgeislands.info/tooling/ki/` and update the CLI contract assertions.
+- [ ] Update the manual's `ki manage docs overview` route while preserving the other documentation topics.
+- [ ] Extend the release guide with the exact post-publication website handoff: released version, immutable raw `install.sh` target, and pinned invocation.
+- [ ] Verify no retired `/tooling/cli/` or `/harness/install` route remains in shipped source, tests, manual, README, or guides.
+- [ ] Run focused documentation-command and manual checks followed by the complete repository gates.
+
+## Files touched
+
+Expected scope is `src/commands/manage/docs.ts`, `src/tests/cli/manage/local-commands.test.ts`, `man/ki.1`, `docs/guides/developer/release-management.md`, and this work record.
+
+## Verify
+
+Run `bunx vitest run src/tests/cli/manage/local-commands.test.ts`, `bun run ki:tools:lint-man`, `bun run test:coverage`, `bunx tsc --noEmit`, `bunx biome check`, `bunx knip`, `bun run build`, `ki repo audit --repo .`, `rg 'tooling/cli|harness/install' src docs README.md man`, and `git diff --check`. The route search must return no shipped references outside historical review evidence.
+
+## Dependencies / blocks
+
+None. CLI-076 decides the shared pinned-installer spelling, but this item can correct the dead overview route independently. Sequence CLI-076 first in the batch so the release-guide handoff can use its settled wording.
+
+## Documentation impact
+
+### Decision Records
+
+No new decision record is needed; website route ownership and installer indirection were already decided by the website owner.
+
+### Specifications
+
+No behaviour-level specification change is needed because this is a correction to a published documentation location rather than a new command contract.
+
+### Guides
+
+Update the developer release guide with the exact website registry handoff after immutable publication.
+
+### Roadmap
+
+CLI-076 remains the owner of the shared version-pinning interface. No additional local work item is expected.
 
 ## Discussion
 

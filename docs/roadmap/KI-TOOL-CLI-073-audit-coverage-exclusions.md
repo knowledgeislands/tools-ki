@@ -4,12 +4,12 @@ area: CLI
 title: Audit coverage exclusions
 theme: cli
 horizon: now
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-09-17T06:46:58Z
-updated_at: 2026-09-17T21:02:57Z
+updated_at: 2026-09-18T03:04:16Z
 ---
 
 # Audit Coverage Exclusions
