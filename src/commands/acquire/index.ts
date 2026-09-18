@@ -6,6 +6,7 @@ import {
   type AcquisitionAdapterInventoryItem,
   acquisitionAdapterInventory,
   type GranolaImportResult,
+  type GranolaOperationContext,
   type GranolaStatusResult,
   granolaStatus,
   importCapture,
@@ -38,6 +39,15 @@ interface ResetOptions extends SelectionOptions {
   readonly rebuild?: boolean
   readonly confirm?: boolean
 }
+
+const granolaOperationContext = (context: KiContext): GranolaOperationContext => ({
+  workingDirectory: context.workingDirectory,
+  homeDirectory: context.homeDirectory,
+  stateDirectory: context.paths.state,
+  environment: context.environment,
+  runner: context.runner,
+  now: context.now
+})
 
 const inventory = (context: KiContext, repository?: string): Promise<AcquisitionAdapterInventory> =>
   acquisitionAdapterInventory({
@@ -154,7 +164,7 @@ const runImport = async (context: KiContext, options: ImportOptions): Promise<vo
           dryRun: options.dryRun,
           refreshTranscripts: options.refreshTranscripts
         },
-        context
+        granolaOperationContext(context)
       )
       context.stdout.write(`${renderGranolaResult(result)}\n`)
       continue
@@ -206,7 +216,7 @@ const runReset = async (context: KiContext, options: ResetOptions): Promise<void
         rebuild: options.rebuild,
         confirm: options.confirm
       },
-      context
+      granolaOperationContext(context)
     )
     context.stdout.write(
       `${result.plan}\n${result.changed ? 'Reset applied.' : 'No changes made; repeat with --confirm.'}\n`

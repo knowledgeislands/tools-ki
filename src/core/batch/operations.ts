@@ -1,10 +1,10 @@
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative, resolve } from 'node:path'
-import type { KiContext } from '../../context.ts'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import { prepareWrites, publishWrites } from '../filesystem/index.ts'
 import { resolveRepository } from '../repository/index.ts'
+import type { Runner } from '../runtime/runner.ts'
 import { readWorkItems } from '../work/items.ts'
 import { readRepositoryPlanningSource } from '../work/planning.ts'
 import {
@@ -62,6 +62,14 @@ export interface BatchOperationResult {
   readonly changed: boolean
 }
 
+export interface BatchOperationContext {
+  readonly workingDirectory: string
+  readonly homeDirectory: string
+  readonly environment: NodeJS.ProcessEnv
+  readonly runner: Runner
+  readonly now: () => number
+}
+
 interface ResolvedBatchRepository {
   readonly root: string
   readonly declaration: string
@@ -106,7 +114,7 @@ const itemResult = (value: string): BatchItemResult => {
 
 const resolveBatchRepository = async (
   repository: string | undefined,
-  context: KiContext
+  context: BatchOperationContext
 ): Promise<ResolvedBatchRepository> => {
   const location = await resolveRepository({
     repository,
@@ -203,7 +211,7 @@ const canonicalRecordPath = async (
   return { path, relativePath: `${batchDirectory}/${relativePath}` }
 }
 
-const locateBatch = async (options: BatchRecordOptions, context: KiContext): Promise<LocatedBatch> => {
+const locateBatch = async (options: BatchRecordOptions, context: BatchOperationContext): Promise<LocatedBatch> => {
   const repository = await resolveBatchRepository(options.repository, context)
   const location = await canonicalRecordPath(repository, options.record)
   const contents = await readFile(location.path, 'utf8')
@@ -229,7 +237,7 @@ const assertCommitExists = async (
   repository: ResolvedBatchRepository,
   value: string,
   label: string,
-  context: KiContext
+  context: BatchOperationContext
 ): Promise<void> => {
   const evidence = await context.runner(
     'git',
@@ -249,7 +257,10 @@ const operationResult = (located: LocatedBatch, changed: boolean): BatchOperatio
   changed
 })
 
-export const prepareBatch = async (options: PrepareBatchOptions, context: KiContext): Promise<BatchOperationResult> => {
+export const prepareBatch = async (
+  options: PrepareBatchOptions,
+  context: BatchOperationContext
+): Promise<BatchOperationResult> => {
   /* v8 ignore next -- Commander's required boolean option rejects the only public path without this assertion. */
   if (!options.approved) return fail('batch prepare requires explicit --approved')
   const repository = await resolveBatchRepository(options.repository, context)
@@ -283,7 +294,10 @@ export const prepareBatch = async (options: PrepareBatchOptions, context: KiCont
   return operationResult({ repository, path: join(repository.root, relativePath), relativePath, record }, true)
 }
 
-export const validateBatch = async (options: BatchRecordOptions, context: KiContext): Promise<BatchOperationResult> => {
+export const validateBatch = async (
+  options: BatchRecordOptions,
+  context: BatchOperationContext
+): Promise<BatchOperationResult> => {
   const located = await locateBatch(options, context)
   if (located.record.shape === 'current') {
     assertActive(located.record, context.now())
@@ -316,7 +330,10 @@ const ledgerEntry = (options: RunBatchOptions): BatchLedgerEntry | undefined => 
   }
 }
 
-export const runBatch = async (options: RunBatchOptions, context: KiContext): Promise<BatchOperationResult> => {
+export const runBatch = async (
+  options: RunBatchOptions,
+  context: BatchOperationContext
+): Promise<BatchOperationResult> => {
   const located = await locateBatch(options, context)
   assertActive(located.record, context.now())
   if (located.record.closed) return fail('batch record is already closed')
@@ -343,7 +360,10 @@ export const runBatch = async (options: RunBatchOptions, context: KiContext): Pr
   return operationResult({ ...located, record }, true)
 }
 
-export const closeBatch = async (options: CloseBatchOptions, context: KiContext): Promise<BatchOperationResult> => {
+export const closeBatch = async (
+  options: CloseBatchOptions,
+  context: BatchOperationContext
+): Promise<BatchOperationResult> => {
   const located = await locateBatch(options, context)
   assertActive(located.record, context.now())
   const target = completionTarget(options.completionTarget)

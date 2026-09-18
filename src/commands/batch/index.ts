@@ -1,6 +1,21 @@
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { type BatchOperationResult, closeBatch, prepareBatch, runBatch, validateBatch } from '../../core/batch/index.ts'
+import {
+  type BatchOperationContext,
+  type BatchOperationResult,
+  closeBatch,
+  prepareBatch,
+  runBatch,
+  validateBatch
+} from '../../core/batch/index.ts'
+
+const batchOperationContext = (context: KiContext): BatchOperationContext => ({
+  workingDirectory: context.workingDirectory,
+  homeDirectory: context.homeDirectory,
+  environment: context.environment,
+  runner: context.runner,
+  now: context.now
+})
 
 const renderResult = (action: string, result: BatchOperationResult): string =>
   [
@@ -49,7 +64,10 @@ export const createBatchCommand = (context: KiContext): Command => {
       readonly expiresAt: string
       readonly completionTarget: string
     }) => {
-      const result = await prepareBatch({ ...options, repository: options.repo, itemIds: options.item }, context)
+      const result = await prepareBatch(
+        { ...options, repository: options.repo, itemIds: options.item },
+        batchOperationContext(context)
+      )
       context.stdout.write(`${renderResult('prepared', result)}\n`)
     }
   )
@@ -59,7 +77,7 @@ export const createBatchCommand = (context: KiContext): Command => {
       .description('validate one batch record without writing')
       .argument('<record>', 'batch identifier or canonical record path')
   ).action(async (record: string, options: { readonly repo?: string }) => {
-    const result = await validateBatch({ repository: options.repo, record }, context)
+    const result = await validateBatch({ repository: options.repo, record }, batchOperationContext(context))
     context.stdout.write(`${renderResult('valid', result)}\n`)
   })
 
@@ -91,7 +109,7 @@ export const createBatchCommand = (context: KiContext): Command => {
         readonly exception?: string
       }
     ) => {
-      const result = await runBatch({ ...options, repository: options.repo, record }, context)
+      const result = await runBatch({ ...options, repository: options.repo, record }, batchOperationContext(context))
       context.stdout.write(`${renderResult('updated', result)}\n`)
     }
   )
@@ -111,7 +129,7 @@ export const createBatchCommand = (context: KiContext): Command => {
       record: string,
       options: { readonly repo?: string; readonly completionTarget: string; readonly evidenceCommit: string }
     ) => {
-      const result = await closeBatch({ ...options, repository: options.repo, record }, context)
+      const result = await closeBatch({ ...options, repository: options.repo, record }, batchOperationContext(context))
       context.stdout.write(`${renderResult('closed', result)}\n`)
     }
   )

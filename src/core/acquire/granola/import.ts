@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
-import type { KiContext } from '../../../context.ts'
 import { KiError } from '../../errors.ts'
+import type { Runner } from '../../runtime/runner.ts'
 import { renderGranolaMeeting } from './markdown.ts'
 import { granolaReceivers, type RoutedGranolaMeeting, routeGranolaMeetings } from './routing.ts'
 import { type GranolaDetail, type GranolaTranscript, granolaSource, sha256, stableJson } from './source.ts'
@@ -82,6 +82,15 @@ export interface GranolaResetResult {
   readonly repository: string
   readonly plan: string
   readonly changed: boolean
+}
+
+export interface GranolaOperationContext {
+  readonly workingDirectory: string
+  readonly homeDirectory: string
+  readonly stateDirectory: string
+  readonly environment: NodeJS.ProcessEnv
+  readonly runner: Runner
+  readonly now: () => number
 }
 
 const basePath = (root: string): string => join(root, '+/_ACQUIRE/granola')
@@ -324,14 +333,14 @@ const withoutVolatile = (checkpoint: GranolaCheckpoint): unknown => ({
 
 export const importGranola = async (
   options: GranolaImportOptions,
-  context: KiContext
+  context: GranolaOperationContext
 ): Promise<GranolaImportResult> => {
   const interval = granolaInterval(options.since, options.until)
   const { target, receivers } = await granolaReceivers({
     repository: options.repository,
     workingDirectory: context.workingDirectory,
     homeDirectory: context.homeDirectory,
-    stateDirectory: context.paths.state
+    stateDirectory: context.stateDirectory
   })
   const source = await granolaSource(context.runner, context.environment)
   const folders = [...(await source.folders())].sort((left, right) => left.id.localeCompare(right.id, 'en'))
@@ -614,13 +623,13 @@ export const reconcileGranola = async (options: {
 
 export const resetGranola = async (
   options: GranolaResetOptions,
-  context: Pick<KiContext, 'workingDirectory' | 'homeDirectory' | 'paths' | 'now'>
+  context: Pick<GranolaOperationContext, 'workingDirectory' | 'homeDirectory' | 'stateDirectory' | 'now'>
 ): Promise<GranolaResetResult> => {
   const { target } = await granolaReceivers({
     repository: options.repository,
     workingDirectory: context.workingDirectory,
     homeDirectory: context.homeDirectory,
-    stateDirectory: context.paths.state
+    stateDirectory: context.stateDirectory
   })
   if (options.component && !options.source) throw new KiError('--component requires --source', 2)
   if (options.rebuild && (options.source || options.component)) {

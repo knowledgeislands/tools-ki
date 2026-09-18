@@ -7,6 +7,7 @@ export {
 export { importCapture } from './chatgpt/import.ts'
 export {
   type GranolaImportResult,
+  type GranolaOperationContext,
   type GranolaStatusResult,
   granolaStatus,
   importGranola,
