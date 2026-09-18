@@ -4,12 +4,12 @@ area: CLI
 title: Restore release governance
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 47d3617470f82d5227be3c48249a6cd7875717c9
 created_at: 2026-09-17T06:51:55Z
-updated_at: 2026-09-18T05:20:00Z
+updated_at: 2026-09-18T06:27:20Z
 ---
 
 # Restore Release Governance
@@ -125,6 +125,10 @@ The release boundary remains immutable and provider-neutral, mandatory roadmap t
 ### Mini recap
 
 v0.4.0 is published and installed, the repository is cut over to it, and CLI-074 is ready for human acceptance.
+
+## Done
+
+Accepted 2026-09-18 by Kris Brown on the review packet above.
 
 ## Discussion
 
