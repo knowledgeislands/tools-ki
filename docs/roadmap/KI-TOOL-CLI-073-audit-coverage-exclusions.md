@@ -4,12 +4,12 @@ area: CLI
 title: Audit coverage exclusions
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 72a6a6757e0a1012ea40d05e0fe512fb793ae4a3
 created_at: 2026-09-17T06:46:58Z
-updated_at: 2026-09-18T03:04:16Z
+updated_at: 2026-09-18T03:13:01Z
 ---
 
 # Audit Coverage Exclusions
@@ -32,11 +32,11 @@ The largest concentrations are in trade configuration mutation, managed storage,
 
 ## Steps
 
-- [ ] Capture a stable domain-grouped inventory of all 129 opening directives and trace each excluded branch through every caller to the supported CLI boundary.
-- [ ] Replace each reachable exclusion with observable CLI contract evidence, removing or narrowing the directive in the same change.
-- [ ] Delete unsupported branches or helpers that have no supported caller instead of retaining them solely for defensive coverage.
-- [ ] Retain only genuinely unreachable guards, with an adjacent explanation that covers the complete call graph and any sanctioned interface-level fault injection.
-- [ ] Review each domain-sized change set for preserved public behaviour, then run the complete engineering and repository gates and record the final directive inventory in the review packet.
+- [x] Capture a stable domain-grouped inventory of all 129 opening directives and trace each excluded branch through every caller to the supported CLI boundary.
+- [x] Replace each reachable exclusion with observable CLI contract evidence, removing or narrowing the directive in the same change.
+- [x] Delete unsupported branches or helpers that have no supported caller instead of retaining them solely for defensive coverage.
+- [x] Retain only genuinely unreachable guards, with an adjacent explanation that covers the complete call graph and any sanctioned interface-level fault injection.
+- [x] Review each domain-sized change set for preserved public behaviour, then run the complete engineering and repository gates and record the final directive inventory in the review packet.
 
 ## Files touched
 
@@ -67,6 +67,36 @@ No guide change is expected unless the audit discovers a supported operational f
 ### Roadmap
 
 This record remains the single owner of the complete exclusion audit. Any materially separate product defect discovered during review should be captured independently rather than expanding this boundary.
+
+## Review
+
+### Delivered
+
+From immutable baseline `72a6a6757e0a1012ea40d05e0fe512fb793ae4a3`, audited all 129 opening `v8 ignore` directives across 51 product files against their complete supported caller paths and the repository's interface-level fault-injection policy. The resulting delivery commit is recorded in the `KI-TOOL-BATCH-001` run ledger.
+
+### Summary of changes
+
+The retained inventory comprises 71 directives with inline reachability explanations and 58 with immediately adjacent explanations. No directive concealed a branch reachable through supported CLI input, and no excluded branch or helper proved dead, so no product-code or test change was justified by the audit.
+
+### Verification
+
+- `bun run test:coverage` — 860 tests pass and all four product-code metrics remain at 100%.
+- `bunx tsc --noEmit`, `bunx biome check`, `bunx knip`, and `bun run build` — pass.
+- `ki repo audit --skill ki-self --repo .`, `ki repo audit --skill ki-engineering --repo .`, and `ki repo audit --repo .` — pass.
+- `git diff --check` — pass.
+- Independent inventory recount — 129 opening directives in 51 product files, unchanged after review.
+
+### Outstanding concerns
+
+None. The retained exclusions describe parser or type invariants, complete collection projections, external process boundaries, or filesystem races that one supported in-process CLI invocation cannot generate. Existing sanctioned interface-level fault injection remains limited to the documented transaction cases.
+
+### Post-change review
+
+Public behaviour is unchanged. Avoiding mechanical comment rewrites keeps the audited guards narrow and reviewable without manufacturing product churn.
+
+### Mini recap
+
+Coverage remains a dead-code detector rather than a percentage-only gate: every exclusion was revalidated, none required removal or replacement, and the full engineering surface remains green.
 
 ## Discussion
 

@@ -30,10 +30,12 @@ describe('install.sh', () => {
     const help = await box.exec([box.installer, '--help'])
     const unknown = await box.exec([box.installer, '--bogus'])
     const malformed = await box.exec([box.installer, '1.2.3'])
+    const extra = await box.exec([box.installer, 'v1.2.3', 'v2.0.0'])
 
     expect(help).toEqual({ exitCode: 0, output: expect.stringContaining('Usage: ./install.sh [vX.Y.Z]') })
     expect(unknown).toEqual({ exitCode: 2, output: expect.stringContaining('expected an exact version') })
     expect(malformed).toEqual({ exitCode: 2, output: expect.stringContaining('expected an exact version') })
+    expect(extra).toEqual({ exitCode: 2, output: expect.stringContaining('accepts one argument') })
   })
 
   test('installs an exact signed release for the detected target', async () => {

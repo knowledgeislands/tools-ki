@@ -173,7 +173,7 @@ curl --fail --location --proto '=https' --proto-redir '=https' --output install.
 bash ./install.sh vX.Y.Z
 ```
 
-The installer carries the pinned public key and verifies the release's Ed25519-signed checksum manifest before downloading the platform archive. It supports macOS (Apple Silicon and Intel) and x86_64 glibc Linux. Use an explicit version for every public installation.
+The installer carries the pinned public key and verifies the release's Ed25519-signed checksum manifest before downloading the platform archive. It supports macOS (Apple Silicon and Intel) and x86_64 glibc Linux. Use an explicit version for every public installation. The equivalent pinned pipe form is `curl -fsSL https://knowledgeislands.info/install/ki | sh -s -- vX.Y.Z`; omitting the version deliberately resolves the latest release.
 
 The Homebrew tap will move to these same release artifacts after that first immutable release.
 

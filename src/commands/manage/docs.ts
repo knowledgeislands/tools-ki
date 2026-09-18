@@ -3,7 +3,7 @@ import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
 
 const documentationUrls = {
-  overview: 'https://knowledgeislands.info/tooling/cli/',
+  overview: 'https://knowledgeislands.info/tooling/ki/',
   site: 'https://knowledgeislands.info/',
   manual: 'https://github.com/knowledgeislands/tools-ki/blob/main/man/ki.1',
   roadmap: 'https://github.com/knowledgeislands/tools-ki/blob/main/ROADMAP.md'

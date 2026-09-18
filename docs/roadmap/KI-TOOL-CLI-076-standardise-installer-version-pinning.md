@@ -4,12 +4,12 @@ area: CLI
 title: Standardise installer version pinning
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 72a6a6757e0a1012ea40d05e0fe512fb793ae4a3
 created_at: 2026-09-17T21:05:39Z
-updated_at: 2026-09-18T03:04:16Z
+updated_at: 2026-09-18T03:13:01Z
 ---
 
 # KI-TOOL-CLI-076: Standardise installer version pinning
@@ -47,11 +47,11 @@ Do not make the website compute or choose a version. It only documents the invoc
 
 ## Steps
 
-- [ ] Record the positional `vX.Y.Z` form as the canonical cross-tool installer pinning decision, with existing `<TOOL>_VERSION` variables retained as compatibility aliases where they already exist.
-- [ ] Add the decision to the repository Decision Records index and link its practical consequence from the release guide without duplicating rationale there.
-- [ ] Verify `tools-ki` already conforms through its installer help, exact-version parsing, malformed-input rejection, README example, and installer tests; change product code only if that evidence exposes a gap.
-- [ ] State the exact pinned website invocation in the release handoff and preserve the unpinned latest-release form as the default convenience path.
-- [ ] Run the Decision Record, guide, authoring, installer, and complete repository gates.
+- [x] Record the positional `vX.Y.Z` form as the canonical cross-tool installer pinning decision, with existing `<TOOL>_VERSION` variables retained as compatibility aliases where they already exist.
+- [x] Add the decision to the repository Decision Records index and link its practical consequence from the release guide without duplicating rationale there.
+- [x] Verify `tools-ki` already conforms through its installer help, exact-version parsing, malformed-input rejection, README example, and installer tests; change product code only if that evidence exposes a gap.
+- [x] State the exact pinned website invocation in the release handoff and preserve the unpinned latest-release form as the default convenience path.
+- [x] Run the Decision Record, guide, authoring, installer, and complete repository gates.
 
 ## Files touched
 
@@ -82,6 +82,34 @@ Update the developer release guide with the canonical pinned invocation and webs
 ### Roadmap
 
 Retain reciprocal repository items as their local implementation owners. Do not create a duplicate local follow-up unless verification finds a `tools-ki` contract gap.
+
+## Review
+
+### Delivered
+
+From immutable baseline `72a6a6757e0a1012ea40d05e0fe512fb793ae4a3`, created `PDR-KI-TOOLS-001` to establish positional `vX.Y.Z` as the canonical cross-tool pinning interface, indexed it, and reflected the operative invocation in README and release guidance. The resulting delivery commit is recorded in the `KI-TOOL-BATCH-001` run ledger.
+
+### Summary of changes
+
+An omitted version continues to resolve the latest release. Existing tool-specific environment variables remain compatibility aliases where already supported, while explicit positional input takes precedence. The existing `ki` installer required no product-code change; its contract test now also proves rejection of additional positional arguments.
+
+### Verification
+
+- `bunx vitest run src/tests/install/install.test.ts` — 10 tests pass.
+- `ki repo audit --skill ki-decision-records --repo .`, `ki repo audit --skill ki-guides --repo .`, and `ki repo audit --skill ki-authoring --repo .` — pass.
+- Complete coverage, type, format, dead-code, build, and repository audit gates — pass.
+
+### Outstanding concerns
+
+None locally. The reciprocal mGit, Git Almanac, and Rig records remain independently owned adoption work; this delivery does not write their repositories.
+
+### Post-change review
+
+The decision preserves shell portability, release ownership, and the convenient unpinned path while giving automation and the website one reproducible spelling.
+
+### Mini recap
+
+The canonical pinned form is now durable, documented, and mechanically evidenced in `tools-ki`; cross-tool adoption can proceed without reopening the interface choice.
 
 ## Discussion
 

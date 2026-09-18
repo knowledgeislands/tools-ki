@@ -4,12 +4,12 @@ area: CLI
 title: Align website tool routes
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 72a6a6757e0a1012ea40d05e0fe512fb793ae4a3
 created_at: 2026-09-17T21:05:16Z
-updated_at: 2026-09-18T03:04:16Z
+updated_at: 2026-09-18T03:13:01Z
 ---
 
 # KI-TOOL-CLI-075: Align website tool routes
@@ -40,11 +40,11 @@ This item does not redesign the `ki manage docs` command surface; it corrects on
 
 ## Steps
 
-- [ ] Change the canonical overview location to `https://knowledgeislands.info/tooling/ki/` and update the CLI contract assertions.
-- [ ] Update the manual's `ki manage docs overview` route while preserving the other documentation topics.
-- [ ] Extend the release guide with the exact post-publication website handoff: released version, immutable raw `install.sh` target, and pinned invocation.
-- [ ] Verify no retired `/tooling/cli/` or `/harness/install` route remains in shipped source, tests, manual, README, or guides.
-- [ ] Run focused documentation-command and manual checks followed by the complete repository gates.
+- [x] Change the canonical overview location to `https://knowledgeislands.info/tooling/ki/` and update the CLI contract assertions.
+- [x] Update the manual's `ki manage docs overview` route while preserving the other documentation topics.
+- [x] Extend the release guide with the exact post-publication website handoff: released version, immutable raw `install.sh` target, and pinned invocation.
+- [x] Verify no retired `/tooling/cli/` or `/harness/install` route remains in shipped source, tests, manual, README, or guides.
+- [x] Run focused documentation-command and manual checks followed by the complete repository gates.
 
 ## Files touched
 
@@ -75,6 +75,35 @@ Update the developer release guide with the exact website registry handoff after
 ### Roadmap
 
 CLI-076 remains the owner of the shared version-pinning interface. No additional local work item is expected.
+
+## Review
+
+### Delivered
+
+From immutable baseline `72a6a6757e0a1012ea40d05e0fe512fb793ae4a3`, corrected the CLI and manual to the live `/tooling/ki/` overview, added the exact website-registry handoff to the release guide, and recorded the public correction in the changelog. The resulting delivery commit is recorded in the `KI-TOOL-BATCH-001` run ledger.
+
+### Summary of changes
+
+The documentation command and its CLI contract now agree on the canonical route. The release handoff names the immutable tagged installer, pinned invocation, and human-facing route without moving website deployment authority into this repository.
+
+### Verification
+
+- `bunx vitest run src/tests/cli/manage/local-commands.test.ts` — 7 tests pass.
+- `bun run ki:tools:lint-man` — pass.
+- Exact retired-URL search — no shipped source, README, guide, test, or manual reference remains; historical context remains only in this work record.
+- Complete coverage, type, format, dead-code, build, and repository audit gates — pass.
+
+### Outstanding concerns
+
+None. The website owner must still apply the handoff after an immutable release; this repository neither edits nor advances the website registry.
+
+### Post-change review
+
+Help and completion grammar are unaffected because no command or option changed. The route correction is covered at the public CLI seam and in the purpose-oriented manual and changelog inventories.
+
+### Mini recap
+
+`ki manage docs overview` no longer sends users to a retired page, and releases now carry enough evidence for the website owner to advance the public tool registry safely.
 
 ## Discussion
 

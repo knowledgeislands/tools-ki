@@ -90,7 +90,24 @@ curl --fail --location --proto '=https' --proto-redir '=https' --output install.
 bash ./install.sh vX.Y.Z
 ```
 
-After the first verified release, update the Homebrew tap and the KI Website install redirect in their owning repositories.
+The canonical cross-tool pinning form is an exact positional `vX.Y.Z`, as recorded in [the installer version-pinning decision](../../decisions/PDR-KI-TOOLS-001-installer-version-pinning.md). For a pipe installation, pass the tag after the shell's option terminator:
+
+```sh
+curl -fsSL https://knowledgeislands.info/install/ki | sh -s -- vX.Y.Z
+```
+
+Omitting the positional tag deliberately retains latest-release discovery.
+
+### Hand off the verified release
+
+After immutable publication and the clean-install proof succeed, update the Homebrew tap through its owning repository. Send the KI Website owner one exact release handoff containing:
+
+- the released `vX.Y.Z` tag;
+- the immutable installer source `https://raw.githubusercontent.com/knowledgeislands/tools-ki/vX.Y.Z/install.sh`;
+- the pinned invocation `curl -fsSL https://knowledgeislands.info/install/ki | sh -s -- vX.Y.Z`; and
+- confirmation that `https://knowledgeislands.info/tooling/ki/` is the human-facing overview route.
+
+The website registry must not advance before the release is immutable and independently installable. The website owns its registry edit and deployment; this repository owns the handoff evidence.
 
 ## Release-please assessment
 

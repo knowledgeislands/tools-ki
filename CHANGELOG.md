@@ -135,6 +135,8 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 ### Behaviours
 
+- `ki manage docs overview` now reports the canonical `https://knowledgeislands.info/tooling/ki/` route.
+- Release guidance standardises exact installer pinning as positional `vX.Y.Z`, while an omitted version continues to resolve the latest release.
 - Acquisition is action-first and adapter-driven from verified Harness skill declarations; Granola uses an allowlisted read-only MCP adapter, saturation-aware complete-history enumeration, separate detail and transcript checkpoints, atomic resumable journals, governed reset, explicit omissions, and post-acquisition dispositions.
 - `.ki.toml` is the sole repository and Harness declaration filename across source checkouts, release archives, installed Harnesses, local development, repository discovery, and diagnostics; retired filenames have no compatibility or migration path.
 - Direct-CWD mGit selection consumes only schema-one `.mgit.toml` workspace or repository manifests, including configured groups and child-workspace recursion, without invoking `mgit`.

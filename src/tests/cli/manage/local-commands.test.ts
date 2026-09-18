@@ -87,9 +87,9 @@ describe('[ki local utility commands]', () => {
     expect(overview).toEqual({
       exitCode: 0,
       output:
-        'Overview: https://knowledgeislands.info/tooling/cli/\nSite: https://knowledgeislands.info/\nManual: https://github.com/knowledgeislands/tools-ki/blob/main/man/ki.1\nRoadmap: https://github.com/knowledgeislands/tools-ki/blob/main/ROADMAP.md\n'
+        'Overview: https://knowledgeislands.info/tooling/ki/\nSite: https://knowledgeislands.info/\nManual: https://github.com/knowledgeislands/tools-ki/blob/main/man/ki.1\nRoadmap: https://github.com/knowledgeislands/tools-ki/blob/main/ROADMAP.md\n'
     })
-    expect(explicitOverview).toEqual({ exitCode: 0, output: 'https://knowledgeislands.info/tooling/cli/\n' })
+    expect(explicitOverview).toEqual({ exitCode: 0, output: 'https://knowledgeislands.info/tooling/ki/\n' })
     expect(site).toEqual({ exitCode: 0, output: 'https://knowledgeislands.info/\n' })
     expect(manual).toEqual({ exitCode: 0, output: 'https://github.com/knowledgeislands/tools-ki/blob/main/man/ki.1\n' })
     expect(roadmap).toEqual({
