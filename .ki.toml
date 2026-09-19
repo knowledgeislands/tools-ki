@@ -1,6 +1,8 @@
 # Knowledge Islands repository configuration.
 # Its presence declares conformance with the Knowledge Islands repository standard.
 
+# =============================================================================
+
 # -----------------------------------------------------------------------------
 # Foundation
 # -----------------------------------------------------------------------------
@@ -27,7 +29,7 @@ visibility = "public"
 [skills.ki-repo-tools]
 
 # -----------------------------------------------------------------------------
-# Governance runtime
+# Governance and runtime
 # -----------------------------------------------------------------------------
 
 [skills.ki-self]
@@ -49,10 +51,8 @@ adapter = "roadmap"
 
 [skills.ki-work-roadmap]
 themes = ["cli", "cross-repository-vendoring"]
-
-[skills.ki-work-roadmap.areas]
-CLI = "cli"
-VENDOR = "cross-repository-vendoring"
+areas.CLI = "cli"
+areas.VENDOR = "cross-repository-vendoring"
 
 [skills.ki-tokenomics]
 
@@ -69,30 +69,12 @@ VENDOR = "cross-repository-vendoring"
 # -----------------------------------------------------------------------------
 
 [skills.ki-trades]
-
-[skills.ki-trades.routes."knowledgeislands/ki-agentic-harness"]
-import = ["work", "knowledge"]
-
-[skills.ki-trades.routes."knowledgeislands/ki-techne-principal"]
-import = ["work", "knowledge"]
-
-[skills.ki-trades.routes."knowledgeislands/homebrew-tap"]
-export = ["work"]
-
-[skills.ki-trades.routes."knowledgeislands/tools-mgit"]
-export = ["work", "knowledge"]
-import = ["work", "knowledge"]
-
-[skills.ki-trades.routes."krisb/dotfiles"]
-export = ["work", "knowledge"]
-import = ["work", "knowledge"]
+routes."knowledgeislands/ki-agentic-harness" = { import = ["work", "knowledge"] }
+routes."knowledgeislands/ki-techne-principal" = { import = ["work", "knowledge"] }
+routes."knowledgeislands/homebrew-tap" = { export = ["work"] }
+routes."knowledgeislands/tools-mgit" = { export = ["work", "knowledge"], import = ["work", "knowledge"] }
+routes."krisb/dotfiles" = { export = ["work", "knowledge"], import = ["work", "knowledge"] }
 
 [skills.ki-agora]
-
-[skills.ki-agora.memberships.ki-all]
-home = "https://github.com/knowledgeislands/ki-agentic-harness"
-role = "maintainer"
-
-[skills.ki-agora.memberships.ki-fnd]
-home = "https://github.com/knowledgeislands/ki-agentic-harness"
-role = "maintainer"
+memberships.ki-all = { home = "https://github.com/knowledgeislands/ki-agentic-harness", role = "maintainer" }
+memberships.ki-fnd = { home = "https://github.com/knowledgeislands/ki-agentic-harness", role = "maintainer" }
