@@ -1,7 +1,7 @@
 ---
 id: KI-TOOL-CLI-077
 area: CLI
-title: Transfer estate visualisation to Observatory
+title: Transfer visualisation to Observatory
 theme: cli
 horizon: now
 status: awaiting-review
@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 86facd2a172bcfcde10cdc346f235401a1176f64
 created_at: 2026-09-20T07:34:49Z
-updated_at: 2026-09-20T19:33:41Z
+updated_at: 2026-09-20T19:52:12Z
 ---
 
 ## Goal
@@ -84,7 +84,7 @@ The D3 trade-route visualisation has a runnable local application home, while `t
 - Focused trade and completion suites: 45 tests passed.
 - `bunx tsc --noEmit`, `bun run build`, `bunx biome check .`, and `bun run ki:tools:lint-man`: passed.
 - Observatory: 10 tests passed; TypeScript, compiled build, Biome, engineering audit, and roadmap audit passed.
-- Full `tools-ki` suite: 860 tests passed with permitted loopback access for installer fixtures.
+- Full `tools-ki` suite and coverage gate: 861 tests passed with 100% statements, branches, functions, and lines.
 
 ### Outstanding concerns
 
