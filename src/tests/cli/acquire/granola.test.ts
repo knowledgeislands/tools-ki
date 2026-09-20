@@ -1121,7 +1121,15 @@ describe('[ki acquire import --adapter granola]', () => {
     textual.setRunner((executable, arguments_, environment) => {
       const tool = (arguments_[1] ?? '').replace('granola.', '')
       if (tool === 'list_meeting_folders')
-        return Promise.resolve({ exitCode: 0, output: '{"folders":[{"id":"folder-a"}]}\n' })
+        return Promise.resolve({
+          exitCode: 0,
+          output: '{"folders":[{"id":"folder-a"},{"id":"folder-empty"}]}\n'
+        })
+      if (tool === 'list_meetings' && arguments_.some((argument) => argument.includes('"folder_id":"folder-empty"')))
+        return Promise.resolve({
+          exitCode: 0,
+          output: content('<meetings_data count="0" />')
+        })
       if (tool === 'get_meetings')
         return Promise.resolve({
           exitCode: 0,

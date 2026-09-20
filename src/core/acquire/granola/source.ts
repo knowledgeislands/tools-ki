@@ -111,10 +111,13 @@ const collection = (value: unknown, names: readonly [string, ...string[]], label
 
 const textMeetingCollection = (value: string, label: string): readonly GranolaMeeting[] => {
   const root = /<meetings_data\b([^>]*)>([\s\S]*?)<\/meetings_data>/.exec(value)
-  if (!root) throw new KiError(`Granola ${label} response is malformed`)
-  const count = /\bcount=(['"])(\d+)\1/.exec(root[1] as string)
+  const empty = /<meetings_data\b([^>]*)\/>/.exec(value)
+  const attributes = root?.[1] ?? empty?.[1]
+  if (attributes === undefined) throw new KiError(`Granola ${label} response is malformed`)
+  const count = /\bcount=(['"])(\d+)\1/.exec(attributes)
   if (!count) throw new KiError(`Granola ${label} response has no meeting count`)
-  const meetings = [...(root[2] as string).matchAll(/<meeting\b([^>]*)>[\s\S]*?<\/meeting>/g)].map((match) => {
+  const body = root?.[2] ?? ''
+  const meetings = [...body.matchAll(/<meeting\b([^>]*)>[\s\S]*?<\/meeting>/g)].map((match) => {
     const id = /\bid=(['"])([^'"]+)\1/.exec(match[1] as string)?.[2]
     if (!id) throw new KiError(`Granola ${label} has no stable identity`)
     return { id, projection: match[0] }
