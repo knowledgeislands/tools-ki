@@ -4,12 +4,12 @@ area: CLI
 title: Transfer visualisation to Observatory
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 86facd2a172bcfcde10cdc346f235401a1176f64
 created_at: 2026-09-20T07:34:49Z
-updated_at: 2026-09-20T19:52:12Z
+updated_at: 2026-09-20T19:52:55Z
 ---
 
 ## Goal
@@ -97,6 +97,10 @@ This removes presentation-only code and dependencies from the command host witho
 ### Mini recap
 
 The visualisation moved, the provider contract narrowed, dead CLI presentation code was removed, and the wider Observatory work now has one canonical owner.
+
+## Done
+
+Approved by the user in this session after confirming that the roadmap scope and D3 route graph should move to `apps-observatory` and be removed from `tools-ki`. The independently committed receiving implementation is `fde8211`; the provider cutover and review evidence are committed in `f705b1c` and `db62e5d`.
 
 ## Discussion
 
