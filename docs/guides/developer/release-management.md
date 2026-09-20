@@ -100,14 +100,16 @@ Omitting the positional tag deliberately retains latest-release discovery.
 
 ### Hand off the verified release
 
-After immutable publication and the clean-install proof succeed, update the Homebrew tap through its owning repository. Send the KI Website owner one exact release handoff containing:
+After immutable publication and the clean-install proof succeed, update the Homebrew tap through its owning repository. Once the formula-changing commit reaches the tap's `main` branch and passes governance, the tap dispatches the verified release event to its explicitly configured consumers through the shared `ki-tools-release-bot` GitHub App. An existing KI Website registry entry is then advanced through an ordinary website pull request.
+
+This repository neither stores the App credentials nor installs the App. The tap owns dispatch and sender configuration; each consumer owns installation consent, independent validation, and review. A first-time website entry or a maturity change still needs an exact manual handoff containing:
 
 - the released `vX.Y.Z` tag;
 - the immutable installer source `https://raw.githubusercontent.com/knowledgeislands/tools-ki/vX.Y.Z/install.sh`;
 - the pinned invocation `curl -fsSL https://knowledgeislands.info/install/ki | sh -s -- vX.Y.Z`; and
 - confirmation that `https://knowledgeislands.info/tooling/ki/` is the human-facing overview route.
 
-The website registry must not advance before the release is immutable and independently installable. The website owns its registry edit and deployment; this repository owns the handoff evidence.
+The website registry must not advance before the release is immutable and independently installable. The website owns its registry edit and deployment; this repository owns the upstream release evidence. If automated delivery fails, retry it from the Homebrew tap rather than copying App credentials or substituting a personal access token here.
 
 ## Release-please assessment
 
