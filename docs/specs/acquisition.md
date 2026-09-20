@@ -112,7 +112,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### ACQUIRE-013 — Separate detail and transcript observations
 
-Granola acquisition MUST hash mutable detail separately from transcript content, exclude transcript content from the detail hash, reuse a verified transcript by default, retry an unavailable transcript under a bounded policy, and support explicit single-adapter transcript refresh.
+Granola acquisition MUST hash mutable detail separately from transcript content, exclude transcript content from the detail hash, reuse a verified transcript by default, retry an unavailable transcript under a bounded policy, and support explicit single-adapter transcript refresh. An explicit refresh that returns identical detail and transcript hashes MUST leave the meeting document, version history, and authoritative checkpoint unchanged.
 
 _Conformance:_ conforming
 

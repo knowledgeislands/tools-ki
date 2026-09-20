@@ -600,7 +600,9 @@ describe('[ki acquire import --adapter granola]', () => {
 
     const repeatedSource = granolaFixtureRunner({ meetings, folders })
     box.setRunner(repeatedSource.runner)
-    const repeated = await box.run(command(repository), { now: () => Date.parse('2026-01-05T12:00:00Z') })
+    const repeated = await box.run(command(repository, '--refresh-transcripts'), {
+      now: () => Date.parse('2026-01-05T12:00:00Z')
+    })
     expect(repeated.output).toContain('Meetings: 0 new, 0 amended, 2 unchanged')
     expect(repeated.output).toContain('Checkpoint: unchanged')
     expect(await box.root.read(ledgerPath)).toBe(originalLedger)

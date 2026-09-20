@@ -459,8 +459,10 @@ export const importGranola = async (
         current.detail_sha256 !== observedDetailHash ||
         current.transcript_sha256 !== transcriptResult.hash ||
         current.transcript_state !== transcriptResult.state ||
-        current.transcript_retry_count !== transcriptResult.retries ||
-        current.transcript_observed_at !== transcriptResult.observedAt
+        current.transcript_retry_count !== transcriptResult.retries
+      const transcriptObservedAt = changed
+        ? transcriptResult.observedAt
+        : (current?.transcript_observed_at ?? current?.acquired_at ?? observedAt)
       const acquiredAt = changed ? observedAt : (current as GranolaCheckpointMeeting).acquired_at
       const document = renderGranolaMeeting({
         accountSha256: source.accountSha256,
@@ -470,7 +472,7 @@ export const importGranola = async (
         folders,
         meeting,
         transcript: transcriptResult.transcript,
-        transcriptObservedAt: transcriptResult.observedAt,
+        transcriptObservedAt,
         ...(transcriptResult.hash ? { transcriptSha256: transcriptResult.hash } : {}),
         transcriptState: transcriptResult.state
       })
@@ -488,7 +490,7 @@ export const importGranola = async (
         detail_sha256: observedDetailHash,
         ...(transcriptResult.hash ? { transcript_sha256: transcriptResult.hash } : {}),
         transcript_state: transcriptResult.state,
-        transcript_observed_at: transcriptResult.observedAt,
+        transcript_observed_at: transcriptObservedAt,
         transcript_retry_count: transcriptResult.retries,
         versions: [...new Set([...(current?.versions ?? []), documentSha256])],
         folder_ids: meeting.folderIds,

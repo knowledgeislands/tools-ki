@@ -76,6 +76,14 @@ ki acquire reconcile --adapter granola
 
 `status` reports checkpoint, transcript, disposition, and journal summaries. `reconcile` additionally verifies the checkpoint's staged or disposed document evidence.
 
+## Prepare manual retirement
+
+Granola exposes no supported archive or delete operation through its official MCP, so acquisition never deletes meetings. The accepted retirement path is a verified manual-release manifest followed by human deletion in Granola.
+
+Before producing a manifest, run a full-history `--refresh-transcripts` import for every configured receiver, repeat it until every receiver reports all meetings unchanged, run `reconcile`, and commit each receiver's `+/_ACQUIRE/granola/` state. The manifest must reconcile one shared account, source schema, interval, and identity checkpoint across the complete receiver union; deduplicate intentional receiver copies; name each meeting UUID and source-version hash; and exclude any meeting with an unavailable detail or transcript projection, unresolved routing conflict, failed checksum, or uncommitted receiver document.
+
+Present the exact eligible list to the human operator and stop. The human deletes only that list in Granola. A later complete discovery treats the meetings' source-side absence as the signifier that manual retirement completed while the committed receiver documents and ledgers remain durable evidence. Any Granola or receiver change after manifest generation invalidates the affected list and requires fresh reconciliation.
+
 ## Understand staged evidence and recovery
 
 Meeting Markdown is staged beneath `+/_ACQUIRE/granola/`. The authoritative `ledger.json` records one completely verified generation, with separate detail and transcript hashes and transcript retry state. The in-progress `journal.json` records the selected identities, verified staged paths and component hashes, failures, retry state, and remaining work.
