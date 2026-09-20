@@ -3,13 +3,13 @@ id: KI-TOOL-CLI-077
 area: CLI
 title: Visualise estate governance
 theme: cli
-horizon: triage
+horizon: next
 status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-09-20T07:34:49Z
-updated_at: 2026-09-20T07:34:49Z
+updated_at: 2026-09-20T07:47:23Z
 ---
 
 ## Goal
@@ -25,6 +25,48 @@ The 21-repository baseline audit proved that the underlying evidence exists but 
 ## Boundary
 
 Start read-only and local. Do not publish private repository metadata, duplicate governance rules outside the Harness, mutate repositories from the dashboard, or make KI Website the source of estate truth. Do not create a separate dashboard repository until the product boundary is large and stable enough to justify one.
+
+## Current state
+
+`tools-ki` can resolve and audit one repository but has no estate snapshot model, multi-repository aggregation command, or graphical status surface. The completed baseline provides the first concrete field set and privacy boundary, but its checkpoint was intentionally removed after project-local work was captured.
+
+## Steps
+
+- [ ] Define a read-only estate snapshot model that composes existing repository resolution, audit, dependency, roadmap, and Git evidence without duplicating Harness rules.
+- [ ] Add a command that discovers an explicitly configured estate and emits the snapshot in stable machine-readable form.
+- [ ] Add a local graphical surface over that snapshot with repository drill-down and links to canonical records.
+- [ ] Cover partial availability, stale evidence, private-repository handling, and shared-tree state with fixtures and boundary tests.
+- [ ] Document local operation, evidence freshness, privacy defaults, and the conditions that would justify extracting a separate dashboard product.
+
+## Files touched
+
+Expected scope is new estate modules under `src/core/`, command wiring under `src/commands/`, a bounded local presentation surface, colocated tests, package scripts where needed, and operator documentation. `ki-plan` must refine the exact UI seam before readiness.
+
+## Verify
+
+Run focused estate-model and command tests during shaping, then `bun run test`, `bunx tsc --noEmit`, `bun run build`, `bunx biome check .`, and the declared `ki-engineering`, `ki-repo-tools`, and `ki-work-roadmap` audits.
+
+## Dependencies / blocks
+
+No build-order blocker is known. Planning must choose the smallest local UI mechanism and confirm how repositories enter the configured estate without introducing hidden global discovery or publishing private data.
+
+## Documentation impact
+
+### Decision Records
+
+No Decision Record is required for the read-only local first slice. A hosted, shared, authenticated, or separately deployed dashboard would require a later ownership and privacy decision.
+
+### Specifications
+
+Specify the estate snapshot contract and evidence freshness semantics once the first slice chooses its stable output boundary.
+
+### Guides
+
+Add an operator guide for configuring the estate, generating the snapshot, opening the dashboard, and interpreting unavailable or stale evidence.
+
+### Roadmap
+
+Keep extraction into a separate repository outside this item unless implementation reveals a stable independently deployable seam.
 
 ## Discussion
 
