@@ -121,7 +121,7 @@ The first command runs the currently installed Homebrew release. The second runs
 
 ## Release work
 
-Release signing, protected GitHub environment configuration, and publication are covered by the [release management guide](release-management.md).
+Release signing, protected GitHub environment configuration, and publication are covered by [Release tools-ki](releasing.md).
 
 ## Read the manual
 

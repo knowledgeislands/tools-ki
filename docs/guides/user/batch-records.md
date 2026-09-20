@@ -61,3 +61,9 @@ The evidence commit must resolve in the repository. Closing appends structural e
 ## Retained records and recovery
 
 `validate` can integrity-check retained records written under the earlier batch shape even after their execution window has expired. Those records remain read-only: `run` and `close` refuse to upgrade or rewrite them. An expired current record, altered approved payload, mismatched run binding, non-canonical path, symbolic link, or cross-repository identity fails closed. Correct the source authority or create a newly approved batch rather than editing a protected payload in place.
+
+## Clean up inactive records
+
+A batch record is a temporary authority envelope, not a durable history store. Once a run is inactive and every useful outcome or follow-up has been routed to its canonical work, decision, guide, specification, trade, or commit evidence, remove the record immediately. Git retains the committed execution evidence.
+
+If useful follow-up remains, route it before cleanup. Seven days after inactivity is the overdue deadline for making that decision, not a minimum retention period: record that no useful follow-up remains or move the useful material to its owner, then remove the batch in the same review cycle. Active, malformed, unsafe, or incompletely evidenced records remain in place until their state can be resolved safely.

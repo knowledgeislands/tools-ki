@@ -29,7 +29,7 @@ ki acquire list
 ki acquire import --adapter granola --since 2023-01-01
 ```
 
-Use `--repo /path/to/repository` to select another eligible receiver and `--dry-run` to perform all reads and verification without writing. Routine acquisition revalidates mutable meeting detail, reuses verified transcripts, journals interrupted work, stages one Markdown document per selected identity, and advances its receiver-local checkpoint only after complete verification. It never mutates Granola or writes another repository. Adapter activation, receiver selectors, transcript refresh, disposition, reset, and interrupted-import recovery are documented in [Acquire Granola meetings](docs/guides/granola-acquisition.md).
+Use `--repo /path/to/repository` to select another eligible receiver and `--dry-run` to perform all reads and verification without writing. Routine acquisition revalidates mutable meeting detail, reuses verified transcripts, journals interrupted work, stages one Markdown document per selected identity, and advances its receiver-local checkpoint only after complete verification. It never mutates Granola or writes another repository. Adapter activation, receiver selectors, transcript refresh, disposition, reset, and interrupted-import recovery are documented in [Acquire Granola meetings](docs/guides/user/granola-acquisition.md).
 
 ## Manage installed capabilities
 
@@ -77,7 +77,7 @@ An Agora is declared portably by a registered owner repository under `[skills.ki
 
 `ki agora roots <id>` is the versioned machine interface for a resolved group's physical roots. A named Agora places its declared `order` prefix first and appends unlisted participants in registry-key order; an Agora without `order` and the system `estate` retain registry-key order throughout. The command writes newline-delimited absolute roots; use `--null` (or `-0`) for safe NUL-delimited path handling. It fails before writing any root when the selector cannot resolve or has no members, and it never clones, repairs, or treats source or legacy stores as Agora members.
 
-An Agora owner may include ordinary Git repositories in its portable `references` list without making them KI members. Associate one explicit local checkout with `ki agora reference set <repository> <absolute-checkout>`, inspect associations with `ki agora reference list`, and remove one with `ki agora reference remove <repository>`. `ki` validates the checkout root and canonical `origin` identity without requiring `.ki.toml`, stores only machine-local state, and never clones or mutates the referenced repository. Unresolved references remain typed diagnostics and are omitted from projected roots without affecting reciprocal owner or member resolution. See the [Agora reference guide](docs/guides/agora-references.md) for setup and recovery.
+An Agora owner may include ordinary Git repositories in its portable `references` list without making them KI members. Associate one explicit local checkout with `ki agora reference set <repository> <absolute-checkout>`, inspect associations with `ki agora reference list`, and remove one with `ki agora reference remove <repository>`. `ki` validates the checkout root and canonical `origin` identity without requiring `.ki.toml`, stores only machine-local state, and never clones or mutates the referenced repository. Unresolved references remain typed diagnostics and are omitted from projected roots without affecting reciprocal owner or member resolution. See the [Agora reference guide](docs/guides/user/agora-references.md) for setup and recovery.
 
 ## Select repository targets
 
@@ -133,7 +133,7 @@ ki batch run KI-EXAMPLE-BATCH-001
 
 Replace the illustrative identifiers and expiry with the approved Ready items and active window for the selected repository.
 
-See [canonical batch records](docs/guides/batch-records.md) for result and close examples, retained-record handling, and the process-authority boundary.
+See [canonical batch records](docs/guides/user/batch-records.md) for result and close examples, retained-record handling, and the process-authority boundary.
 
 ## Inspect governed work
 
@@ -157,7 +157,7 @@ Creation, shaping, readiness, implementation, acceptance, and completion remain 
 
 `ki trade receive <trade-id>` imports one committed submission and records its source commit. `ki trade receive --all` previews every receivable trade and changes nothing until `--yes` is also supplied. Receiver-owned decision evidence remains local; the sender-owned envelope and body are immutable.
 
-`ki trade subtypes` maintains receiver-owned knowledge subtype definitions. `ki trade standing` adds, lists, checks, and removes exact reciprocal standing grants layered on active ordinary knowledge routes. From the receiver, `ki trade standing capture` appends a marked, commit-pinned `STI-*` provenance block to an existing local Markdown file only after the source commit and path resolve and the exact grant is active. One-sided, unknown, malformed, ambiguous, or revoked declarations retain the ordinary itemized-trade fallback and grant no direct-capture authority. See the [standing knowledge-intake guide](docs/guides/standing-knowledge-intake.md) for the complete workflow.
+`ki trade subtypes` maintains receiver-owned knowledge subtype definitions. `ki trade standing` adds, lists, checks, and removes exact reciprocal standing grants layered on active ordinary knowledge routes. From the receiver, `ki trade standing capture` appends a marked, commit-pinned `STI-*` provenance block to an existing local Markdown file only after the source commit and path resolve and the exact grant is active. One-sided, unknown, malformed, ambiguous, or revoked declarations retain the ordinary itemized-trade fallback and grant no direct-capture authority. See the [standing knowledge-intake guide](docs/guides/user/standing-knowledge-intake.md) for the complete workflow.
 
 `ki trade list` presents visible preparations, imports, and exports across the registered repository estate. Each item identifies its peer (`→ receiver` or `← sender`), kind (`⚒` work or `ⓘ` knowledge), observation policy, and lifecycle: preparing or submitted, receipt state, receiver decision, and release or prune eligibility. Sender release becomes eligible according to the selected observation policy; receiver prune becomes eligible only after that release is observable. `ki trade release --eligible` and `ki trade prune --eligible` preview their batches and require `--yes` to apply them. These trade and the existing report and diagnostic symbols come from one bounded presentation registry; structural tree and table characters remain part of their renderers.
 
@@ -193,7 +193,7 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 `ki manage search <query>` searches only verified installed harness capabilities, without contacting a registry or discovering a repository.
 
-`ki manage vscode check` compares a chezmoi-managed VS Code workspace inventory and trusted-folder source with the local KI registry. Use `ki manage vscode sync --write` to publish reviewed source-state repairs, or `ki manage vscode source create <repository> --write` to create and associate an opt-in OneDrive source store. These commands update only chezmoi source state and never run `chezmoi apply`; see the [VS Code projection management guide](docs/guides/vscode-management.md).
+`ki manage vscode check` compares a chezmoi-managed VS Code workspace inventory and trusted-folder source with the local KI registry. Use `ki manage vscode sync --write` to publish reviewed source-state repairs, or `ki manage vscode source create <repository> --write` to create and associate an opt-in OneDrive source store. These commands update only chezmoi source state and never run `chezmoi apply`; see the [VS Code projection management guide](docs/guides/user/vscode-management.md).
 
 `ki manage cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki manage diag` reports only machine-managed installation, configuration, registry, and path state. `ki repo diag` uses the standard repository discovery, `--repo`, or `--agora` selection rules to report each selected repository's declared skills and compatible local projections without changing state. `ki manage repair` reconciles missing, dangling, or stale configured user-skill projections; `--dry-run` changes nothing and unavailable or unsafe state remains reported for manual resolution. `ki repo repair` records each selected physical root before repairing only missing, dangling, or stale KI-managed projections, and `--dry-run` changes nothing. `ki manage doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories and validates a regular direct-CWD `.ki.toml`.
 

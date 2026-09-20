@@ -1,4 +1,4 @@
-# Release management
+# Release tools-ki
 
 `tools-ki` releases compiled archives for `darwin-arm64`, `darwin-x64`, and glibc `linux-x64`.
 

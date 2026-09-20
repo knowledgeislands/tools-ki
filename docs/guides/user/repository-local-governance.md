@@ -47,4 +47,4 @@ The host fails before importing catalogue code when the declaration is missing, 
 
 `ki repo diag` reports the canonical local provider without expecting a managed projection. `ki repo upgrade` refreshes only installed Harness providers and ignores repository-local `ki-self`.
 
-The provider boundary is specified by [REPO-OPS-013](../specs/repository-operations.md#repo-ops-013--repository-local-self-governance) and decided in [ADR-KI-TOOLS-002](../decisions/ADR-KI-TOOLS-002-compatible-harness-registry-and-native-operations.md).
+The provider boundary is specified by [REPO-OPS-013](../../specs/repository-operations.md#repo-ops-013--repository-local-self-governance) and decided in [ADR-KI-TOOLS-002](../../decisions/ADR-KI-TOOLS-002-compatible-harness-registry-and-native-operations.md).

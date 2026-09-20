@@ -2,7 +2,7 @@
 
 This guide is for repository owners who want one registered Knowledge Islands repository to retain a narrowly defined class of knowledge from another without creating an itemized trade for every capture. The result is an exact reciprocal grant and a receiver-local, commit-pinned provenance block; neither repository gains authority to write to the other.
 
-The observable command contract is specified by [TRADE-009 through TRADE-011](../specs/trades.md#trade-009--receiver-owned-knowledge-subtypes).
+The observable command contract is specified by [TRADE-009 through TRADE-011](../../specs/trades.md#trade-009--receiver-owned-knowledge-subtypes).
 
 ## Prerequisites
 
