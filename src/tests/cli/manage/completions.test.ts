@@ -125,7 +125,7 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain('--estate:select every repository in the registered estate')
     expect(zsh.output).toContain('--estate:list route declarations across the registered repository estate')
     expect(zsh.output).toContain('--incomplete:show only routes that are not active')
-    expect(zsh.output).toContain('--table:render estate routes as repository pairs')
+    expect(zsh.output).toContain('--format:render estate route evidence as text or versioned JSON')
     expect(zsh.output).toContain("'agora open:--target') printf '%s\\n' 'zed vscode'")
     expect(bash.output).toContain("'agora open:--target') printf '%s\\n' 'zed vscode'")
     expect(zsh.output).toContain("'agora inspect:--target') printf '%s\\n' 'zed vscode'")
@@ -144,7 +144,7 @@ describe('[ki manage completion]', () => {
     expect(bash.output).toContain("'repo roadmap')")
     expect(bash.output).toContain("'trade routes')")
     expect(bash.output).toContain(
-      "'trade routes list') printf '%s\\n' '-V --version -h --help --estate --incomplete --table --html'"
+      "'trade routes list') printf '%s\\n' '-V --version -h --help --estate --incomplete --format'"
     )
     expect(bash.output).toContain("'trade standing capture:--capture')")
     expect(bash.output).toContain("'acquire list')")

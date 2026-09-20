@@ -384,7 +384,7 @@ describe('[ki trade]', () => {
     const { box } = await configuredPair()
 
     const wide = await box.run('ki trade routes list --estate', { interactive: true, columns: 120 })
-    const explicit = await box.run('ki trade routes list --estate --table', { interactive: true, columns: 120 })
+    const explicit = await box.run('ki trade routes list --estate --format text', { interactive: true, columns: 120 })
     const narrow = await box.run('ki trade routes list --estate', { interactive: true, columns: 40 })
 
     expect(explicit).toEqual(wide)
@@ -454,203 +454,51 @@ describe('[ki trade]', () => {
     return box
   }
 
-  test('renders the registered estate as an interactive network page and opens it', async () => {
+  test('renders versioned path-free estate route evidence as JSON', async () => {
     const box = await diagramEstate()
-    const opened: string[][] = []
-    box.setRunner(async (command, args) => {
-      opened.push([command, ...args])
-      return { exitCode: 0, output: '' }
-    })
 
-    const rendered = await box.run('ki trade routes list --estate --html', { platform: 'darwin' })
+    const rendered = await box.run('ki trade routes list --estate --format json')
 
     expect(rendered.exitCode).toBe(0)
-    expect(rendered.output).toContain('estate network written to')
-    const page = await box.home.read('.cache/ki/estate-routes.html')
-    // The page is a payload and a simulation, so the assertions are about the estate it carries
-    // and never about where anything is drawn — the browser decides that, and a reader can drag it.
-    const payload = JSON.parse(/window\.__estate = (.*?)<\/script>/u.exec(page)?.[1] as string)
-    expect(payload.nodes.map((node: { id: string }) => node.id)).toEqual([
-      'example/fourth',
-      'example/receiver',
-      'example/source',
-      'example/third'
-    ])
-    expect(
-      payload.links.map(
-        ({
-          laneCapacity: _laneCapacity,
-          targetDistance: _targetDistance,
-          springStrength: _springStrength,
-          strokeWidth: _strokeWidth,
-          ...link
-        }: Record<string, unknown>) => link
-      )
-    ).toEqual([
-      {
-        source: 'example/fourth',
-        target: 'example/source',
-        kinds: ['work'],
-        states: ['awaiting-receiver'],
-        active: false
-      },
-      { source: 'example/receiver', target: 'example/source', kinds: ['work'], states: ['active'], active: true },
-      { source: 'example/receiver', target: 'example/third', kinds: ['knowledge'], states: ['active'], active: true },
-      {
-        source: 'example/source',
-        target: 'example/receiver',
-        kinds: ['knowledge', 'work'],
-        states: ['active'],
-        active: true
-      },
-      { source: 'example/source', target: 'example/third', kinds: ['work'], states: ['active'], active: true },
-      {
-        source: 'example/third',
-        target: 'example/fourth',
-        kinds: ['knowledge'],
-        states: ['awaiting-sender'],
-        active: false
-      }
-    ])
-    expect(
-      payload.links.map(
-        (link: { laneCapacity: number; targetDistance: number; springStrength: number; strokeWidth: number }) => ({
-          laneCapacity: link.laneCapacity,
-          targetDistance: link.targetDistance,
-          springStrength: link.springStrength,
-          strokeWidth: link.strokeWidth
-        })
-      )
-    ).toEqual([
-      { laneCapacity: 0, targetDistance: 180, springStrength: 0.16, strokeWidth: 1.4 },
-      { laneCapacity: 3, targetDistance: 306, springStrength: 0.25, strokeWidth: 2 },
-      { laneCapacity: 1, targetDistance: 222, springStrength: 0.19, strokeWidth: 1.6 },
-      { laneCapacity: 3, targetDistance: 306, springStrength: 0.25, strokeWidth: 2 },
-      { laneCapacity: 1, targetDistance: 222, springStrength: 0.19, strokeWidth: 1.6 },
-      { laneCapacity: 0, targetDistance: 180, springStrength: 0.16, strokeWidth: 1.4 }
-    ])
-    expect(payload.incomplete).toBe(false)
-    // Self-contained: the viewer runtime ships in the page, so nothing is fetched when it opens.
-    expect(page).toContain('forceSimulation')
-    expect(page).not.toMatch(/<script[^>]*\ssrc=/u)
-    expect(page).toContain('aria-label="work"')
-    expect(page).toContain('aria-label="knowledge"')
-    expect(page).toContain('m15 12-8.373 8.373')
-    expect(page).toContain('M12 7v14')
-    expect(page).toContain('knowledge</span>')
-    expect(page).toContain('lane capacity sets distance, spring, and width')
-    expect(opened).toEqual([['open', join(box.home.path, '.cache/ki/estate-routes.html')]])
-  })
-
-  test('derives map influence from active routes, organisation membership, and declared bonuses', async () => {
-    const box = await sandbox()
-    const source = await realpath(box.project.path)
-    const hub = await box.project.mkdir('hub')
-    const peer = await box.project.mkdir('peer')
-    const sink = await box.project.mkdir('sink')
-    const hubHome = home('knowledgeislands/hub')
-    const peerHome = home('knowledgeislands/peer')
-    const sinkHome = home('knowledgeislands/sink')
-    const sourceHome = home('knowledgeislands/source')
-    await box.project.write('.ki.toml', repositoryConfiguration('knowledgeislands/source', { knowledge: [hubHome] }))
-    await box.project.write(
-      'hub/.ki.toml',
-      repositoryConfiguration(
-        'knowledgeislands/hub',
-        { work: [peerHome, sinkHome] },
-        { knowledge: [sourceHome, peerHome] },
-        1
-      )
-    )
-    await box.project.write(
-      'peer/.ki.toml',
-      repositoryConfiguration('knowledgeislands/peer', { knowledge: [hubHome] }, { work: [hubHome] })
-    )
-    await box.project.write('sink/.ki.toml', repositoryConfiguration('knowledgeislands/sink', {}, { work: [hubHome] }))
-    await configureEstate(box, [source, hub, peer, sink])
-    box.setRunner(async () => ({ exitCode: 0, output: '' }))
-
-    await box.run('ki trade routes list --estate --html')
-
-    const page = await box.home.read('.cache/ki/estate-routes.html')
-    const payload = JSON.parse(/window\.__estate = (.*?)<\/script>/u.exec(page)?.[1] as string)
-    expect(payload.nodes).toEqual([
-      {
-        id: 'knowledgeislands/hub',
-        owner: 'knowledgeislands',
-        name: 'hub',
-        inbound: 2,
-        outbound: 2,
-        organisationBonus: 1,
-        mapBonus: 1,
-        influence: 6,
-        role: 'hub'
-      },
-      {
-        id: 'knowledgeislands/peer',
-        owner: 'knowledgeislands',
-        name: 'peer',
-        inbound: 1,
-        outbound: 1,
-        organisationBonus: 1,
-        mapBonus: 0,
-        influence: 3,
-        role: 'peer'
-      },
-      {
-        id: 'knowledgeislands/sink',
-        owner: 'knowledgeislands',
-        name: 'sink',
-        inbound: 1,
-        outbound: 0,
-        organisationBonus: 1,
-        mapBonus: 0,
-        influence: 2,
-        role: 'sink'
-      },
-      {
-        id: 'knowledgeislands/source',
-        owner: 'knowledgeislands',
-        name: 'source',
-        inbound: 0,
-        outbound: 1,
-        organisationBonus: 1,
-        mapBonus: 0,
-        influence: 2,
-        role: 'source'
-      }
-    ])
-    expect(
-      payload.links.find(
-        (link: { source: string; target: string }) =>
-          link.source === 'knowledgeislands/hub' && link.target === 'knowledgeislands/peer'
-      )
-    ).toMatchObject({
-      laneCapacity: 2,
-      targetDistance: 264,
-      springStrength: 0.22,
-      strokeWidth: 1.8
+    const report = JSON.parse(rendered.output)
+    expect(report).toMatchObject({
+      schema: 'ki/trade-routes/v1',
+      scope: 'estate',
+      incomplete: false
     })
+    expect(report.routes).toContainEqual({
+      source: {
+        identity: 'example/source',
+        repository: 'https://github.com/example/source',
+        mapBonus: 0
+      },
+      peer: {
+        identity: 'example/receiver',
+        repository: 'https://github.com/example/receiver',
+        resolved: true,
+        mapBonus: 0
+      },
+      direction: 'export',
+      kind: 'work',
+      state: 'active'
+    })
+    expect(JSON.stringify(report)).not.toContain(box.project.path)
+    expect(JSON.stringify(report)).not.toContain('.ki.toml')
   })
 
-  test('narrows the network to incomplete routes and reports a failure to open it', async () => {
+  test('filters JSON evidence to incomplete routes', async () => {
     const box = await diagramEstate()
-    box.setRunner(async () => ({ exitCode: 1, output: '' }))
 
-    const rendered = await box.run('ki trade routes list --estate --incomplete --html')
+    const rendered = await box.run('ki trade routes list --estate --incomplete --format json')
 
     expect(rendered.exitCode).toBe(0)
-    // The page is already written, so failing to open it is worth saying and not worth failing on.
-    expect(rendered.output).toContain('could not open')
-    const payload = JSON.parse(
-      /window\.__estate = (.*?)<\/script>/u.exec(await box.home.read('.cache/ki/estate-routes.html'))?.[1] as string
-    )
-    expect(payload.incomplete).toBe(true)
-    expect(payload.nodes).toHaveLength(3)
-    expect(payload.links.map((link: { source: string }) => link.source)).toEqual(['example/fourth', 'example/third'])
+    const report = JSON.parse(rendered.output)
+    expect(report.incomplete).toBe(true)
+    expect(report.routes.length).toBeGreaterThan(0)
+    expect(report.routes.every((route: { state: string }) => route.state !== 'active')).toBe(true)
   })
 
-  test('leaves an unresolved repository without a declared map bonus', async () => {
+  test('represents unresolved peers without leaking registry paths or inventing map bonuses', async () => {
     const box = await sandbox()
     const source = await realpath(box.project.path)
     await box.project.write(
@@ -658,64 +506,44 @@ describe('[ki trade]', () => {
       repositoryConfiguration('example/source', { work: [home('example/unresolved')] })
     )
     await configureEstate(box, [source])
-    box.setRunner(async () => ({ exitCode: 0, output: '' }))
 
-    await box.run('ki trade routes list --estate --html')
+    const rendered = await box.run('ki trade routes list --estate --format json')
 
-    const page = await box.home.read('.cache/ki/estate-routes.html')
-    const payload = JSON.parse(/window\.__estate = (.*?)<\/script>/u.exec(page)?.[1] as string)
-    expect(payload.nodes).toContainEqual({
-      id: 'example/unresolved',
-      owner: 'example',
-      name: 'unresolved',
-      inbound: 0,
-      outbound: 0,
-      organisationBonus: 0,
-      mapBonus: 0,
-      influence: 0,
-      role: 'source'
-    })
+    expect(rendered.exitCode).toBe(0)
+    expect(JSON.parse(rendered.output).routes).toEqual([
+      {
+        source: {
+          identity: 'example/source',
+          repository: 'https://github.com/example/source',
+          mapBonus: 0
+        },
+        peer: {
+          identity: 'example/unresolved',
+          repository: 'https://github.com/example/unresolved',
+          resolved: false,
+          mapBonus: null
+        },
+        direction: 'export',
+        kind: 'work',
+        state: 'awaiting-receiver'
+      }
+    ])
   })
 
-  test('renders an empty estate network and refuses a network of the local route list', async () => {
+  test('requires an estate for JSON and rejects unknown formats and retired presentation flags', async () => {
     const box = await sandbox()
-    const source = await realpath(box.project.path)
-    await box.project.write('.ki.toml', repositoryConfiguration('example/source'))
-    await configureEstate(box, [source])
-    box.setEnv({ KI_BROWSER_OPENER: 'noop-opener' })
-    const opened: string[] = []
-    box.setRunner(async (command) => {
-      opened.push(command)
-      return { exitCode: 0, output: '' }
-    })
 
-    expect((await box.run('ki trade routes list --estate --html')).exitCode).toBe(0)
-    const page = await box.home.read('.cache/ki/estate-routes.html')
-    expect(page).toContain('0 repositories · 0 routes · all declared routes')
-    expect(JSON.parse(/window\.__estate = (.*?)<\/script>/u.exec(page)?.[1] as string).links).toEqual([])
-    // The opener is configurable, so a machine without the platform default can still be used.
-    expect(opened).toEqual(['noop-opener'])
-    expect(await box.run('ki trade routes list --html')).toEqual({
+    expect(await box.run('ki trade routes list --format json')).toEqual({
       exitCode: 2,
-      output: 'ki: error: trade route --html requires --estate\n'
+      output: 'ki: error: trade route --format json requires --estate\n'
     })
-    expect(await box.run('ki trade routes list --table')).toEqual({
+    expect(await box.run('ki trade routes list --estate --format yaml')).toEqual({
       exitCode: 2,
-      output: 'ki: error: trade route --table requires --estate\n'
+      output: 'ki: error: trade route --format must be text or json\n'
     })
-    expect(await box.run('ki trade routes list --estate --table --html')).toEqual({
-      exitCode: 2,
-      output: 'ki: error: trade route --table cannot be combined with --html\n'
-    })
-
-    // Without an override the opener is the platform's, which is injected rather than read from
-    // the host, so both defaults stay reachable from a test wherever the suite runs.
-    box.setEnv({ KI_BROWSER_OPENER: undefined })
-    await box.run('ki trade routes list --estate --html', { platform: 'linux' })
-    await box.run('ki trade routes list --estate --html', { platform: 'darwin' })
-    expect(opened.slice(1)).toEqual(['xdg-open', 'open'])
+    expect((await box.run('ki trade routes list --estate --html')).output).toContain("unknown option '--html'")
+    expect((await box.run('ki trade routes list --estate --table')).output).toContain("unknown option '--table'")
   })
-
   test('releases a decided trade whose receiver reformatted the record without changing the payload', async () => {
     const { box } = await configuredPair()
     const created = await createTrade(box, 'work')

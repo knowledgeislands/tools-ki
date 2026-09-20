@@ -38,6 +38,8 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 `ki trade routes list --estate` MUST inspect every valid registered repository trade declaration as one estate; `--incomplete` MUST retain only routes that are not active.
 
+`ki trade routes list --estate --format json` MUST emit the `ki/trade-routes/v1` machine contract. It MUST contain canonical source and peer identities, canonical repository URLs, direction, kind, activation state, peer resolution, and bounded declared map bonuses. It MUST NOT expose registry roots, declaration paths, or renderer-derived layout values. JSON format MUST require estate scope; text remains the default. Interactive route visualisation is application-owned rather than a `tools-ki` command concern.
+
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `lists incomplete route declarations across the registered estate`.

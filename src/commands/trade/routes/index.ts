@@ -1,10 +1,9 @@
-import { mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../../context.ts'
 import { grammarError } from '../../../core/errors.ts'
 import { addTradeRoute, removeTradeRoute } from '../../../core/trade/configuration-mutations.ts'
 import {
+  estateRouteReport,
   inspectEstateRoutes,
   inspectRoutes,
   localRegisteredConfiguration,
@@ -16,10 +15,8 @@ import {
   inspectLocalTradeRoutes,
   mutateTradeRoute
 } from '../../../core/trade/operations/index.ts'
-import { estateNetwork } from '../../../core/trade/routes.ts'
 import { type PairTableRow, renderPairTable, renderTree, routeState, tradeKindText } from '../../presentation/index.ts'
 import { kind, repository, routeDirection } from '../shared.ts'
-import { renderEstateRoutesPage } from './estate-page.ts'
 
 interface RouteOptions {
   readonly direction?: string
@@ -29,8 +26,7 @@ interface RouteOptions {
 interface RouteListOptions {
   readonly estate?: boolean
   readonly incomplete?: boolean
-  readonly html?: boolean
-  readonly table?: boolean
+  readonly format?: string
 }
 
 const renderRouteList = (inspected: Awaited<ReturnType<typeof inspectRoutes>>): string => {
@@ -108,16 +104,6 @@ const renderEstateRouteList = (
   ].join('\n')
 }
 
-/**
- * Hands the page to the desktop's own opener. A failure to open is reported rather than fatal:
- * the file is already written, so the caller can open it themselves.
- */
-const openInBrowser = async (context: KiContext, path: string): Promise<void> => {
-  const opener = context.environment['KI_BROWSER_OPENER'] ?? (context.platform === 'darwin' ? 'open' : 'xdg-open')
-  const result = await context.runner(opener, [path], context.environment)
-  if (result.exitCode !== 0) context.stderr.write(`ki trade routes list: could not open ${path} with ${opener}\n`)
-}
-
 export const createTradeRoutesCommand = (context: KiContext): Command => {
   const routes = new Command('routes').description('maintain local typed trade-route declarations')
   routes
@@ -170,23 +156,17 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
         .description('list local routes or every registered route and its estate state')
         .option('--estate', 'list route declarations across the registered repository estate')
         .option('--incomplete', 'show only routes that are not active')
-        .option('--table', 'render estate routes as repository pairs')
-        .option('--html', 'render the estate as an interactive network page and open it')
+        .option('--format <text|json>', 'render estate route evidence as text or versioned JSON', 'text')
         .action(async (options: RouteListOptions) => {
-          if (options.table && !options.estate) throw grammarError('trade route --table requires --estate')
-          if (options.html && !options.estate) throw grammarError('trade route --html requires --estate')
-          if (options.table && options.html) throw grammarError('trade route --table cannot be combined with --html')
+          if (options.format !== 'text' && options.format !== 'json')
+            throw grammarError('trade route --format must be text or json')
+          if (options.format === 'json' && !options.estate)
+            throw grammarError('trade route --format json requires --estate')
           if (options.estate) {
             const incomplete = Boolean(options.incomplete)
             const inspected = await inspectEstateTradeRoutes(incomplete, () => inspectEstateRoutes(context))
-            if (options.html) {
-              // The page is regenerable from the estate at any moment, so it lives in the cache
-              // under a fixed name and is rewritten in place rather than accumulating copies.
-              const path = join(context.paths.cache, 'estate-routes.html')
-              await mkdir(context.paths.cache, { recursive: true })
-              await writeFile(path, renderEstateRoutesPage(estateNetwork(inspected, incomplete)), 'utf8')
-              context.stdout.write(`ki trade routes list: estate network written to ${path}\n`)
-              await openInBrowser(context, path)
+            if (options.format === 'json') {
+              context.stdout.write(`${JSON.stringify(estateRouteReport(inspected, incomplete), null, 2)}\n`)
               return
             }
             context.stdout.write(

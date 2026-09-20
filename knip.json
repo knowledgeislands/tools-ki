@@ -3,6 +3,6 @@
   "entry": ["bin/ki", "src/cli.ts", "src/**/*.test.ts"],
   "ignore": [".claude/skills/**", ".agents/skills/**", "scripts/**"],
   "ignoreBinaries": ["mandoc", "mkfifo"],
-  "ignoreDependencies": ["lint-staged", "syncpack", "d3-force", "d3-selection", "d3-drag", "d3-zoom"],
+  "ignoreDependencies": ["lint-staged", "syncpack"],
   "ignoreExportsUsedInFile": true
 }
