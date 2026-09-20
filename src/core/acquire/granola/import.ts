@@ -5,7 +5,14 @@ import { KiError } from '../../errors.ts'
 import type { Runner } from '../../runtime/runner.ts'
 import { renderGranolaMeeting } from './markdown.ts'
 import { granolaReceivers, type RoutedGranolaMeeting, routeGranolaMeetings } from './routing.ts'
-import { type GranolaDetail, type GranolaTranscript, granolaSource, sha256, stableJson } from './source.ts'
+import {
+  type GranolaDetail,
+  type GranolaTranscript,
+  granolaSource,
+  sha256,
+  stableJson,
+  transcriptProjectionUnavailable
+} from './source.ts'
 import {
   type GranolaCheckpoint,
   type GranolaCheckpointMeeting,
@@ -228,6 +235,7 @@ const cachedTranscript = async (
   if (!transcript || !meeting.transcript_sha256) {
     throw new KiError('Granola cached transcript differs from checkpoint')
   }
+  if (transcriptProjectionUnavailable(transcript.projection)) return undefined
   return transcript
 }
 
@@ -253,8 +261,9 @@ const readTranscript = async (options: {
   if (!shouldRead) {
     const complete = current as GranolaCheckpointMeeting
     if (complete.transcript_state === 'available') {
+      if (!cached) throw new KiError('Granola cached transcript contains an unavailable provider response')
       return {
-        transcript: cached as Extract<GranolaTranscript, { readonly state: 'available' }>,
+        transcript: cached,
         hash: complete.transcript_sha256 as string,
         state: 'available',
         observedAt: complete.transcript_observed_at as string,
