@@ -1668,6 +1668,42 @@ describe('[ki acquire import --adapter granola]', () => {
     expect(refreshSource.calls.every((call) => !/(archive|delete|move|tag|update)/i.test(call.tool))).toBe(true)
   })
 
+  test('treats a successful meeting-not-found transcript response as unavailable', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      {
+        key: 'target',
+        repository: 'https://github.com/example/target',
+        path: repository,
+        unfoldered: true
+      }
+    ])
+    const base = granolaFixtureRunner({
+      meetings: [{ id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }]
+    }).runner
+    box.setRunner((executable, arguments_, environment) => {
+      const tool = (arguments_[1] ?? '').replace('granola.', '')
+      if (tool === 'get_meeting_transcript')
+        return Promise.resolve({
+          exitCode: 0,
+          output: `${JSON.stringify({ content: [{ type: 'text', text: 'Meeting not found' }] })}\n`
+        })
+      return base(executable, arguments_, environment)
+    })
+
+    const result = await box.run(command(repository))
+
+    expect(result.exitCode, result.output).toBe(0)
+    const ledger = JSON.parse(await box.root.read('target/+/_ACQUIRE/granola/ledger.json')) as {
+      meetings: Record<string, { transcript_state: string; transcript_retry_count: number }>
+    }
+    expect(ledger.meetings['meeting-a']).toMatchObject({
+      transcript_state: 'retrying',
+      transcript_retry_count: 1
+    })
+  })
+
   test('retries unavailable transcripts to availability and then records bounded durable omission', async () => {
     const availableBox = await sandbox()
     const availableRepository = await availableBox.root.mkdir('target')

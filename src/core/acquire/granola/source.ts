@@ -177,6 +177,12 @@ const identity = (value: unknown, names: readonly [string, ...string[]], label: 
 const transcriptUnavailable = (output: string): boolean =>
   /(?:not available|unavailable|not entitled|paid plan|not found|no transcript)/i.test(output)
 
+const transcriptProjectionUnavailable = (projection: unknown): projection is string =>
+  typeof projection === 'string' &&
+  /^(?:meeting not found|no transcript(?: available)?(?: on (?:the )?plan)?|transcript (?:not available|unavailable))\.?$/i.test(
+    projection.trim()
+  )
+
 const rateLimited = (result: CommandResult): boolean =>
   result.exitCode !== 0 && /(?:rate limit exceeded|too many requests)/i.test(result.output)
 
@@ -330,7 +336,9 @@ export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessE
           `Granola get_meeting_transcript failed: ${result.output.trim() || 'mcporter exited non-zero'}`
         )
       }
-      return { state: 'available', projection: unwrap(parseJson(result.output, 'transcript')) }
+      const projection = unwrap(parseJson(result.output, 'transcript'))
+      if (transcriptProjectionUnavailable(projection)) return { state: 'unavailable', reason: projection.trim() }
+      return { state: 'available', projection }
     }
   }
 }
