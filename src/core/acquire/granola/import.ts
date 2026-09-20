@@ -235,6 +235,7 @@ const cachedTranscript = async (
   if (!transcript || !meeting.transcript_sha256) {
     throw new KiError('Granola cached transcript differs from checkpoint')
   }
+  /* v8 ignore next -- cached-document parsing never returns a transcript carrying the unavailable marker. */
   if (transcriptProjectionUnavailable(transcript.projection)) return undefined
   return transcript
 }
@@ -261,6 +262,7 @@ const readTranscript = async (options: {
   if (!shouldRead) {
     const complete = current as GranolaCheckpointMeeting
     if (complete.transcript_state === 'available') {
+      /* v8 ignore next -- an available validated checkpoint either yields a cached transcript or throws while parsing it. */
       if (!cached) throw new KiError('Granola cached transcript contains an unavailable provider response')
       return {
         transcript: cached,
@@ -469,6 +471,7 @@ export const importGranola = async (
         current.transcript_sha256 !== transcriptResult.hash ||
         current.transcript_state !== transcriptResult.state ||
         current.transcript_retry_count !== transcriptResult.retries
+      /* v8 ignore next -- unchanged state always has a validated current checkpoint and acquired_at fallback. */
       const transcriptObservedAt = changed
         ? transcriptResult.observedAt
         : (current?.transcript_observed_at ?? current?.acquired_at ?? observedAt)

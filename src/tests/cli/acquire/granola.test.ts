@@ -1704,6 +1704,35 @@ describe('[ki acquire import --adapter granola]', () => {
     })
   })
 
+  test('records a successful structured transcript omission', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      {
+        key: 'target',
+        repository: 'https://github.com/example/target',
+        path: repository,
+        unfoldered: true
+      }
+    ])
+    const base = granolaFixtureRunner({
+      meetings: [{ id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }]
+    }).runner
+    box.setRunner((executable, arguments_, environment) => {
+      const tool = (arguments_[1] ?? '').replace('granola.', '')
+      if (tool === 'get_meeting_transcript')
+        return Promise.resolve({ exitCode: 0, output: `${JSON.stringify({ transcript: 'Meeting not found' })}\n` })
+      return base(executable, arguments_, environment)
+    })
+
+    const result = await box.run(command(repository))
+
+    expect(result.exitCode, result.output).toBe(0)
+    expect(await box.root.read('target/+/_ACQUIRE/granola/2026-01-02--meeting--meeting-a.md')).toContain(
+      '_Transcript unavailable from the source._'
+    )
+  })
+
   test('retries unavailable transcripts to availability and then records bounded durable omission', async () => {
     const availableBox = await sandbox()
     const availableRepository = await availableBox.root.mkdir('target')
