@@ -1,15 +1,16 @@
 ---
 id: KI-TOOL-CLI-078
-area: CLI
 title: Consolidate audience-centric guides
-theme: documentation-structure
+area: CLI
+theme: cli
+horizon: now
+status: draft
 blocks: []
 blocked_by: []
 transferred_from: ki-website
+baseline_ref: null
 created_at: 2026-09-21T15:44:00Z
-updated_at: 2026-09-21T16:12:00Z
-horizon: now
-status: draft
+updated_at: 2026-09-21T16:40:00Z
 ---
 
 ## Goal
@@ -40,6 +41,50 @@ KI Website derives and cites; it does not own this collection. A guide that woul
 - Decide whether the flat-to-`user/` move warrants a note in the next release's changelog. A downstream repository pinning a path has no other way to learn a document moved.
 - Consider whether `man/ki.1` and the user guides can disagree, and which is authoritative when they do.
 - Confirm the collection index routes each audience before anything else, and run `ki repo audit --skill ki-guides --repo .`.
+
+## Current state
+
+`docs/guides/` splits `user/` and `developer/`, each with its own index, and `.ki.toml` declares `[skills.ki-guides]`. The structure is right. What is unverified is completeness and path stability: the user guides moved from `docs/guides/<name>.md` to `docs/guides/user/<name>.md` after `v0.4.0`, and KI Website's provenance sweep reports that move as a document that no longer exists on the default branch. `man/ki.1` also carries user-facing instruction that the collection does not.
+
+## Steps
+
+- [ ] Sweep `README.md`, `docs/specs/`, and any `man/` page for practical instruction that belongs in the collection.
+- [ ] Confirm every audience directory has an index that routes its own readers.
+- [ ] Place anything found under the audience that needs it, rather than under the audience that wrote it.
+- [ ] Decide whether the flat-to-`user/` move warrants a note in the next release's changelog, since a downstream repository pinning the old path has no other way to learn it moved.
+- [ ] Settle where `man/ki.1` and the user guides may disagree, and which is authoritative.
+- [ ] Confirm the collection index routes by audience before anything else.
+- [ ] Run the guides audit and repair what it reports.
+
+## Files touched
+
+`docs/guides/` and its audience directories; `README.md` and other documents where instruction moves out of them.
+
+## Verify
+
+`ki repo audit --skill ki-guides --repo .` passes, and `ki repo audit --skill ki-authoring --repo .` passes over the collection.
+
+## Dependencies / blocks
+
+Nothing blocks this. `KI-HARNESS-GOV-083` in `ki-agentic-harness` proposes making audience directories a `ki-guides` requirement; this collection already groups by audience, so that change should confirm the arrangement rather than force one.
+
+## Documentation impact
+
+### Decision Records
+
+No decision record is needed. This is consolidation within an arrangement the repository has already adopted.
+
+### Specifications
+
+No behaviour-level contract changes. Where a guide and a specification disagree, the specification is authoritative and the guide is corrected.
+
+### Guides
+
+This item is entirely guide impact: gaps are filled, stray practical material is brought in, and the indexes are made to route.
+
+### Roadmap
+
+No further roadmap change is expected unless the sweep finds behaviour documented nowhere, which would be raised as its own item.
 
 ## Discussion
 
