@@ -165,6 +165,11 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `.ki.toml` names each Harness once in `[repo]` and declares each governing skill by its bare name under `[skills]`, resolving that name against the declared Harness list rather than against whichever Harnesses happen to be installed. Harness-qualified skill keys are invalid; each provider owns a unique declared capability prefix. Trade routes are re-keyed by partner: one entry per peer carrying its `export` and `import` kinds, with a direction it does not trade simply absent. The previous fully-qualified top-level shape is not read: an unmigrated file fails naming the shape expected, with no dual parse or fallback.
 - A configured private GitHub harness can opt into `auth = "github-cli"`: KI obtains a token through the authenticated GitHub CLI, sends it only to the matching commit-pinned codeload archive request, follows no redirects, and neither stores nor displays the credential.
 
+### Documentation
+
+- The user guides moved from `docs/guides/<name>.md` to `docs/guides/user/<name>.md` after `v0.4.0`, and the collection is now grouped by audience under `docs/guides/user/` and `docs/guides/developer/`. Links pinned to `v0.4.0` still resolve at the old paths; a link tracking the default branch does not, and a move is indistinguishable from a deletion to anything reading the old path. Repoint a citation at the `user/` path, or pin it to a tag.
+- Practical instruction that previously deferred to `knowledgeislands.info` is now carried in this repository. New user guides cover first-time installation and `ki bootstrap`, the harness and skill capability lifecycle, repository target selection with audit and conform, maintaining a local installation, and the ChatGPT local-capture format.
+
 ### Distribution baseline
 
 - `install.sh`

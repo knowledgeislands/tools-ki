@@ -10,15 +10,19 @@ The home of `ki`, the Knowledge Islands command-line interface (CLI).
 
 The active TypeScript command host provides local capability, repository, Agora, and trade operations, plus an action-first, provider-neutral `ki acquire` surface backed by verified Harness adapter declarations. The sections below describe the current public surface; use `ki --help` or the tracked [ki(1) manual](man/ki.1) for exact grammar.
 
+## Getting started
+
+If `ki` is not yet installed, read [install ki and run it for the first time](docs/guides/user/getting-started.md). It covers installing a signed release, creating the user environment with `ki bootstrap`, registering a repository, and verifying each step. The rest of the [user guides](docs/guides/user/README.md) carry the procedures for everything described below.
+
 ## Acquire local ChatGPT capture
 
-Prepare a capture using the [controlled local-capture format](https://knowledgeislands.info/guidance/cli/chatgpt-local-capture/), then import it into a new output directory:
+Assemble a capture directory in the controlled `ki-chatgpt-capture` format, then import it into a new output directory:
 
 ```sh
 ki acquire import --adapter chatgpt --capture ./capture --output ./conversation.kep
 ```
 
-Use `--dry-run` to validate without creating output. The command is local only: it does not contact ChatGPT, automate a browser, read credentials, discover repositories, or extract knowledge.
+Use `--dry-run` to validate without creating output. The command is local only: it does not contact ChatGPT, automate a browser, read credentials, discover repositories, or extract knowledge. The capture layout, its metadata fields, and the validation failures you may hit are documented in [import a local ChatGPT capture](docs/guides/user/chatgpt-capture.md).
 
 ## Acquire Granola meetings
 
@@ -39,31 +43,19 @@ Use a harness identifier such as `example/harness`.
 
 A compatible Harness declares its stable capability namespace in its root `.ki.toml`, for example `[skills.ki-repo-harness]` with `prefix = "ki"`. Every published skill uses that prefix (`ki-*`), and `ki` refuses a second installed Harness claiming it. Distinct prefixes such as `ki` and `hnr` coexist; competing Harnesses using the same prefix do not.
 
-### Private GitHub harnesses
+An immutable private GitHub harness archive may opt into the local GitHub CLI credential without placing a token in configuration, by declaring `auth = "github-cli"` alongside its commit-pinned codeload URL and SHA-256.
 
-An immutable private GitHub harness archive may opt into the local GitHub CLI credential without placing a token in configuration. Use the commit-pinned codeload URL, record its SHA-256, and declare `auth = "github-cli"`:
-
-```toml
-[[harnesses.releases]]
-id = "example/private-harness"
-url = "https://codeload.github.com/example/private-harness/tar.gz/<commit-sha>"
-sha256 = "<archive-sha256>"
-auth = "github-cli"
-```
-
-`ki` runs `gh auth token` only for that exact codeload URL, sends the returned token only as its HTTPS authorization header, follows no redirects, and never records or displays the token. Authenticate the GitHub CLI first with `gh auth login`. Public archive releases need no `auth` field and do not invoke `gh`.
-
-For the installation and activation boundary, read the [capability lifecycle guide](https://knowledgeislands.info/guidance/cli/capability-lifecycle/).
+[Install harnesses and activate their skills](docs/guides/user/capability-lifecycle.md) covers the installation-versus-activation boundary, the user and repository activation scopes, the private-archive declaration in full, and the refusals that protect an active capability from being removed underneath it.
 
 ## Update verified installations
 
 `ki manage update` refreshes installed harnesses with configured immutable releases and updates the executable only when a verified installer receipt proves that it owns the running regular installation.
 
-`ki manage completion bash` and `ki manage completion zsh` print corresponding completion source derived from the registered CLI tree. Bash and Zsh cover every command path and valid option name; closed values such as roadmap horizons and statuses complete locally, path-bearing repository selectors, capture directories, and output directories delegate to the shell, and opaque identifiers remain user-entered.
+`ki manage completion bash` and `ki manage completion zsh` print corresponding completion source derived from the registered CLI tree, so the completions cover every command path and valid option name without a second list to maintain.
 
 `ki repo upgrade` refreshes the uniquely resolved providers declared by one or more selected KI repositories.
 
-Neither command changes user or repository skill activation; read the [update and upgrade guide](https://knowledgeislands.info/guidance/cli/update-upgrade/) for target selection and ownership boundaries.
+Neither command changes user or repository skill activation. [Maintain a local installation](docs/guides/user/local-installation.md) covers update ownership, shell completion, diagnosis, and repair.
 
 ## Agoras
 
@@ -95,11 +87,9 @@ repository = "https://github.com/knowledgeislands/ki-agentic-harness"
 path = "/Users/example/workspaces/knowledgeislands/ki-agentic-harness"
 ```
 
-For each selected repository, `ki repo conform` collects safe write proposals and completes every initial audit before publishing any of those proposals. A failing initial audit aborts that repository's conform publication: no proposed conform write is applied. Its output says `proposed write` while the set is staged and `applied write` only after publication; `--dry-run` validates the staged set and then says `would apply write`, without mutation. This boundary does not include the independent local registry update above, later selected repositories, subprocess conforms, or rollback after publication has started.
+For each selected repository, `ki repo conform` collects safe write proposals and completes every initial audit before publishing any of those proposals. A failing initial audit aborts that repository's conform publication: no proposed conform write is applied. On a terminal, audit and conform use a compact receipt stream with one mutable activity row that signals activity without estimating completion.
 
-Conform labels its second rubric pass `re-audit`, because it repeats the audit after staged writes or commands land. When nothing is staged, it reports that no re-audit is required and stops after the initial pass.
-
-On a terminal, audit and conform use a compact receipt stream with one mutable activity row. The moving bar means work is active; it does not estimate completion from item count or declared cost. Evidence-ready skills appear once with a full bar, then collapse to one timed evidence receipt before the rubric results begin. Loading and the operation also finish as timed receipts, with total elapsed time on the operation receipt. Queued skills are not printed. `--progress-style single` suppresses the temporary per-skill evidence receipts, and redirected `--progress always` defaults to that single-row form. All-pass runs end at the summary; detailed per-skill result rows appear only for WARN, FAIL, or FIXED outcomes.
+[Audit and conform repositories](docs/guides/user/repository-operations.md) covers target selection, reading an audit result, the exact meaning of conform's `proposed write`, `applied write`, and `would apply write` verbs, what the publication boundary does not cover, the output and progress controls, and repair.
 
 To start a KI repository, run `ki repo init` in an existing Git worktree root, or name that root as its one argument. Supply its canonical `--repository https://github.com/<owner>/<name>`, `--title`, `--description`, `--repo-code`, one or more `--runtime` values (`claude-code` or `chatgpt-codex`), and `--visibility public|private`. Initialization creates the canonical `ki-repo` declaration and registers that physical root locally; it never runs `git init`, guesses identity, activates skills, creates an Agora, or overwrites an existing declaration.
 
@@ -177,6 +167,8 @@ The installer carries the pinned public key and verifies the release's Ed25519-s
 
 The Homebrew tap will move to these same release artifacts after that first immutable release.
 
+[Install ki and run it for the first time](docs/guides/user/getting-started.md) takes this further: what `ki bootstrap` does, how to register the first repository, and how to verify and recover from each step.
+
 `install.sh --link` is exclusively for development from a local checkout. Read the [local development guide](docs/guides/developer/local-development.md) for that path and the `ki dev local set <harness-id> <path>` / `on [harness-id]` / `off [harness-id]` lifecycle. Each installed Harness can have an independent local source; omitting the ID from `on` or `off` applies the transition to all configured sources.
 
 The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
@@ -185,7 +177,7 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 - [Decision Records](docs/decisions/README.md) explain why the platform is shaped as it is.
 - [Specifications](docs/specs/index.md) define the accepted observable behaviour and its verification evidence.
-- [Guides](docs/guides/README.md) explain how to develop, operate, and release `ki`.
+- [Guides](docs/guides/README.md) explain how to operate, develop, and release `ki`, routed by audience: [user guides](docs/guides/user/README.md) and [developer guides](docs/guides/developer/README.md).
 - [Roadmap](ROADMAP.md) shows active delivery work and its lifecycle state.
 - [Changelog](CHANGELOG.md) inventories the public V1 baseline while pre-V1 tags remain the shipped `0.x` release record.
 
@@ -195,8 +187,6 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 `ki manage vscode check` compares a chezmoi-managed VS Code workspace inventory and trusted-folder source with the local KI registry. Use `ki manage vscode sync --write` to publish reviewed source-state repairs, or `ki manage vscode source create <repository> --write` to create and associate an opt-in OneDrive source store. These commands update only chezmoi source state and never run `chezmoi apply`; see the [VS Code projection management guide](docs/guides/user/vscode-management.md).
 
-`ki manage cleanup` currently reports that no eligible managed stale state exists; it does not delete cache files, links, unconfigured harnesses, or unknown files. `ki manage diag` reports only machine-managed installation, configuration, registry, and path state. `ki repo diag` uses the standard repository discovery, `--repo`, or `--agora` selection rules to report each selected repository's declared skills and compatible local projections without changing state. `ki manage repair` reconciles missing, dangling, or stale configured user-skill projections; `--dry-run` changes nothing and unavailable or unsafe state remains reported for manual resolution. `ki repo repair` records each selected physical root before repairing only missing, dangling, or stale KI-managed projections, and `--dry-run` changes nothing. `ki manage doctor` reports direct-CWD legacy `.ki-meta/` and `.ki/` directories and validates a regular direct-CWD `.ki.toml`.
+`ki manage diag` reports machine-managed installation, configuration, registry, and path state, and `ki manage doctor` checks that state and reports direct-CWD legacy `.ki-meta/` and `.ki/` directories. `ki manage repair` reconciles missing, dangling, or stale configured user-skill projections, and `ki repo repair` does the equivalent for a selected repository's KI-managed projections; `--dry-run` changes nothing in either. `ki manage docs` prints labelled public CLI, site, manual, and roadmap locations without opening a browser.
 
-`ki manage docs` prints labelled public CLI, site, manual, and roadmap locations; `ki manage docs [overview|site|manual|roadmap]` prints one location. It never opens a browser or fetches content.
-
-The [local utility commands guide](https://knowledgeislands.info/guidance/cli/local-commands/) explains their local-only behaviour and safety boundaries. Use `ki --help` or `ki <command> --help` for exact grammar; the tracked manual remains authoritative.
+[Maintain a local installation](docs/guides/user/local-installation.md) explains the local-only behaviour and safety boundary of each of these, including which of them only ever report. Use `ki --help` or `ki <command> --help` for exact grammar; the tracked manual remains authoritative.
