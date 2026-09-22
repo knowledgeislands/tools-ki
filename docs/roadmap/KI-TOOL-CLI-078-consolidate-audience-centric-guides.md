@@ -4,13 +4,13 @@ title: Consolidate audience-centric guides
 area: CLI
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 transferred_from: ki-website
 baseline_ref: 7a561ec98ea5b2abd63f93e7586f400d19e4525a
 created_at: 2026-09-21T15:44:00Z
-updated_at: 2026-09-22T07:05:00Z
+updated_at: 2026-09-22T08:40:00Z
 ---
 
 ## Goal
@@ -64,15 +64,15 @@ On path stability: the flat-to-`user/` move does warrant a changelog note. A dow
 
 ## Steps
 
-- [ ] Add `docs/guides/user/getting-started.md`: install from a pinned release, run `ki bootstrap`, register the first repository, and verify with `ki manage diag` and `ki repo diag`.
-- [ ] Add `docs/guides/user/capability-lifecycle.md`: the installation-versus-activation boundary, harness prefix ownership, private GitHub harness archives under `auth = "github-cli"`, and `ki skill` / `ki repo skill` activation in each scope.
-- [ ] Add `docs/guides/user/repository-operations.md`: target selection by `--repo`, `--agora`, and `--estate`, the registry, and running `ki repo audit`, `conform`, `educate`, and `repair` including the conform publication boundary.
-- [ ] Add `docs/guides/user/local-installation.md`: keeping the installation current and healthy with `ki manage update`, `outdated`, `completion`, `list`, `missing`, `search`, `docs`, `diag`, `doctor`, `repair`, and `cleanup`, plus `ki repo upgrade`.
-- [ ] Rewrite `docs/guides/user/README.md` so it opens with a start-here route and then groups the collection by what the reader is doing, not by filename order.
-- [ ] Rewrite `docs/guides/README.md` so it routes by audience before anything else and states the grammar-versus-procedure authority boundary once, for both audiences.
-- [ ] Replace the four `knowledgeislands.info/guidance/cli/…` deferrals in `README.md` with the in-repo guides, and reduce each affected section to purpose, smallest credible example, and pointer.
-- [ ] Record the flat-to-`user/` guide path move in `CHANGELOG.md` under the in-progress release, so a downstream repository pinning the old path can learn it moved.
-- [ ] Run `ki repo audit --skill ki-guides`, `--skill ki-authoring`, and the full repository audit, and repair what they report.
+- [x] Add `docs/guides/user/getting-started.md`: install from a pinned release, run `ki bootstrap`, register the first repository, and verify with `ki manage diag` and `ki repo diag`.
+- [x] Add `docs/guides/user/capability-lifecycle.md`: the installation-versus-activation boundary, harness prefix ownership, private GitHub harness archives under `auth = "github-cli"`, and `ki skill` / `ki repo skill` activation in each scope.
+- [x] Add `docs/guides/user/repository-operations.md`: target selection by `--repo`, `--agora`, and `--estate`, the registry, and running `ki repo audit`, `conform`, `educate`, and `repair` including the conform publication boundary.
+- [x] Add `docs/guides/user/local-installation.md`: keeping the installation current and healthy with `ki manage update`, `outdated`, `completion`, `list`, `missing`, `search`, `docs`, `diag`, `doctor`, `repair`, and `cleanup`, plus `ki repo upgrade`.
+- [x] Rewrite `docs/guides/user/README.md` so it opens with a start-here route and then groups the collection by what the reader is doing, not by filename order.
+- [x] Rewrite `docs/guides/README.md` so it routes by audience before anything else and states the grammar-versus-procedure authority boundary once, for both audiences.
+- [x] Replace the four `knowledgeislands.info/guidance/cli/…` deferrals in `README.md` with the in-repo guides, and reduce each affected section to purpose, smallest credible example, and pointer.
+- [x] Record the flat-to-`user/` guide path move in `CHANGELOG.md` under the in-progress release, so a downstream repository pinning the old path can learn it moved.
+- [x] Run `ki repo audit --skill ki-guides`, `--skill ki-authoring`, and the full repository audit, and repair what they report.
 
 ## Files touched
 
@@ -107,6 +107,73 @@ This item is entirely guide impact: four missing reader routes are written, the 
 ### Roadmap
 
 No further roadmap change is expected. The sweep found no behaviour documented nowhere; it found behaviour documented only downstream, which this item fixes in place.
+
+## Review
+
+### Delivered
+
+Five new user guides, two rewritten indexes, a README that no longer defers its own operating procedures to a downstream site, and a changelog note recording the guide path move.
+
+The defect behind this item turned out to be structural rather than a set of small gaps. `tools-ki` owns the executable but deferred four operating procedures to `knowledgeislands.info/guidance/cli/…`, while the site derives its guidance from this repository. Those URLs had since become 301 redirects to `/projects/ki/…` under `KI-WEB-SITE-025`, so the README pointed readers at a redirect to a page derived from a repository that did not carry the material. The consolidation reverses that inversion: the procedures now live here, and the site may derive them.
+
+### Summary of changes
+
+`docs/guides/user/getting-started.md` installs a signed release at a pinned tag, creates the user environment with `ki bootstrap`, registers the first repository, and verifies with `ki manage diag` and `ki repo diag`.
+
+`docs/guides/user/capability-lifecycle.md` separates installing a harness from activating one of its skills, covers prefix ownership and both activation scopes, and documents private GitHub release archives under `auth = "github-cli"`.
+
+`docs/guides/user/repository-operations.md` covers target selection by `--repo`, `--agora`, and `--estate`, reading an audit, and the conform publication boundary, including the `re-audit` label.
+
+`docs/guides/user/local-installation.md` covers keeping a user-scope installation current, diagnosable, and repairable, and states the installer-receipt ownership test that explains a `ki manage update` which appears to do nothing.
+
+`docs/guides/user/chatgpt-capture.md` was added beyond the planned four. The README deferred its ChatGPT capture format to the site as well, so leaving it out would have left one of the four deferrals with nowhere to point. It carries the capture tree, the `capture.toml` fields, the `relationships/native.jsonl` record types, the safe-path rules, and a recovery table keyed on the exact error strings in `src/core/acquire/chatgpt/import.ts`.
+
+`docs/guides/README.md` now routes by audience before anything else and states the authority boundary once: a guide owns its procedure, `ki --help` and `man/ki.1` own command grammar, and the specifications own behaviour. `docs/guides/user/README.md` opens with a three-step start-here route and then groups by what the reader is doing. `docs/guides/developer/README.md` gained the reciprocal cross-link and an order that follows a change.
+
+`README.md` lost all four site deferrals and gained a getting-started section; each affected section is now purpose, smallest credible example, and pointer. `CHANGELOG.md` records the `docs/guides/<name>.md` to `docs/guides/user/<name>.md` move so a downstream citation pinned to the old path can learn it moved rather than read a deletion.
+
+### Verification
+
+| Gate | Result |
+| --- | --- |
+| `ki repo audit --skill ki-guides --concise` | `KI REPO AUDIT on tools-ki PASS · 1 skill` |
+| `ki repo audit --skill ki-authoring --concise` | `KI REPO AUDIT on tools-ki PASS · 1 skill` |
+| `ki repo audit --concise` | `KI REPO AUDIT on tools-ki PASS · 18 skills` |
+| `ki repo audit --skill ki-work-roadmap --concise` | `KI REPO AUDIT on tools-ki PASS · 1 skill` |
+| `bun run ki:tools:lint-man` | passes (`mandoc -T lint man/ki.1`, no output) |
+| `grep -rn "knowledgeislands.info/guidance" README.md docs/` | no match in `README.md`; the only hits are this record's own description of the problem |
+
+`ki-authoring` failed once on first run, reporting two `MD049` emphasis findings in `docs/guides/user/local-installation.md`. `ki repo conform --skill ki-authoring` fixed them, `git status` confirmed it touched nothing outside this unit, and the re-audit passed.
+
+Every relative link across `docs/guides/**`, `README.md`, and `CHANGELOG.md` was resolved against the working tree; all resolve.
+
+`bun run test:coverage`, Biome, and knip were not run: the change touches only Markdown, as `## Files touched` anticipated.
+
+### Outstanding concerns
+
+`docs/guides/user/chatgpt-capture.md` documents an in-repo capability with no published specification section of its own. Its behaviour was read from `src/core/acquire/chatgpt/import.ts` rather than from a specification, so the guide is accurate against the implementation but has no contract behind it. `docs/specs/` was deliberately not edited, per this item's boundary. Whether that gap is worth a specification item is a decision for review.
+
+The fifth guide is an approved-deviation candidate: the plan named four, and the fourth README deferral made a fifth necessary. It is additive and within the item's stated purpose, but it is a scope observation review should see rather than one delivery quietly absorbed.
+
+### Post-change review
+
+The goal holds: the collection now carries every route a first-time reader needs, both indexes route rather than list, and the changelog makes the path move legible to anything citing the old location.
+
+Scope held apart from the fifth guide noted above. No command inventory was hand-written anywhere, leaving `KI-TOOL-CLI-080` the sole owner of that surface, and `docs/specs/` was inspected and left alone because its numbered RFC-2119 clauses with named verification tests are genuine specification, not displaced guidance.
+
+Regression risk is low. No source, test, or configuration file changed, and no gate that could regress was skipped without reason.
+
+Acceptance readiness: ready for human review. Two items above want a decision.
+
+### Mini recap
+
+Delivered five user guides, two rewritten audience indexes, a README with its four downstream deferrals brought in-house, and a changelog note for the guide path move.
+
+Verified with `ki-guides`, `ki-authoring`, `ki-work-roadmap`, and the full 18-skill repository audit, plus the manual-page lint and a full relative-link resolution pass.
+
+Concerns are the unspecified ChatGPT capture behaviour and the fifth guide as an additive deviation.
+
+Proposed learning route, not promoted: the failure mode worth remembering is a repository deferring its own operating procedures to a site that derives from it, which reads as documented until the reader follows the link.
 
 ## Discussion
 
