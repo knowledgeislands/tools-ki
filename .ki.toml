@@ -76,5 +76,5 @@ routes."knowledgeislands/tools-mgit" = { export = ["work", "knowledge"], import 
 routes."krisb/dotfiles" = { export = ["work", "knowledge"], import = ["work", "knowledge"] }
 
 [skills.ki-agora]
-memberships.ki-all = { home = "https://github.com/knowledgeislands/ki-agentic-harness", role = "maintainer" }
-memberships.ki-fnd = { home = "https://github.com/knowledgeislands/ki-agentic-harness", role = "maintainer" }
+memberships.ki-all = { home = "https://github.com/knowledgeislands/ki-arcadia-principal", role = "product" }
+memberships.ki-tools = { home = "https://github.com/knowledgeislands/ki-arcadia-principal", role = "product" }
