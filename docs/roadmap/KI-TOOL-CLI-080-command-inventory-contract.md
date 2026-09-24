@@ -21,7 +21,7 @@ A consumer can obtain this CLI's complete command inventory — every group, eve
 
 KI Website now carries the full `ki` command reference at `/guidance/cli/commands/`, because the site's ownership standard says a reader should not have to open a Git repository to find out what a tool does. Hand-writing eighty-eight commands was rejected for the obvious reason: the last hand-written inventory on that site drifted to 42 entries against an upstream 61 with nothing noticing.
 
-So the site vendors `man/ki.1` at a pinned tag and parses its COMMAND GROUPS section. That works, and it is deliberately fail-closed — any roff construct the parser does not recognise throws rather than publishing a partial inventory. But it is a consumer of something that is published rather than specified, which is the weaker of the two vendoring cases the site distinguishes (its ADR-KI-WEBSITE-003 records the distinction, against `ki-repo-harness`'s marker-delimited catalogue block as the stronger one).
+So the site vendors `man/ki.1` at a pinned tag and parses its COMMAND GROUPS section. That works, and it is deliberately fail-closed — any roff construct the parser does not recognise throws rather than publishing a partial inventory. But it is a consumer of something that is published rather than specified, which is the weaker of the two vendoring cases the site distinguishes (its ADR-KI-WEBSITE-001 records the distinction, against `ki-repo-harness`'s marker-delimited catalogue block as the stronger one).
 
 Parsing it surfaced a real defect rather than a hypothetical one. At `v0.4.0` the manual's two inventories disagree.
 

@@ -116,7 +116,7 @@ Five new user guides, two rewritten indexes, a README that no longer defers its 
 
 The defect behind this item turned out to be structural rather than a set of small gaps. `tools-ki` owns the executable but deferred four operating procedures to `knowledgeislands.info/guidance/cli/…`, while the site derives its guidance from this repository. Those URLs had since become 301 redirects to `/projects/ki/…` under `KI-WEB-SITE-025`, so the README pointed readers at a redirect to a page derived from a repository that did not carry the material. The consolidation reverses that inversion: the procedures now live here, and the site may derive them.
 
-### Summary of changes
+### Change Summary
 
 `docs/guides/user/getting-started.md` installs a signed release at a pinned tag, creates the user environment with `ki bootstrap`, registers the first repository, and verifies with `ki manage diag` and `ki repo diag`.
 
