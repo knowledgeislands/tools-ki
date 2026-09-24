@@ -100,4 +100,4 @@ ki repo diag --repo /path/to/repository
 | A skill is declared but not projected | The link is missing, dangling, or stale | `ki repo repair --dry-run`, review, then rerun without the flag |
 | `ki manage missing` names a capability | No installed harness provides it | Install the providing harness, then activate the skill |
 
-Exact grammar for every command here is in `ki <command> --help` and the tracked [ki(1) manual](../../../man/ki.1). The observable contracts are specified in [Verified compatible Harness lifecycle](../../specs/harnesses.md) and [Skill activation and rubrics](../../specs/skills.md).
+Exact grammar for every command here is in `ki <command> --help` and the installed `man ki` manual. Installation never activates a skill, activation never installs a provider, and repair reconciles only the scope it reports.

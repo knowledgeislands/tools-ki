@@ -37,10 +37,14 @@ export type WorkItemHorizon = (typeof workItemHorizons)[number]
 const horizons = new Set<WorkItemHorizon>(workItemHorizons)
 const statuses = new Set<WorkItemStatus>(['draft', 'ready', 'in-progress', 'awaiting-review', 'done'])
 
+export const isWorkItemFile = (file: string, adapter: RepositoryPlanningAdapter): boolean =>
+  file.endsWith('.md') && file !== ISSUE_LEDGER && (adapter !== 'kb-streams' || file !== KB_ROADMAP_INDEX)
+
 export type WorkItemStatus = 'draft' | 'ready' | 'in-progress' | 'awaiting-review' | 'done'
 
 export interface WorkItem {
   readonly id: string
+  readonly area?: string
   readonly title: string
   readonly theme: string
   readonly horizon: WorkItemHorizon
@@ -126,17 +130,9 @@ const frontmatter = (contents: string, file: string, adapter: RepositoryPlanning
   return fields
 }
 
-const readItem = async (
-  directory: string,
-  file: string,
-  adapter: RepositoryPlanningAdapter
-): Promise<WorkItemRecord> => {
-  /* v8 ignore next -- readWorkItems only passes .md directory entries. */
+export const parseWorkItem = (contents: string, file: string, adapter: RepositoryPlanningAdapter): WorkItem => {
+  /* v8 ignore next -- Every live and historical inventory filters entries through isWorkItemFile first. */
   if (!file.endsWith('.md')) throw itemError(file, 'must use the .md extension')
-  const path = join(directory, file)
-  const state = await lstat(path)
-  if (!state.isFile() || state.isSymbolicLink()) throw itemError(file, 'must be a regular file')
-  const contents = await readFile(path, 'utf8')
   const fields = frontmatter(contents, file, adapter)
   const id = fields.id as string
   if (!/^[A-Z0-9][A-Z0-9-]{1,23}-\d{3,}$/.test(id) || !file.startsWith(`${id}-`))
@@ -151,8 +147,9 @@ const readItem = async (
   const updatedAt = timestamp(fields.updated_at as string, file, 'updated_at')
   if (Date.parse(createdAt) > Date.parse(updatedAt))
     throw itemError(file, 'created_at must not be later than updated_at')
-  const item: WorkItem = {
+  return {
     id,
+    ...(fields.area ? { area: fields.area } : {}),
     title: fields.title as string,
     theme: fields.theme as string,
     horizon: fields.horizon as WorkItemHorizon,
@@ -164,7 +161,18 @@ const readItem = async (
     updatedAt,
     ...(fields.transferred_from ? { transferredFrom: fields.transferred_from } : {})
   }
-  return { item, file, path, contents }
+}
+
+const readItem = async (
+  directory: string,
+  file: string,
+  adapter: RepositoryPlanningAdapter
+): Promise<WorkItemRecord> => {
+  const path = join(directory, file)
+  const state = await lstat(path)
+  if (!state.isFile() || state.isSymbolicLink()) throw itemError(file, 'must be a regular file')
+  const contents = await readFile(path, 'utf8')
+  return { item: parseWorkItem(contents, file, adapter), file, path, contents }
 }
 
 interface WorkItemRecordInventory {
@@ -184,12 +192,7 @@ const readWorkItemRecordInventory = async (
   const entries = await readdir(directory)
   const outcomes = await Promise.all(
     entries
-      .filter(
-        (entry) =>
-          entry.endsWith('.md') &&
-          entry !== ISSUE_LEDGER &&
-          (planning.adapter !== 'kb-streams' || entry !== KB_ROADMAP_INDEX)
-      )
+      .filter((entry) => isWorkItemFile(entry, planning.adapter))
       .sort()
       .map(async (entry): Promise<{ record: WorkItemRecord } | { fault: WorkItemFault }> => {
         try {

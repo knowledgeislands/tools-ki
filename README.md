@@ -127,6 +127,8 @@ See [canonical batch records](docs/guides/user/batch-records.md) for result and 
 
 ## Inspect governed work
 
+`ki repo roadmap list --format json` emits the versioned, path-free `ki/roadmap/v1` projection with canonical record URLs for integrations.
+
 `ki repo roadmap list` reads the canonical work-item records in selected repositories without changing them. A selected repository without its declared roadmap directory contributes no roadmap and does not make the list fail; malformed, unsafe, unreadable, or misconfigured roadmap evidence remains a diagnostic and returns status `1`.
 
 Its default deterministic text output uses the same framed grouping style as repository audits: each repository has a header, nested horizon and lifecycle branches, its import and export trade context, diagnostics, and a compact summary. Use `--aggregate` for one selected-set inventory grouped by local horizon; item identifiers carry the repository-aligned prefix, while no-roadmap and diagnostic sections name their repositories. It is a scanning view, not a cross-repository priority queue. Unadopted `triage` intake remains visible, but generic promote and demote operations do not adopt it. Use `--horizon <value>` or `--status <value>` to filter records before rendering.

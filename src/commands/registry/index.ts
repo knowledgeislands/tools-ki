@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { createRegistryAddCommand } from './add.ts'
 import { createRegistryListCommand } from './list.ts'
+import { createRegistryRemoveCommand } from './remove.ts'
 
 export interface RegistrySelection {
   readonly repositories: readonly string[]
@@ -27,4 +28,5 @@ export const createRegistryCommand = (context: KiContext): Command => {
   return command
     .addCommand(createRegistryAddCommand(context, selectedRepositories))
     .addCommand(createRegistryListCommand(context))
+    .addCommand(createRegistryRemoveCommand(context, selectedRepositories))
 }

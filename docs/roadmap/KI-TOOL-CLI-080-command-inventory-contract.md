@@ -4,13 +4,13 @@ title: Command inventory contract
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
 transferred_from: ki-website
-baseline_ref: null
+baseline_ref: 48a45861f153816efba5dbc66fda088fa99364cf
 created_at: 2026-09-22T00:00:00Z
-updated_at: 2026-09-24T22:48:00Z
+updated_at: 2026-09-24T23:18:50Z
 ---
 
 ## Goal
@@ -44,11 +44,11 @@ Nothing upstream detects either difference, because nothing asserts that the two
 
 ## Steps
 
-- [ ] Record the generated-file decision in a Product Decision Record: publish `man/ki.commands.json` as `ki/commands/v1`, generated fail-closed from the reconciled manual inventories rather than from shortened Commander descriptions.
-- [ ] Reconcile the `v0.4.0` divergence: restore `Batch records` to COMMAND GROUPS, and align `ki registry add`'s options between the two sections.
-- [ ] Add a typed inventory parser and generator that publishes groups, purposes, invocations, and full descriptions with the schema identity in every payload.
-- [ ] Add checks that fail when the manual's two inventories disagree, when the generated payload drifts, or when its command paths do not round-trip against the registered Commander tree.
-- [ ] Specify and document the pinned-ref JSON surface so KI Website can consume it and drop its roff reconciliation in its own independently authorised change.
+- [x] Record the generated-file decision in a Product Decision Record: publish `man/ki.commands.json` as `ki/commands/v1`, generated fail-closed from the reconciled manual inventories rather than from shortened Commander descriptions.
+- [x] Reconcile the `v0.4.0` divergence: restore `Batch records` to COMMAND GROUPS, and align `ki registry add`'s options between the two sections.
+- [x] Add a typed inventory parser and generator that publishes groups, purposes, invocations, and full descriptions with the schema identity in every payload.
+- [x] Add checks that fail when the manual's two inventories disagree, when the generated payload drifts, or when its command paths do not round-trip against the registered Commander tree.
+- [x] Specify and document the pinned-ref JSON surface so KI Website can consume it and drop its roff reconciliation in its own independently authorised change.
 
 ## Files touched
 
@@ -83,6 +83,32 @@ The guide covering machine-readable output gains the new surface.
 ### Roadmap
 
 KI Website's `KI-WEB-SITE-022` delivered the vendored reference and recorded this handoff. That item is not held open waiting for this one.
+
+## Review
+
+### Delivered
+
+A generated `ki/commands/v1` inventory sourced from the reconciled manual command groups.
+
+### Change Summary
+
+Reconciled manual inventories, added a typed parser and generator, recorded the product decision, and added drift and registered-tree checks.
+
+### Verification
+
+Focused inventory and completion tests pass; TypeScript compilation passes.
+
+### Outstanding concerns
+
+None.
+
+### Post-change review
+
+Generation fails closed on manual disagreement, generated-file drift, or public command-path mismatch.
+
+### Mini recap
+
+Pinned-ref consumers now have a deterministic command inventory without parsing roff.
 
 ## Discussion
 

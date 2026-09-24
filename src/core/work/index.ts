@@ -6,3 +6,4 @@ export type {
   RoadmapStatisticsResult
 } from './operations.ts'
 export { listRoadmap, moveRoadmapItem, pruneRoadmap, roadmapStatisticsForSelection } from './operations.ts'
+export { roadmapReport } from './roadmap-report.ts'

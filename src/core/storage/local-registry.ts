@@ -23,6 +23,18 @@ export interface LocalRegistryInspection {
   readonly errors: readonly string[]
 }
 
+export type LocalRegistryRemovalSelector =
+  | { readonly kind: 'key'; readonly value: string }
+  | { readonly kind: 'path'; readonly value: string }
+
+export interface LocalRegistryRemoval {
+  readonly removed: LocalRegistryEntry
+  readonly write: {
+    readonly path: string
+    readonly content: string
+  }
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
@@ -148,6 +160,26 @@ export const renderLocalRegistry = (repositories: readonly LocalRegistryEntry[])
       ]),
     ''
   ].join('\n')
+
+export const localRegistryRemoval = async (
+  stateDirectory: string,
+  selector: LocalRegistryRemovalSelector
+): Promise<LocalRegistryRemoval> => {
+  const inspection = await inspectLocalRegistry(stateDirectory)
+  if (inspection.state === 'invalid')
+    throw new KiError(`local KI repository registry is invalid: ${inspection.errors.join('; ')}`, 1)
+  if (selector.kind === 'key' && !validKey(selector.value))
+    throw new KiError('registry key must be a stable local repository name', 2)
+  const removed = inspection.repositories.find((repository) => repository[selector.kind] === selector.value)
+  if (!removed) throw new KiError(`local KI repository registry has no ${selector.kind} ${selector.value}`, 2)
+  return {
+    removed,
+    write: {
+      path: REGISTRY_FILE,
+      content: renderLocalRegistry(inspection.repositories.filter((repository) => repository !== removed))
+    }
+  }
+}
 
 export const localRegistryWrite = async (
   stateDirectory: string,

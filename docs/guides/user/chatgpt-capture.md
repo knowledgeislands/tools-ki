@@ -78,6 +78,6 @@ Re-running the import against the same output path fails rather than overwriting
 | `output directory already exists` | A previous package occupies that path | Remove it explicitly, or choose another path |
 | `output directory must be outside capture-directory` | The output path is inside the capture tree | Choose a sibling or unrelated directory |
 
-Exact grammar is in `ki acquire import --help` and the tracked [ki(1) manual](../../../man/ki.1). The observable contracts are specified in [Knowledge package acquisition](../../specs/acquisition.md); the `ACQUIRE-001` and `ACQUIRE-002` requirements govern package layout and capture validation.
+Exact grammar is in `ki acquire import --help` and the installed `man ki` manual. The command validates the package layout and the capture boundary before it publishes any output.
 
 For provider-backed acquisition rather than a local capture, see [acquire Granola meetings](granola-acquisition.md).

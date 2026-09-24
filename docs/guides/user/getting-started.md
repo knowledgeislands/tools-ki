@@ -86,7 +86,7 @@ This reports the repository's declared skills and their local projections withou
 - Run audits and conform across one repository or many: [repository operations](repository-operations.md).
 - Keep the installation current and diagnose it when something drifts: [maintain a local installation](local-installation.md).
 
-For exact grammar of any command here, use `ki <command> --help` or the tracked [ki(1) manual](../../../man/ki.1). This guide owns the order and the checks; the manual owns the options.
+For exact grammar of any command here, use `ki <command> --help` or the installed `man ki` manual. This guide owns the order and the checks; the manual owns the options.
 
 ## Recovery
 
@@ -97,5 +97,3 @@ For exact grammar of any command here, use `ki <command> --help` or the tracked 
 | `ki manage doctor` reports dangling skill links | Links point at a harness source that has moved | Run `ki manage repair --dry-run`, review, then rerun without the flag |
 | `ki repo diag` reports a direct-CWD legacy `.ki-meta/` or `.ki/` | The checkout predates the current declaration format | Migrate it to `.ki.toml`; `ki manage doctor` reports the same condition |
 | A registry entry points at a path that no longer exists | The checkout moved or was deleted | Re-run `ki registry add --repo <new-path>` for the current root |
-
-The observable contracts behind this guide are specified in [Bootstrap lifecycle](../../specs/bootstrap.md) and [Explicit repository registration](../../specs/registry.md).

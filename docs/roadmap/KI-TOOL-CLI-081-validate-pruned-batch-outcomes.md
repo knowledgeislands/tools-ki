@@ -4,13 +4,13 @@ area: CLI
 title: Validate pruned batch outcomes
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
 transferred_from: ki-agentic-harness
-baseline_ref: null
+baseline_ref: 48a45861f153816efba5dbc66fda088fa99364cf
 created_at: 2026-09-22T05:36:21Z
-updated_at: 2026-09-22T05:36:21Z
+updated_at: 2026-09-24T23:18:50Z
 ---
 
 ## Goal
@@ -33,11 +33,11 @@ Do not restore or mutate pruned work records, contact the network, weaken depend
 
 ## Steps
 
-- [ ] Add a read-only selected-adapter path that resolves batch work items from an exact repository commit without checking out, restoring, or writing files.
-- [ ] Strengthen close so its evidence commit contains every named roadmap or KB Streams item at the approved completion target and preserves valid in-batch dependency order.
-- [ ] Validate a closed batch against its close-evidence snapshot while retaining live canonical validation and expiry checks for every open batch operation.
-- [ ] Cover roadmap and KB Streams records, valid post-prune validation, missing or mismatched snapshot evidence, dependency ordering, and unchanged open-batch behaviour with focused CLI tests.
-- [ ] Align the batch specification, operator guidance, manual, and changelog with the archival validation contract.
+- [x] Add a read-only selected-adapter path that resolves batch work items from an exact repository commit without checking out, restoring, or writing files.
+- [x] Strengthen close so its evidence commit contains every named roadmap or KB Streams item at the approved completion target and preserves valid in-batch dependency order.
+- [x] Validate a closed batch against its close-evidence snapshot while retaining live canonical validation and expiry checks for every open batch operation.
+- [x] Cover roadmap and KB Streams records, valid post-prune validation, missing or mismatched snapshot evidence, dependency ordering, and unchanged open-batch behaviour with focused CLI tests.
+- [x] Align the batch specification, operator guidance, manual, and changelog with the archival validation contract.
 
 ## Files touched
 
@@ -68,6 +68,32 @@ Explain the difference between live validation for open batches and archival val
 ### Roadmap
 
 The item is the receiver-local owner for `TRD-3f6649a4`; no additional follow-up is currently known.
+
+## Review
+
+### Delivered
+
+Closed-batch validation now reads exact selected-adapter work evidence from the recorded commit.
+
+### Change Summary
+
+Added historical Git-object readers, strengthened close proof, preserved live open-batch validation, and documented archival behaviour.
+
+### Verification
+
+Focused batch tests pass across project roadmap and KB Streams adapters; TypeScript compilation passes.
+
+### Outstanding concerns
+
+None.
+
+### Post-change review
+
+Historical validation performs no checkout or worktree write and fails closed on missing or inconsistent evidence.
+
+### Mini recap
+
+Closed batch outcomes remain verifiable after canonical work records are pruned.
 
 ## Discussion
 

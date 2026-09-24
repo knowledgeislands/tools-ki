@@ -4,13 +4,13 @@ title: Guide opening and deferral
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
 transferred_from: ki-website
-baseline_ref: null
+baseline_ref: 48a45861f153816efba5dbc66fda088fa99364cf
 created_at: 2026-09-24T08:45:00Z
-updated_at: 2026-09-24T22:48:00Z
+updated_at: 2026-09-24T23:18:50Z
 ---
 
 ## Goal
@@ -46,10 +46,10 @@ The collection already avoids the listed hand-off link text, and nearly every gu
 
 ## Steps
 
-- [ ] Record a repository-local editorial rule in the guide collection entry point: open each guide with what its reader can accomplish, and make every link label describe the fact or destination rather than substitute for missing content.
-- [ ] Keep both rules as review judgments, not a new checker or a portable `ki-guides` amendment.
-- [ ] Review every current guide opening and the proposed deferral phrases, correcting only concrete failures found in this collection.
-- [ ] Verify the guide and authoring audits after the overlapping containment work in `KI-TOOL-CLI-085` lands.
+- [x] Record a repository-local editorial rule in the guide collection entry point: open each guide with what its reader can accomplish, and make every link label describe the fact or destination rather than substitute for missing content.
+- [x] Keep both rules as review judgments, not a new checker or a portable `ki-guides` amendment.
+- [x] Review every current guide opening and the proposed deferral phrases, correcting only concrete failures found in this collection.
+- [x] Verify the guide and authoring audits after the overlapping containment work in `KI-TOOL-CLI-085` lands.
 
 ## Files touched
 
@@ -80,6 +80,32 @@ The guide collection entry point records the two review judgments. No new mechan
 ### Roadmap
 
 No follow-up is expected unless another repository supplies evidence that either rule belongs in portable `ki-guides`.
+
+## Review
+
+### Delivered
+
+A repository-local reader-outcome and descriptive-link editorial rule, applied across current guide openings.
+
+### Change Summary
+
+Updated the guide entry point and corrected concrete opening and deferral failures without changing the portable guide checker.
+
+### Verification
+
+The guide containment audit passes; the authoring gate is included in the aggregate verification pass.
+
+### Outstanding concerns
+
+None.
+
+### Post-change review
+
+The rule remains a human review judgment rather than a brittle prose heuristic.
+
+### Mini recap
+
+Guide openings now state what readers can accomplish and links no longer substitute for missing explanation.
 
 ## Discussion
 

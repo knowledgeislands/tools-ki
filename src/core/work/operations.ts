@@ -1,3 +1,6 @@
+import { readdir } from 'node:fs/promises'
+import { join } from 'node:path'
+import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import { resolveRepositoryTargets } from '../repository/index.ts'
 import type { LocatedTrade } from '../trade/model.ts'
@@ -32,13 +35,21 @@ export interface RoadmapOperationContext {
 export interface RoadmapListOptions {
   readonly horizon?: string
   readonly status?: string
+  readonly includeProjection?: boolean
+}
+
+export interface RoadmapListItem extends WorkItem {
+  readonly record: string
 }
 
 export interface RoadmapListResult {
   readonly repository: string
+  readonly repositoryIdentity?: string
+  readonly repositoryUrl?: string
   readonly trades: readonly LocatedTrade[]
   readonly tradeDiagnostic?: string
   readonly items?: readonly WorkItem[]
+  readonly projectedItems?: readonly RoadmapListItem[]
   readonly faults?: readonly WorkItemFault[]
   readonly roadmap?: 'absent'
   readonly diagnostic?: string
@@ -101,6 +112,36 @@ const filterItems = (items: readonly WorkItem[], options: RoadmapListOptions): r
       (!options.horizon || item.horizon === options.horizon) && (!options.status || item.status === options.status)
   )
 
+const repositoryIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
+
+const recordUrl = (repository: string, directory: string, file: string): string =>
+  `${repository}/blob/HEAD/${`${directory}/${file}`
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')}`
+
+const projectItems = async (
+  root: string,
+  repository: string,
+  planning: RepositoryPlanningSource,
+  items: readonly WorkItem[],
+  faults: readonly WorkItemFault[]
+): Promise<readonly RoadmapListItem[]> => {
+  const faultFiles = new Set(faults.map((fault) => fault.file))
+  const available = (await readdir(join(root, planning.directory)))
+    .filter((file) => file.endsWith('.md') && !faultFiles.has(file))
+    .sort()
+  return items.map((item) => {
+    const index = available.findIndex((file) => file.startsWith(`${item.id}-`))
+    // The work-item reader obtained this item from one matching regular Markdown record.
+    /* v8 ignore next -- protects a future inventory implementation that stops retaining its source entry. */
+    const file = index === -1 ? undefined : available.splice(index, 1)[0]
+    /* v8 ignore next -- protects a future inventory implementation that stops retaining its source entry. */
+    if (!file) throw new KiError(`work item ${item.id} has no canonical record`, 2)
+    return { ...item, record: recordUrl(repository, planning.directory, file) }
+  })
+}
+
 const selectedItem = async (repository: string, planning: RepositoryPlanningSource, id: string): Promise<WorkItem> => {
   const items = (await readWorkItems(repository, planning)).filter((item) => item.id === id)
   if (items.length !== 1) throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
@@ -149,22 +190,44 @@ export const listRoadmap = async (
     repositories.map(async (repository): Promise<RoadmapListResult> => {
       const trades = inventory.estate.filter((trade) => trade.root === repository.root)
       const tradeContext = inventory.diagnostic ? { tradeDiagnostic: inventory.diagnostic } : {}
+      let projection: Pick<RoadmapListResult, 'repositoryIdentity' | 'repositoryUrl'> = {}
       try {
+        const repositoryUrl = options.includeProjection
+          ? declaredRepositoryIdentity(await readRepositoryDeclaration(repository.declaration))
+          : undefined
+        projection = repositoryUrl ? { repositoryIdentity: repositoryIdentity(repositoryUrl), repositoryUrl } : {}
         const planning = await readRepositoryPlanningSource(repository.declaration)
         const inventory = await readWorkItemInventoryIfPresent(repository.root, planning)
+        const items = inventory === undefined ? undefined : filterItems(inventory.items, options)
         return {
           repository: repository.root,
+          ...projection,
           trades,
           ...tradeContext,
           ...(inventory === undefined
             ? { roadmap: 'absent' as const }
-            : { items: filterItems(inventory.items, options), faults: inventory.faults })
+            : {
+                items,
+                ...(options.includeProjection
+                  ? {
+                      projectedItems: await projectItems(
+                        repository.root,
+                        repositoryUrl as string,
+                        planning,
+                        items as readonly WorkItem[],
+                        inventory.faults
+                      )
+                    }
+                  : {}),
+                faults: inventory.faults
+              })
         }
       } catch (error) {
         /* v8 ignore next -- inventory failures are always KiError instances. */
         const diagnostic = error instanceof Error ? error.message : String(error)
         return {
           repository: repository.root,
+          ...projection,
           trades,
           ...tradeContext,
           diagnostic

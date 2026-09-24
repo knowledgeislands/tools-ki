@@ -10,6 +10,7 @@ import {
   type RoadmapListResult,
   type RoadmapOperationContext,
   type RoadmapStatisticsResult,
+  roadmapReport,
   roadmapStatisticsForSelection,
   type WorkItem,
   workItemHorizons
@@ -21,6 +22,7 @@ interface RoadmapOptions {
   readonly status?: string
   readonly aggregate?: boolean
   readonly icons?: boolean
+  readonly format?: string
 }
 
 type RepositorySelection = () => {
@@ -279,11 +281,21 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
     .option('--horizon <horizon>', 'only items at this horizon')
     .option('--status <status>', 'only items at this status')
     .option('--no-icons', 'omit decorative trade badge icons')
+    .option('--format <text|json>', 'render roadmap evidence as text or versioned JSON', 'text')
     .action(async (options: RoadmapOptions) => {
-      const { estate, results } = await listRoadmap(operationContext(context), selectedRepositories(), options)
-      const output = options.aggregate
-        ? renderAggregateResult(results, estate, options.icons !== false)
-        : results.map((result) => renderTextResult(result, estate, options.icons !== false)).join('\n\n')
+      if (options.format !== 'text' && options.format !== 'json')
+        throw grammarError('roadmap list --format must be text or json')
+      const { estate, results } = await listRoadmap(operationContext(context), selectedRepositories(), {
+        horizon: options.horizon,
+        status: options.status,
+        includeProjection: options.format === 'json'
+      })
+      const output =
+        options.format === 'json'
+          ? JSON.stringify(roadmapReport(results), null, 2)
+          : options.aggregate
+            ? renderAggregateResult(results, estate, options.icons !== false)
+            : results.map((result) => renderTextResult(result, estate, options.icons !== false)).join('\n\n')
       context.stdout.write(`${output}\n`)
       if (results.some((result) => result.tradeDiagnostic || result.diagnostic || result.faults?.length))
         throw new KiExit(1)

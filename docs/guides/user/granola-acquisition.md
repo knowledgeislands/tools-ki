@@ -1,6 +1,6 @@
 # Acquire Granola meetings
 
-This guide is for operators acquiring Granola meeting evidence into a registered Knowledge Islands repository. It explains how to activate the repository adapter, run read-only imports, inspect resumable state, and recover safely; the accepted behavior is recorded in the [acquisition specification](../../specs/acquisition.md).
+Use this guide to acquire Granola meeting evidence into a registered Knowledge Islands repository. It explains how to activate the repository adapter, run read-only imports, inspect resumable state, and recover safely without allowing provider access to mutate the source.
 
 ## Prepare the source connection
 

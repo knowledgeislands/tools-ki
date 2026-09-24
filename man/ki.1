@@ -1,4 +1,4 @@
-.TH KI 1 "2026-09-18" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-09-25" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -120,7 +120,7 @@ changing repository or registry state.
 Record selected physical KI repository roots, then reconcile only their
 proven KI-managed projections.
 .TP
-.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>]
+.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>] [--format <text|json>]
 List governed work items in a framed deterministic horizon and lifecycle tree
 without changing their lifecycle.
 .TP
@@ -173,8 +173,16 @@ not accept work.
 Record selected canonical KI repository roots in the machine-local registry
 without applying repository repairs.
 .TP
-.B ki registry list
-List KI repositories registered in the machine-local register.
+.B ki registry list [--format <text|json>]
+List registered repository roots as text or emit the path-free
+.B ki/registry/v1
+contract.
+.TP
+.B ki registry remove <key> [--dry-run]
+Remove one exact machine-local registry entry by key.
+.TP
+.B ki registry --repo <path> remove [--dry-run]
+Remove one exact machine-local registry entry by stored path.
 .SS Harness management
 \&
 .TP
@@ -614,7 +622,7 @@ machine-local registry before evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
 .TP
-.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>]
+.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>] [--format <text|json>]
 List canonical governed work items from every selected repository without
 changing their lifecycle. The framed text output names each selected repository,
 then groups items by horizon from \fBnow\fR through unadopted
@@ -695,6 +703,31 @@ repository.
 .B ki repo [repo-options] upgrade
 Refresh uniquely resolved harness providers declared by each selected KI
 repository. It changes neither user nor repository skill activation.
+.SS Batch records
+\&
+.PP
+Use these commands to maintain one already-approved exact set of Ready local
+work records. They validate and record caller-supplied authority evidence; they
+do not select work, execute an agent, accept delivery, prune work, push, or
+release.
+.TP
+.B ki batch prepare --item <id> [--item <id>...] --approved --authority-mode <reviewed-items|outcome> --expires-at <timestamp> --completion-target <awaiting-review|done> [--authority-evidence <text>] [--repo <path>]
+Create one current canonical exact-set batch authority record from explicit
+approval evidence and Ready work items in dependency order.
+.TP
+.B ki batch validate <record> [--repo <path>]
+Validate an open batch against live canonical work records and its expiry. A
+closed batch validates its named outcomes against the immutable close-evidence
+commit, so later legitimate pruning does not erase the delivery proof.
+.TP
+.B ki batch run <record> [--repo <path>] [--item <id> --result <awaiting-review|done|parked|stopped> --baseline <commit|—> [--result-commit <commit>] [--exception <text>]]
+Start the derived run or append one explicit caller-supplied item result without
+executing work or changing roadmap lifecycle.
+.TP
+.B ki batch close <record> [--repo <path>] --completion-target <awaiting-review|done> --evidence-commit <commit>
+Append structural closure evidence only after every named live item and the
+exact evidence commit contain the approved all-item target in valid dependency
+order.
 .SS Registry management
 \&
 .PP
@@ -705,17 +738,35 @@ repository-operation or conformance verdict. The repository key names each
 record; each record holds a canonical HTTPS GitHub repository identity and
 physical checkout path.
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run]
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--sources <absolute-path>]
 Record selected canonical KI repository roots in
 \fB$XDG_STATE_HOME/ki/registry.toml\fR without applying repository repairs.
 This explicit inventory action validates the selected root's declared canonical
 identity and preserves existing entries. It never
 searches outside the supplied target selection.
 .TP
-.B ki registry list
+.B ki registry list [--format <text|json>]
 List physical KI repository roots explicitly registered in the machine-local
 registry, one absolute path per line. The command neither discovers
-repositories nor changes state.
+repositories nor changes state. With
+.BR "--format json" ,
+emit the versioned path-free
+.B ki/registry/v1
+contract with canonical identity and declared repository metadata. An
+unavailable declaration remains represented without a local path and makes the
+command exit non-zero.
+.TP
+.B ki registry remove <key> [--dry-run]
+Remove exactly one complete registry entry by its local key. The command reports
+the removed key, repository identity, and stored path, and leaves every other
+entry unchanged.
+.TP
+.B ki registry --repo <path> remove [--dry-run]
+Remove exactly one complete registry entry by its stored path, including when
+the checkout no longer exists. Removal rejects bulk selectors and publishes the
+validated replacement atomically. Use
+.B --dry-run
+to inspect the write without changing registry state.
 .SS Harness management
 \&
 .PP

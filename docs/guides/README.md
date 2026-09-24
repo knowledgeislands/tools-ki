@@ -13,6 +13,10 @@ New to `ki` entirely? Start at [install ki and run it for the first time](user/g
 
 A guide owns the **procedure**: the order of steps, their preconditions, what to check afterwards, and how to recover when something fails.
 
-`ki --help` and the tracked [ki(1) manual](../../man/ki.1) own the **grammar**: exact invocations, option names, and arguments. Guides deliberately do not restate option lists, which is what keeps them from drifting out of step with the executable. Where a guide and the manual appear to disagree about grammar, the manual is correct and the guide needs fixing.
+`ki --help` and the installed `man ki` manual own the **grammar**: exact invocations, option names, and arguments. Guides deliberately do not restate option lists, which keeps them from drifting out of step with the executable. Where a guide and the manual appear to disagree about grammar, the manual is correct and the guide needs fixing.
 
-The [Specifications](../specs/index.md) own the **behaviour**. Where a guide and a specification disagree about what the CLI does, the specification is correct and the guide needs fixing.
+The repository Specifications own the **behaviour**. Where a guide and a specification disagree about what the CLI does, the specification is correct and the guide needs fixing.
+
+## Write for the reader
+
+Open each guide by saying what its reader will be able to accomplish. Make every link label describe the fact or destination it names; a link may support a complete explanation, but its label must not stand in for content the guide owes.

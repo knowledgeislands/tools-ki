@@ -29,4 +29,4 @@ If `ki` is not yet on this machine, or you have never run it, read these three i
 
 ## Where else to look
 
-Each guide owns its procedure and points at the specification behind it. For exact command grammar use `ki <command> --help` or the tracked [ki(1) manual](../../../man/ki.1); for the accepted behaviour and its verification, read the [Specifications](../../specs/index.md).
+Each guide owns its procedure. For exact command grammar use `ki <command> --help` or the installed `man ki` manual; each guide states the operational behaviour needed to complete, verify, and recover its outcome.

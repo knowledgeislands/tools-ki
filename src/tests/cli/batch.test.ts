@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { lstat, symlink } from 'node:fs/promises'
+import { lstat, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { parse } from 'yaml'
@@ -24,6 +24,10 @@ const configuration = [
   'adapter = "roadmap"',
   ''
 ].join('\n')
+
+const knowledgeBaseConfiguration = configuration
+  .replace('repo_code = "EXAMPLE"', 'repo_code = "EXAMPLE"\nrepo_type = "kb"')
+  .replace('adapter = "roadmap"', 'adapter = "kb-streams"')
 
 const item = (
   id: string,
@@ -64,6 +68,64 @@ const item = (
     ''
   ].join('\n')
 
+const knowledgeBaseItem = (status: 'ready' | 'awaiting-review' = 'ready'): string =>
+  item('EXAMPLE-001', status).replace(
+    'updated_at: 2026-09-15T07:00:00Z',
+    'updated_at: 2026-09-15T07:00:00Z\nsequence:\n  priority: 1'
+  )
+
+interface GitSnapshotEntry {
+  readonly contents: string
+  readonly mode: string
+  readonly type: string
+}
+
+type GitSnapshots = Readonly<Record<string, Readonly<Record<string, string | GitSnapshotEntry | undefined>>>>
+
+type TestRunner = Parameters<Awaited<ReturnType<typeof sandbox>>['setRunner']>[0]
+
+const gitObjectRunner = (snapshots: GitSnapshots = {}): TestRunner => {
+  const resolvable = new Set([baseline, firstCommit, secondCommit, ...Object.keys(snapshots)])
+  return async (command, arguments_) => {
+    if (command !== 'git') return { exitCode: 1, output: 'unexpected command' }
+    const operation = arguments_[2]
+    const object = arguments_.at(-1) ?? ''
+    if (operation === 'cat-file' && arguments_[3] === '-e') {
+      const commit = object.replace(/\^\{commit\}$/, '')
+      return { exitCode: resolvable.has(commit) ? 0 : 1, output: '' }
+    }
+    if (operation === 'ls-tree') {
+      const separator = object.indexOf(':')
+      const commit = object.slice(0, separator)
+      const directory = object.slice(separator + 1)
+      const files = snapshots[commit]
+      if (!files) return { exitCode: 1, output: 'missing tree' }
+      const prefix = `${directory}/`
+      const entries = Object.keys(files)
+        .filter((path) => path.startsWith(prefix) && !path.slice(prefix.length).includes('/'))
+        .sort()
+        .map((path) => {
+          const entry = files[path]
+          const mode = typeof entry === 'object' ? entry.mode : '100644'
+          const type = typeof entry === 'object' ? entry.type : 'blob'
+          return `${mode} ${type} ${'a'.repeat(40)}\t${path.slice(prefix.length)}`
+        })
+      return entries.length
+        ? { exitCode: 0, output: `${entries.join('\0')}\0` }
+        : { exitCode: 1, output: 'missing tree' }
+    }
+    if (operation === 'cat-file' && arguments_[3] === 'blob') {
+      const separator = object.indexOf(':')
+      const commit = object.slice(0, separator)
+      const path = object.slice(separator + 1)
+      const entry = snapshots[commit]?.[path]
+      const contents = typeof entry === 'object' ? entry.contents : entry
+      return contents === undefined ? { exitCode: 1, output: 'missing blob' } : { exitCode: 0, output: contents }
+    }
+    return { exitCode: 1, output: 'unexpected git operation' }
+  }
+}
+
 const setup = async () => {
   const box = await sandbox()
   await box.project.write('repository/.ki.toml', configuration)
@@ -72,10 +134,7 @@ const setup = async () => {
     'repository/docs/roadmap/EXAMPLE-002-second.md',
     item('EXAMPLE-002', 'ready', ['EXAMPLE-001'])
   )
-  box.setRunner(async (command, arguments_) => ({
-    exitCode: command === 'git' && arguments_.includes('cat-file') ? 0 : 1,
-    output: ''
-  }))
+  box.setRunner(gitObjectRunner())
   box.cd('repository')
   return box
 }
@@ -154,13 +213,28 @@ describe('[ki batch]', () => {
     expect(firstResult.exitCode, firstResult.output).toBe(0)
     expect(secondResult.exitCode, secondResult.output).toBe(0)
 
-    box.setRunner(async (command, arguments_) => ({
-      exitCode:
-        command === 'git' && arguments_.includes('cat-file') && arguments_.includes(`${evidenceCommit}^{commit}`)
-          ? 0
-          : 1,
-      output: ''
-    }))
+    box.setRunner(
+      gitObjectRunner({
+        [evidenceCommit]: {
+          'docs/roadmap/EXAMPLE-001-first.md': item('EXAMPLE-001', 'awaiting-review', ['EXAMPLE-002']),
+          'docs/roadmap/EXAMPLE-002-second.md': item('EXAMPLE-002', 'awaiting-review')
+        }
+      })
+    )
+    const reversedEvidence = await box.run(
+      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      { now: () => now }
+    )
+    expect(reversedEvidence.stderr).toContain('must follow its in-batch dependency EXAMPLE-002')
+
+    box.setRunner(
+      gitObjectRunner({
+        [evidenceCommit]: {
+          'docs/roadmap/EXAMPLE-001-first.md': item('EXAMPLE-001', 'awaiting-review'),
+          'docs/roadmap/EXAMPLE-002-second.md': item('EXAMPLE-002', 'awaiting-review', ['EXAMPLE-001'])
+        }
+      })
+    )
     const closed = await box.run(
       `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
@@ -180,10 +254,60 @@ describe('[ki batch]', () => {
       ).stdout
     ).toContain('Write: none')
 
+    await rm(join(box.project.path, 'repository/docs/roadmap/EXAMPLE-001-first.md'))
+    await rm(join(box.project.path, 'repository/docs/roadmap/EXAMPLE-002-second.md'))
+    const archival = await box.run('ki batch validate EXAMPLE-BATCH-001', {
+      now: () => Date.parse('2026-09-16T08:00:00Z')
+    })
+    expect(archival.exitCode, archival.output).toBe(0)
+
     await box.project.write('repository/docs/roadmap/EXAMPLE-001-first.md', item('EXAMPLE-001'))
     await box.project.write('repository/docs/roadmap/EXAMPLE-002-second.md', item('EXAMPLE-002'))
     const second = await box.run(prepare('EXAMPLE-001'), { now: () => now })
     expect(second.stdout).toContain('Batch prepared: EXAMPLE-BATCH-002')
+  })
+
+  test('validates a closed Knowledge Base batch from its selected adapter snapshot after pruning', async () => {
+    const box = await sandbox()
+    await box.project.write('repository/.ki.toml', knowledgeBaseConfiguration)
+    await box.project.write('repository/Streams/Roadmap/Roadmap.md', '# Roadmap\n')
+    await box.project.write('repository/Streams/Roadmap/_ISSUES.md', '# Issues\n')
+    await box.project.write('repository/Streams/Roadmap/EXAMPLE-001-first.md', knowledgeBaseItem())
+    box.setRunner(gitObjectRunner())
+    box.cd('repository')
+
+    expect((await box.run(prepare('EXAMPLE-001'), { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
+    await box.project.write('repository/Streams/Roadmap/EXAMPLE-001-first.md', knowledgeBaseItem('awaiting-review'))
+    expect(
+      (
+        await box.run(
+          `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${firstCommit}`,
+          { now: () => now }
+        )
+      ).exitCode
+    ).toBe(0)
+
+    box.setRunner(
+      gitObjectRunner({
+        [evidenceCommit]: {
+          'Streams/Roadmap/Roadmap.md': '# Roadmap\n',
+          'Streams/Roadmap/_ISSUES.md': '# Issues\n',
+          'Streams/Roadmap/EXAMPLE-001-first.md': knowledgeBaseItem('awaiting-review')
+        }
+      })
+    )
+    const closed = await box.run(
+      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      { now: () => now }
+    )
+    expect(closed.exitCode, closed.output).toBe(0)
+
+    await rm(join(box.project.path, 'repository/Streams/Roadmap/EXAMPLE-001-first.md'))
+    const archival = await box.run('ki batch validate EXAMPLE-BATCH-001', {
+      now: () => Date.parse('2026-09-16T08:00:00Z')
+    })
+    expect(archival.exitCode, archival.output).toBe(0)
   })
 
   test('validates retained records for integrity without upgrading them', async () => {
@@ -697,7 +821,7 @@ describe('[ki batch]', () => {
       { now: () => now }
     )
     expect(unresolvedBaseline.stderr).toContain('--baseline does not resolve in the repository')
-    box.setRunner(async () => ({ exitCode: 0, output: '' }))
+    box.setRunner(gitObjectRunner())
 
     expect(
       (
@@ -753,7 +877,59 @@ describe('[ki batch]', () => {
     expect(missingEvidence.stderr).toContain('--evidence-commit does not resolve')
     expect(await box.project.read(`repository/${batchPath}`)).not.toContain('ki-batch-close')
 
-    box.setRunner(async () => ({ exitCode: 0, output: '' }))
+    box.setRunner(gitObjectRunner({ [evidenceCommit]: {} }))
+    const missingSnapshot = await box.run(
+      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      { now: () => now }
+    )
+    expect(missingSnapshot.stderr).toContain('has no selected docs/roadmap work-item snapshot')
+
+    box.setRunner(
+      gitObjectRunner({
+        [evidenceCommit]: {
+          'docs/roadmap/EXAMPLE-001-first.md': {
+            contents: item('EXAMPLE-001', 'awaiting-review'),
+            mode: '120000',
+            type: 'blob'
+          }
+        }
+      })
+    )
+    const linkedSnapshot = await box.run(
+      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      { now: () => now }
+    )
+    expect(linkedSnapshot.stderr).toContain('must be a regular file at commit')
+
+    box.setRunner(
+      gitObjectRunner({
+        [evidenceCommit]: { 'docs/roadmap/EXAMPLE-001-first.md': undefined }
+      })
+    )
+    const unreadableSnapshot = await box.run(
+      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      { now: () => now }
+    )
+    expect(unreadableSnapshot.stderr).toContain('cannot be read from commit')
+
+    box.setRunner(
+      gitObjectRunner({
+        [evidenceCommit]: { 'docs/roadmap/EXAMPLE-001-first.md': item('EXAMPLE-001') }
+      })
+    )
+    const mismatchedSnapshot = await box.run(
+      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      { now: () => now }
+    )
+    expect(mismatchedSnapshot.stderr).toContain('batch item EXAMPLE-001 is not awaiting-review')
+
+    box.setRunner(
+      gitObjectRunner({
+        [evidenceCommit]: {
+          'docs/roadmap/EXAMPLE-001-first.md': item('EXAMPLE-001', 'awaiting-review')
+        }
+      })
+    )
     expect(
       (
         await box.run(
@@ -762,6 +938,14 @@ describe('[ki batch]', () => {
         )
       ).exitCode
     ).toBe(0)
+
+    box.setRunner(
+      gitObjectRunner({
+        [evidenceCommit]: { 'docs/roadmap/EXAMPLE-001-first.md': item('EXAMPLE-001') }
+      })
+    )
+    const invalidOutcome = await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })
+    expect(invalidOutcome.stderr).toContain('batch item EXAMPLE-001 is not awaiting-review')
 
     box.setRunner(async () => ({ exitCode: 1, output: 'missing' }))
     const invalidatedClose = await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })
@@ -796,7 +980,11 @@ describe('[ki batch]', () => {
         )
       ).exitCode
     ).toBe(0)
-    box.setRunner(async () => ({ exitCode: 0, output: '' }))
+    box.setRunner(
+      gitObjectRunner({
+        [evidenceCommit]: { 'docs/roadmap/EXAMPLE-001-first.md': item('EXAMPLE-001', 'done') }
+      })
+    )
     const closed = await box.run(
       `ki batch close EXAMPLE-BATCH-001 --completion-target done --evidence-commit ${evidenceCommit}`,
       { now: () => now }

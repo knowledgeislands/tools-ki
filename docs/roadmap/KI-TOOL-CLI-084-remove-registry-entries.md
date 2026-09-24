@@ -4,13 +4,13 @@ title: Remove registry entries
 area: CLI
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
 transferred_from: 5g-emerge-phase2
-baseline_ref: null
+baseline_ref: 48a45861f153816efba5dbc66fda088fa99364cf
 created_at: 2026-09-24T11:05:00Z
-updated_at: 2026-09-24T22:48:00Z
+updated_at: 2026-09-24T23:18:50Z
 ---
 
 ## Goal
@@ -41,12 +41,12 @@ Registry parsing and rendering already live in `src/core/storage/local-registry.
 
 ## Steps
 
-- [ ] Add `ki registry remove <key> [--dry-run]` and the alternative `ki registry --repo <path> remove [--dry-run]`, requiring exactly one selector.
-- [ ] Reject no selector, both selectors, repeated `--repo`, `--agora`, and `--estate`; do not add `--force` or change `add`.
-- [ ] Add a typed core removal operation that strictly reads the whole registry, matches an exact key or stored path without requiring the checkout to exist, removes the complete entry including its source-store binding, and renders a valid empty schema after the final removal.
-- [ ] Publish through the existing transaction boundary and report the removed key, canonical repository identity, and stored path; dry-run reports the same receipt without writing.
-- [ ] Cover stale paths, key and path selection, final-entry removal, source-store bindings, invalid or missing registries, unknown selectors, grammar rejection, dry-run, and publication rollback through the CLI seam.
-- [ ] Align help, completions, manual, specification, guides, README, and changelog.
+- [x] Add `ki registry remove <key> [--dry-run]` and the alternative `ki registry --repo <path> remove [--dry-run]`, requiring exactly one selector.
+- [x] Reject no selector, both selectors, repeated `--repo`, `--agora`, and `--estate`; do not add `--force` or change `add`.
+- [x] Add a typed core removal operation that strictly reads the whole registry, matches an exact key or stored path without requiring the checkout to exist, removes the complete entry including its source-store binding, and renders a valid empty schema after the final removal.
+- [x] Publish through the existing transaction boundary and report the removed key, canonical repository identity, and stored path; dry-run reports the same receipt without writing.
+- [x] Cover stale paths, key and path selection, final-entry removal, source-store bindings, invalid or missing registries, unknown selectors, grammar rejection, dry-run, and publication rollback through the CLI seam.
+- [x] Align help, completions, manual, specification, guides, README, and changelog.
 
 ## Files touched
 
@@ -77,6 +77,32 @@ Document stale-entry recovery as remove then add, and correct any claim that eve
 ### Roadmap
 
 Do not create a follow-up for `--force` unless real use shows remove then add is insufficient.
+
+## Review
+
+### Delivered
+
+Exact registry removal by key or stored path, including dry-run and transactional publication.
+
+### Change Summary
+
+Added typed core removal, CLI grammar, completion, manual and guide coverage, specifications, receipts, and failure-path tests.
+
+### Verification
+
+Focused registry, completion, and inventory tests pass; TypeScript compilation passes.
+
+### Outstanding concerns
+
+None.
+
+### Post-change review
+
+The command rejects bulk or ambiguous selection and removes complete entries even when their checkouts are stale.
+
+### Mini recap
+
+Users can now safely remove one obsolete local registry binding without editing TOML.
 
 ## Discussion
 

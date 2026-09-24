@@ -101,4 +101,4 @@ A `doctor` run exiting zero, with `diag` reporting the installation mode and pat
 | `ki manage cleanup` frees nothing | Expected in V1 | No action; it reports rather than deletes by design |
 | A path is not where you expect | A `KI_*_HOME` or `XDG_*_HOME` override is set | Read the resolved values from `ki manage diag` |
 
-Exact grammar is in `ki manage <command> --help` and the tracked [ki(1) manual](../../../man/ki.1). The observable contracts are specified in [User inventory, diagnosis, updates, and shell integration](../../specs/management.md).
+Exact grammar is in `ki manage <command> --help` and the installed `man ki` manual. Inventory and diagnostic commands report only; update and repair act only after the ownership and safety checks described above pass.

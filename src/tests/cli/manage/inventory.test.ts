@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
+import { buildCommandInventory, renderCommandInventory } from '../../../../scripts/command-inventory.ts'
 import { sandbox } from '../_cli_helper.ts'
 
 const rootHelpCommands = [
@@ -42,7 +43,7 @@ const agoraChangelogCommands = [
 ]
 const repoCommands = ['audit', 'conform', 'diag', 'educate', 'init', 'open', 'roadmap', 'repair', 'skill', 'upgrade']
 const batchCommands = ['close', 'prepare', 'run', 'validate']
-const registryCommands = ['add', 'list']
+const registryCommands = ['add', 'list', 'remove']
 
 const commandNames = (output: string): string[] =>
   output.split('\n').flatMap((line) => /^ {2}([a-z]+)(?:\s|$)/.exec(line)?.[1] ?? [])
@@ -93,10 +94,49 @@ describe('[ki command inventory]', () => {
     )
     expect(bash.output).toContain("'batch') printf '%s\\n' 'prepare validate run close'")
     expect(bash.output).toContain(`'registry') printf '%s\\n' '${registryCommands.join(' ')}'`)
+
+    const manual = await readFile('man/ki.1', 'utf8')
+    const inventory = buildCommandInventory(manual)
+    const invocations = inventory.groups.flatMap((group) => group.commands.map((command) => command.invocation))
+    const registeredLeaves = Array.from(
+      bash.output.matchAll(/^ {4}'([^':]+)'\) printf '%s\\n' '' ;;$/gm),
+      (match) => match[1] as string
+    )
+    const covers = (invocation: string, path: string): boolean => {
+      let offset = 0
+      for (const word of path.split(' ')) {
+        const match = new RegExp(`(?:^|[^a-z])${word}(?:$|[^a-z])`).exec(invocation.slice(offset))
+        if (!match) return false
+        offset += match.index + match[0].length
+      }
+      return true
+    }
+    for (const path of registeredLeaves)
+      expect(
+        invocations.some((invocation) => covers(invocation, path)),
+        path
+      ).toBe(true)
+    for (const invocation of invocations.filter((value) => value.startsWith('ki ') && value !== 'ki [command]'))
+      expect(
+        registeredLeaves.some((path) => covers(invocation, path)),
+        invocation
+      ).toBe(true)
   })
 
   test('keeps the purpose-oriented manual and changelog inventories complete', async () => {
-    const [manual, changelog] = await Promise.all([readFile('man/ki.1', 'utf8'), readFile('CHANGELOG.md', 'utf8')])
+    const [manual, changelog, generated] = await Promise.all([
+      readFile('man/ki.1', 'utf8'),
+      readFile('CHANGELOG.md', 'utf8'),
+      readFile('man/ki.commands.json', 'utf8')
+    ])
+
+    expect(generated).toBe(renderCommandInventory(manual))
+    expect(JSON.parse(generated).schema).toBe('ki/commands/v1')
+    expect(
+      manual.match(
+        /\.B ki registry \[--repo <path-or-pattern>]\.\.\. \[--agora <name>] \[--estate] add \[--dry-run] \[--sources <absolute-path>]/g
+      )
+    ).toHaveLength(2)
 
     for (const command of rootHelpCommands) {
       expect(manual).toContain(`.B ki ${command}`)
@@ -111,6 +151,7 @@ describe('[ki command inventory]', () => {
       expect(changelog).toContain(`\`ki repo ${command}`)
     }
     expect(manual).toContain('.B ki registry list')
+    expect(manual).toContain('.B ki registry remove')
     expect(manual).toContain(
       '.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--sources <absolute-path>]'
     )

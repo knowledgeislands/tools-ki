@@ -166,6 +166,16 @@ _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `orders horizons then lifecyc
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### REPO-OPS-017 — Path-free roadmap projection
+
+`ki repo roadmap list --format json` MUST emit schema `ki/roadmap/v1` with canonical item and repository identities, filters, dependencies, lifecycle fields, and canonical record URLs while omitting local filesystem paths and presentation state.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `emits versioned path-free JSON for project and Knowledge Base roadmaps` and `keeps absent roadmaps empty and reports unavailable JSON repositories`.
+
+_Evidence:_ The named roadmap contract tests are part of the passing `bun run test:coverage` gate.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

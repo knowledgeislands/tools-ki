@@ -4,12 +4,12 @@ area: CLI
 title: Restore machine-readable contracts
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 48a45861f153816efba5dbc66fda088fa99364cf
 created_at: 2026-09-21T16:23:59Z
-updated_at: 2026-09-21T17:05:00Z
+updated_at: 2026-09-24T23:18:50Z
 ---
 
 ## Goal
@@ -34,13 +34,13 @@ This item does not change roadmap semantics, horizon or status vocabulary, depen
 
 ## Steps
 
-- [ ] Define `ki/roadmap/v1` covering item identity, repository identity, area, theme, title, horizon, status, dependency arrays, and timestamps, carrying no filesystem path and no presentation state.
-- [ ] Decide and document how a consumer links to a canonical record without receiving a local path, following the precedent `ki/trade-routes/v1` set.
-- [ ] Add `--format json` to `ki repo roadmap list`, honouring existing selection and filter options including `--aggregate`.
-- [ ] Define `ki/registry/v1` covering registered repository identity and declared metadata, and add `--format json` to `ki registry list`.
-- [ ] Emit the schema identity in every payload so a consumer can reject an unrecognised version rather than guess.
-- [ ] Cover both contracts with tests over empty, single-repository, and multi-repository selections, including repositories with no roadmap and unresolved dependencies.
-- [ ] Document both contracts as stable integration surfaces in the manual and changelog.
+- [x] Define `ki/roadmap/v1` covering item identity, repository identity, area, theme, title, horizon, status, dependency arrays, and timestamps, carrying no filesystem path and no presentation state.
+- [x] Decide and document how a consumer links to a canonical record without receiving a local path, following the precedent `ki/trade-routes/v1` set.
+- [x] Add `--format json` to `ki repo roadmap list`, honouring existing selection and filter options including `--aggregate`.
+- [x] Define `ki/registry/v1` covering registered repository identity and declared metadata, and add `--format json` to `ki registry list`.
+- [x] Emit the schema identity in every payload so a consumer can reject an unrecognised version rather than guess.
+- [x] Cover both contracts with tests over empty, single-repository, and multi-repository selections, including repositories with no roadmap and unresolved dependencies.
+- [x] Document both contracts as stable integration surfaces in the manual and changelog.
 
 ## Files touched
 
@@ -71,6 +71,32 @@ Note both contracts wherever machine consumption of `ki` output is documented.
 ### Roadmap
 
 Further machine projections should be captured individually as consumers appear, rather than adding `--format json` everywhere speculatively.
+
+## Review
+
+### Delivered
+
+Versioned, path-free roadmap and registry JSON projections with stable canonical identities and record URLs.
+
+### Change Summary
+
+Added typed report builders, CLI format selection, declared repository metadata projection, specifications, manual entries, guide coverage, and focused tests.
+
+### Verification
+
+Focused roadmap, registry, completion, and inventory tests pass; TypeScript compilation passes.
+
+### Outstanding concerns
+
+None.
+
+### Post-change review
+
+Both JSON payloads carry explicit schema identities and omit local paths and renderer state.
+
+### Mini recap
+
+Integrations can consume roadmap and registry state without scraping text or inheriting machine-local topology.
 
 ## Discussion
 

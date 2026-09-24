@@ -75,7 +75,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo audit`
 - `ki repo conform`
 - `ki repo diag`
-- `ki repo roadmap list`
+- `ki repo roadmap list [--format <text|json>]`
 - `ki repo roadmap stats [--stale-after <duration>] [--format <text|json>]`
 - `ki repo roadmap prune [id]`
 - `ki repo roadmap promote <id> [horizon]`
@@ -96,7 +96,9 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 #### Registry management
 
 - `ki registry add`
-- `ki registry list`
+- `ki registry list [--format <text|json>]`
+- `ki registry remove <key> [--dry-run]`
+- `ki registry remove --repo <path> [--dry-run]`
 - `ki registry` now keeps canonical GitHub identity and checkout bindings as keyed records in the machine-local `$XDG_STATE_HOME/ki/registry.toml`; `ki bootstrap --refresh` migrates and removes the retired configuration path list, which resolution no longer reads.
 
 #### Harness management
@@ -153,6 +155,10 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki agora roots <agora>` exposes a stable machine interface for resolved registered Agora roots: newline-delimited by default, or NUL-delimited with `--null` (`-0`).
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context, including unadopted `triage` intake.
+- `ki repo roadmap list --format json` emits the path-free `ki/roadmap/v1` contract with canonical record URLs.
+- `ki registry list --format json` emits path-free `ki/registry/v1` identity and declaration metadata; `ki registry remove` removes exactly one keyed or path-selected entry with dry-run and transactional publication.
+- Closed current batch records validate selected work from their evidence commit, so later pruning and expiry do not invalidate archival verification.
+- `man/ki.commands.json` publishes the generated `ki/commands/v1` command and description inventory, reconciled against the manual and registered command tree.
 - `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.
 - `ki trade routes list [--estate] [--incomplete] [--format text|json]` is a framed local route inventory or a paired registered-estate table. Estate JSON uses the versioned, path-free `ki/trade-routes/v1` contract so applications can consume canonical route evidence without inheriting local registry topology or renderer-specific weights. The interactive D3 route map now belongs to `apps-observatory`; the retired `--html` and redundant `--table` flags are not retained as aliases.
 - Receiver-owned knowledge subtype commands, exact two-sided standing import/export grants, active/incomplete inspection, and receiver-local `STI-*` capture with full source-commit and path verification. Standing intake is knowledge-only, adds no peer-write or roadmap authority, and leaves ordinary itemized trades as the fallback.

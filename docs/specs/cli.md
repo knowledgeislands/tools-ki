@@ -46,6 +46,18 @@ _Verify:_ `src/tests/cli/root/run.test.ts` — `rethrows unexpected command erro
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+## Machine-readable command inventory
+
+### CLI-005 — Generated command contract
+
+The repository MUST publish `man/ki.commands.json` with schema identity `ki/commands/v1`, complete public command paths, and descriptions reconciled against both manual sections and the registered command tree.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/manage/inventory.test.ts` — `keeps purpose-oriented manual and changelog inventories complete`.
+
+_Evidence:_ The generated inventory is byte-checked against `man/ki.1`, and the named CLI contract test is part of the passing `bun run test:coverage` gate.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

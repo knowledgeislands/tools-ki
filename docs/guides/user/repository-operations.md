@@ -38,7 +38,9 @@ repository = "https://github.com/knowledgeislands/ki-agentic-harness"
 path = "/Users/example/workspaces/knowledgeislands/ki-agentic-harness"
 ```
 
-Record roots without applying any repair using `ki registry add --repo <path-or-pattern>`, and list them with `ki registry list`. `ki repo init`, `ki repo repair`, and `ki repo conform` also record each selected root — conform does so first, even when its later checks fail, so the registry stays an inventory for repair and bulk maintenance rather than a compliance badge.
+Record roots without applying any repair using `ki registry add --repo <path-or-pattern>`, and list them with `ki registry list`. Use `ki registry list --format json` for the path-free `ki/registry/v1` projection of canonical identity and declared metadata. Remove exactly one entry by key with `ki registry remove <key>`, or by its exact path with `ki registry remove --repo <path>`; add `--dry-run` to preview either removal. Bulk selectors are deliberately unavailable for removal.
+
+`ki repo init`, `ki repo repair`, and `ki repo conform` also record each selected root — conform does so first, even when its later checks fail, so the registry stays an inventory for repair and bulk maintenance rather than a compliance badge.
 
 ## Run an audit
 
@@ -116,4 +118,4 @@ A clean audit and a `diag` showing every declared skill projected is the end sta
 | A declared skill has no projection | The link is missing, dangling, or stale | `ki repo repair --dry-run`, review, then rerun |
 | A multi-repository mutation exits non-zero | A later target failed after earlier ones succeeded | Read the per-repository result; earlier targets are already applied |
 
-Exact grammar is in `ki repo <command> --help` and the tracked [ki(1) manual](../../../man/ki.1). The observable contracts are specified in [Repository audit](../../specs/repository-audit.md), [Repository operations](../../specs/repository-operations.md), and [Explicit repository registration](../../specs/registry.md).
+Exact grammar is in `ki repo <command> --help` and the installed `man ki` manual. Selection must resolve at least one physical repository, audit is read-only, and conform publishes only after the selected repository's initial audit passes.

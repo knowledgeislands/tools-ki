@@ -263,7 +263,7 @@ describe('[ki repo roadmap]', () => {
       'repo/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/repo"\n'
     )
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
+    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item({ blocked_by: '[KI-OTHER-999]' }))
     await box.project.write(
       'repo/docs/roadmap/KI-TOOL-CLI-010-cleanup.md',
       item({
@@ -290,6 +290,7 @@ describe('[ki repo roadmap]', () => {
     const empty = await box.run('ki repo --repo repo roadmap list --horizon now')
     const agora = await box.run('ki repo --agora estate roadmap list --status awaiting-review')
     const format = await box.run('ki repo --repo repo roadmap list --format json')
+    const invalidFormat = await box.run('ki repo --repo repo roadmap list --format yaml')
 
     expect(text).toEqual({
       exitCode: 0,
@@ -303,8 +304,40 @@ describe('[ki repo roadmap]', () => {
     expect(empty.output).toContain('├─ roadmap (0)\n├─ trades (0)')
     expect(empty.output).toContain('summary: ITEMS=0 ACTIVE=0 DONE=0')
     expect(empty.output).not.toContain('items: none')
-    expect(format.exitCode).toBe(2)
-    expect(format.output).toContain("unknown option '--format' for 'ki repo roadmap list'")
+    expect(format.exitCode).toBe(0)
+    expect(JSON.parse(format.output)).toEqual({
+      schema: 'ki/roadmap/v1',
+      repositories: [
+        {
+          identity: 'example/repo',
+          repository: 'https://github.com/example/repo',
+          roadmap: 'present',
+          items: 3
+        }
+      ],
+      items: expect.arrayContaining([
+        {
+          identity: 'example/repo',
+          repository: 'https://github.com/example/repo',
+          id: 'KI-TOOL-CLI-003',
+          area: null,
+          theme: 'cli',
+          title: 'Inspect governed work',
+          horizon: 'next',
+          status: 'draft',
+          blocks: [],
+          blockedBy: ['KI-OTHER-999'],
+          createdAt: '2026-09-01T00:00:00Z',
+          updatedAt: '2026-09-01T00:00:00Z',
+          record: 'https://github.com/example/repo/blob/HEAD/docs/roadmap/KI-TOOL-CLI-003-inspect.md'
+        }
+      ])
+    })
+    expect(format.output).not.toContain(root)
+    expect(invalidFormat).toEqual({
+      exitCode: 2,
+      output: 'ki: error: roadmap list --format must be text or json\n'
+    })
   })
 
   test('ignores the canonical issue-allocation ledger when reading work items', async () => {
@@ -322,16 +355,28 @@ describe('[ki repo roadmap]', () => {
 
   test('aggregates selected roadmaps while treating absent roots as empty', async () => {
     const box = await sandbox()
-    await box.project.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'first/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/first"\n'
+    )
     await box.project.write('first/docs/roadmap/KI-TOOL-CLI-003-now.md', item({ horizon: 'now' }))
-    await box.project.write('second/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'second/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/second"\n'
+    )
     await box.project.write(
       'second/docs/roadmap/KI-TOOL-CLI-004-next.md',
       item({ id: 'KI-TOOL-CLI-004', title: 'Next work' })
     )
-    await box.project.write('absent/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'absent/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/absent"\n'
+    )
 
     const result = await box.run('ki repo --repo first --repo second --repo absent roadmap list --aggregate --no-icons')
+    const json = await box.run(
+      'ki repo --repo first --repo second --repo absent roadmap list --aggregate --no-icons --format json --horizon next'
+    )
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('╭─ KI AGGREGATE ROADMAP')
@@ -344,23 +389,89 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('no roadmap (1)')
     expect(result.output).toContain('📁 absent')
     expect(result.output).toContain('summary: REPOSITORIES=3 ROADMAPS=2 NO_ROADMAP=1 ITEMS=2 ACTIVE=2 DONE=0 TRADES=0')
+    expect(json.exitCode).toBe(0)
+    expect(JSON.parse(json.output)).toEqual({
+      schema: 'ki/roadmap/v1',
+      repositories: [
+        {
+          identity: 'example/first',
+          repository: 'https://github.com/example/first',
+          roadmap: 'present',
+          items: 0
+        },
+        {
+          identity: 'example/second',
+          repository: 'https://github.com/example/second',
+          roadmap: 'present',
+          items: 1
+        },
+        {
+          identity: 'example/absent',
+          repository: 'https://github.com/example/absent',
+          roadmap: 'absent',
+          items: 0
+        }
+      ],
+      items: [
+        expect.objectContaining({
+          identity: 'example/second',
+          id: 'KI-TOOL-CLI-004',
+          record: 'https://github.com/example/second/blob/HEAD/docs/roadmap/KI-TOOL-CLI-004-next.md'
+        })
+      ]
+    })
+    expect(json.output).not.toContain(box.project.path)
   })
 
   test('keeps malformed and unreadable roadmap roots as aggregate diagnostics', async () => {
     const box = await sandbox()
-    await box.project.write('file/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'file/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/file"\n'
+    )
     await box.project.write('file/docs/roadmap', 'not a directory\n')
     await box.project.write('unreadable/.ki.toml', knowledgeBaseConfiguration())
+    await box.project.write('unidentified/.ki.toml', 'not = [valid toml\n')
     const unreadable = await box.project.mkdir('unreadable')
     roadmapStatFailure.path = `${unreadable}/Streams/Roadmap`
 
     const result = await box.run('ki repo --repo file --repo unreadable roadmap list --aggregate --no-icons')
+    const json = await box.run(
+      'ki repo --repo file --repo unreadable --repo unidentified roadmap list --aggregate --format json'
+    )
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('diagnostics (2)')
     expect(result.output).toContain('has no physical')
     expect(result.output).toContain('roadmap stat failure')
     expect(result.output).toContain('NO_ROADMAP=0')
+    expect(json.exitCode).toBe(1)
+    expect(JSON.parse(json.output)).toEqual({
+      schema: 'ki/roadmap/v1',
+      repositories: [
+        {
+          identity: 'example/file',
+          repository: 'https://github.com/example/file',
+          roadmap: 'unavailable',
+          items: 0
+        },
+        {
+          identity: 'example/knowledge',
+          repository: 'https://github.com/example/knowledge',
+          roadmap: 'unavailable',
+          items: 0
+        },
+        {
+          identity: null,
+          repository: null,
+          roadmap: 'unavailable',
+          items: 0
+        }
+      ],
+      items: []
+    })
+    expect(json.output).not.toContain(box.project.path)
+    expect(json.output).not.toContain('roadmap stat failure')
   })
 
   test('isolates missing, malformed, invalid-status, and unsafe roadmap entries', async () => {
@@ -373,7 +484,10 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('missing/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('invalid-status/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
     await box.project.write('invalid-status/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item({ status: 'closed' }))
-    await box.project.write('unsafe/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'unsafe/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/unsafe"\n'
+    )
     await box.project.write('unsafe/docs/roadmap/target.md', item())
     await symlink(
       `${box.project.path}/unsafe/docs/roadmap/target.md`,
@@ -398,6 +512,7 @@ describe('[ki repo roadmap]', () => {
       'roadmap',
       'list'
     ])
+    const json = await box.run(['ki', 'repo', '--repo', valid, '--repo', unsafe, 'roadmap', 'list', '--format', 'json'])
     const retiredFormat = await box.run('ki repo --repo valid roadmap list --format yaml')
 
     expect(result.output).toContain(
@@ -410,8 +525,10 @@ describe('[ki repo roadmap]', () => {
       `├─ roadmap (0)\n│  ├─ ❌ work item KI-TOOL-CLI-003-inspect.md must be a regular file\n│  ╰─ ❌ work item target.md must use a matching work-item identifier`
     )
     expect(result.exitCode).toBe(1)
+    expect(json.exitCode).toBe(1)
+    expect(JSON.parse(json.output).repositories).toHaveLength(2)
     expect(retiredFormat.exitCode).toBe(2)
-    expect(retiredFormat.output).toContain("unknown option '--format' for 'ki repo roadmap list'")
+    expect(retiredFormat.output).toContain('roadmap list --format must be text or json')
   })
 
   test('accepts future work items without the retired candidate field', async () => {

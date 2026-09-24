@@ -20,6 +20,14 @@ export interface RepositoryDeclaration {
   readonly skills: readonly DeclaredSkill[]
 }
 
+export interface DeclaredRepositoryMetadata {
+  readonly repository: string
+  readonly title: string
+  readonly description: string
+  readonly repoCode: string
+  readonly visibility: 'public' | 'private'
+}
+
 export type KnowledgeBaseStoreRole = 'notes' | 'sources' | 'legacy'
 
 export interface RepositoryInitialisation {
@@ -124,6 +132,32 @@ export const declaredRepositoryIdentity = (declaration: RepositoryDeclaration): 
   if (!canonicalRepositoryIdentity(identity))
     throw new KiError('[skills.ki-repo].repository must be a canonical HTTPS GitHub repository', 1)
   return identity
+}
+
+const declaredMetadataField = (configuration: Readonly<Record<string, unknown>>, field: string): string => {
+  const value = configuration[field]
+  if (typeof value !== 'string' || !value.trim())
+    throw new KiError(`[skills.ki-repo].${field} must be a non-empty string`, 1)
+  return value
+}
+
+export const declaredRepositoryMetadata = (declaration: RepositoryDeclaration): DeclaredRepositoryMetadata => {
+  const configuration = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration
+  if (!configuration) throw new KiError('repository must declare [skills.ki-repo]', 1)
+  const repository = declaredRepositoryIdentity(declaration)
+  const repoCode = declaredMetadataField(configuration, 'repo_code')
+  if (!/^[A-Z0-9][A-Z0-9-]{1,23}$/.test(repoCode))
+    throw new KiError('[skills.ki-repo].repo_code must be a stable uppercase identifier', 1)
+  const visibility = declaredMetadataField(configuration, 'visibility')
+  if (visibility !== 'public' && visibility !== 'private')
+    throw new KiError('[skills.ki-repo].visibility must be public or private', 1)
+  return {
+    repository,
+    title: declaredMetadataField(configuration, 'title'),
+    description: declaredMetadataField(configuration, 'description'),
+    repoCode,
+    visibility
+  }
 }
 
 export const declaredKnowledgeBaseStoreRoles = (

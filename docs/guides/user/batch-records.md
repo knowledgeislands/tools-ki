@@ -60,6 +60,8 @@ The evidence commit must resolve in the repository. Closing appends structural e
 
 ## Retained records and recovery
 
+`validate` checks an open current record against live selected work and its execution window. After closure, it checks the exact selected work state recorded in the evidence commit, so later pruning and expiry do not invalidate the archived outcome. Missing or inconsistent historical evidence still fails closed.
+
 `validate` can integrity-check retained records written under the earlier batch shape even after their execution window has expired. Those records remain read-only: `run` and `close` refuse to upgrade or rewrite them. An expired current record, altered approved payload, mismatched run binding, non-canonical path, symbolic link, or cross-repository identity fails closed. Correct the source authority or create a newly approved batch rather than editing a protected payload in place.
 
 ## Clean up inactive records

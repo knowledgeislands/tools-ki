@@ -414,6 +414,141 @@ test('preserves and extends an existing local repository registry in determinist
   for (const path of expected) expect(registry).toContain(`path = ${JSON.stringify(path)}`)
 })
 
+test('removes one complete stale registry entry by key with dry-run and transactional publication', async () => {
+  const box = await sandbox()
+  const retained = await box.root.mkdir('retained')
+  const stale = `${box.root.path}/moved-away`
+  const sources = `${box.root.path}/retired-sources`
+  const before = `schema = 1
+
+[repositories.retained]
+repository = "https://github.com/example/retained"
+path = ${JSON.stringify(retained)}
+
+[repositories.retired]
+repository = "https://github.com/example/retired"
+path = ${JSON.stringify(stale)}
+
+[repositories.retired.stores]
+sources = ${JSON.stringify(sources)}
+`
+  await box.state.write('ki/registry.toml', before)
+
+  registryWriteFailure.path = await realpath(`${box.state.path}/ki/registry.toml`)
+  await expect(box.run('ki registry remove retired')).rejects.toThrow('registry write failure')
+  expect(await box.state.read('ki/registry.toml')).toEqual(before)
+  registryWriteFailure.path = undefined
+
+  const dryRun = await box.run('ki registry remove retired --dry-run')
+  expect(dryRun).toEqual({
+    exitCode: 0,
+    output:
+      `would write registry.toml\n` +
+      `ki registry remove: would remove retired https://github.com/example/retired at ${stale}\n`
+  })
+  expect(await box.state.read('ki/registry.toml')).toEqual(before)
+
+  const removed = await box.run('ki registry remove retired')
+  expect(removed).toEqual({
+    exitCode: 0,
+    output: `write registry.toml\nki registry remove: removed retired https://github.com/example/retired at ${stale}\n`
+  })
+  expect(await box.state.read('ki/registry.toml')).toEqual(
+    localRegistry([{ key: 'retained', repository: 'https://github.com/example/retained', path: retained }])
+  )
+})
+
+test('removes exact live and stale registry paths and retains an empty valid registry', async () => {
+  const box = await sandbox()
+  const present = await box.root.mkdir('present')
+  const stale = `${box.root.path}/no-longer-present`
+  await box.state.write(
+    'ki/registry.toml',
+    localRegistry([
+      { key: 'present', repository: 'https://github.com/example/present', path: present },
+      { key: 'retired', repository: 'https://github.com/example/retired', path: stale }
+    ])
+  )
+
+  const removedPresent = await box.run(['ki', 'registry', 'remove', '--repo', present])
+  const removed = await box.run(['ki', 'registry', 'remove', '--repo', stale])
+
+  expect(removedPresent).toEqual({
+    exitCode: 0,
+    output: `write registry.toml\nki registry remove: removed present https://github.com/example/present at ${present}\n`
+  })
+  expect(removed).toEqual({
+    exitCode: 0,
+    output: `write registry.toml\nki registry remove: removed retired https://github.com/example/retired at ${stale}\n`
+  })
+  expect(await box.state.read('ki/registry.toml')).toEqual('schema = 1\nrepositories = {}\n')
+  expect(await box.run('ki registry list')).toEqual({ exitCode: 0, output: '' })
+})
+
+test('requires exactly one key or path and rejects bulk or unknown registry removal selectors', async () => {
+  const box = await sandbox()
+  const registered = `${box.root.path}/registered`
+  const missing = await box.run('ki registry remove absent')
+  await box.state.write(
+    'ki/registry.toml',
+    localRegistry([{ key: 'registered', repository: 'https://github.com/example/registered', path: registered }])
+  )
+  const before = await box.state.read('ki/registry.toml')
+
+  const none = await box.run('ki registry remove')
+  const both = await box.run(['ki', 'registry', 'remove', 'registered', '--repo', registered])
+  const repeated = await box.run(['ki', 'registry', 'remove', '--repo', registered, '--repo', `${box.root.path}/other`])
+  const agora = await box.run('ki registry --agora estate remove registered')
+  const estate = await box.run('ki registry --estate remove registered')
+  const invalidKey = await box.run(['ki', 'registry', 'remove', 'Bad Key'])
+  const unknownKey = await box.run('ki registry remove absent')
+  const unknownPath = await box.run(['ki', 'registry', 'remove', '--repo', `${box.root.path}/absent`])
+
+  expect(missing).toEqual({
+    exitCode: 2,
+    output: 'ki: error: local KI repository registry has no key absent\n'
+  })
+  expect(none).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki registry remove requires exactly one registry key or --repo path\n'
+  })
+  expect(both).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki registry remove requires exactly one registry key or --repo path\n'
+  })
+  expect(repeated).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki registry remove accepts exactly one --repo path\n'
+  })
+  expect(agora).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki registry remove does not accept --agora or --estate\n'
+  })
+  expect(estate).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki registry remove does not accept --agora or --estate\n'
+  })
+  expect(invalidKey).toEqual({
+    exitCode: 2,
+    output: 'ki: error: registry key must be a stable local repository name\n'
+  })
+  expect(unknownKey).toEqual({
+    exitCode: 2,
+    output: 'ki: error: local KI repository registry has no key absent\n'
+  })
+  expect(unknownPath).toEqual({
+    exitCode: 2,
+    output: `ki: error: local KI repository registry has no path ${box.root.path}/absent\n`
+  })
+  expect(await box.state.read('ki/registry.toml')).toEqual(before)
+
+  await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
+  expect(await box.run('ki registry remove registered')).toEqual({
+    exitCode: 1,
+    output: 'ki: error: local KI repository registry is invalid: unrecognised key extra\n'
+  })
+})
+
 test('reports missing, invalid, and unsafe local registry configuration without repairing it', async () => {
   const box = await sandbox()
   await box.setupExampleHarness({ name: 'ki-repo', rubric })
@@ -472,6 +607,107 @@ test('lists an explicitly empty local repository registry', async () => {
   await box.config.write('ki/config.toml', localConfiguration)
 
   expect(await box.run('ki registry list')).toEqual({ exitCode: 0, output: '' })
+  expect(await box.run('ki registry list --format json')).toEqual({
+    exitCode: 0,
+    output: '{\n  "schema": "ki/registry/v1",\n  "repositories": []\n}\n'
+  })
+})
+
+test('projects registered declaration metadata without exposing local paths', async () => {
+  const box = await sandbox()
+  const available = await box.root.mkdir('available')
+  const unavailable = `${box.root.path}/missing`
+  await box.root.write(
+    'available/.ki.toml',
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\n' +
+      'repository = "https://github.com/example/available"\n' +
+      'title = "Available repository"\n' +
+      'description = "Machine-readable registry evidence."\n' +
+      'repo_code = "EXAMPLE"\n' +
+      'visibility = "private"\n'
+  )
+  await box.state.write(
+    'ki/registry.toml',
+    localRegistry([
+      { key: 'missing', repository: 'https://github.com/example/missing', path: unavailable },
+      { key: 'available', repository: 'https://github.com/example/available', path: available }
+    ])
+  )
+
+  const result = await box.run('ki registry list --format json')
+  const report = JSON.parse(result.output)
+
+  expect(result.exitCode).toBe(1)
+  expect(report).toEqual({
+    schema: 'ki/registry/v1',
+    repositories: [
+      {
+        key: 'available',
+        identity: 'example/available',
+        repository: 'https://github.com/example/available',
+        state: 'available',
+        title: 'Available repository',
+        description: 'Machine-readable registry evidence.',
+        repoCode: 'EXAMPLE',
+        visibility: 'private'
+      },
+      {
+        key: 'missing',
+        identity: 'example/missing',
+        repository: 'https://github.com/example/missing',
+        state: 'unavailable',
+        title: null,
+        description: null,
+        repoCode: null,
+        visibility: null
+      }
+    ]
+  })
+  expect(result.output).not.toContain(box.root.path)
+  expect(await box.run('ki registry list --format yaml')).toEqual({
+    exitCode: 2,
+    output: 'ki: error: registry list --format must be text or json\n'
+  })
+})
+
+test('marks mismatched and malformed repository declarations unavailable in JSON inventory', async () => {
+  const box = await sandbox()
+  const declarations = [
+    [
+      'mismatch',
+      'repository = "https://github.com/example/other"\ntitle = "Title"\ndescription = "Description"\nrepo_code = "EXAMPLE"\nvisibility = "public"'
+    ],
+    ['missing-skill', ''],
+    [
+      'empty-title',
+      'repository = "https://github.com/example/empty-title"\ntitle = ""\ndescription = "Description"\nrepo_code = "EXAMPLE"\nvisibility = "public"'
+    ],
+    [
+      'bad-code',
+      'repository = "https://github.com/example/bad-code"\ntitle = "Title"\ndescription = "Description"\nrepo_code = "bad"\nvisibility = "public"'
+    ],
+    [
+      'bad-visibility',
+      'repository = "https://github.com/example/bad-visibility"\ntitle = "Title"\ndescription = "Description"\nrepo_code = "EXAMPLE"\nvisibility = "internal"'
+    ]
+  ] as const
+  const entries = []
+  for (const [key, declaration] of declarations) {
+    const path = await box.root.mkdir(key)
+    await box.root.write(
+      `${key}/.ki.toml`,
+      `[repo]\nharnesses = ["example/harness"]\n${declaration ? `\n[skills.ki-repo]\n${declaration}\n` : ''}`
+    )
+    entries.push({ key, repository: `https://github.com/example/${key}`, path })
+  }
+  await box.state.write('ki/registry.toml', localRegistry(entries))
+
+  const result = await box.run('ki registry list --format json')
+  const report = JSON.parse(result.output)
+
+  expect(result.exitCode).toBe(1)
+  expect(report.repositories).toHaveLength(declarations.length)
+  expect(report.repositories.every((entry: { state: string }) => entry.state === 'unavailable')).toBe(true)
 })
 
 test('retires repository-scoped registry commands without a compatibility path', async () => {

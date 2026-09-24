@@ -41,6 +41,7 @@ const optionNames = (option: Option): readonly string[] =>
 
 const closedOptionValues: Readonly<Record<string, readonly string[]>> = {
   '--direction': ['import', 'export'],
+  '--format': ['text', 'json'],
   '--horizon': ['now', 'next', 'soon', 'waiting-for', 'parked', 'future'],
   '--kind': ['work', 'knowledge'],
   '--progress': ['auto', 'always', 'never'],

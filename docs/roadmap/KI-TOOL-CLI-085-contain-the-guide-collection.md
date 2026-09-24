@@ -4,13 +4,13 @@ area: CLI
 title: Contain the guide collection
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
 transferred_from: ki-website
-baseline_ref: null
+baseline_ref: 48a45861f153816efba5dbc66fda088fa99364cf
 created_at: 2026-09-24T19:55:00Z
-updated_at: 2026-09-24T22:48:00Z
+updated_at: 2026-09-24T23:18:50Z
 ---
 
 ## Goal
@@ -41,11 +41,11 @@ Whether this lands inside `KI-TOOL-CLI-078`, which is already consolidating this
 
 ## Steps
 
-- [ ] Remove every Markdown link from `docs/guides/` to a document outside the collection while preserving code-path references and sibling-guide links.
-- [ ] In user guides, state the operational substance already owed to the reader and remove internal governance citations that reader cannot reach.
-- [ ] In developer guides, retain legitimate specification or decision identifiers as unlinked names where they help a contributor locate repository authority.
-- [ ] Keep command grammar reachable through the installed `ki --help` and `man ki` interfaces without linking the tracked manual file.
-- [ ] Run the guide containment audit, inspect the audience-sensitive `ROUTE-3` judgment, and apply the Markdown authoring gate once after the complete edit batch.
+- [x] Remove every Markdown link from `docs/guides/` to a document outside the collection while preserving code-path references and sibling-guide links.
+- [x] In user guides, state the operational substance already owed to the reader and remove internal governance citations that reader cannot reach.
+- [x] In developer guides, retain legitimate specification or decision identifiers as unlinked names where they help a contributor locate repository authority.
+- [x] Keep command grammar reachable through the installed `ki --help` and `man ki` interfaces without linking the tracked manual file.
+- [x] Run the guide containment audit, inspect the audience-sensitive `ROUTE-3` judgment, and apply the Markdown authoring gate once after the complete edit batch.
 
 ## Files touched
 
@@ -76,6 +76,32 @@ This item is entirely a containment correction across the current collection.
 ### Roadmap
 
 After this passes, recheck `KI-TOOL-CLI-078` for acceptance rather than reopening its completed delivery.
+
+## Review
+
+### Delivered
+
+A self-contained guide collection with only sibling-guide Markdown links.
+
+### Change Summary
+
+Removed out-of-collection links, brought required operational substance into user guides, and retained useful authority identifiers as plain text in developer guides.
+
+### Verification
+
+The guide containment audit passes; the authoring gate is included in the aggregate verification pass.
+
+### Outstanding concerns
+
+None.
+
+### Post-change review
+
+Installed help and `man ki` remain the command-grammar route without linking the tracked manual source.
+
+### Mini recap
+
+The guide collection is portable and useful without repository-external navigation.
 
 ## Discussion
 

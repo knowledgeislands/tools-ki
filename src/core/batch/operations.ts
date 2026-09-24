@@ -5,7 +5,8 @@ import { KiError } from '../errors.ts'
 import { prepareWrites, publishWrites } from '../filesystem/index.ts'
 import { resolveRepository } from '../repository/index.ts'
 import type { Runner } from '../runtime/runner.ts'
-import { readWorkItems } from '../work/items.ts'
+import { readWorkItemsAtCommit } from '../work/history.ts'
+import { readWorkItems, type WorkItem } from '../work/items.ts'
 import { readRepositoryPlanningSource } from '../work/planning.ts'
 import {
   appendCloseEvidence,
@@ -162,7 +163,7 @@ const nextBatchId = async (repository: ResolvedBatchRepository): Promise<string>
   return `${repository.repoCode}-BATCH-${String(highest + 1).padStart(3, '0')}`
 }
 
-const assertDependencyOrder = (itemIds: readonly string[], items: Awaited<ReturnType<typeof readWorkItems>>): void => {
+const assertDependencyOrder = (itemIds: readonly string[], items: readonly WorkItem[]): void => {
   const byId = new Map(items.map((item) => [item.id, item]))
   const positions = new Map(itemIds.map((id, index) => [id, index]))
   for (const [index, id] of itemIds.entries()) {
@@ -182,6 +183,26 @@ const batchItems = async (repository: ResolvedBatchRepository, itemIds: readonly
   const items = await readWorkItems(repository.root, planning)
   assertDependencyOrder(itemIds, items)
   return new Map(items.map((item) => [item.id, item]))
+}
+
+const historicalBatchItems = async (
+  repository: ResolvedBatchRepository,
+  itemIds: readonly string[],
+  commit: string,
+  context: BatchOperationContext
+) => {
+  const planning = await readRepositoryPlanningSource(repository.declaration)
+  const items = await readWorkItemsAtCommit(repository.root, planning, commit, context)
+  assertDependencyOrder(itemIds, items)
+  return new Map(items.map((item) => [item.id, item]))
+}
+
+const assertCompletionTarget = (
+  itemIds: readonly string[],
+  items: ReadonlyMap<string, WorkItem>,
+  target: BatchCompletionTarget
+): void => {
+  for (const id of itemIds) if (items.get(id)?.status !== target) fail(`batch item ${id} is not ${target}`)
 }
 
 const assertReadyItems = async (repository: ResolvedBatchRepository, itemIds: readonly string[]): Promise<void> => {
@@ -300,11 +321,20 @@ export const validateBatch = async (
 ): Promise<BatchOperationResult> => {
   const located = await locateBatch(options, context)
   if (located.record.shape === 'current') {
-    assertActive(located.record, context.now())
-    if (!located.record.runStarted) await assertReadyItems(located.repository, located.record.itemIds)
-    else await batchItems(located.repository, located.record.itemIds)
-    if (located.record.closed)
+    if (located.record.closed) {
       await assertCommitExists(located.repository, located.record.closed.commit, 'batch close evidence commit', context)
+      const items = await historicalBatchItems(
+        located.repository,
+        located.record.itemIds,
+        located.record.closed.commit,
+        context
+      )
+      assertCompletionTarget(located.record.itemIds, items, located.record.closed.completionTarget)
+    } else {
+      assertActive(located.record, context.now())
+      if (!located.record.runStarted) await assertReadyItems(located.repository, located.record.itemIds)
+      else await batchItems(located.repository, located.record.itemIds)
+    }
   }
   return operationResult(located, false)
 }
@@ -373,6 +403,13 @@ export const closeBatch = async (
     if (located.record.closed.completionTarget !== target || located.record.closed.commit !== options.evidenceCommit)
       return fail('batch record is already closed with different evidence')
     await assertCommitExists(located.repository, located.record.closed.commit, 'batch close evidence commit', context)
+    const items = await historicalBatchItems(
+      located.repository,
+      located.record.itemIds,
+      located.record.closed.commit,
+      context
+    )
+    assertCompletionTarget(located.record.itemIds, items, target)
     return operationResult(located, false)
   }
   if (!located.record.runStarted) return fail('batch run must be started before close')
@@ -383,9 +420,15 @@ export const closeBatch = async (
   )
     return fail(`batch close requires one ${target} ledger result for every named item`)
   const items = await batchItems(located.repository, located.record.itemIds)
-  for (const id of located.record.itemIds)
-    if (items.get(id)?.status !== target) return fail(`batch item ${id} is not ${target}`)
+  assertCompletionTarget(located.record.itemIds, items, target)
   await assertCommitExists(located.repository, options.evidenceCommit, '--evidence-commit', context)
+  const historicalItems = await historicalBatchItems(
+    located.repository,
+    located.record.itemIds,
+    options.evidenceCommit,
+    context
+  )
+  assertCompletionTarget(located.record.itemIds, historicalItems, target)
   const contents = appendCloseEvidence(located.record, { completionTarget: target, commit: options.evidenceCommit })
   await publishReplacement(located, contents)
   const record = parseBatchRecord(contents, basename(located.path), located.repository.identity)

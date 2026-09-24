@@ -62,6 +62,7 @@ const commandPaths = [
   'registry',
   'registry add',
   'registry list',
+  'registry remove',
   'repo',
   'repo audit',
   'repo conform',
@@ -170,6 +171,9 @@ describe('[ki manage completion]', () => {
       expect(output).toContain("'repo:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'repo roadmap:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'registry:--repo') printf '%s\\n' 'path'")
+      expect(output).toContain("'registry remove:--repo') printf '%s\\n' 'path'")
+      expect(output).toContain("'registry list:--format') printf '%s\\n' 'text json'")
+      expect(output).toContain("'repo roadmap list:--format') printf '%s\\n' 'text json'")
       expect(output).toContain("'registry add:--sources') printf '%s\\n' 'path'")
       expect(output).toContain("'acquire import:--capture') printf '%s\\n' 'path'")
       expect(output).toContain("'manage docs:0') printf '%s\\n' 'overview site manual roadmap'")

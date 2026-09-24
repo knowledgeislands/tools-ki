@@ -37,6 +37,7 @@ Unbuilt or uncertain behaviour belongs in an area's unnumbered `## Gaps` section
 | acquisition.md           | `ACQUIRE`    | Provider-neutral acquisition adapters and checkpoint recovery  |
 | agoras.md                | `AGORA`      | Named user-level repository groups                             |
 | bootstrap.md             | `BOOT`       | First-time user activation and refresh                         |
+| batches.md               | `BATCH`      | Batch execution and immutable completion evidence              |
 | cli.md                   | `CLI`        | Root command discovery, version, and failure boundary          |
 | development.md           | `DEV`        | Controlled local Harness development                           |
 | harnesses.md             | `HARN`       | Verified compatible Harness lifecycle                          |

@@ -44,5 +44,3 @@ ki agora reference remove https://github.com/example/plain-repository
 Use `--dry-run` to validate removal first. The command never edits the Agora declaration or referenced checkout.
 
 Promotion to KI membership is a separate reciprocal governance change: remove the identity from the owner's `references`, add it to `members`, and add matching consent in the member repository. Once the declarations and local KI registration resolve, `ki` treats it only as a member and ignores any stale reference association; remove that stale local state when convenient.
-
-The observable contract is specified in [Agoras](../../specs/agoras.md).
