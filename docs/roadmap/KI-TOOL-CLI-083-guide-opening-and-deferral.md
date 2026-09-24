@@ -3,14 +3,14 @@ id: KI-TOOL-CLI-083
 title: Guide opening and deferral
 area: CLI
 theme: cli
-horizon: triage
-status: draft
+horizon: next
+status: ready
 blocks: []
 blocked_by: []
 transferred_from: ki-website
 baseline_ref: null
 created_at: 2026-09-24T08:45:00Z
-updated_at: 2026-09-24T08:45:00Z
+updated_at: 2026-09-24T22:48:00Z
 ---
 
 ## Goal
@@ -39,6 +39,47 @@ This item asks a question and records the answer. It does not commit this reposi
 It does not restructure `docs/guides/`, which is `KI-TOOL-CLI-078`'s, and it does not touch `docs/specs/`.
 
 Nothing here blocks KI Website. The site's gate runs against the site's own pages regardless of what this repository decides, and the site derives from these guides rather than owning them.
+
+## Current state
+
+The collection already avoids the listed hand-off link text, and nearly every guide opens with an actionable reader outcome. The useful distinction is editorial rather than mechanical: an opening claim improves any guide, while a blanket phrase ban would confuse descriptive links with deferral and duplicate `ki-guides` containment checks.
+
+## Steps
+
+- [ ] Record a repository-local editorial rule in the guide collection entry point: open each guide with what its reader can accomplish, and make every link label describe the fact or destination rather than substitute for missing content.
+- [ ] Keep both rules as review judgments, not a new checker or a portable `ki-guides` amendment.
+- [ ] Review every current guide opening and the proposed deferral phrases, correcting only concrete failures found in this collection.
+- [ ] Verify the guide and authoring audits after the overlapping containment work in `KI-TOOL-CLI-085` lands.
+
+## Files touched
+
+`docs/guides/README.md` and this record. A concrete guide may change only if the review finds its opening does not state a reader outcome.
+
+## Verify
+
+Search the guide collection for the proposed hand-off link labels, inspect the prose before each first `##`, then run `ki repo audit --skill ki-guides --repo .` and `ki repo audit --skill ki-authoring --repo .`.
+
+## Dependencies / blocks
+
+No blocker. Deliver before `KI-TOOL-CLI-085` so that the containment pass preserves the local editorial wording while touching the same collection entry point.
+
+## Documentation impact
+
+### Decision Records
+
+None. This is a local editorial convention with no product or architecture consequence.
+
+### Specifications
+
+None.
+
+### Guides
+
+The guide collection entry point records the two review judgments. No new mechanical gate is introduced.
+
+### Roadmap
+
+No follow-up is expected unless another repository supplies evidence that either rule belongs in portable `ki-guides`.
 
 ## Discussion
 

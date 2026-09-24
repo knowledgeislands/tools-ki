@@ -4,13 +4,13 @@ title: Command inventory contract
 area: CLI
 theme: cli
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 transferred_from: ki-website
 baseline_ref: null
 created_at: 2026-09-22T00:00:00Z
-updated_at: 2026-09-22T00:00:00Z
+updated_at: 2026-09-24T22:48:00Z
 ---
 
 ## Goal
@@ -44,24 +44,25 @@ Nothing upstream detects either difference, because nothing asserts that the two
 
 ## Steps
 
-- [ ] Decide the shape of the published inventory: a versioned JSON projection (`ki/commands/v1`, following the precedent `ki/trade-routes/v1` set), a generated data file, or a tested contract over `man/ki.1`'s structure.
+- [ ] Record the generated-file decision in a Product Decision Record: publish `man/ki.commands.json` as `ki/commands/v1`, generated fail-closed from the reconciled manual inventories rather than from shortened Commander descriptions.
 - [ ] Reconcile the `v0.4.0` divergence: restore `Batch records` to COMMAND GROUPS, and align `ki registry add`'s options between the two sections.
-- [ ] Add a check that fails when the manual's two inventories disagree on the command set, so this class of defect cannot ship again.
-- [ ] Tell KI Website which surface to consume, so `apps/site/scripts/sync-cli-commands.ts` can target a stated interface and drop its reconciliation.
+- [ ] Add a typed inventory parser and generator that publishes groups, purposes, invocations, and full descriptions with the schema identity in every payload.
+- [ ] Add checks that fail when the manual's two inventories disagree, when the generated payload drifts, or when its command paths do not round-trip against the registered Commander tree.
+- [ ] Specify and document the pinned-ref JSON surface so KI Website can consume it and drop its roff reconciliation in its own independently authorised change.
 
 ## Files touched
 
 - `man/ki.1` — the reconciliation.
-- The command-registration source and its tests, if a projection is the route chosen.
-- `docs/guides/` — whichever guide documents the published surface.
+- The inventory parser, generator, generated `man/ki.commands.json`, and command-inventory tests.
+- A Product Decision Record, the CLI specification, and the guide covering machine-readable output.
 
 ## Verify
 
-`ki repo audit --repo .` passes. A check exists that fails on a command present in one manual section and absent from the other, demonstrated by making it fail. If a projection is published, its payload round-trips against the registered command set in a test.
+`ki repo audit --repo .` passes. A check exists that fails on a command present in one manual section and absent from the other, demonstrated by a fixture. The generated payload matches its source, validates as `ki/commands/v1`, and its command paths round-trip against the registered command set.
 
 ## Dependencies / blocks
 
-Nothing blocks this. It is adjacent to `KI-TOOL-CLI-079`, which publishes versioned projections of roadmap and registry evidence; this is the same argument applied to the command surface, and the two should share whatever schema-identity convention 079 settles.
+Implementation follows `KI-TOOL-CLI-079`, which settles the shared schema-identity convention for versioned projections.
 
 Blocked by nothing in KI Website. The site is unblocked and shipping today — it consumes the manual at a pinned ref and states in its own ADR that the dependency is weaker than it would like. Nothing breaks there if this item waits.
 
@@ -69,7 +70,7 @@ Blocked by nothing in KI Website. The site is unblocked and shipping today — i
 
 ### Decision Records
 
-A record is owed if a versioned projection is published, since that is a new public contract. None is needed for reconciling the manual with itself.
+Record why the command inventory is a generated, pinned-ref JSON file sourced from the full manual descriptions rather than a runtime projection of shortened Commander descriptions.
 
 ### Specifications
 
@@ -88,3 +89,7 @@ KI Website's `KI-WEB-SITE-022` delivered the vendored reference and recorded thi
 The originating request came from KI Website, which owns the published guidance and can verify what its readers see; this repository owns the command surface and can verify what the CLI actually registers. Neither can verify the other's half, which is why the work splits here.
 
 The site's position, stated plainly: vendoring an unspecified interface is accepted knowingly, with a fail-closed parser as the compensation. It is not a complaint about the manual — a complete grouped inventory in the shipped manual page is more than most tools publish. It is a request to make the thing a contract, so that the compensation stops being necessary.
+
+### Selected contract
+
+The published surface is `man/ki.commands.json` with schema identity `ki/commands/v1`. A repository file is the right boundary for the pinned-ref website consumer, while generation from the reconciled manual preserves the group purposes and full command descriptions the site already publishes. The registered Commander tree remains an independent completeness check rather than the prose source.

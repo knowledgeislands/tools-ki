@@ -3,14 +3,14 @@ id: KI-TOOL-CLI-085
 area: CLI
 title: Contain the guide collection
 theme: cli
-horizon: triage
-status: draft
+horizon: next
+status: ready
 blocks: []
 blocked_by: []
 transferred_from: ki-website
 baseline_ref: null
 created_at: 2026-09-24T19:55:00Z
-updated_at: 2026-09-24T19:55:00Z
+updated_at: 2026-09-24T22:48:00Z
 ---
 
 ## Goal
@@ -34,6 +34,48 @@ This item removes the links and states the substance in their place. It does not
 It does not change `docs/specs/`, which is the authority being cited and is not a guide collection.
 
 Whether this lands inside `KI-TOOL-CLI-078`, which is already consolidating this collection, or separately, is that item's call. The two overlap on nearly every file and should not run concurrently.
+
+## Current state
+
+`ki repo audit --skill ki-guides --repo .` reports exactly eighteen `GUIDE-4` failures: sixteen links into `docs/specs/`, one into `docs/decisions/`, and one additional decision-record link from the release guide. The collection otherwise has its required root, entry point, audience routes, and H1s.
+
+## Steps
+
+- [ ] Remove every Markdown link from `docs/guides/` to a document outside the collection while preserving code-path references and sibling-guide links.
+- [ ] In user guides, state the operational substance already owed to the reader and remove internal governance citations that reader cannot reach.
+- [ ] In developer guides, retain legitimate specification or decision identifiers as unlinked names where they help a contributor locate repository authority.
+- [ ] Keep command grammar reachable through the installed `ki --help` and `man ki` interfaces without linking the tracked manual file.
+- [ ] Run the guide containment audit, inspect the audience-sensitive `ROUTE-3` judgment, and apply the Markdown authoring gate once after the complete edit batch.
+
+## Files touched
+
+The guide files named by the eighteen audit findings and this record. `docs/specs/` and `docs/decisions/` remain unchanged.
+
+## Verify
+
+Run `ki repo audit --skill ki-guides --repo .`, `ki repo audit --skill ki-authoring --repo .`, and the full repository audit. Confirm no Markdown link below `docs/guides/` resolves outside that collection and every user guide still states the behaviour needed to complete, verify, and recover its procedure.
+
+## Dependencies / blocks
+
+Deliver after `KI-TOOL-CLI-083`, which records the local opening and link-label judgments in the same guide entry point. Completion makes the existing `KI-TOOL-CLI-078` review evidence current again.
+
+## Documentation impact
+
+### Decision Records
+
+None. Existing rationale remains named where a developer can reach it; no decision content moves.
+
+### Specifications
+
+No specification changes. The accepted behaviour remains in `docs/specs/`; guides state only enough operational substance to stand alone.
+
+### Guides
+
+This item is entirely a containment correction across the current collection.
+
+### Roadmap
+
+After this passes, recheck `KI-TOOL-CLI-078` for acceptance rather than reopening its completed delivery.
 
 ## Discussion
 

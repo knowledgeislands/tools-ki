@@ -3,14 +3,14 @@ id: KI-TOOL-CLI-084
 title: Remove registry entries
 area: CLI
 theme: cli
-horizon: triage
-status: draft
+horizon: next
+status: ready
 blocks: []
 blocked_by: []
 transferred_from: 5g-emerge-phase2
 baseline_ref: null
 created_at: 2026-09-24T11:05:00Z
-updated_at: 2026-09-24T11:05:00Z
+updated_at: 2026-09-24T22:48:00Z
 ---
 
 ## Goal
@@ -34,6 +34,49 @@ This item asks for `ki registry remove`, taking `--repo <path>` or a registry ke
 Out of scope: repairing individual stale entries, which is done by hand meanwhile; automatic detection of moved checkouts, which is a larger behaviour and a separate decision; and any change to how `add` derives a key or validates a repository root.
 
 This repository owns the decision. The requesting repository recorded the need and the evidence; it has no authority over this command surface, and the shape proposed above is a suggestion rather than a requirement.
+
+## Current state
+
+Registry parsing and rendering already live in `src/core/storage/local-registry.ts`, while the command layer publishes prepared writes transactionally. The removal path can reuse both boundaries without resolving the selected checkout, which is essential because a stale or missing checkout is a primary removal case.
+
+## Steps
+
+- [ ] Add `ki registry remove <key> [--dry-run]` and the alternative `ki registry --repo <path> remove [--dry-run]`, requiring exactly one selector.
+- [ ] Reject no selector, both selectors, repeated `--repo`, `--agora`, and `--estate`; do not add `--force` or change `add`.
+- [ ] Add a typed core removal operation that strictly reads the whole registry, matches an exact key or stored path without requiring the checkout to exist, removes the complete entry including its source-store binding, and renders a valid empty schema after the final removal.
+- [ ] Publish through the existing transaction boundary and report the removed key, canonical repository identity, and stored path; dry-run reports the same receipt without writing.
+- [ ] Cover stale paths, key and path selection, final-entry removal, source-store bindings, invalid or missing registries, unknown selectors, grammar rejection, dry-run, and publication rollback through the CLI seam.
+- [ ] Align help, completions, manual, specification, guides, README, and changelog.
+
+## Files touched
+
+The registry command and storage modules; registry, inventory, and completion CLI tests; the registry specification; affected user guides and README; `man/ki.1`; `CHANGELOG.md`; this record.
+
+## Verify
+
+Run focused registry, inventory, and completion tests, then the repository test, coverage, TypeScript, Biome, build, manual-lint, and full repository-audit gates. Confirm an entry whose checkout no longer exists can be removed and a failed publication leaves the original registry byte-for-byte intact.
+
+## Dependencies / blocks
+
+No dependency or blocker. Bulk destructive selection and in-place correction remain outside this item.
+
+## Documentation impact
+
+### Decision Records
+
+None. Exact one-of selection and remove-then-add follow existing registry and removal conventions without introducing a new architecture.
+
+### Specifications
+
+Add the exact selector, strict validation, transactional publication, and dry-run behaviour.
+
+### Guides
+
+Document stale-entry recovery as remove then add, and correct any claim that every registry operation uses bulk repository selectors.
+
+### Roadmap
+
+Do not create a follow-up for `--force` unless real use shows remove then add is insufficient.
 
 ## Discussion
 

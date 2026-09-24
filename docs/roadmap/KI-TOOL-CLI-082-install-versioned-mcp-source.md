@@ -10,7 +10,7 @@ blocked_by: []
 baseline_ref: null
 transferred_from: ki-agentic-harness
 created_at: 2026-09-24T07:59:48Z
-updated_at: 2026-09-24T07:59:48Z
+updated_at: 2026-09-24T22:48:00Z
 ---
 
 # KI-TOOL-CLI-082: Install versioned MCP source
@@ -28,6 +28,10 @@ This receiver item owns the product behaviour proposed as `ki manage mcp install
 ## Boundary
 
 Do not publish server packages, create tags or releases, change repository visibility, establish Git credentials, edit live MCP bindings, or advertise the command on the website before it exists. The Harness owns repository readiness, `ki-binding` owns client configuration, and server owners retain release authority.
+
+## Selection note
+
+Excluded from the 2026-09-24 autonomous roadmap batch because one public contract remains unresolved. An omitted version must resolve only through GitHub's latest stable Release marker, including for private repositories, while private acquisition is stated to rely on the operator's existing Git credentials. The current injected fetch and process seams do not provide a settled, secret-safe way to apply Git credentials to the GitHub Releases API, and requiring separate GitHub CLI authentication would change the promised credential model. An explicit-version-only implementation would not deliver the stated goal. This remains Triage until that authentication boundary is chosen.
 
 ## Discussion
 
