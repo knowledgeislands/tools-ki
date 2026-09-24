@@ -10,7 +10,7 @@ blocked_by: []
 transferred_from: ki-website
 baseline_ref: 7a561ec98ea5b2abd63f93e7586f400d19e4525a
 created_at: 2026-09-21T15:44:00Z
-updated_at: 2026-09-22T08:40:00Z
+updated_at: 2026-09-24T09:14:00Z
 ---
 
 ## Goal
@@ -27,7 +27,7 @@ KI Website now declares, for every page it publishes under `apps/site/src/guidan
 
 That is a pull, not an obligation: KI Website derives, it does not own. This repository decides what its guides say and when they change.
 
-Separately, `ki-guides` is being asked to require audience directories under `docs/guides/` rather than permitting a flat collection (`ki-agentic-harness` `KI-HARNESS-GOV-083`). If that lands, this repository's collection has to satisfy it.
+Separately, `KI-HARNESS-GOV-083` has clarified `ki-guides`: audience directories are recommended when stable reader groups make a collection easier to navigate, while flat and mixed collections remain valid. This item therefore stands on this repository's own readers and routing needs, not a universal Harness requirement.
 
 ## Boundary
 
@@ -86,7 +86,7 @@ No source, test, or configuration file changes, so the `bun run test:coverage`, 
 
 ## Dependencies / blocks
 
-Nothing blocks this. `KI-HARNESS-GOV-083` in `ki-agentic-harness` proposes making audience directories a `ki-guides` requirement; this collection already groups by audience, so that change should confirm the arrangement rather than force one.
+Nothing blocks this. `KI-HARNESS-GOV-083` is advisory rather than a universal migration requirement; this collection's existing audience grouping remains a repository-local choice supported by its readers.
 
 `KI-TOOL-CLI-080` owns the machine-readable command inventory. This item defers every exhaustive command listing to it and to `man/ki.1`, and adds no second hand-maintained inventory that would need reconciling later.
 
