@@ -45,7 +45,7 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
   const repoCode = initialisationField(initialisation.repoCode, 'repo-code')
   const visibility = initialisationField(initialisation.visibility, 'visibility')
   const repository = initialisationField(initialisation.repository, 'repository')
-  if (!/^[A-Z][A-Z0-9-]{1,23}$/.test(repoCode))
+  if (!/^[A-Z0-9][A-Z0-9-]{1,23}$/.test(repoCode))
     throw new KiError('ki repo init --repo-code must be a stable uppercase identifier', 2)
   if (!initialisation.supportedRuntimes.length) throw new KiError('ki repo init requires at least one --runtime', 2)
   if (initialisation.supportedRuntimes.includes('codex'))

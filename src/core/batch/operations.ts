@@ -22,7 +22,7 @@ import {
 } from './codec.ts'
 
 const batchDirectory = '+/_BATCHES'
-const batchName = /^([A-Z][A-Z0-9-]*)-BATCH-(\d{3})\.md$/
+const batchName = /^([A-Z0-9][A-Z0-9-]*)-BATCH-(\d{3})\.md$/
 
 export interface PrepareBatchOptions {
   readonly repository?: string
@@ -125,7 +125,7 @@ const resolveBatchRepository = async (
   const identity = declaredRepositoryIdentity(declaration)
   const repoType = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration['repo_type']
   const repoCode = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration['repo_code']
-  if (typeof repoCode !== 'string' || !/^[A-Z][A-Z0-9-]{1,23}$/.test(repoCode))
+  if (typeof repoCode !== 'string' || !/^[A-Z0-9][A-Z0-9-]{1,23}$/.test(repoCode))
     return fail('[skills.ki-repo].repo_code must be a stable uppercase identifier')
   const adapter = declaration.skills.find((skill) => skill.name === 'ki-work')?.configuration['adapter']
   if (adapter !== 'roadmap' && adapter !== 'kb-streams')
@@ -193,7 +193,7 @@ const canonicalRecordPath = async (
   repository: ResolvedBatchRepository,
   recordArgument: string
 ): Promise<{ readonly path: string; readonly relativePath: string }> => {
-  const name = /^[A-Z][A-Z0-9-]*-BATCH-\d{3}$/.test(recordArgument) ? `${recordArgument}.md` : recordArgument
+  const name = /^[A-Z0-9][A-Z0-9-]*-BATCH-\d{3}$/.test(recordArgument) ? `${recordArgument}.md` : recordArgument
   const path = isAbsolute(name)
     ? resolve(name)
     : resolve(repository.root, name.startsWith(`${batchDirectory}/`) ? name : join(batchDirectory, name))

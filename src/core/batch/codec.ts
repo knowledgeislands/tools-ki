@@ -78,8 +78,8 @@ const RETAINED_FIELDS = new Set([
   'closure_item_ids'
 ])
 
-const identifier = /^[A-Z][A-Z0-9-]*-\d{3}$/
-const batchIdentifier = /^[A-Z][A-Z0-9-]*-BATCH-\d{3}$/
+const identifier = /^[A-Z0-9][A-Z0-9-]{1,23}-\d{3,}$/
+const batchIdentifier = /^[A-Z0-9][A-Z0-9-]*-BATCH-\d{3}$/
 const commit = /^[a-f0-9]{40}$/
 const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
 const runLedgerHeading = /^## Run ledger[ \t]*$/m
@@ -165,7 +165,7 @@ const parseCurrentLedger = (
   const sections = body.split(runLedgerHeading)
   if (sections.length === 1) return { runStarted: false, entries: [] }
   const lines = (sections[1] as string).trim().split('\n')
-  const marker = /^<!-- ki-batch-run: ([A-Z][A-Z0-9-]*-RUN-\d{3}) ([a-f0-9]{64}) -->$/.exec(lines[0] as string)
+  const marker = /^<!-- ki-batch-run: ([A-Z0-9][A-Z0-9-]*-RUN-\d{3}) ([a-f0-9]{64}) -->$/.exec(lines[0] as string)
   if (!marker) return fail('run ledger lacks an approval binding')
   if (marker[1] !== `${id}-RUN-001` || marker[2] !== payloadSha256)
     return fail('run ledger binds another approval payload or run')
@@ -174,7 +174,9 @@ const parseCurrentLedger = (
   let closed: BatchCloseEvidence | undefined
   const closeLine = remaining.at(-1)
   const closeMatch =
-    /^<!-- ki-batch-close: [A-Z][A-Z0-9-]*-BATCH-\d{3} (awaiting-review|done) ([a-f0-9]{40}) -->$/.exec(closeLine ?? '')
+    /^<!-- ki-batch-close: [A-Z0-9][A-Z0-9-]*-BATCH-\d{3} (awaiting-review|done) ([a-f0-9]{40}) -->$/.exec(
+      closeLine ?? ''
+    )
   if (closeMatch) {
     const closeValue = closeLine as string
     if (!closeValue.startsWith(`<!-- ki-batch-close: ${id} `)) return fail('close evidence names another batch')
@@ -191,7 +193,7 @@ const parseCurrentLedger = (
 
   const entries = remaining.slice(2).map((line): BatchLedgerEntry => {
     const match =
-      /^\| ([A-Z][A-Z0-9-]*-\d{3}) \| (awaiting-review|done|parked|stopped) \| (`[a-f0-9]{40}`|—) \| (`[a-f0-9]{40}`|—) \| ([^|\r\n]+) \|$/.exec(
+      /^\| ([A-Z0-9][A-Z0-9-]{1,23}-\d{3,}) \| (awaiting-review|done|parked|stopped) \| (`[a-f0-9]{40}`|—) \| (`[a-f0-9]{40}`|—) \| ([^|\r\n]+) \|$/.exec(
         line
       )
     if (!match) return fail(`run ledger row is malformed: ${line}`)
@@ -213,7 +215,7 @@ const parseCurrentLedger = (
 const parseRetainedBinding = (body: string, runId: string, payloadSha256: string): boolean => {
   const sections = body.split(runLedgerHeading)
   if (sections.length === 1) return false
-  const marker = /^<!-- ki-batch-run: ([A-Z][A-Z0-9-]*-RUN-\d{3}) ([a-f0-9]{64}) -->$/m.exec(sections[1] as string)
+  const marker = /^<!-- ki-batch-run: ([A-Z0-9][A-Z0-9-]*-RUN-\d{3}) ([a-f0-9]{64}) -->$/m.exec(sections[1] as string)
   if (!marker) return fail('run ledger lacks an approval binding')
   if (marker[1] !== runId || marker[2] !== payloadSha256)
     return fail('run ledger binds another approval payload or run')

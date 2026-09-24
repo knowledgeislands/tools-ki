@@ -629,6 +629,20 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
   })
 
+  test('accepts a repository code beginning with a digit and a serial beyond three places', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write(
+      'repo/docs/roadmap/5GE-P2-HK-0017-inspect.md',
+      item({ id: '5GE-P2-HK-0017', theme: 'housekeeping' })
+    )
+
+    const result = await box.run('ki repo --repo repo roadmap list')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('5GE-P2-HK-0017 [draft] Inspect governed work')
+  })
+
   test('accepts contract-owned optional frontmatter fields', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')

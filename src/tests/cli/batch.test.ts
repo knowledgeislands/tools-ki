@@ -465,6 +465,14 @@ describe('[ki batch]', () => {
     expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
       'repo_code must be a stable uppercase identifier'
     )
+
+    await box.project.write(
+      'repository/.ki.toml',
+      configuration.replace('repo_code = "EXAMPLE"', 'repo_code = "5GE-P2"')
+    )
+    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).not.toContain(
+      'repo_code must be a stable uppercase identifier'
+    )
   })
 
   test('rejects dependency order, altered authority payloads, unsupported fields, and marker mismatches', async () => {

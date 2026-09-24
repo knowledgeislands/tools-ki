@@ -139,7 +139,7 @@ const readItem = async (
   const contents = await readFile(path, 'utf8')
   const fields = frontmatter(contents, file, adapter)
   const id = fields.id as string
-  if (!/^[A-Z][A-Z0-9-]*-\d{3}$/.test(id) || !file.startsWith(`${id}-`))
+  if (!/^[A-Z0-9][A-Z0-9-]{1,23}-\d{3,}$/.test(id) || !file.startsWith(`${id}-`))
     throw itemError(file, 'must use a matching work-item identifier')
   if (!fields.title || !/^[a-z0-9-]+$/.test(fields.theme as string) || !horizons.has(fields.horizon as WorkItemHorizon))
     throw itemError(file, 'has invalid title, theme, or horizon')

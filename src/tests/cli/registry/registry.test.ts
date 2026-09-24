@@ -229,6 +229,21 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
   await expect(box.project.read('.ki.toml')).rejects.toThrow()
 })
 
+test('accepts a repository code beginning with a digit', async () => {
+  const box = await sandbox()
+  await box.config.write('ki/config.toml', localConfiguration)
+  box.setRunner(async () => ({ exitCode: 1, output: 'not a repository' }))
+
+  const numericCode = await box.run(
+    'ki repo init --title title --description description --repo-code 5GE-P2 --runtime chatgpt-codex --visibility private --repository https://github.com/example/project'
+  )
+
+  expect(numericCode).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki repo init target must be an existing Git repository\n'
+  })
+})
+
 test('initializes a public repository without rewriting an existing local registry entry', async () => {
   const box = await sandbox()
   const repository = await box.root.mkdir('registered-repository')
