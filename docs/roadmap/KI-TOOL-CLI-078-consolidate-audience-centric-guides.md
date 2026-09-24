@@ -4,13 +4,13 @@ title: Consolidate audience-centric guides
 area: CLI
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 transferred_from: ki-website
 baseline_ref: 7a561ec98ea5b2abd63f93e7586f400d19e4525a
 created_at: 2026-09-21T15:44:00Z
-updated_at: 2026-09-24T09:14:00Z
+updated_at: 2026-09-24T23:41:21Z
 ---
 
 ## Goal
@@ -174,6 +174,10 @@ Verified with `ki-guides`, `ki-authoring`, `ki-work-roadmap`, and the full 18-sk
 Concerns are the unspecified ChatGPT capture behaviour and the fifth guide as an additive deviation.
 
 Proposed learning route, not promoted: the failure mode worth remembering is a repository deferring its own operating procedures to a site that derives from it, which reads as documented until the reader follows the link.
+
+## Done
+
+Accepted on 2026-09-25 under the current human outcome authority after review of the delivery packet and verification evidence. The completed record is retained pending separate pruning authority.
 
 ## Discussion
 

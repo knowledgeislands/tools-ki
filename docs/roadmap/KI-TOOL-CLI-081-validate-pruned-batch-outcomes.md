@@ -4,13 +4,13 @@ area: CLI
 title: Validate pruned batch outcomes
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 transferred_from: ki-agentic-harness
 baseline_ref: 48a45861f153816efba5dbc66fda088fa99364cf
 created_at: 2026-09-22T05:36:21Z
-updated_at: 2026-09-24T23:18:50Z
+updated_at: 2026-09-24T23:41:21Z
 ---
 
 ## Goal
@@ -94,6 +94,10 @@ Historical validation performs no checkout or worktree write and fails closed on
 ### Mini recap
 
 Closed batch outcomes remain verifiable after canonical work records are pruned.
+
+## Done
+
+Accepted on 2026-09-25 under the approval-bound `KI-TOOL-BATCH-001` outcome authority after review of the delivery packet and verification evidence. The completed record is retained pending separate pruning authority.
 
 ## Discussion
 

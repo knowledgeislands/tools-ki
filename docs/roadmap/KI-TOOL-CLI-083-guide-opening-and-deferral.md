@@ -4,13 +4,13 @@ title: Guide opening and deferral
 area: CLI
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 transferred_from: ki-website
 baseline_ref: 48a45861f153816efba5dbc66fda088fa99364cf
 created_at: 2026-09-24T08:45:00Z
-updated_at: 2026-09-24T23:18:50Z
+updated_at: 2026-09-24T23:41:21Z
 ---
 
 ## Goal
@@ -106,6 +106,10 @@ The rule remains a human review judgment rather than a brittle prose heuristic.
 ### Mini recap
 
 Guide openings now state what readers can accomplish and links no longer substitute for missing explanation.
+
+## Done
+
+Accepted on 2026-09-25 under the approval-bound `KI-TOOL-BATCH-001` outcome authority after review of the delivery packet and verification evidence. The completed record is retained pending separate pruning authority.
 
 ## Discussion
 
