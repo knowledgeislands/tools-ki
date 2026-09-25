@@ -38,6 +38,36 @@ Each prints completion source derived from the registered command tree to standa
 
 Closed values such as roadmap horizons and statuses complete locally. Path-bearing repository selectors, capture directories, and output directories delegate to the shell's own path completion, and opaque identifiers stay user-entered. Completions never invoke `ki`, consult a network, or invent an identifier.
 
+## Install an MCP source release
+
+Install and activate a governed MCP server source from its GitHub repository:
+
+```sh
+ki manage mcp install owner/repository
+ki manage mcp install owner/repository 1.2.3
+ki manage mcp list owner/repository
+```
+
+An omitted version resolves the repository owner's latest stable GitHub Release. An explicit version selects only its exact annotated `v<SemVer>` tag. For a private repository, authenticate GitHub CLI first, then opt in deliberately:
+
+```sh
+gh auth login
+ki manage mcp install owner/private-repository --auth github-cli
+```
+
+KI does not read or persist the GitHub token. It verifies the repository origin, annotated tag and full commit, KI declaration, package version, build entry point, build script, and committed Bun lockfile. It installs dependencies in frozen mode, builds in staging, writes a provenance receipt, and changes the active version only after every check passes.
+
+Update, inspect, roll back, or remove the source with:
+
+```sh
+ki manage mcp update owner/repository
+ki manage mcp list owner/repository --format json
+ki manage mcp rollback owner/repository 1.2.3
+ki manage mcp uninstall owner/repository
+```
+
+Complete versions remain available for rollback until uninstall. Rollback performs no fetch, dependency installation, or build. These commands manage source installations below `$KI_DATA_HOME/mcp/`; they do not bind the MCP server to ChatGPT, an editor, or another client.
+
 ## Diagnose
 
 ```sh

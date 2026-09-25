@@ -4,13 +4,13 @@ area: CLI
 title: Install versioned MCP source
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: a540798331a18c6a888895db4c792c8e25e1097f
 transferred_from: ki-agentic-harness
 created_at: 2026-09-24T07:59:48Z
-updated_at: 2026-09-24T23:59:32Z
+updated_at: 2026-09-25T00:31:19Z
 ---
 
 # KI-TOOL-CLI-082: Install versioned MCP source
@@ -39,13 +39,13 @@ The installation root is `$KI_DATA_HOME/mcp/<owner>/<repository>/`. Complete bui
 
 ## Steps
 
-- [ ] Add `ki manage mcp install <owner/repository> [version] [--auth github-cli]`, `update <owner/repository> [version] [--auth github-cli]`, `rollback <owner/repository> <version>`, `uninstall <owner/repository>`, and `list [owner/repository] [--format text|json]`.
-- [ ] Resolve an explicit SemVer only as its exact `v<SemVer>` annotated tag. Resolve an omitted version only from the latest stable GitHub Release marker, using the public API by default or `gh api` under explicit `--auth github-cli`, without exposing credentials.
-- [ ] Clone the selected tag into same-filesystem staging, verify canonical GitHub origin, annotated tag and peeled full commit, `[skills.ki-repo-mcp]`, matching package version, governed entry point, build script, and committed Bun lockfile.
-- [ ] Run `bun install --frozen-lockfile` and the governed build, verify `dist/mcp-server/index.js`, write a schema-one provenance receipt, promote the complete version, and atomically activate it only after every check succeeds.
-- [ ] Make update require an existing installation, rollback select a complete retained receipt without network or build, uninstall validate and remove the whole exact repository installation, and list expose active and retained versions without binding clients.
-- [ ] Cover public and private latest resolution, exact versions, validation failures, failed build rollback, idempotence, activation, rollback, uninstall, receipts, list output, grammar, completion, and inventory through the CLI seam.
-- [ ] Align specification, user guide, README, manual, command inventory, completion, and changelog.
+- [x] Add `ki manage mcp install <owner/repository> [version] [--auth github-cli]`, `update <owner/repository> [version] [--auth github-cli]`, `rollback <owner/repository> <version>`, `uninstall <owner/repository>`, and `list [owner/repository] [--format text|json]`.
+- [x] Resolve an explicit SemVer only as its exact `v<SemVer>` annotated tag. Resolve an omitted version only from the latest stable GitHub Release marker, using the public API by default or `gh api` under explicit `--auth github-cli`, without exposing credentials.
+- [x] Clone the selected tag into same-filesystem staging, verify canonical GitHub origin, annotated tag and peeled full commit, `[skills.ki-repo-mcp]`, matching package version, governed entry point, build script, and committed Bun lockfile.
+- [x] Run `bun install --frozen-lockfile` and the governed build, verify `dist/mcp-server/index.js`, write a schema-one provenance receipt, promote the complete version, and atomically activate it only after every check succeeds.
+- [x] Make update require an existing installation, rollback select a complete retained receipt without network or build, uninstall validate and remove the whole exact repository installation, and list expose active and retained versions without binding clients.
+- [x] Cover public and private latest resolution, exact versions, validation failures, failed build rollback, idempotence, activation, rollback, uninstall, receipts, list output, grammar, completion, and inventory through the CLI seam.
+- [x] Align specification, user guide, README, manual, command inventory, completion, and changelog.
 
 ## Files touched
 
@@ -84,6 +84,32 @@ Document source installation lifecycle, paths, authentication preconditions, ret
 
 Record delivery evidence and the exact authentication resolution in this item.
 
+## Review
+
+### Delivered
+
+Implemented the complete versioned MCP source lifecycle under `ki manage mcp`, including public and authenticated private acquisition, exact-release verification, locked builds, immutable provenance, atomic activation, retained rollback, inventory, and uninstall.
+
+### Change Summary
+
+Added the command and core MCP boundaries, exhaustive CLI contract coverage, generated command inventory entries, and aligned specification, guide, README, manual, completion, and changelog surfaces.
+
+### Verification
+
+Focused MCP, completion, and inventory tests pass. TypeScript, Biome, Knip, manual lint, generated inventory, applicable repository audits, and the full 883-test coverage suite pass with 100% statements, branches, functions, and lines.
+
+### Outstanding concerns
+
+None. Client binding remains deliberately outside this source-installation boundary.
+
+### Post-change review
+
+Delegated review identified private clone transport and failed-first-install cleanup gaps; both were corrected and covered. It also prompted stricter canonical SemVer validation. The apparent receipt active-state gap was resolved by clarifying the designed split between immutable per-version provenance and the atomic active-selection link.
+
+### Mini recap
+
+CLI-082 is implemented and verified from immutable baseline `a540798331a18c6a888895db4c792c8e25e1097f`; the work record now awaits human review.
+
 ## Discussion
 
 ### Installation lifecycle
@@ -92,7 +118,7 @@ Resolve the selected tag and full commit before building. Stage outside a workin
 
 ### Provenance
 
-Retain a versioned machine-readable receipt containing repository identity, tag, full commit, package version, entry point, installation time, schema version, and active state. Updates and rollbacks select complete installations rather than mutate an active directory in place.
+Retain an immutable versioned machine-readable receipt containing repository identity, tag, full commit, package version, entry point, installation time, schema version, and acquisition mode. The atomic relative `active` link records selection; the list projection combines it with receipts to expose active state. Updates and rollbacks select complete installations rather than mutate an active directory in place.
 
 ### Resolved product decisions
 

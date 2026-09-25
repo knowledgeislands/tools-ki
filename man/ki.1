@@ -64,6 +64,21 @@ Print canonical KI documentation locations.
 List verified installed harnesses and capabilities with declared user skills and
 local registered repositories.
 .TP
+.B ki manage mcp install <owner/repository> [version] [--auth github-cli]
+Install and activate one verified MCP source release.
+.TP
+.B ki manage mcp update <owner/repository> [version] [--auth github-cli]
+Build and activate a newer verified MCP source release.
+.TP
+.B ki manage mcp rollback <owner/repository> <version>
+Activate one retained complete MCP source version.
+.TP
+.B ki manage mcp uninstall <owner/repository>
+Remove one validated MCP source installation and its retained versions.
+.TP
+.B ki manage mcp list [owner/repository] [--format text|json]
+List active and retained MCP source versions.
+.TP
 .B ki manage vscode check
 Report local VS Code projection drift.
 .TP
@@ -483,6 +498,43 @@ Any other topic is invalid command grammar.
 List verified installed harnesses and their capabilities with declared user
 skills and local registered repositories. The command does not fetch, discover a
 repository, or change state.
+.TP
+.B ki manage mcp install <owner/repository> [version] [--auth github-cli]
+Install and activate one governed MCP server source release from GitHub. An
+explicit version selects only its exact annotated
+.B v<SemVer>
+tag. With no version, public access resolves the latest stable GitHub Release
+without authentication. Private access requires deliberate
+.BR --auth github-cli ,
+which uses the existing GitHub CLI session for release lookup and clone. KI
+never reads, persists, or displays its credential.
+.TP
+.B ki manage mcp update <owner/repository> [version] [--auth github-cli]
+Require an existing source installation, build the selected release in
+same-filesystem staging, and atomically activate it only after provenance,
+locked dependency installation, build, and entry-point verification succeed.
+Failure leaves the prior active version unchanged. When authentication is not
+specified, update retains the active installation's recorded mode.
+.TP
+.B ki manage mcp rollback <owner/repository> <version>
+Activate one retained complete source version without network access,
+dependency installation, or build execution.
+.TP
+.B ki manage mcp uninstall <owner/repository>
+Validate and remove exactly one source installation, including every retained
+version. This command does not alter MCP client bindings.
+.TP
+.B ki manage mcp list [owner/repository] [--format text|json]
+List active and retained source versions deterministically. Text marks the
+active version with
+.BR * .
+JSON emits the versioned, path-free
+.B ki/mcp-sources/v1
+projection with repository, tag, full commit, package version, entry point,
+installation time, authentication mode, and active state. Source installations
+live below
+.BR $KI_DATA_HOME/mcp/ ;
+complete versions remain available until explicit uninstall.
 .TP
 .B ki manage vscode check
 Compare chezmoi-managed VS Code workspaces and trusted-folder source state with

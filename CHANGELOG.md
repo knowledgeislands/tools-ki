@@ -40,6 +40,11 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki manage repair`
 - `ki manage docs`
 - `ki manage list`
+- `ki manage mcp install <owner/repository> [version] [--auth github-cli]`
+- `ki manage mcp update <owner/repository> [version] [--auth github-cli]`
+- `ki manage mcp rollback <owner/repository> <version>`
+- `ki manage mcp uninstall <owner/repository>`
+- `ki manage mcp list [owner/repository] [--format text|json]`
 - `ki manage search`
 - `ki manage vscode check`
 - `ki manage vscode sync [--write]`

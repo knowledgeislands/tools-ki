@@ -24,6 +24,7 @@ const manageCommands = [
   'docs',
   'doctor',
   'list',
+  'mcp',
   'missing',
   'outdated',
   'repair',

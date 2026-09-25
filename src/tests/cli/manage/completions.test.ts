@@ -49,6 +49,12 @@ const commandPaths = [
   'manage docs',
   'manage doctor',
   'manage list',
+  'manage mcp',
+  'manage mcp install',
+  'manage mcp list',
+  'manage mcp rollback',
+  'manage mcp uninstall',
+  'manage mcp update',
   'manage missing',
   'manage outdated',
   'manage repair',
@@ -158,6 +164,8 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain('--aggregate:render one selected-set roadmap inventory')
     expect(zsh.output).toContain('stats:report roadmap age and inactivity')
     expect(bash.output).toContain("'repo roadmap stats:--format')")
+    expect(bash.output).toContain("'manage mcp install:--auth') printf '%s\\n' 'github-cli'")
+    expect(bash.output).toContain("'manage mcp list:--format') printf '%s\\n' 'text json'")
     expect(bash.output).toContain("'acquire import:--output')")
     expect(bash.output).toContain("'-V --version -h --help'")
     expect(bash.output).toContain('compgen -f')
@@ -177,6 +185,7 @@ describe('[ki manage completion]', () => {
       expect(output).toContain("'registry add:--sources') printf '%s\\n' 'path'")
       expect(output).toContain("'acquire import:--capture') printf '%s\\n' 'path'")
       expect(output).toContain("'manage docs:0') printf '%s\\n' 'overview site manual roadmap'")
+      expect(output).toContain("'manage mcp update:--auth') printf '%s\\n' 'github-cli'")
       expect(output).toContain("'trade prepare:--observation') printf '%s\\n' 'unattended receipt decision completion'")
       expect(output).toContain("'trade prepare:--title') printf '%s\\n' ''")
       expect(output).toContain("'trade standing capture:--capture')")

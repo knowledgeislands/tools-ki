@@ -155,6 +155,18 @@ Creation, shaping, readiness, implementation, acceptance, and completion remain 
 
 `ki repo roadmap list` includes that record context for each selected repository, so planning work and incoming or outgoing trades can be scanned together without changing either lifecycle. If the local registered trade estate cannot be read, it reports that context as unavailable and exits with status `1` after rendering the inventory.
 
+## Install MCP source releases
+
+Install a governed MCP server source from an exact annotated release, or omit the version to select its latest stable GitHub Release:
+
+```sh
+ki manage mcp install owner/repository 1.2.3
+ki manage mcp install owner/repository
+ki manage mcp list owner/repository
+```
+
+Use explicit `--auth github-cli` for private repositories. KI verifies and builds the release into a versioned local installation, records path-free provenance, and atomically activates it. Updates retain complete prior versions for offline rollback; uninstall removes the source installation. Client binding remains a separate operation. See [the local installation guide](docs/guides/user/local-installation.md) for authentication, update, rollback, and recovery details.
+
 ## Install
 
 After the first immutable release, download `install.sh` from an exact released tag, inspect it, then run it with that tag:

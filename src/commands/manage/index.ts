@@ -6,6 +6,7 @@ import { createDiagCommand } from './diag.ts'
 import { createDocsCommand } from './docs.ts'
 import { createDoctorCommand } from './doctor.ts'
 import { createListCommand } from './list.ts'
+import { createMcpCommand } from './mcp.ts'
 import { createMissingCommand } from './missing.ts'
 import { createOutdatedCommand } from './outdated.ts'
 import { createRepairCommand } from './repair.ts'
@@ -22,6 +23,7 @@ export const createManageCommand = (context: KiContext): Command =>
     .addCommand(createDocsCommand(context))
     .addCommand(createDoctorCommand(context))
     .addCommand(createListCommand(context))
+    .addCommand(createMcpCommand(context))
     .addCommand(createMissingCommand(context))
     .addCommand(createOutdatedCommand(context))
     .addCommand(createRepairCommand(context))

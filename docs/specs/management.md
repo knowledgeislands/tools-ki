@@ -138,6 +138,48 @@ _Verify:_ `src/tests/cli/manage/vscode.test.ts` — `previews then creates and a
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+## MCP source releases
+
+### MANAGE-014 — Exact governed source provenance
+
+`ki manage mcp install` MUST accept a lower-case GitHub `owner/repository`, resolve an explicit SemVer only through its exact annotated `v<SemVer>` tag, verify the tag's full commit and governed MCP repository evidence, and persist a versioned provenance receipt without credentials or host paths.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/manage/mcp.test.ts` — `installs an exact source release and exposes path-free provenance` and `rejects invalid latest-release responses and source evidence`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### MANAGE-015 — Deliberate latest-release authentication
+
+When the version is omitted, MCP source installation and update MUST resolve only the latest stable GitHub Release. Public resolution MUST be unauthenticated; private resolution MUST require explicit `--auth github-cli`, use the existing GitHub CLI session, and neither read, persist, nor display a credential.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/manage/mcp.test.ts` — `updates from the latest stable release, rolls back without execution, and uninstalls` and `uses explicit GitHub CLI authentication without leaking command output`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### MANAGE-016 — Failure-atomic activation and retained rollback
+
+MCP source install and update MUST build from a committed Bun lockfile in same-filesystem staging and atomically activate only a complete verified build. A failure MUST preserve the prior active version. Rollback MUST activate a retained complete installation without network access or execution, and uninstall MUST remove only the validated exact repository installation.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/manage/mcp.test.ts` — `preserves the active version when a replacement build fails` and `updates from the latest stable release, rolls back without execution, and uninstalls`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### MANAGE-017 — Inspectable source inventory
+
+`ki manage mcp list` MUST expose active and retained versions deterministically as text or versioned path-free JSON. Installing, updating, rolling back, listing, or uninstalling a source MUST NOT modify any MCP client binding.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/manage/mcp.test.ts` — `installs an exact source release and exposes path-free provenance` and `updates from the latest stable release, rolls back without execution, and uninstalls`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.
