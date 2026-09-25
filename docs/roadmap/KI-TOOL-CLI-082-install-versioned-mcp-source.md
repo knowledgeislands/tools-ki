@@ -3,14 +3,14 @@ id: KI-TOOL-CLI-082
 area: CLI
 title: Install versioned MCP source
 theme: cli
-horizon: triage
-status: draft
+horizon: next
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 transferred_from: ki-agentic-harness
 created_at: 2026-09-24T07:59:48Z
-updated_at: 2026-09-24T22:48:00Z
+updated_at: 2026-09-24T23:59:32Z
 ---
 
 # KI-TOOL-CLI-082: Install versioned MCP source
@@ -29,9 +29,60 @@ This receiver item owns the product behaviour proposed as `ki manage mcp install
 
 Do not publish server packages, create tags or releases, change repository visibility, establish Git credentials, edit live MCP bindings, or advertise the command on the website before it exists. The Harness owns repository readiness, `ki-binding` owns client configuration, and server owners retain release authority.
 
-## Selection note
+## Current state
 
-Excluded from the 2026-09-24 autonomous roadmap batch because one public contract remains unresolved. An omitted version must resolve only through GitHub's latest stable Release marker, including for private repositories, while private acquisition is stated to rely on the operator's existing Git credentials. The current injected fetch and process seams do not provide a settled, secret-safe way to apply Git credentials to the GitHub Releases API, and requiring separate GitHub CLI authentication would change the promised credential model. An explicit-version-only implementation would not deliver the stated goal. This remains Triage until that authentication boundary is chosen.
+The 2026-09-24 autonomous roadmap batch excluded this item because private latest-Release lookup had no settled secret-safe authentication boundary. An explicit-version-only implementation would not have delivered the stated goal.
+
+The authentication question is now resolved for delivery: unauthenticated GitHub Release lookup and Git clone serve public repositories; explicit `--auth github-cli` uses `gh api` and `gh repo clone` for private repositories. Never read or persist a token.
+
+The installation root is `$KI_DATA_HOME/mcp/<owner>/<repository>/`. Complete builds live below `versions/<tag>-<commit>/`, each with `receipt.json`; `active` is an atomically replaced relative symbolic link. Complete versions remain available for rollback until explicit uninstall, with no automatic garbage collection.
+
+## Steps
+
+- [ ] Add `ki manage mcp install <owner/repository> [version] [--auth github-cli]`, `update <owner/repository> [version] [--auth github-cli]`, `rollback <owner/repository> <version>`, `uninstall <owner/repository>`, and `list [owner/repository] [--format text|json]`.
+- [ ] Resolve an explicit SemVer only as its exact `v<SemVer>` annotated tag. Resolve an omitted version only from the latest stable GitHub Release marker, using the public API by default or `gh api` under explicit `--auth github-cli`, without exposing credentials.
+- [ ] Clone the selected tag into same-filesystem staging, verify canonical GitHub origin, annotated tag and peeled full commit, `[skills.ki-repo-mcp]`, matching package version, governed entry point, build script, and committed Bun lockfile.
+- [ ] Run `bun install --frozen-lockfile` and the governed build, verify `dist/mcp-server/index.js`, write a schema-one provenance receipt, promote the complete version, and atomically activate it only after every check succeeds.
+- [ ] Make update require an existing installation, rollback select a complete retained receipt without network or build, uninstall validate and remove the whole exact repository installation, and list expose active and retained versions without binding clients.
+- [ ] Cover public and private latest resolution, exact versions, validation failures, failed build rollback, idempotence, activation, rollback, uninstall, receipts, list output, grammar, completion, and inventory through the CLI seam.
+- [ ] Align specification, user guide, README, manual, command inventory, completion, and changelog.
+
+## Files touched
+
+- `src/commands/manage/`, `src/core/mcp/`, and their public indexes
+- `src/tests/cli/manage/mcp.test.ts` plus completion and inventory contracts
+- `docs/specs/management.md`, `docs/guides/user/local-installation.md`, `README.md`, `man/ki.1`, `man/ki.commands.json`, and `CHANGELOG.md`
+
+## Verify
+
+- Focused MCP lifecycle, completion, and inventory tests pass.
+- `bunx tsc --noEmit`, `bunx biome check`, `bunx knip`, `bun run test:coverage`, manual lint, generated command inventory check, and applicable repository audits pass.
+
+## Dependencies / blocks
+
+No local work-item dependency blocks execution. Public latest lookup requires GitHub availability; private access requires `--auth github-cli` and an authenticated `gh` session; source checkout and build require `git` or `gh`, plus `bun`. Missing external tools or authentication fail before activation and preserve the prior active version.
+
+## Delegation
+
+Delegate bounded reconnaissance of existing acquisition and authentication seams. Keep lifecycle design, integration, filesystem mutation, verification, and final review with the primary agent because the implementation is one tightly coupled atomic-install boundary.
+
+## Documentation impact
+
+### Decision Records
+
+No new decision record. The installation model follows `GDR-KI-HARNESS-011`; the private latest fallback implements the repository's existing GitHub CLI authentication boundary.
+
+### Specifications
+
+Add observable install, update, rollback, uninstall, list, provenance, and failure-atomicity requirements to the management specification.
+
+### Guides
+
+Document source installation lifecycle, paths, authentication preconditions, retained rollback versions, and the separation from client binding.
+
+### Roadmap
+
+Record delivery evidence and the exact authentication resolution in this item.
 
 ## Discussion
 
@@ -43,6 +94,6 @@ Resolve the selected tag and full commit before building. Stage outside a workin
 
 Retain a versioned machine-readable receipt containing repository identity, tag, full commit, package version, entry point, installation time, schema version, and active state. Updates and rollbacks select complete installations rather than mutate an active directory in place.
 
-### Product decisions still to shape
+### Resolved product decisions
 
-Planning must choose the XDG data layout, command and flag surface, stable-release lookup mechanism, Git checkout or archive strategy, receipt schema, garbage-collection rules, recovery behaviour, and how install state is exposed to binding workflows. Those choices belong here rather than in the Harness contract.
+The shaped plan fixes the XDG data layout, command surface, stable-release lookup and private fallback, Git checkout strategy, schema-one receipt, retained-version policy, atomic recovery boundary, and path-free list projection. Client binding remains separately owned by `ki-binding`.
