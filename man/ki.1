@@ -84,9 +84,6 @@ Report local VS Code projection drift.
 .TP
 .B ki manage vscode sync [--write]
 Preview or publish local VS Code projection changes.
-.TP
-.B ki manage vscode source create <repository> [--write]
-Preview or create and associate an opt-in repository source store.
 .SS User management
 \&
 .TP
@@ -118,7 +115,19 @@ and register its physical root in the machine-local registry.
 .TP
 .B ki repo [repo-options] open --target <zed|vscode> [--stores|--no-stores]
 Open selected canonical repositories and, by default, their locally registered
-Knowledge Base source stores.
+Knowledge Base external stores.
+.TP
+.B ki repo [repo-options] store list [--format <text|json>]
+List declared repository stores and their machine-local bindings.
+.TP
+.B ki repo [repo-options] store create sources [--write]
+Preview or create and bind the managed source-store location.
+.TP
+.B ki repo [repo-options] store bind <sources|legacy> <absolute-path> [--write]
+Preview or bind one declared external store.
+.TP
+.B ki repo [repo-options] store unbind <sources|legacy> [--write]
+Preview or remove one binding without deleting store content.
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run registered native repository audits.
@@ -184,7 +193,7 @@ not accept work.
 .SS Registry management
 \&
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--sources <absolute-path>]
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run]
 Record selected canonical KI repository roots in the machine-local registry
 without applying repository repairs.
 .TP
@@ -538,21 +547,16 @@ complete versions remain available until explicit uninstall.
 .TP
 .B ki manage vscode check
 Compare chezmoi-managed VS Code workspaces and trusted-folder source state with
-the local KI repository registry. Report a source diff and exit non-zero when
-drift exists. This command never writes.
+the local KI repository registry. Explicit sources bindings join their notes
+workspace and trusted-client projection; legacy bindings and unbound directories
+are ignored. Report a source diff and exit non-zero when drift exists. This
+command never writes.
 .TP
 .B ki manage vscode sync [--write]
 Preview the same reconciliation. With
 .BR --write ,
 publish the reviewed changes to chezmoi source state. This command never runs
 .BR "chezmoi apply" .
-.TP
-.B ki manage vscode source create <repository> [--write]
-Preview creation and workspace association of an opt-in OneDrive source store
-for one registered repository basename or absolute path. With
-.BR --write ,
-create the directory and publish corresponding chezmoi source-state changes.
-Ambiguous repository or legacy source-store matches fail closed.
 .SS User management
 \&
 .PP
@@ -618,11 +622,11 @@ Agora, accepts repository selectors, or overwrites an existing
 .TP
 .B ki repo [repo-options] open --target <zed|vscode> [--stores|--no-stores]
 Open every selected canonical repository in the requested local target. By
-default, a Knowledge Base that declares the \fBsources\fR store role opens its
-notes root followed by its locally registered sources root. The sources binding
-must be a direct directory recorded with the canonical repository; it is never
-made an estate member or Agora participant. \fB--no-stores\fR opens canonical
-notes roots only, while \fB--stores\fR makes the default explicit.
+default, a Knowledge Base opens its notes root followed by every declared,
+locally bound external store in declaration order. Each binding must be a direct
+directory recorded with the canonical repository; it is never made an estate
+member or Agora participant. \fB--no-stores\fR opens canonical notes roots only,
+while \fB--stores\fR makes the default explicit.
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run the native read-only operations registered by each selected repository's
@@ -729,6 +733,27 @@ errors. The command changes only the item's horizon frontmatter; moving to
 .BR future
 adds its required candidate marker.
 .TP
+.B ki repo [repo-options] store list [--format <text|json>]
+List every store role declared by selected Knowledge Bases. The \fBnotes\fR role
+is the repository root; external roles show their explicit machine-local path
+or unbound state. JSON emits the versioned
+\fBki/repository-stores/v1\fR contract.
+.TP
+.B ki repo [repo-options] store create sources [--write]
+Preview the conventional opt-in OneDrive
+\fBsources-<repository-basename>\fR directory and registry binding. With
+\fB--write\fR, create and bind it. Automatic creation is unavailable for
+\fBlegacy\fR.
+.TP
+.B ki repo [repo-options] store bind <sources|legacy> <absolute-path> [--write]
+Preview an explicit binding for one declared external store. The path must be
+an existing absolute direct directory. With \fB--write\fR, publish the binding
+to the machine-local registry.
+.TP
+.B ki repo [repo-options] store unbind <sources|legacy> [--write]
+Preview removal of one declared external-store binding. With \fB--write\fR,
+publish the registry change without deleting or modifying store content.
+.TP
 .B ki repo [repo-options] educate [--skill <skill>]
 Explain each selected repository's declared capabilities and their recommended
 maintenance actions without changing repository state.
@@ -790,7 +815,7 @@ repository-operation or conformance verdict. The repository key names each
 record; each record holds a canonical HTTPS GitHub repository identity and
 physical checkout path.
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--sources <absolute-path>]
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run]
 Record selected canonical KI repository roots in
 \fB$XDG_STATE_HOME/ki/registry.toml\fR without applying repository repairs.
 This explicit inventory action validates the selected root's declared canonical

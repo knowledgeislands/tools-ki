@@ -1,4 +1,4 @@
-import { lstat, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
@@ -37,29 +37,36 @@ supported_runtimes = ["claude-code"]
 visibility = "private"
 `
 
-const registry = (repositories: readonly { readonly key: string; readonly path: string }[]): string =>
+interface RegisteredRepository {
+  readonly key: string
+  readonly path: string
+  readonly sources?: string
+  readonly legacy?: string
+}
+
+const registry = (repositories: readonly RegisteredRepository[]): string =>
   [
     'schema = 1',
     ...repositories.flatMap((repository) => [
       '',
       `[repositories.${JSON.stringify(repository.key)}]`,
       `repository = "https://github.com/example/${repository.key}"`,
-      `path = ${JSON.stringify(repository.path)}`
+      `path = ${JSON.stringify(repository.path)}`,
+      ...(repository.sources || repository.legacy
+        ? [
+            '',
+            `[repositories.${JSON.stringify(repository.key)}.stores]`,
+            ...(repository.sources ? [`sources = ${JSON.stringify(repository.sources)}`] : []),
+            ...(repository.legacy ? [`legacy = ${JSON.stringify(repository.legacy)}`] : [])
+          ]
+        : [])
     ]),
     ''
   ].join('\n')
 
-const prepare = async (
-  names: readonly string[]
-): Promise<{
-  readonly box: Box
-  readonly repositories: readonly string[]
-  readonly sourceRoot: string
-  readonly oneDriveRoot: string
-}> => {
+const prepare = async (names: readonly string[]) => {
   const box = await sandbox()
   const sourceRoot = await box.root.mkdir('chezmoi-source')
-  const oneDriveRoot = await box.home.mkdir('Library/CloudStorage/OneDrive-Personal')
   const repositories: string[] = []
   for (const name of names) {
     const path = await box.root.mkdir(`repositories/${name}`)
@@ -70,28 +77,23 @@ const prepare = async (
   await box.root.mkdir('chezmoi-source/workspaces/vscode')
   await box.root.write('chezmoi-source/.chezmoidata/trusted-folders.yaml', '# Test inventory\ntrustedFolders:\n')
   setChezmoiRunner(box, sourceRoot)
-  return { box, repositories, sourceRoot, oneDriveRoot }
+  return { box, repositories, sourceRoot }
 }
 
 describe('ki manage vscode', () => {
-  test('exposes explicit check, sync and source-store commands', async () => {
+  test('exposes only projection check and sync commands', async () => {
     const box = await sandbox()
     const help = await box.run('ki manage vscode --help')
-    const source = await box.run('ki manage vscode source create --help')
 
     expect(help.exitCode).toBe(0)
     expect(help.output).toContain('check')
     expect(help.output).toContain('sync')
-    expect(help.output).toContain('source')
-    expect(source.output).toContain('<repository>')
-    expect(source.output).toContain('--write')
+    expect((await box.run('ki manage vscode source create alpha')).exitCode).toBe(2)
   })
 
-  test('synchronises missing workspaces and runtime-scoped trusted folders', async () => {
+  test('synchronises repository roots and runtime-scoped trusted folders', async () => {
     const { box, repositories, sourceRoot } = await prepare(['er-research'])
-    const preview = await box.run('ki manage vscode check')
-    expect(preview.exitCode).toBe(1)
-    expect(preview.output).toContain('drift: rerun as ki manage vscode sync --write')
+    expect((await box.run('ki manage vscode check')).exitCode).toBe(1)
     expect((await box.run('ki manage vscode sync')).exitCode).toBe(1)
 
     const result = await box.run('ki manage vscode sync --write')
@@ -106,38 +108,33 @@ describe('ki manage vscode', () => {
     expect((await box.run('ki manage vscode check')).exitCode).toBe(0)
   })
 
-  test('previews then creates and associates an opt-in source store', async () => {
-    const { box, repositories, sourceRoot, oneDriveRoot } = await prepare(['mcp-acquire-whatsapp'])
-    const source = `${oneDriveRoot}/sources-mcp-acquire-whatsapp`
-
-    const preview = await box.run('ki manage vscode source create mcp-acquire-whatsapp')
-    expect(preview.exitCode).toBe(1)
-    expect(preview.output).toContain(`would create source store: ${source}`)
-    expect(await lstat(source).catch(() => undefined)).toBeUndefined()
-
-    const result = await box.run('ki manage vscode source create mcp-acquire-whatsapp --write')
-    expect(result.exitCode).toBe(0)
-    expect((await lstat(source)).isDirectory()).toBe(true)
-    expect(
-      JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/kis-mcp-acquire-whatsapp.code-workspace`, 'utf8'))
-    ).toEqual({ folders: [{ path: repositories[0] }, { path: source }] })
-    expect((await box.run('ki manage vscode source create mcp-acquire-whatsapp')).exitCode).toBe(0)
-    expect(
-      (await box.run(['ki', 'manage', 'vscode', 'source', 'create', repositories[0] as string, '--write'])).exitCode
-    ).toBe(0)
-  })
-
-  test('fails closed when a legacy source suffix matches multiple repositories', async () => {
-    const { box, sourceRoot, oneDriveRoot } = await prepare(['mcp-acquire-whatsapp', 'tools-acquire-whatsapp'])
-    await box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-acquire-whatsapp')
-
-    const result = await box.run('ki manage vscode sync --write')
-    expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('ambiguous matches')
-    expect(await readFile(`${sourceRoot}/.chezmoidata/trusted-folders.yaml`, 'utf8')).toBe(
-      '# Test inventory\ntrustedFolders:\n'
+  test('consumes explicit sources bindings and ignores legacy and unbound directories', async () => {
+    const { box, repositories, sourceRoot } = await prepare(['knowledge'])
+    const sources = await box.root.mkdir('stores/sources')
+    const legacy = await box.root.mkdir('stores/legacy')
+    const unbound = await box.root.mkdir('stores/sources-unregistered')
+    await box.state.write(
+      'ki/registry.toml',
+      registry([{ key: 'knowledge', path: repositories[0] as string, sources, legacy }])
     )
-    expect(oneDriveRoot).toContain('OneDrive-Personal')
+    await box.root.write(
+      'chezmoi-source/workspaces/vscode/custom-a.code-workspace',
+      JSON.stringify({ folders: [{ path: repositories[0] }, { path: unbound }] })
+    )
+    await box.root.write(
+      'chezmoi-source/workspaces/vscode/custom-b.code-workspace',
+      JSON.stringify({ folders: [{ path: repositories[0] }, { path: sources }] })
+    )
+
+    expect((await box.run('ki manage vscode sync --write')).exitCode).toBe(0)
+    const first = JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/custom-a.code-workspace`, 'utf8'))
+    const second = JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/custom-b.code-workspace`, 'utf8'))
+    expect(first).toEqual({ folders: [{ path: repositories[0] }, { path: unbound }, { path: sources }] })
+    expect(second).toEqual({ folders: [{ path: repositories[0] }, { path: sources }] })
+    expect(JSON.stringify([first, second])).not.toContain(legacy)
+    const trusted = await readFile(`${sourceRoot}/.chezmoidata/trusted-folders.yaml`, 'utf8')
+    expect(trusted).toContain(`path: ${sources}\n    clients: [claude-code]`)
+    expect(trusted).toContain(`path: ${unbound}\n    clients: [claude-desktop, chatgpt-codex, claude-code]`)
   })
 
   test('rejects unavailable chezmoi, malformed repositories, workspaces, and trusted-folder state', async () => {
@@ -190,6 +187,11 @@ describe('ki manage vscode', () => {
     )
 
     const workspace = join(sourceRoot, 'workspaces/vscode/broken.code-workspace')
+    await writeFile(
+      join(sourceRoot, 'workspaces/vscode/alpha.code-workspace'),
+      `${JSON.stringify({ folders: [{ path: repositories[0] }] })}\n`,
+      'utf8'
+    )
     await writeFile(workspace, '{', 'utf8')
     expect((await box.run('ki manage vscode check')).output).toContain('invalid VS Code workspace')
     await writeFile(workspace, '{}', 'utf8')
@@ -211,44 +213,10 @@ describe('ki manage vscode', () => {
     expect((await box.run('ki manage vscode check')).output).toContain('has no trustedFolders root key')
   })
 
-  test('fails closed for unsafe workspace names and unavailable or unassociated source stores', async () => {
+  test('fails closed for unsafe workspace names, collisions, and invalid bound sources', async () => {
     const invalid = await prepare(['bad_name'])
     expect((await invalid.box.run('ki manage vscode check')).output).toContain(
       'cannot derive a safe VS Code workspace name'
-    )
-
-    const missingStore = await prepare(['alpha'])
-    await rm(missingStore.oneDriveRoot, { recursive: true })
-    expect((await missingStore.box.run('ki manage vscode source create alpha')).output).toContain(
-      'OneDrive source-store root is unavailable'
-    )
-    expect((await missingStore.box.run('ki manage vscode check')).exitCode).toBe(1)
-    await writeFile(missingStore.oneDriveRoot, 'not a directory', 'utf8')
-    expect((await missingStore.box.run('ki manage vscode check')).output).toContain(
-      'OneDrive source-store root is not a directory'
-    )
-
-    const unassociated = await prepare(['alpha'])
-    await unassociated.box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-missing')
-    expect((await unassociated.box.run('ki manage vscode check')).output).toContain('no registered repository')
-    expect((await unassociated.box.run('ki manage vscode source create unknown')).output).toContain(
-      'repository is not registered'
-    )
-
-    const ambiguous = await prepare(['seed'])
-    const first = await ambiguous.box.root.mkdir('one/shared')
-    const second = await ambiguous.box.root.mkdir('two/shared')
-    await ambiguous.box.root.write('one/shared/.ki.toml', repositoryDeclaration('first'))
-    await ambiguous.box.root.write('two/shared/.ki.toml', repositoryDeclaration('second'))
-    await ambiguous.box.state.write(
-      'ki/registry.toml',
-      registry([
-        { key: 'first', path: first },
-        { key: 'second', path: second }
-      ])
-    )
-    expect((await ambiguous.box.run('ki manage vscode source create shared')).output).toContain(
-      'repository basename is ambiguous'
     )
 
     const collision = await prepare(['alpha'])
@@ -257,30 +225,19 @@ describe('ki manage vscode', () => {
       'workspace file exists but does not include its KI repository'
     )
 
-    const legacy = await prepare(['tools-alpha'])
-    const source = await legacy.box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-alpha')
-    await legacy.box.root.write(
-      'chezmoi-source/workspaces/vscode/custom.code-workspace',
-      JSON.stringify({ folders: [{ path: legacy.repositories[0] }, { path: source }] })
+    const missing = await prepare(['knowledge'])
+    await missing.box.state.write(
+      'ki/registry.toml',
+      registry([
+        {
+          key: 'knowledge',
+          path: missing.repositories[0] as string,
+          sources: `${missing.box.root.path}/missing-sources`
+        }
+      ])
     )
-    expect((await legacy.box.run('ki manage vscode source create tools-alpha')).exitCode).toBe(1)
-    await legacy.box.root.write(
-      'chezmoi-source/workspaces/vscode/other.code-workspace',
-      `${JSON.stringify({ folders: [{ path: `${legacy.box.root.path}/alpha` }] })}\n`
+    expect((await missing.box.run('ki manage vscode check')).output).toContain(
+      'sources store must be an existing direct directory'
     )
-    await symlink(source, join(legacy.oneDriveRoot, 'sources-ignored-link'))
-    expect((await legacy.box.run('ki manage vscode sync --write')).exitCode).toBe(0)
-    expect((await legacy.box.run('ki manage vscode source create tools-alpha')).exitCode).toBe(0)
-
-    const multiple = await prepare(['mcp-acquire-whatsapp'])
-    await multiple.box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-whatsapp')
-    await multiple.box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-acquire-whatsapp')
-    expect((await multiple.box.run('ki manage vscode source create mcp-acquire-whatsapp')).output).toContain(
-      'repository already has multiple source stores'
-    )
-
-    const sorted = await prepare(['alpha', 'beta'])
-    await sorted.box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-beta')
-    expect((await sorted.box.run('ki manage vscode source create alpha --write')).exitCode).toBe(0)
   })
 })

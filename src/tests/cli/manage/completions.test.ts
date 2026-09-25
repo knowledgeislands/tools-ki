@@ -62,8 +62,6 @@ const commandPaths = [
   'manage update',
   'manage vscode',
   'manage vscode check',
-  'manage vscode source',
-  'manage vscode source create',
   'manage vscode sync',
   'registry',
   'registry add',
@@ -82,6 +80,11 @@ const commandPaths = [
   'repo roadmap stats',
   'repo roadmap promote',
   'repo roadmap prune',
+  'repo store',
+  'repo store bind',
+  'repo store create',
+  'repo store list',
+  'repo store unbind',
   'repo skill',
   'repo skill add',
   'repo skill remove',
@@ -182,7 +185,7 @@ describe('[ki manage completion]', () => {
       expect(output).toContain("'registry remove:--repo') printf '%s\\n' 'path'")
       expect(output).toContain("'registry list:--format') printf '%s\\n' 'text json'")
       expect(output).toContain("'repo roadmap list:--format') printf '%s\\n' 'text json'")
-      expect(output).toContain("'registry add:--sources') printf '%s\\n' 'path'")
+      expect(output).toContain("'repo store list:--format') printf '%s\\n' 'text json'")
       expect(output).toContain("'acquire import:--capture') printf '%s\\n' 'path'")
       expect(output).toContain("'manage docs:0') printf '%s\\n' 'overview site manual roadmap'")
       expect(output).toContain("'manage mcp update:--auth') printf '%s\\n' 'github-cli'")

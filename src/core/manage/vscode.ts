@@ -1,9 +1,9 @@
-import { lstat, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { lstat, readdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { basename, isAbsolute, join } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
 import type { Runner } from '../runtime/runner.ts'
-import { type LocalRegistryEntry, requiredLocalRegistry } from '../storage/index.ts'
+import { type LocalRegistryEntry, repositoryStoreDirectory, requiredLocalRegistry } from '../storage/index.ts'
 
 const trustedClients = ['claude-desktop', 'chatgpt-codex', 'claude-code'] as const
 const runtimeClients: Readonly<Record<string, (typeof trustedClients)[number]>> = {
@@ -33,7 +33,6 @@ interface SourceWrite {
 
 export interface VscodeManagePort {
   readonly environment: NodeJS.ProcessEnv
-  readonly homeDirectory: string
   readonly stateDirectory: string
   readonly runner: Runner
   readonly stdout: { write: (text: string) => void }
@@ -46,9 +45,6 @@ export interface VscodeManageResult {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
-
-const sourceStoreRoot = (homeDirectory: string): string =>
-  join(homeDirectory, 'Library', 'CloudStorage', 'OneDrive-Personal')
 
 const sourceRoot = async (port: VscodeManagePort): Promise<string> => {
   const result = await port.runner('chezmoi', ['source-path'], port.environment)
@@ -86,6 +82,10 @@ const repositoryTrustClients = async (
       throw new KiError(`registered repository has no supported trusted runtime: ${repository.path}`, 1)
     }
     result.set(repository.path, granted)
+    if (repository.stores?.sources) {
+      const sources = await repositoryStoreDirectory('sources', repository.stores.sources)
+      result.set(sources, granted)
+    }
   }
   return result
 }
@@ -130,42 +130,6 @@ const workspaceFileName = (repository: string): string => {
   return `kis-${name}.code-workspace`
 }
 
-const sourceDirectories = async (root: string): Promise<readonly string[]> => {
-  const state = await lstat(root).catch(() => undefined)
-  if (!state) return []
-  if (!state.isDirectory()) throw new KiError(`OneDrive source-store root is not a directory: ${root}`, 1)
-  return (await readdir(root, { withFileTypes: true }))
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith('sources-'))
-    .map((entry) => join(root, entry.name))
-    .sort((left, right) => left.localeCompare(right))
-}
-
-const repositoryFromArgument = (argument: string, repositories: readonly LocalRegistryEntry[]): LocalRegistryEntry => {
-  const candidates = isAbsolute(argument)
-    ? repositories.filter((repository) => repository.path === argument)
-    : repositories.filter((repository) => basename(repository.path) === argument)
-  if (!candidates.length) throw new KiError(`repository is not registered: ${argument}`, 2)
-  if (candidates.length > 1) {
-    throw new KiError(`repository basename is ambiguous; use an absolute path: ${argument}`, 2)
-  }
-  return candidates[0] as LocalRegistryEntry
-}
-
-const repositoryForSource = (source: string, repositories: readonly LocalRegistryEntry[]): LocalRegistryEntry => {
-  const sourceName = basename(source).slice('sources-'.length)
-  const exact = repositories.filter((repository) => basename(repository.path) === sourceName)
-  const candidates = exact.length
-    ? exact
-    : repositories.filter((repository) => basename(repository.path).endsWith(`-${sourceName}`))
-  if (candidates.length !== 1) {
-    const detail = candidates.length
-      ? `ambiguous matches: ${candidates.map((candidate) => candidate.path).join(', ')}`
-      : 'no registered repository; source names must match a registered basename or one unique suffix'
-    throw new KiError(`cannot associate OneDrive source directory ${source}: ${detail}`, 1)
-  }
-  return candidates[0] as LocalRegistryEntry
-}
-
 const validateTrustedFolders = async (port: VscodeManagePort, path: string): Promise<void> => {
   const template = '{{ include ".chezmoidata/trusted-folders.yaml" | fromYaml | toJson }}'
   const result = await port.runner('chezmoi', ['execute-template', template], port.environment)
@@ -198,8 +162,7 @@ const renderTrustedFolders = (
 const buildPlan = async (
   port: VscodeManagePort,
   root: string,
-  repositories: readonly LocalRegistryEntry[],
-  sources: readonly string[]
+  repositories: readonly LocalRegistryEntry[]
 ): Promise<readonly SourceWrite[]> => {
   const workspaceDirectory = join(root, 'workspaces', 'vscode')
   const trustedFoldersPath = join(root, '.chezmoidata', 'trusted-folders.yaml')
@@ -209,29 +172,26 @@ const buildPlan = async (
   const repositoryClients = await repositoryTrustClients(repositories)
 
   for (const repository of repositories) {
-    if (knownFolders.has(repository.path)) continue
-    const path = join(workspaceDirectory, workspaceFileName(repository.path))
-    const state = await lstat(path).catch(() => undefined)
-    if (state) throw new KiError(`workspace file exists but does not include its KI repository: ${path}`, 1)
-    documents.push({ path, before: '', workspace: { folders: [{ path: repository.path }] } })
-    knownFolders.add(repository.path)
-  }
-
-  for (const source of sources) {
-    const sourceName = basename(source).slice('sources-'.length)
     let matching = documents.filter(({ workspace }) =>
-      workspace.folders.some((folder) => basename(folder.path) === sourceName)
+      workspace.folders.some((folder) => folder.path === repository.path)
     )
     if (!matching.length) {
-      const repository = repositoryForSource(source, repositories)
-      matching = documents.filter(({ workspace }) =>
-        workspace.folders.some((folder) => folder.path === repository.path)
-      )
+      const path = join(workspaceDirectory, workspaceFileName(repository.path))
+      const state = await lstat(path).catch(() => undefined)
+      if (state) throw new KiError(`workspace file exists but does not include its KI repository: ${path}`, 1)
+      const document = { path, before: '', workspace: { folders: [{ path: repository.path }] } }
+      documents.push(document)
+      matching = [document]
+      knownFolders.add(repository.path)
     }
-    for (const document of matching) {
-      if (!document.workspace.folders.some((folder) => folder.path === source)) {
-        document.workspace.folders.push({ path: source })
-        knownFolders.add(source)
+    const source = repository.stores?.sources
+    if (source) {
+      await repositoryStoreDirectory('sources', source)
+      for (const document of matching) {
+        if (!document.workspace.folders.some((folder) => folder.path === source)) {
+          document.workspace.folders.push({ path: source })
+          knownFolders.add(source)
+        }
       }
     }
   }
@@ -284,8 +244,7 @@ const writeAtomically = async (write: SourceWrite): Promise<void> => {
 export const reconcileVscode = async (port: VscodeManagePort, write: boolean): Promise<VscodeManageResult> => {
   const root = await sourceRoot(port)
   const repositories = await requiredLocalRegistry(port.stateDirectory)
-  const sources = await sourceDirectories(sourceStoreRoot(port.homeDirectory))
-  const writes = await buildPlan(port, root, repositories, sources)
+  const writes = await buildPlan(port, root, repositories)
   if (!writes.length) {
     port.stdout.write('VS Code workspaces and trusted folders already match the KI registry.\n')
     return { changed: false }
@@ -298,58 +257,4 @@ export const reconcileVscode = async (port: VscodeManagePort, write: boolean): P
   for (const change of writes) await writeAtomically(change)
   port.stdout.write(`synchronised ${writes.length} source file(s); review chezmoi diff before applying.\n`)
   return { changed: true }
-}
-
-export const createVscodeSourceStore = async (
-  port: VscodeManagePort,
-  repositoryArgument: string,
-  write: boolean
-): Promise<VscodeManageResult> => {
-  const storeRoot = sourceStoreRoot(port.homeDirectory)
-  const storeState = await lstat(storeRoot).catch(() => undefined)
-  if (!storeState?.isDirectory()) throw new KiError(`OneDrive source-store root is unavailable: ${storeRoot}`, 1)
-
-  const root = await sourceRoot(port)
-  const repositories = await requiredLocalRegistry(port.stateDirectory)
-  const repository = repositoryFromArgument(repositoryArgument, repositories)
-  const existingSources = await sourceDirectories(storeRoot)
-  const associatedSources = existingSources.filter(
-    (source) => repositoryForSource(source, repositories).path === repository.path
-  )
-  const conventionalSource = join(storeRoot, `sources-${basename(repository.path)}`)
-  if (associatedSources.length > 1 && !existingSources.includes(conventionalSource)) {
-    throw new KiError(`repository already has multiple source stores; use sync instead: ${repository.path}`, 2)
-  }
-  const source = existingSources.includes(conventionalSource)
-    ? conventionalSource
-    : associatedSources.length === 1
-      ? (associatedSources[0] as string)
-      : conventionalSource
-  const exists = existingSources.includes(source)
-  const sources = exists
-    ? existingSources
-    : [...existingSources, source].sort((left, right) => left.localeCompare(right))
-  const writes = await buildPlan(port, root, repositories, sources)
-
-  if (!write) {
-    port.stdout.write(`${exists ? 'source store already exists' : 'would create source store'}: ${source}\n`)
-    printPlan(port, writes)
-    if (!exists || writes.length) {
-      port.stderr.write(
-        `dry-run: rerun as ki manage vscode source create ${repositoryArgument} --write after reviewing this plan\n`
-      )
-      return { changed: true }
-    }
-    return { changed: false }
-  }
-
-  if (!exists) await mkdir(source)
-  for (const change of writes) await writeAtomically(change)
-  port.stdout.write(`${exists ? 'source store exists' : 'created source store'}: ${source}\n`)
-  port.stdout.write(
-    writes.length
-      ? `synchronised ${writes.length} source file(s); review chezmoi diff before applying.\n`
-      : 'VS Code workspaces and trusted folders already match the KI registry.\n'
-  )
-  return { changed: !exists || Boolean(writes.length) }
 }

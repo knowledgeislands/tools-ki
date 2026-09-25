@@ -1,7 +1,6 @@
 import { mkdir, realpath } from 'node:fs/promises'
 import type { ResolvedSkill } from '../../configuration/index.ts'
 import {
-  declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
   readRepositoryDeclaration,
   resolveRepositoryDeclaredSkills
@@ -9,12 +8,7 @@ import {
 import { KiError } from '../../errors.ts'
 import { prepareWrites } from '../../filesystem/index.ts'
 import { discoverInstalledHarnesses } from '../../harness/index.ts'
-import {
-  inspectLocalRegistry,
-  localRegistryWrite,
-  registeredKnowledgeBaseStoreRoots,
-  registryEntry
-} from '../../storage/index.ts'
+import { inspectLocalRegistry, localRegistryWrite, registryEntryForRepository } from '../../storage/index.ts'
 import type { RepositoryLocation } from '../index.ts'
 import type { RepositoryOperationContext, RepositorySkillActivationHost } from './types.ts'
 
@@ -46,24 +40,13 @@ export const localRepositoryRegistryWrites = async (
     throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
   const declaration = await readRepositoryDeclaration(repository.declaration)
   const identity = declaredRepositoryIdentity(declaration)
-  if (declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) {
-    const registry = await inspectLocalRegistry(context.stateDirectory)
-    if (registry.state === 'invalid')
-      throw new KiError(`local KI repository registry is invalid: ${registry.errors.join('; ')}`, 1)
-    const entry = registry.repositories.find(
-      (candidate) => candidate.repository === identity && candidate.path === repository.root
-    )
-    try {
-      await registeredKnowledgeBaseStoreRoots(entry)
-    } catch {
-      throw new KiError(
-        `Knowledge Base ${repository.root} declares sources; run ki registry add --repo ${repository.root} --sources <absolute-path>`,
-        1
-      )
-    }
-    return []
-  }
-  const registryWrite = await localRegistryWrite(context.stateDirectory, registryEntry(repository.root, identity))
+  const registry = await inspectLocalRegistry(context.stateDirectory)
+  if (registry.state === 'invalid')
+    throw new KiError(`local KI repository registry is invalid: ${registry.errors.join('; ')}`, 1)
+  const registryWrite = await localRegistryWrite(
+    context.stateDirectory,
+    registryEntryForRepository(repository.root, identity, registry.repositories)
+  )
   if (!registryWrite) return []
   await mkdir(context.stateDirectory, { recursive: true })
   return prepareWrites(await realpath(context.stateDirectory), [registryWrite])

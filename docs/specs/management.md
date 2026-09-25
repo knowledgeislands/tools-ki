@@ -128,13 +128,13 @@ _Verify:_ `src/tests/cli/manage/vscode.test.ts` — `synchronises missing worksp
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
-### MANAGE-013 — Fail-closed source-store association
+### MANAGE-013 — Typed VS Code store projection
 
-`ki manage vscode source create` MUST preview an opt-in source store by default and MUST refuse ambiguous repository associations before writing.
+`ki manage vscode check|sync` MUST consume only explicit local `sources` bindings for registered repositories, project each bound source beside its notes root with the same trusted runtime clients, and ignore `legacy` bindings and unbound filesystem directories. It MUST NOT infer associations from directory names.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/manage/vscode.test.ts` — `previews then creates and associates an opt-in source store` and `fails closed when a legacy source suffix matches multiple repositories`.
+_Verify:_ `src/tests/cli/manage/vscode.test.ts` — `consumes explicit sources bindings and ignores legacy and unbound directories` and `fails closed for unsafe workspace names, collisions, and invalid bound sources`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

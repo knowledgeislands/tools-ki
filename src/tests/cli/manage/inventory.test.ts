@@ -42,7 +42,19 @@ const agoraChangelogCommands = [
   '`ki agora reference list`',
   '`ki agora reference remove <repository> [--dry-run]`'
 ]
-const repoCommands = ['audit', 'conform', 'diag', 'educate', 'init', 'open', 'roadmap', 'repair', 'skill', 'upgrade']
+const repoCommands = [
+  'audit',
+  'conform',
+  'diag',
+  'educate',
+  'init',
+  'open',
+  'roadmap',
+  'repair',
+  'skill',
+  'store',
+  'upgrade'
+]
 const batchCommands = ['close', 'prepare', 'run', 'validate']
 const registryCommands = ['add', 'list', 'remove']
 
@@ -73,6 +85,7 @@ describe('[ki command inventory]', () => {
       'conform',
       'diag',
       'roadmap',
+      'store',
       'educate',
       'repair',
       'skill',
@@ -91,7 +104,7 @@ describe('[ki command inventory]', () => {
     expect(bash.output).toContain(`'agora') printf '%s\\n' '${agoraCommands.join(' ')}'`)
     expect(bash.output).toContain(`'agora reference') printf '%s\\n' '${agoraReferenceCommands.join(' ')}'`)
     expect(bash.output).toContain(
-      "'repo') printf '%s\\n' 'init open audit conform diag roadmap educate repair skill upgrade'"
+      "'repo') printf '%s\\n' 'init open audit conform diag roadmap store educate repair skill upgrade'"
     )
     expect(bash.output).toContain("'batch') printf '%s\\n' 'prepare validate run close'")
     expect(bash.output).toContain(`'registry') printf '%s\\n' '${registryCommands.join(' ')}'`)
@@ -134,9 +147,7 @@ describe('[ki command inventory]', () => {
     expect(generated).toBe(renderCommandInventory(manual))
     expect(JSON.parse(generated).schema).toBe('ki/commands/v1')
     expect(
-      manual.match(
-        /\.B ki registry \[--repo <path-or-pattern>]\.\.\. \[--agora <name>] \[--estate] add \[--dry-run] \[--sources <absolute-path>]/g
-      )
+      manual.match(/\.B ki registry \[--repo <path-or-pattern>]\.\.\. \[--agora <name>] \[--estate] add \[--dry-run]/g)
     ).toHaveLength(2)
 
     for (const command of rootHelpCommands) {
@@ -153,9 +164,7 @@ describe('[ki command inventory]', () => {
     }
     expect(manual).toContain('.B ki registry list')
     expect(manual).toContain('.B ki registry remove')
-    expect(manual).toContain(
-      '.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--sources <absolute-path>]'
-    )
+    expect(manual).toContain('.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run]')
     for (const command of registryCommands) expect(changelog).toContain(`\`ki registry ${command}`)
 
     expect(changelog).toContain('`ki dev local set <harness-id> <local-harness-path>`')

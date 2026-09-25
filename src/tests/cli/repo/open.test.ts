@@ -2,9 +2,11 @@ import { realpath, symlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
-const repositoryConfiguration = (identity: string, sources = false): string =>
+const repositoryConfiguration = (identity: string, sources = false, legacy = false): string =>
   `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = ${JSON.stringify(identity)}${
-    sources ? '\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]' : ''
+    sources
+      ? `\nrepo_type = "kb"\nstore_roles = ${JSON.stringify(['notes', 'sources', ...(legacy ? ['legacy'] : [])])}`
+      : ''
   }\n`
 
 const localRegistry = (
@@ -13,6 +15,7 @@ const localRegistry = (
     readonly repository: string
     readonly path: string
     readonly sources?: string
+    readonly legacy?: string
   }[]
 ): string =>
   [
@@ -23,22 +26,30 @@ const localRegistry = (
       `[repositories.${JSON.stringify(entry.key)}]`,
       `repository = ${JSON.stringify(entry.repository)}`,
       `path = ${JSON.stringify(entry.path)}`,
-      ...(entry.sources
-        ? ['', `[repositories.${JSON.stringify(entry.key)}.stores]`, `sources = ${JSON.stringify(entry.sources)}`]
+      ...(entry.sources || entry.legacy
+        ? [
+            '',
+            `[repositories.${JSON.stringify(entry.key)}.stores]`,
+            ...(entry.sources ? [`sources = ${JSON.stringify(entry.sources)}`] : []),
+            ...(entry.legacy ? [`legacy = ${JSON.stringify(entry.legacy)}`] : [])
+          ]
         : [])
     ]),
     ''
   ].join('\n')
 
 describe('[ki repo open]', () => {
-  test('opens notes followed by a declared registered sources store by default', async () => {
+  test('opens notes followed by every declared registered external store by default', async () => {
     const box = await sandbox()
     const notes = await realpath(box.project.path)
     const sources = await box.root.mkdir('sources')
-    await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/knowledge', true))
+    const legacy = await box.root.mkdir('legacy')
+    await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/knowledge', true, true))
     await box.state.write(
       'ki/registry.toml',
-      localRegistry([{ key: 'knowledge', repository: 'https://github.com/example/knowledge', path: notes, sources }])
+      localRegistry([
+        { key: 'knowledge', repository: 'https://github.com/example/knowledge', path: notes, sources, legacy }
+      ])
     )
     const calls: string[] = []
     box.setRunner(async (command, arguments_) => {
@@ -50,7 +61,7 @@ describe('[ki repo open]', () => {
       exitCode: 0,
       output: 'ki repo open --target zed: opened 1 repositories\n'
     })
-    expect(calls).toEqual(['zed -n', `zed -e ${notes}`, `zed -e ${sources}`])
+    expect(calls).toEqual(['zed -n', `zed -e ${notes}`, `zed -e ${sources}`, `zed -e ${legacy}`])
   })
 
   test('opens only canonical notes roots with --no-stores and requires a complete binding otherwise', async () => {
@@ -70,7 +81,7 @@ describe('[ki repo open]', () => {
     expect(calls).toEqual([`code --new-window ${notes}`])
     expect(await box.run('ki repo open --target vscode')).toEqual({
       exitCode: 1,
-      output: `ki: error: Knowledge Base ${notes} declares sources; run ki registry add --repo ${notes} --sources <absolute-path>\n`
+      output: `ki: error: Knowledge Base ${notes} has an unavailable declared store: declared sources store is not bound; run ki repo --repo ${notes} store list\n`
     })
   })
 
@@ -114,7 +125,7 @@ describe('[ki repo open]', () => {
     )
     expect(await box.run(['ki', 'repo', '--repo', second, 'open', '--target', 'vscode'])).toEqual({
       exitCode: 1,
-      output: `ki: error: Knowledge Base ${second} declares sources; run ki registry add --repo ${second} --sources <absolute-path>\n`
+      output: `ki: error: Knowledge Base ${second} has an unavailable declared store: sources store must be an existing direct directory; run ki repo --repo ${second} store list\n`
     })
   })
 

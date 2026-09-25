@@ -176,6 +176,36 @@ _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `emits versioned path-free JS
 
 _Evidence:_ The named roadmap contract tests are part of the passing `bun run test:coverage` gate.
 
+### REPO-OPS-018 — Typed repository-store inventory
+
+`ki repo store list` MUST project every store role declared by each selected Knowledge Base. `notes` MUST resolve to the selected repository root; declared external roles MUST report their explicit machine-local binding or `unbound`. JSON output MUST use the versioned `ki/repository-stores/v1` contract.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/store.test.ts` — `lists declared roles with notes bound to the repository root`.
+
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### REPO-OPS-019 — Explicit external-store binding
+
+`ki repo store bind|unbind` MUST operate on exactly one selected repository, refuse undeclared roles and changes to `notes`, preview by default, and publish only with `--write`. Binding MUST require an existing absolute direct directory. Unbinding MUST preserve physical store content and unrelated registry bindings.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/store.test.ts` — `previews, binds, replaces, and non-destructively unbinds external roles` and `fails closed for unsupported roles, unsafe paths, selection, and registry state`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### REPO-OPS-020 — Managed sources creation
+
+`ki repo store create sources` MUST derive the established opt-in OneDrive `sources-<repository-basename>` location, preview creation and binding by default, and perform both only with `--write`. It MUST refuse unavailable or unsafe managed roots, replacement of a different binding, and automatic creation for `legacy`.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/store.test.ts` — `previews and creates the conventional managed sources store without touching VS Code` and `rejects automatic creation without its managed root or over a different binding`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

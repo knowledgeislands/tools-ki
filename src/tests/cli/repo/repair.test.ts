@@ -213,7 +213,7 @@ describe('[ki repo repair]', () => {
     const complete = await box.run('ki repo repair')
 
     expect(missing.exitCode).toBe(1)
-    expect(missing.output).toContain(`run ki registry add --repo ${root} --sources <absolute-path>`)
+    expect(missing.output).toContain(`run ki repo --repo ${root} store list`)
     expect(complete.exitCode).toBe(0)
     expect(complete.output).toContain(`Registry: complete ${root}`)
   })

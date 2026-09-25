@@ -11,6 +11,7 @@ import { createRepairCommand } from './repair.ts'
 import { createRepoRoadmapCommand } from './roadmap.ts'
 import type { RepositorySelection } from './selection.ts'
 import { createRepoSkillCommand } from './skill.ts'
+import { createRepoStoreCommand } from './store.ts'
 import { createUpgradeCommand } from './upgrade.ts'
 
 export const createRepoCommand = (context: KiContext): Command => {
@@ -32,6 +33,7 @@ export const createRepoCommand = (context: KiContext): Command => {
   command
     .addCommand(createRepoOpenCommand(context, selectedRepositories))
     .addCommand(createRepoRoadmapCommand(context, selectedRepositories))
+    .addCommand(createRepoStoreCommand(context, selectedRepositories))
     .addCommand(createRepoDiagCommand(context, selectedRepositories))
     .addCommand(createRepairCommand(context, selectedRepositories))
     .addCommand(createRepoSkillCommand(context, selectedRepositories))

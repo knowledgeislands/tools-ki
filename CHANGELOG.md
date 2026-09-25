@@ -48,7 +48,6 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki manage search`
 - `ki manage vscode check`
 - `ki manage vscode sync [--write]`
-- `ki manage vscode source create <repository> [--write]`
 
 #### User management
 
@@ -77,6 +76,10 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki repo init`
 - `ki repo open --target <zed|vscode> [--stores|--no-stores]`
+- `ki repo store list [--format <text|json>]`
+- `ki repo store create <sources> [--write]`
+- `ki repo store bind <sources|legacy> <absolute-path> [--write]`
+- `ki repo store unbind <sources|legacy> [--write]`
 - `ki repo audit`
 - `ki repo conform`
 - `ki repo diag`

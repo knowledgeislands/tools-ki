@@ -40,6 +40,7 @@ export const repoHelpCommandNames = [
   'conform',
   'diag',
   'roadmap',
+  'store',
   'educate',
   'repair',
   'skill',

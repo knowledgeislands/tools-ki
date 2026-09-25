@@ -12,6 +12,7 @@ import { KiError, KiExit } from '../../core/errors.ts'
 import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import {
+  externalStoreRoles,
   inspectLocalRegistry,
   localRegistryWrite,
   registeredKnowledgeBaseStoreRoots,
@@ -49,7 +50,8 @@ export const createRepairCommand = (
         try {
           const declaration = await readRepositoryDeclaration(repository.declaration)
           const identity = declaredRepositoryIdentity(declaration)
-          if (declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) {
+          const roles = externalStoreRoles(declaredKnowledgeBaseStoreRoles(declaration))
+          if (roles.length) {
             const registry = await inspectLocalRegistry(context.paths.state)
             if (registry.state === 'invalid')
               throw new KiError(`local KI repository registry is invalid: ${registry.errors.join('; ')}`, 1)
@@ -57,10 +59,10 @@ export const createRepairCommand = (
               (candidate) => candidate.repository === identity && candidate.path === repository.root
             )
             try {
-              await registeredKnowledgeBaseStoreRoots(entry)
-            } catch {
+              await registeredKnowledgeBaseStoreRoots(entry, roles)
+            } catch (error) {
               throw new KiError(
-                `Knowledge Base ${repository.root} declares sources; run ki registry add --repo ${repository.root} --sources <absolute-path>`,
+                `Knowledge Base ${repository.root} has an unavailable declared store: ${(error as Error).message}; run ki repo --repo ${repository.root} store list`,
                 1
               )
             }

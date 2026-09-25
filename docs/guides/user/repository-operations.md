@@ -42,6 +42,26 @@ Record roots without applying any repair using `ki registry add --repo <path-or-
 
 `ki repo init`, `ki repo repair`, and `ki repo conform` also record each selected root — conform does so first, even when its later checks fail, so the registry stays an inventory for repair and bulk maintenance rather than a compliance badge.
 
+## Manage declared stores
+
+A Knowledge Base declares stable store roles in `.ki.toml`; your machine binds external roles separately. Inspect one repository or a selected set:
+
+```sh
+ki repo store list
+ki repo --estate store list --format json
+```
+
+`notes` is always the repository root and cannot be rebound. Bind an existing `sources` or `legacy` directory by previewing first, then writing the machine-local registry:
+
+```sh
+ki repo store bind sources /absolute/path/to/sources
+ki repo store bind sources /absolute/path/to/sources --write
+ki repo store unbind sources
+ki repo store unbind sources --write
+```
+
+Unbinding never deletes store content. For the established opt-in OneDrive source location, `ki repo store create sources` previews `sources-<repository-basename>` and `--write` creates and binds it. `legacy` has no automatic creation policy; bind its existing directory explicitly. Do not use stores for credentials.
+
 ## Run an audit
 
 ```sh

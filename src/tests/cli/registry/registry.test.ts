@@ -797,6 +797,14 @@ test('rejects malformed state records and conflicting local bindings', async () 
     'repositories.one.stores has unrecognised key extra'
   )
   await invalid(
+    `schema = 1\n[repositories.one]\nrepository = "https://github.com/example/one"\npath = ${JSON.stringify(root)}\n\n[repositories.one.stores]\n`,
+    'repositories.one.stores must not be empty'
+  )
+  await invalid(
+    `schema = 1\n[repositories.one]\nrepository = "https://github.com/example/one"\npath = ${JSON.stringify(root)}\n\n[repositories.one.stores]\nlegacy = "relative"\n`,
+    'repositories.one.stores.legacy must be an absolute path'
+  )
+  await invalid(
     'schema = 1\n[repositories."Bad Key"]\nrepository = "not-a-url"\npath = "relative"\n',
     'repositories.Bad Key key must be a stable local repository name'
   )
@@ -835,91 +843,43 @@ test('rejects a symbolic-link registry file without following it', async () => {
   })
 })
 
-test('registers and atomically replaces a declared Knowledge Base sources binding', async () => {
-  const box = await sandbox()
-  const first = await box.root.mkdir('first-notes')
-  const second = await box.root.mkdir('second-notes')
-  const ordinary = await box.root.mkdir('ordinary-notes')
-  const firstSources = await box.root.mkdir('first-sources')
-  const secondSources = await box.root.mkdir('second-sources')
-  const identity = 'https://github.com/example/knowledge'
-  const configuration =
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
-  await box.root.write('first-notes/.ki.toml', configuration)
-  await box.root.write('second-notes/.ki.toml', configuration)
-  await box.root.write(
-    'ordinary-notes/.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\n'
-  )
-
-  const firstRegistration = await box.run(['ki', 'registry', '--repo', first, 'add', '--sources', firstSources])
-  const replacement = await box.run(['ki', 'registry', '--repo', second, 'add', '--sources', secondSources])
-
-  expect(firstRegistration.exitCode).toBe(0)
-  expect(replacement.exitCode).toBe(0)
-  const registry = await box.state.read('ki/registry.toml')
-  expect(registry).toContain(`repository = ${JSON.stringify(identity)}`)
-  expect(registry).toContain(`path = ${JSON.stringify(second)}`)
-  expect(registry).toContain(`sources = ${JSON.stringify(secondSources)}`)
-  expect(registry).not.toContain(first)
-  expect(await box.run(['ki', 'registry', '--repo', ordinary, 'add'])).toEqual({
-    exitCode: 1,
-    output:
-      'ki: error: local KI repository registry key second-notes already identifies https://github.com/example/knowledge\n'
-  })
-  expect(await box.state.read('ki/registry.toml')).toEqual(registry)
-})
-
-test('refuses incomplete and unsafe declared Knowledge Base source bindings without changing the registry', async () => {
+test('registers a Knowledge Base independently and preserves typed bindings', async () => {
   const box = await sandbox()
   const root = await realpath(box.project.path)
-  const identity = 'https://github.com/example/knowledge'
-  const configuration =
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
-  await box.project.write('.ki.toml', configuration)
-  const before = `schema = 1\n\n[repositories."project"]\nrepository = ${JSON.stringify(identity)}\npath = ${JSON.stringify(root)}\n`
-  await box.state.write('ki/registry.toml', before)
-  await box.project.write('source-file', 'not a directory\n')
-  const safe = await box.root.mkdir('safe-sources')
-  await symlink(safe, `${box.root.path}/linked-sources`)
-
-  const missing = await box.run('ki registry add')
-  const relative = await box.run('ki registry add --sources relative')
-  const absent = await box.run(['ki', 'registry', 'add', '--sources', `${box.root.path}/missing-sources`])
-  const file = await box.run(['ki', 'registry', 'add', '--sources', `${box.project.path}/source-file`])
-  const linked = await box.run(['ki', 'registry', 'add', '--sources', `${box.root.path}/linked-sources`])
-
-  expect(missing.output).toContain('requires --sources')
-  expect(relative.output).toContain('sources store must be an absolute path')
-  expect(absent.output).toContain('sources store must be an existing direct directory')
-  expect(file.output).toContain('sources store must be an existing direct directory')
-  expect(linked.output).toContain('sources store must be an existing direct directory')
-  expect(await box.state.read('ki/registry.toml')).toEqual(before)
-})
-
-test('requires source binding options to match exactly one selected Knowledge Base', async () => {
-  const box = await sandbox()
-  const knowledge = await realpath(box.project.path)
-  const ordinary = await box.root.mkdir('ordinary')
   const sources = await box.root.mkdir('sources')
+  const legacy = await box.root.mkdir('legacy')
+  const identity = 'https://github.com/example/knowledge'
   await box.project.write(
     '.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
   )
-  await box.root.write(
-    'ordinary/.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/ordinary"\n'
-  )
+  const registered = `schema = 1
 
-  expect(
-    (await box.run(['ki', 'registry', '--repo', knowledge, '--repo', ordinary, 'add', '--sources', sources])).output
-  ).toContain('select exactly one repository with --sources')
-  expect((await box.run(['ki', 'registry', '--repo', ordinary, 'add', '--sources', sources])).output).toContain(
-    '--sources requires one selected KB that declares sources'
-  )
+[repositories.project]
+repository = ${JSON.stringify(identity)}
+path = ${JSON.stringify(root)}
+
+[repositories.project.stores]
+sources = ${JSON.stringify(sources)}
+legacy = ${JSON.stringify(legacy)}
+`
+  await box.state.write('ki/registry.toml', registered)
+
+  expect((await box.run('ki registry add')).exitCode).toBe(0)
+  expect(await box.state.read('ki/registry.toml')).toEqual(registered)
 })
 
-test('rejects every malformed Knowledge Base store-role declaration through the registry boundary', async () => {
+test('retires registry-owned source binding options', async () => {
+  const box = await sandbox()
+  await box.project.write(
+    '.ki.toml',
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
+  )
+
+  expect((await box.run('ki registry add --sources anywhere')).exitCode).toBe(2)
+})
+
+test('rejects every malformed Knowledge Base store-role declaration through the store boundary', async () => {
   const box = await sandbox()
   const base =
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\n'
@@ -934,13 +894,13 @@ test('rejects every malformed Knowledge Base store-role declaration through the 
 
   for (const [declaration, detail] of cases) {
     await box.project.write('.ki.toml', `${base}${declaration}\n`)
-    const result = await box.run('ki registry add')
+    const result = await box.run('ki repo store list')
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain(detail)
   }
 })
 
-test('does not automatically register a Knowledge Base whose declared sources lack a complete binding', async () => {
+test('conformance registers a Knowledge Base independently and preserves existing store bindings', async () => {
   const box = await sandbox()
   const root = await realpath(box.project.path)
   const other = await box.root.mkdir('other')
@@ -950,20 +910,16 @@ test('does not automatically register a Knowledge Base whose declared sources la
     '.ki.toml',
     '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/knowledge"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]\n'
   )
+  await box.setupExampleHarness({ name: 'ki-repo', rubric })
 
-  expect(await box.run('ki repo conform')).toEqual({
-    exitCode: 1,
-    output: `ki: error: Knowledge Base ${root} declares sources; run ki registry add --repo ${root} --sources <absolute-path>\n`
-  })
-  await expect(box.state.read('ki/registry.toml')).rejects.toThrow()
+  expect((await box.run('ki repo conform')).exitCode).toBe(0)
+  expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(root)}`)
 
   await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
   expect(await box.run('ki repo conform')).toEqual({
     exitCode: 1,
     output: 'ki: error: local KI repository registry is invalid: unrecognised key extra\n'
   })
-
-  await box.setupExampleHarness({ name: 'ki-repo', rubric })
   const registered = `schema = 1
 
 [repositories.other]

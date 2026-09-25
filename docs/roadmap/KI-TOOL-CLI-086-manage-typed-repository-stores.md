@@ -4,12 +4,12 @@ area: CLI
 title: Manage typed repository stores
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 3b1b43d6016d3092c69aa537c6bbd49fd57ce81c
 created_at: 2026-09-25T11:29:53Z
-updated_at: 2026-09-25T14:20:29Z
+updated_at: 2026-09-25T14:56:14Z
 ---
 
 # KI-TOOL-CLI-086: Manage typed repository stores
@@ -34,12 +34,12 @@ The local registry can bind only `sources`, `ki manage vscode source create` own
 
 ## Steps
 
-- [ ] Add `ki repo store list`, `create <role> [--write]`, `bind <role> <absolute-path> [--write]`, and `unbind <role> [--write]` with repository selection, declaration validation, typed text and JSON output, and preview-by-default mutation.
-- [ ] Treat `notes` as the immutable repository-root binding; allow automatic creation only for declared `sources` at the established OneDrive `sources-<repository-basename>` location; manage `legacy` and non-conventional `sources` paths through `bind`; never delete physical content during `unbind`.
-- [ ] Generalise the local registry and store helpers to retain declared `sources` and `legacy` bindings without name inference, while preserving atomic writes and unrelated registry data.
-- [ ] Make VS Code consume explicit `sources` bindings alongside repository roots and ignore `legacy` by default; remove `ki manage vscode source create` without a compatibility alias.
-- [ ] Align repository open and registration behaviour, CLI inventory, completion, specifications, guides, README, manual, and changelog with repository-owned typed stores.
-- [ ] Cover lifecycle, declaration and path failures, dry-run/write behaviour, registry preservation, VS Code projection, opening, help, completion, and inventory through the public CLI seam.
+- [x] Add `ki repo store list`, `create <role> [--write]`, `bind <role> <absolute-path> [--write]`, and `unbind <role> [--write]` with repository selection, declaration validation, typed text and JSON output, and preview-by-default mutation.
+- [x] Treat `notes` as the immutable repository-root binding; allow automatic creation only for declared `sources` at the established OneDrive `sources-<repository-basename>` location; manage `legacy` and non-conventional `sources` paths through `bind`; never delete physical content during `unbind`.
+- [x] Generalise the local registry and store helpers to retain declared `sources` and `legacy` bindings without name inference, while preserving atomic writes and unrelated registry data.
+- [x] Make VS Code consume explicit `sources` bindings alongside repository roots and ignore `legacy` by default; remove `ki manage vscode source create` without a compatibility alias.
+- [x] Align repository open and registration behaviour, CLI inventory, completion, specifications, guides, README, manual, and changelog with repository-owned typed stores.
+- [x] Cover lifecycle, declaration and path failures, dry-run/write behaviour, registry preservation, VS Code projection, opening, help, completion, and inventory through the public CLI seam.
 
 ## Files touched
 
@@ -77,6 +77,32 @@ Move source-store setup out of the VS Code guide and document typed store lifecy
 ### Roadmap
 
 Record the delivered command contract, cutover, verification evidence, and post-change review in this item.
+
+## Review
+
+### Delivered
+
+Delivered the approved repository-owned typed-store lifecycle from immutable baseline `3b1b43d6016d3092c69aa537c6bbd49fd57ce81c`. `notes` remains the repository root; `sources` and `legacy` use explicit machine-local bindings; automatic creation remains sources-only; unbinding never deletes content; VS Code remains a binding consumer rather than an owner.
+
+### Change Summary
+
+Added the `ki repo store` command group and typed storage core, expanded registry records to optional `sources` and `legacy` bindings, made repository opening consume every declared external role, and made VS Code consume only explicit `sources` bindings. Removed the editor-owned source command and registry-owned `--sources` option without aliases. Updated contract tests, specifications, guides, README, manual, generated inventory, completion, and changelog.
+
+### Verification
+
+Focused repository-store, VS Code, registry, open, repair, completion, help, and inventory tests pass. TypeScript, Biome, Knip, manual lint, generated command inventory, `ki-self`, `ki-engineering`, `ki-authoring`, `ki-repo-tools`, and `ki-work-roadmap` audits pass. The full elevated suite passes 888 tests with 100% statements, branches, functions, and lines; elevation supplies only the installer fixture's required local-loopback listener.
+
+### Outstanding concerns
+
+The user-wide chezmoi-managed Codex instruction still names the retired `ki manage vscode source create` command. It is outside this repository delivery and should be updated separately before the next source-store setup.
+
+### Post-change review
+
+The delivered surface meets the approved ownership model and holds the stated boundary. Regression risk concentrates in the local registry schema expansion and command cutover; exact parser, preservation, lifecycle, projection, opening, completion, and inventory tests cover those paths. The change is ready for human acceptance.
+
+### Mini recap
+
+Repository tooling now owns declared store lifecycle, consumers receive typed bindings, and no filesystem-name association remains. Durable behaviour is recorded in repository-operations and management specifications and the paired user guides; no new decision record is required.
 
 ## Discussion
 

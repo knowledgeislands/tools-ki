@@ -11,9 +11,12 @@ export interface LocalRegistryEntry {
   readonly key: string
   readonly repository: string
   readonly path: string
-  readonly stores?: {
-    readonly sources: string
-  }
+  readonly stores?: LocalRepositoryStores
+}
+
+export interface LocalRepositoryStores {
+  readonly sources?: string
+  readonly legacy?: string
 }
 
 export interface LocalRegistryInspection {
@@ -91,9 +94,12 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
       if (stores !== undefined && !isRecord(stores)) errors.push(`repositories.${key}.stores must be a table`)
       if (isRecord(stores)) {
         for (const field of Object.keys(stores))
-          if (field !== 'sources') errors.push(`repositories.${key}.stores has unrecognised key ${field}`)
-        if (typeof stores['sources'] !== 'string' || !isAbsolute(stores['sources']))
-          errors.push(`repositories.${key}.stores.sources must be an absolute path`)
+          if (!['sources', 'legacy'].includes(field))
+            errors.push(`repositories.${key}.stores has unrecognised key ${field}`)
+        for (const role of ['sources', 'legacy'] as const)
+          if (stores[role] !== undefined && (typeof stores[role] !== 'string' || !isAbsolute(stores[role])))
+            errors.push(`repositories.${key}.stores.${role} must be an absolute path`)
+        if (!Object.keys(stores).length) errors.push(`repositories.${key}.stores must not be empty`)
       }
       if (
         validKey(key) &&
@@ -101,13 +107,27 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
         typeof entry['path'] === 'string' &&
         isAbsolute(entry['path']) &&
         (stores === undefined ||
-          (isRecord(stores) && typeof stores['sources'] === 'string' && isAbsolute(stores['sources'])))
+          (isRecord(stores) &&
+            Object.keys(stores).length > 0 &&
+            Object.keys(stores).every(
+              (role) =>
+                (role === 'sources' || role === 'legacy') &&
+                typeof stores[role] === 'string' &&
+                isAbsolute(stores[role] as string)
+            )))
       )
         repositories.push({
           key,
           repository: entry['repository'],
           path: entry['path'],
-          ...(isRecord(stores) ? { stores: { sources: stores['sources'] as string } } : {})
+          ...(isRecord(stores)
+            ? {
+                stores: {
+                  ...(typeof stores['sources'] === 'string' ? { sources: stores['sources'] } : {}),
+                  ...(typeof stores['legacy'] === 'string' ? { legacy: stores['legacy'] } : {})
+                }
+              }
+            : {})
         })
     }
   }
@@ -132,10 +152,10 @@ export const requiredLocalRegistry = async (stateDirectory: string): Promise<rea
   return inspection.repositories
 }
 
-export const registryEntry = (repository: string, identity: string, sources?: string): LocalRegistryEntry => {
+export const registryEntry = (repository: string, identity: string): LocalRegistryEntry => {
   const key = basename(repository)
   if (!KEY.test(key)) throw new KiError(`repository root ${repository} has no valid local repository name`, 1)
-  return { key, repository: identity, path: repository, ...(sources ? { stores: { sources } } : {}) }
+  return { key, repository: identity, path: repository }
 }
 
 export const renderLocalRegistry = (repositories: readonly LocalRegistryEntry[]): string =>
@@ -154,7 +174,8 @@ export const renderLocalRegistry = (repositories: readonly LocalRegistryEntry[])
           ? [
               '',
               `[repositories.${JSON.stringify(repository.key)}.stores]`,
-              `sources = ${JSON.stringify(repository.stores.sources)}`
+              ...(repository.stores.sources ? [`sources = ${JSON.stringify(repository.stores.sources)}`] : []),
+              ...(repository.stores.legacy ? [`legacy = ${JSON.stringify(repository.stores.legacy)}`] : [])
             ]
           : [])
       ]),
@@ -197,7 +218,7 @@ export const localRegistryWriteMany = async (
   let repositories = inspection.repositories
   for (const entry of additions) {
     const byIdentity = repositories.find((candidate) => candidate.repository === entry.repository)
-    if (byIdentity && byIdentity.key !== entry.key && (!byIdentity.stores || !entry.stores))
+    if (byIdentity && (byIdentity.key !== entry.key || byIdentity.path !== entry.path))
       throw new KiError(`local KI repository registry key ${byIdentity.key} already identifies ${entry.repository}`, 1)
     const byKey = repositories.find((candidate) => candidate.key === entry.key)
     if (byKey && byKey.repository !== entry.repository)
