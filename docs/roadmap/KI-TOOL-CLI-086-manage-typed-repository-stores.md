@@ -4,12 +4,12 @@ area: CLI
 title: Manage typed repository stores
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 3b1b43d6016d3092c69aa537c6bbd49fd57ce81c
 created_at: 2026-09-25T11:29:53Z
-updated_at: 2026-09-25T14:56:14Z
+updated_at: 2026-09-26T12:43:20Z
 ---
 
 # KI-TOOL-CLI-086: Manage typed repository stores
@@ -103,6 +103,10 @@ The delivered surface meets the approved ownership model and holds the stated bo
 ### Mini recap
 
 Repository tooling now owns declared store lifecycle, consumers receive typed bindings, and no filesystem-name association remains. Durable behaviour is recorded in repository-operations and management specifications and the paired user guides; no new decision record is required.
+
+## Done
+
+Accepted on 2026-09-26 after human approval of the delivery review packet and successful re-verification against `e45633e60d69cd0623f5ac5e5a532d254c624346`.
 
 ## Discussion
 

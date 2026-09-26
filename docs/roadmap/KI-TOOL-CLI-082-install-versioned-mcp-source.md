@@ -4,13 +4,13 @@ area: CLI
 title: Install versioned MCP source
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: a540798331a18c6a888895db4c792c8e25e1097f
 transferred_from: ki-agentic-harness
 created_at: 2026-09-24T07:59:48Z
-updated_at: 2026-09-25T00:31:19Z
+updated_at: 2026-09-26T12:43:20Z
 ---
 
 # KI-TOOL-CLI-082: Install versioned MCP source
@@ -108,7 +108,11 @@ Delegated review identified private clone transport and failed-first-install cle
 
 ### Mini recap
 
-CLI-082 is implemented and verified from immutable baseline `a540798331a18c6a888895db4c792c8e25e1097f`; the work record now awaits human review.
+CLI-082 is implemented and verified from immutable baseline `a540798331a18c6a888895db4c792c8e25e1097f`.
+
+## Done
+
+Accepted on 2026-09-26 after human approval of the delivery review packet and successful re-verification against `e45633e60d69cd0623f5ac5e5a532d254c624346`.
 
 ## Discussion
 
