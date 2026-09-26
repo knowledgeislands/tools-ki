@@ -2,6 +2,7 @@ import { Command, CommanderError } from 'commander'
 import { addRootCommands } from './commands/root/index.ts'
 import type { KiContext } from './context.ts'
 import { KiError, KiExit } from './core/errors.ts'
+import { adoptMcpInventory } from './core/storage/mcp-inventory.ts'
 import { KI_VERSION } from './version.ts'
 
 type ParserCommand = Command & {
@@ -90,6 +91,10 @@ export const run = async (arguments_: readonly string[], context: KiContext): Pr
     return 0
   }
   try {
+    // Adopted before dispatch so that every command observes one environment, and inside the try
+    // so that a malformed table reports through the ordinary KiError boundary below rather than as
+    // an entrypoint crash.
+    await adoptMcpInventory(context.environment, context.paths.config)
     await program.parseAsync([...arguments_], { from: 'user' })
     return 0
   } catch (error) {

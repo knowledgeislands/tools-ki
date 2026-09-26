@@ -46,6 +46,28 @@ _Verify:_ `src/tests/cli/root/run.test.ts` — `rethrows unexpected command erro
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+## Configured environment adoption
+
+### CLI-006 — Configured canonical MCP inventory
+
+`ki` MUST adopt an absolute `[mcp] inventory` path declared in `config.toml` as `KI_MCP_SOURCE` for its own process and every command it spawns, MUST leave a non-empty inherited `KI_MCP_SOURCE` unchanged, and MUST NOT require the named file to exist.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/root/mcp-inventory.test.ts` — `adopts the configured canonical MCP inventory without requiring the named file`, `leaves an inherited canonical MCP inventory in place and treats an empty one as unset`, and `adopts nothing from an absent, unreadable or mcp-free ki configuration`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### CLI-007 — Validated MCP inventory declaration
+
+`ki` MUST refuse an `mcp` configuration value that is not a table, carries any key other than `inventory`, or declares `inventory` as anything but a non-empty absolute path string.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/root/mcp-inventory.test.ts` — `rejects an mcp configuration table it cannot resolve to one absolute inventory path`.
+
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Machine-readable command inventory
 
 ### CLI-005 — Generated command contract

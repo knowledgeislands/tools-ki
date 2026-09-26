@@ -68,6 +68,17 @@ ki manage mcp uninstall owner/repository
 
 Complete versions remain available for rollback until uninstall. Rollback performs no fetch, dependency installation, or build. These commands manage source installations below `$KI_DATA_HOME/mcp/`; they do not bind the MCP server to ChatGPT, an editor, or another client.
 
+## Declare the canonical MCP inventory
+
+Cross-surface MCP binding resolves one `mcpServers:` YAML inventory through `$KI_MCP_SOURCE`, defaulting to `$XDG_CONFIG_HOME/ki/mcp-servers.yaml`. When that inventory lives elsewhere, name it once in `config.toml` and `ki` carries it into every command it runs and into its own process, so an in-process binding check and a spawned command agree:
+
+```toml
+[mcp]
+inventory = "/absolute/path/to/mcp-servers.yaml"
+```
+
+The path must be absolute, and `inventory` is the only accepted key. An inherited non-empty `$KI_MCP_SOURCE` still wins, so a shell override stays authoritative. The file itself is not required to exist — reporting an absent or invalid inventory is a binding check's result, not a reason to stop unrelated commands. This declares which inventory describes your MCP servers; it is unrelated to the source installations that `ki manage mcp` builds.
+
 ## Diagnose
 
 ```sh

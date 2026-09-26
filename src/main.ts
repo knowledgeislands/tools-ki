@@ -14,6 +14,9 @@ const context = await createContext({
   executable: bundled ? process.execPath : fileURLToPath(import.meta.url),
   installation: bundled ? 'regular' : 'local',
   workingDirectory: process.cwd(),
+  // `process.env` itself, never a copy: `ki` adopts configured variables into the context
+  // environment, and an in-process consumer such as a dynamically imported skill rubric
+  // catalogue reads them back from `process.env`. Copying here would split the two.
   environment: process.env as NodeJS.ProcessEnv & { HOME?: string; USERPROFILE?: string }
 })
 process.exitCode = await run(process.argv.slice(2), context)
