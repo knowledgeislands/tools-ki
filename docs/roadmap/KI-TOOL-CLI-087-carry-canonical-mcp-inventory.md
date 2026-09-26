@@ -4,12 +4,12 @@ area: CLI
 title: Carry canonical MCP inventory
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 12beb676c6c8f97ada1c9a9357afa03b1f9c78d6
 created_at: 2026-09-26T15:18:29Z
-updated_at: 2026-09-26T15:18:29Z
+updated_at: 2026-09-26T18:12:48Z
 ---
 
 # KI-TOOL-CLI-087: Carry canonical MCP inventory
@@ -134,6 +134,10 @@ Acceptance-ready.
 CLI-087 reads an optional `[mcp] inventory` declaration from `config.toml`, validates it as one absolute path, and adopts it as `KI_MCP_SOURCE` for `ki`'s own process and its spawned children without displacing an inherited value. Verified from immutable baseline `12beb676c6c8f97ada1c9a9357afa03b1f9c78d6` by the full coverage gate, the type, lint and dependency gates, and real-host audit evidence. One concern remains recorded: the in-process half is a structural rather than a tested invariant.
 
 Learning routes, proposed not promoted: whether `ki manage diag` should report the resolved inventory alongside the other resolved paths; and whether the CLI test sandbox should be able to opt into the real process environment so entrypoint-level invariants become checkable.
+
+## Done
+
+Accepted 2026-09-26 by repository owner on review packet above.
 
 ## Discussion
 
