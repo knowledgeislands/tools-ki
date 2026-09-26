@@ -29,8 +29,10 @@
   "homepage": "https://github.com/knowledgeislands/tools-ki#readme",
   "keywords": [
     "agentic-harness",
+    "bun",
     "cli",
-    "knowledge-islands"
+    "knowledge-islands",
+    "typescript"
   ],
   "license": "MIT",
   "lint-staged": {
