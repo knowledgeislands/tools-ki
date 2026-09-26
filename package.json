@@ -1,11 +1,8 @@
 {
   "name": "@knowledgeislands/ki",
   "description": "Knowledge Islands command-line interface.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": "kris@kris.me.uk",
-  "bugs": {
-    "url": "https://github.com/knowledgeislands/tools-ki/issues"
-  },
   "dependencies": {
     "commander": "^15.0.0",
     "smol-toml": "1.8.0",
@@ -13,6 +10,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "@types/bun": "^1.4.2",
     "@types/node": "^26.6.1",
     "@vitest/coverage-v8": "^5.0.1",

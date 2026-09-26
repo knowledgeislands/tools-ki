@@ -64,7 +64,7 @@ Each public command or command group lives under `src/commands/`, with leaf modu
 
 `src/core/` is organised by domain. Focused operation modules own extracted orchestration and mutation while receiving only the capabilities they need; those operation boundaries do not import Commander, `KiContext`, command modules, or terminal presentation. Long-running operations report semantic events through injected observers so commands can stream progress as work happens without making the operation depend on a particular display. Domain entry points are their `index.ts` barrels; cross-domain infrastructure is limited to errors, paths, and the validated atomic-write boundary under `src/core/filesystem/`.
 
-Repository selection, execution, progress events, and subprocess handling are grouped below `src/core/repository/`. Roadmap operations live below `src/core/work/`; acquisition logic lives below `src/core/acquire/`. Agora resolution and its local-client target adapters live below `src/core/agora/`; each target adapter owns one client's process invocation, while the Agora barrel exposes supported identifiers to every opening command. The observable contracts remain in the [repository operations](../../specs/repository-operations.md) and [Agora](../../specs/agoras.md) specifications rather than being duplicated here.
+Repository selection, execution, progress events, and subprocess handling are grouped below `src/core/repository/`. Roadmap operations live below `src/core/work/`; acquisition logic lives below `src/core/acquire/`. Agora resolution and its local-client target adapters live below `src/core/agora/`; each target adapter owns one client's process invocation, while the Agora barrel exposes supported identifiers to every opening command. The observable contracts are defined by REPO-OPS-001 through REPO-OPS-016 and AGORA-001 through AGORA-015, rather than being duplicated here.
 
 `src/agents/vendors/` contains vendor-specific runtime descriptors and conventions. `src/agents/shared/` contains vendor-neutral descriptor types and detection, while the top-level agent services coordinate configuration, managed skills, capability status, bootstrap, and repository activation through the public `src/agents/index.ts` boundary.
 
@@ -121,7 +121,7 @@ The first command runs the currently installed Homebrew release. The second runs
 
 ## Release work
 
-Release signing, protected GitHub environment configuration, and publication are covered by the [release management guide](release-management.md).
+Release signing, protected GitHub environment configuration, and publication are covered by the [release guide](releasing.md).
 
 ## Read the manual
 
