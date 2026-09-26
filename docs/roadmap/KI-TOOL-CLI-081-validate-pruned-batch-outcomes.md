@@ -10,7 +10,7 @@ blocked_by: []
 transferred_from: ki-agentic-harness
 baseline_ref: 48a45861f153816efba5dbc66fda088fa99364cf
 created_at: 2026-09-22T05:36:21Z
-updated_at: 2026-09-24T23:41:21Z
+updated_at: 2026-09-26T12:53:04Z
 ---
 
 ## Goal
@@ -67,7 +67,7 @@ Explain the difference between live validation for open batches and archival val
 
 ### Roadmap
 
-The item is the receiver-local owner for `TRD-3f6649a4`; no additional follow-up is currently known.
+The item is the receiver-local owner for `TRD-3f6649a4`. Its only residual lifecycle action is trade-gated pruning under the return condition recorded below.
 
 ## Review
 
@@ -97,7 +97,7 @@ Closed batch outcomes remain verifiable after canonical work records are pruned.
 
 ## Done
 
-Accepted on 2026-09-25 under the approval-bound `KI-TOOL-BATCH-001` outcome authority after review of the delivery packet and verification evidence. The completed record is retained pending separate pruning authority.
+Accepted 2026-09-25 by `KI-TOOL-BATCH-001` outcome authority on the review packet above.
 
 ## Discussion
 
@@ -108,6 +108,10 @@ Commit existence alone is insufficient because an unrelated commit can resolve w
 ### Lifecycle split
 
 Open operations intentionally inspect live records because readiness, dependencies, progress, and expiry can still change. Once closed, the close-evidence commit is the immutable observation point; later pruning should not erase proof that was valid when recorded.
+
+### Pruning return condition
+
+When pruning was reviewed on 2026-09-26, the sender's completion-observation record `TRD-3f6649a4` remained submitted. Retain this done item and its inbound trade until sender release is observable. Then re-run the trade and roadmap audits and prune only through explicit `ki-accept prune docs/roadmap/KI-TOOL-CLI-081-validate-pruned-batch-outcomes.md` authority.
 
 ### Safety
 

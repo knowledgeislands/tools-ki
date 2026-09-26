@@ -10,7 +10,7 @@ blocked_by: []
 baseline_ref: a540798331a18c6a888895db4c792c8e25e1097f
 transferred_from: ki-agentic-harness
 created_at: 2026-09-24T07:59:48Z
-updated_at: 2026-09-26T12:43:20Z
+updated_at: 2026-09-26T12:53:04Z
 ---
 
 # KI-TOOL-CLI-082: Install versioned MCP source
@@ -96,7 +96,7 @@ Added the command and core MCP boundaries, exhaustive CLI contract coverage, gen
 
 ### Verification
 
-Focused MCP, completion, and inventory tests pass. TypeScript, Biome, Knip, manual lint, generated inventory, applicable repository audits, and the full 883-test coverage suite pass with 100% statements, branches, functions, and lines.
+Focused MCP, completion, and inventory tests pass. TypeScript, Biome, Knip, manual lint, generated inventory, applicable repository audits, and the full 883-test coverage suite pass with 100% statements, branches, functions, and lines. Before acceptance, the full current repository gate was re-run against `e45633e60d69cd0623f5ac5e5a532d254c624346` and passed.
 
 ### Outstanding concerns
 
@@ -112,7 +112,7 @@ CLI-082 is implemented and verified from immutable baseline `a540798331a18c6a888
 
 ## Done
 
-Accepted on 2026-09-26 after human approval of the delivery review packet and successful re-verification against `e45633e60d69cd0623f5ac5e5a532d254c624346`.
+Accepted 2026-09-26 by the repository owner on the review packet above.
 
 ## Discussion
 

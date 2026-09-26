@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 3b1b43d6016d3092c69aa537c6bbd49fd57ce81c
 created_at: 2026-09-25T11:29:53Z
-updated_at: 2026-09-26T12:43:20Z
+updated_at: 2026-09-26T12:53:04Z
 ---
 
 # KI-TOOL-CLI-086: Manage typed repository stores
@@ -90,15 +90,15 @@ Added the `ki repo store` command group and typed storage core, expanded registr
 
 ### Verification
 
-Focused repository-store, VS Code, registry, open, repair, completion, help, and inventory tests pass. TypeScript, Biome, Knip, manual lint, generated command inventory, `ki-self`, `ki-engineering`, `ki-authoring`, `ki-repo-tools`, and `ki-work-roadmap` audits pass. The full elevated suite passes 888 tests with 100% statements, branches, functions, and lines; elevation supplies only the installer fixture's required local-loopback listener.
+Focused repository-store, VS Code, registry, open, repair, completion, help, and inventory tests pass. TypeScript, Biome, Knip, manual lint, generated command inventory, `ki-self`, `ki-engineering`, `ki-authoring`, `ki-repo-tools`, and `ki-work-roadmap` audits pass. The full elevated suite passes 888 tests with 100% statements, branches, functions, and lines; elevation supplies only the installer fixture's required local-loopback listener. Before acceptance, the full current repository gate was re-run against `e45633e60d69cd0623f5ac5e5a532d254c624346` and passed.
 
 ### Outstanding concerns
 
-The user-wide chezmoi-managed Codex instruction still names the retired `ki manage vscode source create` command. It is outside this repository delivery and should be updated separately before the next source-store setup.
+None within this repository.
 
 ### Post-change review
 
-The delivered surface meets the approved ownership model and holds the stated boundary. Regression risk concentrates in the local registry schema expansion and command cutover; exact parser, preservation, lifecycle, projection, opening, completion, and inventory tests cover those paths. The change is ready for human acceptance.
+The accepted surface meets the approved ownership model and holds the stated boundary. Regression risk concentrates in the local registry schema expansion and command cutover; exact parser, preservation, lifecycle, projection, opening, completion, and inventory tests cover those paths.
 
 ### Mini recap
 
@@ -106,7 +106,7 @@ Repository tooling now owns declared store lifecycle, consumers receive typed bi
 
 ## Done
 
-Accepted on 2026-09-26 after human approval of the delivery review packet and successful re-verification against `e45633e60d69cd0623f5ac5e5a532d254c624346`.
+Accepted 2026-09-26 by the repository owner on the review packet above.
 
 ## Discussion
 
