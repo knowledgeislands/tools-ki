@@ -3,8 +3,8 @@ id: GDR-KI-TOOLS-001
 title: 'Adopting Decision Records'
 date: 2026-07-24
 status: current
-decision_type_url: https://knowledgeislands.info/specifications/decision-records/gdr
 decision_type: governance
+decision_type_url: https://knowledgeislands.info/specifications/decision-records/gdr
 ---
 
 # GDR-KI-TOOLS-001: Adopting Decision Records
