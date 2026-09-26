@@ -3,9 +3,6 @@
   "description": "Knowledge Islands command-line interface.",
   "version": "0.4.0",
   "author": "kris@kris.me.uk",
-  "bugs": {
-    "url": "https://github.com/knowledgeislands/tools-ki/issues"
-  },
   "dependencies": {
     "commander": "^15.0.0",
     "smol-toml": "1.9.0",
