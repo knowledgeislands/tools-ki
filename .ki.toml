@@ -57,6 +57,7 @@ areas.VENDOR = "cross-repository-vendoring"
 [skills.ki-tokenomics]
 
 [skills.ki-housekeeping-claude]
+auto_memory = "transition"
 
 [skills.ki-tokenomics-claude]
 
