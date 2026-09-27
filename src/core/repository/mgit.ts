@@ -106,7 +106,10 @@ const workspaceManifest = (
   path: string,
   groups: Record<string, unknown>
 ): WorkspaceManifest => {
-  rejectUnknownKeys(parsed, ['schema', 'kind', 'default', 'groups'], path, 'workspace manifest')
+  rejectUnknownKeys(parsed, ['schema', 'kind', 'default', 'groups', 'locations'], path, 'workspace manifest')
+  const locations = parsed['locations']
+  if (locations !== undefined && (!Array.isArray(locations) || locations.some((value) => typeof value !== 'string')))
+    throw manifestError(path, 'workspace locations must be an array of strings')
   const defaultGroup = parsed['default']
   if (typeof defaultGroup !== 'string' || !/^[A-Za-z0-9_-]+$/.test(defaultGroup))
     throw manifestError(path, 'workspace default must name a valid group')

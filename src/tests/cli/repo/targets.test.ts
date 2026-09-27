@@ -131,7 +131,7 @@ describe('[ki repo target sets]', () => {
       const box = await sandbox()
       await box.project.write(
         '.mgit.toml',
-        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.first]\nkind = "repository"\ntype = "standard"\n\n[groups.default.members."hnr-shared"]\nkind = "repository"\ntype = "standard"\n\n[groups.default.members.group]\nkind = "workspace"\n\n[groups.default.members.nested]\nkind = "repository"\ntype = "nested"\n\n[groups.default.members."archive.git"]\nkind = "repository"\ntype = "bare"\n'
+        'schema = 1\nkind = "workspace"\ndefault = "default"\nlocations = ["local", "repo:../shared"]\n\n[groups.default.members.first]\nkind = "repository"\ntype = "standard"\n\n[groups.default.members."hnr-shared"]\nkind = "repository"\ntype = "standard"\n\n[groups.default.members.group]\nkind = "workspace"\n\n[groups.default.members.nested]\nkind = "repository"\ntype = "nested"\n\n[groups.default.members."archive.git"]\nkind = "repository"\ntype = "bare"\n'
       )
       await box.project.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.project.mkdir('hnr-shared')
@@ -249,6 +249,21 @@ describe('[ki repo target sets]', () => {
       expect(bareResult.exitCode).toBe(2)
       expect(bareResult.output).toContain('mGit workspace has no KI repositories')
       expect(bareResult.output).not.toContain('skipped members without .ki.toml')
+    })
+
+    test('rejects malformed workspace locations before selecting members', async () => {
+      const box = await sandbox()
+      for (const locations of ['"local"', '["local", 1]']) {
+        await box.project.write(
+          '.mgit.toml',
+          `schema = 1\nkind = "workspace"\ndefault = "default"\nlocations = ${locations}\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n`
+        )
+
+        const result = await box.run('ki repo audit')
+
+        expect(result.exitCode).toBe(2)
+        expect(result.output).toContain('workspace locations must be an array of strings')
+      }
     })
 
     test('reports every malformed mGit selection through supported roadmap listing', async () => {

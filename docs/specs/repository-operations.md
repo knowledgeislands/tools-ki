@@ -216,6 +216,16 @@ _Verify:_ `src/tests/cli/repo/targets.test.ts` — mixed KI and non-KI audit, mi
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### REPO-OPS-022 — mGit registration locations
+
+`ki repo` MUST accept an optional string-array `locations` field in a schema-one mGit workspace manifest without selecting targets from it. A non-array value or non-string entry MUST fail before repository selection.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/targets.test.ts` — `audits KI members and reports skipped non-KI members in both output modes`; `rejects malformed workspace locations before selecting members`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.
