@@ -17,7 +17,7 @@ task_links:
       url: http://127.0.0.1:3100/KIS/issues/KIS-5
       relation: related
 created_at: 2026-09-27T13:10:03Z
-updated_at: 2026-09-27T13:55:33Z
+updated_at: 2026-09-27T22:56:21Z
 ---
 
 # KI-TOOL-CLI-088: Implement per-item task links
@@ -116,3 +116,9 @@ The approved parser, projection, specification and CLI tests are complete and ve
 ### Association versus claim
 
 The map carries durable associations, including finished evaluation and delivery history. It is not a lock or provider status cache. A direct agent still checks the current roadmap item, Paperclip task and retained worktree evidence before taking work; absence of a link is unknown rather than free capacity.
+
+### Pickup checkpoint — 2026-09-27
+
+- **Integrated evidence:** local `main` is `884f4642aed4062a22f65967313e9819e75e68cf`. Commit `c0857d5652060d644fecc7c2f20a308f59feec7c` implements `task_links` parsing and validation in `src/core/work/items.ts` (`parseTaskLinks`), optional JSON projection in `src/core/work/roadmap-report.ts` (`taskLinks`), the contract in `docs/specs/repository-operations.md`, and CLI cases in `src/tests/cli/repo/roadmap.test.ts`. Later commit `9f28542` adds linked-task text rendering in `src/commands/repo/roadmap-links.ts` (`renderRoadmapItem`) and the `--links` option in `src/commands/repo/roadmap.ts`. Both are ancestors of `main`; the recorded baseline `02ec3da5322d2fdb158254f05f39d61a024eed5d` resolves. Harness commit `a98cce65` delivered the sibling portable `task_links` contract on its local `main`. This item's existing `KIS-5` link is an association, not a current ownership claim.
+- **Verification boundary:** the `## Review` packet records focused tests, a full suite and coverage, TypeScript, Biome, Markdown, and roadmap audits from delivery time. Those are historical claims, not reruns in this checkpoint. Current source and Git ancestry were inspected; no fresh executable suite or independent review result was established here.
+- **Remaining and pickup:** independently review the exact integrated source against this item's approved scope and the current portable contract, then seek owner acceptance before changing `awaiting-review` or closing it. Reconcile destination branch, linked `KIS-5` task and any live ownership, and retained worktrees from current evidence before further implementation. Missing task evidence does not release ownership or lift a hold; this checkpoint is guidance, not an execution block or resumption authority. Retain any later Done record until explicit pruning.
