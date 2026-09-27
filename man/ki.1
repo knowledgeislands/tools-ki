@@ -1,4 +1,4 @@
-.TH KI 1 "2026-09-25" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-09-27" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -589,11 +589,12 @@ repository through the reserved \fBestate\fR selector. This option,
 repository. With neither selector, KI checks a regular direct-CWD schema-one
 \fB.mgit.toml\fR manifest. A workspace manifest selects its configured group,
 recurses through child workspaces, follows standard and nested repositories,
-and skips bare stores. A repository manifest falls through to ordinary
+and skips bare stores. Existing physical members without \fB.ki.toml\fR are
+skipped and named by \fBki repo audit\fR in normal and concise output. Missing
+or unsafe checkouts, unsafe or invalid KI declarations, and selections with no
+KI repositories fail. A repository manifest falls through to ordinary
 single-repository discovery. KI never searches ancestor directories for an
-mGit manifest or invokes \fBmgit\fR. Selection never resolves to no repository:
-every selector either selects at least one repository or fails with a message
-and a non-zero exit.
+mGit manifest or invokes \fBmgit\fR.
 .TP
 .B --estate
 Select every repository in the registered estate. This is shorthand for

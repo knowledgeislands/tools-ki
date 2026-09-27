@@ -206,6 +206,16 @@ _Verify:_ `src/tests/cli/repo/store.test.ts` — `previews and creates the conve
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### REPO-OPS-021 — Mixed mGit workspace audit
+
+With no explicit selector, `ki repo audit` MUST audit selected mGit members with valid KI declarations and report the names of existing physical members skipped because `.ki.toml` is absent, including in concise output. It MUST fail for missing or unsafe checkouts, unsafe or invalid KI declarations, or a workspace with no KI repositories.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/targets.test.ts` — mixed KI and non-KI audit, missing or unsafe checkout, unsafe or invalid declaration, and all-skipped workspace cases.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

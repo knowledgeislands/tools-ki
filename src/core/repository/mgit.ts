@@ -2,7 +2,8 @@ import { lstat, readFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
-import { physicalDirectory, type RepositoryLocation, targetFromDirectory } from './location.ts'
+import { inspectRepositoryDeclarationState, repositoryDeclarationError } from './declaration.ts'
+import { physicalDirectory, type RepositoryLocation } from './location.ts'
 
 export const MGIT_MANIFEST_FILE = '.mgit.toml'
 
@@ -26,6 +27,11 @@ interface RepositoryManifest {
 }
 
 type MgitManifest = WorkspaceManifest | RepositoryManifest
+
+interface WorkspaceTargets {
+  readonly repositories: readonly RepositoryLocation[]
+  readonly skipped: readonly string[]
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -161,14 +167,28 @@ const readManifest = async (directory: string): Promise<MgitManifest | undefined
 
 const resolveWorkspace = async (
   directory: string,
-  manifest: WorkspaceManifest
-): Promise<readonly RepositoryLocation[]> => {
-  const targets: RepositoryLocation[] = []
+  manifest: WorkspaceManifest,
+  prefix = ''
+): Promise<WorkspaceTargets> => {
+  const repositories: RepositoryLocation[] = []
+  const skipped: string[] = []
   for (const member of manifest.members) {
     if (member.kind === 'repository') {
       if (member.type === 'bare') continue
       const checkout = member.type === 'nested' ? join(directory, member.path, 'main') : join(directory, member.path)
-      targets.push(await targetFromDirectory(checkout, `${manifest.path} has invalid repository member ${member.path}`))
+      const root = await physicalDirectory(checkout, `${manifest.path} has invalid repository member ${member.path}`)
+      const declaration = await inspectRepositoryDeclarationState(root)
+      if (declaration.state === 'absent') {
+        skipped.push(join(prefix, member.path))
+        continue
+      }
+      if (declaration.state === 'unsafe')
+        throw repositoryDeclarationError(
+          root,
+          declaration,
+          `${manifest.path} has invalid repository member ${member.path}`
+        )
+      repositories.push({ root, declaration: declaration.path })
       continue
     }
     const child = await physicalDirectory(
@@ -181,14 +201,14 @@ const resolveWorkspace = async (
         manifest.path,
         `child workspace ${member.path} must contain workspace-kind ${MGIT_MANIFEST_FILE}`
       )
-    targets.push(...(await resolveWorkspace(child, childManifest)))
+    const nested = await resolveWorkspace(child, childManifest, join(prefix, member.path))
+    repositories.push(...nested.repositories)
+    skipped.push(...nested.skipped)
   }
-  return targets
+  return { repositories, skipped }
 }
 
-export const repositoriesFromMgitManifest = async (
-  directory: string
-): Promise<readonly RepositoryLocation[] | undefined> => {
+export const repositoriesFromMgitManifest = async (directory: string): Promise<WorkspaceTargets | undefined> => {
   const manifest = await readManifest(directory)
   if (!manifest || manifest.kind === 'repository') return undefined
   return resolveWorkspace(directory, manifest)

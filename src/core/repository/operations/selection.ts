@@ -33,7 +33,8 @@ export const selectRepositorySkills = async (
     configurationDirectory: context.configurationDirectory,
     stateDirectory: context.stateDirectory,
     workingDirectory: context.workingDirectory,
-    homeDirectory: context.homeDirectory
+    homeDirectory: context.homeDirectory,
+    onSkippedMgitMembers: options.onSkippedMgitMembers
   })
   const harnesses = await discoverInstalledHarnesses(context.dataDirectory)
   return resolveSkillsForRepositories(repositories, harnesses, options.skill)

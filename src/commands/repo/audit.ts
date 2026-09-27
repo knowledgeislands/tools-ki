@@ -37,7 +37,12 @@ export const createRepoAuditCommand = (context: KiContext, selectedRepositories:
       let reporter: ReturnType<typeof renderAuditFrameStart> | undefined
       const result = await auditRepositories(
         repositoryOperationContext(context, repositoryOperationProgress(context, output)),
-        { ...options, ...selectedRepositories() },
+        {
+          ...options,
+          ...selectedRepositories(),
+          onSkippedMgitMembers: (members) =>
+            context.stdout.write(`skipped mGit members (no .ki.toml): ${members.join(', ')}\n`)
+        },
         {
           repositoryStarted: (repository, skills, index) => {
             if (index && !output.concise) context.stdout.write('\n')

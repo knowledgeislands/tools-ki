@@ -53,6 +53,7 @@ export interface RepositorySelection {
   readonly agora?: string
   readonly estate?: boolean
   readonly skill?: string
+  readonly onSkippedMgitMembers?: (members: readonly string[]) => void
 }
 
 export interface SelectedRepositorySkills {

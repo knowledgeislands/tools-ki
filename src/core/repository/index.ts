@@ -132,6 +132,7 @@ interface RepositorySelection {
   readonly stateDirectory: string
   readonly workingDirectory: string
   readonly homeDirectory: string
+  readonly onSkippedMgitMembers?: (members: readonly string[]) => void
 }
 
 const selectRepositoryTargets = async (options: RepositorySelection): Promise<readonly RepositoryLocation[]> => {
@@ -175,7 +176,16 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
   }
   const working = await realpath(options.workingDirectory)
   const members = await repositoriesFromMgitManifest(working)
-  if (members) return distinctTargets(members, MGIT_MANIFEST_FILE)
+  if (members) {
+    if (!members.repositories.length)
+      throw new KiError(
+        `mGit workspace has no KI repositories${members.skipped.length ? `; skipped members without ${REPOSITORY_DECLARATION_FILE}: ${members.skipped.join(', ')}` : ''}`,
+        2
+      )
+    const targets = distinctTargets(members.repositories, MGIT_MANIFEST_FILE)
+    if (members.skipped.length) options.onSkippedMgitMembers?.(members.skipped)
+    return targets
+  }
   return [await resolveRepository({ workingDirectory: options.workingDirectory, homeDirectory: options.homeDirectory })]
 }
 

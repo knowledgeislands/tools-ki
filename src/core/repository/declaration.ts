@@ -10,7 +10,10 @@ export type RepositoryDeclarationState =
 
 export const inspectRepositoryDeclarationState = async (root: string): Promise<RepositoryDeclarationState> => {
   const path = join(root, REPOSITORY_DECLARATION_FILE)
-  const state = await lstat(path).catch(() => undefined)
+  const state = await lstat(path).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return undefined
+    throw new KiError(`${path} cannot be inspected: ${error.message}`, 2)
+  })
   if (!state) return { state: 'absent' }
   return state.isFile() && !state.isSymbolicLink() ? { state: 'canonical', path } : { state: 'unsafe', path }
 }

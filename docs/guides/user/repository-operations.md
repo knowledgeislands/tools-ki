@@ -24,6 +24,8 @@ An unmatched pattern, an invalid root, or a duplicate root stops the operation b
 
 With no explicit selector, `ki` reads a regular `.mgit.toml` schema-one manifest in the current directory. A workspace manifest selects its configured group and recurses through child workspaces, using structural member types for standard and nested `main/` checkouts and skipping bare stores; a repository manifest falls through to ordinary single-repository discovery. `ki` never invokes `mgit` to do this.
 
+An mGit member whose checkout exists but has no `.ki.toml` is skipped. `ki repo audit` reports its name, including with `--concise`. Missing or unsafe checkouts, unsafe or invalid KI declarations, and a workspace with no KI repositories still fail.
+
 Operations then run in target order. A read-only operation isolates each target's diagnostic. A mutation retains earlier successful targets when a later one fails, and returns a non-zero overall result — so a multi-repository failure leaves completed work in place and tells you it was not complete.
 
 ### The registry

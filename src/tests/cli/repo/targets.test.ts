@@ -1,4 +1,4 @@
-import { lstat, realpath } from 'node:fs/promises'
+import { chmod, lstat, realpath, symlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -125,6 +125,130 @@ describe('[ki repo target sets]', () => {
       expect(result.output).toContain('╭─ KI REPO ROADMAP')
       expect(result.output).toContain('/group/second')
       expect(result.output).toContain('/nested/main')
+    })
+
+    test('audits KI members and reports skipped non-KI members in both output modes', async () => {
+      const box = await sandbox()
+      await box.project.write(
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.first]\nkind = "repository"\ntype = "standard"\n\n[groups.default.members."hnr-shared"]\nkind = "repository"\ntype = "standard"\n\n[groups.default.members.group]\nkind = "workspace"\n\n[groups.default.members.nested]\nkind = "repository"\ntype = "nested"\n\n[groups.default.members."archive.git"]\nkind = "repository"\ntype = "bare"\n'
+      )
+      await box.project.write('first/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.project.mkdir('hnr-shared')
+      await box.project.write(
+        'group/.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.second]\nkind = "repository"\ntype = "standard"\n\n[groups.default.members.outsider]\nkind = "repository"\ntype = "standard"\n'
+      )
+      await box.project.write(
+        'group/second/.ki.toml',
+        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n'
+      )
+      await box.project.mkdir('group/outsider')
+      await box.project.mkdir('nested/main')
+      await box.setupExampleHarness({ rubric: rubric('[]') })
+
+      const result = await box.run('ki repo audit')
+      const concise = await box.run('ki repo audit --concise')
+
+      expect(result.exitCode).toBe(0)
+      expect(result.output.match(/╭─ KI REPO AUDIT\n/g)).toHaveLength(2)
+      expect(result.output).toContain('/first)')
+      expect(result.output).toContain('/group/second)')
+      expect(result.output).toContain('skipped mGit members (no .ki.toml): hnr-shared, group/outsider, nested')
+      expect(result.output).not.toContain('archive.git')
+      expect(concise.exitCode).toBe(0)
+      expect(concise.output).toContain('summary: KI REPO AUDIT on first PASS · 1 skill')
+      expect(concise.output).toContain('summary: KI REPO AUDIT on second PASS · 1 skill')
+      expect(concise.output).toContain('skipped mGit members (no .ki.toml): hnr-shared, group/outsider, nested')
+    })
+
+    test('fails when a selected mGit checkout is missing or unsafe', async () => {
+      const missing = await sandbox()
+      await missing.project.write(
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.missing]\nkind = "repository"\ntype = "standard"\n'
+      )
+      const missingResult = await missing.run('ki repo audit')
+
+      const unsafe = await sandbox()
+      await unsafe.project.write(
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.link]\nkind = "repository"\ntype = "standard"\n'
+      )
+      await unsafe.project.mkdir('real')
+      await symlink(`${unsafe.project.path}/real`, `${unsafe.project.path}/link`)
+      const unsafeResult = await unsafe.run('ki repo audit')
+
+      expect(missingResult.exitCode).toBe(2)
+      expect(missingResult.output).toContain('invalid repository member missing')
+      expect(unsafeResult.exitCode).toBe(2)
+      expect(unsafeResult.output).toContain('invalid repository member link')
+    })
+
+    test('fails on unsafe or invalid KI declarations in selected mGit members', async () => {
+      const unsafe = await sandbox()
+      await unsafe.project.write(
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.member]\nkind = "repository"\ntype = "standard"\n'
+      )
+      await unsafe.project.mkdir('member/.ki.toml')
+      const unsafeResult = await unsafe.run('ki repo audit')
+
+      const invalid = await sandbox()
+      await invalid.project.write(
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.skipped]\nkind = "repository"\ntype = "standard"\n\n[groups.default.members.member]\nkind = "repository"\ntype = "standard"\n'
+      )
+      await invalid.project.mkdir('skipped')
+      await invalid.project.write('member/.ki.toml', '[repo\n')
+      const invalidResult = await invalid.run('ki repo audit')
+
+      expect(unsafeResult.exitCode).toBe(2)
+      expect(unsafeResult.output).toContain('member/.ki.toml must be a regular file')
+      expect(invalidResult.exitCode).toBe(1)
+      expect(invalidResult.output).toContain('.ki.toml must be valid TOML')
+      expect(invalidResult.output).toContain('skipped mGit members (no .ki.toml): skipped')
+    })
+
+    test('does not skip a member when declaration inspection fails for a reason other than absence', async () => {
+      const box = await sandbox()
+      await box.project.write(
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members.member]\nkind = "repository"\ntype = "standard"\n'
+      )
+      await box.project.mkdir('member')
+      await chmod(`${box.project.path}/member`, 0o000)
+
+      const result = await box.run('ki repo audit').finally(() => chmod(`${box.project.path}/member`, 0o755))
+
+      expect(result.exitCode).toBe(2)
+      expect(result.output).toContain('member/.ki.toml cannot be inspected: EACCES')
+      expect(result.output).not.toContain('skipped mGit members')
+    })
+
+    test('fails rather than reporting success when every mGit member lacks a KI declaration', async () => {
+      const box = await sandbox()
+      await box.project.write(
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members."hnr-shared"]\nkind = "repository"\ntype = "standard"\n'
+      )
+      await box.project.mkdir('hnr-shared')
+
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(2)
+      expect(result.output).toContain('no KI repositories; skipped members without .ki.toml: hnr-shared')
+      expect(result.output).not.toContain('PASS')
+
+      const bare = await sandbox()
+      await bare.project.write(
+        '.mgit.toml',
+        'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members."archive.git"]\nkind = "repository"\ntype = "bare"\n'
+      )
+      const bareResult = await bare.run('ki repo audit')
+      expect(bareResult.exitCode).toBe(2)
+      expect(bareResult.output).toContain('mGit workspace has no KI repositories')
+      expect(bareResult.output).not.toContain('skipped members without .ki.toml')
     })
 
     test('reports every malformed mGit selection through supported roadmap listing', async () => {
