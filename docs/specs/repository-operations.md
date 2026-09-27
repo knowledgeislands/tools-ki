@@ -96,7 +96,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-OPS-010 — Adapter-owned roadmap metadata
 
-For the `kb-streams` adapter, `ki repo roadmap` MUST project and validate the common work lifecycle fields while accepting additional frontmatter fields, including opaque indented continuations attached to those fields, whose semantics remain owned by native Knowledge Base governance. It MUST continue rejecting missing, malformed, or repeated common fields. Project roadmaps MUST accept exactly the current shared frontmatter fields, including `waiting_on_trades`, terminal intake-disposition fields, `transferred_from`, `housekeeping_template`, and `scheduled_for`, while rejecting retired field spellings.
+For the `kb-streams` adapter, `ki repo roadmap` MUST project and validate the common work lifecycle fields while accepting additional frontmatter fields, including opaque indented continuations attached to those fields, whose semantics remain owned by native Knowledge Base governance. It MUST continue rejecting missing, malformed, or repeated common fields. Project roadmaps MUST accept exactly the current shared frontmatter fields, including `waiting_on_trades`, terminal intake-disposition fields, `transferred_from`, `housekeeping_template`, `scheduled_for`, and optional `task_links`, while rejecting retired field spellings. Both local adapters MUST validate `task_links` offline as a non-empty map from lower-case provider names to non-empty arrays of references. Each reference MUST contain only non-empty string `authority`, `scope`, `id`, `key`, `url`, and `relation` fields; `relation` MUST be `evaluation`, `implementation`, `review`, `integration`, `coordination`, or `related`. References MUST NOT repeat the same provider, authority, scope, id, and relation tuple within an item. Readable keys and URLs are not identity; the map does not mirror task status or establish current ownership or release.
 
 A KB Streams horizon mutation MUST preserve every unconsumed frontmatter field and body byte except for the requested `horizon` change and monotonic `updated_at` advancement.
 
@@ -168,7 +168,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### REPO-OPS-017 — Path-free roadmap projection
 
-`ki repo roadmap list --format json` MUST emit schema `ki/roadmap/v1` with canonical item and repository identities, filters, dependencies, lifecycle fields, and canonical record URLs while omitting local filesystem paths and presentation state.
+`ki repo roadmap list --format json` MUST emit schema `ki/roadmap/v1` with canonical item and repository identities, filters, dependencies, lifecycle fields, and canonical record URLs while omitting local filesystem paths and presentation state. It MUST project validated `task_links` as `taskLinks` only for items that declare the field; older records MUST retain their existing JSON shape. This additive projection is association evidence, not a live task-system check or KI lifecycle state.
 
 _Conformance:_ conforming
 

@@ -1,5 +1,6 @@
 import { lstat, readdir, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
+import { parse } from 'yaml'
 import { KiError } from '../errors.ts'
 import { prepareWrites, publishWrites } from '../filesystem/index.ts'
 import type { RepositoryPlanningAdapter, RepositoryPlanningSource } from './planning.ts'
@@ -29,18 +30,32 @@ const optionalFields = [
   'scheduled_for'
 ] as const
 type WorkItemField = RequiredField | (typeof optionalFields)[number]
-type WorkItemFields = Partial<Record<WorkItemField, string>>
+type WorkItemFields = Partial<Record<WorkItemField, string>> & { task_links?: TaskLinks }
 
-const allowedFields = new Set<WorkItemField>([...requiredFields, ...optionalFields])
+const allowedFields = new Set<string>([...requiredFields, ...optionalFields, 'task_links'])
 export const workItemHorizons = ['now', 'next', 'soon', 'waiting-for', 'parked', 'future', 'triage'] as const
 export type WorkItemHorizon = (typeof workItemHorizons)[number]
 const horizons = new Set<WorkItemHorizon>(workItemHorizons)
 const statuses = new Set<WorkItemStatus>(['draft', 'ready', 'in-progress', 'awaiting-review', 'done'])
+const taskLinkRelations = ['evaluation', 'implementation', 'review', 'integration', 'coordination', 'related'] as const
+export type TaskLinkRelation = (typeof taskLinkRelations)[number]
+const validTaskLinkRelations = new Set<string>(taskLinkRelations)
 
 export const isWorkItemFile = (file: string, adapter: RepositoryPlanningAdapter): boolean =>
   file.endsWith('.md') && file !== ISSUE_LEDGER && (adapter !== 'kb-streams' || file !== KB_ROADMAP_INDEX)
 
 export type WorkItemStatus = 'draft' | 'ready' | 'in-progress' | 'awaiting-review' | 'done'
+
+export interface TaskLink {
+  readonly authority: string
+  readonly scope: string
+  readonly id: string
+  readonly key: string
+  readonly url: string
+  readonly relation: TaskLinkRelation
+}
+
+export type TaskLinks = Readonly<Record<string, readonly TaskLink[]>>
 
 export interface WorkItem {
   readonly id: string
@@ -55,6 +70,7 @@ export interface WorkItem {
   readonly createdAt: string
   readonly updatedAt: string
   readonly transferredFrom?: string
+  readonly taskLinks?: TaskLinks
 }
 
 interface WorkItemRecord {
@@ -104,25 +120,72 @@ const timestamp = (value: string, file: string, field: string): string => {
   return value
 }
 
+const parseTaskLinks = (lines: readonly string[], file: string): TaskLinks => {
+  let value: unknown
+  try {
+    value = parse(`task_links:\n${lines.join('\n')}`)
+  } catch {
+    throw itemError(file, 'task_links must be a provider map of task references')
+  }
+  const links = (value as { task_links?: unknown } | null)?.task_links
+  if (!links || typeof links !== 'object' || Array.isArray(links) || !Object.keys(links).length)
+    throw itemError(file, 'task_links must be a non-empty provider map')
+
+  const fields = ['authority', 'scope', 'id', 'key', 'url', 'relation'] as const
+  const result: Record<string, readonly TaskLink[]> = {}
+  for (const [provider, references] of Object.entries(links)) {
+    if (!/^[a-z][a-z0-9-]*$/.test(provider) || !Array.isArray(references) || !references.length)
+      throw itemError(file, 'task_links providers must have lower-case names and non-empty reference arrays')
+    const seen = new Set<string>()
+    result[provider] = references.map((reference: unknown): TaskLink => {
+      if (!reference || typeof reference !== 'object' || Array.isArray(reference))
+        throw itemError(file, 'task_links references must be field maps')
+      const entries = Object.entries(reference)
+      if (entries.length !== fields.length || entries.some(([key]) => !fields.includes(key as (typeof fields)[number])))
+        throw itemError(file, 'task_links references must contain only authority, scope, id, key, url and relation')
+      const record = reference as Record<(typeof fields)[number], unknown>
+      if (fields.some((field) => typeof record[field] !== 'string' || !(record[field] as string).trim()))
+        throw itemError(file, 'task_links reference fields must be non-empty strings')
+      if (!validTaskLinkRelations.has(record.relation as string))
+        throw itemError(file, 'task_links reference has an unsupported relation')
+      const identity = JSON.stringify([provider, record.authority, record.scope, record.id, record.relation])
+      if (seen.has(identity)) throw itemError(file, 'task_links repeats a qualified task relation')
+      seen.add(identity)
+      return record as unknown as TaskLink
+    })
+  }
+  return result
+}
+
 const frontmatter = (contents: string, file: string, adapter: RepositoryPlanningAdapter): Readonly<WorkItemFields> => {
   const match = /^---\n([\s\S]*?)\n---(?:\n|$)/.exec(contents)
   if (!match?.[1]) throw itemError(file, 'must declare canonical frontmatter')
   const fields: WorkItemFields = {}
   const seen = new Set<string>()
   let adapterField: string | undefined
-  for (const line of match[1].split('\n')) {
+  const lines = match[1].split('\n')
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index] as string
     const entry = /^([a-z_-]+):(?: (.*))?$/.exec(line)
     if (!entry?.[1]) {
       if (adapter === 'kb-streams' && adapterField && (line === '' || /^\s+/.test(line))) continue
       throw itemError(file, 'frontmatter must contain simple key-value fields')
     }
     const [, key, value] = entry
-    const common = allowedFields.has(key as WorkItemField)
+    const common = allowedFields.has(key)
     if (seen.has(key) || (adapter === 'roadmap' && !common))
       throw itemError(file, `has unsupported or repeated field ${key}`)
     seen.add(key)
     adapterField = common ? undefined : key
     if (!common) continue
+    if (key === 'task_links') {
+      if (value) throw itemError(file, 'task_links must be a nested provider map')
+      const nested: string[] = []
+      while (index + 1 < lines.length && (lines[index + 1] === '' || /^\s+/.test(lines[index + 1] as string)))
+        nested.push(lines[++index] as string)
+      fields.task_links = parseTaskLinks(nested, file)
+      continue
+    }
     if (!value) throw itemError(file, 'frontmatter must contain simple key-value fields')
     fields[key as WorkItemField] = parseScalar(value)
   }
@@ -159,7 +222,8 @@ export const parseWorkItem = (contents: string, file: string, adapter: Repositor
     baselineRef: baseline === 'null' ? null : (baseline as string),
     createdAt,
     updatedAt,
-    ...(fields.transferred_from ? { transferredFrom: fields.transferred_from } : {})
+    ...(fields.transferred_from ? { transferredFrom: fields.transferred_from } : {}),
+    ...(fields.task_links ? { taskLinks: fields.task_links } : {})
   }
 }
 

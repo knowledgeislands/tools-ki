@@ -4,12 +4,12 @@ area: CLI
 title: Implement per-item task links
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 02ec3da5322d2fdb158254f05f39d61a024eed5d
 created_at: 2026-09-27T13:10:03Z
-updated_at: 2026-09-27T13:10:03Z
+updated_at: 2026-09-27T13:29:14Z
 ---
 
 # KI-TOOL-CLI-088: Implement per-item task links
@@ -32,12 +32,12 @@ Implement the optional `task_links` field for local project roadmaps and KB Stre
 
 ## Steps
 
-- [ ] Add optional `task_links` parsing and typed validation: lower-case provider key to a nonempty list of refs with nonempty string `authority`, `scope`, `id`, `key`, `url`, and `relation`; relations are `evaluation`, `implementation`, `review`, `integration`, `coordination`, or `related`.
-- [ ] Reject malformed nested content, unknown reference keys and duplicate provider + authority + scope + id + relation within an item, while allowing multiple providers and references, duplicate readable keys under different qualified identities, and absent `task_links` on existing records.
-- [ ] Preserve the closed common-field allow-list, unrelated KB-owned nested metadata, historical parsing, frontmatter round trips and immutable `created_at` during horizon changes.
-- [ ] Expose optional task links in the path-free roadmap JSON report only when present; keep old-record output unchanged under the documented additive v1 projection unless consumer review shows a version break is required.
-- [ ] Update the repository-operations specification and focused CLI tests for the complete matrix above, including malformed values, identity and relation distinctions, KB Streams, historical reading and horizon preservation.
-- [ ] Independently compare the final implementation with `KI-HARNESS-GOV-116` and the KIS-5 plan before review.
+- [x] Add optional `task_links` parsing and typed validation: lower-case provider key to a nonempty list of refs with nonempty string `authority`, `scope`, `id`, `key`, `url`, and `relation`; relations are `evaluation`, `implementation`, `review`, `integration`, `coordination`, or `related`.
+- [x] Reject malformed nested content, unknown reference keys and duplicate provider + authority + scope + id + relation within an item, while allowing multiple providers and references, duplicate readable keys under different qualified identities, and absent `task_links` on existing records.
+- [x] Preserve the closed common-field allow-list, unrelated KB-owned nested metadata, historical parsing, frontmatter round trips and immutable `created_at` during horizon changes.
+- [x] Expose optional task links in the path-free roadmap JSON report only when present; keep old-record output unchanged under the documented additive v1 projection unless consumer review shows a version break is required.
+- [x] Update the repository-operations specification and focused CLI tests for the complete matrix above, including malformed values, identity and relation distinctions, KB Streams, historical reading and horizon preservation.
+- [x] Independently compare the final implementation with `KI-HARNESS-GOV-116` and the KIS-5 plan before review.
 
 ## Files touched
 
@@ -72,6 +72,36 @@ No new guide; the portable harness format and Paperclip coordination standard ex
 ### Roadmap
 
 The harness sibling owns the normative field. Bulk backfill is a later reconciliation action against existing items, not a duplicate tools-ki work item.
+
+## Review
+
+### Delivered
+
+Implemented the approved local CLI boundary from immutable baseline `02ec3da5322d2fdb158254f05f39d61a024eed5d` in the designated tools-ki primary checkout. The resulting evidence is the local commit carrying this review packet. No Paperclip state, Techné record, shared registry, KI acceptance or push changed.
+
+### Change Summary
+
+`src/core/work/items.ts` validates the optional nested map and exposes typed links; `src/core/work/index.ts` exports the types. `src/core/work/roadmap-report.ts` adds `taskLinks` only for linked items under `ki/roadmap/v1`. `docs/specs/repository-operations.md` states the CLI contract. `src/tests/cli/repo/roadmap.test.ts` covers both local adapters, qualified identities, relation values, malformed shapes, unchanged old-record output, byte-preserving horizon moves and historical snapshot validation through batch close. No file outside the approved list changed.
+
+### Verification
+
+- Focused roadmap CLI tests: 26 passed.
+- Full `bun run test`: 894 passed before the final historical-snapshot case; the final `bun run test:coverage` ran the full suite with 895 passed and 100% statement, branch, function and line coverage.
+- `bunx tsc --noEmit`, focused `bunx biome check`, and `rumdl check` on the two authored Markdown files: passed.
+- `ki repo audit --skill ki-work --repo .` and `ki repo audit --skill ki-work-roadmap --repo .`: passed.
+- Compared the six fields, six relations, provider key grammar, duplicate tuple and no-live-claim boundary with KIS-5 plan revision `cbcba3b3-82f2-44dd-9f1f-37d1b672ec71` and the `KI-HARNESS-GOV-116` portable format text.
+
+### Outstanding concerns
+
+Independent review of the exact resulting commit remains pending. No known CLI failure or approved-scope deviation remains. The separate harness contract delivery must land under its own review and integration authority.
+
+### Post-change review
+
+The CLI now reports durable task associations without treating them as current ownership or a second lifecycle. Existing records retain their JSON shape; KB-owned metadata and task-link blocks survive horizon changes byte-for-byte. The delivery is ready for independent review, not KI acceptance.
+
+### Mini recap
+
+The approved parser, projection, specification and CLI tests are complete and verified. Keep the provider-neutral field semantics in `KI-HARNESS-GOV-116`; reconcile any future task-link backfill item by item rather than inferring availability from the map.
 
 ## Discussion
 

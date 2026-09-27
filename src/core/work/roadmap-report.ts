@@ -1,3 +1,4 @@
+import type { TaskLinks } from './items.ts'
 import type { RoadmapListResult } from './operations.ts'
 
 const ROADMAP_REPORT_SCHEMA = 'ki/roadmap/v1' as const
@@ -24,6 +25,7 @@ interface RoadmapReport {
     readonly createdAt: string
     readonly updatedAt: string
     readonly record: string
+    readonly taskLinks?: TaskLinks
   }[]
 }
 
@@ -56,7 +58,8 @@ export const roadmapReport = (results: readonly RoadmapListResult[]): RoadmapRep
       blockedBy: item.blockedBy,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
-      record: item.record
+      record: item.record,
+      ...(item.taskLinks ? { taskLinks: item.taskLinks } : {})
     }))
   })
 })

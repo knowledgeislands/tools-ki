@@ -1,4 +1,4 @@
-export type { WorkItem } from './items.ts'
+export type { TaskLink, TaskLinkRelation, TaskLinks, WorkItem } from './items.ts'
 export { workItemHorizons } from './items.ts'
 export type {
   RoadmapListResult,

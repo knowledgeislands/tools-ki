@@ -45,6 +45,30 @@ const item = (overrides: Record<string, string | undefined> = {}): string => {
     .join('\n')}\n---\n\n## Context\n\nTest item.\n\n## Boundary\n\nNone.\n\n## Discussion\n\n### Test\n\nTest.\n`
 }
 
+const taskLinks = [
+  '',
+  '  paperclip:',
+  '    - authority: http://127.0.0.1:3100',
+  '      scope: 558dd49e-7615-409f-b7b2-7f19e22171d9',
+  '      id: b76a4ec9-be48-4a3c-8568-7885b5e6789b',
+  '      key: KIS-5',
+  '      url: http://127.0.0.1:3100/KIS/issues/KIS-5',
+  '      relation: implementation',
+  '    - authority: http://127.0.0.1:3100',
+  '      scope: 558dd49e-7615-409f-b7b2-7f19e22171d9',
+  '      id: 7afd7214-386e-455f-83bd-6ac4c9f1bf7f',
+  '      key: KIS-5',
+  '      url: http://127.0.0.1:3100/KIS/issues/KIS-6',
+  '      relation: evaluation',
+  '  linear:',
+  '    - authority: https://linear.app',
+  '      scope: example',
+  '      id: 12345678-1234-1234-1234-123456789abc',
+  '      key: KIS-5',
+  '      url: https://linear.app/example/issue/KIS-5',
+  '      relation: related'
+].join('\n')
+
 const localRegistry = (
   entries: readonly { readonly key: string; readonly repository: string; readonly path: string }[]
 ): string =>
@@ -784,6 +808,198 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).not.toContain('has unsupported or repeated field transferred_from')
     expect(result.output).not.toContain('has unsupported or repeated field housekeeping_template')
     expect(result.output).not.toContain('has unsupported or repeated field scheduled_for')
+  })
+
+  test('projects qualified task links across local adapters and preserves their bytes on horizon moves', async () => {
+    const box = await sandbox()
+    await box.project.write(
+      'project/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
+    )
+    await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
+    const linked = item({ task_links: taskLinks })
+    const kbLinked = item({ id: 'KBS-001', task_links: taskLinks, ...knowledgeBaseMetadata })
+    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-linked.md', linked)
+    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-004-unlinked.md', item({ id: 'KI-TOOL-CLI-004' }))
+    await box.project.write('knowledge/Streams/Roadmap/KBS-001-linked.md', kbLinked)
+
+    const listed = await box.run('ki repo --repo project --repo knowledge roadmap list --format json')
+    expect(listed.exitCode, listed.output).toBe(0)
+    const report = JSON.parse(listed.output)
+    expect(report.schema).toBe('ki/roadmap/v1')
+    const linkedItems = report.items.filter((entry: { id: string }) => entry.id !== 'KI-TOOL-CLI-004')
+    expect(linkedItems).toHaveLength(2)
+    for (const entry of linkedItems) {
+      expect(entry.taskLinks).toEqual({
+        paperclip: [
+          {
+            authority: 'http://127.0.0.1:3100',
+            scope: '558dd49e-7615-409f-b7b2-7f19e22171d9',
+            id: 'b76a4ec9-be48-4a3c-8568-7885b5e6789b',
+            key: 'KIS-5',
+            url: 'http://127.0.0.1:3100/KIS/issues/KIS-5',
+            relation: 'implementation'
+          },
+          expect.objectContaining({
+            id: '7afd7214-386e-455f-83bd-6ac4c9f1bf7f',
+            key: 'KIS-5',
+            relation: 'evaluation'
+          })
+        ],
+        linear: [expect.objectContaining({ key: 'KIS-5', relation: 'related' })]
+      })
+    }
+    expect(report.items.find((entry: { id: string }) => entry.id === 'KI-TOOL-CLI-004')).not.toHaveProperty('taskLinks')
+    expect(listed.output).not.toContain(box.project.path)
+
+    const now = () => Date.parse('2026-09-02T00:00:00Z')
+    expect((await box.run('ki repo --repo project roadmap promote KI-TOOL-CLI-003', { now })).exitCode).toBe(0)
+    expect((await box.run('ki repo --repo knowledge roadmap promote KBS-001', { now })).exitCode).toBe(0)
+    expect(await box.project.read('project/docs/roadmap/KI-TOOL-CLI-003-linked.md')).toBe(
+      linked
+        .replace('horizon: next', 'horizon: now')
+        .replace('updated_at: 2026-09-01T00:00:00Z', 'updated_at: 2026-09-02T00:00:00Z')
+    )
+    expect(await box.project.read('knowledge/Streams/Roadmap/KBS-001-linked.md')).toBe(
+      kbLinked
+        .replace('horizon: next', 'horizon: now')
+        .replace('updated_at: 2026-09-01T00:00:00Z', 'updated_at: 2026-09-02T00:00:00Z')
+    )
+  })
+
+  test('accepts each task-link relation but rejects malformed or duplicated qualified references', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    const record = 'repo/docs/roadmap/KI-TOOL-CLI-003-linked.md'
+    for (const relation of ['evaluation', 'implementation', 'review', 'integration', 'coordination', 'related']) {
+      await box.project.write(
+        record,
+        item({ task_links: taskLinks.replace('relation: implementation', `relation: ${relation}`) })
+      )
+      const result = await box.run('ki repo --repo repo roadmap list')
+      expect(result.exitCode, `${relation}: ${result.output}`).toBe(0)
+    }
+
+    const duplicate = taskLinks.replace(
+      '  linear:',
+      [
+        '    - authority: http://127.0.0.1:3100',
+        '      scope: 558dd49e-7615-409f-b7b2-7f19e22171d9',
+        '      id: b76a4ec9-be48-4a3c-8568-7885b5e6789b',
+        '      key: KIS-6',
+        '      url: http://127.0.0.1:3100/KIS/issues/KIS-6',
+        '      relation: implementation',
+        '  linear:'
+      ].join('\n')
+    )
+    await box.project.write(
+      record,
+      item({
+        task_links: taskLinks.replace(
+          'id: 7afd7214-386e-455f-83bd-6ac4c9f1bf7f',
+          'id: b76a4ec9-be48-4a3c-8568-7885b5e6789b'
+        )
+      })
+    )
+    expect((await box.run('ki repo --repo repo roadmap list')).exitCode).toBe(0)
+    await box.project.write(
+      record,
+      item({
+        task_links: duplicate
+          .replace('key: KIS-6', 'key: KIS-5')
+          .replace(
+            '  paperclip:\n    - authority: http://127.0.0.1:3100',
+            '  paperclip:\n    - authority: http://127.0.0.1:3200'
+          )
+      })
+    )
+    expect((await box.run('ki repo --repo repo roadmap list')).exitCode).toBe(0)
+    const cases: readonly [string, string, string][] = [
+      ['scalar field', '[]', 'must be a nested provider map'],
+      ['empty map', '\n  {}', 'non-empty provider map'],
+      ['empty references', '\n  paperclip: []', 'non-empty reference arrays'],
+      ['null reference', '\n  paperclip:\n    - null', 'references must be field maps'],
+      ['scalar reference', '\n  paperclip:\n    - text', 'references must be field maps'],
+      ['array reference', '\n  paperclip:\n    - []', 'references must be field maps'],
+      ['uppercase provider', taskLinks.replace('  paperclip:', '  Paperclip:'), 'lower-case names'],
+      ['missing field', taskLinks.replace('      scope: 558dd49e-7615-409f-b7b2-7f19e22171d9\n', ''), 'contain only'],
+      [
+        'empty field',
+        taskLinks.replace('      id: b76a4ec9-be48-4a3c-8568-7885b5e6789b', "      id: ''"),
+        'non-empty strings'
+      ],
+      [
+        'unknown field',
+        taskLinks.replace('      relation: implementation', '      relation: implementation\n      status: done'),
+        'contain only'
+      ],
+      ['unknown relation', taskLinks.replace('relation: implementation', 'relation: active'), 'unsupported relation'],
+      ['duplicate identity', duplicate, 'repeats a qualified task relation'],
+      ['duplicate provider', `${taskLinks}\n  paperclip: []`, 'provider map of task references'],
+      ['malformed YAML', '\n  paperclip: [', 'provider map of task references']
+    ]
+    for (const [name, value, message] of cases) {
+      await box.project.write(record, item({ task_links: value }))
+      const result = await box.run('ki repo --repo repo roadmap list')
+      expect(result.exitCode, name).toBe(1)
+      expect(result.output, name).toContain(message)
+    }
+  })
+
+  test('validates task links in a historical work-item snapshot through batch close', async () => {
+    const box = await sandbox()
+    await box.project.write(
+      'repository/.ki.toml',
+      [
+        '[repo]',
+        'harnesses = ["example/harness"]',
+        '',
+        '[skills.ki-repo]',
+        'repository = "https://github.com/example/repository"',
+        'repo_code = "EXAMPLE"',
+        '',
+        '[skills.ki-work]',
+        'adapter = "roadmap"',
+        ''
+      ].join('\n')
+    )
+    const record = 'repository/docs/roadmap/EXAMPLE-001-linked.md'
+    await box.project.write(record, item({ id: 'EXAMPLE-001', status: 'ready', task_links: taskLinks }))
+    const baseline = '1'.repeat(40)
+    const resultCommit = '2'.repeat(40)
+    const evidenceCommit = '3'.repeat(40)
+    let historical = item({ id: 'EXAMPLE-001', status: 'awaiting-review', task_links: taskLinks })
+    box.setRunner(async (command, arguments_) => {
+      if (command !== 'git') return { exitCode: 1, output: 'unexpected command' }
+      if (arguments_[2] === 'cat-file' && arguments_[3] === '-e') return { exitCode: 0, output: '' }
+      if (arguments_[2] === 'ls-tree' && arguments_.at(-1) === `${evidenceCommit}:docs/roadmap`)
+        return { exitCode: 0, output: `100644 blob ${'a'.repeat(40)}\tEXAMPLE-001-linked.md\0` }
+      if (arguments_[2] === 'cat-file' && arguments_[3] === 'blob') return { exitCode: 0, output: historical }
+      return { exitCode: 1, output: 'unexpected git operation' }
+    })
+    box.cd('repository')
+    const now = () => Date.parse('2026-09-15T08:00:00Z')
+    const prepare = await box.run(
+      'ki batch prepare --item EXAMPLE-001 --approved --authority-mode reviewed-items --expires-at 2026-09-15T12:00:00Z --completion-target awaiting-review',
+      { now }
+    )
+    expect(prepare.exitCode, prepare.output).toBe(0)
+    expect((await box.run('ki batch run EXAMPLE-BATCH-001', { now })).exitCode).toBe(0)
+    await box.project.write(record, historical)
+    const outcome = await box.run(
+      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${resultCommit}`,
+      { now }
+    )
+    expect(outcome.exitCode, outcome.output).toBe(0)
+
+    const close = `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`
+    historical = historical.replace('relation: implementation', 'relation: active')
+    const invalid = await box.run(close, { now })
+    expect(invalid.exitCode).toBe(2)
+    expect(invalid.output).toContain('task_links reference has an unsupported relation')
+    historical = item({ id: 'EXAMPLE-001', status: 'awaiting-review', task_links: taskLinks })
+    const valid = await box.run(close, { now })
+    expect(valid.exitCode, valid.output).toBe(0)
   })
 
   test('prunes only completed items across selected repositories after every target is valid', async () => {
