@@ -1,5 +1,5 @@
 import { basename } from 'node:path'
-import { Command } from 'commander'
+import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError, KiExit } from '../../core/errors.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade/index.ts'
@@ -16,6 +16,7 @@ import {
   workItemHorizons
 } from '../../core/work/index.ts'
 import { presentation, renderTradeRelation, renderTree, type TreeEntry } from '../presentation/index.ts'
+import { type RoadmapTextOptions, renderRoadmapItem, roadmapLinkLegend } from './roadmap-links.ts'
 
 interface RoadmapOptions {
   readonly horizon?: string
@@ -23,6 +24,7 @@ interface RoadmapOptions {
   readonly aggregate?: boolean
   readonly icons?: boolean
   readonly format?: string
+  readonly links: 'compact' | 'all'
 }
 
 type RepositorySelection = () => {
@@ -96,7 +98,11 @@ const countTradeDirections = (
   return { inbound, outbound }
 }
 
-const renderTextResult = (result: RoadmapListResult, estate: readonly LocatedTrade[], icons = true): string => {
+const renderTextResult = (
+  result: RoadmapListResult,
+  estate: readonly LocatedTrade[],
+  options: RoadmapTextOptions
+): string => {
   const context = [
     { label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.repository})` }
   ]
@@ -110,7 +116,7 @@ const renderTextResult = (result: RoadmapListResult, estate: readonly LocatedTra
       : [
           ...groups.map(({ horizon, items: group }) => ({
             label: `${horizon} (${group.length})`,
-            children: group.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
+            children: group.map((item) => renderRoadmapItem(item, options))
           })),
           ...faults.map((fault) => ({
             label: `${presentation('status.unavailable').terminal} ${fault.message}`
@@ -127,9 +133,10 @@ const renderTextResult = (result: RoadmapListResult, estate: readonly LocatedTra
     context,
     entries: [
       { label: `roadmap (${items.length})`, children: roadmap },
+      ...roadmapLinkLegend(items, options),
       {
         label: `trades (${result.trades.length})`,
-        children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, icons)
+        children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, options.icons)
       },
       { label: `summary: ITEMS=${items.length} ACTIVE=${active} DONE=${done} TRADES=${tradeSummary}` }
     ]
@@ -139,7 +146,7 @@ const renderTextResult = (result: RoadmapListResult, estate: readonly LocatedTra
 const renderAggregateResult = (
   results: readonly RoadmapListResult[],
   estate: readonly LocatedTrade[],
-  icons = true
+  options: RoadmapTextOptions
 ): string => {
   const entries: TreeEntry[] = []
   const items = results.flatMap((result) => result.items ?? [])
@@ -158,12 +165,13 @@ const renderAggregateResult = (
       ? [
           {
             label: `${horizon} (${grouped.length})`,
-            children: grouped.map((item) => ({ label: `${item.id} [${item.status}] ${item.title}` }))
+            children: grouped.map((item) => renderRoadmapItem(item, options))
           }
         ]
       : []
   })
   entries.push({ label: `roadmap (${items.length})`, children: horizonEntries })
+  entries.push(...roadmapLinkLegend(items, options))
   if (absent.length)
     entries.push({
       label: `no roadmap (${absent.length})`,
@@ -188,7 +196,7 @@ const renderAggregateResult = (
       label: `trades (${tradeCount})`,
       children: tradeResults.map((result) => ({
         label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.trades.length})`,
-        children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, icons)
+        children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, options.icons)
       }))
     })
   const done = items.filter((item) => item.status === 'done').length
@@ -282,6 +290,11 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
     .option('--status <status>', 'only items at this status')
     .option('--no-icons', 'omit decorative trade badge icons')
     .option('--format <text|json>', 'render roadmap evidence as text or versioned JSON', 'text')
+    .addOption(
+      new Option('--links <compact|all>', 'show compact task references or nested tasks and URLs in text output')
+        .choices(['compact', 'all'])
+        .default('compact')
+    )
     .action(async (options: RoadmapOptions) => {
       if (options.format !== 'text' && options.format !== 'json')
         throw grammarError('roadmap list --format must be text or json')
@@ -290,12 +303,17 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
         status: options.status,
         includeProjection: options.format === 'json'
       })
+      const textOptions: RoadmapTextOptions = {
+        links: options.links,
+        icons: options.icons !== false,
+        dim: Boolean(context.stdout.isTTY && !context.environment['NO_COLOR'] && context.environment['TERM'] !== 'dumb')
+      }
       const output =
         options.format === 'json'
           ? JSON.stringify(roadmapReport(results), null, 2)
           : options.aggregate
-            ? renderAggregateResult(results, estate, options.icons !== false)
-            : results.map((result) => renderTextResult(result, estate, options.icons !== false)).join('\n\n')
+            ? renderAggregateResult(results, estate, textOptions)
+            : results.map((result) => renderTextResult(result, estate, textOptions)).join('\n\n')
       context.stdout.write(`${output}\n`)
       if (results.some((result) => result.tradeDiagnostic || result.diagnostic || result.faults?.length))
         throw new KiExit(1)

@@ -144,7 +144,7 @@ changing repository or registry state.
 Record selected physical KI repository roots, then reconcile only their
 proven KI-managed projections.
 .TP
-.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>] [--format <text|json>]
+.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>] [--format <text|json>] [--links <compact|all>]
 List governed work items in a framed deterministic horizon and lifecycle tree
 without changing their lifecycle.
 .TP
@@ -679,12 +679,20 @@ machine-local registry before evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
 .TP
-.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>] [--format <text|json>]
+.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>] [--format <text|json>] [--links <compact|all>]
 List canonical governed work items from every selected repository without
 changing their lifecycle. The framed text output names each selected repository,
 then groups items by horizon from \fBnow\fR through unadopted
 \fBtriage\fR and by lifecycle from \fBdone\fR through \fBdraft\fR, with
 identifiers breaking ties.
+Linked items append one compact provider-qualified task key and a count of
+additional distinct tickets, preferring implementation links. A legend explains
+provider abbreviations. Use \fB--links all\fR to replace the suffix with nested
+task entries showing provider, key, and relation, each with its full URL on a
+further indented line. Ambiguous keys include authority, scope, and task ID on
+separate child lines. These options also apply to \fB--aggregate\fR; JSON output
+is unchanged. Mappings are read locally without contacting task systems and
+do not imply current task status or ownership.
 \fB--horizon\fR
 and \fB--status\fR filter before rendering. A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other

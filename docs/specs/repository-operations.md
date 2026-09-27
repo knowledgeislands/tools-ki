@@ -226,6 +226,18 @@ _Verify:_ `src/tests/cli/repo/targets.test.ts` — `audits KI members and report
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### REPO-OPS-023 — Readable roadmap task links
+
+Text roadmap inventories, including `--aggregate`, MUST append one compact provider-qualified task key to each linked item's title, preferring an implementation relation and otherwise using stable qualified-identity and relation ordering. A `+N` suffix MUST count additional distinct provider, authority, scope, and task identities, not additional relations. Known provider abbreviations MUST have a legend; other providers MUST retain their names. Unlinked items MUST retain their existing display. Compact suffixes SHOULD be muted on interactive terminals that permit colour.
+
+`--links all` MUST replace the compact suffix with child entries for every mapping, showing provider, readable key, and relation, with the stored task URL on a further indented child line. Distinct tasks with the same provider and readable key MUST expose authority, scope, and task ID on separate child lines. Both modes MUST use local evidence without contacting providers or implying live task status or ownership. `--links` MUST accept only `compact` and `all`, default to `compact`, and leave JSON projection unchanged.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `lists compact task keys and expands nested task URLs in both roadmap views`, `counts distinct qualified tickets while retaining every relation and provider in expanded links`, `qualifies task keys from different instances or scopes only in expanded output`, and `mutes compact task suffixes only on colour-capable terminals`.
+
+_Evidence:_ The named in-process CLI tests exercise compact and expanded inventories, qualified identities, relation counts, terminal output, option validation, and unchanged JSON evidence with a sandbox that rejects network access.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

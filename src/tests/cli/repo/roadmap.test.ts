@@ -867,6 +867,118 @@ describe('[ki repo roadmap]', () => {
     )
   })
 
+  test('lists compact task keys and expands nested task URLs in both roadmap views', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-linked.md', item({ task_links: taskLinks }))
+    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-004-unlinked.md', item({ id: 'KI-TOOL-CLI-004' }))
+
+    for (const view of ['', '--aggregate --no-icons']) {
+      const compact = await box.run(`ki repo --repo repo roadmap list ${view}`)
+      expect(compact.exitCode).toBe(0)
+      expect(compact.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work · PC:KIS-5 +2\n')
+      expect(compact.output).toContain('KI-TOOL-CLI-004 [draft] Inspect governed work\n')
+      expect(compact.output.match(/Links: PC = Paperclip/g)).toHaveLength(1)
+      expect(compact.output).not.toContain('http')
+      expect(compact.output).not.toContain('\u001b')
+
+      const expanded = await box.run(`ki repo --repo repo roadmap list ${view} --links all`)
+      expect(expanded.exitCode).toBe(0)
+      expect(expanded.output).toContain(
+        '│     ├─ KI-TOOL-CLI-003 [draft] Inspect governed work\n' +
+          '│     │  ├─ Paperclip KIS-5 · implementation\n' +
+          '│     │  │  ├─ http://127.0.0.1:3100/KIS/issues/KIS-5\n'
+      )
+      expect(expanded.output).toContain('authority: http://127.0.0.1:3100')
+      expect(expanded.output).toContain('scope: 558dd49e-7615-409f-b7b2-7f19e22171d9')
+      expect(expanded.output).toContain('id: b76a4ec9-be48-4a3c-8568-7885b5e6789b')
+      expect(expanded.output).toContain('id: 7afd7214-386e-455f-83bd-6ac4c9f1bf7f')
+      expect(expanded.output).toContain('Paperclip KIS-5 · evaluation\n')
+      expect(expanded.output).toContain('http://127.0.0.1:3100/KIS/issues/KIS-6\n')
+      expect(expanded.output).toContain(
+        '│     │  ├─ Linear KIS-5 · related\n' + '│     │  │  ╰─ https://linear.app/example/issue/KIS-5\n'
+      )
+      expect(expanded.output).not.toContain(' · PC:')
+      expect(expanded.output).not.toContain('Links:')
+    }
+
+    const ordinary = await box.run('ki repo --repo repo roadmap list --format json')
+    const expanded = await box.run('ki repo --repo repo roadmap list --links all --format json')
+    expect(expanded).toEqual(ordinary)
+    const filtered = await box.run('ki repo --repo repo roadmap list --status ready')
+    expect(filtered.output).not.toContain('Links:')
+    const invalid = await box.run('ki repo --repo repo roadmap list --links unknown')
+    expect(invalid.exitCode).toBe(2)
+    expect(invalid.output).toContain('--links')
+    const help = await box.run('ki repo roadmap list --help')
+    expect(help.output).toContain('--links <compact|all>')
+  })
+
+  test('counts distinct qualified tickets while retaining every relation and provider in expanded links', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    const record = 'repo/docs/roadmap/KI-TOOL-CLI-003-linked.md'
+    const repeated = taskLinks.replace('7afd7214-386e-455f-83bd-6ac4c9f1bf7f', 'b76a4ec9-be48-4a3c-8568-7885b5e6789b')
+    await box.project.write(record, item({ task_links: repeated }))
+    expect((await box.run('ki repo --repo repo roadmap list')).output).toContain(' · PC:KIS-5 +1\n')
+    const expanded = await box.run('ki repo --repo repo roadmap list --links all')
+    expect(expanded.output).toContain('Paperclip KIS-5 · implementation')
+    expect(expanded.output).toContain('Paperclip KIS-5 · evaluation')
+    expect(expanded.output).not.toContain('authority:')
+
+    // Without an implementation relation the same stable ordering applies regardless of source order.
+    const noImplementation = repeated.replace('relation: implementation', 'relation: review')
+    await box.project.write(record, item({ task_links: noImplementation }))
+    const fallback = await box.run('ki repo --repo repo roadmap list')
+    expect(fallback.output).toContain(' · LN:KIS-5 +1\n')
+    expect(fallback.output).toContain('Links: LN = Linear')
+    const reordered = noImplementation
+      .replace('relation: review', 'relation: evaluation')
+      .replace(/relation: evaluation(?=\n {2}linear:)/, 'relation: review')
+    await box.project.write(record, item({ task_links: reordered }))
+    expect(await box.run('ki repo --repo repo roadmap list')).toEqual(fallback)
+
+    const single = taskLinks.slice(0, taskLinks.indexOf('    - authority:', taskLinks.indexOf('    - authority:') + 1))
+    await box.project.write(record, item({ task_links: single.replace('paperclip:', 'constructor:') }))
+    const custom = await box.run('ki repo --repo repo roadmap list')
+    expect(custom.output).toContain(' · constructor:KIS-5\n')
+    expect(custom.output).not.toContain('Links:')
+    expect(custom.output).not.toContain('+1')
+    expect((await box.run('ki repo --repo repo roadmap list --links all')).output).toContain(
+      'constructor KIS-5 · implementation\n│           ╰─ http://127.0.0.1:3100/KIS/issues/KIS-5\n'
+    )
+  })
+
+  test('qualifies task keys from different instances or scopes only in expanded output', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    const first = taskLinks.slice(0, taskLinks.indexOf('    - authority:', taskLinks.indexOf('    - authority:') + 1))
+    const reference = first.slice(first.indexOf('    - authority:'))
+    const links =
+      first +
+      reference.replaceAll('3100', '3200') +
+      reference.replace('558dd49e-7615-409f-b7b2-7f19e22171d9', 'another-company')
+    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-linked.md', item({ task_links: links }))
+    expect((await box.run('ki repo --repo repo roadmap list')).output).toContain(' · PC:KIS-5 +2\n')
+    const expanded = await box.run('ki repo --repo repo roadmap list --links all')
+    expect(expanded.output).toContain('authority: http://127.0.0.1:3200')
+    expect(expanded.output).toContain('scope: another-company')
+    expect(expanded.output).toContain('http://127.0.0.1:3200/KIS/issues/KIS-5')
+  })
+
+  test('mutes compact task suffixes only on colour-capable terminals', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
+    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-linked.md', item({ task_links: taskLinks }))
+    box.setEnv({ TERM: 'xterm', NO_COLOR: undefined })
+    const terminal = await box.run('ki repo --repo repo roadmap list', { interactive: true })
+    expect(terminal.output).toContain('Inspect governed work\u001b[2m · PC:KIS-5 +2\u001b[22m\n')
+    box.setEnv({ NO_COLOR: '1' })
+    expect((await box.run('ki repo --repo repo roadmap list', { interactive: true })).output).not.toContain('\u001b')
+    box.setEnv({ NO_COLOR: '', TERM: 'dumb' })
+    expect((await box.run('ki repo --repo repo roadmap list', { interactive: true })).output).not.toContain('\u001b')
+  })
+
   test('accepts each task-link relation but rejects malformed or duplicated qualified references', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')

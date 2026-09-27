@@ -83,7 +83,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo audit`
 - `ki repo conform`
 - `ki repo diag`
-- `ki repo roadmap list [--format <text|json>]`
+- `ki repo roadmap list [--format <text|json>] [--links <compact|all>]`
 - `ki repo roadmap stats [--stale-after <duration>] [--format <text|json>]`
 - `ki repo roadmap prune [id]`
 - `ki repo roadmap promote <id> [horizon]`
@@ -164,6 +164,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context, including unadopted `triage` intake.
 - `ki repo roadmap list --format json` emits the path-free `ki/roadmap/v1` contract with canonical record URLs.
+- Roadmap text listings show compact external ticket keys and counts; `--links all` expands mappings into child entries with full task URLs and disambiguating identity details where needed.
 - `ki registry list --format json` emits path-free `ki/registry/v1` identity and declaration metadata; `ki registry remove` removes exactly one keyed or path-selected entry with dry-run and transactional publication.
 - Closed current batch records validate selected work from their evidence commit, so later pruning and expiry do not invalidate archival verification.
 - `man/ki.commands.json` publishes the generated `ki/commands/v1` command and description inventory, reconciled against the manual and registered command tree.

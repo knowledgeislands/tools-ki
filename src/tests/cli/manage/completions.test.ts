@@ -164,6 +164,9 @@ describe('[ki manage completion]', () => {
     expect(bash.output).toContain("'dev local')")
     expect(bash.output).toContain("'repo roadmap list:--horizon')")
     expect(bash.output).toContain("'repo roadmap list:--status')")
+    expect(bash.output.split('\n').find((line) => line.includes("'repo roadmap list:--links')"))).toContain(
+      'compact all'
+    )
     expect(zsh.output).toContain('--aggregate:render one selected-set roadmap inventory')
     expect(zsh.output).toContain('stats:report roadmap age and inactivity')
     expect(bash.output).toContain("'repo roadmap stats:--format')")
