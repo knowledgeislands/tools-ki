@@ -8,8 +8,16 @@ status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 02ec3da5322d2fdb158254f05f39d61a024eed5d
+task_links:
+  paperclip:
+    - authority: http://127.0.0.1:3100
+      scope: 558dd49e-7615-409f-b7b2-7f19e22171d9
+      id: b76a4ec9-be48-4a3c-8568-7885b5e6789b
+      key: KIS-5
+      url: http://127.0.0.1:3100/KIS/issues/KIS-5
+      relation: related
 created_at: 2026-09-27T13:10:03Z
-updated_at: 2026-09-27T13:29:14Z
+updated_at: 2026-09-27T13:55:33Z
 ---
 
 # KI-TOOL-CLI-088: Implement per-item task links
