@@ -177,7 +177,7 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (3 members)\n│  ╰─ team [declared] team (3 members)\n╰─ summary: AGORAS=2 MEMBERS=3\n'
+        '╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (3 members)\n│  ╰─ team [declared] team (3 members, leader: home)\n╰─ summary: AGORAS=2 MEMBERS=3\n'
     })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 0,
@@ -316,8 +316,8 @@ describe('[ki agora]', () => {
     const listed = await box.run('ki agora list')
 
     expect(listed.exitCode).toBe(0)
-    expect(listed.output).toContain('├─ alpha [declared] alpha (1 members)')
-    expect(listed.output).toContain('zeta [declared] zeta (1 members)')
+    expect(listed.output).toContain('├─ alpha [declared] alpha (1 members, leader: alpha)')
+    expect(listed.output).toContain('zeta [declared] zeta (1 members, leader: zeta)')
     expect(listed.output.indexOf('alpha [declared]')).toBeLessThan(listed.output.indexOf('zeta [declared]'))
   })
 
@@ -335,7 +335,7 @@ describe('[ki agora]', () => {
 
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 1,
-      output: `╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (1 members)\n│  ╰─ healthy [declared] healthy (1 members)\n├─ broken (2)\n│  ├─ Agora also-broken member ${missingIdentity} is not registered locally\n│  ╰─ Agora broken member ${missingIdentity} is not registered locally\n╰─ summary: AGORAS=2 MEMBERS=1 BROKEN=2\n`
+      output: `╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (1 members)\n│  ╰─ healthy [declared] healthy (1 members, leader: home)\n├─ broken (2)\n│  ├─ Agora also-broken member ${missingIdentity} is not registered locally\n│  ╰─ Agora broken member ${missingIdentity} is not registered locally\n╰─ summary: AGORAS=2 MEMBERS=1 BROKEN=2\n`
     })
     expect((await box.run('ki agora show healthy')).exitCode).toBe(0)
     expect(await box.run('ki agora roots healthy')).toEqual({ exitCode: 0, output: `${roots['home']}\n` })

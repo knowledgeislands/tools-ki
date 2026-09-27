@@ -12,7 +12,7 @@ export const createAgoraListCommand = (context: KiContext): Command =>
     })
     const members = new Set(profiles.flatMap((profile) => profile.members.map((member) => member.repository))).size
     const entries = profiles.map((profile) => ({
-      label: `${profile.id} [${profile.system ? 'system' : 'declared'}] ${profile.name} (${profile.members.length} members${profile.references.length || profile.referenceDiagnostics.length ? `, ${profile.references.length} references` : ''})`
+      label: `${profile.id} [${profile.system ? 'system' : 'declared'}] ${profile.name} (${profile.members.length} members${profile.home ? `, leader: ${profile.home.key}` : ''}${profile.references.length || profile.referenceDiagnostics.length ? `, ${profile.references.length} references` : ''})`
     }))
     context.stdout.write(
       `${renderTree({

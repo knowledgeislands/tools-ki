@@ -129,7 +129,9 @@ describe('[ki agora reference]', () => {
     ])
     expect(inspected.exitCode).toBe(0)
     expect(inspected.output).toContain(`example/plain-reference [reference]: ${referenceRoot}`)
-    expect((await box.run('ki agora list')).output).toContain('team [declared] team (1 members, 1 references)')
+    expect((await box.run('ki agora list')).output).toContain(
+      'team [declared] team (1 members, leader: home, 1 references)'
+    )
     expect(await box.run('ki agora open team --target zed')).toEqual({
       exitCode: 0,
       output: 'ki agora open team --target zed: opened 2 repositories\n'
