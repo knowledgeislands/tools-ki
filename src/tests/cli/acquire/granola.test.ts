@@ -26,7 +26,11 @@ const declaration = (receiver: ReceiverFixture): string =>
     '[repo]',
     'harnesses = ["knowledgeislands/ki-agentic-harness"]',
     '',
+    '[skills.ki-repo-project]',
+    '',
     '[skills.ki-repo]',
+    'repo_type = "project"',
+    'primary_shape = "ki-repo-project"',
     `repository = ${JSON.stringify(receiver.repository)}`,
     '',
     '[skills.ki-acquire-granola]',
@@ -2319,7 +2323,11 @@ describe('[ki acquire import --adapter granola]', () => {
         '[repo]',
         'harnesses = ["knowledgeislands/ki-agentic-harness"]',
         '',
+        '[skills.ki-repo-project]',
+        '',
         '[skills.ki-repo]',
+        'repo_type = "project"',
+        'primary_shape = "ki-repo-project"',
         'repository = "https://github.com/example/peer"',
         ''
       ].join('\n')

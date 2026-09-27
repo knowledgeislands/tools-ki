@@ -201,7 +201,7 @@ describe('[ki repo] repository-local ki-self provider', () => {
     await box.setupExampleHarness({ name: 'ki-repo' })
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-self]\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\nsupported_runtimes = ["chatgpt-codex"]\n\n[skills.ki-self]\n'
     )
     await box.setupRepositoryLocalSkill({ rubric: rubric() })
 

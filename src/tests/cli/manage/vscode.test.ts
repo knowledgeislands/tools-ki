@@ -28,7 +28,11 @@ const setChezmoiRunner = (
 const repositoryDeclaration = (name: string): string => `[repo]
 harnesses = ["knowledgeislands/ki-agentic-harness"]
 
+[skills.ki-repo-project]
+
 [skills.ki-repo]
+repo_type = "project"
+primary_shape = "ki-repo-project"
 repository = "https://github.com/example/${name}"
 title = "${name}"
 description = "Test repository."

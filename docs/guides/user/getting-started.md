@@ -70,7 +70,7 @@ ki repo init \
   --visibility private
 ```
 
-Initialisation writes the canonical declaration and registers that physical root. It never runs `git init`, guesses an identity, activates skills, creates an Agora, or overwrites a declaration that already exists.
+Initialisation writes a Project declaration with explicit `repo_type = "project"` and `primary_shape = "ki-repo-project"` under `[skills.ki-repo]`, declares `[skills.ki-repo-project]`, and registers that physical root. Select another declared core shape when the repository has a different primary responsibility. A Knowledge Base requires `repo_type = "kb"`, `primary_shape = "ki-repo-kb"`, the declared KB skill, and its store roles. Neither classification field is inferred. Initialisation never runs `git init`, guesses an identity, activates skills, creates an Agora, or overwrites a declaration that already exists.
 
 Verify:
 

@@ -48,7 +48,11 @@ const repository = async (
       '[repo]',
       'harnesses = ["knowledgeislands/ki-agentic-harness"]',
       '',
+      '[skills.ki-repo-project]',
+      '',
       '[skills.ki-repo]',
+      'repo_type = "project"',
+      'primary_shape = "ki-repo-project"',
       'repository = "https://github.com/example/acquisition-target"',
       '',
       ...skills.flatMap((skill) => [`[skills.${skill.name}]`, ...(skill.configuration ?? []), ''])

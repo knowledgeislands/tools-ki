@@ -136,7 +136,7 @@ ids = [
     )
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
     )
     await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     expect(await box.config.read('ki/config.toml')).toContain('[repositories]')
@@ -148,7 +148,7 @@ ids = [
     )
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\n'
+      '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     box.setRunner(async (command, arguments_) =>
       command === 'git' && arguments_.join(' ') === `-C ${repository} remote get-url origin`
@@ -352,7 +352,7 @@ ids = ["claude-code"]
     await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n'
     )
     await box.run('ki bootstrap')
 

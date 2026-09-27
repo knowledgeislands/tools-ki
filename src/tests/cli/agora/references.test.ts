@@ -7,7 +7,7 @@ const homeIdentity = 'https://github.com/example/home'
 const referenceIdentity = 'https://github.com/example/plain-reference'
 
 const repository = (identity: string, agora = ''): string =>
-  `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = ${JSON.stringify(identity)}\n${agora}`
+  `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${agora}`
 
 const home = (
   options: { readonly references?: readonly string[]; readonly members?: Record<string, string> } = {}

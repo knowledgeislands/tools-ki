@@ -70,7 +70,11 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
     '[repo]',
     `harnesses = [${JSON.stringify(DEFAULT_HARNESS)}]`,
     '',
+    '[skills.ki-repo-project]',
+    '',
     '[skills.ki-repo]',
+    'repo_type = "project"',
+    'primary_shape = "ki-repo-project"',
     `repository = ${JSON.stringify(repository)}`,
     `title = ${JSON.stringify(title)}`,
     `description = ${JSON.stringify(description)}`,
@@ -121,16 +125,49 @@ export const readRepositoryDeclaration = async (configurationPath: string): Prom
   // A successfully parsed TOML document is always a table; this only guards a future parser change.
   /* v8 ignore next */
   if (!isRecord(parsed)) throw shapeError(configurationPath, 'must be a table')
-  return {
+  const declaration = {
     harnesses: declaredHarnesses(parsed, configurationPath),
     skills: declaredSkills(parsed, configurationPath)
   }
+  if (declaration.skills.some((skill) => skill.name === 'ki-repo')) declaredRepositoryKind(declaration)
+  return declaration
+}
+
+const projectShapes = [
+  'ki-repo-project',
+  'ki-repo-dotfiles-chezmoi',
+  'ki-repo-harness',
+  'ki-repo-homebrew-tap',
+  'ki-repo-mcp',
+  'ki-repo-plugins',
+  'ki-repo-specifications',
+  'ki-repo-tools',
+  'ki-repo-website'
+] as const
+
+export const declaredRepositoryKind = (declaration: RepositoryDeclaration): 'project' | 'kb' => {
+  const configuration = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration
+  const kind = configuration?.['repo_type']
+  if (kind !== 'project' && kind !== 'kb')
+    throw new KiError('[skills.ki-repo].repo_type is required and must be "project" or "kb"', 1)
+  for (const skill of declaration.skills) {
+    if (skill.name !== 'ki-repo' && ('repo_type' in skill.configuration || 'primary_shape' in skill.configuration))
+      throw new KiError(`repo_type and primary_shape belong only in [skills.ki-repo], not [skills.${skill.name}]`, 1)
+  }
+  const shape = configuration?.['primary_shape']
+  const allowed: readonly string[] = kind === 'kb' ? ['ki-repo-kb'] : projectShapes
+  if (typeof shape !== 'string' || !allowed.includes(shape))
+    throw new KiError(`[skills.ki-repo].primary_shape is required and must be ${allowed.join(', ')} for ${kind}`, 1)
+  if (!declaration.skills.some((skill) => skill.name === shape))
+    throw new KiError(`[skills.ki-repo].primary_shape must name a declared skill: add [skills.${shape}]`, 1)
+  return kind
 }
 
 export const declaredRepositoryIdentity = (declaration: RepositoryDeclaration): string => {
   const identity = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration['repository']
   if (!canonicalRepositoryIdentity(identity))
     throw new KiError('[skills.ki-repo].repository must be a canonical HTTPS GitHub repository', 1)
+  declaredRepositoryKind(declaration)
   return identity
 }
 
@@ -164,13 +201,12 @@ export const declaredKnowledgeBaseStoreRoles = (
   declaration: RepositoryDeclaration
 ): readonly KnowledgeBaseStoreRole[] => {
   const configuration = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration
-  const repositoryType = configuration?.['repo_type']
+  const repositoryType = declaredRepositoryKind(declaration)
   const storeRoles = configuration?.['store_roles']
-  if (repositoryType === undefined) {
+  if (repositoryType === 'project') {
     if (storeRoles !== undefined) throw new KiError('[skills.ki-repo].store_roles requires repo_type = "kb"', 1)
     return []
   }
-  if (repositoryType !== 'kb') throw new KiError('[skills.ki-repo].repo_type must be "kb" when declared', 1)
   if (!Array.isArray(storeRoles) || !storeRoles.length || storeRoles.some((role) => typeof role !== 'string'))
     throw new KiError('[skills.ki-repo].store_roles must be a non-empty array of named KB stores', 1)
   const roles = storeRoles as string[]

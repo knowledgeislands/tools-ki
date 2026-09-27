@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
 const knowledgeBase = (identity: string, roles = ['notes', 'sources', 'legacy']): string =>
-  `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = ${JSON.stringify(identity)}\nrepo_type = "kb"\nstore_roles = ${JSON.stringify(roles)}\n`
+  `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-kb"\nrepository = ${JSON.stringify(identity)}\nrepo_type = "kb"\nstore_roles = ${JSON.stringify(roles)}\n`
 
 describe('ki repo store', () => {
   test('lists declared roles with notes bound to the repository root', async () => {
@@ -157,7 +157,7 @@ describe('ki repo store', () => {
     const box = await sandbox()
     await box.project.write(
       '.ki.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "https://github.com/example/project"\n'
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/project"\n'
     )
 
     expect((await box.run('ki repo store list')).output).toContain('does not declare Knowledge Base store roles')

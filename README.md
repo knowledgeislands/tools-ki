@@ -93,7 +93,9 @@ For each selected repository, `ki repo conform` collects safe write proposals an
 
 [Audit and conform repositories](docs/guides/user/repository-operations.md) covers target selection, reading an audit result, the exact meaning of conform's `proposed write`, `applied write`, and `would apply write` verbs, what the publication boundary does not cover, the output and progress controls, and repair.
 
-To start a KI repository, run `ki repo init` in an existing Git worktree root, or name that root as its one argument. Supply its canonical `--repository https://github.com/<owner>/<name>`, `--title`, `--description`, `--repo-code`, one or more `--runtime` values (`claude-code` or `chatgpt-codex`), and `--visibility public|private`. Initialization creates the canonical `ki-repo` declaration and registers that physical root locally; it never runs `git init`, guesses identity, activates skills, creates an Agora, or overwrites an existing declaration.
+To start a KI repository, run `ki repo init` in an existing Git worktree root, or name that root as its one argument. Supply its canonical `--repository https://github.com/<owner>/<name>`, `--title`, `--description`, `--repo-code`, one or more `--runtime` values (`claude-code` or `chatgpt-codex`), and `--visibility public|private`. Initialization declares a Project with `repo_type = "project"`, `primary_shape = "ki-repo-project"`, and the baseline shape skill, then registers that physical root locally; it never runs `git init`, guesses identity, activates skills, creates an Agora, or overwrites an existing declaration.
+
+Every `[skills.ki-repo]` declaration requires an explicit `repo_type` and `primary_shape`. The shape must name a declared core Project shape, or `ki-repo-kb` when `repo_type = "kb"`. Specialist and refining skills remain composable; their presence does not choose or change the primary shape. The `ki-repo` skill owns the allowed shapes and compatibility rules.
 
 ```sh
 ki agora list

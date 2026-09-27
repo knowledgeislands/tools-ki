@@ -49,7 +49,11 @@ const repositoryConfiguration = (
     '[repo]',
     'harnesses = ["example/harness"]',
     '',
+    '[skills.ki-repo-project]',
+    '',
     '[skills.ki-repo]',
+    'repo_type = "project"',
+    'primary_shape = "ki-repo-project"',
     `repository = ${JSON.stringify(home(identity))}`,
     'title = "Test repository"',
     'description = "Trade fixture."',
@@ -846,23 +850,26 @@ describe('[ki trade]', () => {
     expect((await box.run('ki trade routes check')).output).toContain(`${missingHome}: awaiting receiver activation`)
 
     await box.project.write('.ki.toml', repositoryConfiguration('example/source', { work: [receiverHome] }))
-    await box.project.write('receiver/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\n')
+    await box.project.write(
+      'receiver/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+    )
     expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write(
       'receiver/.ki.toml',
-      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = 1\n`
+      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = 1\n`
     )
     expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write('receiver/.ki.toml', '[repo]\nharnesses = ["example/harness"]\nskills = "none"\n')
     expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write(
       'receiver/.ki.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "not-a-repository"\n'
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "not-a-repository"\n'
     )
     expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write(
       'receiver/.ki.toml',
-      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "${receiverHome}"\n`
+      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${receiverHome}"\n`
     )
     expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
     await box.project.write('receiver/.ki.toml', repositoryConfiguration('example/receiver'))
@@ -1382,7 +1389,7 @@ describe('[ki trade]', () => {
     await box.project.write('.ki.toml', repositoryConfiguration('example/source', { work: [receiverHome] }))
     await box.project.write(
       'receiver/.ki.toml',
-      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "${receiverHome}"\n`
+      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${receiverHome}"\n`
     )
     expect(await box.run('ki trade routes list --estate')).toEqual({
       exitCode: 0,
@@ -1433,7 +1440,7 @@ describe('[ki trade]', () => {
     box.cd('..')
     await box.project.write(
       '.ki.toml',
-      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = "${sourceHome}"\n`
+      `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${sourceHome}"\n`
     )
     box.cd('receiver')
     const unavailable = await box.run(['ki', 'trade', 'receive', 'TRD-00000000'])

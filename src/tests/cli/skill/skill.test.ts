@@ -290,16 +290,16 @@ ids = []
 
       const missing = await run('[repo]\nharnesses = ["example/harness"]\n\n[other]\nvalue = true\n')
       const malformed = await run(
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = []\n'
+        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = []\n'
       )
       const unsupported = await run(
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["other"]\n'
+        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["other"]\n'
       )
       const repeated = await run(
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["chatgpt-codex", "chatgpt-codex"]\n'
+        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["chatgpt-codex", "chatgpt-codex"]\n'
       )
       const retired = await run(
-        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["codex"]\n'
+        '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["codex"]\n'
       )
       const invalidToml = await run('[ki-repo\n')
 
@@ -327,7 +327,7 @@ ids = []
       )
       await box.project.write(
         '.ki.toml',
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["chatgpt-codex"]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["chatgpt-codex"]\n'
       )
       await box.run('ki bootstrap')
 
@@ -339,7 +339,7 @@ ids = []
 
       await box.project.write(
         '.ki.toml',
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n'
       )
       const refused = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
 
@@ -379,7 +379,7 @@ ids = []
       await bootstrapClaudeCode(box)
       await writeFile(
         join(box.project.path, '.ki.toml'),
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n'
       )
       const projectRoot = await realpath(box.project.path)
       const link = join(projectRoot, '.claude', 'skills', 'ki-example')
@@ -431,7 +431,7 @@ ids = []
         // rather than fail the removal.
         await writeFile(
           join(box.project.path, '.ki.toml'),
-          `[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\nnotes = """\n[not a header]\n"""\n\n${spelling}\n`
+          `[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\nnotes = """\n[not a header]\n"""\n\n${spelling}\n`
         )
         const projectRoot = await realpath(box.project.path)
 
@@ -456,14 +456,14 @@ ids = []
       const configuration = join(box.project.path, '.ki.toml')
       await writeFile(
         configuration,
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[skills.ki-example]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n\n[skills.ki-example]\n'
       )
       await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
       // Replace the header with an inline table under [skills] carrying the same key, which parses
       // to the same declaration but presents no [skills.ki-example] header for the editor to remove.
       await writeFile(
         configuration,
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills]\nki-example = {}\nki-repo = { supported_runtimes = ["claude-code"] }\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills]\nki-example = {}\nki-repo-project = {}\nki-repo = { repo_type = "project", primary_shape = "ki-repo-project", supported_runtimes = ["claude-code"] }\n'
       )
 
       const removed = await box.run(`ki repo --repo ${box.project.path} skill remove ki-example`)
@@ -478,14 +478,14 @@ ids = []
       await bootstrapClaudeCode(box)
       await box.project.write(
         '.ki.toml',
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]'
       )
 
       const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
 
       expect(added.exitCode).toBe(0)
       expect(await box.project.read('.ki.toml')).toBe(
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[skills.ki-example]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n\n[skills.ki-example]\n'
       )
     })
 
@@ -494,7 +494,7 @@ ids = []
       await bootstrapClaudeCode(box)
       await box.project.write(
         '.ki.toml',
-        '[repo]\nharnesses = ["other/harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+        '[repo]\nharnesses = ["other/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n'
       )
 
       const added = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
@@ -510,7 +510,7 @@ ids = []
       await bootstrapClaudeCode(box)
       await box.project.write(
         '.ki.toml',
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n'
       )
       const link = join(box.project.path, '.claude', 'skills', 'ki-example')
       await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
@@ -527,7 +527,7 @@ ids = []
       await bootstrapClaudeCode(box)
       await box.project.write(
         '.ki.toml',
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-example]\nsetting = true\n\n[skills.ki-example.nested]\nvalue = 2\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-example]\nsetting = true\n\n[skills.ki-example.nested]\nvalue = 2\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1'
       )
 
       const repeated = await box.run(`ki repo --repo ${box.project.path} skill add ki-example`)
@@ -539,7 +539,7 @@ ids = []
       // Each removed table takes the blank line before it, so the two removals close the gap that
       // separated [repo] from the declaration that followed it.
       expect(configuration).toBe(
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n\n[other]\nvalue = 1'
       )
     })
 
@@ -634,7 +634,7 @@ ids = []
       const box = await sandbox()
       await bootstrapClaudeCode(box)
       const configuration =
-        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo]\nsupported_runtimes = ["claude-code"]\n'
+        '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nsupported_runtimes = ["claude-code"]\n'
       await box.root.write('first/.ki.toml', configuration)
       await box.root.write('second/.ki.toml', configuration)
       const first = await realpath(`${box.root.path}/first`)

@@ -3,10 +3,10 @@ import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
 const repositoryConfiguration = (identity: string, sources = false, legacy = false): string =>
-  `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo]\nrepository = ${JSON.stringify(identity)}${
+  `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-${sources ? 'kb' : 'project'}]\n\n[skills.ki-repo]\nprimary_shape = "ki-repo-${sources ? 'kb' : 'project'}"\nrepository = ${JSON.stringify(identity)}${
     sources
       ? `\nrepo_type = "kb"\nstore_roles = ${JSON.stringify(['notes', 'sources', ...(legacy ? ['legacy'] : [])])}`
-      : ''
+      : '\nrepo_type = "project"'
   }\n`
 
 const localRegistry = (

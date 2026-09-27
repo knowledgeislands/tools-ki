@@ -205,9 +205,16 @@ export const removeRepoSkill = async (options: {
     workingDirectory: options.workingDirectory,
     homeDirectory: options.homeDirectory
   })
-  const declaration = (await readRepositoryDeclaration(location.declaration)).skills.find(
-    (candidate) => candidate.name === options.skill
-  )
+  const repositoryDeclaration = await readRepositoryDeclaration(location.declaration)
+  const primaryShape = repositoryDeclaration.skills.find((candidate) => candidate.name === 'ki-repo')?.configuration[
+    'primary_shape'
+  ]
+  if (primaryShape === options.skill)
+    throw new KiError(
+      `cannot remove primary shape ${options.skill}; select another declared compatible primary_shape first`,
+      1
+    )
+  const declaration = repositoryDeclaration.skills.find((candidate) => candidate.name === options.skill)
   const agents = await configuredAgents({
     homeDirectory: options.homeDirectory,
     configurationDirectory: options.configurationDirectory

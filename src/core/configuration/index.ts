@@ -2,6 +2,7 @@ export type { RepositoryDeclaration } from './declaration.ts'
 export {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
+  declaredRepositoryKind,
   declaredRepositoryMetadata,
   declareRepositorySkill,
   REPOSITORY_DECLARATION_FILE,

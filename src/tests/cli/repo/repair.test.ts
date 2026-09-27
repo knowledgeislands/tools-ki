@@ -6,7 +6,11 @@ const repositoryConfiguration = `
 [repo]
 harnesses = ["knowledgeislands/ki-agentic-harness"]
 
+[skills.ki-repo-project]
+
 [skills.ki-repo]
+repo_type = "project"
+primary_shape = "ki-repo-project"
 repository = "https://github.com/example/project"
 title = "Example"
 description = "Example repository."
@@ -180,10 +184,9 @@ describe('[ki repo repair]', () => {
     const box = await preparedRepository()
     await box.project.write(
       '.ki.toml',
-      repositoryConfiguration.replace(
-        'repository = "https://github.com/example/project"',
-        'repository = "https://github.com/example/project"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]'
-      )
+      repositoryConfiguration
+        .replaceAll('ki-repo-project', 'ki-repo-kb')
+        .replace('repo_type = "project"', 'repo_type = "kb"\nstore_roles = ["notes", "sources"]')
     )
     await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
 
@@ -199,10 +202,9 @@ describe('[ki repo repair]', () => {
     const sources = await box.root.mkdir('sources')
     await box.project.write(
       '.ki.toml',
-      repositoryConfiguration.replace(
-        'repository = "https://github.com/example/project"',
-        'repository = "https://github.com/example/project"\nrepo_type = "kb"\nstore_roles = ["notes", "sources"]'
-      )
+      repositoryConfiguration
+        .replaceAll('ki-repo-project', 'ki-repo-kb')
+        .replace('repo_type = "project"', 'repo_type = "kb"\nstore_roles = ["notes", "sources"]')
     )
 
     const missing = await box.run('ki repo repair')

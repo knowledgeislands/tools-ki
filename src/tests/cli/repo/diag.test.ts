@@ -6,7 +6,11 @@ const repositoryConfiguration = `
 [repo]
 harnesses = ["knowledgeislands/ki-agentic-harness"]
 
+[skills.ki-repo-project]
+
 [skills.ki-repo]
+repo_type = "project"
+primary_shape = "ki-repo-project"
 repository = "https://github.com/example/project"
 title = "Example"
 description = "Example repository."

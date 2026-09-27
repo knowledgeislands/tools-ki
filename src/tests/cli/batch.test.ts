@@ -16,7 +16,11 @@ const configuration = [
   '[repo]',
   'harnesses = ["knowledgeislands/ki-agentic-harness"]',
   '',
+  '[skills.ki-repo-project]',
+  '',
   '[skills.ki-repo]',
+  'repo_type = "project"',
+  'primary_shape = "ki-repo-project"',
   'repository = "https://github.com/knowledgeislands/example"',
   'repo_code = "EXAMPLE"',
   '',
@@ -26,7 +30,8 @@ const configuration = [
 ].join('\n')
 
 const knowledgeBaseConfiguration = configuration
-  .replace('repo_code = "EXAMPLE"', 'repo_code = "EXAMPLE"\nrepo_type = "kb"')
+  .replace('repo_type = "project"', 'repo_type = "kb"')
+  .replaceAll('ki-repo-project', 'ki-repo-kb')
   .replace('adapter = "roadmap"', 'adapter = "kb-streams"')
 
 const item = (
@@ -580,7 +585,7 @@ describe('[ki batch]', () => {
 
     await box.project.write(
       'repository/.ki.toml',
-      configuration.replace('repo_code = "EXAMPLE"', 'repo_code = "EXAMPLE"\nrepo_type = "kb"')
+      configuration.replace('repo_type = "project"', 'repo_type = "kb"').replaceAll('ki-repo-project', 'ki-repo-kb')
     )
     const wrongKnowledgeBaseAdapter = await box.run(prepare('EXAMPLE-001'), { now: () => now })
     expect(wrongKnowledgeBaseAdapter.stderr).toContain('cannot use roadmap for this repository kind')

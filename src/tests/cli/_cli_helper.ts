@@ -125,6 +125,15 @@ const setupExampleHarness = async (
   await data.write(`${root}/.ki.toml`, `[skills.ki-repo-harness]\nprefix = ${JSON.stringify(prefix)}\n`)
   const base = `${root}/skills/${name}`
   await data.write(`${base}/SKILL.md`, `---\nname: ${name}\nki-depends-on: []\n---\n`)
+  if (name === 'ki-repo') {
+    for (const shape of ['ki-repo-project', 'ki-repo-kb']) {
+      await data.write(`${root}/skills/${shape}/SKILL.md`, `---\nname: ${shape}\nki-depends-on: []\n---\n`)
+      await data.write(
+        `${root}/skills/${shape}/scripts/rubric/items/index.ts`,
+        `export default { contract: 1, name: '${shape}', concern: 'shape', createSession: async () => ({ subjects: [], proposal: () => ({ writes: [] }) }), families: [] }\n`
+      )
+    }
+  }
   if (rubric !== undefined) await data.write(`${base}/scripts/rubric/items/index.ts`, rubric)
 }
 
