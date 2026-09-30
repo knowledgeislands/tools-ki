@@ -788,7 +788,9 @@ Record each selected physical repository root in the local user register, then
 reconcile only missing, dangling, or stale KI-managed compatible projections.
 It never creates a declaration, adds an undeclared skill, overwrites foreign
 content, guesses a provider or runtime, or follows a symbolic declaration.
-\fB--dry-run\fR reports the same actions without changing disk state.
+The command writes by default. \fB--dry-run\fR reports the same actions
+without creating state directories or changing disk state. Store mutations
+and VS Code sync instead preview by default and require \fB--write\fR.
 .TP
 .B ki repo [repo-options] skill add <skill> [--replace]
 Add a registered skill in each selected repository.
@@ -841,6 +843,8 @@ Record selected canonical KI repository roots in
 This explicit inventory action validates the selected root's declared canonical
 identity and preserves existing entries. It never
 searches outside the supplied target selection.
+The command writes by default; \fB--dry-run\fR reports proposed registration
+without creating the state directory or changing disk state.
 .TP
 .B ki registry list [--format <text|json>]
 List physical KI repository roots explicitly registered in the machine-local

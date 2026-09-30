@@ -215,7 +215,7 @@
         },
         {
           "invocation": "ki repo [repo-options] repair [--dry-run]",
-          "description": "Record each selected physical repository root in the local user register, then reconcile only missing, dangling, or stale KI-managed compatible projections. It never creates a declaration, adds an undeclared skill, overwrites foreign content, guesses a provider or runtime, or follows a symbolic declaration. --dry-run reports the same actions without changing disk state."
+          "description": "Record each selected physical repository root in the local user register, then reconcile only missing, dangling, or stale KI-managed compatible projections. It never creates a declaration, adds an undeclared skill, overwrites foreign content, guesses a provider or runtime, or follows a symbolic declaration. The command writes by default. --dry-run reports the same actions without creating state directories or changing disk state. Store mutations and VS Code sync instead preview by default and require --write."
         },
         {
           "invocation": "ki repo [repo-options] skill add <skill> [--replace]",
@@ -259,7 +259,7 @@
       "commands": [
         {
           "invocation": "ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run]",
-          "description": "Record selected canonical KI repository roots in $XDG_STATE_HOME/ki/registry.toml without applying repository repairs. This explicit inventory action validates the selected root's declared canonical identity and preserves existing entries. It never searches outside the supplied target selection."
+          "description": "Record selected canonical KI repository roots in $XDG_STATE_HOME/ki/registry.toml without applying repository repairs. This explicit inventory action validates the selected root's declared canonical identity and preserves existing entries. It never searches outside the supplied target selection. The command writes by default; --dry-run reports proposed registration without creating the state directory or changing disk state."
         },
         {
           "invocation": "ki registry list [--format <text|json>]",

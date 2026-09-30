@@ -1,7 +1,8 @@
-import { lstat, readFile } from 'node:fs/promises'
+import { lstat, mkdir, readFile, realpath } from 'node:fs/promises'
 import { basename, isAbsolute, join } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
+import { prepareWrites, publishWrites } from '../filesystem/index.ts'
 
 const REGISTRY_FILE = 'registry.toml'
 const REPOSITORY = /^https:\/\/github\.com\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/
@@ -207,6 +208,22 @@ export const localRegistryWrite = async (
   entry: LocalRegistryEntry
 ): Promise<{ readonly path: string; readonly content: string; readonly create?: boolean } | undefined> =>
   localRegistryWriteMany(stateDirectory, [entry])
+
+/** Validate a registry proposal in preview without materialising a missing XDG state directory. */
+export const publishLocalRegistryProposal = async (
+  stateDirectory: string,
+  proposal: NonNullable<Awaited<ReturnType<typeof localRegistryWrite>>>,
+  dryRun: boolean
+): Promise<void> => {
+  const state = await lstat(stateDirectory).catch(() => undefined)
+  if (dryRun && !state) {
+    await prepareWrites(stateDirectory, [proposal])
+    return
+  }
+  if (!dryRun) await mkdir(stateDirectory, { recursive: true })
+  const writes = await prepareWrites(await realpath(stateDirectory), [proposal])
+  await publishWrites(writes, dryRun)
+}
 
 export const localRegistryWriteMany = async (
   stateDirectory: string,

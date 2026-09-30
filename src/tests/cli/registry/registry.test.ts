@@ -1,4 +1,4 @@
-import { realpath, rm, symlink } from 'node:fs/promises'
+import { lstat, realpath, rm, symlink } from 'node:fs/promises'
 import { afterEach, expect, test, vi } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -349,6 +349,7 @@ test('registers a selected KI repository carrying a canonical identity', async (
 
   const repository = await realpath(box.project.path)
   const dryRun = await box.run(['ki', 'registry', '--repo', repository, 'add', '--dry-run'])
+  await expect(lstat(`${box.state.path}/ki`)).rejects.toThrow()
   const result = await box.run(['ki', 'registry', '--repo', repository, 'add'])
 
   expect(dryRun).toEqual({
@@ -357,6 +358,15 @@ test('registers a selected KI repository carrying a canonical identity', async (
   })
   expect(result).toEqual({ exitCode: 0, output: `write registry.toml\nki registry add: registered ${repository}\n` })
   expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(repository)}`)
+
+  await box.project.write(
+    'another/.ki.toml',
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/another"\n'
+  )
+  const previousRegistry = await box.state.read('ki/registry.toml')
+  const another = await realpath(`${box.project.path}/another`)
+  expect((await box.run(['ki', 'registry', '--repo', another, 'add', '--dry-run'])).exitCode).toBe(0)
+  expect(await box.state.read('ki/registry.toml')).toBe(previousRegistry)
 })
 
 test('refuses a repository registration without a declared canonical identity', async () => {

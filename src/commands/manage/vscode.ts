@@ -22,7 +22,7 @@ export const createVscodeCommand = (context: KiContext): Command => {
     )
     .addCommand(
       new Command('sync')
-        .description('preview or publish VS Code source-state reconciliation')
+        .description('preview VS Code source-state reconciliation; --write applies')
         .option('--write', 'publish source-state changes')
         .action(async (options: { write?: boolean }) => {
           const result = await reconcileVscode(vscodePort(context), Boolean(options.write))

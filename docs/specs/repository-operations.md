@@ -28,6 +28,8 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 `ki repo repair` MUST register the selected physical root before repairing a missing compatible repository projection.
 
+`ki repo repair --dry-run` and `ki registry add --dry-run` MUST NOT create a missing XDG state directory merely to preview registration. Without `--dry-run`, both commands apply their writes by default; repository store mutations and VS Code sync instead preview by default until `--write` is supplied.
+
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repair.test.ts` — `registers the selected physical root before repairing a missing compatible projection`.

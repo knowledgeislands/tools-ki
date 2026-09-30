@@ -1,16 +1,19 @@
-import { mkdir, realpath } from 'node:fs/promises'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../core/configuration/index.ts'
 import { KiError } from '../../core/errors.ts'
-import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
-import { inspectLocalRegistry, localRegistryWrite, registryEntryForRepository } from '../../core/storage/index.ts'
+import {
+  inspectLocalRegistry,
+  localRegistryWrite,
+  publishLocalRegistryProposal,
+  registryEntryForRepository
+} from '../../core/storage/index.ts'
 import type { RegistrySelection } from './index.ts'
 
 export const createRegistryAddCommand = (context: KiContext, selectedRepositories: () => RegistrySelection): Command =>
   new Command('add')
-    .description('add explicitly selected local KI repository roots without applying repairs')
+    .description('register selected KI roots by default; --dry-run previews without writing')
     .option('--dry-run', 'report registrations without writing')
     .action(async (options: { dryRun?: boolean }) => {
       const repositories = await resolveRepositoryTargets({
@@ -35,10 +38,10 @@ export const createRegistryAddCommand = (context: KiContext, selectedRepositorie
           context.paths.state,
           registryEntryForRepository(repository.root, identity, registry.repositories)
         )
-        await mkdir(context.paths.state, { recursive: true })
-        const writes = registryWrite ? await prepareWrites(await realpath(context.paths.state), [registryWrite]) : []
-        for (const write of writes) context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${write.path}\n`)
-        await publishWrites(writes, Boolean(options.dryRun))
+        if (registryWrite) {
+          context.stdout.write(`${options.dryRun ? 'would write' : 'write'} ${registryWrite.path}\n`)
+          await publishLocalRegistryProposal(context.paths.state, registryWrite, Boolean(options.dryRun))
+        }
         context.stdout.write(
           `ki registry add: ${registryWrite ? (options.dryRun ? 'would register' : 'registered') : 'already registered'} ${repository.root}\n`
         )

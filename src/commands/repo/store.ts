@@ -133,7 +133,7 @@ const createStoreListCommand = (context: KiContext, selection: SelectRepositorie
 
 const createStoreCreateCommand = (context: KiContext, selection: SelectRepositories): Command =>
   new Command('create')
-    .description('create and bind a store at its managed local location')
+    .description('preview managed store creation and binding; --write applies')
     .argument('<role>', 'declared store role')
     .addOption(new Option('--write', 'create the store and publish its binding'))
     .action(async (rawRole: string, options: { write?: boolean }) => {
@@ -167,7 +167,7 @@ const createStoreCreateCommand = (context: KiContext, selection: SelectRepositor
 
 const createStoreBindCommand = (context: KiContext, selection: SelectRepositories): Command =>
   new Command('bind')
-    .description('bind a declared external store to an existing local directory')
+    .description('preview an external store binding; --write applies')
     .argument('<role>', 'declared external store role')
     .argument('<absolute-path>', 'existing direct directory')
     .option('--write', 'publish the local binding')
@@ -186,7 +186,7 @@ const createStoreBindCommand = (context: KiContext, selection: SelectRepositorie
 
 const createStoreUnbindCommand = (context: KiContext, selection: SelectRepositories): Command =>
   new Command('unbind')
-    .description('remove a local store binding without deleting store content')
+    .description('preview binding removal; --write applies without deleting content')
     .argument('<role>', 'declared external store role')
     .option('--write', 'publish removal of the local binding')
     .action(async (rawRole: string, options: { write?: boolean }) => {

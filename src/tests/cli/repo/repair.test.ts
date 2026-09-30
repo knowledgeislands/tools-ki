@@ -54,6 +54,7 @@ describe('[ki repo repair]', () => {
     expect(repair.exitCode).toBe(0)
     expect(repair.output).toContain('would register')
     expect(repair.output).toContain('would link')
+    await expect(lstat(`${box.state.path}/ki`)).rejects.toThrow()
     await expect(lstat(projection)).rejects.toThrow()
     await expect(box.state.read('ki/registry.toml')).rejects.toThrow()
   })

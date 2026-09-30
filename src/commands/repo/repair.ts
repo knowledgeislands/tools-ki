@@ -1,4 +1,3 @@
-import { mkdir, realpath } from 'node:fs/promises'
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
@@ -9,12 +8,12 @@ import {
   readRepositoryDeclaration
 } from '../../core/configuration/index.ts'
 import { KiError, KiExit } from '../../core/errors.ts'
-import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import {
   externalStoreRoles,
   inspectLocalRegistry,
   localRegistryWrite,
+  publishLocalRegistryProposal,
   registeredKnowledgeBaseStoreRoots,
   registryEntry
 } from '../../core/storage/index.ts'
@@ -26,7 +25,7 @@ export const createRepairCommand = (
   selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
 ): Command =>
   new Command('repair')
-    .description('reconcile proven KI-managed projections in selected repositories')
+    .description('reconcile KI-managed projections by default; --dry-run previews without writing')
     .option('--dry-run', 'report repairs without writing')
     .action(async (options: { dryRun?: boolean }) => {
       const failedMark = presentation('status.fail').terminal
@@ -73,10 +72,8 @@ export const createRepairCommand = (
               registryEntry(repository.root, identity)
             )
             if (registryWrite) {
-              await mkdir(context.paths.state, { recursive: true })
-              const writes = await prepareWrites(await realpath(context.paths.state), [registryWrite])
-              for (const write of writes) entries.push(`${dryRun ? 'would write' : 'write'} ${write.path}`)
-              await publishWrites(writes, dryRun)
+              entries.push(`${dryRun ? 'would write' : 'write'} ${registryWrite.path}`)
+              await publishLocalRegistryProposal(context.paths.state, registryWrite, dryRun)
               entries.push(`${passedMark} Registry: ${dryRun ? 'would register' : 'registered'} ${repository.root}`)
             } else entries.push(`${passedMark} Registry: already registered ${repository.root}`)
           }
