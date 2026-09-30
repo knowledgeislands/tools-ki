@@ -4,12 +4,12 @@ area: CLI
 title: Modularise Agora resolution
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: ff4cfb72ac9abbb43bfd1f529f5fda8d5ee1e8e4
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T09:46:47Z
+updated_at: 2026-09-30T10:48:07Z
 ---
 
 # KI-TOOL-CLI-098: Modularise Agora resolution
@@ -32,9 +32,9 @@ One 643-line module owns registry I/O, home/member parsing, profile resolution, 
 
 ## Steps
 
-- [ ] Extract cohesive registry/declaration and health responsibilities behind typed internal modules without circular dependencies.
-- [ ] Keep public Agora API stable and prove behavior parity through existing and focused tests.
-- [ ] Document only meaningful architecture seam changes, not a new user contract.
+- [x] Extract cohesive registry/declaration and health responsibilities behind typed internal modules without circular dependencies.
+- [x] Keep public Agora API stable and prove behavior parity through existing and focused tests.
+- [x] Document only meaningful architecture seam changes, not a new user contract.
 
 ## Files touched
 
@@ -65,6 +65,32 @@ No user guidance changes.
 ### Roadmap
 
 Record delivery here and retain CLI-089 as the separate role-free follow-up.
+
+## Review
+
+### Delivered
+
+The behavior-preserving Agora split is implemented from baseline `ff4cfb72ac9abbb43bfd1f529f5fda8d5ee1e8e4`. Role requirements, diagnostics, public exports, CLI output, and repository declarations are unchanged.
+
+### Change Summary
+
+`src/core/agora/resolution.ts` now orchestrates the public resolver with `repository-inventory.ts`, `declarations.ts`, `profiles.ts`, and `health.ts` owning the separate internal concerns. Shared runtime dependencies flow one way; type-only imports retain the public Agora types without runtime cycles.
+
+### Verification
+
+All 30 focused Agora CLI tests, TypeScript, Biome, and the `ki-self` architecture audit passed. `bun run test:coverage -- --reporter=dot` passed 940 tests with 100% statements, branches, functions, and lines.
+
+### Outstanding concerns
+
+Independent review and acceptance remain. Role-free behavior is intentionally excluded and remains in CLI-089 after the portable Harness contract is settled.
+
+### Post-change review
+
+The module split preserves tested behavior while making the declaration and health seams more local for future changes. The item is ready for review.
+
+### Mini recap
+
+Agora core concerns are separated without a user-facing contract change. CLI-089 remains the distinct role-free follow-up.
 
 ## Discussion
 

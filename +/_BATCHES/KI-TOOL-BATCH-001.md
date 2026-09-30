@@ -23,3 +23,4 @@ policy: safe-local-v1
 | KI-TOOL-CLI-094 | awaiting-review | `c7cf922b8929f616a8106f033b3929a341337405` | `ce7e0087ca83f1de79adeeb589a0335bc5be5f6f` | None |
 | KI-TOOL-CLI-095 | awaiting-review | `ce7e0087ca83f1de79adeeb589a0335bc5be5f6f` | `f8bc2e4c3f02b53b98a78546dcfe7329989a338d` | None |
 | KI-TOOL-CLI-096 | awaiting-review | `f8bc2e4c3f02b53b98a78546dcfe7329989a338d` | `9aec010b1ec726663f09ed459da7c28065d30dbb` | None |
+| KI-TOOL-CLI-097 | awaiting-review | `9aec010b1ec726663f09ed459da7c28065d30dbb` | `ff4cfb72ac9abbb43bfd1f529f5fda8d5ee1e8e4` | None |
