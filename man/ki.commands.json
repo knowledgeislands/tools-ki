@@ -266,6 +266,10 @@
           "description": "List physical KI repository roots explicitly registered in the machine-local registry, one absolute path per line. The command neither discovers repositories nor changes state. With --format json , emit the versioned path-free ki/registry/v1 contract with canonical identity and declared repository metadata. An unavailable declaration remains represented without a local path and makes the command exit non-zero."
         },
         {
+          "invocation": "ki registry source-stores",
+          "description": "Inspect registered repositories for direct conventional OneDrive sources-<repository-basename> directories without a matching declared sources store role. Warnings identify the repository kind and an explicit decision to declare and bind, migrate to a Knowledge Base, or retire the directory; warnings exit successfully. Unsafe paths or unavailable repository declarations remain diagnostics and cause a non-zero exit. The command never creates, binds, moves, or removes a directory and does not accept selectors."
+        },
+        {
           "invocation": "ki registry remove <key> [--dry-run]",
           "description": "Remove exactly one complete registry entry by its local key. The command reports the removed key, repository identity, and stored path, and leaves every other entry unchanged."
         },

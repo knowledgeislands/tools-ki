@@ -4,12 +4,12 @@ area: CLI
 title: Detect undeclared source stores
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: ec506413aecf594b0f622f7f6a459f8912e88a52
 created_at: 2026-09-30T07:36:00Z
-updated_at: 2026-09-30T11:00:14Z
+updated_at: 2026-09-30T11:23:13Z
 ---
 
 # KI-TOOL-CLI-092: Detect undeclared source stores
@@ -32,14 +32,14 @@ In scope: a registry or repository audit signal that lists conventional store di
 
 ## Steps
 
-- [ ] Add a read-only core inspection of registered conventional source directories, comparing each direct directory with its repository declaration and reporting unavailable evidence separately.
-- [ ] Expose the inspection as `ki registry source-stores`, with actionable warnings that do not fail the command and diagnostics that do.
-- [ ] Cover Project, Knowledge Base, declared, absent, unsafe, and unavailable cases through `run(args, context)` and `sandbox()`.
-- [ ] Update the repository-store specification, README/manual, and generated command inventory, then run the full verification gate.
+- [x] Add a read-only core inspection of registered conventional source directories, comparing each direct directory with its repository declaration and reporting unavailable evidence separately.
+- [x] Expose the inspection as `ki registry source-stores`, with actionable warnings that do not fail the command and diagnostics that do.
+- [x] Cover Project, Knowledge Base, declared, absent, unsafe, and unavailable cases through `run(args, context)` and `sandbox()`.
+- [x] Update the repository-store specification, README/manual, and generated command inventory, then run the full verification gate.
 
 ## Files touched
 
-`src/core/storage/repository-stores.ts`, registry command registration and renderer, registry CLI tests, `docs/specs/repository-operations.md`, README, `man/ki.1`, and generated inventory.
+`src/core/storage/repository-stores.ts`, registry command registration and renderer, registry and command-inventory CLI tests, `docs/specs/repository-operations.md`, README, `man/ki.1`, generated inventory, and CHANGELOG.
 
 ## Verify
 
@@ -66,6 +66,32 @@ Explain the command and its per-repository decision prompt in README and manual.
 ### Roadmap
 
 Keep any actual source-store disposition in the affected repository's own work or decision record; this item only reports candidates.
+
+## Review
+
+### Delivered
+
+The read-only `ki registry source-stores` report is implemented from baseline `ec506413aecf594b0f622f7f6a459f8912e88a52`. It leaves declarations, bindings, and source directories unchanged.
+
+### Change Summary
+
+The registry command inspects conventional direct OneDrive source directories for registered Projects and Knowledge Bases, warns when no `sources` role is declared, and separates unsafe or unavailable evidence as nonzero diagnostics. README, manual, command inventory, specification, and changelog describe the new operation.
+
+### Verification
+
+Focused CLI, help, and completion tests pass. The full coverage gate passes with 100% statements, branches, functions, and lines. TypeScript, Biome, manual lint, generated inventory, and repository audits pass. The Knip gate also required removing an unused internal Agora re-export left by the preceding batch.
+
+### Outstanding concerns
+
+Independent review and acceptance remain. The affected repositories and Harness mirror contract own any later declaration, migration, or retirement decisions; this command deliberately makes none.
+
+### Post-change review
+
+The command makes otherwise invisible conventional stores visible without changing the existing store-list contract or treating a detection warning as a repository failure.
+
+### Mini recap
+
+Registered conventional source stores now receive an actionable read-only warning or a distinct diagnostic. No source-store state is mutated.
 
 ## Discussion
 

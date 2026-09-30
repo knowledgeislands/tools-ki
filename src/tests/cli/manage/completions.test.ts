@@ -67,6 +67,7 @@ const commandPaths = [
   'registry add',
   'registry list',
   'registry remove',
+  'registry source-stores',
   'repo',
   'repo audit',
   'repo conform',

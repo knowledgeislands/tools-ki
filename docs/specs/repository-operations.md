@@ -252,6 +252,16 @@ _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `summarizes selected roadmaps
 
 _Evidence:_ The named in-process CLI tests cover selected Knowledge Base roadmaps, absent and empty directories, count breakdowns, invalid records, and independence from trade evidence without network access.
 
+### REPO-OPS-025 — Undeclared conventional sources
+
+`ki registry source-stores` MUST inspect registered repository checkouts for existing direct conventional OneDrive source directories without a declared `sources` store role. It MUST name the repository kind and present an explicit declaration, migration, or retirement decision without changing any directory, declaration, or binding. Undeclared directories MUST be warnings with exit zero; unsafe paths and unavailable declarations MUST be diagnostics with a nonzero exit. The command MUST NOT silently apply inherited registry selectors.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/registry/source-stores.test.ts` — `warns about undeclared direct source stores without changing the registry or directories` and `reports unsafe and unavailable conventional source-store evidence separately`.
+
+_Evidence:_ The named in-process CLI tests cover registered Projects and Knowledge Bases, declared and absent stores, unchanged files, unsafe paths, invalid declarations, and warning versus diagnostic exit status without network access.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

@@ -15,7 +15,6 @@ import { requiredReferenceAssociations } from './reference-associations.ts'
 import { availableRegisteredRepositories, registeredRepositories } from './repository-inventory.ts'
 
 export { auditAgoras } from './health.ts'
-export { ESTATE_AGORA } from './profiles.ts'
 
 export type AgoraRootKind = 'owner' | 'member' | 'reference'
 

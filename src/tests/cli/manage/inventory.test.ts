@@ -56,10 +56,10 @@ const repoCommands = [
   'upgrade'
 ]
 const batchCommands = ['close', 'prepare', 'run', 'validate']
-const registryCommands = ['add', 'list', 'remove']
+const registryCommands = ['add', 'list', 'remove', 'source-stores']
 
 const commandNames = (output: string): string[] =>
-  output.split('\n').flatMap((line) => /^ {2}([a-z]+)(?:\s|$)/.exec(line)?.[1] ?? [])
+  output.split('\n').flatMap((line) => /^ {2}([a-z][a-z-]*)(?:\s|$)/.exec(line)?.[1] ?? [])
 
 describe('[ki command inventory]', () => {
   test('keeps runtime help and completion memberships aligned with the public command contract', async () => {
