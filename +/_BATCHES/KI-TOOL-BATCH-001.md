@@ -24,3 +24,6 @@ policy: safe-local-v1
 | KI-TOOL-CLI-095 | awaiting-review | `ce7e0087ca83f1de79adeeb589a0335bc5be5f6f` | `f8bc2e4c3f02b53b98a78546dcfe7329989a338d` | None |
 | KI-TOOL-CLI-096 | awaiting-review | `f8bc2e4c3f02b53b98a78546dcfe7329989a338d` | `9aec010b1ec726663f09ed459da7c28065d30dbb` | None |
 | KI-TOOL-CLI-097 | awaiting-review | `9aec010b1ec726663f09ed459da7c28065d30dbb` | `ff4cfb72ac9abbb43bfd1f529f5fda8d5ee1e8e4` | None |
+| KI-TOOL-CLI-098 | awaiting-review | `ff4cfb72ac9abbb43bfd1f529f5fda8d5ee1e8e4` | `4d3fac7ba13448adca12dd8a821133b2ecb41e73` | None |
+
+<!-- ki-batch-close: KI-TOOL-BATCH-001 awaiting-review 4d3fac7ba13448adca12dd8a821133b2ecb41e73 -->
