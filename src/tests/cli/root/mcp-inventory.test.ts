@@ -114,3 +114,27 @@ test('rejects an mcp configuration table it cannot resolve to one absolute inven
     '1 ki: error: ki configuration mcp inventory must be an absolute path\n'
   ])
 })
+
+test('keeps help, version, and recovery diagnostics reachable with malformed MCP binding', async () => {
+  const box = await sandbox()
+  await box.config.write('ki/config.toml', configuration('inventory = "relative.yaml"'))
+
+  for (const command of ['ki --help', 'ki repo roadmap --help', 'ki --version']) {
+    const result = await box.run(command)
+    expect(result.exitCode).toBe(0)
+    expect(result.output).not.toContain('mcp inventory must be an absolute path')
+  }
+  for (const command of ['ki manage doctor', 'ki manage diag', 'ki manage repair']) {
+    const result = await box.run(command)
+    expect(result.output).not.toContain('mcp inventory must be an absolute path')
+    expect(result.output).toContain('KI MANAGE')
+  }
+  expect(await box.run('ki registry list')).toEqual({
+    exitCode: 1,
+    output: 'ki: error: ki configuration mcp inventory must be an absolute path\n'
+  })
+  expect(await box.run('ki manage')).toEqual({
+    exitCode: 1,
+    output: 'ki: error: ki configuration mcp inventory must be an absolute path\n'
+  })
+})

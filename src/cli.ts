@@ -83,6 +83,11 @@ export const createProgram = (context: KiContext): Command => {
   return program
 }
 
+const needsMcpInventory = (arguments_: readonly string[]): boolean => {
+  if (arguments_.some((argument) => ['--help', '-h', '--version', '-V'].includes(argument))) return false
+  return !(arguments_[0] === 'manage' && ['doctor', 'diag', 'repair'].includes(arguments_[1] ?? ''))
+}
+
 export const run = async (arguments_: readonly string[], context: KiContext): Promise<number> => {
   const program = createProgram(context)
   /* v8 ignore next -- V8 reports a non-existent third outcome for this complete boolean condition. */
@@ -91,10 +96,9 @@ export const run = async (arguments_: readonly string[], context: KiContext): Pr
     return 0
   }
   try {
-    // Adopted before dispatch so that every command observes one environment, and inside the try
-    // so that a malformed table reports through the ordinary KiError boundary below rather than as
-    // an entrypoint crash.
-    await adoptMcpInventory(context.environment, context.paths.config)
+    // Help, version, and recovery diagnostics must remain reachable with malformed MCP binding
+    // configuration. Other commands still adopt before dispatch and share one environment.
+    if (needsMcpInventory(arguments_)) await adoptMcpInventory(context.environment, context.paths.config)
     await program.parseAsync([...arguments_], { from: 'user' })
     return 0
   } catch (error) {

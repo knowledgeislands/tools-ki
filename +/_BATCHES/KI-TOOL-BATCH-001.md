@@ -20,3 +20,4 @@ policy: safe-local-v1
 | Item | Result | Baseline | Result commit | Exception |
 | --- | --- | --- | --- | --- |
 | KI-TOOL-CLI-093 | awaiting-review | `dad7a43d31dfe257b2d6cbefa9812e27f8b3b324` | `c7cf922b8929f616a8106f033b3929a341337405` | None |
+| KI-TOOL-CLI-094 | awaiting-review | `c7cf922b8929f616a8106f033b3929a341337405` | `ce7e0087ca83f1de79adeeb589a0335bc5be5f6f` | None |

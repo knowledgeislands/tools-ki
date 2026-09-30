@@ -62,9 +62,11 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 `ki` MUST refuse an `mcp` configuration value that is not a table, carries any key other than `inventory`, or declares `inventory` as anything but a non-empty absolute path string.
 
+Parser help, version, and `ki manage doctor|diag|repair` MUST remain reachable when this binding declaration is invalid. Other commands MUST still validate the binding before dispatch, so a malformed path is not silently adopted.
+
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/root/mcp-inventory.test.ts` — `rejects an mcp configuration table it cannot resolve to one absolute inventory path`.
+_Verify:_ `src/tests/cli/root/mcp-inventory.test.ts` — `rejects an mcp configuration table it cannot resolve to one absolute inventory path` and `keeps help, version, and recovery diagnostics reachable with malformed MCP binding`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
