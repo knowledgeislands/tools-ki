@@ -238,6 +238,16 @@ _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `lists compact task keys and 
 
 _Evidence:_ The named in-process CLI tests exercise compact and expanded inventories, qualified identities, relation counts, terminal output, option validation, and unchanged JSON evidence with a sandbox that rejects network access.
 
+### REPO-OPS-024 — Compact roadmap summary
+
+`ki repo roadmap summary` MUST report the count of valid work items per selected repository and the nonzero breakdown by horizon and lifecycle status without listing item identifiers or titles. It MUST distinguish an absent roadmap from a present empty roadmap. Invalid roadmap evidence MUST remain diagnostic and make the command exit nonzero; trade inventory MUST NOT affect the roadmap summary.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `summarizes selected roadmaps without listing records or reading trades` and `summarizes valid items but diagnoses malformed roadmap records`.
+
+_Evidence:_ The named in-process CLI tests cover selected Knowledge Base roadmaps, absent and empty directories, count breakdowns, invalid records, and independence from trade evidence without network access.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

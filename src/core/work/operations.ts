@@ -36,6 +36,7 @@ export interface RoadmapListOptions {
   readonly horizon?: string
   readonly status?: string
   readonly includeProjection?: boolean
+  readonly includeTrades?: boolean
 }
 
 export interface RoadmapListItem extends WorkItem {
@@ -177,15 +178,18 @@ export const listRoadmap = async (
   options: RoadmapListOptions
 ): Promise<RoadmapList> => {
   const repositories = await resolveTargets(context, selection)
-  const inventory: { readonly estate: readonly LocatedTrade[]; readonly diagnostic?: string } = await context
-    .locateTrades()
-    .then((estate) => ({ estate }))
-    .catch((error) => ({
-      estate: [] as readonly LocatedTrade[],
-      // locateTrades normalizes every failure to a KiError before this boundary.
-      /* v8 ignore next */
-      diagnostic: error instanceof Error ? error.message : String(error)
-    }))
+  const inventory: { readonly estate: readonly LocatedTrade[]; readonly diagnostic?: string } =
+    options.includeTrades === false
+      ? { estate: [] }
+      : await context
+          .locateTrades()
+          .then((estate) => ({ estate }))
+          .catch((error) => ({
+            estate: [] as readonly LocatedTrade[],
+            // locateTrades normalizes every failure to a KiError before this boundary.
+            /* v8 ignore next */
+            diagnostic: error instanceof Error ? error.message : String(error)
+          }))
   const results = await Promise.all(
     repositories.map(async (repository): Promise<RoadmapListResult> => {
       const trades = inventory.estate.filter((trade) => trade.root === repository.root)

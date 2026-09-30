@@ -113,6 +113,62 @@ const knowledgeBaseMetadata = {
 }
 
 describe('[ki repo roadmap]', () => {
+  test('summarizes selected roadmaps without listing records or reading trades', async () => {
+    const box = await sandbox()
+    const configuration = knowledgeBaseConfiguration('\n[skills.ki-trades]\n')
+    for (const repository of ['knowledge', 'empty', 'absent'])
+      await box.project.write(`${repository}/.ki.toml`, configuration)
+    await box.project.mkdir('empty/Streams/Roadmap')
+    await box.project.write(
+      'knowledge/Streams/Roadmap/KBS-001-now.md',
+      item({ id: 'KBS-001', title: 'First item', horizon: 'now', status: 'ready' })
+    )
+    await box.project.write(
+      'knowledge/Streams/Roadmap/KBS-002-next.md',
+      item({ id: 'KBS-002', title: 'Second item', horizon: 'next', status: 'draft' })
+    )
+    await box.project.write(
+      'knowledge/Streams/Roadmap/KBS-003-triage.md',
+      item({ id: 'KBS-003', title: 'Third item', horizon: 'triage', status: 'draft' })
+    )
+    await box.project.write('knowledge/-/_TRADES/example/receiver/TRD-00000001.md', 'not a trade record\n')
+
+    const result = await box.run('ki repo --repo knowledge --repo empty --repo absent roadmap summary')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('KI REPO ROADMAP SUMMARY')
+    expect(result.output).toContain('items: 3')
+    expect(result.output).toContain('horizons: now=1 next=1 triage=1')
+    expect(result.output).toContain('statuses: draft=2 ready=1')
+    expect(result.output).toContain('items: 0')
+    expect(result.output).toContain('no roadmap')
+    expect(result.output).not.toContain('KBS-001')
+    expect(result.output).not.toContain('First item')
+    expect(result.output).not.toContain('TRD-00000001')
+  })
+
+  test('summarizes valid items but diagnoses malformed roadmap records', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', knowledgeBaseConfiguration())
+    await box.project.write('repo/Streams/Roadmap/KBS-001-valid.md', item({ id: 'KBS-001' }))
+    await box.project.write('repo/Streams/Roadmap/KBS-002-invalid.md', item({ id: 'KBS-002', status: 'closed' }))
+
+    const result = await box.run('ki repo --repo repo roadmap summary')
+
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('valid items: 1')
+    expect(result.output).toContain('horizons: next=1')
+    expect(result.output).toContain('statuses: draft=1')
+    expect(result.output).toContain('has an invalid lifecycle status')
+    expect(result.output).not.toContain('Inspect governed work')
+
+    await box.project.write('misconfigured/.ki.toml', knowledgeBaseConfiguration().replace('kb-streams', 'roadmap'))
+    const unavailable = await box.run('ki repo --repo misconfigured roadmap summary')
+    expect(unavailable.exitCode).toBe(1)
+    expect(unavailable.output).toContain('Knowledge Base roadmap operations require')
+    expect(unavailable.output).not.toContain('no roadmap')
+  })
+
   test('lists flat Knowledge Base work items from the declared Streams roadmap and ignores its ledger', async () => {
     const box = await sandbox()
     await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())

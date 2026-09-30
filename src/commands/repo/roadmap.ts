@@ -211,6 +211,39 @@ const renderAggregateResult = (
   return renderTree({ title: 'KI AGGREGATE ROADMAP', entries }).join('\n')
 }
 
+const renderSummaryResult = (results: readonly RoadmapListResult[]): string =>
+  renderTree({
+    title: 'KI REPO ROADMAP SUMMARY',
+    entries: results.map((result) => {
+      const items = result.items ?? []
+      const faults = result.faults ?? []
+      const horizonCounts = horizonOrder.flatMap((horizon) => {
+        const count = items.filter((item) => item.horizon === horizon).length
+        return count ? [`${horizon}=${count}`] : []
+      })
+      const statusCounts = [...statusOrder].reverse().flatMap((status) => {
+        const count = items.filter((item) => item.status === status).length
+        return count ? [`${status}=${count}`] : []
+      })
+      const entries: TreeEntry[] = result.diagnostic
+        ? [{ label: `${presentation('status.unavailable').terminal} ${result.diagnostic}` }]
+        : result.roadmap === 'absent'
+          ? [{ label: `${presentation('status.skip').terminal} no roadmap` }]
+          : [
+              { label: `${faults.length ? 'valid items' : 'items'}: ${items.length}` },
+              ...(horizonCounts.length ? [{ label: `horizons: ${horizonCounts.join(' ')}` }] : []),
+              ...(statusCounts.length ? [{ label: `statuses: ${statusCounts.join(' ')}` }] : []),
+              ...faults.map((fault) => ({
+                label: `${presentation('status.unavailable').terminal} ${fault.message}`
+              }))
+            ]
+      return {
+        label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.repository})`,
+        children: entries
+      }
+    })
+  }).join('\n')
+
 const parseDuration = (value: string): number => {
   const match = /^(\d+)([smhd])$/.exec(value)
   if (!match || Number(match[1]) < 1) throw grammarError('stale-after must be a positive duration such as 7d')
@@ -319,6 +352,13 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
         throw new KiExit(1)
     })
 
+const summaryCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
+  new Command('summary').description('summarize roadmap item counts').action(async () => {
+    const { results } = await listRoadmap(operationContext(context), selectedRepositories(), { includeTrades: false })
+    context.stdout.write(`${renderSummaryResult(results)}\n`)
+    if (results.some((result) => result.diagnostic || result.faults?.length)) throw new KiExit(1)
+  })
+
 const statsCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('stats')
     .description('report roadmap age and inactivity')
@@ -382,6 +422,7 @@ export const createRepoRoadmapCommand = (context: KiContext, selectedRepositorie
   new Command('roadmap')
     .description('inspect and mechanically maintain governed work items')
     .addCommand(listCommand(context, selectedRepositories))
+    .addCommand(summaryCommand(context, selectedRepositories))
     .addCommand(statsCommand(context, selectedRepositories))
     .addCommand(pruneCommand(context, selectedRepositories))
     .addCommand(moveCommand(context, selectedRepositories, 'promote'))

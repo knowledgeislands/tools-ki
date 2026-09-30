@@ -148,6 +148,9 @@ proven KI-managed projections.
 List governed work items in a framed deterministic horizon and lifecycle tree
 without changing their lifecycle.
 .TP
+.B ki repo [repo-options] roadmap summary
+Summarize item counts by horizon and lifecycle status without listing records.
+.TP
 .B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
 Report timestamp coverage, age, and inactivity for governed work items.
 .TP
@@ -700,6 +703,13 @@ selected repositories still report, and any roadmap or trade diagnostic makes
 the command exit with status 1 after rendering the inventory. The command
 never creates, transitions, accepts, prunes, or repairs a work item. Generic
 promote and demote operations exclude the unadopted \fBtriage\fR horizon.
+.TP
+.B ki repo [repo-options] roadmap summary
+Report each selected repository's valid work-item count and its nonzero horizon
+and lifecycle-status counts without item identifiers or titles. Distinguish an
+absent roadmap from a present empty one. Invalid roadmap evidence remains a
+diagnostic and makes the command exit with status 1. Trade records are not
+part of this overview.
 .TP
 .B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
 Report timestamp coverage and age and inactivity metrics for selected local

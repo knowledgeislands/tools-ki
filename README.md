@@ -131,6 +131,8 @@ See [canonical batch records](docs/guides/user/batch-records.md) for result and 
 
 ## Inspect governed work
 
+`ki repo roadmap summary` shows the item total and nonzero counts by horizon and lifecycle status for each selected repository, without listing item identifiers or titles. It distinguishes an absent roadmap from a present empty one; malformed roadmap evidence remains diagnostic and returns status `1`. Trade records are outside this overview.
+
 `ki repo roadmap list --format json` emits the versioned, path-free `ki/roadmap/v1` projection with canonical record URLs for integrations.
 
 Linked roadmap items show one compact ticket reference after the title, such as `PC:KIS-42 +2`, with a legend for provider abbreviations. The count covers additional distinct tickets; implementation links take precedence. Use `ki repo roadmap list --links all` to expand every mapping beneath its item, with the provider, ticket key, relation, and full task URL on a further indented line. Matching keys are qualified when needed. Both views use local mappings without contacting ticket systems; links do not imply current task status or ownership.
