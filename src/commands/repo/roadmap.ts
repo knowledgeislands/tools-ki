@@ -5,8 +5,10 @@ import { grammarError, KiExit } from '../../core/errors.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade/index.ts'
 import {
   listRoadmap,
+  listRoadmapItems,
   moveRoadmapItem,
   pruneRoadmap,
+  type RoadmapItemResult,
   type RoadmapListResult,
   type RoadmapOperationContext,
   type RoadmapStatisticsResult,
@@ -106,6 +108,7 @@ const renderTextResult = (
   const context = [
     { label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.repository})` }
   ]
+  const trades = result.trades
   const items = result.items ?? []
   const faults = result.faults ?? []
   const groups = textHorizonGroups(items)
@@ -122,12 +125,12 @@ const renderTextResult = (
             label: `${presentation('status.unavailable').terminal} ${fault.message}`
           }))
         ]
-  const { inbound, outbound } = countTradeDirections(result.trades)
+  const { inbound, outbound } = countTradeDirections(trades)
   const done = items.filter((item) => item.status === 'done').length
   const notDone = items.length - done
   const tradeSummary = result.tradeDiagnostic
     ? 'unavailable'
-    : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
+    : `${trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
   return renderTree({
     title: 'KI REPO ROADMAP',
     context,
@@ -135,8 +138,8 @@ const renderTextResult = (
       { label: `roadmap (${items.length})`, children: roadmap },
       ...roadmapLinkLegend(items, options),
       {
-        label: `trades (${result.trades.length})`,
-        children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, options.icons)
+        label: `trades (${trades.length})`,
+        children: renderTradeEntries(trades, estate, result.tradeDiagnostic, options.icons)
       },
       { label: `summary: ITEMS=${items.length} NOT_DONE=${notDone} DONE=${done} TRADES=${tradeSummary}` }
     ]
@@ -211,7 +214,7 @@ const renderAggregateResult = (
   return renderTree({ title: 'KI AGGREGATE ROADMAP', entries }).join('\n')
 }
 
-const renderSummaryResult = (results: readonly RoadmapListResult[]): string =>
+const renderSummaryResult = (results: readonly RoadmapItemResult[]): string =>
   renderTree({
     title: 'KI REPO ROADMAP SUMMARY',
     entries: results.map((result) => {
@@ -358,7 +361,7 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
 
 const summaryCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('summary').description('summarize roadmap item counts').action(async () => {
-    const { results } = await listRoadmap(operationContext(context), selectedRepositories(), { includeTrades: false })
+    const { results } = await listRoadmapItems(operationContext(context), selectedRepositories(), {})
     context.stdout.write(`${renderSummaryResult(results)}\n`)
     if (results.some((result) => result.diagnostic || result.faults?.length)) throw new KiExit(1)
   })

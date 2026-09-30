@@ -36,24 +36,35 @@ export interface RoadmapListOptions {
   readonly horizon?: string
   readonly status?: string
   readonly includeProjection?: boolean
-  readonly includeTrades?: boolean
 }
 
 export interface RoadmapListItem extends WorkItem {
   readonly record: string
 }
 
-export interface RoadmapListResult {
+interface RoadmapItemEvidence {
   readonly repository: string
   readonly repositoryIdentity?: string
   readonly repositoryUrl?: string
-  readonly trades: readonly LocatedTrade[]
-  readonly tradeDiagnostic?: string
   readonly items?: readonly WorkItem[]
   readonly projectedItems?: readonly RoadmapListItem[]
   readonly faults?: readonly WorkItemFault[]
   readonly roadmap?: 'absent'
   readonly diagnostic?: string
+}
+
+export interface RoadmapItemResult extends RoadmapItemEvidence {
+  readonly tradeInventory: 'not-requested'
+}
+
+export interface RoadmapListResult extends RoadmapItemEvidence {
+  readonly tradeInventory: 'available' | 'unavailable'
+  readonly trades: readonly LocatedTrade[]
+  readonly tradeDiagnostic?: string
+}
+
+export interface RoadmapItemList {
+  readonly results: readonly RoadmapItemResult[]
 }
 
 export interface RoadmapList {
@@ -172,29 +183,15 @@ const moveHorizon = (item: WorkItem, operation: RoadmapMove, requested?: string)
   return movableHorizons[target] as WorkItemHorizon
 }
 
-export const listRoadmap = async (
+export const listRoadmapItems = async (
   context: RoadmapOperationContext,
   selection: RoadmapSelection,
   options: RoadmapListOptions
-): Promise<RoadmapList> => {
+): Promise<RoadmapItemList> => {
   const repositories = await resolveTargets(context, selection)
-  const inventory: { readonly estate: readonly LocatedTrade[]; readonly diagnostic?: string } =
-    options.includeTrades === false
-      ? { estate: [] }
-      : await context
-          .locateTrades()
-          .then((estate) => ({ estate }))
-          .catch((error) => ({
-            estate: [] as readonly LocatedTrade[],
-            // locateTrades normalizes every failure to a KiError before this boundary.
-            /* v8 ignore next */
-            diagnostic: error instanceof Error ? error.message : String(error)
-          }))
   const results = await Promise.all(
-    repositories.map(async (repository): Promise<RoadmapListResult> => {
-      const trades = inventory.estate.filter((trade) => trade.root === repository.root)
-      const tradeContext = inventory.diagnostic ? { tradeDiagnostic: inventory.diagnostic } : {}
-      let projection: Pick<RoadmapListResult, 'repositoryIdentity' | 'repositoryUrl'> = {}
+    repositories.map(async (repository): Promise<RoadmapItemResult> => {
+      let projection: Pick<RoadmapItemResult, 'repositoryIdentity' | 'repositoryUrl'> = {}
       try {
         const repositoryUrl = options.includeProjection
           ? declaredRepositoryIdentity(await readRepositoryDeclaration(repository.declaration))
@@ -206,8 +203,7 @@ export const listRoadmap = async (
         return {
           repository: repository.root,
           ...projection,
-          trades,
-          ...tradeContext,
+          tradeInventory: 'not-requested',
           ...(inventory === undefined
             ? { roadmap: 'absent' as const }
             : {
@@ -232,14 +228,42 @@ export const listRoadmap = async (
         return {
           repository: repository.root,
           ...projection,
-          trades,
-          ...tradeContext,
+          tradeInventory: 'not-requested',
           diagnostic
         }
       }
     })
   )
-  return { estate: inventory.estate, results }
+  return { results }
+}
+
+export const listRoadmap = async (
+  context: RoadmapOperationContext,
+  selection: RoadmapSelection,
+  options: RoadmapListOptions
+): Promise<RoadmapList> => {
+  const [items, inventory] = await Promise.all([
+    listRoadmapItems(context, selection, options),
+    context
+      .locateTrades()
+      .then((estate) => ({ state: 'available' as const, estate }))
+      .catch((error) => ({
+        state: 'unavailable' as const,
+        estate: [] as readonly LocatedTrade[],
+        // locateTrades normalizes every failure to a KiError before this boundary.
+        /* v8 ignore next */
+        diagnostic: error instanceof Error ? error.message : String(error)
+      }))
+  ])
+  return {
+    estate: inventory.estate,
+    results: items.results.map((item) => ({
+      ...item,
+      tradeInventory: inventory.state,
+      trades: inventory.estate.filter((trade) => trade.root === item.repository),
+      ...('diagnostic' in inventory ? { tradeDiagnostic: inventory.diagnostic } : {})
+    }))
+  }
 }
 
 export const pruneRoadmap = async (
@@ -289,7 +313,7 @@ export const roadmapStatisticsForSelection = async (
   readonly aggregate: RoadmapStatistics
   readonly results: readonly RoadmapStatisticsResult[]
 }> => {
-  const listed = await listRoadmap(context, selection, {})
+  const listed = await listRoadmapItems(context, selection, {})
   const now = context.now()
   const aggregate = roadmapStatistics(
     listed.results.flatMap((result) => result.items ?? []),
