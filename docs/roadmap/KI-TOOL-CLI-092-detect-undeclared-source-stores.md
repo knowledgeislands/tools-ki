@@ -3,16 +3,16 @@ id: KI-TOOL-CLI-092
 area: CLI
 title: Detect undeclared source stores
 theme: cli
-horizon: triage
-status: draft
+horizon: next
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-09-30T07:36:00Z
-updated_at: 2026-09-30T07:36:00Z
+updated_at: 2026-09-30T11:00:14Z
 ---
 
-# Detect undeclared source stores
+# KI-TOOL-CLI-092: Detect undeclared source stores
 
 ## Goal
 
@@ -26,8 +26,49 @@ The 2026-09-30 survey behind `KI-HARNESS-GOV-121` found three repositories with 
 
 In scope: a registry or repository audit signal that lists conventional store directories with no matching declaration, states whether the repository kind may declare one, and suggests the decision (declare, migrate to a Knowledge Base, or retire). Excludes: moving or deleting any directory, changing which repository kinds may hold stores, and the mirror content standard itself.
 
+## Current state
+
+`conventionalSourcesStore` derives a local OneDrive path, but `ki repo store list` only accepts Knowledge Bases with declared roles. Registered Projects with an existing conventional directory are not surfaced by that command.
+
+## Steps
+
+- [ ] Add a read-only core inspection of registered conventional source directories, comparing each direct directory with its repository declaration and reporting unavailable evidence separately.
+- [ ] Expose the inspection as `ki registry source-stores`, with actionable warnings that do not fail the command and diagnostics that do.
+- [ ] Cover Project, Knowledge Base, declared, absent, unsafe, and unavailable cases through `run(args, context)` and `sandbox()`.
+- [ ] Update the repository-store specification, README/manual, and generated command inventory, then run the full verification gate.
+
+## Files touched
+
+`src/core/storage/repository-stores.ts`, registry command registration and renderer, registry CLI tests, `docs/specs/repository-operations.md`, README, `man/ki.1`, and generated inventory.
+
+## Verify
+
+Focused registry CLI tests, `bunx tsc --noEmit`, Biome, manual lint, generated inventory check, `ki repo` audits, and `bun run test:coverage` pass. Reported undeclared directories produce warning output and exit zero; malformed evidence remains nonzero.
+
+## Dependencies / blocks
+
+None for read-only detection. The Harness store-mirror content decision and each receiving repository own any later declaration, migration, or retirement.
+
+## Documentation impact
+
+### Decision Records
+
+No new decision; this makes existing declared-store governance observable without choosing a migration.
+
+### Specifications
+
+Add the read-only registry detection and warning/failure semantics.
+
+### Guides
+
+Explain the command and its per-repository decision prompt in README and manual.
+
+### Roadmap
+
+Keep any actual source-store disposition in the affected repository's own work or decision record; this item only reports candidates.
+
 ## Discussion
 
 ### Where the signal belongs
 
-The registry knows every checkout and its kind, so `ki repo` or the registry status command is the natural home. Emit it as a warning, not a failure, until each existing case has been decided.
+The registry knows every checkout and its kind. A dedicated `ki registry source-stores` report keeps `ki registry list` and its machine-readable shape unchanged. Emit undeclared direct directories as warnings, not failures; unreadable declarations or unsafe conventional paths remain diagnostics. No source directory or binding is changed.
