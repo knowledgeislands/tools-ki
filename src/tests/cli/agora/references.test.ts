@@ -10,22 +10,19 @@ const repository = (identity: string, agora = ''): string =>
   `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${agora}`
 
 const home = (
-  options: { readonly references?: readonly string[]; readonly members?: Record<string, string> } = {}
+  options: { readonly references?: readonly string[]; readonly members?: readonly string[] } = {}
 ): string =>
   `[skills.ki-agora.homes.team]\nowner = ${JSON.stringify(homeIdentity)}\npurpose = "Shared delivery"\norder = [${[
     homeIdentity,
     ...(options.references ?? []),
-    ...Object.keys(options.members ?? {})
+    ...(options.members ?? [])
   ]
     .map((identity) => JSON.stringify(identity))
-    .join(', ')}]\nreferences = ${JSON.stringify(options.references ?? [])}\nmembers = { ${Object.entries(
-    options.members ?? {}
-  )
-    .map(([identity, role]) => `${JSON.stringify(identity)} = ${JSON.stringify(role)}`)
-    .join(', ')} }\n`
+    .join(
+      ', '
+    )}]\nreferences = ${JSON.stringify(options.references ?? [])}\nmembers = ${JSON.stringify(options.members ?? [])}\n`
 
-const membership = (role: string): string =>
-  `[skills.ki-agora.memberships.team]\nhome = ${JSON.stringify(homeIdentity)}\nrole = ${JSON.stringify(role)}\n`
+const membership = (): string => `[skills.ki-agora.memberships.team]\nhome = ${JSON.stringify(homeIdentity)}\n`
 
 const setReference = (root: string, dryRun = false): readonly string[] => [
   'ki',
@@ -180,12 +177,12 @@ describe('[ki agora reference]', () => {
     box.setRunner(gitRunner(referenceRoot))
     await box.run(setReference(referenceRoot))
 
-    const promotedHome = home({ members: { [referenceIdentity]: 'reader' } }).replace(
+    const promotedHome = home({ members: [referenceIdentity] }).replace(
       `order = [${JSON.stringify(homeIdentity)}, ${JSON.stringify(referenceIdentity)}]`,
       `order = [${JSON.stringify(referenceIdentity)}]`
     )
     await box.project.write('home/.ki.toml', repository(homeIdentity, promotedHome))
-    await box.project.write('plain reference/.ki.toml', repository(referenceIdentity, membership('reader')))
+    await box.project.write('plain reference/.ki.toml', repository(referenceIdentity, membership()))
     await box.state.write(
       'ki/registry.toml',
       registry([
@@ -233,26 +230,26 @@ describe('[ki agora reference]', () => {
       return (await box.run('ki agora list')).output
     }
 
-    expect(await declaration('references = "bad"\nmembers = {}\n')).toContain('references must be an array')
-    expect(await declaration('references = ["invalid"]\nmembers = {}\n')).toContain(
+    expect(await declaration('references = "bad"\nmembers = []\n')).toContain('references must be an array')
+    expect(await declaration('references = ["invalid"]\nmembers = []\n')).toContain(
       'reference entries must be canonical HTTPS GitHub repositories'
     )
-    expect(await declaration(`references = [${JSON.stringify(homeIdentity)}]\nmembers = {}\n`)).toContain(
+    expect(await declaration(`references = [${JSON.stringify(homeIdentity)}]\nmembers = []\n`)).toContain(
       'must not also be the owner or a member'
     )
     expect(
       await declaration(
-        `references = [${JSON.stringify(referenceIdentity)}]\nmembers = { ${JSON.stringify(referenceIdentity)} = "reader" }\n`
+        `references = [${JSON.stringify(referenceIdentity)}]\nmembers = [${JSON.stringify(referenceIdentity)}]\n`
       )
     ).toContain('must not also be the owner or a member')
     expect(
       await declaration(
-        `references = [${JSON.stringify(referenceIdentity)}, ${JSON.stringify(referenceIdentity)}]\nmembers = {}\n`
+        `references = [${JSON.stringify(referenceIdentity)}, ${JSON.stringify(referenceIdentity)}]\nmembers = []\n`
       )
     ).toContain('references repeats repository')
 
     await declaration(
-      `references = [${JSON.stringify(referenceIdentity)}, "https://github.com/example/second-reference"]\nmembers = {}\n`
+      `references = [${JSON.stringify(referenceIdentity)}, "https://github.com/example/second-reference"]\nmembers = []\n`
     )
     box.setRunner(async () => ({ exitCode: 1, output: '' }))
     await box.run(setReference(await box.project.mkdir('comparison-reference')))
@@ -292,10 +289,7 @@ describe('[ki agora reference]', () => {
     expect((await box.run('ki repo --agora team roadmap list')).output).toContain('declared by multiple owners')
 
     const unavailableIdentity = 'https://github.com/example/unavailable'
-    await box.project.write(
-      'home/.ki.toml',
-      repository(homeIdentity, home({ members: { [unavailableIdentity]: 'reader' } }))
-    )
+    await box.project.write('home/.ki.toml', repository(homeIdentity, home({ members: [unavailableIdentity] })))
     await box.state.write(
       'ki/registry.toml',
       registry([

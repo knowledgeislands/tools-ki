@@ -8,15 +8,11 @@ import { type Sandbox, sandbox } from '../_cli_helper.ts'
 const repository = (identity: string, agora = ''): string =>
   `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${agora}`
 
-const home = (id: string, members: Record<string, string>): string =>
-  `[skills.ki-agora.homes.${id}]\nowner = "https://github.com/example/home"\npurpose = "Shared delivery"\nmembers = { ${Object.entries(
-    members
-  )
-    .map(([identity, role]) => `${JSON.stringify(identity)} = ${JSON.stringify(role)}`)
-    .join(', ')} }\n`
+const home = (id: string, members: readonly string[]): string =>
+  `[skills.ki-agora.homes.${id}]\nowner = "https://github.com/example/home"\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(members)}\n`
 
-const membership = (id: string, homeIdentity: string, role: string): string =>
-  `[skills.ki-agora.memberships.${id}]\nhome = ${JSON.stringify(homeIdentity)}\nrole = ${JSON.stringify(role)}\n`
+const membership = (id: string, homeIdentity: string): string =>
+  `[skills.ki-agora.memberships.${id}]\nhome = ${JSON.stringify(homeIdentity)}\n`
 
 const localRegistry = (
   entries: readonly { readonly key: string; readonly identity: string; readonly root: string }[]
@@ -42,11 +38,8 @@ const configuredAgora = async (box: Sandbox): Promise<Record<'home' | 'member' |
   const registryTarget = await box.project.mkdir('registry target')
   const registryLink = join(box.project.path, 'registry-link')
   await symlink(registryTarget, registryLink)
-  await box.project.write('home/.ki.toml', repository(homeIdentity, home('team', { [memberIdentity]: 'reviewer' })))
-  await box.project.write(
-    'member with space/.ki.toml',
-    repository(memberIdentity, membership('team', homeIdentity, 'reviewer'))
-  )
+  await box.project.write('home/.ki.toml', repository(homeIdentity, home('team', [memberIdentity])))
+  await box.project.write('member with space/.ki.toml', repository(memberIdentity, membership('team', homeIdentity)))
   await box.project.write('extra/.ki.toml', repository(extraIdentity))
   await box.state.write(
     'ki/registry.toml',

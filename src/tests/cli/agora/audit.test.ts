@@ -4,15 +4,11 @@ import { type Sandbox, sandbox } from '../_cli_helper.ts'
 const repository = (identity: string, agora = ''): string =>
   `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${agora}`
 
-const home = (id: string, members: Record<string, string> = {}, owner = 'https://github.com/example/home'): string =>
-  `[skills.ki-agora.homes.${id}]\nowner = ${JSON.stringify(owner)}\npurpose = "Shared delivery"\nmembers = { ${Object.entries(
-    members
-  )
-    .map(([identity, role]) => `${JSON.stringify(identity)} = ${JSON.stringify(role)}`)
-    .join(', ')} }\n`
+const home = (id: string, members: readonly string[] = [], owner = 'https://github.com/example/home'): string =>
+  `[skills.ki-agora.homes.${id}]\nowner = ${JSON.stringify(owner)}\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(members)}\n`
 
-const membership = (id: string, homeIdentity: string, role: string): string =>
-  `[skills.ki-agora.memberships.${id}]\nhome = ${JSON.stringify(homeIdentity)}\nrole = ${JSON.stringify(role)}\n`
+const membership = (id: string, homeIdentity: string): string =>
+  `[skills.ki-agora.memberships.${id}]\nhome = ${JSON.stringify(homeIdentity)}\n`
 
 const localRegistry = (
   entries: readonly { readonly key: string; readonly identity: string; readonly root: string }[]
@@ -61,8 +57,8 @@ describe('[ki agora audit]', () => {
     const homeIdentity = 'https://github.com/example/home'
     const memberIdentity = 'https://github.com/example/member'
     await registered(box, [
-      { path: 'home', identity: homeIdentity, agora: home('team', { [memberIdentity]: 'maintainer' }) },
-      { path: 'member', identity: memberIdentity, agora: membership('team', homeIdentity, 'maintainer') }
+      { path: 'home', identity: homeIdentity, agora: home('team', [memberIdentity]) },
+      { path: 'member', identity: memberIdentity, agora: membership('team', homeIdentity) }
     ])
 
     const healthy =
@@ -84,7 +80,7 @@ describe('[ki agora audit]', () => {
       {
         path: 'home',
         identity: homeIdentity,
-        agora: `${home('healthy')}\n${home('broken', { [missingIdentity]: 'reviewer' })}`
+        agora: `${home('healthy')}\n${home('broken', [missingIdentity])}`
       }
     ])
 
@@ -111,8 +107,8 @@ describe('[ki agora audit]', () => {
     const firstIdentity = 'https://github.com/example/first'
     const secondIdentity = 'https://github.com/example/second'
     await registered(box, [
-      { path: 'first', identity: firstIdentity, agora: home('team', {}, firstIdentity) },
-      { path: 'second', identity: secondIdentity, agora: home('team', {}, secondIdentity) }
+      { path: 'first', identity: firstIdentity, agora: home('team', [], firstIdentity) },
+      { path: 'second', identity: secondIdentity, agora: home('team', [], secondIdentity) }
     ])
 
     expect(await box.run('ki agora audit team')).toEqual({
@@ -146,7 +142,7 @@ describe('[ki agora audit]', () => {
       {
         path: 'home',
         identity: homeIdentity,
-        agora: home('team', { [firstIdentity]: 'maintainer', [secondIdentity]: 'reviewer' })
+        agora: home('team', [firstIdentity, secondIdentity])
       }
     ])
     const firstRoot = `${box.project.path}/missing-first`

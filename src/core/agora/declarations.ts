@@ -4,10 +4,8 @@ import { agoraError, type RegisteredRepository, skillConfiguration } from './rep
 import type { AgoraMember } from './resolution.ts'
 
 export const AGORA_ID = /^[a-z][a-z0-9-]*[a-z0-9]$/
-const ROLE = /^[a-z][a-z0-9-]*[a-z0-9]$/
 interface Membership {
   readonly home: string
-  readonly role: string
 }
 
 export interface AgoraHome {
@@ -16,7 +14,7 @@ export interface AgoraHome {
   readonly purpose: string
   readonly order: readonly string[]
   readonly references: readonly string[]
-  readonly members: Readonly<Record<string, string>>
+  readonly members: readonly string[]
 }
 
 export interface AgoraCandidate {
@@ -54,15 +52,15 @@ export const homeDeclaration = (repository: RegisteredRepository, id: string, va
     throw profileError(id, 'owner must match its declaring registered repository')
   if (typeof home['purpose'] !== 'string' || !home['purpose'].trim())
     throw profileError(id, 'home requires a non-empty purpose')
-  const members = table(home['members'])
-  if (!members) throw profileError(id, 'members must be a repository-to-role table')
-  const roles: Record<string, string> = {}
-  for (const [identity, role] of Object.entries(members)) {
+  const members = home['members']
+  if (!Array.isArray(members)) throw profileError(id, 'members must be an array of canonical HTTPS GitHub repositories')
+  const identities: string[] = []
+  for (const identity of members) {
     if (!canonicalRepositoryIdentity(identity))
       throw profileError(id, `member ${identity} must be a canonical HTTPS GitHub repository`)
     if (identity === repository.repository) throw profileError(id, 'must not list its home repository as a member')
-    if (typeof role !== 'string' || !ROLE.test(role)) throw profileError(id, `member ${identity} has an invalid role`)
-    roles[identity] = role
+    if (identities.includes(identity)) throw profileError(id, `members repeats repository ${identity}`)
+    identities.push(identity)
   }
   const declaredReferences = home['references']
   if (declaredReferences !== undefined && !Array.isArray(declaredReferences))
@@ -71,7 +69,7 @@ export const homeDeclaration = (repository: RegisteredRepository, id: string, va
   for (const identity of declaredReferences ?? []) {
     if (!canonicalRepositoryIdentity(identity))
       throw profileError(id, 'reference entries must be canonical HTTPS GitHub repositories')
-    if (identity === repository.repository || roles[identity])
+    if (identity === repository.repository || identities.includes(identity))
       throw profileError(id, `reference ${identity} must not also be the owner or a member`)
     if (references.includes(identity)) throw profileError(id, `references repeats repository ${identity}`)
     references.push(identity)
@@ -80,7 +78,7 @@ export const homeDeclaration = (repository: RegisteredRepository, id: string, va
   if (declaredOrder !== undefined && !Array.isArray(declaredOrder))
     throw profileError(id, 'order must be an array of canonical HTTPS GitHub repositories')
   const order: string[] = []
-  const participants = new Set([home['owner'], ...Object.keys(roles), ...references])
+  const participants = new Set([home['owner'], ...identities, ...references])
   for (const identity of declaredOrder ?? []) {
     if (!canonicalRepositoryIdentity(identity))
       throw profileError(id, 'order entries must be canonical HTTPS GitHub repositories')
@@ -89,7 +87,7 @@ export const homeDeclaration = (repository: RegisteredRepository, id: string, va
       throw profileError(id, `order participant ${identity} is not the owner or a member or reference`)
     order.push(identity)
   }
-  return { id, owner: home['owner'], purpose: home['purpose'], order, references, members: roles }
+  return { id, owner: home['owner'], purpose: home['purpose'], order, references, members: identities }
 }
 
 const membershipDeclaration = (repository: RegisteredRepository, id: string): Membership | undefined => {
@@ -103,9 +101,9 @@ const membershipDeclaration = (repository: RegisteredRepository, id: string): Me
   if (!membership) throw profileError(id, `membership in ${repository.repository} must be a table`)
   if (!canonicalRepositoryIdentity(membership['home']))
     throw profileError(id, `membership in ${repository.repository} has an invalid home`)
-  if (typeof membership['role'] !== 'string' || !ROLE.test(membership['role']))
-    throw profileError(id, `membership in ${repository.repository} has an invalid role`)
-  return { home: membership['home'], role: membership['role'] }
+  if (Object.keys(membership).some((key) => key !== 'home'))
+    throw profileError(id, `membership in ${repository.repository} must contain only home`)
+  return { home: membership['home'] }
 }
 
 export const membersFromHome = (
@@ -114,14 +112,14 @@ export const membersFromHome = (
   repositories: readonly RegisteredRepository[]
 ): readonly AgoraMember[] => {
   const members: AgoraMember[] = [
-    { key: home.key, root: home.root, repository: declaration.owner, kind: 'owner', role: 'owner' },
-    ...Object.entries(declaration.members).map(([identity, role]) => {
+    { key: home.key, root: home.root, repository: declaration.owner, kind: 'owner' },
+    ...declaration.members.map((identity) => {
       const member = repositories.find((candidate) => candidate.repository === identity)
       if (!member) throw profileError(declaration.id, `member ${identity} is not registered locally`)
       const consent = membershipDeclaration(member, declaration.id)
-      if (!consent || consent.home !== home.repository || consent.role !== role)
+      if (!consent || consent.home !== home.repository)
         throw profileError(declaration.id, `member ${identity} does not declare matching consent`)
-      return { key: member.key, root: member.root, repository: member.repository, kind: 'member' as const, role }
+      return { key: member.key, root: member.root, repository: member.repository, kind: 'member' as const }
     })
   ]
   const order = new Map(declaration.order.map((identity, index) => [identity, index]))

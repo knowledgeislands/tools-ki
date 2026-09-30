@@ -27,7 +27,6 @@ export interface AgoraRoot {
 
 export interface AgoraMember extends AgoraRoot {
   readonly kind: 'owner' | 'member'
-  readonly role?: string
 }
 
 export interface AgoraReference extends AgoraRoot {
@@ -154,7 +153,7 @@ export const resolveAgora = async (
       candidates.map((candidate) => candidate.home.repository)
     )
   const candidate = candidates[0] as AgoraCandidate
-  for (const member of Object.keys(candidate.declaration.members)) {
+  for (const member of candidate.declaration.members) {
     const failure = failuresByRepository.get(member)
     if (failure) throw failure
   }
@@ -184,7 +183,7 @@ export const resolveAgoraMembers = async (stateDirectory: string, id: string): P
       candidates.map((candidate) => candidate.home.repository)
     )
   const candidate = candidates[0] as AgoraCandidate
-  for (const member of Object.keys(candidate.declaration.members)) {
+  for (const member of candidate.declaration.members) {
     const failure = failuresByRepository.get(member)
     if (failure) throw failure
   }

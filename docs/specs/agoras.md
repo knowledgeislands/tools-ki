@@ -16,11 +16,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### AGORA-002 — Reciprocal additional membership
 
-Every member other than the owner MUST be registered locally and reciprocally declare the declared owner and matching role.
+Every member other than the owner MUST be registered locally and reciprocally declare the declared owner. A home declares members as a duplicate-free array of canonical repository identities; a member declares only the Agora identifier and canonical home. The resolver MUST reject role-bearing legacy declarations.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/core/agora/index.ts` — `profileFromHome`; `src/tests/cli/agora/agora.test.ts` covers one-sided and malformed membership declarations.
+_Verify:_ `src/core/agora/declarations.ts` — `homeDeclaration`, `membershipDeclaration`, and `membersFromHome`; `src/tests/cli/agora/agora.test.ts` covers one-sided, role-bearing, and malformed membership declarations.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

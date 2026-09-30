@@ -59,7 +59,7 @@ const healthProfiles = async (stateDirectory: string, runtime: AgoraRuntime): Pr
     const candidate = candidates[0]
     if (!candidate) continue
     let unavailable = false
-    for (const member of Object.keys(candidate.declaration.members)) {
+    for (const member of candidate.declaration.members) {
       const failure = failuresByRepository.get(member)
       if (!failure) continue
       addHealthFinding(findingsById, id, failure.message)

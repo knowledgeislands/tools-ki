@@ -59,7 +59,7 @@ Neither command changes user or repository skill activation. [Maintain a local i
 
 ## Agoras
 
-An Agora is declared portably by a registered owner repository under `[skills.ki-agora.homes.<id>]`. Each home names its own canonical repository identity, which `ki` verifies against the local registry and includes in the resolved projection. Its other declared members reciprocate under `[skills.ki-agora.memberships.<id>]`; `ki` resolves the declaration only when every member is also locally registered and agrees with its owner and role. A home may declare `order` as a duplicate-free prefix of those canonical participant identities.
+An Agora is declared portably by a registered owner repository under `[skills.ki-agora.homes.<id>]`. Each home names its own canonical repository identity, which `ki` verifies against the local registry and includes in the resolved projection. It lists other members by canonical repository identity; each member reciprocates under `[skills.ki-agora.memberships.<id>]` by naming the home. `ki` resolves the declaration only when every member is locally registered and reciprocally agrees. A home may declare `order` as a duplicate-free prefix of those canonical participant identities.
 
 `estate` is the reserved system selector for every locally registered canonical KI repository. Use `ki agora list`, `ki agora show <id>`, and `ki agora open <id> --target zed` to inspect or open a declared Agora or the estate. Opening requires an explicit permitted target; supported local-client adapters are `zed` and `vscode`.
 
