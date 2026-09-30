@@ -4,12 +4,12 @@ area: CLI
 title: Summarize roadmap inventory
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 8422c3862ae20a3713bac0a366eb4cf1cdd8f080
 created_at: 2026-09-30T07:30:33Z
-updated_at: 2026-09-30T07:32:51Z
+updated_at: 2026-09-30T12:02:38Z
 ---
 
 # KI-TOOL-CLI-090: Summarize roadmap inventory
@@ -92,6 +92,10 @@ The result answers whether a repository has roadmap items without exposing their
 ### Mini recap
 
 The summary command, contract, user documentation, manual inventory, and public CLI tests are complete. Review this item against the delivery commit, then decide acceptance through the roadmap workflow.
+
+## Done
+
+Accepted 2026-09-30 by Kris Brown on the review packet above.
 
 ## Discussion
 

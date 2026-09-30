@@ -4,12 +4,12 @@ area: CLI
 title: Clarify CLI reporting
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: f8bc2e4c3f02b53b98a78546dcfe7329989a338d
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T11:56:23Z
+updated_at: 2026-09-30T12:02:38Z
 ---
 
 # KI-TOOL-CLI-096: Clarify CLI reporting
@@ -91,6 +91,10 @@ The human-readable output now identifies what the counts mean without changing t
 ### Mini recap
 
 Text reports and documentation are aligned with current domain semantics. No automatic follow-on is created for the possible future JSON rename.
+
+## Done
+
+Accepted 2026-09-30 by Kris Brown on the review packet above.
 
 ## Discussion
 

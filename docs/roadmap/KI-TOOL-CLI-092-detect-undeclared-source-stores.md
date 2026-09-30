@@ -4,12 +4,12 @@ area: CLI
 title: Detect undeclared source stores
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: ec506413aecf594b0f622f7f6a459f8912e88a52
 created_at: 2026-09-30T07:36:00Z
-updated_at: 2026-09-30T11:23:13Z
+updated_at: 2026-09-30T12:02:38Z
 ---
 
 # KI-TOOL-CLI-092: Detect undeclared source stores
@@ -92,6 +92,10 @@ The command makes otherwise invisible conventional stores visible without changi
 ### Mini recap
 
 Registered conventional source stores now receive an actionable read-only warning or a distinct diagnostic. No source-store state is mutated.
+
+## Done
+
+Accepted 2026-09-30 by Kris Brown on the review packet above.
 
 ## Discussion
 

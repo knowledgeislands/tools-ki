@@ -4,12 +4,12 @@ area: CLI
 title: Separate trade evidence
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 9aec010b1ec726663f09ed459da7c28065d30dbb
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T10:38:12Z
+updated_at: 2026-09-30T12:02:38Z
 ---
 
 # KI-TOOL-CLI-097: Separate trade evidence
@@ -91,6 +91,10 @@ The result type no longer mistakes an unrequested trade lookup for an observed e
 ### Mini recap
 
 Roadmap item inventory and optional trade enrichment now have explicit boundaries. No further change is proposed from this slice.
+
+## Done
+
+Accepted 2026-09-30 by Kris Brown on the review packet above.
 
 ## Discussion
 

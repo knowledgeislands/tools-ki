@@ -4,12 +4,12 @@ area: CLI
 title: Modularise Agora resolution
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: ff4cfb72ac9abbb43bfd1f529f5fda8d5ee1e8e4
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T11:56:23Z
+updated_at: 2026-09-30T12:02:38Z
 ---
 
 # KI-TOOL-CLI-098: Modularise Agora resolution
@@ -91,6 +91,10 @@ The module split preserves tested behavior while making the declaration and heal
 ### Mini recap
 
 Agora core concerns are separated without a user-facing contract change. Role-bearing membership remains in place.
+
+## Done
+
+Accepted 2026-09-30 by Kris Brown on the review packet above.
 
 ## Discussion
 

@@ -4,12 +4,12 @@ area: CLI
 title: Validate enumerated options
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: dad7a43d31dfe257b2d6cbefa9812e27f8b3b324
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T10:01:55Z
+updated_at: 2026-09-30T12:02:38Z
 ---
 
 # KI-TOOL-CLI-093: Validate enumerated options
@@ -91,6 +91,10 @@ Unknown values no longer look like an empty successful query. Existing valid out
 ### Mini recap
 
 CLI grammar, completion, tests, specifications, and manual inventory are aligned. No further learning route is required beyond review of this delivery.
+
+## Done
+
+Accepted 2026-09-30 by Kris Brown on the review packet above.
 
 ## Discussion
 

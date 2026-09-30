@@ -4,12 +4,12 @@ area: CLI
 title: Keep previews read-only
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: c7cf922b8929f616a8106f033b3929a341337405
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T10:11:45Z
+updated_at: 2026-09-30T12:02:38Z
 ---
 
 # KI-TOOL-CLI-094: Keep previews read-only
@@ -91,6 +91,10 @@ The preview now has no incidental state-directory write, while the real apply pa
 ### Mini recap
 
 Registry dry-runs are read-only and write defaults are explicit. No additional work is proposed from this slice.
+
+## Done
+
+Accepted 2026-09-30 by Kris Brown on the review packet above.
 
 ## Discussion
 

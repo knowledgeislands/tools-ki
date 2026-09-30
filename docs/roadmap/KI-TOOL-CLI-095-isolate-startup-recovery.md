@@ -4,12 +4,12 @@ area: CLI
 title: Isolate startup recovery
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: ce7e0087ca83f1de79adeeb589a0335bc5be5f6f
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T10:18:10Z
+updated_at: 2026-09-30T12:02:38Z
 ---
 
 # KI-TOOL-CLI-095: Isolate startup recovery
@@ -91,6 +91,10 @@ The CLI remains diagnosable when its MCP binding is malformed, without making or
 ### Mini recap
 
 Startup preflight is limited for recovery entrypoints; normal inventory adoption is retained. No follow-on work is proposed from this slice.
+
+## Done
+
+Accepted 2026-09-30 by Kris Brown on the review packet above.
 
 ## Discussion
 
