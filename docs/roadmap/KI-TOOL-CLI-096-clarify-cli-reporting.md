@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: f8bc2e4c3f02b53b98a78546dcfe7329989a338d
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T10:23:44Z
+updated_at: 2026-09-30T11:56:23Z
 ---
 
 # KI-TOOL-CLI-096: Clarify CLI reporting
@@ -46,7 +46,7 @@ Focused CLI suites, manual lint, command-inventory check, type check, Biome, and
 
 ## Dependencies / blocks
 
-None; role-free Agora contract changes remain in CLI-089.
+None; Agora membership rules are outside this reporting item and remain role-bearing.
 
 ## Documentation impact
 
@@ -64,7 +64,7 @@ Correct manual and user-facing examples.
 
 ### Roadmap
 
-Record delivery here; CLI-089 remains separate.
+Record delivery here; preserve the role-bearing Agora contract.
 
 ## Review
 

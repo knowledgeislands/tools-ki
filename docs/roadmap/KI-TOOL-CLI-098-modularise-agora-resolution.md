@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: ff4cfb72ac9abbb43bfd1f529f5fda8d5ee1e8e4
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T10:48:07Z
+updated_at: 2026-09-30T11:56:23Z
 ---
 
 # KI-TOOL-CLI-098: Modularise Agora resolution
@@ -20,11 +20,11 @@ Agora registry inspection, declaration parsing, reciprocal resolution, and healt
 
 ## Context
 
-`src/core/agora/resolution.ts` currently combines all four concerns in one large module. CLI-089 may later change the membership contract, but that contract is not yet approved; a behavior-preserving separation can land independently.
+`src/core/agora/resolution.ts` combined all four concerns in one large module. The membership contract remains role-bearing; a behavior-preserving separation can land independently.
 
 ## Boundary
 
-Do not change role requirements, diagnostics, public exports, CLI output, or any repository declaration. Do not implement CLI-089 by inference.
+Do not change role requirements, diagnostics, public exports, CLI output, or any repository declaration. The refactor does not change membership semantics.
 
 ## Current state
 
@@ -46,7 +46,7 @@ Focused Agora tests, type check, Biome, architecture checks, and full coverage g
 
 ## Dependencies / blocks
 
-None. CLI-089 remains dependent on the external role-free contract and is not part of this item's behavior change.
+None. Role requirements are not part of this item's behavior change.
 
 ## Documentation impact
 
@@ -64,7 +64,7 @@ No user guidance changes.
 
 ### Roadmap
 
-Record delivery here and retain CLI-089 as the separate role-free follow-up.
+Record delivery here and preserve the existing role-bearing contract.
 
 ## Review
 
@@ -82,7 +82,7 @@ All 30 focused Agora CLI tests, TypeScript, Biome, and the `ki-self` architectur
 
 ### Outstanding concerns
 
-Independent review and acceptance remain. Role-free behavior is intentionally excluded and remains in CLI-089 after the portable Harness contract is settled.
+Independent review and acceptance remain. Role requirements are intentionally unchanged.
 
 ### Post-change review
 
@@ -90,7 +90,7 @@ The module split preserves tested behavior while making the declaration and heal
 
 ### Mini recap
 
-Agora core concerns are separated without a user-facing contract change. CLI-089 remains the distinct role-free follow-up.
+Agora core concerns are separated without a user-facing contract change. Role-bearing membership remains in place.
 
 ## Discussion
 
