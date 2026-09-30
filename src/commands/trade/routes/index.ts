@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import type { KiContext } from '../../../context.ts'
 import { grammarError } from '../../../core/errors.ts'
 import { addTradeRoute, removeTradeRoute } from '../../../core/trade/configuration-mutations.ts'
+import { registeredRepositories } from '../../../core/trade/estate.ts'
 import {
   estateRouteReport,
   inspectEstateRoutes,
@@ -16,6 +17,7 @@ import {
   mutateTradeRoute
 } from '../../../core/trade/operations/index.ts'
 import { type PairTableRow, renderPairTable, renderTree, routeState, tradeKindText } from '../../presentation/index.ts'
+import type { TradeSelection } from '../selection.ts'
 import { kind, repository, routeDirection } from '../shared.ts'
 
 interface RouteOptions {
@@ -24,7 +26,6 @@ interface RouteOptions {
 }
 
 interface RouteListOptions {
-  readonly estate?: boolean
   readonly incomplete?: boolean
   readonly format?: string
 }
@@ -104,7 +105,7 @@ const renderEstateRouteList = (
   ].join('\n')
 }
 
-export const createTradeRoutesCommand = (context: KiContext): Command => {
+export const createTradeRoutesCommand = (context: KiContext, selection: TradeSelection): Command => {
   const routes = new Command('routes').description('maintain local typed trade-route declarations')
   routes
     .addCommand(
@@ -120,12 +121,12 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
             direction,
             kind(options.kind),
             {
-              configurationPath: async () => (await localRegisteredRepository(context)).declaration,
+              configurationPath: async () => (await localRegisteredRepository(await selection.one())).declaration,
               mutate: addTradeRoute
             }
           )
           context.stdout.write(
-            `ki trade routes add: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`
+            `ki repo trade routes add: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`
           )
         })
     )
@@ -142,29 +143,39 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
             direction,
             kind(options.kind),
             {
-              configurationPath: async () => (await localRegisteredConfiguration(context)).repository.declaration,
+              configurationPath: async () =>
+                (await localRegisteredConfiguration(await selection.one())).repository.declaration,
               mutate: removeTradeRoute
             }
           )
           context.stdout.write(
-            `ki trade routes remove: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`
+            `ki repo trade routes remove: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`
           )
         })
     )
     .addCommand(
       new Command('list')
         .description('list local routes or every registered route and its estate state')
-        .option('--estate', 'list route declarations across the registered repository estate')
         .option('--incomplete', 'show only routes that are not active')
         .option('--format <text|json>', 'render estate route evidence as text or versioned JSON', 'text')
         .action(async (options: RouteListOptions) => {
           if (options.format !== 'text' && options.format !== 'json')
             throw grammarError('trade route --format must be text or json')
-          if (options.format === 'json' && !options.estate)
-            throw grammarError('trade route --format json requires --estate')
-          if (options.estate) {
+          const repositories = await selection.selected()
+          const aggregate = repositories.length !== 1 || selection.aggregate()
+          if (options.format === 'json' && !aggregate)
+            throw grammarError('trade route --format json requires an aggregate repository selection')
+          if (aggregate) {
             const incomplete = Boolean(options.incomplete)
-            const inspected = await inspectEstateTradeRoutes(incomplete, () => inspectEstateRoutes(context))
+            const roots = new Set(repositories.map((repository) => repository.root))
+            const identities = new Set(
+              (await registeredRepositories(context))
+                .filter((repository) => roots.has(repository.root) && repository.configuration)
+                .map((repository) => repository.repository)
+            )
+            const inspected = await inspectEstateTradeRoutes(incomplete, async () =>
+              (await inspectEstateRoutes(context)).filter((route) => identities.has(route.source.repository))
+            )
             if (options.format === 'json') {
               context.stdout.write(`${JSON.stringify(estateRouteReport(inspected, incomplete), null, 2)}\n`)
               return
@@ -174,9 +185,10 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
             )
             return
           }
+          const selectedContext = await selection.one()
           const inspected = await inspectLocalTradeRoutes(Boolean(options.incomplete), {
-            configuration: async () => (await localRegisteredConfiguration(context)).configuration,
-            inspect: (configuration) => inspectRoutes(context, configuration)
+            configuration: async () => (await localRegisteredConfiguration(selectedContext)).configuration,
+            inspect: (configuration) => inspectRoutes(selectedContext, configuration)
           })
           context.stdout.write(`${renderRouteList(inspected)}\n`)
         })
@@ -188,6 +200,7 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
         .option('--direction <export|import>', 'restrict to one route direction')
         .option('--kind <work|knowledge>', 'restrict to one trade kind')
         .action(async (peer: string | undefined, options: RouteOptions) => {
+          const selectedContext = await selection.one()
           const result = await checkTradeRoutes(
             {
               repository: peer ? repository(peer, 'trade route repository') : undefined,
@@ -195,8 +208,8 @@ export const createTradeRoutesCommand = (context: KiContext): Command => {
               kind: options.kind ? kind(options.kind) : undefined
             },
             {
-              configuration: async () => (await localRegisteredConfiguration(context)).configuration,
-              inspect: (configuration) => inspectRoutes(context, configuration)
+              configuration: async () => (await localRegisteredConfiguration(selectedContext)).configuration,
+              inspect: (configuration) => inspectRoutes(selectedContext, configuration)
             }
           )
           if (peer && !result.routes.length) throw grammarError(`trade route ${peer} is not declared locally`)

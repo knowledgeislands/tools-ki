@@ -121,22 +121,22 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 #### Trades
 
-- `ki trade routes add`
-- `ki trade routes remove`
-- `ki trade routes list [--estate] [--incomplete] [--format text|json]`
-- `ki trade routes check`
-- `ki trade subtypes add|list|remove`
-- `ki trade standing add|list|check|remove`
-- `ki trade standing capture`
-- `ki trade prepare`
-- `ki trade observe`
-- `ki trade submit`
-- `ki trade abandon`
-- `ki trade receive`
-- `ki trade list`
-- `ki trade show`
-- `ki trade release`
-- `ki trade prune`
+- `ki repo trade routes add`
+- `ki repo trade routes remove`
+- `ki repo trade routes list [--incomplete] [--format text|json]` (`--estate` for an aggregate)
+- `ki repo trade routes check`
+- `ki repo trade subtypes add|list|remove`
+- `ki repo trade standing add|list|check|remove`
+- `ki repo trade standing capture`
+- `ki repo trade prepare`
+- `ki repo trade observe`
+- `ki repo trade submit`
+- `ki repo trade abandon`
+- `ki repo trade receive`
+- `ki repo trade list`
+- `ki repo trade show`
+- `ki repo trade release`
+- `ki repo trade prune`
 
 #### Acquisition
 
@@ -176,12 +176,12 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - Closed current batch records validate selected work from their evidence commit, so later pruning and expiry do not invalidate archival verification.
 - `man/ki.commands.json` publishes the generated `ki/commands/v1` command and description inventory, reconciled against the manual and registered command tree.
 - `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.
-- `ki trade routes list [--estate] [--incomplete] [--format text|json]` is a framed local route inventory or a paired registered-estate table. Estate JSON uses the versioned, path-free `ki/trade-routes/v1` contract so applications can consume canonical route evidence without inheriting local registry topology or renderer-specific weights. The interactive D3 route map now belongs to `apps-observatory`; the retired `--html` and redundant `--table` flags are not retained as aliases.
+- `ki repo trade` is the sole trade command tree. Its parent `--repo`, `--agora`, and `--estate` selectors govern local and aggregate views; mutations require one registered repository. `ki repo trade routes list` is a framed local route inventory, while `ki repo --estate trade routes list` is a paired registered-estate table. Aggregate JSON uses the versioned, path-free `ki/trade-routes/v1` contract so applications can consume canonical route evidence without inheriting local registry topology or renderer-specific weights. The interactive D3 route map now belongs to `apps-observatory`; the retired `--html` and redundant `--table` flags are not retained as aliases.
 - Receiver-owned knowledge subtype commands, exact two-sided standing import/export grants, active/incomplete inspection, and receiver-local `STI-*` capture with full source-commit and path verification. Standing intake is knowledge-only, adds no peer-write or roadmap authority, and leaves ordinary itemized trades as the fallback.
 - Trade kinds, observations, report statuses, diagnostics, and repository entities use a bounded named presentation registry. Layout punctuation remains local to each renderer, while terminal knowledge consistently renders as `ⓘ` and HTML uses the matching accessible Lucide Book Open mark.
-- `ki trade prepare` creates a mutable local export once this repository declares the route; the receiver may observe it before `ki trade submit` freezes it, and `ki trade abandon --yes` removes it while it remains mutable. Receiver activation remains reciprocal.
+- `ki repo trade prepare` creates a mutable local export once this repository declares the route; the receiver may observe it before `ki repo trade submit` freezes it, and `ki repo trade abandon --yes` removes it while it remains mutable. Receiver activation remains reciprocal.
 - Trade pairing compares the payload the sender authored — its field values as parsed and its prose — rather than raw bytes, so a receiver that formats its own Markdown does not read as having tampered with a record.
-- `ki trade list` is a framed registered-estate inventory of preparations, outbound submissions, and received imports, including their observation and cleanup state.
+- `ki repo trade list` is a framed selected-repository inventory of preparations, outbound submissions, received imports, and imports awaiting local receipt, including their observation and cleanup state. `ki repo --estate trade list` aggregates the same view across registered repositories.
 - `ki repo audit` and `ki repo conform` report the span in which a skill gathers its evidence, which precedes every criterion and on a subprocess-backed rubric is nearly the whole operation. The host names that span itself, so a session that emits nothing is still reported as gathering evidence rather than as a stalled item count; a session that takes the optional emitter refines it with its own named stages and steps.
 - Repository audit and conform now share a compact receipt stream and one mutable activity row. The bar indicates activity without estimating completion from item count or declared `cost`; evidence-ready skills receive one full receipt before collapsing to a timed evidence receipt, queued skills stay hidden, and the operation receipt retains total elapsed time. All-pass result trees end at the repository summary; per-skill results are retained only for WARN, FAIL, or FIXED outcomes. Conform labels a post-write pass `re-audit` and skips it with an explicit message when no write or command was staged.
 - `.ki.toml` names each Harness once in `[repo]` and declares each governing skill by its bare name under `[skills]`, resolving that name against the declared Harness list rather than against whichever Harnesses happen to be installed. Harness-qualified skill keys are invalid; each provider owns a unique declared capability prefix. Trade routes are re-keyed by partner: one entry per peer carrying its `export` and `import` kinds, with a direction it does not trade simply absent. The previous fully-qualified top-level shape is not read: an unmigrated file fails naming the shape expected, with no dual parse or fallback.

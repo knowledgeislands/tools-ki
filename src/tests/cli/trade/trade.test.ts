@@ -126,6 +126,7 @@ const prepareTrade = (
   overrides: { readonly receiver?: string; readonly title?: string; readonly observation?: string } = {}
 ): readonly string[] => [
   'ki',
+  'repo',
   'trade',
   'prepare',
   overrides.receiver ?? receiverHome,
@@ -154,13 +155,13 @@ const createTrade = async (
   const prepared = await box.run(prepareTrade(kind, overrides), { now })
   const id = /TRD-[0-9a-f]{8}/u.exec(prepared.output)?.[0] as string
   if (!id) return prepared
-  return box.run(['ki', 'trade', 'submit', id])
+  return box.run(['ki', 'repo', 'trade', 'submit', id])
 }
 
-describe('[ki trade]', () => {
+describe('[ki repo trade]', () => {
   test('rejects unknown decision status rather than reporting no trades', async () => {
     const box = await sandbox()
-    expect(await box.run('ki trade list --status bogus')).toEqual({
+    expect(await box.run('ki repo trade list --status bogus')).toEqual({
       exitCode: 2,
       output:
         'ki: error: trade list --status must be one of unconsidered, in_progress, parked, clarify, applied, adopted, retained, declined, superseded\n'
@@ -172,7 +173,7 @@ describe('[ki trade]', () => {
     const id = /TRD-[0-9a-f]{8}/u.exec(submitted.output)?.[0] as string
     await configureEstate(box, [source])
 
-    expect((await box.run(['ki', 'trade', 'release', id])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'release', id])).output).toContain(
       'trade record peer example/receiver is unavailable or ambiguous in the registered repository estate'
     )
   })
@@ -188,9 +189,10 @@ describe('[ki trade]', () => {
     )
     await configureEstate(box, [source, receiver])
 
-    const empty = await box.run('ki trade routes list')
+    const empty = await box.run('ki repo trade routes list')
     const added = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'add',
@@ -200,9 +202,10 @@ describe('[ki trade]', () => {
       '--kind',
       'work'
     ])
-    const exportOnly = await box.run('ki trade routes list')
+    const exportOnly = await box.run('ki repo trade routes list')
     const addedExportKnowledge = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'add',
@@ -214,6 +217,7 @@ describe('[ki trade]', () => {
     ])
     const addedImport = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'add',
@@ -223,10 +227,11 @@ describe('[ki trade]', () => {
       '--kind',
       'knowledge'
     ])
-    const listed = await box.run('ki trade routes list')
-    const checkedAll = await box.run('ki trade routes check')
+    const listed = await box.run('ki repo trade routes list')
+    const checkedAll = await box.run('ki repo trade routes check')
     const checked = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'check',
@@ -238,6 +243,7 @@ describe('[ki trade]', () => {
     ])
     const removed = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'remove',
@@ -249,6 +255,7 @@ describe('[ki trade]', () => {
     ])
     const removedExportKnowledge = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'remove',
@@ -260,6 +267,7 @@ describe('[ki trade]', () => {
     ])
     const removedImport = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'remove',
@@ -273,16 +281,16 @@ describe('[ki trade]', () => {
     expect(empty.output).toContain('│  ╰─ routes: none')
     expect(added).toEqual({
       exitCode: 0,
-      output: `ki trade routes add: export work ${sourceHome} -> ${receiverHome}\n`
+      output: `ki repo trade routes add: export work ${sourceHome} -> ${receiverHome}\n`
     })
     expect(exportOnly.output).toContain('│  ╰─ export')
     expect(addedExportKnowledge).toEqual({
       exitCode: 0,
-      output: `ki trade routes add: export knowledge ${sourceHome} -> ${receiverHome}\n`
+      output: `ki repo trade routes add: export knowledge ${sourceHome} -> ${receiverHome}\n`
     })
     expect(addedImport).toEqual({
       exitCode: 0,
-      output: `ki trade routes add: import knowledge ${sourceHome} -> ${receiverHome}\n`
+      output: `ki repo trade routes add: import knowledge ${sourceHome} -> ${receiverHome}\n`
     })
     expect(listed.exitCode).toBe(0)
     expect(listed.output).toContain('│  ├─ export\n│  │  ├─ work')
@@ -297,15 +305,15 @@ describe('[ki trade]', () => {
     })
     expect(removed).toEqual({
       exitCode: 0,
-      output: `ki trade routes remove: export work ${sourceHome} -> ${receiverHome}\n`
+      output: `ki repo trade routes remove: export work ${sourceHome} -> ${receiverHome}\n`
     })
     expect(removedExportKnowledge).toEqual({
       exitCode: 0,
-      output: `ki trade routes remove: export knowledge ${sourceHome} -> ${receiverHome}\n`
+      output: `ki repo trade routes remove: export knowledge ${sourceHome} -> ${receiverHome}\n`
     })
     expect(removedImport).toEqual({
       exitCode: 0,
-      output: `ki trade routes remove: import knowledge ${sourceHome} -> ${receiverHome}\n`
+      output: `ki repo trade routes remove: import knowledge ${sourceHome} -> ${receiverHome}\n`
     })
     expect(await box.project.read('.ki.toml')).toContain(`repository = "${sourceHome}"`)
     expect(await box.project.read('receiver/.ki.toml')).toContain('"example/source" = { import = ["work"] }')
@@ -316,7 +324,7 @@ describe('[ki trade]', () => {
     const created = await createTrade(box, 'work', {}, () => Date.UTC(2026, 7, 3, 12, 0, 0))
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', id])
+    await box.run(['ki', 'repo', 'trade', 'receive', id])
     box.cd('..')
 
     // The sender's copy reads submitted and the receiver's reads received, so the two are
@@ -325,7 +333,7 @@ describe('[ki trade]', () => {
     expect(await box.project.read(`-/_TRADES/example/receiver/${id}.md`)).toContain('phase: submitted')
     expect(await box.project.read(`receiver/+/_TRADES/example/source/${id}.md`)).toContain('phase: received')
 
-    const listed = await box.run('ki trade list')
+    const listed = await box.run('ki repo --estate trade list')
 
     expect(listed.exitCode).toBe(0)
     expect(listed.output).toContain(`${id} import`)
@@ -333,7 +341,41 @@ describe('[ki trade]', () => {
     // The compact observation badge describes what the sender now awaits from the receiver.
     expect(listed.output).toContain('[? decision]')
     expect(listed.output).not.toContain('unrecognised trade field')
-    expect(await box.run(['ki', 'trade', 'show', id])).toMatchObject({ exitCode: 0 })
+    expect(await box.run(['ki', 'repo', '--estate', 'trade', 'show', id])).toMatchObject({ exitCode: 0 })
+  })
+
+  test('scopes trade reads and mutations through the parent repository selector', async () => {
+    const { box } = await configuredPair()
+    const created = await createTrade(box, 'work')
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+
+    expect((await box.run('ki repo trade list')).output).toContain(`${id} export`)
+    expect((await box.run('ki repo --repo receiver trade list')).output).toContain(`${id} import → example/receiver`)
+    expect((await box.run('ki repo --estate trade list')).output).toContain(`${id} import → example/receiver`)
+    expect((await box.run('ki repo --estate trade list')).output).not.toContain(`${id} export`)
+    expect((await box.run(['ki', 'repo', '--repo', 'receiver', 'trade', 'show', id])).output).toContain(
+      'not found in the selected repositories'
+    )
+    const sourceConfiguration = await box.project.read('.ki.toml')
+    expect(
+      (
+        await box.run(
+          'ki repo --repo receiver trade routes add https://github.com/example/other --direction import --kind work'
+        )
+      ).exitCode
+    ).toBe(0)
+    expect(await box.project.read('.ki.toml')).toBe(sourceConfiguration)
+    expect(await box.project.read('receiver/.ki.toml')).toContain(
+      '[skills.ki-trades.routes."example/other"]\nimport = ["work"]'
+    )
+    expect(
+      (
+        await box.run(
+          'ki repo --estate trade routes add https://github.com/example/other --direction export --kind work'
+        )
+      ).output
+    ).toContain('requires exactly one repository')
+    expect((await box.run('ki trade list')).output).toContain("unknown subcommand 'trade' for 'ki'")
   })
 
   test('pairs estate routes lexically when several repositories declare several peers', async () => {
@@ -355,20 +397,20 @@ describe('[ki trade]', () => {
     )
     await configureEstate(box, [source, receiver, third])
 
-    expect(await box.run('ki trade routes list --estate')).toEqual({
+    expect(await box.run('ki repo --estate trade routes list')).toEqual({
       exitCode: 0,
       output:
         '╭─ KI TRADE ROUTES\n╭──────────────────┬────────────────────────┬────────────────╮\n│ example/receiver │ → —                    │ example/source │\n│                  ├────────────────────────┤                │\n│                  │ ← ⚒ work [active]      │                │\n├──────────────────┼────────────────────────┼────────────────┤\n│ example/receiver │ → ⓘ knowledge [active] │ example/third  │\n│                  ├────────────────────────┤                │\n│                  │ ← —                    │                │\n├──────────────────┼────────────────────────┼────────────────┤\n│ example/source   │ → ⚒ work [active]      │ example/third  │\n│                  ├────────────────────────┤                │\n│                  │ ← —                    │                │\n╰──────────────────┴────────────────────────┴────────────────╯\nsummary: ROUTES=3 ACTIVE=3 INCOMPLETE=0\n'
     })
-    const narrow = await box.run('ki trade routes list --estate', { interactive: true, columns: 40 })
+    const narrow = await box.run('ki repo --estate trade routes list', { interactive: true, columns: 40 })
     expect(narrow.output).toContain('├─ example/receiver ↔ example/source')
     expect(narrow.output).toContain('╰─ example/source ↔ example/third')
   })
 
   test('lists incomplete route declarations across the registered estate', async () => {
     const { box } = await configuredPair()
-    const estate = await box.run('ki trade routes list --estate')
-    const incomplete = await box.run('ki trade routes list --estate --incomplete')
+    const estate = await box.run('ki repo --estate trade routes list')
+    const incomplete = await box.run('ki repo --estate trade routes list --incomplete')
 
     expect(estate).toEqual({
       exitCode: 0,
@@ -385,7 +427,7 @@ describe('[ki trade]', () => {
       repositoryConfiguration('example/receiver', {}, { work: [sourceHome] })
     )
 
-    const narrowed = await box.run('ki trade routes list --estate --incomplete')
+    const narrowed = await box.run('ki repo --estate trade routes list --incomplete')
     expect(narrowed.exitCode).toBe(0)
     expect(narrowed.output).toContain('example/receiver')
     expect(narrowed.output).toContain('← ⓘ knowledge [awaiting receiver activation]')
@@ -395,9 +437,12 @@ describe('[ki trade]', () => {
   test('uses the same pair projection for explicit wide and narrow estate tables', async () => {
     const { box } = await configuredPair()
 
-    const wide = await box.run('ki trade routes list --estate', { interactive: true, columns: 120 })
-    const explicit = await box.run('ki trade routes list --estate --format text', { interactive: true, columns: 120 })
-    const narrow = await box.run('ki trade routes list --estate', { interactive: true, columns: 40 })
+    const wide = await box.run('ki repo --estate trade routes list', { interactive: true, columns: 120 })
+    const explicit = await box.run('ki repo --estate trade routes list --format text', {
+      interactive: true,
+      columns: 120
+    })
+    const narrow = await box.run('ki repo --estate trade routes list', { interactive: true, columns: 40 })
 
     expect(explicit).toEqual(wide)
     expect(wide.output).toContain('╭──────────────────┬')
@@ -419,7 +464,7 @@ describe('[ki trade]', () => {
       repositoryConfiguration('example/receiver', { knowledge: [sourceHome] }, { work: [sourceHome] })
     )
 
-    const listed = await box.run('ki trade routes list --estate')
+    const listed = await box.run('ki repo --estate trade routes list')
 
     expect(listed.exitCode).toBe(0)
     expect(listed.output).toContain('→ ⓘ knowledge [active]')
@@ -469,7 +514,7 @@ describe('[ki trade]', () => {
   test('renders versioned path-free estate route evidence as JSON', async () => {
     const box = await diagramEstate()
 
-    const rendered = await box.run('ki trade routes list --estate --format json')
+    const rendered = await box.run('ki repo --estate trade routes list --format json')
 
     expect(rendered.exitCode).toBe(0)
     const report = JSON.parse(rendered.output)
@@ -501,7 +546,7 @@ describe('[ki trade]', () => {
   test('filters JSON evidence to incomplete routes', async () => {
     const box = await diagramEstate()
 
-    const rendered = await box.run('ki trade routes list --estate --incomplete --format json')
+    const rendered = await box.run('ki repo --estate trade routes list --incomplete --format json')
 
     expect(rendered.exitCode).toBe(0)
     const report = JSON.parse(rendered.output)
@@ -519,7 +564,7 @@ describe('[ki trade]', () => {
     )
     await configureEstate(box, [source])
 
-    const rendered = await box.run('ki trade routes list --estate --format json')
+    const rendered = await box.run('ki repo --estate trade routes list --format json')
 
     expect(rendered.exitCode).toBe(0)
     expect(JSON.parse(rendered.output).routes).toEqual([
@@ -542,26 +587,27 @@ describe('[ki trade]', () => {
     ])
   })
 
-  test('requires an estate for JSON and rejects unknown formats and retired presentation flags', async () => {
-    const box = await sandbox()
+  test('requires an aggregate selection for JSON and rejects unknown formats and retired presentation flags', async () => {
+    const { box } = await configuredPair()
 
-    expect(await box.run('ki trade routes list --format json')).toEqual({
+    box.cd('receiver')
+    expect(await box.run('ki repo trade routes list --format json')).toEqual({
       exitCode: 2,
-      output: 'ki: error: trade route --format json requires --estate\n'
+      output: 'ki: error: trade route --format json requires an aggregate repository selection\n'
     })
-    expect(await box.run('ki trade routes list --estate --format yaml')).toEqual({
+    expect(await box.run('ki repo --estate trade routes list --format yaml')).toEqual({
       exitCode: 2,
       output: 'ki: error: trade route --format must be text or json\n'
     })
-    expect((await box.run('ki trade routes list --estate --html')).output).toContain("unknown option '--html'")
-    expect((await box.run('ki trade routes list --estate --table')).output).toContain("unknown option '--table'")
+    expect((await box.run('ki repo --estate trade routes list --html')).output).toContain("unknown option '--html'")
+    expect((await box.run('ki repo --estate trade routes list --table')).output).toContain("unknown option '--table'")
   })
   test('releases a decided trade whose receiver reformatted the record without changing the payload', async () => {
     const { box } = await configuredPair()
     const created = await createTrade(box, 'work')
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', id])
+    await box.run(['ki', 'repo', 'trade', 'receive', id])
     // Everything a Markdown formatter does to a received record at once: it requotes the
     // frontmatter's YAML scalars and puts a blank line before the first block. None of it is
     // payload, and if any of it read as tampering no trade could ever complete its lifecycle
@@ -586,25 +632,25 @@ describe('[ki trade]', () => {
     expect(outbound).toContain(`---\n\n# ${id}`)
     await box.project.write(outboundPath, outbound.replace(`---\n\n# ${id}`, `---\n# ${id}`))
 
-    expect(await box.run(['ki', 'trade', 'release', id])).toMatchObject({ exitCode: 0 })
+    expect(await box.run(['ki', 'repo', 'trade', 'release', id])).toMatchObject({ exitCode: 0 })
   })
 
   test('refuses release when the receiver inbound record declares a phase its location contradicts', async () => {
     // The estate scan derives direction from the record's own phase, so it can never disagree
     // with itself. Release is the caller that does not: it asserts inbound for a file in another
     // repository, hand-editable and never consulted for its phase before this point. A record
-    // copied into place rather than recorded through `ki trade receive` arrives here intact.
+    // copied into place rather than recorded through `ki repo trade receive` arrives here intact.
     const { box } = await configuredPair()
     const created = await createTrade(box, 'work')
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', id])
+    await box.run(['ki', 'repo', 'trade', 'receive', id])
     const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
     const inbound = await box.project.read(inboundPath)
     box.cd('..')
     const releaseWithPhase = async (phase: string) => {
       await box.project.write(inboundPath, inbound.replace('phase: received', `phase: ${phase}`))
-      return box.run(['ki', 'trade', 'release', id])
+      return box.run(['ki', 'repo', 'trade', 'release', id])
     }
 
     // The two lines fail on different inputs: a phase outside the vocabulary at all, and a phase
@@ -628,8 +674,8 @@ describe('[ki trade]', () => {
     expect(outbound).toContain('kind: work')
 
     box.cd('receiver')
-    const received = await box.run(['ki', 'trade', 'receive', id])
-    const receiverListed = await box.run('ki trade list')
+    const received = await box.run(['ki', 'repo', 'trade', 'receive', id])
+    const receiverListed = await box.run('ki repo trade list')
     const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
     const receivedInbound = await box.project.read(inboundPath)
     await box.project.write(
@@ -642,10 +688,11 @@ describe('[ki trade]', () => {
     box.cd('..')
     const listed = await box.run([
       'ki',
+      'repo',
+      '--repo',
+      'receiver',
       'trade',
       'list',
-      '--repo',
-      receiverHome,
       '--direction',
       'import',
       '--status',
@@ -653,23 +700,23 @@ describe('[ki trade]', () => {
       '--kind',
       'work'
     ])
-    const allListed = await box.run('ki trade list')
-    const plainListed = await box.run('ki trade list --no-icons')
-    const shown = await box.run(['ki', 'trade', 'show', id])
-    const released = await box.run(['ki', 'trade', 'release', id])
+    const allListed = await box.run('ki repo --estate trade list')
+    const plainListed = await box.run('ki repo --estate trade list --no-icons')
+    const shown = await box.run(['ki', 'repo', '--estate', 'trade', 'show', id])
+    const released = await box.run(['ki', 'repo', 'trade', 'release', id])
     box.cd('receiver')
-    const pruned = await box.run(['ki', 'trade', 'prune', id])
+    const pruned = await box.run(['ki', 'repo', 'trade', 'prune', id])
 
-    expect(created.output).toBe(`ki trade submit: submitted ${id} for example/receiver [decision]\n`)
-    expect(received).toEqual({ exitCode: 0, output: `ki trade receive: received ${id}\n` })
+    expect(created.output).toBe(`ki repo trade submit: submitted ${id} for example/receiver [decision]\n`)
+    expect(received).toEqual({ exitCode: 0, output: `ki repo trade receive: received ${id}\n` })
     expect(receiverListed.output.match(new RegExp(id, 'g'))).toHaveLength(1)
     expect(listed.output).toContain(`${id} import [✓ release] ← [⚒ work] source [adopted] Route contract`)
     expect(allListed.output).toContain(`${id} import [✓ release] ← [⚒ work] source [adopted]`)
     expect(allListed.output).not.toContain(`${id} export`)
     expect(plainListed.output).not.toContain(`${id} export`)
     expect(shown.output).toContain(`Repository: ${sourceHome} [export]\n${outbound.trimEnd()}`)
-    expect(released).toEqual({ exitCode: 0, output: `ki trade release: released ${id}\n` })
-    expect(pruned).toEqual({ exitCode: 0, output: `ki trade prune: pruned ${id}\n` })
+    expect(released).toEqual({ exitCode: 0, output: `ki repo trade release: released ${id}\n` })
+    expect(pruned).toEqual({ exitCode: 0, output: `ki repo trade prune: pruned ${id}\n` })
     await expect(box.project.read(`receiver/+/_TRADES/example/source/${id}.md`)).rejects.toThrow()
   })
 
@@ -677,10 +724,10 @@ describe('[ki trade]', () => {
     const { box } = await configuredPair()
     const created = await createTrade(box, 'knowledge')
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
-    const listed = await box.run('ki trade list')
+    const listed = await box.run('ki repo trade list')
     expect(listed.output).toContain(`${id} export [ⓘ knowledge] → [↓ receipt] receiver Route contract`)
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', id])
+    await box.run(['ki', 'repo', 'trade', 'receive', id])
     const path = `receiver/+/_TRADES/example/source/${id}.md`
     await box.project.write(
       path,
@@ -690,9 +737,9 @@ describe('[ki trade]', () => {
       )
     )
     box.cd('..')
-    const released = await box.run(['ki', 'trade', 'release', id])
+    const released = await box.run(['ki', 'repo', 'trade', 'release', id])
     box.cd('receiver')
-    const pruned = await box.run(['ki', 'trade', 'prune', id])
+    const pruned = await box.run(['ki', 'repo', 'trade', 'prune', id])
 
     expect(released.exitCode).toBe(0)
     expect(pruned.exitCode).toBe(0)
@@ -701,7 +748,7 @@ describe('[ki trade]', () => {
     const invalid = await createTrade(box, 'work')
     const invalidId = /TRD-[0-9a-f-]+/u.exec(invalid.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', invalidId])
+    await box.run(['ki', 'repo', 'trade', 'receive', invalidId])
     const invalidPath = `receiver/+/_TRADES/example/source/${invalidId}.md`
     await box.project.write(
       invalidPath,
@@ -711,7 +758,7 @@ describe('[ki trade]', () => {
       )
     )
     box.cd('..')
-    expect((await box.run(['ki', 'trade', 'release', invalidId])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'release', invalidId])).output).toContain(
       'permits retained only for knowledge trades'
     )
   })
@@ -721,17 +768,19 @@ describe('[ki trade]', () => {
     await box.project.write('receiver/.ki.toml', repositoryConfiguration('example/receiver'))
 
     const nonreciprocal = await createTrade(box, 'work')
-    const missingKind = await box.run(['ki', 'trade', 'prepare', receiverHome])
-    const missingDirection = await box.run(['ki', 'trade', 'routes', 'add', receiverHome, '--kind', 'work'])
-    const malformedRepository = await box.run('ki trade routes add example/receiver --direction export --kind work')
-    const malformedKind = await box.run(`ki trade routes add ${receiverHome} --direction export --kind other`)
+    const missingKind = await box.run(['ki', 'repo', 'trade', 'prepare', receiverHome])
+    const missingDirection = await box.run(['ki', 'repo', 'trade', 'routes', 'add', receiverHome, '--kind', 'work'])
+    const malformedRepository = await box.run(
+      'ki repo trade routes add example/receiver --direction export --kind work'
+    )
+    const malformedKind = await box.run(`ki repo trade routes add ${receiverHome} --direction export --kind other`)
     const emptyTitle = await box.run(prepareTrade('work', { title: '   ' }))
     const retired = await box.run('ki handoffs list')
-    const plural = await box.run('ki trades list')
+    const plural = await box.run('ki repo trades list')
 
     expect(nonreciprocal.exitCode).toBe(0)
     expect(nonreciprocal.output).toMatch(
-      /^ki trade submit: submitted TRD-[0-9a-f]{8} for example\/receiver \[decision\]\n$/
+      /^ki repo trade submit: submitted TRD-[0-9a-f]{8} for example\/receiver \[decision\]\n$/
     )
     const id = /TRD-[0-9a-f]{8}/u.exec(nonreciprocal.output)?.[0] as string
     expect(await box.project.read(`-/_TRADES/example/receiver/${id}.md`)).toContain(`receiver: example/receiver`)
@@ -760,7 +809,7 @@ describe('[ki trade]', () => {
 
     const created = await createTrade(box, 'work', { receiver: foreignReceiver })
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
-    const listed = await box.run('ki trade list')
+    const listed = await box.run('ki repo trade list')
 
     expect(listed.output).toContain(`${id} export [⚒ work] → [↓ receipt] other/receiver Route contract`)
   })
@@ -773,23 +822,23 @@ describe('[ki trade]', () => {
     await configureEstate(box, [source, receiver, duplicate])
 
     await box.project.write('.ki.toml', repositoryConfiguration('example/source'))
-    expect(await box.run('ki trade routes list')).toEqual({
+    expect(await box.run('ki repo trade routes list')).toEqual({
       exitCode: 0,
       output: '╭─ KI TRADE ROUTES\n├─ results\n│  ╰─ routes: none\n╰─ summary: ROUTES=0\n'
     })
-    expect(await box.run('ki trade routes check')).toEqual({
+    expect(await box.run('ki repo trade routes check')).toEqual({
       exitCode: 0,
       output: '╭─ KI TRADE ROUTE CHECK\n├─ routes (0)\n│  ╰─ none\n╰─ summary: ROUTES=0 ACTIVE=0\n'
     })
 
     await box.project.write('.ki.toml', '[not valid TOML\n')
-    expect((await box.run('ki trade routes list')).output).toContain('must be valid TOML')
+    expect((await box.run('ki repo trade routes list')).output).toContain('must be valid TOML')
 
     await box.project.write(
       '.ki.toml',
       repositoryConfiguration('example/source').replace(`repository = "${sourceHome}"\n`, '')
     )
-    expect((await box.run('ki trade routes list')).output).toContain(
+    expect((await box.run('ki repo trade routes list')).output).toContain(
       '.repository must use canonical HTTPS GitHub repository form'
     )
 
@@ -798,14 +847,16 @@ describe('[ki trade]', () => {
       `${repositoryOnly}[${tradesTable}]\n\n[${tradesTable}.routes]\n${routes}\n`
 
     await box.project.write('.ki.toml', `${repositoryOnly}[${tradesTable}]\nunknown = true\n`)
-    expect((await box.run('ki trade routes list')).output).toContain('has unrecognised key unknown')
+    expect((await box.run('ki repo trade routes list')).output).toContain('has unrecognised key unknown')
 
     for (const value of ['-1', '4', '1.5', '"one"']) {
       await box.project.write('.ki.toml', `${repositoryOnly}[${tradesTable}]\nmap_bonus = ${value}\n`)
-      expect((await box.run('ki trade routes list')).output).toContain('map_bonus must be an integer from 0 through 3')
+      expect((await box.run('ki repo trade routes list')).output).toContain(
+        'map_bonus must be an integer from 0 through 3'
+      )
     }
     await box.project.write('.ki.toml', repositoryConfiguration('example/source', {}, {}, 1))
-    await box.run(['ki', 'trade', 'routes', 'add', receiverHome, '--direction', 'export', '--kind', 'work'])
+    await box.run(['ki', 'repo', 'trade', 'routes', 'add', receiverHome, '--direction', 'export', '--kind', 'work'])
     expect(await box.project.read('.ki.toml')).toContain('map_bonus = 1')
 
     // Each partner is named once by a key TOML itself keeps unique, so what remains checkable is the
@@ -821,21 +872,21 @@ describe('[ki trade]', () => {
     ]
     for (const [routes, detail] of rejected) {
       await box.project.write('.ki.toml', withRoutes(routes))
-      const listed = await box.run('ki trade routes list')
+      const listed = await box.run('ki repo trade routes list')
       expect(listed.exitCode).toBe(2)
       expect(listed.output).toContain(detail)
     }
 
     await box.project.write('.ki.toml', `${repositoryOnly}[${tradesTable}]\nroutes = "none"\n`)
-    expect((await box.run('ki trade routes list')).output).toContain(`[${tradesTable}.routes] must be a table`)
+    expect((await box.run('ki repo trade routes list')).output).toContain(`[${tradesTable}.routes] must be a table`)
 
     await box.project.write('.ki.toml', repositoryOnly)
-    expect((await box.run('ki trade routes list')).output).toContain(`does not declare [${tradesTable}]`)
+    expect((await box.run('ki repo trade routes list')).output).toContain(`does not declare [${tradesTable}]`)
     await box.project.write('.ki.toml', `${repositoryOnly}[${tradesTable}]\n\n[after]\nvalue = true\n`)
-    expect((await box.run(`ki trade routes add ${receiverHome} --direction export --kind work`)).exitCode).toBe(0)
+    expect((await box.run(`ki repo trade routes add ${receiverHome} --direction export --kind work`)).exitCode).toBe(0)
     expect(await box.project.read('.ki.toml')).toContain('[after]\nvalue = true')
     await box.project.write('.ki.toml', repositoryOnly)
-    expect((await box.run(`ki trade routes add ${receiverHome} --direction export --kind work`)).output).toContain(
+    expect((await box.run(`ki repo trade routes add ${receiverHome} --direction export --kind work`)).output).toContain(
       'does not declare'
     )
     // Declared as an inline table under [skills], which parses but presents no header for the
@@ -844,44 +895,58 @@ describe('[ki trade]', () => {
       '.ki.toml',
       `[repo]\nharnesses = ["example/harness"]\n\n[skills]\nki-repo = { repository = "${sourceHome}" }\nki-trades = {}\n`
     )
-    expect((await box.run(`ki trade routes add ${receiverHome} --direction export --kind work`)).output).toContain(
+    expect((await box.run(`ki repo trade routes add ${receiverHome} --direction export --kind work`)).output).toContain(
       `does not declare [${tradesTable}] route tables`
     )
     // No [skills] namespace at all: the repository endpoint the estate is keyed by is absent.
     await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
-    expect((await box.run('ki trade routes list')).output).toContain(
+    expect((await box.run('ki repo trade routes list')).output).toContain(
       '.repository must use canonical HTTPS GitHub repository form'
     )
 
     const missingHome = home('example/missing')
     await box.project.write('.ki.toml', repositoryConfiguration('example/source', { work: [missingHome] }))
-    expect((await box.run('ki trade routes check')).output).toContain(`${missingHome}: awaiting receiver activation`)
+    expect((await box.run('ki repo trade routes check')).output).toContain(
+      `${missingHome}: awaiting receiver activation`
+    )
 
     await box.project.write('.ki.toml', repositoryConfiguration('example/source', { work: [receiverHome] }))
     await box.project.write(
       'receiver/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
+    expect((await box.run('ki repo trade routes check')).output).toContain(
+      `${receiverHome}: awaiting receiver activation`
+    )
     await box.project.write(
       'receiver/.ki.toml',
       `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = 1\n`
     )
-    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
+    expect((await box.run('ki repo trade routes check')).output).toContain(
+      `${receiverHome}: awaiting receiver activation`
+    )
     await box.project.write('receiver/.ki.toml', '[repo]\nharnesses = ["example/harness"]\nskills = "none"\n')
-    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
+    expect((await box.run('ki repo trade routes check')).output).toContain(
+      `${receiverHome}: awaiting receiver activation`
+    )
     await box.project.write(
       'receiver/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "not-a-repository"\n'
     )
-    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
+    expect((await box.run('ki repo trade routes check')).output).toContain(
+      `${receiverHome}: awaiting receiver activation`
+    )
     await box.project.write(
       'receiver/.ki.toml',
       `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${receiverHome}"\n`
     )
-    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
+    expect((await box.run('ki repo trade routes check')).output).toContain(
+      `${receiverHome}: awaiting receiver activation`
+    )
     await box.project.write('receiver/.ki.toml', repositoryConfiguration('example/receiver'))
-    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: awaiting receiver activation`)
+    expect((await box.run('ki repo trade routes check')).output).toContain(
+      `${receiverHome}: awaiting receiver activation`
+    )
 
     await box.project.write(
       'receiver/.ki.toml',
@@ -891,44 +956,45 @@ describe('[ki trade]', () => {
       'duplicate/.ki.toml',
       repositoryConfiguration('example/receiver', {}, { work: [sourceHome] })
     )
-    expect((await box.run('ki trade routes check')).output).toContain(`${receiverHome}: ambiguous repository`)
+    expect((await box.run('ki repo trade routes check')).output).toContain(`${receiverHome}: ambiguous repository`)
 
     await box.project.write('.ki.toml', repositoryConfiguration('example/source'))
-    expect((await box.run(`ki trade routes add ${sourceHome} --direction export --kind work`)).output).toContain(
+    expect((await box.run(`ki repo trade routes add ${sourceHome} --direction export --kind work`)).output).toContain(
       'must differ from the local repository'
     )
-    expect((await box.run(`ki trade routes remove ${receiverHome} --direction export --kind work`)).output).toContain(
-      'is not declared locally'
-    )
+    expect(
+      (await box.run(`ki repo trade routes remove ${receiverHome} --direction export --kind work`)).output
+    ).toContain('is not declared locally')
     await box.project.write('.ki.toml', repositoryConfiguration('example/source'))
     await box.project.write(
       'receiver/.ki.toml',
       repositoryConfiguration('example/receiver', {}, { work: [sourceHome] })
     )
     box.cd('receiver')
-    expect((await box.run(['ki', 'trade', 'receive'])).output).toContain('requires one trade id or --all')
+    expect((await box.run(['ki', 'repo', 'trade', 'receive'])).output).toContain('requires one trade id or --all')
     await box.project.write('receiver/.ki.toml', repositoryConfiguration('example/receiver'))
-    expect((await box.run(['ki', 'trade', 'receive', '--all'])).output).toContain('0 eligible trades')
+    expect((await box.run(['ki', 'repo', 'trade', 'receive', '--all'])).output).toContain('0 eligible trades')
     box.cd('..')
     await box.project.write('.ki.toml', repositoryConfiguration('example/source', { work: [home('example/zulu')] }))
-    expect((await box.run(`ki trade routes add ${receiverHome} --direction export --kind work`)).exitCode).toBe(0)
+    expect((await box.run(`ki repo trade routes add ${receiverHome} --direction export --kind work`)).exitCode).toBe(0)
   })
 
   test('covers import-route mutation and command filters without changing peer configuration', async () => {
     const { box } = await configuredPair()
-    expect(await box.run('ki trade list')).toEqual({
+    expect(await box.run('ki repo trade list')).toEqual({
       exitCode: 0,
       output:
         '╭─ KI TRADES\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 PREPARATIONS=0 IMPORTS=0 AWAITING_RECEIPT=0 EXPORTS=0\n'
     })
-    expect(await box.run('ki trade show TRD-00000000')).toEqual({
+    expect(await box.run('ki repo trade show TRD-00000000')).toEqual({
       exitCode: 2,
-      output: 'ki: error: trade TRD-00000000 was not found in the registered repository estate\n'
+      output: 'ki: error: trade TRD-00000000 was not found in the selected repositories\n'
     })
     box.cd('receiver')
-    expect((await box.run(['ki', 'trade', 'receive'])).exitCode).toBe(2)
+    expect((await box.run(['ki', 'repo', 'trade', 'receive'])).exitCode).toBe(2)
     const removed = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'remove',
@@ -940,6 +1006,7 @@ describe('[ki trade]', () => {
     ])
     const added = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'add',
@@ -951,6 +1018,7 @@ describe('[ki trade]', () => {
     ])
     const selected = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'check',
@@ -960,13 +1028,13 @@ describe('[ki trade]', () => {
       '--kind',
       'knowledge'
     ])
-    const absent = await box.run(['ki', 'trade', 'routes', 'check', home('example/absent')])
-    const badDirection = await box.run(`ki trade routes check ${sourceHome} --direction sideways`)
-    const badKind = await box.run(`ki trade routes check ${sourceHome} --kind other`)
-    const badListDirection = await box.run('ki trade list --direction sideways')
-    const badListRepository = await box.run('ki trade list --repo example/source')
-    const badId = await box.run('ki trade show TRD-invalid')
-    const retiredUuidId = await box.run('ki trade show TRD-00000000-0000-0000-0000-000000000000')
+    const absent = await box.run(['ki', 'repo', 'trade', 'routes', 'check', home('example/absent')])
+    const badDirection = await box.run(`ki repo trade routes check ${sourceHome} --direction sideways`)
+    const badKind = await box.run(`ki repo trade routes check ${sourceHome} --kind other`)
+    const badListDirection = await box.run('ki repo trade list --direction sideways')
+    const badListRepository = await box.run('ki repo --repo example/source trade list')
+    const badId = await box.run('ki repo trade show TRD-invalid')
+    const retiredUuidId = await box.run('ki repo trade show TRD-00000000-0000-0000-0000-000000000000')
 
     expect(removed.exitCode).toBe(0)
     expect(added.exitCode).toBe(0)
@@ -975,7 +1043,7 @@ describe('[ki trade]', () => {
     expect(badDirection.output).toContain('--direction accepts export or import')
     expect(badKind.output).toContain('--kind accepts work or knowledge')
     expect(badListDirection.output).toContain('--direction accepts prepare, import, or export')
-    expect(badListRepository.output).toContain('--repo must use canonical HTTPS GitHub repository form')
+    expect(badListRepository.output).toContain('--repo must be an existing directory')
     expect(badId.output).toContain('trade id must use TRD-')
     expect(retiredUuidId.output).toContain('trade id must use TRD-')
   })
@@ -990,9 +1058,9 @@ describe('[ki trade]', () => {
     const preparingId = /TRD-[0-9a-f]{8}/u.exec(preparing.output)?.[0] as string
 
     box.cd('receiver')
-    const preview = await box.run(['ki', 'trade', 'receive', '--all'])
-    const inventory = await box.run(['ki', 'trade', 'list'])
-    const askedDirectly = await box.run(['ki', 'trade', 'receive', preparingId])
+    const preview = await box.run(['ki', 'repo', 'trade', 'receive', '--all'])
+    const inventory = await box.run(['ki', 'repo', 'trade', 'list'])
+    const askedDirectly = await box.run(['ki', 'repo', 'trade', 'receive', preparingId])
 
     expect(preview.exitCode).toBe(0)
     expect(preview.output).toContain(submittedId)
@@ -1035,7 +1103,7 @@ describe('[ki trade]', () => {
 
     for (const [contents, message] of cases) {
       await box.project.write(path, contents)
-      expect((await box.run(['ki', 'trade', 'receive', id])).output).toContain(message)
+      expect((await box.run(['ki', 'repo', 'trade', 'receive', id])).output).toContain(message)
     }
 
     await box.project.write(
@@ -1044,19 +1112,23 @@ describe('[ki trade]', () => {
         .replace('\n---\n#', '\n---\n\n#')
         .replace('## Constraints\n\nThe receiver retains local authority.', '## Constraints\n\n')
     )
-    expect((await box.run(['ki', 'trade', 'receive', id])).output).toContain('requires non-empty Constraints section')
+    expect((await box.run(['ki', 'repo', 'trade', 'receive', id])).output).toContain(
+      'requires non-empty Constraints section'
+    )
 
     await box.project.write(path, outbound.replace('receiver: example/receiver', 'receiver: example/other'))
-    expect((await box.run(['ki', 'trade', 'receive', id])).output).toContain('is unavailable or ambiguous')
+    expect((await box.run(['ki', 'repo', 'trade', 'receive', id])).output).toContain('is unavailable or ambiguous')
     await box.project.write(path, outbound)
-    const missing = await box.run(['ki', 'trade', 'receive', 'TRD-00000000'])
+    const missing = await box.run(['ki', 'repo', 'trade', 'receive', 'TRD-00000000'])
     expect(missing.output).toContain('is unavailable or ambiguous')
     const wrongId = 'TRD-00000000'
     await box.project.write(`-/_TRADES/example/receiver/${wrongId}.md`, outbound)
     box.cd('..')
-    expect((await box.run('ki trade list')).output).toContain(`filename must match trade id ${id}`)
+    expect((await box.run('ki repo trade list')).output).toContain(`filename must match trade id ${id}`)
     box.cd('receiver')
-    expect((await box.run(['ki', 'trade', 'receive', wrongId])).output).toContain(`filename must match trade id ${id}`)
+    expect((await box.run(['ki', 'repo', 'trade', 'receive', wrongId])).output).toContain(
+      `filename must match trade id ${id}`
+    )
   })
 
   test('receives all matching trades, reports existing copies, and filters distinct records', async () => {
@@ -1067,12 +1139,12 @@ describe('[ki trade]', () => {
     const secondId = /TRD-[0-9a-f-]+/u.exec(second.output)?.[0] as string
     await box.project.write('-/_TRADES/not-an-owner', 'not a directory')
     await box.project.write('-/_TRADES/example/not-a-repository', 'not a directory')
-    const outboundList = await box.run('ki trade list --direction export')
+    const outboundList = await box.run('ki repo trade list --direction export')
     box.cd('receiver')
-    const received = await box.run(['ki', 'trade', 'receive', '--all', '--yes'])
-    const repeated = await box.run(['ki', 'trade', 'receive', '--all', '--yes'])
+    const received = await box.run(['ki', 'repo', 'trade', 'receive', '--all', '--yes'])
+    const repeated = await box.run(['ki', 'repo', 'trade', 'receive', '--all', '--yes'])
     box.cd('..')
-    const shown = await box.run(['ki', 'trade', 'show', firstId])
+    const shown = await box.run(['ki', 'repo', 'trade', 'show', firstId])
 
     expect(outboundList.output).toContain(`${firstId} export [⚒ work] → [↓ receipt] receiver Route contract`)
     expect(received.output).toContain(firstId)
@@ -1085,7 +1157,7 @@ describe('[ki trade]', () => {
   test('reports missing, invalid, and unregistered user configuration before trade mutation', async () => {
     const unbootstrapped = await sandbox()
     await unbootstrapped.project.write('.ki.toml', repositoryConfiguration('example/source'))
-    expect((await unbootstrapped.run('ki trade routes list')).output).toContain(
+    expect((await unbootstrapped.run('ki repo trade routes list')).output).toContain(
       'current KI repository is not registered'
     )
 
@@ -1093,18 +1165,18 @@ describe('[ki trade]', () => {
     const source = await realpath(box.project.path)
     await box.project.write('.ki.toml', repositoryConfiguration('example/source'))
     await box.config.write('ki/config.toml', 'not valid TOML')
-    expect((await box.run('ki trade routes list')).output).toContain('current KI repository is not registered')
+    expect((await box.run('ki repo trade routes list')).output).toContain('current KI repository is not registered')
     await configureEstate(box, [])
-    expect((await box.run('ki trade routes list')).output).toContain('current KI repository is not registered')
+    expect((await box.run('ki repo trade routes list')).output).toContain('current KI repository is not registered')
     await configureEstate(box, [source])
-    expect((await box.run('ki trade routes list')).exitCode).toBe(0)
+    expect((await box.run('ki repo trade routes list')).exitCode).toBe(0)
   })
 
   test('ignores missing registered roots and missing trade paths without treating them as peer state', async () => {
     const { box, source, receiver } = await configuredPair()
     await configureEstate(box, [source, receiver, `${box.root.path}/missing`])
 
-    expect(await box.run('ki trade list')).toEqual({
+    expect(await box.run('ki repo trade list')).toEqual({
       exitCode: 0,
       output:
         '╭─ KI TRADES\n├─ results\n│  ╰─ trades: none\n╰─ summary: TRADES=0 PREPARATIONS=0 IMPORTS=0 AWAITING_RECEIPT=0 EXPORTS=0\n'
@@ -1112,7 +1184,7 @@ describe('[ki trade]', () => {
     const created = await createTrade(box, 'work')
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
 
-    expect((await box.run(['ki', 'trade', 'release', id])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'release', id])).output).toContain(
       'receiver has not recorded an inbound trade'
     )
   })
@@ -1122,13 +1194,13 @@ describe('[ki trade]', () => {
     const created = await createTrade(box, 'work')
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', id])
+    await box.run(['ki', 'repo', 'trade', 'receive', id])
     const path = `receiver/+/_TRADES/example/source/${id}.md`
     const inbound = await box.project.read(path)
     const releaseWith = async (decisionStatus: string) => {
       await box.project.write(path, inbound.replace('decision_status: unconsidered', decisionStatus))
       box.cd('..')
-      const result = await box.run(['ki', 'trade', 'release', id])
+      const result = await box.run(['ki', 'repo', 'trade', 'release', id])
       box.cd('receiver')
       return result
     }
@@ -1166,7 +1238,7 @@ describe('[ki trade]', () => {
     const changed = await createTrade(box, 'work')
     const changedId = /TRD-[0-9a-f-]+/u.exec(changed.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', changedId])
+    await box.run(['ki', 'repo', 'trade', 'receive', changedId])
     const changedPath = `receiver/+/_TRADES/example/source/${changedId}.md`
     await box.project.write(
       changedPath,
@@ -1175,14 +1247,14 @@ describe('[ki trade]', () => {
         .replaceAll('Route contract', 'Changed title')
     )
     box.cd('..')
-    expect((await box.run(['ki', 'trade', 'release', changedId])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'release', changedId])).output).toContain(
       'does not preserve the sender payload'
     )
 
     const knowledge = await createTrade(box, 'knowledge')
     const knowledgeId = /TRD-[0-9a-f-]+/u.exec(knowledge.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', knowledgeId])
+    await box.run(['ki', 'repo', 'trade', 'receive', knowledgeId])
     const knowledgePath = `receiver/+/_TRADES/example/source/${knowledgeId}.md`
     const knowledgeInbound = await box.project.read(knowledgePath)
     await box.project.write(
@@ -1190,7 +1262,7 @@ describe('[ki trade]', () => {
       knowledgeInbound.replace('decision_status: unconsidered', 'decision_status: adopted\nadopted_as: "KI-LOCAL-002"')
     )
     box.cd('..')
-    expect((await box.run(['ki', 'trade', 'release', knowledgeId])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'release', knowledgeId])).output).toContain(
       'permits adopted only for work trades'
     )
     box.cd('receiver')
@@ -1199,14 +1271,14 @@ describe('[ki trade]', () => {
       knowledgeInbound.replace('decision_status: unconsidered', 'decision_status: retained')
     )
     box.cd('..')
-    expect((await box.run(['ki', 'trade', 'release', knowledgeId])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'release', knowledgeId])).output).toContain(
       'requires retained_as for decision status retained'
     )
 
     const superseded = await createTrade(box, 'work')
     const supersededId = /TRD-[0-9a-f-]+/u.exec(superseded.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', supersededId])
+    await box.run(['ki', 'repo', 'trade', 'receive', supersededId])
     const supersededPath = `receiver/+/_TRADES/example/source/${supersededId}.md`
     await box.project.write(
       supersededPath,
@@ -1216,23 +1288,25 @@ describe('[ki trade]', () => {
       )
     )
     box.cd('..')
-    expect((await box.run(['ki', 'trade', 'release', supersededId])).exitCode).toBe(0)
+    expect((await box.run(['ki', 'repo', 'trade', 'release', supersededId])).exitCode).toBe(0)
   })
 
   test('rejects absent, premature, foreign, and ambiguous local lifecycle evidence', async () => {
     const { box, source, receiver } = await configuredPair()
     const created = await createTrade(box, 'work')
     const id = /TRD-[0-9a-f-]+/u.exec(created.output)?.[0] as string
-    expect((await box.run(['ki', 'trade', 'release', 'TRD-00000000'])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'release', 'TRD-00000000'])).output).toContain(
       'was not found in the current repository'
     )
-    expect((await box.run(['ki', 'trade', 'release', id])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'release', id])).output).toContain(
       'receiver has not recorded an inbound trade'
     )
 
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', id])
-    expect((await box.run(['ki', 'trade', 'prune', id])).output).toContain('before sender release is observable')
+    await box.run(['ki', 'repo', 'trade', 'receive', id])
+    expect((await box.run(['ki', 'repo', 'trade', 'prune', id])).output).toContain(
+      'before sender release is observable'
+    )
     const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
     await box.project.write(
       inboundPath,
@@ -1241,7 +1315,9 @@ describe('[ki trade]', () => {
         'decision_status: declined\nrationale: "not local"'
       )
     )
-    expect((await box.run(['ki', 'trade', 'prune', id])).output).toContain('before sender release is observable')
+    expect((await box.run(['ki', 'repo', 'trade', 'prune', id])).output).toContain(
+      'before sender release is observable'
+    )
 
     box.cd('..')
     const duplicate = await box.project.mkdir('duplicate')
@@ -1250,11 +1326,15 @@ describe('[ki trade]', () => {
       repositoryConfiguration('example/receiver', {}, { work: [sourceHome] })
     )
     await configureEstate(box, [source, receiver, duplicate])
-    expect((await box.run(['ki', 'trade', 'release', id])).output).toContain('repositories repeats a repository')
+    expect((await box.run(['ki', 'repo', 'trade', 'release', id])).output).toContain(
+      'repositories repeats a repository'
+    )
 
     await configureEstate(box, [source, receiver])
     await box.project.write('.ki.toml', repositoryConfiguration('example/other', { work: [receiverHome] }))
-    expect((await box.run(['ki', 'trade', 'release', id])).output).toContain('not owned by the current repository')
+    expect((await box.run(['ki', 'repo', 'trade', 'release', id])).output).toContain(
+      'not owned by the current repository'
+    )
 
     await box.project.write('.ki.toml', repositoryConfiguration('example/source', { work: [receiverHome] }))
     box.cd('receiver')
@@ -1262,7 +1342,9 @@ describe('[ki trade]', () => {
       'receiver/.ki.toml',
       repositoryConfiguration('example/other-receiver', {}, { work: [sourceHome] })
     )
-    expect((await box.run(['ki', 'trade', 'prune', id])).output).toContain('not addressed to the current repository')
+    expect((await box.run(['ki', 'repo', 'trade', 'prune', id])).output).toContain(
+      'not addressed to the current repository'
+    )
   })
 
   test('prepares, observes, guards routes and record validity, then abandons mutable work', async () => {
@@ -1271,16 +1353,28 @@ describe('[ki trade]', () => {
     const id = /TRD-[0-9a-f]{8}/u.exec(prepared.output)?.[0] as string
     const preparationPath = `-/_TRADES/example/receiver/${id}.md`
     expect(await box.project.read(preparationPath)).toContain('phase: preparing')
-    expect((await box.run('ki trade list --direction prepare')).output).toContain(
+    expect((await box.run('ki repo trade list --direction prepare')).output).toContain(
       `${id} prepare [⚒ work] → [? decision] receiver`
     )
     expect(
-      (await box.run(['ki', 'trade', 'routes', 'remove', receiverHome, '--direction', 'export', '--kind', 'work']))
-        .output
+      (
+        await box.run([
+          'ki',
+          'repo',
+          'trade',
+          'routes',
+          'remove',
+          receiverHome,
+          '--direction',
+          'export',
+          '--kind',
+          'work'
+        ])
+      ).output
     ).toContain(`is used by ${id}`)
 
     box.cd('receiver')
-    const first = await box.run(['ki', 'trade', 'observe', id])
+    const first = await box.run(['ki', 'repo', 'trade', 'observe', id])
     expect(first.output).toContain('verbatim')
     expect(first.output).toContain('first observation')
     box.setRunner(async (command, arguments_) => {
@@ -1293,8 +1387,10 @@ describe('[ki trade]', () => {
       if (arguments_[2] === 'diff') return { exitCode: 0, output: 'committed diff\n' }
       return { exitCode: 1, output: '' }
     })
-    expect((await box.run(['ki', 'trade', 'observe', id])).output).toContain('diff')
-    expect((await box.run(['ki', 'trade', 'observe', 'TRD-00000000'])).output).toContain('unavailable or ambiguous')
+    expect((await box.run(['ki', 'repo', 'trade', 'observe', id])).output).toContain('diff')
+    expect((await box.run(['ki', 'repo', 'trade', 'observe', 'TRD-00000000'])).output).toContain(
+      'unavailable or ambiguous'
+    )
 
     box.cd('..')
     // Submission rewrites the phase in place, so no outbound destination exists to collide
@@ -1302,9 +1398,9 @@ describe('[ki trade]', () => {
     // its successor share one path, so restore it rather than removing it before abandoning.
     const valid = await box.project.read(preparationPath)
     await box.project.write(preparationPath, 'conflict')
-    expect((await box.run(['ki', 'trade', 'submit', id])).output).toContain('has invalid phase')
+    expect((await box.run(['ki', 'repo', 'trade', 'submit', id])).output).toContain('has invalid phase')
     await box.project.write(preparationPath, valid)
-    expect((await box.run(['ki', 'trade', 'abandon', id, '--yes'])).exitCode).toBe(0)
+    expect((await box.run(['ki', 'repo', 'trade', 'abandon', id, '--yes'])).exitCode).toBe(0)
     await expect(box.project.read(preparationPath)).rejects.toThrow()
     const invalidObservation = await box.run(prepareTrade('work', { observation: 'unknown' }))
     expect(invalidObservation).toEqual({
@@ -1318,7 +1414,7 @@ describe('[ki trade]', () => {
     const completion = await createTrade(box, 'work', { observation: 'completion' })
     const completionId = /TRD-[0-9a-f]{8}/u.exec(completion.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', completionId])
+    await box.run(['ki', 'repo', 'trade', 'receive', completionId])
     const inbound = `receiver/+/_TRADES/example/source/${completionId}.md`
     await box.project.write(
       inbound,
@@ -1328,24 +1424,30 @@ describe('[ki trade]', () => {
       )
     )
     box.cd('..')
-    expect((await box.run('ki trade list --direction export')).output).toContain(
+    expect((await box.run('ki repo trade list --direction export')).output).toContain(
       `${completionId} export [⚒ work] → [… completion] receiver [adopted] Route contract`
     )
-    expect((await box.run(['ki', 'trade', 'release', completionId])).output).toContain('completion observation policy')
+    expect((await box.run(['ki', 'repo', 'trade', 'release', completionId])).output).toContain(
+      'completion observation policy'
+    )
     await box.project.write('receiver/docs/roadmap/not-markdown.txt', 'ignored')
-    expect((await box.run(['ki', 'trade', 'release', completionId])).output).toContain('completion observation policy')
+    expect((await box.run(['ki', 'repo', 'trade', 'release', completionId])).output).toContain(
+      'completion observation policy'
+    )
     await box.project.write('receiver/docs/roadmap/item.md', '---\nid: KI-LOCAL-001\nstatus: done\n---\n')
-    expect((await box.run(['ki', 'trade', 'release', '--eligible'])).output).toContain(completionId)
-    expect((await box.run(['ki', 'trade', 'release', '--eligible', '--yes'])).output).toContain('released 1 trade')
+    expect((await box.run(['ki', 'repo', 'trade', 'release', '--eligible'])).output).toContain(completionId)
+    expect((await box.run(['ki', 'repo', 'trade', 'release', '--eligible', '--yes'])).output).toContain(
+      'released 1 trade'
+    )
     box.cd('receiver')
-    expect((await box.run(['ki', 'trade', 'prune', '--eligible'])).output).toContain(completionId)
-    expect((await box.run(['ki', 'trade', 'prune', '--eligible', '--yes'])).output).toContain('pruned 1 trade')
+    expect((await box.run(['ki', 'repo', 'trade', 'prune', '--eligible'])).output).toContain(completionId)
+    expect((await box.run(['ki', 'repo', 'trade', 'prune', '--eligible', '--yes'])).output).toContain('pruned 1 trade')
 
     box.cd('..')
     const applied = await createTrade(box, 'work')
     const appliedId = /TRD-[0-9a-f]{8}/u.exec(applied.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', appliedId])
+    await box.run(['ki', 'repo', 'trade', 'receive', appliedId])
     const appliedPath = `receiver/+/_TRADES/example/source/${appliedId}.md`
     const appliedInbound = await box.project.read(appliedPath)
     await box.project.write(
@@ -1353,7 +1455,9 @@ describe('[ki trade]', () => {
       appliedInbound.replace('decision_status: unconsidered', 'decision_status: applied')
     )
     box.cd('..')
-    expect((await box.run(['ki', 'trade', 'release', appliedId])).output).toContain('requires full applied_commit')
+    expect((await box.run(['ki', 'repo', 'trade', 'release', appliedId])).output).toContain(
+      'requires full applied_commit'
+    )
     box.cd('receiver')
     await box.project.write(
       appliedPath,
@@ -1363,16 +1467,18 @@ describe('[ki trade]', () => {
       )
     )
     box.cd('..')
-    expect((await box.run(['ki', 'trade', 'release', appliedId])).exitCode).toBe(0)
+    expect((await box.run(['ki', 'repo', 'trade', 'release', appliedId])).exitCode).toBe(0)
 
     const premature = await createTrade(box, 'work')
     const prematureId = /TRD-[0-9a-f]{8}/u.exec(premature.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', prematureId])
+    await box.run(['ki', 'repo', 'trade', 'receive', prematureId])
     box.cd('..')
     await rm(join(box.project.path, `-/_TRADES/example/receiver/${prematureId}.md`))
     box.cd('receiver')
-    expect((await box.run(['ki', 'trade', 'prune', prematureId])).output).toContain('premature decision sender release')
+    expect((await box.run(['ki', 'repo', 'trade', 'prune', prematureId])).output).toContain(
+      'premature decision sender release'
+    )
   })
 
   test('narrows the local route list to incomplete routes and omits unconfigured repositories from the estate', async () => {
@@ -1382,14 +1488,14 @@ describe('[ki trade]', () => {
       repositoryConfiguration('example/receiver', {}, { work: [sourceHome] })
     )
 
-    expect(await box.run('ki trade routes list --incomplete')).toEqual({
+    expect(await box.run('ki repo trade routes list --incomplete')).toEqual({
       exitCode: 0,
       output: `╭─ KI TRADE ROUTES\n├─ results\n│  ╰─ export\n│     ╰─ knowledge ${receiverHome} [awaiting receiver activation]\n╰─ summary: ROUTES=1\n`
     })
 
     await box.project.write('.ki.toml', repositoryConfiguration('example/source'))
     await box.project.write('receiver/.ki.toml', repositoryConfiguration('example/receiver'))
-    expect(await box.run('ki trade routes list --estate')).toEqual({
+    expect(await box.run('ki repo --estate trade routes list')).toEqual({
       exitCode: 0,
       output: '╭─ KI TRADE ROUTES\n╰─ routes: none\nsummary: ROUTES=0 ACTIVE=0 INCOMPLETE=0\n'
     })
@@ -1399,7 +1505,7 @@ describe('[ki trade]', () => {
       'receiver/.ki.toml',
       `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${receiverHome}"\n`
     )
-    expect(await box.run('ki trade routes list --estate')).toEqual({
+    expect(await box.run('ki repo --estate trade routes list')).toEqual({
       exitCode: 0,
       output:
         '╭─ KI TRADE ROUTES\n╭──────────────────┬─────────────────────────────────────────┬────────────────╮\n│ example/receiver │ → —                                     │ example/source │\n│                  ├─────────────────────────────────────────┤                │\n│                  │ ← ⚒ work [awaiting receiver activation] │                │\n╰──────────────────┴─────────────────────────────────────────┴────────────────╯\nsummary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
@@ -1411,20 +1517,20 @@ describe('[ki trade]', () => {
     const created = await createTrade(box, 'work')
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
 
-    expect(await box.run(['ki', 'trade', 'release', id, '--eligible'])).toEqual({
+    expect(await box.run(['ki', 'repo', 'trade', 'release', id, '--eligible'])).toEqual({
       exitCode: 2,
-      output: 'ki: error: ki trade release accepts either one trade id or --eligible\n'
+      output: 'ki: error: ki repo trade release accepts either one trade id or --eligible\n'
     })
-    expect(await box.run(['ki', 'trade', 'prune'])).toEqual({
+    expect(await box.run(['ki', 'repo', 'trade', 'prune'])).toEqual({
       exitCode: 2,
-      output: 'ki: error: ki trade prune requires one trade id or --eligible\n'
+      output: 'ki: error: ki repo trade prune requires one trade id or --eligible\n'
     })
 
     box.cd('receiver')
-    const received = await box.run(['ki', 'trade', 'receive', id])
-    const repeated = await box.run(['ki', 'trade', 'receive', id])
-    expect(received).toEqual({ exitCode: 0, output: `ki trade receive: received ${id}\n` })
-    expect(repeated).toEqual({ exitCode: 0, output: `ki trade receive: existing ${id}\n` })
+    const received = await box.run(['ki', 'repo', 'trade', 'receive', id])
+    const repeated = await box.run(['ki', 'repo', 'trade', 'receive', id])
+    expect(received).toEqual({ exitCode: 0, output: `ki repo trade receive: received ${id}\n` })
+    expect(repeated).toEqual({ exitCode: 0, output: `ki repo trade receive: existing ${id}\n` })
 
     const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
     await box.project.write(
@@ -1435,8 +1541,8 @@ describe('[ki trade]', () => {
       )
     )
     box.cd('..')
-    expect((await box.run(['ki', 'trade', 'release', id])).exitCode).toBe(0)
-    expect((await box.run('ki trade list --direction import')).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'release', id])).exitCode).toBe(0)
+    expect((await box.run('ki repo --estate trade list --direction import')).output).toContain(
       `${id} import [✓ prune] ← [⚒ work] source [adopted] Route contract`
     )
   })
@@ -1444,16 +1550,16 @@ describe('[ki trade]', () => {
   test('skips absent submission directories and peers that declare no trade routes', async () => {
     const { box } = await configuredPair()
     box.cd('receiver')
-    const beforeAnySubmission = await box.run(['ki', 'trade', 'receive', '--all'])
+    const beforeAnySubmission = await box.run(['ki', 'repo', 'trade', 'receive', '--all'])
     box.cd('..')
     await box.project.write(
       '.ki.toml',
       `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${sourceHome}"\n`
     )
     box.cd('receiver')
-    const unavailable = await box.run(['ki', 'trade', 'receive', 'TRD-00000000'])
-    const previewed = await box.run(['ki', 'trade', 'receive', '--all'])
-    const observed = await box.run(['ki', 'trade', 'observe', 'TRD-00000000'])
+    const unavailable = await box.run(['ki', 'repo', 'trade', 'receive', 'TRD-00000000'])
+    const previewed = await box.run(['ki', 'repo', 'trade', 'receive', '--all'])
+    const observed = await box.run(['ki', 'repo', 'trade', 'observe', 'TRD-00000000'])
 
     expect(beforeAnySubmission.output).toContain('0 eligible trades')
     expect(unavailable.output).toContain('is unavailable or ambiguous')
@@ -1466,7 +1572,7 @@ describe('[ki trade]', () => {
     await box.project.write('-/_TRADES/example/receiver/notes.md', 'not a trade record\n')
     box.cd('receiver')
 
-    expect((await box.run(['ki', 'trade', 'receive', '--all'])).output).toContain('0 eligible trades')
+    expect((await box.run(['ki', 'repo', 'trade', 'receive', '--all'])).output).toContain('0 eligible trades')
   })
 
   test('previews an eligible batch that excludes a submission the receiver has not recorded', async () => {
@@ -1474,9 +1580,9 @@ describe('[ki trade]', () => {
     const created = await createTrade(box, 'work')
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
 
-    const previewed = await box.run(['ki', 'trade', 'release', '--eligible'])
+    const previewed = await box.run(['ki', 'repo', 'trade', 'release', '--eligible'])
 
-    expect(previewed).toEqual({ exitCode: 0, output: 'ki trade release --eligible: 0 eligible trades\n' })
+    expect(previewed).toEqual({ exitCode: 0, output: 'ki repo trade release --eligible: 0 eligible trades\n' })
     expect(await box.project.read(`-/_TRADES/example/receiver/${id}.md`)).toContain('kind: work')
   })
 
@@ -1485,7 +1591,7 @@ describe('[ki trade]', () => {
     const created = await createTrade(box, 'work', { observation: 'completion' })
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', id])
+    await box.run(['ki', 'repo', 'trade', 'receive', id])
     const inboundPath = `receiver/+/_TRADES/example/source/${id}.md`
     await box.project.write(
       inboundPath,
@@ -1497,7 +1603,7 @@ describe('[ki trade]', () => {
     await box.project.write('receiver/docs/roadmap/other.md', '---\nid: KI-OTHER-001\nstatus: done\n---\n')
     box.cd('..')
 
-    expect((await box.run(['ki', 'trade', 'release', id])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'release', id])).output).toContain(
       'cannot be released before its completion observation policy is satisfied'
     )
   })
@@ -1509,13 +1615,13 @@ describe('[ki trade]', () => {
     box.cd('receiver')
 
     box.setRunner(async () => ({ exitCode: 1, output: 'fatal: not a git repository\n' }))
-    const withoutHead = await box.run(['ki', 'trade', 'receive', id])
+    const withoutHead = await box.run(['ki', 'repo', 'trade', 'receive', id])
     box.setRunner(async (_command, arguments_) =>
       arguments_[2] === 'rev-parse'
         ? { exitCode: 0, output: `${'a'.repeat(40)}\n` }
         : { exitCode: 1, output: 'fatal: path does not exist\n' }
     )
-    const withoutRecord = await box.run(['ki', 'trade', 'receive', id])
+    const withoutRecord = await box.run(['ki', 'repo', 'trade', 'receive', id])
 
     expect(withoutHead.output).toContain('has no usable committed HEAD')
     expect(withoutRecord.output).toContain(`is not committed at ${'a'.repeat(40)}`)
@@ -1526,8 +1632,8 @@ describe('[ki trade]', () => {
     const prepared = await box.run(prepareTrade('work'))
     const id = /TRD-[0-9a-f]{8}/u.exec(prepared.output)?.[0] as string
     box.cd('receiver')
-    const first = await box.run(['ki', 'trade', 'observe', id])
-    const second = await box.run(['ki', 'trade', 'observe', id])
+    const first = await box.run(['ki', 'repo', 'trade', 'observe', id])
+    const second = await box.run(['ki', 'repo', 'trade', 'observe', id])
     box.setRunner(async (_command, arguments_) =>
       arguments_[2] === 'show'
         ? { exitCode: 0, output: await readFile(join(box.project.path, (arguments_[3] as string).slice(41)), 'utf8') }
@@ -1535,7 +1641,7 @@ describe('[ki trade]', () => {
           ? { exitCode: 1, output: 'fatal: bad revision\n' }
           : { exitCode: 0, output: `${'a'.repeat(40)}\n` }
     )
-    const undiffable = await box.run(['ki', 'trade', 'observe', id])
+    const undiffable = await box.run(['ki', 'repo', 'trade', 'observe', id])
 
     expect(first.output).toContain('first observation has no prior committed reference')
     expect(second.output).toContain('the prior reference is not comparable with the current committed history')
@@ -1547,12 +1653,12 @@ describe('[ki trade]', () => {
     const created = await createTrade(box, 'work', { observation: 'unattended' })
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', id])
+    await box.run(['ki', 'repo', 'trade', 'receive', id])
     box.cd('..')
 
-    expect(await box.run(['ki', 'trade', 'release', id])).toEqual({
+    expect(await box.run(['ki', 'repo', 'trade', 'release', id])).toEqual({
       exitCode: 0,
-      output: `ki trade release: released ${id}\n`
+      output: `ki repo trade release: released ${id}\n`
     })
   })
 
@@ -1565,6 +1671,7 @@ describe('[ki trade]', () => {
 
     const removed = await box.run([
       'ki',
+      'repo',
       'trade',
       'routes',
       'remove',
@@ -1577,7 +1684,7 @@ describe('[ki trade]', () => {
 
     expect(removed).toEqual({
       exitCode: 0,
-      output: `ki trade routes remove: export work ${sourceHome} -> ${receiverHome}\n`
+      output: `ki repo trade routes remove: export work ${sourceHome} -> ${receiverHome}\n`
     })
   })
 
@@ -1586,13 +1693,13 @@ describe('[ki trade]', () => {
     const created = await createTrade(box, 'work')
     const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', id])
+    await box.run(['ki', 'repo', 'trade', 'receive', id])
     box.cd('..')
 
     await box.project.write('receiver/.ki.toml', repositoryConfiguration('example/receiver'))
-    const inactive = await box.run(['ki', 'trade', 'release', id])
+    const inactive = await box.run(['ki', 'repo', 'trade', 'release', id])
     await box.project.write('.ki.toml', repositoryConfiguration('example/source', { knowledge: [receiverHome] }))
-    const undeclared = await box.run(['ki', 'trade', 'release', id])
+    const undeclared = await box.run(['ki', 'repo', 'trade', 'release', id])
 
     expect(inactive).toEqual({
       exitCode: 2,
@@ -1619,7 +1726,7 @@ describe('[ki trade]', () => {
 
     for (const [contents, message] of cases) {
       await box.project.write(path, contents)
-      expect((await box.run('ki trade list')).output).toContain(message)
+      expect((await box.run('ki repo trade list')).output).toContain(message)
     }
   })
 
@@ -1630,8 +1737,8 @@ describe('[ki trade]', () => {
     const knowledge = await createTrade(box, 'knowledge')
     const knowledgeId = /TRD-[0-9a-f]{8}/u.exec(knowledge.output)?.[0] as string
     box.cd('receiver')
-    await box.run(['ki', 'trade', 'receive', workId])
-    await box.run(['ki', 'trade', 'receive', knowledgeId])
+    await box.run(['ki', 'repo', 'trade', 'receive', workId])
+    await box.run(['ki', 'repo', 'trade', 'receive', knowledgeId])
     box.cd('..')
     const workPath = `receiver/+/_TRADES/example/source/${workId}.md`
     const knowledgePath = `receiver/+/_TRADES/example/source/${knowledgeId}.md`
@@ -1666,7 +1773,7 @@ describe('[ki trade]', () => {
       await box.project.write(workPath, workInbound)
       await box.project.write(knowledgePath, knowledgeInbound)
       await box.project.write(path, contents)
-      expect((await box.run('ki trade list')).output).toContain(message)
+      expect((await box.run('ki repo trade list')).output).toContain(message)
     }
   })
 })

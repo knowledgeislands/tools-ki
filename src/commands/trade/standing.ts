@@ -9,6 +9,7 @@ import {
   type StandingRouteInspection
 } from '../../core/trade/standing-intake.ts'
 import { renderTree } from '../presentation/index.ts'
+import type { TradeSelection } from './selection.ts'
 import { repository, requireText, routeDirection, subtype } from './shared.ts'
 
 interface StandingSelectionOptions {
@@ -19,14 +20,15 @@ interface StandingSelectionOptions {
 const stateText = (state: StandingRouteInspection['state']): string => state.replaceAll('-', ' ')
 
 const selectedStandingRoutes = async (
-  context: KiContext,
+  selection: TradeSelection,
   peer: string | undefined,
   options: StandingSelectionOptions
 ): Promise<readonly StandingRouteInspection[]> => {
-  const { configuration } = await localRegisteredConfiguration(context)
+  const selectedContext = await selection.one()
+  const { configuration } = await localRegisteredConfiguration(selectedContext)
   const direction = options.direction ? routeDirection(options.direction) : undefined
   const selectedSubtype = options.subtype ? subtype(options.subtype) : undefined
-  return (await inspectStandingRoutes(context, configuration)).filter(
+  return (await inspectStandingRoutes(selectedContext, configuration)).filter(
     (route) =>
       (!peer || route.repository === peer) &&
       (!direction || route.direction === direction) &&
@@ -52,7 +54,7 @@ const renderStandingRoutes = (routes: readonly StandingRouteInspection[], title:
   }).join('\n')
 }
 
-export const createTradeStandingCommand = (context: KiContext): Command =>
+export const createTradeStandingCommand = (context: KiContext, selection: TradeSelection): Command =>
   new Command('standing')
     .description('maintain exact standing knowledge-intake grants')
     .addCommand(
@@ -66,13 +68,13 @@ export const createTradeStandingCommand = (context: KiContext): Command =>
           const name = subtype(options.subtype)
           const target = repository(peer, 'standing route repository')
           const result = await addStandingRoute(
-            (await localRegisteredRepository(context)).declaration,
+            (await localRegisteredRepository(await selection.one())).declaration,
             target,
             direction,
             name
           )
           context.stdout.write(
-            `ki trade standing add: ${direction} knowledge ${name} ${result.repository} -> ${target}\n`
+            `ki repo trade standing add: ${direction} knowledge ${name} ${result.repository} -> ${target}\n`
           )
         })
     )
@@ -87,13 +89,13 @@ export const createTradeStandingCommand = (context: KiContext): Command =>
           const name = subtype(options.subtype)
           const target = repository(peer, 'standing route repository')
           const result = await removeStandingRoute(
-            (await localRegisteredConfiguration(context)).repository.declaration,
+            (await localRegisteredConfiguration(await selection.one())).repository.declaration,
             target,
             direction,
             name
           )
           context.stdout.write(
-            `ki trade standing remove: ${direction} knowledge ${name} ${result.repository} -> ${target}\n`
+            `ki repo trade standing remove: ${direction} knowledge ${name} ${result.repository} -> ${target}\n`
           )
         })
     )
@@ -102,7 +104,7 @@ export const createTradeStandingCommand = (context: KiContext): Command =>
         .description('list local standing grants and their activation state')
         .option('--incomplete', 'show only standing grants that are not active')
         .action(async (options: { readonly incomplete?: boolean }) => {
-          const inspected = await selectedStandingRoutes(context, undefined, {})
+          const inspected = await selectedStandingRoutes(selection, undefined, {})
           const selected = options.incomplete ? inspected.filter((route) => route.state !== 'active') : inspected
           context.stdout.write(`${renderStandingRoutes(selected, 'KI TRADE STANDING GRANTS')}\n`)
         })
@@ -115,7 +117,7 @@ export const createTradeStandingCommand = (context: KiContext): Command =>
         .option('--subtype <subtype>', 'restrict to one receiver-owned subtype')
         .action(async (peer: string | undefined, options: StandingSelectionOptions) => {
           const target = peer ? repository(peer, 'standing route repository') : undefined
-          const routes = await selectedStandingRoutes(context, target, options)
+          const routes = await selectedStandingRoutes(selection, target, options)
           if (target && !routes.length) throw grammarError(`standing route ${target} is not declared locally`)
           context.stdout.write(`${renderStandingRoutes(routes, 'KI TRADE STANDING CHECK')}\n`)
         })
@@ -132,9 +134,10 @@ export const createTradeStandingCommand = (context: KiContext): Command =>
             peer: string,
             options: { readonly subtype?: string; readonly sourceRef?: string; readonly capture?: string }
           ) => {
-            const local = await localRegisteredConfiguration(context)
+            const selectedContext = await selection.one()
+            const local = await localRegisteredConfiguration(selectedContext)
             const result = await captureStandingIntake(
-              context,
+              selectedContext,
               { root: local.repository.root, configuration: local.configuration },
               {
                 source: repository(peer, 'standing source repository'),
@@ -143,7 +146,7 @@ export const createTradeStandingCommand = (context: KiContext): Command =>
                 capture: requireText(options.capture, '--capture')
               }
             )
-            context.stdout.write(`ki trade standing capture: captured ${result.id} in ${result.path}\n`)
+            context.stdout.write(`ki repo trade standing capture: captured ${result.id} in ${result.path}\n`)
           }
         )
     )

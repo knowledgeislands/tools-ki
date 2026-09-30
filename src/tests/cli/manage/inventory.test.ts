@@ -3,18 +3,7 @@ import { describe, expect, test } from 'vitest'
 import { buildCommandInventory, renderCommandInventory } from '../../../../scripts/command-inventory.ts'
 import { sandbox } from '../_cli_helper.ts'
 
-const rootHelpCommands = [
-  'bootstrap',
-  'agora',
-  'repo',
-  'trade',
-  'acquire',
-  'harness',
-  'manage',
-  'registry',
-  'skill',
-  'dev'
-]
+const rootHelpCommands = ['bootstrap', 'agora', 'repo', 'acquire', 'harness', 'manage', 'registry', 'skill', 'dev']
 
 const manageCommands = [
   'cleanup',
@@ -53,6 +42,7 @@ const repoCommands = [
   'roadmap',
   'skill',
   'store',
+  'trade',
   'upgrade'
 ]
 const batchCommands = ['close', 'prepare', 'run', 'validate']
@@ -78,7 +68,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   'repo batch': batchCommands,
   registry: registryCommands,
   harness: ['info', 'install', 'list', 'reinstall', 'uninstall'],
-  trade: [
+  'repo trade': [
     'abandon',
     'list',
     'observe',
@@ -92,9 +82,9 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
     'submit',
     'subtypes'
   ],
-  'trade routes': ['add', 'check', 'list', 'remove'],
-  'trade subtypes': ['add', 'list', 'remove'],
-  'trade standing': ['add', 'capture', 'check', 'list', 'remove'],
+  'repo trade routes': ['add', 'check', 'list', 'remove'],
+  'repo trade subtypes': ['add', 'list', 'remove'],
+  'repo trade standing': ['add', 'capture', 'check', 'list', 'remove'],
   acquire: ['import', 'list', 'reconcile', 'reset', 'status'],
   dev: ['local', 'skill'],
   'dev local': ['off', 'on', 'set'],

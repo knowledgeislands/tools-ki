@@ -5,7 +5,7 @@ export interface TradeListSelection {
   readonly direction?: TradeDirection
   readonly status?: string
   readonly kind?: TradeKind
-  readonly repository?: string
+  readonly roots: ReadonlySet<string>
 }
 
 export interface ListedTrade {
@@ -26,7 +26,7 @@ interface ListTradePorts {
 
 const matchesSelection = (trade: LocatedTrade, selection: TradeListSelection): boolean =>
   (!selection.direction || trade.direction === selection.direction) &&
-  (!selection.repository || trade.repository === selection.repository) &&
+  selection.roots.has(trade.root) &&
   (!selection.status || trade.record.decisionStatus === selection.status) &&
   (!selection.kind || trade.record.kind === selection.kind)
 
@@ -46,14 +46,18 @@ export const listTradeRecords = async (
   const estate = await ports.locate()
   const selected = estate.filter((trade) => matchesSelection(trade, selection))
   const receivable =
-    selection.direction || selection.status || selection.repository || selection.kind
+    selection.direction || selection.status || selection.kind
       ? []
       : (await ports.previewReceivable()).filter((record) => !alreadyReceived(record, estate))
-  const receivableIds = new Set(receivable.map((record) => record.id))
-  const receivedIds = new Set(selected.filter((trade) => trade.direction === 'inbound').map((trade) => trade.record.id))
+  const identity = (record: TradeRecord): string => `${record.sender}\0${record.receiver}\0${record.id}`
+  const receivableIds = new Set(receivable.map(identity))
+  const receivedIds = new Set(
+    selected.filter((trade) => trade.direction === 'inbound').map((trade) => identity(trade.record))
+  )
   const visible = selected.filter(
     (trade) =>
-      trade.direction !== 'outbound' || (!receivableIds.has(trade.record.id) && !receivedIds.has(trade.record.id))
+      trade.direction !== 'outbound' ||
+      (!receivableIds.has(identity(trade.record)) && !receivedIds.has(identity(trade.record)))
   )
   return {
     trades: visible.map((trade) => ({ trade, lifecycle: ports.lifecycle(trade, estate) })),

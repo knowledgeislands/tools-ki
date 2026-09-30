@@ -9,7 +9,6 @@ import { createManageCommand } from '../manage/index.ts'
 import { createRegistryCommand } from '../registry/index.ts'
 import { createRepoCommand } from '../repo/index.ts'
 import { createSkillCommand } from '../skill/index.ts'
-import { createTradeCommand } from '../trade/index.ts'
 import { type RootCommandName, rootHelpCommandNames, rootHelpGroups } from './catalogue.ts'
 
 type RootCommandFactory = (context: KiContext) => Command
@@ -20,7 +19,6 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   agora: (context) => createAgoraCommand(context),
   dev: (context) => createDevCommand(context),
   harness: (context) => createHarnessCommand(context),
-  trade: (context) => createTradeCommand(context),
   manage: (context) => createManageCommand(context),
   repo: (context) => createRepoCommand(context),
   registry: (context) => createRegistryCommand(context),

@@ -3,9 +3,10 @@ import type { KiContext } from '../../context.ts'
 import { addKnowledgeSubtype, removeKnowledgeSubtype } from '../../core/trade/configuration-mutations.ts'
 import { localRegisteredConfiguration, localRegisteredRepository } from '../../core/trade/index.ts'
 import { renderTree } from '../presentation/index.ts'
+import type { TradeSelection } from './selection.ts'
 import { requireText, subtype } from './shared.ts'
 
-export const createTradeSubtypesCommand = (context: KiContext): Command =>
+export const createTradeSubtypesCommand = (context: KiContext, selection: TradeSelection): Command =>
   new Command('subtypes')
     .description('maintain receiver-owned knowledge subtype definitions')
     .addCommand(
@@ -16,11 +17,11 @@ export const createTradeSubtypesCommand = (context: KiContext): Command =>
         .action(async (value: string, options: { readonly description?: string }) => {
           const name = subtype(value, 'knowledge subtype')
           const result = await addKnowledgeSubtype(
-            (await localRegisteredRepository(context)).declaration,
+            (await localRegisteredRepository(await selection.one())).declaration,
             name,
             requireText(options.description, '--description')
           )
-          context.stdout.write(`ki trade subtypes add: defined ${name} for ${result.repository}\n`)
+          context.stdout.write(`ki repo trade subtypes add: defined ${name} for ${result.repository}\n`)
         })
     )
     .addCommand(
@@ -30,15 +31,15 @@ export const createTradeSubtypesCommand = (context: KiContext): Command =>
         .action(async (value: string) => {
           const name = subtype(value, 'knowledge subtype')
           const result = await removeKnowledgeSubtype(
-            (await localRegisteredConfiguration(context)).repository.declaration,
+            (await localRegisteredConfiguration(await selection.one())).repository.declaration,
             name
           )
-          context.stdout.write(`ki trade subtypes remove: removed ${name} from ${result.repository}\n`)
+          context.stdout.write(`ki repo trade subtypes remove: removed ${name} from ${result.repository}\n`)
         })
     )
     .addCommand(
       new Command('list').description('list receiver-owned knowledge subtype definitions').action(async () => {
-        const { configuration } = await localRegisteredConfiguration(context)
+        const { configuration } = await localRegisteredConfiguration(await selection.one())
         const entries = Object.entries(configuration.knowledgeSubtypes)
         context.stdout.write(
           `${renderTree({

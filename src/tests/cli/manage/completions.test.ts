@@ -93,31 +93,31 @@ const commandPaths = [
   'skill',
   'skill add',
   'skill remove',
-  'trade',
-  'trade abandon',
-  'trade list',
-  'trade observe',
-  'trade prepare',
-  'trade prune',
-  'trade receive',
-  'trade release',
-  'trade routes',
-  'trade routes add',
-  'trade routes check',
-  'trade routes list',
-  'trade routes remove',
-  'trade standing',
-  'trade standing add',
-  'trade standing capture',
-  'trade standing check',
-  'trade standing list',
-  'trade standing remove',
-  'trade subtypes',
-  'trade subtypes add',
-  'trade subtypes list',
-  'trade subtypes remove',
-  'trade show',
-  'trade submit'
+  'repo trade',
+  'repo trade abandon',
+  'repo trade list',
+  'repo trade observe',
+  'repo trade prepare',
+  'repo trade prune',
+  'repo trade receive',
+  'repo trade release',
+  'repo trade routes',
+  'repo trade routes add',
+  'repo trade routes check',
+  'repo trade routes list',
+  'repo trade routes remove',
+  'repo trade standing',
+  'repo trade standing add',
+  'repo trade standing capture',
+  'repo trade standing check',
+  'repo trade standing list',
+  'repo trade standing remove',
+  'repo trade subtypes',
+  'repo trade subtypes add',
+  'repo trade subtypes list',
+  'repo trade subtypes remove',
+  'repo trade show',
+  'repo trade submit'
 ] as const
 
 describe('[ki manage completion]', () => {
@@ -130,11 +130,10 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain("zstyle ':completion:*:ki-commands' verbose yes")
     expect(zsh.output).toContain("'repo roadmap')")
     expect(zsh.output).toContain("'repo skill')")
-    expect(zsh.output).toContain("'trade routes')")
-    expect(zsh.output).toContain("'trade standing')")
-    expect(zsh.output).toContain("'trade subtypes')")
+    expect(zsh.output).toContain("'repo trade routes')")
+    expect(zsh.output).toContain("'repo trade standing')")
+    expect(zsh.output).toContain("'repo trade subtypes')")
     expect(zsh.output).toContain('--estate:select every repository in the registered estate')
-    expect(zsh.output).toContain('--estate:list route declarations across the registered repository estate')
     expect(zsh.output).toContain('--incomplete:show only routes that are not active')
     expect(zsh.output).toContain('--format:render estate route evidence as text or versioned JSON')
     expect(zsh.output).toContain("'agora open:--target') printf '%s\\n' 'zed vscode'")
@@ -153,11 +152,11 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain('trade:submit and inspect typed cross-repository work and knowledge trades')
     expect(bash.output).toContain('_ki_value_strategy()')
     expect(bash.output).toContain("'repo roadmap')")
-    expect(bash.output).toContain("'trade routes')")
+    expect(bash.output).toContain("'repo trade routes')")
     expect(bash.output).toContain(
-      "'trade routes list') printf '%s\\n' '-V --version -h --help --estate --incomplete --format'"
+      "'repo trade routes list') printf '%s\\n' '-V --version -h --help --repo --agora --estate --incomplete --format'"
     )
-    expect(bash.output).toContain("'trade standing capture:--capture')")
+    expect(bash.output).toContain("'repo trade standing capture:--capture')")
     expect(bash.output).toContain("'acquire list')")
     expect(bash.output).toContain("'repo batch') printf '%s\\n' 'close prepare run validate'")
     expect(bash.output).toContain("'repo batch prepare:--item')")
@@ -193,9 +192,11 @@ describe('[ki manage completion]', () => {
       expect(output).toContain("'acquire import:--capture') printf '%s\\n' 'path'")
       expect(output).toContain("'manage docs:0') printf '%s\\n' 'overview site manual roadmap'")
       expect(output).toContain("'manage mcp update:--auth') printf '%s\\n' 'github-cli'")
-      expect(output).toContain("'trade prepare:--observation') printf '%s\\n' 'unattended receipt decision completion'")
-      expect(output).toContain("'trade prepare:--title') printf '%s\\n' ''")
-      expect(output).toContain("'trade standing capture:--capture')")
+      expect(output).toContain(
+        "'repo trade prepare:--observation') printf '%s\\n' 'unattended receipt decision completion'"
+      )
+      expect(output).toContain("'repo trade prepare:--title') printf '%s\\n' ''")
+      expect(output).toContain("'repo trade standing capture:--capture')")
       expect(output).toContain("'repo init:--repository') printf '%s\\n' ''")
     }
   })
@@ -270,7 +271,7 @@ describe('[ki manage completion]', () => {
       'bash',
       [
         '-c',
-        `source completion.bash; COMP_WORDS=(ki trade list --status ""); COMP_CWORD=4; _ki; printf "%s\\n" "\${COMPREPLY[@]}"`
+        `source completion.bash; COMP_WORDS=(ki repo trade list --status ""); COMP_CWORD=5; _ki; printf "%s\\n" "\${COMPREPLY[@]}"`
       ],
       { cwd: box.root.path }
     )

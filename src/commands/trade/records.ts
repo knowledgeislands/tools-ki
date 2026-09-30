@@ -23,6 +23,7 @@ import {
   type TradeListResult
 } from '../../core/trade/operations/index.ts'
 import { renderTradeRelation, renderTree } from '../presentation/index.ts'
+import type { TradeSelection } from './selection.ts'
 import { count, kind, observation, repository, requireText, tradeId } from './shared.ts'
 
 interface PrepareOptions {
@@ -45,7 +46,6 @@ interface ListOptions {
   readonly direction?: string
   readonly status?: string
   readonly kind?: string
-  readonly repo?: string
   readonly icons?: boolean
 }
 
@@ -54,7 +54,7 @@ const directionLabel = { preparation: 'prepare', inbound: 'import', outbound: 'e
 const renderTradeList = async (result: TradeListResult, icons: boolean): Promise<string> => {
   const { trades, receivable } = result
   const pending = receivable.map((record) => ({
-    label: `${record.id} import ${renderTradeRelation(
+    label: `${record.id} import → ${record.receiver} ${renderTradeRelation(
       record,
       'inbound',
       {
@@ -85,7 +85,7 @@ const renderTradeList = async (result: TradeListResult, icons: boolean): Promise
 }
 
 const renderPreview = (label: string, records: readonly { readonly id: string; readonly title: string }[]): string => {
-  const lines = [`ki trade ${label}: ${count(records.length, 'eligible trade')}`]
+  const lines = [`ki repo trade ${label}: ${count(records.length, 'eligible trade')}`]
   lines.push(...records.map((record) => `  ${record.id} ${record.title}`))
   return lines.join('\n')
 }
@@ -95,7 +95,7 @@ const receiveAll = async (context: KiContext, options: BatchOptions): Promise<vo
   context.stdout.write(`${renderPreview('receive --all', records)}\n`)
   if (!options.yes) return
   await receiveTradeBatch(records, (id) => receiveTrade(context, id))
-  context.stdout.write(`ki trade receive: received ${count(records.length, 'trade')}\n`)
+  context.stdout.write(`ki repo trade receive: received ${count(records.length, 'trade')}\n`)
 }
 
 const cleanup = async (
@@ -104,12 +104,12 @@ const cleanup = async (
   id: string | undefined,
   options: BatchOptions
 ): Promise<void> => {
-  if (id && options.eligible) throw grammarError(`ki trade ${operation} accepts either one trade id or --eligible`)
-  if (!id && !options.eligible) throw grammarError(`ki trade ${operation} requires one trade id or --eligible`)
+  if (id && options.eligible) throw grammarError(`ki repo trade ${operation} accepts either one trade id or --eligible`)
+  if (!id && !options.eligible) throw grammarError(`ki repo trade ${operation} requires one trade id or --eligible`)
   if (id) {
     const value = tradeId(id)
     await (operation === 'release' ? releaseTrade(context, value) : pruneTrade(context, value))
-    context.stdout.write(`ki trade ${operation}: ${operation === 'release' ? 'released' : 'pruned'} ${value}\n`)
+    context.stdout.write(`ki repo trade ${operation}: ${operation === 'release' ? 'released' : 'pruned'} ${value}\n`)
     return
   }
   const trades = await eligibleTradeCleanup(context, operation)
@@ -124,11 +124,11 @@ const cleanup = async (
     selected === 'release' ? releaseTrade(context, trade) : pruneTrade(context, trade)
   )
   context.stdout.write(
-    `ki trade ${operation}: ${operation === 'release' ? 'released' : 'pruned'} ${count(trades.length, 'trade')}\n`
+    `ki repo trade ${operation}: ${operation === 'release' ? 'released' : 'pruned'} ${count(trades.length, 'trade')}\n`
   )
 }
 
-export const createTradeRecordCommands = (context: KiContext): readonly Command[] => [
+export const createTradeRecordCommands = (context: KiContext, selection: TradeSelection): readonly Command[] => [
   new Command('prepare')
     .description('create one mutable local trade preparation')
     .argument('<repository>', 'receiver canonical HTTPS GitHub repository')
@@ -140,7 +140,7 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
     .requiredOption('--submission <text>', 'proposed outcome')
     .requiredOption('--constraints <text>', 'receiver constraints')
     .action(async (peer: string, options: PrepareOptions) => {
-      const record = await createTradePreparation(context, {
+      const record = await createTradePreparation(await selection.one(), {
         to: repository(peer, 'trade receiver'),
         kind: kind(options.kind),
         observation: observation(options.observation),
@@ -150,24 +150,28 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
         submission: requireText(options.submission, '--submission'),
         constraints: requireText(options.constraints, '--constraints')
       })
-      context.stdout.write(`ki trade prepare: created ${record.id} for ${record.receiver} [${record.observation}]\n`)
+      context.stdout.write(
+        `ki repo trade prepare: created ${record.id} for ${record.receiver} [${record.observation}]\n`
+      )
     }),
   new Command('observe')
     .description('inspect one sender’s committed mutable preparation')
     .argument('<trade-id>', 'trade identifier')
     .action(async (id: string) => {
-      const observed = await observeTradePreparation(context, tradeId(id))
+      const observed = await observeTradePreparation(await selection.one(), tradeId(id))
       const note = observed.reason ? ` (${observed.reason})` : ''
       context.stdout.write(
-        `ki trade observe ${observed.record.id}: ${observed.mode} ${observed.ref}${note}\n${observed.output}`
+        `ki repo trade observe ${observed.record.id}: ${observed.mode} ${observed.ref}${note}\n${observed.output}`
       )
     }),
   new Command('submit')
     .description('freeze one local preparation as an outbound submission')
     .argument('<trade-id>', 'trade identifier')
     .action(async (id: string) => {
-      const record = await submitTrade(context, tradeId(id))
-      context.stdout.write(`ki trade submit: submitted ${record.id} for ${record.receiver} [${record.observation}]\n`)
+      const record = await submitTrade(await selection.one(), tradeId(id))
+      context.stdout.write(
+        `ki repo trade submit: submitted ${record.id} for ${record.receiver} [${record.observation}]\n`
+      )
     }),
   new Command('abandon')
     .description('remove one local mutable preparation')
@@ -175,8 +179,8 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
     .requiredOption('--yes', 'confirm removal of the mutable preparation')
     .action(async (id: string) => {
       const value = tradeId(id)
-      await abandonTrade(context, value)
-      context.stdout.write(`ki trade abandon: abandoned ${value}\n`)
+      await abandonTrade(await selection.one(), value)
+      context.stdout.write(`ki repo trade abandon: abandoned ${value}\n`)
     }),
   new Command('receive')
     .description('receive one committed submission, or preview an explicit batch')
@@ -184,24 +188,25 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
     .option('--all', 'preview every currently receivable trade')
     .option('--yes', 'confirm the previewed batch')
     .action(async (id: string | undefined, options: BatchOptions) => {
-      if (Boolean(id) === Boolean(options.all)) throw grammarError('ki trade receive requires one trade id or --all')
-      if (options.all) return receiveAll(context, options)
-      const result = await receiveTrade(context, tradeId(id))
-      context.stdout.write(`ki trade receive: ${result.existing ? 'existing' : 'received'} ${result.id}\n`)
+      if (Boolean(id) === Boolean(options.all))
+        throw grammarError('ki repo trade receive requires one trade id or --all')
+      if (options.all) return receiveAll(await selection.one(), options)
+      const result = await receiveTrade(await selection.one(), tradeId(id))
+      context.stdout.write(`ki repo trade receive: ${result.existing ? 'existing' : 'received'} ${result.id}\n`)
     }),
   new Command('list')
-    .description('list trade records in the registered estate and imports awaiting local receipt')
+    .description('list trade records and imports awaiting receipt in selected repositories')
     .option('--direction <direction>', 'prepare, import, or export')
     .option('--status <status>', 'receiver decision status')
     .option('--kind <work|knowledge>', 'trade kind')
-    .option('--repo <repository>', 'only one canonical HTTPS GitHub repository')
     .option('--no-icons', 'omit decorative badge icons')
     .action(async (options: ListOptions) => {
       if (options.direction && !['prepare', 'import', 'export'].includes(options.direction))
         throw grammarError('--direction accepts prepare, import, or export')
       if (options.status && !decisionStatuses.includes(options.status as (typeof decisionStatuses)[number]))
         throw grammarError(`trade list --status must be one of ${decisionStatuses.join(', ')}`)
-      const selectedRepository = options.repo ? repository(options.repo, '--repo') : undefined
+      const repositories = await selection.selected()
+      const roots = new Set(repositories.map((repository) => repository.root))
       const result = await listTradeRecords(
         {
           direction: options.direction
@@ -209,25 +214,34 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
                 options.direction as 'prepare'
               ]
             : undefined,
-          repository: selectedRepository,
+          roots,
           status: options.status,
           kind: options.kind ? kind(options.kind) : undefined
         },
         {
           locate: () => locateTrades(context),
-          previewReceivable: () => previewReceivableTrades(context),
+          previewReceivable: async () =>
+            (
+              await Promise.all(
+                repositories.map((repository) =>
+                  previewReceivableTrades({ ...context, workingDirectory: repository.root })
+                )
+              )
+            ).flat(),
           lifecycle: tradeLifecycle
         }
       )
       context.stdout.write(`${await renderTradeList(result, options.icons !== false)}\n`)
     }),
   new Command('show')
-    .description('show every visible copy of one trade')
+    .description('show selected visible copies of one trade')
     .argument('<trade-id>', 'trade identifier')
     .action(async (id: string) => {
-      const selected = await locateTrades(context, { id: tradeId(id) })
-      if (!selected.length) throw grammarError(`trade ${id} was not found in the registered repository estate`)
-      const lines = [`ki trade show ${id}`]
+      const repositories = await selection.selected()
+      const roots = new Set(repositories.map((repository) => repository.root))
+      const selected = (await locateTrades(context, { id: tradeId(id) })).filter((trade) => roots.has(trade.root))
+      if (!selected.length) throw grammarError(`trade ${id} was not found in the selected repositories`)
+      const lines = [`ki repo trade show ${id}`]
       for (const trade of selected)
         lines.push(
           `Repository: ${trade.repository} [${directionLabel[trade.direction]}]`,
@@ -240,11 +254,15 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
     .argument('[trade-id]', 'trade identifier')
     .option('--eligible', 'preview every release-eligible local trade')
     .option('--yes', 'confirm the previewed eligible batch')
-    .action((id: string | undefined, options: BatchOptions) => cleanup(context, 'release', id, options)),
+    .action(async (id: string | undefined, options: BatchOptions) =>
+      cleanup(await selection.one(), 'release', id, options)
+    ),
   new Command('prune')
     .description('remove eligible local inbound copies after sender release')
     .argument('[trade-id]', 'trade identifier')
     .option('--eligible', 'preview every prune-eligible local trade')
     .option('--yes', 'confirm the previewed eligible batch')
-    .action((id: string | undefined, options: BatchOptions) => cleanup(context, 'prune', id, options))
+    .action(async (id: string | undefined, options: BatchOptions) =>
+      cleanup(await selection.one(), 'prune', id, options)
+    )
 ]

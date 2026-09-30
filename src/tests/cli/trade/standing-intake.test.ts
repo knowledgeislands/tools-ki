@@ -76,12 +76,13 @@ const fixture = async () => {
   return { box }
 }
 
-describe('[ki trade standing intake]', () => {
+describe('[ki repo trade standing intake]', () => {
   test('defines reciprocal grants and appends one commit-pinned receiver-local capture', async () => {
     const { box } = await fixture()
 
     const exported = await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'add',
@@ -94,6 +95,7 @@ describe('[ki trade standing intake]', () => {
     box.cd('receiver')
     const defined = await box.run([
       'ki',
+      'repo',
       'trade',
       'subtypes',
       'add',
@@ -103,6 +105,7 @@ describe('[ki trade standing intake]', () => {
     ])
     const imported = await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'add',
@@ -114,6 +117,7 @@ describe('[ki trade standing intake]', () => {
     ])
     await box.run([
       'ki',
+      'repo',
       'trade',
       'subtypes',
       'add',
@@ -124,6 +128,7 @@ describe('[ki trade standing intake]', () => {
     box.cd('..')
     await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'add',
@@ -133,12 +138,13 @@ describe('[ki trade standing intake]', () => {
       '--subtype',
       'another-subtype'
     ])
-    expect((await box.run('ki trade standing list')).output).toContain(
+    expect((await box.run('ki repo trade standing list')).output).toContain(
       `export knowledge shared-maintenance ${receiverHome}: active`
     )
     box.cd('receiver')
     await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'add',
@@ -148,9 +154,10 @@ describe('[ki trade standing intake]', () => {
       '--subtype',
       'another-subtype'
     ])
-    const listedSubtypes = await box.run('ki trade subtypes list')
+    const listedSubtypes = await box.run('ki repo trade subtypes list')
     const checked = await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'check',
@@ -163,6 +170,7 @@ describe('[ki trade standing intake]', () => {
     const captured = await box.run(
       [
         'ki',
+        'repo',
         'trade',
         'standing',
         'capture',
@@ -179,14 +187,14 @@ describe('[ki trade standing intake]', () => {
 
     expect(exported).toEqual({
       exitCode: 0,
-      output: `ki trade standing add: export knowledge shared-maintenance ${sourceHome} -> ${receiverHome}\n`
+      output: `ki repo trade standing add: export knowledge shared-maintenance ${sourceHome} -> ${receiverHome}\n`
     })
     expect(defined.exitCode).toBe(0)
     expect(imported.exitCode).toBe(0)
     expect(listedSubtypes.output).toContain('shared-maintenance: Shared maintenance evidence.')
     expect(checked.output).toContain(`import knowledge shared-maintenance ${sourceHome}: active`)
     expect(captured.output).toMatch(
-      /^ki trade standing capture: captured STI-[0-9a-f]{8} in docs\/capture file\.md\n$/u
+      /^ki repo trade standing capture: captured STI-[0-9a-f]{8} in docs\/capture file\.md\n$/u
     )
     const contents = await box.project.read('receiver/docs/capture file.md')
     expect(contents).toContain('<!-- ki-trades:standing-intake -->\n```toml')
@@ -203,6 +211,7 @@ describe('[ki trade standing intake]', () => {
           await box.run(
             [
               'ki',
+              'repo',
               'trade',
               'standing',
               'capture',
@@ -222,6 +231,7 @@ describe('[ki trade standing intake]', () => {
 
     const removed = await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'remove',
@@ -234,6 +244,7 @@ describe('[ki trade standing intake]', () => {
     expect(removed.exitCode).toBe(0)
     await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'remove',
@@ -243,11 +254,12 @@ describe('[ki trade standing intake]', () => {
       '--subtype',
       'another-subtype'
     ])
-    expect((await box.run('ki trade standing list')).output).toContain('grants (0)')
+    expect((await box.run('ki repo trade standing list')).output).toContain('grants (0)')
     expect(
       (
         await box.run([
           'ki',
+          'repo',
           'trade',
           'standing',
           'capture',
@@ -261,18 +273,19 @@ describe('[ki trade standing intake]', () => {
         ])
       ).output
     ).toContain('not declared locally')
-    expect((await box.run(['ki', 'trade', 'subtypes', 'remove', 'shared-maintenance'])).exitCode).toBe(0)
-    expect((await box.run(['ki', 'trade', 'subtypes', 'remove', 'another-subtype'])).exitCode).toBe(0)
+    expect((await box.run(['ki', 'repo', 'trade', 'subtypes', 'remove', 'shared-maintenance'])).exitCode).toBe(0)
+    expect((await box.run(['ki', 'repo', 'trade', 'subtypes', 'remove', 'another-subtype'])).exitCode).toBe(0)
   })
 
   test('keeps one-sided and invalid grants closed without touching a peer', async () => {
     const { box } = await fixture()
     box.cd('receiver')
-    expect((await box.run('ki trade subtypes list')).output).toContain('subtypes (0)')
+    expect((await box.run('ki repo trade subtypes list')).output).toContain('subtypes (0)')
     expect(
       (
         await box.run([
           'ki',
+          'repo',
           'trade',
           'standing',
           'capture',
@@ -287,15 +300,16 @@ describe('[ki trade standing intake]', () => {
       ).output
     ).toContain('not defined by the receiver')
     expect(
-      (await box.run(['ki', 'trade', 'subtypes', 'add', 'Bad_Subtype', '--description', 'Invalid'])).output
+      (await box.run(['ki', 'repo', 'trade', 'subtypes', 'add', 'Bad_Subtype', '--description', 'Invalid'])).output
     ).toContain('lower-case hyphenated identifier')
     expect(
-      (await box.run(['ki', 'trade', 'subtypes', 'add', 'shared-maintenance', '--description', ''])).output
+      (await box.run(['ki', 'repo', 'trade', 'subtypes', 'add', 'shared-maintenance', '--description', ''])).output
     ).toContain('--description is required and must be non-empty')
     expect(
       (
         await box.run([
           'ki',
+          'repo',
           'trade',
           'standing',
           'add',
@@ -310,6 +324,7 @@ describe('[ki trade standing intake]', () => {
 
     await box.run([
       'ki',
+      'repo',
       'trade',
       'subtypes',
       'add',
@@ -319,6 +334,7 @@ describe('[ki trade standing intake]', () => {
     ])
     await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'add',
@@ -328,22 +344,35 @@ describe('[ki trade standing intake]', () => {
       '--subtype',
       'shared-maintenance'
     ])
-    expect((await box.run('ki trade standing list --incomplete')).output).toContain('awaiting reciprocal')
-    expect((await box.run('ki trade standing check')).output).toContain('GRANTS=1 ACTIVE=0')
+    expect((await box.run('ki repo trade standing list --incomplete')).output).toContain('awaiting reciprocal')
+    expect((await box.run('ki repo trade standing check')).output).toContain('GRANTS=1 ACTIVE=0')
     expect(
-      (await box.run(['ki', 'trade', 'routes', 'remove', sourceHome, '--direction', 'import', '--kind', 'knowledge']))
-        .output
+      (
+        await box.run([
+          'ki',
+          'repo',
+          'trade',
+          'routes',
+          'remove',
+          sourceHome,
+          '--direction',
+          'import',
+          '--kind',
+          'knowledge'
+        ])
+      ).output
     ).toContain('used by standing subtypes shared-maintenance')
-    expect((await box.run(['ki', 'trade', 'subtypes', 'remove', 'shared-maintenance'])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'subtypes', 'remove', 'shared-maintenance'])).output).toContain(
       `used by standing imports from ${sourceHome}`
     )
-    expect((await box.run(['ki', 'trade', 'standing', 'check', receiverHome])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'standing', 'check', receiverHome])).output).toContain(
       'is not declared locally'
     )
     expect(
       (
         await box.run([
           'ki',
+          'repo',
           'trade',
           'standing',
           'capture',
@@ -361,13 +390,14 @@ describe('[ki trade standing intake]', () => {
       '.ki.toml',
       configuration('example/source', 'example/receiver', 'export').split('[skills.ki-trades.routes')[0] as string
     )
-    expect((await box.run('ki trade standing list --incomplete')).output).toContain('awaiting sender')
+    expect((await box.run('ki repo trade standing list --incomplete')).output).toContain('awaiting sender')
   })
 
   test('refuses malformed, unresolved, or non-local capture targets after an exact grant activates', async () => {
     const { box } = await fixture()
     await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'add',
@@ -380,6 +410,7 @@ describe('[ki trade standing intake]', () => {
     box.cd('receiver')
     await box.run([
       'ki',
+      'repo',
       'trade',
       'subtypes',
       'add',
@@ -391,6 +422,7 @@ describe('[ki trade standing intake]', () => {
       (
         await box.run([
           'ki',
+          'repo',
           'trade',
           'standing',
           'remove',
@@ -404,6 +436,7 @@ describe('[ki trade standing intake]', () => {
     ).toContain('is not declared locally')
     await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'add',
@@ -416,6 +449,7 @@ describe('[ki trade standing intake]', () => {
     const capture = (sourceRef: string, target: string) =>
       box.run([
         'ki',
+        'repo',
         'trade',
         'standing',
         'capture',
@@ -466,7 +500,7 @@ describe('[ki trade standing intake]', () => {
     const inspect = async (declaration: string) => {
       await box.project.write('receiver/.ki.toml', `${receiverHeader}[skills.ki-trades]\n${declaration}\n`)
       box.cd('receiver')
-      const result = await box.run('ki trade subtypes list')
+      const result = await box.run('ki repo trade subtypes list')
       box.cd('..')
       return result
     }
@@ -539,6 +573,7 @@ describe('[ki trade standing intake]', () => {
       (
         await box.run([
           'ki',
+          'repo',
           'trade',
           'standing',
           'add',
@@ -554,6 +589,7 @@ describe('[ki trade standing intake]', () => {
       (
         await box.run([
           'ki',
+          'repo',
           'trade',
           'standing',
           'add',
@@ -567,6 +603,7 @@ describe('[ki trade standing intake]', () => {
     ).toContain('requires an ordinary knowledge export route')
     await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'add',
@@ -578,6 +615,7 @@ describe('[ki trade standing intake]', () => {
     ])
     await box.run([
       'ki',
+      'repo',
       'trade',
       'standing',
       'add',
@@ -587,11 +625,12 @@ describe('[ki trade standing intake]', () => {
       '--subtype',
       'another-subtype'
     ])
-    expect((await box.run('ki trade standing list --incomplete')).output).toContain('unknown subtype')
+    expect((await box.run('ki repo trade standing list --incomplete')).output).toContain('unknown subtype')
     expect(
       (
         await box.run([
           'ki',
+          'repo',
           'trade',
           'standing',
           'remove',
@@ -607,6 +646,7 @@ describe('[ki trade standing intake]', () => {
       (
         await box.run([
           'ki',
+          'repo',
           'trade',
           'standing',
           'remove',
@@ -622,6 +662,7 @@ describe('[ki trade standing intake]', () => {
       (
         await box.run([
           'ki',
+          'repo',
           'trade',
           'standing',
           'remove',
@@ -636,6 +677,7 @@ describe('[ki trade standing intake]', () => {
     box.cd('receiver')
     await box.run([
       'ki',
+      'repo',
       'trade',
       'subtypes',
       'add',
@@ -644,9 +686,10 @@ describe('[ki trade standing intake]', () => {
       'Shared maintenance evidence.'
     ])
     expect(
-      (await box.run(['ki', 'trade', 'subtypes', 'add', 'shared-maintenance', '--description', 'Duplicate'])).output
+      (await box.run(['ki', 'repo', 'trade', 'subtypes', 'add', 'shared-maintenance', '--description', 'Duplicate']))
+        .output
     ).toContain('is already defined locally')
-    expect((await box.run(['ki', 'trade', 'subtypes', 'remove', 'missing-subtype'])).output).toContain(
+    expect((await box.run(['ki', 'repo', 'trade', 'subtypes', 'remove', 'missing-subtype'])).output).toContain(
       'is not defined locally'
     )
   })

@@ -233,67 +233,69 @@ Remove one installed non-canonical harness.
 .SS Trades
 \&
 .TP
-.B ki trade routes add <repository> --direction export|import --kind work|knowledge
+.B ki repo [repo-options] trade routes add <repository> --direction export|import --kind work|knowledge
 Declare one local typed directional trade route.
 .TP
-.B ki trade routes remove <repository> --direction export|import --kind work|knowledge
+.B ki repo [repo-options] trade routes remove <repository> --direction export|import --kind work|knowledge
 Remove one local typed trade route.
 .TP
-.B ki trade routes list [--estate] [--incomplete] [--format text|json]
-List local typed trade routes, or every declared registered-estate route.
+.B ki repo [repo-options] trade routes list [--incomplete] [--format text|json]
+List selected local typed trade routes, or aggregate selected declarations
+with parent \fB--estate\fR or \fB--agora\fR.
 Limit either view to incomplete routes.
 Emit versioned machine-readable estate evidence with
 .BR "--format json" .
 .TP
-.B ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]
+.B ki repo [repo-options] trade routes check [repository] [--direction export|import] [--kind work|knowledge]
 Check local typed trade routes and their activation state.
 .TP
-.B ki trade subtypes add <subtype> --description <text>
+.B ki repo [repo-options] trade subtypes add <subtype> --description <text>
 Define one receiver-owned knowledge subtype.
 .TP
-.B ki trade subtypes list
+.B ki repo [repo-options] trade subtypes list
 List receiver-owned knowledge subtype definitions.
 .TP
-.B ki trade subtypes remove <subtype>
+.B ki repo [repo-options] trade subtypes remove <subtype>
 Remove one subtype that no local standing import uses.
 .TP
-.B ki trade standing add|remove <repository> --direction export|import --subtype <subtype>
+.B ki repo [repo-options] trade standing add|remove <repository> --direction export|import --subtype <subtype>
 Add or remove one exact local standing knowledge-intake declaration.
 .TP
-.B ki trade standing list [--incomplete]
+.B ki repo [repo-options] trade standing list [--incomplete]
 List local standing declarations and their activation state.
 .TP
-.B ki trade standing check [repository] [--direction export|import] [--subtype <subtype>]
+.B ki repo [repo-options] trade standing check [repository] [--direction export|import] [--subtype <subtype>]
 Check exact standing knowledge-intake activation.
 .TP
-.B ki trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>
+.B ki repo [repo-options] trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>
 Append one validated receiver-local standing-intake provenance block.
 .TP
-.B ki trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
+.B ki repo [repo-options] trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
 Create one mutable local trade preparation on a declared export route.
 .TP
-.B ki trade observe <trade-id>
+.B ki repo [repo-options] trade observe <trade-id>
 Inspect one sender's committed mutable preparation.
 .TP
-.B ki trade submit <trade-id>
+.B ki repo [repo-options] trade submit <trade-id>
 Freeze one local preparation as an outbound submission.
 .TP
-.B ki trade abandon <trade-id> --yes
+.B ki repo [repo-options] trade abandon <trade-id> --yes
 Remove one local mutable preparation.
 .TP
-.B ki trade receive <trade-id> | --all [--yes]
+.B ki repo [repo-options] trade receive <trade-id> | --all [--yes]
 Receive one committed submission, or preview and confirm an explicit batch.
 .TP
-.B ki trade list [--direction prepare|import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]
-List visible trade copies in the registered repository estate.
+.B ki repo [repo-options] trade list [--direction prepare|import|export] [--status <status>] [--kind work|knowledge]
+List visible trade copies in selected repositories, including imports
+awaiting receipt.
 .TP
-.B ki trade show <trade-id>
-Show every visible copy of one trade.
+.B ki repo [repo-options] trade show <trade-id>
+Show selected visible copies of one trade.
 .TP
-.B ki trade release <trade-id> | --eligible [--yes]
+.B ki repo [repo-options] trade release <trade-id> | --eligible [--yes]
 Release one eligible local outbound submission, or preview and confirm a batch.
 .TP
-.B ki trade prune <trade-id> | --eligible [--yes]
+.B ki repo [repo-options] trade prune <trade-id> | --eligible [--yes]
 Prune one eligible local inbound copy, or preview and confirm a batch.
 .SS Agora management
 \&
@@ -935,21 +937,24 @@ skills cannot be removed. A successful removal deletes its identifier from
 .PP
 Use these commands with repositories that declare the portable
 \fBki-repo-trades\fR capability and are present in the local registered repository
-estate. They preserve repository authority: every mutation writes only the
-current repository, a typed reciprocal route grants visibility rather than
+estate. Parent \fB--repo\fR, \fB--agora\fR, and \fB--estate\fR selectors
+scope reads;
+mutations require exactly one selected registered repository. They preserve
+repository authority: every mutation writes only the selected repository,
+a typed reciprocal route grants visibility rather than
 acceptance or retention, and no command changes a peer roadmap or knowledge.
 .TP
-.B ki trade routes add <repository> --direction export|import --kind work|knowledge
+.B ki repo [repo-options] trade routes add <repository> --direction export|import --kind work|knowledge
 Declare one local typed route to a canonical HTTPS GitHub repository. Repository
 identity remains the required \fBrepository\fR value in the ki-repo table.
 .TP
-.B ki trade routes remove <repository> --direction export|import --kind work|knowledge
+.B ki repo [repo-options] trade routes remove <repository> --direction export|import --kind work|knowledge
 Remove one local typed route.
 .TP
-.B ki trade routes list [--estate] [--incomplete] [--format text|json]
-List local typed routes with their registered-estate state. With
-.BR --estate ,
-list every valid registered repository declaration as lexical repository pairs.
+.B ki repo [repo-options] trade routes list [--incomplete] [--format text|json]
+List selected local typed routes with their registered-estate state. With a
+parent aggregate selection such as \fBki repo --estate trade routes list\fR,
+list valid selected repository declarations as lexical repository pairs.
 The left and right endpoint cells span the two directional rows, which show
 what each repository sends with a right or left arrow; a missing direction is
 shown as an em dash. The table adapts to the live terminal width, preserving
@@ -958,51 +963,51 @@ the same pairs in a stacked narrow view. With
 show only routes that await reciprocity or have ambiguous peers. With
 .BR "--format json" ,
 emit the versioned \fBki/trade-routes/v1\fR contract. JSON requires
-.BR --estate
-and contains canonical identities, route evidence, peer resolution, and declared
+an aggregate parent repository selection. It contains canonical identities,
+route evidence, peer resolution, and declared
 map bonuses without local registry paths, declaration paths, or presentation
 layout values. Text remains the default renderer. Interactive visualisation is
 owned by Knowledge Islands Observatory rather than this command.
 .TP
-.B ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]
+.B ki repo [repo-options] trade routes check [repository] [--direction export|import] [--kind work|knowledge]
 Check declared routes by kind. An export awaiting local receiver registration,
 receiver participation, or a reciprocal import awaits receiver activation; the
 equivalent import awaits sender activation.
 .TP
-.B ki trade subtypes add <subtype> --description <text>
+.B ki repo [repo-options] trade subtypes add <subtype> --description <text>
 Define one lower-case receiver-owned knowledge subtype in the current
 repository. The description records the receiver's meaning for the subtype.
 .TP
-.B ki trade subtypes list
+.B ki repo [repo-options] trade subtypes list
 List receiver-owned knowledge subtype definitions in the current repository.
 .TP
-.B ki trade subtypes remove <subtype>
+.B ki repo [repo-options] trade subtypes remove <subtype>
 Remove one receiver-owned subtype only when no local standing import still
 names it.
 .TP
-.B ki trade standing add <repository> --direction export|import --subtype <subtype>
+.B ki repo [repo-options] trade standing add <repository> --direction export|import --subtype <subtype>
 Declare one local standing knowledge-intake direction layered on an existing
 ordinary knowledge route. An import subtype must be defined by the local
 receiver. The declaration remains inactive until the peer publishes the exact
 reciprocal direction and the receiver-owned definition is available.
 .TP
-.B ki trade standing remove <repository> --direction export|import --subtype <subtype>
+.B ki repo [repo-options] trade standing remove <repository> --direction export|import --subtype <subtype>
 Remove only the current repository's standing declaration. Historical
 committed provenance remains local evidence, but the removed declaration no
 longer authorises new captures.
 .TP
-.B ki trade standing list [--incomplete]
+.B ki repo [repo-options] trade standing list [--incomplete]
 List local standing declarations and report whether each exact subtype
 relationship is active, awaiting ordinary route activation, awaiting
 reciprocity, ambiguous, or unknown to its receiver. With
 .BR --incomplete ,
 show only declarations that are not active.
 .TP
-.B ki trade standing check [repository] [--direction export|import] [--subtype <subtype>]
+.B ki repo [repo-options] trade standing check [repository] [--direction export|import] [--subtype <subtype>]
 Check all local standing declarations or select an exact repository,
 direction, and subtype.
 .TP
-.B ki trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>
+.B ki repo [repo-options] trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>
 From the receiver repository, append one marked
 .B ki-trades/standing-intake/v1
 TOML provenance block to an existing local Markdown file. The command requires
@@ -1012,43 +1017,46 @@ source repository. Standing intake grants no roadmap, publication,
 implementation, acceptance, completion, Agora, or peer-write authority; use an
 itemized knowledge trade when the exact standing contract does not fit.
 .TP
-.B ki trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
+.B ki repo [repo-options] trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
 Create one mutable preparation in the current repository when it declares the
 matching export route. The mandatory observation policy selects whether receipt,
 a terminal decision, or completion of adopted work is required before release;
 \fBunattended\fR requires no receiver follow-up beyond an observable receipt.
 .TP
-.B ki trade observe <trade-id>
+.B ki repo [repo-options] trade observe <trade-id>
 Read one sender's committed mutable preparation without receiving or acting on
 it. Compare it with the commit last observed by this receiver, or show the full
 current contents when no usable earlier Git evidence exists.
 .TP
-.B ki trade submit <trade-id>
+.B ki repo [repo-options] trade submit <trade-id>
 Freeze one local preparation and move it to the outbound submitted path.
 .TP
-.B ki trade abandon <trade-id> --yes
+.B ki repo [repo-options] trade abandon <trade-id> --yes
 Remove one unsubmitted mutable preparation after explicit confirmation.
 .TP
-.B ki trade receive <trade-id> | --all [--yes]
+.B ki repo [repo-options] trade receive <trade-id> | --all [--yes]
 Import one committed outbound submission into the current repository and record
 its source commit. The \fB--all\fR form previews every receivable submission and
 changes nothing unless \fB--yes\fR is also supplied.
 .TP
-.B ki trade list [--direction prepare|import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]
-Read visible preparations, imports, and exports in the registered estate,
-including their observation policy, delivery and decision state, and cleanup
+.B ki repo [repo-options] trade list [--direction prepare|import|export] [--status <status>] [--kind work|knowledge]
+Read visible preparations, imports, and exports in selected repositories,
+including each selected receiver's imports awaiting receipt. The parent
+\fB--estate\fR selector combines all registered repository views. Each record
+reports its observation policy, delivery and decision state, and cleanup
 eligibility.
 An unsupported \fB--status\fR decision value fails with a usage error.
 .TP
-.B ki trade show <trade-id>
-Show every visible copy of a trade.
+.B ki repo [repo-options] trade show <trade-id>
+Show selected visible copies of a trade; use parent \fB--estate\fR to
+inspect all registered copies.
 .TP
-.B ki trade release <trade-id> | --eligible [--yes]
+.B ki repo [repo-options] trade release <trade-id> | --eligible [--yes]
 Remove one current-repository outbound submission only after its observation
 policy is satisfied. The \fB--eligible\fR form previews all eligible submissions
 and changes nothing unless \fB--yes\fR is also supplied.
 .TP
-.B ki trade prune <trade-id> | --eligible [--yes]
+.B ki repo [repo-options] trade prune <trade-id> | --eligible [--yes]
 Remove one eligible current-repository inbound copy only after sender release is
 observable. The \fB--eligible\fR form previews all eligible copies and changes
 nothing unless \fB--yes\fR is also supplied.

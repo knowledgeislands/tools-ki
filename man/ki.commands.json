@@ -307,90 +307,90 @@
     },
     {
       "name": "Trades",
-      "purpose": "Use these commands with repositories that declare the portable ki-repo-trades capability and are present in the local registered repository estate. They preserve repository authority: every mutation writes only the current repository, a typed reciprocal route grants visibility rather than acceptance or retention, and no command changes a peer roadmap or knowledge.",
+      "purpose": "Use these commands with repositories that declare the portable ki-repo-trades capability and are present in the local registered repository estate. Parent --repo, --agora, and --estate selectors scope reads; mutations require exactly one selected registered repository. They preserve repository authority: every mutation writes only the selected repository, a typed reciprocal route grants visibility rather than acceptance or retention, and no command changes a peer roadmap or knowledge.",
       "commands": [
         {
-          "invocation": "ki trade routes add <repository> --direction export|import --kind work|knowledge",
+          "invocation": "ki repo [repo-options] trade routes add <repository> --direction export|import --kind work|knowledge",
           "description": "Declare one local typed route to a canonical HTTPS GitHub repository. Repository identity remains the required repository value in the ki-repo table."
         },
         {
-          "invocation": "ki trade routes remove <repository> --direction export|import --kind work|knowledge",
+          "invocation": "ki repo [repo-options] trade routes remove <repository> --direction export|import --kind work|knowledge",
           "description": "Remove one local typed route."
         },
         {
-          "invocation": "ki trade routes list [--estate] [--incomplete] [--format text|json]",
-          "description": "List local typed routes with their registered-estate state. With --estate , list every valid registered repository declaration as lexical repository pairs. The left and right endpoint cells span the two directional rows, which show what each repository sends with a right or left arrow; a missing direction is shown as an em dash. The table adapts to the live terminal width, preserving the same pairs in a stacked narrow view. With --incomplete , show only routes that await reciprocity or have ambiguous peers. With --format json , emit the versioned ki/trade-routes/v1 contract. JSON requires --estate and contains canonical identities, route evidence, peer resolution, and declared map bonuses without local registry paths, declaration paths, or presentation layout values. Text remains the default renderer. Interactive visualisation is owned by Knowledge Islands Observatory rather than this command."
+          "invocation": "ki repo [repo-options] trade routes list [--incomplete] [--format text|json]",
+          "description": "List selected local typed routes with their registered-estate state. With a parent aggregate selection such as ki repo --estate trade routes list, list valid selected repository declarations as lexical repository pairs. The left and right endpoint cells span the two directional rows, which show what each repository sends with a right or left arrow; a missing direction is shown as an em dash. The table adapts to the live terminal width, preserving the same pairs in a stacked narrow view. With --incomplete , show only routes that await reciprocity or have ambiguous peers. With --format json , emit the versioned ki/trade-routes/v1 contract. JSON requires an aggregate parent repository selection. It contains canonical identities, route evidence, peer resolution, and declared map bonuses without local registry paths, declaration paths, or presentation layout values. Text remains the default renderer. Interactive visualisation is owned by Knowledge Islands Observatory rather than this command."
         },
         {
-          "invocation": "ki trade routes check [repository] [--direction export|import] [--kind work|knowledge]",
+          "invocation": "ki repo [repo-options] trade routes check [repository] [--direction export|import] [--kind work|knowledge]",
           "description": "Check declared routes by kind. An export awaiting local receiver registration, receiver participation, or a reciprocal import awaits receiver activation; the equivalent import awaits sender activation."
         },
         {
-          "invocation": "ki trade subtypes add <subtype> --description <text>",
+          "invocation": "ki repo [repo-options] trade subtypes add <subtype> --description <text>",
           "description": "Define one lower-case receiver-owned knowledge subtype in the current repository. The description records the receiver's meaning for the subtype."
         },
         {
-          "invocation": "ki trade subtypes list",
+          "invocation": "ki repo [repo-options] trade subtypes list",
           "description": "List receiver-owned knowledge subtype definitions in the current repository."
         },
         {
-          "invocation": "ki trade subtypes remove <subtype>",
+          "invocation": "ki repo [repo-options] trade subtypes remove <subtype>",
           "description": "Remove one receiver-owned subtype only when no local standing import still names it."
         },
         {
-          "invocation": "ki trade standing add <repository> --direction export|import --subtype <subtype>",
+          "invocation": "ki repo [repo-options] trade standing add <repository> --direction export|import --subtype <subtype>",
           "description": "Declare one local standing knowledge-intake direction layered on an existing ordinary knowledge route. An import subtype must be defined by the local receiver. The declaration remains inactive until the peer publishes the exact reciprocal direction and the receiver-owned definition is available."
         },
         {
-          "invocation": "ki trade standing remove <repository> --direction export|import --subtype <subtype>",
+          "invocation": "ki repo [repo-options] trade standing remove <repository> --direction export|import --subtype <subtype>",
           "description": "Remove only the current repository's standing declaration. Historical committed provenance remains local evidence, but the removed declaration no longer authorises new captures."
         },
         {
-          "invocation": "ki trade standing list [--incomplete]",
+          "invocation": "ki repo [repo-options] trade standing list [--incomplete]",
           "description": "List local standing declarations and report whether each exact subtype relationship is active, awaiting ordinary route activation, awaiting reciprocity, ambiguous, or unknown to its receiver. With --incomplete , show only declarations that are not active."
         },
         {
-          "invocation": "ki trade standing check [repository] [--direction export|import] [--subtype <subtype>]",
+          "invocation": "ki repo [repo-options] trade standing check [repository] [--direction export|import] [--subtype <subtype>]",
           "description": "Check all local standing declarations or select an exact repository, direction, and subtype."
         },
         {
-          "invocation": "ki trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>",
+          "invocation": "ki repo [repo-options] trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>",
           "description": "From the receiver repository, append one marked ki-trades/standing-intake/v1 TOML provenance block to an existing local Markdown file. The command requires an active exact standing import, a full source commit, and a source path that resolves in the locally registered source checkout. It never writes to the source repository. Standing intake grants no roadmap, publication, implementation, acceptance, completion, Agora, or peer-write authority; use an itemized knowledge trade when the exact standing contract does not fit."
         },
         {
-          "invocation": "ki trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>",
+          "invocation": "ki repo [repo-options] trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>",
           "description": "Create one mutable preparation in the current repository when it declares the matching export route. The mandatory observation policy selects whether receipt, a terminal decision, or completion of adopted work is required before release; unattended requires no receiver follow-up beyond an observable receipt."
         },
         {
-          "invocation": "ki trade observe <trade-id>",
+          "invocation": "ki repo [repo-options] trade observe <trade-id>",
           "description": "Read one sender's committed mutable preparation without receiving or acting on it. Compare it with the commit last observed by this receiver, or show the full current contents when no usable earlier Git evidence exists."
         },
         {
-          "invocation": "ki trade submit <trade-id>",
+          "invocation": "ki repo [repo-options] trade submit <trade-id>",
           "description": "Freeze one local preparation and move it to the outbound submitted path."
         },
         {
-          "invocation": "ki trade abandon <trade-id> --yes",
+          "invocation": "ki repo [repo-options] trade abandon <trade-id> --yes",
           "description": "Remove one unsubmitted mutable preparation after explicit confirmation."
         },
         {
-          "invocation": "ki trade receive <trade-id> | --all [--yes]",
+          "invocation": "ki repo [repo-options] trade receive <trade-id> | --all [--yes]",
           "description": "Import one committed outbound submission into the current repository and record its source commit. The --all form previews every receivable submission and changes nothing unless --yes is also supplied."
         },
         {
-          "invocation": "ki trade list [--direction prepare|import|export] [--status <status>] [--kind work|knowledge] [--repo <repository>]",
-          "description": "Read visible preparations, imports, and exports in the registered estate, including their observation policy, delivery and decision state, and cleanup eligibility. An unsupported --status decision value fails with a usage error."
+          "invocation": "ki repo [repo-options] trade list [--direction prepare|import|export] [--status <status>] [--kind work|knowledge]",
+          "description": "Read visible preparations, imports, and exports in selected repositories, including each selected receiver's imports awaiting receipt. The parent --estate selector combines all registered repository views. Each record reports its observation policy, delivery and decision state, and cleanup eligibility. An unsupported --status decision value fails with a usage error."
         },
         {
-          "invocation": "ki trade show <trade-id>",
-          "description": "Show every visible copy of a trade."
+          "invocation": "ki repo [repo-options] trade show <trade-id>",
+          "description": "Show selected visible copies of a trade; use parent --estate to inspect all registered copies."
         },
         {
-          "invocation": "ki trade release <trade-id> | --eligible [--yes]",
+          "invocation": "ki repo [repo-options] trade release <trade-id> | --eligible [--yes]",
           "description": "Remove one current-repository outbound submission only after its observation policy is satisfied. The --eligible form previews all eligible submissions and changes nothing unless --yes is also supplied."
         },
         {
-          "invocation": "ki trade prune <trade-id> | --eligible [--yes]",
+          "invocation": "ki repo [repo-options] trade prune <trade-id> | --eligible [--yes]",
           "description": "Remove one eligible current-repository inbound copy only after sender release is observable. The --eligible form previews all eligible copies and changes nothing unless --yes is also supplied."
         }
       ]
