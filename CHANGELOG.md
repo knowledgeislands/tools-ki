@@ -77,6 +77,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo init`
 - `ki repo open --target <zed|vscode> [--stores|--no-stores]`
 - `ki repo store list [--format <text|json>]`
+- `ki repo store scan`
 - `ki repo store create <sources> [--write]`
 - `ki repo store bind <sources|legacy> <absolute-path> [--write]`
 - `ki repo store unbind <sources|legacy> [--write]`
@@ -106,7 +107,6 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 - `ki registry add`
 - `ki registry list [--format <text|json>]`
-- `ki registry source-stores`
 - `ki registry remove <key> [--dry-run]`
 - `ki registry remove --repo <path> [--dry-run]`
 - `ki registry` now keeps canonical GitHub identity and checkout bindings as keyed records in the machine-local `$XDG_STATE_HOME/ki/registry.toml`; `ki bootstrap --refresh` migrates and removes the retired configuration path list, which resolution no longer reads.
@@ -169,7 +169,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo roadmap list --format json` emits the path-free `ki/roadmap/v1` contract with canonical record URLs.
 - Roadmap text listings show compact external ticket keys and counts; `--links all` expands mappings into child entries with full task URLs and disambiguating identity details where needed.
 - `ki registry list --format json` emits path-free `ki/registry/v1` identity and declaration metadata; `ki registry remove` removes exactly one keyed or path-selected entry with dry-run and transactional publication.
-- `ki registry source-stores` warns about undeclared conventional OneDrive source directories without creating or changing stores.
+- `ki repo store scan` warns about undeclared conventional OneDrive source directories for selected repositories without creating or changing stores; `--estate` scans all registered repositories.
 - Closed current batch records validate selected work from their evidence commit, so later pruning and expiry do not invalidate archival verification.
 - `man/ki.commands.json` publishes the generated `ki/commands/v1` command and description inventory, reconciled against the manual and registered command tree.
 - `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.

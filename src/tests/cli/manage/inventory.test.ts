@@ -56,7 +56,7 @@ const repoCommands = [
   'upgrade'
 ]
 const batchCommands = ['close', 'prepare', 'run', 'validate']
-const registryCommands = ['add', 'list', 'remove', 'source-stores']
+const registryCommands = ['add', 'list', 'remove']
 
 const commandNames = (output: string): string[] =>
   output.split('\n').flatMap((line) => /^ {2}([a-z][a-z-]*)(?:\s|$)/.exec(line)?.[1] ?? [])

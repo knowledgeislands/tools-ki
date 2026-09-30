@@ -7,23 +7,33 @@ import {
   declaredRepositoryIdentity,
   readRepositoryDeclaration
 } from '../../core/configuration/index.ts'
-import { grammarError, KiError } from '../../core/errors.ts'
+import { grammarError, KiError, KiExit } from '../../core/errors.ts'
 import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import {
   bindRepositoryStore,
   type ExternalStoreRole,
   inspectLocalRegistry,
+  inspectUndeclaredSourcesStores,
   localRegistryWrite,
   managedSourcesStore,
   repositoryStoreInventory,
   unbindRepositoryStore,
   validateRepositoryStore
 } from '../../core/storage/index.ts'
-import { renderTree } from '../presentation/index.ts'
+import { presentation, renderTree } from '../presentation/index.ts'
 import type { RepositorySelection } from './selection.ts'
 
 type SelectRepositories = () => RepositorySelection
+
+const repositoryTargets = (context: KiContext, selection: SelectRepositories) =>
+  resolveRepositoryTargets({
+    ...selection(),
+    configurationDirectory: context.paths.config,
+    stateDirectory: context.paths.state,
+    workingDirectory: context.workingDirectory,
+    homeDirectory: context.homeDirectory
+  })
 
 interface SelectedStoreRepository {
   readonly root: string
@@ -35,13 +45,7 @@ const selected = async (
   context: KiContext,
   selection: SelectRepositories
 ): Promise<readonly SelectedStoreRepository[]> => {
-  const repositories = await resolveRepositoryTargets({
-    ...selection(),
-    configurationDirectory: context.paths.config,
-    stateDirectory: context.paths.state,
-    workingDirectory: context.workingDirectory,
-    homeDirectory: context.homeDirectory
-  })
+  const repositories = await repositoryTargets(context, selection)
   return Promise.all(
     repositories.map(async (repository) => {
       const declaration = await readRepositoryDeclaration(repository.declaration)
@@ -131,6 +135,60 @@ const createStoreListCommand = (context: KiContext, selection: SelectRepositorie
       )
     })
 
+const createStoreScanCommand = (context: KiContext, selection: SelectRepositories): Command =>
+  new Command('scan')
+    .description('find undeclared conventional source stores for selected repositories')
+    .action(async () => {
+      const [repositories, registry] = await Promise.all([
+        repositoryTargets(context, selection),
+        inspectLocalRegistry(context.paths.state)
+      ])
+      const entries = registry.state === 'valid' ? registry.repositories : []
+      const report = await inspectUndeclaredSourcesStores(
+        repositories.map(({ root }) => ({
+          path: root,
+          repository: entries.find((entry) => entry.path === root)?.repository
+        })),
+        context.homeDirectory
+      )
+      context.stdout.write(
+        `${renderTree({
+          title: 'KI REPO STORE SCAN',
+          entries: [
+            {
+              label: `undeclared (${report.undeclared.length})`,
+              children: report.undeclared.length
+                ? report.undeclared.map((store) => ({
+                    label: `${presentation('status.warn').terminal} ${store.repository} [${store.kind}]`,
+                    children: [
+                      { label: store.path },
+                      {
+                        label:
+                          store.kind === 'kb'
+                            ? 'decision: declare and bind sources, or retire the directory'
+                            : 'decision: migrate to a Knowledge Base, or retire the directory'
+                      }
+                    ]
+                  }))
+                : [{ label: 'none' }]
+            },
+            ...(report.diagnostics.length
+              ? [
+                  {
+                    label: `diagnostics (${report.diagnostics.length})`,
+                    children: report.diagnostics.map((diagnostic) => ({
+                      label: `${presentation('status.unavailable').terminal} ${diagnostic.repository}: ${diagnostic.message} (${diagnostic.path})`
+                    }))
+                  }
+                ]
+              : []),
+            { label: `summary: UNDECLARED=${report.undeclared.length} DIAGNOSTICS=${report.diagnostics.length}` }
+          ]
+        }).join('\n')}\n`
+      )
+      if (report.diagnostics.length) throw new KiExit(1)
+    })
+
 const createStoreCreateCommand = (context: KiContext, selection: SelectRepositories): Command =>
   new Command('create')
     .description('preview managed store creation and binding; --write applies')
@@ -213,8 +271,9 @@ const createStoreUnbindCommand = (context: KiContext, selection: SelectRepositor
 
 export const createRepoStoreCommand = (context: KiContext, selection: SelectRepositories): Command =>
   new Command('store')
-    .description('manage declared stores for selected KI repositories')
+    .description('inspect and manage stores for selected KI repositories')
     .addCommand(createStoreListCommand(context, selection))
+    .addCommand(createStoreScanCommand(context, selection))
     .addCommand(createStoreCreateCommand(context, selection))
     .addCommand(createStoreBindCommand(context, selection))
     .addCommand(createStoreUnbindCommand(context, selection))

@@ -6,7 +6,7 @@ Two ideas carry the whole surface. **Selection happens before anything runs**, a
 
 ## Select targets
 
-Every `ki repo` and `ki registry` operation accepts the same three mutually exclusive selectors:
+`ki repo` operations accept the same three mutually exclusive selectors; `ki registry` commands have their own selection rules:
 
 | Selector | Selects |
 | --- | --- |
@@ -52,6 +52,15 @@ A Knowledge Base declares stable store roles in `.ki.toml`; your machine binds e
 ki repo store list
 ki repo --estate store list --format json
 ```
+
+To find conventional OneDrive `sources-<repository-basename>` directories that have no declared `sources` role, scan the current repository or selected estate:
+
+```sh
+ki repo store scan
+ki repo --estate store scan
+```
+
+The scan includes Projects as well as Knowledge Bases. It warns about undeclared directories and suggests a declaration, migration, or retirement decision; it never changes the directory or binding. Unsafe store paths and unreadable declarations return a non-zero diagnostic.
 
 `notes` is always the repository root and cannot be rebound. Bind an existing `sources` or `legacy` directory by previewing first, then writing the machine-local registry:
 

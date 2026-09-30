@@ -98,9 +98,14 @@ export interface SourcesStoreInspection {
   readonly diagnostics: readonly SourcesStoreDiagnostic[]
 }
 
+export interface SourcesStoreTarget {
+  readonly path: string
+  readonly repository?: string
+}
+
 /** Inspect conventional directories only; declaration and binding decisions remain with each repository. */
 export const inspectUndeclaredSourcesStores = async (
-  entries: readonly LocalRegistryEntry[],
+  entries: readonly SourcesStoreTarget[],
   homeDirectory: string
 ): Promise<SourcesStoreInspection> => {
   const undeclared: UndeclaredSourcesStore[] = []
@@ -120,19 +125,20 @@ export const inspectUndeclaredSourcesStores = async (
         throw new KiError('OneDrive source-store root is not a direct directory', 1)
       const root = await lstat(entry.path)
       if (!root.isDirectory() || root.isSymbolicLink())
-        throw new KiError('registered repository root is not a direct directory', 1)
+        throw new KiError('repository root is not a direct directory', 1)
       const declarationPath = join(entry.path, REPOSITORY_DECLARATION_FILE)
       const declarationState = await lstat(declarationPath).catch(() => undefined)
       if (!declarationState?.isFile() || declarationState.isSymbolicLink())
         throw new KiError('repository declaration is not a direct file', 1)
       const declaration = await readRepositoryDeclaration(declarationPath)
-      if (declaredRepositoryIdentity(declaration) !== entry.repository)
+      const identity = declaredRepositoryIdentity(declaration)
+      if (entry.repository && identity !== entry.repository)
         throw new KiError('repository declaration does not match its registered identity', 1)
       const kind = declaredRepositoryKind(declaration)
       if (declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) continue
-      undeclared.push({ repository: entry.repository, root: entry.path, path, kind })
+      undeclared.push({ repository: identity, root: entry.path, path, kind })
     } catch (error) {
-      diagnostics.push({ repository: entry.repository, path, message: (error as Error).message })
+      diagnostics.push({ repository: entry.repository ?? entry.path, path, message: (error as Error).message })
     }
   }
   return { undeclared, diagnostics }

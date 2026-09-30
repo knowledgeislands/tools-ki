@@ -2,21 +2,32 @@ import { lstat, realpath, symlink } from 'node:fs/promises'
 import { afterEach, expect, test, vi } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
-const statFailure = vi.hoisted(() => ({ path: undefined as string | undefined }))
+const statFailure = vi.hoisted(() => ({
+  path: undefined as string | undefined,
+  replacement: undefined as { trigger: string; target: string; substitute: string } | undefined,
+  activated: false
+}))
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs/promises')>()
   return {
     ...original,
-    lstat: (...arguments_: Parameters<typeof original.lstat>) =>
-      String(arguments_[0]) === statFailure.path
+    lstat: (...arguments_: Parameters<typeof original.lstat>) => {
+      const path = String(arguments_[0])
+      if (path === statFailure.replacement?.trigger) statFailure.activated = true
+      if (statFailure.activated && path === statFailure.replacement?.target)
+        return original.lstat(statFailure.replacement.substitute)
+      return path === statFailure.path
         ? Promise.reject(Object.assign(new Error('source-store stat denied'), { code: 'EACCES' }))
         : original.lstat(...arguments_)
+    }
   }
 })
 
 afterEach(() => {
   statFailure.path = undefined
+  statFailure.replacement = undefined
+  statFailure.activated = false
 })
 
 const declaration = (name: string, kind: 'project' | 'kb', roles = ['notes']): string =>
@@ -47,10 +58,10 @@ test('warns about undeclared direct source stores without changing the registry 
   const source = registry(entries)
   await box.state.write('ki/registry.toml', source)
 
-  const result = await box.run('ki registry source-stores')
+  const result = await box.run('ki repo --estate store scan')
 
   expect(result.exitCode).toBe(0)
-  expect(result.output).toContain('KI REGISTRY SOURCE STORES')
+  expect(result.output).toContain('KI REPO STORE SCAN')
   expect(result.output).toContain('undeclared (2)')
   expect(result.output).toContain('example/project [project]')
   expect(result.output).toContain('migrate to a Knowledge Base, or retire')
@@ -61,42 +72,96 @@ test('warns about undeclared direct source stores without changing the registry 
   expect(result.output).toContain('summary: UNDECLARED=2 DIAGNOSTICS=0')
   expect(await box.state.read('ki/registry.toml')).toBe(source)
   await expect(lstat(`${box.home.path}/Library/CloudStorage/OneDrive-Personal/sources-project`)).resolves.toBeDefined()
-  expect(await box.run('ki registry --estate source-stores')).toEqual({
-    exitCode: 2,
-    output: 'ki: error: ki registry source-stores inspects the entire registry and does not accept selectors\n'
-  })
+  expect((await box.run('ki registry source-stores')).exitCode).toBe(2)
+})
+
+test('scans the current repository and explicit selection without requiring registration', async () => {
+  const box = await sandbox()
+  const project = await box.project.mkdir('unregistered')
+  await box.project.write('unregistered/.ki.toml', declaration('unregistered', 'project'))
+  await box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-unregistered')
+  box.cd('unregistered')
+
+  const current = await box.run('ki repo store scan')
+  const explicit = await box.run(['ki', 'repo', '--repo', project, 'store', 'scan'])
+
+  expect(current.exitCode).toBe(0)
+  expect(current.output).toContain('example/unregistered [project]')
+  expect(explicit.output).toBe(current.output)
+
+  await box.state.write('ki/registry.toml', 'not valid TOML =')
+  expect((await box.run('ki repo store scan')).output).toBe(current.output)
 })
 
 test('reports unsafe and unavailable conventional source-store evidence separately', async () => {
   const box = await sandbox()
   const entries = []
-  for (const name of ['file', 'symlink', 'missing-declaration', 'wrong-identity', 'stat-denied']) {
+  for (const name of ['file', 'symlink', 'stat-denied']) {
     const path = await box.project.mkdir(name)
     entries.push({ name, path })
-    if (name !== 'missing-declaration')
-      await box.project.write(
-        `${name}/.ki.toml`,
-        declaration(name === 'wrong-identity' ? 'different' : name, 'project')
-      )
+    await box.project.write(`${name}/.ki.toml`, declaration(name, 'project'))
   }
   const parent = 'Library/CloudStorage/OneDrive-Personal'
   await box.home.write(`${parent}/sources-file`, 'not a directory')
   const target = await box.root.mkdir('linked-source-store')
   await symlink(target, `${box.home.path}/${parent}/sources-symlink`)
-  for (const name of ['missing-declaration', 'wrong-identity', 'stat-denied'])
-    await box.home.mkdir(`${parent}/sources-${name}`)
+  await box.home.mkdir(`${parent}/sources-stat-denied`)
   await box.state.write('ki/registry.toml', registry(entries))
   statFailure.path = await realpath(`${box.home.path}/${parent}/sources-stat-denied`)
 
-  const result = await box.run('ki registry source-stores')
+  const result = await box.run('ki repo --estate store scan')
 
   expect(result.exitCode).toBe(1)
   expect(result.output).toContain('undeclared (0)')
-  expect(result.output).toContain('diagnostics (5)')
+  expect(result.output).toContain('diagnostics (3)')
   expect(result.output).toContain('conventional sources path is not a direct directory')
-  expect(result.output).toContain('repository declaration is not a direct file')
-  expect(result.output).toContain('repository declaration does not match its registered identity')
   expect(result.output).toContain('source-store stat denied')
+})
+
+test('diagnoses a selected repository whose declaration differs from its registry identity', async () => {
+  const box = await sandbox()
+  const path = await box.project.mkdir('wrong-identity')
+  await box.project.write('wrong-identity/.ki.toml', declaration('different', 'project'))
+  await box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-wrong-identity')
+  await box.state.write('ki/registry.toml', registry([{ name: 'wrong-identity', path }]))
+
+  const result = await box.run(['ki', 'repo', '--repo', path, 'store', 'scan'])
+
+  expect(result.exitCode).toBe(1)
+  expect(result.output).toContain('repository declaration does not match its registered identity')
+})
+
+test('rechecks repository and declaration paths after target selection', async () => {
+  const box = await sandbox()
+  const path = await box.project.mkdir('racing')
+  await box.project.write('racing/.ki.toml', declaration('racing', 'project'))
+  const source = await box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-racing')
+  const file = `${box.root.path}/unsafe-file`
+  await box.root.write('unsafe-file', 'not a directory')
+  statFailure.replacement = { trigger: source, target: path, substitute: file }
+
+  const root = await box.run(['ki', 'repo', '--repo', path, 'store', 'scan'])
+  expect(root.exitCode).toBe(1)
+  expect(root.output).toContain('repository root is not a direct directory')
+
+  statFailure.activated = false
+  statFailure.replacement = { trigger: source, target: `${path}/.ki.toml`, substitute: path }
+  const declarationResult = await box.run(['ki', 'repo', '--repo', path, 'store', 'scan'])
+  expect(declarationResult.exitCode).toBe(1)
+  expect(declarationResult.output).toContain('repository declaration is not a direct file')
+})
+
+test('labels an unregistered repository diagnostic with its root', async () => {
+  const box = await sandbox()
+  const path = await box.project.mkdir('unsafe')
+  await box.project.write('unsafe/.ki.toml', declaration('unsafe', 'project'))
+  const target = await box.root.mkdir('linked-source-store')
+  await box.home.mkdir('Library/CloudStorage/OneDrive-Personal')
+  await symlink(target, `${box.home.path}/Library/CloudStorage/OneDrive-Personal/sources-unsafe`)
+
+  const result = await box.run(['ki', 'repo', '--repo', path, 'store', 'scan'])
+  expect(result.exitCode).toBe(1)
+  expect(result.output).toContain(`${path}: conventional sources path is not a direct directory`)
 })
 
 test('rejects a linked OneDrive root even when its conventional source directory exists', async () => {
@@ -109,7 +174,7 @@ test('rejects a linked OneDrive root even when its conventional source directory
   await symlink(target, `${box.home.path}/Library/CloudStorage/OneDrive-Personal`)
   await box.state.write('ki/registry.toml', registry([{ name: 'linked-parent', path }]))
 
-  const result = await box.run('ki registry source-stores')
+  const result = await box.run('ki repo --estate store scan')
 
   expect(result.exitCode).toBe(1)
   expect(result.output).toContain('OneDrive source-store root is not a direct directory')
@@ -124,8 +189,8 @@ test('rejects a linked registered repository root', async () => {
   await box.home.mkdir('Library/CloudStorage/OneDrive-Personal/sources-linked-root')
   await box.state.write('ki/registry.toml', registry([{ name: 'linked-root', path }]))
 
-  const result = await box.run('ki registry source-stores')
+  const result = await box.run('ki repo --estate store scan')
 
-  expect(result.exitCode).toBe(1)
-  expect(result.output).toContain('registered repository root is not a direct directory')
+  expect(result.exitCode).toBe(2)
+  expect(result.output).toContain('must be an existing physical directory')
 })

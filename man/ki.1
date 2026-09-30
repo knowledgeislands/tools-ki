@@ -120,6 +120,9 @@ Knowledge Base external stores.
 .B ki repo [repo-options] store list [--format <text|json>]
 List declared repository stores and their machine-local bindings.
 .TP
+.B ki repo [repo-options] store scan
+Warn about selected repositories with undeclared conventional source stores.
+.TP
 .B ki repo [repo-options] store create sources [--write]
 Preview or create and bind the managed source-store location.
 .TP
@@ -204,9 +207,6 @@ without applying repository repairs.
 List registered repository roots as text or emit the path-free
 .B ki/registry/v1
 contract.
-.TP
-.B ki registry source-stores
-Warn about registered repositories with undeclared conventional source stores.
 .TP
 .B ki registry remove <key> [--dry-run]
 Remove one exact machine-local registry entry by key.
@@ -764,6 +764,17 @@ is the repository root; external roles show their explicit machine-local path
 or unbound state. JSON emits the versioned
 \fBki/repository-stores/v1\fR contract.
 .TP
+.B ki repo [repo-options] store scan
+Inspect selected repositories for direct conventional OneDrive
+\fBsources-<repository-basename>\fR directories without a matching declared
+\fBsources\fR store role. Warnings identify the repository kind and an explicit
+decision to declare and bind, migrate to a Knowledge Base, or retire the
+directory; warnings exit successfully. Unsafe paths or unreadable repository
+declarations remain diagnostics and cause a non-zero exit. Repository
+selection follows normal \fBki repo\fR semantics, including \fB--estate\fR
+for every registered repository. The command never creates, binds, moves, or
+removes a directory.
+.TP
 .B ki repo [repo-options] store create sources [--write]
 Preview the conventional opt-in OneDrive
 \fBsources-<repository-basename>\fR directory and registry binding. With
@@ -861,15 +872,6 @@ emit the versioned path-free
 contract with canonical identity and declared repository metadata. An
 unavailable declaration remains represented without a local path and makes the
 command exit non-zero.
-.TP
-.B ki registry source-stores
-Inspect registered repositories for direct conventional OneDrive
-\fBsources-<repository-basename>\fR directories without a matching declared
-\fBsources\fR store role. Warnings identify the repository kind and an explicit
-decision to declare and bind, migrate to a Knowledge Base, or retire the
-directory; warnings exit successfully. Unsafe paths or unavailable repository
-declarations remain diagnostics and cause a non-zero exit. The command never
-creates, binds, moves, or removes a directory and does not accept selectors.
 .TP
 .B ki registry remove <key> [--dry-run]
 Remove exactly one complete registry entry by its local key. The command reports

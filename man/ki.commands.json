@@ -194,6 +194,10 @@
           "description": "List every store role declared by selected Knowledge Bases. The notes role is the repository root; external roles show their explicit machine-local path or unbound state. JSON emits the versioned ki/repository-stores/v1 contract."
         },
         {
+          "invocation": "ki repo [repo-options] store scan",
+          "description": "Inspect selected repositories for direct conventional OneDrive sources-<repository-basename> directories without a matching declared sources store role. Warnings identify the repository kind and an explicit decision to declare and bind, migrate to a Knowledge Base, or retire the directory; warnings exit successfully. Unsafe paths or unreadable repository declarations remain diagnostics and cause a non-zero exit. Repository selection follows normal ki repo semantics, including --estate for every registered repository. The command never creates, binds, moves, or removes a directory."
+        },
+        {
           "invocation": "ki repo [repo-options] store create sources [--write]",
           "description": "Preview the conventional opt-in OneDrive sources-<repository-basename> directory and registry binding. With --write, create and bind it. Automatic creation is unavailable for legacy."
         },
@@ -264,10 +268,6 @@
         {
           "invocation": "ki registry list [--format <text|json>]",
           "description": "List physical KI repository roots explicitly registered in the machine-local registry, one absolute path per line. The command neither discovers repositories nor changes state. With --format json , emit the versioned path-free ki/registry/v1 contract with canonical identity and declared repository metadata. An unavailable declaration remains represented without a local path and makes the command exit non-zero."
-        },
-        {
-          "invocation": "ki registry source-stores",
-          "description": "Inspect registered repositories for direct conventional OneDrive sources-<repository-basename> directories without a matching declared sources store role. Warnings identify the repository kind and an explicit decision to declare and bind, migrate to a Knowledge Base, or retire the directory; warnings exit successfully. Unsafe paths or unavailable repository declarations remain diagnostics and cause a non-zero exit. The command never creates, binds, moves, or removes a directory and does not accept selectors."
         },
         {
           "invocation": "ki registry remove <key> [--dry-run]",
