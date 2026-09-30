@@ -1,4 +1,4 @@
-.TH KI 1 "2026-09-27" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-09-30" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -328,7 +328,7 @@ Open one declared Agora or the registered estate through an explicit local
 target.
 .TP
 .B ki agora reference set <repository> <checkout> [--dry-run]
-Associate one owner-declared external reference with an explicitly selected
+Associate one owner-declared repository inclusion with an explicitly selected
 absolute local Git checkout whose canonical origin matches.
 .TP
 .B ki agora reference list
@@ -1063,17 +1063,19 @@ nothing unless \fB--yes\fR is also supplied.
 .SS Agora management
 \&
 .PP
-Named Agoras are declared portably by registered home repositories under
-\fB[skills.ki-agora.homes.<id>]\fR. Each listed member reciprocates under
-\fB[skills.ki-agora.memberships.<id>]\fR. KI resolves only locally registered,
-reciprocal declarations; \fBestate\fR is the reserved selector for all locally
-registered canonical KI repositories.
+Named Agoras are declared by registered owner repositories under
+\fB[skills.ki-agora.<id>]\fR. The owner lists direct members; members need no
+Agora declaration. Optional \fBincludes\fR entries add another Agora's owner
+and direct members or one repository to the working set without membership.
+KI deduplicates and orders projected roots alphabetically by registry key.
+\fBestate\fR is the reserved selector for all locally registered canonical KI
+repositories.
 .TP
 .B ki agora list
-List declared named Agoras and the registered estate. The home is the declaring
-owner and is not counted among reciprocal members. The estate counts registered
-repositories; \fBREGISTERED_REPOSITORIES\fR is that deduplicated total.
-Resolved and unresolved references have separate counts.
+List declared named Agoras and the registered estate. The declaring owner is
+not counted among direct members. The estate counts registered repositories;
+\fBREGISTERED_REPOSITORIES\fR is that deduplicated total. Resolved and
+unresolved inclusions have separate counts.
 .TP
 .B ki agora audit [name]
 Audit every declared Agora, one named Agora, or the registered estate without
@@ -1087,8 +1089,8 @@ are decimal workspace IDs. Read-only. Exit 0 for exact, 1 for drift or an
 unsupported source, and 2 for invalid selection or resolution.
 .TP
 .B ki agora show <name> [--verbose]
-Show one declared Agora with its home, reciprocal members, resolved references,
-and unresolved-reference diagnostics in separate sections. The estate lists
+Show one declared Agora with its owner, direct members, resolved inclusions,
+and unresolved-inclusion diagnostics in separate sections. The estate lists
 registered repositories without a home. \fB--verbose\fR also shows canonical
 repository URLs and local paths, including the home's path.
 .TP
@@ -1101,9 +1103,9 @@ Open one declared Agora or the registered estate through an explicit local
 target.
 .TP
 .B ki agora reference set <repository> <checkout> [--dry-run]
-Associate one owner-declared external reference with an explicitly selected
+Associate one owner-declared repository inclusion with an explicitly selected
 absolute local Git checkout whose canonical origin matches. The operation
-never registers, clones, or mutates the referenced repository.
+never registers, clones, or mutates the included repository.
 .TP
 .B ki agora reference list
 List machine-local external Agora reference associations.

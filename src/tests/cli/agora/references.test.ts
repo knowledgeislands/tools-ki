@@ -12,17 +12,7 @@ const repository = (identity: string, agora = ''): string =>
 const home = (
   options: { readonly references?: readonly string[]; readonly members?: readonly string[] } = {}
 ): string =>
-  `[skills.ki-agora.homes.team]\nowner = ${JSON.stringify(homeIdentity)}\npurpose = "Shared delivery"\norder = [${[
-    homeIdentity,
-    ...(options.references ?? []),
-    ...(options.members ?? [])
-  ]
-    .map((identity) => JSON.stringify(identity))
-    .join(
-      ', '
-    )}]\nreferences = ${JSON.stringify(options.references ?? [])}\nmembers = ${JSON.stringify(options.members ?? [])}\n`
-
-const membership = (): string => `[skills.ki-agora.memberships.team]\nhome = ${JSON.stringify(homeIdentity)}\n`
+  `[skills.ki-agora.team]\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(options.members ?? [])}\nincludes = ${JSON.stringify(options.references ?? [])}\n`
 
 const setReference = (root: string, dryRun = false): readonly string[] => [
   'ki',
@@ -82,7 +72,7 @@ describe('[ki agora reference]', () => {
     const unresolved = await box.run('ki agora show team')
     expect(unresolved.exitCode).toBe(0)
     expect(unresolved.output).toContain(`${referenceIdentity} [unassociated]`)
-    expect((await box.run('ki agora list')).output).toContain('0 references, 1 unresolved reference')
+    expect((await box.run('ki agora list')).output).toContain('0 inclusions, 1 unresolved inclusion')
     expect(await box.run('ki agora roots team')).toEqual({ exitCode: 0, output: `${homeRoot}\n` })
     expect((await box.run('ki agora audit team')).output).toContain(`[unassociated]: no local checkout is associated`)
 
@@ -106,12 +96,12 @@ describe('[ki agora reference]', () => {
     expect(shown.output).toContain(`home: ${homeIdentity}`)
     expect(shown.output).toContain(`path: ${homeRoot}`)
     expect(shown.output).toContain('members (0)')
-    expect(shown.output).toContain(`${referenceIdentity} [reference]`)
-    expect(shown.output).toContain('summary: HOME=1 MEMBERS=0 REFERENCES=1 UNRESOLVED_REFERENCES=0 ROOTS=2')
-    expect((await box.run('ki agora show team')).output).toContain('references (1)')
+    expect(shown.output).toContain(`${referenceIdentity} [included]`)
+    expect(shown.output).toContain('summary: HOME=1 MEMBERS=0 INCLUSIONS=1 UNRESOLVED_INCLUSIONS=0 ROOTS=2')
+    expect((await box.run('ki agora show team')).output).toContain('inclusions (1)')
     expect(await box.run('ki agora roots team')).toEqual({
       exitCode: 0,
-      output: `${homeRoot}\n${referenceRoot}\n`
+      output: `${referenceRoot}\n${homeRoot}\n`
     })
     await box.project.write(
       'team.code-workspace',
@@ -128,9 +118,9 @@ describe('[ki agora reference]', () => {
       `${box.project.path}/team.code-workspace`
     ])
     expect(inspected.exitCode).toBe(0)
-    expect(inspected.output).toContain(`example/plain-reference [reference]: ${referenceRoot}`)
+    expect(inspected.output).toContain(`example/plain-reference [included]: ${referenceRoot}`)
     expect((await box.run('ki agora list')).output).toContain(
-      'team [declared] team (home: home, 0 members, 1 reference, 0 unresolved references)'
+      'team [declared] team (home: home, 0 members, 1 inclusion, 0 unresolved inclusions)'
     )
     expect(await box.run('ki agora open team --target zed')).toEqual({
       exitCode: 0,
@@ -180,12 +170,8 @@ describe('[ki agora reference]', () => {
     box.setRunner(gitRunner(referenceRoot))
     await box.run(setReference(referenceRoot))
 
-    const promotedHome = home({ members: [referenceIdentity] }).replace(
-      `order = [${JSON.stringify(homeIdentity)}, ${JSON.stringify(referenceIdentity)}]`,
-      `order = [${JSON.stringify(referenceIdentity)}]`
-    )
-    await box.project.write('home/.ki.toml', repository(homeIdentity, promotedHome))
-    await box.project.write('plain reference/.ki.toml', repository(referenceIdentity, membership()))
+    await box.project.write('home/.ki.toml', repository(homeIdentity, home({ members: [referenceIdentity] })))
+    await box.project.write('plain reference/.ki.toml', repository(referenceIdentity))
     await box.state.write(
       'ki/registry.toml',
       registry([
@@ -197,11 +183,11 @@ describe('[ki agora reference]', () => {
     const shown = await box.run('ki agora show team')
     expect(shown.exitCode).toBe(0)
     expect(shown.output).toContain('members (1)')
-    expect(shown.output).not.toContain('references (')
+    expect(shown.output).not.toContain('inclusions (')
     expect((await box.run('ki agora list')).output).toContain('team [declared] team (home: home, 1 member)')
     expect(await box.run('ki agora roots team')).toEqual({
       exitCode: 0,
-      output: `${referenceRoot}\n${homeRoot}\n`
+      output: `${homeRoot}\n${referenceRoot}\n`
     })
 
     expect(await box.run(`ki agora reference remove ${referenceIdentity} --dry-run`)).toEqual({
@@ -226,34 +212,31 @@ describe('[ki agora reference]', () => {
     const declaration = async (body: string): Promise<string> => {
       await box.project.write(
         'home/.ki.toml',
-        repository(
-          homeIdentity,
-          `[skills.ki-agora.homes.team]\nowner = ${JSON.stringify(homeIdentity)}\npurpose = "Team"\n${body}`
-        )
+        repository(homeIdentity, `[skills.ki-agora.team]\npurpose = "Team"\n${body}`)
       )
       return (await box.run('ki agora list')).output
     }
 
-    expect(await declaration('references = "bad"\nmembers = []\n')).toContain('references must be an array')
-    expect(await declaration('references = ["invalid"]\nmembers = []\n')).toContain(
-      'reference entries must be canonical HTTPS GitHub repositories'
+    expect(await declaration('includes = "bad"\nmembers = []\n')).toContain('includes must be an array')
+    expect(await declaration('includes = ["invalid entry"]\nmembers = []\n')).toContain(
+      'must be an Agora identifier or canonical HTTPS GitHub repository'
     )
-    expect(await declaration(`references = [${JSON.stringify(homeIdentity)}]\nmembers = []\n`)).toContain(
-      'must not also be the owner or a member'
+    expect(await declaration(`includes = [${JSON.stringify(homeIdentity)}]\nmembers = []\n`)).toContain(
+      'must not also be the owner or a direct member'
     )
     expect(
       await declaration(
-        `references = [${JSON.stringify(referenceIdentity)}]\nmembers = [${JSON.stringify(referenceIdentity)}]\n`
+        `includes = [${JSON.stringify(referenceIdentity)}]\nmembers = [${JSON.stringify(referenceIdentity)}]\n`
       )
-    ).toContain('must not also be the owner or a member')
+    ).toContain('must not also be the owner or a direct member')
     expect(
       await declaration(
-        `references = [${JSON.stringify(referenceIdentity)}, ${JSON.stringify(referenceIdentity)}]\nmembers = []\n`
+        `includes = [${JSON.stringify(referenceIdentity)}, ${JSON.stringify(referenceIdentity)}]\nmembers = []\n`
       )
-    ).toContain('references repeats repository')
+    ).toContain('includes repeats')
 
     await declaration(
-      `references = [${JSON.stringify(referenceIdentity)}, "https://github.com/example/second-reference"]\nmembers = []\n`
+      `includes = [${JSON.stringify(referenceIdentity)}, "https://github.com/example/second-reference"]\nmembers = []\n`
     )
     box.setRunner(async () => ({ exitCode: 1, output: '' }))
     await box.run(setReference(await box.project.mkdir('comparison-reference')))
@@ -266,7 +249,7 @@ describe('[ki agora reference]', () => {
     const malformedRoot = await box.project.mkdir('malformed')
     await box.project.write(
       'malformed/.ki.toml',
-      repository('https://github.com/example/malformed', '[skills.ki-agora]\nhomes = []\n')
+      repository('https://github.com/example/malformed', '[skills.ki-agora]\ninvalid = []\n')
     )
     await box.state.write(
       'ki/registry.toml',
@@ -279,10 +262,7 @@ describe('[ki agora reference]', () => {
 
     const secondRoot = await box.project.mkdir('second')
     const secondIdentity = 'https://github.com/example/second'
-    await box.project.write(
-      'second/.ki.toml',
-      repository(secondIdentity, home({}).replaceAll(homeIdentity, secondIdentity))
-    )
+    await box.project.write('second/.ki.toml', repository(secondIdentity, home()))
     await box.state.write(
       'ki/registry.toml',
       registry([
@@ -312,7 +292,7 @@ describe('[ki agora reference]', () => {
     expect((await box.run('ki agora reference set invalid relative')).exitCode).toBe(2)
     expect(
       (await box.run(['ki', 'agora', 'reference', 'set', 'https://github.com/example/unknown', referenceRoot])).output
-    ).toContain('is not declared as a reference')
+    ).toContain('is not declared as a repository inclusion')
     expect((await box.run(`ki agora reference set ${referenceIdentity} relative`)).output).toContain(
       'checkout must be an absolute path'
     )

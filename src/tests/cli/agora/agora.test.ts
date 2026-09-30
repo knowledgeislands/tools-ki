@@ -4,17 +4,8 @@ import { type Sandbox, sandbox } from '../_cli_helper.ts'
 const repository = (identity: string, agora = ''): string =>
   `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${agora}`
 
-const home = (
-  id: string,
-  purpose: string,
-  members: readonly string[],
-  owner = 'https://github.com/example/home',
-  order?: readonly string[]
-): string =>
-  `[skills.ki-agora.homes.${id}]\nowner = ${JSON.stringify(owner)}\npurpose = ${JSON.stringify(purpose)}\n${order ? `order = ${JSON.stringify(order)}\n` : ''}members = ${JSON.stringify(members)}\n`
-
-const membership = (id: string, homeIdentity: string): string =>
-  `[skills.ki-agora.memberships.${id}]\nhome = ${JSON.stringify(homeIdentity)}\n`
+const home = (id: string, purpose: string, members: readonly string[], includes: readonly string[] = []): string =>
+  `[skills.ki-agora.${id}]\npurpose = ${JSON.stringify(purpose)}\nmembers = ${JSON.stringify(members)}\n${includes.length ? `includes = ${JSON.stringify(includes)}\n` : ''}`
 
 const localRegistry = (
   entries: readonly { readonly key: string; readonly identity: string; readonly root: string }[]
@@ -75,7 +66,7 @@ describe('[ki agora]', () => {
         path: memberPath,
         key: 'member',
         identity: memberIdentity,
-        agora: membership('team', homeIdentity)
+        agora: ''
       },
       { path: 'other', identity: otherIdentity }
     ])
@@ -95,7 +86,7 @@ describe('[ki agora]', () => {
     })
   })
 
-  test('fails without roots for unknown, empty, missing, or non-reciprocal Agora selectors', async () => {
+  test('fails without roots for unknown, empty, or missing Agora selectors', async () => {
     const box = await sandbox()
     const capture = async (
       command: string
@@ -145,12 +136,10 @@ describe('[ki agora]', () => {
       },
       { path: 'member', identity: memberIdentity }
     ])
-    const nonReciprocal = await capture('ki agora roots team')
-    expect(nonReciprocal).toMatchObject({ result: { exitCode: 2 }, stdout: '' })
-    expect(nonReciprocal.stderr).toContain('does not declare matching consent')
+    expect(await capture('ki agora roots team')).toMatchObject({ result: { exitCode: 0 } })
   })
 
-  test('lists, shows, selects, and opens the registered estate and a reciprocal declared Agora', async () => {
+  test('lists, shows, selects, and opens an owner-declared Agora', async () => {
     const box = await sandbox()
     const homeIdentity = 'https://github.com/example/home'
     const memberIdentity = 'https://github.com/example/member'
@@ -161,8 +150,8 @@ describe('[ki agora]', () => {
         identity: homeIdentity,
         agora: home('team', 'Shared delivery', [otherIdentity, memberIdentity])
       },
-      { path: 'member', identity: memberIdentity, agora: membership('team', homeIdentity) },
-      { path: 'other', identity: otherIdentity, agora: membership('team', homeIdentity) }
+      { path: 'member', identity: memberIdentity },
+      { path: 'other', identity: otherIdentity }
     ])
     const calls: string[] = []
     box.setRunner(async (command, arguments_) => {
@@ -177,11 +166,11 @@ describe('[ki agora]', () => {
     })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (2)\n│  ├─ member\n│  ╰─ other\n╰─ summary: HOME=1 MEMBERS=2 REFERENCES=0 UNRESOLVED_REFERENCES=0 ROOTS=3\n`
+      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (2)\n│  ├─ member\n│  ╰─ other\n╰─ summary: HOME=1 MEMBERS=2 INCLUSIONS=0 UNRESOLVED_INCLUSIONS=0 ROOTS=3\n`
     })
     expect(await box.run('ki agora show team --verbose')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n│     ╰─ path: ${roots['home']}\n├─ members (2)\n│  ├─ member\n│  │  ├─ repository: ${memberIdentity}\n│  │  ╰─ path: ${roots['member']}\n│  ╰─ other\n│     ├─ repository: ${otherIdentity}\n│     ╰─ path: ${roots['other']}\n╰─ summary: HOME=1 MEMBERS=2 REFERENCES=0 UNRESOLVED_REFERENCES=0 ROOTS=3\n`
+      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n│     ╰─ path: ${roots['home']}\n├─ members (2)\n│  ├─ member\n│  │  ├─ repository: ${memberIdentity}\n│  │  ╰─ path: ${roots['member']}\n│  ╰─ other\n│     ├─ repository: ${otherIdentity}\n│     ╰─ path: ${roots['other']}\n╰─ summary: HOME=1 MEMBERS=2 INCLUSIONS=0 UNRESOLVED_INCLUSIONS=0 ROOTS=3\n`
     })
     expect(await box.run('ki repo --agora team roadmap list')).toMatchObject({ exitCode: 0 })
     expect(await box.run('ki agora open team --target zed')).toEqual({
@@ -196,22 +185,29 @@ describe('[ki agora]', () => {
     ])
   })
 
-  test('honors a declared participant prefix through every named Agora consumer', async () => {
+  test('includes another Agora and a registered repository in alphabetical projections', async () => {
     const box = await sandbox()
     const homeIdentity = 'https://github.com/example/home'
     const memberIdentity = 'https://github.com/example/member'
     const otherIdentity = 'https://github.com/example/other'
+    const extraIdentity = 'https://github.com/example/extra'
+    const sharedIdentity = 'https://github.com/example/shared'
+    const nestedIdentity = 'https://github.com/example/nested'
     const roots = await registered(box, [
       {
         path: 'home',
         identity: homeIdentity,
-        agora: home('team', 'Shared delivery', [otherIdentity, memberIdentity], homeIdentity, [
-          otherIdentity,
-          homeIdentity
-        ])
+        agora: home('team', 'Shared delivery', [memberIdentity], ['group', sharedIdentity])
       },
-      { path: 'member', identity: memberIdentity, agora: membership('team', homeIdentity) },
-      { path: 'other', identity: otherIdentity, agora: membership('team', homeIdentity) }
+      { path: 'member', identity: memberIdentity },
+      {
+        path: 'other',
+        identity: otherIdentity,
+        agora: home('group', 'Other group', [extraIdentity, memberIdentity], [nestedIdentity])
+      },
+      { path: 'extra', identity: extraIdentity },
+      { path: 'shared', identity: sharedIdentity },
+      { path: 'nested', identity: nestedIdentity }
     ])
     const calls: string[] = []
     box.setRunner(async (command, arguments_) => {
@@ -221,28 +217,66 @@ describe('[ki agora]', () => {
 
     const shown = await box.run('ki agora show team --verbose')
     expect(shown.exitCode).toBe(0)
-    expect(shown.output.indexOf(`path: ${roots['home']}`)).toBeLessThan(shown.output.indexOf(`path: ${roots['other']}`))
-    expect(shown.output.indexOf(`path: ${roots['other']}`)).toBeLessThan(
-      shown.output.indexOf(`path: ${roots['member']}`)
-    )
+    expect(shown.output).toContain(`path: ${roots['other']}`)
+    expect(shown.output).toContain(`path: ${roots['shared']}`)
     expect(await box.run('ki agora roots team')).toEqual({
       exitCode: 0,
-      output: `${roots['other']}\n${roots['home']}\n${roots['member']}\n`
+      output: `${roots['extra']}\n${roots['home']}\n${roots['member']}\n${roots['other']}\n${roots['shared']}\n`
     })
+    expect((await box.run('ki agora roots group')).output).toContain(roots['nested'])
     const selected = await box.run('ki repo --agora team roadmap list')
     expect(selected.exitCode).toBe(0)
-    expect(selected.output.indexOf('📁 other')).toBeLessThan(selected.output.indexOf('📁 home'))
+    expect(selected.output.indexOf('📁 extra')).toBeLessThan(selected.output.indexOf('📁 home'))
     expect(selected.output.indexOf('📁 home')).toBeLessThan(selected.output.indexOf('📁 member'))
+    expect(selected.output.indexOf('📁 member')).toBeLessThan(selected.output.indexOf('📁 other'))
+    expect(selected.output.indexOf('📁 other')).toBeLessThan(selected.output.indexOf('📁 shared'))
     expect(await box.run('ki agora open team --target zed')).toEqual({
       exitCode: 0,
-      output: 'ki agora open team --target zed: opened 3 repositories\n'
+      output: 'ki agora open team --target zed: opened 5 repositories\n'
     })
     expect(calls).toEqual([
       'zed -n',
+      `zed -e ${roots['shared']}`,
+      `zed -e ${roots['other']}`,
       `zed -e ${roots['member']}`,
       `zed -e ${roots['home']}`,
-      `zed -e ${roots['other']}`
+      `zed -e ${roots['extra']}`
     ])
+  })
+
+  test('rejects an inclusion whose Agora name has multiple owners', async () => {
+    const box = await sandbox()
+    await registered(box, [
+      {
+        path: 'home',
+        identity: 'https://github.com/example/home',
+        agora: home('team', 'Shared delivery', [], ['group'])
+      },
+      { path: 'first', identity: 'https://github.com/example/first', agora: home('group', 'First', []) },
+      { path: 'second', identity: 'https://github.com/example/second', agora: home('group', 'Second', []) }
+    ])
+
+    const duplicate = 'Agora group is declared by multiple owners'
+    expect((await box.run('ki agora show team')).output).toContain(duplicate)
+    expect((await box.run('ki repo --agora team roadmap list')).output).toContain(duplicate)
+    expect((await box.run('ki agora audit team')).output).toContain(duplicate)
+  })
+
+  test('rejects an inclusion whose Agora is absent without changing its direct members', async () => {
+    const box = await sandbox()
+    await registered(box, [
+      {
+        path: 'home',
+        identity: 'https://github.com/example/home',
+        agora: home('team', 'Shared delivery', [], ['missing-group'])
+      }
+    ])
+
+    const missing = 'Agora team included Agora missing-group is not declared locally'
+    expect((await box.run('ki agora list')).output).toContain(missing)
+    expect((await box.run('ki agora show team')).output).toContain(missing)
+    expect((await box.run('ki repo --agora team roadmap list')).output).toContain(missing)
+    expect((await box.run('ki agora audit team')).output).toContain(missing)
   })
 
   test('resolves estate only from registered repositories and requires an explicit permitted target', async () => {
@@ -297,12 +331,12 @@ describe('[ki agora]', () => {
       {
         path: 'zeta',
         identity: 'https://github.com/example/zeta',
-        agora: home('zeta', 'Zeta', [], 'https://github.com/example/zeta')
+        agora: home('zeta', 'Zeta', [])
       },
       {
         path: 'alpha',
         identity: 'https://github.com/example/alpha',
-        agora: home('alpha', 'Alpha', [], 'https://github.com/example/alpha')
+        agora: home('alpha', 'Alpha', [])
       }
     ])
 
@@ -356,8 +390,8 @@ describe('[ki agora]', () => {
         identity: homeIdentity,
         agora: home('legal', 'Legal repositories', [memberIdentity])
       },
-      { path: 'member', identity: memberIdentity, agora: membership('legal', homeIdentity) },
-      { path: 'malformed', identity: malformedIdentity, agora: '[skills.ki-agora]\nhomes = "invalid"\n' }
+      { path: 'member', identity: memberIdentity },
+      { path: 'malformed', identity: malformedIdentity, agora: '[skills.ki-agora]\nlegacy = "invalid"\n' }
     ])
     const unavailableRoot = await box.project.mkdir('unavailable')
     await box.state.write(
@@ -421,7 +455,7 @@ describe('[ki agora]', () => {
         identity: homeIdentity,
         agora: home('empty', 'No members', [])
       },
-      { path: 'member', identity: memberIdentity, agora: membership('team', homeIdentity) }
+      { path: 'member', identity: memberIdentity }
     ])
 
     box.setRunner(async () => ({ exitCode: 0, output: '' }))
@@ -457,7 +491,7 @@ describe('[ki agora]', () => {
     })
   })
 
-  test('rejects a one-sided home declaration before selecting or opening it', async () => {
+  test('selects owner-declared members without member-side configuration', async () => {
     const box = await sandbox()
     const homeIdentity = 'https://github.com/example/home'
     const memberIdentity = 'https://github.com/example/member'
@@ -467,18 +501,17 @@ describe('[ki agora]', () => {
         identity: homeIdentity,
         agora: home('team', 'Shared delivery', [memberIdentity])
       },
-      { path: 'member', identity: memberIdentity, agora: '[skills.ki-agora]\n' }
+      { path: 'member', identity: memberIdentity }
     ])
 
     const shown = await box.run('ki agora show team')
     const selected = await box.run('ki repo --agora team roadmap list')
     const estate = await box.run('ki repo --agora estate roadmap list')
     const estateAlias = await box.run('ki repo --estate roadmap list')
-    expect(shown).toEqual({
-      exitCode: 2,
-      output: 'ki: error: Agora team member https://github.com/example/member does not declare matching consent\n'
-    })
-    expect(selected).toEqual(shown)
+    expect(shown.exitCode).toBe(0)
+    expect(shown.output).toContain('member')
+    expect(selected.exitCode).toBe(0)
+    expect(selected.output).toContain('📁 member')
     expect(estateAlias).toEqual(estate)
     expect(estate.exitCode).toBe(0)
     expect(estate.output).toContain('📁 home')
@@ -491,12 +524,12 @@ describe('[ki agora]', () => {
       {
         path: 'first',
         identity: 'https://github.com/example/first',
-        agora: home('team', 'First', [], 'https://github.com/example/first')
+        agora: home('team', 'First', [])
       },
       {
         path: 'second',
         identity: 'https://github.com/example/second',
-        agora: home('team', 'Second', [], 'https://github.com/example/second')
+        agora: home('team', 'Second', [])
       }
     ])
 
@@ -562,55 +595,34 @@ describe('[ki agora]', () => {
       'repository must be a canonical HTTPS GitHub repository'
     )
 
-    await configure(
-      repository(identity, '[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = []\n'),
-      'owner must be a canonical HTTPS'
-    )
-    await configure(
-      repository(
-        identity,
-        '[skills.ki-agora.homes.team]\nowner = "https://github.com/example/other"\npurpose = "x"\nmembers = []\n'
-      ),
-      'owner must match its declaring registered repository'
-    )
-    const ownedHome = (agora: string): string =>
-      agora.replace(/^(\[skills\.ki-agora\.homes\.[^\]]+\]\n)/m, `$1owner = ${JSON.stringify(identity)}\n`)
     const cases = [
-      ['[skills.ki-agora]\nhomes = []\n', 'homes must be a table'],
-      ['[skills.ki-agora.homes."Bad"]\npurpose = "x"\nmembers = []\n', 'must use a stable lower-case'],
-      ['[skills.ki-agora]\nhomes = { team = [] }\n', 'home declaration must be a table'],
-      ['[skills.ki-agora.homes.team]\npurpose = ""\nmembers = []\n', 'requires a non-empty purpose'],
-      ['[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = {}\n', 'members must be an array'],
+      ['[skills.ki-agora."Bad"]\npurpose = "x"\nmembers = []\n', 'must use a stable lower-case'],
+      ['[skills.ki-agora]\nteam = []\n', 'home declaration must be a table'],
+      ['[skills.ki-agora.team]\npurpose = ""\nmembers = []\n', 'requires a non-empty purpose'],
+      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = {}\n', 'members must be an array'],
+      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = ["https://example.com/nope"]\n', 'must be a canonical HTTPS'],
+      [`[skills.ki-agora.team]\npurpose = "x"\nmembers = [${JSON.stringify(identity)}]\n`, 'must not list its home'],
       [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = ["https://example.com/nope"]\n',
-        'must be a canonical HTTPS'
-      ],
-      [
-        `[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = [${JSON.stringify(identity)}]\n`,
-        'must not list its home'
-      ],
-      [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\nmembers = ["https://github.com/example/member", "https://github.com/example/member"]\n',
+        '[skills.ki-agora.team]\npurpose = "x"\nmembers = ["https://github.com/example/member", "https://github.com/example/member"]\n',
         'members repeats repository'
       ],
-      ['[skills.ki-agora.homes.team]\npurpose = "x"\norder = "bad"\nmembers = []\n', 'order must be an array'],
-      [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\norder = ["https://example.com/nope"]\nmembers = []\n',
-        'order entries must be canonical HTTPS'
-      ],
-      [
-        `[skills.ki-agora.homes.team]\npurpose = "x"\norder = [${JSON.stringify(identity)}, ${JSON.stringify(identity)}]\nmembers = []\n`,
-        'order repeats participant'
-      ],
-      [
-        '[skills.ki-agora.homes.team]\npurpose = "x"\norder = ["https://github.com/example/unknown"]\nmembers = []\n',
-        'is not the owner or a member'
-      ]
+      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\norder = []\n', 'unrecognised key order'],
+      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\nowner = "old"\n', 'unrecognised key owner'],
+      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\nincludes = "bad"\n', 'includes must be an array'],
+      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\nincludes = ["team"]\n', 'must not include itself'],
+      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\nincludes = ["bad id"]\n', 'must be an Agora identifier'],
+      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\nincludes = ["other", "other"]\n', 'includes repeats other']
     ] as const
-    for (const [agora, message] of cases) await configure(repository(identity, ownedHome(agora)), message)
+    for (const [agora, message] of cases) await configure(repository(identity, agora), message)
+    await box.project.write(
+      'home/.ki.toml',
+      repository(identity, '[skills.ki-agora.team]\npurpose = "x"\nmembers = {}\n')
+    )
+    expect((await box.run('ki agora show team')).output).toContain('members must be an array')
+    expect((await box.run('ki repo --agora team roadmap list')).output).toContain('members must be an array')
   })
 
-  test('rejects duplicate registry identities and malformed or non-reciprocal memberships', async () => {
+  test('rejects duplicate registry identities and missing direct members', async () => {
     const box = await sandbox()
     const homeIdentity = 'https://github.com/example/home'
     const memberIdentity = 'https://github.com/example/member'
@@ -627,42 +639,19 @@ describe('[ki agora]', () => {
     )
     expect((await box.run('ki agora list')).output).toContain('repositories repeats a repository')
 
-    const roots = await registered(box, [
+    await registered(box, [
       {
         path: 'home',
         identity: homeIdentity,
         agora: home('team', 'Team', [memberIdentity])
       },
-      { path: 'member', identity: memberIdentity, agora: '[skills.ki-agora]\nmemberships = []\n' }
+      { path: 'member', identity: memberIdentity }
     ])
-    expect((await box.run('ki agora show team')).output).toContain('memberships must be a table')
-    await box.project.write('member/.ki.toml', repository(memberIdentity, '[skills.ki-agora.memberships]\n'))
-    expect((await box.run('ki agora show team')).output).toContain('does not declare matching consent')
-    await box.project.write(
-      'member/.ki.toml',
-      repository(memberIdentity, '[skills.ki-agora]\nmemberships = { team = [] }\n')
-    )
-    expect((await box.run('ki agora show team')).output).toContain(
-      'membership in https://github.com/example/member must be a table'
-    )
-    await box.project.write('member/.ki.toml', repository(memberIdentity, membership('team', 'invalid')))
-    expect((await box.run('ki agora show team')).output).toContain('has an invalid home')
-    await box.project.write(
-      'member/.ki.toml',
-      repository(memberIdentity, membership('team', 'https://github.com/example/other'))
-    )
-    expect((await box.run('ki agora show team')).output).toContain('does not declare matching consent')
-    await box.project.write(
-      'member/.ki.toml',
-      repository(memberIdentity, `${membership('team', homeIdentity)}role = "member"\n`)
-    )
-    expect((await box.run('ki agora show team')).output).toContain('must contain only home')
-    await box.project.write('member/.ki.toml', repository(memberIdentity, membership('team', homeIdentity)))
+    expect((await box.run('ki agora show team')).exitCode).toBe(0)
     await box.project.write(
       'home/.ki.toml',
       repository(homeIdentity, home('missing', 'Missing member', ['https://github.com/example/missing']))
     )
     expect((await box.run('ki agora list')).output).toContain('is not registered locally')
-    expect(roots['home']).toContain('/home')
   })
 })

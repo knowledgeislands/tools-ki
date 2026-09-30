@@ -4,11 +4,8 @@ import { type Sandbox, sandbox } from '../_cli_helper.ts'
 const repository = (identity: string, agora = ''): string =>
   `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${agora}`
 
-const home = (id: string, members: readonly string[] = [], owner = 'https://github.com/example/home'): string =>
-  `[skills.ki-agora.homes.${id}]\nowner = ${JSON.stringify(owner)}\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(members)}\n`
-
-const membership = (id: string, homeIdentity: string): string =>
-  `[skills.ki-agora.memberships.${id}]\nhome = ${JSON.stringify(homeIdentity)}\n`
+const home = (id: string, members: readonly string[] = []): string =>
+  `[skills.ki-agora.${id}]\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(members)}\n`
 
 const localRegistry = (
   entries: readonly { readonly key: string; readonly identity: string; readonly root: string }[]
@@ -58,7 +55,7 @@ describe('[ki agora audit]', () => {
     const memberIdentity = 'https://github.com/example/member'
     await registered(box, [
       { path: 'home', identity: homeIdentity, agora: home('team', [memberIdentity]) },
-      { path: 'member', identity: memberIdentity, agora: membership('team', homeIdentity) }
+      { path: 'member', identity: memberIdentity }
     ])
 
     const healthy =
@@ -107,8 +104,8 @@ describe('[ki agora audit]', () => {
     const firstIdentity = 'https://github.com/example/first'
     const secondIdentity = 'https://github.com/example/second'
     await registered(box, [
-      { path: 'first', identity: firstIdentity, agora: home('team', [], firstIdentity) },
-      { path: 'second', identity: secondIdentity, agora: home('team', [], secondIdentity) }
+      { path: 'first', identity: firstIdentity, agora: home('team') },
+      { path: 'second', identity: secondIdentity, agora: home('team') }
     ])
 
     expect(await box.run('ki agora audit team')).toEqual({
@@ -121,16 +118,15 @@ describe('[ki agora audit]', () => {
     const badIdentity = 'https://github.com/example/bad'
     const shapeIdentity = 'https://github.com/example/shape'
     await registered(malformed, [
-      { path: 'bad', identity: badIdentity, agora: '[skills.ki-agora]\nhomes = { bad = [] }\n' },
-      { path: 'shape', identity: shapeIdentity, agora: '[skills.ki-agora]\nhomes = []\n' }
+      { path: 'bad', identity: badIdentity, agora: '[skills.ki-agora]\nbad = []\n' },
+      { path: 'shape', identity: shapeIdentity, agora: '[skills.ki-agora]\nshape = []\n' }
     ])
     const result = await malformed.run('ki agora audit')
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('bad [unhealthy] FINDINGS=1')
     expect(result.output).toContain('Agora bad home declaration must be a table')
-    expect(result.output).toContain('estate findings (1)')
-    expect(result.output).toContain('[skills.ki-agora].homes must be a table')
-    expect(result.output).toContain('summary: PROFILES=1 HEALTHY=0 UNHEALTHY=1 FINDINGS=2')
+    expect(result.output).toContain('shape [unhealthy] FINDINGS=1')
+    expect(result.output).toContain('summary: PROFILES=2 HEALTHY=0 UNHEALTHY=2 FINDINGS=2')
   })
 
   test('attributes unavailable members to profiles and unrelated unavailable repositories to the estate', async () => {

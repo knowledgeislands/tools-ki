@@ -163,7 +163,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki manage completion <shell>` emits Bash and Zsh scripts derived from the registered command tree, including nested commands, options, closed values, and local path completion.
 - Root help leads with usage and groups commands by purpose, including a separate Acquisition section; commands are alphabetical within each section and in every nested help page, with shorter command-list summaries. Completion candidates are alphabetical.
 - Batch authority commands now live under `ki repo batch` and use the parent repository selector; `ki batch` is retired. Each batch still targets exactly one repository.
-- Registered repository declarations define reciprocal named Agoras; the reserved `estate` selector derives the full locally registered canonical repository set for selection and Zed opening.
+- Registered Agora owners declare direct members and optional one-level inclusions of another Agora or repository. Ordinary members need no Agora declaration. The reserved `estate` selector derives the full locally registered canonical repository set for selection and editor opening.
 - `ki agora roots <agora>` exposes a stable machine interface for resolved registered Agora roots: newline-delimited by default, or NUL-delimited with `--null` (`-0`).
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context, including unadopted `triage` intake.
@@ -171,7 +171,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo roadmap list --format json` emits the path-free `ki/roadmap/v1` contract with canonical record URLs.
 - Roadmap text listings show compact external ticket keys and counts; `--links all` expands mappings into child entries with full task URLs and disambiguating identity details where needed.
 - `ki registry list --format json` emits path-free `ki/registry/v1` identity and declaration metadata; `ki registry remove` removes exactly one keyed or path-selected entry with dry-run and transactional publication.
-- `ki agora list` and `ki agora show` separate a named Agora's home from reciprocal members and references, while the system estate counts registered repositories without a home; machine-readable roots remain unchanged.
+- `ki agora list` and `ki agora show` separate a named Agora's owner, direct members, and inclusions, while the system estate counts registered repositories without an owner. Roots are deduplicated and sorted alphabetically by registry key.
 - `ki repo store scan` warns about undeclared conventional OneDrive source directories for selected repositories without creating or changing stores; `--estate` scans all registered repositories.
 - Closed current batch records validate selected work from their evidence commit, so later pruning and expiry do not invalidate archival verification.
 - `man/ki.commands.json` publishes the generated `ki/commands/v1` command and description inventory, reconciled against the manual and registered command tree.

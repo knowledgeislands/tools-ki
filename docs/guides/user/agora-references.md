@@ -1,6 +1,6 @@
-# Associate external Agora references
+# Associate external Agora inclusions
 
-An Agora owner may declare an ordinary Git repository in `references` when it belongs in the working set but is not a Knowledge Islands member. The portable declaration contains only the canonical repository identity; each machine chooses its own checkout explicitly.
+An Agora owner may name a canonical repository URL in `includes` when it belongs in the working set without becoming a direct member. Registered repositories resolve from the local KI registry. For an unregistered Git repository, each machine chooses its checkout explicitly.
 
 ## Associate a checkout
 
@@ -10,11 +10,11 @@ Clone or otherwise prepare the repository yourself, then associate its absolute 
 ki agora reference set https://github.com/example/plain-repository /absolute/path/to/plain-repository
 ```
 
-The command requires the identity to appear in a registered Agora owner's `references` declaration. It verifies that the path is a physical Git checkout root and that its `origin` resolves to the same canonical GitHub identity. It does not add `.ki.toml`, register the checkout, or write into it.
+The command requires the identity to appear in a registered Agora owner's `includes` declaration. It verifies that the path is a physical Git checkout root and that its `origin` resolves to the same canonical GitHub identity. It does not add `.ki.toml`, register the checkout, or write into it.
 
 Use `--dry-run` to validate the proposed association without changing local state. Re-running `set` with another valid checkout replaces the existing association for that identity.
 
-## Inspect and use references
+## Inspect and use inclusions
 
 List the machine-local associations:
 
@@ -22,9 +22,9 @@ List the machine-local associations:
 ki agora reference list
 ```
 
-Resolved references participate in the same ordered projection used by `ki agora roots`, `ki agora open`, and `ki agora inspect`. Human-facing `ki agora list` and `ki agora show` count a named Agora's declaring home separately from its reciprocal members and owner-selected references; `show --verbose` includes the home's path once. The system `estate` instead lists registered repositories and has no home. `ki agora audit` reports unresolved reference diagnostics, while `show` keeps them separate from resolved references.
+Resolved inclusions participate in the same alphabetical projection used by `ki agora roots`, `ki agora open`, and `ki agora inspect`. An included Agora contributes its owner and direct members; its own inclusions are not followed. Human-facing `ki agora list` and `ki agora show` count the owner separately from direct members and included roots; `show --verbose` includes the owner's path once. The system `estate` instead lists registered repositories and has no owner. `ki agora audit` reports unresolved external repository diagnostics.
 
-An unresolved reference does not invalidate reciprocal membership. It is omitted from projected roots with one status:
+An unresolved external repository inclusion does not invalidate direct membership. It is omitted from projected roots with one status:
 
 - **unassociated** — no checkout has been selected on this machine.
 - **missing** — the selected physical directory is unavailable.
@@ -43,4 +43,4 @@ ki agora reference remove https://github.com/example/plain-repository
 
 Use `--dry-run` to validate removal first. The command never edits the Agora declaration or referenced checkout.
 
-Promotion to KI membership is a separate reciprocal governance change: remove the identity from the owner's `references`, add it to `members`, and add matching consent in the member repository. Once the declarations and local KI registration resolve, `ki` treats it only as a member and ignores any stale reference association; remove that stale local state when convenient.
+Promotion to direct membership changes only the owner's declaration: remove the identity from `includes` and add it to `members`. Once local KI registration resolves, `ki` treats it only as a member and ignores any stale reference association; remove that stale local state when convenient.

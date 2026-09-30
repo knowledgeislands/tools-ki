@@ -12,7 +12,7 @@ import { KiExit } from '../../core/errors.ts'
 import { renderTree } from '../presentation/index.ts'
 
 const pathLabel = (value: ProjectionPath): string => {
-  if (value.key) return `${value.key}${value.kind === 'reference' ? ' [reference]' : ''}: ${value.path}`
+  if (value.key) return `${value.key}${value.kind === 'reference' ? ' [included]' : ''}: ${value.path}`
   if (value.repository) return `${value.repository}: ${value.path}`
   return value.path
 }

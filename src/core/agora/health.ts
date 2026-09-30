@@ -25,14 +25,7 @@ const healthProfiles = async (stateDirectory: string, runtime: AgoraRuntime): Pr
   const associatedFailures = new Set<string>()
 
   for (const home of repositories) {
-    let entries: readonly (readonly [string, unknown])[]
-    try {
-      entries = homeDeclarationEntries(home)
-    } catch (error) {
-      estateFindings.push(kiErrorMessage(error))
-      continue
-    }
-    for (const [id, value] of entries) {
+    for (const [id, value] of homeDeclarationEntries(home)) {
       try {
         const candidate = { home, declaration: homeDeclaration(home, id, value) }
         candidatesById.set(id, [...(candidatesById.get(id) ?? []), candidate])
@@ -68,12 +61,19 @@ const healthProfiles = async (stateDirectory: string, runtime: AgoraRuntime): Pr
     }
     if (unavailable) continue
     try {
-      const profile = await profileFromHome(candidate.home, candidate.declaration, repositories, associations, runtime)
+      const profile = await profileFromHome(
+        candidate.home,
+        candidate.declaration,
+        repositories,
+        candidatesById,
+        associations,
+        runtime
+      )
       for (const diagnostic of profile.referenceDiagnostics)
         addHealthFinding(
           findingsById,
           id,
-          `reference ${diagnostic.repository} [${diagnostic.status}]: ${diagnostic.detail}`
+          `inclusion ${diagnostic.repository} [${diagnostic.status}]: ${diagnostic.detail}`
         )
     } catch (error) {
       addHealthFinding(findingsById, id, kiErrorMessage(error))

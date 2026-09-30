@@ -27,7 +27,7 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
         : [{ label: 'none' }]
       const references = profile.references.length
         ? profile.references.map((reference) => ({
-            label: `${reference.repository} [reference]`,
+            label: `${reference.repository} [included]`,
             ...(options.verbose ? { children: [{ label: `path: ${reference.root}` }] } : {})
           }))
         : [{ label: 'none' }]
@@ -59,14 +59,14 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
             { label: `${profile.system ? 'repositories' : 'members'} (${visibleMembers.length})`, children: members },
             ...(hasReferenceSurface
               ? [
-                  { label: `references (${profile.references.length})`, children: references },
-                  { label: `reference diagnostics (${profile.referenceDiagnostics.length})`, children: diagnostics }
+                  { label: `inclusions (${profile.references.length})`, children: references },
+                  { label: `inclusion diagnostics (${profile.referenceDiagnostics.length})`, children: diagnostics }
                 ]
               : []),
             {
               label: profile.system
                 ? `summary: REPOSITORIES=${visibleMembers.length} ROOTS=${profile.roots.length}`
-                : `summary: HOME=1 MEMBERS=${visibleMembers.length} REFERENCES=${profile.references.length} UNRESOLVED_REFERENCES=${profile.referenceDiagnostics.length} ROOTS=${profile.roots.length}`
+                : `summary: HOME=1 MEMBERS=${visibleMembers.length} INCLUSIONS=${profile.references.length} UNRESOLVED_INCLUSIONS=${profile.referenceDiagnostics.length} ROOTS=${profile.roots.length}`
             }
           ]
         }).join('\n')}\n`

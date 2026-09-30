@@ -20,12 +20,12 @@ export const createAgoraListCommand = (context: KiContext): Command =>
       const participants = profile.system
         ? `${count} ${count === 1 ? 'repository' : 'repositories'}`
         : `home: ${home.key}, ${count} ${count === 1 ? 'member' : 'members'}`
-      const referenceCounts =
+      const inclusionCounts =
         profile.references.length || profile.referenceDiagnostics.length
-          ? `, ${profile.references.length} ${profile.references.length === 1 ? 'reference' : 'references'}, ${profile.referenceDiagnostics.length} unresolved ${profile.referenceDiagnostics.length === 1 ? 'reference' : 'references'}`
+          ? `, ${profile.references.length} ${profile.references.length === 1 ? 'inclusion' : 'inclusions'}, ${profile.referenceDiagnostics.length} unresolved ${profile.referenceDiagnostics.length === 1 ? 'inclusion' : 'inclusions'}`
           : ''
       return {
-        label: `${profile.id} [${profile.system ? 'system' : 'declared'}] ${profile.name} (${participants}${referenceCounts})`
+        label: `${profile.id} [${profile.system ? 'system' : 'declared'}] ${profile.name} (${participants}${inclusionCounts})`
       }
     })
     context.stdout.write(

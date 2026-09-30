@@ -1,5 +1,5 @@
 import type { KiError } from '../errors.ts'
-import { type AgoraHome, membersFromHome, profileError } from './declarations.ts'
+import { type AgoraCandidate, type AgoraHome, membersFromHome, profileError } from './declarations.ts'
 import { inspectReferenceCheckout, type ReferenceAssociation } from './reference-associations.ts'
 import type { RegisteredRepository } from './repository-inventory.ts'
 import type {
@@ -15,6 +15,8 @@ export const ESTATE_AGORA = 'estate' as const
 
 const resolveReferences = async (
   declaration: AgoraHome,
+  repositories: readonly RegisteredRepository[],
+  candidatesById: ReadonlyMap<string, readonly AgoraCandidate[]>,
   associations: readonly ReferenceAssociation[],
   runtime: AgoraRuntime
 ): Promise<{
@@ -23,7 +25,26 @@ const resolveReferences = async (
 }> => {
   const references: AgoraReference[] = []
   const diagnostics: AgoraReferenceDiagnostic[] = []
-  for (const repository of declaration.references) {
+  for (const inclusion of declaration.includes) {
+    if (!inclusion.startsWith('https://')) {
+      const candidates = candidatesById.get(inclusion) ?? []
+      if (!candidates.length) throw profileError(declaration.id, `included Agora ${inclusion} is not declared locally`)
+      if (candidates.length > 1)
+        throw duplicateOwnersError(
+          inclusion,
+          candidates.map((candidate) => candidate.home.repository)
+        )
+      const included = candidates[0] as AgoraCandidate
+      for (const member of membersFromHome(included.home, included.declaration, repositories))
+        references.push({ ...member, kind: 'reference' })
+      continue
+    }
+    const repository = inclusion
+    const registered = repositories.find((candidate) => candidate.repository === repository)
+    if (registered) {
+      references.push({ key: registered.key, root: registered.root, repository, kind: 'reference' })
+      continue
+    }
     const candidates = associations.filter((association) => association.repository === repository)
     if (!candidates.length) {
       diagnostics.push({ repository, status: 'unassociated', detail: 'no local checkout is associated' })
@@ -61,21 +82,16 @@ export const profileFromHome = async (
   home: RegisteredRepository,
   declaration: AgoraHome,
   repositories: readonly RegisteredRepository[],
+  candidatesById: ReadonlyMap<string, readonly AgoraCandidate[]>,
   associations: readonly ReferenceAssociation[],
   runtime: AgoraRuntime
 ): Promise<AgoraProfile> => {
   const members = membersFromHome(home, declaration, repositories)
-  const referenceResult = await resolveReferences(declaration, associations, runtime)
+  const referenceResult = await resolveReferences(declaration, repositories, candidatesById, associations, runtime)
   const allRoots: readonly AgoraRoot[] = [...members, ...referenceResult.references]
-  const byRepository = new Map(allRoots.map((root) => [root.repository, root]))
-  const orderedRoots = declaration.order
-    .map((identity) => byRepository.get(identity))
-    .filter((root): root is AgoraRoot => Boolean(root))
-  const orderedIdentities = new Set(declaration.order)
-  const remainingRoots = allRoots
-    .filter((root) => !orderedIdentities.has(root.repository))
-    .sort((left, right) => left.key.localeCompare(right.key, 'en'))
-  const roots = [...orderedRoots, ...remainingRoots]
+  const byRepository = new Map<string, AgoraRoot>()
+  for (const root of allRoots) if (!byRepository.has(root.repository)) byRepository.set(root.repository, root)
+  const roots = [...byRepository.values()].sort((left, right) => left.key.localeCompare(right.key, 'en'))
   return {
     id: declaration.id,
     name: declaration.id,

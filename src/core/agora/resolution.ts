@@ -79,14 +79,7 @@ export const listAgoras = async (stateDirectory: string, runtime: AgoraRuntime):
   const declarations: AgoraCandidate[] = []
   const broken: string[] = []
   for (const home of repositories) {
-    let entries: readonly (readonly [string, unknown])[]
-    try {
-      entries = homeDeclarationEntries(home)
-    } catch (error) {
-      broken.push(kiErrorMessage(error))
-      continue
-    }
-    for (const [id, value] of entries) {
+    for (const [id, value] of homeDeclarationEntries(home)) {
       try {
         declarations.push({ home, declaration: homeDeclaration(home, id, value) })
       } catch (error) {
@@ -112,7 +105,9 @@ export const listAgoras = async (stateDirectory: string, runtime: AgoraRuntime):
     }
     const candidate = candidates[0] as AgoraCandidate
     try {
-      profiles.push(await profileFromHome(candidate.home, candidate.declaration, repositories, associations, runtime))
+      profiles.push(
+        await profileFromHome(candidate.home, candidate.declaration, repositories, byId, associations, runtime)
+      )
     } catch (error) {
       broken.push(kiErrorMessage(error))
     }
@@ -133,19 +128,18 @@ export const resolveAgora = async (
   if (id === ESTATE_AGORA) return estate(await registeredRepositories(stateDirectory))
   const { repositories, failuresByRepository } = await availableRegisteredRepositories(stateDirectory)
   const associations = await requiredReferenceAssociations(stateDirectory)
-  const candidates: AgoraCandidate[] = []
+  const byId = new Map<string, AgoraCandidate[]>()
   for (const home of repositories) {
-    let entries: readonly (readonly [string, unknown])[]
-    try {
-      entries = homeDeclarationEntries(home)
-    } catch (error) {
-      kiErrorMessage(error)
-      continue
-    }
-    for (const [candidateId, value] of entries) {
-      if (candidateId === id) candidates.push({ home, declaration: homeDeclaration(home, candidateId, value) })
+    for (const [candidateId, value] of homeDeclarationEntries(home)) {
+      try {
+        const candidate = { home, declaration: homeDeclaration(home, candidateId, value) }
+        byId.set(candidateId, [...(byId.get(candidateId) ?? []), candidate])
+      } catch (error) {
+        if (candidateId === id) throw error
+      }
     }
   }
+  const candidates = byId.get(id) ?? []
   if (!candidates.length) throw profileError(id, 'is not declared by a registered Agora home')
   if (candidates.length > 1)
     throw duplicateOwnersError(
@@ -157,25 +151,25 @@ export const resolveAgora = async (
     const failure = failuresByRepository.get(member)
     if (failure) throw failure
   }
-  return profileFromHome(candidate.home, candidate.declaration, repositories, associations, runtime)
+  return profileFromHome(candidate.home, candidate.declaration, repositories, byId, associations, runtime)
 }
 
 export const resolveAgoraMembers = async (stateDirectory: string, id: string): Promise<readonly AgoraMember[]> => {
   if (!AGORA_ID.test(id)) throw new KiError('Agora name must use lower-case letters, numbers, and hyphens', 2)
   if (id === ESTATE_AGORA) return estate(await registeredRepositories(stateDirectory)).members
   const { repositories, failuresByRepository } = await availableRegisteredRepositories(stateDirectory)
-  const candidates: AgoraCandidate[] = []
+  const byId = new Map<string, AgoraCandidate[]>()
   for (const home of repositories) {
-    let entries: readonly (readonly [string, unknown])[]
-    try {
-      entries = homeDeclarationEntries(home)
-    } catch (error) {
-      kiErrorMessage(error)
-      continue
+    for (const [candidateId, value] of homeDeclarationEntries(home)) {
+      try {
+        const candidate = { home, declaration: homeDeclaration(home, candidateId, value) }
+        byId.set(candidateId, [...(byId.get(candidateId) ?? []), candidate])
+      } catch (error) {
+        if (candidateId === id) throw error
+      }
     }
-    for (const [candidateId, value] of entries)
-      if (candidateId === id) candidates.push({ home, declaration: homeDeclaration(home, candidateId, value) })
   }
+  const candidates = byId.get(id) ?? []
   if (!candidates.length) throw profileError(id, 'is not declared by a registered Agora home')
   if (candidates.length > 1)
     throw duplicateOwnersError(
@@ -187,7 +181,32 @@ export const resolveAgoraMembers = async (stateDirectory: string, id: string): P
     const failure = failuresByRepository.get(member)
     if (failure) throw failure
   }
-  return membersFromHome(candidate.home, candidate.declaration, repositories)
+  const members = [...membersFromHome(candidate.home, candidate.declaration, repositories)]
+  for (const inclusion of candidate.declaration.includes) {
+    if (inclusion.startsWith('https://')) {
+      const included = repositories.find((repository) => repository.repository === inclusion)
+      if (included)
+        members.push({ key: included.key, root: included.root, repository: included.repository, kind: 'member' })
+      continue
+    }
+    const included = byId.get(inclusion) ?? []
+    if (!included.length) throw profileError(id, `included Agora ${inclusion} is not declared locally`)
+    if (included.length > 1)
+      throw duplicateOwnersError(
+        inclusion,
+        included.map((entry) => entry.home.repository)
+      )
+    members.push(
+      ...membersFromHome(
+        (included[0] as AgoraCandidate).home,
+        (included[0] as AgoraCandidate).declaration,
+        repositories
+      )
+    )
+  }
+  return [...new Map(members.map((member) => [member.repository, member])).values()].sort((left, right) =>
+    left.key.localeCompare(right.key, 'en')
+  )
 }
 
 export const declaredAgoraReferenceIdentities = async (stateDirectory: string): Promise<readonly string[]> => {
@@ -195,7 +214,8 @@ export const declaredAgoraReferenceIdentities = async (stateDirectory: string): 
   for (const repository of await registeredRepositories(stateDirectory)) {
     for (const [id, value] of homeDeclarationEntries(repository)) {
       const home = homeDeclaration(repository, id, value)
-      for (const reference of home.references) references.add(reference)
+      for (const reference of home.includes.filter((inclusion) => inclusion.startsWith('https://')))
+        references.add(reference)
     }
   }
   return [...references].sort((left, right) => left.localeCompare(right, 'en'))

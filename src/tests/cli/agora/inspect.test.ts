@@ -9,10 +9,7 @@ const repository = (identity: string, agora = ''): string =>
   `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${agora}`
 
 const home = (id: string, members: readonly string[]): string =>
-  `[skills.ki-agora.homes.${id}]\nowner = "https://github.com/example/home"\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(members)}\n`
-
-const membership = (id: string, homeIdentity: string): string =>
-  `[skills.ki-agora.memberships.${id}]\nhome = ${JSON.stringify(homeIdentity)}\n`
+  `[skills.ki-agora.${id}]\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(members)}\n`
 
 const localRegistry = (
   entries: readonly { readonly key: string; readonly identity: string; readonly root: string }[]
@@ -39,7 +36,7 @@ const configuredAgora = async (box: Sandbox): Promise<Record<'home' | 'member' |
   const registryLink = join(box.project.path, 'registry-link')
   await symlink(registryTarget, registryLink)
   await box.project.write('home/.ki.toml', repository(homeIdentity, home('team', [memberIdentity])))
-  await box.project.write('member with space/.ki.toml', repository(memberIdentity, membership('team', homeIdentity)))
+  await box.project.write('member with space/.ki.toml', repository(memberIdentity))
   await box.project.write('extra/.ki.toml', repository(extraIdentity))
   await box.state.write(
     'ki/registry.toml',

@@ -13,7 +13,7 @@ import { canonicalRepositoryIdentity } from '../../../core/storage/index.ts'
 
 export const createAgoraReferenceSetCommand = (context: KiContext): Command =>
   new Command('set')
-    .description('associate one owner-declared reference with an explicit local Git checkout')
+    .description('associate one included repository with an explicit local Git checkout')
     .summary('associate a local checkout')
     .argument('<repository>', 'canonical HTTPS GitHub repository identity')
     .argument('<checkout>', 'absolute local Git checkout root')
@@ -24,7 +24,7 @@ export const createAgoraReferenceSetCommand = (context: KiContext): Command =>
       if (!isAbsolute(checkout)) throw new KiError('checkout must be an absolute path', 2)
       const declared = await declaredAgoraReferenceIdentities(context.paths.state)
       if (!declared.includes(repository))
-        throw new KiError(`${repository} is not declared as a reference by a registered Agora owner`, 2)
+        throw new KiError(`${repository} is not declared as a repository inclusion by a registered Agora owner`, 2)
 
       const inspection = await inspectReferenceCheckout(checkout, repository, context.runner, context.environment)
       if (inspection.state !== 'available') throw new KiError(inspection.detail, 2)
