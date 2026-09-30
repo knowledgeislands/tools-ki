@@ -117,14 +117,16 @@ ki repo --agora estate audit
 
 ## Automate canonical batch records
 
-`ki batch prepare`, `validate`, `run`, and `close` provide deterministic local file mechanics for an already-approved exact set of Ready roadmap items. The commands protect the authority payload, bind a run, append explicit item evidence, and require every named item to match the approved completion target before recording closure. They do not select or implement work, infer approval, change roadmap lifecycle, accept or prune items, push, or release.
+`ki repo batch prepare`, `validate`, `run`, and `close` provide deterministic local file mechanics for an already-approved exact set of Ready work items. The commands protect the authority payload, bind a run, append explicit item evidence, and require every named item to match the approved completion target before recording closure. They do not select or implement work, infer approval, change work lifecycle, accept or prune items, push, or release.
+
+Batch operations use the parent `ki repo` selector and require exactly one repository. From elsewhere, use `ki repo --repo /path/to/repository batch <action>`; the former top-level `ki batch` path is retired.
 
 ```sh
-ki batch prepare --item KI-EXAMPLE-001 --item KI-EXAMPLE-002 --approved \
+ki repo batch prepare --item KI-EXAMPLE-001 --item KI-EXAMPLE-002 --approved \
   --authority-mode reviewed-items --expires-at 2099-01-01T18:00:00Z \
   --completion-target awaiting-review
-ki batch validate KI-EXAMPLE-BATCH-001
-ki batch run KI-EXAMPLE-BATCH-001
+ki repo batch validate KI-EXAMPLE-BATCH-001
+ki repo batch run KI-EXAMPLE-BATCH-001
 ```
 
 Replace the illustrative identifiers and expiry with the approved Ready items and active window for the selected repository.

@@ -23,11 +23,6 @@ const commandPaths = [
   'agora open',
   'agora roots',
   'agora show',
-  'batch',
-  'batch close',
-  'batch prepare',
-  'batch run',
-  'batch validate',
   'bootstrap',
   'dev',
   'dev local',
@@ -69,6 +64,11 @@ const commandPaths = [
   'registry remove',
   'repo',
   'repo audit',
+  'repo batch',
+  'repo batch close',
+  'repo batch prepare',
+  'repo batch run',
+  'repo batch validate',
   'repo conform',
   'repo educate',
   'repo init',
@@ -159,9 +159,9 @@ describe('[ki manage completion]', () => {
     )
     expect(bash.output).toContain("'trade standing capture:--capture')")
     expect(bash.output).toContain("'acquire list')")
-    expect(bash.output).toContain("'batch') printf '%s\\n' 'prepare validate run close'")
-    expect(bash.output).toContain("'batch prepare:--item')")
-    expect(bash.output).toContain("'batch prepare:--repo')")
+    expect(bash.output).toContain("'repo batch') printf '%s\\n' 'close prepare run validate'")
+    expect(bash.output).toContain("'repo batch prepare:--item')")
+    expect(bash.output).toContain("'repo batch prepare:--repo')")
     expect(bash.output).toContain("'dev local')")
     expect(bash.output).toContain("'repo roadmap list:--horizon')")
     expect(bash.output).toContain("'repo roadmap list:--status')")

@@ -145,7 +145,7 @@ const setup = async () => {
 }
 
 const prepare = (items = 'EXAMPLE-001 EXAMPLE-002', extra = ''): string =>
-  `ki batch prepare ${items
+  `ki repo batch prepare ${items
     .split(' ')
     .map((id) => `--item ${id}`)
     .join(
@@ -176,7 +176,39 @@ const rehashBatch = (contents: string): string => {
     .replace(/^(<!-- ki-batch-run: [A-Z][A-Z0-9-]*-RUN-\d{3} )[a-f0-9]{64}( -->)$/gm, `$1${payload}$2`)
 }
 
-describe('[ki batch]', () => {
+describe('[ki repo batch]', () => {
+  test('uses the parent repository selector and refuses multiple repositories or the retired command', async () => {
+    const box = await setup()
+    const repository = join(box.project.path, 'repository')
+    box.cd('')
+    const selected = await box.run(
+      prepare('EXAMPLE-001').replace('ki repo batch', `ki repo --repo ${repository} batch`),
+      {
+        now: () => now
+      }
+    )
+    expect(selected.exitCode, selected.output).toBe(0)
+    expect(await box.project.read(`repository/${batchPath}`)).toContain(
+      'repository: https://github.com/knowledgeislands/example'
+    )
+
+    await box.project.write(
+      'other/.ki.toml',
+      configuration
+        .replace('knowledgeislands/example', 'knowledgeislands/other')
+        .replace('repo_code = "EXAMPLE"', 'repo_code = "OTHER"')
+    )
+    const multiple = await box.run(
+      `ki repo --repo ${repository} --repo ${join(box.project.path, 'other')} batch validate EXAMPLE-BATCH-001`,
+      { now: () => now }
+    )
+    expect(multiple.exitCode).toBe(2)
+    expect(multiple.stderr).toContain('ki repo batch requires exactly one repository')
+    const retired = await box.run('ki batch --help')
+    expect(retired.exitCode).toBe(2)
+    expect(retired.stderr).toContain("unknown subcommand 'batch' for 'ki'")
+  })
+
   test('prepares, validates, starts, records, and closes one exact batch without changing work items', async () => {
     const box = await setup()
     const firstBefore = await box.project.read('repository/docs/roadmap/EXAMPLE-001-first.md')
@@ -192,11 +224,11 @@ describe('[ki batch]', () => {
     expect(initial).not.toContain('run_id:')
     expect(await box.project.read('repository/docs/roadmap/EXAMPLE-001-first.md')).toBe(firstBefore)
 
-    const valid = await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })
+    const valid = await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })
     expect(valid.exitCode, valid.output).toBe(0)
     expect(valid.stdout).toContain('Write: none')
-    expect((await box.run(`ki batch validate ${batchPath}`, { now: () => now })).exitCode).toBe(0)
-    const started = await box.run('ki batch run EXAMPLE-BATCH-001', { now: () => now })
+    expect((await box.run(`ki repo batch validate ${batchPath}`, { now: () => now })).exitCode).toBe(0)
+    const started = await box.run('ki repo batch run EXAMPLE-BATCH-001', { now: () => now })
     expect(started.exitCode, started.output).toBe(0)
     expect(await box.project.read(`repository/${batchPath}`)).toContain(
       `<!-- ki-batch-run: EXAMPLE-BATCH-001-RUN-001 ${payload} -->`
@@ -208,11 +240,11 @@ describe('[ki batch]', () => {
       item('EXAMPLE-002', 'awaiting-review', ['EXAMPLE-001'])
     )
     const firstResult = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${firstCommit}`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${firstCommit}`,
       { now: () => now }
     )
     const secondResult = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-002 --result awaiting-review --baseline ${baseline} --result-commit ${secondCommit} --exception none`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-002 --result awaiting-review --baseline ${baseline} --result-commit ${secondCommit} --exception none`,
       { now: () => now }
     )
     expect(firstResult.exitCode, firstResult.output).toBe(0)
@@ -227,7 +259,7 @@ describe('[ki batch]', () => {
       })
     )
     const reversedEvidence = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(reversedEvidence.stderr).toContain('must follow its in-batch dependency EXAMPLE-002')
@@ -241,7 +273,7 @@ describe('[ki batch]', () => {
       })
     )
     const closed = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(closed.exitCode, closed.output).toBe(0)
@@ -249,11 +281,11 @@ describe('[ki batch]', () => {
     const final = await box.project.read(`repository/${batchPath}`)
     expect(final).toContain(`<!-- ki-batch-close: EXAMPLE-BATCH-001 awaiting-review ${evidenceCommit} -->`)
     expect(/approved_payload_sha256: ([a-f0-9]{64})/.exec(final)?.[1]).toBe(payload)
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
     expect(
       (
         await box.run(
-          `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+          `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
           { now: () => now }
         )
       ).stdout
@@ -261,7 +293,7 @@ describe('[ki batch]', () => {
 
     await rm(join(box.project.path, 'repository/docs/roadmap/EXAMPLE-001-first.md'))
     await rm(join(box.project.path, 'repository/docs/roadmap/EXAMPLE-002-second.md'))
-    const archival = await box.run('ki batch validate EXAMPLE-BATCH-001', {
+    const archival = await box.run('ki repo batch validate EXAMPLE-BATCH-001', {
       now: () => Date.parse('2026-09-16T08:00:00Z')
     })
     expect(archival.exitCode, archival.output).toBe(0)
@@ -282,12 +314,12 @@ describe('[ki batch]', () => {
     box.cd('repository')
 
     expect((await box.run(prepare('EXAMPLE-001'), { now: () => now })).exitCode).toBe(0)
-    expect((await box.run('ki batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
     await box.project.write('repository/Streams/Roadmap/EXAMPLE-001-first.md', knowledgeBaseItem('awaiting-review'))
     expect(
       (
         await box.run(
-          `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${firstCommit}`,
+          `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${firstCommit}`,
           { now: () => now }
         )
       ).exitCode
@@ -303,13 +335,13 @@ describe('[ki batch]', () => {
       })
     )
     const closed = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(closed.exitCode, closed.output).toBe(0)
 
     await rm(join(box.project.path, 'repository/Streams/Roadmap/EXAMPLE-001-first.md'))
-    const archival = await box.run('ki batch validate EXAMPLE-BATCH-001', {
+    const archival = await box.run('ki repo batch validate EXAMPLE-BATCH-001', {
       now: () => Date.parse('2026-09-16T08:00:00Z')
     })
     expect(archival.exitCode, archival.output).toBe(0)
@@ -342,10 +374,10 @@ describe('[ki batch]', () => {
     ].join('\n')
     await box.project.write('repository/+/_BATCHES/EXAMPLE-BATCH-009.md', retained)
 
-    const valid = await box.run('ki batch validate EXAMPLE-BATCH-009', { now: () => now })
+    const valid = await box.run('ki repo batch validate EXAMPLE-BATCH-009', { now: () => now })
     expect(valid.exitCode, valid.output).toBe(0)
     expect(valid.stdout).toContain('Contract: retained-legacy')
-    expect((await box.run('ki batch run EXAMPLE-BATCH-009', { now: () => now })).stderr).toContain(
+    expect((await box.run('ki repo batch run EXAMPLE-BATCH-009', { now: () => now })).stderr).toContain(
       'retained legacy batch records are read-only'
     )
 
@@ -389,13 +421,13 @@ describe('[ki batch]', () => {
     ]
     for (const [name, contents, expected] of cases) {
       await box.project.write('repository/+/_BATCHES/EXAMPLE-BATCH-009.md', contents)
-      const result = await box.run('ki batch validate EXAMPLE-BATCH-009', { now: () => now })
+      const result = await box.run('ki repo batch validate EXAMPLE-BATCH-009', { now: () => now })
       expect(result.stderr, name).toContain(expected)
     }
 
     const withoutLedger = rehashBatch(retained.slice(0, retained.indexOf('## Run ledger')))
     await box.project.write('repository/+/_BATCHES/EXAMPLE-BATCH-009.md', withoutLedger)
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-009', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-009', { now: () => now })).exitCode).toBe(0)
 
     const completed = rehashBatch(
       retained
@@ -403,7 +435,7 @@ describe('[ki batch]', () => {
         .replace('closure_item_ids: []', 'closure_item_ids: [EXAMPLE-001]')
     )
     await box.project.write('repository/+/_BATCHES/EXAMPLE-BATCH-009.md', completed)
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-009', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-009', { now: () => now })).exitCode).toBe(0)
 
     const retainedOutcome = rehashBatch(
       retained
@@ -411,7 +443,7 @@ describe('[ki batch]', () => {
         .replaceAll('EXAMPLE-BATCH-009', 'EXAMPLE-BATCH-010')
     )
     await box.project.write('repository/+/_BATCHES/EXAMPLE-BATCH-010.md', retainedOutcome)
-    const validRetainedOutcome = await box.run('ki batch validate EXAMPLE-BATCH-010', { now: () => now })
+    const validRetainedOutcome = await box.run('ki repo batch validate EXAMPLE-BATCH-010', { now: () => now })
     expect(validRetainedOutcome.exitCode, validRetainedOutcome.output).toBe(0)
   })
 
@@ -424,7 +456,7 @@ describe('[ki batch]', () => {
       `repository/${batchPath}`,
       rehashBatch(original.replace('id: EXAMPLE-BATCH-001', 'id: EXAMPLE-BATCH-002'))
     )
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
       'has an invalid identity or filename'
     )
 
@@ -492,34 +524,34 @@ describe('[ki batch]', () => {
 
     for (const [name, mutate, expected] of cases) {
       await box.project.write(`repository/${batchPath}`, mutate(original))
-      const result = await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })
+      const result = await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })
       expect(result.stderr, name).toContain(expected)
     }
 
     await box.project.write(`repository/${batchPath}`, original.replace('# EXAMPLE-BATCH-001', '# OTHER-BATCH-001'))
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
       'body must contain only its matching identity heading'
     )
     await box.project.write(`repository/${batchPath}`, `${original}\n## Run ledger\n\n## Run ledger\n`)
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
       'contains more than one run ledger'
     )
     const compactBody = rehashBatch(original.replace('# EXAMPLE-BATCH-001\n', '# EXAMPLE-BATCH-001'))
     await box.project.write(`repository/${batchPath}`, compactBody)
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
   })
 
   test('requires explicit legitimate authority inputs and Ready exact-set work', async () => {
     const box = await setup()
     const missingApproval = await box.run(
-      `ki batch prepare --item EXAMPLE-001 --authority-mode reviewed-items --expires-at ${expiry} --completion-target awaiting-review`,
+      `ki repo batch prepare --item EXAMPLE-001 --authority-mode reviewed-items --expires-at ${expiry} --completion-target awaiting-review`,
       { now: () => now }
     )
     expect(missingApproval.exitCode).toBe(2)
     expect(missingApproval.stderr).toContain("required option '--approved' not specified")
 
     const missingEvidence = await box.run(
-      `ki batch prepare --item EXAMPLE-001 --approved --authority-mode outcome --expires-at ${expiry} --completion-target done`,
+      `ki repo batch prepare --item EXAMPLE-001 --approved --authority-mode outcome --expires-at ${expiry} --completion-target done`,
       { now: () => now }
     )
     expect(missingEvidence.stderr).toContain('outcome authority requires --authority-evidence')
@@ -530,12 +562,12 @@ describe('[ki batch]', () => {
     const repeated = await box.run(prepare('EXAMPLE-001 EXAMPLE-001'), { now: () => now })
     expect(repeated.stderr).toContain('repeats an item identifier')
     const past = await box.run(
-      'ki batch prepare --item EXAMPLE-001 --approved --authority-mode reviewed-items --expires-at 2026-09-15T07:00:00Z --completion-target awaiting-review',
+      'ki repo batch prepare --item EXAMPLE-001 --approved --authority-mode reviewed-items --expires-at 2026-09-15T07:00:00Z --completion-target awaiting-review',
       { now: () => now }
     )
     expect(past.stderr).toContain('--expires-at must be in the future')
     const malformed = await box.run(
-      'ki batch prepare --item EXAMPLE-001 --approved --authority-mode reviewed-items --expires-at tomorrow --completion-target awaiting-review',
+      'ki repo batch prepare --item EXAMPLE-001 --approved --authority-mode reviewed-items --expires-at tomorrow --completion-target awaiting-review',
       { now: () => now }
     )
     expect(malformed.stderr).toContain('--expires-at must be a canonical UTC timestamp')
@@ -550,13 +582,13 @@ describe('[ki batch]', () => {
   test('validates repository identity, item presence, and outcome-authority preparation', async () => {
     const box = await setup()
     const noItems = await box.run(
-      `ki batch prepare --approved --authority-mode reviewed-items --expires-at ${expiry} --completion-target awaiting-review`,
+      `ki repo batch prepare --approved --authority-mode reviewed-items --expires-at ${expiry} --completion-target awaiting-review`,
       { now: () => now }
     )
     expect(noItems.stderr).toContain('requires at least one item identifier')
 
     const outcome = await box.run(
-      `ki batch prepare --item EXAMPLE-001 --approved --authority-mode outcome --authority-evidence approved-now --expires-at ${expiry} --completion-target awaiting-review`,
+      `ki repo batch prepare --item EXAMPLE-001 --approved --authority-mode outcome --authority-evidence approved-now --expires-at ${expiry} --completion-target awaiting-review`,
       { now: () => now }
     )
     expect(outcome.exitCode, outcome.output).toBe(0)
@@ -591,7 +623,7 @@ describe('[ki batch]', () => {
     expect(wrongKnowledgeBaseAdapter.stderr).toContain('cannot use roadmap for this repository kind')
 
     await box.project.write('repository/.ki.toml', configuration.replace('repo_code = "EXAMPLE"', 'repo_code = "bad"'))
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
       'repo_code must be a stable uppercase identifier'
     )
 
@@ -599,7 +631,7 @@ describe('[ki batch]', () => {
       'repository/.ki.toml',
       configuration.replace('repo_code = "EXAMPLE"', 'repo_code = "5GE-P2"')
     )
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).not.toContain(
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).not.toContain(
       'repo_code must be a stable uppercase identifier'
     )
   })
@@ -615,26 +647,26 @@ describe('[ki batch]', () => {
       `repository/${batchPath}`,
       original.replace('completion_target: awaiting-review', 'completion_target: done')
     )
-    const altered = await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })
+    const altered = await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })
     expect(altered.stderr).toContain('payload no longer matches its approval')
     await box.project.write(`repository/${batchPath}`, original.replace('policy: safe-local-v1', 'retired_field: true'))
-    const unsupported = await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })
+    const unsupported = await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })
     expect(unsupported.stderr).toContain('has unsupported fields')
     await box.project.write(`repository/${batchPath}`, original)
-    expect((await box.run('ki batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
     const started = await box.project.read(`repository/${batchPath}`)
     await box.project.write(
       `repository/${batchPath}`,
       started.replace('EXAMPLE-BATCH-001-RUN-001', 'EXAMPLE-BATCH-001-RUN-002')
     )
-    const mismatched = await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })
+    const mismatched = await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })
     expect(mismatched.stderr).toContain('run ledger binds another approval payload or run')
   })
 
   test('rejects malformed run ledgers and duplicate results', async () => {
     const box = await setup()
     expect((await box.run(prepare('EXAMPLE-001'), { now: () => now })).exitCode).toBe(0)
-    expect((await box.run('ki batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
     const started = await box.project.read(`repository/${batchPath}`)
     const header = '| Item | Result | Baseline | Result commit | Exception |\n| --- | --- | --- | --- | --- |'
 
@@ -642,7 +674,7 @@ describe('[ki batch]', () => {
       started.replace('# EXAMPLE-BATCH-001\n\n## Run ledger', '# EXAMPLE-BATCH-001\n## Run ledger')
     )
     await box.project.write(`repository/${batchPath}`, compactBody)
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
 
     const cases: readonly [string, string, string][] = [
       ['empty ledger', `${started.trimEnd().replace(/<!-- ki-batch-run:.*-->$/m, '')}\n`, 'lacks an approval binding'],
@@ -672,7 +704,7 @@ describe('[ki batch]', () => {
     ]
     for (const [name, contents, expected] of cases) {
       await box.project.write(`repository/${batchPath}`, contents)
-      const result = await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })
+      const result = await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })
       expect(result.stderr, name).toContain(expected)
     }
 
@@ -680,7 +712,7 @@ describe('[ki batch]', () => {
       `repository/${batchPath}`,
       `${started.trimEnd()}\n\n<!-- ki-batch-close: EXAMPLE-BATCH-001 awaiting-review ${evidenceCommit} -->\n`
     )
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
       'close evidence requires one awaiting-review result for every named item'
     )
 
@@ -689,7 +721,7 @@ describe('[ki batch]', () => {
     expect(
       (
         await box.run(
-          `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${firstCommit}`,
+          `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${firstCommit}`,
           { now: () => now }
         )
       ).exitCode
@@ -697,14 +729,14 @@ describe('[ki batch]', () => {
     const oneResult = await box.project.read(`repository/${batchPath}`)
     const row = oneResult.trimEnd().split('\n').at(-1) as string
     await box.project.write(`repository/${batchPath}`, `${oneResult.trimEnd()}\n${row}\n`)
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
       'run ledger repeats an item result'
     )
   })
 
   test('requires a physical batch directory and existing record', async () => {
     const missing = await setup()
-    expect((await missing.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
+    expect((await missing.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
       '+/_BATCHES must be a physical directory'
     )
 
@@ -723,8 +755,10 @@ describe('[ki batch]', () => {
 
     const absent = await setup()
     expect((await absent.run(prepare('EXAMPLE-001'), { now: () => now })).exitCode).toBe(0)
-    expect((await absent.run('ki batch validate +/_BATCHES/EXAMPLE-BATCH-001.md', { now: () => now })).exitCode).toBe(0)
-    expect((await absent.run('ki batch validate EXAMPLE-BATCH-999', { now: () => now })).stderr).toContain(
+    expect(
+      (await absent.run('ki repo batch validate +/_BATCHES/EXAMPLE-BATCH-001.md', { now: () => now })).exitCode
+    ).toBe(0)
+    expect((await absent.run('ki repo batch validate EXAMPLE-BATCH-999', { now: () => now })).stderr).toContain(
       'batch record must be an existing regular file'
     )
   })
@@ -732,13 +766,13 @@ describe('[ki batch]', () => {
   test('rejects non-canonical, symbolic, expired, malformed, and cross-repository records', async () => {
     const box = await setup()
     expect((await box.run(prepare('EXAMPLE-001'), { now: () => now })).exitCode).toBe(0)
-    const outside = await box.run('ki batch validate ../outside.md', { now: () => now })
+    const outside = await box.run('ki repo batch validate ../outside.md', { now: () => now })
     expect(outside.stderr).toContain('must be a canonical file directly beneath +/_BATCHES')
-    const absoluteOutside = await box.run(`ki batch validate ${join(box.project.path, 'outside.md')}`, {
+    const absoluteOutside = await box.run(`ki repo batch validate ${join(box.project.path, 'outside.md')}`, {
       now: () => now
     })
     expect(absoluteOutside.stderr).toContain('must be a canonical file directly beneath +/_BATCHES')
-    const expired = await box.run('ki batch validate EXAMPLE-BATCH-001', {
+    const expired = await box.run('ki repo batch validate EXAMPLE-BATCH-001', {
       now: () => Date.parse('2026-09-15T12:00:00Z')
     })
     expect(expired.stderr).toContain('batch record has expired')
@@ -751,11 +785,11 @@ describe('[ki batch]', () => {
         'repository: https://github.com/knowledgeislands/other'
       )
     )
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
       'names another repository'
     )
     await box.project.write(`repository/${batchPath}`, 'not frontmatter\n')
-    expect((await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
+    expect((await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })).stderr).toContain(
       'has invalid frontmatter'
     )
     await box.project.write(`repository/${batchPath}`, original)
@@ -763,7 +797,7 @@ describe('[ki batch]', () => {
       join(box.project.path, 'repository', batchPath),
       join(box.project.path, 'repository', '+/_BATCHES/link.md')
     )
-    expect((await box.run('ki batch validate link.md', { now: () => now })).stderr).toContain(
+    expect((await box.run('ki repo batch validate link.md', { now: () => now })).stderr).toContain(
       'must be an existing regular file'
     )
   })
@@ -771,58 +805,58 @@ describe('[ki batch]', () => {
   test('requires explicit coherent run results and all-item close evidence', async () => {
     const box = await setup()
     expect((await box.run(prepare(), { now: () => now })).exitCode).toBe(0)
-    const partial = await box.run('ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001', { now: () => now })
+    const partial = await box.run('ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001', { now: () => now })
     expect(partial.stderr).toContain('requires --item, --result, and --baseline together')
     const badBaseline = await box.run(
-      'ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result parked --baseline short',
+      'ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result parked --baseline short',
       { now: () => now }
     )
     expect(badBaseline.stderr).toContain('--baseline must be a full commit or —')
     const missingCommit = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline}`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline}`,
       { now: () => now }
     )
     expect(missingCommit.stderr).toContain('awaiting-review result requires --result-commit')
     const badResultCommit = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result parked --baseline ${baseline} --result-commit short`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result parked --baseline ${baseline} --result-commit short`,
       { now: () => now }
     )
     expect(badResultCommit.stderr).toContain('--result-commit must be a full commit')
     const unsafeException = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result parked --baseline ${baseline} --exception bad|value`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result parked --baseline ${baseline} --exception bad|value`,
       { now: () => now }
     )
     expect(unsafeException.stderr).toContain('--exception must be one plain table-safe line')
     const unknown = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-099 --result parked --baseline ${baseline}`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-099 --result parked --baseline ${baseline}`,
       { now: () => now }
     )
     expect(unknown.stderr).toContain('unapproved item EXAMPLE-099')
     const unstartedClose = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(unstartedClose.stderr).toContain('batch run must be started before close')
     const badEvidence = await box.run(
-      'ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit short',
+      'ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit short',
       { now: () => now }
     )
     expect(badEvidence.stderr).toContain('--evidence-commit must be a full commit')
-    expect((await box.run('ki batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
     const wrongReviewStatus = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-002 --result awaiting-review --baseline ${baseline} --result-commit ${secondCommit}`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-002 --result awaiting-review --baseline ${baseline} --result-commit ${secondCommit}`,
       { now: () => now }
     )
     expect(wrongReviewStatus.stderr).toContain('batch item EXAMPLE-002 is not awaiting review')
     const wrongDoneStatus = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-002 --result done --baseline ${baseline} --result-commit ${secondCommit}`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-002 --result done --baseline ${baseline} --result-commit ${secondCommit}`,
       { now: () => now }
     )
     expect(wrongDoneStatus.stderr).toContain('batch item EXAMPLE-002 is not done')
 
     box.setRunner(async () => ({ exitCode: 1, output: 'missing' }))
     const unresolvedBaseline = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result parked --baseline ${baseline}`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result parked --baseline ${baseline}`,
       { now: () => now }
     )
     expect(unresolvedBaseline.stderr).toContain('--baseline does not resolve in the repository')
@@ -830,25 +864,25 @@ describe('[ki batch]', () => {
 
     expect(
       (
-        await box.run('ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result parked --baseline —', {
+        await box.run('ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result parked --baseline —', {
           now: () => now
         })
       ).exitCode
     ).toBe(0)
     const duplicate = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result stopped --baseline ${baseline}`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result stopped --baseline ${baseline}`,
       { now: () => now }
     )
     expect(duplicate.stderr).toContain('already records item EXAMPLE-001')
-    const alreadyStarted = await box.run('ki batch run EXAMPLE-BATCH-001', { now: () => now })
+    const alreadyStarted = await box.run('ki repo batch run EXAMPLE-BATCH-001', { now: () => now })
     expect(alreadyStarted.stderr).toContain('already started')
     const premature = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(premature.stderr).toContain('requires one awaiting-review ledger result for every named item')
     const wrongTarget = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target done --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target done --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(wrongTarget.stderr).toContain('--completion-target does not match batch authority')
@@ -857,26 +891,26 @@ describe('[ki batch]', () => {
   test('leaves a failed evidence resolution open and rejects mutation after close', async () => {
     const box = await setup()
     expect((await box.run(prepare('EXAMPLE-001'), { now: () => now })).exitCode).toBe(0)
-    expect((await box.run('ki batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
     await box.project.write('repository/docs/roadmap/EXAMPLE-001-first.md', item('EXAMPLE-001', 'awaiting-review'))
     expect(
       (
         await box.run(
-          `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${firstCommit}`,
+          `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${firstCommit}`,
           { now: () => now }
         )
       ).exitCode
     ).toBe(0)
     await box.project.write('repository/docs/roadmap/EXAMPLE-001-first.md', item('EXAMPLE-001'))
     const wrongItemStatus = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(wrongItemStatus.stderr).toContain('batch item EXAMPLE-001 is not awaiting-review')
     await box.project.write('repository/docs/roadmap/EXAMPLE-001-first.md', item('EXAMPLE-001', 'awaiting-review'))
     box.setRunner(async () => ({ exitCode: 1, output: 'missing' }))
     const missingEvidence = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(missingEvidence.stderr).toContain('--evidence-commit does not resolve')
@@ -884,7 +918,7 @@ describe('[ki batch]', () => {
 
     box.setRunner(gitObjectRunner({ [evidenceCommit]: {} }))
     const missingSnapshot = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(missingSnapshot.stderr).toContain('has no selected docs/roadmap work-item snapshot')
@@ -901,7 +935,7 @@ describe('[ki batch]', () => {
       })
     )
     const linkedSnapshot = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(linkedSnapshot.stderr).toContain('must be a regular file at commit')
@@ -912,7 +946,7 @@ describe('[ki batch]', () => {
       })
     )
     const unreadableSnapshot = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(unreadableSnapshot.stderr).toContain('cannot be read from commit')
@@ -923,7 +957,7 @@ describe('[ki batch]', () => {
       })
     )
     const mismatchedSnapshot = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(mismatchedSnapshot.stderr).toContain('batch item EXAMPLE-001 is not awaiting-review')
@@ -938,7 +972,7 @@ describe('[ki batch]', () => {
     expect(
       (
         await box.run(
-          `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
+          `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`,
           { now: () => now }
         )
       ).exitCode
@@ -949,20 +983,20 @@ describe('[ki batch]', () => {
         [evidenceCommit]: { 'docs/roadmap/EXAMPLE-001-first.md': item('EXAMPLE-001') }
       })
     )
-    const invalidOutcome = await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })
+    const invalidOutcome = await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })
     expect(invalidOutcome.stderr).toContain('batch item EXAMPLE-001 is not awaiting-review')
 
     box.setRunner(async () => ({ exitCode: 1, output: 'missing' }))
-    const invalidatedClose = await box.run('ki batch validate EXAMPLE-BATCH-001', { now: () => now })
+    const invalidatedClose = await box.run('ki repo batch validate EXAMPLE-BATCH-001', { now: () => now })
     expect(invalidatedClose.stderr).toContain('batch close evidence commit does not resolve in the repository')
 
     const afterClose = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result stopped --baseline ${baseline}`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result stopped --baseline ${baseline}`,
       { now: () => now }
     )
     expect(afterClose.stderr).toContain('already closed')
     const differentClose = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${'5'.repeat(40)}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${'5'.repeat(40)}`,
       { now: () => now }
     )
     expect(differentClose.stderr).toContain('already closed with different evidence')
@@ -971,16 +1005,16 @@ describe('[ki batch]', () => {
   test('records an explicit done-target batch without performing acceptance', async () => {
     const box = await setup()
     const prepared = await box.run(
-      `ki batch prepare --item EXAMPLE-001 --approved --authority-mode reviewed-items --expires-at ${expiry} --completion-target done`,
+      `ki repo batch prepare --item EXAMPLE-001 --approved --authority-mode reviewed-items --expires-at ${expiry} --completion-target done`,
       { now: () => now }
     )
     expect(prepared.exitCode, prepared.output).toBe(0)
-    expect((await box.run('ki batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch run EXAMPLE-BATCH-001', { now: () => now })).exitCode).toBe(0)
     await box.project.write('repository/docs/roadmap/EXAMPLE-001-first.md', item('EXAMPLE-001', 'done'))
     expect(
       (
         await box.run(
-          `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result done --baseline ${baseline} --result-commit ${firstCommit}`,
+          `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result done --baseline ${baseline} --result-commit ${firstCommit}`,
           { now: () => now }
         )
       ).exitCode
@@ -991,7 +1025,7 @@ describe('[ki batch]', () => {
       })
     )
     const closed = await box.run(
-      `ki batch close EXAMPLE-BATCH-001 --completion-target done --evidence-commit ${evidenceCommit}`,
+      `ki repo batch close EXAMPLE-BATCH-001 --completion-target done --evidence-commit ${evidenceCommit}`,
       { now: () => now }
     )
     expect(closed.exitCode, closed.output).toBe(0)

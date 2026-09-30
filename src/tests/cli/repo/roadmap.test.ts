@@ -1216,19 +1216,19 @@ describe('[ki repo roadmap]', () => {
     box.cd('repository')
     const now = () => Date.parse('2026-09-15T08:00:00Z')
     const prepare = await box.run(
-      'ki batch prepare --item EXAMPLE-001 --approved --authority-mode reviewed-items --expires-at 2026-09-15T12:00:00Z --completion-target awaiting-review',
+      'ki repo batch prepare --item EXAMPLE-001 --approved --authority-mode reviewed-items --expires-at 2026-09-15T12:00:00Z --completion-target awaiting-review',
       { now }
     )
     expect(prepare.exitCode, prepare.output).toBe(0)
-    expect((await box.run('ki batch run EXAMPLE-BATCH-001', { now })).exitCode).toBe(0)
+    expect((await box.run('ki repo batch run EXAMPLE-BATCH-001', { now })).exitCode).toBe(0)
     await box.project.write(record, historical)
     const outcome = await box.run(
-      `ki batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${resultCommit}`,
+      `ki repo batch run EXAMPLE-BATCH-001 --item EXAMPLE-001 --result awaiting-review --baseline ${baseline} --result-commit ${resultCommit}`,
       { now }
     )
     expect(outcome.exitCode, outcome.output).toBe(0)
 
-    const close = `ki batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`
+    const close = `ki repo batch close EXAMPLE-BATCH-001 --completion-target awaiting-review --evidence-commit ${evidenceCommit}`
     historical = historical.replace('relation: implementation', 'relation: active')
     const invalid = await box.run(close, { now })
     expect(invalid.exitCode).toBe(2)

@@ -1,13 +1,15 @@
 # Canonical batch records
 
-Use `ki batch` for the deterministic file mechanics around one already-approved, exact set of Ready roadmap items. The commands create and verify the authority envelope, bind a run to its approved payload, append caller-supplied item results, and record caller-proven completion. They do not select work, infer conversational authority, run an agent, change roadmap lifecycle, accept or prune items, push, or release.
+Use `ki repo batch` for the deterministic file mechanics around one already-approved, exact set of Ready work items. The commands create and verify the authority envelope, bind a run to its approved payload, append caller-supplied item results, and record caller-proven completion. They do not select work, infer conversational authority, run an agent, change work lifecycle, accept or prune items, push, or release.
+
+Run from the intended KI repository or select one with `ki repo --repo /path/to/repository batch <action>`. The parent selector must resolve to exactly one repository; a batch cannot span repositories. The old `ki batch` path is retired.
 
 ## Prepare an approved batch
 
 From the receiving repository, provide every work item explicitly and in dependency order:
 
 ```sh
-ki batch prepare \
+ki repo batch prepare \
   --item KI-EXAMPLE-001 \
   --item KI-EXAMPLE-002 \
   --approved \
@@ -25,19 +27,19 @@ All item identifiers must resolve to canonical Ready records in the selected rep
 Validate without writing:
 
 ```sh
-ki batch validate KI-EXAMPLE-BATCH-001
+ki repo batch validate KI-EXAMPLE-BATCH-001
 ```
 
 Start the run before implementation begins. The command derives the first run identifier and binds it to the approved payload; it does not execute the work:
 
 ```sh
-ki batch run KI-EXAMPLE-BATCH-001
+ki repo batch run KI-EXAMPLE-BATCH-001
 ```
 
 After the process-owned implementation has produced an item result, append that exact result and its evidence:
 
 ```sh
-ki batch run KI-EXAMPLE-BATCH-001 \
+ki repo batch run KI-EXAMPLE-BATCH-001 \
   --item KI-EXAMPLE-001 \
   --result awaiting-review \
   --baseline 0123456789abcdef0123456789abcdef01234567 \
@@ -51,7 +53,7 @@ ki batch run KI-EXAMPLE-BATCH-001 \
 Close only after every named item has a ledger result matching the approved all-item target and its canonical roadmap record already carries that target status:
 
 ```sh
-ki batch close KI-EXAMPLE-BATCH-001 \
+ki repo batch close KI-EXAMPLE-BATCH-001 \
   --completion-target awaiting-review \
   --evidence-commit 89abcdef0123456789abcdef0123456789abcdef
 ```

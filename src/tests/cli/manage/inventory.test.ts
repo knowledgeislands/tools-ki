@@ -6,7 +6,6 @@ import { sandbox } from '../_cli_helper.ts'
 const rootHelpCommands = [
   'bootstrap',
   'agora',
-  'batch',
   'repo',
   'trade',
   'acquire',
@@ -44,6 +43,7 @@ const agoraChangelogCommands = [
 ]
 const repoCommands = [
   'audit',
+  'batch',
   'conform',
   'diag',
   'educate',
@@ -75,7 +75,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   agora: agoraCommands,
   'agora reference': agoraReferenceCommands,
   skill: ['add', 'remove'],
-  batch: batchCommands,
+  'repo batch': batchCommands,
   registry: registryCommands,
   harness: ['info', 'install', 'list', 'reinstall', 'uninstall'],
   trade: [
@@ -109,7 +109,7 @@ describe('[ki command inventory]', () => {
     const agora = await box.run('ki agora --help')
     const agoraReference = await box.run('ki agora reference --help')
     const repository = await box.run('ki repo --help')
-    const batch = await box.run('ki batch --help')
+    const batch = await box.run('ki repo batch --help')
     const registry = await box.run('ki registry --help')
     const zsh = await box.run('ki manage completion zsh')
     const bash = await box.run('ki manage completion bash')

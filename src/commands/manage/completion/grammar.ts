@@ -78,18 +78,14 @@ const optionValueStrategy = (path: string, option: Option): CompletionValueStrat
     return { kind: 'values', values: ['prepare', 'import', 'export'] }
   if (name === '--observation') return { kind: 'values', values: ['unattended', 'receipt', 'decision', 'completion'] }
   if (closedOptionValues[name]) return { kind: 'values', values: closedOptionValues[name] }
-  if (
-    name === '--output' ||
-    name === '--capture' ||
-    (name === '--repo' && /^(acquire|batch|repo|registry)( |$)/.test(path))
-  )
+  if (name === '--output' || name === '--capture' || (name === '--repo' && /^(acquire|repo|registry)( |$)/.test(path)))
     return { kind: 'path' }
   return noValue
 }
 
 const repeatableOption = (path: string, option: Option): boolean =>
   (option.long === '--repo' && /^(repo|registry)$/.test(path)) ||
-  (option.long === '--item' && path === 'batch prepare') ||
+  (option.long === '--item' && path === 'repo batch prepare') ||
   (option.long === '--runtime' && path === 'repo init')
 
 const option = (path: string, value: Option): CompletionOption => ({

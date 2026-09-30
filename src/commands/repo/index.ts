@@ -1,5 +1,6 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
+import { createRepoBatchCommand } from '../batch/index.ts'
 import { createRepoAuditCommand } from './audit.ts'
 import { createRepoConformCommand } from './conform.ts'
 import { createRepoDiagCommand } from './diag.ts'
@@ -30,6 +31,7 @@ export const createRepoCommand = (context: KiContext): Command => {
   }
 
   command
+    .addCommand(createRepoBatchCommand(context, selectedRepositories))
     .addCommand(createRepoOpenCommand(context, selectedRepositories))
     .addCommand(createRepoRoadmapCommand(context, selectedRepositories))
     .addCommand(createRepoStoreCommand(context, selectedRepositories))

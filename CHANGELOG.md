@@ -98,10 +98,10 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 #### Batch records
 
-- `ki batch prepare --item <id> [--item <id>...] --approved --authority-mode <reviewed-items|outcome> --expires-at <timestamp> --completion-target <awaiting-review|done>`
-- `ki batch validate <record>`
-- `ki batch run <record>`
-- `ki batch close <record> --completion-target <awaiting-review|done> --evidence-commit <commit>`
+- `ki repo batch prepare --item <id> [--item <id>...] --approved --authority-mode <reviewed-items|outcome> --expires-at <timestamp> --completion-target <awaiting-review|done>`
+- `ki repo batch validate <record>`
+- `ki repo batch run <record>`
+- `ki repo batch close <record> --completion-target <awaiting-review|done> --evidence-commit <commit>`
 
 #### Registry management
 
@@ -161,7 +161,8 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `.ki.toml` is the sole repository and Harness declaration filename across source checkouts, release archives, installed Harnesses, local development, repository discovery, and diagnostics; retired filenames have no compatibility or migration path.
 - Direct-CWD mGit selection consumes only schema-one `.mgit.toml` workspace or repository manifests, including configured groups and child-workspace recursion, without invoking `mgit`. Existing members without `.ki.toml` are skipped and named in audit output; invalid or empty KI selections still fail.
 - `ki manage completion <shell>` emits Bash and Zsh scripts derived from the registered command tree, including nested commands, options, closed values, and local path completion.
-- Root help leads with usage and groups commands by purpose, including a separate Acquisition section; commands are alphabetical within each section and in every nested help page, with shorter command-list summaries. Completion candidates are alphabetical; command paths and behaviour are unchanged.
+- Root help leads with usage and groups commands by purpose, including a separate Acquisition section; commands are alphabetical within each section and in every nested help page, with shorter command-list summaries. Completion candidates are alphabetical.
+- Batch authority commands now live under `ki repo batch` and use the parent repository selector; `ki batch` is retired. Each batch still targets exactly one repository.
 - Registered repository declarations define reciprocal named Agoras; the reserved `estate` selector derives the full locally registered canonical repository set for selection and Zed opening.
 - `ki agora roots <agora>` exposes a stable machine interface for resolved registered Agora roots: newline-delimited by default, or NUL-delimited with `--null` (`-0`).
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.

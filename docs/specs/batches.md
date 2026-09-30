@@ -16,7 +16,7 @@ _Evidence:_ The named batch contract tests are part of the passing `bun run test
 
 ### BATCH-002 — Exact close evidence
 
-`ki batch close` MUST require an evidence commit containing the exact selected target states and required dependency order before recording completion.
+`ki repo batch close` MUST require an evidence commit containing the exact selected target states and required dependency order before recording completion.
 
 _Conformance:_ conforming
 

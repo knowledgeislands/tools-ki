@@ -240,19 +240,19 @@
       "purpose": "Use these commands to maintain one already-approved exact set of Ready local work records. They validate and record caller-supplied authority evidence; they do not select work, execute an agent, accept delivery, prune work, push, or release.",
       "commands": [
         {
-          "invocation": "ki batch prepare --item <id> [--item <id>...] --approved --authority-mode <reviewed-items|outcome> --expires-at <timestamp> --completion-target <awaiting-review|done> [--authority-evidence <text>] [--repo <path>]",
+          "invocation": "ki repo [repo-options] batch prepare --item <id> [--item <id>...] --approved --authority-mode <reviewed-items|outcome> --expires-at <timestamp> --completion-target <awaiting-review|done> [--authority-evidence <text>]",
           "description": "Create one current canonical exact-set batch authority record from explicit approval evidence and Ready work items in dependency order."
         },
         {
-          "invocation": "ki batch validate <record> [--repo <path>]",
+          "invocation": "ki repo [repo-options] batch validate <record>",
           "description": "Validate an open batch against live canonical work records and its expiry. A closed batch validates its named outcomes against the immutable close-evidence commit, so later legitimate pruning does not erase the delivery proof."
         },
         {
-          "invocation": "ki batch run <record> [--repo <path>] [--item <id> --result <awaiting-review|done|parked|stopped> --baseline <commit|—> [--result-commit <commit>] [--exception <text>]]",
+          "invocation": "ki repo [repo-options] batch run <record> [--item <id> --result <awaiting-review|done|parked|stopped> --baseline <commit|—> [--result-commit <commit>] [--exception <text>]]",
           "description": "Start the derived run or append one explicit caller-supplied item result without executing work or changing roadmap lifecycle."
         },
         {
-          "invocation": "ki batch close <record> [--repo <path>] --completion-target <awaiting-review|done> --evidence-commit <commit>",
+          "invocation": "ki repo [repo-options] batch close <record> --completion-target <awaiting-review|done> --evidence-commit <commit>",
           "description": "Append structural closure evidence only after every named live item and the exact evidence commit contain the approved all-item target in valid dependency order."
         }
       ]

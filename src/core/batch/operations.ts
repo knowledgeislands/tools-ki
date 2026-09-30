@@ -130,9 +130,9 @@ const resolveBatchRepository = async (
     return fail('[skills.ki-repo].repo_code must be a stable uppercase identifier')
   const adapter = declaration.skills.find((skill) => skill.name === 'ki-work')?.configuration['adapter']
   if (adapter !== 'roadmap' && adapter !== 'kb-streams')
-    return fail('ki batch requires a locally executable roadmap or kb-streams adapter')
+    return fail('ki repo batch requires a locally executable roadmap or kb-streams adapter')
   if ((repoType === 'kb' && adapter !== 'kb-streams') || (repoType !== 'kb' && adapter !== 'roadmap'))
-    return fail(`ki batch cannot use ${adapter} for this repository kind`)
+    return fail(`ki repo batch cannot use ${adapter} for this repository kind`)
   return { root: location.root, declaration: location.declaration, identity, repoCode }
 }
 
