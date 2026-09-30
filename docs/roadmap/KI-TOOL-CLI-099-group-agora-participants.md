@@ -4,12 +4,12 @@ area: CLI
 title: Group Agora participants
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 4445673236a4d69c150afa0e1f11449fa9e0da7d
 created_at: 2026-09-30T12:12:04Z
-updated_at: 2026-09-30T19:39:18Z
+updated_at: 2026-09-30T22:15:44Z
 ---
 
 # Group Agora participants
@@ -87,7 +87,7 @@ Implemented the approved human-facing Agora presentation boundary from immutable
 
 ### Outstanding concerns
 
-Independent review and acceptance of this implementation commit remain pending. No known failed check or unresolved implementation dependency remains.
+At delivery, independent review and acceptance of this implementation commit remained pending. The owner approved the item on 2026-09-30. No known failed check or unresolved implementation dependency remains.
 
 ### Post-change review
 
@@ -96,6 +96,10 @@ The visible participant counts now follow the existing home/member/reference aut
 ### Mini recap
 
 The approved presentation, contracts, and documentation are implemented and verified. Review this commit, then accept or request changes; retain the home/member/reference distinction in the Agora specification.
+
+## Done
+
+Accepted 2026-09-30 by Kris Brown on the review packet above.
 
 ## Discussion
 
