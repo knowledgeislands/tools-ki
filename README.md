@@ -14,7 +14,7 @@ The active TypeScript command host provides local capability, repository, Agora,
 
 If `ki` is not yet installed, read [install ki and run it for the first time](docs/guides/user/getting-started.md). It covers installing a signed release, creating the user environment with `ki bootstrap`, registering a repository, and verifying each step. The rest of the [user guides](docs/guides/user/README.md) carry the procedures for everything described below.
 
-Once installed, run `ki -h` for common tasks and task-grouped commands, then `ki <command> -h` for the selected command's options. `ki manage docs` locates the fuller references.
+Once installed, run `ki -h` for task-grouped commands, then `ki <command> -h` for the selected command's options. `ki manage docs` locates the fuller references.
 
 ## Acquire local ChatGPT capture
 

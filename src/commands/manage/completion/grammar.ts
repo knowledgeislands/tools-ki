@@ -125,7 +125,9 @@ const collect = (
   const options = uniqueOptions([...inherited, ...command.options.map((value) => option(key, value))])
   const node: CompletionNode = {
     path,
-    commands: command.commands.map((child) => ({ name: child.name(), description: child.description() })),
+    commands: command.commands
+      .map((child) => ({ name: child.name(), description: child.description() }))
+      .sort((left, right) => left.name.localeCompare(right.name)),
     options,
     arguments: command.registeredArguments.map((value) => argument(key, value))
   }

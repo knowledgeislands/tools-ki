@@ -5,35 +5,35 @@ import { sandbox } from '../_cli_helper.ts'
 
 const rootHelpCommands = [
   'bootstrap',
-  'repo',
   'agora',
+  'batch',
+  'repo',
   'trade',
   'acquire',
-  'batch',
+  'harness',
   'manage',
   'registry',
-  'harness',
   'skill',
   'dev'
 ]
 
 const manageCommands = [
-  'list',
-  'search',
-  'doctor',
-  'diag',
-  'missing',
-  'outdated',
-  'docs',
   'cleanup',
   'completion',
-  'vscode',
+  'diag',
+  'docs',
+  'doctor',
+  'list',
   'mcp',
+  'missing',
+  'outdated',
   'repair',
-  'update'
+  'search',
+  'update',
+  'vscode'
 ]
-const agoraCommands = ['list', 'show', 'audit', 'inspect', 'roots', 'open', 'reference']
-const agoraReferenceCommands = ['list', 'set', 'remove']
+const agoraCommands = ['audit', 'inspect', 'list', 'open', 'reference', 'roots', 'show']
+const agoraReferenceCommands = ['list', 'remove', 'set']
 const agoraChangelogCommands = [
   '`ki agora audit [agora]`',
   '`ki agora inspect <agora> --target <zed|vscode> --workspace <selector>`',
@@ -49,14 +49,14 @@ const repoCommands = [
   'educate',
   'init',
   'open',
-  'roadmap',
   'repair',
+  'roadmap',
   'skill',
   'store',
   'upgrade'
 ]
-const batchCommands = ['prepare', 'validate', 'run', 'close']
-const registryCommands = ['list', 'add', 'remove']
+const batchCommands = ['close', 'prepare', 'run', 'validate']
+const registryCommands = ['add', 'list', 'remove']
 
 const commandNames = (output: string): string[] =>
   output
@@ -66,38 +66,38 @@ const commandNames = (output: string): string[] =>
 
 const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   manage: manageCommands,
-  'manage mcp': ['list', 'install', 'update', 'rollback', 'uninstall'],
+  'manage mcp': ['install', 'list', 'rollback', 'uninstall', 'update'],
   'manage vscode': ['check', 'sync'],
-  repo: ['roadmap', 'diag', 'audit', 'store', 'educate', 'open', 'init', 'conform', 'repair', 'skill', 'upgrade'],
-  'repo roadmap': ['summary', 'list', 'stats', 'promote', 'demote', 'prune'],
-  'repo store': ['list', 'scan', 'create', 'bind', 'unbind'],
+  repo: repoCommands,
+  'repo roadmap': ['demote', 'list', 'promote', 'prune', 'stats', 'summary'],
+  'repo store': ['bind', 'create', 'list', 'scan', 'unbind'],
   'repo skill': ['add', 'remove'],
   agora: agoraCommands,
   'agora reference': agoraReferenceCommands,
   skill: ['add', 'remove'],
   batch: batchCommands,
   registry: registryCommands,
-  harness: ['list', 'info', 'install', 'reinstall', 'uninstall'],
+  harness: ['info', 'install', 'list', 'reinstall', 'uninstall'],
   trade: [
-    'list',
-    'show',
-    'routes',
-    'subtypes',
-    'standing',
-    'prepare',
-    'observe',
-    'submit',
-    'receive',
     'abandon',
+    'list',
+    'observe',
+    'prepare',
+    'prune',
+    'receive',
     'release',
-    'prune'
+    'routes',
+    'show',
+    'standing',
+    'submit',
+    'subtypes'
   ],
-  'trade routes': ['list', 'check', 'add', 'remove'],
-  'trade subtypes': ['list', 'add', 'remove'],
-  'trade standing': ['list', 'check', 'add', 'capture', 'remove'],
-  acquire: ['list', 'status', 'import', 'reconcile', 'reset'],
+  'trade routes': ['add', 'check', 'list', 'remove'],
+  'trade subtypes': ['add', 'list', 'remove'],
+  'trade standing': ['add', 'capture', 'check', 'list', 'remove'],
+  acquire: ['import', 'list', 'reconcile', 'reset', 'status'],
   dev: ['local', 'skill'],
-  'dev local': ['set', 'on', 'off'],
+  'dev local': ['off', 'on', 'set'],
   'dev skill': ['rubric']
 }
 
@@ -127,7 +127,7 @@ describe('[ki command inventory]', () => {
     for (const command of repoCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of batchCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of registryCommands) expect(zsh.output).toContain(`${command}:`)
-    expect(bash.output).toContain(`'') printf '%s\\n' '${rootHelpCommands.join(' ')}'`)
+    expect(bash.output).toContain(`'') printf '%s\\n' '${[...rootHelpCommands].sort().join(' ')}'`)
     for (const [path, expected] of Object.entries(nestedHelpOrder))
       expect(bash.output).toContain(`'${path}') printf '%s\\n' '${expected.join(' ')}'`)
 
@@ -159,15 +159,17 @@ describe('[ki command inventory]', () => {
       ).toBe(true)
   })
 
-  test('groups common root tasks and orders every nested command family for discovery', async () => {
+  test('groups root commands and orders every nested command family for discovery', async () => {
     const box = await sandbox()
     const root = await box.run('ki -h')
     expect(root.exitCode).toBe(0)
+    expect(root.output.startsWith('Usage: ki [options] [command]\n')).toBe(true)
     expect(commandNames(root.output)).toEqual(rootHelpCommands)
-    expect(root.output).toContain('Common tasks:\n  ki repo roadmap summary')
+    expect(root.output).not.toContain('Common tasks:')
     expect(root.output).toContain('Get started:\n  bootstrap')
-    expect(root.output).toContain('Work with repositories:\n  repo')
-    expect(root.output).toContain('Maintain KI:\n  manage')
+    expect(root.output).toContain('Work with repositories:\n  agora')
+    expect(root.output).toContain('Acquisition:\n  acquire')
+    expect(root.output).toContain('Maintain KI:\n  harness')
     expect(root.output).toContain('Development:\n  dev')
     expect(root.output).toContain('Further help: ki <command> --help · ki manage docs · man ki')
     expect(Math.max(...root.output.split('\n').map((line) => line.length))).toBeLessThanOrEqual(80)
