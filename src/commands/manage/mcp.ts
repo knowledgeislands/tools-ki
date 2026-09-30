@@ -25,6 +25,7 @@ export const createMcpCommand = (context: KiContext): Command => {
   command.addCommand(
     new Command('install')
       .description('install and activate one MCP source release')
+      .summary('install an MCP source release')
       .argument('<repository>', 'lower-case GitHub owner/repository')
       .argument('[version]', 'exact Semantic Version without v prefix')
       .addOption(authOption())
@@ -46,6 +47,7 @@ export const createMcpCommand = (context: KiContext): Command => {
   command.addCommand(
     new Command('update')
       .description('build and activate a newer MCP source release')
+      .summary('update an MCP source release')
       .argument('<repository>', 'lower-case GitHub owner/repository')
       .argument('[version]', 'exact Semantic Version without v prefix')
       .addOption(authOption())
@@ -67,6 +69,7 @@ export const createMcpCommand = (context: KiContext): Command => {
   command.addCommand(
     new Command('rollback')
       .description('activate one retained MCP source version')
+      .summary('activate a retained MCP version')
       .argument('<repository>', 'lower-case GitHub owner/repository')
       .argument('<version>', 'installed Semantic Version without v prefix')
       .action(async (repository: string, version: string) => {
@@ -78,6 +81,7 @@ export const createMcpCommand = (context: KiContext): Command => {
   command.addCommand(
     new Command('uninstall')
       .description('remove one MCP source and every retained version')
+      .summary('remove an MCP source')
       .argument('<repository>', 'lower-case GitHub owner/repository')
       .action(async (repository: string) => {
         await uninstallMcpSource(context.paths.data, repository)
@@ -88,6 +92,7 @@ export const createMcpCommand = (context: KiContext): Command => {
   command.addCommand(
     new Command('list')
       .description('list installed MCP source versions')
+      .summary('list installed MCP source versions')
       .argument('[repository]', 'lower-case GitHub owner/repository')
       .option('--format <text|json>', 'output format', 'text')
       .action(async (repository: string | undefined, options: { readonly format: string }) => {

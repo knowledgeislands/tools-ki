@@ -1,6 +1,5 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { repoHelpCommandNames } from '../root/catalogue.ts'
 import { createRepoAuditCommand } from './audit.ts'
 import { createRepoConformCommand } from './conform.ts'
 import { createRepoDiagCommand } from './diag.ts'
@@ -43,10 +42,5 @@ export const createRepoCommand = (context: KiContext): Command => {
     .addCommand(createRepoAuditCommand(context, selectedRepositories))
     .addCommand(createRepoConformCommand(context, selectedRepositories))
 
-  ;(command.commands as Command[]).sort(
-    (left, right) =>
-      repoHelpCommandNames.indexOf(left.name() as (typeof repoHelpCommandNames)[number]) -
-      repoHelpCommandNames.indexOf(right.name() as (typeof repoHelpCommandNames)[number])
-  )
   return command
 }

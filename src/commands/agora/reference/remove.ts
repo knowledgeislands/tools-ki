@@ -9,6 +9,7 @@ import { canonicalRepositoryIdentity } from '../../../core/storage/index.ts'
 export const createAgoraReferenceRemoveCommand = (context: KiContext): Command =>
   new Command('remove')
     .description('remove one local Agora reference association')
+    .summary('remove a reference association')
     .argument('<repository>', 'canonical HTTPS GitHub repository identity')
     .option('--dry-run', 'validate and report without writing')
     .action(async (repository: string, options: { readonly dryRun?: boolean }) => {

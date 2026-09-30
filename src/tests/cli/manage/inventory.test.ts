@@ -5,35 +5,35 @@ import { sandbox } from '../_cli_helper.ts'
 
 const rootHelpCommands = [
   'bootstrap',
-  'manage',
-  'agora',
-  'skill',
   'repo',
-  'batch',
-  'registry',
-  'harness',
+  'agora',
   'trade',
   'acquire',
+  'batch',
+  'manage',
+  'registry',
+  'harness',
+  'skill',
   'dev'
 ]
 
 const manageCommands = [
-  'cleanup',
-  'completion',
-  'diag',
-  'docs',
-  'doctor',
   'list',
-  'mcp',
+  'search',
+  'doctor',
+  'diag',
   'missing',
   'outdated',
+  'docs',
+  'cleanup',
+  'completion',
+  'vscode',
+  'mcp',
   'repair',
-  'search',
-  'update',
-  'vscode'
+  'update'
 ]
-const agoraCommands = ['audit', 'inspect', 'list', 'show', 'roots', 'open', 'reference']
-const agoraReferenceCommands = ['set', 'list', 'remove']
+const agoraCommands = ['list', 'show', 'audit', 'inspect', 'roots', 'open', 'reference']
+const agoraReferenceCommands = ['list', 'set', 'remove']
 const agoraChangelogCommands = [
   '`ki agora audit [agora]`',
   '`ki agora inspect <agora> --target <zed|vscode> --workspace <selector>`',
@@ -55,11 +55,51 @@ const repoCommands = [
   'store',
   'upgrade'
 ]
-const batchCommands = ['close', 'prepare', 'run', 'validate']
-const registryCommands = ['add', 'list', 'remove']
+const batchCommands = ['prepare', 'validate', 'run', 'close']
+const registryCommands = ['list', 'add', 'remove']
 
 const commandNames = (output: string): string[] =>
-  output.split('\n').flatMap((line) => /^ {2}([a-z][a-z-]*)(?:\s|$)/.exec(line)?.[1] ?? [])
+  output
+    .slice(output.indexOf('Usage:'))
+    .split('\n')
+    .flatMap((line) => /^ {2}([a-z][a-z-]*)(?:\s|$)/.exec(line)?.[1] ?? [])
+
+const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
+  manage: manageCommands,
+  'manage mcp': ['list', 'install', 'update', 'rollback', 'uninstall'],
+  'manage vscode': ['check', 'sync'],
+  repo: ['roadmap', 'diag', 'audit', 'store', 'educate', 'open', 'init', 'conform', 'repair', 'skill', 'upgrade'],
+  'repo roadmap': ['summary', 'list', 'stats', 'promote', 'demote', 'prune'],
+  'repo store': ['list', 'scan', 'create', 'bind', 'unbind'],
+  'repo skill': ['add', 'remove'],
+  agora: agoraCommands,
+  'agora reference': agoraReferenceCommands,
+  skill: ['add', 'remove'],
+  batch: batchCommands,
+  registry: registryCommands,
+  harness: ['list', 'info', 'install', 'reinstall', 'uninstall'],
+  trade: [
+    'list',
+    'show',
+    'routes',
+    'subtypes',
+    'standing',
+    'prepare',
+    'observe',
+    'submit',
+    'receive',
+    'abandon',
+    'release',
+    'prune'
+  ],
+  'trade routes': ['list', 'check', 'add', 'remove'],
+  'trade subtypes': ['list', 'add', 'remove'],
+  'trade standing': ['list', 'check', 'add', 'capture', 'remove'],
+  acquire: ['list', 'status', 'import', 'reconcile', 'reset'],
+  dev: ['local', 'skill'],
+  'dev local': ['set', 'on', 'off'],
+  'dev skill': ['rubric']
+}
 
 describe('[ki command inventory]', () => {
   test('keeps runtime help and completion memberships aligned with the public command contract', async () => {
@@ -78,20 +118,8 @@ describe('[ki command inventory]', () => {
     expect(commandNames(manage.output)).toEqual(manageCommands)
     expect(commandNames(agora.output)).toEqual(agoraCommands)
     expect(commandNames(agoraReference.output)).toEqual(agoraReferenceCommands)
-    expect(commandNames(repository.output)).toEqual([
-      'init',
-      'open',
-      'audit',
-      'conform',
-      'diag',
-      'roadmap',
-      'store',
-      'educate',
-      'repair',
-      'skill',
-      'upgrade'
-    ])
-    expect(commandNames(batch.output)).toEqual(['prepare', 'validate', 'run', 'close'])
+    expect(commandNames(repository.output)).toEqual(nestedHelpOrder['repo'])
+    expect(commandNames(batch.output)).toEqual(batchCommands)
     expect(commandNames(registry.output)).toEqual(registryCommands)
     for (const command of rootHelpCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of manageCommands) expect(zsh.output).toContain(`${command}:`)
@@ -100,14 +128,8 @@ describe('[ki command inventory]', () => {
     for (const command of batchCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of registryCommands) expect(zsh.output).toContain(`${command}:`)
     expect(bash.output).toContain(`'') printf '%s\\n' '${rootHelpCommands.join(' ')}'`)
-    expect(bash.output).toContain(`'manage') printf '%s\\n' '${manageCommands.join(' ')}'`)
-    expect(bash.output).toContain(`'agora') printf '%s\\n' '${agoraCommands.join(' ')}'`)
-    expect(bash.output).toContain(`'agora reference') printf '%s\\n' '${agoraReferenceCommands.join(' ')}'`)
-    expect(bash.output).toContain(
-      "'repo') printf '%s\\n' 'init open audit conform diag roadmap store educate repair skill upgrade'"
-    )
-    expect(bash.output).toContain("'batch') printf '%s\\n' 'prepare validate run close'")
-    expect(bash.output).toContain(`'registry') printf '%s\\n' '${registryCommands.join(' ')}'`)
+    for (const [path, expected] of Object.entries(nestedHelpOrder))
+      expect(bash.output).toContain(`'${path}') printf '%s\\n' '${expected.join(' ')}'`)
 
     const manual = await readFile('man/ki.1', 'utf8')
     const inventory = buildCommandInventory(manual)
@@ -135,6 +157,34 @@ describe('[ki command inventory]', () => {
         registeredLeaves.some((path) => covers(invocation, path)),
         invocation
       ).toBe(true)
+  })
+
+  test('groups common root tasks and orders every nested command family for discovery', async () => {
+    const box = await sandbox()
+    const root = await box.run('ki -h')
+    expect(root.exitCode).toBe(0)
+    expect(commandNames(root.output)).toEqual(rootHelpCommands)
+    expect(root.output).toContain('Common tasks:\n  ki repo roadmap summary')
+    expect(root.output).toContain('Get started:\n  bootstrap')
+    expect(root.output).toContain('Work with repositories:\n  repo')
+    expect(root.output).toContain('Maintain KI:\n  manage')
+    expect(root.output).toContain('Development:\n  dev')
+    expect(root.output).toContain('Further help: ki <command> --help · ki manage docs · man ki')
+    expect(Math.max(...root.output.split('\n').map((line) => line.length))).toBeLessThanOrEqual(80)
+    expect(await box.run('ki --help')).toEqual(root)
+
+    const pending = [...rootHelpCommands]
+    while (pending.length) {
+      const path = pending.shift() as string
+      const expected = nestedHelpOrder[path] ?? []
+      const result = await box.run(`ki ${path} -h`)
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain(`Usage: ki ${path}`)
+      if (expected.length) expect(commandNames(result.output)).toEqual(expected)
+      else expect(result.output).not.toContain('\nCommands:\n')
+      expect(Math.max(...result.output.split('\n').map((line) => line.length))).toBeLessThanOrEqual(80)
+      for (const child of expected) pending.push(`${path} ${child}`)
+    }
   })
 
   test('keeps the purpose-oriented manual and changelog inventories complete', async () => {

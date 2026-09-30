@@ -11,7 +11,7 @@ import { createRegistryCommand } from '../registry/index.ts'
 import { createRepoCommand } from '../repo/index.ts'
 import { createSkillCommand } from '../skill/index.ts'
 import { createTradeCommand } from '../trade/index.ts'
-import { type RootCommandName, rootHelpCommandNames } from './catalogue.ts'
+import { nestedHelpCommandNames, type RootCommandName, rootHelpCommandNames, rootHelpGroups } from './catalogue.ts'
 
 type RootCommandFactory = (context: KiContext) => Command
 
@@ -30,5 +30,14 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
 }
 
 export const addRootCommands = (program: Command, context: KiContext): void => {
-  for (const name of rootHelpCommandNames) program.addCommand(rootCommandFactories[name](context))
+  for (const name of rootHelpCommandNames)
+    program.addCommand(rootCommandFactories[name](context).helpGroup(rootHelpGroups[name]))
+
+  const orderNestedCommands = (command: Command, path: string): void => {
+    const names = nestedHelpCommandNames[path]
+    if (names)
+      (command.commands as Command[]).sort((left, right) => names.indexOf(left.name()) - names.indexOf(right.name()))
+    for (const child of command.commands) orderNestedCommands(child, `${path} ${child.name()}`)
+  }
+  orderNestedCommands(program, 'ki')
 }

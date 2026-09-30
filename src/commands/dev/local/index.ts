@@ -54,6 +54,7 @@ export const createDevLocalCommand = (context: KiContext): Command => {
   command
     .command('set <harness-id> <local-harness-path>')
     .description('validate and remember a checkout for one installed harness without enabling it')
+    .summary('remember a local harness checkout')
     .action(async (identifier: string, path: string) => {
       const result = await setDevelopmentSource(setDevelopmentSourcePort(context), identifier, path)
       context.stdout.write(`development harness set ${result.identifier}\t${result.harness}\n`)
@@ -62,6 +63,7 @@ export const createDevLocalCommand = (context: KiContext): Command => {
   command
     .command('on [harness-id]')
     .description('switch one configured harness, or every configured harness, to its complete local checkout root')
+    .summary('activate local harness checkouts')
     .action(async (identifier?: string) => {
       const identifiers = identifier ? [identifier] : await configuredLocalHarnesses(context)
       for (const harness of identifiers) await reportEnabled(context, harness)
@@ -69,6 +71,7 @@ export const createDevLocalCommand = (context: KiContext): Command => {
   command
     .command('off [harness-id]')
     .description('restore one configured harness, or every configured harness, from its verified archive')
+    .summary('restore verified harness archives')
     .action(async (identifier?: string) => {
       const identifiers = identifier ? [identifier] : await configuredLocalHarnesses(context)
       for (const harness of identifiers) await reportDisabled(context, harness)

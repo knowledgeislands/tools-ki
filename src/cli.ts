@@ -54,6 +54,12 @@ export const createProgram = (context: KiContext): Command => {
     .description('Knowledge Islands command-line interface.')
     .version(KI_VERSION, '-V, --version', 'print the CLI version')
 
+  program.addHelpText(
+    'before',
+    'Common tasks:\n  ki repo roadmap summary  See work across selected repositories\n  ki agora list            See declared groups and the registered estate\n  ki repo audit            Check repository conformance\n  ki manage doctor         Check the local KI installation\n'
+  )
+  program.addHelpText('after', '\nFurther help: ki <command> --help · ki manage docs · man ki')
+
   addRootCommands(program, context)
   // Commander does not inherit these settings by subcommands added with addCommand,
   // so apply them to the whole tree — otherwise a subcommand's error, usage, or help

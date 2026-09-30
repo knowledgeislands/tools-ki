@@ -14,6 +14,7 @@ import { canonicalRepositoryIdentity } from '../../../core/storage/index.ts'
 export const createAgoraReferenceSetCommand = (context: KiContext): Command =>
   new Command('set')
     .description('associate one owner-declared reference with an explicit local Git checkout')
+    .summary('associate a local checkout')
     .argument('<repository>', 'canonical HTTPS GitHub repository identity')
     .argument('<checkout>', 'absolute local Git checkout root')
     .option('--dry-run', 'validate and report without writing')
