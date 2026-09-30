@@ -4,7 +4,7 @@ area: CLI
 title: Implement per-item task links
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 02ec3da5322d2fdb158254f05f39d61a024eed5d
@@ -17,7 +17,7 @@ task_links:
       url: http://127.0.0.1:3100/KIS/issues/KIS-5
       relation: related
 created_at: 2026-09-27T13:10:03Z
-updated_at: 2026-09-27T22:56:21Z
+updated_at: 2026-09-30T07:39:22Z
 ---
 
 # KI-TOOL-CLI-088: Implement per-item task links
@@ -101,15 +101,19 @@ Implemented the approved local CLI boundary from immutable baseline `02ec3da5322
 
 ### Outstanding concerns
 
-Independent review of the exact resulting commit remains pending. No known CLI failure or approved-scope deviation remains. The separate harness contract delivery must land under its own review and integration authority.
+At delivery, independent review of the exact resulting commit remained pending. The owner accepted the item on 2026-09-30 without a separate independent review. No known CLI failure or approved-scope deviation remains. The separate harness contract delivery is present on the harness main branch.
 
 ### Post-change review
 
-The CLI now reports durable task associations without treating them as current ownership or a second lifecycle. Existing records retain their JSON shape; KB-owned metadata and task-link blocks survive horizon changes byte-for-byte. The delivery is ready for independent review, not KI acceptance.
+The CLI reports durable task associations without treating them as current ownership or a second lifecycle. Existing records retain their JSON shape; KB-owned metadata and task-link blocks survive horizon changes byte-for-byte. The user accepted this delivery with the independent-review limitation recorded above.
 
 ### Mini recap
 
 The approved parser, projection, specification and CLI tests are complete and verified. Keep the provider-neutral field semantics in `KI-HARNESS-GOV-116`; reconcile any future task-link backfill item by item rather than inferring availability from the map.
+
+## Done
+
+Accepted 2026-09-30 by Kris Brown on the review packet above.
 
 ## Discussion
 
