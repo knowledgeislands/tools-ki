@@ -13,3 +13,12 @@ policy: safe-local-v1
 ---
 
 # KI-TOOL-BATCH-002
+
+## Run ledger
+
+<!-- ki-batch-run: KI-TOOL-BATCH-002-RUN-001 7a7d5ba9469911a8039d327494f971206e1c5c96ef436991200f179ba9397493 -->
+| Item | Result | Baseline | Result commit | Exception |
+| --- | --- | --- | --- | --- |
+| KI-TOOL-CLI-092 | awaiting-review | `ec506413aecf594b0f622f7f6a459f8912e88a52` | `7f371f1aa87735c0b427c23b8b5619224677b188` | None |
+
+<!-- ki-batch-close: KI-TOOL-BATCH-002 awaiting-review 7f371f1aa87735c0b427c23b8b5619224677b188 -->
