@@ -48,7 +48,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 `ki agora list` and `ki agora show` MUST expose the resolved owner-inclusive group, while `ki agora open` MUST launch the resolved group through an explicitly selected supported local target and report a launch failure.
 
-The text list MUST label the declaring owner as `home`, pluralise member and reference counts correctly, and call its cross-profile deduplicated summary count `MEMBER_REPOSITORIES`.
+The text list MUST label the declaring owner as `home`, pluralise member and reference counts correctly, and call its registered-estate summary count `REGISTERED_REPOSITORIES`.
 
 _Conformance:_ conforming
 
@@ -159,6 +159,16 @@ _Conformance:_ conforming
 _Verify:_ `src/tests/cli/agora/references.test.ts` — `keeps association mutation local and ignores stale state after promotion to membership`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### AGORA-016 — Distinct human-facing participants
+
+`ki agora list` and `ki agora show` MUST count a named Agora's home separately from its reciprocal non-owner members and references, distinguish resolved from unresolved references, and label the system estate's participants as registered repositories without inventing a home. `show` MUST render the home once and leave machine-readable roots and projection order unchanged.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/agora/agora.test.ts` — `lists, shows, selects, and opens the registered estate and a reciprocal declared Agora` and `honors a declared participant prefix through every named Agora consumer`; `src/tests/cli/agora/references.test.ts` — `associates a plain Git checkout and projects typed owner and reference roots`.
+
+_Evidence:_ The named in-process CLI tests assert exact named and estate text reports, verbose owner paths, separate references, and unchanged ordered `ki agora roots` output.
 
 ## Gaps
 

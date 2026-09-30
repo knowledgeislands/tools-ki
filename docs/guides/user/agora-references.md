@@ -22,7 +22,7 @@ List the machine-local associations:
 ki agora reference list
 ```
 
-Resolved references participate in the same ordered projection used by `ki agora roots`, `ki agora open`, and `ki agora inspect`. `ki agora show` labels owner, member, and reference roots, while `ki agora audit` reports unresolved reference diagnostics.
+Resolved references participate in the same ordered projection used by `ki agora roots`, `ki agora open`, and `ki agora inspect`. Human-facing `ki agora list` and `ki agora show` count a named Agora's declaring home separately from its reciprocal members and owner-selected references; `show --verbose` includes the home's path once. The system `estate` instead lists registered repositories and has no home. `ki agora audit` reports unresolved reference diagnostics, while `show` keeps them separate from resolved references.
 
 An unresolved reference does not invalidate reciprocal membership. It is omitted from projected roots with one status:
 

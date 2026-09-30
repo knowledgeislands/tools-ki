@@ -4,12 +4,12 @@ area: CLI
 title: Group Agora participants
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 4445673236a4d69c150afa0e1f11449fa9e0da7d
 created_at: 2026-09-30T12:12:04Z
-updated_at: 2026-09-30T15:18:21Z
+updated_at: 2026-09-30T19:39:18Z
 ---
 
 # Group Agora participants
@@ -32,14 +32,14 @@ The resolver already classifies owner, member, and reference roots. `list` and `
 
 ## Steps
 
-- [ ] Render the named home once and show only reciprocal non-owner repositories under `members`, preserving their relative projection order and separate reference diagnostics.
-- [ ] Label estate participants and cross-profile totals as registered repositories, without changing resolver data or `ki agora roots` output.
-- [ ] Update in-process CLI contract tests for named, owner-only, referenced, and estate profiles, including verbose output and unchanged machine-readable roots.
-- [ ] Update the Agora specification, user guidance, manual, command inventory, and changelog to match the human-facing output.
+- [x] Render the named home once and show only reciprocal non-owner repositories under `members`, preserving their relative projection order and separate reference diagnostics.
+- [x] Label estate participants and cross-profile totals as registered repositories, without changing resolver data or `ki agora roots` output.
+- [x] Update in-process CLI contract tests for named, owner-only, referenced, and estate profiles, including verbose output and unchanged machine-readable roots.
+- [x] Update the Agora specification, user guidance, manual, command inventory, and changelog to match the human-facing output.
 
 ## Files touched
 
-`src/commands/agora/list.ts`, `src/commands/agora/show.ts`, focused `src/tests/cli/agora/` tests, `docs/specs/agoras.md`, `docs/guides/user/agora-references.md`, `man/ki.1`, `man/ki.commands.json`, `CHANGELOG.md`, and this record. Core Agora resolution and other commands remain untouched.
+`src/commands/agora/list.ts`, `src/commands/agora/show.ts`, focused `src/tests/cli/agora/` tests, `docs/specs/agoras.md`, `docs/guides/user/agora-references.md`, `man/ki.1`, `man/ki.commands.json`, `CHANGELOG.md`, and this record. A test-only `src/tests/cli/repo/store-scan.test.ts` regression case closes a pre-existing coverage gap encountered in the full gate. Core Agora resolution and other commands remain untouched.
 
 ## Verify
 
@@ -66,6 +66,36 @@ Update the Agora reference guide to explain the separate home, member, reference
 ### Roadmap
 
 Record implementation and review evidence here; no follow-on item is expected from this bounded presentation change.
+
+## Review
+
+### Delivered
+
+Implemented the approved human-facing Agora presentation boundary from immutable baseline `4445673236a4d69c150afa0e1f11449fa9e0da7d` in the primary tools-ki checkout. The resulting evidence is the local implementation commit carrying this packet. `ki agora roots`, core resolution, repository authority, and external state were not changed; no acceptance, pruning, release, or push was performed.
+
+### Change Summary
+
+`ki agora list` now counts named homes separately from reciprocal members and labels the estate and cross-profile total as registered repositories. `ki agora show` renders the named home once, shows only reciprocal non-owner members, and keeps resolved and unresolved references distinct. The Agora CLI tests, specification, user guide, manual, generated command inventory, and changelog reflect those labels. A test-only source-store scan regression case exercises an existing disappearing-declaration error path required by the full coverage gate; it does not change source-store behaviour.
+
+### Verification
+
+- Focused Agora, command-inventory, and source-store CLI tests passed after the presentation and test-only edits.
+- `bun run test:coverage`: 948 tests in 56 files passed; statements, branches, functions, and lines each reached 100%.
+- `bunx tsc --noEmit`, focused `bunx biome check`, command-inventory generator check, `mandoc -T lint man/ki.1`, and Markdown lint passed.
+- `ki repo audit --skill` checks for `ki-work-roadmap`, `ki-specs`, `ki-self`, `ki-authoring`, and `ki-repo-tools` passed.
+- In-process CLI tests assert named, owner-only, referenced, and estate reports; verbose home paths; member order; and unchanged exact `ki agora roots` bytes.
+
+### Outstanding concerns
+
+Independent review and acceptance of this implementation commit remain pending. No known failed check or unresolved implementation dependency remains.
+
+### Post-change review
+
+The visible participant counts now follow the existing home/member/reference authority model without altering resolution or machine-facing projections. The only adjacent change is a test-only coverage repair in source-store scanning; no production behaviour was expanded beyond the approved presentation boundary.
+
+### Mini recap
+
+The approved presentation, contracts, and documentation are implemented and verified. Review this commit, then accept or request changes; retain the home/member/reference distinction in the Agora specification.
 
 ## Discussion
 

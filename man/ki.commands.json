@@ -401,7 +401,7 @@
       "commands": [
         {
           "invocation": "ki agora list",
-          "description": "List declared named Agoras and the registered estate. The home is the declaring owner; MEMBER_REPOSITORIES counts distinct repositories across listed Agoras, not the sum of per-Agora memberships."
+          "description": "List declared named Agoras and the registered estate. The home is the declaring owner and is not counted among reciprocal members. The estate counts registered repositories; REGISTERED_REPOSITORIES is that deduplicated total. Resolved and unresolved references have separate counts."
         },
         {
           "invocation": "ki agora audit [name]",
@@ -413,7 +413,7 @@
         },
         {
           "invocation": "ki agora show <name> [--verbose]",
-          "description": "Show one declared Agora or the registered estate. The default lists member names; --verbose also shows canonical repository URLs and local paths."
+          "description": "Show one declared Agora with its home, reciprocal members, resolved references, and unresolved-reference diagnostics in separate sections. The estate lists registered repositories without a home. --verbose also shows canonical repository URLs and local paths, including the home's path."
         },
         {
           "invocation": "ki agora roots <name> [--null]",

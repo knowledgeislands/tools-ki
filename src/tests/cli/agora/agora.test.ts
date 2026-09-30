@@ -173,15 +173,15 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (3 members)\n│  ╰─ team [declared] team (3 members, home: home)\n╰─ summary: AGORAS=2 MEMBER_REPOSITORIES=3\n'
+        '╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (3 repositories)\n│  ╰─ team [declared] team (home: home, 2 members)\n╰─ summary: AGORAS=2 REGISTERED_REPOSITORIES=3\n'
     })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (3)\n│  ├─ home\n│  ├─ member\n│  ╰─ other\n╰─ summary: MEMBERS=3\n`
+      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (2)\n│  ├─ member\n│  ╰─ other\n╰─ summary: HOME=1 MEMBERS=2 REFERENCES=0 UNRESOLVED_REFERENCES=0 ROOTS=3\n`
     })
     expect(await box.run('ki agora show team --verbose')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (3)\n│  ├─ home\n│  │  ├─ repository: ${homeIdentity}\n│  │  ╰─ path: ${roots['home']}\n│  ├─ member\n│  │  ├─ repository: ${memberIdentity}\n│  │  ╰─ path: ${roots['member']}\n│  ╰─ other\n│     ├─ repository: ${otherIdentity}\n│     ╰─ path: ${roots['other']}\n╰─ summary: MEMBERS=3\n`
+      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n│     ╰─ path: ${roots['home']}\n├─ members (2)\n│  ├─ member\n│  │  ├─ repository: ${memberIdentity}\n│  │  ╰─ path: ${roots['member']}\n│  ╰─ other\n│     ├─ repository: ${otherIdentity}\n│     ╰─ path: ${roots['other']}\n╰─ summary: HOME=1 MEMBERS=2 REFERENCES=0 UNRESOLVED_REFERENCES=0 ROOTS=3\n`
     })
     expect(await box.run('ki repo --agora team roadmap list')).toMatchObject({ exitCode: 0 })
     expect(await box.run('ki agora open team --target zed')).toEqual({
@@ -221,8 +221,8 @@ describe('[ki agora]', () => {
 
     const shown = await box.run('ki agora show team --verbose')
     expect(shown.exitCode).toBe(0)
-    expect(shown.output.indexOf(`path: ${roots['other']}`)).toBeLessThan(shown.output.indexOf(`path: ${roots['home']}`))
-    expect(shown.output.indexOf(`path: ${roots['home']}`)).toBeLessThan(
+    expect(shown.output.indexOf(`path: ${roots['home']}`)).toBeLessThan(shown.output.indexOf(`path: ${roots['other']}`))
+    expect(shown.output.indexOf(`path: ${roots['other']}`)).toBeLessThan(
       shown.output.indexOf(`path: ${roots['member']}`)
     )
     expect(await box.run('ki agora roots team')).toEqual({
@@ -259,7 +259,7 @@ describe('[ki agora]', () => {
 
     expect(await box.run('ki agora show estate')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ estate\n│  ├─ name: Registered estate\n│  ╰─ purpose: Every locally registered canonical KI repository.\n├─ members (2)\n│  ├─ first\n│  ╰─ second\n╰─ summary: MEMBERS=2\n`
+      output: `╭─ KI AGORA\n├─ estate\n│  ├─ name: Registered estate\n│  ╰─ purpose: Every locally registered canonical KI repository.\n├─ repositories (2)\n│  ├─ first\n│  ╰─ second\n╰─ summary: REPOSITORIES=2 ROOTS=2\n`
     })
     expect(await box.run('ki agora open estate')).toMatchObject({ exitCode: 2 })
     expect(await box.run('ki agora open estate --target vscode')).toEqual({
@@ -309,8 +309,8 @@ describe('[ki agora]', () => {
     const listed = await box.run('ki agora list')
 
     expect(listed.exitCode).toBe(0)
-    expect(listed.output).toContain('├─ alpha [declared] alpha (1 member, home: alpha)')
-    expect(listed.output).toContain('zeta [declared] zeta (1 member, home: zeta)')
+    expect(listed.output).toContain('├─ alpha [declared] alpha (home: alpha, 0 members)')
+    expect(listed.output).toContain('zeta [declared] zeta (home: zeta, 0 members)')
     expect(listed.output.indexOf('alpha [declared]')).toBeLessThan(listed.output.indexOf('zeta [declared]'))
   })
 
@@ -328,7 +328,7 @@ describe('[ki agora]', () => {
 
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 1,
-      output: `╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (1 member)\n│  ╰─ healthy [declared] healthy (1 member, home: home)\n├─ broken (2)\n│  ├─ Agora also-broken member ${missingIdentity} is not registered locally\n│  ╰─ Agora broken member ${missingIdentity} is not registered locally\n╰─ summary: AGORAS=2 MEMBER_REPOSITORIES=1 BROKEN=2\n`
+      output: `╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (1 repository)\n│  ╰─ healthy [declared] healthy (home: home, 0 members)\n├─ broken (2)\n│  ├─ Agora also-broken member ${missingIdentity} is not registered locally\n│  ╰─ Agora broken member ${missingIdentity} is not registered locally\n╰─ summary: AGORAS=2 REGISTERED_REPOSITORIES=1 BROKEN=2\n`
     })
     expect((await box.run('ki agora show healthy')).exitCode).toBe(0)
     expect(await box.run('ki agora roots healthy')).toEqual({ exitCode: 0, output: `${roots['home']}\n` })
@@ -503,7 +503,7 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 1,
       output:
-        '╭─ KI AGORAS\n├─ agoras (1)\n│  ╰─ estate [system] Registered estate (2 members)\n├─ broken (1)\n│  ╰─ Agora team is declared by multiple owners: https://github.com/example/first, https://github.com/example/second\n╰─ summary: AGORAS=1 MEMBER_REPOSITORIES=2 BROKEN=1\n'
+        '╭─ KI AGORAS\n├─ agoras (1)\n│  ╰─ estate [system] Registered estate (2 repositories)\n├─ broken (1)\n│  ╰─ Agora team is declared by multiple owners: https://github.com/example/first, https://github.com/example/second\n╰─ summary: AGORAS=1 REGISTERED_REPOSITORIES=2 BROKEN=1\n'
     })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 2,
@@ -517,13 +517,13 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI AGORAS\n├─ agoras (1)\n│  ╰─ estate [system] Registered estate (0 members)\n╰─ summary: AGORAS=1 MEMBER_REPOSITORIES=0\n'
+        '╭─ KI AGORAS\n├─ agoras (1)\n│  ╰─ estate [system] Registered estate (0 repositories)\n╰─ summary: AGORAS=1 REGISTERED_REPOSITORIES=0\n'
     })
     expect(await box.run('ki agora open estate --target zed')).toEqual({
       exitCode: 2,
       output: 'ki: error: Agora estate has no members\n'
     })
-    expect((await box.run('ki agora show estate')).output).toContain('├─ members (0)\n│  ╰─ none\n')
+    expect((await box.run('ki agora show estate')).output).toContain('├─ repositories (0)\n│  ╰─ none\n')
     await box.state.write(
       'ki/registry.toml',
       'schema = 1\n[repositories."relative"]\nrepository = "https://github.com/example/relative"\npath = "relative"\n'

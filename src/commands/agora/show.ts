@@ -14,9 +14,10 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
         environment: context.environment
       })
       const hasReferenceSurface = Boolean(profile.references.length || profile.referenceDiagnostics.length)
-      const members = profile.members.length
-        ? profile.members.map((member) => ({
-            label: hasReferenceSurface ? `${member.key} [${member.kind}]` : member.key,
+      const visibleMembers = profile.members.filter((member) => member.kind === 'member')
+      const members = visibleMembers.length
+        ? visibleMembers.map((member) => ({
+            label: member.key,
             ...(options.verbose
               ? {
                   children: [{ label: `repository: ${member.repository}` }, { label: `path: ${member.root}` }]
@@ -45,10 +46,17 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
               children: [
                 { label: `name: ${profile.name}` },
                 { label: `purpose: ${profile.purpose}` },
-                ...(profile.home ? [{ label: `home: ${profile.home.repository}` }] : [])
+                ...(profile.home
+                  ? [
+                      {
+                        label: `home: ${profile.home.repository}`,
+                        ...(options.verbose ? { children: [{ label: `path: ${profile.home.root}` }] } : {})
+                      }
+                    ]
+                  : [])
               ]
             },
-            { label: `members (${profile.members.length})`, children: members },
+            { label: `${profile.system ? 'repositories' : 'members'} (${visibleMembers.length})`, children: members },
             ...(hasReferenceSurface
               ? [
                   { label: `references (${profile.references.length})`, children: references },
@@ -56,9 +64,9 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
                 ]
               : []),
             {
-              label: hasReferenceSurface
-                ? `summary: MEMBERS=${profile.members.length} REFERENCES=${profile.references.length} UNRESOLVED_REFERENCES=${profile.referenceDiagnostics.length} ROOTS=${profile.roots.length}`
-                : `summary: MEMBERS=${profile.members.length}`
+              label: profile.system
+                ? `summary: REPOSITORIES=${visibleMembers.length} ROOTS=${profile.roots.length}`
+                : `summary: HOME=1 MEMBERS=${visibleMembers.length} REFERENCES=${profile.references.length} UNRESOLVED_REFERENCES=${profile.referenceDiagnostics.length} ROOTS=${profile.roots.length}`
             }
           ]
         }).join('\n')}\n`

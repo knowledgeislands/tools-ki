@@ -10,12 +10,24 @@ export const createAgoraListCommand = (context: KiContext): Command =>
       runner: context.runner,
       environment: context.environment
     })
-    const memberRepositories = new Set(
+    const registeredRepositories = new Set(
       profiles.flatMap((profile) => profile.members.map((member) => member.repository))
     ).size
-    const entries = profiles.map((profile) => ({
-      label: `${profile.id} [${profile.system ? 'system' : 'declared'}] ${profile.name} (${profile.members.length} ${profile.members.length === 1 ? 'member' : 'members'}${profile.home ? `, home: ${profile.home.key}` : ''}${profile.references.length || profile.referenceDiagnostics.length ? `, ${profile.references.length} ${profile.references.length === 1 ? 'reference' : 'references'}` : ''})`
-    }))
+    const entries = profiles.map((profile) => {
+      const count = profile.members.filter((member) => member.kind === 'member').length
+      // Every non-system profile comes from profileFromHome, which always sets home.
+      const home = profile.home as NonNullable<typeof profile.home>
+      const participants = profile.system
+        ? `${count} ${count === 1 ? 'repository' : 'repositories'}`
+        : `home: ${home.key}, ${count} ${count === 1 ? 'member' : 'members'}`
+      const referenceCounts =
+        profile.references.length || profile.referenceDiagnostics.length
+          ? `, ${profile.references.length} ${profile.references.length === 1 ? 'reference' : 'references'}, ${profile.referenceDiagnostics.length} unresolved ${profile.referenceDiagnostics.length === 1 ? 'reference' : 'references'}`
+          : ''
+      return {
+        label: `${profile.id} [${profile.system ? 'system' : 'declared'}] ${profile.name} (${participants}${referenceCounts})`
+      }
+    })
     context.stdout.write(
       `${renderTree({
         title: 'KI AGORAS',
@@ -25,7 +37,7 @@ export const createAgoraListCommand = (context: KiContext): Command =>
             ? [{ label: `broken (${broken.length})`, children: broken.map((message) => ({ label: message })) }]
             : []),
           {
-            label: `summary: AGORAS=${profiles.length} MEMBER_REPOSITORIES=${memberRepositories}${broken.length ? ` BROKEN=${broken.length}` : ''}`
+            label: `summary: AGORAS=${profiles.length} REGISTERED_REPOSITORIES=${registeredRepositories}${broken.length ? ` BROKEN=${broken.length}` : ''}`
           }
         ]
       }).join('\n')}\n`

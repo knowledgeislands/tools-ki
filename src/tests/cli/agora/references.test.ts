@@ -82,6 +82,7 @@ describe('[ki agora reference]', () => {
     const unresolved = await box.run('ki agora show team')
     expect(unresolved.exitCode).toBe(0)
     expect(unresolved.output).toContain(`${referenceIdentity} [unassociated]`)
+    expect((await box.run('ki agora list')).output).toContain('0 references, 1 unresolved reference')
     expect(await box.run('ki agora roots team')).toEqual({ exitCode: 0, output: `${homeRoot}\n` })
     expect((await box.run('ki agora audit team')).output).toContain(`[unassociated]: no local checkout is associated`)
 
@@ -102,9 +103,11 @@ describe('[ki agora reference]', () => {
     expect(listed.output).toContain(`path: ${referenceRoot}`)
     const shown = await box.run('ki agora show team --verbose')
     expect(shown.exitCode).toBe(0)
-    expect(shown.output).toContain('home [owner]')
+    expect(shown.output).toContain(`home: ${homeIdentity}`)
+    expect(shown.output).toContain(`path: ${homeRoot}`)
+    expect(shown.output).toContain('members (0)')
     expect(shown.output).toContain(`${referenceIdentity} [reference]`)
-    expect(shown.output).toContain('summary: MEMBERS=1 REFERENCES=1 UNRESOLVED_REFERENCES=0 ROOTS=2')
+    expect(shown.output).toContain('summary: HOME=1 MEMBERS=0 REFERENCES=1 UNRESOLVED_REFERENCES=0 ROOTS=2')
     expect((await box.run('ki agora show team')).output).toContain('references (1)')
     expect(await box.run('ki agora roots team')).toEqual({
       exitCode: 0,
@@ -127,7 +130,7 @@ describe('[ki agora reference]', () => {
     expect(inspected.exitCode).toBe(0)
     expect(inspected.output).toContain(`example/plain-reference [reference]: ${referenceRoot}`)
     expect((await box.run('ki agora list')).output).toContain(
-      'team [declared] team (1 member, home: home, 1 reference)'
+      'team [declared] team (home: home, 0 members, 1 reference, 0 unresolved references)'
     )
     expect(await box.run('ki agora open team --target zed')).toEqual({
       exitCode: 0,
@@ -193,8 +196,9 @@ describe('[ki agora reference]', () => {
     const before = await box.project.read('plain reference/.ki.toml')
     const shown = await box.run('ki agora show team')
     expect(shown.exitCode).toBe(0)
-    expect(shown.output).toContain('members (2)')
+    expect(shown.output).toContain('members (1)')
     expect(shown.output).not.toContain('references (')
+    expect((await box.run('ki agora list')).output).toContain('team [declared] team (home: home, 1 member)')
     expect(await box.run('ki agora roots team')).toEqual({
       exitCode: 0,
       output: `${referenceRoot}\n${homeRoot}\n`

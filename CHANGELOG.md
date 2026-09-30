@@ -169,6 +169,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 - `ki repo roadmap list --format json` emits the path-free `ki/roadmap/v1` contract with canonical record URLs.
 - Roadmap text listings show compact external ticket keys and counts; `--links all` expands mappings into child entries with full task URLs and disambiguating identity details where needed.
 - `ki registry list --format json` emits path-free `ki/registry/v1` identity and declaration metadata; `ki registry remove` removes exactly one keyed or path-selected entry with dry-run and transactional publication.
+- `ki agora list` and `ki agora show` separate a named Agora's home from reciprocal members and references, while the system estate counts registered repositories without a home; machine-readable roots remain unchanged.
 - `ki repo store scan` warns about undeclared conventional OneDrive source directories for selected repositories without creating or changing stores; `--estate` scans all registered repositories.
 - Closed current batch records validate selected work from their evidence commit, so later pruning and expiry do not invalidate archival verification.
 - `man/ki.commands.json` publishes the generated `ki/commands/v1` command and description inventory, reconciled against the manual and registered command tree.

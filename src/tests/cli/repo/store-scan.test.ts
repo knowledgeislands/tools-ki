@@ -4,7 +4,7 @@ import { sandbox } from '../_cli_helper.ts'
 
 const statFailure = vi.hoisted(() => ({
   path: undefined as string | undefined,
-  replacement: undefined as { trigger: string; target: string; substitute: string } | undefined,
+  replacement: undefined as { trigger: string; target: string; substitute?: string } | undefined,
   activated: false
 }))
 
@@ -16,7 +16,9 @@ vi.mock('node:fs/promises', async (importOriginal) => {
       const path = String(arguments_[0])
       if (path === statFailure.replacement?.trigger) statFailure.activated = true
       if (statFailure.activated && path === statFailure.replacement?.target)
-        return original.lstat(statFailure.replacement.substitute)
+        return statFailure.replacement.substitute
+          ? original.lstat(statFailure.replacement.substitute)
+          : Promise.reject(Object.assign(new Error('declaration disappeared'), { code: 'ENOENT' }))
       return path === statFailure.path
         ? Promise.reject(Object.assign(new Error('source-store stat denied'), { code: 'EACCES' }))
         : original.lstat(...arguments_)
@@ -149,6 +151,12 @@ test('rechecks repository and declaration paths after target selection', async (
   const declarationResult = await box.run(['ki', 'repo', '--repo', path, 'store', 'scan'])
   expect(declarationResult.exitCode).toBe(1)
   expect(declarationResult.output).toContain('repository declaration is not a direct file')
+
+  statFailure.activated = false
+  statFailure.replacement = { trigger: source, target: `${path}/.ki.toml` }
+  const missing = await box.run(['ki', 'repo', '--repo', path, 'store', 'scan'])
+  expect(missing.exitCode).toBe(1)
+  expect(missing.output).toContain('repository declaration is not a direct file')
 })
 
 test('labels an unregistered repository diagnostic with its root', async () => {

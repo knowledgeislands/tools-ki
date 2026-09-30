@@ -1055,8 +1055,9 @@ registered canonical KI repositories.
 .TP
 .B ki agora list
 List declared named Agoras and the registered estate. The home is the declaring
-owner; \fBMEMBER_REPOSITORIES\fR counts distinct repositories across listed
-Agoras, not the sum of per-Agora memberships.
+owner and is not counted among reciprocal members. The estate counts registered
+repositories; \fBREGISTERED_REPOSITORIES\fR is that deduplicated total.
+Resolved and unresolved references have separate counts.
 .TP
 .B ki agora audit [name]
 Audit every declared Agora, one named Agora, or the registered estate without
@@ -1070,9 +1071,10 @@ are decimal workspace IDs. Read-only. Exit 0 for exact, 1 for drift or an
 unsupported source, and 2 for invalid selection or resolution.
 .TP
 .B ki agora show <name> [--verbose]
-Show one declared Agora or the registered estate. The default lists member
-names;
---verbose also shows canonical repository URLs and local paths.
+Show one declared Agora with its home, reciprocal members, resolved references,
+and unresolved-reference diagnostics in separate sections. The estate lists
+registered repositories without a home. \fB--verbose\fR also shows canonical
+repository URLs and local paths, including the home's path.
 .TP
 .B ki agora roots <name> [--null]
 Write absolute physical roots for machine consumption. The default format is
