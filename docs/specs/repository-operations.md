@@ -152,7 +152,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-OPS-015 — Timestamped roadmap statistics
 
-`ki repo roadmap` MUST require paired `created_at` and `updated_at` canonical UTC-second timestamps on every local work item and advance `updated_at` monotonically on horizon move. `ki repo roadmap stats` MUST report per-repository and selected-set aggregate age, inactivity, and optional active-item staleness. Text output MUST render durations as compact days, hours, minutes, and seconds, omitting zero-valued leading components. The version 2 JSON contract MUST retain exact numeric seconds.
+`ki repo roadmap` MUST require paired `created_at` and `updated_at` canonical UTC-second timestamps on every local work item and advance `updated_at` monotonically on horizon move. `ki repo roadmap stats` MUST report per-repository and selected-set aggregate age, inactivity, and optional not-done-item staleness. Text output MUST label the count of all non-done items `NOT_DONE`, including Triage drafts, and render durations as compact days, hours, minutes, and seconds, omitting zero-valued leading components. The version 2 JSON contract MUST retain its `active` field with this same not-done meaning and exact numeric seconds.
 
 _Conformance:_ conforming
 

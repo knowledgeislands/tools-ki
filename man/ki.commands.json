@@ -175,7 +175,7 @@
         },
         {
           "invocation": "ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]",
-          "description": "Report timestamp coverage and age and inactivity metrics for selected local roadmaps. Timestamp-free compatibility records remain readable and are reported as missing coverage. Multiple selected repositories add a selected-set aggregate. A positive stale duration uses seconds, minutes, hours, or days, such as 7d . Use --format json for a versioned machine-readable report."
+          "description": "Report age and inactivity metrics for selected local roadmaps. Every valid work item requires paired canonical UTC-second creation and update timestamps; timestamp-free records are diagnostics, not compatibility records. The NOT_DONE count includes every non-done item, including Triage drafts. Multiple selected repositories add a selected-set aggregate. A positive stale duration uses seconds, minutes, hours, or days, such as 7d . Use --format json for a versioned machine-readable report."
         },
         {
           "invocation": "ki repo [repo-options] roadmap prune [id]",
@@ -397,7 +397,7 @@
       "commands": [
         {
           "invocation": "ki agora list",
-          "description": "List declared named Agoras and the registered estate."
+          "description": "List declared named Agoras and the registered estate. The home is the declaring owner; MEMBER_REPOSITORIES counts distinct repositories across listed Agoras, not the sum of per-Agora memberships."
         },
         {
           "invocation": "ki agora audit [name]",

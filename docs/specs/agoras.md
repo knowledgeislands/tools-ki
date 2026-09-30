@@ -48,6 +48,8 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 `ki agora list` and `ki agora show` MUST expose the resolved owner-inclusive group, while `ki agora open` MUST launch the resolved group through an explicitly selected supported local target and report a launch failure.
 
+The text list MUST label the declaring owner as `home`, pluralise member and reference counts correctly, and call its cross-profile deduplicated summary count `MEMBER_REPOSITORIES`.
+
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/agora/agora.test.ts` — list, show, open, and launch-failure coverage.

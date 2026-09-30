@@ -206,7 +206,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('├─ roadmap (2)')
     expect(result.output).toContain('KBS-001 [awaiting-review] Native proposal')
     expect(result.output).toContain('KBS-002 [draft] Later proposal')
-    expect(result.output).toContain('╰─ summary: ITEMS=2 ACTIVE=2 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0')
+    expect(result.output).toContain('╰─ summary: ITEMS=2 NOT_DONE=2 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0')
     expect(result.output).not.toContain('_ISSUES')
     expect(result.output).not.toContain('Roadmap.md')
     expect(await box.project.read('knowledge/Streams/Roadmap/KBS-001-native-proposal.md')).toBe(before)
@@ -391,15 +391,15 @@ describe('[ki repo roadmap]', () => {
 
     expect(text).toEqual({
       exitCode: 0,
-      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 ACTIVE=1 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0\n`
+      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 NOT_DONE=1 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0\n`
     })
     expect(accepted.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
-    expect(accepted.output).toContain('summary: ITEMS=1 ACTIVE=1 DONE=0')
-    expect(done.output).toContain('summary: ITEMS=1 ACTIVE=0 DONE=1')
+    expect(accepted.output).toContain('summary: ITEMS=1 NOT_DONE=1 DONE=0')
+    expect(done.output).toContain('summary: ITEMS=1 NOT_DONE=0 DONE=1')
     expect(accepted.output).not.toContain('KI-TOOL-CLI-003')
     expect(agora.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
     expect(empty.output).toContain('├─ roadmap (0)\n├─ trades (0)')
-    expect(empty.output).toContain('summary: ITEMS=0 ACTIVE=0 DONE=0')
+    expect(empty.output).toContain('summary: ITEMS=0 NOT_DONE=0 DONE=0')
     expect(empty.output).not.toContain('items: none')
     expect(format.exitCode).toBe(0)
     expect(JSON.parse(format.output)).toEqual({
@@ -488,7 +488,9 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).not.toContain('📁 second (1)')
     expect(result.output).toContain('no roadmap (1)')
     expect(result.output).toContain('📁 absent')
-    expect(result.output).toContain('summary: REPOSITORIES=3 ROADMAPS=2 NO_ROADMAP=1 ITEMS=2 ACTIVE=2 DONE=0 TRADES=0')
+    expect(result.output).toContain(
+      'summary: REPOSITORIES=3 ROADMAPS=2 NO_ROADMAP=1 ITEMS=2 NOT_DONE=2 DONE=0 TRADES=0'
+    )
     expect(json.exitCode).toBe(0)
     expect(JSON.parse(json.output)).toEqual({
       schema: 'ki/roadmap/v1',
@@ -664,7 +666,7 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
     expect(result.output).toContain('KI-TOOL-CLI-004 [draft] Inspect governed work')
     expect(result.output).toContain('KI-TOOL-CLI-005-candidate.md has unsupported or repeated field candidate')
-    expect(result.output).toContain('summary: ITEMS=2 ACTIVE=2 DONE=0')
+    expect(result.output).toContain('summary: ITEMS=2 NOT_DONE=2 DONE=0')
     expect(aggregate.exitCode).toBe(1)
     expect(aggregate.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
     expect(aggregate.output).toContain('KI-TOOL-CLI-004 [draft] Inspect governed work')
@@ -1536,12 +1538,12 @@ describe('[ki repo roadmap]', () => {
     expect(listed.output).toContain('created_at must be a canonical UTC timestamp')
     expect(listed.output).toContain('created_at must not be later than updated_at')
     expect(statistics.exitCode).toBe(1)
-    expect(statistics.output).toContain('legacy: ITEMS=0 ACTIVE=0')
+    expect(statistics.output).toContain('legacy: ITEMS=0 NOT_DONE=0')
     expect(statistics.output).toContain('age: MEDIAN=n/a MAX=n/a')
     expect(statistics.output).toContain('future timestamps: KI-TOOL-CLI-004')
-    expect(statistics.output).toContain('invalid: ITEMS=0 ACTIVE=0')
+    expect(statistics.output).toContain('invalid: ITEMS=0 NOT_DONE=0')
     expect(statistics.output).toContain('missing: no roadmap')
-    expect(statistics.output).toContain('aggregate: ITEMS=1 ACTIVE=1')
+    expect(statistics.output).toContain('aggregate: ITEMS=1 NOT_DONE=1')
     expect(paired.exitCode).toBe(0)
     expect(paired.output).toContain('age: MEDIAN=1d 23h 31m 1s MAX=2d')
     expect(paired.output).toContain('inactivity: MEDIAN=1d 23h 31m 1s MAX=2d')

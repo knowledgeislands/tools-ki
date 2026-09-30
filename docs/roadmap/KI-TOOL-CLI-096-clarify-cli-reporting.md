@@ -4,12 +4,12 @@ area: CLI
 title: Clarify CLI reporting
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: f8bc2e4c3f02b53b98a78546dcfe7329989a338d
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T09:46:47Z
+updated_at: 2026-09-30T10:23:44Z
 ---
 
 # KI-TOOL-CLI-096: Clarify CLI reporting
@@ -32,9 +32,9 @@ Text labels and manual prose disagree with domain meanings; tests assert current
 
 ## Steps
 
-- [ ] Make roadmap not-done counts and Agora owner/member counts self-describing in text output.
-- [ ] Correct singular/plural wording and the manual's timestamp-free claim.
-- [ ] Update public CLI tests and user-facing specification/manual examples.
+- [x] Make roadmap not-done counts and Agora owner/member counts self-describing in text output.
+- [x] Correct singular/plural wording and the manual's timestamp-free claim.
+- [x] Update public CLI tests and user-facing specification/manual examples.
 
 ## Files touched
 
@@ -65,6 +65,32 @@ Correct manual and user-facing examples.
 ### Roadmap
 
 Record delivery here; CLI-089 remains separate.
+
+## Review
+
+### Delivered
+
+The approved reporting clarification is implemented from baseline `f8bc2e4c3f02b53b98a78546dcfe7329989a338d`. Count semantics and versioned JSON shapes remain unchanged.
+
+### Change Summary
+
+Roadmap text uses `NOT_DONE` for the count previously labelled `ACTIVE`; Agora list uses `home`, correct singulars, and `MEMBER_REPOSITORIES` for distinct repositories across profiles. CLI tests, specifications, manual, and generated inventory reflect the output. The manual now states that local work items require paired canonical timestamps.
+
+### Verification
+
+Focused roadmap, Agora, and inventory suites, TypeScript, manual lint, and generated inventory check passed. `bun run test:coverage -- --reporter=dot` passed 939 tests with 100% statements, branches, functions, and lines.
+
+### Outstanding concerns
+
+Independent review and acceptance remain. The version 2 JSON statistics field retains the name `active` with its documented not-done meaning; a JSON rename would require a separate public contract decision.
+
+### Post-change review
+
+The human-readable output now identifies what the counts mean without changing their values. Existing JSON consumers remain compatible; the item is ready for review.
+
+### Mini recap
+
+Text reports and documentation are aligned with current domain semantics. No automatic follow-on is created for the possible future JSON rename.
 
 ## Discussion
 

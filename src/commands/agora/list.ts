@@ -10,9 +10,11 @@ export const createAgoraListCommand = (context: KiContext): Command =>
       runner: context.runner,
       environment: context.environment
     })
-    const members = new Set(profiles.flatMap((profile) => profile.members.map((member) => member.repository))).size
+    const memberRepositories = new Set(
+      profiles.flatMap((profile) => profile.members.map((member) => member.repository))
+    ).size
     const entries = profiles.map((profile) => ({
-      label: `${profile.id} [${profile.system ? 'system' : 'declared'}] ${profile.name} (${profile.members.length} members${profile.home ? `, leader: ${profile.home.key}` : ''}${profile.references.length || profile.referenceDiagnostics.length ? `, ${profile.references.length} references` : ''})`
+      label: `${profile.id} [${profile.system ? 'system' : 'declared'}] ${profile.name} (${profile.members.length} ${profile.members.length === 1 ? 'member' : 'members'}${profile.home ? `, home: ${profile.home.key}` : ''}${profile.references.length || profile.referenceDiagnostics.length ? `, ${profile.references.length} ${profile.references.length === 1 ? 'reference' : 'references'}` : ''})`
     }))
     context.stdout.write(
       `${renderTree({
@@ -23,7 +25,7 @@ export const createAgoraListCommand = (context: KiContext): Command =>
             ? [{ label: `broken (${broken.length})`, children: broken.map((message) => ({ label: message })) }]
             : []),
           {
-            label: `summary: AGORAS=${profiles.length} MEMBERS=${members}${broken.length ? ` BROKEN=${broken.length}` : ''}`
+            label: `summary: AGORAS=${profiles.length} MEMBER_REPOSITORIES=${memberRepositories}${broken.length ? ` BROKEN=${broken.length}` : ''}`
           }
         ]
       }).join('\n')}\n`

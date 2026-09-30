@@ -124,7 +124,7 @@ const renderTextResult = (
         ]
   const { inbound, outbound } = countTradeDirections(result.trades)
   const done = items.filter((item) => item.status === 'done').length
-  const active = items.length - done
+  const notDone = items.length - done
   const tradeSummary = result.tradeDiagnostic
     ? 'unavailable'
     : `${result.trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
@@ -138,7 +138,7 @@ const renderTextResult = (
         label: `trades (${result.trades.length})`,
         children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, options.icons)
       },
-      { label: `summary: ITEMS=${items.length} ACTIVE=${active} DONE=${done} TRADES=${tradeSummary}` }
+      { label: `summary: ITEMS=${items.length} NOT_DONE=${notDone} DONE=${done} TRADES=${tradeSummary}` }
     ]
   }).join('\n')
 }
@@ -200,12 +200,12 @@ const renderAggregateResult = (
       }))
     })
   const done = items.filter((item) => item.status === 'done').length
-  const active = items.length - done
+  const notDone = items.length - done
   const tradeDiagnostic = results.some((result) => result.tradeDiagnostic)
   entries.push({
     label:
       `summary: REPOSITORIES=${results.length} ROADMAPS=${results.length - absent.length} ` +
-      `NO_ROADMAP=${absent.length} ITEMS=${items.length} ACTIVE=${active} DONE=${done} ` +
+      `NO_ROADMAP=${absent.length} ITEMS=${items.length} NOT_DONE=${notDone} DONE=${done} ` +
       `TRADES=${tradeDiagnostic ? 'unavailable' : tradeCount}`
   })
   return renderTree({ title: 'KI AGGREGATE ROADMAP', entries }).join('\n')
@@ -290,7 +290,7 @@ const renderStatisticsText = (
       if (!statistics)
         return { label: `${presentation('status.unavailable').terminal} ${basename(result.repository)}: unavailable` }
       return {
-        label: `${basename(result.repository)}: ITEMS=${statistics.items} ACTIVE=${statistics.active}`,
+        label: `${basename(result.repository)}: ITEMS=${statistics.items} NOT_DONE=${statistics.active}`,
         children: [
           { label: `age: MEDIAN=${metric(statistics.medianAgeSeconds)} MAX=${metric(statistics.maximumAgeSeconds)}` },
           {
@@ -366,7 +366,7 @@ const summaryCommand = (context: KiContext, selectedRepositories: RepositorySele
 const statsCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('stats')
     .description('report roadmap age and inactivity')
-    .option('--stale-after <duration>', 'report active records inactive for at least this duration')
+    .option('--stale-after <duration>', 'report not-done records inactive for at least this duration')
     .option('--format <format>', 'output format: text or json', 'text')
     .action(async (options: { readonly staleAfter?: string; readonly format: string }) => {
       if (options.format !== 'text' && options.format !== 'json') throw grammarError('format must be text or json')

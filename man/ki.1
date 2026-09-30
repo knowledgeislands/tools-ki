@@ -713,9 +713,11 @@ diagnostic and makes the command exit with status 1. Trade records are not
 part of this overview.
 .TP
 .B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
-Report timestamp coverage and age and inactivity metrics for selected local
-roadmaps. Timestamp-free compatibility records remain readable and are reported
-as missing coverage. Multiple selected repositories add a selected-set
+Report age and inactivity metrics for selected local roadmaps. Every valid work
+item requires paired canonical UTC-second creation and update timestamps;
+timestamp-free records are diagnostics, not compatibility records. The
+\fBNOT_DONE\fR count includes every non-done item, including Triage drafts.
+Multiple selected repositories add a selected-set
 aggregate. A positive stale duration uses seconds, minutes, hours, or days,
 such as
 .BR 7d .
@@ -1038,7 +1040,9 @@ reciprocal declarations; \fBestate\fR is the reserved selector for all locally
 registered canonical KI repositories.
 .TP
 .B ki agora list
-List declared named Agoras and the registered estate.
+List declared named Agoras and the registered estate. The home is the declaring
+owner; \fBMEMBER_REPOSITORIES\fR counts distinct repositories across listed
+Agoras, not the sum of per-Agora memberships.
 .TP
 .B ki agora audit [name]
 Audit every declared Agora, one named Agora, or the registered estate without
