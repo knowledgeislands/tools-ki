@@ -265,6 +265,26 @@ describe('[ki manage completion]', () => {
       'done'
     ])
 
+    const tradeStatusCompletion = await execute(
+      'bash',
+      [
+        '-c',
+        `source completion.bash; COMP_WORDS=(ki trade list --status ""); COMP_CWORD=4; _ki; printf "%s\\n" "\${COMPREPLY[@]}"`
+      ],
+      { cwd: box.root.path }
+    )
+    expect(tradeStatusCompletion.stdout.trim().split('\n')).toEqual([
+      'unconsidered',
+      'in_progress',
+      'parked',
+      'clarify',
+      'applied',
+      'adopted',
+      'retained',
+      'declined',
+      'superseded'
+    ])
+
     const horizonCompletion = await execute(
       'bash',
       [
@@ -279,7 +299,8 @@ describe('[ki manage completion]', () => {
       'soon',
       'waiting-for',
       'parked',
-      'future'
+      'future',
+      'triage'
     ])
   })
 

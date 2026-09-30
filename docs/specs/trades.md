@@ -70,6 +70,8 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 `ki trade list` MUST distinguish mutable preparations, submitted exports, and received imports; report observation policy, delivery and decision state; and identify release or prune eligibility from mutually observable repository evidence. Its unfiltered local view MUST additionally show each submitted, reciprocally routable inbound trade that has not yet been received as awaiting receipt; sender-local preparations are not receivable inbound work.
 
+`--status` MUST accept only the receiver decision statuses defined by the trade record model. An unsupported status MUST fail with a grammar error rather than produce an empty inventory.
+
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/trade/trade.test.ts` — `creates, receives, displays, releases, and prunes a work trade while each command writes only its local repository`.

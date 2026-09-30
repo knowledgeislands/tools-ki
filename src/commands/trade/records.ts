@@ -4,6 +4,7 @@ import { grammarError } from '../../core/errors.ts'
 import {
   abandonTrade,
   createTradePreparation,
+  decisionStatuses,
   eligibleTradeCleanup,
   locateTrades,
   observeTradePreparation,
@@ -198,6 +199,8 @@ export const createTradeRecordCommands = (context: KiContext): readonly Command[
     .action(async (options: ListOptions) => {
       if (options.direction && !['prepare', 'import', 'export'].includes(options.direction))
         throw grammarError('--direction accepts prepare, import, or export')
+      if (options.status && !decisionStatuses.includes(options.status as (typeof decisionStatuses)[number]))
+        throw grammarError(`trade list --status must be one of ${decisionStatuses.join(', ')}`)
       const selectedRepository = options.repo ? repository(options.repo, '--repo') : undefined
       const result = await listTradeRecords(
         {

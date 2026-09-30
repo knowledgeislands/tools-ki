@@ -48,6 +48,8 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 `ki repo roadmap list` MUST resolve repository type from `[skills.ki-repo]` and render flat work items from the selected local adapter: `docs/roadmap/` for a project roadmap or `Streams/Roadmap/` for KB Streams, with the colocated `_ISSUES.md` ledger and KB `Roadmap.md` navigation note treated as adapter-owned surfaces rather than work items.
 
+`--horizon` MUST accept only the seven governed horizons and `--status` MUST accept only the five governed lifecycle states. An unsupported filter or output format MUST fail with a grammar error before repository inventory is read.
+
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `lists flat Knowledge Base work items from the declared Streams roadmap and ignores its ledger` and `lists and filters grouped governed work items without JSON output`.

@@ -331,6 +331,10 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
     .action(async (options: RoadmapOptions) => {
       if (options.format !== 'text' && options.format !== 'json')
         throw grammarError('roadmap list --format must be text or json')
+      if (options.horizon && !workItemHorizons.includes(options.horizon as (typeof workItemHorizons)[number]))
+        throw grammarError(`roadmap list --horizon must be one of ${workItemHorizons.join(', ')}`)
+      if (options.status && !statusOrder.includes(options.status as (typeof statusOrder)[number]))
+        throw grammarError(`roadmap list --status must be one of ${statusOrder.join(', ')}`)
       const { estate, results } = await listRoadmap(operationContext(context), selectedRepositories(), {
         horizon: options.horizon,
         status: options.status,

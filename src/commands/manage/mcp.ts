@@ -1,5 +1,6 @@
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
+import { grammarError } from '../../core/errors.ts'
 import {
   installMcpSource,
   listMcpSources,
@@ -88,8 +89,10 @@ export const createMcpCommand = (context: KiContext): Command => {
     new Command('list')
       .description('list installed MCP source versions')
       .argument('[repository]', 'lower-case GitHub owner/repository')
-      .addOption(new Option('--format <format>', 'output format').choices(['text', 'json']).default('text'))
-      .action(async (repository: string | undefined, options: { readonly format: 'text' | 'json' }) => {
+      .option('--format <text|json>', 'output format', 'text')
+      .action(async (repository: string | undefined, options: { readonly format: string }) => {
+        if (options.format !== 'text' && options.format !== 'json')
+          throw grammarError('manage mcp list --format must be text or json')
         const report = await listMcpSources(context.paths.data, repository)
         if (options.format === 'json') {
           context.stdout.write(`${JSON.stringify(report, undefined, 2)}\n`)

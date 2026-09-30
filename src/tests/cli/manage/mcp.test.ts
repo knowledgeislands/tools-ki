@@ -473,6 +473,10 @@ describe('[ki manage mcp]', () => {
     expect((await box.run('ki manage mcp rollback example/server')).exitCode).toBe(2)
     expect((await box.run('ki manage mcp uninstall')).exitCode).toBe(2)
     expect((await box.run('ki manage mcp list --format yaml')).exitCode).toBe(2)
+    expect(await box.run('ki manage mcp list --format yaml')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: manage mcp list --format must be text or json\n'
+    })
 
     await rm(`${box.data.path}/ki/mcp`, { recursive: true })
     await mkdir(`${box.data.path}/ki`, { recursive: true })

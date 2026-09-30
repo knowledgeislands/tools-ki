@@ -44,6 +44,7 @@ export type {
   TradePhase,
   TradeRecord
 } from './model.ts'
+export { decisionStatuses } from './model.ts'
 export {
   abandonTrade,
   createTradePreparation,

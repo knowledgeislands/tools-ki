@@ -113,6 +113,17 @@ const knowledgeBaseMetadata = {
 }
 
 describe('[ki repo roadmap]', () => {
+  test('rejects unknown list filters before reading repository inventory', async () => {
+    const box = await sandbox()
+    expect(await box.run('ki repo roadmap list --horizon bogus')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: roadmap list --horizon must be one of now, next, soon, waiting-for, parked, future, triage\n'
+    })
+    expect(await box.run('ki repo roadmap list --status bogus')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: roadmap list --status must be one of done, awaiting-review, in-progress, ready, draft\n'
+    })
+  })
   test('summarizes selected roadmaps without listing records or reading trades', async () => {
     const box = await sandbox()
     const configuration = knowledgeBaseConfiguration('\n[skills.ki-trades]\n')

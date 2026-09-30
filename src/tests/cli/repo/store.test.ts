@@ -13,6 +13,10 @@ describe('ki repo store', () => {
 
     const text = await box.run('ki repo store list')
     const json = await box.run('ki repo store list --format json')
+    expect(await box.run('ki repo store list --format yaml')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: repo store list --format must be text or json\n'
+    })
 
     expect(text.exitCode).toBe(0)
     expect(text.output).toContain(`notes: bound ${root}`)

@@ -4,12 +4,12 @@ area: CLI
 title: Validate enumerated options
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: dad7a43d31dfe257b2d6cbefa9812e27f8b3b324
 created_at: 2026-09-30T09:46:47Z
-updated_at: 2026-09-30T09:46:47Z
+updated_at: 2026-09-30T10:01:55Z
 ---
 
 # KI-TOOL-CLI-093: Validate enumerated options
@@ -32,9 +32,9 @@ Preserve valid filter semantics and JSON report shape. Do not broaden filtering 
 
 ## Steps
 
-- [ ] Validate enumerated roadmap and trade list options at the command grammar boundary before inventory work.
-- [ ] Make unsupported `--format` values use the same CLI error shape across affected commands.
-- [ ] Add public `run(args, context)` tests for invalid and valid values, then reconcile help and manual wording.
+- [x] Validate enumerated roadmap and trade list options at the command grammar boundary before inventory work.
+- [x] Make unsupported `--format` values use the same CLI error shape across affected commands.
+- [x] Add public `run(args, context)` tests for invalid and valid values, then reconcile help and manual wording.
 
 ## Files touched
 
@@ -65,6 +65,32 @@ Keep the manual and help aligned with accepted options.
 ### Roadmap
 
 Record delivery here; no known follow-on item.
+
+## Review
+
+### Delivered
+
+The approved grammar correction is implemented from baseline `dad7a43d31dfe257b2d6cbefa9812e27f8b3b324`. No valid filter behavior or JSON report shape changed.
+
+### Change Summary
+
+Roadmap and trade commands reject unsupported filters before inventory; store and MCP lists now use the same grammar-error presentation for invalid formats. Completion offers the actual trade decision statuses and the Triage roadmap horizon. CLI tests, specifications, manual, and generated command inventory are updated.
+
+### Verification
+
+Focused CLI suites passed. `bunx tsc --noEmit`, Biome on changed TypeScript, manual lint, and generated inventory check passed. `bun run test:coverage -- --reporter=dot` passed 938 tests with 100% statements, branches, functions, and lines.
+
+### Outstanding concerns
+
+Independent review and acceptance remain. No known implementation failure remains.
+
+### Post-change review
+
+Unknown values no longer look like an empty successful query. Existing valid outputs remain covered by public CLI tests; the item is ready for review.
+
+### Mini recap
+
+CLI grammar, completion, tests, specifications, and manual inventory are aligned. No further learning route is required beyond review of this delivery.
 
 ## Discussion
 

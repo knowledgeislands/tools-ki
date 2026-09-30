@@ -697,7 +697,8 @@ separate child lines. These options also apply to \fB--aggregate\fR; JSON output
 is unchanged. Mappings are read locally without contacting task systems and
 do not imply current task status or ownership.
 \fB--horizon\fR
-and \fB--status\fR filter before rendering. A missing roadmap directory or
+and \fB--status\fR filter before rendering; unsupported values fail with a
+usage error rather than an empty result. A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
 selected repositories still report, and any roadmap or trade diagnostic makes
 the command exit with status 1 after rendering the inventory. The command
@@ -1009,6 +1010,7 @@ changes nothing unless \fB--yes\fR is also supplied.
 Read visible preparations, imports, and exports in the registered estate,
 including their observation policy, delivery and decision state, and cleanup
 eligibility.
+An unsupported \fB--status\fR decision value fails with a usage error.
 .TP
 .B ki trade show <trade-id>
 Show every visible copy of a trade.

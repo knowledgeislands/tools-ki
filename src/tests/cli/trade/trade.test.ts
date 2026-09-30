@@ -158,6 +158,14 @@ const createTrade = async (
 }
 
 describe('[ki trade]', () => {
+  test('rejects unknown decision status rather than reporting no trades', async () => {
+    const box = await sandbox()
+    expect(await box.run('ki trade list --status bogus')).toEqual({
+      exitCode: 2,
+      output:
+        'ki: error: trade list --status must be one of unconsidered, in_progress, parked, clarify, applied, adopted, retained, declined, superseded\n'
+    })
+  })
   test('refuses release when the submitted trade receiver is no longer in the local estate', async () => {
     const { box, source } = await configuredPair()
     const submitted = await createTrade(box, 'work')

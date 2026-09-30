@@ -57,6 +57,23 @@ const noValue: CompletionValueStrategy = { kind: 'none' }
 const optionValueStrategy = (path: string, option: Option): CompletionValueStrategy => {
   const name = option.long as string
   if (option.argChoices) return { kind: 'values', values: option.argChoices }
+  if (name === '--status' && path === 'trade list')
+    return {
+      kind: 'values',
+      values: [
+        'unconsidered',
+        'in_progress',
+        'parked',
+        'clarify',
+        'applied',
+        'adopted',
+        'retained',
+        'declined',
+        'superseded'
+      ]
+    }
+  if (name === '--horizon' && path === 'repo roadmap list')
+    return { kind: 'values', values: ['now', 'next', 'soon', 'waiting-for', 'parked', 'future', 'triage'] }
   if (name === '--direction' && path === 'trade list')
     return { kind: 'values', values: ['prepare', 'import', 'export'] }
   if (name === '--observation') return { kind: 'values', values: ['unattended', 'receipt', 'decision', 'completion'] }

@@ -7,7 +7,7 @@ import {
   declaredRepositoryIdentity,
   readRepositoryDeclaration
 } from '../../core/configuration/index.ts'
-import { KiError } from '../../core/errors.ts'
+import { grammarError, KiError } from '../../core/errors.ts'
 import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import {
@@ -96,8 +96,10 @@ const publishRegistry = async (
 const createStoreListCommand = (context: KiContext, selection: SelectRepositories): Command =>
   new Command('list')
     .description('list declared repository stores and their local bindings')
-    .addOption(new Option('--format <format>', 'output format').choices(['text', 'json']).default('text'))
-    .action(async (options: { format: 'text' | 'json' }) => {
+    .option('--format <text|json>', 'output format', 'text')
+    .action(async (options: { format: string }) => {
+      if (options.format !== 'text' && options.format !== 'json')
+        throw grammarError('repo store list --format must be text or json')
       const [repositories, entries] = await Promise.all([selected(context, selection), registryEntries(context)])
       const inventory = repositories.map((repository) =>
         repositoryStoreInventory(repository.root, repository.identity, repository.roles, entries)
