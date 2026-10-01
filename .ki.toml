@@ -95,7 +95,3 @@ import = ["work", "knowledge"]
 [skills.ki-trades.routes."knowledgeislands/tools-mgit"]
 export = ["work", "knowledge"]
 import = ["work", "knowledge"]
-
-[skills.ki-trades.routes."krisb/dotfiles"]
-export = ["work", "knowledge"]
-import = ["work", "knowledge"]
