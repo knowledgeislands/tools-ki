@@ -421,7 +421,7 @@
         },
         {
           "invocation": "ki agora open <name> --target <zed|vscode>",
-          "description": "Open one declared Agora or the registered estate through an explicit local target."
+          "description": "Open one declared Agora or the registered estate through an explicit local target. For a named Agora in Zed, add its owner last so the sidebar shows it first; the estate and VS Code keep canonical projection order."
         },
         {
           "invocation": "ki agora reference set <repository> <checkout> [--dry-run]",

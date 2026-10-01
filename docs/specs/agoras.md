@@ -48,6 +48,8 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 `ki agora list` and `ki agora show` MUST expose the resolved owner-inclusive group, while `ki agora open` MUST launch the resolved group through an explicitly selected supported local target and report a launch failure.
 
+For a named Agora opened in Zed, the owner MUST appear first in the sidebar, followed by the other roots in registry-key order. The ownerless estate, VS Code launch arguments, repository selection, and machine-readable `ki agora roots` order MUST remain unchanged.
+
 The text list MUST label the declaring owner as `home`, pluralise member and reference counts correctly, and call its registered-estate summary count `REGISTERED_REPOSITORIES`.
 
 _Conformance:_ conforming

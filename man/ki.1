@@ -325,7 +325,8 @@ newline-delimited. Use --null or -0 for pathnames that may contain line feeds.
 .TP
 .B ki agora open <name> --target <zed|vscode>
 Open one declared Agora or the registered estate through an explicit local
-target.
+target. For a named Agora in Zed, add its owner last so the sidebar shows it
+first.
 .TP
 .B ki agora reference set <repository> <checkout> [--dry-run]
 Associate one owner-declared repository inclusion with an explicitly selected
@@ -1100,7 +1101,8 @@ newline-delimited. Use --null or -0 for pathnames that may contain line feeds.
 .TP
 .B ki agora open <name> --target <zed|vscode>
 Open one declared Agora or the registered estate through an explicit local
-target.
+target. For a named Agora in Zed, add its owner last so the sidebar shows it
+first; the estate and VS Code keep canonical projection order.
 .TP
 .B ki agora reference set <repository> <checkout> [--dry-run]
 Associate one owner-declared repository inclusion with an explicitly selected

@@ -19,7 +19,7 @@ export const createAgoraOpenCommand = (context: KiContext): Command =>
         options.target,
         profile.roots.map((root) => root.root),
         { runner: context.runner, environment: context.environment },
-        { preserveProjectionOrder: true }
+        { preserveProjectionOrder: true, ownerRoot: profile.home?.root }
       )
       if (result.exitCode)
         throw new KiError(

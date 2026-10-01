@@ -8,6 +8,7 @@ export interface OpenTargetPort {
 
 export interface OpenTargetOptions {
   readonly preserveProjectionOrder?: boolean
+  readonly ownerRoot?: string
 }
 
 export interface OpenTargetAdapter {

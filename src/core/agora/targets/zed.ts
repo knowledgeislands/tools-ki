@@ -148,7 +148,11 @@ export const zedOpenTarget = {
     if (window.exitCode) return window
 
     const orderedRoots = options.preserveProjectionOrder ? [...roots].reverse() : roots
-    for (const root of orderedRoots) {
+    // Zed prepends opened folders: add the Agora owner last so it appears first.
+    const launchRoots = options.ownerRoot
+      ? [...orderedRoots.filter((root) => root !== options.ownerRoot), options.ownerRoot]
+      : orderedRoots
+    for (const root of launchRoots) {
       const result = await port.runner('zed', ['-e', root], port.environment)
       if (result.exitCode) return result
     }

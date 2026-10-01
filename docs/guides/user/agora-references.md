@@ -22,7 +22,7 @@ List the machine-local associations:
 ki agora reference list
 ```
 
-Resolved inclusions participate in the same alphabetical projection used by `ki agora roots`, `ki agora open`, and `ki agora inspect`. An included Agora contributes its owner and direct members; its own inclusions are not followed. Human-facing `ki agora list` and `ki agora show` count the owner separately from direct members and included roots; `show --verbose` includes the owner's path once. The system `estate` instead lists registered repositories and has no owner. `ki agora audit` reports unresolved external repository diagnostics.
+Resolved inclusions participate in the same alphabetical projection used by `ki agora roots`, `ki agora open`, and `ki agora inspect`. When opening a named Agora in Zed, KI adds the owner last because Zed prepends folders in its sidebar; the owner therefore appears first, followed by the other roots in registry-key order. This does not change the canonical roots or VS Code arguments. An included Agora contributes its owner and direct members; its own inclusions are not followed. Human-facing `ki agora list` and `ki agora show` count the owner separately from direct members and included roots; `show --verbose` includes the owner's path once. The system `estate` instead lists registered repositories and has no owner. `ki agora audit` reports unresolved external repository diagnostics.
 
 An unresolved external repository inclusion does not invalidate direct membership. It is omitted from projected roots with one status:
 

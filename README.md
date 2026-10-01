@@ -63,7 +63,7 @@ Neither command changes user or repository skill activation. [Maintain a local i
 
 An Agora is declared by one registered owner under `[skills.ki-agora.<id>]`. The owner comes from its `ki-repo.repository` identity and lists direct members by canonical repository identity. Member repositories need no Agora configuration. An optional `includes` list adds another Agora's owner and direct members, or one repository by its canonical URL, to the working set without granting membership. `ki` deduplicates and sorts resolved roots alphabetically by local registry key.
 
-`estate` is the reserved system selector for every locally registered canonical KI repository. Use `ki agora list`, `ki agora show <id>`, and `ki agora open <id> --target zed` to inspect or open a declared Agora or the estate. Opening requires an explicit permitted target; supported local-client adapters are `zed` and `vscode`.
+`estate` is the reserved system selector for every locally registered canonical KI repository. Use `ki agora list`, `ki agora show <id>`, and `ki agora open <id> --target zed` to inspect or open a declared Agora or the estate. Opening requires an explicit permitted target; supported local-client adapters are `zed` and `vscode`. For a named Agora, the Zed sidebar puts its owner first; other roots retain registry-key order.
 
 `ki agora audit [id]` checks owner declarations and resolved working-set health without modifying the repository estate. With no identifier it reports every declared profile; a named profile or `estate` limits the report. Exit status is `0` for healthy selections, `1` when findings are reported, and `2` for invalid or unknown explicit selectors.
 

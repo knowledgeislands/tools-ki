@@ -239,9 +239,16 @@ describe('[ki agora]', () => {
       `zed -e ${roots['shared']}`,
       `zed -e ${roots['other']}`,
       `zed -e ${roots['member']}`,
-      `zed -e ${roots['home']}`,
-      `zed -e ${roots['extra']}`
+      `zed -e ${roots['extra']}`,
+      `zed -e ${roots['home']}`
     ])
+    expect(await box.run('ki agora open team --target vscode')).toEqual({
+      exitCode: 0,
+      output: 'ki agora open team --target vscode: opened 5 repositories\n'
+    })
+    expect(calls.at(-1)).toBe(
+      `code --new-window ${roots['extra']} ${roots['home']} ${roots['member']} ${roots['other']} ${roots['shared']}`
+    )
   })
 
   test('rejects an inclusion whose Agora name has multiple owners', async () => {
