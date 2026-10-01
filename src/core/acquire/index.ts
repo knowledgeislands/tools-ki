@@ -5,6 +5,7 @@ export {
   selectAcquisitionAdapters
 } from './adapters.ts'
 export { importCapture } from './chatgpt/import.ts'
+export { importGranolaImages } from './granola/images.ts'
 export {
   type GranolaImportResult,
   type GranolaOperationContext,

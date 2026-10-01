@@ -126,7 +126,7 @@ const optionalString = (value: unknown): boolean => value === undefined || typeo
 const interval = (value: unknown): value is { readonly since: string; readonly until: string } =>
   isRecord(value) && typeof value['since'] === 'string' && typeof value['until'] === 'string'
 
-const safeRelativePath = (value: string): boolean => {
+export const safeRelativePath = (value: string): boolean => {
   const path = normalize(value)
   return !isAbsolute(path) && path !== '..' && !path.startsWith('../') && !path.startsWith('..\\')
 }

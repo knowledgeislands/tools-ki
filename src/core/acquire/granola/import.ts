@@ -3,6 +3,7 @@ import { lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { KiError } from '../../errors.ts'
 import type { Runner } from '../../runtime/runner.ts'
+import { verifyGranolaImages } from './images.ts'
 import { renderGranolaMeeting } from './markdown.ts'
 import { granolaReceivers, type RoutedGranolaMeeting, routeGranolaMeetings } from './routing.ts'
 import {
@@ -71,6 +72,8 @@ export interface GranolaStatusResult {
   readonly availableTranscripts: number
   readonly retryingTranscripts: number
   readonly durableOmissions: number
+  readonly imageMeetings: number
+  readonly images: number
   readonly dispositions: Readonly<Record<string, number>>
   readonly journal: 'absent' | 'in-progress'
   readonly remaining: number
@@ -603,6 +606,13 @@ export const granolaStatus = async (options: {
   const checkpoint = loaded?.schema === 2 ? migrateGranolaCheckpoint(loaded, target.repository) : loaded
   const journal = await loadGranolaJournal(journalPath(target.root))
   const meetings = checkpoint ? Object.values(checkpoint.meetings) : []
+  const imageCounts = checkpoint
+    ? await Promise.all(
+        Object.entries(checkpoint.meetings).map(([id, meeting]) =>
+          verifyGranolaImages(basePath(target.root), id, meeting)
+        )
+      )
+    : []
   const dispositions: Record<string, number> = {}
   for (const meeting of meetings) {
     dispositions[meeting.disposition.state] = (dispositions[meeting.disposition.state] ?? 0) + 1
@@ -615,6 +625,8 @@ export const granolaStatus = async (options: {
     availableTranscripts: meetings.filter((meeting) => meeting.transcript_state === 'available').length,
     retryingTranscripts: meetings.filter((meeting) => meeting.transcript_state === 'retrying').length,
     durableOmissions: meetings.filter((meeting) => meeting.transcript_state === 'durable-omission').length,
+    imageMeetings: imageCounts.filter((count) => count > 0).length,
+    images: imageCounts.reduce((sum, count) => sum + count, 0),
     dispositions,
     journal: journal ? 'in-progress' : 'absent',
     remaining: journal?.remaining_identities.length ?? 0,

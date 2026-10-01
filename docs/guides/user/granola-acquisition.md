@@ -74,13 +74,27 @@ ki acquire status --adapter granola
 ki acquire reconcile --adapter granola
 ```
 
-`status` reports checkpoint, transcript, disposition, and journal summaries. `reconcile` additionally verifies the checkpoint's staged or disposed document evidence.
+`status` reports checkpoint, transcript, disposition, image-manifest, and journal summaries. `reconcile` additionally verifies the checkpoint's staged or disposed document evidence and every acquired image checksum.
+
+## Acquire desktop screenshots
+
+The Granola MCP has no attachment list or image bytes. For a note with an Images stack, observe the current image count in the desktop app. Open each image and use its Download control to save the original into a new, otherwise empty directory. Keep the app-generated `attachment-<uuid>` names. The app may use a `.jpg` filename for PNG bytes; the importer detects the actual format.
+
+After the meeting Markdown is staged in its registered Knowledge Base, run:
+
+```sh
+ki acquire images --adapter granola --repo /path/to/knowledge-base --source <meeting-uuid> --directory /path/to/exports --expected <desktop-image-count> --dry-run
+ki acquire images --adapter granola --repo /path/to/knowledge-base --source <meeting-uuid> --directory /path/to/exports --expected <desktop-image-count>
+ki acquire reconcile --adapter granola --repo /path/to/knowledge-base
+```
+
+The command rejects missing, extra, duplicate, non-image, and conflicting files. It preserves the export bytes beside the meeting Markdown and writes `<meeting-uuid>--attachments.json` with each attachment UUID, SHA-256, and byte count. Repeating the command with the same exports is safe; changed exports require review. The manifest records a user-observed source count, not an MCP-certified inventory. The KB must retain the committed images and manifest before any source retirement.
 
 ## Prepare manual retirement
 
 Granola exposes no supported archive or delete operation through its official MCP, so acquisition never deletes meetings. The accepted retirement path is a verified manual-release manifest followed by human deletion in Granola.
 
-Before producing a manifest, run a full-history `--refresh-transcripts` import for every configured receiver, repeat it until every receiver reports all meetings unchanged, run `reconcile`, and commit each receiver's `+/_ACQUIRE/granola/` state. The manifest must reconcile one shared account, source schema, interval, and identity checkpoint across the complete receiver union; deduplicate intentional receiver copies; name each meeting UUID and source-version hash; and exclude any meeting with an unavailable detail or transcript projection, unresolved routing conflict, failed checksum, or uncommitted receiver document.
+Before producing a manifest, run a full-history `--refresh-transcripts` import for every configured receiver, repeat it until every receiver reports all meetings unchanged, run `reconcile`, and commit each receiver's `+/_ACQUIRE/granola/` state. For screenshot-bearing notes, re-export the current desktop Images stack and repeat `ki acquire images` to check count, UUIDs, and bytes against the committed manifest. The release manifest must reconcile one shared account, source schema, interval, and identity checkpoint across the complete receiver union; deduplicate intentional receiver copies; name each meeting UUID and source-version hash; and exclude any meeting with an unavailable detail or transcript projection, unresolved routing conflict, failed checksum, uncommitted receiver document, or unverified current screenshot stack.
 
 Present the exact eligible list to the human operator and stop. The human deletes only that list in Granola. A later complete discovery treats the meetings' source-side absence as the signifier that manual retirement completed while the committed receiver documents and ledgers remain durable evidence. Any Granola or receiver change after manifest generation invalidates the affected list and requires fresh reconciliation.
 

@@ -11,6 +11,7 @@ import {
   granolaStatus,
   importCapture,
   importGranola,
+  importGranolaImages,
   reconcileGranola,
   resetGranola,
   selectAcquisitionAdapters
@@ -38,6 +39,13 @@ interface ResetOptions extends SelectionOptions {
   readonly component?: string
   readonly rebuild?: boolean
   readonly confirm?: boolean
+}
+
+interface ImageOptions extends SelectionOptions {
+  readonly source: string
+  readonly directory: string
+  readonly expected: string
+  readonly dryRun?: boolean
 }
 
 const granolaOperationContext = (context: KiContext): GranolaOperationContext => ({
@@ -106,7 +114,7 @@ const renderStatus = (adapter: string, status: GranolaStatusResult): string =>
     `Checkpoint: ${status.checkpoint}${status.generation ? ` · ${status.generation}` : ''}`,
     `Meetings: ${status.meetings}`,
     `Transcripts: ${status.availableTranscripts} available, ${status.retryingTranscripts} retrying, ${status.durableOmissions} durable omissions`,
-    'Attachments: not inventoried by Granola MCP; snapshot-bearing notes need separate image verification before deletion.',
+    `Images: ${status.images} verified in ${status.imageMeetings} meeting manifests; Granola MCP cannot attest source image counts.`,
     `Disposition: ${
       Object.entries(status.dispositions)
         .sort(([left], [right]) => left.localeCompare(right, 'en'))
@@ -226,6 +234,24 @@ const runReset = async (context: KiContext, options: ResetOptions): Promise<void
   }
 }
 
+const runImages = async (context: KiContext, options: ImageOptions): Promise<void> => {
+  if (options.all || options.adapter !== 'granola') throw new KiError('images requires --adapter granola', 2)
+  if (!/^[1-9][0-9]*$/.test(options.expected)) throw new KiError('--expected must be a positive integer', 2)
+  const selection = await selected(context, 'import', options)
+  const result = await importGranolaImages({
+    repository: selection.inventory.root,
+    repositoryId: selection.inventory.repository,
+    source: options.source,
+    directory: options.directory,
+    expected: Number(options.expected),
+    dryRun: options.dryRun,
+    now: context.now
+  })
+  context.stdout.write(
+    `${result.dryRun ? 'Granola image plan' : 'Granola images acquired'}: ${result.count} images, ${result.bytes} bytes\nManifest: ${result.manifest}\nSource count: user-observed; recheck Granola before source deletion.\n`
+  )
+}
+
 export const createAcquireCommand = (context: KiContext): Command => {
   const command = new Command('acquire').description('run repository-enabled acquisition adapters')
   command.addCommand(
@@ -250,6 +276,14 @@ export const createAcquireCommand = (context: KiContext): Command => {
     addSelection(new Command('status').description('show local adapter checkpoints and recovery state')).action(
       (options: SelectionOptions) => runStatus(context, options, false)
     )
+  )
+  command.addCommand(
+    addSelection(new Command('images').description('acquire Granola desktop image exports beside a staged meeting'))
+      .requiredOption('--source <uuid>', 'Granola meeting UUID already in the receiving checkpoint')
+      .requiredOption('--directory <path>', 'directory containing only attachment-UUID image exports')
+      .requiredOption('--expected <count>', 'image count observed in the Granola desktop stack')
+      .option('--dry-run', 'verify exports and destination without writing files')
+      .action((options: ImageOptions) => runImages(context, options))
   )
   command.addCommand(
     addSelection(new Command('reconcile').description('verify adapter checkpoints and dispositions')).action(

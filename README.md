@@ -35,7 +35,7 @@ ki acquire list
 ki acquire import --adapter granola --since 2023-01-01
 ```
 
-Use `--repo /path/to/repository` to select another eligible receiver and `--dry-run` to perform all reads and verification without writing. Routine acquisition revalidates mutable meeting detail, reuses verified transcripts, journals interrupted work, stages one Markdown document per selected identity, and advances its receiver-local checkpoint only after complete verification. It never mutates Granola or writes another repository. Adapter activation, receiver selectors, transcript refresh, disposition, reset, and interrupted-import recovery are documented in [Acquire Granola meetings](docs/guides/user/granola-acquisition.md).
+Use `--repo /path/to/repository` to select another eligible receiver and `--dry-run` to perform all reads and verification without writing. Routine acquisition revalidates mutable meeting detail, reuses verified transcripts, journals interrupted work, stages one Markdown document per selected identity, and advances its receiver-local checkpoint only after complete verification. Desktop screenshots use the separate `ki acquire images` handoff because Granola MCP omits attachments. It never mutates Granola or writes another repository. Adapter activation, receiver selectors, screenshot export, transcript refresh, disposition, reset, and interrupted-import recovery are documented in [Acquire Granola meetings](docs/guides/user/granola-acquisition.md).
 
 ## Manage installed capabilities
 

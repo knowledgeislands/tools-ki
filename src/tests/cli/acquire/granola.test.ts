@@ -1912,7 +1912,7 @@ describe('[ki acquire import --adapter granola]', () => {
     const absent = await box.run(statusCommand)
     expect(absent.exitCode, absent.output).toBe(0)
     expect(absent.output).toContain('Checkpoint: absent')
-    expect(absent.output).toContain('Attachments: not inventoried by Granola MCP')
+    expect(absent.output).toContain('Images: 0 verified in 0 meeting manifests')
     expect(absent.output).toContain('Disposition: none')
     expect(absent.output).toContain('Journal: absent')
     const missingReconcile = await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])
@@ -2470,5 +2470,194 @@ describe('[ki acquire import --adapter granola]', () => {
       '--confirm'
     ])
     expect(reset.output).toContain('checkpoint is absent')
+  })
+})
+
+describe('[ki acquire images --adapter granola]', () => {
+  const meetingId = '46261c23-bd6c-4c6a-92d9-85ced57dfcc4'
+  const attachmentId = '6823c90d-a684-449d-be05-0b2cb9194f96'
+  const missingAttachmentId = '00000000-0000-0000-0000-000000000001'
+  const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3])
+
+  test('binds exact desktop exports to an acquired KB meeting and rejects incomplete or changed handoffs', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
+    ])
+    box.setRunner(granolaFixtureRunner({ meetings: [{ id: meetingId, date: '2026-01-02', title: 'Meeting' }] }).runner)
+    expect((await box.run(command(repository))).exitCode).toBe(0)
+    const directory = await box.root.mkdir('exports')
+    const source = join(directory, `attachment-${attachmentId}.jpg`)
+    const bytes = png
+    await writeFile(source, bytes)
+    const args = [
+      'ki',
+      'acquire',
+      'images',
+      '--adapter',
+      'granola',
+      '--repo',
+      repository,
+      '--source',
+      meetingId,
+      '--directory',
+      directory,
+      '--expected',
+      '1'
+    ]
+    const dry = await box.run([...args, '--dry-run'])
+    expect(dry.exitCode, dry.output).toBe(0)
+    const manifestPath = join(repository, '+/_ACQUIRE/granola', `${meetingId}--attachments.json`)
+    expect(await lstat(manifestPath).catch(() => undefined)).toBeUndefined()
+    const imported = await box.run(args)
+    expect(imported.exitCode, imported.output).toBe(0)
+    expect(imported.output).toContain('1 images, 11 bytes')
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as JsonRecord
+    expect(manifest['expected_count']).toBe(1)
+    expect((manifest['assets'] as JsonRecord[])[0]?.['attachment_id']).toBe(attachmentId)
+    const acquired = join(repository, '+/_ACQUIRE/granola', `${meetingId}--attachment-${attachmentId}.png`)
+    expect(await readFile(acquired)).toEqual(bytes)
+    const reconciled = await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])
+    expect(reconciled.exitCode, reconciled.output).toBe(0)
+    expect(reconciled.output).toContain('Images: 1 verified in 1 meeting manifests')
+    expect((await box.run(args)).exitCode).toBe(0)
+    expect((await box.run([...args.slice(0, -1), '2'])).output).toContain('expected 2')
+    await writeFile(source, Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 4, 5, 6]))
+    expect((await box.run(args)).output).toContain('differs from acquired copy')
+    await writeFile(acquired, Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 7, 8, 9]))
+    expect(
+      (await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])).output
+    ).toContain('differs from manifest')
+  })
+
+  test('rejects invalid command scope, receiver, export directory, and files', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
+    ])
+    const directory = await box.root.mkdir('exports')
+    const args = [
+      'ki',
+      'acquire',
+      'images',
+      '--adapter',
+      'granola',
+      '--repo',
+      repository,
+      '--source',
+      meetingId,
+      '--directory',
+      directory,
+      '--expected',
+      '1'
+    ]
+    expect((await box.run([...args, '--all'])).output).toContain('requires --adapter granola')
+    expect((await box.run([...args.slice(0, -1), 'no'])).output).toContain('positive integer')
+    expect((await box.run([...args.slice(0, -1), '99999999999999999999'])).output).toContain(
+      'positive integer from the Granola image stack'
+    )
+    expect((await box.run([...args.slice(0, 8), 'bad', ...args.slice(9)])).output).toContain('meeting UUID')
+    expect((await box.run(args)).output).toContain('Current Granola checkpoint is required')
+    box.setRunner(granolaFixtureRunner({ meetings: [{ id: meetingId, date: '2026-01-02', title: 'Meeting' }] }).runner)
+    expect((await box.run(command(repository))).exitCode).toBe(0)
+    const missingId = '00000000-0000-0000-0000-000000000000'
+    expect((await box.run([...args.slice(0, 8), missingId, ...args.slice(9)])).output).toContain('has no meeting')
+    expect((await box.run([...args.slice(0, 10), join(directory, 'missing'), ...args.slice(11)])).output).toContain(
+      'physical directory'
+    )
+    const linked = join(directory, 'linked')
+    await symlink(directory, linked)
+    expect((await box.run([...args.slice(0, 10), linked, ...args.slice(11)])).output).toContain('physical directory')
+    await rm(linked)
+    const source = join(directory, `attachment-${attachmentId}.jpg`)
+    await writeFile(source, Buffer.from('not an image'))
+    expect((await box.run(args)).output).toContain('not PNG, JPEG, or WebP')
+    await rm(source)
+    await writeFile(join(directory, 'unexpected.png'), png)
+    expect((await box.run(args)).output).toContain('unexpected file')
+    await rm(join(directory, 'unexpected.png'))
+    await symlink(join(directory, 'missing'), source)
+    expect((await box.run(args)).output).toContain('Unsafe Granola image file')
+    await rm(source)
+    await writeFile(source, png)
+    const duplicate = join(directory, `attachment-${attachmentId}.png`)
+    await writeFile(duplicate, png)
+    expect((await box.run([...args.slice(0, -1), '2'])).output).toContain('repeats an attachment UUID')
+    await rm(source)
+    await rm(duplicate)
+    const ledgerPath = join(repository, '+/_ACQUIRE/granola/ledger.json')
+    const ledger = JSON.parse(await readFile(ledgerPath, 'utf8')) as JsonRecord
+    const meeting = (ledger['meetings'] as JsonRecord)[meetingId] as JsonRecord
+    const disposition = meeting['disposition'] as JsonRecord
+    disposition['state'] = 'retained'
+    await writeFile(ledgerPath, JSON.stringify(ledger))
+    await rm(join(repository, '+/_ACQUIRE/granola', String(meeting['path'])))
+    expect((await box.run(args)).output).toContain('document must be present')
+    meeting['path'] = '../../outside.md'
+    await writeFile(ledgerPath, JSON.stringify(ledger))
+    expect((await box.run(['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository])).output).toContain(
+      'unsafe document path'
+    )
+  })
+
+  test('verifies manifest shape, image presence, and JPEG and WebP exports', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
+    ])
+    box.setRunner(granolaFixtureRunner({ meetings: [{ id: meetingId, date: '2026-01-02', title: 'Meeting' }] }).runner)
+    expect((await box.run(command(repository))).exitCode).toBe(0)
+    const directory = await box.root.mkdir('exports')
+    const source = join(directory, `attachment-${attachmentId}.jpg`)
+    const args = [
+      'ki',
+      'acquire',
+      'images',
+      '--adapter',
+      'granola',
+      '--repo',
+      repository,
+      '--source',
+      meetingId,
+      '--directory',
+      directory,
+      '--expected',
+      '1'
+    ]
+    const status = ['ki', 'acquire', 'status', '--adapter', 'granola', '--repo', repository]
+    const target = join(repository, '+/_ACQUIRE/granola')
+    const manifestPath = join(target, `${meetingId}--attachments.json`)
+    await writeFile(source, Buffer.from([255, 216, 255, 1]))
+    expect((await box.run(args)).exitCode).toBe(0)
+    const jpg = join(target, `${meetingId}--attachment-${attachmentId}.jpg`)
+    expect(await lstat(jpg)).toBeDefined()
+    const original = JSON.parse(await readFile(manifestPath, 'utf8')) as JsonRecord
+    const check = async (value: unknown, expected: string): Promise<void> => {
+      await writeFile(manifestPath, typeof value === 'string' ? value : JSON.stringify(value))
+      expect((await box.run(status)).output).toContain(expected)
+    }
+    await check('{', 'invalid JSON')
+    await check({ ...original, expected_count: 2 }, 'malformed')
+    await check({ ...original, assets: [{}] }, 'invalid asset')
+    await writeFile(manifestPath, JSON.stringify(original))
+    await rm(jpg)
+    expect((await box.run(status)).output).toContain('is missing')
+    await writeFile(jpg, Buffer.from([255, 216, 255, 1]))
+    const wrong = {
+      ...original,
+      assets: [{ ...(original['assets'] as JsonRecord[])[0], file: `${meetingId}--attachment-${attachmentId}.png` }]
+    }
+    await check(wrong, 'is missing')
+    await writeFile(join(target, `${meetingId}--attachment-${attachmentId}.png`), Buffer.from([255, 216, 255, 1]))
+    expect((await box.run(status)).output).toContain('wrong format extension')
+    await writeFile(manifestPath, JSON.stringify(original))
+    const webpDirectory = await box.root.mkdir('webp')
+    const webpSource = join(webpDirectory, `attachment-${missingAttachmentId}.webp`)
+    await writeFile(webpSource, Buffer.from('RIFF1234WEBPdata'))
+    const alternate = [...args.slice(0, 10), webpDirectory, ...args.slice(11)]
+    expect((await box.run(alternate)).output).toContain('manifest differs')
   })
 })

@@ -140,6 +140,7 @@ Pre-V1 work is summarized as this baseline; separate 0.x release entries are not
 
 #### Acquisition
 
+- `ki acquire images --adapter granola [--repo <path>] --source <uuid> --directory <path> --expected <count> [--dry-run]`
 - `ki acquire list [--repo <path>]`
 - `ki acquire import [--adapter <name>|--all] [--repo <path>] [--since <date>] [--until <date>] [--dry-run]`
 - `ki acquire status [--adapter <name>|--all] [--repo <path>]`

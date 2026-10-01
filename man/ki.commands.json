@@ -442,6 +442,10 @@
       "purpose": "Acquisition is action-first and adapter-driven. Installed Harness skills publish verified machine-readable adapter declarations; repository configuration enables them.",
       "commands": [
         {
+          "invocation": "ki acquire images",
+          "description": "--adapter granola [--repo <path>] --source <uuid> --directory <path> --expected <count> [--dry-run] Verify UUID-named image exports from the Granola desktop app against an already acquired meeting. Preserve their exact bytes and a checksum manifest beside its Markdown in the receiving Knowledge Base. The expected count is observed in the desktop Images stack, not supplied by Granola MCP."
+        },
+        {
           "invocation": "ki acquire list",
           "description": "[--repo <path>] List enabled, available, and invalid acquisition adapters with owning skill, actions, configuration, executable status, and activation guidance."
         },

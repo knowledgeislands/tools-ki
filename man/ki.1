@@ -340,6 +340,9 @@ Remove only the selected machine-local reference association.
 .SS Acquisition
 \&
 .TP
+.B ki acquire images
+.RI --adapter\ granola\ [--repo\ <path>]\ --source\ <uuid>\ --directory\ <path>\ --expected\ <count>\ [--dry-run]
+.TP
 .B ki acquire list
 .RI [--repo\ <path>]
 .TP
@@ -1120,6 +1123,13 @@ Remove only the selected machine-local reference association.
 Acquisition is action-first and adapter-driven. Installed Harness skills
 publish verified machine-readable adapter declarations; repository
 configuration enables them.
+.TP
+.B ki acquire images
+.RI --adapter\ granola\ [--repo\ <path>]\ --source\ <uuid>\ --directory\ <path>\ --expected\ <count>\ [--dry-run]
+Verify UUID-named image exports from the Granola desktop app against an
+already acquired meeting. Preserve their exact bytes and a checksum manifest
+beside its Markdown in the receiving Knowledge Base. The expected count is
+observed in the desktop Images stack, not supplied by Granola MCP.
 .TP
 .B ki acquire list
 .RI [--repo\ <path>]
