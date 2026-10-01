@@ -1912,6 +1912,7 @@ describe('[ki acquire import --adapter granola]', () => {
     const absent = await box.run(statusCommand)
     expect(absent.exitCode, absent.output).toBe(0)
     expect(absent.output).toContain('Checkpoint: absent')
+    expect(absent.output).toContain('Attachments: not inventoried by Granola MCP')
     expect(absent.output).toContain('Disposition: none')
     expect(absent.output).toContain('Journal: absent')
     const missingReconcile = await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])
@@ -1929,7 +1930,9 @@ describe('[ki acquire import --adapter granola]', () => {
     expect(interrupted.output).toContain('Journal: in-progress · 1 remaining, 1 failures')
 
     box.setRunner(granolaFixtureRunner({ meetings }).runner)
-    expect((await box.run(command(repository))).exitCode).toBe(0)
+    const imported = await box.run(command(repository))
+    expect(imported.exitCode).toBe(0)
+    expect(imported.output).toContain('Attachments: not inventoried by Granola MCP')
     const current = await box.run(statusCommand)
     expect(current.output).toContain('Checkpoint: current · ')
     expect(current.output).toContain('Disposition: staged=11')

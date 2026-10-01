@@ -84,6 +84,7 @@ const renderGranolaResult = (result: GranolaImportResult): string =>
     `Routing: ${result.unfoldered} unfoldered, ${result.duplicated} intentionally duplicated`,
     `Meetings: ${result.created} new, ${result.amended} amended, ${result.unchanged} unchanged`,
     `Transcripts: ${result.transcriptReads} provider reads, ${result.omissions} omissions, ${result.resumed} resumed`,
+    'Attachments: not inventoried by Granola MCP; snapshot-bearing notes need separate image verification before deletion.',
     `Checkpoint: ${result.ledgerChanged ? (result.dryRun ? 'would advance' : 'advanced atomically') : 'unchanged'}`,
     'Boundary: read-only Granola MCP; no source mutation, harvesting, cross-repository write, archive, or deletion.',
     ...(result.dryRun ? ['Dry run: no repository files written.'] : [])
@@ -105,6 +106,7 @@ const renderStatus = (adapter: string, status: GranolaStatusResult): string =>
     `Checkpoint: ${status.checkpoint}${status.generation ? ` · ${status.generation}` : ''}`,
     `Meetings: ${status.meetings}`,
     `Transcripts: ${status.availableTranscripts} available, ${status.retryingTranscripts} retrying, ${status.durableOmissions} durable omissions`,
+    'Attachments: not inventoried by Granola MCP; snapshot-bearing notes need separate image verification before deletion.',
     `Disposition: ${
       Object.entries(status.dispositions)
         .sort(([left], [right]) => left.localeCompare(right, 'en'))
