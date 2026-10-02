@@ -32,7 +32,7 @@ jobs:
           test "$(command -v ki)" = "$KI_CLI_INSTALL_DIR/ki"
           test "$(ki --version)" = "$(node -p 'require("./package.json").version')"
           ki manage diag | grep -F 'Installation: local'
-          ki manage diag | grep -F "Executable: $KI_CLI_INSTALL_DIR/ki"
+          ki manage diag | grep -F "Executable: $GITHUB_WORKSPACE/src/main.ts"
           ki bootstrap
           ki registry add --repo .
           ki repo repair --repo .
