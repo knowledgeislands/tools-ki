@@ -69,7 +69,7 @@ A separate GitHub account controlled by the same person can add a small operatio
 
 ## Publish a release
 
-Before creating the tag, verify that the candidate version in `package.json` and `ki --version` agree with the intended `vX.Y.Z` tag. Review the README, user guides, and `ki(1)` for the same public command surface; after changing the manual, update its date, run `bun run ki:tools:lint-man`, and inspect its rendered output. Move the relevant changes from `Unreleased` into a dated `X.Y.Z` entry in `CHANGELOG.md` for that tag, grouped under `Added`, `Changed`, `Fixed`, and `Removed` as applicable. Keep the remaining unreleased changes under `Unreleased`; do not label them as an in-progress 1.0 release.
+Before creating the tag, verify that the candidate version in `package.json` and `ki --version` agree with the intended `vX.Y.Z` tag. Review the README, user guides, and `ki(1)` for the same public command surface; after changing the manual, update its date, run `bun run ki:tools:lint-man`, and inspect its rendered output. For a 0.x release, update the consolidated Pre-1.0 baseline in `CHANGELOG.md` so its command surface and notable changes reflect the candidate; the tag, GitHub release, and commit history retain the exact per-release record. From 1.0 onward, add a dated `X.Y.Z` entry grouped under `Added`, `Changed`, `Fixed`, and `Removed` as applicable.
 
 The release workflow is manually dispatched from protected `main`, then checks out the exact requested release tag. Create and push an exact semantic version tag only after the intended release commit is on `main`:
 
