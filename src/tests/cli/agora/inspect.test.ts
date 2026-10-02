@@ -166,6 +166,7 @@ describe('[ki agora inspect]', () => {
     await symlink(source, linked)
     expect((await inspect(box, 'vscode', linked)).exitCode).toBe(2)
     expect((await box.run('ki agora inspect team --target terminal --workspace anything')).exitCode).toBe(2)
+    expect((await box.run('ki agora inspect team --target delta --workspace anything')).exitCode).toBe(2)
     expect((await box.run('ki agora inspect unknown --target vscode --workspace anything')).exitCode).toBe(2)
     expect((await box.run('ki agora audit')).exitCode).toBe(1)
   })

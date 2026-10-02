@@ -85,6 +85,28 @@ describe('[ki repo open]', () => {
     })
   })
 
+  test('opens repository roots in Delta without local stores and rejects an explicit store request', async () => {
+    const box = await sandbox()
+    const notes = await realpath(box.project.path)
+    await box.project.write('.ki.toml', repositoryConfiguration('https://github.com/example/knowledge', true))
+    const calls: string[] = []
+    box.setRunner(async (command, arguments_) => {
+      calls.push(`${command} ${arguments_.join(' ')}`)
+      return { exitCode: 0, output: '' }
+    })
+
+    expect(await box.run('ki repo open --target delta')).toEqual({
+      exitCode: 0,
+      output: 'ki repo open --target delta: opened 1 repositories\n'
+    })
+    expect(calls).toEqual([`delta open ${notes}`])
+    expect(await box.run('ki repo open --target delta --stores')).toEqual({
+      exitCode: 2,
+      output: 'ki: error: ki repo open --target delta accepts repository roots only; omit --stores\n'
+    })
+    expect(calls).toHaveLength(1)
+  })
+
   test('preserves notes-then-sources ordering across selected repositories and rejects unsafe source bindings', async () => {
     const box = await sandbox()
     const first = await realpath(box.project.path)
@@ -135,7 +157,7 @@ describe('[ki repo open]', () => {
 
     const invalidTarget = await box.run('ki repo open --target terminal')
     expect(invalidTarget.exitCode).toBe(2)
-    expect(invalidTarget.output).toContain('Allowed choices are zed, vscode.')
+    expect(invalidTarget.output).toContain('Allowed choices are zed, vscode, delta.')
     expect(await box.run('ki repo open --target zed --stores --no-stores')).toEqual({
       exitCode: 2,
       output: 'ki: error: ki repo open --stores and --no-stores are mutually exclusive\n'
@@ -160,7 +182,9 @@ describe('[ki repo open]', () => {
       { target: 'zed', stage: 'root', output: 'root failed\n', expected: 'root failed' },
       { target: 'zed', stage: 'root', output: '', expected: 'zed failed' },
       { target: 'vscode', stage: 'window', output: 'window failed\n', expected: 'window failed' },
-      { target: 'vscode', stage: 'window', output: '', expected: 'code failed' }
+      { target: 'vscode', stage: 'window', output: '', expected: 'code failed' },
+      { target: 'delta', stage: 'root', output: 'project failed\n', expected: 'project failed' },
+      { target: 'delta', stage: 'root', output: '', expected: 'delta failed' }
     ] as const
 
     for (const scenario of cases) {

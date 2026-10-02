@@ -154,8 +154,8 @@
           "description": "Initialize exactly one existing physical Git worktree root. With no directory, it uses the current directory; an explicit directory must be that worktree's root and must not be a symbolic link. Every identity value is required: --title, --description, a stable uppercase --repo-code, canonical HTTPS GitHub --repository, one or more --runtime values selected from claude-code and chatgpt-codex, and --visibility public|private. It atomically creates the minimal canonical ki-repo declaration and registers the physical root in $XDG_STATE_HOME/ki/registry.toml. It never runs git init, guesses identity, activates repository skills, creates a Agora, accepts repository selectors, or overwrites an existing .ki.toml."
         },
         {
-          "invocation": "ki repo [repo-options] open --target <zed|vscode> [--stores|--no-stores]",
-          "description": "Open every selected canonical repository in the requested local target. By default, a Knowledge Base opens its notes root followed by every declared, locally bound external store in declaration order. Each binding must be a direct directory recorded with the canonical repository; it is never made an estate member or Agora participant. --no-stores opens canonical notes roots only, while --stores makes the default explicit."
+          "invocation": "ki repo [repo-options] open --target <zed|vscode|delta> [--stores|--no-stores]",
+          "description": "Open every selected canonical repository in the requested local target. By default, a Knowledge Base opens its notes root followed by every declared, locally bound external store in declaration order. Each binding must be a direct directory recorded with the canonical repository; it is never made an estate member or Agora participant. --no-stores opens canonical notes roots only, while --stores makes the default explicit. Delta opens repository roots only; it skips stores by default and rejects --stores. Delta's documented project flow stores repository and thread data on its servers even when using a local model."
         },
         {
           "invocation": "ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]",
@@ -420,8 +420,8 @@
           "description": "Write absolute physical roots for machine consumption. The default format is newline-delimited. Use --null or -0 for pathnames that may contain line feeds."
         },
         {
-          "invocation": "ki agora open <name> --target <zed|vscode>",
-          "description": "Open one declared Agora or the registered estate through an explicit local target. For a named Agora in Zed, add its owner last so the sidebar shows it first; the estate and VS Code keep canonical projection order."
+          "invocation": "ki agora open <name> --target <zed|vscode|delta>",
+          "description": "Open one declared Agora or the registered estate through an explicit local target. For a named Agora in Zed, add its owner last so the sidebar shows it first; the estate and VS Code keep canonical projection order. Delta opens each repository in its running app. Its documented project flow stores repository and thread data on its servers even with a local model."
         },
         {
           "invocation": "ki agora reference set <repository> <checkout> [--dry-run]",

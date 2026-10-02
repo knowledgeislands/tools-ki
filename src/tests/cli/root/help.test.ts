@@ -77,7 +77,7 @@ describe('[ki --help]', () => {
     expect(agoraInspect.output).toContain('Usage: ki agora inspect [options] <agora>')
     expect(agoraInspect.output).toContain('(choices: "zed", "vscode")')
     expect(agoraInspect.output).toContain('--workspace <selector>')
-    expect(agoraOpen.output).toContain('(choices: "zed", "vscode")')
+    expect(agoraOpen.output).toContain('(choices: "zed", "vscode", "delta")')
     expect(agoraReference.output).toContain('manage explicit local checkouts')
     expect(agoraReferenceSet.output).toContain('Usage: ki agora reference set [options] <repository> <checkout>')
     expect(vscode.output).toContain('reconcile local VS Code projections with the KI registry')

@@ -113,9 +113,9 @@ Select every repository in the registered estate. This is shorthand for
 Create the explicit KI identity declaration for one existing Git repository
 and register its physical root in the machine-local registry.
 .TP
-.B ki repo [repo-options] open --target <zed|vscode> [--stores|--no-stores]
-Open selected canonical repositories and, by default, their locally registered
-Knowledge Base external stores.
+.B ki repo [repo-options] open --target <zed|vscode|delta> [--stores|--no-stores]
+Open selected canonical repositories in one local target. Zed and VS Code
+include locally registered Knowledge Base external stores by default.
 .TP
 .B ki repo [repo-options] store list [--format <text|json>]
 List declared repository stores and their machine-local bindings.
@@ -323,10 +323,11 @@ names;
 Write absolute physical roots for machine consumption. The default format is
 newline-delimited. Use --null or -0 for pathnames that may contain line feeds.
 .TP
-.B ki agora open <name> --target <zed|vscode>
+.B ki agora open <name> --target <zed|vscode|delta>
 Open one declared Agora or the registered estate through an explicit local
 target. For a named Agora in Zed, add its owner last so the sidebar shows it
-first.
+first. Delta opens each repository in its running app. Its documented project
+flow stores repository and thread data on its servers even with a local model.
 .TP
 .B ki agora reference set <repository> <checkout> [--dry-run]
 Associate one owner-declared repository inclusion with an explicitly selected
@@ -641,13 +642,16 @@ never runs
 Agora, accepts repository selectors, or overwrites an existing
 \fB.ki.toml\fR.
 .TP
-.B ki repo [repo-options] open --target <zed|vscode> [--stores|--no-stores]
+.B ki repo [repo-options] open --target <zed|vscode|delta> [--stores|--no-stores]
 Open every selected canonical repository in the requested local target. By
 default, a Knowledge Base opens its notes root followed by every declared,
 locally bound external store in declaration order. Each binding must be a direct
 directory recorded with the canonical repository; it is never made an estate
 member or Agora participant. \fB--no-stores\fR opens canonical notes roots only,
-while \fB--stores\fR makes the default explicit.
+while \fB--stores\fR makes the default explicit. Delta opens repository roots
+only; it skips stores by default and rejects \fB--stores\fR.
+Delta's documented project flow stores repository and thread data on its
+servers even when using a local model.
 .TP
 .B ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]
 Run the native read-only operations registered by each selected repository's
@@ -1102,10 +1106,12 @@ repository URLs and local paths, including the home's path.
 Write absolute physical roots for machine consumption. The default format is
 newline-delimited. Use --null or -0 for pathnames that may contain line feeds.
 .TP
-.B ki agora open <name> --target <zed|vscode>
+.B ki agora open <name> --target <zed|vscode|delta>
 Open one declared Agora or the registered estate through an explicit local
 target. For a named Agora in Zed, add its owner last so the sidebar shows it
-first; the estate and VS Code keep canonical projection order.
+first; the estate and VS Code keep canonical projection order. Delta opens each
+repository in its running app. Its documented project flow stores repository
+and thread data on its servers even with a local model.
 .TP
 .B ki agora reference set <repository> <checkout> [--dry-run]
 Associate one owner-declared repository inclusion with an explicitly selected

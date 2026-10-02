@@ -32,13 +32,15 @@ export const createRepoOpenCommand = (
   selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
 ): Command =>
   new Command('open')
-    .description('open selected repositories with their declared local stores')
+    .description('open selected repositories through an explicit local target')
     .addOption(new Option('--target <target>', 'local target to open').choices(openTargetNames).makeOptionMandatory())
-    .option('--stores', 'include declared local stores (default)')
+    .option('--stores', 'include declared local stores (default for zed and vscode)')
     .option('--no-stores', 'open canonical repository roots only')
     .action(async (options: OpenOptions, command: Command) => {
       if (supplied(command, '--stores') && supplied(command, '--no-stores'))
         throw new KiError('ki repo open --stores and --no-stores are mutually exclusive', 2)
+      if (options.target === 'delta' && supplied(command, '--stores'))
+        throw new KiError('ki repo open --target delta accepts repository roots only; omit --stores', 2)
       const repositories = await resolveRepositoryTargets({
         ...selectedRepositories(),
         configurationDirectory: context.paths.config,
@@ -46,7 +48,7 @@ export const createRepoOpenCommand = (
         workingDirectory: context.workingDirectory,
         homeDirectory: context.homeDirectory
       })
-      const includeStores = options.stores !== false
+      const includeStores = options.target !== 'delta' && options.stores !== false
       const roots: string[] = []
       for (const repository of repositories) {
         roots.push(repository.root)

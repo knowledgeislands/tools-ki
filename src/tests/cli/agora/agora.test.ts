@@ -183,6 +183,26 @@ describe('[ki agora]', () => {
       `zed -e ${roots['member']}`,
       `zed -e ${roots['home']}`
     ])
+    calls.length = 0
+    expect(await box.run('ki agora open team --target delta')).toEqual({
+      exitCode: 0,
+      output: 'ki agora open team --target delta: opened 3 repositories\n'
+    })
+    expect(calls).toEqual([
+      `delta open ${roots['home']}`,
+      `delta open ${roots['member']}`,
+      `delta open ${roots['other']}`
+    ])
+    calls.length = 0
+    box.setRunner(async (command, arguments_) => {
+      calls.push(`${command} ${arguments_.join(' ')}`)
+      return { exitCode: arguments_[1] === roots['member'] ? 7 : 0, output: '' }
+    })
+    expect(await box.run('ki agora open team --target delta')).toEqual({
+      exitCode: 7,
+      output: 'ki: error: could not open Agora team: delta failed\n'
+    })
+    expect(calls).toEqual([`delta open ${roots['home']}`, `delta open ${roots['member']}`])
   })
 
   test('includes another Agora and a registered repository in alphabetical projections', async () => {
@@ -329,7 +349,7 @@ describe('[ki agora]', () => {
     })
     const invalidTarget = await box.run('ki agora open estate --target terminal')
     expect(invalidTarget.exitCode).toBe(2)
-    expect(invalidTarget.output).toContain('Allowed choices are zed, vscode.')
+    expect(invalidTarget.output).toContain('Allowed choices are zed, vscode, delta.')
   })
 
   test('sorts multiple declared Agoras by identifier', async () => {

@@ -2,9 +2,9 @@ import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import {
   compareAgoraProjection,
-  type OpenTargetName,
+  type ObserveTargetName,
   observeLocalTarget,
-  openTargetNames,
+  observeTargetNames,
   type ProjectionPath,
   resolveAgora
 } from '../../core/agora/index.ts'
@@ -25,10 +25,10 @@ export const createAgoraInspectCommand = (context: KiContext): Command =>
     .description('inspect one local editor projection for Agora drift')
     .argument('<agora>', 'Agora name')
     .addOption(
-      new Option('--target <target>', 'local target to inspect').choices(openTargetNames).makeOptionMandatory()
+      new Option('--target <target>', 'local target to inspect').choices(observeTargetNames).makeOptionMandatory()
     )
     .requiredOption('--workspace <selector>', 'explicit local editor workspace selector')
-    .action(async (value: string, options: { readonly target: OpenTargetName; readonly workspace: string }) => {
+    .action(async (value: string, options: { readonly target: ObserveTargetName; readonly workspace: string }) => {
       const agora = await resolveAgora(context.paths.state, value, {
         runner: context.runner,
         environment: context.environment
