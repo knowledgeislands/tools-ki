@@ -142,7 +142,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-OPS-014 — Final repository and workspace declarations
 
-`ki` MUST use `.ki.toml` as the only KI repository declaration filename, and without an explicit repository or Agora selector MUST consume only a regular direct-CWD schema-one `.mgit.toml`: workspace manifests select the configured group and recurse through declared child workspaces, while repository manifests fall through to ordinary repository discovery. It MUST NOT provide retired-filename compatibility or migration behaviour.
+`ki` MUST use `.ki.toml` as the only KI repository declaration filename, and without an explicit repository or Agora selector MUST consume only a regular direct-CWD `.mgit.toml`: unversioned workspace manifests select direct members, existing `schema = 1` workspace manifests select their configured group, and both recurse through declared child workspaces. Repository manifests fall through to ordinary repository discovery. It MUST NOT provide retired-filename compatibility or migration behaviour.
 
 _Conformance:_ conforming
 
@@ -222,7 +222,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### REPO-OPS-022 — mGit registration locations
 
-`ki repo` MUST accept an optional string-array `locations` field in a schema-one mGit workspace manifest without selecting targets from it. A non-array value or non-string entry MUST fail before repository selection.
+`ki repo` MUST accept an optional string-array `locations` field in an unversioned or schema-one mGit workspace manifest without selecting targets from it. A non-array value or non-string entry MUST fail before repository selection.
 
 _Conformance:_ conforming
 

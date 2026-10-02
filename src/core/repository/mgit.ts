@@ -131,6 +131,17 @@ const workspaceManifest = (
   return { kind: 'workspace', path, members }
 }
 
+const directWorkspaceManifest = (parsed: Record<string, unknown>, path: string): WorkspaceManifest => {
+  rejectUnknownKeys(parsed, ['kind', 'locations', 'registered', 'members'], path, 'workspace manifest')
+  const locations = parsed['locations']
+  if (locations !== undefined && (!Array.isArray(locations) || locations.some((value) => typeof value !== 'string')))
+    throw manifestError(path, 'workspace locations must be an array of strings')
+  if (!isRecord(parsed['members'])) throw manifestError(path, 'workspace members must be a table')
+  const members = [...structuralMembers({ members: parsed['members'] }, path).values()]
+  if (!members.length) throw manifestError(path, 'workspace selects no repositories')
+  return { kind: 'workspace', path, members }
+}
+
 const parseManifest = (contents: string, path: string): MgitManifest => {
   let parsed: unknown
   try {
@@ -140,8 +151,9 @@ const parseManifest = (contents: string, path: string): MgitManifest => {
   }
   /* v8 ignore next -- a TOML document always parses to a table. */
   if (!isRecord(parsed)) throw manifestError(path, 'must be a table')
-  if (parsed['schema'] !== 1) throw manifestError(path, 'schema must equal 1')
+  if ((parsed['schema'] ?? 1) !== 1) throw manifestError(path, 'schema must equal 1 when present')
   if (parsed['kind'] === 'workspace') {
+    if (parsed['schema'] === undefined) return directWorkspaceManifest(parsed, path)
     if (!isRecord(parsed['groups'])) throw manifestError(path, 'workspace groups must be a table')
     return workspaceManifest(parsed, path, parsed['groups'])
   }

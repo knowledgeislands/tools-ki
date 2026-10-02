@@ -127,6 +127,42 @@ describe('[ki repo target sets]', () => {
       expect(result.output).toContain('/nested/main')
     })
 
+    test('expands group-free mGit manifests without a schema and rejects mixed formats', async () => {
+      const box = await sandbox()
+      await box.project.write(
+        '.mgit.toml',
+        'kind = "workspace"\nlocations = ["local"]\n\n[registered.members."../external"]\n\n[members.first]\nkind = "repository"\ntype = "standard"\n\n[members.group]\nkind = "workspace"\n'
+      )
+      await box.project.write('first/.ki.toml', '# first\n')
+      await box.project.write(
+        'group/.mgit.toml',
+        'kind = "workspace"\n\n[members.second]\nkind = "repository"\ntype = "standard"\n'
+      )
+      await box.project.write('group/second/.ki.toml', '# second\n')
+
+      const selected = await box.run('ki repo roadmap list')
+      expect(selected.output).toContain('/first')
+      expect(selected.output).toContain('/group/second')
+
+      await box.project.write(
+        '.mgit.toml',
+        'kind = "workspace"\n\n[members.first]\nkind = "repository"\ntype = "standard"\n\n[groups.default]\n'
+      )
+      const mixed = await box.run('ki repo roadmap list')
+      expect(mixed.exitCode).toBe(2)
+      expect(mixed.output).toContain('unsupported field groups')
+
+      for (const [document, detail] of [
+        ['kind = "workspace"\n', 'workspace members must be a table'],
+        ['kind = "workspace"\n\n[members]\n', 'workspace selects no repositories']
+      ] as const) {
+        await box.project.write('.mgit.toml', document)
+        const invalid = await box.run('ki repo roadmap list')
+        expect(invalid.exitCode).toBe(2)
+        expect(invalid.output).toContain(detail)
+      }
+    })
+
     test('audits KI members and reports skipped non-KI members in both output modes', async () => {
       const box = await sandbox()
       await box.project.write(
@@ -254,15 +290,15 @@ describe('[ki repo target sets]', () => {
     test('rejects malformed workspace locations before selecting members', async () => {
       const box = await sandbox()
       for (const locations of ['"local"', '["local", 1]']) {
-        await box.project.write(
-          '.mgit.toml',
-          `schema = 1\nkind = "workspace"\ndefault = "default"\nlocations = ${locations}\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n`
-        )
-
-        const result = await box.run('ki repo audit')
-
-        expect(result.exitCode).toBe(2)
-        expect(result.output).toContain('workspace locations must be an array of strings')
+        for (const document of [
+          `schema = 1\nkind = "workspace"\ndefault = "default"\nlocations = ${locations}\n\n[groups.default.members.repo]\nkind = "repository"\ntype = "standard"\n`,
+          `kind = "workspace"\nlocations = ${locations}\n\n[members.repo]\nkind = "repository"\ntype = "standard"\n`
+        ]) {
+          await box.project.write('.mgit.toml', document)
+          const result = await box.run('ki repo audit')
+          expect(result.exitCode).toBe(2)
+          expect(result.output).toContain('workspace locations must be an array of strings')
+        }
       }
     })
 
@@ -270,7 +306,8 @@ describe('[ki repo target sets]', () => {
       const box = await sandbox()
       const documents: readonly [string, number][] = [
         ['schema = [\n', 2],
-        ['kind = "repository"\n', 2],
+        ['schema = 2\nkind = "workspace"\n', 2],
+        ['kind = "repository"\nextra = true\n', 2],
         ['schema = 1\nkind = "workspace"\ndefault = "default"\ngroups = []\n', 2],
         [
           'schema = 1\nkind = "workspace"\ndefault = "default"\n\n[groups.default.members."../escape"]\nkind = "repository"\ntype = "standard"\n',
@@ -381,19 +418,20 @@ describe('[ki repo target sets]', () => {
 
     test('audits the repository a repository-kind mGit manifest sits in', async () => {
       const box = await sandbox()
-      await box.project.write(
-        '.mgit.toml',
-        'schema = 1\nkind = "repository"\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n'
-      )
       await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
       await box.setupExampleHarness({ rubric: rubric('[]') })
       const root = await realpath(box.project.path)
 
-      const result = await box.run('ki repo audit')
-
-      expect(result.exitCode).toBe(0)
-      expect(result.output).toContain(`╭─ KI REPO AUDIT\n│  ├─ 📁 project (${root})`)
-      expect(result.output).toContain('PASS · 1 skill')
+      for (const schema of ['', 'schema = 1\n']) {
+        await box.project.write(
+          '.mgit.toml',
+          `${schema}kind = "repository"\n\n[symlinks]\n".claude/skills/ki-example" = "~/harness/skills/ki-example"\n`
+        )
+        const result = await box.run('ki repo audit')
+        expect(result.exitCode).toBe(0)
+        expect(result.output).toContain(`╭─ KI REPO AUDIT\n│  ├─ 📁 project (${root})`)
+        expect(result.output).toContain('PASS · 1 skill')
+      }
     })
 
     test('fails loudly when a repository-kind mGit manifest has no discoverable KI repository', async () => {

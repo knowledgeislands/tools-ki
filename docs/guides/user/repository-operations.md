@@ -22,7 +22,7 @@ ki repo audit --estate --concise
 
 An unmatched pattern, an invalid root, or a duplicate root stops the operation before any target runs, which is what makes a wide selector safe to use: you learn the selection is wrong before anything acts on it. A repeated Agora declaration id is rejected naming every declaring owner, so you can resolve the ambiguity rather than guess which one won.
 
-With no explicit selector, `ki` reads a regular `.mgit.toml` schema-one manifest in the current directory. A workspace manifest selects its configured group and recurses through child workspaces, using structural member types for standard and nested `main/` checkouts and skipping bare stores; a repository manifest falls through to ordinary single-repository discovery. `ki` never invokes `mgit` to do this.
+With no explicit selector, `ki` reads a regular `.mgit.toml` manifest in the current directory. A workspace manifest without a schema selects its direct members and recurses through child workspaces, using member types for standard and nested `main/` checkouts and skipping bare stores. Existing `schema = 1` grouped manifests remain readable with their configured default group. A repository manifest falls through to ordinary single-repository discovery. `ki` never invokes `mgit` to do this.
 
 An mGit member whose checkout exists but has no `.ki.toml` is skipped. `ki repo audit` reports its name, including with `--concise`. Missing or unsafe checkouts, unsafe or invalid KI declarations, and a workspace with no KI repositories still fail.
 
