@@ -25,7 +25,7 @@ const agoraReferenceCommands = ['list', 'remove', 'set']
 const agoraChangelogCommands = [
   '`ki agora audit [agora]`',
   '`ki agora inspect <agora> --target <zed|vscode> --workspace <selector>`',
-  '`ki agora open <agora> --target <zed|vscode>`',
+  '`ki agora open <agora> --target <zed|vscode|delta>`',
   '`ki agora reference set <repository> <checkout> [--dry-run]`',
   '`ki agora reference list`',
   '`ki agora reference remove <repository> [--dry-run]`'

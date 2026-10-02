@@ -49,7 +49,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 - `ki agora inspect <agora> --target <zed|vscode> --workspace <selector>`
 - `ki agora show <agora> [--verbose]`
 - `ki agora roots <agora> [--null]`
-- `ki agora open <agora> --target <zed|vscode>`
+- `ki agora open <agora> --target <zed|vscode|delta>`
 - `ki agora reference set <repository> <checkout> [--dry-run]`
 - `ki agora reference list`
 - `ki agora reference remove <repository> [--dry-run]`
@@ -63,7 +63,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 #### Repository management
 
 - `ki repo init`
-- `ki repo open --target <zed|vscode> [--stores|--no-stores]`
+- `ki repo open --target <zed|vscode|delta> [--stores|--no-stores]`
 - `ki repo store list [--format <text|json>]`
 - `ki repo store scan`
 - `ki repo store create <sources> [--write]`
@@ -163,6 +163,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 - `ki registry list --format json` emits path-free `ki/registry/v1` identity and declaration metadata; `ki registry remove` removes exactly one keyed or path-selected entry with dry-run and transactional publication.
 - `ki agora list` and `ki agora show` separate a named Agora's owner, direct members, and inclusions, while the system estate counts registered repositories without an owner. Roots are deduplicated and sorted alphabetically by registry key.
 - `ki agora open <name> --target zed` adds the named owner last so Zed displays it first in the sidebar; canonical roots, the estate, and VS Code ordering are unchanged.
+- `ki agora open` and `ki repo open` support Delta as a local target, opening each selected repository in the running app.
 - `ki repo store scan` warns about undeclared conventional OneDrive source directories for selected repositories without creating or changing stores; `--estate` scans all registered repositories.
 - Closed current batch records validate selected work from their evidence commit, so later pruning and expiry do not invalidate archival verification.
 - `man/ki.commands.json` publishes the generated `ki/commands/v1` command and description inventory, reconciled against the manual and registered command tree.
