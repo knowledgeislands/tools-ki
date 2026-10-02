@@ -1,4 +1,4 @@
-.TH KI 1 "2026-09-30" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-10-02" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -607,10 +607,11 @@ rejects unmatched patterns, invalid roots, and duplicate physical roots.
 Select every member of one declared named Agora, or every registered canonical
 repository through the reserved \fBestate\fR selector. This option,
 \fB--repo\fR, and \fB--estate\fR are mutually exclusive. Each member must be a physical KI
-repository. With neither selector, KI checks a regular direct-CWD schema-one
-\fB.mgit.toml\fR manifest. A workspace manifest selects its configured group,
-recurses through child workspaces, follows standard and nested repositories,
-and skips bare stores. Existing physical members without \fB.ki.toml\fR are
+repository. With neither selector, KI checks a regular direct-CWD
+\fB.mgit.toml\fR manifest. An unversioned workspace selects direct members;
+an existing schema-one workspace selects its configured group. Both recurse
+through child workspaces, follow standard and nested repositories, and skip
+bare stores. Existing physical members without \fB.ki.toml\fR are
 skipped and named by \fBki repo audit\fR in normal and concise output. Missing
 or unsafe checkouts, unsafe or invalid KI declarations, and selections with no
 KI repositories fail. A repository manifest falls through to ordinary
