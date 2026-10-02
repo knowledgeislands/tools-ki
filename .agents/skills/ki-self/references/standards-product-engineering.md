@@ -28,7 +28,7 @@ This standard records the repository-specific engineering goals that make `tools
 
 A release candidate follows `ki-repo-tools` release readiness and the repository's release guide. It is not ready merely because local tests pass: the candidate build, help, completions, manual, installer, version markers, packaging matrix, immutable publication, and clean-install proof must agree. Coverage remains a pre-publication engineering gate; publication evidence remains a release gate.
 
-Before V1, `CHANGELOG.md` deliberately keeps `## [1.0.0] — in progress` as the accumulating V1 contract while `package.json` and Git tags identify shipped `0.x` releases. Do not align those markers by claiming V1 early or discarding the V1 baseline; the mismatch resolves only when V1 is actually released.
+Before V1, `CHANGELOG.md` keeps an `Unreleased` section for pending work and dated entries for shipped `0.x` releases. A proposed V1 command inventory is not a release entry; the manual and CLI help own the current command surface. The version marker and Git tag identify the shipped release, and its dated changelog entry records what changed.
 
 ## Knowledge routing
 

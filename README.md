@@ -205,7 +205,7 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 - [Specifications](docs/specs/index.md) define the accepted observable behaviour and its verification evidence.
 - [Guides](docs/guides/README.md) explain how to operate, develop, and release `ki`, routed by audience: [user guides](docs/guides/user/README.md) and [developer guides](docs/guides/developer/README.md).
 - [Roadmap](ROADMAP.md) shows active delivery work and its lifecycle state.
-- [Changelog](CHANGELOG.md) inventories the public V1 baseline while pre-V1 tags remain the shipped `0.x` release record.
+- [Changelog](CHANGELOG.md) records notable changes for each shipped 0.x release and the current unreleased work.
 
 ## Find local capabilities and documentation
 
