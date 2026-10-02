@@ -2,7 +2,6 @@ export type {
   AuditOutcome,
   RubricContextOptions,
   RubricFamily,
-  RubricItem,
   RubricPublication,
   RubricSession,
   SkillRubricDefinition

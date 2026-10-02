@@ -1,7 +1,14 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["bin/ki", "src/cli.ts", "src/**/*.test.ts"],
-  "ignore": [".claude/skills/**", ".agents/skills/**", "scripts/**"],
+  "entry": [
+    "bin/ki",
+    "src/cli.ts",
+    "src/**/*.test.ts",
+    "scripts/generate-command-inventory.ts",
+    ".agents/skills/ki-self/scripts/rubric/items/index.ts"
+  ],
+  "project": ["src/**/*.ts", "scripts/**/*.ts", ".agents/skills/ki-self/scripts/**/*.ts"],
+  "ignore": [".claude/skills/**", ".agents/skills/**", "!.agents/skills/ki-self/scripts/**"],
   "ignoreBinaries": ["mandoc", "mkfifo"],
   "ignoreDependencies": ["lint-staged", "syncpack"],
   "ignoreExportsUsedInFile": true
