@@ -4,12 +4,12 @@ area: CLI
 title: Align schema contracts
 theme: cli
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-03T04:00:16Z
-updated_at: 2026-10-03T04:00:16Z
+updated_at: 2026-10-03T06:46:03Z
 ---
 
 ## Goal
@@ -26,29 +26,30 @@ Inventory every actual file and consumer before changing it. Read an old version
 
 ## Current state
 
-Version treatment varies by file and contract. The repository has unrelated in-progress registry changes, so this record does not modify those code or documentation paths.
+The only KI-authored user configuration with a required version field is `$KI_CONFIG_HOME/config.toml`, rendered and inspected in `src/agents/configuration.ts`. The public roadmap-stats JSON in `src/commands/repo/roadmap.ts` emits `version: 2`. Other named public JSON contracts already identify v1. `registry.toml`, Agora reference associations, installation and managed-artifact receipts, and Granola checkpoints are private persisted state; their on-disk migration markers are not public generated-output identities. The checkout is now clean.
 
 ## Steps
 
-- [ ] Inventory user-authored inputs, public generated contracts, internal persisted state, and their exact consumers.
-- [ ] Make newly written user-authored inputs unversioned with structurally safe legacy reads and explicit previewed repair.
-- [ ] Align generated public output contracts above v1 to per-contract v1 without capability loss, and test additive-field consumers.
-- [ ] Plan and test any persisted-state migration separately, then align guides, specifications, help, completion and manual where applicable.
+- [ ] Confirm the inventory above against tests and consumers, preserving private persisted-state migration markers.
+- [ ] Make `renderConfiguration` omit `schema`, accept absent or recognised legacy `schema = 1`, and reject unknown values or malformed shape without writing.
+- [ ] Make `ki manage diag` explain the legacy marker and `ki manage repair --dry-run` preview its exact removal; only an explicit `ki manage repair` rewrites that recognised line while preserving other content.
+- [ ] Change roadmap-stats JSON to version 1 without dropping fields; update contract tests and specification.
+- [ ] Align user guide, help, completion and manual where affected; run the full KI gate with CLI tests for preview, repair, unknown shape and no-write reads.
 
 ## Files touched
 
-- KI config parsers/writers and their tests after the current registry work is settled
-- Public output producers and consumers, including roadmap statistics
-- Persisted-state adapters and migration tests where necessary
-- User guide, specifications, help, completion, manual and this record
+- `src/agents/configuration.ts`, `src/agents/internal.ts`, `src/core/manage/repair.ts`, `src/commands/manage/repair.ts`
+- `src/commands/repo/roadmap.ts` and focused CLI tests under `src/tests/cli/`
+- `docs/specs/repository-operations.md`, `docs/guides/user/local-installation.md`, `man/ki.1`, README/help/completion only where the active surface changes
+- This roadmap item
 
 ## Verify
 
-Run the full KI repository and tool gates, plus per-contract tests for old known files, unknown shape rejection, previewed repair, non-interactive no-write behaviour, preserved output fields and persisted-state migration.
+Run `ki repo audit --repo .`, `bun run test:coverage`, `bun run build`, `bunx biome check`, `bun run ki:tools:lint-man`, and CLI tests for recognised legacy preview/repair, unknown shape rejection, no-write ordinary reads, unversioned new config, and unchanged roadmap-stats fields with version 1. Confirm the private persisted-state formats and migration tests remain unchanged and passing.
 
 ## Dependencies / blocks
 
-Do not overlap the unrelated uncommitted registry changes. A Ready plan must enumerate exact contracts and separate public output from internal durable state before implementation.
+No external dependency. Do not renumber private persisted-state checkpoints as a cosmetic change: they need their version markers for migration and do not participate in the public output contract. Stop if an actual external consumer requires roadmap-stats version 2 or a legacy config shape cannot be recognised safely.
 
 ## Documentation impact
 
