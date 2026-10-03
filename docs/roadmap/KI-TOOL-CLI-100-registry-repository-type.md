@@ -4,12 +4,12 @@ area: CLI
 title: Registry repository type
 theme: cli
 horizon: next
-status: ready
+status: done
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 04d0ecf0ff8741d97a70b77dc6d29ee637b84cd8
 created_at: 2026-10-03T02:36:15Z
-updated_at: 2026-10-03T03:27:47Z
+updated_at: 2026-10-03T03:52:12Z
 ---
 
 # Registry repository type
@@ -45,10 +45,10 @@ In scope: one repository-type field in each `ki/registry/v1` entry, its tests, a
 
 ## Steps
 
-- [ ] Add `repoType` to `RegistryReport` entries, projecting `project` or `kb` from a valid declaration and `null` for an unavailable entry without exposing local paths.
-- [ ] Extend the public CLI JSON contract tests with Project, Knowledge Base, missing declaration, and malformed `repo_type` cases that assert exact field values and exit behavior.
-- [ ] Update `REGISTRY-005`, the command inventory and manual, the repository-operations guide, and the Pre-1.0 changelog to describe the additive `ki/registry/v1` field.
-- [ ] Run the registry contract test, full coverage gate, TypeScript check, manual lint, and relevant repository audits.
+- [x] Add `repoType` to `RegistryReport` entries, projecting `project` or `kb` from a valid declaration and `null` for an unavailable entry without exposing local paths.
+- [x] Extend the public CLI JSON contract tests with Project, Knowledge Base, missing declaration, and malformed `repo_type` cases that assert exact field values and exit behavior.
+- [x] Update `REGISTRY-005`, the command inventory and manual, the repository-operations guide, and the Pre-1.0 changelog to describe the additive `ki/registry/v1` field.
+- [x] Run the registry contract test, full coverage gate, TypeScript check, manual lint, and relevant repository audits.
 
 ## Files touched
 
@@ -79,6 +79,36 @@ Update the registry JSON passage in the repository-operations guide and the comm
 ### Roadmap
 
 Record delivery and review evidence here; the Observatory-side consumption remains outside this item.
+
+## Review
+
+### Delivered
+
+The approved `ki/registry/v1` entries now project `repoType` as `project`, `kb`, or `null` for unavailable repositories. The change preserves path-free JSON and the text inventory. The immutable baseline was `04d0ecf0ff8741d97a70b77dc6d29ee637b84cd8`; the resulting implementation is commit `df72747533db48a98e1a551b9d2bcde974dade88`. The Observatory-side consumer change remains outside this item.
+
+### Change Summary
+
+Updated `src/core/storage/registry-report.ts` and the public CLI contract tests in `src/tests/cli/registry/registry.test.ts`. Updated `REGISTRY-005`, the generated command inventory and manual, the repository-operations guide, and the Pre-1.0 changelog. The inventory test exposed a wording mismatch between the manual and JSON inventory during verification; the committed descriptions now agree. No approved scope departure was needed.
+
+### Verification
+
+`bunx vitest run src/tests/cli/registry/registry.test.ts` passed 28 tests. `bunx vitest run src/tests/cli/manage/inventory.test.ts` passed after aligning the manual and inventory. `bun run test:coverage` passed 958 tests across 56 files with 100% statement, branch, function, and line coverage. `bunx tsc --noEmit`, `bun run ki:tools:lint-man`, and JSON parsing of `man/ki.commands.json` passed. Focused `ki repo audit` runs for `ki-self`, `ki-engineering`, `ki-authoring`, `ki-work-roadmap`, and `ki-repo-tools` passed.
+
+### Outstanding concerns
+
+None within the approved delivery boundary.
+
+### Post-change review
+
+Available Projects and Knowledge Bases expose their declared type, and missing or malformed declarations expose `null` with non-zero exit evidence. The exact-shape CLI tests and full coverage gate protect the contract. The additive schema treatment and documentation match the approved decisions. Scope and verification are complete, with no material regression concern.
+
+### Mini recap
+
+Delivered the path-free registry type field, its CLI evidence, and matching contract documentation. All planned Steps are complete; no further item-scoped work or learning route is proposed.
+
+## Done
+
+Accepted 2026-10-03 by the repository owner on the review packet above.
 
 ## Discussion
 
