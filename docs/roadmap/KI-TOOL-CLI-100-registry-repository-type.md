@@ -4,12 +4,12 @@ area: CLI
 title: Registry repository type
 theme: cli
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-03T02:36:15Z
-updated_at: 2026-10-03T03:27:02Z
+updated_at: 2026-10-03T03:27:47Z
 ---
 
 # Registry repository type
@@ -37,7 +37,7 @@ In scope: one repository-type field in each `ki/registry/v1` entry, its tests, a
 - Approach: read the type through `declaredRepositoryKind` in `registryReport` and add `repoType` to the `RegistryReport` entry type and both available and unavailable branches. Test `project` and `kb` available entries and the exact `null` shape for missing or malformed declarations. Update `REGISTRY-005` to name the field and additive precedent, update the `registry list` entry in `man/ki.commands.json`, `man/ki.1`, the `ki registry list --format json` passage in `docs/guides/user/repository-operations.md`, and add a `CHANGELOG.md` entry.
 - Dependencies: none. The declaration validation and registry report already exist.
 - Decisions settled: use `repoType` (matching the report's camelCase `repoCode`) with declared values `project` and `kb`; use `null` for an unavailable entry (matching its other metadata keys). The owner confirmed both choices on 2026-10-03.
-- Promotion: the owner selected this item for Next on 2026-10-03; review the plan below before marking it Ready.
+- Promotion: the owner selected this item for Next and approved moving the bounded plan to Ready on 2026-10-03.
 
 ## Current state
 
