@@ -629,6 +629,7 @@ test('lists an explicitly empty local repository registry', async () => {
 test('projects registered declaration metadata without exposing local paths', async () => {
   const box = await sandbox()
   const available = await box.root.mkdir('available')
+  const knowledgeBase = await box.root.mkdir('knowledge-base')
   const unavailable = `${box.root.path}/missing`
   await box.root.write(
     'available/.ki.toml',
@@ -639,11 +640,21 @@ test('projects registered declaration metadata without exposing local paths', as
       'repo_code = "EXAMPLE"\n' +
       'visibility = "private"\n'
   )
+  await box.root.write(
+    'knowledge-base/.ki.toml',
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-kb]\n\n[skills.ki-repo]\nrepo_type = "kb"\nprimary_shape = "ki-repo-kb"\n' +
+      'repository = "https://github.com/example/knowledge-base"\n' +
+      'title = "Knowledge Base"\n' +
+      'description = "Knowledge Base registry evidence."\n' +
+      'repo_code = "EXAMPLE-KB"\n' +
+      'visibility = "public"\n'
+  )
   await box.state.write(
     'ki/registry.toml',
     localRegistry([
       { key: 'missing', repository: 'https://github.com/example/missing', path: unavailable },
-      { key: 'available', repository: 'https://github.com/example/available', path: available }
+      { key: 'available', repository: 'https://github.com/example/available', path: available },
+      { key: 'knowledge-base', repository: 'https://github.com/example/knowledge-base', path: knowledgeBase }
     ])
   )
 
@@ -662,7 +673,19 @@ test('projects registered declaration metadata without exposing local paths', as
         title: 'Available repository',
         description: 'Machine-readable registry evidence.',
         repoCode: 'EXAMPLE',
+        repoType: 'project',
         visibility: 'private'
+      },
+      {
+        key: 'knowledge-base',
+        identity: 'example/knowledge-base',
+        repository: 'https://github.com/example/knowledge-base',
+        state: 'available',
+        title: 'Knowledge Base',
+        description: 'Knowledge Base registry evidence.',
+        repoCode: 'EXAMPLE-KB',
+        repoType: 'kb',
+        visibility: 'public'
       },
       {
         key: 'missing',
@@ -672,6 +695,7 @@ test('projects registered declaration metadata without exposing local paths', as
         title: null,
         description: null,
         repoCode: null,
+        repoType: null,
         visibility: null
       }
     ]
@@ -702,6 +726,10 @@ test('marks mismatched and malformed repository declarations unavailable in JSON
     [
       'bad-visibility',
       'repository = "https://github.com/example/bad-visibility"\ntitle = "Title"\ndescription = "Description"\nrepo_code = "EXAMPLE"\nvisibility = "internal"'
+    ],
+    [
+      'bad-type',
+      'repository = "https://github.com/example/bad-type"\ntitle = "Title"\ndescription = "Description"\nrepo_code = "EXAMPLE"\nvisibility = "public"'
     ]
   ] as const
   const entries = []
@@ -709,7 +737,7 @@ test('marks mismatched and malformed repository declarations unavailable in JSON
     const path = await box.root.mkdir(key)
     await box.root.write(
       `${key}/.ki.toml`,
-      `[repo]\nharnesses = ["example/harness"]\n${declaration ? `\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n${declaration}\n` : ''}`
+      `[repo]\nharnesses = ["example/harness"]\n${declaration ? `\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "${key === 'bad-type' ? 'other' : 'project'}"\nprimary_shape = "ki-repo-project"\n${declaration}\n` : ''}`
     )
     entries.push({ key, repository: `https://github.com/example/${key}`, path })
   }
@@ -721,6 +749,7 @@ test('marks mismatched and malformed repository declarations unavailable in JSON
   expect(result.exitCode).toBe(1)
   expect(report.repositories).toHaveLength(declarations.length)
   expect(report.repositories.every((entry: { state: string }) => entry.state === 'unavailable')).toBe(true)
+  expect(report.repositories.every((entry: { repoType: string | null }) => entry.repoType === null)).toBe(true)
 })
 
 test('retires repository-scoped registry commands without a compatibility path', async () => {

@@ -888,9 +888,16 @@ repositories nor changes state. With
 .BR "--format json" ,
 emit the versioned path-free
 .B ki/registry/v1
-contract with canonical identity and declared repository metadata. An
-unavailable declaration remains represented without a local path and makes the
-command exit non-zero.
+contract with canonical identity and declared repository metadata, including
+.B repoType
+as
+.B project
+or
+.B kb
+for available repositories and
+.B null
+for unavailable ones. An unavailable declaration remains represented without
+a local path and makes the command exit non-zero.
 .TP
 .B ki registry remove <key> [--dry-run]
 Remove exactly one complete registry entry by its local key. The command reports

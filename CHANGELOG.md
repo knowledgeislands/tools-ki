@@ -160,7 +160,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 - `ki repo roadmap summary` reports per-repository item, horizon, and lifecycle counts without listing work-item details or reading trades.
 - `ki repo roadmap list --format json` emits the path-free `ki/roadmap/v1` contract with canonical record URLs.
 - Roadmap text listings show compact external ticket keys and counts; `--links all` expands mappings into child entries with full task URLs and disambiguating identity details where needed.
-- `ki registry list --format json` emits path-free `ki/registry/v1` identity and declaration metadata; `ki registry remove` removes exactly one keyed or path-selected entry with dry-run and transactional publication.
+- `ki registry list --format json` emits path-free `ki/registry/v1` identity and declaration metadata, including `repoType` as `project`, `kb`, or `null` when unavailable; `ki registry remove` removes exactly one keyed or path-selected entry with dry-run and transactional publication.
 - `ki agora list` and `ki agora show` separate a named Agora's owner, direct members, and inclusions, while the system estate counts registered repositories without an owner. Roots are deduplicated and sorted alphabetically by registry key.
 - `ki agora open <name> --target zed` adds the named owner last so Zed displays it first in the sidebar; canonical roots, the estate, and VS Code ordering are unchanged.
 - `ki agora open` and `ki repo open` support Delta as a local target, opening each selected repository in the running app.

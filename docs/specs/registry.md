@@ -46,7 +46,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REGISTRY-005 — Path-free machine inventory
 
-`ki registry list --format json` MUST emit schema `ki/registry/v1` with canonical repository identity and declared metadata, MUST NOT expose local paths, and MUST return non-zero when any registered repository is unavailable.
+`ki registry list --format json` MUST emit schema `ki/registry/v1` with canonical repository identity and declared metadata, including `repoType` as `project` or `kb` for an available repository and `null` for an unavailable one. It MUST NOT expose local paths and MUST return non-zero when any registered repository is unavailable. The `repoType` field is an additive part of the prerelease `ki/registry/v1` contract, following the `ki/roadmap/v1` projection precedent in `REPO-OPS-017`.
 
 _Conformance:_ conforming
 

@@ -1,5 +1,9 @@
 import { join } from 'node:path'
-import { declaredRepositoryMetadata, readRepositoryDeclaration } from '../configuration/index.ts'
+import {
+  declaredRepositoryKind,
+  declaredRepositoryMetadata,
+  readRepositoryDeclaration
+} from '../configuration/index.ts'
 import type { LocalRegistryEntry } from './local-registry.ts'
 
 const REGISTRY_REPORT_SCHEMA = 'ki/registry/v1' as const
@@ -14,6 +18,7 @@ export interface RegistryReport {
     readonly title: string | null
     readonly description: string | null
     readonly repoCode: string | null
+    readonly repoType: 'project' | 'kb' | null
     readonly visibility: 'public' | 'private' | null
   }[]
 }
@@ -28,7 +33,8 @@ export const registryReport = async (
   const projected = await Promise.all(
     repositories.map(async (entry): Promise<RegistryReport['repositories'][number]> => {
       try {
-        const metadata = declaredRepositoryMetadata(await readRepositoryDeclaration(join(entry.path, '.ki.toml')))
+        const declaration = await readRepositoryDeclaration(join(entry.path, '.ki.toml'))
+        const metadata = declaredRepositoryMetadata(declaration)
         if (metadata.repository !== entry.repository) throw new Error('registry identity mismatch')
         return {
           key: entry.key,
@@ -38,6 +44,7 @@ export const registryReport = async (
           title: metadata.title,
           description: metadata.description,
           repoCode: metadata.repoCode,
+          repoType: declaredRepositoryKind(declaration),
           visibility: metadata.visibility
         }
       } catch {
@@ -50,6 +57,7 @@ export const registryReport = async (
           title: null,
           description: null,
           repoCode: null,
+          repoType: null,
           visibility: null
         }
       }

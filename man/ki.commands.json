@@ -267,7 +267,7 @@
         },
         {
           "invocation": "ki registry list [--format <text|json>]",
-          "description": "List physical KI repository roots explicitly registered in the machine-local registry, one absolute path per line. The command neither discovers repositories nor changes state. With --format json , emit the versioned path-free ki/registry/v1 contract with canonical identity and declared repository metadata. An unavailable declaration remains represented without a local path and makes the command exit non-zero."
+          "description": "List physical KI repository roots explicitly registered in the machine-local registry, one absolute path per line. The command neither discovers repositories nor changes state. With --format json , emit the versioned path-free ki/registry/v1 contract with canonical identity and declared repository metadata, including repoType as project or kb for available repositories and null for unavailable ones. An unavailable declaration remains represented without a local path and makes the command exit non-zero."
         },
         {
           "invocation": "ki registry remove <key> [--dry-run]",
