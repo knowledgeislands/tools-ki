@@ -13,6 +13,7 @@ export {
   configuredAgents,
   inspectUserConfiguration,
   migrateLegacyRepositoryRegistry,
+  repairLegacyUserConfiguration,
   setConfiguredUserSkills,
   setLocalBootstrapHarness
 } from './configuration.ts'

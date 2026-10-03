@@ -68,11 +68,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-007 — Safe managed projection repair
 
-`ki manage repair` MUST repair only missing or stale KI-managed user-skill projections, preserve foreign state as unsafe, and support a no-write `--dry-run` preview.
+`ki manage repair` MUST repair missing or stale KI-managed user-skill projections and may remove a recognised legacy `schema = 1` line from valid user configuration, preserving all other content. It MUST preserve foreign and unknown state as unsafe and support a no-write `--dry-run` preview. Ordinary reads MUST NOT rewrite configuration.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/manage/repair.test.ts` — `re-points a stale symbolic link and preserves a non-link as unsafe` and `reports a dry-run link repair without changing it`.
+_Verify:_ `src/tests/cli/manage/repair.test.ts` — `re-points a stale symbolic link and preserves a non-link as unsafe`, `reports a dry-run link repair without changing it`, `previews and explicitly removes a recognised legacy config marker without changing other content`, and `rejects unknown and noncanonical legacy markers without rewriting configuration`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

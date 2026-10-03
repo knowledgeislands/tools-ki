@@ -17,6 +17,49 @@ const manifest = (state: 'creating' | 'active' | 'recoverable', path: string, lo
   ].join('\n')
 
 describe('[ki manage repair]', () => {
+  test('previews and explicitly removes a recognised legacy config marker without changing other content', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    const current = await box.config.read('ki/config.toml')
+    const legacy = `# personal choices\nschema = 1 # old marker\n\n${current}`
+    await box.config.write('ki/config.toml', legacy)
+
+    const diag = await box.run('ki manage diag')
+    const preview = await box.run('ki manage repair --dry-run')
+    expect(diag.output).toContain('legacy schema = 1; preview its removal with ki manage repair --dry-run')
+    expect(preview.output).toContain(`would remove legacy schema = 1 from ${box.config.path}/ki/config.toml`)
+    expect(await box.config.read('ki/config.toml')).toBe(legacy)
+
+    const repaired = await box.run('ki manage repair')
+    expect(repaired.exitCode).toBe(0)
+    expect(repaired.output).toContain('removed legacy schema = 1')
+    expect(await box.config.read('ki/config.toml')).toBe(`# personal choices\n\n${current}`)
+    const repeat = await box.run('ki manage repair --dry-run')
+    expect(repeat.output).not.toContain('legacy schema = 1')
+  })
+
+  test('rejects unknown and noncanonical legacy markers without rewriting configuration', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    const current = await box.config.read('ki/config.toml')
+    const unusual = `schema = +1\n${current}`
+    await box.config.write('ki/config.toml', unusual)
+
+    const refused = await box.run('ki manage repair')
+    expect(refused.exitCode).toBe(1)
+    expect(refused.output).toContain('legacy schema marker is not a simple top-level schema = 1 line')
+    expect(await box.config.read('ki/config.toml')).toBe(unusual)
+
+    const unknown = `schema = 2\n${current}`
+    await box.config.write('ki/config.toml', unknown)
+    const invalid = await box.run('ki manage repair')
+    expect(invalid.exitCode).toBe(1)
+    expect(invalid.output).toContain('schema must equal 1 when present')
+    expect(await box.config.read('ki/config.toml')).toBe(unknown)
+  })
+
   test('recreates a configured missing user-skill link without repairing repository projections', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')

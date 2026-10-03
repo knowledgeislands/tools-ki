@@ -4,12 +4,12 @@ area: CLI
 title: Align schema contracts
 theme: cli
 horizon: next
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: d4c31950dfd3d133b81a608b2d4d69cbc0f823c5
 created_at: 2026-10-03T04:00:16Z
-updated_at: 2026-10-03T06:46:03Z
+updated_at: 2026-10-03T06:58:54Z
 ---
 
 ## Goal
@@ -30,11 +30,11 @@ The only KI-authored user configuration with a required version field is `$KI_CO
 
 ## Steps
 
-- [ ] Confirm the inventory above against tests and consumers, preserving private persisted-state migration markers.
-- [ ] Make `renderConfiguration` omit `schema`, accept absent or recognised legacy `schema = 1`, and reject unknown values or malformed shape without writing.
-- [ ] Make `ki manage diag` explain the legacy marker and `ki manage repair --dry-run` preview its exact removal; only an explicit `ki manage repair` rewrites that recognised line while preserving other content.
-- [ ] Change roadmap-stats JSON to version 1 without dropping fields; update contract tests and specification.
-- [ ] Align user guide, help, completion and manual where affected; run the full KI gate with CLI tests for preview, repair, unknown shape and no-write reads.
+- [x] Confirm the inventory above against tests and consumers, preserving private persisted-state migration markers.
+- [x] Make `renderConfiguration` omit `schema`, accept absent or recognised legacy `schema = 1`, and reject unknown values or malformed shape without writing.
+- [x] Make `ki manage diag` explain the legacy marker and `ki manage repair --dry-run` preview its exact removal; only an explicit `ki manage repair` rewrites that recognised line while preserving other content.
+- [x] Change roadmap-stats JSON to version 1 without dropping fields; update contract tests and specification.
+- [x] Align user guide, help, completion and manual where affected; run the full KI gate with CLI tests for preview, repair, unknown shape and no-write reads.
 
 ## Files touched
 
@@ -68,6 +68,32 @@ Explain explicit repairs and any persistence migration to operators.
 ### Roadmap
 
 Record each contract's verified treatment here or split into bounded delivery records during planning.
+
+## Review
+
+### Delivered
+
+The approved public contract alignment is ready for acceptance against baseline `d4c31950dfd3d133b81a608b2d4d69cbc0f823c5`. Private persisted-state migration markers and their consumers were left unchanged.
+
+### Change Summary
+
+New user configuration omits `schema`; reads accept an absent marker or recognised `schema = 1` and reject unknown values. Diagnostics identify legacy metadata, while `ki manage repair --dry-run` previews its removal and an explicit repair removes only the simple top-level marker. Roadmap-stats JSON identifies its contract as v1 without dropping fields. CLI help, manual, guides, specifications, inventory, and focused tests were aligned.
+
+### Verification
+
+`bun run test:coverage --reporter=dot` passed with 960 tests and full coverage. `bun run build`, `bunx biome check`, `bunx tsc --noEmit`, `bun run ki:tools:lint-man`, `ki repo audit --repo .`, and `git diff --check` passed. Focused CLI tests cover legacy preview and repair, malformed marker refusal, unversioned bootstrap, and roadmap-stats v1 output.
+
+### Outstanding concerns
+
+None within the approved boundary. Human acceptance is still required; no release or tag was made.
+
+### Post-change review
+
+The change keeps ordinary reads non-mutating and confines rewriting to an explicit, recognised legacy repair. Public output retains its existing shape apart from the per-contract version identity; internal recovery markers remain intact. The item is ready for acceptance review.
+
+### Mini recap
+
+KI now writes unversioned user configuration and reports roadmap-stats v1; legacy config can be repaired explicitly. Tests and repository checks passed. No further learning route is proposed beyond the updated specifications and guide.
 
 ## Discussion
 

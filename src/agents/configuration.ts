@@ -31,8 +31,6 @@ export const renderConfiguration = (
   repositories: readonly string[] = []
 ): string =>
   [
-    'schema = 1',
-    '',
     '[agents]',
     'ids = [',
     ...agents.map((agent) => `  ${JSON.stringify(agent.descriptor.id)},`),
@@ -153,7 +151,9 @@ export const inspectUserConfiguration = async (
     .filter((key) => !['schema', 'agents', 'harnesses', 'skills', 'locals', 'repositories'].includes(key))
     .map((key) => `unrecognised key ${key}`)
   const errors: string[] = []
-  if (configuration.schema !== 1) errors.push('schema must equal 1')
+  if (configuration.schema !== undefined && configuration.schema !== 1) errors.push('schema must equal 1 when present')
+  if (configuration.schema === 1)
+    warnings.push('legacy schema = 1; preview its removal with ki manage repair --dry-run')
   const agentSection = inspectSection(configuration.agents, 'agents', errors) as StringListSection
   for (const key of Object.keys(agentSection)) {
     if (key !== 'ids') warnings.push(`agents has unrecognised key ${key}`)
@@ -244,7 +244,8 @@ export const inspectUserConfiguration = async (
     locals: locals.toSorted((left, right) => left.harness.localeCompare(right.harness)),
     repositories,
     warnings,
-    errors
+    errors,
+    legacySchema: configuration.schema === 1
   }
 }
 
@@ -264,7 +265,7 @@ export const readConfiguration = async (
   }
   // A successfully parsed TOML document is always a table; this only guards a future parser change.
   /* v8 ignore next */
-  if (!isRecord(parsed)) throw new KiError('agent configuration must use schema 1', 1)
+  if (!isRecord(parsed)) throw new KiError('agent configuration must be a TOML table', 1)
   const configuration = parsed as { schema?: unknown; agents?: unknown; skills?: unknown; locals?: unknown }
   const agentSection = isRecord(configuration.agents) ? (configuration.agents as StringListSection) : undefined
   const localsSection =
@@ -275,7 +276,7 @@ export const readConfiguration = async (
       (source) => isRecord(source) && typeof source['path'] === 'string' && Boolean(source['path'])
     )
   if (
-    configuration.schema !== 1 ||
+    (configuration.schema !== undefined && configuration.schema !== 1) ||
     !agentSection ||
     !Array.isArray(agentSection.ids) ||
     agentSection.ids.some((agent) => typeof agent !== 'string') ||
@@ -292,6 +293,23 @@ export const readConfiguration = async (
     const known = descriptor(id)
     return { descriptor: known, home: resolve(homeDirectory, known.paths.home) }
   })
+}
+
+export const repairLegacyUserConfiguration = async (
+  configurationDirectory: string,
+  dryRun: boolean
+): Promise<string> => {
+  // The repair coordinator calls this only after a valid legacy inspection.
+  const inspection = await inspectUserConfiguration(configurationDirectory)
+  const before = await readFile(inspection.path, 'utf8')
+  const firstTable = before.search(/^[ \t]*\[/m)
+  const header = before.slice(0, firstTable)
+  const marker = /^[ \t]*(?:schema|"schema"|'schema')[ \t]*=[ \t]*1[ \t]*(?:#[^\r\n]*)?(?:\r?\n|$)/m
+  if (!marker.test(header))
+    throw new KiError('legacy schema marker is not a simple top-level schema = 1 line; repair it manually', 1)
+  const after = header.replace(marker, '') + before.slice(header.length)
+  if (!dryRun) await writeFile(inspection.path, after, 'utf8')
+  return inspection.path
 }
 
 export const configuredAgents = async (options: {

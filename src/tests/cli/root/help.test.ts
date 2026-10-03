@@ -60,7 +60,7 @@ describe('[ki --help]', () => {
     expect(search.output).toContain('search verified installed harness capabilities')
     expect(cleanup.output).toContain('report eligible KI-managed stale state')
     expect(docs.output).toContain('print canonical KI documentation locations')
-    expect(repair.output).toContain('reconcile configured KI-managed user skill projections')
+    expect(repair.output).toContain('repair user skill links and recognised legacy configuration metadata')
     expect(repository.output).toContain('educate')
     expect(repository.output).toContain('repair')
     expect(localSet.output).toContain('validate and remember a checkout for one installed harness')

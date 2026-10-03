@@ -53,6 +53,7 @@ export interface UserConfigurationInspection {
   readonly repositories: readonly string[]
   readonly warnings: readonly string[]
   readonly errors: readonly string[]
+  readonly legacySchema?: boolean
 }
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>

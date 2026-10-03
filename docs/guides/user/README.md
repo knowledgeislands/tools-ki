@@ -12,7 +12,7 @@ If `ki` is not yet on this machine, or you have never run it, read these three i
 
 ## Keep it working
 
-- [Maintain a local installation](local-installation.md) — update the executable and harnesses, install shell completion, diagnose with `diag` and `doctor`, and repair user skill links.
+- [Maintain a local installation](local-installation.md) — update the executable and harnesses, install shell completion, diagnose with `diag` and `doctor`, and repair user skill links or recognised legacy configuration metadata.
 - [Manage local VS Code projections](vscode-management.md) — reconcile the chezmoi-owned workspace inventory and trusted-folder source state against the registry.
 
 ## Bring material in

@@ -97,7 +97,7 @@ ki manage repair --dry-run
 ki manage repair
 ```
 
-Repair reconciles configured user-skill links against installed or active local harness sources: it creates a missing link and re-points a stale or dangling symbolic link. It never changes configuration, installs a harness, or replaces a path that is not a symbolic link — anything unsafe or unavailable is reported for you to resolve by hand. Always run `--dry-run` first and read what it proposes.
+Repair reconciles configured user-skill links against installed or active local harness sources: it creates a missing link and re-points a stale or dangling symbolic link. If the user configuration has a recognised legacy `schema = 1` line, `diag` points it out and repair can remove that line without changing other content. Newly written configuration has no schema field; a missing field means the current shape. An unknown or noncanonical legacy marker is not repaired automatically. Repair never installs a harness or replaces a path that is not a symbolic link — anything unsafe or unavailable is reported for you to resolve by hand. Always run `--dry-run` first and read what it proposes; ordinary reads never rewrite configuration.
 
 This is the user-scope counterpart to `ki repo repair`. If a _repository's_ declared skill has no projection, `ki manage repair` is the wrong command.
 

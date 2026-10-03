@@ -79,7 +79,7 @@ ids = ["example:skill", "example:skill"]
     expect(human.output).toContain('├─ warnings (3)')
     expect(human.output).toContain('! unrecognised key unexpected')
     expect(human.output).toContain('├─ errors (4)')
-    expect(human.output).toContain('× schema must equal 1')
+    expect(human.output).toContain('× schema must equal 1 when present')
   })
 
   test('reports local registry entries and state registry errors', async () => {

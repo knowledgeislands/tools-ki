@@ -62,9 +62,7 @@ ki-recap for chatgpt-codex already installed
     expect(checked.output).not.toContain('✗')
     const config = await box.config.read('ki/config.toml')
     expect(config).not.toContain('[skills.ki-authoring]')
-    const expectedConfig = `schema = 1
-
-[agents]
+    const expectedConfig = `[agents]
 ids = [
   "chatgpt-codex",
 ]
@@ -100,7 +98,7 @@ harness = "knowledgeislands/ki-agentic-harness"
     expect(config).toBe(expectedConfig)
   })
 
-  test('replaces a legacy flat configuration with the current sectioned schema on refresh', async () => {
+  test('replaces a legacy flat configuration with the current unversioned sections on refresh', async () => {
     const box = await sandbox()
     await box.setupAgentHome('chatgpt-codex')
     const legacyConfig = `schema = 1
@@ -120,6 +118,7 @@ ids = [
 
     expect(refreshed.exitCode).toBe(0)
     expect(config).toContain(expectedAgentsSection)
+    expect(config).not.toContain('schema =')
   })
 
   test('preserves registered local and repository settings while refreshing configuration', async () => {

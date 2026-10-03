@@ -6,7 +6,7 @@ This area specifies first-time user activation and refresh; see the [Specificati
 
 ### BOOT-001 — Conservative bootstrap
 
-`ki bootstrap` MUST create the user configuration and detected runtime inventory without replacing an existing configuration unless refresh is explicitly requested.
+`ki bootstrap` MUST create unversioned user configuration and detected runtime inventory without replacing an existing configuration unless refresh is explicitly requested. It MUST read a structurally valid legacy `schema = 1` configuration without silently rewriting it, and reject unknown schema values.
 
 _Conformance:_ conforming
 
@@ -16,7 +16,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### BOOT-002 — Preserved user state on refresh
 
-`ki bootstrap --refresh` MUST preserve registered local and repository settings while refreshing the current configuration schema.
+`ki bootstrap --refresh` MUST preserve registered local and repository settings while refreshing the current unversioned configuration shape.
 
 _Conformance:_ conforming
 

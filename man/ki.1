@@ -55,7 +55,7 @@ Check user configuration, agents, harnesses, user-skill links, and direct-CWD
 legacy KI state and configuration.
 .TP
 .B ki manage repair [--dry-run]
-Reconcile configured KI-managed user skill projections.
+Repair user-skill links and recognised legacy configuration metadata.
 .TP
 .B ki manage docs [topic]
 Print canonical KI documentation locations.
@@ -499,11 +499,14 @@ check produces a non-zero exit status after the complete report.
 .B ki manage repair [--dry-run]
 Reconcile configured user-skill links from their installed or active local
 harness sources. It creates missing links and re-points stale or dangling
-symbolic links, but never changes configuration, installs a harness, removes
-legacy repository state, or repairs repository projections. It reports
+symbolic links. It also removes a recognised legacy \fBschema = 1\fR line
+from valid user configuration; newly written configuration is unversioned.
+It never installs a harness, removes legacy repository state, or repairs
+repository projections. It reports
 unavailable sources, incompatible agents, and unsafe non-symbolic-link entries
-for manual resolution. With \fB--dry-run\fR, it reports proposed links without
-changing state.
+for manual resolution. With \fB--dry-run\fR, it reports proposed links and
+schema removal without changing state. Ordinary reads never rewrite
+configuration.
 .TP
 .B ki manage docs [topic]
 Print canonical documentation locations without opening a browser, fetching

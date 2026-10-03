@@ -1430,7 +1430,7 @@ describe('[ki repo roadmap]', () => {
     expect(changed).toContain('updated_at: 2026-09-02T00:00:01Z')
     expect(stats.exitCode).toBe(0)
     expect(JSON.parse(stats.output)).toMatchObject({
-      version: 2,
+      version: 1,
       generatedAt: '2026-09-03T00:00:00Z',
       staleAfterSeconds: 1,
       aggregate: {

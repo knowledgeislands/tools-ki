@@ -16,6 +16,7 @@ export interface ManageConfiguration {
   readonly skills: readonly string[]
   readonly locals: readonly { readonly harness: string; readonly path: string }[]
   readonly errors: readonly string[]
+  readonly legacySchema?: boolean
 }
 
 export interface ManageAgent {

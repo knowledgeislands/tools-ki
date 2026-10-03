@@ -73,7 +73,7 @@
         },
         {
           "invocation": "ki manage repair [--dry-run]",
-          "description": "Reconcile configured user-skill links from their installed or active local harness sources. It creates missing links and re-points stale or dangling symbolic links, but never changes configuration, installs a harness, removes legacy repository state, or repairs repository projections. It reports unavailable sources, incompatible agents, and unsafe non-symbolic-link entries for manual resolution. With --dry-run, it reports proposed links without changing state."
+          "description": "Reconcile configured user-skill links from their installed or active local harness sources. It creates missing links and re-points stale or dangling symbolic links. It also removes a recognised legacy schema = 1 line from valid user configuration; newly written configuration is unversioned. It never installs a harness, removes legacy repository state, or repairs repository projections. It reports unavailable sources, incompatible agents, and unsafe non-symbolic-link entries for manual resolution. With --dry-run, it reports proposed links and schema removal without changing state. Ordinary reads never rewrite configuration."
         },
         {
           "invocation": "ki manage docs [topic]",

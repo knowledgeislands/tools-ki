@@ -12,6 +12,7 @@ export type ManageRepairItem =
       readonly dryRun: boolean
     }
   | { readonly kind: 'link'; readonly target: string; readonly expected: string; readonly dryRun: boolean }
+  | { readonly kind: 'configuration'; readonly path: string; readonly dryRun: boolean }
 
 export interface ManageRepairResult {
   readonly items: readonly ManageRepairItem[]
@@ -24,6 +25,7 @@ export interface ManageRepairAgent extends ManageAgent {
 
 export interface ManageRepairPort {
   readonly inspectConfiguration: () => Promise<ManageConfiguration>
+  readonly repairConfigurationSchema: (dryRun: boolean) => Promise<string>
   readonly acquireArtifactRecovery: () => Promise<ManagedArtifactRecoveryControl>
   readonly planOrphanRecovery: () => Promise<readonly OrphanRecovery[]>
   readonly recoverOrphans: (planned: readonly OrphanRecovery[]) => Promise<readonly OrphanRecovery[]>
@@ -106,6 +108,15 @@ export const runManageRepair = async (
     items.push({ kind: 'status', status: 'fail', label: 'Configuration', detail: configuration.errors.join('; ') })
     failed = true
   } else {
+    if (configuration.legacySchema) {
+      try {
+        const path = await port.repairConfigurationSchema(options.dryRun)
+        items.push({ kind: 'configuration', path, dryRun: options.dryRun })
+      } catch (error) {
+        items.push({ kind: 'status', status: 'fail', label: 'Configuration repair', detail: (error as Error).message })
+        failed = true
+      }
+    }
     items.push({ kind: 'status', status: 'pass', label: 'Configuration', detail: configuration.path })
     const [agents, installed] = await Promise.all([port.configuredAgents(), port.discoverHarnesses()])
     for (const identity of configuration.skills) {

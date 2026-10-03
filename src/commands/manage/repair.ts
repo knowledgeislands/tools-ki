@@ -4,7 +4,8 @@ import {
   agentSkillDirectory,
   compatibleWithSkill,
   configuredAgents,
-  inspectUserConfiguration
+  inspectUserConfiguration,
+  repairLegacyUserConfiguration
 } from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
@@ -23,6 +24,7 @@ const linkedTo = async (path: string, expected: string): Promise<boolean> => {
 
 const repairPort = (context: KiContext): ManageRepairPort => ({
   inspectConfiguration: () => inspectUserConfiguration(context.paths.config),
+  repairConfigurationSchema: (dryRun) => repairLegacyUserConfiguration(context.paths.config, dryRun),
   acquireArtifactRecovery: () => acquireManagedArtifactRecovery(context.paths.state, context.paths.data),
   planOrphanRecovery: () => planOrphanRecovery(context.paths.data),
   recoverOrphans: (planned) => recoverInstallOrphans(context.paths.data, planned),
@@ -51,13 +53,15 @@ const renderItem = (item: ManageRepairItem): string => {
     return `${presentation(`status.${item.status}`).terminal} ${item.label}: ${item.detail}`
   }
   if (item.kind === 'link') return `${item.dryRun ? 'would link' : 'link'} ${item.target} -> ${item.expected}`
+  if (item.kind === 'configuration')
+    return `${item.dryRun ? 'would remove' : 'removed'} legacy schema = 1 from ${item.path}`
   const verb = item.action === 'restore' ? 'restore' : 'remove'
   return `${item.dryRun ? `would ${verb}` : `${verb}d`} ${item.path}: ${item.detail}`
 }
 
 export const createRepairCommand = (context: KiContext): Command =>
   new Command('repair')
-    .description('reconcile configured KI-managed user skill projections')
+    .description('repair user skill links and recognised legacy configuration metadata')
     .option('--dry-run', 'report repairs without writing')
     .action(async (options: { dryRun?: boolean }) => {
       const result = await runManageRepair(repairPort(context), {

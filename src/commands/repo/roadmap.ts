@@ -379,7 +379,7 @@ const statsCommand = (context: KiContext, selectedRepositories: RepositorySelect
         selectedRepositories(),
         staleAfterSeconds
       )
-      if (options.format === 'json') context.stdout.write(`${JSON.stringify({ version: 2, ...report })}\n`)
+      if (options.format === 'json') context.stdout.write(`${JSON.stringify({ version: 1, ...report })}\n`)
       else
         context.stdout.write(
           `${renderStatisticsText(report.generatedAt, report.staleAfterSeconds, report.results, report.aggregate)}\n`
