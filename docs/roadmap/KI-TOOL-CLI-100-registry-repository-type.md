@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-03T02:36:15Z
-updated_at: 2026-10-03T02:36:15Z
+updated_at: 2026-10-03T02:54:31Z
 ---
 
 # Registry repository type
@@ -34,10 +34,10 @@ In scope: one repository-type field in each `ki/registry/v1` entry, its tests, a
 
 ## Shaping
 
-- Approach: read the type through `declaredRepositoryKind` in `registryReport` and add it to the `RegistryReport` entry type and both available and unavailable branches. Extend the two JSON inventory tests to assert it. Update `REGISTRY-005` to name the field and the additive precedent, then update the `registry list` entry in `man/ki.commands.json`, `man/ki.1`, the `ki registry list --format json` passage in `docs/guides/user/repository-operations.md`, and add a `CHANGELOG.md` entry.
+- Approach: read the type through `declaredRepositoryKind` in `registryReport` and add `repoType` to the `RegistryReport` entry type and both available and unavailable branches. Test `project` and `kb` available entries and the exact `null` shape for missing or malformed declarations. Update `REGISTRY-005` to name the field and additive precedent, update the `registry list` entry in `man/ki.commands.json`, `man/ki.1`, the `ki registry list --format json` passage in `docs/guides/user/repository-operations.md`, and add a `CHANGELOG.md` entry.
 - Dependencies: none. The declaration validation and registry report already exist.
-- Decisions needed: the field name, either `repoType` (matching the report's camelCase `repoCode`) or the declared key name `repo_type`. Also how an unavailable entry represents the type: `null` (matching the other metadata keys in the unavailable branch) or omission (matching how `taskLinks` is projected only when declared).
-- Promotion: move to Next when the owner settles both decisions. The item is then small enough to plan to Ready in one pass.
+- Decisions settled: use `repoType` (matching the report's camelCase `repoCode`) with declared values `project` and `kb`; use `null` for an unavailable entry (matching its other metadata keys). The owner confirmed both choices on 2026-10-03.
+- Promotion: the scope and decisions are ready for Next selection; shape the execution plan and seek Ready approval there.
 
 ## Discussion
 
