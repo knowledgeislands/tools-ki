@@ -4,12 +4,12 @@ area: CLI
 title: Align schema contracts
 theme: cli
 horizon: next
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: d4c31950dfd3d133b81a608b2d4d69cbc0f823c5
 created_at: 2026-10-03T04:00:16Z
-updated_at: 2026-10-03T06:58:54Z
+updated_at: 2026-10-03T07:30:08Z
 ---
 
 ## Goal
@@ -94,6 +94,10 @@ The change keeps ordinary reads non-mutating and confines rewriting to an explic
 ### Mini recap
 
 KI now writes unversioned user configuration and reports roadmap-stats v1; legacy config can be repaired explicitly. Tests and repository checks passed. No further learning route is proposed beyond the updated specifications and guide.
+
+## Done
+
+Accepted 2026-10-03 by Kris Brown on the review packet above.
 
 ## Discussion
 
