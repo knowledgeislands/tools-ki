@@ -2,6 +2,8 @@
 
 Use this guide before presenting a `tools-ki` change for review. Release publication has additional requirements in [Release tools-ki](releasing.md).
 
+The `ki-repo-tools` change-readiness checklist owns cross-tool documentation, verification, and authority questions; the checks below apply them to KI's command and installation contracts.
+
 ## Confirm the delivery boundary
 
 - The implemented behavior matches the approved work scope and does not absorb unrelated working-tree changes.

@@ -1,5 +1,7 @@
 # Release tools-ki
 
+The `ki-repo-tools` release-readiness checklist owns common release checks; this guide provides KI's signed-archive procedure and exact handoffs.
+
 `tools-ki` releases compiled archives for `darwin-arm64`, `darwin-x64`, and glibc `linux-x64`.
 
 Each release contains three `ki-vX.Y.Z-<target>.tar.gz` archives, each holding only `ki` and `man/ki.1`, plus the Ed25519-signed `ki-checksums.txt` manifest and `ki-checksums.txt.sig` signature.
@@ -69,7 +71,7 @@ A separate GitHub account controlled by the same person can add a small operatio
 
 ## Publish a release
 
-Before creating the tag, verify that the candidate version in `package.json` and `ki --version` agree with the intended `vX.Y.Z` tag. Review the README, user guides, and `ki(1)` for the same public command surface; after changing the manual, update its date, run `bun run ki:tools:lint-man`, and inspect its rendered output. For a 0.x release, update the consolidated Pre-1.0 baseline in `CHANGELOG.md` so its command surface and notable changes reflect the candidate; the tag, GitHub release, and commit history retain the exact per-release record. From 1.0 onward, add a dated `X.Y.Z` entry grouped under `Added`, `Changed`, `Fixed`, and `Removed` as applicable.
+Before creating the tag, verify that the candidate version in `package.json` and `ki --version` agree with the intended `vX.Y.Z` tag. Review CLI help, generated Bash and Zsh completions, the README, user guides, and `ki(1)` for the same public command surface; after changing the manual, update its date, run `bun run ki:tools:lint-man`, and inspect its rendered output. For a 0.x release, update the consolidated Pre-1.0 baseline in `CHANGELOG.md` so its command surface and notable changes reflect the candidate; the tag, GitHub release, and commit history retain the exact per-release record. From 1.0 onward, add a dated `X.Y.Z` entry grouped under `Added`, `Changed`, `Fixed`, and `Removed` as applicable.
 
 The release workflow is manually dispatched from protected `main`, then checks out the exact requested release tag. Create and push an exact semantic version tag only after the intended release commit is on `main`:
 
