@@ -3,13 +3,13 @@ id: KI-TOOL-CLI-100
 area: CLI
 title: Registry repository type
 theme: cli
-horizon: soon
+horizon: next
 status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-03T02:36:15Z
-updated_at: 2026-10-03T02:54:31Z
+updated_at: 2026-10-03T03:27:02Z
 ---
 
 # Registry repository type
@@ -37,7 +37,48 @@ In scope: one repository-type field in each `ki/registry/v1` entry, its tests, a
 - Approach: read the type through `declaredRepositoryKind` in `registryReport` and add `repoType` to the `RegistryReport` entry type and both available and unavailable branches. Test `project` and `kb` available entries and the exact `null` shape for missing or malformed declarations. Update `REGISTRY-005` to name the field and additive precedent, update the `registry list` entry in `man/ki.commands.json`, `man/ki.1`, the `ki registry list --format json` passage in `docs/guides/user/repository-operations.md`, and add a `CHANGELOG.md` entry.
 - Dependencies: none. The declaration validation and registry report already exist.
 - Decisions settled: use `repoType` (matching the report's camelCase `repoCode`) with declared values `project` and `kb`; use `null` for an unavailable entry (matching its other metadata keys). The owner confirmed both choices on 2026-10-03.
-- Promotion: the scope and decisions are ready for Next selection; shape the execution plan and seek Ready approval there.
+- Promotion: the owner selected this item for Next on 2026-10-03; review the plan below before marking it Ready.
+
+## Current state
+
+`ki registry list --format json` validates each available repository's declared type but does not project it. Its `ki/registry/v1` entry type and exact-shape CLI test omit the field. The Observatory still reads checkout declarations to classify Knowledge Bases. The public contract and documentation need the same additive field.
+
+## Steps
+
+- [ ] Add `repoType` to `RegistryReport` entries, projecting `project` or `kb` from a valid declaration and `null` for an unavailable entry without exposing local paths.
+- [ ] Extend the public CLI JSON contract tests with Project, Knowledge Base, missing declaration, and malformed `repo_type` cases that assert exact field values and exit behavior.
+- [ ] Update `REGISTRY-005`, the command inventory and manual, the repository-operations guide, and the Pre-1.0 changelog to describe the additive `ki/registry/v1` field.
+- [ ] Run the registry contract test, full coverage gate, TypeScript check, manual lint, and relevant repository audits.
+
+## Files touched
+
+`src/core/storage/registry-report.ts`, `src/tests/cli/registry/registry.test.ts`, `docs/specs/registry.md`, `man/ki.commands.json`, `man/ki.1`, `docs/guides/user/repository-operations.md`, `CHANGELOG.md`, and this work record.
+
+## Verify
+
+Run `bunx vitest run src/tests/cli/registry/registry.test.ts`, `bun run test:coverage`, `bunx tsc --noEmit`, `bun run ki:tools:lint-man`, `ki repo audit --skill ki-self`, and the roadmap and authoring audits. The CLI test must assert exact `repoType` values, unavailable `null`, path omission, and non-zero exit when an entry is unavailable.
+
+## Dependencies / blocks
+
+No build dependency or remaining field-design decision. Observatory consumption is a separate downstream change.
+
+## Documentation impact
+
+### Decision Records
+
+No new decision record: field spelling, unavailable value, and additive v1 treatment are settled in this item and follow the existing prerelease precedent.
+
+### Specifications
+
+Update `REGISTRY-005` with the `repoType` field, its values, and unavailable representation.
+
+### Guides
+
+Update the registry JSON passage in the repository-operations guide and the command manual.
+
+### Roadmap
+
+Record delivery and review evidence here; the Observatory-side consumption remains outside this item.
 
 ## Discussion
 
