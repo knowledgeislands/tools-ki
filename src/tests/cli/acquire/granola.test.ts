@@ -1000,6 +1000,44 @@ describe('[ki acquire import --adapter granola]', () => {
     expect(document).not.toContain('source material')
   })
 
+  test('keeps one Attendees section when the source summary already carries one', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      {
+        key: 'target',
+        repository: 'https://github.com/example/target',
+        path: repository,
+        unfoldered: true
+      }
+    ])
+    const meeting = {
+      id: 'meeting-a',
+      date: '2026-01-02',
+      title: 'Meeting A',
+      detail: {
+        participants: ['Kris Brown', 'Site owner'],
+        summary: '### Attendees\n\n- Kris Brown\n- Site owner\n\n### Decisions\n\n- Ship it'
+      },
+      transcript: { transcript: 'Speaker A: hello' }
+    }
+    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
+
+    const first = await box.run(command(repository))
+    expect(first.exitCode, first.output).toBe(0)
+    const [path] = await packageDirectories(repository)
+    const document = await box.root.read(`target/+/_ACQUIRE/granola/${path}`)
+    expect(document.match(/^## Attendees$/gm)).toHaveLength(1)
+    expect(document).toContain('## Attendees\n\n- Kris Brown\n- Site owner')
+    expect(document).toContain('## Decisions')
+    expect(document).toContain('participants:')
+
+    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
+    const repeated = await box.run(command(repository))
+    expect(repeated.exitCode, repeated.output).toBe(0)
+    expect((await box.root.read(`target/+/_ACQUIRE/granola/${path}`)).match(/^## Attendees$/gm)).toHaveLength(1)
+  })
+
   test('renders defensive Markdown fallbacks and rejects unsafe meeting paths', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')

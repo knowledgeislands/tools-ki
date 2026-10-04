@@ -259,7 +259,10 @@ export const renderGranolaMeeting = (options: {
     ...frontmatter,
     '',
     `# ${title}`,
-    ...(participants.length ? ['', '## Attendees', '', participantsText(participants)] : []),
+    // A source summary that already carries its own Attendees heading keeps it; a second one would duplicate the heading.
+    ...(participants.length && !/^## Attendees\s*$/im.test(summary)
+      ? ['', '## Attendees', '', participantsText(participants)]
+      : []),
     '',
     summary,
     '',
