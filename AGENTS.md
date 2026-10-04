@@ -10,7 +10,5 @@
 
 ## Working contract
 
-- Preserve unrelated dirty work and treat the checkout as potentially shared. Re-check `HEAD`, status, staged paths, and verification evidence before each commit; stage only explicitly owned paths and never push without instruction.
 - Exercise behaviour through the public in-process CLI seam `run(args, context)` and the `sandbox()` helper. Inject streams, paths, time, and network through `KiContext`; tests do not contact the network.
 - Keep command modules responsible for grammar, validation, and rendering, and core modules responsible for typed domain behaviour and repository effects. Do not add legacy aliases or compatibility paths unless a transition is explicitly authorised.
-- Commit only complete, verified units. If a review identifies material work outside the authorised pass, present the finding and route before creating or implementing follow-up work.

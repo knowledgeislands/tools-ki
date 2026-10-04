@@ -2,23 +2,19 @@
 
 Use this guide before presenting a `tools-ki` change for review. Release publication has additional requirements in [Release tools-ki](releasing.md).
 
-The `ki-repo-tools` change-readiness checklist owns cross-tool documentation, verification, and authority questions; the checks below apply them to KI's command and installation contracts.
+Apply the `ki-repo-tools` change-readiness checklist for shared documentation, verification, and authority requirements, and `ki-git` for commit practice. The checks below are KI's local additions.
 
 ## Confirm the delivery boundary
 
-- The implemented behavior matches the approved work scope and does not absorb unrelated working-tree changes.
 - Public grammar, validation, repository effects, and rendered output retain the command/core/presentation boundaries in the repository-local `ki-self` standard.
 - Portable behavior belongs to its owning Harness skill or KI Specification rather than a `tools-ki`-only compatibility path.
 - New provider, filesystem, time, stream, or network behavior enters through `KiContext` or an explicit domain port.
 
 ## Align the public surface
 
-- CLI help, completions, `man/ki.1`, README, user guides, specifications, and the active changelog baseline agree wherever the change affects them.
-- Root `help [command...]`, `completion <shell>`, `diag`, and `doctor` follow the shared tool contract. Diagnostics are share-safe by default and reserve local details for `--full`; repair previews by default and requires `--apply` to write.
 - Regenerate `man/ki.commands.json` with `bun scripts/generate-command-inventory.ts --write` after changing manual grammar.
 - New accepted behavior has an executable contract test through `run(args, context)` and the sandbox helper.
 - Error paths fail before partial writes and are covered at the public seam. Tests use injected provider fixtures rather than live network access.
-- Removed behavior leaves no dead aliases, compatibility branches, obsolete documentation, or unreachable implementation behind unless a bounded transition was approved.
 
 ## Verify the change
 
@@ -48,10 +44,3 @@ When the manual changed, update its date, lint it, and inspect the rendered resu
 bun run ki:tools:lint-man
 mandoc -Tutf8 man/ki.1 | col -b
 ```
-
-## Prepare review
-
-- Commit one coherent, verified unit with only intended paths staged.
-- Record any unavailable check as a blocker rather than describing the change as fully verified.
-- Name receiver-owned cross-repository follow-up without mutating the receiver opportunistically.
-- Do not push, tag, publish, merge, deploy, or accept roadmap work unless that authority was supplied separately.

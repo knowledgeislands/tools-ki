@@ -38,14 +38,6 @@ cp "$key_dir/ki-release-signing-public.pem" release/ki-release-signing-public.pe
 
 The tracked [public key](../../../release/ki-release-signing-public.pem) must match the private key stored in GitHub; the workflow compares them before it signs a release.
 
-## Require immutable releases
-
-Before publishing the next release, enable **Settings** → **Releases** → **Enable release immutability** for `knowledgeislands/tools-ki`, or apply the equivalent organization policy to this repository.
-
-Immutable releases are required: publication locks every release asset and its exact Git tag. The workflow verifies that the published release is immutable.
-
-This applies only to future releases, so the existing `v0.2.6` release is not release-integrity evidence for this contract.
-
 ## Configure the solo-maintainer release environment
 
 The release workflow reads `KI_RELEASE_SIGNING_KEY` only from a GitHub Actions **environment secret**. Do not create it as a general repository secret: a release tag could otherwise select workflow code that reads it.
@@ -71,7 +63,7 @@ A separate GitHub account controlled by the same person can add a small operatio
 
 ## Publish a release
 
-Before creating the tag, verify that the candidate version in `package.json` and `ki --version` agree with the intended `vX.Y.Z` tag. Review CLI help, generated Bash and Zsh completions, the README, user guides, and `ki(1)` for the same public command surface; after changing the manual, update its date, run `bun run ki:tools:lint-man`, and inspect its rendered output. For a 0.x release, update the consolidated Pre-1.0 baseline in `CHANGELOG.md` so its command surface and notable changes reflect the candidate; the tag, GitHub release, and commit history retain the exact per-release record. From 1.0 onward, add a dated `X.Y.Z` entry grouped under `Added`, `Changed`, `Fixed`, and `Removed` as applicable.
+Complete the `ki-repo-tools` release-readiness checklist and the [local definition of done](definition-of-done.md). KI's candidate version comes from `package.json`; check both the source launcher and compiled archive against it. The release workflow verifies GitHub immutability after publication.
 
 The release workflow is manually dispatched from protected `main`, then checks out the exact requested release tag. Create and push an exact semantic version tag only after the intended release commit is on `main`:
 
@@ -102,16 +94,12 @@ Omitting the positional tag deliberately retains latest-release discovery.
 
 ### Hand off the verified release
 
-After immutable publication and the clean-install proof succeed, update the Homebrew tap through its owning repository. Once the formula-changing commit reaches the tap's `main` branch and passes governance, the tap dispatches the verified release event to its explicitly configured consumers through the shared `ki-tools-release-bot` GitHub App. An existing KI Website registry entry is then advanced through an ordinary website pull request.
-
-This repository neither stores the App credentials nor installs the App. The tap owns dispatch and sender configuration; each consumer owns installation consent, independent validation, and review. A first-time website entry or a maturity change still needs an exact manual handoff containing:
+Follow the shared release-readiness checklist's tap and website handoff procedure. For KI's enrolled path or an explicit first-entry handoff, supply:
 
 - the released `vX.Y.Z` tag;
 - the immutable installer source `https://raw.githubusercontent.com/knowledgeislands/tools-ki/vX.Y.Z/install.sh`;
 - the pinned invocation `curl -fsSL https://knowledgeislands.info/install/ki | sh -s -- vX.Y.Z`; and
 - confirmation that `https://knowledgeislands.info/tooling/ki/` is the human-facing overview route.
-
-The website registry must not advance before the release is immutable and independently installable. The website owns its registry edit and deployment; this repository owns the upstream release evidence. If automated delivery fails, retry it from the Homebrew tap rather than copying App credentials or substituting a personal access token here.
 
 ## Release-please assessment
 
