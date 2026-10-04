@@ -4,12 +4,12 @@ area: CLI
 title: One Granola Attendees heading
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 5f7ee0f12308b7cfe4bb0a3ea8e6fe165e2bee52
 created_at: 2026-10-04T12:19:44Z
-updated_at: 2026-10-04T12:19:44Z
+updated_at: 2026-10-04T16:39:39Z
 ---
 
 # One Granola Attendees heading
@@ -92,6 +92,10 @@ The fix keeps the source's own list rather than the importer's prose list, which
 ### Mini recap
 
 One-line importer guard plus a two-pass regression test closes the KIT-010 duplicate Attendees handoff.
+
+## Done
+
+Accepted 2026-10-04 on the review packet above, under the owner's delegated estate-push authority following an independent Fable review. The reviewer confirmed both Steps against ac963ab: `renderGranolaMeeting` omits its own section only when the rendered summary already carries a level-two `Attendees` heading, participants stay in frontmatter, and the two-pass CLI test asserts one heading after import and re-import. Re-run on HEAD: `bun run test:coverage` (962 tests, 100% coverage), `bunx tsc --noEmit -p .`, Biome on the touched files and `ki repo audit` all pass. Nit: a source heading named otherwise still sits beside the importer's list, as Outstanding concerns records; no action needed.
 
 ## Discussion
 
