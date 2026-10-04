@@ -22,7 +22,7 @@ export const createOutdatedCommand = (context: KiContext): Command =>
         : [{ label: 'none' }]
       context.stdout.write(
         `${renderTree({
-          title: 'KI MANAGE OUTDATED',
+          title: 'KI HARNESS OUTDATED',
           entries: [
             { label: `evidence gaps (${status.outdatedEvidenceGaps.length})`, children: evidenceGaps },
             { label: `summary: EVIDENCE_GAPS=${status.outdatedEvidenceGaps.length}` }

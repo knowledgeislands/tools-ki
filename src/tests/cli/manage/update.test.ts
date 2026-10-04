@@ -29,16 +29,16 @@ manual = "${manual}"
 installer = "${installer}"
 `
 
-describe('[ki manage update and ki repo upgrade]', () => {
+describe('[ki update and ki repo upgrade]', () => {
   test('reports unavailable external executable ownership while leaving an empty harness inventory unchanged', async () => {
     const box = await sandbox()
 
-    const result = await box.run('ki manage update')
+    const result = await box.run('ki update')
 
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI MANAGE UPDATE\n├─ CLI\n│  ╰─ CLI executable: unavailable (CLI executable is not installer-managed; update it with its distribution manager)\n├─ harnesses (0)\n│  ╰─ none\n╰─ summary: HARNESS_RESULTS=0\n'
+        '╭─ KI UPDATE\n├─ CLI\n│  ╰─ CLI executable: unavailable (CLI executable is not installer-managed; update it with its distribution manager)\n├─ harnesses (0)\n│  ╰─ none\n╰─ summary: HARNESS_RESULTS=0\n'
     })
   })
 
@@ -51,12 +51,12 @@ describe('[ki manage update and ki repo upgrade]', () => {
       receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
     )
 
-    const updated = await box.run('ki manage update --cli', { runner: 'default' })
+    const updated = await box.run('ki update --cli', { runner: 'default' })
 
     expect(updated).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI MANAGE UPDATE\n├─ CLI\n│  ╰─ CLI executable: updated with the verified installer\n╰─ summary: CLI=UPDATED\n'
+        '╭─ KI UPDATE\n├─ CLI\n│  ╰─ CLI executable: updated with the verified installer\n╰─ summary: CLI=UPDATED\n'
     })
   })
 
@@ -70,23 +70,23 @@ describe('[ki manage update and ki repo upgrade]', () => {
     )
     box.setRunner(async () => ({ exitCode: 0, output: '' }))
 
-    const updated = await box.run('ki manage update')
+    const updated = await box.run('ki update')
 
     expect(updated).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI MANAGE UPDATE\n├─ CLI\n│  ╰─ CLI executable: updated with the verified installer\n├─ harnesses (0)\n│  ╰─ none\n╰─ summary: HARNESS_RESULTS=0\n'
+        '╭─ KI UPDATE\n├─ CLI\n│  ╰─ CLI executable: updated with the verified installer\n├─ harnesses (0)\n│  ╰─ none\n╰─ summary: HARNESS_RESULTS=0\n'
     })
   })
 
   test('rejects malformed, incompatible, mismatched, and incomplete installer receipts before invoking an update', async () => {
     const malformed = await sandbox()
     await malformed.state.write('ki/installation.toml', '[broken\n')
-    const malformedResult = await malformed.run('ki manage update --cli')
+    const malformedResult = await malformed.run('ki update --cli')
 
     const incompatible = await sandbox()
     await incompatible.state.write('ki/installation.toml', 'schema = 2\ndistribution = "installer"\n')
-    const incompatibleResult = await incompatible.run('ki manage update --cli')
+    const incompatibleResult = await incompatible.run('ki update --cli')
 
     const mismatched = await sandbox()
     await mismatched.root.write('installer.sh', '')
@@ -95,7 +95,7 @@ describe('[ki manage update and ki repo upgrade]', () => {
       'ki/installation.toml',
       `schema = 1\ndistribution = "installer"\nexecutable = "${mismatched.root.path}/other-ki"\nmanual = "${mismatched.root.path}/ki.1"\ninstaller = "${mismatched.root.path}/installer.sh"\n`
     )
-    const mismatchedResult = await mismatched.run('ki manage update --cli')
+    const mismatchedResult = await mismatched.run('ki update --cli')
 
     const missingCurrent = await sandbox()
     await missingCurrent.root.write('installer.sh', '')
@@ -104,7 +104,7 @@ describe('[ki manage update and ki repo upgrade]', () => {
       'ki/installation.toml',
       receipt(missingCurrent, `${missingCurrent.root.path}/installer.sh`, `${missingCurrent.root.path}/ki.1`)
     )
-    const missingCurrentResult = await missingCurrent.run('ki manage update --cli', {
+    const missingCurrentResult = await missingCurrent.run('ki update --cli', {
       executable: `${missingCurrent.root.path}/missing-ki`
     })
 
@@ -114,7 +114,7 @@ describe('[ki manage update and ki repo upgrade]', () => {
       'ki/installation.toml',
       receipt(incomplete, `${incomplete.root.path}/installer.sh`, `${incomplete.root.path}/missing.1`)
     )
-    const incompleteResult = await incomplete.run('ki manage update --cli')
+    const incompleteResult = await incomplete.run('ki update --cli')
 
     const relativePath = await sandbox()
     await relativePath.root.write('installer.sh', '')
@@ -122,11 +122,11 @@ describe('[ki manage update and ki repo upgrade]', () => {
       'ki/installation.toml',
       `schema = 1\ndistribution = "installer"\nexecutable = "${relativePath.executable}"\nmanual = "relative.1"\ninstaller = "${relativePath.root.path}/installer.sh"\n`
     )
-    const relativePathResult = await relativePath.run('ki manage update --cli')
+    const relativePathResult = await relativePath.run('ki update --cli')
 
     const directory = await sandbox()
     await directory.state.mkdir('ki/installation.toml')
-    const directoryResult = await directory.run('ki manage update --cli')
+    const directoryResult = await directory.run('ki update --cli')
 
     expect(malformedResult).toEqual({ exitCode: 1, output: 'ki: error: installer receipt must be valid TOML\n' })
     expect(incompatibleResult).toEqual({
@@ -161,9 +161,9 @@ describe('[ki manage update and ki repo upgrade]', () => {
       receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
     )
     box.setRunner(async () => ({ exitCode: 1, output: 'installer failed' }))
-    const detailed = await box.run('ki manage update --cli')
+    const detailed = await box.run('ki update --cli')
     box.setRunner(async () => ({ exitCode: 1, output: '' }))
-    const silent = await box.run('ki manage update --cli')
+    const silent = await box.run('ki update --cli')
 
     expect(detailed).toEqual({ exitCode: 1, output: 'ki: error: verified installer update failed: installer failed\n' })
     expect(silent).toEqual({ exitCode: 1, output: 'ki: error: verified installer update failed\n' })
@@ -178,7 +178,7 @@ describe('[ki manage update and ki repo upgrade]', () => {
       receipt(box, `${box.root.path}/installer.sh`, `${box.root.path}/ki.1`)
     )
 
-    const result = await box.run('ki manage update --cli', { runner: 'default' })
+    const result = await box.run('ki update --cli', { runner: 'default' })
 
     expect(result).toEqual({ exitCode: 1, output: 'ki: error: verified installer update failed\n' })
   })
@@ -193,14 +193,14 @@ describe('[ki manage update and ki repo upgrade]', () => {
     )
     box.setEnv({ PATH: '' })
 
-    await expect(box.run('ki manage update', { runner: 'default' })).rejects.toThrow('spawn bash ENOENT')
+    await expect(box.run('ki update', { runner: 'default' })).rejects.toThrow('spawn bash ENOENT')
   })
 
   test('refuses an explicit CLI update for a local development installation', async () => {
     const box = await sandbox()
     await symlink(box.executable, `${box.root.path}/linked-ki`)
 
-    const result = await box.run('ki manage update --cli', {
+    const result = await box.run('ki update --cli', {
       executable: `${box.root.path}/linked-ki`,
       installation: 'local'
     })
@@ -218,7 +218,7 @@ describe('[ki manage update and ki repo upgrade]', () => {
     await box.config.write('ki/config.toml', configuration(payload.sha256))
     box.setFetcher(async () => new Response(payload.payload))
 
-    const updated = await box.run('ki manage update')
+    const updated = await box.run('ki update')
 
     expect(updated.output).toContain(`example/harness: refreshed archive ${payload.sha256}`)
     expect(await box.data.read('ki/harnesses/example/harness/skills/example/SKILL.md')).toBe(skill)
@@ -233,7 +233,7 @@ describe('[ki manage update and ki repo upgrade]', () => {
       '---\nname: other-skill\nki-depends-on: []\n---\n'
     )
 
-    const result = await box.run('ki manage update')
+    const result = await box.run('ki update')
 
     expect(result.output).toContain('example/harness: unavailable (no configured immutable release)')
     expect(result.output).toContain('other/harness: unavailable (no configured immutable release)')

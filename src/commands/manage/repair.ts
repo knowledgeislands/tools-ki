@@ -9,7 +9,7 @@ import {
 } from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
 import type { KiContext } from '../../context.ts'
-import { KiExit } from '../../core/errors.ts'
+import { KiError, KiExit } from '../../core/errors.ts'
 import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../core/harness/index.ts'
 import { type ManageRepairItem, type ManageRepairPort, runManageRepair } from '../../core/manage/index.ts'
 import { acquireManagedArtifactRecovery, planOrphanRecovery, recoverInstallOrphans } from '../../core/storage/index.ts'
@@ -63,14 +63,16 @@ export const createRepairCommand = (context: KiContext): Command =>
   new Command('repair')
     .description('repair user skill links and recognised legacy configuration metadata')
     .option('--dry-run', 'report repairs without writing')
-    .action(async (options: { dryRun?: boolean }) => {
+    .option('--apply', 'apply the proposed repairs')
+    .action(async (options: { dryRun?: boolean; apply?: boolean }) => {
+      if (options.dryRun && options.apply) throw new KiError('--dry-run and --apply cannot be combined', 2)
       const result = await runManageRepair(repairPort(context), {
-        dryRun: Boolean(options.dryRun),
+        dryRun: !options.apply,
         canonicalHarnessIdentifier
       })
       context.stdout.write(
         `${renderTree({
-          title: 'KI MANAGE REPAIR',
+          title: 'KI REPAIR',
           entries: [
             {
               label: `results (${result.items.length})`,

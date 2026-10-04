@@ -35,29 +35,28 @@ const commandPaths = [
   'harness info',
   'harness install',
   'harness list',
+  'harness missing',
+  'harness outdated',
   'harness reinstall',
+  'harness search',
   'harness uninstall',
-  'manage',
-  'manage cleanup',
-  'manage completion',
-  'manage diag',
-  'manage docs',
-  'manage doctor',
-  'manage list',
-  'manage mcp',
-  'manage mcp install',
-  'manage mcp list',
-  'manage mcp rollback',
-  'manage mcp uninstall',
-  'manage mcp update',
-  'manage missing',
-  'manage outdated',
-  'manage repair',
-  'manage search',
-  'manage update',
-  'manage vscode',
-  'manage vscode check',
-  'manage vscode sync',
+  'cleanup',
+  'completion',
+  'diag',
+  'docs',
+  'doctor',
+  'inventory',
+  'mcp',
+  'mcp install',
+  'mcp list',
+  'mcp rollback',
+  'mcp uninstall',
+  'mcp update',
+  'repair',
+  'update',
+  'vscode',
+  'vscode check',
+  'vscode sync',
   'registry',
   'registry add',
   'registry list',
@@ -120,11 +119,11 @@ const commandPaths = [
   'repo trade submit'
 ] as const
 
-describe('[ki manage completion]', () => {
+describe('[ki completion]', () => {
   test('renders zsh and bash completion scripts', async () => {
     const box = await sandbox()
-    const zsh = await box.run('ki manage completion zsh')
-    const bash = await box.run('ki manage completion bash')
+    const zsh = await box.run('ki completion zsh')
+    const bash = await box.run('ki completion bash')
 
     expect(zsh.output).toContain('#compdef ki')
     expect(zsh.output).toContain("zstyle ':completion:*:ki-commands' verbose yes")
@@ -172,8 +171,8 @@ describe('[ki manage completion]', () => {
     expect(zsh.output).toContain('--aggregate:render one selected-set roadmap inventory')
     expect(zsh.output).toContain('stats:report roadmap age and inactivity')
     expect(bash.output).toContain("'repo roadmap stats:--format')")
-    expect(bash.output).toContain("'manage mcp install:--auth') printf '%s\\n' 'github-cli'")
-    expect(bash.output).toContain("'manage mcp list:--format') printf '%s\\n' 'text json'")
+    expect(bash.output).toContain("'mcp install:--auth') printf '%s\\n' 'github-cli'")
+    expect(bash.output).toContain("'mcp list:--format') printf '%s\\n' 'text json'")
     expect(bash.output).toContain("'acquire import:--output')")
     expect(bash.output).toContain("'-V --version -h --help'")
     expect(bash.output).toContain('compgen -f')
@@ -192,8 +191,8 @@ describe('[ki manage completion]', () => {
       expect(output).toContain("'repo roadmap list:--format') printf '%s\\n' 'text json'")
       expect(output).toContain("'repo store list:--format') printf '%s\\n' 'text json'")
       expect(output).toContain("'acquire import:--capture') printf '%s\\n' 'path'")
-      expect(output).toContain("'manage docs:0') printf '%s\\n' 'overview site manual roadmap'")
-      expect(output).toContain("'manage mcp update:--auth') printf '%s\\n' 'github-cli'")
+      expect(output).toContain("'docs:0') printf '%s\\n' 'overview site manual roadmap'")
+      expect(output).toContain("'mcp update:--auth') printf '%s\\n' 'github-cli'")
       expect(output).toContain(
         "'repo trade prepare:--observation') printf '%s\\n' 'unattended receipt decision completion'"
       )
@@ -205,8 +204,8 @@ describe('[ki manage completion]', () => {
 
   test('rejects an unsupported shell and requires a shell argument', async () => {
     const box = await sandbox()
-    const invalidCompletion = await box.run('ki manage completion fish')
-    const missingCompletionShell = await box.run('ki manage completion')
+    const invalidCompletion = await box.run('ki completion fish')
+    const missingCompletionShell = await box.run('ki completion')
 
     expect(invalidCompletion).toEqual({ exitCode: 2, output: 'ki: error: completion shell must be bash or zsh\n' })
     expect(missingCompletionShell.exitCode).toBe(2)
@@ -214,8 +213,8 @@ describe('[ki manage completion]', () => {
 
   test('emits loadable scripts whose Bash completion reaches repo roadmap', async () => {
     const box = await sandbox()
-    const bash = await box.run('ki manage completion bash')
-    const zsh = await box.run('ki manage completion zsh')
+    const bash = await box.run('ki completion bash')
+    const zsh = await box.run('ki completion zsh')
     await box.root.write('completion.bash', bash.output)
     await box.root.write('completion.zsh', zsh.output)
 
@@ -308,9 +307,9 @@ describe('[ki manage completion]', () => {
     ])
   })
 
-  test('rejects retired root and plural completion command names', async () => {
+  test('rejects retired manage grouping and plural completion command names', async () => {
     const box = await sandbox()
-    const root = await box.run('ki completion zsh')
+    const root = await box.run('ki manage completion zsh')
     const plural = await box.run('ki completions bash')
 
     expect(root.exitCode).toBe(2)

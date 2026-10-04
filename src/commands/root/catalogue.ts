@@ -5,7 +5,6 @@ export const rootHelpCommandNames = [
   'repo',
   'acquire',
   'harness',
-  'manage',
   'registry',
   'skill',
   'dev'
@@ -19,7 +18,6 @@ export const rootHelpGroups: Record<RootCommandName, string> = {
   repo: 'Work with repositories:',
   acquire: 'Acquisition:',
   harness: 'Maintain KI:',
-  manage: 'Maintain KI:',
   registry: 'Maintain KI:',
   skill: 'Maintain KI:',
   dev: 'Development:'

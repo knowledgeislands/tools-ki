@@ -239,7 +239,7 @@ const reportManifest = async (
       artifact.paths[0]
     )
   if (artifact.state === 'creating' || artifact.state === 'recoverable')
-    return report(artifact.id, 'interrupted-recoverable', 'use ki manage repair', artifact.paths[0])
+    return report(artifact.id, 'interrupted-recoverable', 'use ki repair', artifact.paths[0])
   if (artifact.state === 'active')
     return report(artifact.id, 'live', 'active record has no producer lock', artifact.paths[0])
   return report(

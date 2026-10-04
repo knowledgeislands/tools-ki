@@ -429,7 +429,7 @@ export const discoverInstalledHarnesses = async (dataDirectory: string): Promise
     }
     const names = await readdir(join(physicalHarnesses, owner.name), { withFileTypes: true })
     for (const name of names) {
-      // An orphan is reported by `ki manage cleanup` and recovered by `ki manage repair`; it must
+      // An orphan is reported by `ki cleanup` and recovered by `ki repair`; it must
       // not fail the read paths that merely wanted to list what is installed.
       if (installOrphan(owner.name, name.name, join(physicalHarnesses, owner.name, name.name))) continue
       if ((!name.isDirectory() && !name.isSymbolicLink()) || !harnessComponent.test(name.name)) {

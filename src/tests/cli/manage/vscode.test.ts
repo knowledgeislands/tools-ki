@@ -84,23 +84,23 @@ const prepare = async (names: readonly string[]) => {
   return { box, repositories, sourceRoot }
 }
 
-describe('ki manage vscode', () => {
+describe('ki vscode', () => {
   test('exposes only projection check and sync commands', async () => {
     const box = await sandbox()
-    const help = await box.run('ki manage vscode --help')
+    const help = await box.run('ki vscode --help')
 
     expect(help.exitCode).toBe(0)
     expect(help.output).toContain('check')
     expect(help.output).toContain('sync')
-    expect((await box.run('ki manage vscode source create alpha')).exitCode).toBe(2)
+    expect((await box.run('ki vscode source create alpha')).exitCode).toBe(2)
   })
 
   test('synchronises repository roots and runtime-scoped trusted folders', async () => {
     const { box, repositories, sourceRoot } = await prepare(['er-research'])
-    expect((await box.run('ki manage vscode check')).exitCode).toBe(1)
-    expect((await box.run('ki manage vscode sync')).exitCode).toBe(1)
+    expect((await box.run('ki vscode check')).exitCode).toBe(1)
+    expect((await box.run('ki vscode sync')).exitCode).toBe(1)
 
-    const result = await box.run('ki manage vscode sync --write')
+    const result = await box.run('ki vscode sync --write')
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('synchronised 2 source file(s)')
     expect(
@@ -109,7 +109,7 @@ describe('ki manage vscode', () => {
     expect(await readFile(`${sourceRoot}/.chezmoidata/trusted-folders.yaml`, 'utf8')).toContain(
       `path: ${repositories[0]}\n    clients: [claude-code]`
     )
-    expect((await box.run('ki manage vscode check')).exitCode).toBe(0)
+    expect((await box.run('ki vscode check')).exitCode).toBe(0)
   })
 
   test('consumes explicit sources bindings and ignores legacy and unbound directories', async () => {
@@ -130,7 +130,7 @@ describe('ki manage vscode', () => {
       JSON.stringify({ folders: [{ path: repositories[0] }, { path: sources }] })
     )
 
-    expect((await box.run('ki manage vscode sync --write')).exitCode).toBe(0)
+    expect((await box.run('ki vscode sync --write')).exitCode).toBe(0)
     const first = JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/custom-a.code-workspace`, 'utf8'))
     const second = JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/custom-b.code-workspace`, 'utf8'))
     expect(first).toEqual({ folders: [{ path: repositories[0] }, { path: unbound }, { path: sources }] })
@@ -145,33 +145,33 @@ describe('ki manage vscode', () => {
     const { box, repositories, sourceRoot } = await prepare(['alpha'])
 
     setChezmoiRunner(box, sourceRoot, { sourceExit: 1, sourceOutput: 'not configured\n' })
-    expect((await box.run('ki manage vscode check')).output).toContain('chezmoi source path unavailable')
+    expect((await box.run('ki vscode check')).output).toContain('chezmoi source path unavailable')
     setChezmoiRunner(box, sourceRoot, { sourceOutput: 'relative\n' })
-    expect((await box.run('ki manage vscode check')).output).toContain('chezmoi source path must be one absolute path')
+    expect((await box.run('ki vscode check')).output).toContain('chezmoi source path must be one absolute path')
     setChezmoiRunner(box, sourceRoot, { sourceOutput: `${sourceRoot}\n${sourceRoot}\n` })
-    expect((await box.run('ki manage vscode check')).output).toContain('chezmoi source path must be one absolute path')
+    expect((await box.run('ki vscode check')).output).toContain('chezmoi source path must be one absolute path')
     setChezmoiRunner(box, sourceRoot)
 
     await writeFile(join(repositories[0] as string, '.ki.toml'), '[', 'utf8')
-    expect((await box.run('ki manage vscode check')).output).toContain('registered repository has invalid .ki.toml')
+    expect((await box.run('ki vscode check')).output).toContain('registered repository has invalid .ki.toml')
     await writeFile(
       join(repositories[0] as string, '.ki.toml'),
       repositoryDeclaration('alpha').replace('supported_runtimes = ["claude-code"]', 'supported_runtimes = "bad"'),
       'utf8'
     )
-    expect((await box.run('ki manage vscode check')).output).toContain('invalid supported_runtimes declaration')
+    expect((await box.run('ki vscode check')).output).toContain('invalid supported_runtimes declaration')
     await writeFile(
       join(repositories[0] as string, '.ki.toml'),
       repositoryDeclaration('alpha').replace('supported_runtimes = ["claude-code"]', 'supported_runtimes = [1]'),
       'utf8'
     )
-    expect((await box.run('ki manage vscode check')).output).toContain('invalid supported_runtimes declaration')
+    expect((await box.run('ki vscode check')).output).toContain('invalid supported_runtimes declaration')
     await writeFile(join(repositories[0] as string, '.ki.toml'), '[repo]\nharnesses = []\n', 'utf8')
-    expect((await box.run('ki manage vscode check')).output).toContain('invalid supported_runtimes declaration')
+    expect((await box.run('ki vscode check')).output).toContain('invalid supported_runtimes declaration')
     await writeFile(join(repositories[0] as string, '.ki.toml'), '[skills]\nother = true\n', 'utf8')
-    expect((await box.run('ki manage vscode check')).output).toContain('invalid supported_runtimes declaration')
+    expect((await box.run('ki vscode check')).output).toContain('invalid supported_runtimes declaration')
     await writeFile(join(repositories[0] as string, '.ki.toml'), '[skills]\nki-repo = "bad"\n', 'utf8')
-    expect((await box.run('ki manage vscode check')).output).toContain('invalid supported_runtimes declaration')
+    expect((await box.run('ki vscode check')).output).toContain('invalid supported_runtimes declaration')
     await writeFile(
       join(repositories[0] as string, '.ki.toml'),
       repositoryDeclaration('alpha').replace(
@@ -180,7 +180,7 @@ describe('ki manage vscode', () => {
       ),
       'utf8'
     )
-    expect((await box.run('ki manage vscode check')).output).toContain('no supported trusted runtime')
+    expect((await box.run('ki vscode check')).output).toContain('no supported trusted runtime')
     await writeFile(
       join(repositories[0] as string, '.ki.toml'),
       repositoryDeclaration('alpha').replace(
@@ -197,35 +197,33 @@ describe('ki manage vscode', () => {
       'utf8'
     )
     await writeFile(workspace, '{', 'utf8')
-    expect((await box.run('ki manage vscode check')).output).toContain('invalid VS Code workspace')
+    expect((await box.run('ki vscode check')).output).toContain('invalid VS Code workspace')
     await writeFile(workspace, '{}', 'utf8')
-    expect((await box.run('ki manage vscode check')).output).toContain('has no folders array')
+    expect((await box.run('ki vscode check')).output).toContain('has no folders array')
     await writeFile(workspace, '{"folders":[{}]}', 'utf8')
-    expect((await box.run('ki manage vscode check')).output).toContain('workspace folder must be an absolute path')
+    expect((await box.run('ki vscode check')).output).toContain('workspace folder must be an absolute path')
     await writeFile(workspace, '{"folders":[{"path":"relative"}]}', 'utf8')
-    expect((await box.run('ki manage vscode check')).output).toContain('workspace folder must be an absolute path')
+    expect((await box.run('ki vscode check')).output).toContain('workspace folder must be an absolute path')
     await rm(workspace)
 
     setChezmoiRunner(box, sourceRoot, { templateExit: 1, templateOutput: 'template failed\n' })
-    expect((await box.run('ki manage vscode check')).output).toContain('invalid trusted-folder inventory')
+    expect((await box.run('ki vscode check')).output).toContain('invalid trusted-folder inventory')
     setChezmoiRunner(box, sourceRoot, { templateOutput: 'not JSON' })
-    expect((await box.run('ki manage vscode check')).output).toContain('template did not produce JSON')
+    expect((await box.run('ki vscode check')).output).toContain('template did not produce JSON')
     setChezmoiRunner(box, sourceRoot, { templateOutput: '{}' })
-    expect((await box.run('ki manage vscode check')).output).toContain('has no trustedFolders array')
+    expect((await box.run('ki vscode check')).output).toContain('has no trustedFolders array')
     setChezmoiRunner(box, sourceRoot)
     await writeFile(join(sourceRoot, '.chezmoidata/trusted-folders.yaml'), '# missing root key\n', 'utf8')
-    expect((await box.run('ki manage vscode check')).output).toContain('has no trustedFolders root key')
+    expect((await box.run('ki vscode check')).output).toContain('has no trustedFolders root key')
   })
 
   test('fails closed for unsafe workspace names, collisions, and invalid bound sources', async () => {
     const invalid = await prepare(['bad_name'])
-    expect((await invalid.box.run('ki manage vscode check')).output).toContain(
-      'cannot derive a safe VS Code workspace name'
-    )
+    expect((await invalid.box.run('ki vscode check')).output).toContain('cannot derive a safe VS Code workspace name')
 
     const collision = await prepare(['alpha'])
     await collision.box.root.write('chezmoi-source/workspaces/vscode/kis-alpha.code-workspace', '{"folders":[]}\n')
-    expect((await collision.box.run('ki manage vscode check')).output).toContain(
+    expect((await collision.box.run('ki vscode check')).output).toContain(
       'workspace file exists but does not include its KI repository'
     )
 
@@ -240,7 +238,7 @@ describe('ki manage vscode', () => {
         }
       ])
     )
-    expect((await missing.box.run('ki manage vscode check')).output).toContain(
+    expect((await missing.box.run('ki vscode check')).output).toContain(
       'sources store must be an existing direct directory'
     )
   })

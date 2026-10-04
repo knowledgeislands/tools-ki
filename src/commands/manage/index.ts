@@ -1,4 +1,4 @@
-import { Command } from 'commander'
+import type { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { createCleanupCommand } from './cleanup.ts'
 import { createCompletionCommand } from './completion/index.ts'
@@ -14,19 +14,21 @@ import { createSearchCommand } from './search.ts'
 import { createUpdateCommand } from './update.ts'
 import { createVscodeCommand } from './vscode.ts'
 
-export const createManageCommand = (context: KiContext): Command =>
-  new Command('manage')
-    .description('inspect and maintain local KI state')
-    .addCommand(createCleanupCommand(context))
-    .addCommand(createCompletionCommand(context))
-    .addCommand(createDiagCommand(context))
-    .addCommand(createDocsCommand(context))
-    .addCommand(createDoctorCommand(context))
-    .addCommand(createListCommand(context))
-    .addCommand(createMcpCommand(context))
-    .addCommand(createMissingCommand(context))
-    .addCommand(createOutdatedCommand(context))
-    .addCommand(createRepairCommand(context))
-    .addCommand(createSearchCommand(context))
-    .addCommand(createUpdateCommand(context))
-    .addCommand(createVscodeCommand(context))
+export const createSupportCommands = (context: KiContext): Command[] => [
+  createCleanupCommand(context),
+  createCompletionCommand(context),
+  createDiagCommand(context),
+  createDocsCommand(context),
+  createDoctorCommand(context),
+  createListCommand(context).name('inventory'),
+  createMcpCommand(context),
+  createRepairCommand(context),
+  createUpdateCommand(context),
+  createVscodeCommand(context)
+]
+
+export const createHarnessStatusCommands = (context: KiContext): Command[] => [
+  createMissingCommand(context),
+  createOutdatedCommand(context),
+  createSearchCommand(context)
+]

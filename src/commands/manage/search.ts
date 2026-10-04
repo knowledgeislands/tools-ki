@@ -39,7 +39,7 @@ export const createSearchCommand = (context: KiContext): Command =>
         : [{ label: 'none' }]
       context.stdout.write(
         `${renderTree({
-          title: 'KI MANAGE SEARCH',
+          title: 'KI HARNESS SEARCH',
           entries: [
             { label: `query: ${query}` },
             { label: `matches (${found.length})`, children: matchEntries },

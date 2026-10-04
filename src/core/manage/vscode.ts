@@ -251,7 +251,7 @@ export const reconcileVscode = async (port: VscodeManagePort, write: boolean): P
   }
   printPlan(port, writes)
   if (!write) {
-    port.stderr.write('drift: rerun as ki manage vscode sync --write after reviewing this source diff\n')
+    port.stderr.write('drift: rerun as ki vscode sync --write after reviewing this source diff\n')
     return { changed: true }
   }
   for (const change of writes) await writeAtomically(change)

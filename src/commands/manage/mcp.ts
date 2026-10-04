@@ -97,7 +97,7 @@ export const createMcpCommand = (context: KiContext): Command => {
       .option('--format <text|json>', 'output format', 'text')
       .action(async (repository: string | undefined, options: { readonly format: string }) => {
         if (options.format !== 'text' && options.format !== 'json')
-          throw grammarError('manage mcp list --format must be text or json')
+          throw grammarError('mcp list --format must be text or json')
         const report = await listMcpSources(context.paths.data, repository)
         if (options.format === 'json') {
           context.stdout.write(`${JSON.stringify(report, undefined, 2)}\n`)

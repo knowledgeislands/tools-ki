@@ -1,20 +1,20 @@
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
-describe('[ki manage missing and ki manage outdated]', () => {
+describe('[ki harness missing and ki harness outdated]', () => {
   test('reports an empty desired set and no installed harnesses without network access', async () => {
     const box = await sandbox()
 
-    const missing = await box.run('ki manage missing')
-    const outdated = await box.run('ki manage outdated')
+    const missing = await box.run('ki harness missing')
+    const outdated = await box.run('ki harness outdated')
 
     expect(missing).toEqual({
       exitCode: 0,
-      output: '╭─ KI MANAGE MISSING\n├─ capabilities (0)\n│  ╰─ none\n╰─ summary: MISSING=0\n'
+      output: '╭─ KI HARNESS MISSING\n├─ capabilities (0)\n│  ╰─ none\n╰─ summary: MISSING=0\n'
     })
     expect(outdated).toEqual({
       exitCode: 0,
-      output: '╭─ KI MANAGE OUTDATED\n├─ evidence gaps (0)\n│  ╰─ none\n╰─ summary: EVIDENCE_GAPS=0\n'
+      output: '╭─ KI HARNESS OUTDATED\n├─ evidence gaps (0)\n│  ╰─ none\n╰─ summary: EVIDENCE_GAPS=0\n'
     })
   })
 
@@ -42,12 +42,12 @@ describe('[ki manage missing and ki manage outdated]', () => {
     await box.project.write('.ki.toml', '[ki-repository\n')
     const configuration = await box.config.read('ki/config.toml')
 
-    const result = await box.run('ki manage missing')
+    const result = await box.run('ki harness missing')
 
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI MANAGE MISSING\n├─ capabilities (2)\n│  ├─ user skill example/harness:ki-other\n│  ╰─ user skill example/harness:ki-user\n╰─ summary: MISSING=2\n'
+        '╭─ KI HARNESS MISSING\n├─ capabilities (2)\n│  ├─ user skill example/harness:ki-other\n│  ╰─ user skill example/harness:ki-user\n╰─ summary: MISSING=2\n'
     })
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
   })
@@ -57,12 +57,12 @@ describe('[ki manage missing and ki manage outdated]', () => {
     await box.setupCanonicalHarness()
     await box.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
 
-    const result = await box.run('ki manage outdated')
+    const result = await box.run('ki harness outdated')
 
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI MANAGE OUTDATED\n├─ evidence gaps (2)\n│  ├─ example/harness: no configured immutable release\n│  ╰─ knowledgeislands/ki-agentic-harness: installed release provenance is not recorded\n╰─ summary: EVIDENCE_GAPS=2\n'
+        '╭─ KI HARNESS OUTDATED\n├─ evidence gaps (2)\n│  ├─ example/harness: no configured immutable release\n│  ╰─ knowledgeislands/ki-agentic-harness: installed release provenance is not recorded\n╰─ summary: EVIDENCE_GAPS=2\n'
     })
   })
 
@@ -70,7 +70,7 @@ describe('[ki manage missing and ki manage outdated]', () => {
     const box = await sandbox()
     await box.config.write('ki/config.toml', '[agents\n')
 
-    const result = await box.run('ki manage missing')
+    const result = await box.run('ki harness missing')
 
     expect(result).toEqual({
       exitCode: 1,

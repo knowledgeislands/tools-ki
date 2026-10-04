@@ -14,7 +14,7 @@ export const createMissingCommand = (context: KiContext): Command =>
       : [{ label: 'none' }]
     context.stdout.write(
       `${renderTree({
-        title: 'KI MANAGE MISSING',
+        title: 'KI HARNESS MISSING',
         entries: [
           { label: `capabilities (${status.missing.length})`, children: capabilities },
           { label: `summary: MISSING=${status.missing.length}` }

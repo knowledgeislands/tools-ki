@@ -10,6 +10,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 - `ki`
 - `ki --help`
+- `ki help [command...]`
 - `ki --version`
 
 #### Installation
@@ -18,24 +19,24 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 #### Local management
 
-- `ki manage completion <shell>`
-- `ki manage outdated`
-- `ki manage missing`
-- `ki manage update`
-- `ki manage cleanup`
-- `ki manage diag`
-- `ki manage doctor`
-- `ki manage repair`
-- `ki manage docs`
-- `ki manage list`
-- `ki manage mcp install <owner/repository> [version] [--auth github-cli]`
-- `ki manage mcp update <owner/repository> [version] [--auth github-cli]`
-- `ki manage mcp rollback <owner/repository> <version>`
-- `ki manage mcp uninstall <owner/repository>`
-- `ki manage mcp list [owner/repository] [--format text|json]`
-- `ki manage search`
-- `ki manage vscode check`
-- `ki manage vscode sync [--write]`
+- `ki completion <shell>`
+- `ki harness outdated`
+- `ki harness missing`
+- `ki update`
+- `ki cleanup`
+- `ki diag [--full]`
+- `ki doctor`
+- `ki repair [--apply | --dry-run]`
+- `ki docs`
+- `ki inventory`
+- `ki mcp install <owner/repository> [version] [--auth github-cli]`
+- `ki mcp update <owner/repository> [version] [--auth github-cli]`
+- `ki mcp rollback <owner/repository> <version>`
+- `ki mcp uninstall <owner/repository>`
+- `ki mcp list [owner/repository] [--format text|json]`
+- `ki harness search`
+- `ki vscode check`
+- `ki vscode sync [--write]`
 
 #### User management
 
@@ -145,13 +146,14 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 ### Behaviours
 
 - KI's own CI runs from the checked-out source, while release packaging pins a verified Harness revision.
-- `ki manage docs overview` now reports the canonical `https://knowledgeislands.info/tooling/ki/` route.
+- `ki docs overview` now reports the canonical `https://knowledgeislands.info/tooling/ki/` route.
 - Release guidance standardises exact installer pinning as positional `vX.Y.Z`, while an omitted version continues to resolve the latest release.
 - Acquisition is action-first and adapter-driven from verified Harness skill declarations; Granola uses an allowlisted read-only MCP adapter, saturation-aware complete-history enumeration, separate detail and transcript checkpoints, atomic resumable journals, governed reset, explicit omissions, and post-acquisition dispositions.
 - `.ki.toml` is the sole repository and Harness declaration filename across source checkouts, release archives, installed Harnesses, local development, repository discovery, and diagnostics; retired filenames have no compatibility or migration path.
 - Direct-CWD mGit selection consumes unversioned direct-member `.mgit.toml` manifests and existing schema-one grouped manifests, including child-workspace recursion, without invoking `mgit`. Existing members without `.ki.toml` are skipped and named in audit output; invalid or empty KI selections still fail.
-- `ki manage completion <shell>` emits Bash and Zsh scripts derived from the registered command tree, including nested commands, options, closed values, and local path completion.
+- `ki completion <shell>` emits Bash and Zsh scripts derived from the registered command tree, including nested commands, options, closed values, and local path completion.
 - Root help leads with usage and groups commands by purpose, including a separate Acquisition section; commands are alphabetical within each section and in every nested help page, with shorter command-list summaries. Completion candidates are alphabetical.
+- Root `help`, `completion`, `diag`, `doctor`, and `repair` follow the shared tool surface. The `manage` grouping is removed; capability search, missing, and outdated reports live under `harness`. Diagnostics are share-safe by default with local details behind `--full`; repair previews by default and requires `--apply` to write.
 - Batch authority commands now live under `ki repo batch` and use the parent repository selector; `ki batch` is retired. Each batch still targets exactly one repository.
 - Registered Agora owners declare direct members and optional one-level inclusions of another Agora or repository. Ordinary members need no Agora declaration. The reserved `estate` selector derives the full locally registered canonical repository set for selection and editor opening.
 - `ki agora roots <agora>` exposes a stable machine interface for resolved registered Agora roots: newline-delimited by default, or NUL-delimited with `--null` (`-0`).

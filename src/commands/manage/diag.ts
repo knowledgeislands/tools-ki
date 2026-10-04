@@ -1,7 +1,6 @@
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
-import { KiExit } from '../../core/errors.ts'
 import { harnessDevelopmentEnabled, inspectLocalRegistry } from '../../core/storage/index.ts'
 import { KI_VERSION } from '../../version.ts'
 import { presentation, renderTree, type TreeEntry } from '../presentation/index.ts'
@@ -13,12 +12,26 @@ const treeEntries = (entries: readonly string[]): readonly TreeEntry[] =>
 
 export const createDiagCommand = (context: KiContext): Command =>
   new Command('diag')
-    .description('report CLI installation mode, paths, and managed local configuration')
-    .action(async () => {
+    .description('print share-safe installation and configuration facts')
+    .option('--full', 'include local paths, identities, and detailed diagnostics')
+    .action(async (options: { full?: boolean }) => {
       const [configuration, registry] = await Promise.all([
         inspectUserConfiguration(context.paths.config),
         inspectLocalRegistry(context.paths.state)
       ])
+      if (!options.full) {
+        const entries: TreeEntry[] = [
+          { label: field('Version', KI_VERSION) },
+          { label: field('Installation', context.installation) },
+          { label: field('Configuration', configuration.state) },
+          { label: field('Registry', registry.state) },
+          {
+            label: `summary: AGENTS=${configuration.agents.length} HARNESSES=${configuration.harnesses.length} SKILLS=${configuration.skills.length} REPOSITORIES=${registry.repositories.length} WARNINGS=${configuration.warnings.length} ERRORS=${configuration.errors.length + registry.errors.length}`
+          }
+        ]
+        context.stdout.write(`${renderTree({ title: 'KI DIAG', entries }).join('\n')}\n`)
+        return
+      }
       const configurationEntries: TreeEntry[] = [
         { label: field('Status', configuration.state) },
         { label: field('File', configuration.path) }
@@ -101,6 +114,5 @@ export const createDiagCommand = (context: KiContext): Command =>
         label: `summary: CONFIGURATION=${configuration.state} REGISTRY=${registry.state} WARNINGS=${configuration.warnings.length} ERRORS=${configuration.errors.length}`
       })
 
-      context.stdout.write(`${renderTree({ title: 'KI MANAGE DIAG', entries }).join('\n')}\n`)
-      if (configuration.errors.length || registry.errors.length) throw new KiExit(1)
+      context.stdout.write(`${renderTree({ title: 'KI DIAG', entries }).join('\n')}\n`)
     })

@@ -8,17 +8,17 @@ Run the checkout without changing any installation:
 
 ```sh
 ./bin/ki --help
-./bin/ki manage doctor
+./bin/ki doctor
 ```
 
 This source entry point requires Bun and runs the typed command modules in `src/` directly.
 
 ## Test shell completions
 
-`ki manage completion` prints a script; it does not install or refresh a shell's persisted completion file. Test the checkout's current Zsh completion in the current terminal with:
+`ki completion` prints a script; it does not install or refresh a shell's persisted completion file. Test the checkout's current Zsh completion in the current terminal with:
 
 ```zsh
-source <(./bin/ki manage completion zsh)
+source <(./bin/ki completion zsh)
 ```
 
 This replaces the loaded `_ki` function for that shell only. It is the right path when a development checkout changes command grammar or completion rendering.
@@ -28,8 +28,8 @@ Zsh startup normally autoloads a static `_ki` file from a directory in `fpath`, 
 Before sourcing either script, parse its generated form:
 
 ```sh
-./bin/ki manage completion bash >/tmp/ki.bash && bash -n /tmp/ki.bash
-./bin/ki manage completion zsh >/tmp/ki.zsh && zsh -n /tmp/ki.zsh
+./bin/ki completion bash >/tmp/ki.bash && bash -n /tmp/ki.bash
+./bin/ki completion zsh >/tmp/ki.zsh && zsh -n /tmp/ki.zsh
 ```
 
 ## Develop a compatible harness locally
@@ -52,7 +52,7 @@ The checkout and installed Harness root both use `.ki.toml` and must retain the 
 
 `off` restores selected Harnesses from their configured verified archives and reprojects their links, while retaining each remembered identity and checkout for the next `on`. `off <harness-id>` selects one remembered Harness; `off` without an ID selects all of them.
 
-Use `ki manage diag` to see every remembered source and whether its local mode is off or on; use `ki manage doctor` to identify missing, broken, or wrong-target managed links while mode is on, direct-CWD legacy `.ki-meta/` or `.ki/` directories, and invalid direct-CWD `.ki.toml` declarations.
+Use `ki diag --full` to see every remembered source and whether its local mode is off or on; use `ki doctor` to identify missing, broken, or wrong-target managed links while mode is on, direct-CWD legacy `.ki-meta/` or `.ki/` directories, and invalid direct-CWD `.ki.toml` declarations.
 
 ## Command structure
 
@@ -78,7 +78,7 @@ Build and run a standalone executable for the current platform without changing 
 
 ```sh
 bun run build
-./dist/ki manage doctor
+./dist/ki doctor
 ```
 
 The compiled executable contains the Bun runtime and its dependency graph, so it does not need Bun on `PATH`. Public installation is deliberately release-based: `install.sh` verifies a signed archive instead of copying a mutable local build.
@@ -89,10 +89,10 @@ Install a symbolic link to the current checkout into a dedicated development com
 
 ```sh
 KI_CLI_INSTALL_DIR="$HOME/.local/ki-dev/bin" ./install.sh --link
-PATH="$HOME/.local/ki-dev/bin:$PATH" ki manage doctor
+PATH="$HOME/.local/ki-dev/bin:$PATH" ki doctor
 ```
 
-`ki manage diag` reports `Installation  local` when that link is running. The command runs `src/main.ts` through Bun and the `ki(1)` link follows subsequent manual edits; reinstall only when changing target directories or replacing the link with a release installation.
+`ki diag` reports `Installation  local` when that link is running. The command runs `src/main.ts` through Bun and the `ki(1)` link follows subsequent manual edits; reinstall only when changing target directories or replacing the link with a release installation.
 
 Set `KI_MAN_INSTALL_DIR` when the manual should be installed outside the default sibling `share/man/man1` directory.
 

@@ -54,9 +54,24 @@ export const createProgram = (context: KiContext): Command => {
     .description('Knowledge Islands command-line interface.')
     .version(KI_VERSION, '-V, --version', 'print the CLI version')
 
-  program.addHelpText('after', '\nFurther help: ki <command> --help · ki manage docs · man ki')
+  program.addHelpText('after', '\nFurther help: ki help <command> · ki docs · man ki')
 
   addRootCommands(program, context)
+  program.addCommand(
+    new Command('help')
+      .description('show general or command help')
+      .argument('[command...]', 'command path')
+      .helpGroup('Operations:')
+      .action((path: string[]) => {
+        let selected = program
+        for (const name of path) {
+          const child = selected.commands.find((command) => command.name() === name)
+          if (!child) throw new KiError(`unknown help topic: ${path.join(' ')}`, 2)
+          selected = child
+        }
+        selected.outputHelp()
+      })
+  )
   // Commander does not inherit these settings by subcommands added with addCommand,
   // so apply them to the whole tree — otherwise a subcommand's error, usage, or help
   // output bypasses the context streams and writes straight to the real process.
@@ -88,7 +103,7 @@ export const createProgram = (context: KiContext): Command => {
 
 const needsMcpInventory = (arguments_: readonly string[]): boolean => {
   if (arguments_.some((argument) => ['--help', '-h', '--version', '-V'].includes(argument))) return false
-  return !(arguments_[0] === 'manage' && ['doctor', 'diag', 'repair'].includes(arguments_[1] ?? ''))
+  return !['help', 'doctor', 'diag', 'repair'].includes(arguments_[0] as string)
 }
 
 export const run = async (arguments_: readonly string[], context: KiContext): Promise<number> => {

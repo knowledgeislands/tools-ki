@@ -218,7 +218,7 @@ path = ${JSON.stringify(harnessPath)}
       )
       box.setFetcher(async () => new Response(archive.payload))
 
-      const update = await box.run('ki manage update')
+      const update = await box.run('ki update')
       const uninstall = await box.run('ki harness uninstall humansnotrobots/hnr-agentic-harness')
 
       expect(update.exitCode).toBe(1)
@@ -318,7 +318,7 @@ path = ${JSON.stringify(harnessPath)}
       const firstOff = await box.run('ki dev local off')
       const secondOn = await box.run('ki dev local on')
       const secondOff = await box.run('ki dev local off')
-      const doctor = await box.run('ki manage doctor')
+      const doctor = await box.run('ki doctor')
 
       expect(firstOff.exitCode).toBe(1)
       expect(secondOn.exitCode).toBe(0)

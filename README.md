@@ -14,7 +14,7 @@ The active TypeScript command host provides local capability, repository, Agora,
 
 If `ki` is not yet installed, read [install ki and run it for the first time](docs/guides/user/getting-started.md). It covers installing a signed release, creating the user environment with `ki bootstrap`, registering a repository, and verifying each step. The rest of the [user guides](docs/guides/user/README.md) carry the procedures for everything described below.
 
-Once installed, run `ki -h` for task-grouped commands, then `ki <command> -h` for the selected command's options. `ki manage docs` locates the fuller references.
+Once installed, run `ki -h` for task-grouped commands, then `ki <command> -h` for the selected command's options. `ki docs` locates the fuller references.
 
 ## Acquire local ChatGPT capture
 
@@ -51,9 +51,9 @@ An immutable private GitHub harness archive may opt into the local GitHub CLI cr
 
 ## Update verified installations
 
-`ki manage update` refreshes installed harnesses with configured immutable releases and updates the executable only when a verified installer receipt proves that it owns the running regular installation.
+`ki update` refreshes installed harnesses with configured immutable releases and updates the executable only when a verified installer receipt proves that it owns the running regular installation.
 
-`ki manage completion bash` and `ki manage completion zsh` print corresponding completion source derived from the registered CLI tree, so the completions cover every command path and valid option name without a second list to maintain.
+`ki completion bash` and `ki completion zsh` print corresponding completion source derived from the registered CLI tree, so the completions cover every command path and valid option name without a second list to maintain.
 
 `ki repo upgrade` refreshes the uniquely resolved providers declared by one or more selected KI repositories.
 
@@ -111,7 +111,7 @@ ki agora roots estate | xargs -n 1 sh -c 'git -C "$1" status --short' _
 ki agora roots estate --null | xargs -0 -n 1 sh -c 'git -C "$1" status --short' _
 ki agora open estate --target zed
 ki repo init --repository https://github.com/example/example --title 'Example repository' --description 'An explicit KI repository identity.' --repo-code EXAMPLE --runtime claude-code --runtime chatgpt-codex --visibility private
-ki manage diag
+ki diag
 ki repo diag
 ki repo repair --dry-run
 ki repo --agora estate audit
@@ -174,9 +174,9 @@ Creation, shaping, readiness, implementation, acceptance, and completion remain 
 Install a governed MCP server source from an exact annotated release, or omit the version to select its latest stable GitHub Release:
 
 ```sh
-ki manage mcp install owner/repository 1.2.3
-ki manage mcp install owner/repository
-ki manage mcp list owner/repository
+ki mcp install owner/repository 1.2.3
+ki mcp install owner/repository
+ki mcp list owner/repository
 ```
 
 Use explicit `--auth github-cli` for private repositories. KI verifies and builds the release into a versioned local installation, records path-free provenance, and atomically activates it. Updates retain complete prior versions for offline rollback; uninstall removes the source installation. Client binding remains a separate operation. See [the local installation guide](docs/guides/user/local-installation.md) for authentication, update, rollback, and recovery details.
@@ -211,10 +211,10 @@ The tracked [ki(1) manual](man/ki.1) defines the intended V1 command surface.
 
 ## Find local capabilities and documentation
 
-`ki manage search <query>` searches only verified installed harness capabilities, without contacting a registry or discovering a repository.
+`ki harness search <query>` searches only verified installed harness capabilities, without contacting a registry or discovering a repository.
 
-`ki repo store list|create|bind|unbind` manages the store roles declared by a selected Knowledge Base: `notes` remains the repository root, while `sources` and `legacy` use explicit machine-local bindings. `ki manage vscode check` and `sync --write` consume bound `sources` for chezmoi-managed workspace and trusted-folder projections, ignore `legacy`, and never infer associations from directory names or run `chezmoi apply`. See the [repository operations](docs/guides/user/repository-operations.md#manage-declared-stores) and [VS Code projection](docs/guides/user/vscode-management.md) guides.
+`ki repo store list|create|bind|unbind` manages the store roles declared by a selected Knowledge Base: `notes` remains the repository root, while `sources` and `legacy` use explicit machine-local bindings. `ki vscode check` and `sync --write` consume bound `sources` for chezmoi-managed workspace and trusted-folder projections, ignore `legacy`, and never infer associations from directory names or run `chezmoi apply`. See the [repository operations](docs/guides/user/repository-operations.md#manage-declared-stores) and [VS Code projection](docs/guides/user/vscode-management.md) guides.
 
-`ki manage diag` reports machine-managed installation, configuration, registry, and path state, and `ki manage doctor` checks that state and reports direct-CWD legacy `.ki-meta/` and `.ki/` directories. `ki manage repair` reconciles missing, dangling, or stale configured user-skill projections and can remove a recognised legacy configuration schema line after a `--dry-run` preview; `ki repo repair` handles a selected repository's KI-managed projections. `--dry-run` changes nothing in either. `ki manage docs` prints labelled public CLI, site, manual, and roadmap locations without opening a browser.
+`ki diag` reports share-safe installation and configuration facts; `--full` includes local paths and identities. `ki doctor` checks health and reports direct-CWD legacy `.ki-meta/` and `.ki/` directories. `ki repair` previews repairs to missing, dangling, or stale configured user-skill projections and recognised legacy configuration metadata; `ki repair --apply` applies them. `ki repo repair` handles a selected repository's KI-managed projections. `--dry-run` changes nothing in either. `ki docs` prints labelled public CLI, site, manual, and roadmap locations without opening a browser.
 
 [Maintain a local installation](docs/guides/user/local-installation.md) explains the local-only behaviour and safety boundary of each of these, including which of them only ever report. Use `ki --help` or `ki <command> --help` for exact grammar; the tracked manual remains authoritative.

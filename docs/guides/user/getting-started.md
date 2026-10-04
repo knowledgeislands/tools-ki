@@ -24,7 +24,7 @@ Confirm the executable is on your path and reports the version you asked for:
 ki --version
 ```
 
-If the command is not found, `KI_CLI_INSTALL_DIR` is not on your `PATH`. Add it and open a new shell rather than moving the binary; `ki manage update` recognises only an installation it owns at its own path.
+If the command is not found, `KI_CLI_INSTALL_DIR` is not on your `PATH`. Add it and open a new shell rather than moving the binary; `ki update` recognises only an installation it owns at its own path.
 
 ## Create the user environment
 
@@ -41,8 +41,8 @@ Use `ki bootstrap --refresh` to redetect runtimes and rebuild the agent, harness
 Verify:
 
 ```sh
-ki manage diag
-ki manage doctor
+ki diag
+ki doctor
 ```
 
 `diag` prints the version, installation mode, resolved paths, user configuration, and registry without changing anything. `doctor` checks configuration, agent skill directories, installed harnesses, and skill links, and exits non-zero on a failing check while still printing the complete report.
@@ -94,6 +94,6 @@ For exact grammar of any command here, use `ki <command> --help` or the installe
 | --- | --- | --- |
 | `ki: command not found` after install | `KI_CLI_INSTALL_DIR` is not on `PATH` | Add the directory to `PATH` and start a new shell |
 | Bootstrap refuses, naming a missing bootstrap skill | The installed canonical harness payload is incomplete | Reinstall the harness, then rerun `ki bootstrap` |
-| `ki manage doctor` reports dangling skill links | Links point at a harness source that has moved | Run `ki manage repair --dry-run`, review, then rerun without the flag |
-| `ki repo diag` reports a direct-CWD legacy `.ki-meta/` or `.ki/` | The checkout predates the current declaration format | Migrate it to `.ki.toml`; `ki manage doctor` reports the same condition |
+| `ki doctor` reports dangling skill links | Links point at a harness source that has moved | Run `ki repair --dry-run`, review, then run `ki repair --apply` |
+| `ki repo diag` reports a direct-CWD legacy `.ki-meta/` or `.ki/` | The checkout predates the current declaration format | Migrate it to `.ki.toml`; `ki doctor` reports the same condition |
 | A registry entry points at a path that no longer exists | The checkout moved or was deleted | Re-run `ki registry add --repo <new-path>` for the current root |

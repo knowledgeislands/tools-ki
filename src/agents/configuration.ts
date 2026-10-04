@@ -152,8 +152,7 @@ export const inspectUserConfiguration = async (
     .map((key) => `unrecognised key ${key}`)
   const errors: string[] = []
   if (configuration.schema !== undefined && configuration.schema !== 1) errors.push('schema must equal 1 when present')
-  if (configuration.schema === 1)
-    warnings.push('legacy schema = 1; preview its removal with ki manage repair --dry-run')
+  if (configuration.schema === 1) warnings.push('legacy schema = 1; preview its removal with ki repair --dry-run')
   const agentSection = inspectSection(configuration.agents, 'agents', errors) as StringListSection
   for (const key of Object.keys(agentSection)) {
     if (key !== 'ids') warnings.push(`agents has unrecognised key ${key}`)

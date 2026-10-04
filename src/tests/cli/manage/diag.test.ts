@@ -21,8 +21,8 @@ visibility = "private"
 [skills.ki-example]
 `
 
-describe('[ki manage diag]', () => {
-  test('reports the executable path and the resolved data directory', async () => {
+describe('[ki diag]', () => {
+  test('redacts paths by default and reveals them only with --full', async () => {
     const box = await sandbox()
     const missingHome = join(box.root.path, 'missing-home')
     box.setEnv({
@@ -32,8 +32,11 @@ describe('[ki manage diag]', () => {
       XDG_STATE_HOME: join(missingHome, 'state')
     })
 
-    const diag = await box.run('ki manage diag')
+    const redacted = await box.run('ki diag')
+    const diag = await box.run('ki diag --full')
 
+    expect(redacted.output).not.toContain(box.executable)
+    expect(redacted.output).not.toContain(missingHome)
     expect(diag.output).toContain(`Executable: ${box.executable}`)
     expect(diag.output).toContain(`Data: ${missingHome}/data/ki`)
   })
@@ -41,8 +44,8 @@ describe('[ki manage diag]', () => {
   test('reports the entrypoint-proven installation mode', async () => {
     const box = await sandbox()
 
-    const regular = await box.run('ki manage diag')
-    const local = await box.run('ki manage diag', { installation: 'local' })
+    const regular = await box.run('ki diag --full')
+    const local = await box.run('ki diag --full', { installation: 'local' })
 
     expect(regular.output).toContain('Installation: regular')
     expect(local.output).toContain('Installation: local')
@@ -52,7 +55,7 @@ describe('[ki manage diag]', () => {
     const box = await sandbox()
     box.setEnv({ HOME: undefined, USERPROFILE: box.home.path })
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.exitCode).toBe(0)
   })
@@ -73,9 +76,9 @@ ids = ["example:skill", "example:skill"]
 `
     await box.config.write('ki/config.toml', invalidConfig)
 
-    const human = await box.run('ki manage diag')
+    const human = await box.run('ki diag --full')
 
-    expect(human.exitCode).toBe(1)
+    expect(human.exitCode).toBe(0)
     expect(human.output).toContain('├─ warnings (3)')
     expect(human.output).toContain('! unrecognised key unexpected')
     expect(human.output).toContain('├─ errors (4)')
@@ -90,12 +93,17 @@ ids = ["example:skill", "example:skill"]
       `schema = 1\n\n[repositories."repository"]\nrepository = "https://github.com/example/repository"\npath = ${JSON.stringify(repository)}\n`
     )
 
-    const valid = await box.run('ki manage diag')
+    const valid = await box.run('ki diag --full')
+    const shareSafe = await box.run('ki diag')
+    expect(shareSafe.output).toContain('REPOSITORIES=1')
+    expect(shareSafe.output).not.toContain(repository)
+    expect(shareSafe.output).not.toContain('example/repository')
     await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
-    const invalid = await box.run('ki manage diag')
+    const invalid = await box.run('ki diag --full')
+    expect((await box.run('ki diag')).output).not.toContain('unrecognised key extra')
 
     expect(valid.output).toContain(`╰─ repository: ${repository}`)
-    expect(invalid.exitCode).toBe(1)
+    expect(invalid.exitCode).toBe(0)
     expect(invalid.output).toContain('errors (1)')
     expect(invalid.output).toContain('unrecognised key extra')
   })
@@ -104,7 +112,7 @@ ids = ["example:skill", "example:skill"]
     const box = await sandbox()
     await box.project.write('.ki.toml', '# repo\n')
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).not.toContain('Repository')
   })
@@ -113,7 +121,7 @@ ids = ["example:skill", "example:skill"]
     const box = await sandbox()
     await box.project.write('.mgit.toml', 'schema = 1\nkind = "repository"\n')
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.exitCode).toBe(0)
     expect(diag.output).not.toContain('\n├─ repository (')
@@ -129,7 +137,7 @@ ids = ["example:skill", "example:skill"]
     })
     await box.setupExampleHarness({ identifier: 'knowledgeislands/ki-agentic-harness' })
     await box.project.write('.ki.toml', repositoryConfiguration)
-    const managed = await box.run('ki manage diag')
+    const managed = await box.run('ki diag --full')
     const repository = await box.run('ki repo diag')
     const root = await realpath(box.project.path)
 
@@ -146,7 +154,7 @@ ids = ["example:skill", "example:skill"]
     await box.project.write('actual.toml', repositoryConfiguration)
     await symlink(`${box.project.path}/actual.toml`, `${box.project.path}/.ki.toml`)
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.exitCode).toBe(0)
     expect(diag.output).not.toContain('Repository')
@@ -155,11 +163,11 @@ ids = ["example:skill", "example:skill"]
   test('rejects selectors on the direct diagnostic command before rendering help', async () => {
     const box = await sandbox()
 
-    const diag = await box.run('ki manage diag --repo elsewhere')
+    const diag = await box.run('ki diag --repo elsewhere')
 
     expect(diag.exitCode).toBe(2)
-    expect(diag.output).toContain("ki: error: unknown option '--repo' for 'ki manage diag'")
-    expect(diag.output).toContain('Usage: ki manage diag [options]')
+    expect(diag.output).toContain("ki: error: unknown option '--repo' for 'ki diag'")
+    expect(diag.output).toContain('Usage: ki diag [options]')
   })
 
   test('rejects a configuration file that is a symlink rather than a regular file', async () => {
@@ -167,7 +175,7 @@ ids = ["example:skill", "example:skill"]
     await box.config.write('ki/real-config.toml', 'schema = 1\n')
     await symlink(join(box.config.path, 'ki/real-config.toml'), join(box.config.path, 'ki/config.toml'))
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('× configuration must be a regular file')
   })
@@ -176,7 +184,7 @@ ids = ["example:skill", "example:skill"]
     const box = await sandbox()
     await box.config.write('ki/config.toml', 'schema = 1\n[agents\n')
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('× configuration must be valid TOML')
   })
@@ -199,7 +207,7 @@ extra = true
 `
     await box.config.write('ki/config.toml', invalidConfig)
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('× agents.ids must be an array of non-empty strings')
     expect(diag.output).toContain('× skills.foo must declare a harness string')
@@ -214,7 +222,7 @@ extra = true
       'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills]\n\n[repositories]\npaths = ["relative"]\nextra = true\n'
     )
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('! repositories has unrecognised key extra')
     expect(diag.output).toContain('× repositories.paths must contain absolute paths')
@@ -225,7 +233,7 @@ extra = true
     await box.setupAgentHome('claude-code')
     await box.run('ki bootstrap')
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('Status: valid')
     expect(diag.output).not.toContain('Warnings')
@@ -246,9 +254,9 @@ extra = true
     await box.run('ki bootstrap')
     await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
 
-    const off = await box.run('ki manage diag')
+    const off = await box.run('ki diag --full')
     await box.run('ki dev local on')
-    const on = await box.run('ki manage diag')
+    const on = await box.run('ki diag --full')
 
     expect(off.output).toContain(`source: ${harnessPath}`)
     expect(off.output).toContain('mode: off')
@@ -267,7 +275,7 @@ extra = true
     await unlink(`${box.data.path}/${root}`)
     await box.data.mkdir(root)
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('mode: off')
   })
@@ -284,7 +292,7 @@ extra = true
     await unlink(root)
     await symlink(otherHarnessPath, root, 'dir')
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('mode: off')
   })
@@ -300,7 +308,7 @@ extra = true
     await unlink(root)
     await symlink(`${box.root.path}/missing-harness`, root, 'dir')
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('mode: off')
   })
@@ -314,7 +322,7 @@ extra = true
     await box.run('ki dev local on')
     await rm(`${harnessPath}/hooks`, { recursive: true })
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('mode: on')
   })
@@ -329,7 +337,7 @@ extra = true
     const configuration = await box.config.read('ki/config.toml')
     await box.config.write('ki/config.toml', configuration.replace(harnessPath, `${harnessPath}-missing`))
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('mode: off')
   })
@@ -346,7 +354,7 @@ locals = "not-a-table"
 `
     )
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('× agents must be a TOML table')
     expect(diag.output).toContain('× skills must be a TOML table')
@@ -383,7 +391,7 @@ path = ""
 `
     )
 
-    const diag = await box.run('ki manage diag')
+    const diag = await box.run('ki diag --full')
 
     expect(diag.output).toContain('× agents.ids repeats a value')
     expect(diag.output).toContain('! unrecognised agent unrecognised')

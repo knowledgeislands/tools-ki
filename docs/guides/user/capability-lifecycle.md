@@ -46,12 +46,12 @@ Authenticate the CLI first with `gh auth login`. `ki` then runs `gh auth token` 
 Find what is available, then turn on what you need:
 
 ```sh
-ki manage list
-ki manage search roadmap
+ki inventory
+ki harness search roadmap
 ki skill add ki-plan
 ```
 
-`ki manage list` inventories installed harness capabilities and declared skills; `ki manage search` matches a query case-insensitively against harness identifier, capability kind, and capability name. Neither consults a network or discovers a repository, so both are safe to run anywhere.
+`ki inventory` inventories installed harness capabilities and declared skills; `ki harness search` matches a query case-insensitively against harness identifier, capability kind, and capability name. Neither consults a network or discovers a repository, so both are safe to run anywhere.
 
 For a repository, activate from inside it or select it explicitly:
 
@@ -62,7 +62,7 @@ ki repo diag --repo /path/to/repository
 
 The `diag` confirms the declaration and its projection agree. If the declaration is present but the projection is missing or stale, that is a repair job rather than a re-activation — see [repository operations](repository-operations.md).
 
-Use `ki manage missing` to find the opposite condition: a capability you have asked for that has no installed provider. That report tells you which harness you still need to install.
+Use `ki harness missing` to find the opposite condition: a capability you have asked for that has no installed provider. That report tells you which harness you still need to install.
 
 ## Withdraw a capability
 
@@ -83,7 +83,7 @@ Both `ki skill remove` and `ki repo skill remove` refuse to remove a managed-ski
 ## Verify
 
 ```sh
-ki manage doctor
+ki doctor
 ki repo diag --repo /path/to/repository
 ```
 
@@ -98,6 +98,6 @@ ki repo diag --repo /path/to/repository
 | Reinstall refuses a development-linked harness | The harness is served from a local checkout | Run `ki dev local off <harness-id>` first |
 | `gh auth token` fails during a private install | The GitHub CLI is not authenticated for that account | Run `gh auth login`, then retry the install |
 | A skill is declared but not projected | The link is missing, dangling, or stale | `ki repo repair --dry-run`, review, then rerun without the flag |
-| `ki manage missing` names a capability | No installed harness provides it | Install the providing harness, then activate the skill |
+| `ki harness missing` names a capability | No installed harness provides it | Install the providing harness, then activate the skill |
 
 Exact grammar for every command here is in `ki <command> --help` and the installed `man ki` manual. Installation never activates a skill, activation never installs a provider, and repair reconciles only the scope it reports.

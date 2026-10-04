@@ -97,7 +97,7 @@ const option = (path: string, value: Option): CompletionOption => ({
 })
 
 const argumentValueStrategy = (path: string, value: Argument): CompletionValueStrategy => {
-  if (path === 'manage docs' && value.name() === 'topic')
+  if (path === 'docs' && value.name() === 'topic')
     return { kind: 'values', values: ['overview', 'site', 'manual', 'roadmap'] }
   if (value.name().includes('directory')) return { kind: 'path' }
   return noValue

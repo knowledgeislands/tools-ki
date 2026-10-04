@@ -16,7 +16,7 @@ const manifest = (state: 'creating' | 'active' | 'recoverable', path: string, lo
     ''
   ].join('\n')
 
-describe('[ki manage repair]', () => {
+describe('[ki repair]', () => {
   test('previews and explicitly removes a recognised legacy config marker without changing other content', async () => {
     const box = await sandbox()
     await box.setupAgentHome('claude-code')
@@ -25,17 +25,19 @@ describe('[ki manage repair]', () => {
     const legacy = `# personal choices\nschema = 1 # old marker\n\n${current}`
     await box.config.write('ki/config.toml', legacy)
 
-    const diag = await box.run('ki manage diag')
-    const preview = await box.run('ki manage repair --dry-run')
-    expect(diag.output).toContain('legacy schema = 1; preview its removal with ki manage repair --dry-run')
+    const diag = await box.run('ki diag --full')
+    const preview = await box.run('ki repair')
+    expect(await box.run('ki repair --dry-run')).toEqual(preview)
+    expect((await box.run('ki repair --dry-run --apply')).exitCode).toBe(2)
+    expect(diag.output).toContain('legacy schema = 1; preview its removal with ki repair --dry-run')
     expect(preview.output).toContain(`would remove legacy schema = 1 from ${box.config.path}/ki/config.toml`)
     expect(await box.config.read('ki/config.toml')).toBe(legacy)
 
-    const repaired = await box.run('ki manage repair')
+    const repaired = await box.run('ki repair --apply')
     expect(repaired.exitCode).toBe(0)
     expect(repaired.output).toContain('removed legacy schema = 1')
     expect(await box.config.read('ki/config.toml')).toBe(`# personal choices\n\n${current}`)
-    const repeat = await box.run('ki manage repair --dry-run')
+    const repeat = await box.run('ki repair --dry-run')
     expect(repeat.output).not.toContain('legacy schema = 1')
   })
 
@@ -47,14 +49,14 @@ describe('[ki manage repair]', () => {
     const unusual = `schema = +1\n${current}`
     await box.config.write('ki/config.toml', unusual)
 
-    const refused = await box.run('ki manage repair')
+    const refused = await box.run('ki repair --apply')
     expect(refused.exitCode).toBe(1)
     expect(refused.output).toContain('legacy schema marker is not a simple top-level schema = 1 line')
     expect(await box.config.read('ki/config.toml')).toBe(unusual)
 
     const unknown = `schema = 2\n${current}`
     await box.config.write('ki/config.toml', unknown)
-    const invalid = await box.run('ki manage repair')
+    const invalid = await box.run('ki repair --apply')
     expect(invalid.exitCode).toBe(1)
     expect(invalid.output).toContain('schema must equal 1 when present')
     expect(await box.config.read('ki/config.toml')).toBe(unknown)
@@ -67,8 +69,8 @@ describe('[ki manage repair]', () => {
     await unlink(`${box.home.path}/.claude/skills/ki-recap`)
     await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills]\n')
 
-    const repaired = await box.run('ki manage repair')
-    const doctor = await box.run('ki manage doctor')
+    const repaired = await box.run('ki repair --apply')
+    const doctor = await box.run('ki doctor')
 
     expect(repaired).toEqual({ exitCode: 0, output: expect.stringContaining('link ') })
     expect((await lstat(`${box.home.path}/.claude/skills/ki-recap`)).isSymbolicLink()).toBe(true)
@@ -82,7 +84,7 @@ describe('[ki manage repair]', () => {
     await box.run('ki bootstrap')
     await unlink(`${box.home.path}/.claude/skills/ki-recap`)
 
-    const repair = await box.run('ki manage repair --dry-run')
+    const repair = await box.run('ki repair --dry-run')
 
     expect(repair).toEqual({ exitCode: 0, output: expect.stringContaining('would link ') })
     await expect(lstat(`${box.home.path}/.claude/skills/ki-recap`)).rejects.toThrow()
@@ -98,7 +100,7 @@ describe('[ki manage repair]', () => {
     await unlink(`${box.home.path}/.claude/skills/ki-next`)
     await box.home.write('.claude/skills/ki-next', 'user-owned\n')
 
-    const repair = await box.run('ki manage repair')
+    const repair = await box.run('ki repair --apply')
 
     expect(repair.exitCode).toBe(1)
     expect(repair.output).toContain('link ')
@@ -110,15 +112,14 @@ describe('[ki manage repair]', () => {
 
   test('reports missing and invalid configuration without changing it', async () => {
     const missing = await sandbox()
-    const missingRepair = await missing.run('ki manage repair')
+    const missingRepair = await missing.run('ki repair --apply')
     const invalid = await sandbox()
     await invalid.config.write('ki/config.toml', 'schema = 1\n[agents\n')
-    const invalidRepair = await invalid.run('ki manage repair')
+    const invalidRepair = await invalid.run('ki repair --apply')
 
     expect(missingRepair).toEqual({
       exitCode: 1,
-      output:
-        '╭─ KI MANAGE REPAIR\n├─ results (1)\n│  ╰─ ✗ Configuration: missing; run ki bootstrap\n╰─ summary: FAIL\n'
+      output: '╭─ KI REPAIR\n├─ results (1)\n│  ╰─ ✗ Configuration: missing; run ki bootstrap\n╰─ summary: FAIL\n'
     })
     expect(invalidRepair).toEqual({
       exitCode: 1,
@@ -132,7 +133,7 @@ describe('[ki manage repair]', () => {
       'ki/config.toml',
       'schema = 1\n\n[agents]\nids = []\n\n[harnesses]\nids = []\n\n[skills.ki-missing]\nharness = "missing/harness"\n'
     )
-    const unavailableRepair = await unavailable.run('ki manage repair')
+    const unavailableRepair = await unavailable.run('ki repair --apply')
     const incompatible = await sandbox()
     await incompatible.setupAgentHome('claude-code')
     await incompatible.setupExampleHarness({ name: 'example-skill', prefix: 'example' })
@@ -144,7 +145,7 @@ describe('[ki manage repair]', () => {
       'ki/config.toml',
       'schema = 1\n\n[agents]\nids = ["claude-code"]\n\n[harnesses]\nids = ["example/harness"]\n\n[skills.example-skill]\nharness = "example/harness"\n'
     )
-    const incompatibleRepair = await incompatible.run('ki manage repair')
+    const incompatibleRepair = await incompatible.run('ki repair --apply')
 
     expect(unavailableRepair).toEqual({
       exitCode: 1,
@@ -166,7 +167,7 @@ describe('[ki manage repair]', () => {
     const recap = `${box.home.path}/.claude/skills/ki-recap`
     await unlink(recap)
 
-    const repair = await box.run('ki manage repair')
+    const repair = await box.run('ki repair --apply')
 
     expect(repair.exitCode).toBe(0)
     expect(await realpath(recap)).toBe(`${harnessPath}/skills/change-management/ki-recap`)
@@ -184,8 +185,8 @@ describe('[ki manage repair]', () => {
       await box.data.write('ki/harnesses/example/.install-abc123/partial', 'half-extracted\n')
 
       const listed = await box.run('ki harness list')
-      const cleanup = await box.run('ki manage cleanup')
-      const repair = await box.run('ki manage repair')
+      const cleanup = await box.run('ki cleanup')
+      const repair = await box.run('ki repair --apply')
 
       expect(listed.exitCode).toBe(0)
       expect(listed.output).toContain('example/harness')
@@ -201,7 +202,7 @@ describe('[ki manage repair]', () => {
       await box.state.write(`ki/managed-artifacts/${artifactId}.toml`, manifest('creating', orphan, lock))
       await box.state.mkdir(`ki/managed-artifacts/locks/${artifactId}`)
 
-      const repair = await box.run('ki manage repair')
+      const repair = await box.run('ki repair --apply')
 
       expect(repair.exitCode).toBe(1)
       expect(repair.output).toContain(`✗ Install residue ${orphan}: managed artifact operation is live`)
@@ -217,7 +218,7 @@ describe('[ki manage repair]', () => {
       await box.state.mkdir('ki/managed-artifacts/locks')
       await box.state.write(`ki/managed-artifacts/${artifactId}.toml`, manifest('recoverable', orphan, lock))
 
-      const repair = await box.run('ki manage repair')
+      const repair = await box.run('ki repair --apply')
 
       expect(repair.exitCode).toBe(1)
       expect(repair.output).toContain(`removed ${orphan}`)
@@ -237,7 +238,7 @@ describe('[ki manage repair]', () => {
         manifest('recoverable', mismatchedPath, mismatchedLock, mismatchedId)
       )
 
-      await ignored.run('ki manage repair')
+      await ignored.run('ki repair --apply')
 
       expect((await lstat(`${ignored.state.path}/ki/managed-artifacts/broken.toml`)).isFile()).toBe(true)
       expect((await lstat(`${ignored.state.path}/ki/managed-artifacts/not-the-id.toml`)).isFile()).toBe(true)
@@ -250,7 +251,7 @@ describe('[ki manage repair]', () => {
         manifest('recoverable', unsafePath, unsafeLock)
       )
 
-      const unsafeRepair = await unsafe.run('ki manage repair')
+      const unsafeRepair = await unsafe.run('ki repair --apply')
 
       expect(unsafeRepair.output).toContain(`✗ Install residue ${unsafePath}: managed artifact lock is unsafe`)
       expect((await lstat(unsafePath)).isDirectory()).toBe(true)
@@ -261,7 +262,7 @@ describe('[ki manage repair]', () => {
       await active.state.mkdir('ki/managed-artifacts/locks')
       await active.state.write(`ki/managed-artifacts/${artifactId}.toml`, manifest('active', activePath, activeLock))
 
-      const activeRepair = await active.run('ki manage repair')
+      const activeRepair = await active.run('ki repair --apply')
 
       expect(activeRepair.output).toContain(`✗ Install residue ${activePath}: managed artifact is not recoverable`)
       await expect(lstat(activeLock)).rejects.toThrow()
@@ -276,7 +277,7 @@ describe('[ki manage repair]', () => {
         manifest('recoverable', absentPath, absentLock)
       )
 
-      await absent.run('ki manage repair')
+      await absent.run('ki repair --apply')
 
       expect((await lstat(`${absent.state.path}/ki/managed-artifacts/${artifactId}.toml`)).isFile()).toBe(true)
       await expect(lstat(absentLock)).rejects.toThrow()
@@ -290,8 +291,8 @@ describe('[ki manage repair]', () => {
       await box.data.write(`${relative}/skills/ki-example/SKILL.md`, '---\nname: ki-example\nki-depends-on: []\n---\n')
       await rm(`${box.data.path}/ki/harnesses/example/harness`, { recursive: true })
 
-      const cleanup = await box.run('ki manage cleanup')
-      const repair = await box.run('ki manage repair')
+      const cleanup = await box.run('ki cleanup')
+      const repair = await box.run('ki repair --apply')
 
       expect(cleanup.output).toContain('[restorable] restores example/harness')
       expect(repair.output).toContain(`restored ${parked}`)
@@ -304,15 +305,15 @@ describe('[ki manage repair]', () => {
       await box.setupExampleHarness()
       const parked = await box.data.mkdir(`ki/harnesses/example/.replace-${uuid}-harness`)
 
-      const cleanup = await box.run('ki manage cleanup')
-      const dryRun = await box.run('ki manage repair --dry-run')
+      const cleanup = await box.run('ki cleanup')
+      const dryRun = await box.run('ki repair --dry-run')
 
       expect(cleanup.output).toContain('[removable] example/harness is installed')
       expect(dryRun.output).toContain(`would remove ${parked}`)
       // Asserted between the two runs: the dry run must leave on disk what the real run removes.
       expect((await lstat(parked)).isDirectory()).toBe(true)
 
-      const repair = await box.run('ki manage repair')
+      const repair = await box.run('ki repair --apply')
 
       expect(repair.output).toContain(`removed ${parked}`)
       await expect(lstat(parked)).rejects.toThrow()
@@ -325,8 +326,8 @@ describe('[ki manage repair]', () => {
       await box.setupExampleHarness()
       const parked = await box.data.mkdir(`ki/harnesses/example/.replace-${uuid}`)
 
-      const cleanup = await box.run('ki manage cleanup')
-      const repair = await box.run('ki manage repair')
+      const cleanup = await box.run('ki cleanup')
+      const repair = await box.run('ki repair --apply')
 
       expect(cleanup.output).toContain(`${parked} [needs manual inspection]`)
       expect(repair.exitCode).toBe(1)
@@ -345,7 +346,7 @@ describe('[ki manage repair]', () => {
       const parked = await box.data.mkdir(`ki/harnesses/example/.replace-${uuid}-harness`)
       await box.data.write('ki/harnesses/Not_An_Owner', 'not a harness owner\n')
 
-      const cleanup = await box.run('ki manage cleanup')
+      const cleanup = await box.run('ki cleanup')
 
       expect(cleanup.exitCode).toBe(0)
       expect(cleanup.output).toContain('├─ eligible (2)')

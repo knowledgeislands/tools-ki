@@ -62,7 +62,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 `ki` MUST refuse an `mcp` configuration value that is not a table, carries any key other than `inventory`, or declares `inventory` as anything but a non-empty absolute path string.
 
-Parser help, version, and `ki manage doctor|diag|repair` MUST remain reachable when this binding declaration is invalid. Other commands MUST still validate the binding before dispatch, so a malformed path is not silently adopted.
+Parser help, version, and `ki doctor|diag|repair` MUST remain reachable when this binding declaration is invalid. Other commands MUST still validate the binding before dispatch, so a malformed path is not silently adopted.
 
 _Conformance:_ conforming
 

@@ -39,7 +39,7 @@ export const createCleanupCommand = (context: KiContext): Command =>
       : [{ label: 'none' }]
     context.stdout.write(
       `${renderTree({
-        title: 'KI MANAGE CLEANUP',
+        title: 'KI CLEANUP',
         entries: [
           { label: `eligible (${result.eligible.length})`, children: eligible },
           ...(result.artifacts.length

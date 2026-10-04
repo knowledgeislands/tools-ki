@@ -3,20 +3,24 @@ import { describe, expect, test } from 'vitest'
 import { buildCommandInventory, renderCommandInventory } from '../../../../scripts/command-inventory.ts'
 import { sandbox } from '../_cli_helper.ts'
 
-const rootHelpCommands = ['bootstrap', 'agora', 'repo', 'acquire', 'harness', 'manage', 'registry', 'skill', 'dev']
-
-const manageCommands = [
+const rootHelpCommands = [
+  'bootstrap',
+  'agora',
+  'repo',
+  'acquire',
+  'harness',
+  'registry',
+  'skill',
+  'dev',
   'cleanup',
   'completion',
   'diag',
   'docs',
   'doctor',
-  'list',
+  'help',
+  'inventory',
   'mcp',
-  'missing',
-  'outdated',
   'repair',
-  'search',
   'update',
   'vscode'
 ]
@@ -55,9 +59,8 @@ const commandNames = (output: string): string[] =>
     .flatMap((line) => /^ {2}([a-z][a-z-]*)(?:\s|$)/.exec(line)?.[1] ?? [])
 
 const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
-  manage: manageCommands,
-  'manage mcp': ['install', 'list', 'rollback', 'uninstall', 'update'],
-  'manage vscode': ['check', 'sync'],
+  mcp: ['install', 'list', 'rollback', 'uninstall', 'update'],
+  vscode: ['check', 'sync'],
   repo: repoCommands,
   'repo roadmap': ['demote', 'list', 'promote', 'prune', 'stats', 'summary'],
   'repo store': ['bind', 'create', 'list', 'scan', 'unbind'],
@@ -67,7 +70,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   skill: ['add', 'remove'],
   'repo batch': batchCommands,
   registry: registryCommands,
-  harness: ['info', 'install', 'list', 'reinstall', 'uninstall'],
+  harness: ['info', 'install', 'list', 'missing', 'outdated', 'reinstall', 'search', 'uninstall'],
   'repo trade': [
     'abandon',
     'list',
@@ -95,24 +98,21 @@ describe('[ki command inventory]', () => {
   test('keeps runtime help and completion memberships aligned with the public command contract', async () => {
     const box = await sandbox()
     const root = await box.run('ki --help')
-    const manage = await box.run('ki manage --help')
     const agora = await box.run('ki agora --help')
     const agoraReference = await box.run('ki agora reference --help')
     const repository = await box.run('ki repo --help')
     const batch = await box.run('ki repo batch --help')
     const registry = await box.run('ki registry --help')
-    const zsh = await box.run('ki manage completion zsh')
-    const bash = await box.run('ki manage completion bash')
+    const zsh = await box.run('ki completion zsh')
+    const bash = await box.run('ki completion bash')
 
     expect(commandNames(root.output)).toEqual(rootHelpCommands)
-    expect(commandNames(manage.output)).toEqual(manageCommands)
     expect(commandNames(agora.output)).toEqual(agoraCommands)
     expect(commandNames(agoraReference.output)).toEqual(agoraReferenceCommands)
     expect(commandNames(repository.output)).toEqual(nestedHelpOrder['repo'])
     expect(commandNames(batch.output)).toEqual(batchCommands)
     expect(commandNames(registry.output)).toEqual(registryCommands)
     for (const command of rootHelpCommands) expect(zsh.output).toContain(`${command}:`)
-    for (const command of manageCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of agoraCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of repoCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of batchCommands) expect(zsh.output).toContain(`${command}:`)
@@ -161,7 +161,7 @@ describe('[ki command inventory]', () => {
     expect(root.output).toContain('Acquisition:\n  acquire')
     expect(root.output).toContain('Maintain KI:\n  harness')
     expect(root.output).toContain('Development:\n  dev')
-    expect(root.output).toContain('Further help: ki <command> --help · ki manage docs · man ki')
+    expect(root.output).toContain('Further help: ki help <command> · ki docs · man ki')
     expect(Math.max(...root.output.split('\n').map((line) => line.length))).toBeLessThanOrEqual(80)
     expect(await box.run('ki --help')).toEqual(root)
 
@@ -195,10 +195,6 @@ describe('[ki command inventory]', () => {
     for (const command of rootHelpCommands) {
       expect(manual).toContain(`.B ki ${command}`)
       expect(changelog).toContain(`\`ki ${command}`)
-    }
-    for (const command of manageCommands) {
-      expect(manual).toContain(`.B ki manage ${command}`)
-      expect(changelog).toContain(`\`ki manage ${command}`)
     }
     for (const command of repoCommands) {
       expect(manual).toContain(command === 'init' ? '.B ki repo init' : `.B ki repo [repo-options] ${command}`)

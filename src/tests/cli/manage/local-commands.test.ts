@@ -9,12 +9,12 @@ describe('[ki local utility commands]', () => {
     await box.project.write('.ki.toml', '[not valid TOML\n')
     const example = await box.data.read('ki/harnesses/example/harness/skills/example-skill/SKILL.md')
 
-    const result = await box.run('ki manage search SKILL')
+    const result = await box.run('ki harness search SKILL')
 
     expect(result).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI MANAGE SEARCH\n├─ query: SKILL\n├─ matches (8)\n│  ├─ example/harness skill example-skill\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-accept\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-batch\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-bootstrap\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-implement\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-next\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-plan\n│  ╰─ knowledgeislands/ki-agentic-harness skill ki-recap\n╰─ summary: MATCHES=8\n'
+        '╭─ KI HARNESS SEARCH\n├─ query: SKILL\n├─ matches (8)\n│  ├─ example/harness skill example-skill\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-accept\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-batch\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-bootstrap\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-implement\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-next\n│  ├─ knowledgeislands/ki-agentic-harness skill ki-plan\n│  ╰─ knowledgeislands/ki-agentic-harness skill ki-recap\n╰─ summary: MATCHES=8\n'
     })
     expect(await box.data.read('ki/harnesses/example/harness/skills/example-skill/SKILL.md')).toBe(example)
   })
@@ -23,26 +23,26 @@ describe('[ki local utility commands]', () => {
     const box = await sandbox()
     await box.setupExampleHarness()
 
-    const identifier = await box.run('ki manage search EXAMPLE/HARNESS')
-    const absent = await box.run('ki manage search absent')
+    const identifier = await box.run('ki harness search EXAMPLE/HARNESS')
+    const absent = await box.run('ki harness search absent')
 
     expect(identifier).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI MANAGE SEARCH\n├─ query: EXAMPLE/HARNESS\n├─ matches (1)\n│  ╰─ example/harness skill ki-example\n╰─ summary: MATCHES=1\n'
+        '╭─ KI HARNESS SEARCH\n├─ query: EXAMPLE/HARNESS\n├─ matches (1)\n│  ╰─ example/harness skill ki-example\n╰─ summary: MATCHES=1\n'
     })
     expect(absent).toEqual({
       exitCode: 0,
-      output: '╭─ KI MANAGE SEARCH\n├─ query: absent\n├─ matches (0)\n│  ╰─ none\n╰─ summary: MATCHES=0\n'
+      output: '╭─ KI HARNESS SEARCH\n├─ query: absent\n├─ matches (0)\n│  ╰─ none\n╰─ summary: MATCHES=0\n'
     })
   })
 
   test('rejects missing, empty, additional, and option search arguments', async () => {
     const box = await sandbox()
-    const missing = await box.run('ki manage search')
-    const empty = await box.run(['ki', 'manage', 'search', ''])
-    const extra = await box.run('ki manage search one two')
-    const option = await box.run('ki manage search --all')
+    const missing = await box.run('ki harness search')
+    const empty = await box.run(['ki', 'harness', 'search', ''])
+    const extra = await box.run('ki harness search one two')
+    const option = await box.run('ki harness search --all')
 
     expect(missing.exitCode).toBe(2)
     expect(empty).toEqual({ exitCode: 2, output: 'ki: error: search query must not be empty\n' })
@@ -57,11 +57,11 @@ describe('[ki local utility commands]', () => {
     const skill = await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')
     const unknown = await box.data.read('ki/unknown-state')
 
-    const result = await box.run('ki manage cleanup')
+    const result = await box.run('ki cleanup')
 
     expect(result).toEqual({
       exitCode: 0,
-      output: '╭─ KI MANAGE CLEANUP\n├─ eligible (0)\n│  ╰─ none\n╰─ summary: ELIGIBLE=0\n'
+      output: '╭─ KI CLEANUP\n├─ eligible (0)\n│  ╰─ none\n╰─ summary: ELIGIBLE=0\n'
     })
     expect(await box.data.read('ki/harnesses/example/harness/skills/ki-example/SKILL.md')).toBe(skill)
     expect(await box.data.read('ki/unknown-state')).toBe(unknown)
@@ -69,8 +69,8 @@ describe('[ki local utility commands]', () => {
 
   test('rejects cleanup arguments and options', async () => {
     const box = await sandbox()
-    const argument = await box.run('ki manage cleanup now')
-    const option = await box.run('ki manage cleanup --all')
+    const argument = await box.run('ki cleanup now')
+    const option = await box.run('ki cleanup --all')
 
     expect(argument.exitCode).toBe(2)
     expect(option.exitCode).toBe(2)
@@ -78,11 +78,11 @@ describe('[ki local utility commands]', () => {
 
   test('prints canonical documentation URLs without launching or fetching content', async () => {
     const box = await sandbox()
-    const overview = await box.run('ki manage docs')
-    const explicitOverview = await box.run('ki manage docs overview')
-    const site = await box.run('ki manage docs site')
-    const manual = await box.run('ki manage docs manual')
-    const roadmap = await box.run('ki manage docs roadmap')
+    const overview = await box.run('ki docs')
+    const explicitOverview = await box.run('ki docs overview')
+    const site = await box.run('ki docs site')
+    const manual = await box.run('ki docs manual')
+    const roadmap = await box.run('ki docs roadmap')
 
     expect(overview).toEqual({
       exitCode: 0,
@@ -100,9 +100,9 @@ describe('[ki local utility commands]', () => {
 
   test('rejects unknown documentation topics, options, and additional arguments', async () => {
     const box = await sandbox()
-    const unknown = await box.run('ki manage docs guide')
-    const option = await box.run('ki manage docs --open')
-    const extra = await box.run('ki manage docs manual extra')
+    const unknown = await box.run('ki docs guide')
+    const option = await box.run('ki docs --open')
+    const extra = await box.run('ki docs manual extra')
 
     expect(unknown).toEqual({
       exitCode: 2,

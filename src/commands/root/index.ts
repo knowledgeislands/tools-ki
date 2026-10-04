@@ -5,7 +5,7 @@ import { createAgoraCommand } from '../agora/index.ts'
 import { createBootstrapCommand } from '../bootstrap/index.ts'
 import { createDevCommand } from '../dev/index.ts'
 import { createHarnessCommand } from '../harness/index.ts'
-import { createManageCommand } from '../manage/index.ts'
+import { createHarnessStatusCommands, createSupportCommands } from '../manage/index.ts'
 import { createRegistryCommand } from '../registry/index.ts'
 import { createRepoCommand } from '../repo/index.ts'
 import { createSkillCommand } from '../skill/index.ts'
@@ -19,13 +19,16 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   agora: (context) => createAgoraCommand(context),
   dev: (context) => createDevCommand(context),
   harness: (context) => createHarnessCommand(context),
-  manage: (context) => createManageCommand(context),
   repo: (context) => createRepoCommand(context),
   registry: (context) => createRegistryCommand(context),
   skill: (context) => createSkillCommand(context)
 }
 
 export const addRootCommands = (program: Command, context: KiContext): void => {
-  for (const name of rootHelpCommandNames)
-    program.addCommand(rootCommandFactories[name](context).helpGroup(rootHelpGroups[name]))
+  for (const name of rootHelpCommandNames) {
+    const command = rootCommandFactories[name](context).helpGroup(rootHelpGroups[name])
+    if (name === 'harness') for (const child of createHarnessStatusCommands(context)) command.addCommand(child)
+    program.addCommand(command)
+  }
+  for (const command of createSupportCommands(context)) program.addCommand(command.helpGroup('Operations:'))
 }

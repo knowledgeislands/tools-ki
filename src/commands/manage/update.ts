@@ -34,7 +34,7 @@ export const createUpdateCommand = (context: KiContext): Command =>
       if (options.cli) {
         context.stdout.write(
           `${renderTree({
-            title: 'KI MANAGE UPDATE',
+            title: 'KI UPDATE',
             entries: [{ label: 'CLI', children: [{ label: cliResult(result.cli) }] }, { label: 'summary: CLI=UPDATED' }]
           }).join('\n')}\n`
         )
@@ -48,7 +48,7 @@ export const createUpdateCommand = (context: KiContext): Command =>
       )
       context.stdout.write(
         `${renderTree({
-          title: 'KI MANAGE UPDATE',
+          title: 'KI UPDATE',
           entries: [
             { label: 'CLI', children: [{ label: cliResult(result.cli) }] },
             {

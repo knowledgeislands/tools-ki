@@ -6,7 +6,7 @@ This area specifies the user-oriented management interface; see the [Specificati
 
 ### MANAGE-001 — Repository-independent inventory
 
-`ki manage list` MUST list installed capabilities and declared user skills without inspecting the current repository.
+`ki inventory` MUST list installed capabilities and declared user skills without inspecting the current repository.
 
 _Conformance:_ conforming
 
@@ -16,7 +16,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-002 — Managed-state diagnosis
 
-`ki manage doctor` MUST report configured skills whose active source cannot be resolved.
+`ki doctor` MUST report configured skills whose active source cannot be resolved.
 
 _Conformance:_ conforming
 
@@ -26,7 +26,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-003 — Deterministic capability search
 
-`ki manage search` MUST search verified installed capabilities case-insensitively in deterministic order without repository discovery.
+`ki harness search` MUST search verified installed capabilities case-insensitively in deterministic order without repository discovery.
 
 _Conformance:_ conforming
 
@@ -38,7 +38,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-004 — Verified executable update
 
-`ki manage update` MUST update the executable only when a persisted verified installer receipt proves it owns the running regular installation.
+`ki update` MUST update the executable only when a persisted verified installer receipt proves it owns the running regular installation.
 
 _Conformance:_ conforming
 
@@ -48,7 +48,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-005 — Generated shell completions
 
-`ki manage completion` MUST render supported shell completion scripts and reject unsupported shells.
+`ki completion` MUST render supported shell completion scripts and reject unsupported shells.
 
 _Conformance:_ conforming
 
@@ -58,7 +58,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-006 — Managed-state diagnostics
 
-`ki manage diag` MUST report only machine-managed installation, user configuration, registry, and path state. It MUST NOT inspect a repository declaration or its projections.
+`ki diag` MUST report share-safe machine-managed installation, configuration and registry status and counts by default. `--full` MAY include local paths, identities and detailed diagnostics. It MUST NOT inspect a repository declaration or its projections.
 
 _Conformance:_ conforming
 
@@ -68,7 +68,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-007 — Safe managed projection repair
 
-`ki manage repair` MUST repair missing or stale KI-managed user-skill projections and may remove a recognised legacy `schema = 1` line from valid user configuration, preserving all other content. It MUST preserve foreign and unknown state as unsafe and support a no-write `--dry-run` preview. Ordinary reads MUST NOT rewrite configuration.
+`ki repair` MUST preview repairs to missing or stale KI-managed user-skill projections by default and require `--apply` to write. It may remove a recognised legacy `schema = 1` line from valid user configuration, preserving all other content. It MUST preserve foreign and unknown state as unsafe and support an explicit no-write `--dry-run` preview. Combining `--apply` with `--dry-run` MUST fail. Ordinary reads MUST NOT rewrite configuration.
 
 _Conformance:_ conforming
 
@@ -78,7 +78,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-008 — Non-mutating cleanup report
 
-`ki manage cleanup` MUST report when no eligible KI-managed stale state exists without changing installed harnesses or unknown files.
+`ki cleanup` MUST report when no eligible KI-managed stale state exists without changing installed harnesses or unknown files.
 
 _Conformance:_ conforming
 
@@ -88,7 +88,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-009 — Canonical documentation lookup
 
-`ki manage docs` MUST print canonical KI documentation locations without launching applications or fetching their content.
+`ki docs` MUST print canonical KI documentation locations without launching applications or fetching their content.
 
 _Conformance:_ conforming
 
@@ -98,7 +98,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-010 — Closed option-value completion
 
-`ki manage completion` MUST offer every closed value for a value-taking public CLI option after that option is supplied, including roadmap horizons and lifecycle statuses.
+`ki completion` MUST offer every closed value for a value-taking public CLI option after that option is supplied, including roadmap horizons and lifecycle statuses.
 
 _Conformance:_ conforming
 
@@ -110,7 +110,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-011 — VS Code projection diagnosis
 
-`ki manage vscode check` MUST compare the chezmoi-managed VS Code workspace and trusted-folder source state with the local KI repository registry without writing.
+`ki vscode check` MUST compare the chezmoi-managed VS Code workspace and trusted-folder source state with the local KI repository registry without writing.
 
 _Conformance:_ conforming
 
@@ -120,7 +120,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-012 — Explicit VS Code projection publication
 
-`ki manage vscode sync` MUST preview source-state drift by default and MUST publish it only when `--write` is supplied, without running `chezmoi apply`.
+`ki vscode sync` MUST preview source-state drift by default and MUST publish it only when `--write` is supplied, without running `chezmoi apply`.
 
 _Conformance:_ conforming
 
@@ -130,7 +130,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-013 — Typed VS Code store projection
 
-`ki manage vscode check|sync` MUST consume only explicit local `sources` bindings for registered repositories, project each bound source beside its notes root with the same trusted runtime clients, and ignore `legacy` bindings and unbound filesystem directories. It MUST NOT infer associations from directory names.
+`ki vscode check|sync` MUST consume only explicit local `sources` bindings for registered repositories, project each bound source beside its notes root with the same trusted runtime clients, and ignore `legacy` bindings and unbound filesystem directories. It MUST NOT infer associations from directory names.
 
 _Conformance:_ conforming
 
@@ -142,7 +142,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-014 — Exact governed source provenance
 
-`ki manage mcp install` MUST accept a lower-case GitHub `owner/repository`, resolve an explicit SemVer only through its exact annotated `v<SemVer>` tag, verify the tag's full commit and governed MCP repository evidence, and persist a versioned provenance receipt without credentials or host paths.
+`ki mcp install` MUST accept a lower-case GitHub `owner/repository`, resolve an explicit SemVer only through its exact annotated `v<SemVer>` tag, verify the tag's full commit and governed MCP repository evidence, and persist a versioned provenance receipt without credentials or host paths.
 
 _Conformance:_ conforming
 
@@ -172,7 +172,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### MANAGE-017 — Inspectable source inventory
 
-`ki manage mcp list` MUST expose active and retained versions deterministically as text or versioned path-free JSON. Installing, updating, rolling back, listing, or uninstalling a source MUST NOT modify any MCP client binding.
+`ki mcp list` MUST expose active and retained versions deterministically as text or versioned path-free JSON. Installing, updating, rolling back, listing, or uninstalling a source MUST NOT modify any MCP client binding.
 
 _Conformance:_ conforming
 

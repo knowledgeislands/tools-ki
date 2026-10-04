@@ -14,6 +14,8 @@ The `ki-repo-tools` change-readiness checklist owns cross-tool documentation, ve
 ## Align the public surface
 
 - CLI help, completions, `man/ki.1`, README, user guides, specifications, and the active changelog baseline agree wherever the change affects them.
+- Root `help [command...]`, `completion <shell>`, `diag`, and `doctor` follow the shared tool contract. Diagnostics are share-safe by default and reserve local details for `--full`; repair previews by default and requires `--apply` to write.
+- Regenerate `man/ki.commands.json` with `bun scripts/generate-command-inventory.ts --write` after changing manual grammar.
 - New accepted behavior has an executable contract test through `run(args, context)` and the sandbox helper.
 - Error paths fail before partial writes and are covered at the public seam. Tests use injected provider fixtures rather than live network access.
 - Removed behavior leaves no dead aliases, compatibility branches, obsolete documentation, or unreachable implementation behind unless a bounded transition was approved.

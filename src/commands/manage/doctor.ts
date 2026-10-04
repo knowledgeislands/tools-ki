@@ -52,7 +52,7 @@ const report = (context: KiContext, checks: readonly ManageDoctorCheck[]): void 
   }
   context.stdout.write(
     `${renderTree({
-      title: 'KI MANAGE DOCTOR',
+      title: 'KI DOCTOR',
       entries: [
         {
           label: `checks (${checks.length})`,

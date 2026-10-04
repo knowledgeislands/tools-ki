@@ -24,7 +24,7 @@ export const createListCommand = (context: KiContext): Command =>
     const capabilities = harnesses.reduce((total, harness) => total + harness.capabilities.length, 0)
     context.stdout.write(
       `${renderTree({
-        title: 'KI MANAGE',
+        title: 'KI INVENTORY',
         entries: [
           {
             label: `harnesses (${harnesses.length})`,

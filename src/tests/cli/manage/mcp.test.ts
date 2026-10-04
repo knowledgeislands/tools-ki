@@ -94,25 +94,25 @@ const sourceRunner = (
   }
 }
 
-describe('[ki manage mcp]', () => {
+describe('[ki mcp]', () => {
   test('installs an exact source release and exposes path-free provenance', async () => {
     const box = await sandbox()
     const calls: string[] = []
     box.setRunner(sourceRunner({ 'v1.2.3': { commit: defaultCommit } }, calls))
 
     expect(
-      await box.run('ki manage mcp install example/server 1.2.3', { now: () => Date.parse('2026-09-25T00:00:00Z') })
+      await box.run('ki mcp install example/server 1.2.3', { now: () => Date.parse('2026-09-25T00:00:00Z') })
     ).toEqual({
       exitCode: 0,
       output: `MCP source installed: example/server 1.2.3 (${defaultCommit})\n`
     })
     expect(
-      await box.run('ki manage mcp install example/server 1.2.3', { now: () => Date.parse('2026-09-25T00:00:00Z') })
+      await box.run('ki mcp install example/server 1.2.3', { now: () => Date.parse('2026-09-25T00:00:00Z') })
     ).toEqual({
       exitCode: 0,
       output: `MCP source installed: example/server 1.2.3 (${defaultCommit})\n`
     })
-    const listed = await box.run('ki manage mcp list example/server --format json')
+    const listed = await box.run('ki mcp list example/server --format json')
     const report = JSON.parse(listed.output)
 
     expect(listed.exitCode).toBe(0)
@@ -145,31 +145,31 @@ describe('[ki manage mcp]', () => {
     box.setRunner(sourceRunner({ 'v1.0.0': { commit: '1'.repeat(40) }, 'v2.0.0': { commit: '2'.repeat(40) } }, calls))
     box.setFetcher(async () => new Response(JSON.stringify({ tag_name: 'v2.0.0' }), { status: 200 }))
 
-    expect((await box.run('ki manage mcp update example/server')).exitCode).toBe(1)
-    expect((await box.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
-    expect((await box.run('ki manage mcp update example/server')).exitCode).toBe(0)
-    expect((await box.run('ki manage mcp list')).output.split('\n')).toEqual([
+    expect((await box.run('ki mcp update example/server')).exitCode).toBe(1)
+    expect((await box.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
+    expect((await box.run('ki mcp update example/server')).exitCode).toBe(0)
+    expect((await box.run('ki mcp list')).output.split('\n')).toEqual([
       `- example/server 1.0.0 ${'1'.repeat(40)}`,
       `* example/server 2.0.0 ${'2'.repeat(40)}`,
       ''
     ])
 
     const callsBeforeRollback = calls.length
-    expect(await box.run('ki manage mcp rollback example/server 1.0.0')).toEqual({
+    expect(await box.run('ki mcp rollback example/server 1.0.0')).toEqual({
       exitCode: 0,
       output: `MCP source rolled back: example/server 1.0.0 (${'1'.repeat(40)})\n`
     })
     expect(calls).toHaveLength(callsBeforeRollback)
-    expect((await box.run('ki manage mcp rollback example/server 9.0.0')).exitCode).toBe(1)
-    expect(await box.run('ki manage mcp uninstall example/server')).toEqual({
+    expect((await box.run('ki mcp rollback example/server 9.0.0')).exitCode).toBe(1)
+    expect(await box.run('ki mcp uninstall example/server')).toEqual({
       exitCode: 0,
       output: 'MCP source uninstalled: example/server\n'
     })
-    expect(await box.run('ki manage mcp list --format json')).toEqual({
+    expect(await box.run('ki mcp list --format json')).toEqual({
       exitCode: 0,
       output: '{\n  "schema": "ki/mcp-sources/v1",\n  "installations": []\n}\n'
     })
-    expect(await box.run('ki manage mcp list')).toEqual({ exitCode: 0, output: '' })
+    expect(await box.run('ki mcp list')).toEqual({ exitCode: 0, output: '' })
   })
 
   test('uses explicit GitHub CLI authentication without leaking command output', async () => {
@@ -177,15 +177,15 @@ describe('[ki manage mcp]', () => {
     const calls: string[] = []
     box.setRunner(sourceRunner({ 'v1.0.0': {} }, calls))
 
-    expect((await box.run('ki manage mcp install example/server --auth github-cli')).exitCode).toBe(0)
+    expect((await box.run('ki mcp install example/server --auth github-cli')).exitCode).toBe(0)
     expect(calls[0]).toBe('gh api repos/example/server/releases/latest --jq .tag_name')
     expect(calls.some((call) => call.startsWith('gh repo clone example/server '))).toBe(true)
     expect(calls.some((call) => call.startsWith('git --no-optional-locks clone'))).toBe(false)
-    expect((await box.run('ki manage mcp update example/server 1.0.0 --auth github-cli')).exitCode).toBe(0)
+    expect((await box.run('ki mcp update example/server 1.0.0 --auth github-cli')).exitCode).toBe(0)
 
     const failed = await sandbox()
     failed.setRunner(async () => ({ exitCode: 1, output: 'ghp_do-not-leak' }))
-    const result = await failed.run('ki manage mcp install example/server --auth github-cli')
+    const result = await failed.run('ki mcp install example/server --auth github-cli')
     expect(result.output).toBe(
       'ki: error: could not resolve private GitHub release; install gh and run gh auth login\n'
     )
@@ -201,14 +201,14 @@ describe('[ki manage mcp]', () => {
     }
     box.setRunner(sourceRunner(releases, calls))
 
-    expect((await box.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
-    const failure = await box.run('ki manage mcp update example/server 2.0.0')
+    expect((await box.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
+    const failure = await box.run('ki mcp update example/server 2.0.0')
     expect(failure).toEqual({
       exitCode: 1,
       output: 'ki: error: could not build MCP source example/server\n'
     })
     expect(failure.output).not.toContain('secret-build-output')
-    expect((await box.run('ki manage mcp list')).output).toBe(`* example/server 1.0.0 ${'1'.repeat(40)}\n`)
+    expect((await box.run('ki mcp list')).output).toBe(`* example/server 1.0.0 ${'1'.repeat(40)}\n`)
     expect(
       (await readdir(`${box.data.path}/ki/mcp/example/server/versions`)).some((name) => name.startsWith('.install-'))
     ).toBe(false)
@@ -219,9 +219,9 @@ describe('[ki manage mcp]', () => {
     const releases: Record<string, ReleaseFixture> = { 'v1.0.0': { failBuild: true } }
     box.setRunner(sourceRunner(releases, []))
 
-    expect((await box.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(1)
+    expect((await box.run('ki mcp install example/server 1.0.0')).exitCode).toBe(1)
     releases['v1.0.0'] = {}
-    expect((await box.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
+    expect((await box.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
   })
 
   test.each([
@@ -230,18 +230,18 @@ describe('[ki manage mcp]', () => {
     ['example/server', 'MCP version must be valid Semantic Versioning without a v prefix', '1.0.0-01']
   ])('rejects invalid identity or version %s', async (repository, message, version) => {
     const box = await sandbox()
-    const result = await box.run(`ki manage mcp install ${repository}${version ? ` ${version}` : ' 1.0.0'}`)
+    const result = await box.run(`ki mcp install ${repository}${version ? ` ${version}` : ' 1.0.0'}`)
     expect(result).toEqual({ exitCode: 2, output: `ki: error: ${message}\n` })
   })
 
   test('rejects invalid latest-release responses and source evidence', async () => {
     const malformed = await sandbox()
     malformed.setFetcher(async () => new Response('{', { status: 200 }))
-    expect((await malformed.run('ki manage mcp install example/server')).output).toContain('not valid JSON')
+    expect((await malformed.run('ki mcp install example/server')).output).toContain('not valid JSON')
 
     const prerelease = await sandbox()
     prerelease.setFetcher(async () => new Response(JSON.stringify({ tag_name: 'v1.0.0-rc.1' }), { status: 200 }))
-    expect((await prerelease.run('ki manage mcp install example/server')).output).toContain('must not be a prerelease')
+    expect((await prerelease.run('ki mcp install example/server')).output).toContain('must not be a prerelease')
 
     const latestFailures: readonly [unknown, string][] = [
       [{ tag_name: '1.0.0' }, 'must use a v<SemVer> tag'],
@@ -253,18 +253,18 @@ describe('[ki manage mcp]', () => {
     for (const [payload, message] of latestFailures) {
       const box = await sandbox()
       box.setFetcher(async () => new Response(JSON.stringify(payload), { status: 200 }))
-      expect((await box.run('ki manage mcp install example/server')).output).toContain(message)
+      expect((await box.run('ki mcp install example/server')).output).toContain(message)
     }
 
     const unavailable = await sandbox()
     unavailable.setFetcher(async () => new Response('', { status: 404 }))
-    expect((await unavailable.run('ki manage mcp install example/server')).output).toContain('HTTP 404')
+    expect((await unavailable.run('ki mcp install example/server')).output).toContain('HTTP 404')
 
     const networkFailure = await sandbox()
     networkFailure.setFetcher(async () => {
       throw new Error('secret-network-detail')
     })
-    const networkResult = await networkFailure.run('ki manage mcp install example/server')
+    const networkResult = await networkFailure.run('ki mcp install example/server')
     expect(networkResult.output).toContain('could not resolve latest GitHub release')
     expect(networkResult.output).not.toContain('secret-network-detail')
 
@@ -297,13 +297,13 @@ describe('[ki manage mcp]', () => {
     for (const [fixture, message] of cases) {
       const box = await sandbox()
       box.setRunner(sourceRunner({ 'v1.0.0': fixture }, []))
-      expect((await box.run('ki manage mcp install example/server 1.0.0')).output).toContain(message)
+      expect((await box.run('ki mcp install example/server 1.0.0')).output).toContain(message)
     }
 
     for (const origin of ['git@github.com:example/server.git', 'ssh://git@github.com/example/server.git']) {
       const box = await sandbox()
       box.setRunner(sourceRunner({ 'v1.0.0': { origin } }, []))
-      expect((await box.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
+      expect((await box.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
     }
   })
 
@@ -312,7 +312,7 @@ describe('[ki manage mcp]', () => {
     clone.setRunner(async () => {
       throw new Error('secret-clone-detail')
     })
-    const cloneResult = await clone.run('ki manage mcp install example/server 1.0.0')
+    const cloneResult = await clone.run('ki mcp install example/server 1.0.0')
     expect(cloneResult.output).toBe('ki: error: could not clone MCP source example/server\n')
     expect(cloneResult.output).not.toContain('secret-clone-detail')
 
@@ -320,13 +320,13 @@ describe('[ki manage mcp]', () => {
     authenticated.setRunner(async () => {
       throw new Error('secret-gh-detail')
     })
-    const authenticatedResult = await authenticated.run('ki manage mcp install example/server --auth github-cli')
+    const authenticatedResult = await authenticated.run('ki mcp install example/server --auth github-cli')
     expect(authenticatedResult.output).toContain('install gh and run gh auth login')
     expect(authenticatedResult.output).not.toContain('secret-gh-detail')
 
     const empty = await sandbox()
     empty.setRunner(async () => ({ exitCode: 0, output: '' }))
-    expect((await empty.run('ki manage mcp install example/server --auth github-cli')).output).toContain(
+    expect((await empty.run('ki mcp install example/server --auth github-cli')).output).toContain(
       'install gh and run gh auth login'
     )
   })
@@ -362,19 +362,19 @@ describe('[ki manage mcp]', () => {
     for (const [receipt, message] of cases) {
       const box = await sandbox()
       box.setRunner(sourceRunner({ 'v1.0.0': { commit: defaultCommit } }, []))
-      expect((await box.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
+      expect((await box.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
       await writeFile(
         `${box.data.path}/ki/mcp/example/server/versions/v1.0.0-${defaultCommit}/receipt.json`,
         `${JSON.stringify(receipt)}\n`
       )
-      expect((await box.run('ki manage mcp list example/server')).output).toContain(message)
+      expect((await box.run('ki mcp list example/server')).output).toContain(message)
     }
 
     const invalidJson = await sandbox()
     invalidJson.setRunner(sourceRunner({ 'v1.0.0': {} }, []))
-    expect((await invalidJson.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
+    expect((await invalidJson.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
     await writeFile(`${invalidJson.data.path}/ki/mcp/example/server/versions/v1.0.0-${defaultCommit}/receipt.json`, '{')
-    expect((await invalidJson.run('ki manage mcp list example/server')).output).toContain('receipt must be valid JSON')
+    expect((await invalidJson.run('ki mcp list example/server')).output).toContain('receipt must be valid JSON')
   })
 
   test('rejects unsafe active selections and retained-version state', async () => {
@@ -382,32 +382,32 @@ describe('[ki manage mcp]', () => {
     for (const target of [undefined, '/tmp/outside', '../outside', 'other/version']) {
       const box = await sandbox()
       box.setRunner(sourceRunner({ 'v1.0.0': {} }, []))
-      expect((await box.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
+      expect((await box.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
       await rm(`${source(box)}/active`)
       if (target !== undefined) await symlink(target, `${source(box)}/active`)
-      expect((await box.run('ki manage mcp list example/server')).output).toContain(
+      expect((await box.run('ki mcp list example/server')).output).toContain(
         target === undefined ? 'must be a symbolic link' : 'active selection is invalid'
       )
     }
 
     const missingActive = await sandbox()
     missingActive.setRunner(sourceRunner({ 'v1.0.0': {} }, []))
-    expect((await missingActive.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
+    expect((await missingActive.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
     await rm(`${source(missingActive)}/active`)
     await symlink('versions/missing', `${source(missingActive)}/active`)
-    expect((await missingActive.run('ki manage mcp list example/server')).output).toContain('active version is missing')
+    expect((await missingActive.run('ki mcp list example/server')).output).toContain('active version is missing')
 
     const unsafeVersion = await sandbox()
     unsafeVersion.setRunner(sourceRunner({ 'v1.0.0': {} }, []))
-    expect((await unsafeVersion.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
+    expect((await unsafeVersion.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
     await writeFile(`${source(unsafeVersion)}/versions/unsafe`, 'not a directory')
-    expect((await unsafeVersion.run('ki manage mcp list example/server')).output).toContain('version is unsafe')
+    expect((await unsafeVersion.run('ki mcp list example/server')).output).toContain('version is unsafe')
 
     const hiddenStaging = await sandbox()
     hiddenStaging.setRunner(sourceRunner({ 'v1.0.0': {} }, []))
-    expect((await hiddenStaging.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
+    expect((await hiddenStaging.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
     await writeFile(`${source(hiddenStaging)}/versions/.install-interrupted`, 'ignored')
-    expect((await hiddenStaging.run('ki manage mcp list example/server')).exitCode).toBe(0)
+    expect((await hiddenStaging.run('ki mcp list example/server')).exitCode).toBe(0)
   })
 
   test('rejects unsafe installation roots and conflicting immutable releases', async () => {
@@ -416,7 +416,7 @@ describe('[ki manage mcp]', () => {
     await rm(`${badData.data.path}/ki`, { recursive: true, force: true })
     await writeFile(`${badData.data.path}/ki`, 'unsafe')
     badData.setRunner(sourceRunner({ 'v1.0.0': {} }, []))
-    expect((await badData.run('ki manage mcp install example/server 1.0.0')).output).toContain(
+    expect((await badData.run('ki mcp install example/server 1.0.0')).output).toContain(
       'KI data directory must be a physical directory'
     )
 
@@ -424,63 +424,63 @@ describe('[ki manage mcp]', () => {
     await mkdir(`${linkedRoot.data.path}/ki`, { recursive: true })
     await symlink(linkedRoot.root.path, `${linkedRoot.data.path}/ki/mcp`)
     linkedRoot.setRunner(sourceRunner({ 'v1.0.0': {} }, []))
-    expect((await linkedRoot.run('ki manage mcp install example/server 1.0.0')).output).toContain(
+    expect((await linkedRoot.run('ki mcp install example/server 1.0.0')).output).toContain(
       'MCP source directory must be a physical directory'
     )
 
     const linkedSource = await sandbox()
     await mkdir(`${linkedSource.data.path}/ki/mcp/example`, { recursive: true })
     await symlink(linkedSource.root.path, `${linkedSource.data.path}/ki/mcp/example/server`)
-    expect((await linkedSource.run('ki manage mcp list example/server')).output).toContain(
+    expect((await linkedSource.run('ki mcp list example/server')).output).toContain(
       'installed MCP source example/server must be a physical directory'
     )
 
     const repositoryFile = await sandbox()
     await mkdir(`${repositoryFile.data.path}/ki/mcp/example`, { recursive: true })
     await writeFile(`${repositoryFile.data.path}/ki/mcp/example/server`, 'unsafe')
-    expect((await repositoryFile.run('ki manage mcp list')).output).toContain('repository directory is unsafe')
+    expect((await repositoryFile.run('ki mcp list')).output).toContain('repository directory is unsafe')
 
     const invalidOwner = await sandbox()
     await mkdir(`${invalidOwner.data.path}/ki/mcp/Invalid/server`, { recursive: true })
-    expect((await invalidOwner.run('ki manage mcp list')).output).toContain('lower-case owner/repository')
+    expect((await invalidOwner.run('ki mcp list')).output).toContain('lower-case owner/repository')
 
     const releases: Record<string, ReleaseFixture> = { 'v1.0.0': { commit: '1'.repeat(40) } }
     const conflict = await sandbox()
     conflict.setRunner(sourceRunner(releases, []))
-    expect((await conflict.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
+    expect((await conflict.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
     releases['v1.0.0'] = { commit: '2'.repeat(40) }
-    expect((await conflict.run('ki manage mcp install example/server 1.0.0')).output).toContain(
+    expect((await conflict.run('ki mcp install example/server 1.0.0')).output).toContain(
       'conflicts with installed provenance'
     )
 
     const authConflict = await sandbox()
     authConflict.setRunner(sourceRunner({ 'v1.0.0': {} }, []))
-    expect((await authConflict.run('ki manage mcp install example/server 1.0.0')).exitCode).toBe(0)
-    expect((await authConflict.run('ki manage mcp install example/server 1.0.0 --auth github-cli')).output).toContain(
+    expect((await authConflict.run('ki mcp install example/server 1.0.0')).exitCode).toBe(0)
+    expect((await authConflict.run('ki mcp install example/server 1.0.0 --auth github-cli')).output).toContain(
       'has conflicting provenance'
     )
   })
 
   test('fails closed on unsafe installed state and retired grammar', async () => {
     const box = await sandbox()
-    expect(await box.run('ki manage mcp list')).toEqual({ exitCode: 0, output: '' })
-    expect((await box.run('ki manage mcp list example/server')).output).toContain('is not installed')
+    expect(await box.run('ki mcp list')).toEqual({ exitCode: 0, output: '' })
+    expect((await box.run('ki mcp list example/server')).output).toContain('is not installed')
     await mkdir(`${box.data.path}/ki/mcp`, { recursive: true })
     await writeFile(`${box.data.path}/ki/mcp/not-an-owner`, 'unsafe')
-    expect((await box.run('ki manage mcp list')).output).toContain('owner directory is unsafe')
+    expect((await box.run('ki mcp list')).output).toContain('owner directory is unsafe')
 
-    expect((await box.run('ki manage mcp install example/server 1.0.0 --auth token')).exitCode).toBe(2)
-    expect((await box.run('ki manage mcp rollback example/server')).exitCode).toBe(2)
-    expect((await box.run('ki manage mcp uninstall')).exitCode).toBe(2)
-    expect((await box.run('ki manage mcp list --format yaml')).exitCode).toBe(2)
-    expect(await box.run('ki manage mcp list --format yaml')).toEqual({
+    expect((await box.run('ki mcp install example/server 1.0.0 --auth token')).exitCode).toBe(2)
+    expect((await box.run('ki mcp rollback example/server')).exitCode).toBe(2)
+    expect((await box.run('ki mcp uninstall')).exitCode).toBe(2)
+    expect((await box.run('ki mcp list --format yaml')).exitCode).toBe(2)
+    expect(await box.run('ki mcp list --format yaml')).toEqual({
       exitCode: 2,
-      output: 'ki: error: manage mcp list --format must be text or json\n'
+      output: 'ki: error: mcp list --format must be text or json\n'
     })
 
     await rm(`${box.data.path}/ki/mcp`, { recursive: true })
     await mkdir(`${box.data.path}/ki`, { recursive: true })
     await symlink(box.root.path, `${box.data.path}/ki/mcp`)
-    expect((await box.run('ki manage mcp list')).output).toContain('MCP source directory must be physical')
+    expect((await box.run('ki mcp list')).output).toContain('MCP source directory must be physical')
   })
 })
