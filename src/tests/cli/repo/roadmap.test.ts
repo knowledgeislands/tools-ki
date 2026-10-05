@@ -1292,8 +1292,13 @@ describe('[ki repo roadmap]', () => {
       'second/docs/roadmap/KI-TOOL-CLI-005-done.md',
       item({ id: 'KI-TOOL-CLI-005', status: 'done' })
     )
+    await box.project.write(
+      'absent/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+    )
     const first = await realpath(`${box.project.path}/first`)
     const second = await realpath(`${box.project.path}/second`)
+    const absent = await realpath(`${box.project.path}/absent`)
 
     const exact = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-003')
     const notDone = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-004')
@@ -1309,8 +1314,21 @@ describe('[ki repo roadmap]', () => {
       'prune',
       'KI-TOOL-CLI-005'
     ])
-    const pruned = await box.run(['ki', 'repo', '--repo', first, '--repo', second, 'roadmap', 'prune'])
+    const pruned = await box.run([
+      'ki',
+      'repo',
+      '--repo',
+      first,
+      '--repo',
+      second,
+      '--repo',
+      absent,
+      'roadmap',
+      'prune'
+    ])
     const empty = await box.run('ki repo --repo first roadmap prune')
+    const absentEmpty = await box.run(['ki', 'repo', '--repo', absent, 'roadmap', 'prune'])
+    const absentExact = await box.run(['ki', 'repo', '--repo', absent, 'roadmap', 'prune', 'KI-TOOL-CLI-003'])
 
     expect(exact).toEqual({
       exitCode: 0,
@@ -1336,6 +1354,11 @@ describe('[ki repo roadmap]', () => {
     await expect(box.project.read('second/docs/roadmap/KI-TOOL-CLI-005-done.md')).rejects.toThrow()
     await expect(box.project.read('first/docs/roadmap/KI-TOOL-CLI-004-draft.md')).resolves.toContain('status: draft')
     expect(empty).toEqual({ exitCode: 0, output: 'ki repo roadmap prune: no done work items\n' })
+    expect(absentEmpty).toEqual({ exitCode: 0, output: 'ki repo roadmap prune: no done work items\n' })
+    expect(absentExact).toEqual({
+      exitCode: 2,
+      output: `ki: error: repository ${absent} has no physical docs/roadmap directory\n`
+    })
 
     await box.project.write(
       'invalid/.ki.toml',

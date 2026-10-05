@@ -291,13 +291,16 @@ export const readWorkItems = async (
   planning: RepositoryPlanningSource
 ): Promise<readonly WorkItem[]> => (await readWorkItemRecords(repository, planning)).map(({ item }) => item)
 
+/** Reports whether the selected adapter root exists; a non-directory root still exists and remains a diagnostic. */
+export const hasWorkItemRoot = async (repository: string, planning: RepositoryPlanningSource): Promise<boolean> =>
+  (await roadmapDirectoryState(join(repository, planning.directory))) !== undefined
+
 /** Lists no inventory when a repository has not created its selected adapter root yet. One unreadable item becomes a fault; the readable items still list. */
 export const readWorkItemInventoryIfPresent = async (
   repository: string,
   planning: RepositoryPlanningSource
 ): Promise<undefined | WorkItemInventory> => {
-  const directory = join(repository, planning.directory)
-  if (!(await roadmapDirectoryState(directory))) return undefined
+  if (!(await hasWorkItemRoot(repository, planning))) return undefined
   const { records, faults } = await readWorkItemRecordInventory(repository, planning)
   return { items: records.map(({ item }) => item), faults }
 }

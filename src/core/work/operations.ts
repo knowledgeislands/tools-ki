@@ -5,6 +5,7 @@ import { KiError } from '../errors.ts'
 import { resolveRepositoryTargets } from '../repository/index.ts'
 import type { LocatedTrade } from '../trade/model.ts'
 import {
+  hasWorkItemRoot,
   pruneDoneWorkItems,
   readWorkItemInventoryIfPresent,
   readWorkItems,
@@ -273,12 +274,15 @@ export const pruneRoadmap = async (
 ): Promise<readonly RoadmapPruneResult[]> => {
   const repositories =
     id === undefined ? await resolveTargets(context, selection) : [await oneMutationTarget(context, selection, 'prune')]
-  const sources = await Promise.all(
-    repositories.map(async (repository) => ({
-      repository,
-      planning: await readRepositoryPlanningSource(repository.declaration)
-    }))
-  )
+  const sources = (
+    await Promise.all(
+      repositories.map(async (repository) => {
+        const planning = await readRepositoryPlanningSource(repository.declaration)
+        // Like the list, a bulk prune treats an absent adapter root as contributing no roadmap.
+        return id === undefined && !(await hasWorkItemRoot(repository.root, planning)) ? [] : [{ repository, planning }]
+      })
+    )
+  ).flat()
   await Promise.all(sources.map(({ repository, planning }) => readWorkItems(repository.root, planning)))
   return Promise.all(
     sources.map(async ({ repository, planning }) => ({

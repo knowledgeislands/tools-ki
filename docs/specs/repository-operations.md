@@ -112,11 +112,11 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### REPO-OPS-011 — Absent roadmap projection
 
-`ki repo roadmap list` MUST treat a selected repository with no physical directory for its declared local roadmap adapter as contributing no roadmap rather than as a diagnostic or non-zero result. It MUST continue reporting malformed, unsafe, unreadable, or misconfigured roadmap evidence as diagnostics that make the command non-zero.
+`ki repo roadmap list` and identifier-free `ki repo roadmap prune` MUST treat a selected repository with no physical directory for its declared local roadmap adapter as contributing no roadmap rather than as a diagnostic or non-zero result. They MUST continue reporting malformed, unsafe, unreadable, or misconfigured roadmap evidence as diagnostics that make the command non-zero. Pruning one explicit identifier still requires the selected repository's roadmap directory.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `treats absent Knowledge Base roadmaps as empty but diagnoses malformed and misconfigured ones` and `isolates missing, malformed, invalid-status, and unsafe roadmap entries`.
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `treats absent Knowledge Base roadmaps as empty but diagnoses malformed and misconfigured ones`, `isolates missing, malformed, invalid-status, and unsafe roadmap entries`, and `prunes only completed items across selected repositories after every target is valid`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
