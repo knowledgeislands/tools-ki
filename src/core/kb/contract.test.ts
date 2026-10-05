@@ -171,10 +171,10 @@ test('published result bounds select canonical complete lines and conservative i
   const candidate = { file: `qmd://ki-kb-alpha/${key}`, docid: `#${sha256(text).slice(0, 6)}`, score: 0.2 }
   for (const source of [
     '---\n\n---\nbody',
-    '---\nsource_path: /private/INVALID\n',
-    '---\nsource_path: "unterminated\n---\nbody',
+    '---\nmirrors: /private/INVALID\n',
+    '---\nmirrors: "unterminated\n---\nbody',
     'Plain note\n' + 'x'.repeat(1700),
-    '---\nsource_path: Records/Example.pdf\nsource_sha256: invalid\n---\nbody'
+    '---\nmirrors: kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: invalid\n---\nbody'
   ]) {
     base.documents[key]!.sha256 = sha256(source)
     const hit = { ...candidate, docid: `#${sha256(source).slice(0, 6)}` }

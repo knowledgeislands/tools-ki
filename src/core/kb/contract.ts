@@ -262,11 +262,13 @@ const provenance = (source: string) => {
     malformed: parsed.errors.length > 0 || !record(fields)
   })
 }
-const safeProvenance = (path: string | null): string | null =>
+const safeMirror = (path: string | null): string | null =>
   path &&
   path.length <= 1024 &&
   !/[\\:]/.test(path) &&
   !hasControl(path) &&
+  path.split('/').length > 1 &&
+  path.split('/')[0]!.endsWith('-sources') &&
   path.split('/').every((part) => Boolean(part) && part !== '.' && part !== '..')
     ? path
     : null
@@ -340,8 +342,9 @@ export const authenticateResults = (
         line_start: start + 1,
         line_end: end,
         mirror_content: label.mirror_content,
-        source_path: safeProvenance(label.source_path),
-        source_sha256: label.source_sha256 && /^[0-9a-fA-F]{64}$/.test(label.source_sha256) ? label.source_sha256 : null
+        mirrors: safeMirror(label.mirrors),
+        mirror_type: label.mirror_type,
+        mirror_sha256: label.mirror_sha256 && /^[0-9a-fA-F]{64}$/.test(label.mirror_sha256) ? label.mirror_sha256 : null
       }
     })
     .filter(

@@ -121,7 +121,7 @@ test('isolates fresh projection and authenticates every visible field from local
     line_start: 3,
     line_end: 4,
     mirror_content: null,
-    source_path: null
+    mirrors: null
   })
   const first = mapping.generation
   expect((await box.run('ki kb index --kb alpha')).exitCode).toBe(0)
@@ -265,14 +265,24 @@ test('mirror labels remain local, conservative and free of unsafe private declar
   const { box } = await fixture()
   const body = `# Mirror\n\n${'canonical fact '.repeat(40)}\n`
   for (const [header, label, path] of [
-    ['source_path: Records/Example.pdf\nsource_sha256: ' + 'a'.repeat(64), 'extract', 'Records/Example.pdf'],
-    ['source_path: /private/CANARY.pdf\nsource_sha256: ' + 'a'.repeat(64), 'unknown', null],
     [
-      'source_path: /private/CANARY.pdf\nsource_path: Records/Example.pdf\nsource_sha256: ' + 'a'.repeat(64),
+      'mirrors: kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ' + 'a'.repeat(64),
+      'extract',
+      'kit-alpha-sources/Records/Example.pdf'
+    ],
+    ['mirrors: /private/CANARY.pdf\nmirror_type: summarised\nmirror_sha256: ' + 'a'.repeat(64), 'unknown', null],
+    [
+      'mirrors: /private/CANARY.pdf\nmirrors: kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ' +
+        'a'.repeat(64),
       'unknown',
       null
     ],
-    ['"source_path": Records/Example.pdf\nsource_sha256: ' + 'a'.repeat(64), 'unknown', null],
+    [
+      '"mirrors": kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ' + 'a'.repeat(64),
+      'unknown',
+      null
+    ],
+    ['source_path: kit-alpha-sources/Records/Export.txt\nsource_sha256: ' + 'a'.repeat(64), null, null],
     ['note_type: ordinary', null, null]
   ] as const) {
     await box.project.write('Resources/Note.md', `---\n${header}\n---\n${body}`)
@@ -280,13 +290,13 @@ test('mirror labels remain local, conservative and free of unsafe private declar
     const result = await box.run('ki kb search canonical --kb alpha --mode search')
     expect(result.exitCode, result.output).toBe(0)
     const note = JSON.parse(result.stdout).results[0]
-    expect(note).toMatchObject({ mirror_content: label, source_path: path })
+    expect(note).toMatchObject({ mirror_content: label, mirrors: path })
     expect(result.stdout).not.toContain('CANARY')
     expect(note.line_start).toBeGreaterThan(1)
   }
   await box.project.write(
     'Resources/Note.md',
-    `---\nsource_path: Records/Example.pdf\nsource_sha256: ${'a'.repeat(64)}\n---\n# Mirror\nshort pointer\n`
+    `---\nmirrors: kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ${'a'.repeat(64)}\n---\n# Mirror\nshort pointer\n`
   )
   expect((await box.run('ki kb index --kb alpha')).exitCode).toBe(0)
   expect(

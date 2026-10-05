@@ -83,8 +83,9 @@
             "line_start": 1,
             "line_end": 4,
             "mirror_content": null,
-            "source_path": null,
-            "source_sha256": null
+            "mirrors": null,
+            "mirror_type": null,
+            "mirror_sha256": null
           }
         ]
       }
@@ -118,8 +119,9 @@
             "line_start": 1,
             "line_end": 4,
             "mirror_content": null,
-            "source_path": null,
-            "source_sha256": null
+            "mirrors": null,
+            "mirror_type": null,
+            "mirror_sha256": null
           }
         ]
       }
@@ -153,8 +155,9 @@
             "line_start": 1,
             "line_end": 4,
             "mirror_content": null,
-            "source_path": null,
-            "source_sha256": null
+            "mirrors": null,
+            "mirror_type": null,
+            "mirror_sha256": null
           }
         ]
       }
@@ -240,8 +243,9 @@
             "line_start": 1,
             "line_end": 4,
             "mirror_content": null,
-            "source_path": null,
-            "source_sha256": null
+            "mirrors": null,
+            "mirror_type": null,
+            "mirror_sha256": null
           }
         ]
       }
@@ -275,8 +279,9 @@
             "line_start": 1,
             "line_end": 4,
             "mirror_content": null,
-            "source_path": null,
-            "source_sha256": null
+            "mirrors": null,
+            "mirror_type": null,
+            "mirror_sha256": null
           }
         ]
       }
@@ -310,8 +315,9 @@
             "line_start": 1,
             "line_end": 4,
             "mirror_content": null,
-            "source_path": null,
-            "source_sha256": null
+            "mirrors": null,
+            "mirror_type": null,
+            "mirror_sha256": null
           }
         ]
       }
