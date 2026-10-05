@@ -4,7 +4,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 ## Pre-1.0 baseline
 
-The source checkout prepares `v0.6.0`; publication remains a separate action. Domain imports and extracted type leaves keep the dependency graph acyclic, enforced by a resolved-graph boundary gate with a supported isolated compiler and deliberate failure fixtures.
+This baseline describes the `v0.6.0` release. Domain imports and extracted type leaves keep the dependency graph acyclic, enforced by a resolved-graph boundary gate with a supported isolated compiler and deliberate failure fixtures.
 
 ### Knowledge Base search
 
