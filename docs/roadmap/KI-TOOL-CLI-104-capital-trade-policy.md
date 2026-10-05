@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T10:00:00Z
-updated_at: 2026-10-06T10:00:00Z
+updated_at: 2026-10-06T11:30:00Z
 ---
 
 # Capital trade policy
@@ -81,3 +81,7 @@ None beyond this record.
 ### Cross-repository relationship
 
 This item is blocked by `knowledgeislands/ki-arcadia-principal` `KI-ARCADIA-GOV-016`, which settles the policy authority and schema. Release B ships together with `knowledgeislands/ki-agentic-harness` `KI-HARNESS-GOV-122`, because the harness rubric parses routes independently.
+
+### Open owner question
+
+Release authority for A, B and C: whether each release may be cut once its verification passes, or whether the owner triggers each one. Until answered, the Boundary applies and no release is cut or published without the owner's request.
