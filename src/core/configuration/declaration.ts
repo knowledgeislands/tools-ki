@@ -139,7 +139,6 @@ const projectShapes = [
   'ki-repo-harness',
   'ki-repo-homebrew-tap',
   'ki-repo-mcp',
-  'ki-repo-plugins',
   'ki-repo-specifications',
   'ki-repo-tools',
   'ki-repo-website'

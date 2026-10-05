@@ -25,7 +25,7 @@ This record separates five factorisation dimensions: repository structure; autho
 - `ki-agentic-harness` owns the reusable agent-facing capabilities it publishes and generic MCP governance, binding semantics, and conformance assets. It does not contain or own executable MCP products merely because those products consume its governance.
 - `tools-ki` owns generic repository host mechanics and the public `ki` command grammar. `ki-techne-harness` owns Techne execution-harness applications, controller and execution-fabric implementation, packaging, deployment, and provider adapters. `tools-techne` owns the independently released `techne` operator command.
 - Each application, tool, and MCP product repository owns its executable source, behaviour, provider policy, schema, trust boundary, compatibility, tests, build identity, release, and lifecycle. `apps-observatory` owns the Observatory application and governed operator experience.
-- `ki-website` owns public editorial publication; `ki-plugins` owns generated plugin packaging; `homebrew-tap` owns Homebrew formula acceptance and distribution. None acquires the authority of projected or distributed source.
+- `ki-website` owns public editorial publication; `homebrew-tap` owns Homebrew formula acceptance and distribution. None acquires the authority of projected or distributed source.
 - Dotfiles owns personal environment declarations, binding selection, and runtime registration. Each native provider owns its mutable native state.
 - Before overall V1, `ki-specifications` is a dormant container for possible portable contracts. Repository-level specifications remain with their repository owners; no KI-wide KIP, KIS, schema, or conformance contract is an active prerequisite.
 
