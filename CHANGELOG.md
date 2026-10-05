@@ -10,6 +10,7 @@ The source checkout prepares `v0.6.0`; publication remains a separate action. Do
 
 - `ki registry add --search-boundary <id>` explicitly assigns one unique KB trust boundary; `ki kb index` builds a fresh private generation, `ki kb search` returns bounded current-source-authenticated JSON, and `ki kb status` reports endpoint liveness without index attestation. qmd 2.8.3 and local models require explicit provisioning.
 - `ki kb search` mirror labels come only from `mirrors`, `mirror_type` and `mirror_sha256`, which replace the `source_path` and `source_sha256` result fields; `source_*` provenance on derived notes never produces a mirror label.
+- `ki kb search` labels a mirror `extract` from its non-`indexed` `mirror_type` whenever the body has content, replacing the 40-word extract minimum; an empty body is a `pointer`.
 
 ### Command surface
 

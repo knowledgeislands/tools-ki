@@ -12,8 +12,6 @@ export type SourceMirrorLabel = {
   issues: readonly string[]
 }
 
-export const MINIMUM_MIRROR_WORDS = 40
-
 const MIRROR_KEYS = ['mirrors', 'mirror_type', 'mirror_sha256']
 
 /** Conservative eligibility check, not a YAML parser. Quoted values remain supported. */
@@ -52,6 +50,8 @@ export const classifySourceMirror = ({
     .replace(/!?\[\[[\s\S]*?\]\]/g, '')
     .replace(/^\s*\[[^\]]+\]:.*$/gm, '')
     .replace(/https?:\/\/\S+/g, '')
+    .replace(/`[^`\n]*`/g, '')
+    .replace(/^\s*[*_]*[\p{L}\p{N} ]{1,40}:[*_]*\s*$/gmu, '')
   const wordCount = text.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu)?.length ?? 0
   const empty: SourceMirrorLabel = {
     mirror_content: null,
@@ -82,14 +82,9 @@ export const classifySourceMirror = ({
   if (!type) issues.push(`mirror_type must be one of ${MIRROR_TYPES.join(', ')}`)
   if (!checksum || !/^[0-9a-fA-F]{64}$/.test(checksum)) issues.push('missing or invalid mirror_sha256')
   const declarationValid = !issues.length
-  if (type !== 'indexed' && wordCount < MINIMUM_MIRROR_WORDS)
-    issues.push(`extract has fewer than ${MINIMUM_MIRROR_WORDS} words`)
+  if (type !== 'indexed' && !wordCount) issues.push('mirror body has no content')
   return {
-    mirror_content: !declarationValid
-      ? 'unknown'
-      : type !== 'indexed' && wordCount >= MINIMUM_MIRROR_WORDS
-        ? 'extract'
-        : 'pointer',
+    mirror_content: !declarationValid ? 'unknown' : type !== 'indexed' && wordCount ? 'extract' : 'pointer',
     mirrors: path,
     mirror_type: type,
     mirror_sha256: checksum,

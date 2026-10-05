@@ -27,19 +27,21 @@ test('source provenance is a separate relationship and never makes a mirror', ()
   expect(ambiguousMirrorFrontmatter('source_path: *alias\nsource_sha256: &checksum abc')).toBe(false)
 })
 
-test('recognized declarations distinguish minimum extracts from pointers without attesting fidelity', () => {
+test('mirror_type decides extract or pointer without attesting fidelity', () => {
   expect(classifySourceMirror({ fields, body: extract })).toMatchObject({
     mirror_content: 'extract',
     mirrors: fields.mirrors,
     mirror_type: 'summarised',
     mirror_sha256: fields.mirror_sha256,
-    word_count: 40,
     issues: []
   })
-  expect(classifySourceMirror({ fields, body: 'See the source.' })).toMatchObject({
-    mirror_content: 'pointer',
-    issues: ['extract has fewer than 40 words']
+  expect(classifySourceMirror({ fields, body: 'MacBook 16-inch, £2,159.10.' })).toMatchObject({
+    mirror_content: 'extract',
+    issues: []
   })
+  expect(
+    classifySourceMirror({ fields, body: '# Example.pdf\n\n**Source:** `kit-example-sources/Records/Example.pdf`\n' })
+  ).toMatchObject({ mirror_content: 'pointer', word_count: 0, issues: ['mirror body has no content'] })
   const { mirror_sha256: _checksum, ...unhashed } = fields
   expect(classifySourceMirror({ fields: unhashed, body: extract }).mirror_content).toBe('unknown')
   expect(classifySourceMirror({ fields: { ...fields, mirror_sha256: 'forged' }, body: extract }).mirror_content).toBe(
@@ -47,7 +49,7 @@ test('recognized declarations distinguish minimum extracts from pointers without
   )
 })
 
-test('mirror_type is required and indexed mirrors are exempt from the extract minimum', () => {
+test('mirror_type is required and indexed mirrors may have no body', () => {
   for (const mirror_type of [undefined, 'pointer', 'full', 'Summarised'])
     expect(classifySourceMirror({ fields: { ...fields, mirror_type }, body: extract })).toMatchObject({
       mirror_content: 'unknown',
@@ -56,10 +58,11 @@ test('mirror_type is required and indexed mirrors are exempt from the extract mi
   expect(
     classifySourceMirror({ fields: { ...fields, mirror_type: 'indexed' }, body: 'Timesheet for April.' })
   ).toMatchObject({ mirror_content: 'pointer', mirror_type: 'indexed', issues: [] })
+  expect(classifySourceMirror({ fields: { ...fields, mirror_type: 'indexed' }, body: '' }).issues).toEqual([])
 })
 
-test('headings, links and comments cannot manufacture an extract', () => {
-  const body = `# ${extract}\n\n[${extract}](Records/Example.pdf)\n[[Records/Example|${extract}]]\n<!-- ${extract} -->`
+test('headings, links, code, labels and comments cannot manufacture an extract', () => {
+  const body = `# ${extract}\n\n[${extract}](Records/Example.pdf)\n[[Records/Example|${extract}]]\n<!-- ${extract} -->\n\`${extract}\`\nOther source files:`
   expect(classifySourceMirror({ fields, body })).toMatchObject({ mirror_content: 'pointer', word_count: 0 })
 })
 
@@ -105,7 +108,7 @@ test('raw provenance grammar cannot accept last-wins, quoted-key, merge, flow or
 test('byte-vendored canonical mirror helper retains frozen upstream receipt', async () => {
   const bytes = await readFile(new URL('./source-mirrors.ts', import.meta.url))
   expect(createHash('sha256').update(bytes).digest('hex')).toBe(
-    'df7e86d4d0cf3197f8d919d8a9624adab5b550b3eb36ab6cba5d5c7c83f6a6f9'
+    'aeb36ba9e9840989b38f87ff81360c29239fe530ac0aed8fb43e2a0d4f134128'
   )
 })
 

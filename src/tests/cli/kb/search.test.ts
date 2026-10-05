@@ -296,7 +296,7 @@ test('mirror labels remain local, conservative and free of unsafe private declar
   }
   await box.project.write(
     'Resources/Note.md',
-    `---\nmirrors: kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ${'a'.repeat(64)}\n---\n# Mirror\nshort pointer\n`
+    `---\nmirrors: kit-alpha-sources/Records/Example.pdf\nmirror_type: summarised\nmirror_sha256: ${'a'.repeat(64)}\n---\n# Mirror\n**Source:** \`kit-alpha-sources/Records/missing.pdf\`\n`
   )
   expect((await box.run('ki kb index --kb alpha')).exitCode).toBe(0)
   expect(
