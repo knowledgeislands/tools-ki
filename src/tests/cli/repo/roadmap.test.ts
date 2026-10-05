@@ -203,7 +203,7 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('misconfigured/.ki.toml', knowledgeBaseConfiguration().replace('kb-streams', 'roadmap'))
     const unavailable = await box.run('ki repo --repo misconfigured roadmap summary')
     expect(unavailable.exitCode).toBe(1)
-    expect(unavailable.output).toContain('Knowledge Base roadmap operations require')
+    expect(unavailable.output).toContain('[skills.ki-work].adapter = "roadmap" does not apply to repo_type = "kb"')
     expect(unavailable.output).toMatch(/│ misconfigured\s+│\s+\? │/)
     expect(unavailable.output).not.toContain('No roadmap:')
   })
@@ -278,6 +278,55 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).not.toContain('unsupported or repeated field note_type')
   })
 
+  test('resolves roadmaps only from the declared work adapter and its adapter table', async () => {
+    const box = await sandbox()
+    const project =
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+    await box.project.write('undeclared/.ki.toml', project)
+    await box.project.write('undeclared/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    await box.project.write(
+      'remote/.ki.toml',
+      `${project}\n[skills.ki-work]\nadapter = "github-issues"\n\n[skills.ki-work-github-issues]\n`
+    )
+    await box.project.write('remote/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    await box.project.write('untabled/.ki.toml', `${project}\n[skills.ki-work]\nadapter = "roadmap"\n`)
+    await box.project.write('unknown/.ki.toml', `${project}\n[skills.ki-work]\nadapter = "jira"\n`)
+    await box.project.write(
+      'inapplicable/.ki.toml',
+      `${project}\n[skills.ki-work]\nadapter = "kb-streams"\n\n[skills.ki-repo-kb-streams]\n`
+    )
+    const undeclared = await realpath(`${box.project.path}/undeclared`)
+
+    const listed = await box.run('ki repo --repo undeclared --repo remote roadmap list --no-icons')
+    const pruned = await box.run('ki repo --repo undeclared --repo remote roadmap prune')
+    const exact = await box.run('ki repo --repo undeclared roadmap prune KI-TOOL-CLI-003')
+    const moved = await box.run('ki repo --repo remote roadmap promote KI-TOOL-CLI-003')
+    const untabled = await box.run('ki repo --repo untabled roadmap list')
+    const unknown = await box.run('ki repo --repo unknown roadmap prune')
+    const inapplicable = await box.run('ki repo --repo inapplicable roadmap list')
+
+    expect(listed.exitCode).toBe(0)
+    expect(listed.output).toContain('no roadmap')
+    expect(listed.output).not.toContain('KI-TOOL-CLI-003')
+    expect(pruned).toEqual({ exitCode: 0, output: 'ki repo roadmap prune: no done work items\n' })
+    expect(exact).toEqual({
+      exitCode: 2,
+      output: `ki: error: repository ${undeclared} declares no local roadmap adapter\n`
+    })
+    expect(moved.exitCode).toBe(2)
+    expect(moved.output).toContain('declares no local roadmap adapter')
+    expect(untabled.exitCode).toBe(1)
+    expect(untabled.output).toContain('[skills.ki-work].adapter = "roadmap" requires [skills.ki-work-roadmap]')
+    expect(unknown.exitCode).toBe(2)
+    expect(unknown.output).toContain('[skills.ki-work].adapter must be one of "roadmap", "kb-streams"')
+    expect(inapplicable.exitCode).toBe(1)
+    expect(inapplicable.output).toContain(
+      '[skills.ki-work].adapter = "kb-streams" does not apply to repo_type = "project"'
+    )
+    await expect(box.project.read('undeclared/docs/roadmap/KI-TOOL-CLI-003-done.md')).resolves.toContain('status: done')
+    await expect(box.project.read('remote/docs/roadmap/KI-TOOL-CLI-003-done.md')).resolves.toContain('status: done')
+  })
+
   test('treats absent Knowledge Base roadmaps as empty but diagnoses malformed and misconfigured ones', async () => {
     const box = await sandbox()
     const configuration = knowledgeBaseConfiguration()
@@ -317,9 +366,7 @@ describe('[ki repo roadmap]', () => {
     expect(malformed.exitCode).toBe(1)
     expect(malformed.output).toContain('has an invalid lifecycle status')
     expect(misconfigured.exitCode).toBe(1)
-    expect(misconfigured.output).toContain(
-      'Knowledge Base roadmap operations require [skills.ki-work].adapter = "kb-streams"'
-    )
+    expect(misconfigured.output).toContain('[skills.ki-work].adapter = "roadmap" does not apply to repo_type = "kb"')
     expect(repeated.exitCode).toBe(1)
     expect(repeated.output).toContain('has unsupported or repeated field title')
     expect(structuredCommon.exitCode).toBe(1)

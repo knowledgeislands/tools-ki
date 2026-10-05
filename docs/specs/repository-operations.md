@@ -262,6 +262,16 @@ _Verify:_ `src/tests/cli/repo/store-scan.test.ts` — `warns about undeclared di
 
 _Evidence:_ The named in-process CLI tests cover current, explicit, and estate selection; Projects and Knowledge Bases; declared and absent stores; unchanged files; unsafe paths; and warning versus diagnostic exit status without network access.
 
+### REPO-OPS-026 — Declared roadmap adapter
+
+`ki repo roadmap` and `ki batch` MUST resolve a repository's local roadmap only from its declared `[skills.ki-work].adapter` and the matching adapter table: `roadmap` with `[skills.ki-work-roadmap]` in a Project selects `docs/roadmap/`, and `kb-streams` with `[skills.ki-repo-kb-streams]` in a Knowledge Base selects `Streams/Roadmap/`. They MUST NOT infer a roadmap from a directory. A repository without `[skills.ki-work]`, or one declaring the remote `github-issues` or `linear` adapter, MUST contribute no local roadmap to listing, statistics, and identifier-free pruning, and MUST fail an operation on one explicit work item. An unknown adapter, an adapter inapplicable to the repository kind, or a missing adapter table MUST be a diagnostic that makes the command non-zero.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `resolves roadmaps only from the declared work adapter and its adapter table` and `treats absent Knowledge Base roadmaps as empty but diagnoses malformed and misconfigured ones`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.
