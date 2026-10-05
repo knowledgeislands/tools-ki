@@ -69,7 +69,7 @@
         },
         {
           "invocation": "ki diag [--full]",
-          "description": "Print share-safe tool/version, proven local/release/unknown installation mode, executing host platform and architecture, runtime/version, configuration and registry status, and counts without changing state. With --full, include local paths, identities, and detailed configuration diagnostics. It does not inspect repository declarations or projections."
+          "description": "Print share-safe tool/version, proven local/release/unknown installation mode, executing host platform and architecture, runtime/version, configuration and registry status, and counts without changing state. With --full, include local paths, identities, and detailed configuration diagnostics. It does not inspect repository declarations or projections. Local provenance requires a resolved development checkout matching this tool's source/package layout and a Git checkout or worktree marker. Copied source without that evidence reports unknown; a source URL alone is insufficient."
         },
         {
           "invocation": "ki doctor",

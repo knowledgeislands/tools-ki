@@ -1,5 +1,6 @@
 import { realpath, rm, symlink, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -22,6 +23,74 @@ visibility = "private"
 `
 
 describe('[ki diag]', () => {
+  test('proves checkout identity from resolved entrypoints and refuses copied or incomplete source', async () => {
+    const box = await sandbox()
+    const fixture = async (name: string): Promise<string> => {
+      await box.root.write(`${name}/package.json`, JSON.stringify({ name: '@knowledgeislands/ki' }))
+      await box.root.write(`${name}/src/main.ts`, '// source entrypoint')
+      await box.root.write(`${name}/bin/ki`, '#!/usr/bin/env bun')
+      return join(box.root.path, name, 'src/main.ts')
+    }
+    const classify = async (entrypoint: string) =>
+      (await box.run('ki diag', { entrypointUrl: pathToFileURL(entrypoint).href })).output
+    const source = await fixture('checkout')
+    await box.root.mkdir('checkout/.git')
+    expect(await classify(source)).toContain('Installation: local')
+    await symlink(source, join(box.root.path, 'linked-entrypoint.ts'))
+    expect(await classify(join(box.root.path, 'linked-entrypoint.ts'))).toContain('Installation: local')
+    const worktree = await fixture('worktree')
+    await box.root.mkdir('git-admin')
+    await box.root.write('worktree/.git', 'gitdir: ../git-admin\n')
+    expect(await classify(worktree)).toContain('Installation: local')
+    await box.root.write('worktree/.git', 'gitdir: ../git-admin\r\n')
+    expect(await classify(worktree)).toContain('Installation: local')
+    expect(await classify(await fixture('copied'))).toContain('Installation: unknown')
+    expect(await classify(join(box.root.path, 'unavailable/src/main.ts'))).toContain('Installation: unknown')
+    const release = await box.run('ki diag', { entrypointUrl: 'file:///$bunfs/root/main.js' })
+    expect(release.output).toContain('Installation: release')
+    const invalidUrl = await box.run('ki diag', { entrypointUrl: 'https://example.invalid/main.ts' })
+    expect(invalidUrl.output).toContain('Installation: unknown')
+    for (const name of [
+      'wrong-entrypoint',
+      'directory-entrypoint',
+      'directory-manifest',
+      'directory-launcher',
+      'wrong-package',
+      'malformed-package',
+      'git-link',
+      'bad-worktree',
+      'file-gitdir'
+    ]) {
+      const entrypoint = await fixture(name)
+      await box.root.mkdir(`${name}/.git`)
+      let observed = entrypoint
+      if (name === 'wrong-entrypoint') {
+        await box.root.write(`${name}/copied-main.ts`, '// copied source')
+        observed = join(box.root.path, name, 'copied-main.ts')
+      } else if (name === 'directory-entrypoint') {
+        await unlink(entrypoint)
+        await box.root.mkdir(`${name}/src/main.ts`)
+      } else if (name === 'directory-manifest') {
+        await unlink(join(box.root.path, name, 'package.json'))
+        await box.root.mkdir(`${name}/package.json`)
+      } else if (name === 'directory-launcher') {
+        await unlink(join(box.root.path, name, 'bin/ki'))
+        await box.root.mkdir(`${name}/bin/ki`)
+      } else if (name === 'wrong-package')
+        await box.root.write(`${name}/package.json`, JSON.stringify({ name: 'copied-tool' }))
+      else if (name === 'malformed-package') await box.root.write(`${name}/package.json`, '{')
+      else {
+        await rm(join(box.root.path, name, '.git'), { recursive: true })
+        if (name === 'git-link') await symlink(join(box.root.path, 'git-admin'), join(box.root.path, name, '.git'))
+        else if (name === 'bad-worktree') await box.root.write(`${name}/.git`, 'not a gitdir marker\n')
+        else {
+          await box.root.write('git-admin-file', 'not a directory')
+          await box.root.write(`${name}/.git`, 'gitdir: ../git-admin-file\n')
+        }
+      }
+      expect(await classify(observed), name).toContain('Installation: unknown')
+    }
+  })
   test('normalizes executing host names without treating regular fallback as release provenance', async () => {
     const box = await sandbox()
     const macos = await box.run('ki diag', { installation: 'regular', platform: 'darwin', architecture: 'x64' })

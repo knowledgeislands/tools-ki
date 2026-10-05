@@ -2,6 +2,7 @@ import { lstat, realpath } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import type { Output } from './commands/presentation/index.ts'
 import type { Fetcher } from './core/harness/acquire.ts'
+import { installationProvenance } from './core/manage/installation-provenance.ts'
 import type { Environment, KiInstallationMode, KiPaths } from './core/paths.ts'
 import { resolveKiPaths, userHome } from './core/paths.ts'
 import { type Runner, runCommand } from './core/runtime/runner.ts'
@@ -36,9 +37,11 @@ export interface ContextOptions {
   readonly stdout: Output
   readonly stderr: Output
   readonly executable: string
-  /** Entrypoints supply their proven installation provenance; callers default to regular. */
+  /** Internal update mode is independent of diagnostic provenance; callers default to regular. */
   readonly installation?: KiInstallationMode
   readonly installationProvenance?: KiContext['installationProvenance']
+  /** Process entrypoint evidence; source URLs require identified checkout markers. */
+  readonly entrypointUrl?: string
   readonly architecture?: string
   readonly runtime?: string
   readonly platform?: NodeJS.Platform
@@ -93,7 +96,7 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
     stderr: options.stderr,
     executable: options.executable,
     installation: options.installation ?? 'regular',
-    installationProvenance: options.installationProvenance ?? 'unknown',
+    installationProvenance: options.installationProvenance ?? installationProvenance(options.entrypointUrl),
     architecture: options.architecture ?? process.arch,
     runtime: options.runtime ?? hostRuntime(),
     platform: options.platform ?? process.platform,

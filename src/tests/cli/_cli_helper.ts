@@ -209,6 +209,7 @@ export interface Sandbox {
       readonly executable?: string
       readonly installation?: KiInstallationMode
       readonly installationProvenance?: 'local' | 'release' | 'unknown'
+      readonly entrypointUrl?: string
       readonly architecture?: string
       readonly runtime?: string
       readonly platform?: NodeJS.Platform
@@ -286,6 +287,7 @@ const create = async (): Promise<Sandbox> => {
       readonly executable?: string
       readonly installation?: KiInstallationMode
       readonly installationProvenance?: 'local' | 'release' | 'unknown'
+      readonly entrypointUrl?: string
       readonly architecture?: string
       readonly runtime?: string
       readonly platform?: NodeJS.Platform
@@ -317,6 +319,7 @@ const create = async (): Promise<Sandbox> => {
       executable,
       installation: options?.installation,
       installationProvenance: options?.installationProvenance,
+      entrypointUrl: options?.entrypointUrl,
       architecture: options?.architecture,
       runtime: options?.runtime,
       ...(options?.platform === undefined ? {} : { platform: options.platform }),

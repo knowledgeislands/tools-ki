@@ -58,11 +58,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-006 — Managed-state diagnostics
 
-`ki diag` MUST report share-safe tool/version, proven local/release/unknown installation mode, executing host platform/architecture, runtime/version, configuration and registry status and counts by default. Unproven callers MUST report unknown provenance rather than infer release mode from a path or the internal regular-installation default. `--full` MAY include local paths, identities and detailed diagnostics. It MUST NOT inspect a repository declaration or its projections.
+`ki diag` MUST report share-safe tool/version, proven local/release/unknown installation mode, executing host platform/architecture, runtime/version, configuration and registry status and counts by default. Local provenance MUST identify a physically resolved development checkout through this tool's source/package markers and Git directory or valid worktree pointer; a source URL alone is insufficient. Unproven callers MUST report unknown provenance rather than infer release mode from a path or the internal regular-installation default. `--full` MAY include local paths, identities and detailed diagnostics. It MUST NOT inspect a repository declaration or its projections.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/manage/diag.test.ts` — `does not inspect repository state for user diagnostics`, `leaves direct repository projection health to ki repo diag`, `reports the entrypoint-proven installation mode`, and `normalizes executing host names without treating regular fallback as release provenance`.
+_Verify:_ `src/tests/cli/manage/diag.test.ts` — `does not inspect repository state for user diagnostics`, `leaves direct repository projection health to ki repo diag`, `reports the entrypoint-proven installation mode`, `normalizes executing host names without treating regular fallback as release provenance`, and `proves checkout identity from resolved entrypoints and refuses copied or incomplete source`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
