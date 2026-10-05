@@ -4,7 +4,7 @@ The `ki kb` commands use a rebuildable derived search cache for one explicitly r
 
 ## Register and assign
 
-Install the pinned qmd v2.8.3 engine separately using the Harness's recorded pilot and adoption guidance. `ki` does not install the engine or global launch services. If the executable is outside PATH, set `KI_QMD_BINARY` to its operator-controlled executable path.
+Install the pinned qmd v2.8.3 engine separately using the Harness's recorded pilot and adoption guidance. `ki` does not install the engine or global launch services. Bounded native execution uses POSIX process groups on the supported macOS/Linux delivery platforms; Windows native execution fails closed. If the executable is outside PATH, set `KI_QMD_BINARY` to its operator-controlled executable path.
 
 Register exactly one declared KB and explicitly assign a unique boundary:
 
@@ -22,11 +22,13 @@ Run from the registered KB root, or select its stable registry key explicitly:
 ki kb index --kb kb-key --daemon-url http://127.0.0.1:8181
 ```
 
+Declare folder overrides under `[skills.ki-repo-kb.zones]`, using the five canonical zone names and quoted `"+"`/`"-"` staging keys. Move any retired `[knowledgeislands-kb.zones]` assignment explicitly before indexing; search never silently defaults over retired authority.
+
 The command copies eligible Markdown from the KB's configured zones into an isolated owned projection, then runs qmd update and embedding for `ki-kb-kb-key`. Hidden paths, symlinks, nested repositories, undeclared folders and binary source stores never enter the engine. Declared title and description supply purpose context. Output records the generated mapping path, configuration and database paths.
 
 The mapping is machine-local state under the KI state directory. It uses schema `ki/kb-search/v1`, binds registry identity, physical root, explicit boundary and independent index, and records content digests. New derived generations are created without overwriting unmanaged paths; retained generations are caches rather than originals. Refresh after editing notes or repository scope. A stale, invalid or missing mapping fails clearly.
 
-Provision qmd 2.8.3 and its three pinned GGUF files explicitly before indexing. The generated config points to already-present local files under `KI_CACHE_HOME/qmd/models`; reads never download models. Lexical search requires no model, vector requires embedding, native CLI hybrid requires all three, and HTTP hybrid requires embedding and reranking. Missing assets fail clearly.
+Provision qmd 2.8.3 at the documented source revision and its three recorded GGUF files explicitly before indexing. The runtime checks the reported version and any reported short revision, plus regular nonempty local model files; it does not cryptographically attest the engine or recalculate multi-gigabyte model checksums on every search. Verify provisioned assets against the Harness pilot receipt. The generated config points to already-present local files under `KI_CACHE_HOME/qmd/models`; reads never download models. Lexical search requires no model, vector requires embedding, native CLI hybrid requires all three, and HTTP hybrid requires embedding and reranking. Missing assets fail clearly.
 
 ## Provision one loopback daemon
 

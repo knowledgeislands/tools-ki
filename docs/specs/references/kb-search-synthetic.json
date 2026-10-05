@@ -1,0 +1,320 @@
+{
+  "pin": "facd35e01359e59d938bc9418e93fb9318addee3",
+  "fixture_root": "/private/tmp/ki-tools-qmd-integration-S26np0",
+  "evidence": [
+    {
+      "id": "alpha",
+      "operation": "index",
+      "mode": null,
+      "exit": 0,
+      "milliseconds": 2456,
+      "response": {
+        "mapping": "/private/tmp/ki-tools-qmd-integration-S26np0/state/search/alpha/mapping.json",
+        "schema": "ki/kb-search/v1",
+        "registry_id": "alpha",
+        "repository": "https://github.com/example/alpha",
+        "root": "/private/tmp/ki-tools-qmd-integration-S26np0/alpha",
+        "trust_boundary": "alpha-owner",
+        "index": "ki-kb-alpha",
+        "generation": "480d742b-8668-48fe-b7de-18a2d88b3a5c",
+        "engine": {
+          "name": "qmd",
+          "version": "2.8.3",
+          "revision": "facd35e01359e59d938bc9418e93fb9318addee3"
+        },
+        "collections": [
+          "ki-kb-alpha"
+        ],
+        "purpose": {
+          "title": "alpha",
+          "description": "Synthetic isolated integration fixture"
+        },
+        "zones": {
+          "Calendar": "Calendar",
+          "Pillars": "Pillars",
+          "Resources": "Resources",
+          "Streams": "Streams",
+          "Admin": "Admin",
+          "inbound": "+",
+          "outbound": "-"
+        },
+        "declaration_sha256": "a597ac8bbaa63ee217fd41a06a68a788d457be3db7f39a53760a83821144845f",
+        "projection": "/private/tmp/ki-tools-qmd-integration-S26np0/state/search/alpha/generations/480d742b-8668-48fe-b7de-18a2d88b3a5c/projection",
+        "config": "/private/tmp/ki-tools-qmd-integration-S26np0/state/search/alpha/generations/480d742b-8668-48fe-b7de-18a2d88b3a5c/config/ki-kb-alpha.yml",
+        "database": "/private/tmp/ki-tools-qmd-integration-S26np0/state/search/alpha/generations/480d742b-8668-48fe-b7de-18a2d88b3a5c/index.sqlite",
+        "model_cache": "/private/tmp/ki-harness-qmd-pilot-20261005-runtime/cache",
+        "daemon_url": null,
+        "source_store_declared": false,
+        "source_store_binding_declared": false,
+        "documents": {
+          "documents/66fc6e781d329cc5dfe8101785ba48364df95174fd1658d096f158c94d4223d6.md": {
+            "path": "Resources/Mixed Case Note.md",
+            "sha256": "7b5d7d5c0ce07a56a2c0aeb2b093ce387637816c1894075f39b437cc5b9811f0"
+          }
+        }
+      }
+    },
+    {
+      "id": "alpha",
+      "operation": "search",
+      "mode": "search",
+      "exit": 0,
+      "milliseconds": 245,
+      "response": {
+        "schema": "ki/kb-search-result/v1",
+        "registry_id": "alpha",
+        "trust_boundary": "alpha-owner",
+        "index": "ki-kb-alpha",
+        "generation": "480d742b-8668-48fe-b7de-18a2d88b3a5c",
+        "mode": "search",
+        "profile": "cli-lexical",
+        "candidate_limit": 200,
+        "exhaustive": false,
+        "truncated": false,
+        "source_store_declared": false,
+        "source_store_binding_declared": false,
+        "results": [
+          {
+            "path": "Resources/Mixed Case Note.md",
+            "title": "alpha Budget",
+            "snippet": "# alpha Budget\n\nalpha budget approval requires a signed grant from the designated owner.\n",
+            "score": 0,
+            "docid": "#7b5d7d",
+            "line_start": 1,
+            "line_end": 4,
+            "mirror_content": null,
+            "source_path": null,
+            "source_sha256": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "alpha",
+      "operation": "search",
+      "mode": "vsearch",
+      "exit": 0,
+      "milliseconds": 5688,
+      "response": {
+        "schema": "ki/kb-search-result/v1",
+        "registry_id": "alpha",
+        "trust_boundary": "alpha-owner",
+        "index": "ki-kb-alpha",
+        "generation": "480d742b-8668-48fe-b7de-18a2d88b3a5c",
+        "mode": "vsearch",
+        "profile": "cli-vector",
+        "candidate_limit": 200,
+        "exhaustive": false,
+        "truncated": false,
+        "source_store_declared": false,
+        "source_store_binding_declared": false,
+        "results": [
+          {
+            "path": "Resources/Mixed Case Note.md",
+            "title": "alpha Budget",
+            "snippet": "# alpha Budget\n\nalpha budget approval requires a signed grant from the designated owner.\n",
+            "score": 0.62,
+            "docid": "#7b5d7d",
+            "line_start": 1,
+            "line_end": 4,
+            "mirror_content": null,
+            "source_path": null,
+            "source_sha256": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "alpha",
+      "operation": "search",
+      "mode": "query",
+      "exit": 0,
+      "milliseconds": 3397,
+      "response": {
+        "schema": "ki/kb-search-result/v1",
+        "registry_id": "alpha",
+        "trust_boundary": "alpha-owner",
+        "index": "ki-kb-alpha",
+        "generation": "480d742b-8668-48fe-b7de-18a2d88b3a5c",
+        "mode": "query",
+        "profile": "cli-expanded-hybrid-rerank",
+        "candidate_limit": 200,
+        "exhaustive": false,
+        "truncated": false,
+        "source_store_declared": false,
+        "source_store_binding_declared": false,
+        "results": [
+          {
+            "path": "Resources/Mixed Case Note.md",
+            "title": "alpha Budget",
+            "snippet": "# alpha Budget\n\nalpha budget approval requires a signed grant from the designated owner.\n",
+            "score": 1,
+            "docid": "#7b5d7d",
+            "line_start": 1,
+            "line_end": 4,
+            "mirror_content": null,
+            "source_path": null,
+            "source_sha256": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "omega",
+      "operation": "index",
+      "mode": null,
+      "exit": 0,
+      "milliseconds": 1997,
+      "response": {
+        "mapping": "/private/tmp/ki-tools-qmd-integration-S26np0/state/search/omega/mapping.json",
+        "schema": "ki/kb-search/v1",
+        "registry_id": "omega",
+        "repository": "https://github.com/example/omega",
+        "root": "/private/tmp/ki-tools-qmd-integration-S26np0/omega",
+        "trust_boundary": "omega-owner",
+        "index": "ki-kb-omega",
+        "generation": "3cdb2f01-9f71-4aed-a1d7-6c1bdb3b984a",
+        "engine": {
+          "name": "qmd",
+          "version": "2.8.3",
+          "revision": "facd35e01359e59d938bc9418e93fb9318addee3"
+        },
+        "collections": [
+          "ki-kb-omega"
+        ],
+        "purpose": {
+          "title": "omega",
+          "description": "Synthetic isolated integration fixture"
+        },
+        "zones": {
+          "Calendar": "Calendar",
+          "Pillars": "Pillars",
+          "Resources": "Resources",
+          "Streams": "Streams",
+          "Admin": "Admin",
+          "inbound": "+",
+          "outbound": "-"
+        },
+        "declaration_sha256": "087f69abe23855f6345ec0601a0d03575fa90b4da86a34ff9f43a8e994a76020",
+        "projection": "/private/tmp/ki-tools-qmd-integration-S26np0/state/search/omega/generations/3cdb2f01-9f71-4aed-a1d7-6c1bdb3b984a/projection",
+        "config": "/private/tmp/ki-tools-qmd-integration-S26np0/state/search/omega/generations/3cdb2f01-9f71-4aed-a1d7-6c1bdb3b984a/config/ki-kb-omega.yml",
+        "database": "/private/tmp/ki-tools-qmd-integration-S26np0/state/search/omega/generations/3cdb2f01-9f71-4aed-a1d7-6c1bdb3b984a/index.sqlite",
+        "model_cache": "/private/tmp/ki-harness-qmd-pilot-20261005-runtime/cache",
+        "daemon_url": null,
+        "source_store_declared": false,
+        "source_store_binding_declared": false,
+        "documents": {
+          "documents/66fc6e781d329cc5dfe8101785ba48364df95174fd1658d096f158c94d4223d6.md": {
+            "path": "Resources/Mixed Case Note.md",
+            "sha256": "267eb0f032ff720165422ee70b26e1ebb2b835efe4e689e821581c529999ac2b"
+          }
+        }
+      }
+    },
+    {
+      "id": "omega",
+      "operation": "search",
+      "mode": "search",
+      "exit": 0,
+      "milliseconds": 245,
+      "response": {
+        "schema": "ki/kb-search-result/v1",
+        "registry_id": "omega",
+        "trust_boundary": "omega-owner",
+        "index": "ki-kb-omega",
+        "generation": "3cdb2f01-9f71-4aed-a1d7-6c1bdb3b984a",
+        "mode": "search",
+        "profile": "cli-lexical",
+        "candidate_limit": 200,
+        "exhaustive": false,
+        "truncated": false,
+        "source_store_declared": false,
+        "source_store_binding_declared": false,
+        "results": [
+          {
+            "path": "Resources/Mixed Case Note.md",
+            "title": "omega Budget",
+            "snippet": "# omega Budget\n\nomega budget approval requires a signed grant from the designated owner.\n",
+            "score": 0,
+            "docid": "#267eb0",
+            "line_start": 1,
+            "line_end": 4,
+            "mirror_content": null,
+            "source_path": null,
+            "source_sha256": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "omega",
+      "operation": "search",
+      "mode": "vsearch",
+      "exit": 0,
+      "milliseconds": 4344,
+      "response": {
+        "schema": "ki/kb-search-result/v1",
+        "registry_id": "omega",
+        "trust_boundary": "omega-owner",
+        "index": "ki-kb-omega",
+        "generation": "3cdb2f01-9f71-4aed-a1d7-6c1bdb3b984a",
+        "mode": "vsearch",
+        "profile": "cli-vector",
+        "candidate_limit": 200,
+        "exhaustive": false,
+        "truncated": false,
+        "source_store_declared": false,
+        "source_store_binding_declared": false,
+        "results": [
+          {
+            "path": "Resources/Mixed Case Note.md",
+            "title": "omega Budget",
+            "snippet": "# omega Budget\n\nomega budget approval requires a signed grant from the designated owner.\n",
+            "score": 0.59,
+            "docid": "#267eb0",
+            "line_start": 1,
+            "line_end": 4,
+            "mirror_content": null,
+            "source_path": null,
+            "source_sha256": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "omega",
+      "operation": "search",
+      "mode": "query",
+      "exit": 0,
+      "milliseconds": 3628,
+      "response": {
+        "schema": "ki/kb-search-result/v1",
+        "registry_id": "omega",
+        "trust_boundary": "omega-owner",
+        "index": "ki-kb-omega",
+        "generation": "3cdb2f01-9f71-4aed-a1d7-6c1bdb3b984a",
+        "mode": "query",
+        "profile": "cli-expanded-hybrid-rerank",
+        "candidate_limit": 200,
+        "exhaustive": false,
+        "truncated": false,
+        "source_store_declared": false,
+        "source_store_binding_declared": false,
+        "results": [
+          {
+            "path": "Resources/Mixed Case Note.md",
+            "title": "omega Budget",
+            "snippet": "# omega Budget\n\nomega budget approval requires a signed grant from the designated owner.\n",
+            "score": 0.99,
+            "docid": "#267eb0",
+            "line_start": 1,
+            "line_end": 4,
+            "mirror_content": null,
+            "source_path": null,
+            "source_sha256": null
+          }
+        ]
+      }
+    }
+  ]
+}

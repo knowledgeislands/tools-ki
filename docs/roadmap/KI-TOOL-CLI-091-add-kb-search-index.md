@@ -4,12 +4,12 @@ area: CLI
 title: Add KB search index
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 0a0ab5d0ffcc4d71eaea017bbc759c90a1330007
 created_at: 2026-09-30T07:36:00Z
-updated_at: 2026-10-05T11:37:03Z
+updated_at: 2026-10-05T12:16:23Z
 ---
 
 # Add KB search index
@@ -30,9 +30,11 @@ In scope: explicit unique registry trust-boundary assignment per stable Knowledg
 
 The user explicitly approved delivery of the qmd pilot, registry authority, mirror labels and subsequent MCP search with one independently assigned trust boundary per registered Knowledge Base. The registry stable key owns identity; the new explicit `search_boundary` field owns assignment. No path, alias, Agora or basename supplies assignment authority. qmd v2.8.3 is pinned to upstream commit `facd35e01359e59d938bc9418e93fb9318addee3`; the Harness published its bounded functional go, measured synthetic pilot and exact pinned configuration contract before this Ready plan.
 
+A narrow interface publication freezes the portable mapping/response helpers and documentary contract while CLI source remains In progress. Focused interface and eight-operation native synthetic evidence pass; full CLI delivery and 100% coverage are still required before Awaiting review.
+
 ## Steps
 
-- [ ] Bind the published pinned Harness pilot and mirror-label contract, then commit this Ready plan and exact singleton outcome authorisation before implementation.
+- [x] Bind the published pinned Harness pilot and mirror-label contract, then commit this Ready plan and exact singleton outcome authorisation before implementation.
 - [ ] Extend registry parsing/rendering and explicit registration to preserve a unique assigned `search_boundary`, rejecting missing or contradictory assignments for indexing.
 - [ ] Build an exclusive private generation with a fresh database, deterministic path-hash Markdown projection and named qmd configuration for one selected registry KB, excluding symlinks, protected paths, undeclared zones, nested repositories and binary stores before qmd reads any source; retain prior owned caches without deleting sources or unmanaged state.
 - [ ] Implement bounded `ki kb index`, `ki kb search` and `ki kb status` with strict typed qmd modes, execution/output/HTTP bounds, whole-manifest current-source validation before retrieval, explicit unavailable failures, local-source provenance validation and independently generated titles/snippets/docidentities/labels.
@@ -53,11 +55,11 @@ Stable baseline tests, 100% coverage, TypeScript and ki-self passed. A later foc
 
 ## Dependencies / blocks
 
-Harness owns the pinned qmd pilot and canonical mirror labels. Their durable evidence is published in the [synthetic pilot](../../../ki-agentic-harness/docs/decisions/references/qmd-synthetic-pilot.md), [pinned search contract](../../../ki-agentic-harness/skills/repo-structure/ki-repo-kb/references/standards-search.md) and [mirror standard](../../../ki-agentic-harness/skills/repo-structure/ki-repo-kb/references/standards-source-mirrors.md); tools publishes the mapping consumed downstream by MCP search. Registry assignment is settled by current explicit user policy. No external item belongs in local `blocked_by`.
+Harness owns the pinned qmd pilot and canonical mirror labels, accepted Done in `e093d3ad08f59376b22ce18c3c74b197fe85fb85` against reviewed corrected source `b79a0941`. Their durable evidence is published in the [synthetic pilot](../../../ki-agentic-harness/docs/decisions/references/qmd-synthetic-pilot.md), [pinned search contract](../../../ki-agentic-harness/skills/repo-structure/ki-repo-kb/references/standards-search.md) and [mirror standard](../../../ki-agentic-harness/skills/repo-structure/ki-repo-kb/references/standards-source-mirrors.md); tools publishes the mapping consumed downstream by MCP search. Registry assignment is settled by current explicit user policy. No external item belongs in local `blocked_by`.
 
 ## Delegation
 
-The root coordinator assigned this repository delivery to one bounded worker, followed sequentially by MCP delivery after the CLI receipt is stable. The root independently reviews, accepts and prunes; this worker does not self-accept or prune and starts no additional writers.
+The root coordinator assigned this repository delivery to one bounded worker; the Harness worker owns MCP planning and subsequent implementation after the immutable CLI receipt. The root independently reviews, accepts and prunes; this worker does not self-accept or prune and starts no additional writers.
 
 ## Documentation impact
 

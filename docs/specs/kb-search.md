@@ -2,7 +2,7 @@
 
 This area specifies the registry-owned derived search boundary. The Harness owns qmd adoption and mirror-content policy; this repository owns its concrete CLI and generated mapping. Implementation and test evidence are pending while the pinned pilot completes.
 
-Generated model settings use absolute already-provisioned GGUF paths under `model_cache/qmd/models`; lexical mode needs no models, vector needs embedding, CLI hybrid needs all three and REST hybrid needs embedding and reranking. Missing models fail clearly before a read invokes retrieval. No read downloads models or provisions runtime state. Engine line numbers are hints; returned snippets and citations use independently selected current local line arrays.
+Generated model settings use absolute already-provisioned GGUF paths under `model_cache/qmd/models`; lexical mode needs no models, vector needs embedding, CLI hybrid needs all three and REST hybrid needs embedding and reranking. Missing models fail clearly before a read invokes retrieval. No read downloads models or provisions runtime state. qmd retrieval may update its private derived LLM cache; read purity means no canonical KB or registry mutation, installation, index refresh or daemon provisioning. Engine line numbers are hints; returned snippets and citations use independently selected current local line arrays. Input is limited to 10,000 documents, 1 MiB per document and 100 MiB of current source bytes; response transport is limited to 2 MiB and 200 candidates. CLI options precede an argv terminator and the literal query.
 
 ## Authority and projection
 
@@ -16,7 +16,7 @@ _Verify:_ isolated public CLI fixtures for assignment, duplicate boundaries, pro
 
 ### KB-SEARCH-002 — Authorized sources before indexing
 
-The engine MUST read only an owned projection of Markdown inside the KB's configured zones. Dot paths, root repository metadata, symlinks, nested repository checkouts, undeclared folders and binary source stores MUST be excluded before any indexing or embedding. Projection publication MUST reject unmanaged collisions and unsafe ancestry; pruning MUST only remove previously owned derived files and never original sources.
+The engine MUST read only an owned projection of Markdown inside the KB's configured zones. Authority is `[skills.ki-repo-kb.zones]`, with five canonical zone keys and quoted `"+"`/`"-"` staging keys projected as `inbound`/`outbound`; retired `[knowledgeislands-kb.zones]` is rejected for indexing until explicitly migrated. Dot paths, root repository metadata, symlinks, nested repository checkouts, undeclared folders and binary source stores MUST be excluded before any indexing or embedding. Projection publication MUST reject unmanaged collisions and unsafe ancestry; pruning MUST only remove previously owned derived files and never original sources.
 
 _Conformance:_ implementation pending
 
@@ -32,7 +32,7 @@ _Verify:_ deterministic mapping output, identity mismatch, physical-root mismatc
 
 ## Mapping wire shape
 
-`mapping.json` is generated inside the selected KB's owned search-state directory. Unknown fields or contradictory identity/path assignments are rejected. Each generation has a fresh database and a private exclusive projection; retained prior generations never become an implicit input.
+`mapping.json` is generated inside the selected KB's owned search-state directory. Unknown fields or contradictory identity/path assignments are rejected. Publication rechecks ownership and destination identity, using exclusive create or snapshot-checked atomic replacement. It does not reserve a refresh-wide lock: two valid concurrent generations may finish in either order, with the last completed valid publication becoming current. Source checks are bounded validations before and after retrieval, not an atomic filesystem snapshot or immunity to concurrent replacement. Each generation has a fresh database and a private exclusive projection; retained prior generations never become an implicit input.
 
 | Field | Type | Contract |
 | --- | --- | --- |
