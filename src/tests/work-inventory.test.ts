@@ -7,7 +7,7 @@ test('distinguishes unrequested, empty, and unavailable trade evidence in core r
   const root = await box.project.mkdir('repo')
   await box.project.write(
     'repo/.ki.toml',
-    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/repo"\n\n[skills.ki-work]\nadapter = "roadmap"\n'
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/repo"\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n'
   )
   await box.project.write(
     'repo/docs/roadmap/KI-TOOL-CLI-001-test.md',

@@ -15,7 +15,7 @@ import {
   type WorkItemHorizon,
   workItemHorizons
 } from './items.ts'
-import { type RepositoryPlanningSource, readRepositoryPlanningSource } from './planning.ts'
+import { type RepositoryPlanningSource, readDeclaredPlanningSource, readRepositoryPlanningSource } from './planning.ts'
 import { type RoadmapStatistics, roadmapStatistics } from './statistics.ts'
 
 export interface RoadmapSelection {
@@ -198,14 +198,14 @@ export const listRoadmapItems = async (
           ? declaredRepositoryIdentity(await readRepositoryDeclaration(repository.declaration))
           : undefined
         projection = repositoryUrl ? { repositoryIdentity: repositoryIdentity(repositoryUrl), repositoryUrl } : {}
-        const planning = await readRepositoryPlanningSource(repository.declaration)
-        const inventory = await readWorkItemInventoryIfPresent(repository.root, planning)
+        const planning = await readDeclaredPlanningSource(repository.declaration)
+        const inventory = planning && (await readWorkItemInventoryIfPresent(repository.root, planning))
         const items = inventory === undefined ? undefined : filterItems(inventory.items, options)
         return {
           repository: repository.root,
           ...projection,
           tradeInventory: 'not-requested',
-          ...(inventory === undefined
+          ...(planning === undefined || inventory === undefined
             ? { roadmap: 'absent' as const }
             : {
                 items,
@@ -277,9 +277,11 @@ export const pruneRoadmap = async (
   const sources = (
     await Promise.all(
       repositories.map(async (repository) => {
-        const planning = await readRepositoryPlanningSource(repository.declaration)
-        // Like the list, a bulk prune treats an absent adapter root as contributing no roadmap.
-        return id === undefined && !(await hasWorkItemRoot(repository.root, planning)) ? [] : [{ repository, planning }]
+        if (id !== undefined)
+          return [{ repository, planning: await readRepositoryPlanningSource(repository.declaration) }]
+        // Like the list, a bulk prune treats an undeclared adapter or absent adapter root as contributing no roadmap.
+        const planning = await readDeclaredPlanningSource(repository.declaration)
+        return planning && (await hasWorkItemRoot(repository.root, planning)) ? [{ repository, planning }] : []
       })
     )
   ).flat()
