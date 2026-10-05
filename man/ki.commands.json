@@ -109,7 +109,7 @@
         },
         {
           "invocation": "ki vscode check",
-          "description": "Compare chezmoi-managed VS Code workspaces and trusted-folder source state with the local KI repository registry. Explicit sources bindings join their notes workspace and trusted-client projection; legacy bindings and unbound directories are ignored. Report a source diff and exit non-zero when drift exists. This command never writes."
+          "description": "Compare chezmoi-managed VS Code workspaces and trusted-folder source state with the local KI repository registry. Explicit sources bindings join their notes workspace and trusted-client projection; legacy bindings and unbound directories are ignored. Preview removal of folder paths that no longer resolve to directories and deletion of projects with no live folders. Existing projects outside the registry and intentionally empty workspaces are preserved. Missing registered checkouts are skipped without changing the registry. Report a source diff and exit non-zero when drift exists. This command never writes."
         },
         {
           "invocation": "ki vscode sync [--write]",

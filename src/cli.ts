@@ -61,7 +61,6 @@ export const createProgram = (context: KiContext): Command => {
     new Command('help')
       .description('show general or command help')
       .argument('[command...]', 'command path')
-      .helpGroup('Operations:')
       .action((path: string[]) => {
         let selected = program
         for (const name of path) {

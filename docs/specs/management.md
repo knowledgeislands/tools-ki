@@ -138,6 +138,18 @@ _Verify:_ `src/tests/cli/manage/vscode.test.ts` — `consumes explicit sources b
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### MANAGE-018 — Obsolete VS Code project removal
+
+`ki vscode check|sync` MUST preview removal of workspace folders whose paths no longer resolve to directories and deletion of non-empty projects with no remaining live folders, applying these changes only with `sync --write` and rebuilding trusted folders from retained projects.
+
+Live folders, folder metadata, settings, custom filenames, and intentionally empty workspaces remain preserved, including projects outside the registry. Missing registered checkouts are skipped without changing registry state. A conventional project for a moved repository is regenerated for its current registered path.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/manage/vscode.test.ts` — `previews and removes obsolete projects and missing folders while preserving live workspaces`, `replaces an obsolete conventional project when its repository moves`, `removes the last obsolete project and its trust without changing the registry`, and `validates the complete source plan before deleting obsolete projects`.
+
+_Evidence:_ The named CLI contract tests exercise preview, deletion, preservation, trust removal, registry preservation, and validation before writes through the public CLI seam as part of `bun run test:coverage`.
+
 ## MCP source releases
 
 ### MANAGE-014 — Exact governed source provenance

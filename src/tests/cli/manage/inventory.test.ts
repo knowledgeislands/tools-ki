@@ -4,24 +4,24 @@ import { buildCommandInventory, renderCommandInventory } from '../../../../scrip
 import { sandbox } from '../_cli_helper.ts'
 
 const rootHelpCommands = [
-  'bootstrap',
-  'agora',
-  'kb',
-  'repo',
   'acquire',
-  'harness',
-  'registry',
-  'skill',
-  'dev',
+  'agora',
+  'bootstrap',
   'cleanup',
   'completion',
+  'dev',
   'diag',
   'docs',
   'doctor',
+  'harness',
   'help',
   'inventory',
+  'kb',
   'mcp',
+  'registry',
   'repair',
+  'repo',
+  'skill',
   'update',
   'vscode'
 ]
@@ -151,18 +151,17 @@ describe('[ki command inventory]', () => {
       ).toBe(true)
   })
 
-  test('groups root commands and orders every nested command family for discovery', async () => {
+  test('lists root and nested commands alphabetically without help groups', async () => {
     const box = await sandbox()
     const root = await box.run('ki -h')
     expect(root.exitCode).toBe(0)
     expect(root.output.startsWith('Usage: ki [options] [command]\n')).toBe(true)
     expect(commandNames(root.output)).toEqual(rootHelpCommands)
     expect(root.output).not.toContain('Common tasks:')
-    expect(root.output).toContain('Get started:\n  bootstrap')
-    expect(root.output).toContain('Work with repositories:\n  agora')
-    expect(root.output).toContain('Acquisition:\n  acquire')
-    expect(root.output).toContain('Maintain KI:\n  harness')
-    expect(root.output).toContain('Development:\n  dev')
+    expect(root.output).toContain('\nCommands:\n')
+    expect(root.output).not.toMatch(
+      /^(Get started|Work with repositories|Acquisition|Maintain KI|Development|Operations):$/m
+    )
     expect(root.output).toContain('Further help: ki help <command> · ki docs · man ki')
     expect(Math.max(...root.output.split('\n').map((line) => line.length))).toBeLessThanOrEqual(80)
     expect(await box.run('ki --help')).toEqual(root)

@@ -1,26 +1,14 @@
-/** Root help section order; Commander sorts commands within each section. */
-export const rootHelpCommandNames = [
-  'bootstrap',
-  'agora',
-  'repo',
-  'kb',
+/** Root command families; Commander sorts the complete help inventory. */
+export const rootCommandNames = [
   'acquire',
+  'agora',
+  'bootstrap',
+  'dev',
   'harness',
+  'kb',
   'registry',
-  'skill',
-  'dev'
+  'repo',
+  'skill'
 ] as const
 
-export type RootCommandName = (typeof rootHelpCommandNames)[number]
-
-export const rootHelpGroups: Record<RootCommandName, string> = {
-  bootstrap: 'Get started:',
-  agora: 'Work with repositories:',
-  repo: 'Work with repositories:',
-  kb: 'Work with repositories:',
-  acquire: 'Acquisition:',
-  harness: 'Maintain KI:',
-  registry: 'Maintain KI:',
-  skill: 'Maintain KI:',
-  dev: 'Development:'
-}
+export type RootCommandName = (typeof rootCommandNames)[number]

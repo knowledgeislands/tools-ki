@@ -6,11 +6,11 @@ This area specifies the public root interface of `ki`; see the [Specifications i
 
 ### CLI-001 — Universal command help
 
-`ki` MUST provide help at the root and every public nested command path.
+`ki` MUST provide help at the root and every public nested command path, listing commands alphabetically in one ungrouped command list while retaining purpose groups in the manual.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/root/help.test.ts` — `prints root and nested command help through universal --help`.
+_Verify:_ `src/tests/cli/root/help.test.ts` — `prints root and nested command help through universal --help`; `src/tests/cli/manage/inventory.test.ts` — `lists root and nested commands alphabetically without help groups` and `keeps the purpose-oriented manual and changelog inventories complete`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

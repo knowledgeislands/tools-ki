@@ -141,6 +141,99 @@ describe('ki vscode', () => {
     expect(trusted).toContain(`path: ${unbound}\n    clients: [claude-desktop, chatgpt-codex, claude-code]`)
   })
 
+  test('previews and removes obsolete projects and missing folders while preserving live workspaces', async () => {
+    const { box, repositories, sourceRoot } = await prepare(['alpha', 'retired'])
+    expect((await box.run('ki vscode sync --write')).exitCode).toBe(0)
+    const retired = repositories[1] as string
+    await rm(retired, { recursive: true })
+    const external = await box.root.mkdir('external-project')
+    const file = `${box.root.path}/not-a-directory`
+    await writeFile(file, 'file\n', 'utf8')
+    const mixed = JSON.stringify({
+      folders: [{ path: repositories[0], name: 'Alpha' }, { path: retired }, { path: file }],
+      settings: { 'editor.tabSize': 2 }
+    })
+    await box.root.write('chezmoi-source/workspaces/vscode/custom-multi.code-workspace', mixed)
+    await box.root.write(
+      'chezmoi-source/workspaces/vscode/external.code-workspace',
+      JSON.stringify({ folders: [{ path: external }] })
+    )
+    await box.root.write('chezmoi-source/workspaces/vscode/empty.code-workspace', '{"folders":[]}\n')
+    const retiredWorkspace = `${sourceRoot}/workspaces/vscode/kis-retired.code-workspace`
+    const trustedPath = `${sourceRoot}/.chezmoidata/trusted-folders.yaml`
+    const trustedBefore = await readFile(trustedPath, 'utf8')
+
+    for (const command of ['ki vscode check', 'ki vscode sync']) {
+      const preview = await box.run(command)
+      expect(preview.exitCode).toBe(1)
+      expect(preview.output).toContain(`--- ${retiredWorkspace}\n+++ /dev/null`)
+      expect(await readFile(retiredWorkspace, 'utf8')).toContain(retired)
+      expect(await readFile(`${sourceRoot}/workspaces/vscode/custom-multi.code-workspace`, 'utf8')).toBe(mixed)
+      expect(await readFile(trustedPath, 'utf8')).toBe(trustedBefore)
+    }
+
+    expect((await box.run('ki vscode sync --write')).exitCode).toBe(0)
+    await expect(readFile(retiredWorkspace)).rejects.toMatchObject({ code: 'ENOENT' })
+    expect(JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/custom-multi.code-workspace`, 'utf8'))).toEqual({
+      folders: [{ path: repositories[0], name: 'Alpha' }],
+      settings: { 'editor.tabSize': 2 }
+    })
+    expect(JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/external.code-workspace`, 'utf8'))).toEqual({
+      folders: [{ path: external }]
+    })
+    expect(JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/empty.code-workspace`, 'utf8'))).toEqual({
+      folders: []
+    })
+    const trusted = await readFile(trustedPath, 'utf8')
+    expect(trusted).not.toContain(retired)
+    expect(trusted).not.toContain(file)
+    expect(trusted).toContain(external)
+    expect((await box.run('ki vscode check')).exitCode).toBe(0)
+  })
+
+  test('replaces an obsolete conventional project when its repository moves', async () => {
+    const { box, repositories, sourceRoot } = await prepare(['alpha'])
+    const oldRoot = `${box.root.path}/old/alpha`
+    const workspace = `${sourceRoot}/workspaces/vscode/kis-alpha.code-workspace`
+    await writeFile(workspace, JSON.stringify({ folders: [{ path: oldRoot }] }), 'utf8')
+
+    const preview = await box.run('ki vscode sync')
+    expect(preview.exitCode).toBe(1)
+    expect(preview.output).not.toContain('+++ /dev/null')
+    expect(preview.output).toContain(oldRoot)
+    expect((await box.run('ki vscode sync --write')).exitCode).toBe(0)
+    expect(JSON.parse(await readFile(workspace, 'utf8'))).toEqual({ folders: [{ path: repositories[0] }] })
+    expect((await box.run('ki vscode check')).exitCode).toBe(0)
+  })
+
+  test('removes the last obsolete project and its trust without changing the registry', async () => {
+    const { box, repositories, sourceRoot } = await prepare(['retired'])
+    expect((await box.run('ki vscode sync --write')).exitCode).toBe(0)
+    const registryPath = `${box.state.path}/ki/registry.toml`
+    const registryBefore = await readFile(registryPath, 'utf8')
+    await rm(repositories[0] as string, { recursive: true })
+
+    expect((await box.run('ki vscode sync --write')).exitCode).toBe(0)
+    await expect(readFile(`${sourceRoot}/workspaces/vscode/kis-retired.code-workspace`)).rejects.toMatchObject({
+      code: 'ENOENT'
+    })
+    expect(await readFile(`${sourceRoot}/.chezmoidata/trusted-folders.yaml`, 'utf8')).not.toContain(repositories[0])
+    expect(await readFile(registryPath, 'utf8')).toBe(registryBefore)
+    expect((await box.run('ki vscode check')).exitCode).toBe(0)
+  })
+
+  test('validates the complete source plan before deleting obsolete projects', async () => {
+    const { box, sourceRoot } = await prepare(['alpha'])
+    const obsolete = `${sourceRoot}/workspaces/vscode/obsolete.code-workspace`
+    await writeFile(obsolete, JSON.stringify({ folders: [{ path: `${box.root.path}/missing` }] }), 'utf8')
+    setChezmoiRunner(box, sourceRoot, { templateExit: 1, templateOutput: 'template failed\n' })
+
+    const result = await box.run('ki vscode sync --write')
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain('invalid trusted-folder inventory')
+    expect(await readFile(obsolete, 'utf8')).toContain(`${box.root.path}/missing`)
+  })
+
   test('rejects unavailable chezmoi, malformed repositories, workspaces, and trusted-folder state', async () => {
     const { box, repositories, sourceRoot } = await prepare(['alpha'])
 

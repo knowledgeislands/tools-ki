@@ -1,4 +1,4 @@
-import { lstat, readdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { lstat, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, isAbsolute, join } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
@@ -28,7 +28,7 @@ interface WorkspaceDocument {
 interface SourceWrite {
   readonly path: string
   readonly before: string
-  readonly after: string
+  readonly after: string | null
 }
 
 export interface VscodeManagePort {
@@ -159,6 +159,11 @@ const renderTrustedFolders = (
   return `${source.slice(0, position)}${marker}\n${entries.join('\n')}\n`
 }
 
+const existingDirectory = async (path: string): Promise<boolean> => {
+  const state = await stat(path, { throwIfNoEntry: false })
+  return state?.isDirectory() === true
+}
+
 const buildPlan = async (
   port: VscodeManagePort,
   root: string,
@@ -166,23 +171,43 @@ const buildPlan = async (
 ): Promise<readonly SourceWrite[]> => {
   const workspaceDirectory = join(root, 'workspaces', 'vscode')
   const trustedFoldersPath = join(root, '.chezmoidata', 'trusted-folders.yaml')
-  const documents = await workspaceDocuments(workspaceDirectory)
-  const knownFolders = new Set(documents.flatMap(({ workspace }) => workspace.folders.map((folder) => folder.path)))
-  const writes: SourceWrite[] = []
-  const repositoryClients = await repositoryTrustClients(repositories)
-
+  const documents: WorkspaceDocument[] = []
+  const writes = new Map<string, SourceWrite>()
+  for (const document of await workspaceDocuments(workspaceDirectory)) {
+    const folders: WorkspaceFolder[] = []
+    for (const folder of document.workspace.folders) {
+      if (await existingDirectory(folder.path)) folders.push(folder)
+    }
+    if (document.workspace.folders.length && !folders.length) {
+      writes.set(document.path, { path: document.path, before: document.before, after: null })
+    } else {
+      document.workspace.folders = folders
+      documents.push(document)
+    }
+  }
+  const availableRepositories: LocalRegistryEntry[] = []
   for (const repository of repositories) {
+    if (await existingDirectory(repository.path)) availableRepositories.push(repository)
+  }
+  const repositoryClients = await repositoryTrustClients(availableRepositories)
+
+  for (const repository of availableRepositories) {
     let matching = documents.filter(({ workspace }) =>
       workspace.folders.some((folder) => folder.path === repository.path)
     )
     if (!matching.length) {
       const path = join(workspaceDirectory, workspaceFileName(repository.path))
       const state = await lstat(path).catch(() => undefined)
-      if (state) throw new KiError(`workspace file exists but does not include its KI repository: ${path}`, 1)
-      const document = { path, before: '', workspace: { folders: [{ path: repository.path }] } }
+      if (state && !writes.has(path)) {
+        throw new KiError(`workspace file exists but does not include its KI repository: ${path}`, 1)
+      }
+      const document = {
+        path,
+        before: writes.get(path)?.before ?? '',
+        workspace: { folders: [{ path: repository.path }] }
+      }
       documents.push(document)
       matching = [document]
-      knownFolders.add(repository.path)
     }
     const source = repository.stores?.sources
     if (source) {
@@ -190,7 +215,6 @@ const buildPlan = async (
       for (const document of matching) {
         if (!document.workspace.folders.some((folder) => folder.path === source)) {
           document.workspace.folders.push({ path: source })
-          knownFolders.add(source)
         }
       }
     }
@@ -198,17 +222,18 @@ const buildPlan = async (
 
   for (const document of documents) {
     const after = `${JSON.stringify(document.workspace, null, 2)}\n`
-    if (document.before !== after) writes.push({ path: document.path, before: document.before, after })
+    if (document.before !== after) writes.set(document.path, { path: document.path, before: document.before, after })
   }
 
+  const knownFolders = new Set(documents.flatMap(({ workspace }) => workspace.folders.map((folder) => folder.path)))
   const trustedSource = await readFile(trustedFoldersPath, 'utf8')
   await validateTrustedFolders(port, trustedFoldersPath)
-  writes.push({
+  writes.set(trustedFoldersPath, {
     path: trustedFoldersPath,
     before: trustedSource,
     after: renderTrustedFolders(trustedSource, knownFolders, repositoryClients)
   })
-  return writes.filter((write) => write.before !== write.after)
+  return [...writes.values()].filter((write) => write.before !== write.after)
 }
 
 const diffLines = (text: string): readonly string[] => {
@@ -220,10 +245,10 @@ const diffLines = (text: string): readonly string[] => {
 
 const unifiedDiff = (write: SourceWrite): string => {
   const before = diffLines(write.before)
-  const after = diffLines(write.after)
+  const after = diffLines(write.after ?? '')
   return [
     `--- ${write.path}`,
-    `+++ ${write.path} (synchronised)`,
+    write.after === null ? '+++ /dev/null' : `+++ ${write.path} (synchronised)`,
     `@@ -1,${before.length} +1,${after.length} @@`,
     ...before.map((line) => `-${line}`),
     ...after.map((line) => `+${line}`),
@@ -236,6 +261,10 @@ const printPlan = (port: VscodeManagePort, writes: readonly SourceWrite[]): void
 }
 
 const writeAtomically = async (write: SourceWrite): Promise<void> => {
+  if (write.after === null) {
+    await unlink(write.path)
+    return
+  }
   const temporary = `${write.path}.ki-vscode-tmp`
   await writeFile(temporary, write.after, 'utf8')
   await rename(temporary, write.path)

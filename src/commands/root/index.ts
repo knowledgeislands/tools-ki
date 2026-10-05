@@ -10,7 +10,7 @@ import { createHarnessStatusCommands, createSupportCommands } from '../manage/in
 import { createRegistryCommand } from '../registry/index.ts'
 import { createRepoCommand } from '../repo/index.ts'
 import { createSkillCommand } from '../skill/index.ts'
-import { type RootCommandName, rootHelpCommandNames, rootHelpGroups } from './catalogue.ts'
+import { type RootCommandName, rootCommandNames } from './catalogue.ts'
 
 type RootCommandFactory = (context: KiContext) => Command
 
@@ -27,10 +27,10 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
 }
 
 export const addRootCommands = (program: Command, context: KiContext): void => {
-  for (const name of rootHelpCommandNames) {
-    const command = rootCommandFactories[name](context).helpGroup(rootHelpGroups[name])
+  for (const name of rootCommandNames) {
+    const command = rootCommandFactories[name](context)
     if (name === 'harness') for (const child of createHarnessStatusCommands(context)) command.addCommand(child)
     program.addCommand(command)
   }
-  for (const command of createSupportCommands(context)) program.addCommand(command.helpGroup('Operations:'))
+  for (const command of createSupportCommands(context)) program.addCommand(command)
 }

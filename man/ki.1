@@ -1,4 +1,4 @@
-.TH KI 1 "2026-10-05" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-10-06" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -402,8 +402,8 @@ material.
 This page describes the intended V1 CLI surface.
 The concise
 .B ki --help
-starts with usage, then groups commands under Get started, Work with
-repositories, Acquisition, Maintain KI, and Development. Use
+starts with usage, then lists commands alphabetically without task groups.
+This manual groups commands by operational scope and purpose. Use
 .B ki <command> --help
 for focused options,
 .B ki docs
@@ -605,8 +605,11 @@ complete versions remain available until explicit uninstall.
 Compare chezmoi-managed VS Code workspaces and trusted-folder source state with
 the local KI repository registry. Explicit sources bindings join their notes
 workspace and trusted-client projection; legacy bindings and unbound directories
-are ignored. Report a source diff and exit non-zero when drift exists. This
-command never writes.
+are ignored. Preview removal of folder paths that no longer resolve to
+directories and deletion of projects with no live folders. Existing projects
+outside the registry and intentionally empty workspaces are preserved. Missing
+registered checkouts are skipped without changing the registry. Report a source
+diff and exit non-zero when drift exists. This command never writes.
 .TP
 .B ki vscode sync [--write]
 Preview the same reconciliation. With
