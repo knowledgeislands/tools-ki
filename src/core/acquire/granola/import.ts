@@ -468,7 +468,7 @@ export const importGranola = async (
         throw error
       }
       if (transcriptResult.read) transcriptReads += 1
-      const changed =
+      const changed: boolean =
         !current ||
         current.detail_sha256 !== observedDetailHash ||
         current.transcript_sha256 !== transcriptResult.hash ||
@@ -491,7 +491,9 @@ export const importGranola = async (
         ...(transcriptResult.hash ? { transcriptSha256: transcriptResult.hash } : {}),
         transcriptState: transcriptResult.state
       })
-      const documentSha256 = sha256(document.content)
+      const documentSha256: string = changed
+        ? sha256(document.content)
+        : (current as GranolaCheckpointMeeting).document_sha256
       const sourceVersionSha256 = sha256(
         stableJson({
           detail_sha256: observedDetailHash,
@@ -500,7 +502,7 @@ export const importGranola = async (
         })
       )
       const checkpointMeeting: GranolaCheckpointMeeting = {
-        path: document.path,
+        path: changed ? document.path : (current as GranolaCheckpointMeeting).path,
         document_sha256: documentSha256,
         detail_sha256: observedDetailHash,
         ...(transcriptResult.hash ? { transcript_sha256: transcriptResult.hash } : {}),
@@ -533,7 +535,7 @@ export const importGranola = async (
             ...(transcriptResult.hash ? { transcript_sha256: transcriptResult.hash } : {}),
             transcript_state: transcriptResult.state,
             transcript_observed_at: transcriptResult.observedAt,
-            staged_document_path: document.path,
+            staged_document_path: checkpointMeeting.path,
             staged_document_sha256: documentSha256,
             verified_at: observedAt,
             checkpoint: checkpointMeeting

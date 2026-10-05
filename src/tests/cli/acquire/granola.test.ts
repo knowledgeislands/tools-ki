@@ -2351,6 +2351,44 @@ describe('[ki acquire import --adapter granola]', () => {
     ).toContain('journal must be physical file')
   })
 
+  test('preserves a verified presentation and document path when the source is unchanged', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
+    ])
+    const meeting: GranolaMeetingFixture = { id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }
+    box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
+    expect((await box.run(command(repository))).exitCode).toBe(0)
+    const root = join(repository, '+/_ACQUIRE/granola')
+    const checkpoint = join(root, 'ledger.json')
+    const ledger = JSON.parse(await readFile(checkpoint, 'utf8'))
+    const entry = ledger.meetings['meeting-a']
+    const oldPath = join(root, entry.path)
+    const content = (await readFile(oldPath, 'utf8')).replace('\n# Meeting\n', '\n# Meeting\n\n')
+    entry.path = '2026-01-02--presentation--meeting-a.md'
+    entry.document_sha256 = createHash('sha256').update(content).digest('hex')
+    entry.disposition.document_sha256 = entry.document_sha256
+    entry.versions.push(entry.document_sha256)
+    await rename(oldPath, join(root, entry.path))
+    await writeFile(join(root, entry.path), content)
+    const verifiedCheckpoint = `${JSON.stringify(ledger, null, 2)}\n`
+    await writeFile(checkpoint, verifiedCheckpoint)
+
+    for (const options of [[], ['--refresh-transcripts']]) {
+      box.setRunner(granolaFixtureRunner({ meetings: [meeting] }).runner)
+      const result = await box.run(command(repository, ...options))
+      expect(result.exitCode, result.output).toBe(0)
+      expect(result.output).toContain('0 new, 0 amended, 1 unchanged')
+      expect(await readFile(checkpoint, 'utf8')).toBe(verifiedCheckpoint)
+      expect(await readFile(join(root, entry.path), 'utf8')).toBe(content)
+      expect(await packageDirectories(repository)).toEqual([entry.path])
+      expect(
+        (await box.run(['ki', 'acquire', 'reconcile', '--adapter', 'granola', '--repo', repository])).exitCode
+      ).toBe(0)
+    }
+  })
+
   test('retains account binding across workspace inventory changes and rejects identity or access changes', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')
