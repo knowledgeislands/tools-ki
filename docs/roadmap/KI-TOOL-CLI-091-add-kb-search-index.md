@@ -4,12 +4,12 @@ area: CLI
 title: Add KB search index
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 0a0ab5d0ffcc4d71eaea017bbc759c90a1330007
 created_at: 2026-09-30T07:36:00Z
-updated_at: 2026-10-05T12:57:29Z
+updated_at: 2026-10-05T13:00:00Z
 ---
 
 # Add KB search index
@@ -106,6 +106,10 @@ Root and an independent reviewer approved only the immutable interface receipt; 
 ### Mini recap
 
 The implementation baseline is `0a0ab5d0ffcc4d71eaea017bbc759c90a1330007`. The prior diagnostic inventory mismatch resolved through its own delivery, and the final combined-state engineering gate passes. All current touched paths belong to this approved search delivery, including the narrowly approved parser and private-publisher seams; no unrelated work is staged or consumed. Awaiting review is the handoff boundary, with the exact clean implementation commit supplied to the coordinator after commit.
+
+## Done
+
+Accepted under the principal-approved singleton outcome batch. Root and the independent reviewer approved exact clean delivery `313371fc824e51d19d1040a2c0cdb25238dcd998`, with the published interface `d6222b752d5f5ee3ef36c7bac55eec3f67629c87` unchanged. Required local verification passed: 1,025 tests across 62 files, 100% statements/branches/functions/lines, TypeScript, native build and help, Biome, Knip, man/inventory and focused work/roadmap/self/engineering/authoring audits. A fresh pinned native engine run passed all eight synthetic operations across two isolated KBs. Source and operator-owned provisioning, cache, attestation and concurrency limits remain as recorded in Review. No private KB indexing, live provider mutation, push or publication occurred.
 
 ## Discussion
 
