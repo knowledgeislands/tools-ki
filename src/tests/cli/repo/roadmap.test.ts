@@ -169,13 +169,13 @@ describe('[ki repo roadmap]', () => {
     expect(rows).toEqual([
       ['Repository', 'now', 'next', 'soon', 'waiting-for', 'parked', 'future', 'triage', 'Σ'],
       ['knowledge', 'r=1 Σ=1', 'd=1 Σ=1', '—', '—', '—', '—', 'd=1 Σ=1', 'd=2 r=1 Σ=3'],
-      ['delivery', '—', 'ip=1 ar=1 done=1 Σ=3', '—', '—', '—', '—', '—', 'ip=1 ar=1 done=1 Σ=3'],
+      ['delivery', '—', 'ip=1 ar=1 x=1 Σ=3', '—', '—', '—', '—', '—', 'ip=1 ar=1 x=1 Σ=3'],
       ['empty', '—', '—', '—', '—', '—', '—', '—', '—'],
       ['absent', '—', '—', '—', '—', '—', '—', '—', '—'],
-      ['Σ', 'r=1 Σ=1', 'd=1 ip=1 ar=1 done=1 Σ=4', '—', '—', '—', '—', 'd=1 Σ=1', 'd=2 r=1 ip=1 ar=1 done=1 Σ=6']
+      ['Σ', 'r=1 Σ=1', 'd=1 ip=1 ar=1 x=1 Σ=4', '—', '—', '—', '—', 'd=1 Σ=1', 'd=2 r=1 ip=1 ar=1 x=1 Σ=6']
     ])
     expect(result.output).not.toContain('\nStatuses\n')
-    expect(result.output).toContain('d=draft r=ready ip=in-progress ar=awaiting-review; Σ=total')
+    expect(result.output).toContain('d=draft r=ready ip=in-progress ar=awaiting-review x=done; Σ=total')
     expect(result.output).toContain('— no items; ? unavailable')
     expect(result.output).toContain('No roadmap: absent')
     expect(result.output).not.toContain('KBS-001')

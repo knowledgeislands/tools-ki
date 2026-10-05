@@ -232,7 +232,7 @@ const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
     ready: 'r',
     'in-progress': 'ip',
     'awaiting-review': 'ar',
-    done: 'done'
+    done: 'x'
   } as const
   const cell = (items: readonly WorkItem[]): string => {
     const counts = [...statusOrder].reverse().flatMap((status) => {
@@ -266,7 +266,7 @@ const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
   const absent = results.flatMap((result, index) => (result.roadmap === 'absent' ? [labels[index]] : []))
   return [
     ...table,
-    'd=draft r=ready ip=in-progress ar=awaiting-review; Σ=total',
+    'd=draft r=ready ip=in-progress ar=awaiting-review x=done; Σ=total',
     '— no items; ? unavailable',
     ...(absent.length ? [`No roadmap: ${absent.join(', ')}`] : []),
     ...(diagnostics.length ? ['Diagnostics (counts include valid items only)', ...diagnostics] : [])
