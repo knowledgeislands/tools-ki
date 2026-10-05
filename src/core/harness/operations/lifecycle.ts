@@ -1,5 +1,5 @@
 import { KiError } from '../../errors.ts'
-import { canonicalHarnessIdentifier, type InstalledHarness } from '../index.ts'
+import { canonicalHarnessIdentifier, type InstalledHarness } from '../inspection.ts'
 import type {
   HarnessInstallationPort,
   HarnessInstallationResult,

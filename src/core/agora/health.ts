@@ -10,7 +10,7 @@ import {
 import { duplicateOwnersError, ESTATE_AGORA, profileFromHome } from './profiles.ts'
 import { requiredReferenceAssociations } from './reference-associations.ts'
 import { availableRegisteredRepositories } from './repository-inventory.ts'
-import type { AgoraHealthReport, AgoraRuntime } from './resolution.ts'
+import type { AgoraHealthReport, AgoraRuntime } from './types.ts'
 
 const addHealthFinding = (findings: Map<string, string[]>, id: string, message: string): void => {
   findings.set(id, [...(findings.get(id) ?? []), message])

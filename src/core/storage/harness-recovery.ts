@@ -1,6 +1,6 @@
 import { lstat, rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
-import { discoverInstallOrphans, type InstallOrphan } from '../harness/index.ts'
+import { discoverInstallOrphans, type InstallOrphan } from '../harness/inspection.ts'
 
 export interface OrphanRecovery {
   readonly orphan: InstallOrphan

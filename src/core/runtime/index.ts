@@ -1,9 +1,4 @@
-export {
-  EVIDENCE_STAGE_LABEL,
-  gatherSkillAuditEvidence,
-  runGatheredSkillAudit,
-  runSkillAudit
-} from './audit.ts'
+export { EVIDENCE_STAGE_LABEL } from './audit.ts'
 /**
  * Stable runtime operation surface retained for repository hosts.
  * @public

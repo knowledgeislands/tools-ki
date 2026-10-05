@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { lstat, readdir, realpath, rename, rm, symlink } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
-import { canonicalHarnessIdentifier, parkedPayloadEntry, readInstalledHarness } from '../harness/index.ts'
+import { canonicalHarnessIdentifier, parkedPayloadEntry, readInstalledHarness } from '../harness/inspection.ts'
 import {
   ensureDirectory,
   harnessDirectory,

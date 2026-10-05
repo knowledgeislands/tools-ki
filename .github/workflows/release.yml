@@ -80,6 +80,7 @@ jobs:
       - if: matrix.asset-target == 'linux-x64'
         run: sudo apt-get update && sudo apt-get install --yes zsh
       - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile --cwd tooling/boundaries
       - run: bun run test
       - run: release/package.sh "${{ needs.validate.outputs.version }}" "${{ matrix.bun-target }}" "${{ matrix.asset-target }}"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

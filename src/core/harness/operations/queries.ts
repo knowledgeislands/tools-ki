@@ -1,4 +1,4 @@
-import type { InstalledHarness } from '../index.ts'
+import type { InstalledHarness } from '../inspection.ts'
 import type { HarnessInventory, HarnessQueryPort } from './types.ts'
 
 export const listInstalledHarnesses = async (port: HarnessQueryPort): Promise<HarnessInventory> => {

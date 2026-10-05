@@ -1,4 +1,4 @@
-import type { InstalledHarness } from '../index.ts'
+import type { InstalledHarness } from '../inspection.ts'
 
 export interface HarnessInstallationOptions {
   readonly replace?: boolean

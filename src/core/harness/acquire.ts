@@ -5,8 +5,8 @@ import { gunzipSync } from 'node:zlib'
 import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
-import type { HarnessRelease } from '../storage/index.ts'
-import { HARNESS_DECLARATION_FILE } from './index.ts'
+import type { HarnessRelease } from '../storage/registry.ts'
+import { HARNESS_DECLARATION_FILE } from './inspection.ts'
 
 const decoder = new TextDecoder('utf-8', { fatal: true })
 

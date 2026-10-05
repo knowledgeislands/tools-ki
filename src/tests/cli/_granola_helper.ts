@@ -1,4 +1,4 @@
-import type { Runner } from '../../core/runtime/runner.ts'
+import type { Runner } from './_cli_helper.ts'
 
 export interface GranolaMeetingFixture {
   readonly id: string

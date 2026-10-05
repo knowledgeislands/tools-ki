@@ -64,19 +64,27 @@ Re-running the import against the same output path fails rather than overwriting
 
 ## Recovery
 
-| Message | Cause | Action |
-| --- | --- | --- |
-| `capture.toml is required` | Missing, or present as a symbolic link | Provide a regular `capture.toml` at the capture root |
-| `capture metadata contains an unsupported field` | A key outside the four permitted ones | Remove it; the format has no extension point |
-| `capture metadata format_version must be 0.1.0` | A version this adapter does not accept | Use `0.1.0` |
-| `capture_boundary contains unsupported characters` | Punctuation outside the permitted set | Rewrite the sentence in plain text |
-| `omissions must be a compact array of plain strings` | Multi-line or loosely formatted array | Write it on one line, or as `[]` |
-| `relationship references a missing record` or `missing asset` | A relationship names a file that is not there | Correct the path, or add the file |
-| `relationship repeats a conversation position` | Two records claim the same position | Renumber; positions are unique and start at 1 |
-| `capture contains an unsafe file` | A symbolic link, FIFO, or similar in the tree | Replace it with a regular file |
-| `originals contains an unsafe path` | A path segment outside the permitted character set | Rename the file |
-| `output directory already exists` | A previous package occupies that path | Remove it explicitly, or choose another path |
-| `output directory must be outside capture-directory` | The output path is inside the capture tree | Choose a sibling or unrelated directory |
+- `capture.toml is required` — Cause: Missing, or present as a symbolic link. Action: Provide a regular `capture.toml` at the capture root.
+
+- `capture metadata contains an unsupported field` — Cause: A key outside the four permitted ones. Action: Remove it; the format has no extension point.
+
+- `capture metadata format_version must be 0.1.0` — Cause: A version this adapter does not accept. Action: Use `0.1.0`.
+
+- `capture_boundary contains unsupported characters` — Cause: Punctuation outside the permitted set. Action: Rewrite the sentence in plain text.
+
+- `omissions must be a compact array of plain strings` — Cause: Multi-line or loosely formatted array. Action: Write it on one line, or as `[]`.
+
+- `relationship references a missing record` or `missing asset` — Cause: A relationship names a file that is not there. Action: Correct the path, or add the file.
+
+- `relationship repeats a conversation position` — Cause: Two records claim the same position. Action: Renumber; positions are unique and start at 1.
+
+- `capture contains an unsafe file` — Cause: A symbolic link, FIFO, or similar in the tree. Action: Replace it with a regular file.
+
+- `originals contains an unsafe path` — Cause: A path segment outside the permitted character set. Action: Rename the file.
+
+- `output directory already exists` — Cause: A previous package occupies that path. Action: Remove it explicitly, or choose another path.
+
+- `output directory must be outside capture-directory` — Cause: The output path is inside the capture tree. Action: Choose a sibling or unrelated directory.
 
 Exact grammar is in `ki acquire import --help` and the installed `man ki` manual. The command validates the package layout and the capture boundary before it publishes any output.
 

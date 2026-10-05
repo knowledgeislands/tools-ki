@@ -1,9 +1,5 @@
-import {
-  type Finding,
-  gatherSkillAuditEvidence,
-  type PreparedSkill,
-  runGatheredSkillAudit
-} from '../../runtime/index.ts'
+import { gatherSkillAuditEvidence, runGatheredSkillAudit } from '../../runtime/audit.ts'
+import type { Finding, PreparedSkill } from '../../runtime/types.ts'
 import { runWithEvidenceProgress } from '../progress/run.ts'
 import { localRepositoryRegistration, repositorySkillActivation } from './local-state.ts'
 import { selectRepositorySkills } from './selection.ts'

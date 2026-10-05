@@ -4,16 +4,16 @@ import {
   declaredRepositoryIdentity,
   declaredRepositoryKind,
   readRepositoryDeclaration
-} from '../../core/configuration/index.ts'
+} from '../../core/configuration/declaration.ts'
 import { KiError } from '../../core/errors.ts'
-import { resolveRepositoryTargets } from '../../core/repository/index.ts'
+import { resolveRepositoryTargets } from '../../core/repository/selection.ts'
 import {
   inspectLocalRegistry,
   localRegistryWrite,
-  publishLocalRegistryProposal,
-  registryEntryForRepository
-} from '../../core/storage/index.ts'
-import type { RegistrySelection } from './index.ts'
+  publishLocalRegistryProposal
+} from '../../core/storage/local-registry.ts'
+import { registryEntryForRepository } from '../../core/storage/repository-stores.ts'
+import type { RegistrySelection } from './types.ts'
 
 export const createRegistryAddCommand = (context: KiContext, selectedRepositories: () => RegistrySelection): Command =>
   new Command('add')

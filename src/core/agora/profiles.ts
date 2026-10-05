@@ -9,7 +9,7 @@ import type {
   AgoraReferenceDiagnostic,
   AgoraRoot,
   AgoraRuntime
-} from './resolution.ts'
+} from './types.ts'
 
 export const ESTATE_AGORA = 'estate' as const
 

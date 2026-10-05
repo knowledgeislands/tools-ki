@@ -1,5 +1,5 @@
 import { KiError } from '../errors.ts'
-import type { HarnessCapability, InstalledHarness } from '../harness/index.ts'
+import type { HarnessCapability, InstalledHarness } from '../harness/inspection.ts'
 import type { DeclaredSkill, RepositoryDeclaration } from './declaration.ts'
 
 export interface InstalledHarnessSkillProvider {

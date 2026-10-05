@@ -1,7 +1,7 @@
 import type { lstat } from 'node:fs/promises'
-import type { ResolvedSkill } from '../../configuration/index.ts'
+import type { ResolvedSkill } from '../../configuration/resolution.ts'
 import type { RepositorySkillActivation } from '../../rubric/index.ts'
-import type { RepositoryLocation } from '../index.ts'
+import type { RepositoryLocation } from '../location.ts'
 import type { ProgressTracker } from '../progress/run.ts'
 
 export type RepositoryOperationPhase = 'audit' | 'conform' | 'educate' | 're-audit'

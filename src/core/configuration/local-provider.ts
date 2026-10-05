@@ -1,6 +1,6 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { KiError } from '../errors.ts'
-import { type InstalledHarness, inspectSkillCapability } from '../harness/index.ts'
+import { type InstalledHarness, inspectSkillCapability } from '../harness/inspection.ts'
 import type { RepositoryDeclaration } from './declaration.ts'
 import { type ResolvedSkill, resolveDeclaredSkills } from './resolution.ts'
 

@@ -1,15 +1,13 @@
 import { mkdir, realpath } from 'node:fs/promises'
-import type { ResolvedSkill } from '../../configuration/index.ts'
-import {
-  declaredRepositoryIdentity,
-  readRepositoryDeclaration,
-  resolveRepositoryDeclaredSkills
-} from '../../configuration/index.ts'
+import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../../configuration/declaration.ts'
+import { resolveRepositoryDeclaredSkills } from '../../configuration/local-provider.ts'
+import type { ResolvedSkill } from '../../configuration/resolution.ts'
 import { KiError } from '../../errors.ts'
-import { prepareWrites } from '../../filesystem/index.ts'
-import { discoverInstalledHarnesses } from '../../harness/index.ts'
-import { inspectLocalRegistry, localRegistryWrite, registryEntryForRepository } from '../../storage/index.ts'
-import type { RepositoryLocation } from '../index.ts'
+import { prepareWrites } from '../../filesystem/publication.ts'
+import { discoverInstalledHarnesses } from '../../harness/inspection.ts'
+import { inspectLocalRegistry, localRegistryWrite } from '../../storage/local-registry.ts'
+import { registryEntryForRepository } from '../../storage/repository-stores.ts'
+import type { RepositoryLocation } from '../location.ts'
 import type { RepositoryOperationContext, RepositorySkillActivationHost } from './types.ts'
 
 export const localRepositoryRegistration = async (

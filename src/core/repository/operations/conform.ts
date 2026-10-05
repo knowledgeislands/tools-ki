@@ -1,19 +1,14 @@
 import { KiError } from '../../errors.ts'
-import { prepareScopedWrites, prepareWrites, publishWrites } from '../../filesystem/index.ts'
-import { discoverInstalledHarnesses } from '../../harness/index.ts'
+import { prepareScopedWrites, prepareWrites, publishWrites } from '../../filesystem/publication.ts'
+import { discoverInstalledHarnesses } from '../../harness/inspection.ts'
 import type { PackageScriptClaim } from '../../rubric/index.ts'
-import {
-  detectFixed,
-  type Finding,
-  type FixedItem,
-  type PreparedSkill,
-  runSkillAudit,
-  runSkillConform,
-  type SkillConformResult
-} from '../../runtime/index.ts'
+import { runSkillAudit } from '../../runtime/audit.ts'
+import { detectFixed, runSkillConform } from '../../runtime/conform.ts'
 import { publishIndependentConformGroups } from '../../runtime/publication.ts'
-import { type RepositoryConformCommand, resolveRepositoryTargets, runRepositoryConformCommands } from '../index.ts'
+import type { Finding, FixedItem, PreparedSkill, SkillConformResult } from '../../runtime/types.ts'
 import { runPreparedWithProgress, runWithProgress } from '../progress/run.ts'
+import { resolveRepositoryTargets } from '../selection.ts'
+import { type RepositoryConformCommand, runRepositoryConformCommands } from '../subprocess.ts'
 import { localRepositoryRegistryWrites, repositorySkillActivation } from './local-state.ts'
 import { resolveSkillsForRepositories } from './selection.ts'
 import type { RepositoryOperationContext, RepositorySelection } from './types.ts'

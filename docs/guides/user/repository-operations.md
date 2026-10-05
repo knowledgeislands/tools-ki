@@ -8,11 +8,11 @@ Two ideas carry the whole surface. **Selection happens before anything runs**, a
 
 `ki repo` operations accept the same three mutually exclusive selectors; `ki registry` commands have their own selection rules:
 
-| Selector | Selects |
-| --- | --- |
-| `--repo <path-or-pattern>` | Literal paths or patterns, repeatable, resolved to physical KI repository roots in deterministic order |
-| `--agora <name>` | The registered member repositories of one owner-declared Agora |
-| `--estate` | Every locally registered canonical KI repository — shorthand for `--agora estate` |
+- `--repo <path-or-pattern>` — Selects: Literal paths or patterns, repeatable, resolved to physical KI repository roots in deterministic order.
+
+- `--agora <name>` — Selects: The registered member repositories of one owner-declared Agora.
+
+- `--estate` — Selects: Every locally registered canonical KI repository — shorthand for `--agora estate`.
 
 ```sh
 ki repo audit --repo .
@@ -139,14 +139,18 @@ A clean audit and a `diag` showing every declared skill projected is the end sta
 
 ## Recovery
 
-| Symptom | Likely cause | Action |
-| --- | --- | --- |
-| Selection fails naming an unmatched pattern | The pattern matches no physical KI root | Widen or correct the pattern; check `ki registry list` |
-| Selection fails naming a duplicate root | Two selectors resolve to the same root | Remove the redundant `--repo` |
-| `--agora` fails naming several owners | More than one owner declares that id | Resolve the ambiguity in the declaring repositories |
-| Conform reports `proposed write` and stops | The initial audit failed for that repository | Fix the audit findings, then rerun conform |
-| Conform says no re-audit was required | Nothing was staged | Expected; the initial pass is the whole result |
-| A declared skill has no projection | The link is missing, dangling, or stale | `ki repo repair --dry-run`, review, then rerun |
-| A multi-repository mutation exits non-zero | A later target failed after earlier ones succeeded | Read the per-repository result; earlier targets are already applied |
+- Selection fails naming an unmatched pattern — Likely cause: The pattern matches no physical KI root. Action: Widen or correct the pattern; check `ki registry list`.
+
+- Selection fails naming a duplicate root — Likely cause: Two selectors resolve to the same root. Action: Remove the redundant `--repo`.
+
+- `--agora` fails naming several owners — Likely cause: More than one owner declares that id. Action: Resolve the ambiguity in the declaring repositories.
+
+- Conform reports `proposed write` and stops — Likely cause: The initial audit failed for that repository. Action: Fix the audit findings, then rerun conform.
+
+- Conform says no re-audit was required — Likely cause: Nothing was staged. Action: Expected; the initial pass is the whole result.
+
+- A declared skill has no projection — Likely cause: The link is missing, dangling, or stale. Action: `ki repo repair --dry-run`, review, then rerun.
+
+- A multi-repository mutation exits non-zero — Likely cause: A later target failed after earlier ones succeeded. Action: Read the per-repository result; earlier targets are already applied.
 
 Exact grammar is in `ki repo <command> --help` and the installed `man ki` manual. Selection must resolve at least one physical repository, audit is read-only, and conform publishes only after the selected repository's initial audit passes.

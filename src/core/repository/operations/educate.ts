@@ -1,4 +1,5 @@
-import { educateSkill, type SkillEducationResult } from '../../runtime/index.ts'
+import { educateSkill } from '../../runtime/education.ts'
+import type { SkillEducationResult } from '../../runtime/types.ts'
 import { runWithProgress } from '../progress/run.ts'
 import { selectRepositorySkills } from './selection.ts'
 import type { RepositoryOperationContext, RepositorySelection } from './types.ts'

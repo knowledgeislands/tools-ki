@@ -2,7 +2,7 @@ import { lstat, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
-import { canonicalHarnessIdentifier } from '../harness/index.ts'
+import { canonicalHarnessIdentifier } from '../harness/inspection.ts'
 import { harnessIdentifier } from './harness-paths.ts'
 
 const sha256 = /^[a-f0-9]{64}$/

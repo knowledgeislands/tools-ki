@@ -1,7 +1,7 @@
-import type { ResolvedSkill } from '../../configuration/index.ts'
+import type { ResolvedSkill } from '../../configuration/resolution.ts'
 import type { ConformWrite } from '../../rubric/index.ts'
 import type { PreparedRubricPublication } from '../../rubric/publication.ts'
-import type { BootstrapInstallationResult, BootstrapRefreshResult } from '../bootstrap/index.ts'
+import type { BootstrapInstallationResult, BootstrapRefreshResult } from '../bootstrap/types.ts'
 
 export interface DevelopmentConfigurationInspection {
   readonly locals: readonly { readonly harness: string; readonly path: string }[]

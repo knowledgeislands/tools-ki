@@ -4,6 +4,8 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 ## Pre-1.0 baseline
 
+The source checkout prepares `v0.6.0`; publication remains a separate action. Domain imports and extracted type leaves keep the dependency graph acyclic, enforced by a resolved-graph boundary gate with a supported isolated compiler and deliberate failure fixtures.
+
 ### Knowledge Base search
 
 - `ki registry add --search-boundary <id>` explicitly assigns one unique KB trust boundary; `ki kb index` builds a fresh private generation, `ki kb search` returns bounded current-source-authenticated JSON, and `ki kb status` reports endpoint liveness without index attestation. qmd 2.8.3 and local models require explicit provisioning.
@@ -151,7 +153,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 - Diagnostics and doctor reports share tool/version, checkout-verified local/release/unknown installation mode, executing platform/architecture, runtime/version, and configuration state. Copied or unidentified source is unknown rather than guessed local. Doctor reports its read-only scope, verdict, and pass/warn/fail/skipped counts without implying package freshness.
 - KI's own CI runs from the checked-out source, while release packaging pins a verified Harness revision.
-- `ki docs overview` now reports the canonical `https://knowledgeislands.info/tooling/ki/` route.
+- `ki docs overview` now reports the canonical `https://knowledgeislands.info/projects/ki/` route.
 - Release guidance standardises exact installer pinning as positional `vX.Y.Z`, while an omitted version continues to resolve the latest release.
 - Acquisition is action-first and adapter-driven from verified Harness skill declarations; Granola uses an allowlisted read-only MCP adapter, saturation-aware complete-history enumeration, separate detail and transcript checkpoints, atomic resumable journals, governed reset, explicit omissions, and post-acquisition dispositions.
 - `.ki.toml` is the sole repository and Harness declaration filename across source checkouts, release archives, installed Harnesses, local development, repository discovery, and diagnostics; retired filenames have no compatibility or migration path.

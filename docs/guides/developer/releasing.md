@@ -99,7 +99,7 @@ Follow the shared release-readiness checklist's tap and website handoff procedur
 - the released `vX.Y.Z` tag;
 - the immutable installer source `https://raw.githubusercontent.com/knowledgeislands/tools-ki/vX.Y.Z/install.sh`;
 - the pinned invocation `curl -fsSL https://knowledgeislands.info/install/ki | sh -s -- vX.Y.Z`; and
-- confirmation that `https://knowledgeislands.info/tooling/ki/` is the human-facing overview route.
+- confirmation that `https://knowledgeislands.info/projects/ki/` is the human-facing overview route.
 
 After publication, the release workflow's `Notify Homebrew tap` job sends a `tool-release-published` dispatch to `knowledgeislands/homebrew-tap` through the `ki-tools-release-bot` GitHub App; the tap then opens the exact formula pull request and squash-merges it automatically once its required checks pass. The job is skipped until the `KI_TOOLS_RELEASE_BOT_APP_ID` variable and `KI_TOOLS_RELEASE_BOT_PRIVATE_KEY` secret are available to this repository at organisation or repository level (not as `release`-environment secrets); the tap's daily scheduled intake still picks up a published immutable release without the dispatch.
 

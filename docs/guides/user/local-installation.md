@@ -134,14 +134,18 @@ A `doctor` run exiting zero, with `diag` reporting the installation mode and pat
 
 ## Recovery
 
-| Symptom | Likely cause | Action |
-| --- | --- | --- |
-| `ki update` leaves the version unchanged | No installer receipt proves ownership of this executable | Update through the installing system, or reinstall from a pinned release |
-| `ki harness outdated` names unavailable evidence | The comparison source could not be read | Treat freshness as unknown; do not read silence as current |
-| `doctor` reports dangling user skill links | The harness source moved or was removed | `ki repair --dry-run`, review, then `ki repair --apply` |
-| `doctor` reports an unsafe path it will not repair | A managed path is not a symbolic link | Inspect and resolve it by hand; `repair` will not overwrite it |
-| `doctor` reports legacy `.ki-meta/` or `.ki/` | The current directory predates `.ki.toml` | Migrate that repository to a `.ki.toml` declaration |
-| `ki cleanup` frees nothing | Expected in V1 | No action; it reports rather than deletes by design |
-| A path is not where you expect | A `KI_*_HOME` or `XDG_*_HOME` override is set | Read the resolved values from `ki diag --full` |
+- `ki update` leaves the version unchanged — Likely cause: No installer receipt proves ownership of this executable. Action: Update through the installing system, or reinstall from a pinned release.
+
+- `ki harness outdated` names unavailable evidence — Likely cause: The comparison source could not be read. Action: Treat freshness as unknown; do not read silence as current.
+
+- `doctor` reports dangling user skill links — Likely cause: The harness source moved or was removed. Action: `ki repair --dry-run`, review, then `ki repair --apply`.
+
+- `doctor` reports an unsafe path it will not repair — Likely cause: A managed path is not a symbolic link. Action: Inspect and resolve it by hand; `repair` will not overwrite it.
+
+- `doctor` reports legacy `.ki-meta/` or `.ki/` — Likely cause: The current directory predates `.ki.toml`. Action: Migrate that repository to a `.ki.toml` declaration.
+
+- `ki cleanup` frees nothing — Likely cause: Expected in V1. Action: No action; it reports rather than deletes by design.
+
+- A path is not where you expect — Likely cause: A `KI_*_HOME` or `XDG_*_HOME` override is set. Action: Read the resolved values from `ki diag --full`.
 
 Exact grammar is in `ki <command> --help` and the installed `man ki` manual. Inventory and diagnostic commands report only; update and repair act only after the ownership and safety checks described above pass.

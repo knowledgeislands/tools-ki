@@ -90,10 +90,12 @@ For exact grammar of any command here, use `ki <command> --help` or the installe
 
 ## Recovery
 
-| Symptom | Likely cause | Action |
-| --- | --- | --- |
-| `ki: command not found` after install | `KI_CLI_INSTALL_DIR` is not on `PATH` | Add the directory to `PATH` and start a new shell |
-| Bootstrap refuses, naming a missing bootstrap skill | The installed canonical harness payload is incomplete | Reinstall the harness, then rerun `ki bootstrap` |
-| `ki doctor` reports dangling skill links | Links point at a harness source that has moved | Run `ki repair --dry-run`, review, then run `ki repair --apply` |
-| `ki repo diag` reports a direct-CWD legacy `.ki-meta/` or `.ki/` | The checkout predates the current declaration format | Migrate it to `.ki.toml`; `ki doctor` reports the same condition |
-| A registry entry points at a path that no longer exists | The checkout moved or was deleted | Re-run `ki registry add --repo <new-path>` for the current root |
+- `ki: command not found` after install — Likely cause: `KI_CLI_INSTALL_DIR` is not on `PATH`. Action: Add the directory to `PATH` and start a new shell.
+
+- Bootstrap refuses, naming a missing bootstrap skill — Likely cause: The installed canonical harness payload is incomplete. Action: Reinstall the harness, then rerun `ki bootstrap`.
+
+- `ki doctor` reports dangling skill links — Likely cause: Links point at a harness source that has moved. Action: Run `ki repair --dry-run`, review, then run `ki repair --apply`.
+
+- `ki repo diag` reports a direct-CWD legacy `.ki-meta/` or `.ki/` — Likely cause: The checkout predates the current declaration format. Action: Migrate it to `.ki.toml`; `ki doctor` reports the same condition.
+
+- A registry entry points at a path that no longer exists — Likely cause: The checkout moved or was deleted. Action: Re-run `ki registry add --repo <new-path>` for the current root.

@@ -12,7 +12,7 @@ import {
   parkedPayloadEntry,
   readInstalledHarness,
   requireUniqueHarnessPrefixes
-} from '../harness/index.ts'
+} from '../harness/inspection.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
 import { harnessDevelopmentProjection } from './harness-development.ts'

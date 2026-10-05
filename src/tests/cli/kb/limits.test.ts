@@ -7,7 +7,7 @@ const fault = vi.hoisted(() => ({
   mode: 'none',
   root: '',
   reference: '',
-  realpathCalls: 0,
+  rootDriftArmed: false,
   declarationCalls: 0,
   publicationModes: [] as { operation: string; mode: number }[]
 }))
@@ -58,15 +58,18 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     },
     realpath: async (path: unknown, ...args: unknown[]) => {
       if (fault.mode === 'source-escape' && String(path) === fault.reference) return '/foreign/note.md'
-      if (fault.mode === 'root-drift' && String(path) === fault.root && ++fault.realpathCalls === 2)
-        return '/foreign/root'
+      if (fault.mode === 'root-drift' && fault.rootDriftArmed && String(path) === fault.root) return '/foreign/root'
       return virtual(path) ? String(path) : Reflect.apply(original.realpath, null, [path, ...args])
     },
     readFile: async (path: unknown, ...args: unknown[]) => {
       if (fault.mode === 'post-read' && String(path) === fault.reference) return Buffer.alloc(1048577, 65)
       if (fault.mode === 'manifest' && String(path).includes('/projection/documents/')) return Buffer.alloc(1048576, 65)
       if (virtual(path)) return Buffer.alloc(['corpus', 'manifest'].includes(fault.mode) ? 1024 * 1024 : 1, 65)
-      return Reflect.apply(original.readFile, null, [path, ...args])
+      const bytes = await Reflect.apply(original.readFile, null, [path, ...args])
+      // Arm after source capture, not after an OS-dependent number of root resolutions.
+      // The next source revalidation must refuse the changed physical root.
+      if (fault.mode === 'root-drift' && String(path) === fault.reference) fault.rootDriftArmed = true
+      return bytes
     },
     writeFile: async (path: unknown, ...args: unknown[]) => {
       if (['documents', 'corpus', 'walk'].includes(fault.mode) && String(path).includes('/projection/documents/'))
@@ -79,7 +82,7 @@ afterEach(() => {
   fault.mode = 'none'
   fault.root = ''
   fault.reference = ''
-  fault.realpathCalls = 0
+  fault.rootDriftArmed = false
   fault.declarationCalls = 0
   fault.publicationModes = []
 })

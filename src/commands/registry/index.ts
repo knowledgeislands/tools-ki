@@ -4,11 +4,7 @@ import { createRegistryAddCommand } from './add.ts'
 import { createRegistryListCommand } from './list.ts'
 import { createRegistryRemoveCommand } from './remove.ts'
 
-export interface RegistrySelection {
-  readonly repositories: readonly string[]
-  readonly agora?: string
-  readonly estate?: boolean
-}
+import type { RegistrySelection } from './types.ts'
 
 export const createRegistryCommand = (context: KiContext): Command => {
   const command = new Command('registry')

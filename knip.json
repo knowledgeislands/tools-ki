@@ -5,6 +5,7 @@
     "src/cli.ts",
     "src/**/*.test.ts",
     "scripts/generate-command-inventory.ts",
+    ".dependency-cruiser.ts",
     ".agents/skills/ki-self/scripts/rubric/items/index.ts"
   ],
   "project": ["src/**/*.ts", "scripts/**/*.ts", ".agents/skills/ki-self/scripts/**/*.ts"],

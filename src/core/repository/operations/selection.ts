@@ -1,6 +1,8 @@
-import { readRepositoryDeclaration, resolveRepositoryDeclaredSkills } from '../../configuration/index.ts'
-import { discoverInstalledHarnesses, type InstalledHarness } from '../../harness/index.ts'
-import { type RepositoryLocation, resolveRepositoryTargets } from '../index.ts'
+import { readRepositoryDeclaration } from '../../configuration/declaration.ts'
+import { resolveRepositoryDeclaredSkills } from '../../configuration/local-provider.ts'
+import { discoverInstalledHarnesses, type InstalledHarness } from '../../harness/inspection.ts'
+import type { RepositoryLocation } from '../location.ts'
+import { resolveRepositoryTargets } from '../selection.ts'
 import type { RepositoryOperationContext, RepositorySelection, SelectedRepositorySkills } from './types.ts'
 
 export const resolveSkillsForRepositories = async (

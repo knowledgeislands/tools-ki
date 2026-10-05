@@ -1,7 +1,7 @@
 import { KiError } from '../errors.ts'
-import { canonicalRepositoryIdentity } from '../storage/index.ts'
+import { canonicalRepositoryIdentity } from '../storage/local-registry.ts'
 import { type RegisteredRepository, skillConfiguration } from './repository-inventory.ts'
-import type { AgoraMember } from './resolution.ts'
+import type { AgoraMember } from './types.ts'
 
 export const AGORA_ID = /^[a-z][a-z0-9-]*[a-z0-9]$/
 export interface AgoraHome {

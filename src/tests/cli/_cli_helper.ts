@@ -35,6 +35,8 @@ import type { Fetcher } from '../../core/harness/acquire.ts'
 import type { KiInstallationMode } from '../../core/paths.ts'
 import type { Runner } from '../../core/runtime/runner.ts'
 
+export type { Runner } from '../../core/runtime/runner.ts'
+
 // `ki bootstrap` detects the active agent from which of these home directories exists —
 // kept here as a literal, not imported from src/agents, so this black-box CLI harness
 // exercises detection through observable behavior rather than sharing implementation.

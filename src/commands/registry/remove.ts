@@ -3,9 +3,9 @@ import { resolve } from 'node:path'
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
-import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
-import { type LocalRegistryRemovalSelector, localRegistryRemoval } from '../../core/storage/index.ts'
-import type { RegistrySelection } from './index.ts'
+import { prepareWrites, publishWrites } from '../../core/filesystem/publication.ts'
+import { type LocalRegistryRemovalSelector, localRegistryRemoval } from '../../core/storage/local-registry.ts'
+import type { RegistrySelection } from './types.ts'
 
 const removalSelector = async (
   context: KiContext,

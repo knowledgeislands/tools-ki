@@ -1,4 +1,4 @@
-import type { InstalledHarness } from '../index.ts'
+import type { InstalledHarness } from '../inspection.ts'
 import type { HarnessRefreshPort, HarnessRefreshResult } from './types.ts'
 
 const retainedCapabilities = (harness: InstalledHarness): readonly string[] =>

@@ -3,7 +3,7 @@ import {
   declaredRepositoryKind,
   declaredRepositoryMetadata,
   readRepositoryDeclaration
-} from '../configuration/index.ts'
+} from '../configuration/declaration.ts'
 import type { LocalRegistryEntry } from './local-registry.ts'
 
 const REGISTRY_REPORT_SCHEMA = 'ki/registry/v1' as const

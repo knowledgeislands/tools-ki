@@ -6,10 +6,9 @@ The distinction that matters throughout: **installing a harness makes its capabi
 
 ## The two activation scopes
 
-| Scope | Command | Effect |
-| --- | --- | --- |
-| User | `ki skill add <skill>` | Links the skill into the configured agent skill directories for this machine's user |
-| Repository | `ki repo skill add <skill>` | Links the skill into the repository and declares it under `[skills]` in that repository's `.ki.toml` |
+- User — Command: `ki skill add <skill>`. Effect: Links the skill into the configured agent skill directories for this machine's user.
+
+- Repository — Command: `ki repo skill add <skill>`. Effect: Links the skill into the repository and declares it under `[skills]` in that repository's `.ki.toml`.
 
 User activation is machine-local and travels with you. Repository activation travels with the repository: the `.ki.toml` declaration is the durable statement, and the link is its local projection. That is why `ki repo repair` can rebuild a repository's projections from its declaration, and why cloning a governed repository on a new machine needs only the harness installed, not a re-run of `ki repo skill add`.
 
@@ -91,13 +90,16 @@ ki repo diag --repo /path/to/repository
 
 ## Recovery
 
-| Symptom | Likely cause | Action |
-| --- | --- | --- |
-| Install refuses, naming a claimed prefix | Another installed harness already owns that capability prefix | Uninstall the competing harness, or use a harness with a distinct prefix |
-| Uninstall refuses, naming active skills | Skills from that harness are still activated | Run `ki skill remove` for each, then uninstall |
-| Reinstall refuses a development-linked harness | The harness is served from a local checkout | Run `ki dev local off <harness-id>` first |
-| `gh auth token` fails during a private install | The GitHub CLI is not authenticated for that account | Run `gh auth login`, then retry the install |
-| A skill is declared but not projected | The link is missing, dangling, or stale | `ki repo repair --dry-run`, review, then rerun without the flag |
-| `ki harness missing` names a capability | No installed harness provides it | Install the providing harness, then activate the skill |
+- Install refuses, naming a claimed prefix — Likely cause: Another installed harness already owns that capability prefix. Action: Uninstall the competing harness, or use a harness with a distinct prefix.
+
+- Uninstall refuses, naming active skills — Likely cause: Skills from that harness are still activated. Action: Run `ki skill remove` for each, then uninstall.
+
+- Reinstall refuses a development-linked harness — Likely cause: The harness is served from a local checkout. Action: Run `ki dev local off <harness-id>` first.
+
+- `gh auth token` fails during a private install — Likely cause: The GitHub CLI is not authenticated for that account. Action: Run `gh auth login`, then retry the install.
+
+- A skill is declared but not projected — Likely cause: The link is missing, dangling, or stale. Action: `ki repo repair --dry-run`, review, then rerun without the flag.
+
+- `ki harness missing` names a capability — Likely cause: No installed harness provides it. Action: Install the providing harness, then activate the skill.
 
 Exact grammar for every command here is in `ki <command> --help` and the installed `man ki` manual. Installation never activates a skill, activation never installs a provider, and repair reconciles only the scope it reports.

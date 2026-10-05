@@ -3,7 +3,6 @@ export {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
   declaredRepositoryKind,
-  declaredRepositoryMetadata,
   declareRepositorySkill,
   REPOSITORY_DECLARATION_FILE,
   readRepositoryDeclaration,

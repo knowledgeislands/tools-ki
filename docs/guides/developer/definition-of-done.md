@@ -9,6 +9,7 @@ Apply the `ki-repo-tools` change-readiness checklist for shared documentation, v
 - Public grammar, validation, repository effects, and rendered output retain the command/core/presentation boundaries in the repository-local `ki-self` standard.
 - Portable behavior belongs to its owning Harness skill or KI Specification rather than a `tools-ki`-only compatibility path.
 - New provider, filesystem, time, stream, or network behavior enters through `KiContext` or an explicit domain port.
+- Core modules do not import command grammar; CLI contract tests reach product modules only through the shared sandbox; runtime modules cannot import fixtures. The dependency-boundary suite checks a resolved graph with a supported isolated TypeScript compiler and proves a deliberately violating type-only import fails.
 
 ## Align the public surface
 
@@ -23,6 +24,8 @@ For diagnostic changes, exercise both `diag` and `doctor` with isolated checkout
 Run focused tests while iterating, then the complete engineering gate:
 
 ```sh
+bun install --frozen-lockfile
+bun install --frozen-lockfile --cwd tooling/boundaries
 bun run test
 bunx tsc --noEmit
 bunx biome check

@@ -7,7 +7,7 @@ import {
   declaredRepositoryKind,
   REPOSITORY_DECLARATION_FILE,
   readRepositoryDeclaration
-} from '../configuration/index.ts'
+} from '../configuration/declaration.ts'
 import { KiError } from '../errors.ts'
 import type { LocalRegistryEntry } from './local-registry.ts'
 import { registryEntry } from './local-registry.ts'
