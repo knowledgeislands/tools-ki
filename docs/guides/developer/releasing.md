@@ -101,6 +101,8 @@ Follow the shared release-readiness checklist's tap and website handoff procedur
 - the pinned invocation `curl -fsSL https://knowledgeislands.info/install/ki | sh -s -- vX.Y.Z`; and
 - confirmation that `https://knowledgeislands.info/tooling/ki/` is the human-facing overview route.
 
+After publication, the release workflow's `Notify Homebrew tap` job sends a `tool-release-published` dispatch to `knowledgeislands/homebrew-tap` through the `ki-tools-release-bot` GitHub App; the tap then opens the exact formula pull request and squash-merges it automatically once its required checks pass. The job is skipped until the `KI_TOOLS_RELEASE_BOT_APP_ID` variable and `KI_TOOLS_RELEASE_BOT_PRIVATE_KEY` secret are available to this repository at organisation or repository level (not as `release`-environment secrets); the tap's daily scheduled intake still picks up a published immutable release without the dispatch.
+
 ## Release-please assessment
 
 Do not introduce release-please before the V1 baseline has been released.
