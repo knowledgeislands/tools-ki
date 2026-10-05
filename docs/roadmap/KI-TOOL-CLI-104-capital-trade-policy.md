@@ -22,7 +22,7 @@ updated_at: 2026-10-06T10:00:00Z
 
 The owner approved Capital-only route governance on 2026-10-06 in [KI-ARCADIA-GOV-016](https://github.com/knowledgeislands/ki-arcadia-principal/blob/main/Streams/Roadmap/KI-ARCADIA-GOV-016-territorial-classification-and-exchange.md). Routes are today parsed from member `.ki.toml` tables in `src/core/trade/configuration.ts` and resolved pairwise in `estate.ts`, `delivery.ts` and `standing-intake.ts`. The harness's share is `KI-HARNESS-GOV-122`.
 
-The policy is planned at `Admin/Governance/trade-policy.toml` in the Capital (`schema = "ki-trades/territory-policy/v1"`, `capital`, `members`, `[[channels]]` expanding to exact `(source, receiver, kind)` triples, `[[standing]]` grants). The Capital is the unique registered `ki-repo-kb-principal` repository whose policy names itself as `capital` and lists the island; none is unavailable, several is ambiguous, and both fail closed. Agora membership never grants a route.
+The policy is a `[skills.ki-trades.territory]` table in the Capital's own `.ki.toml`: `name`, `members`, `[[skills.ki-trades.territory.channels]]` (`id`, `purpose`, `from`, `to`, `kinds`) expanding to exact `(source, receiver, kind)` triples, and `[[skills.ki-trades.territory.standing]]` grants. The Capital is the unique registered repository whose `.ki.toml` declares `[skills.ki-trades.territory]` listing the island as a member, resolved as Agora homes already are. None is unavailable and several is ambiguous; both fail closed, and no Agora is consulted.
 
 ## Boundary
 
@@ -33,14 +33,14 @@ The policy is planned at `Admin/Governance/trade-policy.toml` in the Capital (`s
 
 ## Current state
 
-Draft. Route authority today comes from paired member `.ki.toml` tables; no Capital policy file or resolver exists.
+Draft. Route authority today comes from paired member `.ki.toml` tables; no territory table or Capital resolver exists, and `parseConfiguration` rejects unknown `ki-trades` keys.
 
 ## Steps
 
-- [ ] Release A: new `src/core/trade/policy.ts` (`parseTradePolicy`, `policyEdges`, `policyGrants`) and `capital.ts` (`resolveCapitalPolicy`, `requireCapitalPolicy`); new `commands/trade/policy.ts` with `show`, `check` (conforming, failing, unverifiable, ambiguous; non-zero on failing) and `migration-report` (`ki/trade-policy-migration/v1`); move the current parser to `legacy-configuration.ts` for the report.
+- [ ] Release A: `configuration.ts` accepts the `territory` sub-table so Arcadia can declare it without breaking current audits; new `src/core/trade/policy.ts` (`parseTradePolicy`, `policyEdges`, `policyGrants`) and `capital.ts` (`resolveCapitalPolicy`, `requireCapitalPolicy`, reusing Agora home resolution over registered `.ki.toml` files); new `commands/trade/policy.ts` with `show`, `check` (conforming, failing, unverifiable, ambiguous; non-zero on failing) and `migration-report` (`ki/trade-policy-migration/v1`); move the current parser to `legacy-configuration.ts` for the report.
 - [ ] Release B: `estate.ts`, `delivery.ts`, `standing-intake.ts`, `preparations.ts` and `lifecycle.ts` read policy edges and grants; `configuration.ts` keeps `repository`, `identity` and `mapBonus` and reports legacy keys as diagnostics only; remove route, standing and subtype mutators and their `add`/`remove` commands.
 - [ ] Release C: retire the legacy parser and migration report.
-- [ ] Tests: new `policy.test.ts` (parser refusals, resolver states, non-principal file ignored, Agora grants nothing, sweep states, report equality and pending direction, uncovered record); policy fixtures in `trade.test.ts` and `standing-intake.test.ts`; `roadmap.test.ts` fixture; v1 route-report snapshot.
+- [ ] Tests: new `policy.test.ts` (parser refusals, resolver states, territory table outside a Capital refused, Agora grants nothing, sweep states, report equality and pending direction, uncovered record); policy fixtures in `trade.test.ts` and `standing-intake.test.ts`; `roadmap.test.ts` fixture; v1 route-report snapshot.
 
 ## Files touched
 
