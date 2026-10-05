@@ -4,12 +4,12 @@ area: CLI
 title: Workflows use ki diag
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: d7a5aa9f170efe55be387fefbc9b614a1085c51c
 created_at: 2026-10-05T11:11:18Z
-updated_at: 2026-10-05T11:15:00Z
+updated_at: 2026-10-05T11:25:00Z
 ---
 
 # Workflows use ki diag
@@ -96,6 +96,10 @@ The assertions keep their original intent (provenance, executable identity, conf
 ### Mini recap
 
 Workflow-only fix replacing the retired `ki manage diag` with `ki diag` and `ki diag --full`; CI is unblocked and release verification is ready for the next release.
+
+## Done
+
+Accepted 2026-10-05 on the review packet above, under the owner's delegated estate-push authority following independent Fable review of `20f99e6`. The reviewer confirmed no `ki manage` call remains in the workflows, re-simulated both installations from an export of `20f99e6` (local: `Installation: local`, checkout `Executable`, then `Configuration: valid` and `Registry: valid`; release binary: `Installation: release`, then `Configuration: valid` with the registry `missing`), found the `set -euo pipefail` semantics sound and actionlint clean, and the scope confined to the workflows. Left at `done` for the owner's review.
 
 ## Discussion
 
