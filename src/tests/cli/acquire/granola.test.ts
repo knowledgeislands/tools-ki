@@ -2351,6 +2351,51 @@ describe('[ki acquire import --adapter granola]', () => {
     ).toContain('journal must be physical file')
   })
 
+  test('retains account binding across workspace inventory changes and rejects identity or access changes', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
+    ])
+    const meeting: GranolaMeetingFixture = { id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }
+    const account = {
+      email: 'owner@example.com',
+      active_workspace: { id: 'active-workspace', display_name: 'Personal' },
+      mcp_note_access: { scopes: ['personal', 'public'] }
+    }
+    box.setRunner(granolaFixtureRunner({ meetings: [meeting], account }).runner)
+    expect((await box.run(command(repository))).exitCode).toBe(0)
+    const checkpoint = join(repository, '+/_ACQUIRE/granola/ledger.json')
+    const original = await readFile(checkpoint, 'utf8')
+
+    for (const workspaces of [[], [{ id: 'active-workspace' }], [{ id: 'new-workspace' }]]) {
+      box.setRunner(granolaFixtureRunner({ meetings: [meeting], account: { ...account, workspaces } }).runner)
+      const result = await box.run(command(repository))
+      expect(result.exitCode, result.output).toBe(0)
+      expect(await readFile(checkpoint, 'utf8')).toBe(original)
+    }
+
+    for (const changed of [
+      { ...account, email: 'other@example.com' },
+      { ...account, active_workspace: { id: 'other-workspace', display_name: 'Personal' } },
+      { ...account, mcp_note_access: { scopes: ['personal'] } }
+    ]) {
+      box.setRunner(granolaFixtureRunner({ meetings: [meeting], account: changed }).runner)
+      const result = await box.run(command(repository))
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain('account differs')
+      expect(await readFile(checkpoint, 'utf8')).toBe(original)
+    }
+
+    const fixture = granolaFixtureRunner({ meetings: [meeting], account })
+    box.setRunner(async (executable, arguments_, environment) =>
+      arguments_[1] === 'granola.get_account_info'
+        ? { exitCode: 0, output: '[]' }
+        : fixture.runner(executable, arguments_, environment)
+    )
+    expect((await box.run(command(repository))).output).toContain('account response is malformed')
+  })
+
   test('ignores non-acquisition peers and validates peer acquisition selectors', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')

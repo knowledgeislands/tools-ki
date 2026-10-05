@@ -76,6 +76,8 @@ ki acquire reconcile --adapter granola
 
 `status` reports checkpoint, transcript, disposition, image-manifest, and journal summaries. `reconcile` additionally verifies the checkpoint's staged or disposed document evidence and every acquired image checksum.
 
+The account checkpoint binds the connected account, active workspace and note-access scopes. Granola's list of joined workspaces is discovery metadata and does not affect that binding; an added workspace alone does not block a later import. Changes to the account, active workspace or access scopes still require review.
+
 ## Acquire desktop screenshots
 
 The Granola MCP has no attachment list or image bytes. For a note with an Images stack, observe the current image count in the desktop app. Open each image and use its Download control to save the original into a new, otherwise empty directory. Keep the app-generated `attachment-<uuid>` names. The app may use a `.jpg` filename for PNG bytes; the importer detects the actual format.

@@ -289,7 +289,10 @@ const inspectSchema = async (runner: Runner, environment: NodeJS.ProcessEnv): Pr
 export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessEnv): Promise<GranolaSource> => {
   const schemaSha256 = await inspectSchema(runner, environment)
   const gate = requestGate(environment)
-  const accountSha256 = sha256(stableJson(await call(runner, environment, 'get_account_info', {}, gate)))
+  const account = record(await call(runner, environment, 'get_account_info', {}, gate), 'account')
+  // Workspace inventory is discovery metadata; membership changes do not change the active source identity.
+  const accountIdentity = Object.fromEntries(Object.entries(account).filter(([key]) => key !== 'workspaces'))
+  const accountSha256 = sha256(stableJson(accountIdentity))
   return {
     accountSha256,
     schemaSha256,
