@@ -739,12 +739,15 @@ never creates, transitions, accepts, prunes, or repairs a work item. Generic
 promote and demote operations exclude the unadopted \fBtriage\fR horizon.
 .TP
 .B ki repo [repo-options] roadmap summary
-Show selected repositories as rows against horizon columns, with valid work-item
-totals per repository and per horizon. Nonzero lifecycle-status counts appear
-below the table. Zero means an empty roadmap, a dash means no roadmap, and a
-question mark means unavailable. Invalid roadmap evidence remains diagnostic
-and makes the command exit with status 1. Item identifiers, titles, and trade
-records are omitted.
+Show selected repositories as rows against horizon columns. Each cell shows
+nonzero lifecycle-status counts and a sum, such as d=1 r=2 Σ=3.
+The Σ column and row aggregate the same counts per repository and per
+horizon. A legend expands d (draft), r (ready), ip (in-progress), and
+ar (awaiting-review); done
+counts use done. A sum of zero means no items in that cell, a dash means no
+roadmap, and a question mark means unavailable. Invalid roadmap evidence
+remains diagnostic and makes the command exit with status 1. Item identifiers,
+titles, and trade records are omitted.
 .TP
 .B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
 Report age and inactivity metrics for selected local roadmaps. Every valid work

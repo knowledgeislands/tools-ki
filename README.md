@@ -137,7 +137,7 @@ See [canonical batch records](docs/guides/user/batch-records.md) for result and 
 
 ## Inspect governed work
 
-`ki repo roadmap summary` shows selected repositories as rows against horizon columns, with a total for each repository and each horizon. Lifecycle counts appear below the table. Zero means a present empty roadmap; `—` means no roadmap, and `?` means unavailable. Malformed records remain diagnostic and return status `1`; counts include valid items only. The summary omits item identifiers, titles, and trade records.
+`ki repo roadmap summary` shows selected repositories as rows against horizon columns. Each cell shows lifecycle-status counts and its sum, such as `d=1 r=2 Σ=3`; the `Σ` column and row aggregate repositories and horizons. The legend expands `d` (draft), `r` (ready), `ip` (in-progress), and `ar` (awaiting-review); done counts use `done`. `Σ=0` means no items in that cell; `—` means no roadmap, and `?` means unavailable. Malformed records remain diagnostic and return status `1`; counts include valid items only. The summary omits item identifiers, titles, and trade records.
 
 `ki repo roadmap list --format json` emits the versioned, path-free `ki/roadmap/v1` projection with canonical record URLs for integrations.
 

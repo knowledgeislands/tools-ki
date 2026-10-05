@@ -227,40 +227,46 @@ const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
       ? (names[index] as string)
       : result.repository
   )
-  const count = (items: readonly WorkItem[], horizon: string): number =>
-    items.filter((item) => item.horizon === horizon).length
+  const statusLabels = {
+    draft: 'd',
+    ready: 'r',
+    'in-progress': 'ip',
+    'awaiting-review': 'ar',
+    done: 'done'
+  } as const
+  const cell = (items: readonly WorkItem[]): string => {
+    const counts = [...statusOrder].reverse().flatMap((status) => {
+      const value = items.filter((item) => item.status === status).length
+      return value ? [`${statusLabels[status]}=${value}`] : []
+    })
+    return [...counts, `Σ=${items.length}`].join(' ')
+  }
   const rows = results.map((result, index) => {
     const unavailable = Boolean(result.diagnostic)
     const absent = result.roadmap === 'absent'
     const items = result.items ?? []
     return [
       labels[index] as string,
-      ...horizonOrder.map((horizon) => (unavailable ? '?' : absent ? '—' : String(count(items, horizon)))),
-      unavailable ? '?' : absent ? '—' : String(items.length)
+      ...horizonOrder.map((horizon) =>
+        unavailable ? '?' : absent ? '—' : cell(items.filter((item) => item.horizon === horizon))
+      ),
+      unavailable ? '?' : absent ? '—' : cell(items)
     ]
   })
   const items = results.flatMap((result) => result.items ?? [])
-  const table = renderMatrixTable('KI REPO ROADMAP SUMMARY', ['Repository', ...horizonOrder, 'Total'], rows, [
-    'TOTAL',
-    ...horizonOrder.map((horizon) => String(count(items, horizon))),
-    String(items.length)
+  const table = renderMatrixTable('KI REPO ROADMAP SUMMARY', ['Repository', ...horizonOrder, 'Σ'], rows, [
+    'Σ',
+    ...horizonOrder.map((horizon) => cell(items.filter((item) => item.horizon === horizon))),
+    cell(items)
   ])
-  const statuses = results.flatMap((result, index) => {
-    const items = result.items ?? []
-    const counts = [...statusOrder].reverse().flatMap((status) => {
-      const value = items.filter((item) => item.status === status).length
-      return value ? [`${status}=${value}`] : []
-    })
-    return counts.length ? [`  ${labels[index]}: ${counts.join(' ')}`] : []
-  })
   const diagnostics = results.flatMap((result, index) => [
     ...(result.diagnostic ? [`  ${labels[index]}: ${result.diagnostic}`] : []),
     ...(result.faults ?? []).map((fault) => `  ${labels[index]}: ${fault.message}`)
   ])
   return [
     ...table,
+    'd=draft r=ready ip=in-progress ar=awaiting-review; Σ=total',
     '— no roadmap; ? unavailable',
-    ...(statuses.length ? ['Statuses', ...statuses] : []),
     ...(diagnostics.length ? ['Diagnostics (counts include valid items only)', ...diagnostics] : [])
   ].join('\n')
 }
