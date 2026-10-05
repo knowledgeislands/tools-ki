@@ -208,6 +208,9 @@ export interface Sandbox {
       readonly runner?: 'default'
       readonly executable?: string
       readonly installation?: KiInstallationMode
+      readonly installationProvenance?: 'local' | 'release' | 'unknown'
+      readonly architecture?: string
+      readonly runtime?: string
       readonly platform?: NodeJS.Platform
       readonly stdoutFailure?: Error
       /** Receives each write with its destination stream. */
@@ -282,6 +285,9 @@ const create = async (): Promise<Sandbox> => {
       readonly runner?: 'default'
       readonly executable?: string
       readonly installation?: KiInstallationMode
+      readonly installationProvenance?: 'local' | 'release' | 'unknown'
+      readonly architecture?: string
+      readonly runtime?: string
       readonly platform?: NodeJS.Platform
       readonly stdoutFailure?: Error
       /** Receives each write with its destination stream. */
@@ -310,6 +316,9 @@ const create = async (): Promise<Sandbox> => {
       stderr: { write: write('stderr'), isTTY: options?.interactive, columns: options?.columns },
       executable,
       installation: options?.installation,
+      installationProvenance: options?.installationProvenance,
+      architecture: options?.architecture,
+      runtime: options?.runtime,
       ...(options?.platform === undefined ? {} : { platform: options.platform }),
       workingDirectory,
       environment: { ...env, ...environmentOverrides, _: executable },

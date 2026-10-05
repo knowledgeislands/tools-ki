@@ -145,6 +145,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 ### Behaviours
 
+- Diagnostics and doctor reports share tool/version, proven local/release/unknown installation mode, executing platform/architecture, runtime/version, and configuration state. Doctor reports its read-only scope, verdict, and pass/warn/fail/skipped counts without implying package freshness.
 - KI's own CI runs from the checked-out source, while release packaging pins a verified Harness revision.
 - `ki docs overview` now reports the canonical `https://knowledgeislands.info/tooling/ki/` route.
 - Release guidance standardises exact installer pinning as positional `vX.Y.Z`, while an omitted version continues to resolve the latest release.

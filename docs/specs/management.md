@@ -16,11 +16,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-002 — Managed-state diagnosis
 
-`ki doctor` MUST report configured skills whose active source cannot be resolved.
+`ki doctor` MUST report configured skills whose active source cannot be resolved, the same tool/version, installation provenance, executing host platform/architecture, runtime/version and configuration state as `diag`, its read-only check scope, a healthy/unhealthy verdict, and pass/warn/fail/skipped counts that account for every reported check. It MUST NOT imply package or release freshness was checked.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/manage/doctor.test.ts` — `reports a configured skill whose active source cannot be resolved`.
+_Verify:_ `src/tests/cli/manage/doctor.test.ts` — `reports a configured skill whose active source cannot be resolved`, `shares diagnostic host context and counts each completed check exactly once`, and `reports missing configuration in human form`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
@@ -58,11 +58,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### MANAGE-006 — Managed-state diagnostics
 
-`ki diag` MUST report share-safe machine-managed installation, configuration and registry status and counts by default. `--full` MAY include local paths, identities and detailed diagnostics. It MUST NOT inspect a repository declaration or its projections.
+`ki diag` MUST report share-safe tool/version, proven local/release/unknown installation mode, executing host platform/architecture, runtime/version, configuration and registry status and counts by default. Unproven callers MUST report unknown provenance rather than infer release mode from a path or the internal regular-installation default. `--full` MAY include local paths, identities and detailed diagnostics. It MUST NOT inspect a repository declaration or its projections.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/manage/diag.test.ts` — `does not inspect repository state for user diagnostics` and `leaves direct repository projection health to ki repo diag`.
+_Verify:_ `src/tests/cli/manage/diag.test.ts` — `does not inspect repository state for user diagnostics`, `leaves direct repository projection health to ki repo diag`, `reports the entrypoint-proven installation mode`, and `normalizes executing host names without treating regular fallback as release provenance`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

@@ -19,11 +19,15 @@ import {
 } from '../../core/manage/index.ts'
 import { harnessDevelopmentEnabled } from '../../core/storage/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
+import { diagnosticContext } from './diagnostic-context.ts'
 
 const mark = (status: ManageCheckStatus): string => presentation(`status.${status}`).terminal
 
-const doctorPort = (context: KiContext): ManageDoctorPort => ({
-  inspectConfiguration: () => inspectUserConfiguration(context.paths.config),
+const doctorPort = (
+  context: KiContext,
+  configuration: Awaited<ReturnType<typeof inspectUserConfiguration>>
+): ManageDoctorPort => ({
+  inspectConfiguration: async () => configuration,
   configuredAgents: async () =>
     (
       await configuredAgents({
@@ -44,7 +48,7 @@ const doctorPort = (context: KiContext): ManageDoctorPort => ({
   realpath: (path) => realpath(path).catch(() => undefined)
 })
 
-const report = (context: KiContext, checks: readonly ManageDoctorCheck[]): void => {
+const report = (context: KiContext, configuration: string, checks: readonly ManageDoctorCheck[]): void => {
   const totals = {
     pass: checks.filter((check) => check.status === 'pass').length,
     fail: checks.filter((check) => check.status === 'fail').length,
@@ -54,11 +58,17 @@ const report = (context: KiContext, checks: readonly ManageDoctorCheck[]): void 
     `${renderTree({
       title: 'KI DOCTOR',
       entries: [
+        ...diagnosticContext(context, configuration),
+        {
+          label:
+            'Scope: read-only local configuration, agents, harnesses, skills, and direct-CWD state; freshness not checked'
+        },
         {
           label: `checks (${checks.length})`,
           children: checks.map((check) => ({ label: `${mark(check.status)} ${check.label}: ${check.detail}` }))
         },
-        { label: `summary: PASS=${totals.pass} FAIL=${totals.fail} SKIP=${totals.skip}` }
+        { label: `Verdict: ${totals.fail ? 'unhealthy' : 'healthy'}` },
+        { label: `Checks: pass=${totals.pass} warn=0 fail=${totals.fail} skipped=${totals.skip}` }
       ]
     }).join('\n')}\n`
   )
@@ -67,11 +77,12 @@ const report = (context: KiContext, checks: readonly ManageDoctorCheck[]): void 
 
 export const createDoctorCommand = (context: KiContext): Command =>
   new Command('doctor')
-    .description('check KI configuration, agents, harnesses, user skills, and direct-CWD legacy state')
+    .description('report diagnostic context and read-only KI health checks, verdict, and counts')
     .action(async () => {
-      const checks = await inspectManageDoctor(doctorPort(context), {
+      const configuration = await inspectUserConfiguration(context.paths.config)
+      const checks = await inspectManageDoctor(doctorPort(context, configuration), {
         workingDirectory: context.workingDirectory,
         canonicalHarnessIdentifier
       })
-      report(context, checks)
+      report(context, configuration.state, checks)
     })

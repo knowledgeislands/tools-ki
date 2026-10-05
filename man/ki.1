@@ -490,7 +490,9 @@ transaction-looking directories, unconfigured harnesses, links, or unknown
 files are stale.
 .TP
 .B ki diag [--full]
-Print share-safe version, installation mode, configuration and registry status,
+Print share-safe tool/version, proven local/release/unknown installation mode,
+executing host platform and architecture, runtime/version, configuration
+and registry status,
 and counts without changing state. With --full, include local paths, identities,
 and detailed configuration diagnostics. It does not inspect repository
 declarations or projections.
@@ -501,7 +503,10 @@ harnesses, and configured KI user-skill links without changing state. It also
 reports direct-CWD legacy \fB.ki-meta/\fR and \fB.ki/\fR directories, without
 searching for or operating on a repository. It validates a regular direct-CWD
 \fB.ki.toml\fR declaration without resolving its providers. A failing
-check produces a non-zero exit status after the complete report.
+check produces a non-zero exit status after the complete report. Report the same
+context as diag, the read-only scope, verdict, and
+pass/warn/fail/skipped counts.
+Health does not imply package or release freshness.
 .TP
 .B ki repair [--apply | --dry-run]
 Preview repairs by default; --apply explicitly authorises changes.

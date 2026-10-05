@@ -11,6 +11,9 @@ export interface KiContext {
   readonly stderr: Output
   readonly executable: string
   readonly installation: KiInstallationMode
+  readonly installationProvenance: 'local' | 'release' | 'unknown'
+  readonly architecture: string
+  readonly runtime: string
   /** Injected host platform, so platform-dependent behaviour stays reachable from a CLI test. */
   readonly platform: NodeJS.Platform
   readonly workingDirectory: string
@@ -35,6 +38,9 @@ export interface ContextOptions {
   readonly executable: string
   /** Entrypoints supply their proven installation provenance; callers default to regular. */
   readonly installation?: KiInstallationMode
+  readonly installationProvenance?: KiContext['installationProvenance']
+  readonly architecture?: string
+  readonly runtime?: string
   readonly platform?: NodeJS.Platform
   readonly workingDirectory: string
   readonly environment: Environment
@@ -72,6 +78,11 @@ const processInterrupt = (handler: () => void): (() => void) => {
 }
 /* v8 ignore stop */
 
+/* v8 ignore start -- Host engine selection is process wiring; CLI tests inject runtime facts at this boundary. */
+const hostRuntime = (): string =>
+  process.versions.bun ? `Bun ${process.versions.bun}` : `Node ${process.versions.node}`
+/* v8 ignore stop */
+
 export const createContext = async (options: ContextOptions): Promise<KiContext> => {
   const workingDirectory = await realpath(options.workingDirectory)
   const homeDirectory = await realpath(userHome(options.environment)).catch(() =>
@@ -82,6 +93,9 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
     stderr: options.stderr,
     executable: options.executable,
     installation: options.installation ?? 'regular',
+    installationProvenance: options.installationProvenance ?? 'unknown',
+    architecture: options.architecture ?? process.arch,
+    runtime: options.runtime ?? hostRuntime(),
     platform: options.platform ?? process.platform,
     workingDirectory,
     environment: options.environment,

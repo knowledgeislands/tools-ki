@@ -13,6 +13,7 @@ const context = await createContext({
   // executable is process.execPath. Source execution is necessarily a local checkout.
   executable: bundled ? process.execPath : fileURLToPath(import.meta.url),
   installation: bundled ? 'regular' : 'local',
+  installationProvenance: bundled ? 'release' : 'local',
   workingDirectory: process.cwd(),
   // `process.env` itself, never a copy: `ki` adopts configured variables into the context
   // environment, and an in-process consumer such as a dynamically imported skill rubric

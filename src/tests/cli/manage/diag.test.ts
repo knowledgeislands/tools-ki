@@ -22,6 +22,16 @@ visibility = "private"
 `
 
 describe('[ki diag]', () => {
+  test('normalizes executing host names without treating regular fallback as release provenance', async () => {
+    const box = await sandbox()
+    const macos = await box.run('ki diag', { installation: 'regular', platform: 'darwin', architecture: 'x64' })
+    const windows = await box.run('ki diag', { platform: 'win32', architecture: 'AMD64' })
+    expect(macos.output).toContain('Installation: unknown')
+    expect(macos.output).toContain('Platform: macos')
+    expect(macos.output).toContain('Architecture: x86_64')
+    expect(windows.output).toContain('Platform: windows')
+    expect(windows.output).toContain('Architecture: x86_64')
+  })
   test('redacts paths by default and reveals them only with --full', async () => {
     const box = await sandbox()
     const missingHome = join(box.root.path, 'missing-home')
@@ -39,16 +49,44 @@ describe('[ki diag]', () => {
     expect(redacted.output).not.toContain(missingHome)
     expect(diag.output).toContain(`Executable: ${box.executable}`)
     expect(diag.output).toContain(`Data: ${missingHome}/data/ki`)
+    for (const report of [redacted.output, diag.output]) {
+      for (const label of [
+        'Tool:',
+        'Version:',
+        'Installation:',
+        'Platform:',
+        'Architecture:',
+        'Runtime:',
+        'Configuration:'
+      ])
+        expect(report.split(label)).toHaveLength(2)
+    }
   })
 
   test('reports the entrypoint-proven installation mode', async () => {
     const box = await sandbox()
 
     const regular = await box.run('ki diag --full')
-    const local = await box.run('ki diag --full', { installation: 'local' })
+    const local = await box.run('ki diag --full', {
+      installation: 'local',
+      installationProvenance: 'local',
+      platform: 'linux',
+      architecture: 'arm64',
+      runtime: 'Bun 1.4.1'
+    })
+    const release = await box.run('ki diag', { installationProvenance: 'release' })
 
-    expect(regular.output).toContain('Installation: regular')
+    expect(regular.output).toContain('Installation: unknown')
     expect(local.output).toContain('Installation: local')
+    expect(release.output).toContain('Installation: release')
+    for (const field of [
+      'Tool: ki',
+      'Platform: linux',
+      'Architecture: arm64',
+      'Runtime: Bun 1.4.1',
+      'Configuration: missing'
+    ])
+      expect(local.output).toContain(field)
   })
 
   test('resolves the user home from USERPROFILE when HOME is unset', async () => {
@@ -235,7 +273,7 @@ extra = true
 
     const diag = await box.run('ki diag --full')
 
-    expect(diag.output).toContain('Status: valid')
+    expect(diag.output).toContain('Configuration: valid')
     expect(diag.output).not.toContain('Warnings')
     expect(diag.output).not.toContain('Errors')
     expect(diag.output).toContain('├─ agents (1)\n│  │  ╰─ claude-code')

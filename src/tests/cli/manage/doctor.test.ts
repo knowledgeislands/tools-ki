@@ -3,11 +3,44 @@ import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
 describe('[ki doctor]', () => {
+  test('shares diagnostic host context and counts each completed check exactly once', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    const options = {
+      installationProvenance: 'local' as const,
+      platform: 'linux' as const,
+      architecture: 'arm64',
+      runtime: 'Bun 1.4.1'
+    }
+    const diag = await box.run('ki diag', options)
+    const doctor = await box.run('ki doctor', options)
+    for (const label of [
+      'Tool: ki',
+      'Installation: local',
+      'Platform: linux',
+      'Architecture: arm64',
+      'Runtime: Bun 1.4.1',
+      'Configuration: valid'
+    ]) {
+      expect(diag.output).toContain(label)
+      expect(doctor.output).toContain(label)
+    }
+    expect(doctor.output).toContain('Verdict: healthy')
+    const checks = Number(doctor.output.match(/checks \((\d+)\)/)?.[1])
+    const totals = doctor.output.match(/pass=(\d+) warn=(\d+) fail=(\d+) skipped=(\d+)/)
+    expect(totals?.slice(1).reduce((sum, value) => sum + Number(value), 0)).toBe(checks)
+  })
   test('reports missing configuration in human form', async () => {
     const box = await sandbox()
     const doctor = await box.run('ki doctor')
 
-    expect(doctor.output).toContain('╭─ KI DOCTOR\n├─ checks (4)\n│  ├─ ✗ Configuration: missing; run ki bootstrap')
+    expect(doctor.output).toContain('╭─ KI DOCTOR')
+    expect(doctor.output).toContain('├─ checks (4)\n│  ├─ ✗ Configuration: missing; run ki bootstrap')
+    expect(doctor.output).toContain('Configuration: missing')
+    expect(doctor.output).toContain('Verdict: unhealthy')
+    expect(doctor.output).toContain('Checks: pass=1 warn=0 fail=1 skipped=2')
+    expect(doctor.output).toContain('freshness not checked')
     expect(doctor.output).not.toContain('ki: error:')
     expect(doctor.exitCode).toBe(1)
   })

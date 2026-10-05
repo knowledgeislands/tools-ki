@@ -18,6 +18,8 @@ Apply the `ki-repo-tools` change-readiness checklist for shared documentation, v
 
 ## Verify the change
 
+For diagnostic changes, exercise both `diag` and `doctor` with injected provenance and host/runtime facts. Confirm default diagnostic redaction, local/release/unknown reporting, normalized host names, and doctor verdict/count agreement through the public CLI seam; keep freshness outside the health claim.
+
 Run focused tests while iterating, then the complete engineering gate:
 
 ```sh

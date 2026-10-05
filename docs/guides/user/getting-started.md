@@ -45,7 +45,7 @@ ki diag
 ki doctor
 ```
 
-`diag` prints the version, installation mode, resolved paths, user configuration, and registry without changing anything. `doctor` checks configuration, agent skill directories, installed harnesses, and skill links, and exits non-zero on a failing check while still printing the complete report.
+`diag` prints share-safe tool/version, proven installation mode, executing platform and architecture, runtime, configuration state, and registry counts without changing anything. Use `ki diag --full` for resolved paths and local identities. `doctor` reports the same context, evaluates configuration, agent skill directories, installed harnesses, and skill links, and prints its verdict and pass/warn/fail/skipped counts before exiting non-zero on a failing check. A healthy result does not mean package updates were checked.
 
 ## Register your first repository
 

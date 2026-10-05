@@ -86,9 +86,11 @@ ki diag
 ki doctor
 ```
 
-`diag` prints share-safe version, installation mode, configuration and registry status, and counts. Use `ki diag --full` for resolved paths, local identities, and detailed diagnostics. It changes nothing and inspects no repository declaration. Each path resolves from the first non-empty of `$KI_*_HOME`, `$XDG_*_HOME/ki`, then the `~/.local` or `~/.config` default.
+`diag` prints share-safe tool/version, installation mode, executing host platform and architecture, runtime/version, configuration and registry status, and counts. Installation is `local` for source execution, `release` for a compiled executable, or `unknown` when its caller supplied no proven provenance; a filename or installation path alone is not proof. Use `ki diag --full` for resolved paths, local identities, and detailed diagnostics. It changes nothing and inspects no repository declaration. Each path resolves from the first non-empty of `$KI_*_HOME`, `$XDG_*_HOME/ki`, then the `~/.local` or `~/.config` default.
 
 `doctor` checks user configuration, configured agent skill directories, installed harnesses, and the configured KI-managed user skill links. It also reports a direct-CWD legacy `.ki-meta/` or `.ki/` directory and validates a regular direct-CWD `.ki.toml` declaration without resolving its providers. A failing check produces a non-zero exit status and still prints the complete report, so read the whole output rather than stopping at the first failure.
+
+Doctor reports begin with the same diagnostic context, state the read-only check scope, and end with a verdict and pass/warn/fail/skipped counts. Skipped checks were not evaluated; a healthy verdict describes only the named checks, not package or release freshness. `doctor` includes actionable local findings and is not a substitute for the share-safe `diag` report.
 
 ## Repair user skill links
 
