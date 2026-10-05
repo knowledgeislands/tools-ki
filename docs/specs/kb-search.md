@@ -1,6 +1,6 @@
 # Knowledge Base search — KB-SEARCH
 
-This area specifies the registry-owned derived search boundary. The Harness owns qmd adoption and mirror-content policy; this repository owns its concrete CLI and generated mapping. Implementation and test evidence are pending while the pinned pilot completes.
+This area specifies the registry-owned derived search boundary. The Harness owns qmd adoption and mirror-content policy; this repository owns its concrete CLI and generated mapping. The pinned pilot and portable interface are published; CLI verification passes and independent review and acceptance are pending.
 
 Generated model settings use absolute already-provisioned GGUF paths under `model_cache/qmd/models`; lexical mode needs no models, vector needs embedding, CLI hybrid needs all three and REST hybrid needs embedding and reranking. Missing models fail clearly before a read invokes retrieval. No read downloads models or provisions runtime state. qmd retrieval may update its private derived LLM cache; read purity means no canonical KB or registry mutation, installation, index refresh or daemon provisioning. Engine line numbers are hints; returned snippets and citations use independently selected current local line arrays. Input is limited to 10,000 documents, 1 MiB per document and 100 MiB of current source bytes; response transport is limited to 2 MiB and 200 candidates. CLI options precede an argv terminator and the literal query.
 
@@ -10,7 +10,9 @@ Generated model settings use absolute already-provisioned GGUF paths under `mode
 
 Each searchable Knowledge Base MUST have one stable local registry key and an explicitly assigned, unique `search_boundary`. Indexing MUST reject absent, invalid, shared or contradictory assignments; repository paths, caller aliases, basenames and Agora membership MUST NOT supply authority. `ki registry add --search-boundary <id>` assigns exactly one selected registered KB and preserves its identity and store bindings. The generated named index is `ki-kb-<registry-key>` and contains only that KB.
 
-_Conformance:_ implementation pending
+_Conformance:_ conforming
+
+_Evidence:_ Public CLI fixtures in `src/tests/cli/kb/`, portable contract tests and the [synthetic native receipt](references/kb-search-synthetic.json); complete suite and coverage pass with 1,025 tests and 100% in every metric.
 
 _Verify:_ isolated public CLI fixtures for assignment, duplicate boundaries, project rejection, registration preservation and missing assignment.
 
@@ -18,7 +20,9 @@ _Verify:_ isolated public CLI fixtures for assignment, duplicate boundaries, pro
 
 The engine MUST read only an owned projection of Markdown inside the KB's configured zones. Authority is `[skills.ki-repo-kb.zones]`, with five canonical zone keys and quoted `"+"`/`"-"` staging keys projected as `inbound`/`outbound`; retired `[knowledgeislands-kb.zones]` is rejected for indexing until explicitly migrated. Dot paths, root repository metadata, symlinks, nested repository checkouts, undeclared folders and binary source stores MUST be excluded before any indexing or embedding. Projection publication MUST reject unmanaged collisions and unsafe ancestry; pruning MUST only remove previously owned derived files and never original sources.
 
-_Conformance:_ implementation pending
+_Conformance:_ conforming
+
+_Evidence:_ Public CLI fixtures in `src/tests/cli/kb/`, portable contract tests and the [synthetic native receipt](references/kb-search-synthetic.json); complete suite and coverage pass with 1,025 tests and 100% in every metric.
 
 _Verify:_ synthetic sibling bases, hidden and undeclared content, symlink escapes, nested repositories and unmanaged-state collision fixtures.
 
@@ -26,7 +30,9 @@ _Verify:_ synthetic sibling bases, hidden and undeclared content, symlink escape
 
 The machine-local mapping MUST use schema `ki/kb-search/v1` and record `registry_id`, canonical `repository`, physical `root`, explicit `trust_boundary`, independent `index`, pinned `engine`, exact collection identity, zone map, owned qmd configuration/database paths, current generation identity, per-document complete content digests, and an optional strictly loopback daemon endpoint. MCP clients MUST bind their aliases explicitly to the registry identity and match the physical root; aliases MUST NOT be mapped by name inference.
 
-_Conformance:_ implementation pending
+_Conformance:_ conforming
+
+_Evidence:_ Public CLI fixtures in `src/tests/cli/kb/`, portable contract tests and the [synthetic native receipt](references/kb-search-synthetic.json); complete suite and coverage pass with 1,025 tests and 100% in every metric.
 
 _Verify:_ deterministic mapping output, identity mismatch, physical-root mismatch and endpoint validation fixtures.
 
@@ -66,7 +72,9 @@ Search returns schema `ki/kb-search-result/v1` with registry identity, explicit 
 
 `ki kb search <query>` MUST support `query`, `search` and `vsearch`, strictly bounded query/result inputs and JSON results. qmd v2.8.3 is pinned to commit `facd35e01359e59d938bc9418e93fb9318addee3`. Missing qmd, mismatched version, missing or invalid index mapping and engine failure MUST yield non-zero, clear unavailable errors; silent grep fallback MUST NOT occur. All external execution MUST use argv arrays with explicit configuration and database paths, timeout and output limits. Engine stdout, stderr/error text and HTTP response bodies MUST be size bounded before parsing. Each refreshed generation MUST have a fresh independent database containing only its current authorized projection; deleted or now-protected content MUST NOT carry into expansion or reranking. Mode metadata MUST distinguish CLI native expansion/reranking from REST explicit lexical/vector/reranking profiles; ranking identity MUST NOT be claimed.
 
-_Conformance:_ implementation pending
+_Conformance:_ conforming
+
+_Evidence:_ Public CLI fixtures in `src/tests/cli/kb/`, portable contract tests and the [synthetic native receipt](references/kb-search-synthetic.json); complete suite and coverage pass with 1,025 tests and 100% in every metric.
 
 _Verify:_ injected CLI engine responses, unavailable/version/failure/timeout/output bounds, and actual pinned qmd against synthetic corpora.
 
@@ -74,7 +82,9 @@ _Verify:_ injected CLI engine responses, unavailable/version/failure/timeout/out
 
 The adapter MUST validate each candidate's exact collection and relative path against the selected mapping and current symlink-aware source boundary before exposing any content. It MUST derive titles, snippets, document identities and mirror labels from authorized, bounded local Markdown; untrusted engine text MUST NOT establish provenance. Document content changes MUST invalidate stale results. Invalid, malformed, cross-base, protected, undeclared or escaped candidates MUST fail closed without exposing their content. Returned scores MUST be finite. Results MUST state bounded retrieval honestly and MUST NOT imply exhaustive corpus coverage.
 
-_Conformance:_ implementation pending
+_Conformance:_ conforming
+
+_Evidence:_ Public CLI fixtures in `src/tests/cli/kb/`, portable contract tests and the [synthetic native receipt](references/kb-search-synthetic.json); complete suite and coverage pass with 1,025 tests and 100% in every metric.
 
 _Verify:_ hostile responses that pair allowed paths with foreign titles/snippets/docids/labels, stale sources, malformed URI encodings and cross-collection candidates.
 
@@ -82,6 +92,8 @@ _Verify:_ hostile responses that pair allowed paths with foreign titles/snippets
 
 A daemon process serves one independent named index. The pinned HTTP endpoint is `POST /query` with `searches: [{type: "lex" | "vec" | "hyde", query: string}]`, plural `collections`, and bounded `limit`, `candidateLimit`, and `rerank`; its response is `{results: [...]}`. `GET /health` reports availability only, never index identity. `ki kb status` MUST distinguish the configured mapping/index from transport availability and report `index_attested: false`. The explicit operator endpoint assignment is trusted; this protocol cannot distinguish a misassigned daemon that returns no hits from a correctly assigned daemon with no matching notes, so an empty response MUST NOT imply index availability or exhaustive corpus coverage. Generated endpoint bindings MUST remain loopback-only and explicitly operator provisioned. Search MUST NOT create, refresh or install indexes or daemons at a read gate.
 
-_Conformance:_ implementation pending
+_Conformance:_ conforming
+
+_Evidence:_ Public CLI fixtures in `src/tests/cli/kb/`, portable contract tests and the [synthetic native receipt](references/kb-search-synthetic.json); complete suite and coverage pass with 1,025 tests and 100% in every metric.
 
 _Verify:_ pinned source and synthetic daemon evidence, unknown-index/missing daemon fixtures and strict loopback URL rejection.

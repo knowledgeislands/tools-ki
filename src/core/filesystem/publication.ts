@@ -7,6 +7,7 @@ export interface NativeWrite {
   readonly path: string
   readonly content: string
   readonly create?: boolean
+  readonly mode?: number
 }
 
 /** An optional lexical allow-list below the physical root for a restricted publisher. */
@@ -203,7 +204,7 @@ const publishOne = async (write: PreparedWrite): Promise<void> => {
     await inspectCreateTarget(write.repository, write.path, write.absolutePath)
     const temporary = temporaryPath(write)
     try {
-      await writeFile(temporary, write.content, { encoding: 'utf8', flag: 'wx' })
+      await writeFile(temporary, write.content, { encoding: 'utf8', flag: 'wx', mode: write.mode })
       await link(temporary, write.absolutePath)
     } finally {
       await rm(temporary, { force: true })
@@ -214,7 +215,7 @@ const publishOne = async (write: PreparedWrite): Promise<void> => {
   const snapshot = await snapshotExistingTarget(write)
   const temporary = temporaryPath(write)
   try {
-    await writeFile(temporary, write.content, { encoding: 'utf8', flag: 'wx' })
+    await writeFile(temporary, write.content, { encoding: 'utf8', flag: 'wx', mode: write.mode })
     await assertSnapshotCurrent(write, snapshot)
     await rename(temporary, write.absolutePath)
   } finally {

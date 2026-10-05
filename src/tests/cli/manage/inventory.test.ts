@@ -6,6 +6,7 @@ import { sandbox } from '../_cli_helper.ts'
 const rootHelpCommands = [
   'bootstrap',
   'agora',
+  'kb',
   'repo',
   'acquire',
   'harness',
@@ -70,6 +71,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   skill: ['add', 'remove'],
   'repo batch': batchCommands,
   registry: registryCommands,
+  kb: ['index', 'search', 'status'],
   harness: ['info', 'install', 'list', 'missing', 'outdated', 'reinstall', 'search', 'uninstall'],
   'repo trade': [
     'abandon',

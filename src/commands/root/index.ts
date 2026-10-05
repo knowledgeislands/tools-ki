@@ -5,6 +5,7 @@ import { createAgoraCommand } from '../agora/index.ts'
 import { createBootstrapCommand } from '../bootstrap/index.ts'
 import { createDevCommand } from '../dev/index.ts'
 import { createHarnessCommand } from '../harness/index.ts'
+import { createKbCommand } from '../kb/index.ts'
 import { createHarnessStatusCommands, createSupportCommands } from '../manage/index.ts'
 import { createRegistryCommand } from '../registry/index.ts'
 import { createRepoCommand } from '../repo/index.ts'
@@ -20,6 +21,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   dev: (context) => createDevCommand(context),
   harness: (context) => createHarnessCommand(context),
   repo: (context) => createRepoCommand(context),
+  kb: (context) => createKbCommand(context),
   registry: (context) => createRegistryCommand(context),
   skill: (context) => createSkillCommand(context)
 }

@@ -13,6 +13,7 @@ export interface LocalRegistryEntry {
   readonly repository: string
   readonly path: string
   readonly stores?: LocalRepositoryStores
+  readonly searchBoundary?: string
 }
 
 export interface LocalRepositoryStores {
@@ -53,6 +54,8 @@ const invalid = (path: string, errors: readonly string[]): LocalRegistryInspecti
 
 const validKey = (value: unknown): value is string => typeof value === 'string' && KEY.test(value)
 
+const validBoundary = (value: unknown): value is string => validKey(value) && value.length <= 128
+
 export const canonicalRepositoryIdentity = (value: unknown): value is string =>
   typeof value === 'string' && REPOSITORY.test(value)
 
@@ -84,13 +87,16 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
         continue
       }
       for (const field of Object.keys(entry))
-        if (!['repository', 'path', 'stores'].includes(field))
+        if (!['repository', 'path', 'stores', 'search_boundary'].includes(field))
           errors.push(`repositories.${key} has unrecognised key ${field}`)
       if (!validKey(key)) errors.push(`repositories.${key} key must be a stable local repository name`)
       if (!canonicalRepositoryIdentity(entry['repository']))
         errors.push(`repositories.${key} repository must be a canonical HTTPS GitHub repository`)
       if (typeof entry['path'] !== 'string' || !isAbsolute(entry['path']))
         errors.push(`repositories.${key} path must be an absolute path`)
+      const boundary = entry['search_boundary']
+      if (boundary !== undefined && !validBoundary(boundary))
+        errors.push(`repositories.${key}.search_boundary must be a safe boundary ID`)
       const stores = entry['stores']
       if (stores !== undefined && !isRecord(stores)) errors.push(`repositories.${key}.stores must be a table`)
       if (isRecord(stores)) {
@@ -121,6 +127,7 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
           key,
           repository: entry['repository'],
           path: entry['path'],
+          ...(validBoundary(boundary) ? { searchBoundary: boundary } : {}),
           ...(isRecord(stores)
             ? {
                 stores: {
@@ -132,6 +139,8 @@ export const inspectLocalRegistry = async (stateDirectory: string): Promise<Loca
         })
     }
   }
+  const boundaries = repositories.flatMap((entry) => (entry.searchBoundary ? [entry.searchBoundary] : []))
+  if (new Set(boundaries).size !== boundaries.length) errors.push('repositories repeats a search_boundary')
   for (const field of ['repository', 'path'] as const) {
     const values = repositories.map((repository) => repository[field])
     if (new Set(values).size !== values.length) errors.push(`repositories repeats a ${field}`)
@@ -171,6 +180,7 @@ export const renderLocalRegistry = (repositories: readonly LocalRegistryEntry[])
         `[repositories.${JSON.stringify(repository.key)}]`,
         `repository = ${JSON.stringify(repository.repository)}`,
         `path = ${JSON.stringify(repository.path)}`,
+        ...(repository.searchBoundary ? [`search_boundary = ${JSON.stringify(repository.searchBoundary)}`] : []),
         ...(repository.stores
           ? [
               '',
@@ -247,6 +257,9 @@ export const localRegistryWriteMany = async (
       ? repositories.map((candidate) => (candidate.repository === entry.repository ? entry : candidate))
       : [...repositories, entry]
   }
+  const boundaries = repositories.flatMap((entry) => (entry.searchBoundary ? [entry.searchBoundary] : []))
+  if (boundaries.some((boundary) => !validBoundary(boundary)) || new Set(boundaries).size !== boundaries.length)
+    throw new KiError('search_boundary must be safe and unique per registered KB', 2)
   if (renderLocalRegistry(repositories) === renderLocalRegistry(inspection.repositories)) return undefined
   return { path: REGISTRY_FILE, content: renderLocalRegistry(repositories), create: inspection.state === 'missing' }
 }

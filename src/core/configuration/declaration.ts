@@ -115,10 +115,10 @@ const declaredSkills = (parsed: Record<string, unknown>, path: string): readonly
   return declared
 }
 
-export const readRepositoryDeclaration = async (configurationPath: string): Promise<RepositoryDeclaration> => {
+export const parseRepositoryDeclaration = (raw: string, configurationPath: string): RepositoryDeclaration => {
   let parsed: unknown
   try {
-    parsed = parse(await readFile(configurationPath, 'utf8'))
+    parsed = parse(raw)
   } catch {
     throw shapeError(configurationPath, 'must be valid TOML')
   }
@@ -131,6 +131,16 @@ export const readRepositoryDeclaration = async (configurationPath: string): Prom
   }
   if (declaration.skills.some((skill) => skill.name === 'ki-repo')) declaredRepositoryKind(declaration)
   return declaration
+}
+
+export const readRepositoryDeclaration = async (configurationPath: string): Promise<RepositoryDeclaration> => {
+  let raw: string
+  try {
+    raw = await readFile(configurationPath, 'utf8')
+  } catch {
+    throw shapeError(configurationPath, 'must be valid TOML')
+  }
+  return parseRepositoryDeclaration(raw, configurationPath)
 }
 
 const projectShapes = [

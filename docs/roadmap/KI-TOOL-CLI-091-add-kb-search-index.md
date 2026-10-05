@@ -4,12 +4,12 @@ area: CLI
 title: Add KB search index
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 0a0ab5d0ffcc4d71eaea017bbc759c90a1330007
 created_at: 2026-09-30T07:36:00Z
-updated_at: 2026-10-05T12:16:23Z
+updated_at: 2026-10-05T12:57:29Z
 ---
 
 # Add KB search index
@@ -30,20 +30,20 @@ In scope: explicit unique registry trust-boundary assignment per stable Knowledg
 
 The user explicitly approved delivery of the qmd pilot, registry authority, mirror labels and subsequent MCP search with one independently assigned trust boundary per registered Knowledge Base. The registry stable key owns identity; the new explicit `search_boundary` field owns assignment. No path, alias, Agora or basename supplies assignment authority. qmd v2.8.3 is pinned to upstream commit `facd35e01359e59d938bc9418e93fb9318addee3`; the Harness published its bounded functional go, measured synthetic pilot and exact pinned configuration contract before this Ready plan.
 
-A narrow interface publication freezes the portable mapping/response helpers and documentary contract while CLI source remains In progress. Focused interface and eight-operation native synthetic evidence pass; full CLI delivery and 100% coverage are still required before Awaiting review.
+The independently reviewed interface is frozen in `d6222b752d5f5ee3ef36c7bac55eec3f67629c87`. CLI implementation, hostile-response verification and current-source synthetic native integration now pass, including the required complete 100% coverage gate. This delivery awaits independent source review and coordinator acceptance; it does not accept itself or close the outcome batch.
 
 ## Steps
 
 - [x] Bind the published pinned Harness pilot and mirror-label contract, then commit this Ready plan and exact singleton outcome authorisation before implementation.
-- [ ] Extend registry parsing/rendering and explicit registration to preserve a unique assigned `search_boundary`, rejecting missing or contradictory assignments for indexing.
-- [ ] Build an exclusive private generation with a fresh database, deterministic path-hash Markdown projection and named qmd configuration for one selected registry KB, excluding symlinks, protected paths, undeclared zones, nested repositories and binary stores before qmd reads any source; retain prior owned caches without deleting sources or unmanaged state.
-- [ ] Implement bounded `ki kb index`, `ki kb search` and `ki kb status` with strict typed qmd modes, execution/output/HTTP bounds, whole-manifest current-source validation before retrieval, explicit unavailable failures, local-source provenance validation and independently generated titles/snippets/docidentities/labels.
-- [ ] Publish the registry-derived `ki/kb-search/v1` mapping for explicit downstream MCP bindings and one loopback daemon per independent named index; document operator provisioning and failure behaviour.
-- [ ] Verify CLI contracts, malformed/hostile engine fixtures and real pinned qmd against synthetic KBs, then run required repository gates and record the six-heading review packet.
+- [x] Extend registry parsing/rendering and explicit registration to preserve a unique assigned `search_boundary`, rejecting missing or contradictory assignments for indexing.
+- [x] Build an exclusive private generation with a fresh database, deterministic path-hash Markdown projection and named qmd configuration for one selected registry KB, excluding symlinks, protected paths, undeclared zones, nested repositories and binary stores before qmd reads any source; retain prior owned caches without deleting sources or unmanaged state.
+- [x] Implement bounded `ki kb index`, `ki kb search` and `ki kb status` with strict typed qmd modes, execution/output/HTTP bounds, whole-manifest current-source validation before retrieval, explicit unavailable failures, local-source provenance validation and independently generated titles/snippets/docidentities/labels.
+- [x] Publish the registry-derived `ki/kb-search/v1` mapping for explicit downstream MCP bindings and one loopback daemon per independent named index; document operator provisioning and failure behaviour.
+- [x] Verify CLI contracts, malformed/hostile engine fixtures and real pinned qmd against synthetic KBs, then run required repository gates and record the six-heading review packet.
 
 ## Files touched
 
-`src/core/kb/`, `src/commands/kb/`, `src/commands/root/index.ts`, `src/commands/root/catalogue.ts`, `src/core/storage/local-registry.ts`, `src/commands/registry/add.ts`, the bounded runtime runner, focused CLI tests and inventory, `docs/specs/kb-search.md`, `docs/guides/user/kb-search.md`, this work record and its exact batch authorisation. Public command inventories and overview documentation receive only search-owned edits; any concurrent diagnostic changes require CAS and coordinated partial staging.
+`src/core/kb/`, `src/commands/kb/`, `src/commands/root/index.ts`, `src/commands/root/catalogue.ts`, `src/core/storage/local-registry.ts`, `src/commands/registry/add.ts`, the bounded runtime runner, the single-snapshot declaration parser and optional private native-publisher mode, focused CLI tests and inventory, `docs/specs/kb-search.md`, `docs/guides/user/kb-search.md`, this work record and its exact batch authorisation. Public command inventories and overview documentation receive only search-owned edits; any concurrent diagnostic changes require CAS and coordinated partial staging.
 
 ## Verify
 
@@ -78,6 +78,34 @@ Add operator setup, isolated per-KB indexing, daemon binding, search modes and u
 ### Roadmap
 
 This item supplies the concrete upstream contract and immutable delivery receipt required to ready MCP-KBFS-TOOL-004. Root retains acceptance and explicit prune authority.
+
+## Review
+
+### Delivered
+
+Implemented explicit unique registry `search_boundary` assignment and public `ki kb index`, `ki kb search` and `ki kb status`. Each selected registered KB has an independent private fresh qmd generation, strict mapping and declared-purpose configuration; undeclared, protected, symlinked and nested-repository content is excluded before engine ingestion. Search authenticates all current source hashes and returns locally reconstructed titles, snippets, citations and canonical mirror labels.
+
+### Change Summary
+
+The new command and core modules preserve command/domain separation. The registry preserves existing identity and store bindings; the declaration parser now derives authority from one raw snapshot. Optional bounded runtime execution uses POSIX process groups and separate stdout. Native publication accepts an optional file mode while retaining all existing caller defaults, allowing private `0600` mapping temporaries before exclusive create or snapshot-checked atomic replacement. Owned-marker drift refuses publication and preserves the previous mapping. Inventory, manual, guide, specification and focused public CLI fixtures accompany these changes.
+
+### Verification
+
+Both complete test and complete coverage runs passed: 1,025 tests across 62 files; statements, branches, functions and lines are all 100%. TypeScript, compiled build/help, Biome, Knip, manual lint and focused command inventory passed. Sequential `ki-work`, `ki-work-roadmap`, `ki-self`, `ki-engineering` and `ki-authoring` audits passed; a final lifecycle recheck also passed against this review packet. Biome reports existing warnings/information and Knip reports configuration hints without failure.
+
+The [durable native receipt](../specs/references/kb-search-synthetic.json) records eight pinned-engine operations across separate synthetic Alpha/Omega KBs. A final repeat against current source also passed both independent indexes and lexical, vector and expanded retrieval, with exact local Mixed Case citations and no sibling or undeclared canary text. All task-owned fixture repositories, projections, configs and databases were removed; native processes exited. Independent public fixtures exercise equal relative paths across two custom-zone KBs, fingerprint-compatible hostile backend fields and nested `.git` revocation before any engine call. The publication fixture checks private temporary mode at both link and rename boundaries.
+
+### Outstanding concerns
+
+This optional search makes no performance, large-corpus, retrieval-quality or exhaustive coverage claim. Engine revision and models are explicitly operator provisioned; runtime checks verify the reported version and regular nonempty local assets, not cryptographic attestation. Health does not attest index identity, and a misassigned empty daemon cannot be distinguished by the pinned protocol. Source checks are bounded before/after validation, not an atomic filesystem snapshot. Publication is whole-file atomic with publication-window drift checks, without a refresh-wide lock. Old private generations are retained; qmd reads may write derived engine caches. No global installation, daemon binding or private KB indexing was performed.
+
+### Post-change review
+
+Root and an independent reviewer approved only the immutable interface receipt; complete CLI source approval remains pending the final clean candidate. The reviewer authored one separately scoped test file and made no production edits; root reviewed that exact test diff. The canonical portable contract and source-mirror helper remain byte-identical to the interface receipt. MCP has a separate writer and explicit binding to that receipt; this delivery contains no MCP edits. The root retains acceptance, batch completion and prune authority.
+
+### Mini recap
+
+The implementation baseline is `0a0ab5d0ffcc4d71eaea017bbc759c90a1330007`. The prior diagnostic inventory mismatch resolved through its own delivery, and the final combined-state engineering gate passes. All current touched paths belong to this approved search delivery, including the narrowly approved parser and private-publisher seams; no unrelated work is staged or consumed. Awaiting review is the handoff boundary, with the exact clean implementation commit supplied to the coordinator after commit.
 
 ## Discussion
 

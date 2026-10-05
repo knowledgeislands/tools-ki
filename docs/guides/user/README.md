@@ -30,3 +30,5 @@ If `ki` is not yet on this machine, or you have never run it, read these three i
 ## Where else to look
 
 Each guide owns its procedure. For exact command grammar use `ki <command> --help` or the installed `man ki` manual; each guide states the operational behaviour needed to complete, verify, and recover its outcome.
+
+- [Search one Knowledge Base](kb-search.md) — explicitly assign one registry boundary, provision a private generation and use bounded local citations.

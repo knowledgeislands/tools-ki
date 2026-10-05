@@ -1,9 +1,13 @@
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { expect, test } from 'vitest'
 import {
   assertOwnedPath,
   authenticateResults,
   ENGINE,
   loopback,
+  requireModels,
   scopedFile,
   sha256,
   validateMapping,
@@ -166,6 +170,7 @@ test('published result bounds select canonical complete lines and conservative i
   const base = validateMapping(mapping(), state, 'alpha')
   const candidate = { file: `qmd://ki-kb-alpha/${key}`, docid: `#${sha256(text).slice(0, 6)}`, score: 0.2 }
   for (const source of [
+    '---\n\n---\nbody',
     '---\nsource_path: /private/INVALID\n',
     '---\nsource_path: "unterminated\n---\nbody',
     'Plain note\n' + 'x'.repeat(1700),
@@ -184,6 +189,9 @@ test('published result bounds select canonical complete lines and conservative i
     expect(result.snippet.length).toBeLessThanOrEqual(1600)
     expect(JSON.stringify(result)).not.toContain('/private')
   }
+  expect(
+    authenticateResults(m, sources, candidates, { query: '!!!', mode: 'query', limit: 1 }, 'http').results[0]?.title
+  ).toBe('Local note')
   expect(loopback('http://127.0.0.1:80')).toBe('http://127.0.0.1:80')
   expect(loopback('http://[::1]:8181')).toBe('http://[::1]:8181')
 })
@@ -193,4 +201,24 @@ test('published source and derived guards reject escape declarations before any 
   await expect(assertOwnedPath('/nonexistent/synthetic-state', '/foreign/mapping.json')).rejects.toThrow(
     'derived path escaped state'
   )
+})
+
+test('published HTTP and native model requirements stay explicitly provisioned', async () => {
+  const cache = await mkdtemp(join(tmpdir(), 'ki-model-contract-'))
+  const folder = join(cache, 'qmd/models')
+  await mkdir(folder, { recursive: true })
+  const m = validateMapping({ ...mapping(), model_cache: cache }, state, 'alpha')
+  try {
+    await requireModels(m, 'search', 'http')
+    await expect(requireModels(m, 'query', 'http')).rejects.toThrow('provision the pinned embed model')
+    await writeFile(join(folder, 'hf_ggml-org_embeddinggemma-300M-Q8_0.gguf'), 'synthetic provisioned asset')
+    await expect(requireModels(m, 'query', 'http')).rejects.toThrow('provision the pinned rerank model')
+    await writeFile(join(folder, 'hf_ggml-org_qwen3-reranker-0.6b-q8_0.gguf'), 'synthetic provisioned asset')
+    await requireModels(m, 'query', 'http')
+    await expect(requireModels(m, 'query', 'cli')).rejects.toThrow('provision the pinned generate model')
+    await writeFile(join(folder, 'hf_tobil_qmd-query-expansion-1.7B-q4_k_m.gguf'), 'synthetic provisioned asset')
+    await requireModels(m, 'query', 'cli')
+  } finally {
+    await rm(cache, { recursive: true, force: true })
+  }
 })

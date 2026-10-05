@@ -199,10 +199,24 @@ command does not execute agent work or change roadmap lifecycle.
 Append structural closure evidence only after every named ledger result and
 canonical work item matches the approved all-item target. This command does
 not accept work.
+.SS Knowledge Base search
+Index and search one explicitly registered Knowledge Base
+with scoped local citations.
+.TP
+.B ki kb index [--kb <id>] [--daemon-url <origin>]
+Build a fresh private qmd generation for one explicitly assigned registry KB.
+.TP
+.B ki kb search <query> [--kb <id>] [--mode <query|search|vsearch>] [--limit <count>] [--zone <name>] [--path-prefix <path>]
+Return bounded current-source-authenticated JSON results
+without silent fallback.
+.TP
+.B ki kb status [--kb <id>]
+Report configured mapping and loopback endpoint reachability;
+health does not attest index identity.
 .SS Registry management
 \&
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run]
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--search-boundary <id>]
 Record selected canonical KI repository roots in the machine-local registry
 without applying repository repairs.
 .TP
@@ -886,6 +900,20 @@ executing work or changing roadmap lifecycle.
 Append structural closure evidence only after every named live item and the
 exact evidence commit contain the approved all-item target in valid dependency
 order.
+.SS Knowledge Base search
+Index and search one explicitly registered Knowledge Base
+with scoped local citations.
+.TP
+.B ki kb index [--kb <id>] [--daemon-url <origin>]
+Build a fresh private qmd generation for one explicitly assigned registry KB.
+.TP
+.B ki kb search <query> [--kb <id>] [--mode <query|search|vsearch>] [--limit <count>] [--zone <name>] [--path-prefix <path>]
+Return bounded current-source-authenticated JSON results
+without silent fallback.
+.TP
+.B ki kb status [--kb <id>]
+Report configured mapping and loopback endpoint reachability;
+health does not attest index identity.
 .SS Registry management
 \&
 .PP
@@ -896,7 +924,7 @@ repository-operation or conformance verdict. The repository key names each
 record; each record holds a canonical HTTPS GitHub repository identity and
 physical checkout path.
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run]
+.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--search-boundary <id>]
 Record selected canonical KI repository roots in
 \fB$XDG_STATE_HOME/ki/registry.toml\fR without applying repository repairs.
 This explicit inventory action validates the selected root's declared canonical

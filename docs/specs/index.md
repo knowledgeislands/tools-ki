@@ -41,6 +41,7 @@ Unbuilt or uncertain behaviour belongs in an area's unnumbered `## Gaps` section
 | cli.md                   | `CLI`        | Root command discovery, version, and failure boundary          |
 | development.md           | `DEV`        | Controlled local Harness development                           |
 | harnesses.md             | `HARN`       | Verified compatible Harness lifecycle                          |
+| kb-search.md             | `KB-SEARCH` | Explicit per-KB derived search, source authentication and bounds |
 | management.md            | `MANAGE`     | User inventory, diagnosis, updates, and shell integration      |
 | registry.md              | `REGISTRY`   | Explicit repository registration and inventory                 |
 | repository-audit.md      | `REPO-AUDIT` | `ki repo audit` selection, results, output, and multi-repo use |

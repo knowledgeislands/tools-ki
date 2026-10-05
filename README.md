@@ -2,6 +2,8 @@
 
 The home of `ki`, the Knowledge Islands command-line interface (CLI).
 
+Optional `ki kb index`, `ki kb search` and `ki kb status` operate one explicitly assigned registered Knowledge Base through a private derived qmd generation. [Search one Knowledge Base](docs/guides/user/kb-search.md) explains model provisioning, isolated state, operator daemon bindings and source-authenticated citations.
+
 ## Place in the Knowledge Islands ecosystem
 
 `tools-ki` is the canonical source of the `ki` executable platform. It installs verified compatible harnesses, resolves repositories, activates skills in explicit user or repository scope, and hosts registered native operations. It consumes reusable agentic capabilities from the [KI Agentic Harness](https://github.com/knowledgeislands/ki-agentic-harness), does not define their standards, and supplies implementation evidence that [KI Specifications](https://github.com/knowledgeislands/ki-specifications) may formalise as portable contracts.

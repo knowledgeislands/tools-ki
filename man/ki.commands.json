@@ -262,11 +262,29 @@
       ]
     },
     {
+      "name": "Knowledge Base search",
+      "purpose": "Index and search one explicitly registered Knowledge Base with scoped local citations.",
+      "commands": [
+        {
+          "invocation": "ki kb index [--kb <id>] [--daemon-url <origin>]",
+          "description": "Build a fresh private qmd generation for one explicitly assigned registry KB."
+        },
+        {
+          "invocation": "ki kb search <query> [--kb <id>] [--mode <query|search|vsearch>] [--limit <count>] [--zone <name>] [--path-prefix <path>]",
+          "description": "Return bounded current-source-authenticated JSON results without silent fallback."
+        },
+        {
+          "invocation": "ki kb status [--kb <id>]",
+          "description": "Report configured mapping and loopback endpoint reachability; health does not attest index identity."
+        }
+      ]
+    },
+    {
       "name": "Registry management",
       "purpose": "Use these root-level commands to record and list canonical KI repository roots in $XDG_STATE_HOME/ki/registry.toml. Registry membership is an inventory, not a repository-operation or conformance verdict. The repository key names each record; each record holds a canonical HTTPS GitHub repository identity and physical checkout path.",
       "commands": [
         {
-          "invocation": "ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run]",
+          "invocation": "ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--search-boundary <id>]",
           "description": "Record selected canonical KI repository roots in $XDG_STATE_HOME/ki/registry.toml without applying repository repairs. This explicit inventory action validates the selected root's declared canonical identity and preserves existing entries. It never searches outside the supplied target selection. The command writes by default; --dry-run reports proposed registration without creating the state directory or changing disk state."
         },
         {

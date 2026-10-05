@@ -4,6 +4,10 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 ## Pre-1.0 baseline
 
+### Knowledge Base search
+
+- `ki registry add --search-boundary <id>` explicitly assigns one unique KB trust boundary; `ki kb index` builds a fresh private generation, `ki kb search` returns bounded current-source-authenticated JSON, and `ki kb status` reports endpoint liveness without index attestation. qmd 2.8.3 and local models require explicit provisioning.
+
 ### Command surface
 
 #### General
