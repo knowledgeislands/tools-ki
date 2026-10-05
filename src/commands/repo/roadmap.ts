@@ -239,7 +239,7 @@ const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
       const value = items.filter((item) => item.status === status).length
       return value ? [`${statusLabels[status]}=${value}`] : []
     })
-    return [...counts, `Σ=${items.length}`].join(' ')
+    return items.length ? [...counts, `Σ=${items.length}`].join(' ') : '—'
   }
   const rows = results.map((result, index) => {
     const unavailable = Boolean(result.diagnostic)
@@ -263,10 +263,12 @@ const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
     ...(result.diagnostic ? [`  ${labels[index]}: ${result.diagnostic}`] : []),
     ...(result.faults ?? []).map((fault) => `  ${labels[index]}: ${fault.message}`)
   ])
+  const absent = results.flatMap((result, index) => (result.roadmap === 'absent' ? [labels[index]] : []))
   return [
     ...table,
     'd=draft r=ready ip=in-progress ar=awaiting-review; Σ=total',
-    '— no roadmap; ? unavailable',
+    '— no items; ? unavailable',
+    ...(absent.length ? [`No roadmap: ${absent.join(', ')}`] : []),
     ...(diagnostics.length ? ['Diagnostics (counts include valid items only)', ...diagnostics] : [])
   ].join('\n')
 }

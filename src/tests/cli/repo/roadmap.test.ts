@@ -168,25 +168,16 @@ describe('[ki repo roadmap]', () => {
       )
     expect(rows).toEqual([
       ['Repository', 'now', 'next', 'soon', 'waiting-for', 'parked', 'future', 'triage', 'Σ'],
-      ['knowledge', 'r=1 Σ=1', 'd=1 Σ=1', 'Σ=0', 'Σ=0', 'Σ=0', 'Σ=0', 'd=1 Σ=1', 'd=2 r=1 Σ=3'],
-      ['delivery', 'Σ=0', 'ip=1 ar=1 done=1 Σ=3', 'Σ=0', 'Σ=0', 'Σ=0', 'Σ=0', 'Σ=0', 'ip=1 ar=1 done=1 Σ=3'],
-      ['empty', 'Σ=0', 'Σ=0', 'Σ=0', 'Σ=0', 'Σ=0', 'Σ=0', 'Σ=0', 'Σ=0'],
+      ['knowledge', 'r=1 Σ=1', 'd=1 Σ=1', '—', '—', '—', '—', 'd=1 Σ=1', 'd=2 r=1 Σ=3'],
+      ['delivery', '—', 'ip=1 ar=1 done=1 Σ=3', '—', '—', '—', '—', '—', 'ip=1 ar=1 done=1 Σ=3'],
+      ['empty', '—', '—', '—', '—', '—', '—', '—', '—'],
       ['absent', '—', '—', '—', '—', '—', '—', '—', '—'],
-      [
-        'Σ',
-        'r=1 Σ=1',
-        'd=1 ip=1 ar=1 done=1 Σ=4',
-        'Σ=0',
-        'Σ=0',
-        'Σ=0',
-        'Σ=0',
-        'd=1 Σ=1',
-        'd=2 r=1 ip=1 ar=1 done=1 Σ=6'
-      ]
+      ['Σ', 'r=1 Σ=1', 'd=1 ip=1 ar=1 done=1 Σ=4', '—', '—', '—', '—', 'd=1 Σ=1', 'd=2 r=1 ip=1 ar=1 done=1 Σ=6']
     ])
     expect(result.output).not.toContain('\nStatuses\n')
     expect(result.output).toContain('d=draft r=ready ip=in-progress ar=awaiting-review; Σ=total')
-    expect(result.output).toContain('— no roadmap; ? unavailable')
+    expect(result.output).toContain('— no items; ? unavailable')
+    expect(result.output).toContain('No roadmap: absent')
     expect(result.output).not.toContain('KBS-001')
     expect(result.output).not.toContain('First item')
     expect(result.output).not.toContain('TRD-00000001')
@@ -201,7 +192,7 @@ describe('[ki repo roadmap]', () => {
     const result = await box.run('ki repo --repo repo roadmap summary')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toMatch(/│ repo\s+│\s+Σ=0 │\s+d=1 Σ=1 │/)
+    expect(result.output).toMatch(/│ repo\s+│\s+— │\s+d=1 Σ=1 │/)
     expect(result.output).toMatch(/│\s+d=1 Σ=1 │\n/)
     expect(result.output).toContain('has an invalid lifecycle status')
     expect(result.output).toContain('counts include valid items only')
@@ -212,6 +203,7 @@ describe('[ki repo roadmap]', () => {
     expect(unavailable.exitCode).toBe(1)
     expect(unavailable.output).toContain('Knowledge Base roadmap operations require')
     expect(unavailable.output).toMatch(/│ misconfigured\s+│\s+\? │/)
+    expect(unavailable.output).not.toContain('No roadmap:')
   })
 
   test('distinguishes repositories with the same basename in the summary', async () => {

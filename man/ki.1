@@ -744,8 +744,9 @@ nonzero lifecycle-status counts and a sum, such as d=1 r=2 Σ=3.
 The Σ column and row aggregate the same counts per repository and per
 horizon. A legend expands d (draft), r (ready), ip (in-progress), and
 ar (awaiting-review); done
-counts use done. A sum of zero means no items in that cell, a dash means no
-roadmap, and a question mark means unavailable. Invalid roadmap evidence
+counts use done. A dash means no items in that cell; a question mark means
+unavailable. Repositories without a roadmap are named below the table.
+Invalid roadmap evidence
 remains diagnostic and makes the command exit with status 1. Item identifiers,
 titles, and trade records are omitted.
 .TP
