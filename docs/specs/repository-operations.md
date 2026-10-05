@@ -244,13 +244,13 @@ _Evidence:_ The named in-process CLI tests exercise compact and expanded invento
 
 ### REPO-OPS-024 — Compact roadmap summary
 
-`ki repo roadmap summary` MUST report the count of valid work items per selected repository and the nonzero breakdown by horizon and lifecycle status without listing item identifiers or titles. It MUST distinguish an absent roadmap from a present empty roadmap. Invalid roadmap evidence MUST remain diagnostic and make the command exit nonzero; trade inventory MUST NOT affect the roadmap summary.
+`ki repo roadmap summary` MUST show selected repositories as rows against horizon columns, with valid work-item totals per repository and per horizon, and nonzero lifecycle-status counts below the table, without listing item identifiers or titles. It MUST distinguish an absent roadmap from a present empty roadmap and an unavailable roadmap. Invalid roadmap evidence MUST remain diagnostic and make the command exit nonzero; trade inventory MUST NOT affect the roadmap summary.
 
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `summarizes selected roadmaps without listing records or reading trades` and `summarizes valid items but diagnoses malformed roadmap records`.
 
-_Evidence:_ The named in-process CLI tests cover selected Knowledge Base roadmaps, absent and empty directories, count breakdowns, invalid records, and independence from trade evidence without network access.
+_Evidence:_ The named in-process CLI tests cover the horizon matrix and totals, lifecycle counts, selected Knowledge Base roadmaps, absent and empty directories, invalid records, and independence from trade evidence without network access.
 
 ### REPO-OPS-025 — Undeclared conventional sources
 

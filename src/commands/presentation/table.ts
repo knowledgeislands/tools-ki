@@ -38,6 +38,33 @@ const pad = (value: string, width: number): string => `${value}${' '.repeat(Math
 const rule = (left: string, middle: string, right: string, widths: readonly number[], drawing: BoxDrawing): string =>
   `${left}${widths.map((width) => drawing.horizontal.repeat(width + 2)).join(middle)}${right}`
 
+/** Renders a matrix with a left-aligned label column and right-aligned values. */
+export const renderMatrixTable = (
+  title: string,
+  headings: readonly string[],
+  rows: readonly (readonly string[])[],
+  total: readonly string[],
+  drawing: BoxDrawing = roundedBoxDrawing
+): readonly string[] => {
+  const widths = headings.map((heading, index) =>
+    Math.max(heading.length, ...rows.map((row) => (row[index] as string).length), (total[index] as string).length)
+  )
+  const renderRow = (cells: readonly string[]): string =>
+    `${drawing.vertical} ${cells
+      .map((cell, index) => (index === 0 ? pad(cell, widths[index] as number) : cell.padStart(widths[index] as number)))
+      .join(` ${drawing.vertical} `)} ${drawing.vertical}`
+  return [
+    `${drawing.topLeft}${drawing.horizontal} ${title}`,
+    rule(drawing.leftJoin, drawing.topJoin, drawing.rightJoin, widths, drawing),
+    renderRow(headings),
+    rule(drawing.leftJoin, drawing.join, drawing.rightJoin, widths, drawing),
+    ...rows.map(renderRow),
+    rule(drawing.leftJoin, drawing.join, drawing.rightJoin, widths, drawing),
+    renderRow(total),
+    rule(drawing.bottomLeft, drawing.bottomJoin, drawing.bottomRight, widths, drawing)
+  ]
+}
+
 const stacked = (title: string, rows: readonly PairTableRow[], drawing: BoxDrawing): readonly string[] => [
   `${drawing.topLeft}${drawing.horizontal} ${title}`,
   ...rows.flatMap((row, index) => [

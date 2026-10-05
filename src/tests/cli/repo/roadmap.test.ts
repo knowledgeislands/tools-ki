@@ -148,11 +148,24 @@ describe('[ki repo roadmap]', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('KI REPO ROADMAP SUMMARY')
-    expect(result.output).toContain('items: 3')
-    expect(result.output).toContain('horizons: now=1 next=1 triage=1')
-    expect(result.output).toContain('statuses: draft=2 ready=1')
-    expect(result.output).toContain('items: 0')
-    expect(result.output).toContain('no roadmap')
+    const rows = result.output
+      .split('\n')
+      .filter((line) => line.startsWith('│ '))
+      .map((line) =>
+        line
+          .split('│')
+          .slice(1, -1)
+          .map((cell) => cell.trim())
+      )
+    expect(rows).toEqual([
+      ['Repository', 'now', 'next', 'soon', 'waiting-for', 'parked', 'future', 'triage', 'Total'],
+      ['knowledge', '1', '1', '0', '0', '0', '0', '1', '3'],
+      ['empty', '0', '0', '0', '0', '0', '0', '0', '0'],
+      ['absent', '—', '—', '—', '—', '—', '—', '—', '—'],
+      ['TOTAL', '1', '1', '0', '0', '0', '0', '1', '3']
+    ])
+    expect(result.output).toContain('knowledge: draft=2 ready=1')
+    expect(result.output).toContain('— no roadmap; ? unavailable')
     expect(result.output).not.toContain('KBS-001')
     expect(result.output).not.toContain('First item')
     expect(result.output).not.toContain('TRD-00000001')
@@ -167,17 +180,29 @@ describe('[ki repo roadmap]', () => {
     const result = await box.run('ki repo --repo repo roadmap summary')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('valid items: 1')
-    expect(result.output).toContain('horizons: next=1')
-    expect(result.output).toContain('statuses: draft=1')
+    expect(result.output).toMatch(/│ repo\s+│\s+0 │\s+1 │\s+0 │\s+0 │\s+0 │\s+0 │\s+0 │\s+1 │/)
+    expect(result.output).toContain('repo: draft=1')
     expect(result.output).toContain('has an invalid lifecycle status')
+    expect(result.output).toContain('counts include valid items only')
     expect(result.output).not.toContain('Inspect governed work')
 
     await box.project.write('misconfigured/.ki.toml', knowledgeBaseConfiguration().replace('kb-streams', 'roadmap'))
     const unavailable = await box.run('ki repo --repo misconfigured roadmap summary')
     expect(unavailable.exitCode).toBe(1)
     expect(unavailable.output).toContain('Knowledge Base roadmap operations require')
-    expect(unavailable.output).not.toContain('no roadmap')
+    expect(unavailable.output).toMatch(/│ misconfigured\s+│\s+\? │/)
+  })
+
+  test('distinguishes repositories with the same basename in the summary', async () => {
+    const box = await sandbox()
+    for (const repository of ['first/repo', 'second/repo'])
+      await box.project.write(`${repository}/.ki.toml`, knowledgeBaseConfiguration())
+
+    const result = await box.run('ki repo --repo first/repo --repo second/repo roadmap summary')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain(await realpath(`${box.project.path}/first/repo`))
+    expect(result.output).toContain(await realpath(`${box.project.path}/second/repo`))
   })
 
   test('lists flat Knowledge Base work items from the declared Streams roadmap and ignores its ledger', async () => {

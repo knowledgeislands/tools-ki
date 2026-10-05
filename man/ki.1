@@ -1,4 +1,4 @@
-.TH KI 1 "2026-10-04" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-10-05" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -155,7 +155,7 @@ List governed work items in a framed deterministic horizon and lifecycle tree
 without changing their lifecycle.
 .TP
 .B ki repo [repo-options] roadmap summary
-Summarize item counts by horizon and lifecycle status without listing records.
+Show repository-by-horizon counts and totals without listing records.
 .TP
 .B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
 Report timestamp coverage, age, and inactivity for governed work items.
@@ -739,11 +739,12 @@ never creates, transitions, accepts, prunes, or repairs a work item. Generic
 promote and demote operations exclude the unadopted \fBtriage\fR horizon.
 .TP
 .B ki repo [repo-options] roadmap summary
-Report each selected repository's valid work-item count and its nonzero horizon
-and lifecycle-status counts without item identifiers or titles. Distinguish an
-absent roadmap from a present empty one. Invalid roadmap evidence remains a
-diagnostic and makes the command exit with status 1. Trade records are not
-part of this overview.
+Show selected repositories as rows against horizon columns, with valid work-item
+totals per repository and per horizon. Nonzero lifecycle-status counts appear
+below the table. Zero means an empty roadmap, a dash means no roadmap, and a
+question mark means unavailable. Invalid roadmap evidence remains diagnostic
+and makes the command exit with status 1. Item identifiers, titles, and trade
+records are omitted.
 .TP
 .B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
 Report age and inactivity metrics for selected local roadmaps. Every valid work

@@ -17,7 +17,13 @@ import {
   type WorkItem,
   workItemHorizons
 } from '../../core/work/index.ts'
-import { presentation, renderTradeRelation, renderTree, type TreeEntry } from '../presentation/index.ts'
+import {
+  presentation,
+  renderMatrixTable,
+  renderTradeRelation,
+  renderTree,
+  type TreeEntry
+} from '../presentation/index.ts'
 import { type RoadmapTextOptions, renderRoadmapItem, roadmapLinkLegend } from './roadmap-links.ts'
 
 interface RoadmapOptions {
@@ -214,38 +220,50 @@ const renderAggregateResult = (
   return renderTree({ title: 'KI AGGREGATE ROADMAP', entries }).join('\n')
 }
 
-const renderSummaryResult = (results: readonly RoadmapItemResult[]): string =>
-  renderTree({
-    title: 'KI REPO ROADMAP SUMMARY',
-    entries: results.map((result) => {
-      const items = result.items ?? []
-      const faults = result.faults ?? []
-      const horizonCounts = horizonOrder.flatMap((horizon) => {
-        const count = items.filter((item) => item.horizon === horizon).length
-        return count ? [`${horizon}=${count}`] : []
-      })
-      const statusCounts = [...statusOrder].reverse().flatMap((status) => {
-        const count = items.filter((item) => item.status === status).length
-        return count ? [`${status}=${count}`] : []
-      })
-      const entries: TreeEntry[] = result.diagnostic
-        ? [{ label: `${presentation('status.unavailable').terminal} ${result.diagnostic}` }]
-        : result.roadmap === 'absent'
-          ? [{ label: `${presentation('status.skip').terminal} no roadmap` }]
-          : [
-              { label: `${faults.length ? 'valid items' : 'items'}: ${items.length}` },
-              ...(horizonCounts.length ? [{ label: `horizons: ${horizonCounts.join(' ')}` }] : []),
-              ...(statusCounts.length ? [{ label: `statuses: ${statusCounts.join(' ')}` }] : []),
-              ...faults.map((fault) => ({
-                label: `${presentation('status.unavailable').terminal} ${fault.message}`
-              }))
-            ]
-      return {
-        label: `${presentation('entity.repository').terminal} ${basename(result.repository)} (${result.repository})`,
-        children: entries
-      }
+const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
+  const names = results.map((result) => basename(result.repository))
+  const labels = results.map((result, index) =>
+    names.indexOf(names[index] as string) === names.lastIndexOf(names[index] as string)
+      ? (names[index] as string)
+      : result.repository
+  )
+  const count = (items: readonly WorkItem[], horizon: string): number =>
+    items.filter((item) => item.horizon === horizon).length
+  const rows = results.map((result, index) => {
+    const unavailable = Boolean(result.diagnostic)
+    const absent = result.roadmap === 'absent'
+    const items = result.items ?? []
+    return [
+      labels[index] as string,
+      ...horizonOrder.map((horizon) => (unavailable ? '?' : absent ? '—' : String(count(items, horizon)))),
+      unavailable ? '?' : absent ? '—' : String(items.length)
+    ]
+  })
+  const items = results.flatMap((result) => result.items ?? [])
+  const table = renderMatrixTable('KI REPO ROADMAP SUMMARY', ['Repository', ...horizonOrder, 'Total'], rows, [
+    'TOTAL',
+    ...horizonOrder.map((horizon) => String(count(items, horizon))),
+    String(items.length)
+  ])
+  const statuses = results.flatMap((result, index) => {
+    const items = result.items ?? []
+    const counts = [...statusOrder].reverse().flatMap((status) => {
+      const value = items.filter((item) => item.status === status).length
+      return value ? [`${status}=${value}`] : []
     })
-  }).join('\n')
+    return counts.length ? [`  ${labels[index]}: ${counts.join(' ')}`] : []
+  })
+  const diagnostics = results.flatMap((result, index) => [
+    ...(result.diagnostic ? [`  ${labels[index]}: ${result.diagnostic}`] : []),
+    ...(result.faults ?? []).map((fault) => `  ${labels[index]}: ${fault.message}`)
+  ])
+  return [
+    ...table,
+    '— no roadmap; ? unavailable',
+    ...(statuses.length ? ['Statuses', ...statuses] : []),
+    ...(diagnostics.length ? ['Diagnostics (counts include valid items only)', ...diagnostics] : [])
+  ].join('\n')
+}
 
 const parseDuration = (value: string): number => {
   const match = /^(\d+)([smhd])$/.exec(value)

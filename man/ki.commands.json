@@ -175,7 +175,7 @@
         },
         {
           "invocation": "ki repo [repo-options] roadmap summary",
-          "description": "Report each selected repository's valid work-item count and its nonzero horizon and lifecycle-status counts without item identifiers or titles. Distinguish an absent roadmap from a present empty one. Invalid roadmap evidence remains a diagnostic and makes the command exit with status 1. Trade records are not part of this overview."
+          "description": "Show selected repositories as rows against horizon columns, with valid work-item totals per repository and per horizon. Nonzero lifecycle-status counts appear below the table. Zero means an empty roadmap, a dash means no roadmap, and a question mark means unavailable. Invalid roadmap evidence remains diagnostic and makes the command exit with status 1. Item identifiers, titles, and trade records are omitted."
         },
         {
           "invocation": "ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]",
