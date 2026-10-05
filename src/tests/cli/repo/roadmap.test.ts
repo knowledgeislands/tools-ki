@@ -148,6 +148,10 @@ describe('[ki repo roadmap]', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('KI REPO ROADMAP SUMMARY')
+    const lines = result.output.split('\n')
+    expect(lines[0]).toMatch(/^╭─ KI REPO ROADMAP SUMMARY ─+╮$/)
+    expect(lines[0]?.length).toBe(lines.find((line) => line.startsWith('╰'))?.length)
+    expect(lines[1]?.startsWith('│ Repository ')).toBe(true)
     const rows = result.output
       .split('\n')
       .filter((line) => line.startsWith('│ '))

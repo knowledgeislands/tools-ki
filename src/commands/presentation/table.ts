@@ -46,16 +46,21 @@ export const renderMatrixTable = (
   total: readonly string[],
   drawing: BoxDrawing = roundedBoxDrawing
 ): readonly string[] => {
-  const widths = headings.map((heading, index) =>
+  const contentWidths = headings.map((heading, index) =>
     Math.max(heading.length, ...rows.map((row) => (row[index] as string).length), (total[index] as string).length)
   )
+  const extraWidth = Math.max(
+    0,
+    title.length + 5 - rule(drawing.topLeft, drawing.topJoin, drawing.topRight, contentWidths, drawing).length
+  )
+  const widths = contentWidths.map((width, index) => (index === 0 ? width + extraWidth : width))
+  const tableWidth = rule(drawing.topLeft, drawing.topJoin, drawing.topRight, widths, drawing).length
   const renderRow = (cells: readonly string[]): string =>
     `${drawing.vertical} ${cells
       .map((cell, index) => (index === 0 ? pad(cell, widths[index] as number) : cell.padStart(widths[index] as number)))
       .join(` ${drawing.vertical} `)} ${drawing.vertical}`
   return [
-    `${drawing.topLeft}${drawing.horizontal} ${title}`,
-    rule(drawing.leftJoin, drawing.topJoin, drawing.rightJoin, widths, drawing),
+    `${drawing.topLeft}${drawing.horizontal} ${title} ${drawing.horizontal.repeat(tableWidth - title.length - 5)}${drawing.topRight}`,
     renderRow(headings),
     rule(drawing.leftJoin, drawing.join, drawing.rightJoin, widths, drawing),
     ...rows.map(renderRow),
