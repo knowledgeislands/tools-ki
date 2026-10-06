@@ -9,14 +9,14 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T23:27:45Z
-updated_at: 2026-10-06T23:27:45Z
+updated_at: 2026-10-06T23:34:24Z
 ---
 
 # Surface undeliverable trades
 
 ## Goal
 
-An outbound trade submitted on a route whose receiver has not activated the matching import route is reported as undeliverable, warned about at submission, releasable by its sender, and explained at the receiver, so neither party can be stuck in a silent deadlock.
+An outbound trade submitted on a route whose receiver has not activated the matching import route is reported as undeliverable, warned about at submission, releasable by its sender, and explained at the receiver, so neither party can be stuck in a silent deadlock. A sender can also withdraw any submitted trade that the receiver has not yet received, through a supported command rather than by hand.
 
 ## Context
 
@@ -34,9 +34,9 @@ No existing record duplicates this. KI-TOOL-CLI-108 (roadmap list structural val
 
 ## Boundary
 
-In scope, from the trade's constraints: CLI detection and messaging only.
+In scope, from the trade's constraints: CLI detection and messaging. Added on 2026-10-07: a sender-side withdraw command for a submitted, unreceived trade (see Discussion).
 
-Out of scope: route policy, which the harness owns; widening any repository's routes. The receiver owns priority, plan and execution.
+Out of scope: route policy and the `ki-trades` standard, which the harness owns; widening any repository's routes. The receiver owns priority, plan and execution.
 
 ## Discussion
 
@@ -46,6 +46,20 @@ The trade's submission, verbatim:
 
 > Make an undeliverable outbound trade visible and resolvable: (1) when the route to the receiver is not active, report the outbound record as undeliverable (naming the missing receiver import route) in 'trade list', 'trade show' and the sender's audit, rather than 'awaiting receipt'; (2) warn at 'trade submit' when the route is still awaiting receiver activation; (3) let the sender release or abandon an outbound submission whose route is not active, with an error message that names the missing receiver route rather than implying a receiver that never had one; (4) make the receiver's 'trade receive' refusal say when a visible outbound trade addressed to it has no matching local import route.
 
+### Sender-side withdrawal
+
+Added on 2026-10-07 at Kris's direction. Requirement: provide a sender-side withdraw facility for a submitted trade that the receiver has not yet received, for example `ki repo trade withdraw <trade-id>`. It must:
+
+- remove the sender's outbound copy of the submitted trade;
+- record the withdrawal evidence (trade ID, receiver, reason, time and actor) where the sender keeps it, so the withdrawal stays traceable after the outbound copy is gone;
+- refuse once the receiver has received the trade, directing the sender to the existing observation-led `ki repo trade release` path instead.
+
+Withdrawal applies whether or not the receiver's route is active, so it also answers part (3) of the trade's submission for inactive routes.
+
+Motivating case: this trade and TRD-8004751b, both submitted to `knowledgeislands/tools-ki` and never received, had to be deleted by hand as an explicit one-off exception to the trade standard, because no supported withdrawal existed. The deletion is harness commit [`9cac045245a36326f02e8e3a9aa192e7749e4f85`](https://github.com/knowledgeislands/ki-agentic-harness/commit/9cac045245a36326f02e8e3a9aa192e7749e4f85) ("chore(trades): withdraw two unreceived tools-ki trades by hand"). TRD-8004751b's content is carried by KI-TOOL-CLI-110.
+
+Harness handoff: the `ki-trades` standard (`skills/governance/ki-trades` in `knowledgeislands/ki-agentic-harness`) must define withdrawal as a sender operation on a submitted, unreceived trade, including its evidence and refusal rules. That change belongs to the harness and is not made here; it should reach the harness as its own handoff before or alongside delivery of this record.
+
 ### Open questions
 
-- Should releasing an outbound submission on an inactive route be a distinct sender operation, or an exception to the existing observation-led `ki repo trade release` eligibility? The harness trade standard currently allows release only after the observation policy is satisfied.
+- Should releasing an outbound submission on an inactive route be a distinct sender operation, or an exception to the existing observation-led `ki repo trade release` eligibility? The harness trade standard currently allows release only after the observation policy is satisfied. A general withdraw command for unreceived trades, as above, may make a separate inactive-route release unnecessary.
