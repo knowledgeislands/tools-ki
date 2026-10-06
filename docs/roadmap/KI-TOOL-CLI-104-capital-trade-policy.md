@@ -4,12 +4,12 @@ area: CLI
 title: Capital trade policy
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 3f96f18680c8792a837ecba1931e03ab59112741
 created_at: 2026-10-06T10:00:00Z
-updated_at: 2026-10-06T16:00:00Z
+updated_at: 2026-10-06T18:30:00Z
 ---
 
 # Capital trade policy
@@ -62,13 +62,12 @@ The implementation, tests and documentation are complete in the item's worktree.
 - [x] Update the tests, keeping 100% coverage.
 - [x] Update the manual, the command inventory, the specs (TRADE-001, 003, 008 and 009 deprecated, 010, 012 to 014, REGISTRY-001 and 002), README, CHANGELOG and the guides.
 - [x] Verify against the Arcadia policy and the saved v0.6.1 route report.
-- [ ] Review and acceptance.
 
 ## Files touched
 
-- `src/core/trade/` (`policy.ts` new; `configuration.ts`, `estate.ts`, `standing-intake.ts` and `operations/routes.ts`; `configuration-mutations.ts` removed)
-- `src/commands/trade/` (`policy.ts` new; `index.ts`, `routes/index.ts` and `standing.ts`; `subtypes.ts` removed)
-- `src/core/configuration/declaration.ts` and `src/commands/repo/init.ts`
+- `src/core/trade/` (`policy.ts` new; `configuration.ts`, `estate.ts`, `model.ts`, `standing-intake.ts` and `operations/routes.ts`; `configuration-mutations.ts` removed)
+- `src/commands/trade/` (`policy.ts` new; `index.ts`, `routes/index.ts`, `standing.ts`, `records.ts`, `selection.ts` and `shared.ts`; `subtypes.ts` removed)
+- `src/core/configuration/declaration.ts`, `src/core/configuration/index.ts` and `src/commands/repo/init.ts`
 - `src/tests/`
 - `man/ki.1` and `man/ki.commands.json`
 - `docs/specs/trades.md`, `docs/specs/registry.md` and `docs/specs/index.md`
@@ -107,6 +106,46 @@ The manual, README, CHANGELOG, and the getting-started, repository-operations an
 
 None beyond this record.
 
+## Review
+
+### Delivered
+
+`ki` resolves every repository's trade routes and standing grants from its declared Capital through the registry, and fails closed when the Capital is unavailable, ambiguous, invalid, not a Capital or does not list the member. Member route and subtype keys are retired and rejected, and their mutators are removed. `ki repo init --capital` is required. `ki repo trade policy show|check|compare` are the read-only policy commands. The `ki/trade-routes/v1` JSON contract is unchanged.
+
+### Change Summary
+
+- `feat(trade)!` Capital policy resolution, retirement of member routes and mutators, `policy` commands and `init --capital`; `chore(config)` this repository's Capital; `docs(specs)` TRADE-008 and TRADE-009 deprecated.
+- Review fixes: `fix(trade)` requires Capital `members` in code-point order, names members skipped because their Capital is unavailable (`skipped:` lines and `SKIPPED=n`; stderr under `--format json`), and rejects a malformed `policy compare` baseline route; one shared `isRecord`. `docs(trade)` covers the skip report, the ordering rule and the whole-registry sweep of `policy compare` in the manual, README, specs and getting-started guide. `docs(changelog)` records the final behaviour.
+
+### Verification
+
+Run on `feat/cli-104-capital-trade-policy` with this branch's `src/main.ts` as `ki` and the `KI-HARNESS-GOV-122` harness (now on harness `main`), in an isolated `KI_*_HOME` registering all 41 repositories at their pushed Capital declarations.
+
+- `bun run test:coverage`: 64 files, 1062 tests, 100% statements, branches, functions and lines. `bunx tsc --noEmit -p .`, `bunx knip`, dependency-cruiser, `mandoc -T lint man/ki.1`, Biome on changed files, rumdl and command-inventory regeneration are clean.
+- `ki repo trade policy check` from Arcadia: MEMBERS=21 CONFORMING=21 WARNING=0 FAILING=0 UNVERIFIABLE=0. All seven Capitals list their members in code-point order.
+- `ki repo trade policy compare --baseline` against the saved v0.6.1 estate report: COVERED=77 LOST=0 ADDED=1, the addition being `tools-techne -> homebrew-tap work`.
+- `ki repo trade standing list`: GRANTS=21 ACTIVE=21 in `ki-agentic-harness`, 4 in `ki-website`, and 3 each in `ki-techne-harness` and `tools-techne`.
+- `TRD-8004751b` and `TRD-d03495e9` remain visible in `tools-ki` as awaiting receipt on active routes.
+- `ki repo audit --repo . --progress never --concise`: no territory, trade or roadmap finding; the only failure is SELECT-1 auto-memory, an artefact of the isolated `HOME`.
+
+### Outstanding concerns
+
+- CI installs released `ki` v0.6.1, which does not know `capital`, so audits across the estate fail until this is released and each CI `KI_VERSION` pin is bumped; the owner accepted that window.
+- Five abbreviated `_Verify:_` names in `docs/specs/trades.md` predate this work and do not resolve to test names.
+- Unfiltered `ki repo --estate trade list` still fails on repositories that do not declare `ki-trades`, as before this change.
+
+### Post-change review
+
+A Fable review approved with should-fixes and no blockers. Its three should-fixes (unvalidated `members` order, silent skipping of members with an unavailable Capital in aggregate views, coercion of a malformed comparison baseline) and its nits (duplicate `isRecord`, double parsing, undocumented whole-registry sweep, `replace` versus `replaceAll`, a stale reciprocal-declaration comment) are addressed. Its note that a member-side trade operation exits 2 rather than warning when the Capital is unavailable follows the specification: audits warn, trade operations fail closed.
+
+### Mini recap
+
+Trade authority now comes from one place, the Capital's policy, and `ki` proves the switched estate keeps every previous route plus the one decided addition. Ready for release by the coordinator.
+
+## Done
+
+Accepted 2026-10-06 by Kris Brown on the review packet above.
+
 ## Discussion
 
 ### Cross-repository relationship
@@ -116,13 +155,3 @@ This item is blocked by `knowledgeislands/ki-arcadia-principal` `KI-ARCADIA-GOV-
 ### Release authority
 
 The owner settled this on 2026-10-06: the coordinator cuts one release once verification passes. After that release, consumers bump their CI `KI_VERSION` from `v0.6.1`.
-
-### Verification - 2026-10-06
-
-Run on `feat/cli-104-capital-trade-policy` after rebasing onto `6575e83`, with this branch's `src/main.ts` as `ki` and the `KI-HARNESS-GOV-122` branch as the local harness, in an isolated `KI_*_HOME` holding all 41 registered repositories on their migration branches.
-
-- `bun run test:coverage`: 64 files, 1061 tests, 100% statements, branches, functions and lines. `bunx tsc --noEmit -p .`, `bunx knip`, dependency-cruiser (330 modules), `mandoc -T lint man/ki.1` and the command-inventory regeneration are clean; `bunx biome check .` reports only pre-existing warnings.
-- `ki repo trade policy check` from Arcadia: MEMBERS=21 CONFORMING=21 FAILING=0 UNVERIFIABLE=0.
-- `ki repo trade policy compare --baseline` against the v0.6.1 estate report: COVERED=77 LOST=0 ADDED=1, the addition being `tools-techne -> homebrew-tap work`.
-- `ki repo trade standing list` reports every grant active: GRANTS=21 in `ki-agentic-harness`, 4 in `ki-website`, and 3 each in `ki-techne-harness` and `tools-techne`, matching the previous active set. `TRD-8004751b` and `TRD-d03495e9` remain visible in `tools-ki` as awaiting receipt on active routes.
-- `ki repo audit --repo . --progress never --concise`: the only remaining findings are isolated-environment artefacts (auto-memory opt-in under the isolated `HOME`).
