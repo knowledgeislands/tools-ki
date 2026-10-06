@@ -4,7 +4,7 @@ This is the consolidated Pre-1.0 baseline for KI's current command surface and n
 
 ## Pre-1.0 baseline
 
-This baseline describes the `v0.7.0` release. Domain imports and extracted type leaves keep the dependency graph acyclic, enforced by a resolved-graph boundary gate with a supported isolated compiler and deliberate failure fixtures.
+This baseline describes the `v0.7.1` release. Domain imports and extracted type leaves keep the dependency graph acyclic, enforced by a resolved-graph boundary gate with a supported isolated compiler and deliberate failure fixtures.
 
 ### Knowledge Base search
 
@@ -154,7 +154,7 @@ This baseline describes the `v0.7.0` release. Domain imports and extracted type 
 
 - Diagnostics and doctor reports share tool/version, checkout-verified local/release/unknown installation mode, executing platform/architecture, runtime/version, and configuration state. Copied or unidentified source is unknown rather than guessed local. Doctor reports its read-only scope, verdict, and pass/warn/fail/skipped counts without implying package freshness.
 - KI's own CI runs from the checked-out source, while release packaging pins a verified Harness revision.
-- The canonical Harness pin is `ki-agentic-harness` `f0af2d1`. Its rubrics parse YAML with Bun's built-in parser, so the compiled executable imports every rubric catalogue, and its engineering CI rule requires a separate `bun run test` step only for tests the audit does not run itself.
+- The canonical Harness pin is `ki-agentic-harness` `709f49f`. Its rubrics parse YAML with Bun's built-in parser, so the compiled executable imports every rubric catalogue, and its engineering CI rule requires a separate `bun run test` step only for tests the audit does not run itself.
 - `ki docs overview` now reports the canonical `https://knowledgeislands.info/projects/ki/` route.
 - Release guidance standardises exact installer pinning as positional `vX.Y.Z`, while an omitted version continues to resolve the latest release.
 - Acquisition is action-first and adapter-driven from verified Harness skill declarations; Granola uses an allowlisted read-only MCP adapter, saturation-aware complete-history enumeration, separate detail and transcript checkpoints, atomic resumable journals, governed reset, explicit omissions, and post-acquisition dispositions.
