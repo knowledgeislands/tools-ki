@@ -78,25 +78,13 @@ _Verify:_ `src/tests/cli/trade/trade.test.ts` — `creates, receives, displays, 
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
-### TRADE-008 — Route dependency protection
+### TRADE-008 — ~~Route dependency protection~~ (deprecated)
 
-Retired by the Capital-governed territory model: no repository-local command adds or removes a route, so there is no local route removal to protect. A route withdrawn from the Capital policy stops granting new preparations, submissions and standing captures through TRADE-012; existing local records remain local evidence.
+Deprecated in 2026-10-06 when the Capital-governed territory model removed repository-local route mutation; a route withdrawn from the Capital policy stops granting new preparations, submissions and standing captures through TRADE-012, and existing local records remain local evidence.
 
-_Conformance:_ retired
+### TRADE-009 — ~~Receiver-owned knowledge subtypes~~ (deprecated)
 
-_Verify:_ superseded by TRADE-012.
-
-_Evidence:_ the `ki repo trade routes add` and `remove` commands no longer exist in `man/ki.1` or `man/ki.commands.json`.
-
-### TRADE-009 — Receiver-owned knowledge subtypes
-
-Retired by the Capital-governed territory model: knowledge subtypes are defined once in the territory Capital's policy rather than by each receiver, and the `ki repo trade subtypes` command group no longer exists. Subtype definition and validation are specified by TRADE-012 and inspected by TRADE-013.
-
-_Conformance:_ retired
-
-_Verify:_ superseded by TRADE-012 and TRADE-013.
-
-_Evidence:_ the `ki repo trade subtypes` command group no longer exists in `man/ki.1` or `man/ki.commands.json`.
+Deprecated in 2026-10-06 when knowledge subtypes moved into the territory Capital's policy, specified by TRADE-012 and inspected by TRADE-013, and the `ki repo trade subtypes` command group was removed.
 
 ### TRADE-010 — Exact standing grants
 

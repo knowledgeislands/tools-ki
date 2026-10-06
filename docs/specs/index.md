@@ -24,7 +24,7 @@ _Evidence:_ the named CLI contract test passes.
 
 ## ID scheme
 
-Each area owns one uppercase prefix. Identifiers use `<PREFIX>-NNN`; serials are zero-padded, sequential and append-only within their area, and never reused. A requirement whose behaviour is removed keeps its heading and ID with `_Conformance:_ retired`, states what superseded it, and is never renumbered or reused.
+Each area owns one uppercase prefix. Identifiers use `<PREFIX>-NNN`; serials are zero-padded, sequential and append-only within their area, and never reused. A requirement whose behaviour is removed keeps its ID with its title struck through and a `(deprecated)` note, states what superseded it, and is never renumbered or reused.
 
 ## Gaps convention
 
