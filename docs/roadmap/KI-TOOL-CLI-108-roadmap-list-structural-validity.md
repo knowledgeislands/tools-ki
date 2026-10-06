@@ -3,13 +3,13 @@ id: KI-TOOL-CLI-108
 area: CLI
 title: Roadmap list structural validity
 theme: cli
-horizon: triage
+horizon: next
 status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T21:05:00Z
-updated_at: 2026-10-06T21:05:00Z
+updated_at: 2026-10-06T22:04:00Z
 ---
 
 # Roadmap list structural validity
@@ -52,6 +52,8 @@ To be determined in planning. At minimum, fixtures with a record without frontma
 
 None. Originating item `KI-HARNESS-GOV-095` in `ki-agentic-harness` is non-blocking in both directions.
 
+Sequencing: `ki-agentic-harness` KI-HARNESS-GOV-094 (Check constraint reach) and KI-HARNESS-GOV-103 (Cite coordination rules once) both edit the same harness roadmap standard section, `skills/change-management/ki-work-roadmap/references/standards-repository-roadmaps.md`, whose "Structural validity" invariant this item implements. Neither blocks this item, but re-read that standard after they land and before planning this item to Ready, so the diagnostics match its final wording.
+
 ## Documentation impact
 
 ### Decision Records
@@ -73,3 +75,7 @@ None.
 ## Discussion
 
 Raised by the GOV-095 delivery on 2026-10-06 under Kris's owner decision that the harness delivery raises this handoff as a draft record here. `tools-ki` owns its priority, plan and execution.
+
+### Adoption
+
+Kris approved adoption from Triage into Next on 2026-10-06, as a disposition of the state-of-play review (`ki-arcadia-principal`, `+/_CHECKPOINTS/state-of-play.md`).
