@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T23:27:45Z
-updated_at: 2026-10-06T23:34:24Z
+updated_at: 2026-10-06T23:50:39Z
 ---
 
 # Surface undeliverable trades
@@ -59,6 +59,8 @@ Withdrawal applies whether or not the receiver's route is active, so it also ans
 Motivating case: this trade and TRD-8004751b, both submitted to `knowledgeislands/tools-ki` and never received, had to be deleted by hand as an explicit one-off exception to the trade standard, because no supported withdrawal existed. The deletion is harness commit [`9cac045245a36326f02e8e3a9aa192e7749e4f85`](https://github.com/knowledgeislands/ki-agentic-harness/commit/9cac045245a36326f02e8e3a9aa192e7749e4f85) ("chore(trades): withdraw two unreceived tools-ki trades by hand"). TRD-8004751b's content is carried by KI-TOOL-CLI-110.
 
 Harness handoff: the `ki-trades` standard (`skills/governance/ki-trades` in `knowledgeislands/ki-agentic-harness`) must define withdrawal as a sender operation on a submitted, unreceived trade, including its evidence and refusal rules. That change belongs to the harness and is not made here; it should reach the harness as its own handoff before or alongside delivery of this record.
+
+Blocked by `ki-agentic-harness` [KI-HARNESS-GOV-148](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/KI-HARNESS-GOV-148-let-senders-withdraw-trades.md) as build order: that record carries the standard change, and the withdraw command implements the semantics it defines.
 
 ### Open questions
 
