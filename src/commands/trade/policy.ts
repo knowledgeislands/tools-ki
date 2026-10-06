@@ -7,7 +7,7 @@ import { localTerritoryPolicy } from '../../core/trade/estate.ts'
 import { compareRoutes, inspectTerritory } from '../../core/trade/policy.ts'
 import { renderTree } from '../presentation/index.ts'
 import type { TradeSelection } from './selection.ts'
-import { requireText } from './shared.ts'
+import { requireText, skipLine } from './shared.ts'
 
 const identities = (repositories: readonly string[]): string => repositories.map(repositoryIdentity).join(', ')
 
@@ -102,8 +102,9 @@ export const createTradePolicyCommand = (context: KiContext, selection: TradeSel
               entries: [
                 { label: `lost (${result.lost.length})`, children: items(result.lost) },
                 { label: `added (${result.added.length})`, children: items(result.added) },
+                ...result.skipped.map((repository) => ({ label: skipLine(repository) })),
                 {
-                  label: `summary: COVERED=${result.covered.length} LOST=${result.lost.length} ADDED=${result.added.length}`
+                  label: `summary: COVERED=${result.covered.length} LOST=${result.lost.length} ADDED=${result.added.length}${result.skipped.length ? ` SKIPPED=${result.skipped.length}` : ''}`
                 }
               ]
             }).join('\n')}\n`

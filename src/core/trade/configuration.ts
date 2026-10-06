@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { parse } from 'smol-toml'
+import { isRecord } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 
 const TRADES_TABLE = 'skills.ki-trades'
@@ -73,9 +74,6 @@ export interface RepositoryDeclaration {
   readonly policy?: TerritoryPolicy
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
 /** One skill's table under the `[skills]` namespace, or undefined where the file declares neither. */
 const skillTable = (parsed: Record<string, unknown>, name: string): unknown => {
   const skills = parsed['skills']
@@ -132,6 +130,9 @@ const parseTerritory = (
   if (typeof name !== 'string' || !name.trim())
     throw tradeError(`${path} [${TERRITORY_TABLE}].name must be a non-empty string`)
   const members = repositoryList(value['members'], `${path} [${TERRITORY_TABLE}].members`)
+  // Code-point order, not locale collation, so every reader agrees on one canonical listing.
+  if (!members.every((member, index) => index === 0 || (members[index - 1] as string) < member))
+    throw tradeError(`${path} [${TERRITORY_TABLE}].members must be sorted ascending`)
   if (!members.includes(repository))
     throw tradeError(`${path} [${TERRITORY_TABLE}].members must include the Capital itself`)
   return { name, members }
@@ -277,30 +278,30 @@ const parseTrades = (
   return { mapBonus: mapBonus(value['map_bonus'], path), policy: value['territory'] }
 }
 
-export const parseRepositoryDeclaration = (contents: string, path: string): RepositoryDeclaration => {
-  let parsed: unknown
-  try {
-    parsed = parse(contents)
-  } catch {
-    throw tradeError(`${path} must be valid TOML`)
-  }
-  /* v8 ignore next -- smol-toml either rejects invalid input or returns a TOML document object. */
-  if (!isRecord(parsed)) throw tradeError(`${path} must be a TOML table`)
-  const declaration = skillTable(parsed, 'ki-repo')
+/** The canonical `[skills.ki-repo].repository` a parsed declaration claims, even where the rest is invalid. */
+export const claimedRepository = (document: Record<string, unknown>): string | undefined => {
+  const declaration = skillTable(document, 'ki-repo')
   const repository = isRecord(declaration) ? declaration['repository'] : undefined
-  if (typeof repository !== 'string' || !isTradeRepository(repository))
+  return typeof repository === 'string' && isTradeRepository(repository) ? repository : undefined
+}
+
+/** Validates the trade-relevant facts of an already parsed `.ki.toml` document. */
+export const repositoryDeclarationFrom = (document: Record<string, unknown>, path: string): RepositoryDeclaration => {
+  const repository = claimedRepository(document)
+  if (!repository)
     throw tradeError(`${path} [${REPOSITORY_TABLE}].repository must use canonical HTTPS GitHub repository form`)
-  const capital = (declaration as Record<string, unknown>)['capital']
+  const declaration = skillTable(document, 'ki-repo') as Record<string, unknown>
+  const capital = declaration['capital']
   if (typeof capital !== 'string' || !isTradeRepository(capital))
     throw tradeError(`${path} [${REPOSITORY_TABLE}].capital must name the territory Capital in canonical HTTPS form`)
   const isCapital = capital === repository
-  const territoryValue = (declaration as Record<string, unknown>)['territory']
+  const territoryValue = declaration['territory']
   if (!isCapital && territoryValue !== undefined)
     throw tradeError(`${path} [${TERRITORY_TABLE}] is permitted only in a territory Capital`)
   if (isCapital && territoryValue === undefined)
     throw tradeError(`${path} is a territory Capital and must declare [${TERRITORY_TABLE}]`)
   const territory = isCapital ? parseTerritory(territoryValue, path, repository) : undefined
-  const trades = parseTrades(skillTable(parsed, 'ki-trades'), path, isCapital)
+  const trades = parseTrades(skillTable(document, 'ki-trades'), path, isCapital)
   return {
     repository,
     identity: repositoryIdentity(repository),
@@ -308,6 +309,16 @@ export const parseRepositoryDeclaration = (contents: string, path: string): Repo
     ...(territory ? { territory, policy: parsePolicy(trades?.policy, path, repository, territory) } : {}),
     ...(trades ? { trades: { mapBonus: trades.mapBonus } } : {})
   }
+}
+
+const parseRepositoryDeclaration = (contents: string, path: string): RepositoryDeclaration => {
+  let document: Record<string, unknown>
+  try {
+    document = parse(contents)
+  } catch {
+    throw tradeError(`${path} must be valid TOML`)
+  }
+  return repositoryDeclarationFrom(document, path)
 }
 
 export const readRepositoryDeclaration = async (path: string): Promise<RepositoryDeclaration> =>

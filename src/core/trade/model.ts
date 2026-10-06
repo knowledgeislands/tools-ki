@@ -95,6 +95,8 @@ export interface RegisteredRepository {
   readonly root: string
   readonly repository: string
   readonly configuration?: TradeConfiguration
+  /** Why a repository declaring `[skills.ki-trades]` is no trade endpoint: its Capital did not resolve. */
+  readonly skipped?: string
 }
 
 export interface ActiveRegisteredRepository extends RegisteredRepository {

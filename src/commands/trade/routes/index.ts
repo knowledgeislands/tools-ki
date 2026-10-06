@@ -3,11 +3,13 @@ import type { KiContext } from '../../../context.ts'
 import { grammarError } from '../../../core/errors.ts'
 import { registeredRepositories } from '../../../core/trade/estate.ts'
 import {
+  type EstateRouteInspection,
   estateRouteReport,
   inspectEstateRoutes,
   inspectRoutes,
   localRegisteredConfiguration
 } from '../../../core/trade/index.ts'
+import type { RegisteredRepository } from '../../../core/trade/model.ts'
 import {
   checkTradeRoutes,
   inspectEstateTradeRoutes,
@@ -15,7 +17,7 @@ import {
 } from '../../../core/trade/operations/index.ts'
 import { type PairTableRow, renderPairTable, renderTree, routeState, tradeKindText } from '../../presentation/index.ts'
 import type { TradeSelection } from '../selection.ts'
-import { kind, repository, routeDirection } from '../shared.ts'
+import { kind, repository, routeDirection, skipLine } from '../shared.ts'
 
 interface RouteOptions {
   readonly direction?: string
@@ -48,7 +50,8 @@ const renderRouteList = (inspected: Awaited<ReturnType<typeof inspectRoutes>>): 
 }
 
 const renderEstateRouteList = (
-  inspected: Awaited<ReturnType<typeof inspectEstateRoutes>>,
+  inspected: readonly EstateRouteInspection[],
+  skipped: readonly RegisteredRepository[],
   incomplete: boolean,
   columns?: number
 ): string => {
@@ -58,7 +61,8 @@ const renderEstateRouteList = (
     route.direction === 'export'
       ? [route.source.identity, routeIdentity(route.repository)]
       : [routeIdentity(route.repository), route.source.identity]
-  // A reciprocal declaration describes the same directed route; collapse it before pairing endpoints.
+  // One policy edge appears twice, as the exporter's export view and the importer's import view;
+  // collapse both endpoint views into one directed route before pairing endpoints.
   const edges = new Map<
     string,
     {
@@ -98,7 +102,8 @@ const renderEstateRouteList = (
     }))
   return [
     ...renderPairTable('KI TRADE ROUTES', rows, columns),
-    `summary: ROUTES=${edges.size} ACTIVE=${active} INCOMPLETE=${incompleteCount}`
+    ...skipped.map(skipLine),
+    `summary: ROUTES=${edges.size} ACTIVE=${active} INCOMPLETE=${incompleteCount}${skipped.length ? ` SKIPPED=${skipped.length}` : ''}`
   ].join('\n')
 }
 
@@ -120,20 +125,22 @@ export const createTradeRoutesCommand = (context: KiContext, selection: TradeSel
           if (aggregate) {
             const incomplete = Boolean(options.incomplete)
             const roots = new Set(repositories.map((repository) => repository.root))
+            const selected = (await registeredRepositories(context)).filter((repository) => roots.has(repository.root))
             const identities = new Set(
-              (await registeredRepositories(context))
-                .filter((repository) => roots.has(repository.root) && repository.configuration)
-                .map((repository) => repository.repository)
+              selected.filter((repository) => repository.configuration).map((repository) => repository.repository)
             )
+            const skipped = selected.filter((repository) => repository.skipped)
             const inspected = await inspectEstateTradeRoutes(incomplete, async () =>
               (await inspectEstateRoutes(context)).filter((route) => identities.has(route.source.repository))
             )
             if (options.format === 'json') {
+              // The versioned contract stays byte-stable; skips are diagnostics on standard error.
+              for (const repository of skipped) context.stderr.write(`${skipLine(repository)}\n`)
               context.stdout.write(`${JSON.stringify(estateRouteReport(inspected, incomplete), null, 2)}\n`)
               return
             }
             context.stdout.write(
-              `${renderEstateRouteList(inspected, incomplete, context.stdout.isTTY ? context.stdout.columns : undefined)}\n`
+              `${renderEstateRouteList(inspected, skipped, incomplete, context.stdout.isTTY ? context.stdout.columns : undefined)}\n`
             )
             return
           }

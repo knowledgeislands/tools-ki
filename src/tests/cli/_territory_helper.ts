@@ -39,8 +39,9 @@ export interface TerritoryFixture {
 
 const list = (values: readonly string[]): string => `[${values.map((value) => JSON.stringify(value)).join(', ')}]`
 
+/** Code-point order, matching the Capital's `members` validation rather than locale collation. */
 const sorted = (values: Iterable<string>): readonly string[] =>
-  [...new Set(values)].sort((left, right) => left.localeCompare(right))
+  [...new Set(values)].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
 
 const declarationHeader = (repository: string, capital: string): readonly string[] => [
   '[repo]',

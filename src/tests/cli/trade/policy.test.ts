@@ -105,6 +105,17 @@ describe('[ki repo trade policy]', () => {
         territoryTable(`name = "Example territory"\nmembers = ${list([sourceHome])}`),
         `${T}.members must include the Capital itself`
       ],
+      [
+        territoryTable(`name = "Example territory"\nmembers = ${list([sourceHome, capitalHome])}`),
+        `${T}.members must be sorted ascending`
+      ],
+      // Code-point order, not locale collation: `_` (U+005F) sorts after `-` (U+002D).
+      [
+        territoryTable(
+          `name = "Example territory"\nmembers = ${list([home('example/a_b'), home('example/a-b'), capitalHome])}`
+        ),
+        `${T}.members must be sorted ascending`
+      ],
       // Policy shape.
       [withPolicy('territory = "none"'), `${P} must be a table`],
       [withPolicy('\n[skills.ki-trades.territory]\nroutes = []'), `${P} has unrecognised key routes`],
@@ -402,7 +413,7 @@ describe('[ki repo trade policy]', () => {
   })
 
   test('compares saved active routes with the routes the current Capital policies make active', async () => {
-    const { box, source } = await territoryBox()
+    const { box, source, receiver, capital } = await territoryBox()
     const saved = await box.run('ki repo --estate trade routes list --format json')
     await box.project.write('baseline.json', saved.output)
     const comparison = (lost: readonly string[], added: readonly string[], covered: number) =>
@@ -459,13 +470,39 @@ describe('[ki repo trade policy]', () => {
             kind: 'knowledge',
             state: 'active'
           },
-          { source: { repository: sourceHome }, peer: { repository: receiverHome }, kind: 'work', state: 'active' }
+          {
+            source: { repository: sourceHome },
+            peer: { repository: receiverHome },
+            direction: 'export',
+            kind: 'work',
+            state: 'active'
+          }
         ]
       })
     )
     expect(await box.run('ki repo trade policy compare --baseline baseline.json')).toEqual({
       exitCode: 0,
       output: `${comparison([], [], 2)}\n`
+    })
+
+    // The sweep covers the whole registry, so a trading member whose Capital is not checked out
+    // here is stated as skipped rather than silently contributing no routes.
+    const elsewhereHome = home('example/elsewhere')
+    const orphan = await checkout(box, 'orphan', memberConfiguration('example/orphan', { capital: elsewhereHome }))
+    await registerEstate(box, [source, receiver, capital, orphan])
+    expect(await box.run('ki repo trade policy compare --baseline baseline.json')).toEqual({
+      exitCode: 0,
+      output: `${comparison([], [], 2)
+        .split('\n')
+        .flatMap((line) =>
+          line.startsWith('╰─ summary:')
+            ? [
+                `├─ skipped: example/orphan (territory policy lives in ${elsewhereHome}, not available here)`,
+                `${line} SKIPPED=1`
+              ]
+            : [line]
+        )
+        .join('\n')}\n`
     })
   })
 
@@ -483,7 +520,13 @@ describe('[ki repo trade policy]', () => {
       failure(`${path} cannot be read`)
     )
 
-    const route = { source: { repository: sourceHome }, peer: { repository: receiverHome }, state: 'active' }
+    const route = {
+      source: { repository: sourceHome },
+      peer: { repository: receiverHome },
+      direction: 'export',
+      kind: 'work',
+      state: 'active'
+    }
     const cases: readonly (readonly [string, string])[] = [
       ['{not json', 'must be valid JSON'],
       ['[]', 'must be a ki/trade-routes/v1 report'],
@@ -497,7 +540,20 @@ describe('[ki repo trade policy]', () => {
       [
         JSON.stringify({ schema: 'ki/trade-routes/v1', routes: [{ ...route, peer: null }] }),
         'contains a malformed route'
-      ]
+      ],
+      // Every route is validated, whatever its state; nothing is coerced into a default.
+      ...[
+        { ...route, source: {} },
+        { ...route, peer: { repository: 7 } },
+        { ...route, direction: 'sideways' },
+        { ...route, direction: undefined },
+        { ...route, kind: 'bogus' },
+        { ...route, kind: 1 },
+        { ...route, state: 'awaiting-receiver', kind: 'bogus' }
+      ].map(
+        (malformed) =>
+          [JSON.stringify({ schema: 'ki/trade-routes/v1', routes: [malformed] }), 'contains a malformed route'] as const
+      )
     ]
     for (const [contents, detail] of cases) {
       await box.project.write('baseline.json', contents)

@@ -1,7 +1,14 @@
 import { readFile } from 'node:fs/promises'
-import { policyParticipants, type TerritoryPolicy } from './configuration.ts'
-import { type DeclaredRepository, inspectEstateRoutes, localTerritoryPolicy, type RouteInspection } from './estate.ts'
-import { type TradeContext, tradeError } from './model.ts'
+import { isRecord } from '../configuration/index.ts'
+import { isTradeKind, policyParticipants, type TerritoryPolicy } from './configuration.ts'
+import {
+  type DeclaredRepository,
+  estateRoutes,
+  localTerritoryPolicy,
+  type RouteInspection,
+  registeredRepositories
+} from './estate.ts'
+import { type RegisteredRepository, type TradeContext, tradeError } from './model.ts'
 
 export type TerritoryMemberState = 'conforming' | 'warning' | 'failing' | 'unverifiable'
 
@@ -70,10 +77,9 @@ export interface RouteComparison {
   readonly covered: readonly string[]
   readonly lost: readonly string[]
   readonly added: readonly string[]
+  /** Trading repositories whose Capital did not resolve, so none of their routes count as current. */
+  readonly skipped: readonly RegisteredRepository[]
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const edge = (exporter: string, importer: string, kind: string): string => `${exporter} -> ${importer} ${kind}`
 
@@ -91,33 +97,37 @@ const baselineEdges = (contents: string, path: string): ReadonlySet<string> => {
     throw tradeError(`${path} must be a ki/trade-routes/v1 report`)
   const edges = new Set<string>()
   for (const route of report['routes'] as unknown[]) {
-    if (!isRecord(route) || !isRecord(route['source']) || !isRecord(route['peer']))
+    const source = isRecord(route) && isRecord(route['source']) ? route['source']['repository'] : undefined
+    const peer = isRecord(route) && isRecord(route['peer']) ? route['peer']['repository'] : undefined
+    if (
+      !isRecord(route) ||
+      typeof source !== 'string' ||
+      typeof peer !== 'string' ||
+      (route['direction'] !== 'export' && route['direction'] !== 'import') ||
+      typeof route['kind'] !== 'string' ||
+      !isTradeKind(route['kind'])
+    )
       throw tradeError(`${path} contains a malformed route`)
     if (route['state'] !== 'active') continue
-    const direction = route['direction'] === 'import' ? 'import' : 'export'
-    edges.add(
-      inspectedEdge(String(route['source']['repository']), {
-        repository: String(route['peer']['repository']),
-        direction,
-        kind: route['kind'] === 'knowledge' ? 'knowledge' : 'work'
-      })
-    )
+    edges.add(inspectedEdge(source, { repository: peer, direction: route['direction'], kind: route['kind'] }))
   }
   return edges
 }
 
 /**
  * Compares the active directed edges of a saved `ki/trade-routes/v1` report with the edges the
- * current registry and Capital policies make active, so a policy change can be checked for lost or
- * newly granted routes before it lands.
+ * whole registry and its Capital policies make active, so a policy change can be checked for lost
+ * or newly granted routes before it lands. The sweep is always the whole registry, whatever the
+ * repository selection.
  */
 export const compareRoutes = async (context: TradeContext, baselinePath: string): Promise<RouteComparison> => {
   const contents = await readFile(baselinePath, 'utf8').catch(() => {
     throw tradeError(`${baselinePath} cannot be read`)
   })
   const baseline = baselineEdges(contents, baselinePath)
+  const repositories = await registeredRepositories(context)
   const current = new Set(
-    (await inspectEstateRoutes(context))
+    estateRoutes(repositories)
       .filter((route) => route.state === 'active')
       .map((route) => inspectedEdge(route.source.repository, route))
   )
@@ -126,6 +136,7 @@ export const compareRoutes = async (context: TradeContext, baselinePath: string)
   return {
     covered: sorted([...baseline].filter((value) => current.has(value))),
     lost: sorted([...baseline].filter((value) => !current.has(value))),
-    added: sorted([...current].filter((value) => !baseline.has(value)))
+    added: sorted([...current].filter((value) => !baseline.has(value))),
+    skipped: repositories.filter((repository) => repository.skipped)
   }
 }

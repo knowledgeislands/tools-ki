@@ -5,12 +5,13 @@ import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { type RepositoryLocation, resolveRepository } from '../repository/index.ts'
 import { requiredLocalRegistry } from '../storage/index.ts'
 import {
+  claimedRepository,
   effectiveConfiguration,
   isTradeRepository,
-  parseRepositoryDeclaration,
   type RepositoryDeclaration,
   type RouteDirection,
   readRepositoryDeclaration,
+  repositoryDeclarationFrom,
   repositoryIdentity,
   type TerritoryPolicy,
   type TradeConfiguration,
@@ -18,22 +19,6 @@ import {
   tradeKinds
 } from './configuration.ts'
 import { type ActiveRegisteredRepository, type RegisteredRepository, type TradeContext, tradeError } from './model.ts'
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-/** The `[skills.ki-repo].repository` a registered declaration claims, even where the rest is invalid. */
-const claimedRepository = (contents: string): string | undefined => {
-  try {
-    const parsed = parse(contents)
-    const skills = parsed['skills']
-    const declaration = isRecord(skills) ? skills['ki-repo'] : undefined
-    const repository = isRecord(declaration) ? declaration['repository'] : undefined
-    return typeof repository === 'string' && isTradeRepository(repository) ? repository : undefined
-  } catch {
-    return undefined
-  }
-}
 
 /** One registered checkout with its claimed identity and, where it validates, its declaration. */
 export interface DeclaredRepository {
@@ -53,12 +38,17 @@ export const declaredRepositories = async (context: TradeContext): Promise<reado
     const path = join(root, REPOSITORY_DECLARATION_FILE)
     const state = await lstat(path).catch(() => undefined)
     if (!state?.isFile()) continue
-    const contents = await readFile(path, 'utf8')
-    const repository = claimedRepository(contents)
+    let document: Record<string, unknown>
+    try {
+      document = parse(await readFile(path, 'utf8'))
+    } catch {
+      continue
+    }
+    const repository = claimedRepository(document)
     // A declaration without a canonical identity cannot be a trade endpoint.
     if (!repository) continue
     try {
-      repositories.push({ root, repository, declaration: parseRepositoryDeclaration(contents, path) })
+      repositories.push({ root, repository, declaration: repositoryDeclarationFrom(document, path) })
     } catch (error) {
       repositories.push({ root, repository, error: (error as Error).message })
     }
@@ -100,25 +90,30 @@ export const resolveCapital = (
   return { state: 'resolved', capital, policy: capital.declaration.policy }
 }
 
-const tradingConfiguration = (
+/**
+ * Projects one declared checkout into the estate. A repository that trades but whose Capital does
+ * not resolve keeps the resolution message, so aggregate views can state the skip instead of
+ * silently dropping it.
+ */
+const registeredRepository = (
   declared: readonly DeclaredRepository[],
-  declaration: RepositoryDeclaration | undefined
-): TradeConfiguration | undefined => {
-  if (!declaration?.trades) return undefined
+  entry: DeclaredRepository
+): RegisteredRepository => {
+  const located = { root: entry.root, repository: entry.repository }
+  const declaration = entry.declaration
+  if (!declaration?.trades) return located
   const resolution = resolveCapital(declared, declaration)
   return resolution.state === 'resolved'
-    ? effectiveConfiguration({ ...declaration, trades: declaration.trades }, resolution.policy)
-    : undefined
+    ? {
+        ...located,
+        configuration: effectiveConfiguration({ ...declaration, trades: declaration.trades }, resolution.policy)
+      }
+    : { ...located, skipped: resolution.message }
 }
 
 export const registeredRepositories = async (context: TradeContext): Promise<readonly RegisteredRepository[]> => {
   const declared = await declaredRepositories(context)
-  return declared.map((entry) => {
-    const configuration = tradingConfiguration(declared, entry.declaration)
-    return configuration
-      ? { root: entry.root, repository: entry.repository, configuration }
-      : { root: entry.root, repository: entry.repository }
-  })
+  return declared.map((entry) => registeredRepository(declared, entry))
 }
 
 export const localRepository = async (context: TradeContext): Promise<RepositoryLocation> =>
@@ -205,9 +200,9 @@ export const inspectRoutes = async (
   local: TradeConfiguration
 ): Promise<readonly RouteInspection[]> => inspectRoutesInEstate(await registeredRepositories(context), local)
 
-export const inspectEstateRoutes = async (context: TradeContext): Promise<readonly EstateRouteInspection[]> => {
-  const repositories = await registeredRepositories(context)
-  return repositories.flatMap((source) => {
+/** Every route each trading repository in `repositories` resolves, inspected against that same estate. */
+export const estateRoutes = (repositories: readonly RegisteredRepository[]): readonly EstateRouteInspection[] =>
+  repositories.flatMap((source) => {
     const configuration = source.configuration
     return configuration
       ? inspectRoutesInEstate(repositories, configuration).map((route) => ({
@@ -220,7 +215,9 @@ export const inspectEstateRoutes = async (context: TradeContext): Promise<readon
         }))
       : []
   })
-}
+
+export const inspectEstateRoutes = async (context: TradeContext): Promise<readonly EstateRouteInspection[]> =>
+  estateRoutes(await registeredRepositories(context))
 
 export const requireActiveRoute = async (
   context: TradeContext,
@@ -237,7 +234,7 @@ export const requireActiveRoute = async (
   )
   if (route?.state !== 'active')
     throw tradeError(
-      `${direction} ${kind} trade route ${repository} is ${route?.state?.replace('-', ' ') ?? 'not granted by the territory policy'}`
+      `${direction} ${kind} trade route ${repository} is ${route?.state?.replaceAll('-', ' ') ?? 'not granted by the territory policy'}`
     )
   return route.peer as ActiveRegisteredRepository
 }

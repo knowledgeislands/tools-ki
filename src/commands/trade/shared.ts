@@ -6,9 +6,11 @@ import {
   isTradeRepository,
   type ObservationPolicy,
   type RouteDirection,
+  repositoryIdentity,
   type TradeKind
 } from '../../core/trade/configuration.ts'
 import { isTradeIdentifier } from '../../core/trade/index.ts'
+import type { RegisteredRepository } from '../../core/trade/model.ts'
 
 export const repository = (value: string | undefined, option: string): string => {
   if (!value || !isTradeRepository(value))
@@ -49,3 +51,7 @@ export const requireText = (value: string | undefined, option: string): string =
 }
 
 export const count = (value: number, noun: string): string => `${value} ${noun}${value === 1 ? '' : 's'}`
+
+/** States why an aggregate view omits a trading repository whose territory Capital did not resolve. */
+export const skipLine = (repository: RegisteredRepository): string =>
+  `skipped: ${repositoryIdentity(repository.repository)} (${repository.skipped})`

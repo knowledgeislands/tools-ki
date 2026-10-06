@@ -15,6 +15,7 @@ import {
   submitTrade,
   tradeLifecycle
 } from '../../core/trade/index.ts'
+import type { RegisteredRepository } from '../../core/trade/model.ts'
 import {
   cleanupTradeBatch,
   listTradeRecords,
@@ -24,7 +25,7 @@ import {
 } from '../../core/trade/operations/index.ts'
 import { renderTradeRelation, renderTree } from '../presentation/index.ts'
 import type { TradeSelection } from './selection.ts'
-import { count, kind, observation, repository, requireText, tradeId } from './shared.ts'
+import { count, kind, observation, repository, requireText, skipLine, tradeId } from './shared.ts'
 
 interface PrepareOptions {
   readonly kind?: string
@@ -51,7 +52,11 @@ interface ListOptions {
 
 const directionLabel = { preparation: 'prepare', inbound: 'import', outbound: 'export' } as const
 
-const renderTradeList = async (result: TradeListResult, icons: boolean): Promise<string> => {
+const renderTradeList = async (
+  result: TradeListResult,
+  skipped: readonly RegisteredRepository[],
+  icons: boolean
+): Promise<string> => {
   const { trades, receivable } = result
   const pending = receivable.map((record) => ({
     label: `${record.id} import → ${record.receiver} ${renderTradeRelation(
@@ -77,8 +82,9 @@ const renderTradeList = async (result: TradeListResult, icons: boolean): Promise
         label: 'results',
         children: [...pending, ...results].length ? [...pending, ...results] : [{ label: 'trades: none' }]
       },
+      ...skipped.map((repository) => ({ label: skipLine(repository) })),
       {
-        label: `summary: TRADES=${visible.length + receivable.length} PREPARATIONS=${visible.filter((trade) => trade.direction === 'preparation').length} IMPORTS=${visible.filter((trade) => trade.direction === 'inbound').length} AWAITING_RECEIPT=${receivable.length} EXPORTS=${visible.filter((trade) => trade.direction === 'outbound').length}`
+        label: `summary: TRADES=${visible.length + receivable.length} PREPARATIONS=${visible.filter((trade) => trade.direction === 'preparation').length} IMPORTS=${visible.filter((trade) => trade.direction === 'inbound').length} AWAITING_RECEIPT=${receivable.length} EXPORTS=${visible.filter((trade) => trade.direction === 'outbound').length}${skipped.length ? ` SKIPPED=${skipped.length}` : ''}`
       }
     ]
   }).join('\n')
@@ -206,6 +212,8 @@ export const createTradeRecordCommands = (context: KiContext, selection: TradeSe
       if (options.status && !decisionStatuses.includes(options.status as (typeof decisionStatuses)[number]))
         throw grammarError(`trade list --status must be one of ${decisionStatuses.join(', ')}`)
       const repositories = await selection.selected()
+      const skipped = await selection.skipped(repositories)
+      const skippedRoots = new Set(skipped.map((repository) => repository.root))
       const roots = new Set(repositories.map((repository) => repository.root))
       const result = await listTradeRecords(
         {
@@ -223,21 +231,23 @@ export const createTradeRecordCommands = (context: KiContext, selection: TradeSe
           previewReceivable: async () =>
             (
               await Promise.all(
-                repositories.map((repository) =>
-                  previewReceivableTrades({ ...context, workingDirectory: repository.root })
-                )
+                repositories
+                  .filter((repository) => !skippedRoots.has(repository.root))
+                  .map((repository) => previewReceivableTrades({ ...context, workingDirectory: repository.root }))
               )
             ).flat(),
           lifecycle: tradeLifecycle
         }
       )
-      context.stdout.write(`${await renderTradeList(result, options.icons !== false)}\n`)
+      context.stdout.write(`${await renderTradeList(result, skipped, options.icons !== false)}\n`)
     }),
   new Command('show')
     .description('show selected visible copies of one trade')
     .argument('<trade-id>', 'trade identifier')
     .action(async (id: string) => {
       const repositories = await selection.selected()
+      // The record contents own standard output, so skips are diagnostics on standard error.
+      for (const repository of await selection.skipped(repositories)) context.stderr.write(`${skipLine(repository)}\n`)
       const roots = new Set(repositories.map((repository) => repository.root))
       const selected = (await locateTrades(context, { id: tradeId(id) })).filter((trade) => roots.has(trade.root))
       if (!selected.length) throw grammarError(`trade ${id} was not found in the selected repositories`)

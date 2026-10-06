@@ -360,7 +360,11 @@ describe('[ki repo trade]', () => {
     const rendered = await box.run('ki repo --estate trade routes list --format json')
 
     expect(rendered.exitCode).toBe(0)
-    const report = JSON.parse(rendered.output)
+    // The member resolving another Capital is stated on standard error, outside the contract.
+    expect(rendered.stderr).toBe(
+      `skipped: example/fourth (territory policy lives in ${home('example/elsewhere')}, not available here)\n`
+    )
+    const report = JSON.parse(rendered.stdout)
     expect(report).toMatchObject({
       schema: 'ki/trade-routes/v1',
       scope: 'estate',
@@ -392,7 +396,7 @@ describe('[ki repo trade]', () => {
     const rendered = await box.run('ki repo --estate trade routes list --incomplete --format json')
 
     expect(rendered.exitCode).toBe(0)
-    const report = JSON.parse(rendered.output)
+    const report = JSON.parse(rendered.stdout)
     expect(report.incomplete).toBe(true)
     expect(report.routes.length).toBeGreaterThan(0)
     expect(report.routes.every((route: { state: string }) => route.state !== 'active')).toBe(true)
@@ -1261,10 +1265,13 @@ describe('[ki repo trade]', () => {
       output: `╭─ KI TRADE ROUTES\n├─ results\n│  ╰─ export\n│     ╰─ knowledge ${absentHome} [awaiting receiver activation]\n╰─ summary: ROUTES=1\n`
     })
 
+    // Members the Capital no longer lists are stated as skipped rather than dropped.
     await territory(box, [])
+    const unlisted = (member: string) =>
+      `skipped: ${member.slice('https://github.com/'.length)} (territory Capital ${capitalHome} does not list ${member} as a member)`
     expect(await box.run('ki repo --estate trade routes list')).toEqual({
       exitCode: 0,
-      output: '╭─ KI TRADE ROUTES\n╰─ routes: none\nsummary: ROUTES=0 ACTIVE=0 INCOMPLETE=0\n'
+      output: `╭─ KI TRADE ROUTES\n╰─ routes: none\n${unlisted(sourceHome)}\n${unlisted(receiverHome)}\nsummary: ROUTES=0 ACTIVE=0 INCOMPLETE=0 SKIPPED=2\n`
     })
 
     await territory(box, [{ from: [sourceHome], to: [receiverHome], kinds: ['work'] }])
@@ -1278,6 +1285,61 @@ describe('[ki repo trade]', () => {
       output:
         '╭─ KI TRADE ROUTES\n╭──────────────────┬─────────────────────────────────────────┬────────────────╮\n│ example/receiver │ → —                                     │ example/source │\n│                  ├─────────────────────────────────────────┤                │\n│                  │ ← ⚒ work [awaiting receiver activation] │                │\n╰──────────────────┴─────────────────────────────────────────┴────────────────╯\nsummary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
     })
+  })
+
+  test('states a trading member whose Capital is unavailable in every aggregate view instead of dropping it', async () => {
+    const { box, source, receiver, capital } = await configuredPair()
+    const elsewhereHome = home('example/elsewhere')
+    const created = await createTrade(box, 'work')
+    const id = /TRD-[0-9a-f]{8}/u.exec(created.output)?.[0] as string
+    const baselineJson = await box.run('ki repo --estate trade routes list --format json')
+    const baselineList = await box.run('ki repo --estate trade list')
+    const orphan = await box.project.mkdir('orphan')
+    await box.project.write('orphan/.ki.toml', memberConfiguration('example/orphan', { capital: elsewhereHome }))
+    await configureEstate(box, [source, receiver, capital, orphan])
+    const unavailable = `territory policy lives in ${elsewhereHome}, not available here`
+    const skipped = `skipped: example/orphan (${unavailable})`
+
+    // Text states each skip beside the evidence and counts it in the summary.
+    const routes = await box.run('ki repo --estate trade routes list')
+    expect(routes.exitCode).toBe(0)
+    expect(routes.output.split('\n').slice(-3)).toEqual([
+      skipped,
+      'summary: ROUTES=1 ACTIVE=1 INCOMPLETE=0 SKIPPED=1',
+      ''
+    ])
+
+    // JSON keeps the versioned contract byte-identical and states the skip on standard error.
+    const json = await box.run('ki repo --estate trade routes list --format json')
+    expect(json.exitCode).toBe(0)
+    expect(json.stdout).toBe(baselineJson.stdout)
+    expect(json.stderr).toBe(`${skipped}\n`)
+
+    // The aggregate trade inventory and show view state the skip rather than omit the member.
+    const listed = await box.run('ki repo --estate trade list')
+    expect(listed.exitCode).toBe(0)
+    expect(listed.output).toBe(
+      baselineList.output.replace(
+        /╰─ summary: (.*)\n$/u,
+        (_line, summary: string) => `├─ ${skipped}\n╰─ summary: ${summary} SKIPPED=1\n`
+      )
+    )
+    const shown = await box.run(['ki', 'repo', '--estate', 'trade', 'show', id])
+    expect(shown.exitCode).toBe(0)
+    expect(shown.stderr).toBe(`${skipped}\n`)
+    expect(shown.stdout).toContain(`Repository: ${sourceHome} [export]`)
+
+    // Selected alone, the member fails closed instead of reporting an empty inventory.
+    box.cd('orphan')
+    expect(await box.run('ki repo trade list --direction export')).toEqual({
+      exitCode: 2,
+      output: `ki: error: ${unavailable}\n`
+    })
+    expect(await box.run(['ki', 'repo', 'trade', 'show', id])).toEqual({
+      exitCode: 2,
+      output: `ki: error: ${unavailable}\n`
+    })
+    box.cd('..')
   })
 
   test('rejects ambiguous cleanup grammar, reports an already-received copy, and marks prune eligibility', async () => {

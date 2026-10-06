@@ -4,6 +4,7 @@ export {
   declaredRepositoryIdentity,
   declaredRepositoryKind,
   declareRepositorySkill,
+  isRecord,
   REPOSITORY_DECLARATION_FILE,
   readRepositoryDeclaration,
   renderRepositoryDeclaration,
