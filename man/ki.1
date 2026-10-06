@@ -160,8 +160,8 @@ Show repository-by-horizon counts and totals without listing records.
 .B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
 Report timestamp coverage, age, and inactivity for governed work items.
 .TP
-.B ki repo [repo-options] roadmap prune [id]
-Delete completed canonical work-item records.
+.B ki repo [repo-options] roadmap prune [id] [--no-commit] [--dry-run]
+Delete completed canonical work-item records and commit the deletions.
 .TP
 .B ki repo [repo-options] roadmap promote <id> [horizon]
 Move one work item toward the now horizon.
@@ -790,7 +790,7 @@ Use
 .B --format json
 for a versioned machine-readable report.
 .TP
-.B ki repo [repo-options] roadmap prune [id]
+.B ki repo [repo-options] roadmap prune [id] [--no-commit] [--dry-run]
 Without an ID, delete every canonical work-item record whose lifecycle status
 is exactly
 .BR done
@@ -798,7 +798,21 @@ from the selected repositories. It leaves every other lifecycle status,
 non-canonical file, and peer repository untouched. If no selected repository
 contains a completed record, it reports that no record was pruned. With an ID,
 require exactly one selected repository and delete only that named completed
-record.
+record. By default, each repository with pruned records gets one commit that
+contains exactly those deletions, with the subject
+.B chore(roadmap): prune <N> done work record(s)
+and one
+.B - <ID>
+body line per record; commit hooks run. Before deleting anything, the command
+refuses when a selected repository is not a Git work tree, has staged changes,
+or holds a selected record that is untracked or modified. A failed commit
+restores that repository's records, and a commit that a hook widened with other
+paths is reported as an error.
+.B --no-commit
+only deletes the records and skips the Git checks.
+.B --dry-run
+makes the same selection and checks, then reports the records and planned
+commits without deleting or committing.
 .TP
 .B ki repo [repo-options] roadmap promote <id> [horizon]
 Move exactly one selected repository's named work item one horizon toward

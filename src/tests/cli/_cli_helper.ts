@@ -36,6 +36,8 @@ import type { KiInstallationMode } from '../../core/paths.ts'
 import type { Runner } from '../../core/runtime/runner.ts'
 
 export type { Runner } from '../../core/runtime/runner.ts'
+// The production process runner, for a test that wraps real commands to inject one failure.
+export { runCommand } from '../../core/runtime/runner.ts'
 
 // `ki bootstrap` detects the active agent from which of these home directories exists —
 // kept here as a literal, not imported from src/agents, so this black-box CLI harness

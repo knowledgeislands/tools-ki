@@ -272,6 +272,16 @@ _Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `resolves roadmaps only from 
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### REPO-OPS-027 — Committed roadmap pruning
+
+`ki repo roadmap prune` MUST, by default, give each selected repository with records to prune exactly one commit that removes exactly those record paths, with the subject `chore(roadmap): prune <N> done work record(s)` and one `- <ID>` body line per record in identifier order, and MUST run the repository's commit hooks. Before deleting anything in any selected repository, it MUST refuse when a repository is not a Git work tree, has staged changes, or holds a selected record that is untracked or modified, and it MUST NOT stage or commit any other path. It MUST re-check the index immediately before deleting a repository's records, a commit that fails MUST restore that repository's records, and a commit that a hook widened beyond the record deletions MUST be reported as an error naming the extra paths. `--no-commit` MUST only delete the records, without the Git checks, and `--dry-run` MUST make the same selection and checks and report the records and planned commit messages without deleting or committing.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/roadmap.test.ts` — `commits exactly the pruned records with the standardised message and runs commit hooks`, `commits each selected repository separately and names one record in the singular`, `refuses before deleting anything when a repository cannot take a clean prune commit`, `previews a prune and its commit with --dry-run without changing either repository`, `restores the records when a commit hook rejects the prune`, `restores the records and names earlier commits when the runner throws during a commit`, `refuses a change staged by an earlier repository hook and reports a commit a hook widened`, and `commits Knowledge Base records with spaced names and a repository nested in a larger work tree`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

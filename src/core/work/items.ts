@@ -343,11 +343,18 @@ export const updateWorkItemHorizon = async (
   return { ...record.item, horizon, updatedAt }
 }
 
-export const pruneDoneWorkItems = async (
+/** A selected `done` record: its item and repository-relative record path. */
+export interface PrunableWorkItem {
+  readonly item: WorkItem
+  readonly path: string
+}
+
+/** Selects every `done` record, or exactly the named `done` record, without changing the repository. */
+export const selectDoneWorkItems = async (
   repository: string,
   planning: RepositoryPlanningSource,
   id?: string
-): Promise<readonly WorkItem[]> => {
+): Promise<readonly PrunableWorkItem[]> => {
   const records = await readWorkItemRecords(repository, planning)
   const selected =
     id === undefined
@@ -357,6 +364,12 @@ export const pruneDoneWorkItems = async (
     throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
   if (selected.some(({ item }) => item.status !== 'done'))
     throw new KiError(`work item ${id} must be done before pruning`, 2)
-  await Promise.all(selected.map(({ path }) => rm(path)))
-  return selected.map(({ item }) => item)
+  return selected.map(({ item, file }) => ({ item, path: join(planning.directory, file) }))
+}
+
+export const removeWorkItemRecords = async (
+  repository: string,
+  records: readonly PrunableWorkItem[]
+): Promise<void> => {
+  await Promise.all(records.map(({ path }) => rm(join(repository, path))))
 }

@@ -1,6 +1,7 @@
-import { realpath, rm, symlink } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
+import { chmod, realpath, rm, symlink } from 'node:fs/promises'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { sandbox } from '../_cli_helper.ts'
+import { runCommand, sandbox } from '../_cli_helper.ts'
 
 // A normal CLI invocation cannot force a filesystem stat failure other than a
 // missing path. This narrow boundary injection verifies that such a failure
@@ -430,7 +431,7 @@ describe('[ki repo roadmap]', () => {
         })
       ).exitCode
     ).toBe(0)
-    expect((await box.run('ki repo --repo knowledge roadmap prune KBS-002')).exitCode).toBe(0)
+    expect((await box.run('ki repo --repo knowledge roadmap prune --no-commit KBS-002')).exitCode).toBe(0)
     await expect(box.project.read('knowledge/Streams/Roadmap/KBS-001-next.md')).resolves.toBe(
       before
         .replace('horizon: next', 'horizon: now')
@@ -1351,7 +1352,7 @@ describe('[ki repo roadmap]', () => {
     const second = await realpath(`${box.project.path}/second`)
     const absent = await realpath(`${box.project.path}/absent`)
 
-    const exact = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-003')
+    const exact = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-003 --no-commit')
     const notDone = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-004')
     const missing = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-999')
     const multiple = await box.run([
@@ -1375,7 +1376,8 @@ describe('[ki repo roadmap]', () => {
       '--repo',
       absent,
       'roadmap',
-      'prune'
+      'prune',
+      '--no-commit'
     ])
     const empty = await box.run('ki repo --repo first roadmap prune')
     const absentEmpty = await box.run(['ki', 'repo', '--repo', absent, 'roadmap', 'prune'])
@@ -1383,7 +1385,7 @@ describe('[ki repo roadmap]', () => {
 
     expect(exact).toEqual({
       exitCode: 0,
-      output: `pruned ${first}: KI-TOOL-CLI-003 [done] Inspect governed work\nki repo roadmap prune: removed 1 done work item(s)\n`
+      output: `pruned ${first}: KI-TOOL-CLI-003 [done] Inspect governed work\nki repo roadmap prune: removed 1 done work item(s) without committing\n`
     })
     expect(notDone).toEqual({
       exitCode: 2,
@@ -1399,7 +1401,7 @@ describe('[ki repo roadmap]', () => {
     })
     expect(pruned).toEqual({
       exitCode: 0,
-      output: `pruned ${second}: KI-TOOL-CLI-005 [done] Inspect governed work\nki repo roadmap prune: removed 1 done work item(s)\n`
+      output: `pruned ${second}: KI-TOOL-CLI-005 [done] Inspect governed work\nki repo roadmap prune: removed 1 done work item(s) without committing\n`
     })
     await expect(box.project.read('first/docs/roadmap/KI-TOOL-CLI-003-done.md')).rejects.toThrow()
     await expect(box.project.read('second/docs/roadmap/KI-TOOL-CLI-005-done.md')).rejects.toThrow()
@@ -1691,5 +1693,399 @@ describe('[ki repo roadmap]', () => {
     const box = await sandbox()
 
     expect((await box.run('ki repo plan list')).exitCode).toBe(2)
+  })
+})
+
+describe('[ki repo roadmap prune] commits', () => {
+  type Box = Awaited<ReturnType<typeof sandbox>>
+
+  const declaration =
+    '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+
+  // The sandbox HOME hides the developer's global Git configuration; identity and PATH come from here only.
+  const gitEnvironment = (box: Box): NodeJS.ProcessEnv => ({
+    ...box.env,
+    PATH: process.env['PATH'],
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_AUTHOR_NAME: 'Test',
+    GIT_AUTHOR_EMAIL: 'test@example.com',
+    GIT_COMMITTER_NAME: 'Test',
+    GIT_COMMITTER_EMAIL: 'test@example.com'
+  })
+
+  const git = (box: Box, repository: string, ...arguments_: string[]): string =>
+    execFileSync('git', ['-C', `${box.project.path}/${repository}`, ...arguments_], {
+      env: gitEnvironment(box),
+      encoding: 'utf8'
+    })
+
+  const committedRepository = async (
+    box: Box,
+    repository: string,
+    records: Readonly<Record<string, string>>
+  ): Promise<string> => {
+    await box.project.write(`${repository}/.ki.toml`, declaration)
+    await box.project.write(`${repository}/README.md`, 'Readme.\n')
+    for (const [file, contents] of Object.entries(records))
+      await box.project.write(`${repository}/docs/roadmap/${file}`, contents)
+    git(box, repository, 'init', '--quiet', '--initial-branch=main')
+    git(box, repository, 'add', '--all')
+    git(box, repository, 'commit', '--quiet', '-m', 'chore: seed roadmap')
+    return realpath(`${box.project.path}/${repository}`)
+  }
+
+  const hook = async (box: Box, repository: string, name: string, script: string): Promise<void> => {
+    await box.project.write(`${repository}/.git/hooks/${name}`, `#!/bin/sh\n${script}\n`)
+    await chmod(`${box.project.path}/${repository}/.git/hooks/${name}`, 0o755)
+  }
+
+  const run = (box: Box, command: string) => {
+    box.setEnv(gitEnvironment(box))
+    return box.run(command, { runner: 'default' })
+  }
+
+  test('commits exactly the pruned records with the standardised message and runs commit hooks', async () => {
+    const box = await sandbox()
+    const root = await committedRepository(box, 'repo', {
+      'KI-TOOL-CLI-003-done.md': item({ status: 'done' }),
+      'KI-TOOL-CLI-004-draft.md': item({ id: 'KI-TOOL-CLI-004' }),
+      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+    })
+    await hook(box, 'repo', 'pre-commit', 'touch .git/pre-commit-ran')
+    await hook(box, 'repo', 'commit-msg', 'cp "$1" .git/commit-msg-seen')
+    await box.project.write('repo/README.md', 'Unrelated unstaged change.\n')
+    await box.project.write('repo/notes.txt', 'Unrelated untracked file.\n')
+
+    const result = await run(box, 'ki repo --repo repo roadmap prune')
+    const head = git(box, 'repo', 'rev-parse', 'HEAD').trim()
+
+    expect(result).toEqual({
+      exitCode: 0,
+      output: [
+        `pruned ${root}: KI-TOOL-CLI-003 [done] Inspect governed work`,
+        `pruned ${root}: KI-TOOL-CLI-005 [done] Inspect governed work`,
+        `committed ${root}: ${head.slice(0, 12)} chore(roadmap): prune 2 done work records`,
+        'ki repo roadmap prune: removed 2 done work item(s)',
+        ''
+      ].join('\n')
+    })
+    expect(git(box, 'repo', 'log', '-1', '--format=%B')).toBe(
+      'chore(roadmap): prune 2 done work records\n\n- KI-TOOL-CLI-003\n- KI-TOOL-CLI-005\n\n'
+    )
+    expect(git(box, 'repo', 'show', '--name-status', '--format=', 'HEAD')).toBe(
+      'D\tdocs/roadmap/KI-TOOL-CLI-003-done.md\nD\tdocs/roadmap/KI-TOOL-CLI-005-done.md\n'
+    )
+    expect(git(box, 'repo', 'status', '--porcelain')).toBe(' M README.md\n?? notes.txt\n')
+    await expect(box.project.read('repo/.git/pre-commit-ran')).resolves.toBe('')
+    await expect(box.project.read('repo/.git/commit-msg-seen')).resolves.toContain('prune 2 done work records')
+    await expect(box.project.read('repo/docs/roadmap/KI-TOOL-CLI-004-draft.md')).resolves.toContain('status: draft')
+  })
+
+  test('commits each selected repository separately and names one record in the singular', async () => {
+    const box = await sandbox()
+    const first = await committedRepository(box, 'first', {
+      'KI-TOOL-CLI-003-done.md': item({ status: 'done' })
+    })
+    const second = await committedRepository(box, 'second', {
+      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' }),
+      'KI-TOOL-CLI-006-done.md': item({ id: 'KI-TOOL-CLI-006', status: 'done' })
+    })
+
+    const result = await run(box, 'ki repo --repo first --repo second roadmap prune')
+
+    expect(result.exitCode, result.output).toBe(0)
+    expect(result.output).toContain(`committed ${first}: `)
+    expect(result.output).toContain(`committed ${second}: `)
+    expect(git(box, 'first', 'log', '-1', '--format=%B')).toBe(
+      'chore(roadmap): prune 1 done work record\n\n- KI-TOOL-CLI-003\n\n'
+    )
+    expect(git(box, 'second', 'log', '-1', '--format=%s')).toBe('chore(roadmap): prune 2 done work records\n')
+    expect(git(box, 'first', 'status', '--porcelain')).toBe('')
+    expect(git(box, 'second', 'status', '--porcelain')).toBe('')
+  })
+
+  test('refuses before deleting anything when a repository cannot take a clean prune commit', async () => {
+    const box = await sandbox()
+    await box.project.write('plain/.ki.toml', declaration)
+    await box.project.write('plain/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    const plain = await realpath(`${box.project.path}/plain`)
+    const clean = await committedRepository(box, 'clean', {
+      'KI-TOOL-CLI-003-done.md': item({ status: 'done' })
+    })
+    const staged = await committedRepository(box, 'staged', {
+      'KI-TOOL-CLI-003-done.md': item({ status: 'done' })
+    })
+    await box.project.write('staged/README.md', 'Unrelated staged change.\n')
+    git(box, 'staged', 'add', 'README.md')
+    const untracked = await committedRepository(box, 'untracked', {})
+    await box.project.write('untracked/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    const modified = await committedRepository(box, 'modified', {
+      'KI-TOOL-CLI-003-done.md': item({ status: 'awaiting-review' })
+    })
+    await box.project.write('modified/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+
+    const outside = await run(box, 'ki repo --repo plain roadmap prune')
+    const withStaged = await run(box, 'ki repo --repo clean --repo staged roadmap prune')
+    const withUntracked = await run(box, 'ki repo --repo untracked roadmap prune')
+    const withModified = await run(box, 'ki repo --repo modified roadmap prune KI-TOOL-CLI-003')
+
+    expect(outside).toEqual({
+      exitCode: 2,
+      output: `ki: error: repository ${plain} is not a Git work tree; rerun with --no-commit to delete without committing\n`
+    })
+    expect(withStaged).toEqual({
+      exitCode: 2,
+      output: `ki: error: repository ${staged} has staged changes (README.md); commit or unstage them before pruning, or rerun with --no-commit to delete without committing\n`
+    })
+    expect(withUntracked).toEqual({
+      exitCode: 2,
+      output: `ki: error: work item KI-TOOL-CLI-003 in ${untracked} is not committed; commit its done state before pruning, or rerun with --no-commit to delete without committing\n`
+    })
+    expect(withModified).toEqual({
+      exitCode: 2,
+      output: `ki: error: work item KI-TOOL-CLI-003 in ${modified} has uncommitted changes; commit its done state before pruning, or rerun with --no-commit to delete without committing\n`
+    })
+    for (const repository of ['plain', 'clean', 'staged', 'untracked', 'modified'])
+      await expect(box.project.read(`${repository}/docs/roadmap/KI-TOOL-CLI-003-done.md`)).resolves.toContain(
+        'status: done'
+      )
+    expect(git(box, 'clean', 'log', '--format=%s')).toBe('chore: seed roadmap\n')
+    expect(git(box, 'staged', 'diff', '--cached', '--name-only')).toBe('README.md\n')
+    expect(clean).toBeTruthy()
+
+    const deleted = await run(box, 'ki repo --repo plain roadmap prune --no-commit')
+    expect(deleted).toEqual({
+      exitCode: 0,
+      output: `pruned ${plain}: KI-TOOL-CLI-003 [done] Inspect governed work\nki repo roadmap prune: removed 1 done work item(s) without committing\n`
+    })
+    const unstaged = await run(box, 'ki repo --repo clean roadmap prune --no-commit')
+    expect(unstaged.exitCode, unstaged.output).toBe(0)
+    expect(git(box, 'clean', 'status', '--porcelain')).toBe(' D docs/roadmap/KI-TOOL-CLI-003-done.md\n')
+    expect(git(box, 'clean', 'log', '--format=%s')).toBe('chore: seed roadmap\n')
+  })
+
+  test.each([
+    {
+      failing: 'diff --cached',
+      matches: (arguments_: readonly string[]) => arguments_[2] === 'diff' && arguments_[3] === '--cached',
+      result: { exitCode: 128, output: 'fatal: bad index\n' },
+      message: (root: string) => `git diff --cached failed in ${root}\nfatal: bad index`
+    },
+    {
+      failing: 'ls-files',
+      matches: (arguments_: readonly string[]) => arguments_[2] === 'ls-files',
+      result: { exitCode: 128, output: '' },
+      message: (root: string) => `git ls-files failed in ${root}`
+    },
+    {
+      failing: 'diff --name-only',
+      matches: (arguments_: readonly string[]) => arguments_[2] === 'diff' && arguments_[3] === '--name-only',
+      result: { exitCode: 128, output: 'fatal: diff\n' },
+      message: (root: string) => `git diff failed in ${root}\nfatal: diff`
+    },
+    {
+      failing: 'rm',
+      matches: (arguments_: readonly string[]) => arguments_[2] === 'rm',
+      result: { exitCode: 128, output: 'fatal: rm\n' },
+      message: (root: string) => `git rm failed in ${root}\nfatal: rm`
+    },
+    {
+      failing: 'commit and its restore',
+      matches: (arguments_: readonly string[]) => arguments_[2] === 'commit' || arguments_[2] === 'checkout',
+      result: { exitCode: 1, output: '' },
+      message: (root: string) =>
+        `git commit failed in ${root}; the record deletions remain staged; restore them with git checkout HEAD -- 'docs/roadmap/KI-TOOL-CLI-003-done.md'`
+    },
+    {
+      failing: 'rev-parse HEAD',
+      matches: (arguments_: readonly string[]) => arguments_[2] === 'rev-parse' && arguments_[3] === 'HEAD',
+      result: { exitCode: 128, output: 'fatal: head\n' },
+      message: (root: string) => `git rev-parse HEAD failed in ${root}\nfatal: head`
+    }
+  ])('reports a failing git $failing without claiming success', async ({ matches, result, message }) => {
+    const box = await sandbox()
+    const root = await committedRepository(box, 'repo', {
+      'KI-TOOL-CLI-003-done.md': item({ status: 'done' })
+    })
+    box.setEnv(gitEnvironment(box))
+    box.setRunner(async (command, arguments_, environment, limits) =>
+      matches(arguments_) ? result : runCommand(command, arguments_, environment, limits)
+    )
+
+    await expect(box.run('ki repo --repo repo roadmap prune')).resolves.toEqual({
+      exitCode: 1,
+      output: `ki: error: ${message(root)}\n`
+    })
+  })
+
+  test('restores the records and names earlier commits when the runner throws during a commit', async () => {
+    const box = await sandbox()
+    const first = await committedRepository(box, 'first', { 'KI-TOOL-CLI-003-done.md': item({ status: 'done' }) })
+    const second = await committedRepository(box, 'second', {
+      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+    })
+    box.setEnv(gitEnvironment(box))
+    box.setRunner(async (command, arguments_, environment, limits) => {
+      if (arguments_[1] === second && arguments_[2] === 'commit') throw new Error('spawn failed')
+      return runCommand(command, arguments_, environment, limits)
+    })
+
+    const result = await box.run('ki repo --repo first --repo second roadmap prune')
+    const firstHead = git(box, 'first', 'rev-parse', 'HEAD').trim()
+
+    expect(result).toEqual({
+      exitCode: 1,
+      output: `ki: error: spawn failed\nalready committed: ${first} at ${firstHead}\n`
+    })
+    expect(git(box, 'first', 'log', '-1', '--format=%s')).toBe('chore(roadmap): prune 1 done work record\n')
+    expect(git(box, 'second', 'status', '--porcelain')).toBe('')
+    box.setRunner(async (command, arguments_, environment, limits) => {
+      if (arguments_[2] === 'commit') throw new Error('spawn failed')
+      return runCommand(command, arguments_, environment, limits)
+    })
+    await expect(box.run('ki repo --repo second roadmap prune')).rejects.toThrow('spawn failed')
+    expect(git(box, 'second', 'status', '--porcelain')).toBe('')
+  })
+
+  test('refuses a change staged by an earlier repository hook and reports a commit a hook widened', async () => {
+    const box = await sandbox()
+    const first = await committedRepository(box, 'first', { 'KI-TOOL-CLI-003-done.md': item({ status: 'done' }) })
+    const second = await committedRepository(box, 'second', {
+      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+    })
+    await hook(
+      box,
+      'first',
+      'pre-commit',
+      `echo late > ${box.project.path}/second/README.md\ngit -C ${box.project.path}/second add README.md`
+    )
+
+    const late = await run(box, 'ki repo --repo first --repo second roadmap prune')
+    const firstHead = git(box, 'first', 'rev-parse', 'HEAD').trim()
+
+    expect(late).toEqual({
+      exitCode: 2,
+      output: `ki: error: repository ${second} has staged changes (README.md); commit or unstage them before pruning, or rerun with --no-commit to delete without committing\nalready committed: ${first} at ${firstHead}\n`
+    })
+    await expect(box.project.read('second/docs/roadmap/KI-TOOL-CLI-005-done.md')).resolves.toContain('status: done')
+
+    git(box, 'second', 'reset', '--quiet', '--hard')
+    await hook(box, 'second', 'pre-commit', 'echo widened > sibling.txt\ngit add sibling.txt')
+    const widened = await run(box, 'ki repo --repo second roadmap prune')
+    const secondHead = git(box, 'second', 'rev-parse', 'HEAD').trim()
+
+    expect(widened).toEqual({
+      exitCode: 1,
+      output: `ki: error: prune commit ${secondHead} in ${second} also contains sibling.txt, which a commit hook staged; inspect it with git show ${secondHead.slice(0, 12)} and amend or revert it\n`
+    })
+    expect(git(box, 'second', 'show', '--name-status', '--format=', 'HEAD')).toBe(
+      'D\tdocs/roadmap/KI-TOOL-CLI-005-done.md\nA\tsibling.txt\n'
+    )
+  })
+
+  test('commits Knowledge Base records with spaced names and a repository nested in a larger work tree', async () => {
+    const box = await sandbox()
+    await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
+    await box.project.write(
+      'knowledge/Streams/Roadmap/KBS-002-done record.md',
+      item({ id: 'KBS-002', title: 'Done item', status: 'done' })
+    )
+    git(box, 'knowledge', 'init', '--quiet', '--initial-branch=main')
+    git(box, 'knowledge', 'add', '--all')
+    git(box, 'knowledge', 'commit', '--quiet', '-m', 'chore: seed roadmap')
+    await box.project.write('mono/README.md', 'Monorepo.\n')
+    await box.project.write('mono/tools/inner/.ki.toml', declaration)
+    await box.project.write('mono/tools/inner/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    git(box, 'mono', 'init', '--quiet', '--initial-branch=main')
+    git(box, 'mono', 'add', '--all')
+    git(box, 'mono', 'commit', '--quiet', '-m', 'chore: seed roadmap')
+
+    const kb = await run(box, 'ki repo --repo knowledge roadmap prune')
+    const nested = await run(box, 'ki repo --repo mono/tools/inner roadmap prune')
+
+    expect(kb.exitCode, kb.output).toBe(0)
+    expect(nested.exitCode, nested.output).toBe(0)
+    expect(git(box, 'knowledge', 'show', '--name-status', '--format=%B', 'HEAD')).toBe(
+      'chore(roadmap): prune 1 done work record\n\n- KBS-002\n\n\nD\tStreams/Roadmap/KBS-002-done record.md\n'
+    )
+    expect(git(box, 'mono', 'show', '--name-status', '--format=', 'HEAD')).toBe(
+      'D\ttools/inner/docs/roadmap/KI-TOOL-CLI-003-done.md\n'
+    )
+    expect(git(box, 'mono', 'status', '--porcelain')).toBe('')
+  })
+
+  test('previews a prune and its commit with --dry-run without changing either repository', async () => {
+    const box = await sandbox()
+    const root = await committedRepository(box, 'repo', {
+      'KI-TOOL-CLI-003-done.md': item({ status: 'done' }),
+      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+    })
+    await box.project.write('plain/.ki.toml', declaration)
+    await box.project.write('plain/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    const plain = await realpath(`${box.project.path}/plain`)
+
+    const preview = await run(box, 'ki repo --repo repo roadmap prune --dry-run')
+    const outside = await run(box, 'ki repo --repo plain roadmap prune --dry-run')
+    const uncommitted = await run(box, 'ki repo --repo plain roadmap prune --dry-run --no-commit')
+
+    expect(preview).toEqual({
+      exitCode: 0,
+      output: [
+        `would prune ${root}: KI-TOOL-CLI-003 [done] Inspect governed work`,
+        `would prune ${root}: KI-TOOL-CLI-005 [done] Inspect governed work`,
+        `would commit ${root}: chore(roadmap): prune 2 done work records`,
+        'ki repo roadmap prune: would remove 2 done work item(s)',
+        ''
+      ].join('\n')
+    })
+    expect(outside).toEqual({
+      exitCode: 2,
+      output: `ki: error: repository ${plain} is not a Git work tree; rerun with --no-commit to delete without committing\n`
+    })
+    expect(uncommitted).toEqual({
+      exitCode: 0,
+      output: `would prune ${plain}: KI-TOOL-CLI-003 [done] Inspect governed work\nki repo roadmap prune: would remove 1 done work item(s) without committing\n`
+    })
+    expect(git(box, 'repo', 'log', '--format=%s')).toBe('chore: seed roadmap\n')
+    expect(git(box, 'repo', 'status', '--porcelain')).toBe('')
+    await expect(box.project.read('plain/docs/roadmap/KI-TOOL-CLI-003-done.md')).resolves.toContain('status: done')
+  })
+
+  test('names no earlier commit when only a repository without done records preceded the rejected prune', async () => {
+    const box = await sandbox()
+    await committedRepository(box, 'open', { 'KI-TOOL-CLI-004-draft.md': item({ id: 'KI-TOOL-CLI-004' }) })
+    const rejecting = await committedRepository(box, 'rejecting', {
+      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+    })
+    await hook(box, 'rejecting', 'pre-commit', 'exit 1')
+
+    await expect(run(box, 'ki repo --repo open --repo rejecting roadmap prune')).resolves.toEqual({
+      exitCode: 1,
+      output: `ki: error: git commit failed in ${rejecting}; restored 1 work item record(s); nothing was pruned\n`
+    })
+    expect(git(box, 'open', 'log', '--format=%s')).toBe('chore: seed roadmap\n')
+  })
+
+  test('restores the records when a commit hook rejects the prune', async () => {
+    const box = await sandbox()
+    const first = await committedRepository(box, 'first', {
+      'KI-TOOL-CLI-003-done.md': item({ status: 'done' })
+    })
+    const second = await committedRepository(box, 'second', {
+      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+    })
+    await hook(box, 'second', 'pre-commit', 'echo "hook refused" >&2\nexit 1')
+
+    const result = await run(box, 'ki repo --repo first --repo second roadmap prune')
+    const firstHead = git(box, 'first', 'rev-parse', 'HEAD').trim()
+
+    expect(result).toEqual({
+      exitCode: 1,
+      output: `ki: error: git commit failed in ${second}; restored 1 work item record(s); nothing was pruned\nhook refused\nalready committed: ${first} at ${firstHead}\n`
+    })
+    expect(git(box, 'first', 'log', '-1', '--format=%s')).toBe('chore(roadmap): prune 1 done work record\n')
+    expect(git(box, 'second', 'log', '--format=%s')).toBe('chore: seed roadmap\n')
+    expect(git(box, 'second', 'status', '--porcelain')).toBe('')
+    await expect(box.project.read('second/docs/roadmap/KI-TOOL-CLI-005-done.md')).resolves.toContain('status: done')
   })
 })

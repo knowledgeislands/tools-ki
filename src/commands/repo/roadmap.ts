@@ -420,18 +420,49 @@ const statsCommand = (context: KiContext, selectedRepositories: RepositorySelect
 
 const pruneCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('prune')
-    .description('delete completed governed work items')
+    .description('delete completed governed work items and commit the deletions')
     .argument('[id]', 'canonical completed work-item identifier')
-    .action(async (id: string | undefined) => {
-      const removed = await pruneRoadmap(operationContext(context), selectedRepositories(), id)
-      const entries = removed.flatMap(({ repository, items }) =>
-        items.map((item) => `${repository}: ${item.id} [done] ${item.title}`)
+    .option('--no-commit', 'delete the records without staging or committing them')
+    .option('--dry-run', 'report the records and commits a prune would make without changing anything')
+    .addHelpText(
+      'after',
+      '\nBy default each repository with records to prune gets one commit containing\n' +
+        'exactly their deletions, with the subject\n' +
+        '"chore(roadmap): prune <N> done work record(s)" and one "- <ID>" body line per\n' +
+        'record. Commit hooks run. Before deleting anything, the command refuses when a\n' +
+        'repository is not a Git work tree, has staged changes, or holds a selected\n' +
+        'record that is untracked or modified. A failed commit restores the records,\n' +
+        'and a commit that a hook widened with other paths is reported as an error.\n' +
+        '--no-commit only deletes the records and skips those Git checks. --dry-run\n' +
+        'makes the same selection and checks, then reports without deleting or\n' +
+        'committing.'
+    )
+    .action(async (id: string | undefined, options: { readonly commit: boolean; readonly dryRun?: boolean }) => {
+      const dryRun = Boolean(options.dryRun)
+      const removed = await pruneRoadmap(
+        { ...operationContext(context), runner: context.runner, environment: context.environment },
+        selectedRepositories(),
+        id,
+        { commit: options.commit, dryRun }
       )
-      if (!entries.length) context.stdout.write('ki repo roadmap prune: no done work items\n')
-      else
-        context.stdout.write(
-          `${entries.map((entry) => `pruned ${entry}`).join('\n')}\nki repo roadmap prune: removed ${entries.length} done work item(s)\n`
-        )
+      const entries = removed.flatMap(({ repository, items }) =>
+        items.map((item) => `${dryRun ? 'would prune' : 'pruned'} ${repository}: ${item.id} [done] ${item.title}`)
+      )
+      if (!entries.length) {
+        context.stdout.write('ki repo roadmap prune: no done work items\n')
+        return
+      }
+      const commits = removed.flatMap(({ repository, commit, plannedCommit }) =>
+        commit
+          ? [`committed ${repository}: ${commit.id.slice(0, 12)} ${commit.message.subject}`]
+          : plannedCommit
+            ? [`would commit ${repository}: ${plannedCommit.subject}`]
+            : []
+      )
+      const summary = dryRun
+        ? `would remove ${entries.length} done work item(s)${options.commit ? '' : ' without committing'}`
+        : `removed ${entries.length} done work item(s)${options.commit ? '' : ' without committing'}`
+      context.stdout.write(`${[...entries, ...commits].join('\n')}\nki repo roadmap prune: ${summary}\n`)
     })
 
 const moveCommand = (

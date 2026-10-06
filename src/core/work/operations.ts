@@ -6,9 +6,10 @@ import { resolveRepositoryTargets } from '../repository/index.ts'
 import type { LocatedTrade } from '../trade/model.ts'
 import {
   hasWorkItemRoot,
-  pruneDoneWorkItems,
   readWorkItemInventoryIfPresent,
   readWorkItems,
+  removeWorkItemRecords,
+  selectDoneWorkItems,
   updateWorkItemHorizon,
   type WorkItem,
   type WorkItemFault,
@@ -16,6 +17,13 @@ import {
   workItemHorizons
 } from './items.ts'
 import { type RepositoryPlanningSource, readDeclaredPlanningSource, readRepositoryPlanningSource } from './planning.ts'
+import {
+  commitPrune,
+  type PruneCommitContext,
+  type PruneCommitMessage,
+  preflightPruneCommit,
+  pruneCommitMessage
+} from './prune-commit.ts'
 import { type RoadmapStatistics, roadmapStatistics } from './statistics.ts'
 
 export interface RoadmapSelection {
@@ -31,6 +39,13 @@ export interface RoadmapOperationContext {
   readonly homeDirectory: string
   readonly now: () => number
   readonly locateTrades: () => Promise<readonly LocatedTrade[]>
+}
+
+export interface RoadmapPruneOptions {
+  /** Commit the deletions per repository with the standardised message; false only deletes. */
+  readonly commit: boolean
+  /** Select and preflight exactly as a real prune would, then report without deleting or committing. */
+  readonly dryRun?: boolean
 }
 
 export interface RoadmapListOptions {
@@ -76,6 +91,10 @@ export interface RoadmapList {
 export interface RoadmapPruneResult {
   readonly repository: string
   readonly items: readonly WorkItem[]
+  /** Present when the deletions were committed. */
+  readonly commit?: { readonly id: string; readonly message: PruneCommitMessage }
+  /** Present on a committing dry run: the message the prune commit would carry. */
+  readonly plannedCommit?: PruneCommitMessage
 }
 
 export interface RoadmapMoveResult {
@@ -268,9 +287,10 @@ export const listRoadmap = async (
 }
 
 export const pruneRoadmap = async (
-  context: RoadmapOperationContext,
+  context: RoadmapOperationContext & PruneCommitContext,
   selection: RoadmapSelection,
-  id?: string
+  id: string | undefined,
+  options: RoadmapPruneOptions
 ): Promise<readonly RoadmapPruneResult[]> => {
   const repositories =
     id === undefined ? await resolveTargets(context, selection) : [await oneMutationTarget(context, selection, 'prune')]
@@ -286,12 +306,45 @@ export const pruneRoadmap = async (
     )
   ).flat()
   await Promise.all(sources.map(({ repository, planning }) => readWorkItems(repository.root, planning)))
-  return Promise.all(
+  const selected = await Promise.all(
     sources.map(async ({ repository, planning }) => ({
       repository: repository.root,
-      items: await pruneDoneWorkItems(repository.root, planning, id)
+      records: await selectDoneWorkItems(repository.root, planning, id)
     }))
   )
+  // Validate every repository before deleting anything, so one refusal leaves the whole selection untouched.
+  if (options.commit)
+    for (const { repository, records } of selected)
+      if (records.length) await preflightPruneCommit(context, repository, records)
+  if (options.dryRun)
+    return selected.map(({ repository, records }) => ({
+      repository,
+      items: records.map(({ item }) => item),
+      ...(options.commit && records.length
+        ? { plannedCommit: pruneCommitMessage(records.map(({ item }) => item.id)) }
+        : {})
+    }))
+  const results: RoadmapPruneResult[] = []
+  for (const { repository, records } of selected) {
+    const items = records.map(({ item }) => item)
+    if (!records.length || !options.commit) {
+      await removeWorkItemRecords(repository, records)
+      results.push({ repository, items })
+      continue
+    }
+    try {
+      const { commit, message } = await commitPrune(context, repository, records)
+      results.push({ repository, items, commit: { id: commit, message } })
+    } catch (error) {
+      const committed = results.flatMap(({ repository: root, commit }) => (commit ? [`${root} at ${commit.id}`] : []))
+      if (!committed.length) throw error
+      throw new KiError(
+        `${(error as Error).message}\nalready committed: ${committed.join(', ')}`,
+        error instanceof KiError ? error.exitCode : 1
+      )
+    }
+  }
+  return results
 }
 
 export const moveRoadmapItem = async (
