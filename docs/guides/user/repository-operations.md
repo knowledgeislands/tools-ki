@@ -42,7 +42,7 @@ path = "/Users/example/workspaces/knowledgeislands/ki-agentic-harness"
 
 Record roots without applying any repair using `ki registry add --repo <path-or-pattern>`, and list them with `ki registry list`. Use `ki registry list --format json` for the path-free `ki/registry/v1` projection of canonical identity and declared metadata. Each entry has `repoType`: `project` or `kb` when available, and `null` when unavailable. Remove exactly one entry by key with `ki registry remove <key>`, or by its exact path with `ki registry remove --repo <path>`; add `--dry-run` to preview either removal. Bulk selectors are deliberately unavailable for removal.
 
-`ki repo init`, `ki repo repair`, and `ki repo conform` also record each selected root — conform does so first, even when its later checks fail, so the registry stays an inventory for repair and bulk maintenance rather than a compliance badge.
+`ki repo init`, `ki repo repair`, and `ki repo conform` also record each selected root — conform does so first, even when its later checks fail, so the registry stays an inventory for repair and bulk maintenance rather than a compliance badge. Trade commands also use the registry to locate the territory Capital named by each repository's `[skills.ki-repo].capital`; register the Capital's checkout on every machine that inspects or exchanges trades, or they fail with `territory policy lives in <capital>, not available here`.
 
 ## Manage declared stores
 

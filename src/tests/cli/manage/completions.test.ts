@@ -97,24 +97,20 @@ const commandPaths = [
   'repo trade list',
   'repo trade observe',
   'repo trade prepare',
+  'repo trade policy',
+  'repo trade policy check',
+  'repo trade policy compare',
+  'repo trade policy show',
   'repo trade prune',
   'repo trade receive',
   'repo trade release',
   'repo trade routes',
-  'repo trade routes add',
   'repo trade routes check',
   'repo trade routes list',
-  'repo trade routes remove',
   'repo trade standing',
-  'repo trade standing add',
   'repo trade standing capture',
   'repo trade standing check',
   'repo trade standing list',
-  'repo trade standing remove',
-  'repo trade subtypes',
-  'repo trade subtypes add',
-  'repo trade subtypes list',
-  'repo trade subtypes remove',
   'repo trade show',
   'repo trade submit'
 ] as const
@@ -131,7 +127,8 @@ describe('[ki completion]', () => {
     expect(zsh.output).toContain("'repo skill')")
     expect(zsh.output).toContain("'repo trade routes')")
     expect(zsh.output).toContain("'repo trade standing')")
-    expect(zsh.output).toContain("'repo trade subtypes')")
+    expect(zsh.output).toContain("'repo trade policy')")
+    expect(zsh.output).not.toContain("'repo trade subtypes')")
     expect(zsh.output).toContain('--estate:select every repository in the registered estate')
     expect(zsh.output).toContain('--incomplete:show only routes that are not active')
     expect(zsh.output).toContain('--format:render estate route evidence as text or versioned JSON')
@@ -158,6 +155,7 @@ describe('[ki completion]', () => {
       "'repo trade routes list') printf '%s\\n' '-V --version -h --help --repo --agora --estate --incomplete --format'"
     )
     expect(bash.output).toContain("'repo trade standing capture:--capture')")
+    expect(bash.output).toContain("'repo trade policy compare:--baseline')")
     expect(bash.output).toContain("'acquire list')")
     expect(bash.output).toContain("'repo batch') printf '%s\\n' 'close prepare run validate'")
     expect(bash.output).toContain("'repo batch prepare:--item')")

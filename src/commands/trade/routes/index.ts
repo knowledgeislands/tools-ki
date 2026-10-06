@@ -1,20 +1,17 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../../context.ts'
 import { grammarError } from '../../../core/errors.ts'
-import { addTradeRoute, removeTradeRoute } from '../../../core/trade/configuration-mutations.ts'
 import { registeredRepositories } from '../../../core/trade/estate.ts'
 import {
   estateRouteReport,
   inspectEstateRoutes,
   inspectRoutes,
-  localRegisteredConfiguration,
-  localRegisteredRepository
+  localRegisteredConfiguration
 } from '../../../core/trade/index.ts'
 import {
   checkTradeRoutes,
   inspectEstateTradeRoutes,
-  inspectLocalTradeRoutes,
-  mutateTradeRoute
+  inspectLocalTradeRoutes
 } from '../../../core/trade/operations/index.ts'
 import { type PairTableRow, renderPairTable, renderTree, routeState, tradeKindText } from '../../presentation/index.ts'
 import type { TradeSelection } from '../selection.ts'
@@ -106,53 +103,8 @@ const renderEstateRouteList = (
 }
 
 export const createTradeRoutesCommand = (context: KiContext, selection: TradeSelection): Command => {
-  const routes = new Command('routes').description('maintain local typed trade-route declarations')
+  const routes = new Command('routes').description('inspect typed trade routes granted by the territory Capital policy')
   routes
-    .addCommand(
-      new Command('add')
-        .description('declare one local typed trade route')
-        .argument('<repository>', 'canonical peer HTTPS GitHub repository')
-        .requiredOption('--direction <export|import>', 'whether this repository exports or imports the trade kind')
-        .requiredOption('--kind <work|knowledge>', 'trade kind')
-        .action(async (peer: string, options: RouteOptions) => {
-          const direction = routeDirection(options.direction)
-          const result = await mutateTradeRoute(
-            repository(peer, 'trade route repository'),
-            direction,
-            kind(options.kind),
-            {
-              configurationPath: async () => (await localRegisteredRepository(await selection.one())).declaration,
-              mutate: addTradeRoute
-            }
-          )
-          context.stdout.write(
-            `ki repo trade routes add: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`
-          )
-        })
-    )
-    .addCommand(
-      new Command('remove')
-        .description('remove one local typed trade route')
-        .argument('<repository>', 'canonical peer HTTPS GitHub repository')
-        .requiredOption('--direction <export|import>', 'whether this repository exports or imports the trade kind')
-        .requiredOption('--kind <work|knowledge>', 'trade kind')
-        .action(async (peer: string, options: RouteOptions) => {
-          const direction = routeDirection(options.direction)
-          const result = await mutateTradeRoute(
-            repository(peer, 'trade route repository'),
-            direction,
-            kind(options.kind),
-            {
-              configurationPath: async () =>
-                (await localRegisteredConfiguration(await selection.one())).repository.declaration,
-              mutate: removeTradeRoute
-            }
-          )
-          context.stdout.write(
-            `ki repo trade routes remove: ${direction} ${kind(options.kind)} ${result.repository} -> ${peer}\n`
-          )
-        })
-    )
     .addCommand(
       new Command('list')
         .description('list local routes or every registered route and its estate state')
@@ -212,7 +164,8 @@ export const createTradeRoutesCommand = (context: KiContext, selection: TradeSel
               inspect: (configuration) => inspectRoutes(selectedContext, configuration)
             }
           )
-          if (peer && !result.routes.length) throw grammarError(`trade route ${peer} is not declared locally`)
+          if (peer && !result.routes.length)
+            throw grammarError(`trade route ${peer} is not granted by the territory policy`)
           const routes = result.routes.length
             ? result.routes.map((route) => ({
                 label: `${route.direction} ${route.kind} ${route.repository}: ${routeState(route.state)}`

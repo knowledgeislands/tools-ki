@@ -1,198 +1,121 @@
 import { realpath } from 'node:fs/promises'
+import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
+import {
+  capitalHome,
+  home,
+  memberConfiguration,
+  registerEstate,
+  type StandingFixture,
+  writeCapital
+} from '../_territory_helper.ts'
 
-const home = (identity: string): string => `https://github.com/${identity}`
 const sourceHome = home('example/source')
 const receiverHome = home('example/receiver')
 const commit = 'a'.repeat(40)
+const capturedAt = { now: () => Date.UTC(2026, 8, 8, 9, 30, 0) }
 
-const configuration = (
-  identity: string,
-  peer: string,
-  direction: 'export' | 'import',
-  options: { readonly subtype?: boolean; readonly standing?: string } = {}
-): string =>
-  [
-    '[repo]',
-    'harnesses = ["example/harness"]',
-    '',
-    '[skills.ki-repo-project]',
-    '',
-    '[skills.ki-repo]',
-    'repo_type = "project"',
-    'primary_shape = "ki-repo-project"',
-    `repository = ${JSON.stringify(home(identity))}`,
-    'title = "Standing intake fixture"',
-    'description = "Standing intake fixture."',
-    'repo_code = "TEST"',
-    '',
-    '[skills.ki-trades]',
-    ...(options.subtype
-      ? ['', '[skills.ki-trades.subtypes.knowledge]', 'shared-maintenance = "Shared maintenance evidence."']
-      : []),
-    '',
-    `[skills.ki-trades.routes.${JSON.stringify(peer)}]`,
-    `${direction} = ["knowledge"]`,
-    ...(options.standing
-      ? [
-          '',
-          `[skills.ki-trades.routes.${JSON.stringify(peer)}.standing.${direction}]`,
-          `knowledge = [${JSON.stringify(options.standing)}]`
-        ]
-      : []),
-    ''
-  ].join('\n')
+const subtypes = {
+  'shared-maintenance': 'Shared maintenance evidence.',
+  'another-subtype': 'A second territory subtype.'
+} as const
+const knowledge = { from: [sourceHome], to: [receiverHome], kinds: ['knowledge'] } as const
+const grant = (subtype: string): StandingFixture => ({ subtype, from: [sourceHome], to: [receiverHome] })
 
-const fixture = async () => {
+/** A source and receiver member whose Capital grants a knowledge channel and `standing` grants. */
+const fixture = async (standing: readonly StandingFixture[] = [grant('shared-maintenance')]) => {
   const box = await sandbox()
   const source = await realpath(box.project.path)
   const receiver = await box.project.mkdir('receiver')
-  await box.project.write('.ki.toml', configuration('example/source', 'example/receiver', 'export'))
+  await box.project.write('.ki.toml', memberConfiguration('example/source'))
   await box.project.write('docs/source.md', '# Source\n\n## Finding\n')
-  await box.project.write('receiver/.ki.toml', configuration('example/receiver', 'example/source', 'import'))
+  await box.project.write('receiver/.ki.toml', memberConfiguration('example/receiver'))
   await box.project.write('receiver/docs/capture file.md', '# Capture\n\n## Source analysis\n')
   await box.project.write('receiver/docs/double.md', '# Double\n\n')
   await box.project.write('receiver/docs/plain.md', '# Plain')
-  await box.state.write(
-    'ki/registry.toml',
-    [
-      'schema = 1',
-      '',
-      '[repositories.project]',
-      `repository = ${JSON.stringify(sourceHome)}`,
-      `path = ${JSON.stringify(source)}`,
-      '',
-      '[repositories.receiver]',
-      `repository = ${JSON.stringify(receiverHome)}`,
-      `path = ${JSON.stringify(receiver)}`,
-      ''
-    ].join('\n')
-  )
+  const capital = await writeCapital(box, { subtypes, channels: [knowledge], standing })
+  await registerEstate(box, [source, receiver, capital])
   box.setRunner(async (commandName, arguments_) => {
     if (commandName === 'git' && arguments_[2] === 'cat-file') return { exitCode: 0, output: '' }
     return { exitCode: 1, output: 'unsupported command' }
   })
-  return { box }
+  return { box, source, receiver, capital }
 }
 
-describe('[ki repo trade standing intake]', () => {
-  test('defines reciprocal grants and appends one commit-pinned receiver-local capture', async () => {
-    const { box } = await fixture()
+type Box = Awaited<ReturnType<typeof fixture>>['box']
 
-    const exported = await box.run([
+const capture = (
+  box: Box,
+  target = 'docs/capture file.md#source-analysis',
+  options: { subtype?: string; sourceRef?: string } = {}
+) =>
+  box.run(
+    [
       'ki',
       'repo',
       'trade',
       'standing',
-      'add',
-      receiverHome,
-      '--direction',
-      'export',
+      'capture',
+      sourceHome,
       '--subtype',
-      'shared-maintenance'
-    ])
+      options.subtype ?? 'shared-maintenance',
+      '--source-ref',
+      options.sourceRef ?? `${commit}:docs/source.md#finding`,
+      '--capture',
+      target
+    ],
+    capturedAt
+  )
+
+const grants = (title: string, lines: readonly string[], active: number) =>
+  [
+    `╭─ KI TRADE STANDING ${title}`,
+    `├─ grants (${lines.length})`,
+    ...(lines.length
+      ? lines.map((line, index) => `│  ${index === lines.length - 1 ? '╰' : '├'}─ ${line}`)
+      : ['│  ╰─ none']),
+    `╰─ summary: GRANTS=${lines.length} ACTIVE=${active}`,
+    ''
+  ].join('\n')
+
+const failure = (message: string) => ({ exitCode: 2, output: `ki: error: ${message}\n` })
+
+describe('[ki repo trade standing intake]', () => {
+  test('reads exact grants from the Capital policy and appends one commit-pinned receiver-local capture', async () => {
+    const { box } = await fixture([grant('shared-maintenance'), grant('another-subtype')])
+
+    expect(await box.run('ki repo trade standing list')).toEqual({
+      exitCode: 0,
+      output: grants(
+        'GRANTS',
+        [
+          `export knowledge another-subtype ${receiverHome}: active`,
+          `export knowledge shared-maintenance ${receiverHome}: active`
+        ],
+        2
+      )
+    })
     box.cd('receiver')
-    const defined = await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'subtypes',
-      'add',
-      'shared-maintenance',
-      '--description',
-      'Shared maintenance evidence.'
-    ])
-    const imported = await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'add',
-      sourceHome,
-      '--direction',
-      'import',
-      '--subtype',
-      'shared-maintenance'
-    ])
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'subtypes',
-      'add',
-      'another-subtype',
-      '--description',
-      'A second receiver-owned subtype.'
-    ])
-    box.cd('..')
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'add',
-      receiverHome,
-      '--direction',
-      'export',
-      '--subtype',
-      'another-subtype'
-    ])
-    expect((await box.run('ki repo trade standing list')).output).toContain(
-      `export knowledge shared-maintenance ${receiverHome}: active`
-    )
-    box.cd('receiver')
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'add',
-      sourceHome,
-      '--direction',
-      'import',
-      '--subtype',
-      'another-subtype'
-    ])
-    const listedSubtypes = await box.run('ki repo trade subtypes list')
-    const checked = await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'check',
-      sourceHome,
-      '--direction',
-      'import',
-      '--subtype',
-      'shared-maintenance'
-    ])
-    const captured = await box.run(
-      [
+    expect(
+      await box.run([
         'ki',
         'repo',
         'trade',
         'standing',
-        'capture',
+        'check',
         sourceHome,
+        '--direction',
+        'import',
         '--subtype',
-        'shared-maintenance',
-        '--source-ref',
-        `${commit}:docs/source.md#finding`,
-        '--capture',
-        'docs/capture file.md#source-analysis'
-      ],
-      { now: () => Date.UTC(2026, 8, 8, 9, 30, 0) }
-    )
-
-    expect(exported).toEqual({
+        'shared-maintenance'
+      ])
+    ).toEqual({
       exitCode: 0,
-      output: `ki repo trade standing add: export knowledge shared-maintenance ${sourceHome} -> ${receiverHome}\n`
+      output: grants('CHECK', [`import knowledge shared-maintenance ${sourceHome}: active`], 1)
     })
-    expect(defined.exitCode).toBe(0)
-    expect(imported.exitCode).toBe(0)
-    expect(listedSubtypes.output).toContain('shared-maintenance: Shared maintenance evidence.')
-    expect(checked.output).toContain(`import knowledge shared-maintenance ${sourceHome}: active`)
+
+    const captured = await capture(box)
     expect(captured.output).toMatch(
       /^ki repo trade standing capture: captured STI-[0-9a-f]{8} in docs\/capture file\.md\n$/u
     )
@@ -205,249 +128,142 @@ describe('[ki repo trade standing intake]', () => {
     expect(contents).toContain('subtype = "shared-maintenance"')
     expect(contents).toContain('captured_at = "2026-09-08T09:30:00Z"')
     expect(contents).toContain('capture = "docs/capture file.md#source-analysis"')
-    for (const capturePath of ['docs/double.md#double', 'docs/plain.md#plain']) {
-      expect(
-        (
-          await box.run(
-            [
-              'ki',
-              'repo',
-              'trade',
-              'standing',
-              'capture',
-              sourceHome,
-              '--subtype',
-              'shared-maintenance',
-              '--source-ref',
-              `${commit}:docs/source.md#finding`,
-              '--capture',
-              capturePath
-            ],
-            { now: () => Date.UTC(2026, 8, 8, 9, 30, 0) }
-          )
-        ).exitCode
-      ).toBe(0)
-    }
+    for (const target of ['docs/double.md#double', 'docs/plain.md#plain'])
+      expect((await capture(box, target)).exitCode).toBe(0)
 
-    const removed = await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'remove',
-      sourceHome,
-      '--direction',
-      'import',
-      '--subtype',
-      'shared-maintenance'
-    ])
-    expect(removed.exitCode).toBe(0)
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'remove',
-      sourceHome,
-      '--direction',
-      'import',
-      '--subtype',
-      'another-subtype'
-    ])
-    expect((await box.run('ki repo trade standing list')).output).toContain('grants (0)')
-    expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'standing',
-          'capture',
-          sourceHome,
-          '--subtype',
-          'shared-maintenance',
-          '--source-ref',
-          `${commit}:docs/source.md#finding`,
-          '--capture',
-          'docs/capture file.md#source-analysis'
-        ])
-      ).output
-    ).toContain('not declared locally')
-    expect((await box.run(['ki', 'repo', 'trade', 'subtypes', 'remove', 'shared-maintenance'])).exitCode).toBe(0)
-    expect((await box.run(['ki', 'repo', 'trade', 'subtypes', 'remove', 'another-subtype'])).exitCode).toBe(0)
+    // Withdrawing the grant in the Capital withdraws direct-capture authority; the subtype survives.
+    await writeCapital(box, { subtypes, channels: [knowledge], standing: [grant('another-subtype')] })
+    expect(await box.run('ki repo trade standing list')).toEqual({
+      exitCode: 0,
+      output: grants('GRANTS', [`import knowledge another-subtype ${sourceHome}: active`], 1)
+    })
+    expect(await capture(box)).toEqual(
+      failure(
+        `standing import knowledge subtype shared-maintenance from ${sourceHome} is not granted by the territory policy`
+      )
+    )
+    expect(await box.project.read('docs/source.md')).toBe('# Source\n\n## Finding\n')
   })
 
-  test('keeps one-sided and invalid grants closed without touching a peer', async () => {
-    const { box } = await fixture()
+  test('keeps a grant pending exactly while its knowledge route is, without touching a peer', async () => {
+    const { box, source, receiver, capital } = await fixture()
     box.cd('receiver')
-    expect((await box.run('ki repo trade subtypes list')).output).toContain('subtypes (0)')
-    expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'standing',
-          'capture',
-          sourceHome,
-          '--subtype',
-          'shared-maintenance',
-          '--source-ref',
-          `${commit}:docs/source.md#finding`,
-          '--capture',
-          'docs/capture file.md#source-analysis'
-        ])
-      ).output
-    ).toContain('not defined by the receiver')
-    expect(
-      (await box.run(['ki', 'repo', 'trade', 'subtypes', 'add', 'Bad_Subtype', '--description', 'Invalid'])).output
-    ).toContain('lower-case hyphenated identifier')
-    expect(
-      (await box.run(['ki', 'repo', 'trade', 'subtypes', 'add', 'shared-maintenance', '--description', ''])).output
-    ).toContain('--description is required and must be non-empty')
-    expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'standing',
-          'add',
-          sourceHome,
-          '--direction',
-          'import',
-          '--subtype',
-          'shared-maintenance'
-        ])
-      ).output
-    ).toContain('not defined by the receiver')
+    const pending = (state: string) => ({
+      list: {
+        exitCode: 0,
+        output: grants('GRANTS', [`import knowledge shared-maintenance ${sourceHome}: ${state}`], 0)
+      },
+      capture: failure(`standing import knowledge subtype shared-maintenance from ${sourceHome} is ${state}`)
+    })
 
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'subtypes',
-      'add',
-      'shared-maintenance',
-      '--description',
-      'Shared maintenance evidence.'
-    ])
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'add',
-      sourceHome,
-      '--direction',
-      'import',
-      '--subtype',
-      'shared-maintenance'
-    ])
-    expect((await box.run('ki repo trade standing list --incomplete')).output).toContain('awaiting reciprocal')
-    expect((await box.run('ki repo trade standing check')).output).toContain('GRANTS=1 ACTIVE=0')
-    expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'routes',
-          'remove',
-          sourceHome,
-          '--direction',
-          'import',
-          '--kind',
-          'knowledge'
-        ])
-      ).output
-    ).toContain('used by standing subtypes shared-maintenance')
-    expect((await box.run(['ki', 'repo', 'trade', 'subtypes', 'remove', 'shared-maintenance'])).output).toContain(
-      `used by standing imports from ${sourceHome}`
+    expect(await capture(box, undefined, { subtype: 'other-subtype' })).toEqual(
+      failure('knowledge subtype other-subtype is not defined by the territory policy')
     )
-    expect((await box.run(['ki', 'repo', 'trade', 'standing', 'check', receiverHome])).output).toContain(
-      'is not declared locally'
+    expect(await capture(box, undefined, { subtype: 'Bad_Subtype' })).toEqual(
+      failure('--subtype must use a lower-case hyphenated identifier')
     )
-    expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'standing',
-          'capture',
-          sourceHome,
-          '--subtype',
-          'shared-maintenance',
-          '--source-ref',
-          'not-a-ref',
-          '--capture',
-          '../peer.md#finding'
-        ])
-      ).output
-    ).toContain('awaiting reciprocal')
-    await box.project.write(
-      '.ki.toml',
-      configuration('example/source', 'example/receiver', 'export').split('[skills.ki-trades.routes')[0] as string
+    expect(await box.run(['ki', 'repo', 'trade', 'standing', 'check', receiverHome])).toEqual(
+      failure(`standing route ${receiverHome} is not granted by the territory policy`)
     )
-    expect((await box.run('ki repo trade standing list --incomplete')).output).toContain('awaiting sender')
+
+    // The source stops trading.
+    await box.project.write('.ki.toml', memberConfiguration('example/source', { trades: false }))
+    expect(await box.run('ki repo trade standing list --incomplete')).toEqual(pending('awaiting sender').list)
+    expect(await box.run('ki repo trade standing check')).toEqual({
+      exitCode: 0,
+      output: grants('CHECK', [`import knowledge shared-maintenance ${sourceHome}: awaiting sender`], 0)
+    })
+    expect(await capture(box)).toEqual(pending('awaiting sender').capture)
+
+    // The source trades again but resolves another registered Capital.
+    const capitalB = await writeCapital(
+      box,
+      { identity: 'example/capital-b', members: [home('example/capital-b'), sourceHome] },
+      'capital-b'
+    )
+    await box.project.write('.ki.toml', memberConfiguration('example/source', { capital: home('example/capital-b') }))
+    await registerEstate(box, [source, receiver, capital, capitalB])
+    expect(await box.run('ki repo trade standing list --incomplete')).toEqual(pending('awaiting sender').list)
+
+    // The source is registered twice.
+    await box.project.write('.ki.toml', memberConfiguration('example/source'))
+    const copy = await box.project.mkdir('source-copy')
+    await registerEstate(box, [source, receiver, capital, copy])
+    await box.project.write('source-copy/.ki.toml', memberConfiguration('example/source'))
+    expect(await capture(box)).toEqual(pending('ambiguous repository').capture)
+
+    // From the source, an unregistered receiver leaves the export grant awaiting the receiver.
+    await registerEstate(box, [source, capital])
+    box.cd('..')
+    expect(await box.run('ki repo trade standing list --incomplete')).toEqual({
+      exitCode: 0,
+      output: grants('GRANTS', [`export knowledge shared-maintenance ${receiverHome}: awaiting receiver`], 0)
+    })
+    await registerEstate(box, [source, receiver, capital])
+    expect(await box.run('ki repo trade standing list --incomplete')).toEqual({
+      exitCode: 0,
+      output: grants('GRANTS', [], 0)
+    })
+    expect(await box.project.read('docs/source.md')).toBe('# Source\n\n## Finding\n')
+    expect(await box.project.read('receiver/docs/capture file.md')).toBe('# Capture\n\n## Source analysis\n')
+  })
+
+  test('orders grants from several sources and reports each against its own knowledge route', async () => {
+    const { box } = await fixture()
+    const otherHome = home('example/other')
+    await writeCapital(box, {
+      subtypes,
+      channels: [{ from: [sourceHome, otherHome], to: [receiverHome], kinds: ['knowledge'] }],
+      standing: [{ subtype: 'shared-maintenance', from: [sourceHome, otherHome], to: [receiverHome] }]
+    })
+    box.cd('receiver')
+    expect(await box.run('ki repo trade standing list')).toEqual({
+      exitCode: 0,
+      output: grants(
+        'GRANTS',
+        [
+          `import knowledge shared-maintenance ${otherHome}: awaiting sender`,
+          `import knowledge shared-maintenance ${sourceHome}: active`
+        ],
+        1
+      )
+    })
   })
 
   test('refuses malformed, unresolved, or non-local capture targets after an exact grant activates', async () => {
     const { box } = await fixture()
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'add',
-      receiverHome,
-      '--direction',
-      'export',
-      '--subtype',
-      'shared-maintenance'
-    ])
     box.cd('receiver')
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'subtypes',
-      'add',
-      'shared-maintenance',
-      '--description',
-      'Shared maintenance evidence.'
-    ])
+    const at = (sourceRef: string, target: string) => capture(box, target, { sourceRef })
+
+    expect((await at('not-a-ref', 'docs/capture file.md#source-analysis')).output).toContain(
+      'source-ref must use <40-hex-commit>:<path>#<anchor>'
+    )
+    box.setRunner(async () => ({ exitCode: 1, output: 'missing' }))
+    expect((await at(`${commit}:docs/source.md#finding`, 'docs/capture file.md#source-analysis')).output).toContain(
+      `source commit ${commit} does not resolve`
+    )
+    box.setRunner(async (_commandName, arguments_) => ({
+      exitCode: (arguments_[4] as string).endsWith('^{commit}') ? 0 : 1,
+      output: ''
+    }))
+    expect((await at(`${commit}:docs/source.md#finding`, 'docs/capture file.md#source-analysis')).output).toContain(
+      `source path docs/source.md does not resolve at ${commit}`
+    )
+    box.setRunner(async () => ({ exitCode: 0, output: '' }))
+    expect((await at(`${commit}:docs/source.md#finding`, 'capture-without-anchor')).output).toContain(
+      'capture must use <relative-markdown-path>#<anchor>'
+    )
+    expect((await at(`${commit}:docs/source.md#finding`, '../peer.md#finding')).output).toContain(
+      'must name a Markdown file inside the current repository'
+    )
+    expect((await at(`${commit}:docs/source.md#finding`, '/tmp/peer.md#finding')).output).toContain(
+      'must name a Markdown file inside the current repository'
+    )
+    expect((await at(`${commit}:docs/source.md#finding`, 'docs/missing.md#finding')).output).toContain(
+      'must be an existing regular file'
+    )
     expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'standing',
-          'remove',
-          sourceHome,
-          '--direction',
-          'import',
-          '--subtype',
-          'shared-maintenance'
-        ])
-      ).output
-    ).toContain('is not declared locally')
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'add',
-      sourceHome,
-      '--direction',
-      'import',
-      '--subtype',
-      'shared-maintenance'
-    ])
-    const capture = (sourceRef: string, target: string) =>
-      box.run([
+      await box.run([
         'ki',
         'repo',
         'trade',
@@ -457,240 +273,35 @@ describe('[ki repo trade standing intake]', () => {
         '--subtype',
         'shared-maintenance',
         '--source-ref',
-        sourceRef,
+        ' ',
         '--capture',
-        target
+        'docs/plain.md#plain'
       ])
-
-    expect((await capture('not-a-ref', 'docs/capture file.md#source-analysis')).output).toContain(
-      'source-ref must use <40-hex-commit>:<path>#<anchor>'
-    )
-    box.setRunner(async () => ({ exitCode: 1, output: 'missing' }))
-    expect(
-      (await capture(`${commit}:docs/source.md#finding`, 'docs/capture file.md#source-analysis')).output
-    ).toContain(`source commit ${commit} does not resolve`)
-    box.setRunner(async (_commandName, arguments_) => ({
-      exitCode: (arguments_[4] as string).endsWith('^{commit}') ? 0 : 1,
-      output: ''
-    }))
-    expect(
-      (await capture(`${commit}:docs/source.md#finding`, 'docs/capture file.md#source-analysis')).output
-    ).toContain(`source path docs/source.md does not resolve at ${commit}`)
-    box.setRunner(async () => ({ exitCode: 0, output: '' }))
-    expect((await capture(`${commit}:docs/source.md#finding`, 'capture-without-anchor')).output).toContain(
-      'capture must use <relative-markdown-path>#<anchor>'
-    )
-    expect((await capture(`${commit}:docs/source.md#finding`, '../peer.md#finding')).output).toContain(
-      'must name a Markdown file inside the current repository'
-    )
-    expect((await capture(`${commit}:docs/source.md#finding`, '/tmp/peer.md#finding')).output).toContain(
-      'must name a Markdown file inside the current repository'
-    )
-    expect((await capture(`${commit}:docs/source.md#finding`, 'docs/missing.md#finding')).output).toContain(
-      'must be an existing regular file'
-    )
+    ).toEqual(failure('--source-ref is required and must be non-empty'))
     expect(await box.project.read('docs/source.md')).toBe('# Source\n\n## Finding\n')
   })
 
-  test('validates subtype and standing declarations before they become executable authority', async () => {
-    const { box } = await fixture()
-    const receiverHeader = configuration('example/receiver', 'example/source', 'import').split(
-      '[skills.ki-trades]'
-    )[0] as string
-    const inspect = async (declaration: string) => {
-      await box.project.write('receiver/.ki.toml', `${receiverHeader}[skills.ki-trades]\n${declaration}\n`)
-      box.cd('receiver')
-      const result = await box.run('ki repo trade subtypes list')
-      box.cd('..')
-      return result
-    }
-    const rejected: readonly [string, string][] = [
-      ['subtypes = "bad"', 'subtypes] must be a table'],
-      ['[skills.ki-trades.subtypes.work]\nthing = "Unsupported"', 'standing intake is knowledge-only'],
-      ['[skills.ki-trades.subtypes]\nknowledge = "bad"', 'must be a subtype-to-description table'],
-      ['[skills.ki-trades.subtypes.knowledge]\n"Bad Subtype" = "Invalid"', 'lower-case hyphenated identifier'],
-      ['[skills.ki-trades.subtypes.knowledge]\nvalid-subtype = 1', 'non-empty receiver-owned description'],
-      ['[skills.ki-trades.subtypes.knowledge]\nvalid-subtype = " "', 'non-empty receiver-owned description'],
+  test('rejects undefined, uncovered, and repeated grants when the Capital policy is parsed', async () => {
+    const { box, capital } = await fixture()
+    const invalid = (detail: string) =>
+      failure(`territory Capital ${capitalHome} is invalid: ${join(capital, '.ki.toml')} ${detail}`)
+    const cases: readonly (readonly [Parameters<typeof writeCapital>[1], string])[] = [
       [
-        '[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\nstanding = "bad"',
-        'standing must be a table'
+        { subtypes, channels: [knowledge], standing: [grant('undefined-subtype')] },
+        'standing grant #1 subtype must name a subtype the policy defines'
       ],
       [
-        '[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\n[skills.ki-trades.routes."example/source".standing.other]\nknowledge = ["valid-subtype"]',
-        'standing direction other is unsupported'
+        { subtypes, channels: [{ ...knowledge, kinds: ['work'] }], standing: [grant('shared-maintenance')] },
+        `standing grant #1 needs a knowledge channel from ${sourceHome} to ${receiverHome}`
       ],
       [
-        '[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\nstanding = { import = "bad" }',
-        'standing import must be a table containing knowledge'
-      ],
-      [
-        '[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\n[skills.ki-trades.routes."example/source".standing.import]\nwork = ["valid-subtype"]',
-        'standing import kind work is unsupported'
-      ],
-      [
-        '[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\n[skills.ki-trades.routes."example/source".standing.import]\nknowledge = []',
-        'must be a non-empty subtype array'
-      ],
-      [
-        '[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\n[skills.ki-trades.routes."example/source".standing.import]\nknowledge = "bad"',
-        'must be a non-empty subtype array'
-      ],
-      [
-        '[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\n[skills.ki-trades.routes."example/source".standing.import]\nknowledge = [1]',
-        'must be a non-empty subtype array'
-      ],
-      [
-        '[skills.ki-trades.subtypes.knowledge]\nvalid-subtype = "Valid"\n[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\n[skills.ki-trades.routes."example/source".standing.import]\nknowledge = ["valid-subtype", "valid-subtype"]',
-        'must not repeat a subtype'
-      ],
-      [
-        '[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\n[skills.ki-trades.routes."example/source".standing.import]\nknowledge = ["Bad_Subtype"]',
-        'must be lower-case hyphenated'
-      ],
-      [
-        '[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\n[skills.ki-trades.routes."example/source".standing.import]\nknowledge = ["unknown-subtype"]',
-        'is not defined by the receiver'
-      ],
-      [
-        '[skills.ki-trades.subtypes.knowledge]\nvalid-subtype = "Valid"\n[skills.ki-trades.routes."example/source"]\nexport = ["knowledge"]\n[skills.ki-trades.routes."example/source".standing.import]\nknowledge = ["valid-subtype"]',
-        'requires an ordinary knowledge import route'
+        { subtypes, channels: [knowledge], standing: [grant('shared-maintenance'), grant('shared-maintenance')] },
+        `standing grant #2 repeats shared-maintenance from ${sourceHome} to ${receiverHome}`
       ]
     ]
-    for (const [declaration, message] of rejected) expect((await inspect(declaration)).output).toContain(message)
-    expect((await inspect('[skills.ki-trades.subtypes]')).exitCode).toBe(0)
-    expect(
-      (
-        await inspect(
-          '[skills.ki-trades.subtypes.knowledge]\nzeta-subtype = "Zeta"\nalpha-subtype = "Alpha"\n[skills.ki-trades.routes."example/source"]\nimport = ["knowledge"]\n[skills.ki-trades.routes."example/source".standing.import]\nknowledge = ["zeta-subtype", "alpha-subtype"]'
-        )
-      ).exitCode
-    ).toBe(0)
-  })
-
-  test('guards duplicate, self, absent, and export-side mutations', async () => {
-    const { box } = await fixture()
-    expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'standing',
-          'add',
-          sourceHome,
-          '--direction',
-          'export',
-          '--subtype',
-          'shared-maintenance'
-        ])
-      ).output
-    ).toContain('must differ from the local repository')
-    expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'standing',
-          'add',
-          home('example/other'),
-          '--direction',
-          'export',
-          '--subtype',
-          'shared-maintenance'
-        ])
-      ).output
-    ).toContain('requires an ordinary knowledge export route')
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'add',
-      receiverHome,
-      '--direction',
-      'export',
-      '--subtype',
-      'shared-maintenance'
-    ])
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'standing',
-      'add',
-      receiverHome,
-      '--direction',
-      'export',
-      '--subtype',
-      'another-subtype'
-    ])
-    expect((await box.run('ki repo trade standing list --incomplete')).output).toContain('unknown subtype')
-    expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'standing',
-          'remove',
-          receiverHome,
-          '--direction',
-          'export',
-          '--subtype',
-          'missing-subtype'
-        ])
-      ).output
-    ).toContain('is not declared locally')
-    expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'standing',
-          'remove',
-          receiverHome,
-          '--direction',
-          'export',
-          '--subtype',
-          'shared-maintenance'
-        ])
-      ).exitCode
-    ).toBe(0)
-    expect(
-      (
-        await box.run([
-          'ki',
-          'repo',
-          'trade',
-          'standing',
-          'remove',
-          receiverHome,
-          '--direction',
-          'export',
-          '--subtype',
-          'another-subtype'
-        ])
-      ).exitCode
-    ).toBe(0)
-    box.cd('receiver')
-    await box.run([
-      'ki',
-      'repo',
-      'trade',
-      'subtypes',
-      'add',
-      'shared-maintenance',
-      '--description',
-      'Shared maintenance evidence.'
-    ])
-    expect(
-      (await box.run(['ki', 'repo', 'trade', 'subtypes', 'add', 'shared-maintenance', '--description', 'Duplicate']))
-        .output
-    ).toContain('is already defined locally')
-    expect((await box.run(['ki', 'repo', 'trade', 'subtypes', 'remove', 'missing-subtype'])).output).toContain(
-      'is not defined locally'
-    )
+    for (const [territory, detail] of cases) {
+      await writeCapital(box, territory)
+      expect(await box.run('ki repo trade standing list')).toEqual(invalid(detail))
+    }
   })
 })

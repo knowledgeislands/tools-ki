@@ -26,6 +26,8 @@ const spawnedEnvironment = async (box: Box): Promise<NodeJS.ProcessEnv | undefin
     'EXAMPLE',
     '--repository',
     'https://github.com/example/project',
+    '--capital',
+    'https://github.com/example/project',
     '--runtime',
     'claude-code',
     '--visibility',

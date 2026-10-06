@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { chmod, realpath, rm, symlink } from 'node:fs/promises'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { runCommand, sandbox } from '../_cli_helper.ts'
+import { capitalHome, home, writeCapital } from '../_territory_helper.ts'
 
 // A normal CLI invocation cannot force a filesystem stat failure other than a
 // missing path. This narrow boundary injection verifies that such a failure
@@ -94,6 +95,7 @@ harnesses = ["example/harness"]
 [skills.ki-repo]
 primary_shape = "ki-repo-kb"
 repository = "https://github.com/example/knowledge"
+capital = "https://github.com/example/capital"
 repo_type = "kb"
 store_roles = ["notes"]
 
@@ -388,11 +390,15 @@ describe('[ki repo roadmap]', () => {
       item({ id: 'KBS-001', title: 'Native proposal', status: 'awaiting-review' })
     )
     await box.project.write('knowledge/-/_TRADES/example/receiver/TRD-00000001.md', 'not a trade record\n')
+    const capital = await writeCapital(box, {
+      members: [home('example/broken'), capitalHome, home('example/knowledge')]
+    })
     await box.state.write(
       'ki/registry.toml',
       localRegistry([
         { key: 'knowledge', repository: 'https://github.com/example/knowledge', path: knowledge },
-        { key: 'broken', repository: 'https://github.com/example/broken', path: broken }
+        { key: 'broken', repository: 'https://github.com/example/broken', path: broken },
+        { key: 'capital', repository: capitalHome, path: capital }
       ])
     )
 
@@ -824,23 +830,23 @@ describe('[ki repo roadmap]', () => {
     const sourceHome = 'https://github.com/example/source'
     const receiverHome = 'https://github.com/example/receiver'
     const id = 'TRD-00000000'
-    const peer = (route: string): string => route.slice('https://github.com/'.length)
-    const configuration = (repository: string, exportsTo: readonly string[], importsFrom: readonly string[]): string =>
+    // Members carry only their Capital; the Capital's policy grants the source -> receiver channel.
+    const configuration = (repository: string): string =>
       [
         '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"',
         `repository = ${JSON.stringify(repository)}`,
+        `capital = ${JSON.stringify(capitalHome)}`,
         '',
         '[skills.ki-trades]',
-        '',
-        '[skills.ki-trades.routes]',
-        ...exportsTo.map((route) => `${JSON.stringify(peer(route))} = { export = ["work", "knowledge"] }`),
-        ...importsFrom.map((route) => `${JSON.stringify(peer(route))} = { import = ["work", "knowledge"] }`),
         ''
       ].join('\n')
+    const capital = await writeCapital(box, {
+      channels: [{ from: [sourceHome], to: [receiverHome], kinds: ['work', 'knowledge'] }]
+    })
     const record = (recordId: string, kind: 'work' | 'knowledge', status = ''): string =>
       `---\nid: ${recordId}\ntitle: Trade-aware planning\ncreated_at: 2026-08-05T12:00:00Z\nsender: example/source\nreceiver: example/receiver\nkind: ${kind}\nsource_ref: KI-TOOL-CLI-012\nobservation: decision\nphase: ${status ? 'received' : 'submitted'}${status}\n---\n# ${recordId}: Trade-aware planning\n\n## Context\n\nTrade context.\n\n## Submission\n\nShow trades with roadmap work.\n\n## Constraints\n\nRemain read-only.\n`
-    await box.project.write('source/.ki.toml', configuration(sourceHome, [receiverHome], []))
-    await box.project.write('receiver/.ki.toml', configuration(receiverHome, [], [sourceHome]))
+    await box.project.write('source/.ki.toml', configuration(sourceHome))
+    await box.project.write('receiver/.ki.toml', configuration(receiverHome))
     await box.project.write('source/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
     await box.project.write('receiver/docs/roadmap/KI-TOOL-CLI-004-inspect.md', item({ id: 'KI-TOOL-CLI-004' }))
     await box.project.write(`source/-/_TRADES/example/receiver/${id}.md`, record(id, 'work'))
@@ -862,7 +868,8 @@ describe('[ki repo roadmap]', () => {
       'ki/registry.toml',
       localRegistry([
         { key: 'source', repository: 'https://github.com/example/source', path: source },
-        { key: 'receiver', repository: 'https://github.com/example/receiver', path: receiver }
+        { key: 'receiver', repository: 'https://github.com/example/receiver', path: receiver },
+        { key: 'capital', repository: capitalHome, path: capital }
       ])
     )
 

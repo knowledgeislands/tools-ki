@@ -5,9 +5,14 @@ import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { type RepositoryLocation, resolveRepository } from '../repository/index.ts'
 import { requiredLocalRegistry } from '../storage/index.ts'
 import {
+  effectiveConfiguration,
   isTradeRepository,
+  parseRepositoryDeclaration,
+  type RepositoryDeclaration,
   type RouteDirection,
-  readTradeConfiguration,
+  readRepositoryDeclaration,
+  repositoryIdentity,
+  type TerritoryPolicy,
   type TradeConfiguration,
   type TradeKind,
   tradeKinds
@@ -17,49 +22,103 @@ import { type ActiveRegisteredRepository, type RegisteredRepository, type TradeC
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
-/** One skill's table under the `[skills]` namespace, or undefined where the file declares neither. */
-const skillTable = (parsed: Record<string, unknown>, name: string): unknown => {
-  const skills = parsed['skills']
-  return isRecord(skills) ? skills[name] : undefined
+/** The `[skills.ki-repo].repository` a registered declaration claims, even where the rest is invalid. */
+const claimedRepository = (contents: string): string | undefined => {
+  try {
+    const parsed = parse(contents)
+    const skills = parsed['skills']
+    const declaration = isRecord(skills) ? skills['ki-repo'] : undefined
+    const repository = isRecord(declaration) ? declaration['repository'] : undefined
+    return typeof repository === 'string' && isTradeRepository(repository) ? repository : undefined
+  } catch {
+    return undefined
+  }
 }
 
-const hasRepository = (value: unknown): value is { readonly repository: unknown } =>
-  isRecord(value) && 'repository' in value
-
-const repositoryIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
+/** One registered checkout with its claimed identity and, where it validates, its declaration. */
+export interface DeclaredRepository {
+  readonly root: string
+  readonly repository: string
+  readonly declaration?: RepositoryDeclaration
+  readonly error?: string
+}
 
 const registeredRoots = async (context: TradeContext): Promise<readonly string[]> => {
   return (await requiredLocalRegistry(context.paths.state)).map((repository) => repository.path)
 }
 
-export const registeredRepositories = async (context: TradeContext): Promise<readonly RegisteredRepository[]> => {
-  const repositories: RegisteredRepository[] = []
+export const declaredRepositories = async (context: TradeContext): Promise<readonly DeclaredRepository[]> => {
+  const repositories: DeclaredRepository[] = []
   for (const root of await registeredRoots(context)) {
     const path = join(root, REPOSITORY_DECLARATION_FILE)
     const state = await lstat(path).catch(() => undefined)
     if (!state?.isFile()) continue
+    const contents = await readFile(path, 'utf8')
+    const repository = claimedRepository(contents)
+    // A declaration without a canonical identity cannot be a trade endpoint.
+    if (!repository) continue
     try {
-      const contents = await readFile(path, 'utf8')
-      const parsed = parse(contents)
-      /* v8 ignore next -- smol-toml parses valid configuration input as a document object. */
-      const repositoryDeclaration = isRecord(parsed) ? skillTable(parsed, 'ki-repo') : undefined
-      if (
-        !hasRepository(repositoryDeclaration) ||
-        typeof repositoryDeclaration.repository !== 'string' ||
-        !isTradeRepository(repositoryDeclaration.repository)
-      )
-        continue
-      const repository = repositoryDeclaration.repository
-      try {
-        repositories.push({ root, repository, configuration: await readTradeConfiguration(path) })
-      } catch {
-        repositories.push({ root, repository })
-      }
-    } catch {
-      // Invalid registered entries cannot identify a trade endpoint.
+      repositories.push({ root, repository, declaration: parseRepositoryDeclaration(contents, path) })
+    } catch (error) {
+      repositories.push({ root, repository, error: (error as Error).message })
     }
   }
   return repositories
+}
+
+export type CapitalResolution =
+  | { readonly state: 'resolved'; readonly capital: DeclaredRepository; readonly policy: TerritoryPolicy }
+  | {
+      readonly state: 'unavailable' | 'ambiguous' | 'invalid' | 'not-capital' | 'not-member'
+      readonly message: string
+    }
+
+/**
+ * Resolves a repository's territory policy through its own declared `capital`: the unique
+ * registered checkout declaring that repository, which must be a Capital listing the repository.
+ * Several territories may share one registry; no other declaration is ever consulted.
+ */
+export const resolveCapital = (
+  declared: readonly DeclaredRepository[],
+  local: Pick<RepositoryDeclaration, 'repository' | 'capital'>
+): CapitalResolution => {
+  const candidates = declared.filter((candidate) => candidate.repository === local.capital)
+  if (!candidates.length)
+    return { state: 'unavailable', message: `territory policy lives in ${local.capital}, not available here` }
+  if (candidates.length > 1)
+    return { state: 'ambiguous', message: `territory Capital ${local.capital} is registered more than once` }
+  const capital = candidates[0] as DeclaredRepository
+  if (!capital.declaration)
+    return { state: 'invalid', message: `territory Capital ${local.capital} is invalid: ${capital.error}` }
+  if (!capital.declaration.policy)
+    return { state: 'not-capital', message: `${local.capital} does not declare itself a territory Capital` }
+  if (!capital.declaration.policy.members.includes(local.repository))
+    return {
+      state: 'not-member',
+      message: `territory Capital ${local.capital} does not list ${local.repository} as a member`
+    }
+  return { state: 'resolved', capital, policy: capital.declaration.policy }
+}
+
+const tradingConfiguration = (
+  declared: readonly DeclaredRepository[],
+  declaration: RepositoryDeclaration | undefined
+): TradeConfiguration | undefined => {
+  if (!declaration?.trades) return undefined
+  const resolution = resolveCapital(declared, declaration)
+  return resolution.state === 'resolved'
+    ? effectiveConfiguration({ ...declaration, trades: declaration.trades }, resolution.policy)
+    : undefined
+}
+
+export const registeredRepositories = async (context: TradeContext): Promise<readonly RegisteredRepository[]> => {
+  const declared = await declaredRepositories(context)
+  return declared.map((entry) => {
+    const configuration = tradingConfiguration(declared, entry.declaration)
+    return configuration
+      ? { root: entry.root, repository: entry.repository, configuration }
+      : { root: entry.root, repository: entry.repository }
+  })
 }
 
 export const localRepository = async (context: TradeContext): Promise<RepositoryLocation> =>
@@ -72,11 +131,35 @@ export const localRegisteredRepository = async (context: TradeContext): Promise<
   return repository
 }
 
+/** The local repository's declaration and the Capital policy it resolves to, failing closed. */
+export const localTerritoryPolicy = async (
+  context: TradeContext
+): Promise<{
+  readonly repository: RepositoryLocation
+  readonly declaration: RepositoryDeclaration
+  readonly declared: readonly DeclaredRepository[]
+  readonly policy: TerritoryPolicy
+}> => {
+  const repository = await localRegisteredRepository(context)
+  const declaration = await readRepositoryDeclaration(repository.declaration)
+  const declared = await declaredRepositories(context)
+  const resolution = resolveCapital(declared, declaration)
+  if (resolution.state !== 'resolved') throw tradeError(resolution.message)
+  return { repository, declaration, declared, policy: resolution.policy }
+}
+
 export const localRegisteredConfiguration = async (
   context: TradeContext
 ): Promise<{ readonly repository: RepositoryLocation; readonly configuration: TradeConfiguration }> => {
   const repository = await localRegisteredRepository(context)
-  return { repository, configuration: await readTradeConfiguration(repository.declaration) }
+  const declaration = await readRepositoryDeclaration(repository.declaration)
+  if (!declaration.trades) throw tradeError(`${repository.declaration} does not declare [skills.ki-trades]`)
+  const resolution = resolveCapital(await declaredRepositories(context), declaration)
+  if (resolution.state !== 'resolved') throw tradeError(resolution.message)
+  return {
+    repository,
+    configuration: effectiveConfiguration({ ...declaration, trades: declaration.trades }, resolution.policy)
+  }
 }
 
 export type RouteState = 'active' | 'awaiting-receiver' | 'awaiting-sender' | 'ambiguous-repository'
@@ -111,12 +194,9 @@ const inspectRoutesInEstate = (
     if (!candidates.length) return { ...route, state: pending }
     if (candidates.length > 1) return { ...route, state: 'ambiguous-repository' }
     const peer = candidates[0] as RegisteredRepository
-    if (!peer.configuration) return { ...route, state: pending, peer }
-    const reciprocal =
-      route.direction === 'export'
-        ? peer.configuration.importsFrom[route.kind]
-        : peer.configuration.exportsTo[route.kind]
-    if (!reciprocal.includes(local.repository)) return { ...route, state: pending, peer }
+    // One Capital's policy grants both directions of an edge, so a peer that trades and resolves
+    // the same Capital is reciprocal by construction.
+    if (peer.configuration?.capital !== local.capital) return { ...route, state: pending, peer }
     return { ...route, state: 'active', peer }
   })
 
@@ -157,7 +237,7 @@ export const requireActiveRoute = async (
   )
   if (route?.state !== 'active')
     throw tradeError(
-      `${direction} ${kind} trade route ${repository} is ${route?.state?.replace('-', ' ') ?? 'not declared locally'}`
+      `${direction} ${kind} trade route ${repository} is ${route?.state?.replace('-', ' ') ?? 'not granted by the territory policy'}`
     )
   return route.peer as ActiveRegisteredRepository
 }
@@ -167,6 +247,6 @@ export const requireDeclaredExportRoute = (local: TradeConfiguration, repository
   if (!isTradeRepository(repository))
     throw tradeError('trade route repository must use canonical HTTPS GitHub repository form')
   if (!local.exportsTo[kind].includes(repository))
-    throw tradeError(`export ${kind} trade route ${repository} is not declared locally`)
+    throw tradeError(`export ${kind} trade route ${repository} is not granted by the territory policy`)
   return repositoryIdentity(repository)
 }

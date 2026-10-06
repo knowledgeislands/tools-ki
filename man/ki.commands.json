@@ -154,8 +154,8 @@
       "purpose": "Use these commands to inspect and maintain declared capabilities and manage their skill links. Read-only operations isolate per-target diagnostics; a later mutation failure retains earlier successful targets and returns a non-zero result.",
       "commands": [
         {
-          "invocation": "ki repo init [directory] --repository <https-url> --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>",
-          "description": "Initialize exactly one existing physical Git worktree root. With no directory, it uses the current directory; an explicit directory must be that worktree's root and must not be a symbolic link. Every identity value is required: --title, --description, a stable uppercase --repo-code, canonical HTTPS GitHub --repository, one or more --runtime values selected from claude-code and chatgpt-codex, and --visibility public|private. It atomically creates the minimal canonical ki-repo declaration and registers the physical root in $XDG_STATE_HOME/ki/registry.toml. It never runs git init, guesses identity, activates repository skills, creates a Agora, accepts repository selectors, or overwrites an existing .ki.toml."
+          "invocation": "ki repo init [directory] --repository <https-url> --capital <https-url> --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>",
+          "description": "Initialize exactly one existing physical Git worktree root. With no directory, it uses the current directory; an explicit directory must be that worktree's root and must not be a symbolic link. Every identity value is required: --title, --description, a stable uppercase --repo-code, canonical HTTPS GitHub --repository, one or more --runtime values selected from claude-code and chatgpt-codex, and --visibility public|private. It atomically creates the minimal canonical ki-repo declaration and A required --capital names the territory Capital; a Capital names itself and then also receives a [skills.ki-repo.territory] table listing itself as the first member. registers the physical root in $XDG_STATE_HOME/ki/registry.toml. It never runs git init, guesses identity, activates repository skills, creates a Agora, accepts repository selectors, or overwrites an existing .ki.toml."
         },
         {
           "invocation": "ki repo [repo-options] open --target <zed|vscode|delta> [--stores|--no-stores]",
@@ -329,51 +329,35 @@
     },
     {
       "name": "Trades",
-      "purpose": "Use these commands with repositories that declare the portable ki-repo-trades capability and are present in the local registered repository estate. Parent --repo, --agora, and --estate selectors scope reads; mutations require exactly one selected registered repository. They preserve repository authority: every mutation writes only the selected repository, a typed reciprocal route grants visibility rather than acceptance or retention, and no command changes a peer roadmap or knowledge.",
+      "purpose": "Use these commands with repositories that declare the portable ki-repo-trades capability and are present in the local registered repository estate. Routes and standing grants come only from the territory Capital's [skills.ki-trades.territory] policy, resolved through each repository's declared [skills.ki-repo].capital; no command edits that policy, and a member declaration carries no route table. Parent --repo, --agora, and --estate selectors scope reads; mutations require exactly one selected registered repository. Every mutation writes only the selected repository, a granted route gives visibility rather than acceptance or retention, and no command changes a peer roadmap or knowledge.",
       "commands": [
-        {
-          "invocation": "ki repo [repo-options] trade routes add <repository> --direction export|import --kind work|knowledge",
-          "description": "Declare one local typed route to a canonical HTTPS GitHub repository. Repository identity remains the required repository value in the ki-repo table."
-        },
-        {
-          "invocation": "ki repo [repo-options] trade routes remove <repository> --direction export|import --kind work|knowledge",
-          "description": "Remove one local typed route."
-        },
         {
           "invocation": "ki repo [repo-options] trade routes list [--incomplete] [--format text|json]",
           "description": "List selected local typed routes with their registered-estate state. With a parent aggregate selection such as ki repo --estate trade routes list, list valid selected repository declarations as lexical repository pairs. The left and right endpoint cells span the two directional rows, which show what each repository sends with a right or left arrow; a missing direction is shown as an em dash. The table adapts to the live terminal width, preserving the same pairs in a stacked narrow view. With --incomplete , show only routes that await reciprocity or have ambiguous peers. With --format json , emit the versioned ki/trade-routes/v1 contract. JSON requires an aggregate parent repository selection. It contains canonical identities, route evidence, peer resolution, and declared map bonuses without local registry paths, declaration paths, or presentation layout values. Text remains the default renderer. Interactive visualisation is owned by Knowledge Islands Observatory rather than this command."
         },
         {
           "invocation": "ki repo [repo-options] trade routes check [repository] [--direction export|import] [--kind work|knowledge]",
-          "description": "Check declared routes by kind. An export awaiting local receiver registration, receiver participation, or a reciprocal import awaits receiver activation; the equivalent import awaits sender activation."
+          "description": "Check the routes the territory Capital policy grants this repository. A route is active when its peer is registered once, declares ki-trades, and resolves the same Capital; otherwise an export awaits the receiver and an import awaits the sender."
         },
         {
-          "invocation": "ki repo [repo-options] trade subtypes add <subtype> --description <text>",
-          "description": "Define one lower-case receiver-owned knowledge subtype in the current repository. The description records the receiver's meaning for the subtype."
+          "invocation": "ki repo [repo-options] trade policy show",
+          "description": "Show the trade policy of the selected repository's territory Capital: its channels, standing grants, and knowledge subtype vocabulary. The policy is resolved through the repository's declared [skills.ki-repo].capital; an unregistered Capital fails with territory policy lives in <url>, not available here."
         },
         {
-          "invocation": "ki repo [repo-options] trade subtypes list",
-          "description": "List receiver-owned knowledge subtype definitions in the current repository."
+          "invocation": "ki repo [repo-options] trade policy check",
+          "description": "Sweep the selected repository's territory through the local registry. Each listed member is reported conforming, warning (declares ki-trades but no channel names it), failing (registered twice, invalid, declaring another Capital, or named by a channel without declaring ki-trades), or unverifiable (not checked out here). A registered repository that claims the Capital without being listed also fails. Any failure exits 1 after rendering."
         },
         {
-          "invocation": "ki repo [repo-options] trade subtypes remove <subtype>",
-          "description": "Remove one receiver-owned subtype only when no local standing import still names it."
-        },
-        {
-          "invocation": "ki repo [repo-options] trade standing add <repository> --direction export|import --subtype <subtype>",
-          "description": "Declare one local standing knowledge-intake direction layered on an existing ordinary knowledge route. An import subtype must be defined by the local receiver. The declaration remains inactive until the peer publishes the exact reciprocal direction and the receiver-owned definition is available."
-        },
-        {
-          "invocation": "ki repo [repo-options] trade standing remove <repository> --direction export|import --subtype <subtype>",
-          "description": "Remove only the current repository's standing declaration. Historical committed provenance remains local evidence, but the removed declaration no longer authorises new captures."
+          "invocation": "ki repo [repo-options] trade policy compare --baseline <path>",
+          "description": "Compare the active directed routes of a saved ki/trade-routes/v1 report with the routes the current registry and Capital policies make active, listing lost and newly granted routes. A lost route exits 1 after rendering."
         },
         {
           "invocation": "ki repo [repo-options] trade standing list [--incomplete]",
-          "description": "List local standing declarations and report whether each exact subtype relationship is active, awaiting ordinary route activation, awaiting reciprocity, ambiguous, or unknown to its receiver. With --incomplete , show only declarations that are not active."
+          "description": "List the standing grants the territory Capital policy gives this repository. A grant is active exactly when its ordinary knowledge route is active. With --incomplete , show only grants that are not active."
         },
         {
           "invocation": "ki repo [repo-options] trade standing check [repository] [--direction export|import] [--subtype <subtype>]",
-          "description": "Check all local standing declarations or select an exact repository, direction, and subtype."
+          "description": "Check all Capital-granted standing grants or select one repository, direction, and subtype."
         },
         {
           "invocation": "ki repo [repo-options] trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>",

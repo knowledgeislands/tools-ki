@@ -63,6 +63,7 @@ If the checkout has no `.ki.toml`, create one from inside the existing Git workt
 ```sh
 ki repo init \
   --repository https://github.com/example/example \
+  --capital https://github.com/example/example \
   --title 'Example repository' \
   --description 'An explicit KI repository identity.' \
   --repo-code EXAMPLE \
@@ -70,7 +71,7 @@ ki repo init \
   --visibility private
 ```
 
-Initialisation writes a Project declaration with explicit `repo_type = "project"` and `primary_shape = "ki-repo-project"` under `[skills.ki-repo]`, declares `[skills.ki-repo-project]`, and registers that physical root. Select another declared core shape when the repository has a different primary responsibility. A Knowledge Base requires `repo_type = "kb"`, `primary_shape = "ki-repo-kb"`, the declared KB skill, and its store roles. Neither classification field is inferred. Initialisation never runs `git init`, guesses an identity, activates skills, creates an Agora, or overwrites a declaration that already exists.
+`--capital` names the territory Capital whose policy governs the repository's trades; give the repository's own URL when it is the Capital, and initialisation then also declares `[skills.ki-repo.territory]` with the repository as its only member. Initialisation writes a Project declaration with explicit `repo_type = "project"` and `primary_shape = "ki-repo-project"` under `[skills.ki-repo]`, declares `[skills.ki-repo-project]`, and registers that physical root. Select another declared core shape when the repository has a different primary responsibility. A Knowledge Base requires `repo_type = "kb"`, `primary_shape = "ki-repo-kb"`, the declared KB skill, and its store roles. Neither classification field is inferred. Initialisation never runs `git init`, guesses an identity, activates skills, creates an Agora, or overwrites a declaration that already exists.
 
 Verify:
 

@@ -64,12 +64,16 @@ const gitRepositoryRunner = (root: string) => async (command: string, arguments_
     ? { exitCode: 0, output: `${root}\n` }
     : { exitCode: 1, output: '' }
 
-const initialise = (box: Awaited<ReturnType<typeof sandbox>>, directory?: string) =>
+const memberCapital = 'https://github.com/example/capital'
+
+const initialise = (box: Awaited<ReturnType<typeof sandbox>>, directory?: string, capital = memberCapital) =>
   box.run([
     'ki',
     'repo',
     'init',
     ...(directory ? [directory] : []),
+    '--capital',
+    capital,
     '--title',
     'Example repository',
     '--description',
@@ -102,12 +106,33 @@ test('initializes one explicit physical Git root and registers its complete KI i
     '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n' +
       'repository = "https://github.com/example/project"\n' +
       'title = "Example repository"\n' +
+      `capital = "${memberCapital}"\n` +
       'description = "Repository initialization contract."\n' +
       'repo_code = "EXAMPLE"\n' +
       'supported_runtimes = ["claude-code", "chatgpt-codex"]\n' +
       'visibility = "private"\n'
   )
   expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(root)}`)
+
+  // A Capital names itself and founds a territory whose only member it is.
+  const capitalBox = await sandbox()
+  await capitalBox.config.write('ki/config.toml', localConfiguration)
+  const capitalRoot = await realpath(capitalBox.project.path)
+  capitalBox.setRunner(gitRepositoryRunner(capitalRoot))
+  expect((await initialise(capitalBox, undefined, 'https://github.com/example/project')).exitCode).toBe(0)
+  expect(await capitalBox.project.read('.ki.toml')).toEqual(
+    '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n' +
+      'repository = "https://github.com/example/project"\n' +
+      'title = "Example repository"\n' +
+      'capital = "https://github.com/example/project"\n' +
+      'description = "Repository initialization contract."\n' +
+      'repo_code = "EXAMPLE"\n' +
+      'supported_runtimes = ["claude-code", "chatgpt-codex"]\n' +
+      'visibility = "private"\n' +
+      '\n[skills.ki-repo.territory]\n' +
+      'name = "Example repository"\n' +
+      'members = ["https://github.com/example/project"]\n'
+  )
 })
 
 test('initializes an explicit directory but refuses non-root, linked, declared, and unsafe targets', async () => {
@@ -167,25 +192,31 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
     'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex'
   )
   const noRuntime = await box.run(
-    'ki repo init --title title --description description --repo-code EXAMPLE --repository https://github.com/example/project --visibility private'
+    'ki repo init --title title --description description --repo-code EXAMPLE --repository https://github.com/example/project --visibility private --capital https://github.com/example/capital'
   )
   const invalidCode = await box.run(
-    'ki repo init --title title --description description --repo-code example --runtime chatgpt-codex --visibility private --repository https://github.com/example/project'
+    'ki repo init --title title --description description --repo-code example --runtime chatgpt-codex --visibility private --repository https://github.com/example/project --capital https://github.com/example/capital'
   )
   const invalidRuntime = await box.run(
-    'ki repo init --title title --description description --repo-code EXAMPLE --runtime node --visibility private --repository https://github.com/example/project'
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime node --visibility private --repository https://github.com/example/project --capital https://github.com/example/capital'
   )
   const retiredRuntime = await box.run(
-    'ki repo init --title title --description description --repo-code EXAMPLE --runtime codex --visibility private --repository https://github.com/example/project'
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime codex --visibility private --repository https://github.com/example/project --capital https://github.com/example/capital'
   )
   const repeatedRuntime = await box.run(
-    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --runtime chatgpt-codex --visibility private --repository https://github.com/example/project'
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --runtime chatgpt-codex --visibility private --repository https://github.com/example/project --capital https://github.com/example/capital'
   )
   const invalidVisibility = await box.run(
-    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility internal --repository https://github.com/example/project'
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility internal --repository https://github.com/example/project --capital https://github.com/example/capital'
   )
   const invalidRepository = await box.run(
-    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private --repository https://example.test/project'
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private --repository https://example.test/project --capital https://github.com/example/capital'
+  )
+  const missingCapital = await box.run(
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private --repository https://github.com/example/project'
+  )
+  const invalidCapital = await box.run(
+    'ki repo init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private --repository https://github.com/example/project --capital https://github.com/Example/Capital'
   )
   const selectors = await box.run(
     'ki repo --estate init --title title --description description --repo-code EXAMPLE --runtime chatgpt-codex --visibility private'
@@ -222,6 +253,11 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
     exitCode: 2,
     output: 'ki: error: ki repo init --repository must be a canonical HTTPS GitHub repository\n'
   })
+  expect(missingCapital).toEqual({ exitCode: 2, output: 'ki: error: ki repo init requires --capital\n' })
+  expect(invalidCapital).toEqual({
+    exitCode: 2,
+    output: 'ki: error: ki repo init --capital must be a canonical HTTPS GitHub repository\n'
+  })
   expect(selectors).toEqual({
     exitCode: 2,
     output: 'ki: error: ki repo init does not accept --repo, --agora, or --estate\n'
@@ -235,7 +271,7 @@ test('accepts a repository code beginning with a digit', async () => {
   box.setRunner(async () => ({ exitCode: 1, output: 'not a repository' }))
 
   const numericCode = await box.run(
-    'ki repo init --title title --description description --repo-code 5GE-P2 --runtime chatgpt-codex --visibility private --repository https://github.com/example/project'
+    'ki repo init --title title --description description --repo-code 5GE-P2 --runtime chatgpt-codex --visibility private --repository https://github.com/example/project --capital https://github.com/example/capital'
   )
 
   expect(numericCode).toEqual({
@@ -267,6 +303,8 @@ test('initializes a public repository without rewriting an existing local regist
     'PUBLIC',
     '--repository',
     'https://github.com/example/public',
+    '--capital',
+    'https://github.com/example/capital',
     '--runtime',
     'chatgpt-codex',
     '--visibility',

@@ -6,7 +6,7 @@ This area specifies explicit repository registration and inventory; see the [Spe
 
 ### REGISTRY-001 — Physical KI-root registration
 
-`ki repo init` MUST initialise one explicit physical Git root and register its complete KI identity.
+`ki repo init` MUST initialise one explicit physical Git root and register its complete KI identity, including the required `--capital` territory Capital. When the Capital is the repository itself, it MUST also declare `[skills.ki-repo.territory]` with the title as its name and the repository as its only member.
 
 _Conformance:_ conforming
 
@@ -16,7 +16,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REGISTRY-002 — Validated registration boundary
 
-`ki repo init` MUST reject non-Git targets and invalid or incomplete explicit identity metadata before writing registry state.
+`ki repo init` MUST reject non-Git targets and invalid or incomplete explicit identity metadata, including a missing or non-canonical `--capital`, before writing registry state.
 
 _Conformance:_ conforming
 

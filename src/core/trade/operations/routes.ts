@@ -1,25 +1,6 @@
 import type { RouteDirection, TradeConfiguration, TradeKind } from '../configuration.ts'
 import type { EstateRouteInspection, RouteInspection } from '../estate.ts'
 
-type RouteMutation = (
-  path: string,
-  repository: string,
-  direction: RouteDirection,
-  kind: TradeKind
-) => Promise<TradeConfiguration>
-
-interface MutateTradeRoutePorts {
-  readonly configurationPath: () => Promise<string>
-  readonly mutate: RouteMutation
-}
-
-export const mutateTradeRoute = async (
-  repository: string,
-  direction: RouteDirection,
-  kind: TradeKind,
-  ports: MutateTradeRoutePorts
-): Promise<TradeConfiguration> => ports.mutate(await ports.configurationPath(), repository, direction, kind)
-
 interface InspectLocalRoutesPorts {
   readonly configuration: () => Promise<TradeConfiguration>
   readonly inspect: (configuration: TradeConfiguration) => Promise<readonly RouteInspection[]>

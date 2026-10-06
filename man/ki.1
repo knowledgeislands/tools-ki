@@ -112,7 +112,7 @@ Select every repository in the registered estate. This is shorthand for
 .SS Repository management
 \&
 .TP
-.B ki repo init [directory] --repository <https-url> --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>
+.B ki repo init [directory] --repository <https-url> --capital <https-url> --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>
 Create the explicit KI identity declaration for one existing Git repository
 and register its physical root in the machine-local registry.
 .TP
@@ -252,12 +252,6 @@ Remove one installed non-canonical harness.
 .SS Trades
 \&
 .TP
-.B ki repo [repo-options] trade routes add <repository> --direction export|import --kind work|knowledge
-Declare one local typed directional trade route.
-.TP
-.B ki repo [repo-options] trade routes remove <repository> --direction export|import --kind work|knowledge
-Remove one local typed trade route.
-.TP
 .B ki repo [repo-options] trade routes list [--incomplete] [--format text|json]
 List selected local typed trade routes, or aggregate selected declarations
 with parent \fB--estate\fR or \fB--agora\fR.
@@ -266,22 +260,23 @@ Emit versioned machine-readable estate evidence with
 .BR "--format json" .
 .TP
 .B ki repo [repo-options] trade routes check [repository] [--direction export|import] [--kind work|knowledge]
-Check local typed trade routes and their activation state.
+Check Capital-granted typed trade routes and their activation state.
 .TP
-.B ki repo [repo-options] trade subtypes add <subtype> --description <text>
-Define one receiver-owned knowledge subtype.
+.B ki repo [repo-options] trade policy show
+Show the territory Capital's channels, standing grants, and knowledge
+subtypes.
 .TP
-.B ki repo [repo-options] trade subtypes list
-List receiver-owned knowledge subtype definitions.
+.B ki repo [repo-options] trade policy check
+Check every territory member against the Capital policy through the
+local registry.
 .TP
-.B ki repo [repo-options] trade subtypes remove <subtype>
-Remove one subtype that no local standing import uses.
-.TP
-.B ki repo [repo-options] trade standing add|remove <repository> --direction export|import --subtype <subtype>
-Add or remove one exact local standing knowledge-intake declaration.
+.B ki repo [repo-options] trade policy compare --baseline <path>
+Compare active routes with a saved
+.B ki/trade-routes/v1
+report.
 .TP
 .B ki repo [repo-options] trade standing list [--incomplete]
-List local standing declarations and their activation state.
+List Capital-granted standing grants and their activation state.
 .TP
 .B ki repo [repo-options] trade standing check [repository] [--direction export|import] [--subtype <subtype>]
 Check exact standing knowledge-intake activation.
@@ -667,7 +662,7 @@ their skill links. Read-only operations isolate per-target diagnostics; a later
 mutation failure retains earlier successful targets and returns a non-zero
 result.
 .TP
-.B ki repo init [directory] --repository <https-url> --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>
+.B ki repo init [directory] --repository <https-url> --capital <https-url> --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>
 Initialize exactly one existing physical Git worktree root. With no
 \fIdirectory\fR, it uses the current directory; an explicit directory must be
 that worktree's root and must not be a symbolic link. Every identity value is
@@ -675,6 +670,9 @@ required: \fB--title\fR, \fB--description\fR, a stable uppercase
 \fB--repo-code\fR, canonical HTTPS GitHub \fB--repository\fR, one or more \fB--runtime\fR values selected from
 \fBclaude-code\fR and \fBchatgpt-codex\fR, and \fB--visibility public|private\fR.
 It atomically creates the minimal canonical \fBki-repo\fR declaration and
+A required \fB--capital\fR names the territory Capital; a Capital names
+itself and then also receives a \fB[skills.ki-repo.territory]\fR table
+listing itself as the first member.
 registers the physical root in \fB$XDG_STATE_HOME/ki/registry.toml\fR. It
 never runs
 \fBgit init\fR, guesses identity, activates repository skills, creates a
@@ -1026,19 +1024,14 @@ skills cannot be removed. A successful removal deletes its identifier from
 .PP
 Use these commands with repositories that declare the portable
 \fBki-repo-trades\fR capability and are present in the local registered repository
-estate. Parent \fB--repo\fR, \fB--agora\fR, and \fB--estate\fR selectors
-scope reads;
-mutations require exactly one selected registered repository. They preserve
-repository authority: every mutation writes only the selected repository,
-a typed reciprocal route grants visibility rather than
-acceptance or retention, and no command changes a peer roadmap or knowledge.
-.TP
-.B ki repo [repo-options] trade routes add <repository> --direction export|import --kind work|knowledge
-Declare one local typed route to a canonical HTTPS GitHub repository. Repository
-identity remains the required \fBrepository\fR value in the ki-repo table.
-.TP
-.B ki repo [repo-options] trade routes remove <repository> --direction export|import --kind work|knowledge
-Remove one local typed route.
+estate. Routes and standing grants come only from the territory Capital's
+\fB[skills.ki-trades.territory]\fR policy, resolved through each repository's
+declared \fB[skills.ki-repo].capital\fR; no command edits that policy, and a
+member declaration carries no route table. Parent \fB--repo\fR, \fB--agora\fR,
+and \fB--estate\fR selectors scope reads; mutations require exactly one selected
+registered repository. Every mutation writes only the selected repository, a
+granted route gives visibility rather than acceptance or retention, and no
+command changes a peer roadmap or knowledge.
 .TP
 .B ki repo [repo-options] trade routes list [--incomplete] [--format text|json]
 List selected local typed routes with their registered-estate state. With a
@@ -1059,41 +1052,40 @@ layout values. Text remains the default renderer. Interactive visualisation is
 owned by Knowledge Islands Observatory rather than this command.
 .TP
 .B ki repo [repo-options] trade routes check [repository] [--direction export|import] [--kind work|knowledge]
-Check declared routes by kind. An export awaiting local receiver registration,
-receiver participation, or a reciprocal import awaits receiver activation; the
-equivalent import awaits sender activation.
+Check the routes the territory Capital policy grants this repository. A route
+is active when its peer is registered once, declares \fBki-trades\fR, and
+resolves the same Capital; otherwise an export awaits the receiver and an
+import awaits the sender.
 .TP
-.B ki repo [repo-options] trade subtypes add <subtype> --description <text>
-Define one lower-case receiver-owned knowledge subtype in the current
-repository. The description records the receiver's meaning for the subtype.
+.B ki repo [repo-options] trade policy show
+Show the trade policy of the selected repository's territory Capital: its
+channels, standing grants, and knowledge subtype vocabulary. The policy is
+resolved through the repository's declared \fB[skills.ki-repo].capital\fR; an
+unregistered Capital fails with
+\fBterritory policy lives in <url>, not available here\fR.
 .TP
-.B ki repo [repo-options] trade subtypes list
-List receiver-owned knowledge subtype definitions in the current repository.
+.B ki repo [repo-options] trade policy check
+Sweep the selected repository's territory through the local registry. Each
+listed member is reported conforming, warning (declares \fBki-trades\fR but
+no channel names it), failing (registered twice, invalid, declaring another
+Capital, or named by a channel without declaring \fBki-trades\fR), or
+unverifiable (not checked out here). A registered repository that claims the
+Capital without being listed also fails. Any failure exits 1 after rendering.
 .TP
-.B ki repo [repo-options] trade subtypes remove <subtype>
-Remove one receiver-owned subtype only when no local standing import still
-names it.
-.TP
-.B ki repo [repo-options] trade standing add <repository> --direction export|import --subtype <subtype>
-Declare one local standing knowledge-intake direction layered on an existing
-ordinary knowledge route. An import subtype must be defined by the local
-receiver. The declaration remains inactive until the peer publishes the exact
-reciprocal direction and the receiver-owned definition is available.
-.TP
-.B ki repo [repo-options] trade standing remove <repository> --direction export|import --subtype <subtype>
-Remove only the current repository's standing declaration. Historical
-committed provenance remains local evidence, but the removed declaration no
-longer authorises new captures.
+.B ki repo [repo-options] trade policy compare --baseline <path>
+Compare the active directed routes of a saved
+.B ki/trade-routes/v1
+report with the routes the current registry and Capital policies make active,
+listing lost and newly granted routes. A lost route exits 1 after rendering.
 .TP
 .B ki repo [repo-options] trade standing list [--incomplete]
-List local standing declarations and report whether each exact subtype
-relationship is active, awaiting ordinary route activation, awaiting
-reciprocity, ambiguous, or unknown to its receiver. With
+List the standing grants the territory Capital policy gives this repository.
+A grant is active exactly when its ordinary knowledge route is active. With
 .BR --incomplete ,
-show only declarations that are not active.
+show only grants that are not active.
 .TP
 .B ki repo [repo-options] trade standing check [repository] [--direction export|import] [--subtype <subtype>]
-Check all local standing declarations or select an exact repository,
+Check all Capital-granted standing grants or select one repository,
 direction, and subtype.
 .TP
 .B ki repo [repo-options] trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>

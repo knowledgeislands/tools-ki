@@ -1,8 +1,7 @@
 import { Command } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { grammarError } from '../../core/errors.ts'
-import { addStandingRoute, removeStandingRoute } from '../../core/trade/configuration-mutations.ts'
-import { localRegisteredConfiguration, localRegisteredRepository } from '../../core/trade/index.ts'
+import { localRegisteredConfiguration } from '../../core/trade/index.ts'
 import {
   captureStandingIntake,
   inspectStandingRoutes,
@@ -56,49 +55,7 @@ const renderStandingRoutes = (routes: readonly StandingRouteInspection[], title:
 
 export const createTradeStandingCommand = (context: KiContext, selection: TradeSelection): Command =>
   new Command('standing')
-    .description('maintain exact standing knowledge-intake grants')
-    .addCommand(
-      new Command('add')
-        .description('declare one local standing knowledge-intake grant')
-        .argument('<repository>', 'canonical peer HTTPS GitHub repository')
-        .requiredOption('--direction <export|import>', 'whether this repository exports or imports the subtype')
-        .requiredOption('--subtype <subtype>', 'exact receiver-owned knowledge subtype')
-        .action(async (peer: string, options: StandingSelectionOptions) => {
-          const direction = routeDirection(options.direction)
-          const name = subtype(options.subtype)
-          const target = repository(peer, 'standing route repository')
-          const result = await addStandingRoute(
-            (await localRegisteredRepository(await selection.one())).declaration,
-            target,
-            direction,
-            name
-          )
-          context.stdout.write(
-            `ki repo trade standing add: ${direction} knowledge ${name} ${result.repository} -> ${target}\n`
-          )
-        })
-    )
-    .addCommand(
-      new Command('remove')
-        .description('remove one local standing knowledge-intake grant')
-        .argument('<repository>', 'canonical peer HTTPS GitHub repository')
-        .requiredOption('--direction <export|import>', 'whether this repository exports or imports the subtype')
-        .requiredOption('--subtype <subtype>', 'exact receiver-owned knowledge subtype')
-        .action(async (peer: string, options: StandingSelectionOptions) => {
-          const direction = routeDirection(options.direction)
-          const name = subtype(options.subtype)
-          const target = repository(peer, 'standing route repository')
-          const result = await removeStandingRoute(
-            (await localRegisteredConfiguration(await selection.one())).repository.declaration,
-            target,
-            direction,
-            name
-          )
-          context.stdout.write(
-            `ki repo trade standing remove: ${direction} knowledge ${name} ${result.repository} -> ${target}\n`
-          )
-        })
-    )
+    .description('inspect and capture standing knowledge-intake grants from the territory Capital policy')
     .addCommand(
       new Command('list')
         .description('list local standing grants and their activation state')
@@ -114,11 +71,12 @@ export const createTradeStandingCommand = (context: KiContext, selection: TradeS
         .description('check exact standing knowledge-intake activation')
         .argument('[repository]', 'canonical peer HTTPS GitHub repository')
         .option('--direction <export|import>', 'restrict to one standing direction')
-        .option('--subtype <subtype>', 'restrict to one receiver-owned subtype')
+        .option('--subtype <subtype>', 'restrict to one subtype defined by the Capital policy')
         .action(async (peer: string | undefined, options: StandingSelectionOptions) => {
           const target = peer ? repository(peer, 'standing route repository') : undefined
           const routes = await selectedStandingRoutes(selection, target, options)
-          if (target && !routes.length) throw grammarError(`standing route ${target} is not declared locally`)
+          if (target && !routes.length)
+            throw grammarError(`standing route ${target} is not granted by the territory policy`)
           context.stdout.write(`${renderStandingRoutes(routes, 'KI TRADE STANDING CHECK')}\n`)
         })
     )

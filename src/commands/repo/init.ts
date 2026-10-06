@@ -23,6 +23,7 @@ export const createRepoInitCommand = (
     .option('--description <description>', 'repository description')
     .option('--repo-code <code>', 'stable uppercase repository identifier')
     .option('--repository <url>', 'canonical HTTPS GitHub repository identity')
+    .option('--capital <url>', 'canonical HTTPS GitHub identity of the territory Capital (a Capital names itself)')
     .option(
       '--runtime <runtime>',
       'supported runtime: claude-code, claude-desktop, or chatgpt-codex',
@@ -38,6 +39,7 @@ export const createRepoInitCommand = (
           description?: string
           repoCode?: string
           repository: string
+          capital?: string
           runtime: readonly string[]
           visibility?: string
         }
@@ -50,6 +52,7 @@ export const createRepoInitCommand = (
           description: options.description ?? '',
           repoCode: options.repoCode ?? '',
           repository: options.repository,
+          capital: options.capital ?? '',
           supportedRuntimes: options.runtime,
           visibility: options.visibility ?? ''
         })

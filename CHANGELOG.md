@@ -71,7 +71,7 @@ This baseline describes the `v0.6.1` release. Domain imports and extracted type 
 
 #### Repository management
 
-- `ki repo init`
+- `ki repo init --capital <https-url>`
 - `ki repo open --target <zed|vscode|delta> [--stores|--no-stores]`
 - `ki repo store list [--format <text|json>]`
 - `ki repo store scan`
@@ -118,12 +118,11 @@ This baseline describes the `v0.6.1` release. Domain imports and extracted type 
 
 #### Trades
 
-- `ki repo trade routes add`
-- `ki repo trade routes remove`
 - `ki repo trade routes list [--incomplete] [--format text|json]` (`--estate` for an aggregate)
 - `ki repo trade routes check`
-- `ki repo trade subtypes add|list|remove`
-- `ki repo trade standing add|list|check|remove`
+- `ki repo trade policy show|check`
+- `ki repo trade policy compare --baseline <path>`
+- `ki repo trade standing list|check`
 - `ki repo trade standing capture`
 - `ki repo trade prepare`
 - `ki repo trade observe`
@@ -183,7 +182,8 @@ This baseline describes the `v0.6.1` release. Domain imports and extracted type 
 - `man/ki.commands.json` publishes the generated `ki/commands/v1` command and description inventory, reconciled against the manual and registered command tree.
 - `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.
 - `ki repo trade` is the sole trade command tree. Its parent `--repo`, `--agora`, and `--estate` selectors govern local and aggregate views; mutations require one registered repository. `ki repo trade routes list` is a framed local route inventory, while `ki repo --estate trade routes list` is a paired registered-estate table. Aggregate JSON uses the versioned, path-free `ki/trade-routes/v1` contract so applications can consume canonical route evidence without inheriting local registry topology or renderer-specific weights. The interactive D3 route map now belongs to `apps-observatory`; the retired `--html` and redundant `--table` flags are not retained as aliases.
-- Receiver-owned knowledge subtype commands, exact two-sided standing import/export grants, active/incomplete inspection, and receiver-local `STI-*` capture with full source-commit and path verification. Standing intake is knowledge-only, adds no peer-write or roadmap authority, and leaves ordinary itemized trades as the fallback.
+- Trades are governed by the territory Capital. Every `.ki.toml` names its Capital in `[skills.ki-repo].capital`; the Capital declares its members in `[skills.ki-repo.territory]` and the only routes, standing grants and knowledge subtypes in `[skills.ki-trades.territory]`. Member `[skills.ki-trades].routes` and `.subtypes` are retired and rejected, `routes add|remove`, `standing add|remove` and `subtypes` are removed, and an unavailable Capital fails closed with `territory policy lives in <capital>, not available here`. `ki repo trade policy check` classifies members and `ki repo trade policy compare` checks active routes against a saved `ki/trade-routes/v1` report. The JSON contract is unchanged.
+- Exact standing grants from the Capital policy, active/incomplete inspection, and receiver-local `STI-*` capture with full source-commit and path verification. Standing intake is knowledge-only, adds no peer-write or roadmap authority, and leaves ordinary itemized trades as the fallback.
 - Trade kinds, observations, report statuses, diagnostics, and repository entities use a bounded named presentation registry. Layout punctuation remains local to each renderer, while terminal knowledge consistently renders as `ⓘ` and HTML uses the matching accessible Lucide Book Open mark.
 - `ki repo trade prepare` creates a mutable local export once this repository declares the route; the receiver may observe it before `ki repo trade submit` freezes it, and `ki repo trade abandon --yes` removes it while it remains mutable. Receiver activation remains reciprocal.
 - Trade pairing compares the payload the sender authored — its field values as parsed and its prose — rather than raw bytes, so a receiver that formats its own Markdown does not read as having tampered with a record.

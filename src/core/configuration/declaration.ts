@@ -37,6 +37,7 @@ export interface RepositoryInitialisation {
   readonly supportedRuntimes: readonly string[]
   readonly visibility: string
   readonly repository: string
+  readonly capital: string
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -53,6 +54,7 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
   const repoCode = initialisationField(initialisation.repoCode, 'repo-code')
   const visibility = initialisationField(initialisation.visibility, 'visibility')
   const repository = initialisationField(initialisation.repository, 'repository')
+  const capital = initialisationField(initialisation.capital, 'capital')
   if (!/^[A-Z0-9][A-Z0-9-]{1,23}$/.test(repoCode))
     throw new KiError('ki repo init --repo-code must be a stable uppercase identifier', 2)
   if (!initialisation.supportedRuntimes.length) throw new KiError('ki repo init requires at least one --runtime', 2)
@@ -66,6 +68,18 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
     throw new KiError('ki repo init --visibility must be public or private', 2)
   if (!canonicalRepositoryIdentity(repository))
     throw new KiError('ki repo init --repository must be a canonical HTTPS GitHub repository', 2)
+  if (!canonicalRepositoryIdentity(capital))
+    throw new KiError('ki repo init --capital must be a canonical HTTPS GitHub repository', 2)
+  // A Capital names itself and must list its territory's members, starting with itself.
+  const territory =
+    capital === repository
+      ? [
+          '',
+          '[skills.ki-repo.territory]',
+          `name = ${JSON.stringify(title)}`,
+          `members = [${JSON.stringify(repository)}]`
+        ]
+      : []
   return [
     '[repo]',
     `harnesses = [${JSON.stringify(DEFAULT_HARNESS)}]`,
@@ -77,10 +91,12 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
     'primary_shape = "ki-repo-project"',
     `repository = ${JSON.stringify(repository)}`,
     `title = ${JSON.stringify(title)}`,
+    `capital = ${JSON.stringify(capital)}`,
     `description = ${JSON.stringify(description)}`,
     `repo_code = ${JSON.stringify(repoCode)}`,
     `supported_runtimes = [${initialisation.supportedRuntimes.map((runtime) => JSON.stringify(runtime)).join(', ')}]`,
     `visibility = ${JSON.stringify(visibility)}`,
+    ...territory,
     ''
   ].join('\n')
 }

@@ -2,20 +2,14 @@ import { randomUUID } from 'node:crypto'
 import { lstat, readFile, writeFile } from 'node:fs/promises'
 import { isAbsolute, relative, resolve, sep } from 'node:path'
 import type { RouteDirection, TradeConfiguration } from './configuration.ts'
-import { inspectRoutes } from './estate.ts'
+import { inspectRoutes, type RouteState } from './estate.ts'
 import type { ActiveRegisteredRepository, TradeContext } from './model.ts'
 import { tradeError } from './model.ts'
 
 const sourceReferenceExpression = /^([0-9a-f]{40}):([^#\s]+)#([^\s]+)$/u
 const captureExpression = /^(.+\.md)#([^#\s]+)$/u
 
-export type StandingRouteState =
-  | 'active'
-  | 'awaiting-receiver'
-  | 'awaiting-sender'
-  | 'ambiguous-repository'
-  | 'awaiting-reciprocal'
-  | 'unknown-subtype'
+export type StandingRouteState = RouteState
 
 export interface StandingRouteInspection {
   readonly repository: string
@@ -25,6 +19,11 @@ export interface StandingRouteInspection {
   readonly peer?: ActiveRegisteredRepository
 }
 
+/**
+ * Standing grants come from the same Capital policy as the ordinary routes, which validates that
+ * every grant names a defined subtype over a knowledge channel; a grant is therefore active exactly
+ * when its ordinary knowledge route is.
+ */
 export const inspectStandingRoutes = async (
   context: TradeContext,
   local: TradeConfiguration
@@ -35,28 +34,15 @@ export const inspectStandingRoutes = async (
       Object.entries(direction === 'export' ? local.standingExports : local.standingImports).flatMap(
         ([repository, subtypes]) =>
           subtypes.map((subtype) => {
-            // Parsed standing declarations always carry the matching ordinary knowledge route.
             const route = ordinary.find(
               (candidate) =>
                 candidate.repository === repository &&
                 candidate.direction === direction &&
                 candidate.kind === 'knowledge'
             ) as (typeof ordinary)[number]
-            if (route.state !== 'active') return { repository, direction, subtype, state: route.state }
-            const peer = route.peer as ActiveRegisteredRepository
-            if (direction === 'export' && !peer.configuration.knowledgeSubtypes[subtype])
-              return { repository, direction, subtype, state: 'unknown-subtype' as const, peer }
-            const reciprocal =
-              direction === 'export'
-                ? peer.configuration.standingImports[local.repository]
-                : peer.configuration.standingExports[local.repository]
-            return {
-              repository,
-              direction,
-              subtype,
-              state: reciprocal?.includes(subtype) ? ('active' as const) : ('awaiting-reciprocal' as const),
-              peer
-            }
+            return route.state === 'active'
+              ? { repository, direction, subtype, state: route.state, peer: route.peer as ActiveRegisteredRepository }
+              : { repository, direction, subtype, state: route.state }
           })
       )
     )
@@ -74,13 +60,14 @@ const requireActiveStandingImport = async (
   source: string,
   subtype: string
 ): Promise<ActiveRegisteredRepository> => {
-  if (!local.knowledgeSubtypes[subtype]) throw tradeError(`knowledge subtype ${subtype} is not defined by the receiver`)
+  if (!local.knowledgeSubtypes[subtype])
+    throw tradeError(`knowledge subtype ${subtype} is not defined by the territory policy`)
   const route = (await inspectStandingRoutes(context, local)).find(
     (candidate) => candidate.repository === source && candidate.direction === 'import' && candidate.subtype === subtype
   )
   if (route?.state !== 'active')
     throw tradeError(
-      `standing import knowledge subtype ${subtype} from ${source} is ${route?.state?.replaceAll('-', ' ') ?? 'not declared locally'}`
+      `standing import knowledge subtype ${subtype} from ${source} is ${route?.state?.replaceAll('-', ' ') ?? 'not granted by the territory policy'}`
     )
   return route.peer as ActiveRegisteredRepository
 }
