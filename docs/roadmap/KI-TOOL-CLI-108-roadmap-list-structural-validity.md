@@ -20,7 +20,7 @@ updated_at: 2026-10-06T21:05:00Z
 
 ## Context
 
-Originating repository and item: `ki-agentic-harness` [KI-HARNESS-GOV-095](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/KI-HARNESS-GOV-095-align-roadmap-diagnostics.md), delivered in harness commit `91b82969`. Relationship: non-blocking; this record neither blocks nor is blocked by GOV-095, which is a follow-on handoff.
+Originating repository and item: `ki-agentic-harness` [KI-HARNESS-GOV-095](https://github.com/knowledgeislands/ki-agentic-harness/blob/fb69de8d8a734164fd1ff7dc84a886c2a509e095/docs/roadmap/KI-HARNESS-GOV-095-align-roadmap-diagnostics.md), delivered in harness commit `91b82969`. Relationship: non-blocking; this record neither blocks nor is blocked by GOV-095, which is a follow-on handoff.
 
 On 2026-09-25 Kit Principal exposed two inconsistent results. `ki repo audit --skill ki-repo-kb-streams` passed while `ki repo roadmap list` exited non-zero because one `Streams/Roadmap/` file lacked canonical frontmatter. After that file was migrated, `ki repo roadmap list` exited successfully while displaying two active records with the same `KIT-007` identifier and no duplicate-identity diagnostic.
 
