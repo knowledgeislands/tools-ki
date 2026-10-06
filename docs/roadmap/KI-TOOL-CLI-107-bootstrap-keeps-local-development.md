@@ -4,12 +4,12 @@ area: CLI
 title: Bootstrap keeps local development
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 2bdf302840910ec90d332aabebf77f0fc9ea82cf
 created_at: 2026-10-06T19:00:00Z
-updated_at: 2026-10-06T19:36:00Z
+updated_at: 2026-10-06T20:07:54Z
 ---
 
 # Bootstrap keeps local development
@@ -118,6 +118,10 @@ A Fable review of the uncommitted diff confirmed the symlink replacement safety,
 ### Mini recap
 
 Bootstrap no longer silently leaves canonical local mode: it keeps an active binding, and when one cannot be kept it warns on standard error, restores the archive and re-points the configured canonical skills.
+
+## Done
+
+Accepted 2026-10-06 by Kris on the review packet above.
 
 ## Discussion
 
