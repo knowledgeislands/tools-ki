@@ -1,5 +1,6 @@
 export {
   enableHarnessDevelopment,
+  harnessDevelopmentBinding,
   harnessDevelopmentEnabled,
   installedHarnessSlot,
   isHarnessDevelopmentLinked

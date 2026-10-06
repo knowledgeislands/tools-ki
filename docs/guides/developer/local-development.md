@@ -52,6 +52,8 @@ The checkout and installed Harness root both use `.ki.toml` and must retain the 
 
 `off` restores selected Harnesses from their configured verified archives and reprojects their links, while retaining each remembered identity and checkout for the next `on`. `off <harness-id>` selects one remembered Harness; `off` without an ID selects all of them.
 
+`ki bootstrap` and `ki bootstrap --refresh` keep an active canonical local mode: they project the core user skills from the checkout and never replace it with the archive. When the canonical root link cannot be kept, because its checkout is missing, it targets a different checkout, or no source is remembered, bootstrap prints a `ki: warning:` line with the reason, restores the verified archive and re-points every configured canonical skill to it. Run `ki dev local on` once the checkout is back, or `ki dev local set` first when no source is remembered. A checkout that fails inspection stops bootstrap with an error and leaves local mode in place.
+
 Use `ki diag --full` to see every remembered source and whether its local mode is off or on; use `ki doctor` to identify missing, broken, or wrong-target managed links while mode is on, direct-CWD legacy `.ki-meta/` or `.ki/` directories, and invalid direct-CWD `.ki.toml` declarations.
 
 ## Command structure

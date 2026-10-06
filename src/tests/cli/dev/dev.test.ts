@@ -330,6 +330,41 @@ path = ${JSON.stringify(harnessPath)}
       expect(doctor.output).not.toContain('✗')
     })
 
+    test('restores the verified archive over a development link whose checkout is missing', async () => {
+      const box = await sandbox()
+      const skill = '---\nname: hnr-example\nki-depends-on: []\n---\n'
+      const installed = 'ki/harnesses/humansnotrobots/hnr-agentic-harness'
+      const checkout = 'dev/humansnotrobots/hnr-agentic-harness'
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await box.data.write(`${installed}/.ki.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
+      await box.data.write(`${installed}/skills/hnr-example/SKILL.md`, skill)
+      await Promise.all(['subagents', 'hooks'].map((payload) => box.data.mkdir(`${installed}/${payload}`)))
+      await box.root.write(`${checkout}/.ki.toml`, '[skills.ki-repo-harness]\nprefix = "hnr"\n')
+      await box.root.write(`${checkout}/skills/hnr-example/SKILL.md`, skill)
+      await Promise.all(['subagents', 'hooks'].map((payload) => box.root.mkdir(`${checkout}/${payload}`)))
+      const local = await realpath(`${box.root.path}/${checkout}`)
+      await box.run(`ki dev local set humansnotrobots/hnr-agentic-harness ${local}`)
+      expect((await box.run('ki dev local on humansnotrobots/hnr-agentic-harness')).exitCode).toBe(0)
+      const archive = makeHarnessArchive({ 'source/skills/hnr-example/SKILL.md': skill }, { harnessPrefix: 'hnr' })
+      const configuration = await box.config.read('ki/config.toml')
+      await box.config.write(
+        'ki/config.toml',
+        configuration.replace(
+          '[harnesses]\n',
+          `[harnesses]\nreleases = [{ id = "humansnotrobots/hnr-agentic-harness", url = "https://releases.example.test/hnr.tgz", sha256 = "${archive.sha256}" }]\n`
+        )
+      )
+      box.setFetcher(async () => new Response(archive.payload))
+      await rm(local, { recursive: true })
+
+      const off = await box.run('ki dev local off humansnotrobots/hnr-agentic-harness')
+
+      expect(off.exitCode).toBe(0)
+      expect(await box.data.isSymlink(installed)).toBe(false)
+      expect(await box.data.read(`${installed}/skills/hnr-example/SKILL.md`)).toBe(skill)
+    })
+
     test('attempts canonical restoration when its development destination is already absent', async () => {
       const box = await sandbox()
       const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')

@@ -3,6 +3,24 @@ import type { KiContext } from '../../context.ts'
 import { type BootstrapOperationEvent, bootstrapEnvironment } from '../../core/harness/index.ts'
 import { bootstrapPort } from './ports.ts'
 
+const developmentLoss = (event: Extract<BootstrapOperationEvent, { readonly kind: 'development-binding-lost' }>) => {
+  switch (event.reason) {
+    case 'checkout-missing':
+      return `its checkout ${event.target} is missing`
+    case 'source-mismatch':
+      return `its link targets ${event.target}, not the configured checkout ${event.configured}`
+    case 'source-unconfigured':
+      return `its link targets ${event.target}, but no local checkout is configured`
+  }
+}
+
+const developmentRecovery = (
+  event: Extract<BootstrapOperationEvent, { readonly kind: 'development-binding-lost' }>
+): string =>
+  event.reason === 'source-unconfigured'
+    ? `To resume, run ki dev local set ${event.harness} <checkout> and then ki dev local on ${event.harness}`
+    : `To resume, run ki dev local on ${event.harness} once its checkout is available`
+
 const renderBootstrapEvent = (event: BootstrapOperationEvent): string => {
   switch (event.kind) {
     case 'configuration-created':
@@ -13,6 +31,10 @@ const renderBootstrapEvent = (event: BootstrapOperationEvent): string => {
       // A sandbox cannot verify the pinned canonical archive needed by the fresh-install arm.
       /* v8 ignore next */
       return `canonical harness ${event.installed ? 'installed' : 'already installed'}\tarchive ${event.archiveSha256}\n`
+    case 'canonical-harness-local':
+      return `canonical harness kept in local development\t${event.path}\n`
+    case 'development-binding-lost':
+      return `ki: warning: leaving local development for ${event.harness}: ${developmentLoss(event)}; restoring the verified archive and re-pointing its configured skills. ${developmentRecovery(event)}\n`
     case 'configuration-refreshed':
       return `refreshed ki configuration: ${event.agents} agents, ${event.harnesses} harnesses, ${event.skills} skills\n`
     case 'repositories-migrated':
@@ -28,6 +50,6 @@ export const createBootstrapCommand = (context: KiContext): Command =>
     .option('--refresh', 'reconcile agents, harnesses, and skills from installed state')
     .action(async (options: { refresh?: boolean }) => {
       await bootstrapEnvironment(bootstrapPort(context), options, (event) =>
-        context.stdout.write(renderBootstrapEvent(event))
+        (event.kind === 'development-binding-lost' ? context.stderr : context.stdout).write(renderBootstrapEvent(event))
       )
     })

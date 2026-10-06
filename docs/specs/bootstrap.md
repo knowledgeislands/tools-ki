@@ -34,6 +34,18 @@ _Verify:_ `src/tests/cli/bootstrap/bootstrap.test.ts` — `refuses an installed 
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+## Local development
+
+### BOOT-004 — Kept local development binding
+
+When the canonical Harness root is linked to its configured local checkout, `ki bootstrap` and `ki bootstrap --refresh` MUST keep that binding and project the core user skills from the checkout, and MUST NOT restore the verified archive. When a canonical root link cannot be kept, because its checkout is missing, it targets another checkout than the configured one, or no local checkout is configured, bootstrap MUST warn on standard error, naming the reason and the recovery, before restoring the verified archive, and MUST then re-point every configured canonical skill the archive provides. An active checkout that fails inspection MUST fail bootstrap without changing the binding.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/bootstrap/bootstrap.test.ts` — `keeps an active local development binding without contacting the archive`, `rolls back local skill projections when refresh fails after linking them`, `warns loudly before restoring the archive when a local development binding cannot be kept` and `fails closed without leaving local development when the active checkout is incomplete`; `src/tests/cli/dev/dev.test.ts` — `restores the verified archive over a development link whose checkout is missing`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

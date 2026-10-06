@@ -1,10 +1,9 @@
-import { readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import {
   configureBootstrapAgents,
   inspectUserConfiguration,
   installBootstrapSkills,
   installedBootstrapSkillSources,
+  installedHarnessSkillSources,
   localBootstrapHarness,
   migrateLegacyRepositoryRegistry,
   refreshUserConfiguration,
@@ -12,7 +11,7 @@ import {
 } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { type BootstrapOperationPort, canonicalHarnessIdentifier } from '../../core/harness/index.ts'
-import { harnessDevelopmentEnabled, restoreCanonicalHarness } from '../../core/storage/index.ts'
+import { harnessDevelopmentBinding, restoreCanonicalHarness } from '../../core/storage/index.ts'
 
 type BootstrapAgent = Awaited<ReturnType<typeof configureBootstrapAgents>>['agents'][number]
 type BootstrapSkill = Awaited<ReturnType<typeof installedBootstrapSkillSources>>[number]
@@ -21,13 +20,11 @@ type BootstrapProjection = Awaited<ReturnType<typeof installBootstrapSkills>>[nu
 export const bootstrapPort = (
   context: KiContext
 ): BootstrapOperationPort<BootstrapAgent, BootstrapSkill, BootstrapProjection> => {
-  const configurationPath = join(context.paths.config, 'config.toml')
   return {
     canonicalHarnessIdentifier,
     inspectConfiguration: () => inspectUserConfiguration(context.paths.config),
-    readConfiguration: () => readFile(configurationPath, 'utf8'),
-    restoreConfiguration: (contents) => writeFile(configurationPath, contents, 'utf8'),
-    developmentEnabled: (local) => harnessDevelopmentEnabled(context.paths.data, local.harness, local.path),
+    developmentBinding: (local) =>
+      harnessDevelopmentBinding(context.paths.data, canonicalHarnessIdentifier, local?.path),
     inspectLocalHarness: (local) => localBootstrapHarness(local.path),
     migrateLegacyRepositories: () =>
       migrateLegacyRepositoryRegistry(context.paths.config, context.paths.state, context.runner, context.environment),
@@ -37,8 +34,10 @@ export const bootstrapPort = (
         configurationDirectory: context.paths.config,
         ...options
       }),
-    installedSkills: (options) =>
-      installedBootstrapSkillSources(context.paths.data, canonicalHarnessIdentifier, options),
+    installedSkills: () => installedBootstrapSkillSources(context.paths.data, canonicalHarnessIdentifier),
+    // Only a lost binding reads the full inventory, after restoring the pinned canonical archive that no sandbox can verify.
+    /* v8 ignore next */
+    installedHarnessSkills: () => installedHarnessSkillSources(context.paths.data, canonicalHarnessIdentifier),
     refreshConfiguration: (agents, locals, options) =>
       refreshUserConfiguration(context.paths.config, context.paths.data, agents, locals, options),
     setConfiguredSkills: (skills) => setConfiguredUserSkills(context.paths.config, context.homeDirectory, skills),

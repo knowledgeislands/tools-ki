@@ -19,6 +19,12 @@ export interface BootstrapInstallationResult {
   readonly archiveSha256: string
 }
 
+export type BootstrapDevelopmentLoss = 'checkout-missing' | 'source-mismatch' | 'source-unconfigured'
+
+export type BootstrapDevelopmentBinding =
+  | { readonly state: 'archive' | 'active' }
+  | { readonly state: 'unavailable'; readonly reason: BootstrapDevelopmentLoss; readonly target: string }
+
 export interface BootstrapProjectionView {
   readonly agentId: string
   readonly skill: string
@@ -28,9 +34,10 @@ export interface BootstrapProjectionView {
 export interface BootstrapOperationPort<Agent, Skill, Projection> {
   readonly canonicalHarnessIdentifier: string
   readonly inspectConfiguration: () => Promise<BootstrapConfigurationInspection>
-  readonly readConfiguration: () => Promise<string>
-  readonly restoreConfiguration: (contents: string) => Promise<void>
-  readonly developmentEnabled: (local: { readonly harness: string; readonly path: string }) => Promise<boolean>
+  readonly developmentBinding: (local?: {
+    readonly harness: string
+    readonly path: string
+  }) => Promise<BootstrapDevelopmentBinding>
   readonly inspectLocalHarness: (local: {
     readonly harness: string
     readonly path: string
@@ -40,7 +47,8 @@ export interface BootstrapOperationPort<Agent, Skill, Projection> {
     readonly refresh?: boolean
     readonly dropLegacyRepositories: boolean
   }) => Promise<BootstrapAgentConfiguration<Agent>>
-  readonly installedSkills: (options?: { readonly preserveHarnessRoot?: boolean }) => Promise<readonly Skill[]>
+  readonly installedSkills: () => Promise<readonly Skill[]>
+  readonly installedHarnessSkills: () => Promise<readonly Skill[]>
   readonly refreshConfiguration: (
     agents: readonly Agent[],
     locals: readonly { readonly harness: string; readonly path: string }[],
@@ -62,6 +70,14 @@ export type BootstrapOperationEvent =
   | { readonly kind: 'configuration-created'; readonly agentIds: readonly string[] }
   | { readonly kind: 'agents-refreshed'; readonly agentIds: readonly string[] }
   | ({ readonly kind: 'canonical-harness' } & BootstrapInstallationResult)
+  | { readonly kind: 'canonical-harness-local'; readonly path: string }
+  | {
+      readonly kind: 'development-binding-lost'
+      readonly harness: string
+      readonly reason: BootstrapDevelopmentLoss
+      readonly target: string
+      readonly configured?: string
+    }
   | ({ readonly kind: 'configuration-refreshed'; readonly agents: number } & BootstrapRefreshResult)
   | { readonly kind: 'repositories-migrated'; readonly repositories: number }
   | ({ readonly kind: 'skill-projection' } & BootstrapProjectionView)

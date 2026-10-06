@@ -1,4 +1,4 @@
-import { mkdir, realpath, rm, symlink, unlink } from 'node:fs/promises'
+import { lstat, mkdir, readlink, realpath, rm, symlink, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
@@ -391,7 +391,50 @@ ids = ["claude-code"]
     })
   })
 
-  test('keeps an active local projection coherent when archive bootstrap fails', async () => {
+  test('keeps an active local development binding without contacting the archive', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.setupAgentHome('chatgpt-codex')
+    await box.run('ki bootstrap')
+    await box.root.write(
+      'dev/knowledgeislands/ki-agentic-harness/skills/governance/ki-authoring/SKILL.md',
+      '---\nname: ki-authoring\nki-depends-on: []\n---\n'
+    )
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
+    await box.run('ki dev local on')
+    expect((await box.run('ki skill add ki-authoring')).exitCode).toBe(0)
+    box.setFetcher(async () => {
+      throw new Error('offline')
+    })
+
+    const bootstrapped = await box.run('ki bootstrap')
+    const refreshed = await box.run('ki bootstrap --refresh')
+    const doctor = await box.run('ki doctor')
+
+    expect(bootstrapped.exitCode).toBe(0)
+    expect(bootstrapped.output).toContain(`canonical harness kept in local development\t${harnessPath}\n`)
+    expect(bootstrapped.output).not.toContain('warning')
+    expect(refreshed.exitCode).toBe(0)
+    expect(refreshed.output).toContain(`canonical harness kept in local development\t${harnessPath}\n`)
+    expect(refreshed.output).toContain('ki-bootstrap for chatgpt-codex already installed')
+    expect(await realpath(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`)).toBe(harnessPath)
+    expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness')).toBe(true)
+    for (const home of ['.claude', '.agents'])
+      expect(await realpath(`${box.home.path}/${home}/skills/ki-bootstrap`)).toBe(
+        `${harnessPath}/skills/keystone/ki-bootstrap`
+      )
+    for (const home of ['.claude', '.agents'])
+      expect(await realpath(`${box.home.path}/${home}/skills/ki-authoring`)).toBe(
+        `${harnessPath}/skills/governance/ki-authoring`
+      )
+    expect(await box.config.read('ki/config.toml')).toContain('[skills.ki-authoring]')
+    expect(doctor.exitCode).toBe(0)
+    expect(doctor.output).toContain(`✓ Local development knowledgeislands/ki-agentic-harness: active ${harnessPath}`)
+    expect(doctor.output).not.toContain('✗')
+  })
+
+  test('rolls back local skill projections when refresh fails after linking them', async () => {
     const box = await sandbox()
     const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await box.setupAgentHome('claude-code')
@@ -399,25 +442,95 @@ ids = ["claude-code"]
     await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     await box.run('ki dev local on')
     const configuration = await box.config.read('ki/config.toml')
-    await box.setupAgentHome('chatgpt-codex')
-    box.setFetcher(async () => {
-      throw new Error('offline')
-    })
+    const skills = `${box.home.path}/.claude/skills`
+    await unlink(`${skills}/ki-recap`)
+    await unlink(`${skills}/ki-plan`)
+    await symlink(`${box.root.path}/elsewhere`, `${skills}/ki-plan`, 'dir')
+    await box.data.write('ki/harnesses/stray', '')
 
-    const bootstrapped = await box.run('ki bootstrap --refresh')
-    const doctor = await box.run('ki doctor')
+    const refreshed = await box.run('ki bootstrap --refresh')
 
-    expect(bootstrapped.exitCode).toBe(1)
-    expect(bootstrapped.output).toContain('could not download configured harness knowledgeislands/ki-agentic-harness')
-    expect(bootstrapped.output).not.toContain('skill points elsewhere')
+    expect(refreshed.exitCode).toBe(1)
+    expect(refreshed.output).toContain('installed harnesses directory contains an unsafe owner entry stray')
     expect(await box.config.read('ki/config.toml')).toBe(configuration)
     expect(await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness')).toBe(true)
-    expect(await realpath(`${box.home.path}/.claude/skills/ki-bootstrap`)).toBe(
-      `${harnessPath}/skills/keystone/ki-bootstrap`
+    expect(await lstat(`${skills}/ki-recap`).catch(() => undefined)).toBeUndefined()
+    expect(await readlink(`${skills}/ki-plan`)).toBe(`${box.root.path}/elsewhere`)
+    expect(await realpath(`${skills}/ki-bootstrap`)).toBe(`${harnessPath}/skills/keystone/ki-bootstrap`)
+  })
+
+  test('warns loudly before restoring the archive when a local development binding cannot be kept', async () => {
+    const link = 'ki/harnesses/knowledgeislands/ki-agentic-harness'
+    const prepare = async (box: Awaited<ReturnType<typeof sandbox>>, harnessPath: string) => {
+      await box.setupAgentHome('claude-code')
+      await box.run('ki bootstrap')
+      await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
+      await box.run('ki dev local on')
+      box.setFetcher(async () => {
+        throw new Error('offline')
+      })
+    }
+    const restoring = 'restoring the verified archive and re-pointing its configured skills.'
+    const advice = `${restoring} To resume, run ki dev local on knowledgeislands/ki-agentic-harness once its checkout is available\n`
+
+    const missing = await sandbox()
+    const missingPath = await missing.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await prepare(missing, missingPath)
+    await rm(missingPath, { recursive: true })
+    const missingResult = await missing.run('ki bootstrap')
+
+    const mismatched = await sandbox()
+    const configured = await mismatched.setupLocalCanonicalHarness('dev/current/knowledgeislands/ki-agentic-harness')
+    const other = await mismatched.setupLocalCanonicalHarness('dev/other/knowledgeislands/ki-agentic-harness')
+    await prepare(mismatched, configured)
+    await unlink(`${mismatched.data.path}/${link}`)
+    await symlink(other, `${mismatched.data.path}/${link}`, 'dir')
+    const mismatchedResult = await mismatched.run('ki bootstrap')
+
+    const unconfigured = await sandbox()
+    const unconfiguredPath = await unconfigured.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await prepare(unconfigured, unconfiguredPath)
+    const configuration = await unconfigured.config.read('ki/config.toml')
+    await unconfigured.config.write(
+      'ki/config.toml',
+      configuration.replace(
+        `[locals."knowledgeislands/ki-agentic-harness"]\npath = ${JSON.stringify(unconfiguredPath)}\n`,
+        ''
+      )
     )
-    expect(doctor.exitCode).toBe(0)
-    expect(doctor.output).toContain(`✓ Local development knowledgeislands/ki-agentic-harness: active ${harnessPath}`)
-    expect(doctor.output).not.toContain('✗')
+    const unconfiguredResult = await unconfigured.run('ki bootstrap')
+
+    const warning = 'ki: warning: leaving local development for knowledgeislands/ki-agentic-harness:'
+    expect(missingResult.exitCode).toBe(1)
+    expect(missingResult.stderr).toContain(`${warning} its checkout ${missingPath} is missing; ${advice}`)
+    expect(missingResult.stdout).not.toContain('warning')
+    expect(missingResult.output).toContain('could not download configured harness knowledgeislands/ki-agentic-harness')
+    expect(mismatchedResult.exitCode).toBe(1)
+    expect(mismatchedResult.stderr).toContain(
+      `${warning} its link targets ${other}, not the configured checkout ${configured}; ${advice}`
+    )
+    expect(await mismatched.data.isSymlink(link)).toBe(true)
+    expect(unconfiguredResult.exitCode).toBe(1)
+    expect(unconfiguredResult.stderr).toContain(
+      `${warning} its link targets ${unconfiguredPath}, but no local checkout is configured; ${restoring} To resume, run ki dev local set knowledgeislands/ki-agentic-harness <checkout> and then ki dev local on knowledgeislands/ki-agentic-harness\n`
+    )
+    expect(await unconfigured.data.isSymlink(link)).toBe(true)
+  })
+
+  test('fails closed without leaving local development when the active checkout is incomplete', async () => {
+    const box = await sandbox()
+    const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+    await box.setupAgentHome('claude-code')
+    await box.run('ki bootstrap')
+    await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
+    await box.run('ki dev local on')
+    await rm(`${harnessPath}/skills/keystone/ki-bootstrap`, { recursive: true })
+
+    const bootstrapped = await box.run('ki bootstrap')
+
+    expect(bootstrapped.exitCode).toBe(1)
+    expect(bootstrapped.output).toContain('does not provide ki-bootstrap')
+    expect(await realpath(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`)).toBe(harnessPath)
   })
 
   test('refresh ignores a dangling managed link and a non-link skill entry', async () => {

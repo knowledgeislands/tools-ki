@@ -15,9 +15,9 @@ import {
 } from '../harness/inspection.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
-import { harnessDevelopmentProjection } from './harness-development.ts'
 import {
   ensureDirectory,
+  harnessDirectory,
   harnessIdentifier,
   harnessMetadataFile,
   payloadRoots,
@@ -79,9 +79,12 @@ export const installHarness = async (
   const destination = join(ownerDirectory, name)
   const existing = await lstat(destination).catch(() => undefined)
   if (existing) {
-    requireCapabilities(await readInstalledHarness(dataDirectory, identifier), options)
+    const developmentLink = existing.isSymbolicLink()
+    // A replaced development link may no longer resolve, so only the verified candidate's inventory is required.
+    if (!options.replace || !developmentLink)
+      requireCapabilities(await readInstalledHarness(dataDirectory, identifier), options)
     if (!options.replace) return { installed: false, replaced: false, archiveSha256: release.sha256 }
-    if ((await harnessDevelopmentProjection(dataDirectory, identifier)) && !options.allowDevelopmentReplace)
+    if (developmentLink && !options.allowDevelopmentReplace)
       throw new KiError(`harness ${identifier} is development-linked; run ki dev local off before replacing it`, 1)
   }
 
@@ -95,8 +98,9 @@ export const installHarness = async (
     await extractArchive(payload, staging)
     const candidate = await inspectInstalledHarnessRoot(staging, identifier)
     requireCapabilities(candidate, options)
-    const installed = await discoverInstalledHarnesses(dataDirectory)
-    requireUniqueHarnessPrefixes([...installed.filter((harness) => harness.id !== identifier), candidate])
+    // The slot being replaced may be a development link whose checkout is gone, so it is not read.
+    const installed = await discoverInstalledHarnesses(dataDirectory, { except: identifier })
+    requireUniqueHarnessPrefixes([...installed, candidate])
     if (!existing) {
       await artifact.transition('retired')
       await rename(staging, destination)
@@ -135,7 +139,9 @@ export const restoreHarness = async (
   environment: Environment
 ): Promise<{ readonly installed: boolean; readonly archiveSha256: string }> =>
   installHarness(configurationDirectory, dataDirectory, stateDirectory, identifier, fetcher, runner, environment, {
-    replace: await harnessDevelopmentProjection(dataDirectory, identifier),
+    replace: Boolean(
+      (await lstat(harnessDirectory(dataDirectory, identifier)).catch(() => undefined))?.isSymbolicLink()
+    ),
     allowDevelopmentReplace: true,
     ...(identifier === canonicalHarnessIdentifier
       ? {

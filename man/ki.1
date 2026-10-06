@@ -451,6 +451,10 @@ configuration is reused without replacement. Pass
 .B --refresh
 to redetect every supported runtime and rebuild the user configuration's
 agents, installed harnesses, and KI-managed user skill links.
+When the canonical harness is in local development, bootstrap keeps that
+binding and installs the core user skills from the local checkout. If the
+binding cannot be kept, it prints a warning naming the reason before restoring
+the verified archive and re-pointing the configured canonical skills to it.
 During a refresh only, KI imports the retired
 \fB[repositories].paths\fR list into keyed records in
 \fB$XDG_STATE_HOME/ki/registry.toml\fR and removes that list from user

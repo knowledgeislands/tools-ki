@@ -36,6 +36,8 @@ Bootstrap detects the supported agent runtimes on this machine, writes the user 
 
 It refuses to complete against an installed canonical harness that is missing a required bootstrap skill, rather than leaving you with a half-activated environment. If that happens, the harness payload is the problem, not your configuration — reinstall it as described in the [capability lifecycle guide](capability-lifecycle.md).
 
+If you develop the canonical harness locally with `ki dev local on`, bootstrap keeps that local mode and links the core skills from your checkout; only `ki dev local off` returns to the verified archive. If the local mode cannot be kept, for example because the checkout has moved, bootstrap prints a `ki: warning:` line naming the reason before it restores the archive.
+
 Use `ki bootstrap --refresh` to redetect runtimes and rebuild the agent, harness, and skill-link inventory from installed state. Refresh preserves your registered local and repository settings. It is also the one-time migration path: it imports any retired configuration path list into the machine-local registry and removes the list from user configuration.
 
 Verify:

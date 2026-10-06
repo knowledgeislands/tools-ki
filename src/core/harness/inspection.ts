@@ -416,7 +416,10 @@ const installOrphan = (owner: string, entry: string, path: string): InstallOrpha
   return { kind: 'parked', owner, entry, path, ...(destination ? { destination } : {}) }
 }
 
-export const discoverInstalledHarnesses = async (dataDirectory: string): Promise<readonly InstalledHarness[]> => {
+export const discoverInstalledHarnesses = async (
+  dataDirectory: string,
+  options: { readonly except?: string } = {}
+): Promise<readonly InstalledHarness[]> => {
   const harnesses = join(dataDirectory, 'harnesses')
   const state = await lstat(harnesses).catch(() => undefined)
   if (!state) return []
@@ -438,7 +441,7 @@ export const discoverInstalledHarnesses = async (dataDirectory: string): Promise
           1
         )
       }
-      identifiers.push(`${owner.name}/${name.name}`)
+      if (`${owner.name}/${name.name}` !== options.except) identifiers.push(`${owner.name}/${name.name}`)
     }
   }
   const installed = await Promise.all(

@@ -29,28 +29,26 @@ interface BootstrapSkillLinkSnapshot {
 
 const bootstrapSkillSources = async (
   harness: { readonly root: string; readonly capabilities: readonly HarnessCapability[] },
-  description: string,
-  preserveHarnessRoot = false
+  description: string
 ): Promise<readonly ManagedUserSkill[]> =>
   Promise.all(
     minimumBootstrapUserSkills.map(async (name) => {
       const capability = harness.capabilities.find((candidate) => candidate.kind === 'skill' && candidate.name === name)
-      // Canonical restoration validates this exact inventory before this source resolver is reached.
-      /* v8 ignore next */
       if (!capability) throw new KiError(`${description} does not provide ${name}`, 1)
-      const source = join(harness.root, capability.source)
-      const physicalSource = await requiredPhysicalDirectory(source, `${description} ${name} skill`)
-      return { name, source: preserveHarnessRoot ? source : physicalSource }
+      const source = await requiredPhysicalDirectory(
+        join(harness.root, capability.source),
+        `${description} ${name} skill`
+      )
+      return { name, source }
     })
   )
 
 export const installedBootstrapSkillSources = async (
   dataDirectory: string,
-  identifier = canonicalHarnessIdentifier,
-  options: { readonly preserveHarnessRoot?: boolean } = {}
+  identifier = canonicalHarnessIdentifier
 ): Promise<readonly ManagedUserSkill[]> => {
   const harness = await readInstalledHarness(dataDirectory, identifier)
-  return bootstrapSkillSources(harness, `installed harness ${identifier}`, options.preserveHarnessRoot)
+  return bootstrapSkillSources(harness, `installed harness ${identifier}`)
 }
 
 export const localBootstrapHarness = async (

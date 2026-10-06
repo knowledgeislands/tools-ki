@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { lstat, readdir, realpath, rename, rm, symlink } from 'node:fs/promises'
+import { lstat, readdir, readlink, realpath, rename, rm, symlink } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { canonicalHarnessIdentifier, parkedPayloadEntry, readInstalledHarness } from '../harness/inspection.ts'
@@ -103,7 +103,7 @@ export const enableHarnessDevelopment = async (
   return harness
 }
 
-export const harnessDevelopmentProjection = async (dataDirectory: string, identifier: string): Promise<boolean> => {
+const harnessDevelopmentProjection = async (dataDirectory: string, identifier: string): Promise<boolean> => {
   const destination = harnessDirectory(dataDirectory, identifier)
   const state = await lstat(destination).catch(() => undefined)
   if (!state?.isSymbolicLink()) return false
@@ -138,4 +138,32 @@ export const harnessDevelopmentEnabled = async (
     )
   ])
   return Boolean(harness && harness === active)
+}
+
+export type HarnessDevelopmentBinding =
+  | { readonly state: 'archive' }
+  | { readonly state: 'active' }
+  | {
+      readonly state: 'unavailable'
+      readonly reason: 'checkout-missing' | 'source-mismatch' | 'source-unconfigured'
+      readonly target: string
+    }
+
+// Classify the active Harness root against its remembered local source: a physical or absent root
+// is archive-backed; a root link is a development binding that is either kept or cannot be kept.
+export const harnessDevelopmentBinding = async (
+  dataDirectory: string,
+  identifier: string,
+  local?: string
+): Promise<HarnessDevelopmentBinding> => {
+  const destination = harnessDirectory(dataDirectory, identifier)
+  const state = await lstat(destination).catch(() => undefined)
+  if (!state?.isSymbolicLink()) return { state: 'archive' }
+  const target = await readlink(destination)
+  if (!(await harnessDevelopmentProjection(dataDirectory, identifier)))
+    return { state: 'unavailable', reason: 'checkout-missing', target }
+  if (!local) return { state: 'unavailable', reason: 'source-unconfigured', target }
+  return (await harnessDevelopmentEnabled(dataDirectory, identifier, local))
+    ? { state: 'active' }
+    : { state: 'unavailable', reason: 'source-mismatch', target }
 }
