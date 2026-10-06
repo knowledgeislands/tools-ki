@@ -20,7 +20,7 @@ describe('[ki bootstrap]', () => {
     expect(bootstrapped).toEqual({
       exitCode: 0,
       output: `created KI agent configuration for chatgpt-codex
-canonical harness already installed\tarchive 51f7d1af276fb4e1933928d1abde4c558fa54656796d3cff1b6f1397dc35f838
+canonical harness already installed\tarchive 0e15b212401d57020d06c282112b790bd0e3344f90a76fa5f5f0df35b35bd1dd
 ki-bootstrap for chatgpt-codex installed
 ki-next for chatgpt-codex installed
 ki-plan for chatgpt-codex installed
@@ -32,7 +32,7 @@ ki-recap for chatgpt-codex installed
     })
     expect(repeated).toEqual({
       exitCode: 0,
-      output: `canonical harness already installed\tarchive 51f7d1af276fb4e1933928d1abde4c558fa54656796d3cff1b6f1397dc35f838
+      output: `canonical harness already installed\tarchive 0e15b212401d57020d06c282112b790bd0e3344f90a76fa5f5f0df35b35bd1dd
 ki-bootstrap for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
@@ -45,7 +45,7 @@ ki-recap for chatgpt-codex already installed
     expect(refreshed).toEqual({
       exitCode: 0,
       output: `refreshed KI agents: chatgpt-codex
-canonical harness already installed\tarchive 51f7d1af276fb4e1933928d1abde4c558fa54656796d3cff1b6f1397dc35f838
+canonical harness already installed\tarchive 0e15b212401d57020d06c282112b790bd0e3344f90a76fa5f5f0df35b35bd1dd
 refreshed ki configuration: 1 agents, 1 harnesses, 7 skills
 ki-bootstrap for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
