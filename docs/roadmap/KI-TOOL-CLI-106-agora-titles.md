@@ -4,12 +4,12 @@ area: CLI
 title: Agora titles
 theme: cli
 horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
-baseline_ref: ada1f6ab276c6595f3c9b77cd284768ee97eacc7
+baseline_ref: d2312360b500152933c69d99f3661231a2c49ee9
 created_at: 2026-10-06T11:15:00Z
-updated_at: 2026-10-06T12:00:00Z
+updated_at: 2026-10-06T12:40:00Z
 ---
 
 # Agora titles
@@ -85,7 +85,7 @@ This record.
 
 ### Delivered
 
-The approved boundary: `ki` parses and requires the declared Agora `title`, presents it in `ki agora list` and `ki agora show`, and keeps the identifier as the only selector and machine key. Excluded: owner declarations, the `ki-agora` standard and rubric (KI-HARNESS-GOV-143), identifier fallback, compatibility mode, title uniqueness, releases and publication. Baseline `ada1f6ab276c6595f3c9b77cd284768ee97eacc7`; the delivery commits follow it on `main`.
+The approved boundary: `ki` parses and requires the declared Agora `title`, presents it in `ki agora list` and `ki agora show`, and keeps the identifier as the only selector and machine key. Excluded: owner declarations, the `ki-agora` standard and rubric (KI-HARNESS-GOV-143), identifier fallback, compatibility mode, title uniqueness, releases and publication. Baseline `d2312360b500152933c69d99f3661231a2c49ee9`; the delivery commits follow it on `main`.
 
 ### Change Summary
 
@@ -113,9 +113,15 @@ None in this item. Released `ki` v0.6.1 rejects `title` as an unrecognised key, 
 
 Goal met: the CLI enforces the same title rule as the rubric and shows the title without changing any machine interface. Fable review found no blocking issue; its CHANGELOG finding and the Unicode line-separator and test-case observations are addressed. Regression risk is confined to untitled declarations, which now fail by design; every locally registered owner declares a title. Ready for acceptance.
 
+Review outcome: Fable's first review found no blocking issue; its CHANGELOG finding, Unicode line-separator and test-case nits are addressed in the follow-up commit. A focused Fable re-review confirmed each fix, with the remaining correction being this baseline after rebasing onto `main`. Gates were rerun after the rebase: 1051 tests passing at 100% coverage and the audit passing.
+
 ### Mini recap
 
 Required Agora titles are parsed, validated and presented by `ki` with full coverage and passing gates; the open matter is the owner-held `ki` release. Learning route: none proposed beyond KI-ARCADIA-GOV-017.
+
+## Done
+
+Accepted 2026-10-06 by Kris Brown on review packet above.
 
 ## Discussion
 
