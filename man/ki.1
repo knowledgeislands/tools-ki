@@ -672,7 +672,8 @@ required: \fB--title\fR, \fB--description\fR, a stable uppercase
 It atomically creates the minimal canonical \fBki-repo\fR declaration and
 A required \fB--capital\fR names the territory Capital; a Capital names
 itself and then also receives a \fB[skills.ki-repo.territory]\fR table
-listing itself as the first member.
+listing itself as the first member. Further members must be kept sorted
+ascending in code-point order; an unsorted list is rejected.
 registers the physical root in \fB$XDG_STATE_HOME/ki/registry.toml\fR. It
 never runs
 \fBgit init\fR, guesses identity, activates repository skills, creates a
@@ -1032,6 +1033,14 @@ and \fB--estate\fR selectors scope reads; mutations require exactly one selected
 registered repository. Every mutation writes only the selected repository, a
 granted route gives visibility rather than acceptance or retention, and no
 command changes a peer roadmap or knowledge.
+.PP
+A repository that declares \fBki-trades\fR but whose Capital does not resolve
+is never dropped silently. Aggregate \fBroutes list\fR and \fBtrade list\fR
+views, and \fBpolicy compare\fR, print
+\fBskipped: <identity> (<reason>)\fR for it and add \fBSKIPPED=\fR\fIn\fR to
+the summary; under \fB--format json\fR, and for \fBtrade show\fR, the line is
+written to standard error so standard output is unchanged. Selected alone,
+such a repository fails closed with the reason.
 .TP
 .B ki repo [repo-options] trade routes list [--incomplete] [--format text|json]
 List selected local typed routes with their registered-estate state. With a
@@ -1076,7 +1085,11 @@ Capital without being listed also fails. Any failure exits 1 after rendering.
 Compare the active directed routes of a saved
 .B ki/trade-routes/v1
 report with the routes the current registry and Capital policies make active,
-listing lost and newly granted routes. A lost route exits 1 after rendering.
+listing lost and newly granted routes. The current side always sweeps the whole
+local registry, whatever the parent repository selection. A baseline route
+lacking string source and peer repositories, an \fBexport\fR or \fBimport\fR
+direction, or a known trade kind is rejected as malformed. A lost route exits 1
+after rendering.
 .TP
 .B ki repo [repo-options] trade standing list [--incomplete]
 List the standing grants the territory Capital policy gives this repository.

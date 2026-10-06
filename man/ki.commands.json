@@ -155,7 +155,7 @@
       "commands": [
         {
           "invocation": "ki repo init [directory] --repository <https-url> --capital <https-url> --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>",
-          "description": "Initialize exactly one existing physical Git worktree root. With no directory, it uses the current directory; an explicit directory must be that worktree's root and must not be a symbolic link. Every identity value is required: --title, --description, a stable uppercase --repo-code, canonical HTTPS GitHub --repository, one or more --runtime values selected from claude-code and chatgpt-codex, and --visibility public|private. It atomically creates the minimal canonical ki-repo declaration and A required --capital names the territory Capital; a Capital names itself and then also receives a [skills.ki-repo.territory] table listing itself as the first member. registers the physical root in $XDG_STATE_HOME/ki/registry.toml. It never runs git init, guesses identity, activates repository skills, creates a Agora, accepts repository selectors, or overwrites an existing .ki.toml."
+          "description": "Initialize exactly one existing physical Git worktree root. With no directory, it uses the current directory; an explicit directory must be that worktree's root and must not be a symbolic link. Every identity value is required: --title, --description, a stable uppercase --repo-code, canonical HTTPS GitHub --repository, one or more --runtime values selected from claude-code and chatgpt-codex, and --visibility public|private. It atomically creates the minimal canonical ki-repo declaration and A required --capital names the territory Capital; a Capital names itself and then also receives a [skills.ki-repo.territory] table listing itself as the first member. Further members must be kept sorted ascending in code-point order; an unsorted list is rejected. registers the physical root in $XDG_STATE_HOME/ki/registry.toml. It never runs git init, guesses identity, activates repository skills, creates a Agora, accepts repository selectors, or overwrites an existing .ki.toml."
         },
         {
           "invocation": "ki repo [repo-options] open --target <zed|vscode|delta> [--stores|--no-stores]",
@@ -329,7 +329,7 @@
     },
     {
       "name": "Trades",
-      "purpose": "Use these commands with repositories that declare the portable ki-repo-trades capability and are present in the local registered repository estate. Routes and standing grants come only from the territory Capital's [skills.ki-trades.territory] policy, resolved through each repository's declared [skills.ki-repo].capital; no command edits that policy, and a member declaration carries no route table. Parent --repo, --agora, and --estate selectors scope reads; mutations require exactly one selected registered repository. Every mutation writes only the selected repository, a granted route gives visibility rather than acceptance or retention, and no command changes a peer roadmap or knowledge.",
+      "purpose": "Use these commands with repositories that declare the portable ki-repo-trades capability and are present in the local registered repository estate. Routes and standing grants come only from the territory Capital's [skills.ki-trades.territory] policy, resolved through each repository's declared [skills.ki-repo].capital; no command edits that policy, and a member declaration carries no route table. Parent --repo, --agora, and --estate selectors scope reads; mutations require exactly one selected registered repository. Every mutation writes only the selected repository, a granted route gives visibility rather than acceptance or retention, and no command changes a peer roadmap or knowledge. A repository that declares ki-trades but whose Capital does not resolve is never dropped silently. Aggregate routes list and trade list views, and policy compare, print skipped: <identity> (<reason>) for it and add SKIPPED=n to the summary; under --format json, and for trade show, the line is written to standard error so standard output is unchanged. Selected alone, such a repository fails closed with the reason.",
       "commands": [
         {
           "invocation": "ki repo [repo-options] trade routes list [--incomplete] [--format text|json]",
@@ -349,7 +349,7 @@
         },
         {
           "invocation": "ki repo [repo-options] trade policy compare --baseline <path>",
-          "description": "Compare the active directed routes of a saved ki/trade-routes/v1 report with the routes the current registry and Capital policies make active, listing lost and newly granted routes. A lost route exits 1 after rendering."
+          "description": "Compare the active directed routes of a saved ki/trade-routes/v1 report with the routes the current registry and Capital policies make active, listing lost and newly granted routes. The current side always sweeps the whole local registry, whatever the parent repository selection. A baseline route lacking string source and peer repositories, an export or import direction, or a known trade kind is rejected as malformed. A lost route exits 1 after rendering."
         },
         {
           "invocation": "ki repo [repo-options] trade standing list [--incomplete]",

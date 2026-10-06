@@ -36,13 +36,13 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### TRADE-004 — Estate route inspection
 
-`ki repo --estate trade routes list` MUST inspect every valid registered repository trade declaration as one estate; `--incomplete` MUST retain only routes that are not active.
+`ki repo --estate trade routes list` MUST inspect every valid registered repository trade declaration as one estate; `--incomplete` MUST retain only routes that are not active. A selected repository that declares `[skills.ki-trades]` but whose territory Capital does not resolve MUST NOT be dropped silently: the text view MUST state `skipped: <identity> (<reason>)` for it and add `SKIPPED=<n>` to its summary, where the reason is the Capital resolution message.
 
-`ki repo --estate trade routes list --format json` MUST emit the `ki/trade-routes/v1` machine contract. It MUST contain canonical source and peer identities, canonical repository URLs, direction, kind, activation state, peer resolution, and bounded declared map bonuses. It MUST NOT expose registry roots, declaration paths, or renderer-derived layout values. JSON format MUST require an aggregate parent repository selection; text remains the default. Interactive route visualisation is application-owned rather than a `tools-ki` command concern.
+`ki repo --estate trade routes list --format json` MUST emit the `ki/trade-routes/v1` machine contract. It MUST contain canonical source and peer identities, canonical repository URLs, direction, kind, activation state, peer resolution, and bounded declared map bonuses. It MUST NOT expose registry roots, declaration paths, or renderer-derived layout values. JSON format MUST require an aggregate parent repository selection; text remains the default. Skip statements MUST NOT alter the JSON contract; under `--format json` they MUST be written to standard error instead. Interactive route visualisation is application-owned rather than a `tools-ki` command concern.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/trade/trade.test.ts` — `lists incomplete route declarations across the registered estate`.
+_Verify:_ `src/tests/cli/trade/trade.test.ts` — `lists incomplete route declarations across the registered estate`, `renders versioned path-free estate route evidence as JSON` and `states a trading member whose Capital is unavailable in every aggregate view instead of dropping it`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
@@ -68,13 +68,13 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### TRADE-007 — Lifecycle inventory
 
-`ki repo trade list` MUST distinguish mutable preparations, submitted exports, and received imports for the selected registered repositories; report observation policy, delivery and decision state; and identify release or prune eligibility from mutually observable repository evidence. Its unfiltered view MUST additionally show each submitted, reciprocally routable inbound trade that has not yet been received as awaiting receipt for each selected receiver; sender-local preparations are not receivable inbound work. `ki repo --estate trade list` MUST aggregate the selected repository views without duplicating an outbound record already represented by its received inbound copy. Mutating trade commands MUST require exactly one selected registered repository.
+`ki repo trade list` MUST distinguish mutable preparations, submitted exports, and received imports for the selected registered repositories; report observation policy, delivery and decision state; and identify release or prune eligibility from mutually observable repository evidence. Its unfiltered view MUST additionally show each submitted, reciprocally routable inbound trade that has not yet been received as awaiting receipt for each selected receiver; sender-local preparations are not receivable inbound work. `ki repo --estate trade list` MUST aggregate the selected repository views without duplicating an outbound record already represented by its received inbound copy. In an aggregate selection, `ki repo trade list` and `ki repo trade show` MUST state each selected trading repository whose territory Capital does not resolve as `skipped: <identity> (<reason>)` - in the list tree, with `SKIPPED=<n>` added to its summary, and on standard error for `show`, whose standard output carries record contents; a single non-aggregate selection MUST instead fail closed with the Capital resolution message. Mutating trade commands MUST require exactly one selected registered repository.
 
 `--status` MUST accept only the receiver decision statuses defined by the trade record model. An unsupported status MUST fail with a grammar error rather than produce an empty inventory.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/trade/trade.test.ts` — `creates, receives, displays, releases, and prunes a work trade while each command writes only its local repository`.
+_Verify:_ `src/tests/cli/trade/trade.test.ts` — `creates, receives, displays, releases, and prunes a work trade while each command writes only its local repository` and `states a trading member whose Capital is unavailable in every aggregate view instead of dropping it`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
@@ -108,7 +108,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### TRADE-012 — Capital-governed route authority
 
-Every trade participant MUST resolve routes, standing grants and knowledge subtypes only from the `[skills.ki-trades.territory]` policy of the territory Capital named by its own `[skills.ki-repo].capital`, located through the local registry. A Capital MUST name itself as `capital` and declare `[skills.ki-repo.territory]`; a member MUST NOT declare either territory table. A member `[skills.ki-trades]` table MAY contain only `map_bonus`; the retired `routes` and `subtypes` keys MUST be rejected with a message naming the Capital policy. Resolution MUST fail closed when the Capital is unregistered, registered more than once, invalid, not a Capital, or does not list the member. A policy MUST validate each channel's identifier, purpose, member-only non-overlapping endpoints, kinds and uniqueness, and each standing grant's subtype definition, knowledge-channel coverage and uniqueness.
+Every trade participant MUST resolve routes, standing grants and knowledge subtypes only from the `[skills.ki-trades.territory]` policy of the territory Capital named by its own `[skills.ki-repo].capital`, located through the local registry. A Capital MUST name itself as `capital` and declare `[skills.ki-repo.territory]`, whose `members` MUST be canonical repository URLs without repeats, sorted ascending in code-point order (not locale collation), and including the Capital itself; a member MUST NOT declare either territory table. A member `[skills.ki-trades]` table MAY contain only `map_bonus`; the retired `routes` and `subtypes` keys MUST be rejected with a message naming the Capital policy. Resolution MUST fail closed when the Capital is unregistered, registered more than once, invalid, not a Capital, or does not list the member. A policy MUST validate each channel's identifier, purpose, member-only non-overlapping endpoints, kinds and uniqueness, and each standing grant's subtype definition, knowledge-channel coverage and uniqueness.
 
 _Conformance:_ conforming
 
@@ -128,7 +128,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### TRADE-014 — Route migration comparison
 
-`ki repo trade policy compare --baseline <path>` MUST compare the active routes in a saved `ki/trade-routes/v1` report with the routes currently active across the registered estate, report covered, lost and added routes as `exporter -> importer kind`, and exit non-zero when any baseline route is lost. It MUST reject an unreadable, non-JSON, wrong-contract or malformed baseline.
+`ki repo trade policy compare --baseline <path>` MUST compare the active routes in a saved `ki/trade-routes/v1` report with the routes currently active across the registered estate, report covered, lost and added routes as `exporter -> importer kind`, and exit non-zero when any baseline route is lost. The current side MUST always sweep the whole local registry, whatever the repository selection, and MUST state each registered trading repository whose territory Capital does not resolve as `skipped: <identity> (<reason>)` with `SKIPPED=<n>` in its summary. It MUST reject an unreadable, non-JSON, wrong-contract or malformed baseline; a route is malformed unless it carries string source and peer repositories, an `export` or `import` direction and a known trade kind, whatever its state, and no field is coerced to a default.
 
 _Conformance:_ conforming
 
