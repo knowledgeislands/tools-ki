@@ -4,12 +4,12 @@ area: CLI
 title: Capital trade policy
 theme: cli
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 3f96f18680c8792a837ecba1931e03ab59112741
 created_at: 2026-10-06T10:00:00Z
-updated_at: 2026-10-06T12:00:00Z
+updated_at: 2026-10-06T16:00:00Z
 ---
 
 # Capital trade policy
@@ -53,21 +53,16 @@ The implementation, tests and documentation are complete in the item's worktree.
 
 ## Steps
 
-- [x] `configuration.ts` handles the declaration side:
-  - parses `capital`, the two territory tables and the member `map_bonus`;
-  - rejects the retired keys and territory tables outside a Capital;
-  - validates channels and standing grants;
-  - derives each repository's effective routes from the policy.
-- [x] `estate.ts` handles resolution:
-  - resolves the Capital through the registry and fails closed;
-  - makes route activation depend on the peer sharing the Capital, replacing the reciprocal-declaration check.
+- [x] `configuration.ts` parses `capital`, the two territory tables and the member `map_bonus`, rejects the retired keys and territory tables outside a Capital, validates channels and standing grants, and derives each repository's effective routes from the policy.
+- [x] `estate.ts` resolves the Capital through the registry and fails closed, and makes route activation depend on the peer sharing the Capital, replacing the reciprocal-declaration check.
 - [x] `standing-intake.ts` makes a grant's state its knowledge route's state.
 - [x] New `policy.ts` and `commands/trade/policy.ts` provide `policy show`, `policy check` and `policy compare --baseline`.
 - [x] Remove the `routes add|remove`, `standing add|remove` and `subtypes` commands, together with `configuration-mutations.ts`.
 - [x] `ki repo init` requires `--capital`. When the repository is its own Capital, it writes a one-member territory.
 - [x] Update the tests, keeping 100% coverage.
-- [x] Update the manual, the command inventory, the specs (TRADE-001, 003, 008 and 009 retired, 010, 012 to 014, REGISTRY-001 and 002), README, CHANGELOG and the guides.
-- [ ] Verify against the Arcadia policy, then run review and acceptance.
+- [x] Update the manual, the command inventory, the specs (TRADE-001, 003, 008 and 009 deprecated, 010, 012 to 014, REGISTRY-001 and 002), README, CHANGELOG and the guides.
+- [x] Verify against the Arcadia policy and the saved v0.6.1 route report.
+- [ ] Review and acceptance.
 
 ## Files touched
 
@@ -121,3 +116,13 @@ This item is blocked by `knowledgeislands/ki-arcadia-principal` `KI-ARCADIA-GOV-
 ### Release authority
 
 The owner settled this on 2026-10-06: the coordinator cuts one release once verification passes. After that release, consumers bump their CI `KI_VERSION` from `v0.6.1`.
+
+### Verification - 2026-10-06
+
+Run on `feat/cli-104-capital-trade-policy` after rebasing onto `6575e83`, with this branch's `src/main.ts` as `ki` and the `KI-HARNESS-GOV-122` branch as the local harness, in an isolated `KI_*_HOME` holding all 41 registered repositories on their migration branches.
+
+- `bun run test:coverage`: 64 files, 1061 tests, 100% statements, branches, functions and lines. `bunx tsc --noEmit -p .`, `bunx knip`, dependency-cruiser (330 modules), `mandoc -T lint man/ki.1` and the command-inventory regeneration are clean; `bunx biome check .` reports only pre-existing warnings.
+- `ki repo trade policy check` from Arcadia: MEMBERS=21 CONFORMING=21 FAILING=0 UNVERIFIABLE=0.
+- `ki repo trade policy compare --baseline` against the v0.6.1 estate report: COVERED=77 LOST=0 ADDED=1, the addition being `tools-techne -> homebrew-tap work`.
+- `ki repo trade standing list` reports every grant active: GRANTS=21 in `ki-agentic-harness`, 4 in `ki-website`, and 3 each in `ki-techne-harness` and `tools-techne`, matching the previous active set. `TRD-8004751b` and `TRD-d03495e9` remain visible in `tools-ki` as awaiting receipt on active routes.
+- `ki repo audit --repo . --progress never --concise`: the only remaining findings are isolated-environment artefacts (auto-memory opt-in under the isolated `HOME`).
