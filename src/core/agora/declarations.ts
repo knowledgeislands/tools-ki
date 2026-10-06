@@ -44,7 +44,7 @@ export const homeDeclaration = (repository: RegisteredRepository, id: string, va
     if (!['title', 'purpose', 'members', 'includes'].includes(key))
       throw profileError(id, `has unrecognised key ${key}`)
   const title = home['title']
-  if (typeof title !== 'string' || !title || title.trim() !== title || /[\r\n]/.test(title))
+  if (typeof title !== 'string' || !title || title.trim() !== title || /[\r\n\u2028\u2029]/.test(title))
     throw profileError(id, 'home requires a non-empty single-line title')
   if (typeof home['purpose'] !== 'string' || !home['purpose'].trim())
     throw profileError(id, 'home requires a non-empty purpose')

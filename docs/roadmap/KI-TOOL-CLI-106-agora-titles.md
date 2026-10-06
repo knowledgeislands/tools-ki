@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: ada1f6ab276c6595f3c9b77cd284768ee97eacc7
 created_at: 2026-10-06T11:15:00Z
-updated_at: 2026-10-06T11:30:00Z
+updated_at: 2026-10-06T12:00:00Z
 ---
 
 # Agora titles
@@ -38,14 +38,14 @@ The owner approved [KI-ARCADIA-GOV-017](https://github.com/knowledgeislands/ki-a
 - [x] `src/core/agora/types.ts` and `src/core/agora/profiles.ts`: rename the profile `name` to `title`, carry the declared title, and keep `Registered estate` for the system estate.
 - [x] `src/commands/agora/list.ts` and `src/commands/agora/show.ts`: present the title; `show` prints `title:`.
 - [x] Tests under `src/tests/cli/agora/`: titled fixtures, exact list and show output, and malformed-title cases (missing, blank, padded, multi-line, non-string).
-- [x] Documentation: AGORA-017 in `docs/specs/agoras.md`, the README Agoras paragraph, `man/ki.1` and the regenerated `man/ki.commands.json`.
+- [x] Documentation: AGORA-017 in `docs/specs/agoras.md`, the README Agoras paragraph, `CHANGELOG.md`, `man/ki.1` and the regenerated `man/ki.commands.json`.
 
 ## Files touched
 
 - `src/core/agora/declarations.ts`, `src/core/agora/types.ts`, `src/core/agora/profiles.ts`
 - `src/commands/agora/list.ts`, `src/commands/agora/show.ts`
 - `src/tests/cli/agora/agora.test.ts`, `audit.test.ts`, `inspect.test.ts`, `references.test.ts`
-- `docs/specs/agoras.md`, `README.md`, `man/ki.1`, `man/ki.commands.json`
+- `docs/specs/agoras.md`, `README.md`, `CHANGELOG.md`, `man/ki.1`, `man/ki.commands.json`
 
 ## Verify
 
@@ -75,11 +75,47 @@ None in this repository; the contract decision is recorded in GDR-KI-HARNESS-006
 
 ### Guides
 
-`README.md` and `man/ki.1` describe the required title.
+`README.md`, `CHANGELOG.md` and `man/ki.1` describe the required title.
 
 ### Roadmap
 
 This record.
+
+## Review
+
+### Delivered
+
+The approved boundary: `ki` parses and requires the declared Agora `title`, presents it in `ki agora list` and `ki agora show`, and keeps the identifier as the only selector and machine key. Excluded: owner declarations, the `ki-agora` standard and rubric (KI-HARNESS-GOV-143), identifier fallback, compatibility mode, title uniqueness, releases and publication. Baseline `ada1f6ab276c6595f3c9b77cd284768ee97eacc7`; the delivery commits follow it on `main`.
+
+### Change Summary
+
+- `src/core/agora/declarations.ts`: `homeDeclaration` admits `title` and fails closed with `home requires a non-empty single-line title` when it is missing, non-string, empty, padded, or contains CR, LF, U+2028 or U+2029, before `purpose` is checked. The rule matches the harness CONFIG-1 check.
+- `src/core/agora/types.ts`, `profiles.ts`: the profile `name` becomes `title`; declared Agoras carry the owner's title and the estate keeps `Registered estate`.
+- `src/commands/agora/list.ts`, `show.ts`: `list` prints `<id> [declared] <title> (...)`; `show` prints `title: <title>`. Roots, selection, projections and editor targets still use only the identifier.
+- Tests under `src/tests/cli/agora/`: titled fixtures whose titles differ from identifiers, exact list and show output, and every malformed-title form.
+- Documentation: AGORA-017, README, CHANGELOG, `man/ki.1` and the regenerated `man/ki.commands.json`.
+- No approved deviations.
+
+### Verification
+
+- `bun run test:coverage`: all files and tests pass at 100% statement, branch, function and line coverage.
+- `bunx tsc --noEmit`: clean.
+- `bunx biome check .`: no errors; warnings and infos unchanged from the baseline.
+- `bun run ki:tools:lint-man`: clean.
+- `ki repo audit --repo . --progress never --concise` in an isolated environment that registers this worktree against a harness including KI-HARNESS-GOV-143: PASS.
+- Against the seven titled owner repositories, this build's `ki agora list` shows every declared title and `ki agora audit` reports HEALTHY=7 FINDINGS=0.
+
+### Outstanding concerns
+
+None in this item. Released `ki` v0.6.1 rejects `title` as an unrecognised key, so `ki agora` and `ki repo --agora` fail with the installed binary until a `ki` release includes this item; the owner has accepted that window and the coordinator holds the release.
+
+### Post-change review
+
+Goal met: the CLI enforces the same title rule as the rubric and shows the title without changing any machine interface. Fable review found no blocking issue; its CHANGELOG finding and the Unicode line-separator and test-case observations are addressed. Regression risk is confined to untitled declarations, which now fail by design; every locally registered owner declares a title. Ready for acceptance.
+
+### Mini recap
+
+Required Agora titles are parsed, validated and presented by `ki` with full coverage and passing gates; the open matter is the owner-held `ki` release. Learning route: none proposed beyond KI-ARCADIA-GOV-017.
 
 ## Discussion
 
@@ -90,11 +126,3 @@ This item receives the CLI handoff from KI-ARCADIA-GOV-017 and pairs with KI-HAR
 ### Release window
 
 The released `ki` v0.6.1 rejects `title` as an unrecognised key. Once owners declare titles, the released binary fails `ki agora` and `ki repo --agora` resolution until a `ki` release includes this item. No release is cut here.
-
-## Review packet
-
-- Parser: `homeDeclaration` accepts `title` and fails closed with `home requires a non-empty single-line title` for a missing, empty, padded, multi-line or non-string value, before `purpose` is checked. `ki agora audit` reports the same failure through the existing broken-declaration path.
-- Profiles: `AgoraProfile.name` is now `title`; declared Agoras carry the owner's title and the estate keeps `Registered estate`. `list` prints `<id> [declared] <title> (...)`; `show` prints `title: <title>`. Roots, selection and projection order are unchanged.
-- Documentation: AGORA-017, README, `man/ki.1` and the regenerated command inventory.
-- Gates on the implementation: `bun run test:coverage` 63 files and 1036 tests passing at 100% coverage; `bunx tsc --noEmit` clean; `bunx biome check .` no errors (27 warnings and 14 infos, the unchanged baseline); `bun run ki:tools:lint-man` clean; `ki repo audit --repo . --progress never --concise` PASS against a harness including KI-HARNESS-GOV-143.
-- Release: needs a `ki` release before owners' titled declarations resolve with the installed binary.

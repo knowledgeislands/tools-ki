@@ -635,6 +635,18 @@ describe('[ki agora]', () => {
         '[skills.ki-agora.team]\ntitle = "Team\\nTwo"\npurpose = "x"\nmembers = []\n',
         'requires a non-empty single-line title'
       ],
+      [
+        '[skills.ki-agora.team]\ntitle = "Team\\rTwo"\npurpose = "x"\nmembers = []\n',
+        'requires a non-empty single-line title'
+      ],
+      [
+        '[skills.ki-agora.team]\ntitle = "Team\\u2028Two"\npurpose = "x"\nmembers = []\n',
+        'requires a non-empty single-line title'
+      ],
+      [
+        '[skills.ki-agora.team]\ntitle = "\\tTeam"\npurpose = "x"\nmembers = []\n',
+        'requires a non-empty single-line title'
+      ],
       ['[skills.ki-agora.team]\ntitle = 7\npurpose = "x"\nmembers = []\n', 'requires a non-empty single-line title'],
       ['[skills.ki-agora.team]\ntitle = "Team"\npurpose = ""\nmembers = []\n', 'requires a non-empty purpose'],
       ['[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = {}\n', 'members must be an array'],
