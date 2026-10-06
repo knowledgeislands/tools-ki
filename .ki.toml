@@ -15,6 +15,7 @@ repo_type = "project"
 primary_shape = "ki-repo-tools"
 repository = "https://github.com/knowledgeislands/tools-ki"
 title = "tools-ki"
+capital = "https://github.com/knowledgeislands/ki-arcadia-principal"
 description = "Knowledge Islands command-line interface."
 repo_code = "KI-TOOL"
 supported_runtimes = ["claude-code", "claude-desktop", "chatgpt-codex"]
@@ -80,15 +81,3 @@ organisation_code = "KIS"
 # -----------------------------------------------------------------------------
 
 [skills.ki-trades]
-
-[skills.ki-trades.routes."knowledgeislands/homebrew-tap"]
-export = ["work"]
-
-[skills.ki-trades.routes."knowledgeislands/ki-agentic-harness"]
-export = ["work", "knowledge"]
-import = ["work", "knowledge"]
-standing.export.knowledge = ["shared-capability-maintenance"]
-
-[skills.ki-trades.routes."knowledgeislands/tools-mgit"]
-export = ["work", "knowledge"]
-import = ["work", "knowledge"]
