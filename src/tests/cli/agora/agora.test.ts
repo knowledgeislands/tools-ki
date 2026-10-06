@@ -5,7 +5,7 @@ const repository = (identity: string, agora = ''): string =>
   `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${agora}`
 
 const home = (id: string, purpose: string, members: readonly string[], includes: readonly string[] = []): string =>
-  `[skills.ki-agora.${id}]\npurpose = ${JSON.stringify(purpose)}\nmembers = ${JSON.stringify(members)}\n${includes.length ? `includes = ${JSON.stringify(includes)}\n` : ''}`
+  `[skills.ki-agora.${id}]\ntitle = ${JSON.stringify(`${id.charAt(0).toUpperCase()}${id.slice(1)}`)}\npurpose = ${JSON.stringify(purpose)}\nmembers = ${JSON.stringify(members)}\n${includes.length ? `includes = ${JSON.stringify(includes)}\n` : ''}`
 
 const localRegistry = (
   entries: readonly { readonly key: string; readonly identity: string; readonly root: string }[]
@@ -162,15 +162,15 @@ describe('[ki agora]', () => {
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 0,
       output:
-        '╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (3 repositories)\n│  ╰─ team [declared] team (home: home, 2 members)\n╰─ summary: AGORAS=2 REGISTERED_REPOSITORIES=3\n'
+        '╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (3 repositories)\n│  ╰─ team [declared] Team (home: home, 2 members)\n╰─ summary: AGORAS=2 REGISTERED_REPOSITORIES=3\n'
     })
     expect(await box.run('ki agora show team')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (2)\n│  ├─ member\n│  ╰─ other\n╰─ summary: HOME=1 MEMBERS=2 INCLUSIONS=0 UNRESOLVED_INCLUSIONS=0 ROOTS=3\n`
+      output: `╭─ KI AGORA\n├─ team\n│  ├─ title: Team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n├─ members (2)\n│  ├─ member\n│  ╰─ other\n╰─ summary: HOME=1 MEMBERS=2 INCLUSIONS=0 UNRESOLVED_INCLUSIONS=0 ROOTS=3\n`
     })
     expect(await box.run('ki agora show team --verbose')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ team\n│  ├─ name: team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n│     ╰─ path: ${roots['home']}\n├─ members (2)\n│  ├─ member\n│  │  ├─ repository: ${memberIdentity}\n│  │  ╰─ path: ${roots['member']}\n│  ╰─ other\n│     ├─ repository: ${otherIdentity}\n│     ╰─ path: ${roots['other']}\n╰─ summary: HOME=1 MEMBERS=2 INCLUSIONS=0 UNRESOLVED_INCLUSIONS=0 ROOTS=3\n`
+      output: `╭─ KI AGORA\n├─ team\n│  ├─ title: Team\n│  ├─ purpose: Shared delivery\n│  ╰─ home: ${homeIdentity}\n│     ╰─ path: ${roots['home']}\n├─ members (2)\n│  ├─ member\n│  │  ├─ repository: ${memberIdentity}\n│  │  ╰─ path: ${roots['member']}\n│  ╰─ other\n│     ├─ repository: ${otherIdentity}\n│     ╰─ path: ${roots['other']}\n╰─ summary: HOME=1 MEMBERS=2 INCLUSIONS=0 UNRESOLVED_INCLUSIONS=0 ROOTS=3\n`
     })
     expect(await box.run('ki repo --agora team roadmap list')).toMatchObject({ exitCode: 0 })
     expect(await box.run('ki agora open team --target zed')).toEqual({
@@ -320,7 +320,7 @@ describe('[ki agora]', () => {
 
     expect(await box.run('ki agora show estate')).toEqual({
       exitCode: 0,
-      output: `╭─ KI AGORA\n├─ estate\n│  ├─ name: Registered estate\n│  ╰─ purpose: Every locally registered canonical KI repository.\n├─ repositories (2)\n│  ├─ first\n│  ╰─ second\n╰─ summary: REPOSITORIES=2 ROOTS=2\n`
+      output: `╭─ KI AGORA\n├─ estate\n│  ├─ title: Registered estate\n│  ╰─ purpose: Every locally registered canonical KI repository.\n├─ repositories (2)\n│  ├─ first\n│  ╰─ second\n╰─ summary: REPOSITORIES=2 ROOTS=2\n`
     })
     expect(await box.run('ki agora open estate')).toMatchObject({ exitCode: 2 })
     expect(await box.run('ki agora open estate --target vscode')).toEqual({
@@ -370,8 +370,8 @@ describe('[ki agora]', () => {
     const listed = await box.run('ki agora list')
 
     expect(listed.exitCode).toBe(0)
-    expect(listed.output).toContain('├─ alpha [declared] alpha (home: alpha, 0 members)')
-    expect(listed.output).toContain('zeta [declared] zeta (home: zeta, 0 members)')
+    expect(listed.output).toContain('├─ alpha [declared] Alpha (home: alpha, 0 members)')
+    expect(listed.output).toContain('zeta [declared] Zeta (home: zeta, 0 members)')
     expect(listed.output.indexOf('alpha [declared]')).toBeLessThan(listed.output.indexOf('zeta [declared]'))
   })
 
@@ -389,7 +389,7 @@ describe('[ki agora]', () => {
 
     expect(await box.run('ki agora list')).toEqual({
       exitCode: 1,
-      output: `╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (1 repository)\n│  ╰─ healthy [declared] healthy (home: home, 0 members)\n├─ broken (2)\n│  ├─ Agora also-broken member ${missingIdentity} is not registered locally\n│  ╰─ Agora broken member ${missingIdentity} is not registered locally\n╰─ summary: AGORAS=2 REGISTERED_REPOSITORIES=1 BROKEN=2\n`
+      output: `╭─ KI AGORAS\n├─ agoras (2)\n│  ├─ estate [system] Registered estate (1 repository)\n│  ╰─ healthy [declared] Healthy (home: home, 0 members)\n├─ broken (2)\n│  ├─ Agora also-broken member ${missingIdentity} is not registered locally\n│  ╰─ Agora broken member ${missingIdentity} is not registered locally\n╰─ summary: AGORAS=2 REGISTERED_REPOSITORIES=1 BROKEN=2\n`
     })
     expect((await box.run('ki agora show healthy')).exitCode).toBe(0)
     expect(await box.run('ki agora roots healthy')).toEqual({ exitCode: 0, output: `${roots['home']}\n` })
@@ -623,27 +623,59 @@ describe('[ki agora]', () => {
     )
 
     const cases = [
-      ['[skills.ki-agora."Bad"]\npurpose = "x"\nmembers = []\n', 'must use a stable lower-case'],
+      ['[skills.ki-agora."Bad"]\ntitle = "Team"\npurpose = "x"\nmembers = []\n', 'must use a stable lower-case'],
       ['[skills.ki-agora]\nteam = []\n', 'home declaration must be a table'],
-      ['[skills.ki-agora.team]\npurpose = ""\nmembers = []\n', 'requires a non-empty purpose'],
-      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = {}\n', 'members must be an array'],
-      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = ["https://example.com/nope"]\n', 'must be a canonical HTTPS'],
-      [`[skills.ki-agora.team]\npurpose = "x"\nmembers = [${JSON.stringify(identity)}]\n`, 'must not list its home'],
+      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\n', 'requires a non-empty single-line title'],
+      ['[skills.ki-agora.team]\ntitle = ""\npurpose = "x"\nmembers = []\n', 'requires a non-empty single-line title'],
       [
-        '[skills.ki-agora.team]\npurpose = "x"\nmembers = ["https://github.com/example/member", "https://github.com/example/member"]\n',
+        '[skills.ki-agora.team]\ntitle = " Team"\npurpose = "x"\nmembers = []\n',
+        'requires a non-empty single-line title'
+      ],
+      [
+        '[skills.ki-agora.team]\ntitle = "Team\\nTwo"\npurpose = "x"\nmembers = []\n',
+        'requires a non-empty single-line title'
+      ],
+      ['[skills.ki-agora.team]\ntitle = 7\npurpose = "x"\nmembers = []\n', 'requires a non-empty single-line title'],
+      ['[skills.ki-agora.team]\ntitle = "Team"\npurpose = ""\nmembers = []\n', 'requires a non-empty purpose'],
+      ['[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = {}\n', 'members must be an array'],
+      [
+        '[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = ["https://example.com/nope"]\n',
+        'must be a canonical HTTPS'
+      ],
+      [
+        `[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = [${JSON.stringify(identity)}]\n`,
+        'must not list its home'
+      ],
+      [
+        '[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = ["https://github.com/example/member", "https://github.com/example/member"]\n',
         'members repeats repository'
       ],
-      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\norder = []\n', 'unrecognised key order'],
-      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\nowner = "old"\n', 'unrecognised key owner'],
-      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\nincludes = "bad"\n', 'includes must be an array'],
-      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\nincludes = ["team"]\n', 'must not include itself'],
-      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\nincludes = ["bad id"]\n', 'must be an Agora identifier'],
-      ['[skills.ki-agora.team]\npurpose = "x"\nmembers = []\nincludes = ["other", "other"]\n', 'includes repeats other']
+      ['[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = []\norder = []\n', 'unrecognised key order'],
+      [
+        '[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = []\nowner = "old"\n',
+        'unrecognised key owner'
+      ],
+      [
+        '[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = []\nincludes = "bad"\n',
+        'includes must be an array'
+      ],
+      [
+        '[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = []\nincludes = ["team"]\n',
+        'must not include itself'
+      ],
+      [
+        '[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = []\nincludes = ["bad id"]\n',
+        'must be an Agora identifier'
+      ],
+      [
+        '[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = []\nincludes = ["other", "other"]\n',
+        'includes repeats other'
+      ]
     ] as const
     for (const [agora, message] of cases) await configure(repository(identity, agora), message)
     await box.project.write(
       'home/.ki.toml',
-      repository(identity, '[skills.ki-agora.team]\npurpose = "x"\nmembers = {}\n')
+      repository(identity, '[skills.ki-agora.team]\ntitle = "Team"\npurpose = "x"\nmembers = {}\n')
     )
     expect((await box.run('ki agora show team')).output).toContain('members must be an array')
     expect((await box.run('ki repo --agora team roadmap list')).output).toContain('members must be an array')

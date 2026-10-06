@@ -12,7 +12,7 @@ const repository = (identity: string, agora = ''): string =>
 const home = (
   options: { readonly references?: readonly string[]; readonly members?: readonly string[] } = {}
 ): string =>
-  `[skills.ki-agora.team]\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(options.members ?? [])}\nincludes = ${JSON.stringify(options.references ?? [])}\n`
+  `[skills.ki-agora.team]\ntitle = "Team"\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(options.members ?? [])}\nincludes = ${JSON.stringify(options.references ?? [])}\n`
 
 const setReference = (root: string, dryRun = false): readonly string[] => [
   'ki',
@@ -120,7 +120,7 @@ describe('[ki agora reference]', () => {
     expect(inspected.exitCode).toBe(0)
     expect(inspected.output).toContain(`example/plain-reference [included]: ${referenceRoot}`)
     expect((await box.run('ki agora list')).output).toContain(
-      'team [declared] team (home: home, 0 members, 1 inclusion, 0 unresolved inclusions)'
+      'team [declared] Team (home: home, 0 members, 1 inclusion, 0 unresolved inclusions)'
     )
     expect(await box.run('ki agora open team --target zed')).toEqual({
       exitCode: 0,
@@ -184,7 +184,7 @@ describe('[ki agora reference]', () => {
     expect(shown.exitCode).toBe(0)
     expect(shown.output).toContain('members (1)')
     expect(shown.output).not.toContain('inclusions (')
-    expect((await box.run('ki agora list')).output).toContain('team [declared] team (home: home, 1 member)')
+    expect((await box.run('ki agora list')).output).toContain('team [declared] Team (home: home, 1 member)')
     expect(await box.run('ki agora roots team')).toEqual({
       exitCode: 0,
       output: `${homeRoot}\n${referenceRoot}\n`
@@ -212,7 +212,7 @@ describe('[ki agora reference]', () => {
     const declaration = async (body: string): Promise<string> => {
       await box.project.write(
         'home/.ki.toml',
-        repository(homeIdentity, `[skills.ki-agora.team]\npurpose = "Team"\n${body}`)
+        repository(homeIdentity, `[skills.ki-agora.team]\ntitle = "Team"\npurpose = "Team"\n${body}`)
       )
       return (await box.run('ki agora list')).output
     }

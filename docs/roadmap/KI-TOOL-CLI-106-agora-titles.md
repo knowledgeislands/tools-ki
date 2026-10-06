@@ -4,12 +4,12 @@ area: CLI
 title: Agora titles
 theme: cli
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: ada1f6ab276c6595f3c9b77cd284768ee97eacc7
 created_at: 2026-10-06T11:15:00Z
-updated_at: 2026-10-06T11:15:00Z
+updated_at: 2026-10-06T11:30:00Z
 ---
 
 # Agora titles
@@ -34,18 +34,18 @@ The owner approved [KI-ARCADIA-GOV-017](https://github.com/knowledgeislands/ki-a
 
 ## Steps
 
-- [ ] `src/core/agora/declarations.ts`: accept and require `title` as a non-empty, single-line string without surrounding whitespace, failing with `home requires a non-empty single-line title`.
-- [ ] `src/core/agora/types.ts` and `src/core/agora/profiles.ts`: rename the profile `name` to `title`, carry the declared title, and keep `Registered estate` for the system estate.
-- [ ] `src/commands/agora/list.ts` and `src/commands/agora/show.ts`: present the title; `show` prints `title:`.
-- [ ] Tests under `src/tests/cli/agora/`: titled fixtures, exact list and show output, and malformed-title cases (missing, blank, padded, multi-line, non-string).
-- [ ] Documentation: AGORA-017 in `docs/specs/agoras.md`, the README Agoras paragraph and `man/ki.1`.
+- [x] `src/core/agora/declarations.ts`: accept and require `title` as a non-empty, single-line string without surrounding whitespace, failing with `home requires a non-empty single-line title`.
+- [x] `src/core/agora/types.ts` and `src/core/agora/profiles.ts`: rename the profile `name` to `title`, carry the declared title, and keep `Registered estate` for the system estate.
+- [x] `src/commands/agora/list.ts` and `src/commands/agora/show.ts`: present the title; `show` prints `title:`.
+- [x] Tests under `src/tests/cli/agora/`: titled fixtures, exact list and show output, and malformed-title cases (missing, blank, padded, multi-line, non-string).
+- [x] Documentation: AGORA-017 in `docs/specs/agoras.md`, the README Agoras paragraph, `man/ki.1` and the regenerated `man/ki.commands.json`.
 
 ## Files touched
 
 - `src/core/agora/declarations.ts`, `src/core/agora/types.ts`, `src/core/agora/profiles.ts`
 - `src/commands/agora/list.ts`, `src/commands/agora/show.ts`
 - `src/tests/cli/agora/agora.test.ts`, `audit.test.ts`, `inspect.test.ts`, `references.test.ts`
-- `docs/specs/agoras.md`, `README.md`, `man/ki.1`
+- `docs/specs/agoras.md`, `README.md`, `man/ki.1`, `man/ki.commands.json`
 
 ## Verify
 
@@ -90,3 +90,11 @@ This item receives the CLI handoff from KI-ARCADIA-GOV-017 and pairs with KI-HAR
 ### Release window
 
 The released `ki` v0.6.1 rejects `title` as an unrecognised key. Once owners declare titles, the released binary fails `ki agora` and `ki repo --agora` resolution until a `ki` release includes this item. No release is cut here.
+
+## Review packet
+
+- Parser: `homeDeclaration` accepts `title` and fails closed with `home requires a non-empty single-line title` for a missing, empty, padded, multi-line or non-string value, before `purpose` is checked. `ki agora audit` reports the same failure through the existing broken-declaration path.
+- Profiles: `AgoraProfile.name` is now `title`; declared Agoras carry the owner's title and the estate keeps `Registered estate`. `list` prints `<id> [declared] <title> (...)`; `show` prints `title: <title>`. Roots, selection and projection order are unchanged.
+- Documentation: AGORA-017, README, `man/ki.1` and the regenerated command inventory.
+- Gates on the implementation: `bun run test:coverage` 63 files and 1036 tests passing at 100% coverage; `bunx tsc --noEmit` clean; `bunx biome check .` no errors (27 warnings and 14 infos, the unchanged baseline); `bun run ki:tools:lint-man` clean; `ki repo audit --repo . --progress never --concise` PASS against a harness including KI-HARNESS-GOV-143.
+- Release: needs a `ki` release before owners' titled declarations resolve with the installed binary.

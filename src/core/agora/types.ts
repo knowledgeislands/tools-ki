@@ -33,7 +33,7 @@ export interface AgoraRuntime {
 
 export interface AgoraProfile {
   readonly id: string
-  readonly name: string
+  readonly title: string
   readonly purpose: string
   readonly home?: AgoraMember
   readonly members: readonly AgoraMember[]

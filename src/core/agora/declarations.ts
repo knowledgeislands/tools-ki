@@ -6,6 +6,7 @@ import type { AgoraMember } from './types.ts'
 export const AGORA_ID = /^[a-z][a-z0-9-]*[a-z0-9]$/
 export interface AgoraHome {
   readonly id: string
+  readonly title: string
   readonly owner: string
   readonly purpose: string
   readonly includes: readonly string[]
@@ -40,7 +41,11 @@ export const homeDeclaration = (repository: RegisteredRepository, id: string, va
   const home = table(value)
   if (!home) throw profileError(id, 'home declaration must be a table')
   for (const key of Object.keys(home))
-    if (!['purpose', 'members', 'includes'].includes(key)) throw profileError(id, `has unrecognised key ${key}`)
+    if (!['title', 'purpose', 'members', 'includes'].includes(key))
+      throw profileError(id, `has unrecognised key ${key}`)
+  const title = home['title']
+  if (typeof title !== 'string' || !title || title.trim() !== title || /[\r\n]/.test(title))
+    throw profileError(id, 'home requires a non-empty single-line title')
   if (typeof home['purpose'] !== 'string' || !home['purpose'].trim())
     throw profileError(id, 'home requires a non-empty purpose')
   const members = home['members']
@@ -66,7 +71,7 @@ export const homeDeclaration = (repository: RegisteredRepository, id: string, va
     if (includes.includes(inclusion)) throw profileError(id, `includes repeats ${inclusion}`)
     includes.push(inclusion)
   }
-  return { id, owner: repository.repository, purpose: home['purpose'], includes, members: identities }
+  return { id, title, owner: repository.repository, purpose: home['purpose'], includes, members: identities }
 }
 
 export const membersFromHome = (

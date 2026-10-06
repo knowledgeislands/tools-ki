@@ -5,7 +5,7 @@ const repository = (identity: string, agora = ''): string =>
   `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${agora}`
 
 const home = (id: string, members: readonly string[] = []): string =>
-  `[skills.ki-agora.${id}]\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(members)}\n`
+  `[skills.ki-agora.${id}]\ntitle = "Shared"\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(members)}\n`
 
 const localRegistry = (
   entries: readonly { readonly key: string; readonly identity: string; readonly root: string }[]

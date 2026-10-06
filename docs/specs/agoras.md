@@ -172,6 +172,16 @@ _Verify:_ `src/tests/cli/agora/agora.test.ts` — `lists, shows, selects, and op
 
 _Evidence:_ The named in-process CLI tests assert exact named and estate text reports, verbose owner paths, separate references, and unchanged ordered `ki agora roots` output.
 
+### AGORA-017 — Declared readable title
+
+Every `[skills.ki-agora.<id>]` declaration MUST carry a `title` that is a non-empty, single-line string without leading or trailing whitespace; `ki` MUST reject a missing or malformed title like any other malformed declaration. `ki agora list` and `ki agora show` MUST present the declared title beside the identifier, and the reserved `estate` keeps its system title. The identifier MUST remain the only machine key: `--agora` selection, `ki agora roots`, lookups and folder paths never use the title, and titles need not be unique.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/core/agora/declarations.ts` — `homeDeclaration`; `src/tests/cli/agora/agora.test.ts` — `lists, shows, selects, and opens an owner-declared Agora` and the malformed declaration cases.
+
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

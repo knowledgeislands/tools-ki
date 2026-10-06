@@ -44,7 +44,7 @@ export const createAgoraShowCommand = (context: KiContext): Command =>
             {
               label: profile.id,
               children: [
-                { label: `name: ${profile.name}` },
+                { label: `title: ${profile.title}` },
                 { label: `purpose: ${profile.purpose}` },
                 ...(profile.home
                   ? [

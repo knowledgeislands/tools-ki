@@ -94,7 +94,7 @@ export const profileFromHome = async (
   const roots = [...byRepository.values()].sort((left, right) => left.key.localeCompare(right.key, 'en'))
   return {
     id: declaration.id,
-    name: declaration.id,
+    title: declaration.title,
     purpose: declaration.purpose,
     home: { key: home.key, root: home.root, repository: home.repository, kind: 'owner' },
     members: roots.filter((root): root is AgoraMember => root.kind !== 'reference'),
@@ -113,7 +113,7 @@ export const duplicateOwnersError = (id: string, owners: readonly string[]): KiE
 
 export const estate = (repositories: readonly RegisteredRepository[]): AgoraProfile => ({
   id: ESTATE_AGORA,
-  name: 'Registered estate',
+  title: 'Registered estate',
   purpose: 'Every locally registered canonical KI repository.',
   members: repositories.map(({ key, root, repository }) => ({ key, root, repository, kind: 'member' })),
   references: [],
