@@ -3,56 +3,92 @@ id: KI-TOOL-CLI-104
 area: CLI
 title: Capital trade policy
 theme: cli
-horizon: next
-status: draft
+horizon: now
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 3f96f18680c8792a837ecba1931e03ab59112741
 created_at: 2026-10-06T10:00:00Z
-updated_at: 2026-10-06T11:30:00Z
+updated_at: 2026-10-06T12:00:00Z
 ---
 
 # Capital trade policy
 
 ## Goal
 
-`ki` takes trade routes and standing-intake grants only from the territory Capital's policy, sweeps the territory for named islands that have not declared `ki-trades`, and produces a read-only migration report before the switch.
+`ki` takes trade routes, standing-intake grants and knowledge subtypes only from the territory Capital's policy. Every repository names its Capital, and the Capital lists its members. `ki repo trade policy check` sweeps the territory for members that do not conform. `ki repo trade policy compare` proves that the switch loses no active route.
 
 ## Context
 
-The owner approved Capital-only route governance on 2026-10-06 in [KI-ARCADIA-GOV-016](https://github.com/knowledgeislands/ki-arcadia-principal/blob/main/Streams/Roadmap/KI-ARCADIA-GOV-016-territorial-classification-and-exchange.md). Routes are today parsed from member `.ki.toml` tables in `src/core/trade/configuration.ts` and resolved pairwise in `estate.ts`, `delivery.ts` and `standing-intake.ts`. The harness's share is `KI-HARNESS-GOV-122`.
+The owner approved Capital-only route governance on 2026-10-06 in [KI-ARCADIA-GOV-016](https://github.com/knowledgeislands/ki-arcadia-principal/blob/main/Streams/Roadmap/KI-ARCADIA-GOV-016-territorial-classification-and-exchange.md). On the same day the owner collapsed the staged plan into a single change: "just push this through and just get to where we want to be in the config". There are no additive or legacy-compatible layers. A single release is cut once verification passes, and the coordinator cuts it, not this item. Capital declaration is mandatory and FAILs immediately, with no warning phase. The harness's share is [KI-HARNESS-GOV-122](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/KI-HARNESS-GOV-122-capital-governed-trade-routes.md).
 
-The policy is a `[skills.ki-trades.territory]` table in the Capital's own `.ki.toml`: `name`, `members`, `[[skills.ki-trades.territory.channels]]` (`id`, `purpose`, `from`, `to`, `kinds`) expanding to exact `(source, receiver, kind)` triples, and `[[skills.ki-trades.territory.standing]]` grants. The Capital is the unique registered repository whose `.ki.toml` declares `[skills.ki-trades.territory]` listing the island as a member, resolved as Agora homes already are. None is unavailable and several is ambiguous; both fail closed, and no Agora is consulted.
+The schema has three parts:
+
+- Every `.ki.toml` declares `capital = "<canonical HTTPS URL>"` in `[skills.ki-repo]`, and a Capital names itself.
+- Only a Capital declares `[skills.ki-repo.territory]`, which holds `name` and the sorted `members`, including itself.
+- Only a Capital declares `[skills.ki-trades.territory]`. It holds a `subtypes` table, `[[channels]]` entries (`id`, `purpose`, `from`, `to`, `kinds`) and `[[standing]]` grants (`subtype`, `from`, `to`).
+
+A member's `[skills.ki-trades]` may hold only `map_bonus`. `routes` and `subtypes` are retired and rejected.
+
+Each repository resolves its declared Capital through the local registry. Resolution fails closed when the Capital is:
+
+- unregistered, which reports `territory policy lives in <capital>, not available here`;
+- registered more than once;
+- invalid;
+- not a Capital;
+- not listing the repository.
+
+A route is active when its peer is registered once, declares `[skills.ki-trades]` and resolves the same Capital. Several territories can coexist in one registry.
 
 ## Boundary
 
-- Delivered in three releases: A additive (parser, resolver, `policy check`, `policy migration-report`; legacy tables stay authoritative), B the switch (policy is the only authority; no fallback), C retirement (legacy keys FAIL; remove legacy parser and report).
+- One change to the target state, with no staged releases and no legacy parser.
 - `ki/trade-routes/v1` output stays byte-compatible for apps-observatory.
-- `TRD-8004751b` and `TRD-d03495e9` are never rewritten; no route a live record depends on may be removed.
-- No release is cut or published without the owner's request.
+- `TRD-8004751b` and `TRD-d03495e9` are never rewritten, and the policy must still grant the routes they depend on.
+- This item does not cut or publish a release.
 
 ## Current state
 
-Draft. Route authority today comes from paired member `.ki.toml` tables; no territory table or Capital resolver exists, and `parseConfiguration` rejects unknown `ki-trades` keys.
+The implementation, tests and documentation are complete in the item's worktree. Verification is under way against the real Arcadia Capital policy in an isolated `KI_*_HOME`.
 
 ## Steps
 
-- [ ] Release A: `configuration.ts` accepts the `territory` sub-table so Arcadia can declare it without breaking current audits; new `src/core/trade/policy.ts` (`parseTradePolicy`, `policyEdges`, `policyGrants`) and `capital.ts` (`resolveCapitalPolicy`, `requireCapitalPolicy`, reusing Agora home resolution over registered `.ki.toml` files); new `commands/trade/policy.ts` with `show`, `check` (conforming, failing, unverifiable, ambiguous; non-zero on failing) and `migration-report` (`ki/trade-policy-migration/v1`); move the current parser to `legacy-configuration.ts` for the report.
-- [ ] Release B: `estate.ts`, `delivery.ts`, `standing-intake.ts`, `preparations.ts` and `lifecycle.ts` read policy edges and grants; `configuration.ts` keeps `repository`, `identity` and `mapBonus` and reports legacy keys as diagnostics only; remove route, standing and subtype mutators and their `add`/`remove` commands.
-- [ ] Release C: retire the legacy parser and migration report.
-- [ ] Tests: new `policy.test.ts` (parser refusals, resolver states, territory table outside a Capital refused, Agora grants nothing, sweep states, report equality and pending direction, uncovered record); policy fixtures in `trade.test.ts` and `standing-intake.test.ts`; `roadmap.test.ts` fixture; v1 route-report snapshot.
+- [x] `configuration.ts` handles the declaration side:
+  - parses `capital`, the two territory tables and the member `map_bonus`;
+  - rejects the retired keys and territory tables outside a Capital;
+  - validates channels and standing grants;
+  - derives each repository's effective routes from the policy.
+- [x] `estate.ts` handles resolution:
+  - resolves the Capital through the registry and fails closed;
+  - makes route activation depend on the peer sharing the Capital, replacing the reciprocal-declaration check.
+- [x] `standing-intake.ts` makes a grant's state its knowledge route's state.
+- [x] New `policy.ts` and `commands/trade/policy.ts` provide `policy show`, `policy check` and `policy compare --baseline`.
+- [x] Remove the `routes add|remove`, `standing add|remove` and `subtypes` commands, together with `configuration-mutations.ts`.
+- [x] `ki repo init` requires `--capital`. When the repository is its own Capital, it writes a one-member territory.
+- [x] Update the tests, keeping 100% coverage.
+- [x] Update the manual, the command inventory, the specs (TRADE-001, 003, 008 and 009 retired, 010, 012 to 014, REGISTRY-001 and 002), README, CHANGELOG and the guides.
+- [ ] Verify against the Arcadia policy, then run review and acceptance.
 
 ## Files touched
 
-- `src/core/trade/` (`policy.ts`, `capital.ts`, `legacy-configuration.ts` new; `configuration.ts`, `estate.ts`, `delivery.ts`, `standing-intake.ts`, `preparations.ts`, `lifecycle.ts`, `configuration-mutations.ts`, `route-report.ts`)
-- `src/commands/trade/` (`policy.ts` new; `routes/index.ts`, `standing.ts`, `subtypes.ts`)
-- `src/tests/cli/trade/`, `src/tests/cli/repo/roadmap.test.ts`
+- `src/core/trade/` (`policy.ts` new; `configuration.ts`, `estate.ts`, `standing-intake.ts` and `operations/routes.ts`; `configuration-mutations.ts` removed)
+- `src/commands/trade/` (`policy.ts` new; `index.ts`, `routes/index.ts` and `standing.ts`; `subtypes.ts` removed)
+- `src/core/configuration/declaration.ts` and `src/commands/repo/init.ts`
+- `src/tests/`
+- `man/ki.1` and `man/ki.commands.json`
+- `docs/specs/trades.md`, `docs/specs/registry.md` and `docs/specs/index.md`
+- `README.md` and `CHANGELOG.md`
+- `docs/guides/user/getting-started.md`, `repository-operations.md` and `standing-knowledge-intake.md`
 
 ## Verify
 
-- `bun test` and `ki repo audit` pass.
-- Against the Capital policy, `policy migration-report` shows every active legacy direction and standing grant covered, the pending `tools-techne` to `homebrew-tap` direction as an explicit decision, and both open records covered.
-- `policy check` from Arcadia reports no failing island after member tables are stripped.
+- `bunx vitest run --coverage` (100%), `bunx tsc --noEmit -p .`, `bunx biome check`, knip, dependency-cruiser, the manual lint and the command-inventory check all pass.
+- `ki repo audit --repo . --progress never --concise` passes with the locally built `ki` and harness.
+- Isolated verification runs with every registered repository migrated:
+  - `ki repo trade policy check`, run from Arcadia, reports no failing member;
+  - `ki repo trade policy compare --baseline` against the v0.6.1 estate report loses no route and adds only `tools-techne -> homebrew-tap work`;
+  - the standing grants match the previous active set;
+  - the routes behind `TRD-8004751b` and `TRD-d03495e9` remain active.
 
 ## Dependencies / blocks
 
@@ -62,15 +98,15 @@ No local dependency. The cross-repository relationship is recorded under Discuss
 
 ### Decision Records
 
-None in this repository; authority is decided in Arcadia and the harness.
+None in this repository. The authority is decided in Arcadia, under KI-ARCADIA-GOV-016 and its GDR.
 
 ### Specifications
 
-Trade command specification for `ki repo trade policy` and the removed route mutators.
+`docs/specs/trades.md` and `docs/specs/registry.md`. `docs/specs/index.md` gains the convention for retired requirements.
 
 ### Guides
 
-Command help.
+The manual, README, CHANGELOG, and the getting-started, repository-operations and standing-knowledge-intake guides.
 
 ### Roadmap
 
@@ -80,8 +116,8 @@ None beyond this record.
 
 ### Cross-repository relationship
 
-This item is blocked by `knowledgeislands/ki-arcadia-principal` `KI-ARCADIA-GOV-016`, which settles the policy authority and schema. Release B ships together with `knowledgeislands/ki-agentic-harness` `KI-HARNESS-GOV-122`, because the harness rubric parses routes independently.
+This item is blocked by `knowledgeislands/ki-arcadia-principal` `KI-ARCADIA-GOV-016`, which settles the policy authority and schema. It ships together with `knowledgeislands/ki-agentic-harness` `KI-HARNESS-GOV-122`, because the harness rubric parses routes independently.
 
-### Open owner question
+### Release authority
 
-Release authority for A, B and C: whether each release may be cut once its verification passes, or whether the owner triggers each one. Until answered, the Boundary applies and no release is cut or published without the owner's request.
+The owner settled this on 2026-10-06: the coordinator cuts one release once verification passes. After that release, consumers bump their CI `KI_VERSION` from `v0.6.1`.
