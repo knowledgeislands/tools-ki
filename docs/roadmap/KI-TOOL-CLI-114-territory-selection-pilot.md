@@ -30,7 +30,7 @@ No legacy Agora flags, runtime memberships or filter globs; no new named groups,
 
 ## Current state
 
-The integrated local candidate combines the territory-selection pilot with the published v0.8.4 native agent commands and tests. The package remains prepared as 0.9.0. Publication is held because the built-in clean-install harness pin predates this contract; updating its source path and obtaining its exact archive digest require the coordinator's narrow authority addition.
+The integrated local candidate combines the territory-selection pilot with the published v0.8.4 native agent commands and tests. The package remains prepared as 0.9.0. The built-in clean-install harness now pins the exact published territory cut-over candidate and its verified canonical archive digest under the existing release authority.
 
 ## Steps
 
@@ -123,10 +123,14 @@ The approved KI pilot from baseline `72f64238841d790571de63d9f7be57ba23322449`: 
 
 The final combined candidate passed the full coverage suite at all four 100% thresholds, TypeScript, Biome, Knip, Markdown, manual lint, compilation and the whole native audit against the final harness in an isolated registered context. The source agent implementation and its tests are byte-identical to the published prerequisite. Command inventory was regenerated after resolving the root and manual overlap. Initial audit registration/link findings were corrected solely in run-owned state. Dependency freshness remains unknown under the explicit network restriction.
 
+The release-readiness addition changes only `src/core/storage/registry.ts`, `src/tests/cli/bootstrap/bootstrap.test.ts` and this review record. It preserves agent and territory surfaces together, membership, the ki handle and KIS identity, frozen design evidence and trade/Techne holds. Full final KI verification and immutable tagged installation/bootstrap proof are required before rollout completion.
+
+The pin continuation passed focused bootstrap/harness tests, full coverage at all four 100% thresholds, TypeScript, Biome, Knip, Markdown, manual lint and compilation. A freshly compiled executable bootstrapped an empty run-owned HOME/XDG context from the published canonical archive and reported its pinned digest. The native audit identified and corrected the review heading shape; the affected audit is repeated before publication.
+
 ### Outstanding concerns
 
 - The v0.8.4 prerequisite is published immutably, installed and verified; the widened delegation skill matches its published canonical source. GOV-144 functionality and tests remain unchanged.
-- Clean installation would acquire a pre-cut-over harness from the built-in pin. The coordinator has requested authority to update `src/core/storage/registry.ts` and download the exact published canonical harness archive for its digest. Neither action is included in the immutable pilot packet or named remote calls.
+- Decision 1 and the explicit continuation cover the required `src/core/storage/registry.ts` pin and related bootstrap fixture. The exact published harness commit is `52989fa5cd5a4163c8273dc14c74156b9ad5605e`; its downloaded canonical archive has SHA-256 `5e4fc1e9f792a844e7e045e5f965a6f2db951c67b1dc7e2f9542bc122c3e8d9a`. Original baseline and pilot evidence remain immutable.
 - Publication, release, immutable installation and downstream proof remain outstanding; no acceptance is inferred.
 
 ### Post-change review
