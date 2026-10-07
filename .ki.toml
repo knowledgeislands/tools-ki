@@ -58,9 +58,22 @@ auto_memory = "disabled"
 adapter = "roadmap"
 
 [skills.ki-work-roadmap]
-themes = ["cli", "cross-repository-vendoring"]
-areas.CLI = "cli"
-areas.VENDOR = "cross-repository-vendoring"
+areas = ["CLI", "VENDOR"]
+# Mirrors the src/commands groups.
+components = [
+  "acquire",
+  "agora",
+  "batch",
+  "bootstrap",
+  "dev",
+  "harness",
+  "kb",
+  "manage",
+  "registry",
+  "repo",
+  "skill",
+  "trade",
+]
 
 [skills.ki-tokenomics]
 
