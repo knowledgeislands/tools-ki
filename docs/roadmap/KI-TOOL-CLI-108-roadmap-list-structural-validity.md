@@ -7,12 +7,12 @@ purpose: upkeep
 initiative: platform-foundations
 component: repo
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 84bd8d4f4c15cbcab2c6bea49618d7d9be5bb6fa
 created_at: 2026-10-06T21:05:00Z
-updated_at: 2026-10-07T20:53:26Z
+updated_at: 2026-10-07T21:06:02Z
 ---
 
 # Roadmap list structural validity
@@ -41,9 +41,9 @@ Planned on 2026-10-07 against `main`. `parseWorkItem` in `src/core/work/items.ts
 
 ## Steps
 
-- [ ] In `readWorkItemRecordInventory`, group readable records by `id`; for every identifier held by more than one record, withhold those records from the inventory and add one fault per file, `work item <file> shares identifier <ID> with <other files>`, so list, summary and every inventory reader see the duplicate as a structural fault.
-- [ ] Add a CLI contract test in `src/tests/cli/repo/roadmap.test.ts` covering both adapters: a record without frontmatter and two records sharing an `id` fail `list` and `summary` with the stable diagnostics and exit `1`, the ledger and KB index are never reported, and the repaired fixtures pass. Update the existing ambiguous-identifier test to the new diagnostic.
-- [ ] Extend `REPO-OPS-011` in `docs/specs/repository-operations.md` with the duplicate-identifier diagnostic and the new test.
+- [x] In `readWorkItemRecordInventory`, group readable records by `id`; for every identifier held by more than one record, withhold those records from the inventory and add one fault per file, `work item <file> shares identifier <ID> with <other files>`, so list, summary and every inventory reader see the duplicate as a structural fault.
+- [x] Add a CLI contract test in `src/tests/cli/repo/roadmap.test.ts` covering both adapters: a record without frontmatter and two records sharing an `id` fail `list` and `summary` with the stable diagnostics and exit `1`, the ledger and KB index are never reported, and the repaired fixtures pass. Update the existing ambiguous-identifier test to the new diagnostic.
+- [x] Extend `REPO-OPS-011` in `docs/specs/repository-operations.md` with the duplicate-identifier diagnostic and the new test.
 
 ## Files touched
 
@@ -81,6 +81,36 @@ None expected.
 ### Roadmap
 
 None.
+
+## Review
+
+### Delivered
+
+`ki repo roadmap list` and `summary` now report every record that shares a work-item identifier with another, naming the other holders, withhold those records from the inventory and exit `1`, for both the `roadmap` and `kb-streams` adapters. Records without canonical frontmatter keep their per-file fault, and `_ISSUES.md` and the KB `Roadmap.md` index are never reported. Out of scope as planned: adapter-owned field validation, repairing any repository and harness rubrics. Baseline `84bd8d4f4c15cbcab2c6bea49618d7d9be5bb6fa`.
+
+### Change Summary
+
+- `src/core/work/items.ts`: `readWorkItemRecordInventory` groups readable records by identifier and turns every holder of a shared identifier into a fault, `work item <file> shares identifier <ID> with <other files>`. Because every inventory reader goes through this function, mutating commands that read the whole inventory refuse with the same diagnostic, as they already did for malformed records.
+- `src/tests/cli/repo/roadmap.test.ts`: new contract test covering both adapters, list and summary, defects and repair; the ambiguous-identifier test now expects the duplicate diagnostic.
+- `docs/specs/repository-operations.md`: `REPO-OPS-011` gains the duplicate-identifier requirement and cites the new test.
+
+### Verification
+
+- `bun run test:coverage`: 1082 tests pass with 100% statement, branch, function and line coverage.
+- `bunx tsc --noEmit` clean; `bunx biome check` reports no errors.
+- `ki repo audit --repo .` in the delivery worktree: only `REPO-REG-1` (the temporary worktree is unregistered) and `RUNTIMES-2` (its untracked runtime activations are absent); both are worktree-local, and the registered primary checkout at the same base passes all 22 skills. `ki repo audit --skill ki-work-roadmap` passes.
+
+### Outstanding concerns
+
+None for this record. A repository that already holds a duplicate identifier will now see `list` fail and inventory-wide mutations refuse until it is repaired, which is the intended structural-validity behaviour.
+
+### Post-change review
+
+The goal is met with a single change at the shared inventory boundary, so list, summary, statistics and mutation paths agree. Regression risk is limited to repositories with existing duplicates, which the standard already treats as invalid. Ready for acceptance.
+
+### Mini recap
+
+Duplicate-identifier detection added to the roadmap inventory, specified and tested for both adapters; no learning route beyond the specification.
 
 ## Discussion
 

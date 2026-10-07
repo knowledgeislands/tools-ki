@@ -506,11 +506,29 @@ export const readWorkItemRecordInventory = async (
         }
       })
   )
+  const readable = outcomes.flatMap((outcome) => ('record' in outcome ? [outcome.record] : []))
+  const holders = Map.groupBy(readable, (record) => record.item.id)
+  const others = (record: WorkItemRecord): readonly string[] =>
+    (holders.get(record.item.id) as readonly WorkItemRecord[])
+      .filter((holder) => holder.file !== record.file)
+      .map((holder) => holder.file)
+  const duplicated = (record: WorkItemRecord): boolean => others(record).length > 0
   return {
-    records: outcomes
-      .flatMap((outcome) => ('record' in outcome ? [outcome.record] : []))
+    records: readable
+      .filter((record) => !duplicated(record))
       .sort((left, right) => left.item.id.localeCompare(right.item.id)),
-    faults: outcomes.flatMap((outcome) => ('fault' in outcome ? [outcome.fault] : []))
+    faults: outcomes.flatMap((outcome) => {
+      if ('fault' in outcome) return [outcome.fault]
+      const { record } = outcome
+      return duplicated(record)
+        ? [
+            {
+              file: record.file,
+              message: `work item ${record.file} shares identifier ${record.item.id} with ${others(record).join(', ')}`
+            }
+          ]
+        : []
+    })
   }
 }
 

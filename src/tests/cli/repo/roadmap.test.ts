@@ -755,6 +755,58 @@ describe('[ki repo roadmap]', () => {
     expect(retiredFormat.output).toContain('roadmap list --format must be text or json')
   })
 
+  test('diagnoses records without frontmatter and shared identifiers in both local adapters', async () => {
+    const box = await sandbox()
+    const project =
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+    await box.project.write('project/.ki.toml', project)
+    await box.project.write('project/docs/roadmap/_ISSUES.md', 'last_id: 4\n')
+    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-first.md', item())
+    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-second.md', item({ title: 'Duplicate item' }))
+    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-third.md', item({ title: 'Third holder' }))
+    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-004-bare.md', '# No frontmatter\n')
+    await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
+    await box.project.write('knowledge/Streams/Roadmap/_ISSUES.md', 'last_id: 3\n')
+    await box.project.write('knowledge/Streams/Roadmap/Roadmap.md', '---\nnote_type: index\n---\n\n# Roadmap\n')
+    await box.project.write('knowledge/Streams/Roadmap/KBS-001-valid.md', item({ id: 'KBS-001' }))
+    await box.project.write('knowledge/Streams/Roadmap/KBS-002-first.md', item({ id: 'KBS-002' }))
+    await box.project.write('knowledge/Streams/Roadmap/KBS-002-second.md', item({ id: 'KBS-002' }))
+    await box.project.write('knowledge/Streams/Roadmap/KBS-003-bare.md', '# No frontmatter\n')
+
+    const list = await box.run('ki repo --repo project --repo knowledge roadmap list')
+    const summary = await box.run('ki repo --repo project --repo knowledge roadmap summary')
+
+    for (const result of [list, summary]) {
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(
+        'work item KI-TOOL-CLI-003-first.md shares identifier KI-TOOL-CLI-003 with KI-TOOL-CLI-003-second.md, KI-TOOL-CLI-003-third.md'
+      )
+      expect(result.output).toContain(
+        'work item KI-TOOL-CLI-003-third.md shares identifier KI-TOOL-CLI-003 with KI-TOOL-CLI-003-first.md, KI-TOOL-CLI-003-second.md'
+      )
+      expect(result.output).toContain('work item KBS-002-second.md shares identifier KBS-002 with KBS-002-first.md')
+      expect(result.output).toContain('work item KI-TOOL-CLI-004-bare.md must declare canonical frontmatter')
+      expect(result.output).toContain('work item KBS-003-bare.md must declare canonical frontmatter')
+      expect(result.output).not.toContain('_ISSUES.md')
+      expect(result.output).not.toContain('Roadmap.md')
+    }
+    expect(list.output).toContain('├─ roadmap (0)')
+    expect(list.output).toContain('├─ roadmap (1)')
+    expect(list.output).not.toContain('Duplicate item')
+
+    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-004-bare.md', item({ id: 'KI-TOOL-CLI-004' }))
+    await rm(`${box.project.path}/project/docs/roadmap/KI-TOOL-CLI-003-second.md`)
+    await rm(`${box.project.path}/project/docs/roadmap/KI-TOOL-CLI-003-third.md`)
+    await box.project.write('knowledge/Streams/Roadmap/KBS-003-bare.md', item({ id: 'KBS-003' }))
+    await rm(`${box.project.path}/knowledge/Streams/Roadmap/KBS-002-second.md`)
+
+    for (const command of ['list', 'summary']) {
+      const repaired = await box.run(`ki repo --repo project --repo knowledge roadmap ${command}`)
+      expect(repaired.exitCode).toBe(0)
+      expect(repaired.output).not.toContain('shares identifier')
+    }
+  })
+
   test('accepts future work items without the retired candidate field', async () => {
     const box = await sandbox()
     await box.project.write(
@@ -1782,8 +1834,12 @@ describe('[ki repo roadmap]', () => {
     const prune = await box.run('ki repo --repo repo roadmap prune KI-TOOL-CLI-003')
 
     expect(result.exitCode).toBe(2)
-    expect(result.output).toContain('must contain exactly one work item KI-TOOL-CLI-003')
-    expect(prune.output).toContain('must contain exactly one work item KI-TOOL-CLI-003')
+    expect(result.output).toContain(
+      'work item KI-TOOL-CLI-003-first.md shares identifier KI-TOOL-CLI-003 with KI-TOOL-CLI-003-second.md'
+    )
+    expect(prune.output).toContain(
+      'work item KI-TOOL-CLI-003-first.md shares identifier KI-TOOL-CLI-003 with KI-TOOL-CLI-003-second.md'
+    )
     await expect(box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-first.md')).resolves.toContain('horizon: next')
     await expect(box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-second.md')).resolves.toContain('horizon: next')
   })
