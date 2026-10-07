@@ -6,12 +6,13 @@ kind: deliver
 purpose: corrective
 project: estate-factorisation
 component: repo
-status: triage
+horizon: now
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T23:27:45Z
-updated_at: 2026-10-07T14:35:20Z
+updated_at: 2026-10-07T20:39:59Z
 ---
 
 # Report dangling projection links
@@ -37,6 +38,49 @@ No existing record duplicates this. KI-TOOL-CLI-108 (roadmap list structural val
 In scope: detecting and reporting dangling symlinks in KI-managed projection directories (at least entries whose names carry the `ki-` prefix or match a known retired capability), and removing them through `ki repo repair` with its existing dry-run preview.
 
 Out of scope: removing non-symlink or non-KI entries; changing harness skill retirement policy.
+
+## Current state
+
+Adopted into Now on 2026-10-07 under decision 17 of the state-of-play design; not yet planned. `inspectRepositoryHealth` in `src/agents/repository-health.ts` inspects one projection per declared installed-harness skill and compatible agent, so an entry for a skill that is no longer declared, such as a retired capability, is never inspected and the repository can report healthy. `ki repo diag` and `ki repo repair` share `src/commands/repo/shared/repository-health.ts`. The two open questions under Discussion are unanswered.
+
+## Steps
+
+- [ ] Settle the two open questions: the detection scope within a projection directory, and whether the harness supplies a retired-capability list.
+- [ ] Extend repository health to enumerate entries in each compatible agent's projection directory and report dangling KI-managed symlinks that no declared skill accounts for.
+- [ ] Have `ki repo repair` remove those symlinks, previewed by its existing dry-run, without touching non-symlink or non-KI entries.
+- [ ] Add regression tests for diagnosis and repair, including a foreign entry that must be left alone.
+
+## Files touched
+
+`src/agents/repository-health.ts`, `src/commands/repo/shared/repository-health.ts`, and the repository `diag` and `repair` tests under `src/tests/cli/repo/`.
+
+## Verify
+
+1. A fixture repository with a dangling `ki-` projection symlink for an undeclared skill makes `ki repo diag` report it and not report healthy.
+2. `ki repo repair --dry-run` lists that removal and changes nothing; `ki repo repair` removes it and leaves non-symlink and non-KI entries in place.
+3. The repository's test, type-check and `ki repo audit` gates pass.
+
+## Dependencies / blocks
+
+None blocking. If the second open question is answered with a harness-supplied retired-capability list, that list becomes a handoff to `knowledgeislands/ki-agentic-harness`.
+
+## Documentation impact
+
+### Decision Records
+
+None expected unless the detection scope warrants one.
+
+### Specifications
+
+None; this changes diagnosis and repair behaviour within the CLI only.
+
+### Guides
+
+Update any repository-health guidance that describes what `ki repo diag` reports and what `ki repo repair` removes.
+
+### Roadmap
+
+A harness handoff only if the retired-capability list is chosen.
 
 ## Discussion
 
