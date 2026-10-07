@@ -9,7 +9,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 6fa3e7bb9fda9c5b8ba6fc947e312ed16f26904f
 created_at: 2026-10-07T12:26:37Z
-updated_at: 2026-10-07T12:42:00Z
+updated_at: 2026-10-07T16:10:00Z
 ---
 
 # KI-TOOL-CLI-112: Read roadmap model
@@ -47,7 +47,7 @@ Blocked by `ki-agentic-harness` [KI-HARNESS-GOV-150](https://github.com/knowledg
 
 ### Known dependencies
 
-[KI-HARNESS-GOV-150](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/KI-HARNESS-GOV-150-check-the-roadmap-model.md) must be done so the table and field shapes are fixed.
+[KI-HARNESS-GOV-150](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/KI-HARNESS-GOV-150-check-the-roadmap-model.md) must be done so the table and field shapes are fixed. Satisfied: GOV-150 and its standards companion KI-HARNESS-GOV-149 were accepted as done on 2026-10-07 in `ki-agentic-harness` commit `bdcb7360`, on delivery commits `1780ff75` (standards) and `1549ad35` (checker).
 
 ### Decisions settled for planning
 
@@ -73,6 +73,7 @@ Planned under the 2026-10-07 rollout authority while GOV-150 is still uncommitte
 - [ ] Move horizons along now, next, soon, future and hold: entering hold requires a reason and condition, leaving hold requires an explicit destination, and moves respect the status and horizon table.
 - [ ] Add `ki repo roadmap migrate [--apply]` for the mechanical pass with a before/after comparison, idempotence and no commit.
 - [ ] Update completion values, the manual, README and changelog.
+- [ ] Extend `ki repo roadmap prune` to select cancelled records as well as done ones, with the same guard: the terminal state must already be committed in an earlier commit, and the commit subject and body name the pruned records whichever terminal state they reached. This mirrors the harness `ki-accept` prune selection delivered by GOV-150.
 - [ ] Cover every new branch through the CLI and keep 100% coverage.
 
 ## Files touched
@@ -90,7 +91,7 @@ Planned under the 2026-10-07 rollout authority while GOV-150 is still uncommitte
 
 ## Dependencies / blocks
 
-Build order follows `ki-agentic-harness` KI-HARNESS-GOV-149 and KI-HARNESS-GOV-150, still uncommitted when this plan was made; the field shapes mirror that working tree and are reconciled once it lands.
+Build order follows `ki-agentic-harness` KI-HARNESS-GOV-149 and KI-HARNESS-GOV-150. Both are now done (harness commit `bdcb7360`), so the dependency is satisfied; the field shapes this plan mirrored from the working tree should be reconciled against the committed harness checker in `skills/change-management/ki-work-roadmap/scripts/rubric/contexts/roadmap-evidence.ts` and `project-registry.ts`.
 
 ## Documentation impact
 
@@ -115,3 +116,7 @@ Repository migrations and the later enforcement switch-over remain separate reco
 ### Origin
 
 Handoff from the `ki-agentic-harness` roadmap model rollout on 2026-10-07, captured and shaped by the harness agent under Kris's instruction; `tools-ki` retains priority, execution and acceptance authority.
+
+### Harness dependency satisfied
+
+On 2026-10-07 the harness rollout closed KI-HARNESS-GOV-149 and KI-HARNESS-GOV-150 as done under Kris's decision 6 grant. The harness checker landed with these shapes worth reconciling here: `hold` is a nested mapping with `reason` (`waiting-for` or `parked`), `condition`, optional `review` date and optional `trades`; `resolution` is one of obsolete, rejected, duplicate, merged or superseded, and duplicate, merged and superseded need `resolution_target`; `areas` is a list of codes and `components` a vocabulary in `.ki.toml`; registry discovery resolves `[skills.ki-repo].capital` through the local ki registry to `Streams/Projects/`. The harness `ki-accept` prune selection now admits cancelled records, which this record adds to `ki repo roadmap prune`. Recorded by the harness rollout agent; `tools-ki` keeps its priority, execution and acceptance authority.
