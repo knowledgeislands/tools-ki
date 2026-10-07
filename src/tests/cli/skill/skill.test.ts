@@ -23,6 +23,7 @@ describe('[ki skill]', () => {
     const box = await sandbox()
     const subcommand = await box.run('ki skill repo')
     const subcommandWithHelp = await box.run('ki skill repo -h')
+    const unknownSubcommand = await box.run('ki skill unknown')
     const option = await box.run('ki skill --repo')
     const shortOptionWithHelp = await box.run('ki skill -x -h')
     const optionWithHelp = await box.run('ki skill add ki-example --repo -h')
@@ -30,9 +31,8 @@ describe('[ki skill]', () => {
 
     for (const result of [subcommand, subcommandWithHelp]) {
       expect(result.exitCode).toBe(2)
-      expect(result.output).toContain(
-        "ki: error: unknown subcommand 'repo' for 'ki skill'\nDid you mean: ki repo skill …?\n"
-      )
+      expect(result.output).toContain("ki: error: unknown subcommand 'repo' for 'ki skill'\n")
+      expect(result.output).toBe(unknownSubcommand.output.replace("'unknown'", "'repo'"))
       expect(result.output).toContain('Usage: ki skill [options] [command]')
     }
     expect(option.exitCode).toBe(2)

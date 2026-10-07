@@ -26,8 +26,7 @@ const parserError = (command: Command, text: string): string => {
   const subcommand = /^error: unknown command '([^']+)'\n$/.exec(text)
   if (!subcommand) return text
 
-  const hint = commandName(command) === 'ki skill' && subcommand[1] === 'repo' ? 'Did you mean: ki repo skill …?\n' : ''
-  return `ki: error: unknown subcommand '${subcommand[1]}' for '${commandName(command)}'\n${hint}`
+  return `ki: error: unknown subcommand '${subcommand[1]}' for '${commandName(command)}'\n`
 }
 
 const unknownOption = (command: Command, arguments_: readonly string[]): string | undefined => {
