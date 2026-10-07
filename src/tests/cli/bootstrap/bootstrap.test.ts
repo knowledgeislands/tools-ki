@@ -20,7 +20,7 @@ describe('[ki bootstrap]', () => {
     expect(bootstrapped).toEqual({
       exitCode: 0,
       output: `created KI agent configuration for chatgpt-codex
-canonical harness already installed\tarchive 012346c754ae05839fdd47a9333c6f60ca36bbe084dd47f0be79a9a8fa611128
+canonical harness already installed\tarchive 743b7900eb9b0885d6fd4fc5efebdfd7d139a37f2e14de09df8df391cf657f67
 ki-bootstrap for chatgpt-codex installed
 ki-next for chatgpt-codex installed
 ki-plan for chatgpt-codex installed
@@ -28,11 +28,12 @@ ki-implement for chatgpt-codex installed
 ki-accept for chatgpt-codex installed
 ki-batch for chatgpt-codex installed
 ki-recap for chatgpt-codex installed
+ki-design-loop for chatgpt-codex installed
 `
     })
     expect(repeated).toEqual({
       exitCode: 0,
-      output: `canonical harness already installed\tarchive 012346c754ae05839fdd47a9333c6f60ca36bbe084dd47f0be79a9a8fa611128
+      output: `canonical harness already installed\tarchive 743b7900eb9b0885d6fd4fc5efebdfd7d139a37f2e14de09df8df391cf657f67
 ki-bootstrap for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
@@ -40,13 +41,14 @@ ki-implement for chatgpt-codex already installed
 ki-accept for chatgpt-codex already installed
 ki-batch for chatgpt-codex already installed
 ki-recap for chatgpt-codex already installed
+ki-design-loop for chatgpt-codex already installed
 `
     })
     expect(refreshed).toEqual({
       exitCode: 0,
       output: `refreshed KI agents: chatgpt-codex
-canonical harness already installed\tarchive 012346c754ae05839fdd47a9333c6f60ca36bbe084dd47f0be79a9a8fa611128
-refreshed ki configuration: 1 agents, 1 harnesses, 7 skills
+canonical harness already installed\tarchive 743b7900eb9b0885d6fd4fc5efebdfd7d139a37f2e14de09df8df391cf657f67
+refreshed ki configuration: 1 agents, 1 harnesses, 8 skills
 ki-bootstrap for chatgpt-codex already installed
 ki-next for chatgpt-codex already installed
 ki-plan for chatgpt-codex already installed
@@ -54,6 +56,7 @@ ki-implement for chatgpt-codex already installed
 ki-accept for chatgpt-codex already installed
 ki-batch for chatgpt-codex already installed
 ki-recap for chatgpt-codex already installed
+ki-design-loop for chatgpt-codex already installed
 `
     })
     expect(checked.output).toContain('✓ Configuration:')
@@ -81,6 +84,9 @@ harness = "knowledgeislands/ki-agentic-harness"
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-bootstrap]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-design-loop]
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-implement]
@@ -549,7 +555,7 @@ ids = ["claude-code"]
     const config = await box.config.read('ki/config.toml')
 
     expect(refreshed.exitCode).toBe(0)
-    expect(refreshed.output).toContain('refreshed ki configuration: 1 agents, 2 harnesses, 7 skills')
+    expect(refreshed.output).toContain('refreshed ki configuration: 1 agents, 2 harnesses, 8 skills')
     expect(config).not.toContain('[skills.example-skill]')
   })
 

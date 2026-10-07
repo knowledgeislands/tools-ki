@@ -347,7 +347,7 @@ extra = true
     expect(diag.output).not.toContain('Errors')
     expect(diag.output).toContain('├─ agents (1)\n│  │  ╰─ claude-code')
     expect(diag.output).toContain('├─ harnesses (0)\n│  │  ╰─ none')
-    expect(diag.output).toContain('├─ skills (7)')
+    expect(diag.output).toContain('├─ skills (8)')
     expect(diag.output).toContain('│  │  ╰─ knowledgeislands/ki-agentic-harness:ki-recap')
     expect(diag.output).toContain('├─ registry\n│  ├─ Status: missing')
     expect(diag.output).toContain('│  ╰─ repositories (0)\n│     ╰─ none')

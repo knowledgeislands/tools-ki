@@ -59,7 +59,7 @@ describe('[ki dev]', () => {
       expect(result).toEqual({
         exitCode: 0,
         output: `development harness enabled knowledgeislands/ki-agentic-harness\t${harnessPath}
-refreshed ki configuration: 1 agents, 1 harnesses, 7 skills
+refreshed ki configuration: 1 agents, 1 harnesses, 8 skills
 ki-bootstrap for chatgpt-codex installed
 ki-next for chatgpt-codex installed
 ki-plan for chatgpt-codex installed
@@ -67,6 +67,7 @@ ki-implement for chatgpt-codex installed
 ki-accept for chatgpt-codex installed
 ki-batch for chatgpt-codex installed
 ki-recap for chatgpt-codex installed
+ki-design-loop for chatgpt-codex installed
 `
       })
       const dataIsSymlink = await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness')
@@ -91,6 +92,9 @@ harness = "knowledgeislands/ki-agentic-harness"
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-bootstrap]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-design-loop]
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-implement]
