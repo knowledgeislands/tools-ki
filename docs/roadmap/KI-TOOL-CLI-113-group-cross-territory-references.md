@@ -6,13 +6,12 @@ kind: deliver
 purpose: capability
 project: roadmap-model
 component: repo
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 8b54eb97ee6c3ae925c13446f2a568eced56403d
 created_at: 2026-10-07T15:03:28Z
-updated_at: 2026-10-07T15:20:00Z
+updated_at: 2026-10-07T15:16:02Z
 ---
 
 # KI-TOOL-CLI-113: Group cross-territory references
@@ -116,8 +115,12 @@ The goal is met and matches the harness checker from KI-HARNESS-GOV-153: same sy
 
 Qualified references now group in their own territory, with warnings when that territory cannot be read. Gates pass at full coverage.
 
+## Done
+
+Accepted 2026-10-07 by Kris Brown on the review packet above.
+
 ## Discussion
 
 ### Authority
 
-Decision 9 (Kris Brown, 7 October 2026) approves the change, and decision 6 grants carry-through to done for the whole rollout, including fast-forward pushes of the commits it makes. That is the adoption, readiness and acceptance authority for this record.
+Decision 9 (Kris Brown, 7 October 2026) approves the change, and decision 6 grants carry-through to done for the whole rollout, including fast-forward pushes of the commits it makes. That is the adoption, readiness and acceptance authority for this record. Closed through `ki-accept` under that grant after rechecking the review evidence on the committed delivery (`8963e44` and `00a37a8`): `bun run test:coverage` 1076 pass at full coverage, `bunx tsc --noEmit` clean, and `ki repo audit --skill ki-work-roadmap` PASS.
