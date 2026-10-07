@@ -26,13 +26,13 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-OPS-003 — Repository repair scope
 
-`ki repo repair` MUST register the selected physical root before repairing a missing compatible repository projection.
+`ki repo repair` MUST register the selected physical root before repairing a missing compatible repository projection. It MUST remove a dangling undeclared `ki-` projection link that `ki repo diag` reports, and `--dry-run` MUST only preview that removal.
 
 `ki repo repair --dry-run` and `ki registry add --dry-run` MUST NOT create a missing XDG state directory merely to preview registration. Without `--dry-run`, both commands apply their writes by default; repository store mutations and VS Code sync instead preview by default until `--write` is supplied.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/repo/repair.test.ts` — `registers the selected physical root before repairing a missing compatible projection`.
+_Verify:_ `src/tests/cli/repo/repair.test.ts` — `registers the selected physical root before repairing a missing compatible projection` and `previews and then removes a dangling undeclared ki- link`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
@@ -70,11 +70,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-OPS-007 — Repository projection diagnostics
 
-`ki repo diag` MUST report the declared skill and compatible runtime projection health for every selected repository without changing repository or registry state. It MUST return non-zero when any selected repository is unrepairable.
+`ki repo diag` MUST report the declared skill and compatible runtime projection health for every selected repository without changing repository or registry state. It MUST return non-zero when any selected repository is unrepairable. It MUST also report every dangling `ki-` link in a compatible projection directory that no declared skill accounts for, and treat it as repairable; other entries are not KI's to report.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/repo/diag.test.ts` — `reports selected repository projection health without changing it` and `reports an unresolved declared provider as unrepairable`.
+_Verify:_ `src/tests/cli/repo/diag.test.ts` — `reports selected repository projection health without changing it`, `reports an unresolved declared provider as unrepairable`, and `reports dangling undeclared ki- links and ignores entries KI does not own`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

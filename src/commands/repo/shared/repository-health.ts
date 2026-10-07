@@ -2,6 +2,7 @@ import {
   inspectRepositoryHealth as inspectAgentRepositoryHealth,
   type RepositoryHealth,
   type RepositoryLocation,
+  type RepositoryOrphan,
   type RepositoryProjection
 } from '../../../agents/index.ts'
 import type { KiContext } from '../../../context.ts'
@@ -18,6 +19,9 @@ const stateDescription: Record<RepositoryProjection['state'], string> = {
 export const describeRepositoryProjection = (projection: RepositoryProjection): string =>
   `${presentation(projection.state === 'linked' ? 'status.pass' : 'status.fail').terminal} ${projection.agent.descriptor.id} ${projection.skill.declaration.name}: ${stateDescription[projection.state]}`
 
+export const describeRepositoryOrphan = (orphan: RepositoryOrphan): string =>
+  `${presentation('status.fail').terminal} ${orphan.agent.descriptor.id} ${orphan.name}: undeclared projection is dangling`
+
 export const describeRepositoryLocalProvider = (skill: RepositoryHealth['localProviders'][number]): string =>
   `${presentation('status.pass').terminal} ${skill.identity}: canonical repository source`
 
@@ -31,4 +35,4 @@ export const inspectRepositoryHealth = (context: KiContext, location: Repository
     location
   )
 
-export type { RepositoryHealth, RepositoryProjection }
+export type { RepositoryHealth, RepositoryOrphan, RepositoryProjection }

@@ -122,7 +122,7 @@ ki repo repair --repo .
 ki repo upgrade --repo .
 ```
 
-`repair` records each selected physical root and then reconciles only missing, dangling, or stale KI-managed projections. It does not create declarations, change configuration, or touch anything it does not manage; `--dry-run` changes nothing. Use it when `ki repo diag` shows a declared skill whose local projection has gone missing — for instance after a harness moved.
+`repair` records each selected physical root and then reconciles only missing, dangling, or stale KI-managed projections, and removes a dangling `ki-` link that no declared skill accounts for, such as one left by a retired skill. It does not create declarations, change configuration, or touch anything it does not manage; `--dry-run` changes nothing. Use it when `ki repo diag` shows a declared skill whose local projection has gone missing — for instance after a harness moved.
 
 `upgrade` refreshes the uniquely resolved providers declared by the selected repositories. It changes no skill activation in either scope. When a declared provider does not resolve uniquely, the upgrade reports it rather than choosing.
 

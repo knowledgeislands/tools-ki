@@ -112,6 +112,30 @@ describe('[ki repo repair]', () => {
     expect(unsafe.output).toContain('/.ki.toml must be a regular file')
   })
 
+  test('previews and then removes a dangling undeclared ki- link', async () => {
+    const box = await preparedRepository()
+    const orphan = `${box.project.path}/.agents/skills/ki-retired`
+    await box.project.mkdir('.agents/skills')
+    await symlink(`${box.root.path}/retired`, orphan, 'dir')
+
+    const removed = `${await realpath(box.project.path)}/.agents/skills/ki-retired`
+
+    const preview = await box.run('ki repo repair --dry-run')
+    const previewed = (await lstat(orphan)).isSymbolicLink()
+    const repair = await box.run('ki repo repair')
+    const diag = await box.run('ki repo diag')
+
+    expect(preview.exitCode).toBe(0)
+    expect(preview.output).toContain('chatgpt-codex ki-retired: undeclared projection is dangling')
+    expect(preview.output).toContain(`would remove ${removed}`)
+    expect(previewed).toBe(true)
+    expect(repair.exitCode).toBe(0)
+    expect(repair.output).toContain(`remove ${removed}`)
+    expect(repair.output).toContain('result: healthy')
+    await expect(lstat(orphan)).rejects.toThrow()
+    expect(diag.output).toContain('HEALTHY=1')
+  })
+
   test('uses repository discovery by default and accepts explicit repository selectors', async () => {
     const box = await preparedRepository()
     await box.project.mkdir('child')

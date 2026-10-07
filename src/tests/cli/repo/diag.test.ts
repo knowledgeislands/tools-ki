@@ -1,4 +1,4 @@
-import { realpath } from 'node:fs/promises'
+import { realpath, symlink } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
@@ -60,5 +60,23 @@ describe('[ki repo diag]', () => {
     expect(diag.exitCode).toBe(1)
     expect(diag.output).toContain('missing/harness is not installed')
     expect(diag.output).toContain('summary: REPOSITORIES=1 HEALTHY=0 REPAIRABLE=0 UNREPAIRABLE=1')
+  })
+  test('reports dangling undeclared ki- links and ignores entries KI does not own', async () => {
+    const box = await preparedRepository()
+    await box.run('ki repo repair')
+    await box.root.mkdir('present')
+    await box.project.mkdir('.agents/skills/ki-local')
+    await symlink(`${box.root.path}/retired`, `${box.project.path}/.agents/skills/ki-retired`, 'dir')
+    await symlink(`${box.root.path}/retired`, `${box.project.path}/.agents/skills/other-tool`, 'dir')
+    await symlink(`${box.root.path}/present`, `${box.project.path}/.agents/skills/ki-present`, 'dir')
+
+    const diag = await box.run('ki repo diag')
+
+    expect(diag.exitCode).toBe(0)
+    expect(diag.output).toContain('chatgpt-codex ki-retired: undeclared projection is dangling')
+    expect(diag.output).not.toContain('other-tool')
+    expect(diag.output).not.toContain('ki-present')
+    expect(diag.output).not.toContain('ki-local')
+    expect(diag.output).toContain('summary: REPOSITORIES=1 HEALTHY=0 REPAIRABLE=1 UNREPAIRABLE=0')
   })
 })

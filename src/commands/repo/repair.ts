@@ -1,3 +1,4 @@
+import { unlink } from 'node:fs/promises'
 import { Command } from 'commander'
 import { inspectUserConfiguration } from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
@@ -18,7 +19,11 @@ import {
   registryEntry
 } from '../../core/storage/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
-import { describeRepositoryProjection, inspectRepositoryHealth } from './shared/repository-health.ts'
+import {
+  describeRepositoryOrphan,
+  describeRepositoryProjection,
+  inspectRepositoryHealth
+} from './shared/repository-health.ts'
 
 export const createRepairCommand = (
   context: KiContext,
@@ -85,7 +90,11 @@ export const createRepairCommand = (
         }
         const health = await inspectRepositoryHealth(context, repository)
         if (health.diagnostic) entries.push(`${failedMark} Repository: ${health.diagnostic}`)
-        else entries.push(...health.projections.map(describeRepositoryProjection))
+        else
+          entries.push(
+            ...health.projections.map(describeRepositoryProjection),
+            ...health.orphans.map(describeRepositoryOrphan)
+          )
         for (const projection of health.projections) {
           if (projection.state === 'linked' || projection.state === 'foreign') continue
           entries.push(`${dryRun ? 'would link' : 'link'} ${projection.path} -> ${projection.expected}`)
@@ -104,6 +113,10 @@ export const createRepairCommand = (
               failed = true
             }
           }
+        }
+        for (const orphan of health.orphans) {
+          entries.push(`${dryRun ? 'would remove' : 'remove'} ${orphan.path}`)
+          if (!dryRun) await unlink(orphan.path)
         }
         const repaired = dryRun ? health : await inspectRepositoryHealth(context, repository)
         entries.push(`${dryRun ? 'would result' : 'result'}: ${repaired.health}`)

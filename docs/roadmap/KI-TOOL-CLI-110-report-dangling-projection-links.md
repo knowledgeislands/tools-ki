@@ -7,12 +7,12 @@ purpose: corrective
 project: estate-factorisation
 component: repo
 horizon: now
-status: draft
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: ae4c12990a8ccf0128ee83df20a6a0b38afa7801
 created_at: 2026-10-06T23:27:45Z
-updated_at: 2026-10-07T20:39:59Z
+updated_at: 2026-10-07T21:04:17Z
 ---
 
 # Report dangling projection links
@@ -41,18 +41,18 @@ Out of scope: removing non-symlink or non-KI entries; changing harness skill ret
 
 ## Current state
 
-Adopted into Now on 2026-10-07 under decision 17 of the state-of-play design; not yet planned. `inspectRepositoryHealth` in `src/agents/repository-health.ts` inspects one projection per declared installed-harness skill and compatible agent, so an entry for a skill that is no longer declared, such as a retired capability, is never inspected and the repository can report healthy. `ki repo diag` and `ki repo repair` share `src/commands/repo/shared/repository-health.ts`. The two open questions under Discussion are unanswered.
+Adopted into Now on 2026-10-07 under decision 17 of the state-of-play design; not yet planned. `inspectRepositoryHealth` in `src/agents/repository-health.ts` inspects one projection per declared installed-harness skill and compatible agent, so an entry for a skill that is no longer declared, such as a retired capability, is never inspected and the repository can report healthy. `ki repo diag` and `ki repo repair` share `src/commands/repo/shared/repository-health.ts`. The two open questions are settled under Discussion; delivery started from baseline `ae4c129`.
 
 ## Steps
 
-- [ ] Settle the two open questions: the detection scope within a projection directory, and whether the harness supplies a retired-capability list.
-- [ ] Extend repository health to enumerate entries in each compatible agent's projection directory and report dangling KI-managed symlinks that no declared skill accounts for.
-- [ ] Have `ki repo repair` remove those symlinks, previewed by its existing dry-run, without touching non-symlink or non-KI entries.
-- [ ] Add regression tests for diagnosis and repair, including a foreign entry that must be left alone.
+- [x] Settle the two open questions: the detection scope within a projection directory, and whether the harness supplies a retired-capability list.
+- [x] Extend repository health to enumerate entries in each compatible agent's projection directory and report dangling KI-managed symlinks that no declared skill accounts for.
+- [x] Have `ki repo repair` remove those symlinks, previewed by its existing dry-run, without touching non-symlink or non-KI entries.
+- [x] Add regression tests for diagnosis and repair, including a foreign entry that must be left alone.
 
 ## Files touched
 
-`src/agents/repository-health.ts`, `src/commands/repo/shared/repository-health.ts`, and the repository `diag` and `repair` tests under `src/tests/cli/repo/`.
+`src/agents/repository-health.ts`, `src/agents/index.ts`, `src/commands/repo/shared/repository-health.ts`, `src/commands/repo/diag.ts`, `src/commands/repo/repair.ts`, the `diag` and `repair` tests under `src/tests/cli/repo/`, `docs/specs/repository-operations.md` (REPO-OPS-003 and REPO-OPS-007) and `docs/guides/user/repository-operations.md`.
 
 ## Verify
 
@@ -72,7 +72,7 @@ None expected unless the detection scope warrants one.
 
 ### Specifications
 
-None; this changes diagnosis and repair behaviour within the CLI only.
+REPO-OPS-003 and REPO-OPS-007 in `docs/specs/repository-operations.md` state the new diagnosis and repair behaviour and cite the new tests.
 
 ### Guides
 
@@ -88,7 +88,14 @@ A harness handoff only if the retired-capability list is chosen.
 
 The trade was a finding only: the receiver decides whether and how to act. It asked that `ki repo diag` report the dangling entries and `ki repo repair` remove them, so stale projections are visible and reconcilable.
 
-### Open questions
+### Planning decisions
+
+Settled on 2026-10-07 when the record was planned and started under Kris's decision 17; both are reversible and local to this CLI:
+
+- **Detection scope:** only dangling symlinks whose names carry the `ki-` prefix and that no declared skill accounts for. Other tools may own the remaining entries, and a resolving `ki-` link may be a deliberate local addition, so neither is reported or removed.
+- **Retired-capability list:** none. A broken target identifies a retired or renamed skill's leftover link without a harness-supplied list, so no harness handoff is needed.
+
+### Open questions (settled above)
 
 - Should detection cover every dangling symlink in a projection directory, or only `ki-` prefixed names, given that other tools may own entries there?
 - Should a retired-capability list come from the harness, so a renamed skill is recognised by name as well as by a broken target?

@@ -5,6 +5,7 @@ import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
 import {
   describeRepositoryLocalProvider,
+  describeRepositoryOrphan,
   describeRepositoryProjection,
   inspectRepositoryHealth
 } from './shared/repository-health.ts'
@@ -43,7 +44,8 @@ export const createRepoDiagCommand = (
                     { label: `Declaration: ${health.declaration}` },
                     { label: `Status: ${health.health}` },
                     ...health.localProviders.map((skill) => ({ label: describeRepositoryLocalProvider(skill) })),
-                    ...health.projections.map((projection) => ({ label: describeRepositoryProjection(projection) }))
+                    ...health.projections.map((projection) => ({ label: describeRepositoryProjection(projection) })),
+                    ...health.orphans.map((orphan) => ({ label: describeRepositoryOrphan(orphan) }))
                   ]
             }))
           },

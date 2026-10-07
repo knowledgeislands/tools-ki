@@ -21,6 +21,7 @@ export {
   inspectRepositoryHealth,
   type RepositoryHealth,
   type RepositoryLocation,
+  type RepositoryOrphan,
   type RepositoryProjection
 } from './repository-health.ts'
 export { compatibleWithSkill } from './runtimes.ts'
