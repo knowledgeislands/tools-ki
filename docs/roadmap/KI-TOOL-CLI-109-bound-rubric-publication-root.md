@@ -6,12 +6,13 @@ kind: deliver
 purpose: corrective
 initiative: platform-foundations
 component: dev
-status: triage
+horizon: now
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T23:03:55Z
-updated_at: 2026-10-07T14:35:20Z
+updated_at: 2026-10-07T21:09:53Z
 ---
 
 # Bound rubric publication root
@@ -39,6 +40,51 @@ In scope: the `--write` safety interlock on which working tree receives the byte
 
 Out of scope: treating the interlock as an isolation boundary. A caller able to export environment variables can equally write a `.git` file into a directory it controls; sandboxing is a runtime concern.
 
+## Current state
+
+Planned on 2026-10-07 against `main`. The retained commit `3a10a70` applies to current `main` without conflict. `main` still resolves installed Harnesses for `ki dev skill rubric` with no check that the publication root and the caller share a working tree, and `SKILL-005` is unallocated in `docs/specs/skills.md`.
+
+## Steps
+
+- [ ] Reapply commit `3a10a70` onto current `main` (route chosen: reapply as a fresh change rather than rebase the 181-commit-old branch), and review it as a new change: the publication-root comparison in `src/core/harness/development/rubric.ts`, the shared `gitWorkingTreeRoot` primitive in `src/core/runtime/git.ts`, the port and renderer changes, the sandbox `git` fixture helper and the rubric tests.
+- [ ] Regenerate `man/ki.commands.json` from `man/ki.1` and confirm the manual lints.
+- [ ] Keep `SKILL-005` in `docs/specs/skills.md` as the accepted behaviour.
+
+## Files touched
+
+- `src/core/runtime/git.ts` (new), `src/core/harness/development/rubric.ts`, `src/core/harness/development/types.ts`, `src/commands/dev/ports.ts`, `src/commands/dev/skill/index.ts`
+- `src/tests/cli/_cli_helper.ts`, `src/tests/cli/skill/rubric.test.ts`, `src/tests/cli/skill/rubric-publication.test.ts`
+- `docs/specs/skills.md`, `man/ki.1`, `man/ki.commands.json`
+- this record
+
+## Verify
+
+- `bun run test:coverage` passes with 100% coverage, including the new rubric publication-tree tests.
+- `bunx tsc --noEmit`, Biome, `mandoc -T lint man/ki.1` and the command-inventory check are clean.
+- `~/.local/bin/ki repo audit --repo .` passes apart from worktree-local findings.
+
+## Dependencies / blocks
+
+None.
+
+## Documentation impact
+
+### Decision Records
+
+None: the change applies existing publication-root behaviour and changes no decision.
+
+### Specifications
+
+New `SKILL-005` (Attributable publication tree) in `docs/specs/skills.md`.
+
+### Guides
+
+None; the manual entry for `ki dev skill rubric` describes the refusal.
+
+### Roadmap
+
+None.
+
 ## Discussion
 
 ### Delivery route
@@ -47,4 +93,8 @@ Shaping should decide whether to rebase the branch commit onto current `main` or
 
 ### Open questions
 
-- Should read-only `ki dev skill rubric` also warn when the publication root differs from the current working tree?
+- Should read-only `ki dev skill rubric` also warn when the publication root differs from the current working tree? Not taken in this delivery: every read-only result now names the resolved publication root, which makes the difference visible without a new warning. Recapture if a caller is misled in practice.
+
+### Adoption and readiness
+
+Adopted from Triage into Now, shaped and marked Ready on 2026-10-07 under Kris's standing continuous-delivery decision (state-of-play Decisions 12, 17 and 19).
