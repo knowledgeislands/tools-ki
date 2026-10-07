@@ -11,7 +11,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 72f64238841d790571de63d9f7be57ba23322449
 created_at: 2026-10-07T20:17:07Z
-updated_at: 2026-10-07T22:03:41Z
+updated_at: 2026-10-07T22:29:21Z
 ---
 
 # Territory selection pilot
@@ -30,7 +30,7 @@ No legacy Agora flags, runtime memberships or filter globs; no new named groups,
 
 ## Current state
 
-The integrated local candidate combines the territory-selection pilot with the published v0.8.4 native agent commands and tests. The package remains prepared as 0.9.0. The built-in clean-install harness now pins the exact published territory cut-over candidate and its verified canonical archive digest under the existing release authority.
+The approved rollout is published through fast-forward task-owned source integration. [KI v0.9.0](https://github.com/knowledgeislands/tools-ki/releases/tag/v0.9.0) and [mgit v0.16.0](https://github.com/knowledgeislands/tools-mgit/releases/tag/v0.16.0) are immutable and exact-tag installations pass. KI has signed archive/checksum verification, successful clean Linux installation and fresh local bootstrap of the pinned territory harness; mgit has absolute executable and manual proof. Installed callers agree for `-t ki -f tools-` and `--estate -f mcp-`, preserving membership and the ki/KIS identities. The automatic [KI formula handoff](https://github.com/knowledgeislands/homebrew-tap/pull/27) and [mgit formula handoff](https://github.com/knowledgeislands/homebrew-tap/pull/29) merged with required checks passing; both exact Homebrew upgrades and user versions are verified. Frozen design evidence, trade routing and Techne Programme Hold remain unchanged. All four records retain awaiting-review status; no acceptance or pruning occurred. The dirty primary KI source checkout is preserved; the user executable is installed from the signed exact tag and its former local runner remains intact with provenance retained.
 
 ## Steps
 
@@ -100,7 +100,7 @@ Use this one bounded KI record; no speculative follow-on records or new Project.
 
 ### Delivered
 
-The approved KI pilot from baseline `72f64238841d790571de63d9f7be57ba23322449`: territory selection derived from Capital `territory_members`, the Capital-only `territory_prefix` handle with registry-key fallback, shared `-t/--territory`, `--estate` and repeatable literal `-f/--filter` selectors, the atomic `ki territory roots --null` endpoint, and the opening, observation and discovery cut-over. Executable Agora grammar, declarations and reference-selection machinery are retired without aliases; historical local state is untouched. The package is prepared as `0.9.0` but not published, tagged or installed. No mgit, harness, trade-policy, Project or follow-on record changes are included.
+The approved KI pilot from baseline `72f64238841d790571de63d9f7be57ba23322449`: territory selection derived from Capital `territory_members`, the Capital-only `territory_prefix` handle with registry-key fallback, shared `-t/--territory`, `--estate` and repeatable literal `-f/--filter` selectors, the atomic `ki territory roots --null` endpoint, and the opening, observation and discovery cut-over. Executable Agora grammar, declarations and reference-selection machinery are retired without aliases; historical local state is untouched. The original pilot prepared `0.9.0`; the coordinator subsequently published and installed the verified exact tag as recorded below. No mgit, harness, trade-policy, Project or follow-on record changes are included.
 
 ### Change Summary
 
@@ -127,11 +127,11 @@ The release-readiness addition changes only `src/core/storage/registry.ts`, `src
 
 The pin continuation passed focused bootstrap/harness tests, full coverage at all four 100% thresholds, TypeScript, Biome, Knip, Markdown, manual lint and compilation. A freshly compiled executable bootstrapped an empty run-owned HOME/XDG context from the published canonical archive and reported its pinned digest. The native audit identified and corrected the review heading shape; the affected audit is repeated before publication.
 
+Final publication evidence: [KI v0.9.0](https://github.com/knowledgeislands/tools-ki/releases/tag/v0.9.0) and [mgit v0.16.0](https://github.com/knowledgeislands/tools-mgit/releases/tag/v0.16.0). [Verified source CI](https://github.com/knowledgeislands/tools-ki/actions/runs/37695265722) passed. The [signed Release workflow](https://github.com/knowledgeislands/tools-ki/actions/runs/37695656509) passed all three archive builds, immutable signing/publication, clean Linux installation and tap notification. The canonical pin is commit `52989fa5cd5a4163c8273dc14c74156b9ad5605e`, archive SHA-256 `5e4fc1e9f792a844e7e045e5f965a6f2db951c67b1dc7e2f9542bc122c3e8d9a`. The signed exact-tag executable bootstrapped an empty run-owned HOME/XDG context and installed the byte-identical territory contract without the retired Agora capability. Agent commands, territory selectors, manual and all four 100% coverage thresholds are verified. Both automatic Homebrew formula handoffs merged with passing required checks, exact versions were upgraded, and read-only installed caller parity passed for both approved scopes. Immutable baseline records and original delivery packets remain unchanged.
+
 ### Outstanding concerns
 
-- The v0.8.4 prerequisite is published immutably, installed and verified; the widened delegation skill matches its published canonical source. GOV-144 functionality and tests remain unchanged.
-- Decision 1 and the explicit continuation cover the required `src/core/storage/registry.ts` pin and related bootstrap fixture. The exact published harness commit is `52989fa5cd5a4163c8273dc14c74156b9ad5605e`; its downloaded canonical archive has SHA-256 `5e4fc1e9f792a844e7e045e5f965a6f2db951c67b1dc7e2f9542bc122c3e8d9a`. Original baseline and pilot evidence remain immutable.
-- Publication, release, immutable installation and downstream proof remain outstanding; no acceptance is inferred.
+Human acceptance remains outstanding. No mandatory rollout gate is failing or unchecked. Work remains awaiting review; no record was accepted or pruned. Foreign primary-checkout changes and historical user state are preserved.
 
 ### Post-change review
 
