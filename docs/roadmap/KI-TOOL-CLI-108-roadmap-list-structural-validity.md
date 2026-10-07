@@ -6,13 +6,12 @@ kind: deliver
 purpose: upkeep
 initiative: platform-foundations
 component: repo
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 84bd8d4f4c15cbcab2c6bea49618d7d9be5bb6fa
 created_at: 2026-10-06T21:05:00Z
-updated_at: 2026-10-07T21:06:02Z
+updated_at: 2026-10-07T21:07:21Z
 ---
 
 # Roadmap list structural validity
@@ -111,6 +110,10 @@ The goal is met with a single change at the shared inventory boundary, so list, 
 ### Mini recap
 
 Duplicate-identifier detection added to the roadmap inventory, specified and tested for both adapters; no learning route beyond the specification.
+
+## Done
+
+Accepted 2026-10-07 by Kris Brown on the review packet above, under the standing decision that delivered and verified work counts as accepted (state-of-play Decisions 12 and 17).
 
 ## Discussion
 
