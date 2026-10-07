@@ -6,13 +6,13 @@ kind: deliver
 purpose: upkeep
 initiative: platform-foundations
 component: repo
-horizon: next
-status: draft
+horizon: now
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T21:05:00Z
-updated_at: 2026-10-07T14:36:34Z
+updated_at: 2026-10-07T20:53:26Z
 ---
 
 # Roadmap list structural validity
@@ -37,19 +37,26 @@ GOV-095 states the invariant once in the harness roadmap standard (`skills/chang
 
 ## Current state
 
-Planning has not started. A first look on 2026-10-06 suggests `readWorkItemRecordInventory` in `src/core/work/items.ts` already turns unreadable records into `faults`, and `src/commands/repo/roadmap.ts` exits `1` on faults, but nothing in `src/core/work/` compares identifiers across records.
+Planned on 2026-10-07 against `main`. `parseWorkItem` in `src/core/work/items.ts` already rejects a record without canonical frontmatter or whose `id` does not match its filename, and `readWorkItemRecordInventory` turns each rejection into a per-file fault that `ki repo roadmap list` and `summary` render and exit `1` on, for both adapters; `_ISSUES.md`, `_IDEAS.md` and the KB `Roadmap.md` index are excluded by `isWorkItemFile`. Nothing compares identifiers across records, so two readable records sharing an `id` both list without a diagnostic. Mutating commands already refuse an ambiguous identifier through `selectedItem`.
 
 ## Steps
 
-- [ ] Plan the change and confirm the current behaviour against fixtures for both adapters.
+- [ ] In `readWorkItemRecordInventory`, group readable records by `id`; for every identifier held by more than one record, withhold those records from the inventory and add one fault per file, `work item <file> shares identifier <ID> with <other files>`, so list, summary and every inventory reader see the duplicate as a structural fault.
+- [ ] Add a CLI contract test in `src/tests/cli/repo/roadmap.test.ts` covering both adapters: a record without frontmatter and two records sharing an `id` fail `list` and `summary` with the stable diagnostics and exit `1`, the ledger and KB index are never reported, and the repaired fixtures pass. Update the existing ambiguous-identifier test to the new diagnostic.
+- [ ] Extend `REPO-OPS-011` in `docs/specs/repository-operations.md` with the duplicate-identifier diagnostic and the new test.
 
 ## Files touched
 
-To be determined in planning.
+- `src/core/work/items.ts`
+- `src/tests/cli/repo/roadmap.test.ts`
+- `docs/specs/repository-operations.md`
+- this record
 
 ## Verify
 
-To be determined in planning. At minimum, fixtures with a record without frontmatter and with two records sharing an `id` fail `ki repo roadmap list` with stable diagnostics and a non-zero exit, and the same fixtures with the defects removed pass.
+- `bun run test:coverage` passes with 100% coverage, including the new test.
+- `bunx tsc --noEmit` and `bunx biome check` are clean.
+- `~/.local/bin/ki repo audit --repo .` passes.
 
 ## Dependencies / blocks
 
@@ -82,3 +89,7 @@ Raised by the GOV-095 delivery on 2026-10-06 under Kris's owner decision that th
 ### Adoption
 
 Kris approved adoption from Triage into Next on 2026-10-06, as a disposition of the state-of-play review (`ki-arcadia-principal`, `+/_CHECKPOINTS/state-of-play.md`).
+
+### Readiness
+
+Shaped and marked Ready on 2026-10-07 under Kris's standing continuous-delivery decision (state-of-play Decisions 12, 17 and 19), which also adopts it into Now.
