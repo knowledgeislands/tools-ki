@@ -678,8 +678,9 @@ required: \fB--title\fR, \fB--description\fR, a stable uppercase
 \fBclaude-code\fR and \fBchatgpt-codex\fR, and \fB--visibility public|private\fR.
 It atomically creates the minimal canonical \fBki-repo\fR declaration and
 A required \fB--capital\fR names the territory Capital; a Capital names
-itself and then also receives a \fB[skills.ki-repo.territory]\fR table
-listing itself as the first member. Further members must be kept sorted
+itself and then also receives \fBterritory_name\fR and \fBterritory_members\fR
+in \fB[skills.ki-repo]\fR, listing itself as the first member.
+Further members must be kept sorted
 ascending in code-point order; an unsorted list is rejected.
 registers the physical root in \fB$XDG_STATE_HOME/ki/registry.toml\fR. It
 never runs

@@ -6,7 +6,9 @@ import { KiError } from '../errors.ts'
 const TRADES_TABLE = 'skills.ki-trades'
 const REPOSITORY_TABLE = 'skills.ki-repo'
 const POLICY_TABLE = `${TRADES_TABLE}.territory`
-const TERRITORY_TABLE = `${REPOSITORY_TABLE}.territory`
+const RETIRED_TERRITORY_TABLE = `${REPOSITORY_TABLE}.territory`
+const TERRITORY_NAME = `[${REPOSITORY_TABLE}].territory_name`
+const TERRITORY_MEMBERS = `[${REPOSITORY_TABLE}].territory_members`
 const repositoryExpression =
   /^https:\/\/github\.com\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)$/
 const identifierExpression = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
@@ -120,21 +122,17 @@ const exactKeys = (value: Record<string, unknown>, keys: readonly string[], labe
 }
 
 const parseTerritory = (
-  value: unknown,
+  declaration: Record<string, unknown>,
   path: string,
   repository: string
 ): { readonly name: string; readonly members: readonly string[] } => {
-  if (!isRecord(value)) throw tradeError(`${path} [${TERRITORY_TABLE}] must be a table`)
-  exactKeys(value, ['name', 'members'], `${path} [${TERRITORY_TABLE}]`)
-  const name = value['name']
-  if (typeof name !== 'string' || !name.trim())
-    throw tradeError(`${path} [${TERRITORY_TABLE}].name must be a non-empty string`)
-  const members = repositoryList(value['members'], `${path} [${TERRITORY_TABLE}].members`)
+  const name = declaration['territory_name']
+  if (typeof name !== 'string' || !name.trim()) throw tradeError(`${path} ${TERRITORY_NAME} must be a non-empty string`)
+  const members = repositoryList(declaration['territory_members'], `${path} ${TERRITORY_MEMBERS}`)
   // Code-point order, not locale collation, so every reader agrees on one canonical listing.
   if (!members.every((member, index) => index === 0 || (members[index - 1] as string) < member))
-    throw tradeError(`${path} [${TERRITORY_TABLE}].members must be sorted ascending`)
-  if (!members.includes(repository))
-    throw tradeError(`${path} [${TERRITORY_TABLE}].members must include the Capital itself`)
+    throw tradeError(`${path} ${TERRITORY_MEMBERS} must be sorted ascending`)
+  if (!members.includes(repository)) throw tradeError(`${path} ${TERRITORY_MEMBERS} must include the Capital itself`)
   return { name, members }
 }
 
@@ -295,12 +293,16 @@ export const repositoryDeclarationFrom = (document: Record<string, unknown>, pat
   if (typeof capital !== 'string' || !isTradeRepository(capital))
     throw tradeError(`${path} [${REPOSITORY_TABLE}].capital must name the territory Capital in canonical HTTPS form`)
   const isCapital = capital === repository
-  const territoryValue = declaration['territory']
-  if (!isCapital && territoryValue !== undefined)
-    throw tradeError(`${path} [${TERRITORY_TABLE}] is permitted only in a territory Capital`)
-  if (isCapital && territoryValue === undefined)
-    throw tradeError(`${path} is a territory Capital and must declare [${TERRITORY_TABLE}]`)
-  const territory = isCapital ? parseTerritory(territoryValue, path, repository) : undefined
+  if (declaration['territory'] !== undefined)
+    throw tradeError(
+      `${path} [${RETIRED_TERRITORY_TABLE}] is retired; move its name and members to ${TERRITORY_NAME} and ${TERRITORY_MEMBERS}, then remove the table`
+    )
+  const declared = declaration['territory_name'] !== undefined || declaration['territory_members'] !== undefined
+  if (!isCapital && declared)
+    throw tradeError(`${path} ${TERRITORY_NAME} and ${TERRITORY_MEMBERS} are permitted only in a territory Capital`)
+  if (isCapital && !declared)
+    throw tradeError(`${path} is a territory Capital and must declare ${TERRITORY_NAME} and ${TERRITORY_MEMBERS}`)
+  const territory = isCapital ? parseTerritory(declaration, path, repository) : undefined
   const trades = parseTrades(skillTable(document, 'ki-trades'), path, isCapital)
   return {
     repository,

@@ -39,7 +39,7 @@ export interface TerritoryFixture {
 
 const list = (values: readonly string[]): string => `[${values.map((value) => JSON.stringify(value)).join(', ')}]`
 
-/** Code-point order, matching the Capital's `members` validation rather than locale collation. */
+/** Code-point order, matching the Capital's `territory_members` validation rather than locale collation. */
 const sorted = (values: Iterable<string>): readonly string[] =>
   [...new Set(values)].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
 
@@ -86,10 +86,8 @@ export const capitalConfiguration = (territory: TerritoryFixture = {}): string =
     sorted([repository, ...[...channels, ...standing].flatMap((entry) => [...entry.from, ...entry.to])])
   return [
     ...declarationHeader(repository, repository),
-    '',
-    '[skills.ki-repo.territory]',
-    `name = ${JSON.stringify(territory.name ?? 'Example territory')}`,
-    `members = ${list(members)}`,
+    `territory_name = ${JSON.stringify(territory.name ?? 'Example territory')}`,
+    `territory_members = ${list(members)}`,
     '',
     '[skills.ki-trades]',
     ...(territory.subtypes

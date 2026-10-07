@@ -89,12 +89,7 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
   // A Capital names itself and must list its territory's members, starting with itself.
   const territory =
     capital === repository
-      ? [
-          '',
-          '[skills.ki-repo.territory]',
-          `name = ${JSON.stringify(title)}`,
-          ...multilineArray('members', [repository])
-        ]
+      ? [`territory_name = ${JSON.stringify(title)}`, ...multilineArray('territory_members', [repository])]
       : []
   // The ki-authoring TOML layout: the conformance header, neighbourhood banners, one blank line before every
   // table and banner, and every array written one element per line with a trailing comma.

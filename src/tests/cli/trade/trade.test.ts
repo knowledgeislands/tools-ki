@@ -690,8 +690,8 @@ describe('[ki repo trade]', () => {
       [bare.replace(`capital = "${capitalHome}"\n`, ''), capitalForm],
       [bare.replace(`capital = "${capitalHome}"`, 'capital = "example/capital"'), capitalForm],
       [
-        `${bare}\n[skills.ki-repo.territory]\nname = "Rogue"\nmembers = ["${sourceHome}"]\n`,
-        '[skills.ki-repo.territory] is permitted only in a territory Capital'
+        `${bare}territory_name = "Rogue"\n`,
+        '[skills.ki-repo].territory_name and [skills.ki-repo].territory_members are permitted only in a territory Capital'
       ],
       [
         bare.replace('[skills.ki-repo-project]\n', '[skills]\nki-trades = "none"\n\n[skills.ki-repo-project]\n'),

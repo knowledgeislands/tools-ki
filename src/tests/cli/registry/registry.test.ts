@@ -151,10 +151,8 @@ test('initializes one explicit physical Git root and registers its complete KI i
   expect((await initialise(capitalBox, undefined, 'https://github.com/example/project')).exitCode).toBe(0)
   expect(await capitalBox.project.read('.ki.toml')).toEqual(
     declaredLayout('https://github.com/example/project', [
-      '',
-      '[skills.ki-repo.territory]',
-      'name = "Example repository"',
-      'members = [',
+      'territory_name = "Example repository"',
+      'territory_members = [',
       '  "https://github.com/example/project",',
       ']'
     ])

@@ -43,9 +43,8 @@ const failure = (message: string) => ({ exitCode: 2, output: `ki: error: ${messa
 
 // Raw Capital declarations for the policy parser refusals.
 const capitalHeader = memberConfiguration('example/capital', { trades: false })
-const membersLine = `members = ${list([capitalHome, receiverHome, sourceHome])}`
-const territoryTable = (body = `name = "Example territory"\n${membersLine}`) =>
-  `${capitalHeader}\n[skills.ki-repo.territory]\n${body}\n`
+const membersLine = `territory_members = ${list([capitalHome, receiverHome, sourceHome])}`
+const territoryTable = (body = `territory_name = "Example territory"\n${membersLine}`) => `${capitalHeader}${body}\n`
 const withPolicy = (policy: string) => `${territoryTable()}\n[skills.ki-trades]\n${policy}\n`
 const table = (header: string, fields: Readonly<Record<string, string | undefined>>) =>
   `\n[[${header}]]\n${Object.entries(fields)
@@ -74,7 +73,8 @@ describe('[ki repo trade policy]', () => {
   test('rejects malformed Capital territory and trade policies before resolving any route', async () => {
     const { box, capital } = await territoryBox()
     const path = join(capital, '.ki.toml')
-    const T = '[skills.ki-repo.territory]'
+    const N = '[skills.ki-repo].territory_name'
+    const M = '[skills.ki-repo].territory_members'
     const P = '[skills.ki-trades.territory]'
     const C = '[[skills.ki-trades.territory.channels]]'
     const S = '[[skills.ki-trades.territory.standing]]'
@@ -83,38 +83,43 @@ describe('[ki repo trade policy]', () => {
     const uncovered = (from: string, to: string) => `standing grant #1 needs a knowledge channel from ${from} to ${to}`
     const outsider = home('example/outsider')
     const cases: readonly (readonly [string, string])[] = [
-      // Membership: the Capital must publish one well-formed territory table that lists itself.
-      [capitalHeader, `is a territory Capital and must declare ${T}`],
-      [`${capitalHeader}territory = "none"\n`, `${T} must be a table`],
-      [territoryTable(`name = "Example territory"\n${membersLine}\nextra = 1`), `${T} has unrecognised key extra`],
-      [territoryTable('name = "Example territory"'), `${T} must declare members`],
-      [territoryTable(`name = " "\n${membersLine}`), `${T}.name must be a non-empty string`],
-      [territoryTable(`name = 7\n${membersLine}`), `${T}.name must be a non-empty string`],
-      [territoryTable('name = "Example territory"\nmembers = []'), `${T}.members ${repositories}`],
-      [territoryTable('name = "Example territory"\nmembers = "all"'), `${T}.members ${repositories}`],
-      [territoryTable('name = "Example territory"\nmembers = [1]'), `${T}.members ${repositories}`],
+      // Membership: the Capital must declare a well-formed territory name and member list that lists itself.
+      [capitalHeader, `is a territory Capital and must declare ${N} and ${M}`],
       [
-        territoryTable(`name = "Example territory"\nmembers = ["https://github.com/Example/Capital"]`),
-        `${T}.members ${repositories}`
+        `${territoryTable()}\n[skills.ki-repo.territory]\nname = "Example territory"\n`,
+        `[skills.ki-repo.territory] is retired; move its name and members to ${N} and ${M}, then remove the table`
+      ],
+      [territoryTable('territory_name = "Example territory"'), `${M} ${repositories}`],
+      [territoryTable(membersLine), `${N} must be a non-empty string`],
+      [territoryTable(`territory_name = " "\n${membersLine}`), `${N} must be a non-empty string`],
+      [territoryTable(`territory_name = 7\n${membersLine}`), `${N} must be a non-empty string`],
+      [territoryTable('territory_name = "Example territory"\nterritory_members = []'), `${M} ${repositories}`],
+      [territoryTable('territory_name = "Example territory"\nterritory_members = "all"'), `${M} ${repositories}`],
+      [territoryTable('territory_name = "Example territory"\nterritory_members = [1]'), `${M} ${repositories}`],
+      [
+        territoryTable(
+          `territory_name = "Example territory"\nterritory_members = ["https://github.com/Example/Capital"]`
+        ),
+        `${M} ${repositories}`
       ],
       [
-        territoryTable(`name = "Example territory"\nmembers = ${list([capitalHome, capitalHome])}`),
-        `${T}.members must not repeat a repository`
+        territoryTable(`territory_name = "Example territory"\nterritory_members = ${list([capitalHome, capitalHome])}`),
+        `${M} must not repeat a repository`
       ],
       [
-        territoryTable(`name = "Example territory"\nmembers = ${list([sourceHome])}`),
-        `${T}.members must include the Capital itself`
+        territoryTable(`territory_name = "Example territory"\nterritory_members = ${list([sourceHome])}`),
+        `${M} must include the Capital itself`
       ],
       [
-        territoryTable(`name = "Example territory"\nmembers = ${list([sourceHome, capitalHome])}`),
-        `${T}.members must be sorted ascending`
+        territoryTable(`territory_name = "Example territory"\nterritory_members = ${list([sourceHome, capitalHome])}`),
+        `${M} must be sorted ascending`
       ],
       // Code-point order, not locale collation: `_` (U+005F) sorts after `-` (U+002D).
       [
         territoryTable(
-          `name = "Example territory"\nmembers = ${list([home('example/a_b'), home('example/a-b'), capitalHome])}`
+          `territory_name = "Example territory"\nterritory_members = ${list([home('example/a_b'), home('example/a-b'), capitalHome])}`
         ),
-        `${T}.members must be sorted ascending`
+        `${M} must be sorted ascending`
       ],
       // Policy shape.
       [withPolicy('territory = "none"'), `${P} must be a table`],

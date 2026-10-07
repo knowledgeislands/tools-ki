@@ -6,7 +6,7 @@ This area specifies explicit repository registration and inventory; see the [Spe
 
 ### REGISTRY-001 — Physical KI-root registration
 
-`ki repo init` MUST initialise one explicit physical Git root and register its complete KI identity, including the required `--capital` territory Capital. When the Capital is the repository itself, it MUST also declare `[skills.ki-repo.territory]` with the title as its name and the repository as its only member.
+`ki repo init` MUST initialise one explicit physical Git root and register its complete KI identity, including the required `--capital` territory Capital. When the Capital is the repository itself, it MUST also declare `territory_name` and `territory_members` under `[skills.ki-repo]`, with the title as the name and the repository as the only member.
 
 _Conformance:_ conforming
 
