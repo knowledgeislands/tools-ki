@@ -71,17 +71,35 @@ const frontmatter = (text: string): Record<string, unknown> | undefined => {
 const isDirectory = async (path: string): Promise<boolean> =>
   (await lstat(path).catch(() => undefined))?.isDirectory() === true
 
-/** Regular Markdown notes directly inside one registry folder, in name order, as name and frontmatter. */
+const isFile = async (path: string): Promise<boolean> => (await lstat(path).catch(() => undefined))?.isFile() === true
+
+/**
+ * Regular Markdown notes directly inside one registry folder, in name order, as name and frontmatter. A note that holds
+ * a design folder is the folder note `<slug>/<slug>.md`, read under the name `<slug>.md`.
+ */
 const registryNotes = async (
   directory: string
 ): Promise<readonly { readonly name: string; readonly text: string; readonly values?: Record<string, unknown> }[]> => {
   if (!(await isDirectory(directory))) return []
-  const entries = (await readdir(directory, { withFileTypes: true }))
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
-    .sort((left, right) => left.name.localeCompare(right.name))
+  const entries = await readdir(directory, { withFileTypes: true })
+  const notes = [
+    ...entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+      .map(({ name }) => ({ name, path: join(directory, name) })),
+    ...(
+      await Promise.all(
+        entries
+          .filter((entry) => entry.isDirectory())
+          .map(async ({ name }) => {
+            const path = join(directory, name, `${name}.md`)
+            return (await isFile(path)) ? [{ name: `${name}.md`, path }] : []
+          })
+      )
+    ).flat()
+  ].sort((left, right) => left.name.localeCompare(right.name))
   return Promise.all(
-    entries.map(async ({ name }) => {
-      const text = await readFile(join(directory, name), 'utf8')
+    notes.map(async ({ name, path }) => {
+      const text = await readFile(path, 'utf8')
       const values = frontmatter(text)
       return { name, text, ...(values ? { values } : {}) }
     })
