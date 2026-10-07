@@ -155,7 +155,7 @@ This baseline describes the `v0.8.1` release. Domain imports and extracted type 
 
 - Diagnostics and doctor reports share tool/version, checkout-verified local/release/unknown installation mode, executing platform/architecture, runtime/version, and configuration state. Copied or unidentified source is unknown rather than guessed local. Doctor reports its read-only scope, verdict, and pass/warn/fail/skipped counts without implying package freshness.
 - KI's own CI runs from the checked-out source, while release packaging pins a verified Harness revision.
-- The canonical Harness pin is `ki-agentic-harness` `a27bbb6`. It carries the v1 roadmap model with mapped area titles and their enforcement, and the `ki-design-loop` skill, which `ki bootstrap` now installs with the other core skills.
+- The canonical Harness pin is `ki-agentic-harness` `7a9b78c`. It carries the five-rule `.ki.toml` layout checked by FILES-10, an optional roadmap README and `## Areas` section, bare `[skills.ki-trades]` tables while the trades hold stands, and a warning when that hold passes its review date.
 - `ki docs overview` now reports the canonical `https://knowledgeislands.info/projects/ki/` route.
 - Release guidance standardises exact installer pinning as positional `vX.Y.Z`, while an omitted version continues to resolve the latest release.
 - Acquisition is action-first and adapter-driven from verified Harness skill declarations; Granola uses an allowlisted read-only MCP adapter, saturation-aware complete-history enumeration, separate detail and transcript checkpoints, atomic resumable journals, governed reset, explicit omissions, and post-acquisition dispositions.
