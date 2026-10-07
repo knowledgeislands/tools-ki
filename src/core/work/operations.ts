@@ -66,7 +66,8 @@ export interface RoadmapPruneOptions {
 }
 
 export interface RoadmapListOptions {
-  readonly horizon?: string
+  /** Any of these placements; empty or absent selects every placement. */
+  readonly horizons?: readonly string[]
   readonly status?: string
   readonly includeProjection?: boolean
   readonly by?: RoadmapGrouping
@@ -75,6 +76,8 @@ export interface RoadmapListOptions {
 /** Registry grouping for one repository's listed records; an unavailable registry is a warning. */
 export interface RoadmapGroupingResult {
   readonly by: RoadmapGrouping
+  /** The repository's own territory registry root, empty when unreadable, so listings tell local slugs from foreign. */
+  readonly ownTerritory: string
   readonly registryWarnings: readonly string[]
   readonly groups: ReadonlyMap<string, WorkItemGroup>
 }
@@ -183,7 +186,9 @@ const filterItems = (items: readonly WorkItem[], options: RoadmapListOptions): r
   items.filter((item) => {
     const lane = workItemLane(item)
     const status = lane === 'triage' ? 'triage' : item.status
-    return (!options.horizon || lane === options.horizon) && (!options.status || status === options.status)
+    return (
+      (!options.horizons?.length || options.horizons.includes(lane)) && (!options.status || status === options.status)
+    )
   })
 
 const groupItems = async (
@@ -217,6 +222,7 @@ const groupItems = async (
   const registries = (territory: string | undefined) => (territory === undefined ? own : territories.get(territory))
   return {
     by,
+    ownTerritory: own?.root ?? '',
     registryWarnings,
     groups: new Map(items.map((item) => [item.id, workItemGroup(item, by, registries)]))
   }
@@ -225,6 +231,7 @@ const groupItems = async (
 /** Groups by the record's fixed area, labelled with its declared title when the repository maps one. */
 const groupByArea = (planning: RepositoryPlanningSource, items: readonly WorkItem[]): RoadmapGroupingResult => ({
   by: 'area',
+  ownTerritory: '',
   registryWarnings: [],
   groups: new Map(
     items.map((item) => {

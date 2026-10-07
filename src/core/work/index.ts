@@ -14,6 +14,6 @@ export {
   pruneRoadmap,
   roadmapStatisticsForSelection
 } from './operations.ts'
-export type { RoadmapGrouping } from './registry.ts'
+export type { RoadmapGrouping, WorkItemGroup } from './registry.ts'
 export { UNASSIGNED_GROUP } from './registry.ts'
 export { roadmapReport } from './roadmap-report.ts'

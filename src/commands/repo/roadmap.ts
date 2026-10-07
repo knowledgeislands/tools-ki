@@ -19,6 +19,7 @@ import {
   roadmapStatisticsForSelection,
   UNASSIGNED_GROUP,
   type WorkItem,
+  type WorkItemGroup,
   type WorkItemHold,
   workItemHorizons,
   workItemLane,
@@ -36,7 +37,7 @@ import { type RoadmapTextOptions, renderRoadmapItem, roadmapLinkLegend } from '.
 
 interface RoadmapOptions {
   readonly by?: string
-  readonly horizon?: string
+  readonly horizon?: readonly string[]
   readonly status?: string
   readonly aggregate?: boolean
   readonly icons?: boolean
@@ -79,45 +80,82 @@ const laneEntries = (items: readonly WorkItem[], options: RoadmapTextOptions): r
       : []
   })
 
-/** Project or Initiative groups, named groups first and the explicit unassigned group last. */
-const groupedEntries = (
-  results: readonly RoadmapListResult[],
-  by: RoadmapGrouping,
-  options: RoadmapTextOptions
-): readonly TreeEntry[] => {
-  const groups = new Map<string, WorkItem[]>()
+type GroupedResult = Pick<RoadmapItemResult, 'grouping' | 'items'>
+
+interface MergedGroup {
+  readonly name: string
+  readonly lifecycle?: string
+  readonly items: readonly WorkItem[]
+}
+
+/**
+ * Merges every repository's groups by registry identity, so `territory/slug` and a local `slug` naming one Project
+ * share a group. A slug keeps its territory only when no selected repository belongs to that territory or when the
+ * slug names groups in more than one territory. Named groups come first and the explicit unassigned group last.
+ */
+const mergedGroups = (results: readonly GroupedResult[]): readonly MergedGroup[] => {
+  const owned = new Set(results.flatMap((result) => (result.grouping ? [result.grouping.ownTerritory] : [])))
+  const groups = new Map<string, { readonly group: WorkItemGroup; readonly items: WorkItem[] }>()
   for (const { grouping, items } of results) {
     // A repository without a roadmap carries no grouping; a grouping covers every listed item.
     if (!grouping) continue
     for (const item of items as readonly WorkItem[]) {
-      const { group } = grouping.groups.get(item.id) as { readonly group: string }
-      groups.set(group, [...(groups.get(group) ?? []), item])
+      const group = grouping.groups.get(item.id) as WorkItemGroup
+      const key = group.reference ? `${group.reference.territory}\n${group.reference.slug}` : group.group
+      const entry = groups.get(key) ?? { group, items: [] }
+      entry.items.push(item)
+      groups.set(key, entry)
     }
   }
-  const names = [...groups.keys()].sort(
-    (left, right) => Number(left === UNASSIGNED_GROUP) - Number(right === UNASSIGNED_GROUP) || left.localeCompare(right)
-  )
-  return names.map((name) => {
-    const group = orderItemsForText(groups.get(name) as WorkItem[])
-    return {
-      label: `${name === UNASSIGNED_GROUP ? name : `${by} ${name}`} (${group.length})`,
-      children: group.map((item) => renderRoadmapItem(item, { ...options, lane: true }))
-    }
-  })
+  const territories = new Map<string, number>()
+  for (const { group } of groups.values())
+    if (group.reference) territories.set(group.reference.slug, (territories.get(group.reference.slug) ?? 0) + 1)
+  const name = ({ group, reference }: WorkItemGroup): string =>
+    !reference
+      ? group
+      : (owned.has(reference.territory) && territories.get(reference.slug) === 1) || !reference.name
+        ? reference.slug
+        : `${reference.name}/${reference.slug}`
+  return [...groups.values()]
+    .map(({ group, items }) => ({
+      name: name(group),
+      ...(group.lifecycle ? { lifecycle: group.lifecycle } : {}),
+      items
+    }))
+    .sort(
+      (left, right) =>
+        Number(left.name === UNASSIGNED_GROUP) - Number(right.name === UNASSIGNED_GROUP) ||
+        left.name.localeCompare(right.name)
+    )
 }
 
+/** A group's name with its Project lifecycle from the registry, when it declares one. */
+const groupName = (group: MergedGroup): string => (group.lifecycle ? `${group.name} [${group.lifecycle}]` : group.name)
+
+const groupedEntries = (
+  results: readonly RoadmapListResult[],
+  by: RoadmapGrouping,
+  options: RoadmapTextOptions
+): readonly TreeEntry[] =>
+  mergedGroups(results).map((group) => ({
+    label: `${group.name === UNASSIGNED_GROUP ? group.name : `${by} ${groupName(group)}`} (${group.items.length})`,
+    children: orderItemsForText(group.items).map((item) => renderRoadmapItem(item, { ...options, lane: true }))
+  }))
+
 /** Registry warnings for grouped output; they never change the exit status. */
+const groupingWarningLines = (results: readonly GroupedResult[]): readonly string[] => [
+  ...new Set(
+    results.flatMap((result) => [
+      ...(result.grouping?.registryWarnings ?? []),
+      ...[...(result.grouping?.groups.entries() ?? [])].flatMap(([id, group]) =>
+        group.warning ? [`${id}: ${group.warning}`] : []
+      )
+    ])
+  )
+]
+
 const groupingWarnings = (results: readonly RoadmapListResult[]): readonly TreeEntry[] => {
-  const warnings = [
-    ...new Set(
-      results.flatMap((result) => [
-        ...(result.grouping?.registryWarnings ?? []),
-        ...[...(result.grouping?.groups.entries() ?? [])].flatMap(([id, group]) =>
-          group.warning ? [`${id}: ${group.warning}`] : []
-        )
-      ])
-    )
-  ]
+  const warnings = groupingWarningLines(results)
   return warnings.length
     ? [
         {
@@ -195,7 +233,7 @@ const renderTextResult = (
     : result.roadmap === 'absent'
       ? [{ label: `${presentation('status.skip').terminal} no roadmap` }]
       : [
-          ...(result.grouping ? groupedEntries([result], result.grouping.by, options) : laneEntries(items, options)),
+          ...laneEntries(items, options),
           ...faults.map((fault) => ({
             label: `${presentation('status.unavailable').terminal} ${fault.message}`
           }))
@@ -209,7 +247,6 @@ const renderTextResult = (
     context,
     entries: [
       { label: `roadmap (${items.length})`, children: roadmap },
-      ...groupingWarnings([result]),
       ...roadmapLinkLegend(items, options),
       {
         label: `trades (${trades.length})`,
@@ -278,47 +315,63 @@ const renderAggregateResult = (
   return renderTree({ title: 'KI AGGREGATE ROADMAP', entries }).join('\n')
 }
 
-const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
+const statusLabels = {
+  triage: 't',
+  draft: 'd',
+  ready: 'r',
+  'in-progress': 'ip',
+  'awaiting-review': 'ar',
+  done: 'x',
+  cancelled: 'c'
+} as const
+
+/** One summary cell: per-status counts and the total, or a dash for none. */
+const summaryCell = (items: readonly WorkItem[]): string => {
+  const counts = workItemStatuses.flatMap((status) => {
+    const value = items.filter((item) => item.status === status).length
+    return value ? [`${statusLabels[status]}=${value}`] : []
+  })
+  return items.length ? [...counts, `Σ=${items.length}`].join(' ') : '—'
+}
+
+const laneCells = (items: readonly WorkItem[]): readonly string[] => [
+  ...workItemLanes.map((lane) => summaryCell(items.filter((item) => workItemLane(item) === lane))),
+  summaryCell(items)
+]
+
+const groupHeadings: Readonly<Record<RoadmapGrouping, string>> = {
+  project: 'Project',
+  initiative: 'Initiative',
+  area: 'Area'
+}
+
+const renderSummaryResult = (results: readonly RoadmapItemResult[], by?: RoadmapGrouping): string => {
   const names = results.map((result) => basename(result.repository))
   const labels = results.map((result, index) =>
     names.indexOf(names[index] as string) === names.lastIndexOf(names[index] as string)
       ? (names[index] as string)
       : result.repository
   )
-  const statusLabels = {
-    triage: 't',
-    draft: 'd',
-    ready: 'r',
-    'in-progress': 'ip',
-    'awaiting-review': 'ar',
-    done: 'x',
-    cancelled: 'c'
-  } as const
-  const cell = (items: readonly WorkItem[]): string => {
-    const counts = workItemStatuses.flatMap((status) => {
-      const value = items.filter((item) => item.status === status).length
-      return value ? [`${statusLabels[status]}=${value}`] : []
-    })
-    return items.length ? [...counts, `Σ=${items.length}`].join(' ') : '—'
-  }
-  const rows = results.map((result, index) => {
-    const unavailable = Boolean(result.diagnostic)
-    const absent = result.roadmap === 'absent'
-    const items = result.items ?? []
-    return [
-      labels[index] as string,
-      ...workItemLanes.map((lane) =>
-        unavailable ? '?' : absent ? '—' : cell(items.filter((item) => workItemLane(item) === lane))
-      ),
-      unavailable ? '?' : absent ? '—' : cell(items)
-    ]
-  })
+  const rows = by
+    ? mergedGroups(results).map((group) => [groupName(group), ...laneCells(group.items)])
+    : results.map((result, index) => {
+        const unavailable = Boolean(result.diagnostic)
+        const absent = result.roadmap === 'absent'
+        return [
+          labels[index] as string,
+          ...(unavailable || absent
+            ? Array.from({ length: workItemLanes.length + 1 }, () => (unavailable ? '?' : '—'))
+            : laneCells(result.items as readonly WorkItem[]))
+        ]
+      })
   const items = results.flatMap((result) => result.items ?? [])
-  const table = renderMatrixTable('KI REPO ROADMAP SUMMARY', ['Repository', ...workItemLanes, 'Σ'], rows, [
-    'Σ',
-    ...workItemLanes.map((lane) => cell(items.filter((item) => workItemLane(item) === lane))),
-    cell(items)
-  ])
+  const table = renderMatrixTable(
+    'KI REPO ROADMAP SUMMARY',
+    [by ? groupHeadings[by] : 'Repository', ...workItemLanes, 'Σ'],
+    rows,
+    ['Σ', ...laneCells(items)]
+  )
+  const warnings = groupingWarningLines(results)
   const diagnostics = results.flatMap((result, index) => [
     ...(result.diagnostic ? [`  ${labels[index]}: ${result.diagnostic}`] : []),
     ...(result.faults ?? []).map((fault) => `  ${labels[index]}: ${fault.message}`)
@@ -329,7 +382,8 @@ const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
     't=triage d=draft r=ready ip=in-progress ar=awaiting-review x=done c=cancelled; Σ=total',
     '— no items; ? unavailable',
     ...(absent.length ? [`No roadmap: ${absent.join(', ')}`] : []),
-    ...(diagnostics.length ? ['Diagnostics (counts include valid items only)', ...diagnostics] : [])
+    ...(diagnostics.length ? ['Diagnostics (counts include valid items only)', ...diagnostics] : []),
+    ...(warnings.length ? ['Warnings', ...warnings.map((warning) => `  ${warning}`)] : [])
   ].join('\n')
 }
 
@@ -404,18 +458,31 @@ const renderStatisticsText = (
   }).join('\n')
 }
 
+/** Accumulates `--horizon` values, each of which may be a comma-separated list. */
+const collectHorizons = (value: string, previous: readonly string[] = []): readonly string[] => [
+  ...previous,
+  ...value.split(',').map((horizon) => horizon.trim())
+]
+
+const selectedHorizons = (horizons: readonly string[] = []): readonly string[] => {
+  if (horizons.some((horizon) => !workItemHorizons.includes(horizon as (typeof workItemHorizons)[number])))
+    throw grammarError(`roadmap list --horizon must be one of ${workItemHorizons.join(', ')}`)
+  return [...new Set(horizons)]
+}
+
+const byOption = (description: string): Option =>
+  new Option(
+    '--by <grouping>',
+    `${description}: by Project or by Initiative from the Project registry, or by fixed area`
+  ).choices(['project', 'initiative', 'area'])
+
 const listCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('list')
     .description('list governed work items')
     .option('--aggregate', 'render one selected-set roadmap inventory')
-    .option('--horizon <horizon>', 'only items at this horizon')
+    .option('--horizon <horizons>', 'only items at these horizons: comma-separated or repeated', collectHorizons)
     .option('--status <status>', 'only items at this status')
-    .addOption(
-      new Option(
-        '--by <grouping>',
-        'group text output by Project or by Initiative from the Project registry, or by fixed area'
-      ).choices(['project', 'initiative', 'area'])
-    )
+    .addOption(byOption('group text output across the selected set; implies --aggregate'))
     .option('--no-icons', 'omit decorative trade badge icons')
     .option('--format <text|json>', 'render roadmap evidence as text or versioned JSON', 'text')
     .addOption(
@@ -426,13 +493,12 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
     .action(async (options: RoadmapOptions) => {
       if (options.format !== 'text' && options.format !== 'json')
         throw grammarError('roadmap list --format must be text or json')
-      if (options.horizon && !workItemHorizons.includes(options.horizon as (typeof workItemHorizons)[number]))
-        throw grammarError(`roadmap list --horizon must be one of ${workItemHorizons.join(', ')}`)
+      const horizons = selectedHorizons(options.horizon)
       if (options.status && !workItemStatuses.includes(options.status as (typeof workItemStatuses)[number]))
         throw grammarError(`roadmap list --status must be one of ${workItemStatuses.join(', ')}`)
       if (options.by && options.format === 'json') throw grammarError('roadmap list --by applies only to text output')
       const { estate, results } = await listRoadmap(operationContext(context), selectedRepositories(), {
-        horizon: options.horizon,
+        horizons,
         status: options.status,
         includeProjection: options.format === 'json',
         ...(options.by ? { by: options.by as RoadmapGrouping } : {})
@@ -445,7 +511,7 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
       const output =
         options.format === 'json'
           ? JSON.stringify(roadmapReport(results), null, 2)
-          : options.aggregate
+          : options.aggregate || options.by
             ? renderAggregateResult(results, estate, textOptions)
             : results.map((result) => renderTextResult(result, estate, textOptions)).join('\n\n')
       context.stdout.write(`${output}\n`)
@@ -454,11 +520,18 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
     })
 
 const summaryCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
-  new Command('summary').description('summarize roadmap item counts').action(async () => {
-    const { results } = await listRoadmapItems(operationContext(context), selectedRepositories(), {})
-    context.stdout.write(`${renderSummaryResult(results)}\n`)
-    if (results.some((result) => result.diagnostic || result.faults?.length)) throw new KiExit(1)
-  })
+  new Command('summary')
+    .description('summarize roadmap item counts')
+    .addOption(byOption('count by group across the selected set instead of by repository'))
+    .action(async (options: { readonly by?: RoadmapGrouping }) => {
+      const { results } = await listRoadmapItems(
+        operationContext(context),
+        selectedRepositories(),
+        options.by ? { by: options.by } : {}
+      )
+      context.stdout.write(`${renderSummaryResult(results, options.by)}\n`)
+      if (results.some((result) => result.diagnostic || result.faults?.length)) throw new KiExit(1)
+    })
 
 const statsCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('stats')

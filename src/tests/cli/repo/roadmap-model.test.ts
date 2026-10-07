@@ -605,6 +605,106 @@ describe('[ki repo roadmap list --by]', () => {
   })
 })
 
+describe('[ki repo roadmap] grouping across the selected set', () => {
+  test('merges a qualified local slug and qualifies only foreign or ambiguous slugs', async () => {
+    const box = await sandbox()
+    const { member, capital } = await territory(box)
+    await box.project.write(
+      'capital/Streams/Projects/alpha.md',
+      '---\nnote_type: streams/project\nslug: alpha\ninitiative: init-one\nlifecycle: active\n---\n\n# alpha\n'
+    )
+    await box.project.write('other/.ki.toml', declaration(home('example/other'), home('example/other')))
+    await box.project.write('other/Streams/Projects/alpha.md', projectNote('alpha', 'rig'))
+    await box.project.write('other/Streams/Projects/host.md', projectNote('host', 'rig'))
+    await box.project.write('other/Streams/Initiatives/rig.md', initiativeNote('rig'))
+    const other = await realpath(`${box.project.path}/other`)
+    await box.state.write(
+      'ki/registry.toml',
+      registryFile([
+        { key: 'member', repository: home('example/member'), path: member },
+        { key: 'capital', repository: capitalHome, path: capital },
+        { key: 'other', repository: home('example/other'), path: other }
+      ])
+    )
+    const items: readonly (readonly [string, Readonly<Record<string, string>>])[] = [
+      ['member', { id: 'KI-TOOL-CLI-001', project: 'alpha', horizon: 'now' }],
+      ['member', { id: 'KI-TOOL-CLI-002', project: 'capital/alpha' }],
+      ['member', { id: 'KI-TOOL-CLI-003', initiative: 'init-two' }],
+      ['member', { id: 'KI-TOOL-CLI-008', project: 'ghost' }],
+      ['other', { id: 'KI-TOOL-CLI-004', project: 'capital/alpha' }],
+      ['other', { id: 'KI-TOOL-CLI-005', project: 'alpha' }],
+      ['other', { id: 'KI-TOOL-CLI-006', project: 'host' }],
+      ['other', { id: 'KI-TOOL-CLI-007', initiative: 'capital/init-two' }]
+    ]
+    for (const [repository, fields] of items) await roadmapFile(box, repository, fields['id'] as string, record(fields))
+
+    const byProject = await box.run('ki repo --repo member --repo other roadmap list --by project')
+    const byInitiative = await box.run('ki repo --repo member --repo other roadmap list --by initiative')
+    const foreign = await box.run('ki repo --repo other roadmap list --by project')
+    const summary = await box.run('ki repo --repo member --repo other roadmap summary --by project')
+    const summaryByInitiative = await box.run('ki repo --repo member --repo other roadmap summary --by initiative')
+    const summaryByArea = await box.run('ki repo --repo member roadmap summary --by area')
+
+    expect(byProject.exitCode).toBe(0)
+    expect(byProject.output).toContain('KI AGGREGATE ROADMAP')
+    expect(byProject.output).toContain('project capital/alpha [active] (3)')
+    expect(byProject.output).toContain('project other/alpha (1)')
+    expect(byProject.output).toContain('project host (1)')
+    expect(byProject.output).toContain('project ghost (1)')
+    expect(byProject.output).toContain('unassigned (2)')
+    expect(byProject.output).toContain('KI-TOOL-CLI-008: project ghost is not in the registry')
+    expect(byInitiative.output).toContain('initiative init-one (3)')
+    expect(byInitiative.output).toContain('initiative init-two (2)')
+    expect(byInitiative.output).toContain('initiative rig (2)')
+    expect(byInitiative.output).not.toContain('capital/init-two')
+    expect(foreign.output).toContain('project capital/alpha [active] (1)')
+    expect(foreign.output).toContain('project other/alpha (1)')
+    expect(summary.exitCode).toBe(0)
+    expect(summary.output).toMatch(/│ +Project +│ +now +│ +next/)
+    expect(summary.output).toMatch(/│ +capital\/alpha \[active\] +│ +d=1 Σ=1 +│ +d=2 Σ=2 /)
+    expect(summary.output).toMatch(/│ +unassigned +│ +— +│ +d=2 Σ=2 /)
+    expect(summary.output).toMatch(/│ +Σ +│ +d=1 Σ=1 +│ +d=7 Σ=7 /)
+    expect(summary.output).toContain('Warnings\n  KI-TOOL-CLI-008: project ghost is not in the registry')
+    expect(summaryByInitiative.output).toMatch(/│ +Initiative +│/)
+    expect(summaryByInitiative.output).toMatch(/│ +init-two +│ +— +│ +d=2 Σ=2 /)
+    expect(summaryByArea.output).toMatch(/│ +Area +│/)
+    expect(summaryByArea.output).toMatch(/│ +unassigned +│ +d=1 Σ=1 +│ +d=3 Σ=3 /)
+    expect(summaryByArea.output).not.toContain('Warnings')
+  })
+
+  test('filters several horizons at once and skips the roadmap index', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', declaration())
+    await box.project.write('repo/docs/roadmap/README.md', '# Roadmap areas\n\n- `CLI` - command line.\n')
+    for (const [id, horizon] of [
+      ['KI-TOOL-CLI-001', 'now'],
+      ['KI-TOOL-CLI-002', 'next'],
+      ['KI-TOOL-CLI-003', 'soon'],
+      ['KI-TOOL-CLI-004', 'future']
+    ] as const)
+      await roadmapFile(box, 'repo', id, record({ id, horizon }))
+
+    const commaSeparated = await box.run('ki repo --repo repo roadmap list --horizon now,next')
+    const repeated = await box.run('ki repo --repo repo roadmap list --horizon now --horizon soon,now')
+    const invalid = await box.run('ki repo --repo repo roadmap list --horizon now,later')
+    const summary = await box.run('ki repo --repo repo roadmap summary')
+
+    expect(commaSeparated.exitCode).toBe(0)
+    expect(commaSeparated.output).toContain('KI-TOOL-CLI-001')
+    expect(commaSeparated.output).toContain('KI-TOOL-CLI-002')
+    expect(commaSeparated.output).not.toContain('KI-TOOL-CLI-003')
+    expect(repeated.output).toContain('ITEMS=2 NOW=1')
+    expect(repeated.output).toContain('KI-TOOL-CLI-003')
+    expect(repeated.output).not.toContain('KI-TOOL-CLI-002')
+    expect(invalid).toEqual({
+      exitCode: 2,
+      output: 'ki: error: roadmap list --horizon must be one of now, next, soon, future, hold\n'
+    })
+    expect(summary.exitCode).toBe(0)
+    expect(summary.output).not.toContain('README.md')
+  })
+})
+
 describe('[ki repo roadmap migrate]', () => {
   const longCondition = `- [ ] Blocked by ${'the slow upstream dependency '.repeat(10)}finishing.`
   const migrationFixture = async (box: Box) => {

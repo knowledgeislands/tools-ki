@@ -8,6 +8,8 @@ import type { RepositoryPlanningAdapter, RepositoryPlanningSource } from './plan
 const ISSUE_LEDGER = '_ISSUES.md'
 const IDEAS_LIST = '_IDEAS.md'
 const KB_ROADMAP_INDEX = 'Roadmap.md'
+/** The roadmap folder's area-definition index, which the ki-work-roadmap checker never reads as a record. */
+const ROADMAP_INDEX = 'README.md'
 const requiredFields = [
   'id',
   'title',
@@ -98,6 +100,7 @@ export const isWorkItemFile = (file: string, adapter: RepositoryPlanningAdapter)
   file.endsWith('.md') &&
   file !== ISSUE_LEDGER &&
   file !== IDEAS_LIST &&
+  file !== ROADMAP_INDEX &&
   (adapter !== 'kb-streams' || file !== KB_ROADMAP_INDEX)
 
 export const isAllowedHorizon = (status: WorkItemStatus, horizon: WorkItemHorizon): boolean =>

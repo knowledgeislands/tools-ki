@@ -50,7 +50,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 `ki repo roadmap list` MUST resolve repository type from `[skills.ki-repo]` and render flat work items from the selected local adapter: `docs/roadmap/` for a project roadmap or `Streams/Roadmap/` for KB Streams, with the colocated `_ISSUES.md` ledger and KB `Roadmap.md` navigation note treated as adapter-owned surfaces rather than work items.
 
-`--horizon` MUST accept only the seven governed horizons and `--status` MUST accept only the five governed lifecycle states. An unsupported filter or output format MUST fail with a grammar error before repository inventory is read.
+`--horizon` MUST accept only governed horizons, as a comma-separated list or a repeated flag, and `--status` MUST accept only the five governed lifecycle states. An unsupported filter or output format MUST fail with a grammar error before repository inventory is read.
 
 _Conformance:_ conforming
 
@@ -244,7 +244,7 @@ _Evidence:_ The named in-process CLI tests exercise compact and expanded invento
 
 ### REPO-OPS-024 — Compact roadmap summary
 
-`ki repo roadmap summary` MUST show selected repositories as rows against horizon columns, with nonzero lifecycle-status counts and a `Σ` total in each populated cell, without listing item identifiers or titles. Status counts MUST use `d` for draft, `r` for ready, `ip` for in-progress, `ar` for awaiting-review, and `x` for done, with a legend for abbreviations. A `Σ` column and row MUST aggregate the same counts per repository and per horizon, with a grand total at their intersection. Empty cells MUST show `—`, including empty totals, while unavailable roadmap cells MUST show `?`. Repositories without a roadmap MUST be named below the table to distinguish absent roadmaps from present empty roadmaps. Invalid roadmap evidence MUST remain diagnostic and make the command exit nonzero; trade inventory MUST NOT affect the roadmap summary.
+`ki repo roadmap summary` MUST show selected repositories as rows against horizon columns, with nonzero lifecycle-status counts and a `Σ` total in each populated cell, without listing item identifiers or titles. Status counts MUST use `d` for draft, `r` for ready, `ip` for in-progress, `ar` for awaiting-review, and `x` for done, with a legend for abbreviations. A `Σ` column and row MUST aggregate the same counts per repository and per horizon, with a grand total at their intersection. Empty cells MUST show `—`, including empty totals, while unavailable roadmap cells MUST show `?`. Repositories without a roadmap MUST be named below the table to distinguish absent roadmaps from present empty roadmaps. Invalid roadmap evidence MUST remain diagnostic and make the command exit nonzero; trade inventory MUST NOT affect the roadmap summary. With `--by project`, `--by initiative` or `--by area`, rows MUST be the groups aggregated across the selected set instead of repositories.
 
 _Conformance:_ conforming
 

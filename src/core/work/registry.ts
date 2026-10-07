@@ -1,5 +1,5 @@
 import { lstat, readdir, readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { parse } from 'yaml'
 import { REPOSITORY_DECLARATION_FILE, readRepositoryDeclaration } from '../configuration/index.ts'
 import { inspectLocalRegistry } from '../storage/index.ts'
@@ -9,6 +9,8 @@ import { parseRegistryReference, type RegistryReference } from './items.ts'
 export interface ProjectRegistry {
   readonly root: string
   readonly projects: ReadonlyMap<string, string | undefined>
+  /** Each registered Project's declared `lifecycle`, such as `active` or `paused`. */
+  readonly lifecycles: ReadonlyMap<string, string>
   readonly initiatives: ReadonlySet<string>
   /** Set when Initiative slugs still come from the retired `Streams/Projects/Initiatives.md` index. */
   readonly legacyInitiativesIndex: boolean
@@ -114,6 +116,7 @@ const readRegistry = async (root: string): Promise<ProjectRegistryLookup> => {
   if (!(await isDirectory(projectsDirectory)) && !(await isDirectory(initiativesDirectory)))
     return { unavailable: `the capital has no ${PROJECTS_DIRECTORY}/ or ${INITIATIVES_DIRECTORY}/ registry` }
   const projects = new Map<string, string | undefined>()
+  const lifecycles = new Map<string, string>()
   const initiatives = new Set<string>()
   let legacyInitiativesIndex = false
   for (const { name, text, values } of await registryNotes(projectsDirectory)) {
@@ -129,6 +132,7 @@ const readRegistry = async (root: string): Promise<ProjectRegistryLookup> => {
     if (typeof slug !== 'string' || !SLUG.test(slug)) continue
     const initiative = typeof values['initiative'] === 'string' ? values['initiative'] : undefined
     projects.set(slug, initiative)
+    if (typeof values['lifecycle'] === 'string') lifecycles.set(slug, values['lifecycle'])
     if (initiative) initiatives.add(initiative)
   }
   for (const { name, values } of await registryNotes(initiativesDirectory)) {
@@ -136,7 +140,7 @@ const readRegistry = async (root: string): Promise<ProjectRegistryLookup> => {
     const slug = values['slug']
     if (typeof slug === 'string' && SLUG.test(slug)) initiatives.add(slug)
   }
-  return { registry: { root, projects, initiatives, legacyInitiativesIndex } }
+  return { registry: { root, projects, lifecycles, initiatives, legacyInitiativesIndex } }
 }
 
 export type RoadmapGrouping = 'project' | 'initiative' | 'area'
@@ -144,8 +148,24 @@ export type RoadmapGrouping = 'project' | 'initiative' | 'area'
 /** Records with no resolvable Project or Initiative group here explicitly rather than disappearing. */
 export const UNASSIGNED_GROUP = 'unassigned'
 
+/**
+ * A grouped slug's registry identity, so that listings across repositories merge one Project or Initiative however
+ * each record spells it: `territory` is the territory's registry root, `?<name>` for a qualifier whose registry is
+ * unreadable, or empty when the repository's own registry is unreadable.
+ */
+export interface GroupReference {
+  readonly territory: string
+  /** The qualifier that names the territory when a listing must disambiguate the slug. */
+  readonly name?: string
+  readonly slug: string
+}
+
 export interface WorkItemGroup {
+  /** The label within the record's own repository: qualified only when the territory is not the repository's own. */
   readonly group: string
+  readonly reference?: GroupReference
+  /** The grouped Project's registry `lifecycle`, for Project groups. */
+  readonly lifecycle?: string
   readonly warning?: string
 }
 
@@ -163,10 +183,18 @@ export const workItemGroup = (
   registries: TerritoryRegistries
 ): WorkItemGroup => {
   const own = registries(undefined)
-  const label = (reference: RegistryReference, registry: ProjectRegistry | undefined): string =>
-    reference.territory && !(registry && registry.root === own?.root)
-      ? `${reference.territory}/${reference.slug}`
-      : reference.slug
+  const located = (reference: RegistryReference, registry: ProjectRegistry | undefined): WorkItemGroup => {
+    const foreign = reference.territory !== undefined && !(registry && registry.root === own?.root)
+    const name = reference.territory ?? (registry ? basename(registry.root) : undefined)
+    return {
+      group: foreign ? `${reference.territory}/${reference.slug}` : reference.slug,
+      reference: {
+        territory: registry?.root ?? (reference.territory === undefined ? '' : `?${reference.territory}`),
+        ...(name ? { name } : {}),
+        slug: reference.slug
+      }
+    }
+  }
   const project = item.project === undefined ? undefined : (parseRegistryReference(item.project) as RegistryReference)
   const initiative =
     item.initiative === undefined ? undefined : (parseRegistryReference(item.initiative) as RegistryReference)
@@ -176,30 +204,34 @@ export const workItemGroup = (
     project && projectRegistry && !projectRegistry.projects.has(project.slug)
       ? `project ${item.project} is not in the registry`
       : undefined
-  if (by === 'project')
+  if (by === 'project') {
+    if (!project) return { group: UNASSIGNED_GROUP }
+    const lifecycle = projectRegistry?.lifecycles.get(project.slug)
     return {
-      group: project ? label(project, projectRegistry) : UNASSIGNED_GROUP,
+      ...located(project, projectRegistry),
+      ...(lifecycle ? { lifecycle } : {}),
       ...(unknownProject ? { warning: unknownProject } : {})
     }
+  }
   if (project && projectRegistry?.projects.has(project.slug)) {
     const registered = projectRegistry.projects.get(project.slug)
     if (!registered) return { group: UNASSIGNED_GROUP, warning: `project ${item.project} names no initiative` }
-    const group = label(
+    const group = located(
       { ...(project.territory ? { territory: project.territory } : {}), slug: registered },
       projectRegistry
     )
     return initiative &&
       initiativeRegistry &&
       (initiative.slug !== registered || initiativeRegistry.root !== projectRegistry.root)
-      ? { group, warning: `initiative ${item.initiative} contradicts project ${item.project} in ${group}` }
-      : { group }
+      ? { ...group, warning: `initiative ${item.initiative} contradicts project ${item.project} in ${group.group}` }
+      : group
   }
-  const initiativeGroup = initiative ? label(initiative, initiativeRegistry) : UNASSIGNED_GROUP
-  if (unknownProject) return { group: initiativeGroup, warning: unknownProject }
+  const initiativeGroup = initiative ? located(initiative, initiativeRegistry) : { group: UNASSIGNED_GROUP }
+  if (unknownProject) return { ...initiativeGroup, warning: unknownProject }
   if (project && !initiative) return { group: UNASSIGNED_GROUP }
   const warning =
     initiative && initiativeRegistry && !initiativeRegistry.initiatives.has(initiative.slug)
       ? `initiative ${item.initiative} is not in the registry`
       : undefined
-  return { group: initiativeGroup, ...(warning ? { warning } : {}) }
+  return { ...initiativeGroup, ...(warning ? { warning } : {}) }
 }
