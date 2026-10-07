@@ -37,6 +37,7 @@ import {
   loadTerritoryRegistry,
   type ProjectRegistry,
   type RoadmapGrouping,
+  UNASSIGNED_GROUP,
   type WorkItemGroup,
   workItemGroup
 } from './registry.ts'
@@ -80,6 +81,8 @@ export interface RoadmapGroupingResult {
 
 export interface RoadmapListItem extends WorkItem {
   readonly record: string
+  /** The declared title of the record's area, when the repository maps its areas to titles. */
+  readonly areaTitle?: string
 }
 
 interface RoadmapItemEvidence {
@@ -219,6 +222,21 @@ const groupItems = async (
   }
 }
 
+/** Groups by the record's fixed area, labelled with its declared title when the repository maps one. */
+const groupByArea = (planning: RepositoryPlanningSource, items: readonly WorkItem[]): RoadmapGroupingResult => ({
+  by: 'area',
+  registryWarnings: [],
+  groups: new Map(
+    items.map((item) => {
+      const title = item.area === undefined ? undefined : planning.areas.get(item.area)
+      return [
+        item.id,
+        { group: item.area === undefined ? UNASSIGNED_GROUP : title ? `${item.area}: ${title}` : item.area }
+      ]
+    })
+  )
+})
+
 const repositoryIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
 
 const recordUrl = (repository: string, directory: string, file: string): string =>
@@ -245,7 +263,8 @@ const projectItems = async (
     const file = index === -1 ? undefined : available.splice(index, 1)[0]
     /* v8 ignore next -- protects a future inventory implementation that stops retaining its source entry. */
     if (!file) throw new KiError(`work item ${item.id} has no canonical record`, 2)
-    return { ...item, record: recordUrl(repository, planning.directory, file) }
+    const areaTitle = item.area === undefined ? undefined : planning.areas.get(item.area)
+    return { ...item, record: recordUrl(repository, planning.directory, file), ...(areaTitle ? { areaTitle } : {}) }
   })
 }
 
@@ -318,7 +337,11 @@ export const listRoadmapItems = async (
         const inventory = planning && (await readWorkItemInventoryIfPresent(repository.root, planning))
         const items = inventory === undefined ? undefined : filterItems(inventory.items, options)
         const grouping =
-          options.by && items ? await groupItems(repository.root, context.stateDirectory, options.by, items) : undefined
+          options.by && planning && items
+            ? options.by === 'area'
+              ? groupByArea(planning, items)
+              : await groupItems(repository.root, context.stateDirectory, options.by, items)
+            : undefined
         return {
           repository: repository.root,
           ...projection,

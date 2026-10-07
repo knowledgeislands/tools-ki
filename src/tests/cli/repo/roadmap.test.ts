@@ -523,6 +523,7 @@ describe('[ki repo roadmap]', () => {
           repository: 'https://github.com/example/repo',
           id: 'KI-TOOL-CLI-003',
           area: null,
+          areaTitle: null,
           theme: null,
           title: 'Inspect governed work',
           horizon: 'next',

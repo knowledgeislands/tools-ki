@@ -330,6 +330,68 @@ describe('[ki repo roadmap] model fields', () => {
   })
 })
 
+const withAreas = (areas: string): string =>
+  declaration(home('example/repo')).replace(
+    '[skills.ki-work-roadmap]\n',
+    `[skills.ki-work-roadmap]\nareas = ${areas}\n`
+  )
+
+describe('[ki repo roadmap] areas', () => {
+  test('reads area titles from the map form and groups by area', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', withAreas('{ CLI = "Command line", OPS = "Operations", OLD = "Retired" }'))
+    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-001', record({ id: 'KI-TOOL-CLI-001', area: 'CLI' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-002', record({ id: 'KI-TOOL-CLI-002', area: 'CLI' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-OPS-003', record({ id: 'KI-TOOL-OPS-003', area: 'OPS' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-NEW-004', record({ id: 'KI-TOOL-NEW-004', area: 'NEW' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-005', record({ id: 'KI-TOOL-CLI-005' }))
+
+    const json = JSON.parse((await box.run('ki repo --repo repo roadmap list --format json')).output)
+    const byArea = await box.run('ki repo --repo repo roadmap list --by area')
+
+    expect(
+      Object.fromEntries(
+        json.items.map((entry: { id: string; areaTitle: string | null }) => [entry.id, entry.areaTitle])
+      )
+    ).toEqual({
+      'KI-TOOL-CLI-001': 'Command line',
+      'KI-TOOL-CLI-002': 'Command line',
+      'KI-TOOL-OPS-003': 'Operations',
+      'KI-TOOL-NEW-004': null,
+      'KI-TOOL-CLI-005': null
+    })
+    expect(byArea.exitCode).toBe(0)
+    const output = byArea.output
+    expect(output).toContain('area CLI: Command line (2)')
+    expect(output).toContain('area OPS: Operations (1)')
+    expect(output).toContain('area NEW (1)')
+    expect(output.indexOf('area OPS: Operations (1)')).toBeLessThan(output.indexOf('unassigned (1)'))
+    expect(output).not.toContain('warnings')
+  })
+
+  test('reads a legacy bare list without titles', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', withAreas('["CLI"]'))
+    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-001', record({ id: 'KI-TOOL-CLI-001', area: 'CLI' }))
+
+    const json = JSON.parse((await box.run('ki repo --repo repo roadmap list --format json')).output)
+    const byArea = await box.run('ki repo --repo repo roadmap list --by area')
+
+    expect(json.items[0]).toMatchObject({ area: 'CLI', areaTitle: null })
+    expect(byArea.output).toContain('area CLI (1)')
+  })
+
+  test('rejects areas that do not map uppercase codes to titles', async () => {
+    const box = await sandbox()
+    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-003', record())
+    for (const areas of ['"CLI"', '["cli"]', '["CLI", "CLI"]', '[7]', '{ CLI = 7 }', '{ cli = "Command line" }']) {
+      await box.project.write('repo/.ki.toml', withAreas(areas))
+      const result = await box.run('ki repo --repo repo roadmap list')
+      expect(result.output, areas).toContain('[skills.ki-work-roadmap].areas must map uppercase area codes to titles')
+    }
+  })
+})
+
 describe('[ki repo roadmap list --by]', () => {
   test('groups by Project and by registry Initiative with warnings that never fail the listing', async () => {
     const box = await sandbox()

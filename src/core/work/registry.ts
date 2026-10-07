@@ -139,7 +139,7 @@ const readRegistry = async (root: string): Promise<ProjectRegistryLookup> => {
   return { registry: { root, projects, initiatives, legacyInitiativesIndex } }
 }
 
-export type RoadmapGrouping = 'project' | 'initiative'
+export type RoadmapGrouping = 'project' | 'initiative' | 'area'
 
 /** Records with no resolvable Project or Initiative group here explicitly rather than disappearing. */
 export const UNASSIGNED_GROUP = 'unassigned'

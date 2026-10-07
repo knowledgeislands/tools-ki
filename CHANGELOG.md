@@ -81,7 +81,7 @@ This baseline describes the `v0.7.1` release. Domain imports and extracted type 
 - `ki repo audit`
 - `ki repo conform`
 - `ki repo diag`
-- `ki repo roadmap list [--format <text|json>] [--links <compact|all>] [--by <project|initiative>]`
+- `ki repo roadmap list [--format <text|json>] [--links <compact|all>] [--by <project|initiative|area>]`
 - `ki repo roadmap summary`
 - `ki repo roadmap stats [--stale-after <duration>] [--format <text|json>]`
 - `ki repo roadmap prune [id]`
@@ -175,6 +175,7 @@ This baseline describes the `v0.7.1` release. Domain imports and extracted type 
 - `ki repo roadmap summary` reports per-repository item, horizon, and lifecycle counts without listing work-item details or reading trades.
 - `ki repo roadmap` reads the v1 roadmap model: statuses add `triage` and `cancelled`, horizons are `now`, `next`, `soon`, `future` and `hold`, `theme` is optional, and `kind`, `purpose`, `project`, `initiative`, `component`, `hold` and `resolution` are validated. A `component` must be declared in `[skills.ki-work-roadmap].components`. Old horizons and fields, and an adopted open record without `kind`, still list as `legacy`. Text output and the summary order lanes `now` to `hold`, then triage, then done and cancelled, with `NOW=`, `CANCELLED=` and `LEGACY=` counts; `docs/roadmap/_IDEAS.md` is not a record.
 - `ki repo roadmap list --by project|initiative` groups text output through the Capital's `Streams/Projects/` and `Streams/Initiatives/` registry, reads the retired `Streams/Projects/Initiatives.md` index with a warning, and warns, without failing, when the registry is unavailable.
+- `[skills.ki-work-roadmap.areas]` is read as a map from area code to title as well as the legacy bare list. `ki repo roadmap list --by area` groups text output by area under its title, and the JSON report adds `areaTitle`.
 - `ki repo roadmap promote` and `demote` move along `now` to `hold` within the status's allowed horizons; entering `hold` needs `--reason` and `--condition`, and leaving it needs an explicit destination.
 - `ki repo roadmap migrate` previews, and with `--apply` on one repository writes, the mechanical move of open records to the v1 model without committing.
 - `ki repo roadmap prune` removes cancelled records as well as done ones, under the same committed-state guard and commit subject.

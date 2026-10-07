@@ -411,10 +411,10 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
     .option('--horizon <horizon>', 'only items at this horizon')
     .option('--status <status>', 'only items at this status')
     .addOption(
-      new Option('--by <grouping>', 'group text output by Project or by Initiative from the Project registry').choices([
-        'project',
-        'initiative'
-      ])
+      new Option(
+        '--by <grouping>',
+        'group text output by Project or by Initiative from the Project registry, or by fixed area'
+      ).choices(['project', 'initiative', 'area'])
     )
     .option('--no-icons', 'omit decorative trade badge icons')
     .option('--format <text|json>', 'render roadmap evidence as text or versioned JSON', 'text')

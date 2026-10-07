@@ -10,6 +10,8 @@ export interface RepositoryPlanningSource {
   readonly directory: WorkItemDirectory
   /** The `[skills.ki-work-roadmap].components` vocabulary; empty when undeclared, so no `component` is valid. */
   readonly components: ReadonlySet<string>
+  /** The fixed `[skills.ki-work-roadmap].areas` codes with their titles; a legacy bare list carries no titles. */
+  readonly areas: ReadonlyMap<string, string | undefined>
 }
 
 const adapterSkills = {
@@ -34,6 +36,32 @@ const declaredComponents = (configuration: Readonly<Record<string, unknown>> | u
   )
     throw new KiError('[skills.ki-work-roadmap].components must list unique lowercase kebab-case names', 2)
   return new Set(components as string[])
+}
+
+const AREA = /^[A-Z][A-Z0-9]*$/
+
+const AREAS_ERROR = '[skills.ki-work-roadmap].areas must map uppercase area codes to titles'
+
+/** Reads the fixed issuing areas in either declared form: the map from code to title, or the legacy bare list. */
+const declaredAreas = (
+  configuration: Readonly<Record<string, unknown>> | undefined
+): ReadonlyMap<string, string | undefined> => {
+  const areas = configuration?.['areas']
+  if (areas === undefined) return new Map()
+  const entries: readonly (readonly [unknown, unknown])[] | undefined = Array.isArray(areas)
+    ? areas.map((code) => [code, undefined])
+    : typeof areas === 'object' && areas !== null
+      ? Object.entries(areas)
+      : undefined
+  if (
+    !entries ||
+    entries.some(
+      ([code, title]) => typeof code !== 'string' || !AREA.test(code) || !['string', 'undefined'].includes(typeof title)
+    ) ||
+    new Set(entries.map(([code]) => code)).size !== entries.length
+  )
+    throw new KiError(AREAS_ERROR, 2)
+  return new Map(entries as readonly (readonly [string, string | undefined])[])
 }
 
 const isDeclaredAdapter = (value: unknown): value is DeclaredAdapter =>
@@ -64,10 +92,13 @@ export const readDeclaredPlanningSource = async (
   if (!declaration.skills.some(({ name }) => name === skill))
     throw new KiError(`[skills.ki-work].adapter = "${adapter}" requires [skills.${skill}]`, 2)
   if (adapter !== 'roadmap' && adapter !== 'kb-streams') return undefined
-  const components = declaredComponents(
-    declaration.skills.find(({ name }) => name === 'ki-work-roadmap')?.configuration
-  )
-  return { adapter, directory: adapter === 'roadmap' ? 'docs/roadmap' : 'Streams/Roadmap', components }
+  const roadmap = declaration.skills.find(({ name }) => name === 'ki-work-roadmap')?.configuration
+  return {
+    adapter,
+    directory: adapter === 'roadmap' ? 'docs/roadmap' : 'Streams/Roadmap',
+    components: declaredComponents(roadmap),
+    areas: declaredAreas(roadmap)
+  }
 }
 
 /** Resolves the declared local roadmap for an operation that cannot proceed without one. */

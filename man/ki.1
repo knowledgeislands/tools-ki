@@ -1,4 +1,4 @@
-.TH KI 1 "2026-10-06" "Knowledge Islands" "User Commands"
+.TH KI 1 "2026-10-07" "Knowledge Islands" "User Commands"
 .SH NAME
 \&
 .PP
@@ -785,7 +785,12 @@ groups under its own \fBinitiative\fR. Records with neither group under
 \fBunassigned\fR. An unavailable registry, the retired
 \fBStreams/Projects/Initiatives.md\fR index, an unknown slug, or an
 \fBinitiative\fR that contradicts the registry is a warning that never changes
-the exit status. \fB--by\fR does not apply to JSON output.
+the exit status.
+\fB--by area\fR
+groups by each record's fixed \fBarea\fR under the title that
+\fB[skills.ki-work-roadmap.areas]\fR maps to its code; a legacy bare areas list
+reads without titles, and JSON output adds \fBareaTitle\fR.
+\fB--by\fR does not apply to JSON output.
 A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
 selected repositories still report, and any roadmap or trade diagnostic makes

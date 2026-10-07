@@ -16,6 +16,7 @@ interface RoadmapReport {
     readonly repository: string
     readonly id: string
     readonly area: string | null
+    readonly areaTitle: string | null
     readonly theme: string | null
     readonly title: string
     readonly horizon: string | null
@@ -60,6 +61,7 @@ export const roadmapReport = (results: readonly RoadmapListResult[]): RoadmapRep
       repository: result.repositoryUrl as string,
       id: item.id,
       area: item.area ?? null,
+      areaTitle: item.areaTitle ?? null,
       theme: item.theme ?? null,
       title: item.title,
       horizon: item.horizon ?? null,
