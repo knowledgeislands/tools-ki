@@ -119,6 +119,19 @@ ki repo repair --dry-run
 ki repo --agora estate audit
 ```
 
+## Delegate to background agents
+
+`ki agent` launches detached Claude Code or Codex agents under the `ki-delegation` background-run contract. Each agent gets a prompt with its authority footer and progress protocol, a one-line status ending `DONE`, a pid, a log and a report under `$KI_STATE_HOME/agents/<run>/`. A queue and a concurrency-capped dispatcher keep agents moving, and `ki agent wait --next` wakes the coordinator on each finish.
+
+```sh
+ki agent decide gov "Ship the launcher."
+ki agent queue gov build task.md --workdir ~/src/repo --rules push
+ki agent dispatch gov --max 4
+ki agent wait gov --next
+```
+
+See [run detached background agents](docs/guides/user/background-agents.md).
+
 ## Automate canonical batch records
 
 `ki repo batch prepare`, `validate`, `run`, and `close` provide deterministic local file mechanics for an already-approved exact set of Ready work items. The commands protect the authority payload, bind a run, append explicit item evidence, and require every named item to match the approved completion target before recording closure. They do not select or implement work, infer approval, change work lifecycle, accept or prune items, push, or release.

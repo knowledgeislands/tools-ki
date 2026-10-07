@@ -375,6 +375,32 @@ Remove only the selected machine-local reference association.
 .TP
 .B ki acquire reset
 .RI [--adapter\ <name>]\ [--repo\ <path>]\ [--source\ <identity>]\ [--component\ <name>]\ [--rebuild]\ [--confirm]
+.SS Background agents
+\&
+.TP
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]
+Launch one detached agent and write its run packet.
+.TP
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]
+Append a ready-made agent to the run queue.
+.TP
+.B ki agent dispatch <run> --max <count> [--interval <seconds>]
+Keep up to the given number of queued agents running, detached.
+.TP
+.B ki agent wait <run> [--next] [--interval <seconds>]
+Block until the next unseen agent, or the whole run, finishes.
+.TP
+.B ki agent status <run>
+Print each agent's latest status and the queue.
+.TP
+.B ki agent watch <run> [seconds]
+Print one status line per interval until the run ends.
+.TP
+.B ki agent new <run> <name>
+Write a prompt skeleton from the run contract.
+.TP
+.B ki agent decide <run> <text...> [--log <path>]
+Append a numbered, dated owner decision.
 .SS Development
 \&
 .TP
@@ -1376,6 +1402,76 @@ verifies. It stages meeting Markdown beneath
 .IR +/_ACQUIRE/granola/ .
 Conflicting receiver mappings fail closed; acquisition never tags, edits,
 archives, deletes, or moves Granola data.
+.SS Background agents
+\&
+.PP
+Launch and coordinate detached background agents under the
+.B ki-delegation
+background-run contract. Each run lives in
+.IR $KI_STATE_HOME/agents/<run>/ ,
+with a prompt, one-line status, pid, log, and report per agent. An agent
+writes
+.B DONE
+as the last line of its status when it finishes. Runtime adapters start
+Claude Code or Codex in their own session with standard input from
+.IR /dev/null ,
+so an interrupt of the launching session cannot stop them.
+.TP
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]
+Launch one detached agent. The prompt gains a wait gate for each
+.B --wait-for
+agent, the authority footer the pinned Harness's
+.B ki-delegation
+skill ships for the
+.B --rules
+tier (default
+.BR none ),
+and the progress protocol. The status time zone follows
+.BR TZ .
+.TP
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]
+Append a ready-made agent to the run queue, copying its prompt. Queue order
+is priority order.
+.TP
+.B ki agent dispatch <run> --max <count> [--interval <seconds>]
+Start a detached dispatcher that keeps up to
+.I count
+agents running, launches the next queued agent as soon as one finishes,
+logs each launch to
+.IR dispatch.log ,
+and exits when the queue is empty and nothing is running.
+.TP
+.B ki agent wait <run> [--next] [--interval <seconds>]
+With
+.BR --next ,
+block until the next unseen agent finishes, print
+.I "<name> finished: <last status>"
+or that it exited without DONE, and mark it seen. A coordinator runs it in
+the background, reports each finish, and re-arms it. Without
+.BR --next ,
+wait for the whole run. Either form prints
+.B ALL FINISHED
+when nothing is left to wait for.
+.TP
+.B ki agent status <run>
+Print each agent's latest status, flag any agent whose process exited
+without DONE, and list the queue.
+.TP
+.B ki agent watch <run> [seconds]
+Print one line per interval (default 120 seconds) until no agent is
+running, ending with
+.BR "ALL FINISHED" .
+.TP
+.B ki agent new <run> <name>
+Write a prompt skeleton from the
+.B ki-delegation
+run contract to
+.IR <name>.draft.md .
+.TP
+.B ki agent decide <run> <text...> [--log <path>]
+Append a numbered, dated owner decision to the run's
+.I decisions.md
+or the named log, for prompts to cite as their authority.
 .SS Development
 \&
 .PP

@@ -478,6 +478,44 @@
       ]
     },
     {
+      "name": "Background agents",
+      "purpose": "Launch and coordinate detached background agents under the ki-delegation background-run contract. Each run lives in $KI_STATE_HOME/agents/<run>/ , with a prompt, one-line status, pid, log, and report per agent. An agent writes DONE as the last line of its status when it finishes. Runtime adapters start Claude Code or Codex in their own session with standard input from /dev/null , so an interrupt of the launching session cannot stop them.",
+      "commands": [
+        {
+          "invocation": "ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]",
+          "description": "Launch one detached agent. The prompt gains a wait gate for each --wait-for agent, the authority footer the pinned Harness's ki-delegation skill ships for the --rules tier (default none ), and the progress protocol. The status time zone follows TZ ."
+        },
+        {
+          "invocation": "ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]",
+          "description": "Append a ready-made agent to the run queue, copying its prompt. Queue order is priority order."
+        },
+        {
+          "invocation": "ki agent dispatch <run> --max <count> [--interval <seconds>]",
+          "description": "Start a detached dispatcher that keeps up to count agents running, launches the next queued agent as soon as one finishes, logs each launch to dispatch.log , and exits when the queue is empty and nothing is running."
+        },
+        {
+          "invocation": "ki agent wait <run> [--next] [--interval <seconds>]",
+          "description": "With --next , block until the next unseen agent finishes, print <name> finished: <last status> or that it exited without DONE, and mark it seen. A coordinator runs it in the background, reports each finish, and re-arms it. Without --next , wait for the whole run. Either form prints ALL FINISHED when nothing is left to wait for."
+        },
+        {
+          "invocation": "ki agent status <run>",
+          "description": "Print each agent's latest status, flag any agent whose process exited without DONE, and list the queue."
+        },
+        {
+          "invocation": "ki agent watch <run> [seconds]",
+          "description": "Print one line per interval (default 120 seconds) until no agent is running, ending with ALL FINISHED ."
+        },
+        {
+          "invocation": "ki agent new <run> <name>",
+          "description": "Write a prompt skeleton from the ki-delegation run contract to <name>.draft.md ."
+        },
+        {
+          "invocation": "ki agent decide <run> <text...> [--log <path>]",
+          "description": "Append a numbered, dated owner decision to the run's decisions.md or the named log, for prompts to cite as their authority."
+        }
+      ]
+    },
+    {
       "name": "Development",
       "purpose": "Use these commands to switch Harnesses already present in the installed KI estate between their verified archives and independent local development checkouts.",
       "commands": [

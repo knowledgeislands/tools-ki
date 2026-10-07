@@ -144,6 +144,17 @@ This baseline describes the `v0.8.3` release. Domain imports and extracted type 
 - `ki acquire reconcile [--adapter <name>|--all] [--repo <path>]`
 - `ki acquire reset [--adapter <name>] [--repo <path>] [--source <identity>] [--component <name>] [--rebuild] [--confirm]`
 
+#### Background agents
+
+- `ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]`
+- `ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [launch options]`
+- `ki agent dispatch <run> --max <count> [--interval <seconds>]`
+- `ki agent wait <run> [--next] [--interval <seconds>]`
+- `ki agent status <run>`
+- `ki agent watch <run> [seconds]`
+- `ki agent new <run> <name>`
+- `ki agent decide <run> <text...> [--log <path>]`
+
 #### Development
 
 - `ki dev local set <harness-id> <local-harness-path>`
@@ -153,6 +164,7 @@ This baseline describes the `v0.8.3` release. Domain imports and extracted type 
 
 ### Behaviours
 
+- `ki agent` is the reference launcher for the `ki-delegation` background-run contract. It detaches Claude Code or Codex agents in their own session, writes each run packet under `$KI_STATE_HOME/agents/<run>/`, appends the pinned Harness's authority footer for the chosen tier, keeps a numbered decisions log, and provides a run queue, a detached concurrency-capped dispatcher, a waiter that returns on each finish, and status and watch views that flag agents which exited without `DONE`.
 - Diagnostics and doctor reports share tool/version, checkout-verified local/release/unknown installation mode, executing platform/architecture, runtime/version, and configuration state. Copied or unidentified source is unknown rather than guessed local. Doctor reports its read-only scope, verdict, and pass/warn/fail/skipped counts without implying package freshness.
 - KI's own CI runs from the checked-out source, while release packaging pins a verified Harness revision.
 - The canonical Harness pin is `ki-agentic-harness` `991acd3`. It carries the five-rule `.ki.toml` layout checked by FILES-10, the flat `territory_name` and `territory_members` keys under `[skills.ki-repo]` with a finding for the retired `[skills.ki-repo.territory]` table, an optional roadmap README and `## Areas` section, bare `[skills.ki-trades]` tables while the trades hold stands, and a warning when that hold passes its review date.
