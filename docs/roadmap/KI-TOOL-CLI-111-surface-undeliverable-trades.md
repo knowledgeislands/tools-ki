@@ -6,12 +6,13 @@ kind: deliver
 purpose: capability
 project: territories-and-trades
 component: trade
-status: triage
+status: cancelled
+resolution: obsolete
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T23:27:45Z
-updated_at: 2026-10-07T14:35:20Z
+updated_at: 2026-10-07T17:20:40Z
 ---
 
 # Surface undeliverable trades
@@ -39,6 +40,12 @@ No existing record duplicates this. KI-TOOL-CLI-108 (roadmap list structural val
 In scope, from the trade's constraints: CLI detection and messaging. Added on 2026-10-07: a sender-side withdraw command for a submitted, unreceived trade (see Discussion).
 
 Out of scope: route policy and the `ki-trades` standard, which the harness owns; widening any repository's routes. The receiver owns priority, plan and execution.
+
+## Cancelled
+
+Approved by Kris on 2026-10-07 under decision 13 of the state-of-play design ("Yes please, lets reduce stuff": cancel and prune obsolete or ownerless records).
+
+Trades are on hold (decision 11 of the state-of-play design), and the sender-side withdrawal overlapped KI-HARNESS-GOV-148 in `knowledgeislands/ki-agentic-harness`, cancelled with it. The trades hold review due 2026-10-14 decides whether trades return; any delivery work is re-specified then. No outstanding changes.
 
 ## Discussion
 
