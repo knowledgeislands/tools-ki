@@ -6,13 +6,12 @@ kind: deliver
 purpose: governance
 project: roadmap-model
 component: repo
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 6fa3e7bb9fda9c5b8ba6fc947e312ed16f26904f
 created_at: 2026-10-07T12:26:37Z
-updated_at: 2026-10-07T14:36:34Z
+updated_at: 2026-10-07T14:39:11Z
 ---
 
 # KI-TOOL-CLI-112: Read roadmap model
@@ -65,7 +64,7 @@ Planned under the 2026-10-07 rollout authority while GOV-150 is still uncommitte
 
 ## Current state
 
-Delivered in `6e47d2d`: the model, lane ordering, grouping, hold moves, migration helper and terminal prune described under Review are awaiting acceptance.
+Done: delivered in `6e47d2d`, reconciled with the harness checker in `535d72a`, and accepted under the rollout grant recorded under Done.
 
 ## Steps
 
@@ -119,6 +118,8 @@ Repository migrations and the later enforcement switch-over remain separate reco
 ### Delivered
 
 - `6e47d2d` `feat(roadmap): read the v1 roadmap model`.
+- `535d72a` `fix(roadmap): match the harness checker on kind, components and Initiatives`: an adopted open record without `kind` is reported as legacy, `component` must be in `[skills.ki-work-roadmap].components`, and the registry reads `Streams/Initiatives/` with a warning on the retired `Streams/Projects/Initiatives.md` index.
+- `0e07c62` and `a2f6e95` migrate this repository: `.ki.toml` declares components and drops themes and the area-to-theme map, and CLI-108 to CLI-112 carry the approved classification without `theme`.
 
 ### Change Summary
 
@@ -131,14 +132,14 @@ Repository migrations and the later enforcement switch-over remain separate reco
 
 ### Verification
 
-- `bun run test:coverage`: 1074 tests pass at 100% statements, branches, functions and lines.
+- `bun run test:coverage`: 1075 tests pass at 100% statements, branches, functions and lines.
 - `bunx @biomejs/biome check`, `bunx tsc --noEmit`, `bunx knip`, `bun run ki:tools:lint-man` and the command-inventory regeneration pass.
 - Read-only against this repository: `ki repo roadmap list` lists five records, all marked legacy for `theme` and three for the `triage` horizon; `list --by project` puts all five under `unassigned`; `migrate` would migrate the three triage-horizon drafts and writes nothing.
 
 ### Outstanding concerns
 
-- The provisional decisions and guesses under Discussion need Kris's confirmation at acceptance.
-- Every existing record reports legacy because `theme` is retired; the count falls only when repositories drop `theme`, which the migration helper deliberately leaves alone.
+- With no `components` declared, any `component` is rejected, as the harness checker does; the planning brief said the check applied only when a vocabulary is declared, so the harness behaviour was followed.
+- Other repositories' installed `ki` picks this up only after a tools-ki release.
 
 ### Post-change review
 
@@ -147,6 +148,10 @@ The command and core split holds: `registry.ts` and `migration.ts` are core modu
 ### Mini recap
 
 `ki roadmap` now reads, orders, groups and migrates the v1 model while tolerating the old shape, and prune covers cancelled records.
+
+## Done
+
+Accepted 2026-10-07 under the rollout's carry-through grant (decision 6, Kris Brown, 7 October 2026): "you can just carry it all the way through, this is a really good example of thought out work", with `completion_target: done`. Rechecked on the committed delivery and migration (`a2f6e95`): `bun run test:coverage` 1075 pass at 100% coverage, Biome, `tsc --noEmit`, knip and `ki:tools:lint-man` clean, `ki repo roadmap list` reports no legacy record, and `ki repo audit` PASS across 22 skills.
 
 ## Discussion
 
@@ -180,3 +185,16 @@ Reconciled against the committed harness checker (`roadmap-evidence.ts` and `pro
 16. Summary adds `NOW=`, `CANCELLED=` and `LEGACY=`; the summary table has eight lane columns plus the total.
 17. This record keeps `theme: cli` until its repository migration.
 18. Grouped items show `[status @ lane]` when the lane differs from the status, and legacy items carry a `legacy` suffix.
+
+### Reconciliation outcome
+
+Reconciled against the pushed harness checker (`roadmap-evidence.ts` and `project-registry.ts` at `e894aa22`):
+
+- Fixed to match the harness in `535d72a`: guess 10 (a missing `kind` on an adopted open record is now reported as legacy, as the checker tolerates it with a warning) and guess 11 (`component` is checked against the `.ki.toml` vocabulary). The registry also reads `Streams/Initiatives/`.
+- Already matching the harness: guesses 9 (prune subject), 12 (a triage-horizon draft becomes `status: triage`) and 15 (Knowledge Base fields share the governed validation).
+- Superseded: guess 17; `theme` was dropped by hand in the migration.
+- Kept as tools-ki decisions where the harness is silent: guesses 1 to 3, 5 to 8, 13, 14, 16 and 18, and guess 4, because `list` reports rather than checks, so a project and initiative contradiction warns there while the checker fails it.
+
+### Migration helper first use
+
+`ki repo roadmap migrate --apply` moved CLI-109 to CLI-111 from the `triage` horizon to `status: triage` and was idempotent on a second run. It does not drop `theme` or add the judgement fields, so those were applied by hand from the approved proposals. No defect was found. The installed `ki` 0.7.1 lacks the helper, so a source build ran it.
