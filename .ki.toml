@@ -58,7 +58,6 @@ auto_memory = "disabled"
 adapter = "roadmap"
 
 [skills.ki-work-roadmap]
-areas = ["CLI", "VENDOR"]
 # Mirrors the src/commands groups.
 components = [
   "acquire",
@@ -74,6 +73,10 @@ components = [
   "skill",
   "trade",
 ]
+
+[skills.ki-work-roadmap.areas]
+CLI = "Command-line interface"
+VENDOR = "Cross-repository skill vendoring"
 
 [skills.ki-tokenomics]
 
