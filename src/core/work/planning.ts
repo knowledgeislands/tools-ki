@@ -8,6 +8,8 @@ export type RepositoryPlanningAdapter = 'roadmap' | 'kb-streams'
 export interface RepositoryPlanningSource {
   readonly adapter: RepositoryPlanningAdapter
   readonly directory: WorkItemDirectory
+  /** The `[skills.ki-work-roadmap].components` vocabulary; empty when undeclared, so no `component` is valid. */
+  readonly components: ReadonlySet<string>
 }
 
 const adapterSkills = {
@@ -18,6 +20,21 @@ const adapterSkills = {
 } as const
 
 type DeclaredAdapter = keyof typeof adapterSkills
+
+const COMPONENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+/** Reads the repository-owned component vocabulary the shared record model checks `component` against. */
+const declaredComponents = (configuration: Readonly<Record<string, unknown>> | undefined): ReadonlySet<string> => {
+  const components = configuration?.['components']
+  if (components === undefined) return new Set()
+  if (
+    !Array.isArray(components) ||
+    components.some((component) => typeof component !== 'string' || !COMPONENT.test(component)) ||
+    new Set(components).size !== components.length
+  )
+    throw new KiError('[skills.ki-work-roadmap].components must list unique lowercase kebab-case names', 2)
+  return new Set(components as string[])
+}
 
 const isDeclaredAdapter = (value: unknown): value is DeclaredAdapter =>
   typeof value === 'string' && Object.hasOwn(adapterSkills, value)
@@ -46,9 +63,11 @@ export const readDeclaredPlanningSource = async (
   const skill = adapterSkills[adapter]
   if (!declaration.skills.some(({ name }) => name === skill))
     throw new KiError(`[skills.ki-work].adapter = "${adapter}" requires [skills.${skill}]`, 2)
-  if (adapter === 'roadmap') return { adapter, directory: 'docs/roadmap' }
-  if (adapter === 'kb-streams') return { adapter, directory: 'Streams/Roadmap' }
-  return undefined
+  if (adapter !== 'roadmap' && adapter !== 'kb-streams') return undefined
+  const components = declaredComponents(
+    declaration.skills.find(({ name }) => name === 'ki-work-roadmap')?.configuration
+  )
+  return { adapter, directory: adapter === 'roadmap' ? 'docs/roadmap' : 'Streams/Roadmap', components }
 }
 
 /** Resolves the declared local roadmap for an operation that cannot proceed without one. */

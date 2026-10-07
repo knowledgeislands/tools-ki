@@ -185,7 +185,14 @@ const groupItems = async (
   const registry = 'registry' in lookup ? lookup.registry : undefined
   return {
     by,
-    ...('unavailable' in lookup ? { registryWarning: `project registry unavailable: ${lookup.unavailable}` } : {}),
+    ...('unavailable' in lookup
+      ? { registryWarning: `project registry unavailable: ${lookup.unavailable}` }
+      : lookup.registry.legacyInitiativesIndex
+        ? {
+            registryWarning:
+              'Streams/Projects/Initiatives.md is retired; keep one note per Initiative in Streams/Initiatives/'
+          }
+        : {}),
     groups: new Map(items.map((item) => [item.id, workItemGroup(item, by, registry)]))
   }
 }

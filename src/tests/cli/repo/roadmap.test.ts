@@ -31,6 +31,7 @@ const item = (overrides: Record<string, string | undefined> = {}): string => {
   const fields = {
     id: 'KI-TOOL-CLI-003',
     title: 'Inspect governed work',
+    kind: 'deliver',
     horizon: 'next',
     status: 'draft',
     blocks: '[]',
@@ -527,7 +528,7 @@ describe('[ki repo roadmap]', () => {
           horizon: 'next',
           lane: 'next',
           status: 'draft',
-          kind: null,
+          kind: 'deliver',
           purpose: null,
           project: null,
           initiative: null,

@@ -9,12 +9,16 @@ export interface ProjectRegistry {
   readonly root: string
   readonly projects: ReadonlyMap<string, string | undefined>
   readonly initiatives: ReadonlySet<string>
+  /** Set when Initiative slugs still come from the retired `Streams/Projects/Initiatives.md` index. */
+  readonly legacyInitiativesIndex: boolean
 }
 
 export type ProjectRegistryLookup = { readonly registry: ProjectRegistry } | { readonly unavailable: string }
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const PROJECTS_DIRECTORY = join('Streams', 'Projects')
+const INITIATIVES_DIRECTORY = join('Streams', 'Initiatives')
+const INDEX_NOTES = new Set(['Projects.md', 'Initiatives.md'])
 
 const declaredIdentity = async (root: string): Promise<{ repository?: unknown; capital?: unknown } | undefined> => {
   try {
@@ -49,9 +53,30 @@ const frontmatter = (text: string): Record<string, unknown> | undefined => {
   }
 }
 
+const isDirectory = async (path: string): Promise<boolean> =>
+  (await lstat(path).catch(() => undefined))?.isDirectory() === true
+
+/** Regular Markdown notes directly inside one registry folder, in name order, as name and frontmatter. */
+const registryNotes = async (
+  directory: string
+): Promise<readonly { readonly name: string; readonly text: string; readonly values?: Record<string, unknown> }[]> => {
+  if (!(await isDirectory(directory))) return []
+  const entries = (await readdir(directory, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+    .sort((left, right) => left.name.localeCompare(right.name))
+  return Promise.all(
+    entries.map(async ({ name }) => {
+      const text = await readFile(join(directory, name), 'utf8')
+      const values = frontmatter(text)
+      return { name, text, ...(values ? { values } : {}) }
+    })
+  )
+}
+
 /**
- * Reads the Capital's `Streams/Projects/` registry through runtime registry discovery. Any missing step is returned as
- * an unavailable reason for the caller to report as a warning; it never fails a listing.
+ * Reads the Capital's `Streams/Projects/` and `Streams/Initiatives/` registry through runtime registry discovery. Any
+ * missing step is returned as an unavailable reason for the caller to report as a warning; it never fails a listing.
+ * The retired `Streams/Projects/Initiatives.md` index stays readable during the migration tolerance window.
  */
 export const loadProjectRegistry = async (
   repository: string,
@@ -59,31 +84,34 @@ export const loadProjectRegistry = async (
 ): Promise<ProjectRegistryLookup> => {
   const root = await capitalRoot(repository, stateDirectory)
   if (typeof root !== 'string') return root
-  const directory = join(root, PROJECTS_DIRECTORY)
-  const state = await lstat(directory).catch(() => undefined)
-  if (!state?.isDirectory()) return { unavailable: `the capital has no ${PROJECTS_DIRECTORY}/ registry` }
+  const projectsDirectory = join(root, PROJECTS_DIRECTORY)
+  const initiativesDirectory = join(root, INITIATIVES_DIRECTORY)
+  if (!(await isDirectory(projectsDirectory)) && !(await isDirectory(initiativesDirectory)))
+    return { unavailable: `the capital has no ${PROJECTS_DIRECTORY}/ or ${INITIATIVES_DIRECTORY}/ registry` }
   const projects = new Map<string, string | undefined>()
   const initiatives = new Set<string>()
-  for (const entry of (await readdir(directory, { withFileTypes: true })).sort((left, right) =>
-    left.name.localeCompare(right.name)
-  )) {
-    if (!entry.isFile() || !entry.name.endsWith('.md')) continue
-    const text = await readFile(join(directory, entry.name), 'utf8')
-    const values = frontmatter(text)
-    if (entry.name === 'Initiatives.md') {
+  let legacyInitiativesIndex = false
+  for (const { name, text, values } of await registryNotes(projectsDirectory)) {
+    if (name === 'Initiatives.md') {
+      legacyInitiativesIndex = true
       const declared = Array.isArray(values?.['initiatives']) ? (values['initiatives'] as unknown[]) : []
       for (const slug of declared) if (typeof slug === 'string' && SLUG.test(slug)) initiatives.add(slug)
       for (const match of text.matchAll(/^Slug `([a-z0-9]+(?:-[a-z0-9]+)*)`\./gm)) initiatives.add(match[1] as string)
       continue
     }
-    if (values?.['note_type'] !== 'streams/project') continue
+    if (INDEX_NOTES.has(name) || values?.['note_type'] !== 'streams/project') continue
     const slug = values['slug']
     if (typeof slug !== 'string' || !SLUG.test(slug)) continue
     const initiative = typeof values['initiative'] === 'string' ? values['initiative'] : undefined
     projects.set(slug, initiative)
     if (initiative) initiatives.add(initiative)
   }
-  return { registry: { root, projects, initiatives } }
+  for (const { name, values } of await registryNotes(initiativesDirectory)) {
+    if (INDEX_NOTES.has(name) || values?.['note_type'] !== 'streams/initiative') continue
+    const slug = values['slug']
+    if (typeof slug === 'string' && SLUG.test(slug)) initiatives.add(slug)
+  }
+  return { registry: { root, projects, initiatives, legacyInitiativesIndex } }
 }
 
 export type RoadmapGrouping = 'project' | 'initiative'

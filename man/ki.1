@@ -758,8 +758,10 @@ items run from \fBawaiting-review\fR through \fBdraft\fR, with identifiers
 breaking ties. The summary line counts the \fBnow\fR lane as a signal with no
 cap. Records still in the old shape (a \fBtheme\fR, a \fBwaiting-for\fR,
 \fBparked\fR or \fBtriage\fR horizon, \fBwaiting_on_trades\fR or
-\fBintake_disposition\fR) are listed in the lane they migrate to, marked
-\fBlegacy\fR, and counted as \fBLEGACY\fR; they are tolerated until migration.
+\fBintake_disposition\fR, or an adopted open record without \fBkind\fR) are
+listed in the lane they migrate to, marked \fBlegacy\fR, and counted as
+\fBLEGACY\fR; they are tolerated until migration. A \fBcomponent\fR must be
+declared in \fB[skills.ki-work-roadmap].components\fR.
 Linked items append one compact provider-qualified task key and a count of
 additional distinct tickets, preferring implementation links. A legend explains
 provider abbreviations. Use \fB--links all\fR to replace the suffix with nested
@@ -776,10 +778,12 @@ values fail with a usage error rather than an empty result.
 groups text output by each record's \fBproject\fR, and
 \fB--by initiative\fR
 by the Initiative its Project names in the Capital's
-\fBStreams/Projects/\fR registry, found through the repository's
+\fBStreams/Projects/\fR notes, with Initiatives read from
+\fBStreams/Initiatives/\fR, found through the repository's
 \fB[skills.ki-repo].capital\fR and the local ki registry; a projectless record
 groups under its own \fBinitiative\fR. Records with neither group under
-\fBunassigned\fR. An unavailable registry, an unknown slug, or an
+\fBunassigned\fR. An unavailable registry, the retired
+\fBStreams/Projects/Initiatives.md\fR index, an unknown slug, or an
 \fBinitiative\fR that contradicts the registry is a warning that never changes
 the exit status. \fB--by\fR does not apply to JSON output.
 A missing roadmap directory or

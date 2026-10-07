@@ -55,7 +55,7 @@ export const readWorkItemsAtCommit = async (
         context.environment
       )
       if (source.exitCode !== 0) throw new KiError(`work item ${file} cannot be read from commit ${commit}`, 2)
-      return parseWorkItem(source.output, file, planning.adapter)
+      return parseWorkItem(source.output, file, planning)
     })
   )
   return items.sort((left, right) => left.id.localeCompare(right.id))

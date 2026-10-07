@@ -1,4 +1,4 @@
-import { mkdir, realpath } from 'node:fs/promises'
+import { mkdir, realpath, rm } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 import { capitalHome, home } from '../_territory_helper.ts'
@@ -7,7 +7,7 @@ type Box = Awaited<ReturnType<typeof sandbox>>
 
 const NOW = Date.parse('2026-10-07T12:00:00Z')
 
-const declaration = (repository?: string, capital?: string): string =>
+const declaration = (repository?: string, capital?: string, components?: readonly string[]): string =>
   [
     '[repo]',
     'harnesses = ["example/harness"]',
@@ -18,6 +18,7 @@ const declaration = (repository?: string, capital?: string): string =>
     'adapter = "roadmap"',
     '',
     '[skills.ki-work-roadmap]',
+    ...(components ? [`components = ${JSON.stringify(components)}`] : []),
     '',
     '[skills.ki-repo]',
     'repo_type = "project"',
@@ -34,6 +35,7 @@ const record = (
   const values = {
     id: 'KI-TOOL-CLI-003',
     title: 'Model item',
+    kind: 'deliver',
     horizon: 'next',
     status: 'draft',
     blocks: '[]',
@@ -67,16 +69,21 @@ const registryFile = (
 const projectNote = (slug: string, initiative?: string): string =>
   `---\nnote_type: streams/project\nslug: ${slug}\n${initiative ? `initiative: ${initiative}\n` : ''}---\n\n# ${slug}\n`
 
+const initiativeNote = (slug: string): string => `---\nnote_type: streams/initiative\nslug: ${slug}\n---\n\n# ${slug}\n`
+
 /** A member repository and its Capital, with the Capital's Project registry and a local ki registry naming both. */
 const territory = async (box: Box): Promise<{ readonly member: string; readonly capital: string }> => {
   await box.project.write('member/.ki.toml', declaration(home('example/member'), capitalHome))
   await box.project.write('capital/.ki.toml', declaration(capitalHome, capitalHome))
   await box.project.write('capital/Streams/Projects/alpha.md', projectNote('alpha', 'init-one'))
   await box.project.write('capital/Streams/Projects/beta.md', projectNote('beta'))
-  await box.project.write(
-    'capital/Streams/Projects/Initiatives.md',
-    '---\ninitiatives:\n  - init-one\n  - Not A Slug\n  - 7\n---\n\n# Initiatives\n\nSlug `init-two`.\n'
-  )
+  await box.project.write('capital/Streams/Projects/Projects.md', projectNote('indexed', 'init-one'))
+  await box.project.write('capital/Streams/Initiatives/init-one.md', initiativeNote('init-one'))
+  await box.project.write('capital/Streams/Initiatives/init-two.md', initiativeNote('init-two'))
+  await box.project.write('capital/Streams/Initiatives/Initiatives.md', initiativeNote('indexed'))
+  await box.project.write('capital/Streams/Initiatives/bad.md', initiativeNote('Bad Slug'))
+  await box.project.write('capital/Streams/Initiatives/project.md', projectNote('stray', 'init-one'))
+  await box.project.write('capital/Streams/Initiatives/bare.md', '# No frontmatter\n')
   await box.project.write('capital/Streams/Projects/Loose.md', '---\ninitiatives: none\n---\n')
   await box.project.write('capital/Streams/Projects/other.md', '---\nnote_type: streams/other\nslug: other\n---\n')
   await box.project.write(
@@ -106,7 +113,7 @@ const roadmapFile = (box: Box, repository: string, id: string, contents: string)
 describe('[ki repo roadmap] model fields', () => {
   test('reads classification, hold and resolution fields and projects them in JSON', async () => {
     const box = await sandbox()
-    await box.project.write('repo/.ki.toml', declaration(home('example/repo')))
+    await box.project.write('repo/.ki.toml', declaration(home('example/repo'), undefined, ['cli', 'repo']))
     await roadmapFile(
       box,
       'repo',
@@ -176,6 +183,11 @@ describe('[ki repo roadmap] model fields', () => {
       ['kind', { kind: 'build' }, 'kind must be one of deliver, decide, investigate, audit'],
       ['purpose', { purpose: 'fun' }, 'purpose must be one of capability'],
       ['project', { project: 'Not_A_Slug' }, 'project must be a lowercase kebab-case slug'],
+      [
+        'undeclared component',
+        { component: 'web' },
+        'component web must be declared in [skills.ki-work-roadmap].components'
+      ],
       ['horizon at triage', { status: 'triage' }, 'must omit horizon at status triage'],
       [
         'horizon at cancelled',
@@ -264,19 +276,51 @@ describe('[ki repo roadmap] model fields', () => {
       record({ status: 'done', horizon: 'triage', intake_disposition: 'rejected' })
     )
     await roadmapFile(box, 'repo', 'KI-TOOL-CLI-004', record({ id: 'KI-TOOL-CLI-004', status: 'done' }))
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-005', record({ id: 'KI-TOOL-CLI-005', horizon: 'parked' }))
+    await roadmapFile(
+      box,
+      'repo',
+      'KI-TOOL-CLI-005',
+      record({ id: 'KI-TOOL-CLI-005', horizon: 'parked', kind: undefined })
+    )
+    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-006', record({ id: 'KI-TOOL-CLI-006', kind: undefined }))
+    await roadmapFile(
+      box,
+      'repo',
+      'KI-TOOL-CLI-007',
+      record({ id: 'KI-TOOL-CLI-007', horizon: undefined, status: 'triage', kind: undefined })
+    )
     const legacy = await box.run('ki repo --repo repo roadmap list --format json')
     expect(legacy.exitCode).toBe(0)
     expect(JSON.parse(legacy.output).items.map((entry: { legacy: string[] }) => entry.legacy)).toEqual([
       ['horizon triage', 'intake_disposition'],
       ['horizon on done'],
-      ['horizon parked']
+      ['horizon parked'],
+      ['missing kind'],
+      []
     ])
     const filtered = await box.run('ki repo --repo repo roadmap list --horizon hold')
     expect(filtered.output).toContain('KI-TOOL-CLI-005 [draft] Model item · legacy')
     expect(filtered.output).not.toContain('KI-TOOL-CLI-004')
     const done = await box.run('ki repo --repo repo roadmap list --status done')
     expect(done.output).toContain('done (2)')
+  })
+
+  test('rejects a component vocabulary that is not a list of unique kebab-case names', async () => {
+    const box = await sandbox()
+    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-003', record())
+    for (const components of ['"cli"', '["cli", "cli"]', '["Not A Slug"]', '[7]']) {
+      await box.project.write(
+        'repo/.ki.toml',
+        declaration(home('example/repo')).replace(
+          '[skills.ki-work-roadmap]\n',
+          `[skills.ki-work-roadmap]\ncomponents = ${components}\n`
+        )
+      )
+      const result = await box.run('ki repo --repo repo roadmap list')
+      expect(result.output, components).toContain(
+        '[skills.ki-work-roadmap].components must list unique lowercase kebab-case names'
+      )
+    }
   })
 })
 
@@ -335,9 +379,14 @@ describe('[ki repo roadmap list --by]', () => {
     await box.project.mkdir('empty/docs/roadmap')
     await box.project.write('empty/.ki.toml', declaration(home('example/empty'), capitalHome))
     await box.project.write('absent/.ki.toml', declaration(home('example/absent'), capitalHome))
-    await box.project.write('capital/Streams/Projects/Initiatives.md', '# Initiatives\n\nSlug `init-one`.\n')
+    await rm(`${box.project.path}/capital/Streams/Initiatives`, { recursive: true })
+    await box.project.write(
+      'capital/Streams/Projects/Initiatives.md',
+      '---\ninitiatives:\n  - init-one\n  - Not A Slug\n  - 7\n---\n\n# Initiatives\n\nSlug `init-two`.\n'
+    )
 
     const own = await box.run('ki repo --repo capital roadmap list --by initiative')
+    await box.project.write('capital/Streams/Projects/Initiatives.md', '# Initiatives\n\nSlug `init-one`.\n')
     const aggregate = await box.run(
       'ki repo --repo capital --repo member --repo empty --repo absent roadmap list --aggregate --by initiative'
     )
@@ -345,7 +394,9 @@ describe('[ki repo roadmap list --by]', () => {
 
     expect(own.exitCode).toBe(0)
     expect(own.output).toContain('initiative init-one (1)')
-    expect(own.output).not.toContain('warnings')
+    expect(own.output).toContain(
+      'Streams/Projects/Initiatives.md is retired; keep one note per Initiative in Streams/Initiatives/'
+    )
     expect(aggregate.exitCode).toBe(0)
     expect(aggregate.output).toContain('initiative init-one (2)')
     expect(plain.output).toContain('next (2)')
@@ -382,6 +433,9 @@ describe('[ki repo roadmap list --by]', () => {
       ])
     )
     const noProjects = await box.run('ki repo --repo member roadmap list --by initiative')
+    await box.project.write('capital/Streams/Initiatives/init-one.md', initiativeNote('init-one'))
+    await roadmapFile(box, 'member', 'KI-TOOL-CLI-002', record({ id: 'KI-TOOL-CLI-002', initiative: 'init-one' }))
+    const initiativesOnly = await box.run('ki repo --repo member roadmap list --by initiative')
 
     expect(undeclared.exitCode).toBe(0)
     expect(undeclared.output).toContain('project registry unavailable: the repository declares no ki-repo capital')
@@ -395,7 +449,13 @@ describe('[ki repo roadmap list --by]', () => {
       `project registry unavailable: no local checkout of the capital ${capitalHome} is registered`
     )
     expect(noProjects.exitCode).toBe(0)
-    expect(noProjects.output).toContain('project registry unavailable: the capital has no Streams/Projects/ registry')
+    expect(noProjects.output).toContain(
+      'project registry unavailable: the capital has no Streams/Projects/ or Streams/Initiatives/ registry'
+    )
+    expect(initiativesOnly.exitCode).toBe(0)
+    expect(initiativesOnly.output).toContain('initiative init-one (1)')
+    expect(initiativesOnly.output).toContain('KI-TOOL-CLI-001: project alpha is not in the registry')
+    expect(initiativesOnly.output).not.toContain('registry unavailable')
   })
 })
 

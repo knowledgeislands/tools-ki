@@ -332,6 +332,8 @@ const slugField = (fields: Readonly<WorkItemFields>, field: WorkItemField, file:
   return value
 }
 
+const adoptedOpenStatuses = new Set<WorkItemStatus>(['draft', 'ready', 'in-progress', 'awaiting-review'])
+
 /** Names each deprecated shape a record carries, so readers report rather than reject it. */
 const legacyShapes = (fields: Readonly<WorkItemFields>, status: WorkItemStatus): readonly string[] => [
   ...(fields.theme ? ['theme'] : []),
@@ -343,13 +345,19 @@ const legacyShapes = (fields: Readonly<WorkItemFields>, status: WorkItemStatus):
   !isAllowedHorizon(status, fields.horizon as WorkItemHorizon) &&
   status !== 'done'
     ? [`${status} at ${fields.horizon}`]
+    : []),
+  // The harness tolerates an adopted record without `kind`; a legacy horizon is reported on its own.
+  ...(fields.kind === undefined &&
+  adoptedOpenStatuses.has(status) &&
+  !legacyWorkItemHorizons.includes(fields.horizon as LegacyWorkItemHorizon)
+    ? ['missing kind']
     : [])
 ]
 
-export const parseWorkItem = (contents: string, file: string, adapter: RepositoryPlanningAdapter): WorkItem => {
+export const parseWorkItem = (contents: string, file: string, planning: RepositoryPlanningSource): WorkItem => {
   /* v8 ignore next -- Every live and historical inventory filters entries through isWorkItemFile first. */
   if (!file.endsWith('.md')) throw itemError(file, 'must use the .md extension')
-  const fields = frontmatter(contents, file, adapter)
+  const fields = frontmatter(contents, file, planning.adapter)
   const id = fields.id as string
   if (!WORK_ITEM_ID.test(id) || !file.startsWith(`${id}-`))
     throw itemError(file, 'must use a matching work-item identifier')
@@ -391,6 +399,8 @@ export const parseWorkItem = (contents: string, file: string, adapter: Repositor
   const project = slugField(fields, 'project', file)
   const initiative = slugField(fields, 'initiative', file)
   const component = slugField(fields, 'component', file)
+  if (component !== undefined && !planning.components.has(component))
+    throw itemError(file, `component ${component} must be declared in [skills.ki-work-roadmap].components`)
   const legacy = legacyShapes(fields, status)
   return {
     id,
@@ -432,13 +442,13 @@ export const isOpenWorkItem = (item: WorkItem): boolean => item.status !== 'done
 const readItem = async (
   directory: string,
   file: string,
-  adapter: RepositoryPlanningAdapter
+  planning: RepositoryPlanningSource
 ): Promise<WorkItemRecord> => {
   const path = join(directory, file)
   const state = await lstat(path)
   if (!state.isFile() || state.isSymbolicLink()) throw itemError(file, 'must be a regular file')
   const contents = await readFile(path, 'utf8')
-  return { item: parseWorkItem(contents, file, adapter), file, path, contents }
+  return { item: parseWorkItem(contents, file, planning), file, path, contents }
 }
 
 export interface WorkItemRecordInventory {
@@ -462,7 +472,7 @@ export const readWorkItemRecordInventory = async (
       .sort()
       .map(async (entry): Promise<{ record: WorkItemRecord } | { fault: WorkItemFault }> => {
         try {
-          return { record: await readItem(directory, entry, planning.adapter) }
+          return { record: await readItem(directory, entry, planning) }
         } catch (error) {
           // readItem normalizes every rejection to a KiError before this boundary.
           /* v8 ignore next */
