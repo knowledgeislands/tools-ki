@@ -12,17 +12,13 @@ const commandPaths = [
   'acquire status',
   'acquire reconcile',
   'acquire reset',
-  'agora',
-  'agora audit',
-  'agora inspect',
-  'agora reference',
-  'agora reference list',
-  'agora reference remove',
-  'agora reference set',
-  'agora list',
-  'agora open',
-  'agora roots',
-  'agora show',
+  'territory',
+  'territory audit',
+  'territory inspect',
+  'territory list',
+  'territory open',
+  'territory roots',
+  'territory show',
   'bootstrap',
   'dev',
   'dev local',
@@ -133,14 +129,16 @@ describe('[ki completion]', () => {
     expect(zsh.output).toContain('--estate:select every repository in the registered estate')
     expect(zsh.output).toContain('--incomplete:show only routes that are not active')
     expect(zsh.output).toContain('--format:render estate route evidence as text or versioned JSON')
-    expect(zsh.output).toContain("'agora open:--target') printf '%s\\n' 'zed vscode delta'")
-    expect(bash.output).toContain("'agora open:--target') printf '%s\\n' 'zed vscode delta'")
+    expect(zsh.output).toContain("'territory open:--target') printf '%s\\n' 'zed vscode delta'")
+    expect(bash.output).toContain("'territory open:--target') printf '%s\\n' 'zed vscode delta'")
     expect(zsh.output).toContain("'repo open:--target') printf '%s\\n' 'zed vscode delta'")
     expect(bash.output).toContain("'repo open:--target') printf '%s\\n' 'zed vscode delta'")
-    expect(zsh.output).toContain("'agora inspect:--target') printf '%s\\n' 'zed vscode'")
-    expect(bash.output).toContain("'agora inspect:--target') printf '%s\\n' 'zed vscode'")
-    expect(zsh.output).toContain("'agora inspect') printf '%s\\n' '--target --workspace'")
-    expect(bash.output).toContain("'agora inspect:--workspace')")
+    expect(zsh.output).toContain("'territory inspect:--target') printf '%s\\n' 'zed vscode'")
+    expect(bash.output).toContain("'territory inspect:--target') printf '%s\\n' 'zed vscode'")
+    expect(zsh.output).toContain(
+      "'territory inspect') printf '%s\\n' '-t --territory -f --filter --target --workspace'"
+    )
+    expect(bash.output).toContain("'territory inspect:--workspace')")
     expect(zsh.output).toContain("'acquire list')")
     expect(zsh.output).toContain("'acquire import')")
     expect(zsh.output).toContain("'acquire reset')")
@@ -153,7 +151,7 @@ describe('[ki completion]', () => {
     expect(bash.output).toContain("'repo roadmap')")
     expect(bash.output).toContain("'repo trade routes')")
     expect(bash.output).toContain(
-      "'repo trade routes list') printf '%s\\n' '-V --version -h --help --repo --agora --estate --incomplete --format'"
+      "'repo trade routes list') printf '%s\\n' '-V --version -h --help --repo -t --territory -f --filter --estate --incomplete --format'"
     )
     expect(bash.output).toContain("'repo trade standing capture:--capture')")
     expect(bash.output).toContain("'repo trade policy compare:--baseline')")

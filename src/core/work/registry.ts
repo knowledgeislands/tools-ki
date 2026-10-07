@@ -3,6 +3,7 @@ import { basename, join } from 'node:path'
 import { parse } from 'yaml'
 import { REPOSITORY_DECLARATION_FILE, readRepositoryDeclaration } from '../configuration/index.ts'
 import { inspectLocalRegistry } from '../storage/index.ts'
+import { resolveTerritoryCapital } from '../territory/resolution.ts'
 import { parseRegistryReference, type RegistryReference } from './items.ts'
 
 /** A territory's Project registry: each Project's Initiative, and every declared Initiative. */
@@ -34,14 +35,11 @@ const declaredIdentity = async (root: string): Promise<{ repository?: unknown; c
 
 /** A named territory's Capital checkout: the local registry entry under that key, when it declares itself a Capital. */
 const territoryRoot = async (territory: string, stateDirectory: string): Promise<string | { unavailable: string }> => {
-  const registry = await inspectLocalRegistry(stateDirectory)
-  if (registry.state !== 'valid') return { unavailable: `the local ki registry ${registry.path} is ${registry.state}` }
-  const entry = registry.repositories.find((candidate) => candidate.key === territory)
-  if (!entry) return { unavailable: `territory ${territory} is not in the local ki registry` }
-  const declared = await declaredIdentity(entry.path)
-  return typeof declared?.capital === 'string' && declared.repository === declared.capital
-    ? entry.path
-    : { unavailable: `territory ${territory} is not a registered Capital checkout` }
+  try {
+    return (await resolveTerritoryCapital(stateDirectory, territory)).path
+  } catch (error) {
+    return { unavailable: (error as Error).message }
+  }
 }
 
 /** Finds the Capital checkout: the repository itself when it is the Capital, else its registered local checkout. */

@@ -83,7 +83,7 @@ adapter = "roadmap"
 # Mirrors the src/commands groups.
 components = [
   "acquire",
-  "agora",
+  "territory",
   "batch",
   "bootstrap",
   "dev",

@@ -2,7 +2,7 @@
 export const rootCommandNames = [
   'acquire',
   'agent',
-  'agora',
+  'territory',
   'bootstrap',
   'dev',
   'harness',

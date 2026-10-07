@@ -148,7 +148,7 @@ export const zedOpenTarget = {
     if (window.exitCode) return window
 
     const orderedRoots = options.preserveProjectionOrder ? [...roots].reverse() : roots
-    // Zed prepends opened folders: add the Agora owner last so it appears first.
+    // Zed prepends opened folders: add the territory owner last so it appears first.
     const launchRoots = options.ownerRoot
       ? [...orderedRoots.filter((root) => root !== options.ownerRoot), options.ownerRoot]
       : orderedRoots

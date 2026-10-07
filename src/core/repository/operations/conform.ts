@@ -52,7 +52,8 @@ export interface RepositoryConformOptions extends RepositorySelection {
 const repositoryTargets = (context: RepositoryOperationContext, selection: RepositorySelection) =>
   resolveRepositoryTargets({
     repositories: selection.repositories,
-    agora: selection.agora,
+    territory: selection.territory,
+    filters: selection.filters,
     estate: selection.estate,
     configurationDirectory: context.configurationDirectory,
     stateDirectory: context.stateDirectory,

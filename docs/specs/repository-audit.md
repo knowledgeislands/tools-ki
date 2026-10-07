@@ -88,11 +88,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-AUDIT-009 — Registered-estate selector
 
-`ki repo --estate <operation>` MUST select the same repositories as `ki repo --agora estate <operation>` and MUST be mutually exclusive with `--repo` and `--agora`.
+`ki repo --estate <operation>` MUST select all registered repositories before optional literal-prefix filtering and MUST be mutually exclusive with `--repo` and `--territory`.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/agora/agora.test.ts` — `rejects a one-sided home declaration before selecting or opening it`; `src/tests/cli/repo/targets.test.ts` — `selects literal roots and standard glob patterns deterministically`.
+_Verify:_ `src/tests/cli/territory/selection.test.ts` - Capital metadata, registration and selector failures; `src/tests/cli/repo/targets.test.ts` — `selects literal roots and standard glob patterns deterministically`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

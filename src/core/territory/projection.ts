@@ -6,18 +6,18 @@ import {
   readRepositoryDeclaration
 } from '../configuration/index.ts'
 import { requiredLocalRegistry } from '../storage/index.ts'
-import type { AgoraProfile, AgoraRoot, AgoraRootKind } from './resolution.ts'
 import type { TargetObservation } from './targets/index.ts'
+import type { TerritoryProfile, TerritoryRoot, TerritoryRootKind } from './types.ts'
 
 export interface ProjectionPath {
   readonly path: string
   readonly key?: string
   readonly repository?: string
-  readonly kind?: AgoraRootKind
+  readonly kind?: TerritoryRootKind
 }
 
-export interface AgoraProjectionReport {
-  readonly agora: AgoraProfile
+export interface TerritoryProjectionReport {
+  readonly territory: TerritoryProfile
   readonly target: string
   readonly source: string
   readonly matched: readonly ProjectionPath[]
@@ -30,7 +30,7 @@ export interface AgoraProjectionReport {
 
 const byPath = (left: ProjectionPath, right: ProjectionPath): number => left.path.localeCompare(right.path, 'en')
 
-const projectionPath = (root: AgoraRoot): ProjectionPath => ({
+const projectionPath = (root: TerritoryRoot): ProjectionPath => ({
   path: root.root,
   key: root.key,
   repository: root.repository,
@@ -60,13 +60,13 @@ const unregisteredRepository = async (root: string): Promise<string | undefined>
   }
 }
 
-export const compareAgoraProjection = async (
+export const compareTerritoryProjection = async (
   stateDirectory: string,
-  agora: AgoraProfile,
+  territory: TerritoryProfile,
   target: string,
   observation: TargetObservation
-): Promise<AgoraProjectionReport> => {
-  const expected = new Map(agora.roots.map((root) => [root.root, root]))
+): Promise<TerritoryProjectionReport> => {
+  const expected = new Map(territory.roots.map((root) => [root.root, root]))
   const registered = await registeredPhysicalRoots(stateDirectory)
   const matched = new Map<string, ProjectionPath>()
   const extraRegistered = new Map<string, ProjectionPath>()
@@ -99,9 +99,9 @@ export const compareAgoraProjection = async (
     else external.set(root, { path: root })
   }
 
-  const missing = agora.roots.filter((root) => !matched.has(root.root)).map(projectionPath)
+  const missing = territory.roots.filter((root) => !matched.has(root.root)).map(projectionPath)
   const report = {
-    agora,
+    territory,
     target,
     source: observation.source,
     matched: [...matched.values()].sort(byPath),

@@ -89,7 +89,7 @@ Keeps bootstrap validation and repair coverage complete and automation-visible.
 
 Keeps inventories and diagnostics framed while preserving direct contract-oriented streams.
 
-- **SELF-OUTPUT-001 [M] — Human-facing report frame** — Representative human-facing inventory and diagnostic commands retain titled tree summaries. (src/commands/agora/list.ts, src/commands/manage/diag.ts, src/commands/manage/list.ts, src/commands/manage/repair.ts, src/commands/manage/update.ts, src/commands/repo/diag.ts, src/commands/repo/repair.ts, src/commands/repo/upgrade.ts, src/commands/trade/records.ts)
+- **SELF-OUTPUT-001 [M] — Human-facing report frame** — Representative human-facing inventory and diagnostic commands retain titled tree summaries. (src/commands/territory/index.ts, src/commands/manage/diag.ts, src/commands/manage/list.ts, src/commands/manage/repair.ts, src/commands/manage/update.ts, src/commands/repo/diag.ts, src/commands/repo/repair.ts, src/commands/repo/upgrade.ts, src/commands/trade/records.ts)
   - _Remediation:_ diagnostic — Restore renderTree with a title and compact summary on human-facing reports.
 - **SELF-OUTPUT-002 [J] — Contract output boundary** — Plain streams, canonical records, generated assets, and action receipts remain direct interfaces. (references/rubric.md)
   - _Evidence scope:_ Changed CLI presentation and its consumer-facing contract tests.

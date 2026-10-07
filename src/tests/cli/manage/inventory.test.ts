@@ -6,7 +6,6 @@ import { sandbox } from '../_cli_helper.ts'
 const rootHelpCommands = [
   'acquire',
   'agent',
-  'agora',
   'bootstrap',
   'cleanup',
   'completion',
@@ -23,18 +22,15 @@ const rootHelpCommands = [
   'repair',
   'repo',
   'skill',
+  'territory',
   'update',
   'vscode'
 ]
-const agoraCommands = ['audit', 'inspect', 'list', 'open', 'reference', 'roots', 'show']
-const agoraReferenceCommands = ['list', 'remove', 'set']
-const agoraChangelogCommands = [
-  '`ki agora audit [agora]`',
-  '`ki agora inspect <agora> --target <zed|vscode> --workspace <selector>`',
-  '`ki agora open <agora> --target <zed|vscode|delta>`',
-  '`ki agora reference set <repository> <checkout> [--dry-run]`',
-  '`ki agora reference list`',
-  '`ki agora reference remove <repository> [--dry-run]`'
+const territoryCommands = ['audit', 'inspect', 'list', 'open', 'roots', 'show']
+const territoryChangelogCommands = [
+  '`ki territory audit (--territory <handle>|--estate) [--filter <prefix>]...`',
+  '`ki territory inspect (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode> --workspace <selector>`',
+  '`ki territory open (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode|delta>`'
 ]
 const repoCommands = [
   'audit',
@@ -67,8 +63,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   'repo roadmap': ['demote', 'list', 'migrate', 'promote', 'prune', 'stats', 'summary'],
   'repo store': ['bind', 'create', 'list', 'scan', 'unbind'],
   'repo skill': ['add', 'remove'],
-  agora: agoraCommands,
-  'agora reference': agoraReferenceCommands,
+  territory: territoryCommands,
   skill: ['add', 'remove'],
   'repo batch': batchCommands,
   registry: registryCommands,
@@ -102,8 +97,7 @@ describe('[ki command inventory]', () => {
   test('keeps runtime help and completion memberships aligned with the public command contract', async () => {
     const box = await sandbox()
     const root = await box.run('ki --help')
-    const agora = await box.run('ki agora --help')
-    const agoraReference = await box.run('ki agora reference --help')
+    const territory = await box.run('ki territory --help')
     const repository = await box.run('ki repo --help')
     const batch = await box.run('ki repo batch --help')
     const registry = await box.run('ki registry --help')
@@ -111,13 +105,12 @@ describe('[ki command inventory]', () => {
     const bash = await box.run('ki completion bash')
 
     expect(commandNames(root.output)).toEqual(rootHelpCommands)
-    expect(commandNames(agora.output)).toEqual(agoraCommands)
-    expect(commandNames(agoraReference.output)).toEqual(agoraReferenceCommands)
+    expect(commandNames(territory.output)).toEqual(territoryCommands)
     expect(commandNames(repository.output)).toEqual(nestedHelpOrder['repo'])
     expect(commandNames(batch.output)).toEqual(batchCommands)
     expect(commandNames(registry.output)).toEqual(registryCommands)
     for (const command of rootHelpCommands) expect(zsh.output).toContain(`${command}:`)
-    for (const command of agoraCommands) expect(zsh.output).toContain(`${command}:`)
+    for (const command of territoryCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of repoCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of batchCommands) expect(zsh.output).toContain(`${command}:`)
     for (const command of registryCommands) expect(zsh.output).toContain(`${command}:`)
@@ -192,7 +185,9 @@ describe('[ki command inventory]', () => {
     expect(generated).toBe(renderCommandInventory(manual))
     expect(JSON.parse(generated).schema).toBe('ki/commands/v1')
     expect(
-      manual.match(/\.B ki registry \[--repo <path-or-pattern>]\.\.\. \[--agora <name>] \[--estate] add \[--dry-run]/g)
+      manual.match(
+        /\.B ki registry \[--repo <path-or-pattern>]\.\.\. \[-t\|--territory <handle>] \[--estate] \[-f\|--filter <prefix>]\.\.\. add \[--dry-run]/g
+      )
     ).toHaveLength(2)
 
     for (const command of rootHelpCommands) {
@@ -205,7 +200,9 @@ describe('[ki command inventory]', () => {
     }
     expect(manual).toContain('.B ki registry list')
     expect(manual).toContain('.B ki registry remove')
-    expect(manual).toContain('.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run]')
+    expect(manual).toContain(
+      '.B ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [-f|--filter <prefix>]... add [--dry-run]'
+    )
     for (const command of registryCommands) expect(changelog).toContain(`\`ki registry ${command}`)
 
     expect(changelog).toContain('`ki dev local set <harness-id> <local-harness-path>`')
@@ -217,13 +214,13 @@ describe('[ki command inventory]', () => {
     expect(manual).toContain('.B ki dev local off <harness-id>.')
     expect(manual).not.toContain('.B ki dev local off knowledgeislands/ki-agentic-harness')
 
-    for (const command of agoraCommands) expect(manual).toContain(`.B ki agora ${command}`)
-    for (const command of agoraChangelogCommands) expect(changelog).toContain(command)
+    for (const command of territoryCommands) expect(manual).toContain(`.B ki territory ${command}`)
+    for (const command of territoryChangelogCommands) expect(changelog).toContain(command)
     expect(manual.indexOf('.SS Repository options')).toBeLessThan(manual.indexOf('.SS Repository management'))
     expect(manual.indexOf('.SS Repository management')).toBeLessThan(manual.indexOf('.SS Registry management'))
-    expect(manual.indexOf('.SS Trades')).toBeLessThan(manual.indexOf('.SS Agora management'))
-    expect(manual.indexOf('.SS Agora management')).toBeLessThan(manual.indexOf('.SS Acquisition'))
-    expect(changelog.indexOf('#### Agora management')).toBeLessThan(changelog.indexOf('#### Repository options'))
+    expect(manual.indexOf('.SS Trades')).toBeLessThan(manual.indexOf('.SS Territory management'))
+    expect(manual.indexOf('.SS Territory management')).toBeLessThan(manual.indexOf('.SS Acquisition'))
+    expect(changelog.indexOf('#### Territory management')).toBeLessThan(changelog.indexOf('#### Repository options'))
     expect(changelog.indexOf('#### Repository options')).toBeLessThan(changelog.indexOf('#### Repository management'))
     expect(changelog.indexOf('#### Repository management')).toBeLessThan(changelog.indexOf('#### Registry management'))
   })

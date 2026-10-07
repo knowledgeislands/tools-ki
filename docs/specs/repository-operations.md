@@ -142,7 +142,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-OPS-014 — Final repository and workspace declarations
 
-`ki` MUST use `.ki.toml` as the only KI repository declaration filename, and without an explicit repository or Agora selector MUST consume only a regular direct-CWD `.mgit.toml`: unversioned workspace manifests select direct members, existing `schema = 1` workspace manifests select their configured group, and both recurse through declared child workspaces. Repository manifests fall through to ordinary repository discovery. It MUST NOT provide retired-filename compatibility or migration behaviour.
+`ki` MUST use `.ki.toml` as the only KI repository declaration filename, and without an explicit repository or Territory selector MUST consume only a regular direct-CWD `.mgit.toml`: unversioned workspace manifests select direct members, existing `schema = 1` workspace manifests select their configured group, and both recurse through declared child workspaces. Repository manifests fall through to ordinary repository discovery. It MUST NOT provide retired-filename compatibility or migration behaviour.
 
 _Conformance:_ conforming
 

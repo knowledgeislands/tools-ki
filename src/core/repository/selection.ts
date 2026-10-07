@@ -1,10 +1,11 @@
 import { readdir, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
-import { resolveAgoraMembers } from '../agora/index.ts'
 import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { Runner } from '../runtime/runner.ts'
+import { matchesDirectoryName, validateFilters } from '../territory/filters.ts'
+import { resolveTerritory } from '../territory/index.ts'
 import { inspectRepositoryDeclarationState, repositoryDeclarationError } from './declaration.ts'
 import { physicalDirectory, type RepositoryLocation, targetFromDirectory } from './location.ts'
 import { MGIT_MANIFEST_FILE, repositoriesFromMgitManifest } from './mgit.ts'
@@ -126,7 +127,8 @@ const distinctTargets = (targets: readonly RepositoryLocation[], source: string)
 
 interface RepositorySelection {
   readonly repositories: readonly string[]
-  readonly agora?: string
+  readonly territory?: string
+  readonly filters?: readonly string[]
   readonly estate?: boolean
   readonly configurationDirectory: string
   readonly stateDirectory: string
@@ -137,15 +139,19 @@ interface RepositorySelection {
 
 const selectRepositoryTargets = async (options: RepositorySelection): Promise<readonly RepositoryLocation[]> => {
   const selectorCount =
-    Number(options.repositories.length > 0) + Number(Boolean(options.agora)) + Number(Boolean(options.estate))
-  if (selectorCount > 1) throw new KiError('--repo, --agora, and --estate cannot be used together', 2)
+    Number(options.repositories.length > 0) + Number(options.territory !== undefined) + Number(Boolean(options.estate))
+  const filters = options.filters ?? []
+  validateFilters(filters)
+  if (selectorCount > 1) throw new KiError('--repo, --territory, and --estate cannot be used together', 2)
   if (options.repositories.length) {
     const targets: RepositoryLocation[] = []
     for (const value of options.repositories) {
       if (!hasPattern(value)) {
+        const path = resolve(options.workingDirectory, value)
+        if (!matchesDirectoryName(path, filters)) continue
         targets.push(
           await targetFromDirectory(
-            resolve(options.workingDirectory, value),
+            path,
             '--repo must be an existing directory',
             `--repo must name a repository containing ${REPOSITORY_DECLARATION_FILE}`
           )
@@ -154,28 +160,22 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
       }
       const matches = await expandPattern(value, options.workingDirectory)
       if (!matches.length) throw new KiError(`--repo pattern ${value} matched no repositories`, 2)
-      for (const match of matches)
+      // Filters narrow logical directory names before the matched roots are validated.
+      for (const match of matches.filter((candidate) => matchesDirectoryName(candidate, filters)))
         targets.push(await targetFromDirectory(match, `--repo pattern ${value} matched a non-KI directory`))
     }
+    if (!targets.length) throw new KiError('repository selection matched no repositories', 2)
     return distinctTargets(targets, '--repo')
   }
-  const agora = options.estate ? 'estate' : options.agora
-  if (agora) {
-    const members = await resolveAgoraMembers(options.stateDirectory, agora)
-    if (!members.length) throw new KiError(`Agora ${agora} has no members`, 2)
-    const targets = await Promise.all(
-      members.map((member) =>
-        targetFromDirectory(
-          member.root,
-          `Agora ${agora} member ${member.repository} must be an existing physical directory`,
-          `Agora ${agora} member ${member.repository} is not a KI repository`
-        )
-      )
-    )
-    return distinctTargets(targets, `Agora ${agora}`)
+  if (options.territory !== undefined || options.estate) {
+    const profile = await resolveTerritory(options.stateDirectory, { ...options, filters })
+    return profile.roots.map((member) => ({
+      root: member.root,
+      declaration: join(member.root, REPOSITORY_DECLARATION_FILE)
+    }))
   }
   const working = await realpath(options.workingDirectory)
-  const members = await repositoriesFromMgitManifest(working)
+  const members = await repositoriesFromMgitManifest(working, filters)
   if (members) {
     if (!members.repositories.length)
       throw new KiError(
@@ -186,7 +186,12 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
     if (members.skipped.length) options.onSkippedMgitMembers?.(members.skipped)
     return targets
   }
-  return [await resolveRepository({ workingDirectory: options.workingDirectory, homeDirectory: options.homeDirectory })]
+  const local = await resolveRepository({
+    workingDirectory: options.workingDirectory,
+    homeDirectory: options.homeDirectory
+  })
+  if (!matchesDirectoryName(local.root, filters)) throw new KiError('repository selection matched no repositories', 2)
+  return [local]
 }
 
 /**

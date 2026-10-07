@@ -35,7 +35,8 @@ Unbuilt or uncertain behaviour belongs in an area's unnumbered `## Gaps` section
 | File                     | Prefix       | Covers                                                         |
 | ------------------------ | ------------ | -------------------------------------------------------------- |
 | acquisition.md           | `ACQUIRE`    | Provider-neutral acquisition adapters and checkpoint recovery  |
-| agoras.md                | `AGORA`      | Named user-level repository groups                             |
+| agoras.md | `AGORA` | Deprecated Agora selection requirements |
+| territories.md | `TERRITORY` | Capital-derived selection and literal filters |
 | bootstrap.md             | `BOOT`       | First-time user activation and refresh                         |
 | batches.md               | `BATCH`      | Batch execution and immutable completion evidence              |
 | cli.md                   | `CLI`        | Root command discovery, version, and failure boundary          |

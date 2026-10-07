@@ -284,7 +284,7 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
   })
   expect(selectors).toEqual({
     exitCode: 2,
-    output: 'ki: error: ki repo init does not accept --repo, --agora, or --estate\n'
+    output: 'ki: error: ki repo init does not accept --repo, --territory, or --estate\n'
   })
   await expect(box.project.read('.ki.toml')).rejects.toThrow()
 })
@@ -573,7 +573,7 @@ test('requires exactly one key or path and rejects bulk or unknown registry remo
   const none = await box.run('ki registry remove')
   const both = await box.run(['ki', 'registry', 'remove', 'registered', '--repo', registered])
   const repeated = await box.run(['ki', 'registry', 'remove', '--repo', registered, '--repo', `${box.root.path}/other`])
-  const agora = await box.run('ki registry --agora estate remove registered')
+  const territory = await box.run('ki registry --estate remove registered')
   const estate = await box.run('ki registry --estate remove registered')
   const invalidKey = await box.run(['ki', 'registry', 'remove', 'Bad Key'])
   const unknownKey = await box.run('ki registry remove absent')
@@ -595,13 +595,13 @@ test('requires exactly one key or path and rejects bulk or unknown registry remo
     exitCode: 2,
     output: 'ki: error: ki registry remove accepts exactly one --repo path\n'
   })
-  expect(agora).toEqual({
+  expect(territory).toEqual({
     exitCode: 2,
-    output: 'ki: error: ki registry remove does not accept --agora or --estate\n'
+    output: 'ki: error: ki registry remove does not accept --territory, --estate, or --filter\n'
   })
   expect(estate).toEqual({
     exitCode: 2,
-    output: 'ki: error: ki registry remove does not accept --agora or --estate\n'
+    output: 'ki: error: ki registry remove does not accept --territory, --estate, or --filter\n'
   })
   expect(invalidKey).toEqual({
     exitCode: 2,
@@ -843,9 +843,9 @@ test('lists registered repositories as a newline-delimited absolute-path stream'
 
   const expected = { exitCode: 0, output: `${first}\n${second}\n` }
   expect(await box.run('ki registry list')).toEqual(expected)
-  expect(await box.run('ki registry --estate list')).toEqual(expected)
+  expect((await box.run('ki registry --estate list')).exitCode).toBe(2)
   expect(await box.run('ki registry --estate add --dry-run')).toEqual(
-    await box.run('ki registry --agora estate add --dry-run')
+    await box.run('ki registry --estate add --dry-run')
   )
 })
 

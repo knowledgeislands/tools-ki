@@ -102,13 +102,14 @@ Remove a KI-managed user skill link.
 Use repeated \fB--repo\fR options to select explicit repository roots or
 patterns.
 .TP
-.B ki repo [--agora <name>] [command]
-Use the physical KI repositories resolved from one declared named Agora or the
-reserved registered-estate selector.
+.B ki repo [-t|--territory <handle>] [command]
+Select the registered Capital's declared territory.
 .TP
 .B ki repo [--estate] [command]
-Select every repository in the registered estate. This is shorthand for
-\fBki repo --agora estate\fR.
+Select every repository in the registered estate.
+.TP
+.B ki repo [-f|--filter <prefix>]... [command]
+Narrow any selected scope by literal case-sensitive directory-name prefixes.
 .SS Repository management
 \&
 .TP
@@ -221,7 +222,7 @@ health does not attest index identity.
 .SS Registry management
 \&
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--search-boundary <id>]
+.B ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [-f|--filter <prefix>]... add [--dry-run] [--search-boundary <id>]
 Record selected canonical KI repository roots in the machine-local registry
 without applying repository repairs.
 .TP
@@ -257,7 +258,7 @@ Remove one installed non-canonical harness.
 .TP
 .B ki repo [repo-options] trade routes list [--incomplete] [--format text|json]
 List selected local typed trade routes, or aggregate selected declarations
-with parent \fB--estate\fR or \fB--agora\fR.
+with parent \fB--estate\fR or \fB--territory\fR.
 Limit either view to incomplete routes.
 Emit versioned machine-readable estate evidence with
 .BR "--format json" .
@@ -314,47 +315,34 @@ Release one eligible local outbound submission, or preview and confirm a batch.
 .TP
 .B ki repo [repo-options] trade prune <trade-id> | --eligible [--yes]
 Prune one eligible local inbound copy, or preview and confirm a batch.
-.SS Agora management
+.SS Territory management
 \&
+.PP
+Territories derive membership from registered Capital declarations. Use the
+Capital's territory_prefix handle, or its registry key when no prefix exists.
+Exactly one of --territory and --estate is required for scoped commands.
+Repeated --filter values match directory basenames literally and
+case-sensitively.
 .TP
-.B ki agora list
-List declared named Agoras with their titles, and the registered estate.
+.B ki territory list
+List registered territory handles, titles, Capitals and declared member counts.
 .TP
-.B ki agora audit [name]
-Audit every declared Agora, one named Agora, or the registered estate. Exit 0
-when healthy, 1 when findings are reported, and 2 for an invalid or unknown
-explicit selector.
+.B ki territory audit (--territory <handle>|--estate) [--filter <prefix>]...
+Validate the complete selection and its physical checkouts without mutation.
 .TP
-.B ki agora inspect <name> --target <zed|vscode> --workspace <selector>
-Compare one explicitly selected local editor workspace with a resolved Agora.
-VS Code selectors are absolute physical .code-workspace files; Zed selectors
-are decimal workspace IDs. Read-only. Exit 0 for exact, 1 for drift or an
-unsupported source, and 2 for invalid selection or resolution.
+.B ki territory inspect (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode> --workspace <selector>
+Compare selected roots with one explicit local editor projection. Exit 0 for
+exact state, 1 for drift or unsupported source, and 2 for invalid selection.
 .TP
-.B ki agora show <name> [--verbose]
-Show one declared Agora or the registered estate. The default lists member
-names;
---verbose also shows canonical repository URLs and local paths.
+.B ki territory show (--territory <handle>|--estate) [--filter <prefix>]... [--verbose]
+Show selected repositories, optionally with canonical identities and paths.
 .TP
-.B ki agora roots <name> [--null]
-Write absolute physical roots for machine consumption. The default format is
-newline-delimited. Use --null or -0 for pathnames that may contain line feeds.
+.B ki territory roots (--territory <handle>|--estate) [--filter <prefix>]... [--null]
+Write deterministic absolute primary checkout roots. Use --null or -0 for NUL
+termination. Validate the complete selection before writing any stdout bytes.
 .TP
-.B ki agora open <name> --target <zed|vscode|delta>
-Open one declared Agora or the registered estate through an explicit local
-target. For a named Agora in Zed, add its owner last so the sidebar shows it
-first. Delta opens each repository in its running app. Its documented project
-flow stores repository and thread data on its servers even with a local model.
-.TP
-.B ki agora reference set <repository> <checkout> [--dry-run]
-Associate one owner-declared repository inclusion with an explicitly selected
-absolute local Git checkout whose canonical origin matches.
-.TP
-.B ki agora reference list
-List machine-local external Agora reference associations.
-.TP
-.B ki agora reference remove <repository> [--dry-run]
-Remove only the selected machine-local reference association.
+.B ki territory open (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode|delta>
+Open the selected repositories through an explicit existing local adapter.
 .SS Acquisition
 \&
 .TP
@@ -487,7 +475,8 @@ the verified archive and re-pointing the configured canonical skills to it.
 During a refresh only, KI imports the retired
 \fB[repositories].paths\fR list into keyed records in
 \fB$XDG_STATE_HOME/ki/registry.toml\fR and removes that list from user
-configuration. Normal repository, trade, and Agora resolution never reads the
+configuration. Normal repository, trade, and Territory resolution never reads
+the
 retired path list.
 .SS Local management
 \&
@@ -669,24 +658,24 @@ Repeat this option to select literal repository roots or patterns in supplied
 order. KI resolves every target physically before an operation begins and
 rejects unmatched patterns, invalid roots, and duplicate physical roots.
 .TP
-.B --agora <name>
-Select every member of one declared named Agora, or every registered canonical
-repository through the reserved \fBestate\fR selector. This option,
-\fB--repo\fR, and \fB--estate\fR are mutually exclusive. Each member must be a physical KI
-repository. With neither selector, KI checks a regular direct-CWD
-\fB.mgit.toml\fR manifest. An unversioned workspace selects direct members;
-an existing schema-one workspace selects its configured group. Both recurse
-through child workspaces, follow standard and nested repositories, and skip
-bare stores. Existing physical members without \fB.ki.toml\fR are
-skipped and named by \fBki repo audit\fR in normal and concise output. Missing
-or unsafe checkouts, unsafe or invalid KI declarations, and selections with no
-KI repositories fail. A repository manifest falls through to ordinary
-single-repository discovery. KI never searches ancestor directories for an
-mGit manifest or invokes \fBmgit\fR.
+.B -t, --territory <handle>
+Select the Capital's declared territory through its territory_prefix, or its
+registry key when no prefix is declared. The registry maps every canonical
+member identity before filtering. This scope conflicts with --repo and --estate.
 .TP
 .B --estate
-Select every repository in the registered estate. This is shorthand for
-\fB--agora estate\fR and is mutually exclusive with \fB--repo\fR and \fB--agora\fR.
+Select every repository in the registered estate, conflicting with --repo and
+--territory. Without an explicit scope, keep the current repository or
+direct-CWD
+\&.mgit.toml workspace selection. KI does not invoke mgit.
+.TP
+.B -f, --filter <prefix>
+Repeat literal, case-sensitive non-empty directory-name prefixes with OR
+semantics
+to narrow any scope, including the native default. Filter before worktree
+expansion. Missing registration and ambiguous identity fail before filtering;
+unavailable selected roots or no matches fail before an operation. An excluded
+registered unavailable checkout does not prevent the remaining operations.
 .SS Repository management
 \&
 .PP
@@ -700,8 +689,10 @@ Initialize exactly one existing physical Git worktree root. With no
 \fIdirectory\fR, it uses the current directory; an explicit directory must be
 that worktree's root and must not be a symbolic link. Every identity value is
 required: \fB--title\fR, \fB--description\fR, a stable uppercase
-\fB--repo-code\fR, canonical HTTPS GitHub \fB--repository\fR, one or more \fB--runtime\fR values selected from
-\fBclaude-code\fR and \fBchatgpt-codex\fR, and \fB--visibility public|private\fR.
+\fB--repo-code\fR, canonical HTTPS GitHub \fB--repository\fR, one or more
+\fB--runtime\fR values selected from
+\fBclaude-code\fR and \fBchatgpt-codex\fR, and \fB--visibility
+public|private\fR.
 It atomically creates the minimal canonical \fBki-repo\fR declaration and
 A required \fB--capital\fR names the territory Capital; a Capital names
 itself and then also receives \fBterritory_name\fR and \fBterritory_members\fR
@@ -711,7 +702,7 @@ ascending in code-point order; an unsorted list is rejected.
 registers the physical root in \fB$XDG_STATE_HOME/ki/registry.toml\fR. It
 never runs
 \fBgit init\fR, guesses identity, activates repository skills, creates a
-Agora, accepts repository selectors, or overwrites an existing
+Territory, accepts repository selectors, or overwrites an existing
 \fB.ki.toml\fR.
 .TP
 .B ki repo [repo-options] open --target <zed|vscode|delta> [--stores|--no-stores]
@@ -719,7 +710,8 @@ Open every selected canonical repository in the requested local target. By
 default, a Knowledge Base opens its notes root followed by every declared,
 locally bound external store in declaration order. Each binding must be a direct
 directory recorded with the canonical repository; it is never made an estate
-member or Agora participant. \fB--no-stores\fR opens canonical notes roots only,
+member or territory participant. \fB--no-stores\fR opens canonical notes roots
+only,
 while \fB--stores\fR makes the default explicit. Delta opens repository roots
 only; it skips stores by default and rejects \fB--stores\fR.
 Delta's documented project flow stores repository and thread data on its
@@ -731,7 +723,8 @@ declared capabilities. The host verifies every selected harness inventory and
 integrity-covered operation before importing it in process; it never dispatches
 repository-vendored runners.
 Progress defaults to \fBauto\fR, which follows the output stream's TTY state;
-\fBalways\fR also renders deterministic progress in redirected output, and \fBnever\fR
+\fBalways\fR also renders deterministic progress in redirected output, and
+\fBnever\fR
 suppresses it.
 On a terminal, progress is a compact receipt stream with one mutable activity
 row. Its moving bar means work is active; it does not estimate completion from
@@ -1077,7 +1070,7 @@ repository-operation or conformance verdict. The repository key names each
 record; each record holds a canonical HTTPS GitHub repository identity and
 physical checkout path.
 .TP
-.B ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--search-boundary <id>]
+.B ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [-f|--filter <prefix>]... add [--dry-run] [--search-boundary <id>]
 Record selected canonical KI repository roots in
 \fB$XDG_STATE_HOME/ki/registry.toml\fR without applying repository repairs.
 This explicit inventory action validates the selected root's declared canonical
@@ -1157,11 +1150,13 @@ skills cannot be removed. A successful removal deletes its identifier from
 \&
 .PP
 Use these commands with repositories that declare the portable
-\fBki-repo-trades\fR capability and are present in the local registered repository
+\fBki-repo-trades\fR capability and are present in the local registered
+repository
 estate. Routes and standing grants come only from the territory Capital's
 \fB[skills.ki-trades.territory]\fR policy, resolved through each repository's
 declared \fB[skills.ki-repo].capital\fR; no command edits that policy, and a
-member declaration carries no route table. Parent \fB--repo\fR, \fB--agora\fR,
+member declaration carries no route table. Parent \fB--repo\fR,
+\fB--territory\fR,
 and \fB--estate\fR selectors scope reads; mutations require exactly one selected
 registered repository. Every mutation writes only the selected repository, a
 granted route gives visibility rather than acceptance or retention, and no
@@ -1241,7 +1236,8 @@ TOML provenance block to an existing local Markdown file. The command requires
 an active exact standing import, a full source commit, and a source path that
 resolves in the locally registered source checkout. It never writes to the
 source repository. Standing intake grants no roadmap, publication,
-implementation, acceptance, completion, Agora, or peer-write authority; use an
+implementation, acceptance, completion, Territory, or peer-write authority; use
+an
 itemized knowledge trade when the exact standing contract does not fit.
 .TP
 .B ki repo [repo-options] trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>
@@ -1287,63 +1283,34 @@ and changes nothing unless \fB--yes\fR is also supplied.
 Remove one eligible current-repository inbound copy only after sender release is
 observable. The \fB--eligible\fR form previews all eligible copies and changes
 nothing unless \fB--yes\fR is also supplied.
-.SS Agora management
+.SS Territory management
 \&
 .PP
-Named Agoras are declared by registered owner repositories under
-\fB[skills.ki-agora.<id>]\fR with a required single-line \fBtitle\fR that is
-shown to people; the identifier remains the only selector and machine key. The
-owner lists direct members; members need no Agora declaration. Optional
-\fBincludes\fR entries add another Agora's owner and direct members or one
-repository to the working set without membership.
-KI deduplicates and orders projected roots alphabetically by registry key.
-\fBestate\fR is the reserved selector for all locally registered canonical KI
-repositories.
+Territories derive membership from registered Capital declarations. Use the
+Capital's territory_prefix handle, or its registry key when no prefix exists.
+Exactly one of --territory and --estate is required for scoped commands.
+Repeated --filter values match directory basenames literally and
+case-sensitively.
 .TP
-.B ki agora list
-List declared named Agoras with their titles, and the registered estate. The
-declaring owner is not counted among direct members. The estate counts
-registered repositories; \fBREGISTERED_REPOSITORIES\fR is that deduplicated
-total. Resolved and unresolved inclusions have separate counts.
+.B ki territory list
+List registered territory handles, titles, Capitals and declared member counts.
 .TP
-.B ki agora audit [name]
-Audit every declared Agora, one named Agora, or the registered estate without
-changing repository or registry state. Exit 0 when healthy, 1 when findings
-are reported, and 2 for an invalid or unknown explicit selector.
+.B ki territory audit (--territory <handle>|--estate) [--filter <prefix>]...
+Validate the complete selection and its physical checkouts without mutation.
 .TP
-.B ki agora inspect <name> --target <zed|vscode> --workspace <selector>
-Compare one explicitly selected local editor workspace with a resolved Agora.
-VS Code selectors are absolute physical .code-workspace files; Zed selectors
-are decimal workspace IDs. Read-only. Exit 0 for exact, 1 for drift or an
-unsupported source, and 2 for invalid selection or resolution.
+.B ki territory inspect (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode> --workspace <selector>
+Compare selected roots with one explicit local editor projection. Exit 0 for
+exact state, 1 for drift or unsupported source, and 2 for invalid selection.
 .TP
-.B ki agora show <name> [--verbose]
-Show one declared Agora with its title, owner, direct members, resolved
-inclusions, and unresolved-inclusion diagnostics in separate sections. The
-estate lists registered repositories without a home. \fB--verbose\fR also
-shows canonical repository URLs and local paths, including the home's path.
+.B ki territory show (--territory <handle>|--estate) [--filter <prefix>]... [--verbose]
+Show selected repositories, optionally with canonical identities and paths.
 .TP
-.B ki agora roots <name> [--null]
-Write absolute physical roots for machine consumption. The default format is
-newline-delimited. Use --null or -0 for pathnames that may contain line feeds.
+.B ki territory roots (--territory <handle>|--estate) [--filter <prefix>]... [--null]
+Write deterministic absolute primary checkout roots. Use --null or -0 for NUL
+termination. Validate the complete selection before writing any stdout bytes.
 .TP
-.B ki agora open <name> --target <zed|vscode|delta>
-Open one declared Agora or the registered estate through an explicit local
-target. For a named Agora in Zed, add its owner last so the sidebar shows it
-first; the estate and VS Code keep canonical projection order. Delta opens each
-repository in its running app. Its documented project flow stores repository
-and thread data on its servers even with a local model.
-.TP
-.B ki agora reference set <repository> <checkout> [--dry-run]
-Associate one owner-declared repository inclusion with an explicitly selected
-absolute local Git checkout whose canonical origin matches. The operation
-never registers, clones, or mutates the included repository.
-.TP
-.B ki agora reference list
-List machine-local external Agora reference associations.
-.TP
-.B ki agora reference remove <repository> [--dry-run]
-Remove only the selected machine-local reference association.
+.B ki territory open (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode|delta>
+Open the selected repositories through an explicit existing local adapter.
 .SS Acquisition
 \&
 .PP

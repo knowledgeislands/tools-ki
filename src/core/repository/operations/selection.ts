@@ -30,7 +30,8 @@ export const selectRepositorySkills = async (
 ): Promise<readonly SelectedRepositorySkills[]> => {
   const repositories = await resolveRepositoryTargets({
     repositories: options.repositories,
-    agora: options.agora,
+    territory: options.territory,
+    filters: options.filters,
     estate: options.estate,
     configurationDirectory: context.configurationDirectory,
     stateDirectory: context.stateDirectory,
