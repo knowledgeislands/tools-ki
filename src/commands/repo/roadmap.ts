@@ -111,7 +111,7 @@ const groupingWarnings = (results: readonly RoadmapListResult[]): readonly TreeE
   const warnings = [
     ...new Set(
       results.flatMap((result) => [
-        ...(result.grouping?.registryWarning ? [result.grouping.registryWarning] : []),
+        ...(result.grouping?.registryWarnings ?? []),
         ...[...(result.grouping?.groups.entries() ?? [])].flatMap(([id, group]) =>
           group.warning ? [`${id}: ${group.warning}`] : []
         )

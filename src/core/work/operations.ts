@@ -9,6 +9,7 @@ import {
   hasWorkItemRoot,
   isAllowedHorizon,
   type LegacyWorkItemHorizon,
+  parseRegistryReference,
   readWorkItemInventoryIfPresent,
   readWorkItemRecordInventory,
   readWorkItems,
@@ -31,7 +32,14 @@ import {
   preflightPruneCommit,
   pruneCommitMessage
 } from './prune-commit.ts'
-import { loadProjectRegistry, type RoadmapGrouping, type WorkItemGroup, workItemGroup } from './registry.ts'
+import {
+  loadProjectRegistry,
+  loadTerritoryRegistry,
+  type ProjectRegistry,
+  type RoadmapGrouping,
+  type WorkItemGroup,
+  workItemGroup
+} from './registry.ts'
 import { type RoadmapStatistics, roadmapStatistics } from './statistics.ts'
 
 export interface RoadmapSelection {
@@ -66,7 +74,7 @@ export interface RoadmapListOptions {
 /** Registry grouping for one repository's listed records; an unavailable registry is a warning. */
 export interface RoadmapGroupingResult {
   readonly by: RoadmapGrouping
-  readonly registryWarning?: string
+  readonly registryWarnings: readonly string[]
   readonly groups: ReadonlyMap<string, WorkItemGroup>
 }
 
@@ -182,18 +190,27 @@ const groupItems = async (
   items: readonly WorkItem[]
 ): Promise<RoadmapGroupingResult> => {
   const lookup = await loadProjectRegistry(repository, stateDirectory)
-  const registry = 'registry' in lookup ? lookup.registry : undefined
+  const registryWarnings: string[] =
+    'unavailable' in lookup
+      ? [`project registry unavailable: ${lookup.unavailable}`]
+      : lookup.registry.legacyInitiativesIndex
+        ? ['Streams/Projects/Initiatives.md is retired; keep one note per Initiative in Streams/Initiatives/']
+        : []
+  const territories = new Map<string, ProjectRegistry | undefined>()
+  for (const value of items.flatMap((item) => [item.project, item.initiative])) {
+    const territory = value === undefined ? undefined : parseRegistryReference(value)?.territory
+    if (territory === undefined || territories.has(territory)) continue
+    const qualified = await loadTerritoryRegistry(territory, stateDirectory)
+    territories.set(territory, 'registry' in qualified ? qualified.registry : undefined)
+    if ('unavailable' in qualified)
+      registryWarnings.push(`territory ${territory} registry unavailable: ${qualified.unavailable}`)
+  }
+  const own = 'registry' in lookup ? lookup.registry : undefined
+  const registries = (territory: string | undefined) => (territory === undefined ? own : territories.get(territory))
   return {
     by,
-    ...('unavailable' in lookup
-      ? { registryWarning: `project registry unavailable: ${lookup.unavailable}` }
-      : lookup.registry.legacyInitiativesIndex
-        ? {
-            registryWarning:
-              'Streams/Projects/Initiatives.md is retired; keep one note per Initiative in Streams/Initiatives/'
-          }
-        : {}),
-    groups: new Map(items.map((item) => [item.id, workItemGroup(item, by, registry)]))
+    registryWarnings,
+    groups: new Map(items.map((item) => [item.id, workItemGroup(item, by, registries)]))
   }
 }
 

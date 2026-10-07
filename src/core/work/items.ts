@@ -332,6 +332,29 @@ const slugField = (fields: Readonly<WorkItemFields>, field: WorkItemField, file:
   return value
 }
 
+/** A Project or Initiative reference: a bare slug in the own territory, or one qualified by a territory's Capital key. */
+export interface RegistryReference {
+  readonly territory?: string
+  readonly slug: string
+}
+
+const TERRITORY = /^[a-z0-9][a-z0-9._-]*$/
+
+/** Splits `<territory>/<slug>` or a bare `<slug>`, where the territory is the local registry key of its Capital. */
+export const parseRegistryReference = (value: string): RegistryReference | undefined => {
+  const parts = value.split('/')
+  if (parts.length === 1) return SLUG.test(value) ? { slug: value } : undefined
+  const [territory, slug] = parts as [string, string]
+  return parts.length === 2 && TERRITORY.test(territory) && SLUG.test(slug) ? { territory, slug } : undefined
+}
+
+const referenceField = (fields: Readonly<WorkItemFields>, field: WorkItemField, file: string): string | undefined => {
+  const value = fields[field]
+  if (value !== undefined && !parseRegistryReference(value))
+    throw itemError(file, `${field} must be a lowercase kebab-case slug, optionally qualified as <territory>/<slug>`)
+  return value
+}
+
 const adoptedOpenStatuses = new Set<WorkItemStatus>(['draft', 'ready', 'in-progress', 'awaiting-review'])
 
 /** Names each deprecated shape a record carries, so readers report rather than reject it. */
@@ -396,8 +419,8 @@ export const parseWorkItem = (contents: string, file: string, planning: Reposito
     throw itemError(file, 'created_at must not be later than updated_at')
   const kind = enumField(fields, 'kind', workItemKinds, file)
   const purpose = enumField(fields, 'purpose', workItemPurposes, file)
-  const project = slugField(fields, 'project', file)
-  const initiative = slugField(fields, 'initiative', file)
+  const project = referenceField(fields, 'project', file)
+  const initiative = referenceField(fields, 'initiative', file)
   const component = slugField(fields, 'component', file)
   if (component !== undefined && !planning.components.has(component))
     throw itemError(file, `component ${component} must be declared in [skills.ki-work-roadmap].components`)

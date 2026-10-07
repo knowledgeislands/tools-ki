@@ -184,6 +184,12 @@ describe('[ki repo roadmap] model fields', () => {
       ['purpose', { purpose: 'fun' }, 'purpose must be one of capability'],
       ['project', { project: 'Not_A_Slug' }, 'project must be a lowercase kebab-case slug'],
       [
+        'over-qualified project',
+        { project: 'one/two/three' },
+        'project must be a lowercase kebab-case slug, optionally qualified as <territory>/<slug>'
+      ],
+      ['qualified component', { component: 'one/two' }, 'component must be a lowercase kebab-case slug'],
+      [
         'undeclared component',
         { component: 'web' },
         'component web must be declared in [skills.ki-work-roadmap].components'
@@ -402,6 +408,74 @@ describe('[ki repo roadmap list --by]', () => {
     expect(plain.output).toContain('next (2)')
   })
 
+  test('resolves qualified references in their named territory and warns when it cannot', async () => {
+    const box = await sandbox()
+    const { member, capital } = await territory(box)
+    await box.project.write('other/.ki.toml', declaration(home('example/other'), home('example/other')))
+    await box.project.write('other/Streams/Projects/host.md', projectNote('host', 'rig'))
+    await box.project.write('other/Streams/Initiatives/rig.md', initiativeNote('rig'))
+    await box.project.write('bare/.ki.toml', declaration(home('example/bare'), home('example/bare')))
+    const other = await realpath(`${box.project.path}/other`)
+    const bare = await realpath(`${box.project.path}/bare`)
+    await box.state.write(
+      'ki/registry.toml',
+      registryFile([
+        { key: 'member', repository: home('example/member'), path: member },
+        { key: 'capital', repository: capitalHome, path: capital },
+        { key: 'other', repository: home('example/other'), path: other },
+        { key: 'bare', repository: home('example/bare'), path: bare }
+      ])
+    )
+    const items: readonly Readonly<Record<string, string | undefined>>[] = [
+      { id: 'KI-TOOL-CLI-001', project: 'other/host' },
+      { id: 'KI-TOOL-CLI-002', project: 'capital/alpha' },
+      { id: 'KI-TOOL-CLI-003', initiative: 'other/rig' },
+      { id: 'KI-TOOL-CLI-004', project: 'other/ghost' },
+      { id: 'KI-TOOL-CLI-005', project: 'nowhere/host' },
+      { id: 'KI-TOOL-CLI-006', project: 'member/host' },
+      { id: 'KI-TOOL-CLI-007', project: 'other/host', initiative: 'rig' },
+      { id: 'KI-TOOL-CLI-008', initiative: 'other/ghost' },
+      { id: 'KI-TOOL-CLI-009', project: 'other/host', initiative: 'other/rig' },
+      { id: 'KI-TOOL-CLI-010', project: 'nowhere/host', initiative: 'nowhere/rig' },
+      { id: 'KI-TOOL-CLI-011', initiative: 'bare/rig' }
+    ]
+    for (const fields of items) await roadmapFile(box, 'member', fields['id'] as string, record(fields))
+
+    const byProject = await box.run('ki repo --repo member roadmap list --by project')
+    const byInitiative = await box.run('ki repo --repo member roadmap list --by initiative')
+
+    expect(byProject.exitCode).toBe(0)
+    const project = byProject.output
+    expect(project).toContain('project other/host (3)')
+    expect(project).toContain('project alpha (1)')
+    expect(project).toContain('project nowhere/host (2)')
+    expect(project).toContain('project member/host (1)')
+    expect(project).toContain('KI-TOOL-CLI-004: project other/ghost is not in the registry')
+    expect(project).toContain(
+      'territory nowhere registry unavailable: territory nowhere is not in the local ki registry'
+    )
+    expect(project).toContain(
+      'territory member registry unavailable: territory member is not a registered Capital checkout'
+    )
+    expect(project).toContain(
+      'territory bare registry unavailable: the capital has no Streams/Projects/ or Streams/Initiatives/ registry'
+    )
+    expect(byInitiative.exitCode).toBe(0)
+    const initiative = byInitiative.output
+    expect(initiative).toContain('initiative other/rig (4)')
+    expect(initiative).toContain('initiative init-one (1)')
+    expect(initiative).toContain('initiative nowhere/rig (1)')
+    expect(initiative).toContain('initiative bare/rig (1)')
+    expect(initiative).toContain('KI-TOOL-CLI-007: initiative rig contradicts project other/host in other/rig')
+    expect(initiative).toContain('KI-TOOL-CLI-008: initiative other/ghost is not in the registry')
+    expect(initiative).not.toContain('KI-TOOL-CLI-009:')
+    expect(initiative).not.toContain('KI-TOOL-CLI-011:')
+
+    await box.state.write('ki/registry.toml', 'schema = [\n')
+    const invalid = await box.run('ki repo --repo member roadmap list --by project')
+    expect(invalid.output).toMatch(/territory other registry unavailable: the local ki registry .* is invalid/)
+  })
+
   test('warns and still lists when the Project registry is unavailable', async () => {
     const box = await sandbox()
     await box.project.write('plain/.ki.toml', declaration(home('example/plain')))
@@ -517,7 +591,12 @@ describe('[ki repo roadmap migrate]', () => {
       'KI-TOOL-CLI-005',
       record({ id: 'KI-TOOL-CLI-005', horizon: 'parked' }, 'Plain context. Parked until the spring review!\n')
     )
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-006', record({ id: 'KI-TOOL-CLI-006', horizon: 'parked' }))
+    await roadmapFile(
+      box,
+      'repo',
+      'KI-TOOL-CLI-006',
+      record({ id: 'KI-TOOL-CLI-006', horizon: 'parked', project: 'other/host', initiative: 'other/rig' })
+    )
     await roadmapFile(
       box,
       'repo',
@@ -601,6 +680,9 @@ describe('[ki repo roadmap migrate]', () => {
     expect(cancelled).not.toContain('intake_disposition')
     expect(cancelled).not.toContain('horizon')
     expect(await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-001-item.md')).toContain('theme: cli')
+    const qualified = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-006-item.md')
+    expect(qualified).toContain('horizon: hold\n')
+    expect(qualified).toContain('project: other/host\ninitiative: other/rig\n')
     expect(listed.exitCode).toBe(0)
     const lanes = Object.fromEntries(
       JSON.parse(listed.output).items.map((entry: { id: string; lane: string }) => [entry.id, entry.lane])
