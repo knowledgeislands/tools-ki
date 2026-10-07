@@ -49,6 +49,21 @@ const initialisationField = (value: string | undefined, name: string): string =>
   return value
 }
 
+const CONFORMANCE_HEADER = [
+  '# Knowledge Islands repository configuration.',
+  '# Its presence declares conformance with the Knowledge Islands repository standard.'
+] as const
+
+const BANNER_RULE = `# ${'-'.repeat(77)}`
+
+const banner = (name: string): readonly string[] => [BANNER_RULE, `# ${name}`, BANNER_RULE]
+
+const multilineArray = (key: string, values: readonly string[]): readonly string[] => [
+  `${key} = [`,
+  ...values.map((value) => `  ${JSON.stringify(value)},`),
+  ']'
+]
+
 export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisation): string => {
   const title = initialisationField(initialisation.title, 'title')
   const description = initialisationField(initialisation.description, 'description')
@@ -78,14 +93,18 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
           '',
           '[skills.ki-repo.territory]',
           `name = ${JSON.stringify(title)}`,
-          `members = [${JSON.stringify(repository)}]`
+          ...multilineArray('members', [repository])
         ]
       : []
+  // The ki-authoring TOML layout: the conformance header, neighbourhood banners, one blank line before every
+  // table and banner, and every array written one element per line with a trailing comma.
   return [
-    '[repo]',
-    `harnesses = [${JSON.stringify(DEFAULT_HARNESS)}]`,
+    ...CONFORMANCE_HEADER,
     '',
-    '[skills.ki-repo-project]',
+    ...banner('Foundation'),
+    '',
+    '[repo]',
+    ...multilineArray('harnesses', [DEFAULT_HARNESS]),
     '',
     '[skills.ki-repo]',
     'repo_type = "project"',
@@ -95,9 +114,13 @@ export const renderRepositoryDeclaration = (initialisation: RepositoryInitialisa
     `capital = ${JSON.stringify(capital)}`,
     `description = ${JSON.stringify(description)}`,
     `repo_code = ${JSON.stringify(repoCode)}`,
-    `supported_runtimes = [${initialisation.supportedRuntimes.map((runtime) => JSON.stringify(runtime)).join(', ')}]`,
+    ...multilineArray('supported_runtimes', initialisation.supportedRuntimes),
     `visibility = ${JSON.stringify(visibility)}`,
     ...territory,
+    '',
+    ...banner('Repository shape'),
+    '',
+    '[skills.ki-repo-project]',
     ''
   ].join('\n')
 }

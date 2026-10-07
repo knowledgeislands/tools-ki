@@ -90,6 +90,44 @@ const initialise = (box: Awaited<ReturnType<typeof sandbox>>, directory?: string
     'private'
   ])
 
+/** The `.ki.toml` that `ki repo init` writes, in the ki-authoring TOML layout. */
+const declaredLayout = (capital: string, territory: readonly string[] = []): string =>
+  [
+    '# Knowledge Islands repository configuration.',
+    '# Its presence declares conformance with the Knowledge Islands repository standard.',
+    '',
+    `# ${'-'.repeat(77)}`,
+    '# Foundation',
+    `# ${'-'.repeat(77)}`,
+    '',
+    '[repo]',
+    'harnesses = [',
+    '  "knowledgeislands/ki-agentic-harness",',
+    ']',
+    '',
+    '[skills.ki-repo]',
+    'repo_type = "project"',
+    'primary_shape = "ki-repo-project"',
+    'repository = "https://github.com/example/project"',
+    'title = "Example repository"',
+    `capital = "${capital}"`,
+    'description = "Repository initialization contract."',
+    'repo_code = "EXAMPLE"',
+    'supported_runtimes = [',
+    '  "claude-code",',
+    '  "chatgpt-codex",',
+    ']',
+    'visibility = "private"',
+    ...territory,
+    '',
+    `# ${'-'.repeat(77)}`,
+    '# Repository shape',
+    `# ${'-'.repeat(77)}`,
+    '',
+    '[skills.ki-repo-project]',
+    ''
+  ].join('\n')
+
 test('initializes one explicit physical Git root and registers its complete KI identity', async () => {
   const box = await sandbox()
   await box.config.write('ki/config.toml', localConfiguration)
@@ -102,16 +140,7 @@ test('initializes one explicit physical Git root and registers its complete KI i
     exitCode: 0,
     output: `write .ki.toml\nwrite registry.toml\nki repo init: initialized ${root}\n`
   })
-  expect(await box.project.read('.ki.toml')).toEqual(
-    '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n' +
-      'repository = "https://github.com/example/project"\n' +
-      'title = "Example repository"\n' +
-      `capital = "${memberCapital}"\n` +
-      'description = "Repository initialization contract."\n' +
-      'repo_code = "EXAMPLE"\n' +
-      'supported_runtimes = ["claude-code", "chatgpt-codex"]\n' +
-      'visibility = "private"\n'
-  )
+  expect(await box.project.read('.ki.toml')).toEqual(declaredLayout(memberCapital))
   expect(await box.state.read('ki/registry.toml')).toContain(`path = ${JSON.stringify(root)}`)
 
   // A Capital names itself and founds a territory whose only member it is.
@@ -121,17 +150,14 @@ test('initializes one explicit physical Git root and registers its complete KI i
   capitalBox.setRunner(gitRepositoryRunner(capitalRoot))
   expect((await initialise(capitalBox, undefined, 'https://github.com/example/project')).exitCode).toBe(0)
   expect(await capitalBox.project.read('.ki.toml')).toEqual(
-    '[repo]\nharnesses = ["knowledgeislands/ki-agentic-harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n' +
-      'repository = "https://github.com/example/project"\n' +
-      'title = "Example repository"\n' +
-      'capital = "https://github.com/example/project"\n' +
-      'description = "Repository initialization contract."\n' +
-      'repo_code = "EXAMPLE"\n' +
-      'supported_runtimes = ["claude-code", "chatgpt-codex"]\n' +
-      'visibility = "private"\n' +
-      '\n[skills.ki-repo.territory]\n' +
-      'name = "Example repository"\n' +
-      'members = ["https://github.com/example/project"]\n'
+    declaredLayout('https://github.com/example/project', [
+      '',
+      '[skills.ki-repo.territory]',
+      'name = "Example repository"',
+      'members = [',
+      '  "https://github.com/example/project",',
+      ']'
+    ])
   )
 })
 
