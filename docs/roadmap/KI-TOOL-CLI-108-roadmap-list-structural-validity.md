@@ -2,14 +2,17 @@
 id: KI-TOOL-CLI-108
 area: CLI
 title: Roadmap list structural validity
-theme: cli
+kind: deliver
+purpose: upkeep
+initiative: platform-foundations
+component: repo
 horizon: next
 status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T21:05:00Z
-updated_at: 2026-10-06T22:04:00Z
+updated_at: 2026-10-07T14:36:34Z
 ---
 
 # Roadmap list structural validity

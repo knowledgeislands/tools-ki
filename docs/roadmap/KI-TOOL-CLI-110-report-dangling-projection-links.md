@@ -2,14 +2,16 @@
 id: KI-TOOL-CLI-110
 area: CLI
 title: Report dangling projection links
-theme: cli
-horizon: triage
-status: draft
+kind: deliver
+purpose: corrective
+project: estate-factorisation
+component: repo
+status: triage
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T23:27:45Z
-updated_at: 2026-10-06T23:27:45Z
+updated_at: 2026-10-07T14:35:20Z
 ---
 
 # Report dangling projection links

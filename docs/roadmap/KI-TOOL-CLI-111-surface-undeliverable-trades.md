@@ -2,14 +2,16 @@
 id: KI-TOOL-CLI-111
 area: CLI
 title: Surface undeliverable trades
-theme: cli
-horizon: triage
-status: draft
+kind: deliver
+purpose: capability
+project: territories-and-trades
+component: trade
+status: triage
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-06T23:27:45Z
-updated_at: 2026-10-06T23:50:39Z
+updated_at: 2026-10-07T14:35:20Z
 ---
 
 # Surface undeliverable trades
