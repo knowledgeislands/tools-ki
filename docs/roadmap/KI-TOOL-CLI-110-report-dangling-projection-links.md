@@ -6,13 +6,12 @@ kind: deliver
 purpose: corrective
 project: estate-factorisation
 component: repo
-horizon: now
-status: in-progress
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: ae4c12990a8ccf0128ee83df20a6a0b38afa7801
 created_at: 2026-10-06T23:27:45Z
-updated_at: 2026-10-07T21:04:17Z
+updated_at: 2026-10-07T21:04:43Z
 ---
 
 # Report dangling projection links
@@ -81,6 +80,36 @@ Update any repository-health guidance that describes what `ki repo diag` reports
 ### Roadmap
 
 A harness handoff only if the retired-capability list is chosen.
+
+## Review
+
+### Delivered
+
+`ki repo diag` reports, and `ki repo repair` removes, dangling `ki-` links in compatible projection directories that no declared skill accounts for. Non-symlink entries, non-`ki-` entries and resolving links are untouched; no harness retired-capability list. Baseline `ae4c12990a8ccf0128ee83df20a6a0b38afa7801`; delivered in `252476c`.
+
+### Change Summary
+
+- `src/agents/repository-health.ts`: `RepositoryHealth` gains `orphans`; each distinct compatible projection directory is listed once, and a dangling undeclared `ki-` link makes the repository repairable.
+- `diag.ts`, `repair.ts` and the shared renderer: orphans are listed as `undeclared projection is dangling`; repair prints `would remove` or `remove` and unlinks only outside dry run.
+- REPO-OPS-003 and REPO-OPS-007 and the user guide describe the behaviour. Deviation from the plan: the record expected no specification change, but both clauses own this behaviour and cite its tests, so they were refined in place.
+
+### Verification
+
+- `bun run test:coverage`: 1083 tests pass, 100% statement, branch, function and line coverage. `bunx tsc --noEmit`: clean.
+- Live read-only check with the worktree build: `ki repo --repo ki-arcadia-principal diag` reports the five retired links (`ki-change-management`, `ki-kb`, `ki-kb-activities`, `ki-kb-live-artifacts`, `ki-kb-streams`) for both `claude-code` and `chatgpt-codex`, and the repository as repairable rather than healthy. Arcadia was not repaired; that remains its owner's action.
+- `ki repo audit --repo .` in the isolated worktree reports only REPO-REG-1 and RUNTIMES-2 findings from the unregistered worktree path and its absent local projections; every other skill passes.
+
+### Outstanding concerns
+
+The behaviour reaches users only in the next `tools-ki` release. Arcadia's five dangling links stay until someone runs `ki repo repair` there with a released or dev-linked `ki`.
+
+### Post-change review
+
+The goal holds and the scope stayed inside the CLI. Regression risk is low: repair removes only a link that is a symlink, `ki-` prefixed, undeclared and unresolvable at inspection time.
+
+### Mini recap
+
+Delivered and verified; accepted under Kris's standing decision (decision 12 and decision 17). No learning route beyond the specification.
 
 ## Discussion
 
