@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 8b54eb97ee6c3ae925c13446f2a568eced56403d
 created_at: 2026-10-07T15:03:28Z
-updated_at: 2026-10-07T15:12:30Z
+updated_at: 2026-10-07T15:20:00Z
 ---
 
 # KI-TOOL-CLI-113: Group cross-territory references
@@ -92,7 +92,7 @@ None.
 
 - `src/core/work/items.ts`: `project` and `initiative` accept `<territory>/<slug>`; new `parseRegistryReference`; `component` stays a bare slug.
 - `src/core/work/registry.ts`: the registry reader is split from Capital discovery; new `loadTerritoryRegistry` resolves a local-registry key to a checkout that declares itself a Capital; `workItemGroup` resolves each reference in its own territory, derives a qualified Initiative from a qualified Project, keeps the qualifier when the territory registry is unavailable, and names the group in a contradiction warning.
-- `src/core/work/operations.ts`: grouping loads the own registry and each referenced territory once, collecting one warning per unavailable registry (`registryWarnings`).
+- `src/core/work/operations.ts`: grouping loads the own registry and each referenced territory once, collecting one warning per unavailable registry (`registryWarnings`). The own-registry warning appears only when a record uses an unqualified slug, matching the harness checker.
 - `src/commands/repo/roadmap.ts`: prints every grouping warning.
 - `src/tests/cli/repo/roadmap-model.test.ts`: invalid over-qualified and qualified-component values, qualified values preserved by migration, and grouping across resolvable, missing, non-Capital and invalid territory registries.
 
@@ -102,7 +102,7 @@ None.
 - `bunx tsc --noEmit`: clean.
 - `bunx biome check` on touched sources and tests: no findings.
 - `ki repo audit --skill ki-work-roadmap`: PASS.
-- The chezmoi listing check runs after chezmoi's migration in the same rollout.
+- `ki repo --repo chezmoi roadmap list --by project` and `--by initiative`, from source after chezmoi's values were qualified: every record groups under `ki-arcadia-principal/<slug>`, with no registry warning.
 
 ### Outstanding concerns
 

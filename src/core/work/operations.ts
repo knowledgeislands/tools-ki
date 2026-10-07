@@ -190,15 +190,20 @@ const groupItems = async (
   items: readonly WorkItem[]
 ): Promise<RoadmapGroupingResult> => {
   const lookup = await loadProjectRegistry(repository, stateDirectory)
+  const references = items.flatMap((item) => [item.project, item.initiative]).filter((value) => value !== undefined)
+  // Only an unqualified slug needs the repository's own Capital registry.
+  const usesOwn = references.some((value) => parseRegistryReference(value)?.territory === undefined)
   const registryWarnings: string[] =
     'unavailable' in lookup
-      ? [`project registry unavailable: ${lookup.unavailable}`]
+      ? usesOwn
+        ? [`project registry unavailable: ${lookup.unavailable}`]
+        : []
       : lookup.registry.legacyInitiativesIndex
         ? ['Streams/Projects/Initiatives.md is retired; keep one note per Initiative in Streams/Initiatives/']
         : []
   const territories = new Map<string, ProjectRegistry | undefined>()
-  for (const value of items.flatMap((item) => [item.project, item.initiative])) {
-    const territory = value === undefined ? undefined : parseRegistryReference(value)?.territory
+  for (const value of references) {
+    const territory = parseRegistryReference(value)?.territory
     if (territory === undefined || territories.has(territory)) continue
     const qualified = await loadTerritoryRegistry(territory, stateDirectory)
     territories.set(territory, 'registry' in qualified ? qualified.registry : undefined)

@@ -474,6 +474,16 @@ describe('[ki repo roadmap list --by]', () => {
     await box.state.write('ki/registry.toml', 'schema = [\n')
     const invalid = await box.run('ki repo --repo member roadmap list --by project')
     expect(invalid.output).toMatch(/territory other registry unavailable: the local ki registry .* is invalid/)
+
+    await box.state.write(
+      'ki/registry.toml',
+      registryFile([{ key: 'other', repository: home('example/other'), path: other }])
+    )
+    await box.project.write('loose/.ki.toml', declaration(home('example/loose')))
+    await roadmapFile(box, 'loose', 'KI-TOOL-CLI-001', record({ id: 'KI-TOOL-CLI-001', project: 'other/host' }))
+    const loose = await box.run('ki repo --repo loose roadmap list --by project')
+    expect(loose.output).toContain('project other/host (1)')
+    expect(loose.output).not.toContain('registry unavailable')
   })
 
   test('warns and still lists when the Project registry is unavailable', async () => {
