@@ -4,12 +4,12 @@ area: CLI
 title: Read roadmap model
 theme: cli
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 6fa3e7bb9fda9c5b8ba6fc947e312ed16f26904f
 created_at: 2026-10-07T12:26:37Z
-updated_at: 2026-10-07T12:40:00Z
+updated_at: 2026-10-07T12:42:00Z
 ---
 
 # KI-TOOL-CLI-112: Read roadmap model
