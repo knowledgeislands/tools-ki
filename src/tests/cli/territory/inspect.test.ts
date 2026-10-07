@@ -5,11 +5,11 @@ import { pathToFileURL } from 'node:url'
 import { describe, expect, test } from 'vitest'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
 
-const repository = (identity: string, agora = ''): string =>
-  `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${agora}`
+const repository = (identity: string, territory = 'capital = "https://github.com/example/home"\n'): string =>
+  `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = ${JSON.stringify(identity)}\n${territory}`
 
-const home = (id: string, members: readonly string[]): string =>
-  `[skills.ki-agora.${id}]\ntitle = "Shared"\npurpose = "Shared delivery"\nmembers = ${JSON.stringify(members)}\n`
+const home = (_id: string, members: readonly string[]): string =>
+  `capital = "https://github.com/example/home"\nterritory_name = "Shared"\nterritory_prefix = "team"\nterritory_members = ${JSON.stringify(['https://github.com/example/home', ...members].sort())}\n`
 
 const localRegistry = (
   entries: readonly { readonly key: string; readonly identity: string; readonly root: string }[]
@@ -24,7 +24,7 @@ const localRegistry = (
     ])
   ].join('\n')
 
-const configuredAgora = async (box: Sandbox): Promise<Record<'home' | 'member' | 'extra', string>> => {
+const configuredTerritory = async (box: Sandbox): Promise<Record<'home' | 'member' | 'extra', string>> => {
   const homeIdentity = 'https://github.com/example/home'
   const memberIdentity = 'https://github.com/example/member'
   const extraIdentity = 'https://github.com/example/extra'
@@ -80,12 +80,14 @@ const zedDatabase = async (
 }
 
 const inspect = (box: Sandbox, target: 'vscode' | 'zed', workspace: string, platform: NodeJS.Platform = 'darwin') =>
-  box.run(['ki', 'agora', 'inspect', 'team', '--target', target, '--workspace', workspace], { platform })
+  box.run(['ki', 'territory', 'inspect', '--territory', 'team', '--target', target, '--workspace', workspace], {
+    platform
+  })
 
-describe('[ki agora inspect]', () => {
+describe('[ki territory inspect]', () => {
   test('classifies VS Code JSONC projection drift and exact state without mutation', async () => {
     const box = await sandbox()
-    const roots = await configuredAgora(box)
+    const roots = await configuredTerritory(box)
     const unregisteredRoot = await box.project.mkdir('unregistered')
     const malformedRoot = await box.project.mkdir('malformed')
     const externalRoot = await box.project.mkdir('external')
@@ -109,6 +111,7 @@ describe('[ki agora inspect]', () => {
     const before = await readFile(workspace)
     const result = await inspect(box, 'vscode', workspace)
     expect(result.exitCode).toBe(1)
+    expect(result.output).toMatch(/^╭─ KI TERRITORY PROJECTION\n/)
     expect(result.output).toContain('status: drift')
     expect(result.output).toContain(`home: ${roots.home}`)
     expect(result.output).toContain(`member: ${roots.member}`)
@@ -137,7 +140,7 @@ describe('[ki agora inspect]', () => {
 
   test('fails closed for invalid VS Code selectors and sources', async () => {
     const box = await sandbox()
-    await configuredAgora(box)
+    await configuredTerritory(box)
     expect((await inspect(box, 'vscode', 'relative.code-workspace')).exitCode).toBe(2)
     expect((await inspect(box, 'vscode', join(box.project.path, 'missing.code-workspace'))).exitCode).toBe(2)
 
@@ -165,15 +168,15 @@ describe('[ki agora inspect]', () => {
     const linked = join(box.project.path, 'linked.code-workspace')
     await symlink(source, linked)
     expect((await inspect(box, 'vscode', linked)).exitCode).toBe(2)
-    expect((await box.run('ki agora inspect team --target terminal --workspace anything')).exitCode).toBe(2)
-    expect((await box.run('ki agora inspect team --target delta --workspace anything')).exitCode).toBe(2)
-    expect((await box.run('ki agora inspect unknown --target vscode --workspace anything')).exitCode).toBe(2)
-    expect((await box.run('ki agora audit')).exitCode).toBe(1)
+    expect((await box.run('ki territory inspect team --target terminal --workspace anything')).exitCode).toBe(2)
+    expect((await box.run('ki territory inspect team --target delta --workspace anything')).exitCode).toBe(2)
+    expect((await box.run('ki territory inspect unknown --target vscode --workspace anything')).exitCode).toBe(2)
+    expect((await box.run('ki territory audit --estate')).exitCode).toBe(2)
   })
 
   test('observes explicit stable and preview Zed workspaces read-only', async () => {
     const box = await sandbox()
-    const roots = await configuredAgora(box)
+    const roots = await configuredTerritory(box)
     const stable = await zedDatabase(box, 'Library/Application Support/Zed/db/0-stable', [
       { id: 17, paths: `${roots.home}\n${roots.member}\n` }
     ])
@@ -197,24 +200,24 @@ describe('[ki agora inspect]', () => {
 
   test('fails closed for unavailable, malformed, remote, absent, and ambiguous Zed observations', async () => {
     const unavailable = await sandbox()
-    await configuredAgora(unavailable)
+    await configuredTerritory(unavailable)
     expect((await inspect(unavailable, 'zed', '1')).exitCode).toBe(1)
     expect((await inspect(unavailable, 'zed', 'invalid')).exitCode).toBe(2)
     expect((await inspect(unavailable, 'zed', '999999999999999999999999')).exitCode).toBe(2)
     expect((await inspect(unavailable, 'zed', '1', 'aix')).exitCode).toBe(1)
 
     const schema = await sandbox()
-    await configuredAgora(schema)
+    await configuredTerritory(schema)
     await zedDatabase(schema, 'Library/Application Support/Zed/db/0-stable', [], false)
     expect((await inspect(schema, 'zed', '1')).output).toContain('unsupported schema')
 
     const corrupt = await sandbox()
-    await configuredAgora(corrupt)
+    await configuredTerritory(corrupt)
     await corrupt.home.write('Library/Application Support/Zed/db/0-stable/db.sqlite', 'not sqlite')
     expect((await inspect(corrupt, 'zed', '1')).output).toContain('could not be observed')
 
     const unreadable = await sandbox()
-    await configuredAgora(unreadable)
+    await configuredTerritory(unreadable)
     const unreadableDirectory = await unreadable.home.mkdir('Library/Application Support/Zed/db/0-stable')
     const unreadablePath = join(unreadableDirectory, 'db.sqlite')
     await unreadable.home.write('Library/Application Support/Zed/db/0-stable/db.sqlite', '')
@@ -222,7 +225,7 @@ describe('[ki agora inspect]', () => {
     expect((await inspect(unreadable, 'zed', '1')).output).toMatch(/unavailable|unsupported/u)
 
     const remote = await sandbox()
-    const remoteRoots = await configuredAgora(remote)
+    const remoteRoots = await configuredTerritory(remote)
     await zedDatabase(remote, 'Library/Application Support/Zed/db/0-stable', [
       { id: 2, paths: remoteRoots.home, remote: 7 },
       { id: 3, paths: null }
@@ -232,7 +235,7 @@ describe('[ki agora inspect]', () => {
     expect((await inspect(remote, 'zed', '4')).exitCode).toBe(2)
 
     const ambiguous = await sandbox()
-    const ambiguousRoots = await configuredAgora(ambiguous)
+    const ambiguousRoots = await configuredTerritory(ambiguous)
     await zedDatabase(ambiguous, 'Library/Application Support/Zed/db/0-stable', [{ id: 5, paths: ambiguousRoots.home }])
     await zedDatabase(ambiguous, 'Library/Application Support/Zed/db/0-preview', [
       { id: 5, paths: ambiguousRoots.home }
@@ -242,12 +245,12 @@ describe('[ki agora inspect]', () => {
 
   test('locates Zed databases on Linux and Windows variants', async () => {
     const linux = await sandbox()
-    const linuxRoots = await configuredAgora(linux)
+    const linuxRoots = await configuredTerritory(linux)
     await zedDatabase(linux, '../data/zed/db/0-stable', [{ id: 10, paths: `${linuxRoots.home}\n${linuxRoots.member}` }])
     expect((await inspect(linux, 'zed', '10', 'linux')).exitCode).toBe(0)
 
     const fallbackLinux = await sandbox()
-    const fallbackLinuxRoots = await configuredAgora(fallbackLinux)
+    const fallbackLinuxRoots = await configuredTerritory(fallbackLinux)
     fallbackLinux.setEnv({ XDG_DATA_HOME: undefined })
     await zedDatabase(fallbackLinux, '.local/share/zed/db/0-stable', [
       { id: 11, paths: `${fallbackLinuxRoots.home}\n${fallbackLinuxRoots.member}` }
@@ -255,7 +258,7 @@ describe('[ki agora inspect]', () => {
     expect((await inspect(fallbackLinux, 'zed', '11', 'freebsd')).exitCode).toBe(0)
 
     const windows = await sandbox()
-    const windowsRoots = await configuredAgora(windows)
+    const windowsRoots = await configuredTerritory(windows)
     const localAppData = await windows.home.mkdir('LocalAppData')
     windows.setEnv({ LOCALAPPDATA: localAppData })
     await zedDatabase(windows, 'LocalAppData/Zed/db/0-stable', [
@@ -264,7 +267,7 @@ describe('[ki agora inspect]', () => {
     expect((await inspect(windows, 'zed', '12', 'win32')).exitCode).toBe(0)
 
     const fallbackWindows = await sandbox()
-    const fallbackWindowsRoots = await configuredAgora(fallbackWindows)
+    const fallbackWindowsRoots = await configuredTerritory(fallbackWindows)
     fallbackWindows.setEnv({ LOCALAPPDATA: undefined })
     await zedDatabase(fallbackWindows, 'AppData/Local/Zed/db/0-stable', [
       { id: 13, paths: `${fallbackWindowsRoots.home}\n${fallbackWindowsRoots.member}` }

@@ -6,21 +6,19 @@ Two ideas carry the whole surface. **Selection happens before anything runs**, a
 
 ## Select targets
 
-`ki repo` operations accept the same three mutually exclusive selectors; `ki registry` commands have their own selection rules:
+Use repeated `--repo <path-or-pattern>` for explicit physical roots. Use `-t, --territory <handle>` for a registered Capital's declared members, or `--estate` for every registered repository. These primary scopes are mutually exclusive. The optional Capital-only `territory_prefix` supplies the handle; without it use the Capital's local registry key.
 
-- `--repo <path-or-pattern>` — Selects: Literal paths or patterns, repeatable, resolved to physical KI repository roots in deterministic order.
+Repeated `-f, --filter <prefix>` arguments narrow directory basenames literally and case-sensitively with OR semantics. Filter alone narrows the native current-repository or direct-CWD mGit workspace default. Filtering happens before nested worktree expansion; empty prefixes and no matches fail.
 
-- `--agora <name>` — Selects: The registered member repositories of one owner-declared Agora.
-
-- `--estate` — Selects: Every locally registered canonical KI repository — shorthand for `--agora estate`.
+Territory registration must be complete before filtering. Selected roots must be physical KI checkouts matching their registered identity and declared Capital. A registered unavailable root excluded by a filter does not block the remaining operation. See [territory selection](territory-selection.md) for the atomic roots interface and local projection tools.
 
 ```sh
 ki repo audit --repo .
-ki repo audit --repo '/path/to/workspaces/*' --concise
+ki repo -t ki -f tools- audit --concise
 ki repo audit --estate --concise
 ```
 
-An unmatched pattern, an invalid root, or a duplicate root stops the operation before any target runs, which is what makes a wide selector safe to use: you learn the selection is wrong before anything acts on it. A repeated Agora declaration id is rejected naming every declaring owner, so you can resolve the ambiguity rather than guess which one won.
+An unmatched pattern, an invalid root, or a duplicate root stops the operation before any target runs, which is what makes a wide selector safe to use: you learn the selection is wrong before anything acts on it.
 
 With no explicit selector, `ki` reads a regular `.mgit.toml` manifest in the current directory. A workspace manifest without a schema selects its direct members and recurses through child workspaces, using member types for standard and nested `main/` checkouts and skipping bare stores. Existing `schema = 1` grouped manifests remain readable with their configured default group. A repository manifest falls through to ordinary single-repository discovery. `ki` never invokes `mgit` to do this.
 
@@ -30,7 +28,7 @@ Operations then run in target order. A read-only operation isolates each target'
 
 ### The registry
 
-The machine-local registry at `$XDG_STATE_HOME/ki/registry.toml` is what `--agora` and `--estate` resolve against. Each keyed entry holds one canonical HTTPS GitHub identity and its checkout path:
+The machine-local registry at `$XDG_STATE_HOME/ki/registry.toml` is what `--territory` and `--estate` resolve against. Each keyed entry holds one canonical HTTPS GitHub identity and its checkout path:
 
 ```toml
 schema = 1
@@ -143,7 +141,7 @@ A clean audit and a `diag` showing every declared skill projected is the end sta
 
 - Selection fails naming a duplicate root — Likely cause: Two selectors resolve to the same root. Action: Remove the redundant `--repo`.
 
-- `--agora` fails naming several owners — Likely cause: More than one owner declares that id. Action: Resolve the ambiguity in the declaring repositories.
+- `--territory` fails with a handle declared more than once — Likely cause: Two registered Capitals resolve to the same handle, from a `territory_prefix` or a registry key. Action: Rename the prefix or registry key so each handle is unique.
 
 - Conform reports `proposed write` and stops — Likely cause: The initial audit failed for that repository. Action: Fix the audit findings, then rerun conform.
 

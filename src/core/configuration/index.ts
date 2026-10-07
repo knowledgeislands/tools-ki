@@ -1,4 +1,3 @@
-export type { RepositoryDeclaration } from './declaration.ts'
 export {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,

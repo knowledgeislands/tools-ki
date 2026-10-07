@@ -3,7 +3,7 @@ import type { SelfRubricContext } from '../contexts/self.ts'
 import { diagnosticRemediation, sourceContains } from './shared.ts'
 
 const framedCommands = [
-  'src/commands/agora/list.ts',
+  'src/commands/territory/index.ts',
   'src/commands/manage/diag.ts',
   'src/commands/manage/list.ts',
   'src/commands/manage/repair.ts',

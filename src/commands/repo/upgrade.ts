@@ -8,7 +8,11 @@ import { refreshHarnesses } from '../shared/harness-refresh.ts'
 
 export const createUpgradeCommand = (
   context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
+  selectedRepositories: () => {
+    readonly repositories: readonly string[]
+    readonly territory?: string
+    readonly filters?: readonly string[]
+  }
 ): Command =>
   new Command('upgrade')
     .description('refresh uniquely resolved capabilities declared by one or more KI repositories')

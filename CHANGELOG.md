@@ -51,22 +51,20 @@ This baseline describes the `v0.8.3` release. Domain imports and extracted type 
 - `ki skill add`
 - `ki skill remove`
 
-#### Agora management
+#### Territory management
 
-- `ki agora list`
-- `ki agora audit [agora]`
-- `ki agora inspect <agora> --target <zed|vscode> --workspace <selector>`
-- `ki agora show <agora> [--verbose]`
-- `ki agora roots <agora> [--null]`
-- `ki agora open <agora> --target <zed|vscode|delta>`
-- `ki agora reference set <repository> <checkout> [--dry-run]`
-- `ki agora reference list`
-- `ki agora reference remove <repository> [--dry-run]`
+- `ki territory list`
+- `ki territory audit (--territory <handle>|--estate) [--filter <prefix>]...`
+- `ki territory inspect (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode> --workspace <selector>`
+- `ki territory show (--territory <handle>|--estate) [--filter <prefix>]... [--verbose]`
+- `ki territory roots (--territory <handle>|--estate) [--filter <prefix>]... [--null]`
+- `ki territory open (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode|delta>`
 
 #### Repository options
 
 - `ki repo --repo <path-or-pattern>`
-- `ki repo --agora <name>`
+- `ki repo -t, --territory <handle>`
+- `ki repo -f, --filter <prefix>`
 - `ki repo --estate`
 
 #### Repository management
@@ -168,8 +166,7 @@ This baseline describes the `v0.8.3` release. Domain imports and extracted type 
 - Root `help`, `completion`, `diag`, `doctor`, and `repair` follow the shared tool surface. The `manage` grouping is removed; capability search, missing, and outdated reports live under `harness`. Diagnostics are share-safe by default with local details behind `--full`; repair previews by default and requires `--apply` to write.
 - Batch authority commands live under `ki repo batch` and use the parent repository selector. Each batch targets exactly one repository.
 - Unknown command paths report the syntax error and current command usage without migration hints for retired names.
-- Registered Agora owners declare a required single-line `title`, direct members and optional one-level inclusions of another Agora or repository. `ki agora list` and `ki agora show` present the title; the identifier remains the only selector and machine key, and a missing or malformed title fails resolution. Ordinary members need no Agora declaration. The reserved `estate` selector derives the full locally registered canonical repository set for selection and editor opening.
-- `ki agora roots <agora>` exposes a stable machine interface for resolved registered Agora roots: newline-delimited by default, or NUL-delimited with `--null` (`-0`).
+- `ki territory roots --territory <handle>` or `--estate` emits deterministic primary checkout roots, newline-delimited by default or NUL-delimited with `--null` (`-0`), after complete validation.
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context, including unadopted `triage` intake.
 - `ki repo roadmap summary` reports per-repository item, horizon, and lifecycle counts without listing work-item details or reading trades.
@@ -183,15 +180,14 @@ This baseline describes the `v0.8.3` release. Domain imports and extracted type 
 - `ki repo roadmap` operations resolve a local roadmap only from the declared `[skills.ki-work]` adapter and its adapter table, never from a physical `docs/roadmap/` or `Streams/Roadmap/` directory; an unknown, inapplicable or tableless adapter is a usage error. Identifier-free `ki repo roadmap prune` skips repositories with no declared local roadmap or no roadmap root instead of failing.
 - Roadmap text listings show compact external ticket keys and counts; `--links all` expands mappings into child entries with full task URLs and disambiguating identity details where needed.
 - `ki registry list --format json` emits path-free `ki/registry/v1` identity and declaration metadata, including `repoType` as `project`, `kb`, or `null` when unavailable; `ki registry remove` removes exactly one keyed or path-selected entry with dry-run and transactional publication.
-- `ki agora list` and `ki agora show` separate a named Agora's owner, direct members, and inclusions, while the system estate counts registered repositories without an owner. Roots are deduplicated and sorted alphabetically by registry key.
-- `ki agora open <name> --target zed` adds the named owner last so Zed displays it first in the sidebar; canonical roots, the estate, and VS Code ordering are unchanged.
-- `ki agora open` and `ki repo open` support Delta as a local target, opening each selected repository in the running app.
+- `ki territory open <name> --target zed` adds the named owner last so Zed displays it first in the sidebar; canonical roots, the estate, and VS Code ordering are unchanged.
+- `ki territory open` and `ki repo open` support Delta as a local target, opening each selected repository in the running app.
 - `ki repo store scan` warns about undeclared conventional OneDrive source directories for selected repositories without creating or changing stores; `--estate` scans all registered repositories.
 - Closed current batch records validate selected work from their evidence commit, so later pruning and expiry do not invalidate archival verification.
 - `man/ki.commands.json` publishes the generated `ki/commands/v1` command and description inventory, reconciled against the manual and registered command tree.
 - `ki repo init` writes `.ki.toml` in the house TOML layout: multiline arrays with trailing commas, a blank line before every table, and section banners.
 - `ki repo init`, local `ki registry add`, `ki repo repair`, and `ki repo conform` record selected canonical KI repository identities in the machine-local registry without treating registration as a repair or conformance verdict; `ki repo conform` records before evaluating findings.
-- `ki repo trade` is the sole trade command tree. Its parent `--repo`, `--agora`, and `--estate` selectors govern local and aggregate views; mutations require one registered repository. `ki repo trade routes list` is a framed local route inventory, while `ki repo --estate trade routes list` is a paired registered-estate table. Aggregate JSON uses the versioned, path-free `ki/trade-routes/v1` contract so applications can consume canonical route evidence without inheriting local registry topology or renderer-specific weights. The interactive D3 route map now belongs to `apps-observatory`; the retired `--html` and redundant `--table` flags are not retained as aliases.
+- `ki repo trade` is the sole trade command tree. Its parent `--repo`, `--territory`, and `--estate` selectors govern local and aggregate views; mutations require one registered repository. `ki repo trade routes list` is a framed local route inventory, while `ki repo --estate trade routes list` is a paired registered-estate table. Aggregate JSON uses the versioned, path-free `ki/trade-routes/v1` contract so applications can consume canonical route evidence without inheriting local registry topology or renderer-specific weights. The interactive D3 route map now belongs to `apps-observatory`; the retired `--html` and redundant `--table` flags are not retained as aliases.
 - Trades are governed by the territory Capital. Every `.ki.toml` names its Capital in `[skills.ki-repo].capital`; the Capital declares its members in `territory_name` and `territory_members` under `[skills.ki-repo]`, refusing the retired `[skills.ki-repo.territory]` table, and the only routes, standing grants and knowledge subtypes in `[skills.ki-trades.territory]`. Member `[skills.ki-trades].routes` and `.subtypes` are retired and rejected, `routes add|remove`, `standing add|remove` and `subtypes` are removed, and an unavailable Capital fails closed with `territory policy lives in <capital>, not available here`. The Capital's `members` must be unique, include the Capital and be sorted by code point. `ki repo trade policy check` classifies members and `ki repo trade policy compare` checks active routes across the whole registry against a saved `ki/trade-routes/v1` report, rejecting a malformed baseline route. Aggregate views name each member skipped because its Capital is unavailable, with a `SKIPPED=n` count, and write those lines to stderr under `--format json`. The JSON contract is unchanged.
 - Exact standing grants from the Capital policy, active/incomplete inspection, and receiver-local `STI-*` capture with full source-commit and path verification. Standing intake is knowledge-only, adds no peer-write or roadmap authority, and leaves ordinary itemised trades as the fallback.
 - Trade kinds, observations, report statuses, diagnostics, and repository entities use a bounded named presentation registry. Layout punctuation remains local to each renderer, while terminal knowledge consistently renders as `ⓘ` and HTML uses the matching accessible Lucide Book Open mark.

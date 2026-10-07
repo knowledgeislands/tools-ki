@@ -691,7 +691,11 @@ describe('[ki repo trade]', () => {
       [bare.replace(`capital = "${capitalHome}"`, 'capital = "example/capital"'), capitalForm],
       [
         `${bare}territory_name = "Rogue"\n`,
-        '[skills.ki-repo].territory_name and [skills.ki-repo].territory_members are permitted only in a territory Capital'
+        '[skills.ki-repo].territory_name, [skills.ki-repo].territory_members and [skills.ki-repo].territory_prefix are permitted only in a territory Capital'
+      ],
+      [
+        `${bare}territory_prefix = "rogue"\n`,
+        '[skills.ki-repo].territory_prefix are permitted only in a territory Capital'
       ],
       [
         bare.replace('[skills.ki-repo-project]\n', '[skills]\nki-trades = "none"\n\n[skills.ki-repo-project]\n'),
@@ -1280,11 +1284,10 @@ describe('[ki repo trade]', () => {
       'receiver/.ki.toml',
       `[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "${receiverHome}"\n`
     )
-    expect(await box.run('ki repo --estate trade routes list')).toEqual({
-      exitCode: 0,
-      output:
-        '╭─ KI TRADE ROUTES\n╭──────────────────┬─────────────────────────────────────────┬────────────────╮\n│ example/receiver │ → —                                     │ example/source │\n│                  ├─────────────────────────────────────────┤                │\n│                  │ ← ⚒ work [awaiting receiver activation] │                │\n╰──────────────────┴─────────────────────────────────────────┴────────────────╯\nsummary: ROUTES=1 ACTIVE=0 INCOMPLETE=1\n'
-    })
+    const invalidSelection = await box.run('ki repo --estate trade routes list')
+    expect(invalidSelection.exitCode).toBe(2)
+    expect(invalidSelection.stdout).toBe('')
+    expect(invalidSelection.stderr).toContain('capital must name the territory Capital')
   })
 
   test('states a trading member whose Capital is unavailable in every aggregate view instead of dropping it', async () => {

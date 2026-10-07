@@ -463,7 +463,7 @@ describe('[ki repo roadmap]', () => {
     const box = await sandbox()
     await box.project.write(
       'repo/.ki.toml',
-      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/repo"\n'
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/repo"\ncapital = "https://github.com/example/capital"\n'
     )
     await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item({ blocked_by: '[KI-OTHER-999]' }))
     await box.project.write(
@@ -490,7 +490,7 @@ describe('[ki repo roadmap]', () => {
     const accepted = await box.run('ki repo --repo repo roadmap list --status awaiting-review')
     const done = await box.run('ki repo --repo repo roadmap list --status done')
     const empty = await box.run('ki repo --repo repo roadmap list --horizon now')
-    const agora = await box.run('ki repo --agora estate roadmap list --status awaiting-review')
+    const territory = await box.run('ki repo --estate roadmap list --status awaiting-review')
     const format = await box.run('ki repo --repo repo roadmap list --format json')
     const invalidFormat = await box.run('ki repo --repo repo roadmap list --format yaml')
 
@@ -502,7 +502,7 @@ describe('[ki repo roadmap]', () => {
     expect(accepted.output).toContain('summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0')
     expect(done.output).toContain('summary: ITEMS=1 NOW=0 NOT_DONE=0 DONE=1')
     expect(accepted.output).not.toContain('KI-TOOL-CLI-003')
-    expect(agora.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
+    expect(territory.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
     expect(empty.output).toContain('├─ roadmap (0)\n├─ trades (0)')
     expect(empty.output).toContain('summary: ITEMS=0 NOW=0 NOT_DONE=0 DONE=0')
     expect(empty.output).not.toContain('items: none')

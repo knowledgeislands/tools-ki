@@ -11,7 +11,11 @@ import {
 
 export const createRepoDiagCommand = (
   context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
+  selectedRepositories: () => {
+    readonly repositories: readonly string[]
+    readonly territory?: string
+    readonly filters?: readonly string[]
+  }
 ): Command =>
   new Command('diag').description('report declared repository skill and projection health').action(async () => {
     const repositories = await resolveRepositoryTargets({

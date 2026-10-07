@@ -1,6 +1,5 @@
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
-import { type OpenTargetName, openLocalTarget, openTargetNames } from '../../core/agora/index.ts'
 import {
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
@@ -13,6 +12,7 @@ import {
   inspectLocalRegistry,
   registeredKnowledgeBaseStoreRoots
 } from '../../core/storage/index.ts'
+import { type OpenTargetName, openLocalTarget, openTargetNames } from '../../core/territory/index.ts'
 
 interface OpenOptions {
   readonly target: OpenTargetName
@@ -29,7 +29,11 @@ const supplied = (command: Command, option: string): boolean => {
 
 export const createRepoOpenCommand = (
   context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
+  selectedRepositories: () => {
+    readonly repositories: readonly string[]
+    readonly territory?: string
+    readonly filters?: readonly string[]
+  }
 ): Command =>
   new Command('open')
     .description('open selected repositories through an explicit local target')

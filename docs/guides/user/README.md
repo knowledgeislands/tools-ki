@@ -8,7 +8,7 @@ If `ki` is not yet on this machine, or you have never run it, read these three i
 
 1. [Install ki and run it for the first time](getting-started.md) — install a signed release, create the user environment with `ki bootstrap`, and register your first repository.
 2. [Install harnesses and activate their skills](capability-lifecycle.md) — where capabilities come from, and the difference between installing a harness and activating one of its skills in user or repository scope.
-3. [Audit and conform repositories](repository-operations.md) — selecting targets with `--repo`, `--agora`, and `--estate`, reading an audit, and applying a conform safely.
+3. [Audit and conform repositories](repository-operations.md) — selecting targets with `--repo`, `--territory`, and `--estate`, reading an audit, and applying a conform safely.
 
 ## Keep it working
 
@@ -23,7 +23,7 @@ If `ki` is not yet on this machine, or you have never run it, read these three i
 
 ## Govern work across repositories
 
-- [Associate external Agora references](agora-references.md) — connect ordinary Git checkouts to an Agora working set without turning them into KI members.
+- [Select territories and the estate](territory-selection.md) - discover Capital handles, narrow literal directory basenames and consume atomic roots.
 - [Canonical batch records](batch-records.md) — prepare, bind, record, and close exact-set batch authority envelopes over already-approved work.
 - [Repository-local governance](repository-local-governance.md) — declare and run a repository-owned `ki-self` capability.
 

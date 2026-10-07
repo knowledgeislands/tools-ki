@@ -4,7 +4,7 @@ import type { RubricContextOptions, RubricPublication, RubricSession } from '../
 
 export const SELF_SOURCE_PATHS = [
   'src/agents/bootstrap.ts',
-  'src/commands/agora/list.ts',
+  'src/commands/territory/index.ts',
   'src/commands/manage/diag.ts',
   'src/commands/manage/list.ts',
   'src/commands/manage/repair.ts',

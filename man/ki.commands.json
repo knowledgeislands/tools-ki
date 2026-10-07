@@ -35,7 +35,7 @@
       "commands": [
         {
           "invocation": "ki bootstrap",
-          "description": "Create the user-managed KI environment configuration from detected supported agents, install the built-in verified canonical harness, then install the core user skills — ki-bootstrap , ki-next , ki-plan , and ki-recap — into every configured agent's user skill directory. An existing agent configuration is reused without replacement. Pass --refresh to redetect every supported runtime and rebuild the user configuration's agents, installed harnesses, and KI-managed user skill links. When the canonical harness is in local development, bootstrap keeps that binding and installs the core user skills from the local checkout. If the binding cannot be kept, it prints a warning naming the reason before restoring the verified archive and re-pointing the configured canonical skills to it. During a refresh only, KI imports the retired [repositories].paths list into keyed records in $XDG_STATE_HOME/ki/registry.toml and removes that list from user configuration. Normal repository, trade, and Agora resolution never reads the retired path list."
+          "description": "Create the user-managed KI environment configuration from detected supported agents, install the built-in verified canonical harness, then install the core user skills — ki-bootstrap , ki-next , ki-plan , and ki-recap — into every configured agent's user skill directory. An existing agent configuration is reused without replacement. Pass --refresh to redetect every supported runtime and rebuild the user configuration's agents, installed harnesses, and KI-managed user skill links. When the canonical harness is in local development, bootstrap keeps that binding and installs the core user skills from the local checkout. If the binding cannot be kept, it prints a warning naming the reason before restoring the verified archive and re-pointing the configured canonical skills to it. During a refresh only, KI imports the retired [repositories].paths list into keyed records in $XDG_STATE_HOME/ki/registry.toml and removes that list from user configuration. Normal repository, trade, and Territory resolution never reads the retired path list."
         }
       ]
     },
@@ -140,12 +140,16 @@
           "description": "Repeat this option to select literal repository roots or patterns in supplied order. KI resolves every target physically before an operation begins and rejects unmatched patterns, invalid roots, and duplicate physical roots."
         },
         {
-          "invocation": "--agora <name>",
-          "description": "Select every member of one declared named Agora, or every registered canonical repository through the reserved estate selector. This option, --repo, and --estate are mutually exclusive. Each member must be a physical KI repository. With neither selector, KI checks a regular direct-CWD .mgit.toml manifest. An unversioned workspace selects direct members; an existing schema-one workspace selects its configured group. Both recurse through child workspaces, follow standard and nested repositories, and skip bare stores. Existing physical members without .ki.toml are skipped and named by ki repo audit in normal and concise output. Missing or unsafe checkouts, unsafe or invalid KI declarations, and selections with no KI repositories fail. A repository manifest falls through to ordinary single-repository discovery. KI never searches ancestor directories for an mGit manifest or invokes mgit."
+          "invocation": "-t, --territory <handle>",
+          "description": "Select the Capital's declared territory through its territory_prefix, or its registry key when no prefix is declared. The registry maps every canonical member identity before filtering. This scope conflicts with --repo and --estate."
         },
         {
           "invocation": "--estate",
-          "description": "Select every repository in the registered estate. This is shorthand for --agora estate and is mutually exclusive with --repo and --agora."
+          "description": "Select every repository in the registered estate, conflicting with --repo and --territory. Without an explicit scope, keep the current repository or direct-CWD \\&.mgit.toml workspace selection. KI does not invoke mgit."
+        },
+        {
+          "invocation": "-f, --filter <prefix>",
+          "description": "Repeat literal, case-sensitive non-empty directory-name prefixes with OR semantics to narrow any scope, including the native default. Filter before worktree expansion. Missing registration and ambiguous identity fail before filtering; unavailable selected roots or no matches fail before an operation. An excluded registered unavailable checkout does not prevent the remaining operations."
         }
       ]
     },
@@ -155,11 +159,11 @@
       "commands": [
         {
           "invocation": "ki repo init [directory] --repository <https-url> --capital <https-url> --title <title> --description <description> --repo-code <code> --runtime <runtime>... --visibility <public|private>",
-          "description": "Initialize exactly one existing physical Git worktree root. With no directory, it uses the current directory; an explicit directory must be that worktree's root and must not be a symbolic link. Every identity value is required: --title, --description, a stable uppercase --repo-code, canonical HTTPS GitHub --repository, one or more --runtime values selected from claude-code and chatgpt-codex, and --visibility public|private. It atomically creates the minimal canonical ki-repo declaration and A required --capital names the territory Capital; a Capital names itself and then also receives territory_name and territory_members in [skills.ki-repo], listing itself as the first member. Further members must be kept sorted ascending in code-point order; an unsorted list is rejected. registers the physical root in $XDG_STATE_HOME/ki/registry.toml. It never runs git init, guesses identity, activates repository skills, creates a Agora, accepts repository selectors, or overwrites an existing .ki.toml."
+          "description": "Initialize exactly one existing physical Git worktree root. With no directory, it uses the current directory; an explicit directory must be that worktree's root and must not be a symbolic link. Every identity value is required: --title, --description, a stable uppercase --repo-code, canonical HTTPS GitHub --repository, one or more --runtime values selected from claude-code and chatgpt-codex, and --visibility public|private. It atomically creates the minimal canonical ki-repo declaration and A required --capital names the territory Capital; a Capital names itself and then also receives territory_name and territory_members in [skills.ki-repo], listing itself as the first member. Further members must be kept sorted ascending in code-point order; an unsorted list is rejected. registers the physical root in $XDG_STATE_HOME/ki/registry.toml. It never runs git init, guesses identity, activates repository skills, creates a Territory, accepts repository selectors, or overwrites an existing .ki.toml."
         },
         {
           "invocation": "ki repo [repo-options] open --target <zed|vscode|delta> [--stores|--no-stores]",
-          "description": "Open every selected canonical repository in the requested local target. By default, a Knowledge Base opens its notes root followed by every declared, locally bound external store in declaration order. Each binding must be a direct directory recorded with the canonical repository; it is never made an estate member or Agora participant. --no-stores opens canonical notes roots only, while --stores makes the default explicit. Delta opens repository roots only; it skips stores by default and rejects --stores. Delta's documented project flow stores repository and thread data on its servers even when using a local model."
+          "description": "Open every selected canonical repository in the requested local target. By default, a Knowledge Base opens its notes root followed by every declared, locally bound external store in declaration order. Each binding must be a direct directory recorded with the canonical repository; it is never made an estate member or territory participant. --no-stores opens canonical notes roots only, while --stores makes the default explicit. Delta opens repository roots only; it skips stores by default and rejects --stores. Delta's documented project flow stores repository and thread data on its servers even when using a local model."
         },
         {
           "invocation": "ki repo [repo-options] audit [--skill <skill>] [--progress <auto|always|never>] [--progress-style <single|multi>] [--reporter-levels <levels|all>]",
@@ -288,7 +292,7 @@
       "purpose": "Use these root-level commands to record and list canonical KI repository roots in $XDG_STATE_HOME/ki/registry.toml. Registry membership is an inventory, not a repository-operation or conformance verdict. The repository key names each record; each record holds a canonical HTTPS GitHub repository identity and physical checkout path.",
       "commands": [
         {
-          "invocation": "ki registry [--repo <path-or-pattern>]... [--agora <name>] [--estate] add [--dry-run] [--search-boundary <id>]",
+          "invocation": "ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [-f|--filter <prefix>]... add [--dry-run] [--search-boundary <id>]",
           "description": "Record selected canonical KI repository roots in $XDG_STATE_HOME/ki/registry.toml without applying repository repairs. This explicit inventory action validates the selected root's declared canonical identity and preserves existing entries. It never searches outside the supplied target selection. The command writes by default; --dry-run reports proposed registration without creating the state directory or changing disk state."
         },
         {
@@ -333,7 +337,7 @@
     },
     {
       "name": "Trades",
-      "purpose": "Use these commands with repositories that declare the portable ki-repo-trades capability and are present in the local registered repository estate. Routes and standing grants come only from the territory Capital's [skills.ki-trades.territory] policy, resolved through each repository's declared [skills.ki-repo].capital; no command edits that policy, and a member declaration carries no route table. Parent --repo, --agora, and --estate selectors scope reads; mutations require exactly one selected registered repository. Every mutation writes only the selected repository, a granted route gives visibility rather than acceptance or retention, and no command changes a peer roadmap or knowledge. A repository that declares ki-trades but whose Capital does not resolve is never dropped silently. Aggregate routes list and trade list views, and policy compare, print skipped: <identity> (<reason>) for it and add SKIPPED=n to the summary; under --format json, and for trade show, the line is written to standard error so standard output is unchanged. Selected alone, such a repository fails closed with the reason.",
+      "purpose": "Use these commands with repositories that declare the portable ki-repo-trades capability and are present in the local registered repository estate. Routes and standing grants come only from the territory Capital's [skills.ki-trades.territory] policy, resolved through each repository's declared [skills.ki-repo].capital; no command edits that policy, and a member declaration carries no route table. Parent --repo, --territory, and --estate selectors scope reads; mutations require exactly one selected registered repository. Every mutation writes only the selected repository, a granted route gives visibility rather than acceptance or retention, and no command changes a peer roadmap or knowledge. A repository that declares ki-trades but whose Capital does not resolve is never dropped silently. Aggregate routes list and trade list views, and policy compare, print skipped: <identity> (<reason>) for it and add SKIPPED=n to the summary; under --format json, and for trade show, the line is written to standard error so standard output is unchanged. Selected alone, such a repository fails closed with the reason.",
       "commands": [
         {
           "invocation": "ki repo [repo-options] trade routes list [--incomplete] [--format text|json]",
@@ -365,7 +369,7 @@
         },
         {
           "invocation": "ki repo [repo-options] trade standing capture <repository> --subtype <subtype> --source-ref <commit:path#anchor> --capture <path#anchor>",
-          "description": "From the receiver repository, append one marked ki-trades/standing-intake/v1 TOML provenance block to an existing local Markdown file. The command requires an active exact standing import, a full source commit, and a source path that resolves in the locally registered source checkout. It never writes to the source repository. Standing intake grants no roadmap, publication, implementation, acceptance, completion, Agora, or peer-write authority; use an itemized knowledge trade when the exact standing contract does not fit."
+          "description": "From the receiver repository, append one marked ki-trades/standing-intake/v1 TOML provenance block to an existing local Markdown file. The command requires an active exact standing import, a full source commit, and a source path that resolves in the locally registered source checkout. It never writes to the source repository. Standing intake grants no roadmap, publication, implementation, acceptance, completion, Territory, or peer-write authority; use an itemized knowledge trade when the exact standing contract does not fit."
         },
         {
           "invocation": "ki repo [repo-options] trade prepare <repository> --kind work|knowledge --observation unattended|receipt|decision|completion --title <title> --source-ref <reference> --context <text> --submission <text> --constraints <text>",
@@ -406,44 +410,32 @@
       ]
     },
     {
-      "name": "Agora management",
-      "purpose": "Named Agoras are declared by registered owner repositories under [skills.ki-agora.<id>] with a required single-line title that is shown to people; the identifier remains the only selector and machine key. The owner lists direct members; members need no Agora declaration. Optional includes entries add another Agora's owner and direct members or one repository to the working set without membership. KI deduplicates and orders projected roots alphabetically by registry key. estate is the reserved selector for all locally registered canonical KI repositories.",
+      "name": "Territory management",
+      "purpose": "Territories derive membership from registered Capital declarations. Use the Capital's territory_prefix handle, or its registry key when no prefix exists. Exactly one of --territory and --estate is required for scoped commands. Repeated --filter values match directory basenames literally and case-sensitively.",
       "commands": [
         {
-          "invocation": "ki agora list",
-          "description": "List declared named Agoras with their titles, and the registered estate. The declaring owner is not counted among direct members. The estate counts registered repositories; REGISTERED_REPOSITORIES is that deduplicated total. Resolved and unresolved inclusions have separate counts."
+          "invocation": "ki territory list",
+          "description": "List registered territory handles, titles, Capitals and declared member counts."
         },
         {
-          "invocation": "ki agora audit [name]",
-          "description": "Audit every declared Agora, one named Agora, or the registered estate without changing repository or registry state. Exit 0 when healthy, 1 when findings are reported, and 2 for an invalid or unknown explicit selector."
+          "invocation": "ki territory audit (--territory <handle>|--estate) [--filter <prefix>]...",
+          "description": "Validate the complete selection and its physical checkouts without mutation."
         },
         {
-          "invocation": "ki agora inspect <name> --target <zed|vscode> --workspace <selector>",
-          "description": "Compare one explicitly selected local editor workspace with a resolved Agora. VS Code selectors are absolute physical .code-workspace files; Zed selectors are decimal workspace IDs. Read-only. Exit 0 for exact, 1 for drift or an unsupported source, and 2 for invalid selection or resolution."
+          "invocation": "ki territory inspect (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode> --workspace <selector>",
+          "description": "Compare selected roots with one explicit local editor projection. Exit 0 for exact state, 1 for drift or unsupported source, and 2 for invalid selection."
         },
         {
-          "invocation": "ki agora show <name> [--verbose]",
-          "description": "Show one declared Agora with its title, owner, direct members, resolved inclusions, and unresolved-inclusion diagnostics in separate sections. The estate lists registered repositories without a home. --verbose also shows canonical repository URLs and local paths, including the home's path."
+          "invocation": "ki territory show (--territory <handle>|--estate) [--filter <prefix>]... [--verbose]",
+          "description": "Show selected repositories, optionally with canonical identities and paths."
         },
         {
-          "invocation": "ki agora roots <name> [--null]",
-          "description": "Write absolute physical roots for machine consumption. The default format is newline-delimited. Use --null or -0 for pathnames that may contain line feeds."
+          "invocation": "ki territory roots (--territory <handle>|--estate) [--filter <prefix>]... [--null]",
+          "description": "Write deterministic absolute primary checkout roots. Use --null or -0 for NUL termination. Validate the complete selection before writing any stdout bytes."
         },
         {
-          "invocation": "ki agora open <name> --target <zed|vscode|delta>",
-          "description": "Open one declared Agora or the registered estate through an explicit local target. For a named Agora in Zed, add its owner last so the sidebar shows it first; the estate and VS Code keep canonical projection order. Delta opens each repository in its running app. Its documented project flow stores repository and thread data on its servers even with a local model."
-        },
-        {
-          "invocation": "ki agora reference set <repository> <checkout> [--dry-run]",
-          "description": "Associate one owner-declared repository inclusion with an explicitly selected absolute local Git checkout whose canonical origin matches. The operation never registers, clones, or mutates the included repository."
-        },
-        {
-          "invocation": "ki agora reference list",
-          "description": "List machine-local external Agora reference associations."
-        },
-        {
-          "invocation": "ki agora reference remove <repository> [--dry-run]",
-          "description": "Remove only the selected machine-local reference association."
+          "invocation": "ki territory open (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode|delta>",
+          "description": "Open the selected repositories through an explicit existing local adapter."
         }
       ]
     },

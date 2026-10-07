@@ -45,7 +45,8 @@ import { type RoadmapStatistics, roadmapStatistics } from './statistics.ts'
 
 export interface RoadmapSelection {
   readonly repositories: readonly string[]
-  readonly agora?: string
+  readonly territory?: string
+  readonly filters?: readonly string[]
   readonly estate?: boolean
 }
 

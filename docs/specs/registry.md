@@ -36,7 +36,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REGISTRY-004 — Registered-estate selector
 
-`ki registry --estate <operation>` MUST select the same repositories as `ki registry --agora estate <operation>`.
+`ki registry --estate add` MUST resolve the registered estate; `--territory <handle>` MUST resolve the Capital's membership. Repeated literal `--filter <prefix>` values MUST narrow the selected basenames before root validation. `list` and `remove` MUST reject selectors they cannot apply, and removal MUST retain its exactly-one key or path contract.
 
 _Conformance:_ conforming
 

@@ -1,6 +1,6 @@
 # Search one Knowledge Base
 
-The `ki kb` commands use a rebuildable derived search cache for one explicitly registered Knowledge Base. qmd is the local implementation engine; original notes remain the knowledge authority. Each KB has an independent named index and an explicitly assigned trust boundary. A caller alias, checkout path or Agora membership does not assign that boundary.
+The `ki kb` commands use a rebuildable derived search cache for one explicitly registered Knowledge Base. qmd is the local implementation engine; original notes remain the knowledge authority. Each KB has an independent named index and an explicitly assigned trust boundary. A caller alias, checkout path or Territory membership does not assign that boundary.
 
 ## Register and assign
 

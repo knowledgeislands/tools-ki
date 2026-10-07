@@ -22,7 +22,11 @@ import { describeRepositoryProjection, inspectRepositoryHealth } from './shared/
 
 export const createRepairCommand = (
   context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
+  selectedRepositories: () => {
+    readonly repositories: readonly string[]
+    readonly territory?: string
+    readonly filters?: readonly string[]
+  }
 ): Command =>
   new Command('repair')
     .description('reconcile KI-managed projections by default; --dry-run previews without writing')

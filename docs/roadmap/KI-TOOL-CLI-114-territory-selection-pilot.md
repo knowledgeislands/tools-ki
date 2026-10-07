@@ -6,12 +6,12 @@ kind: deliver
 purpose: capability
 initiative: knowledge-islands-model
 horizon: now
-status: ready
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 72f64238841d790571de63d9f7be57ba23322449
 created_at: 2026-10-07T20:17:07Z
-updated_at: 2026-10-07T20:18:59Z
+updated_at: 2026-10-07T21:03:00Z
 ---
 
 # Territory selection pilot
@@ -34,11 +34,11 @@ KI uses Agora selection and qualified Capital registry keys; the new contract de
 
 ## Steps
 
-- [ ] Establish the territory resolver using canonical membership and complete registered identity-to-checkout mapping.
-- [ ] Add shared -t/--territory, --estate and -f/--filter selectors to supported KI operations, rejecting ignored or conflicting options.
-- [ ] Expose ki territory roots --null with atomic complete output and migrate opening, observation and discovery consumers.
-- [ ] Retire executable Agora command grammar, declarations and unused reference-selection machinery, preserving historic state without reading it as membership.
-- [ ] Prove the pilot and failure boundaries through the public in-process CLI seam, retaining 100% product coverage.
+- [x] Establish the territory resolver using canonical membership and complete registered identity-to-checkout mapping.
+- [x] Add shared -t/--territory, --estate and -f/--filter selectors to supported KI operations, rejecting ignored or conflicting options.
+- [x] Expose ki territory roots --null with atomic complete output and migrate opening, observation and discovery consumers.
+- [x] Retire executable Agora command grammar, declarations and unused reference-selection machinery, preserving historic state without reading it as membership.
+- [x] Prove the pilot and failure boundaries through the public in-process CLI seam, retaining 100% product coverage.
 - [ ] Update help, completion, manual, inventory, guides, specifications and changelog, and prepare the next pre-1.0 minor release.
 
 ## Files touched

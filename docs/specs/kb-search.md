@@ -8,7 +8,7 @@ Generated model settings use absolute already-provisioned GGUF paths under `mode
 
 ### KB-SEARCH-001 — Explicit isolated assignment
 
-Each searchable Knowledge Base MUST have one stable local registry key and an explicitly assigned, unique `search_boundary`. Indexing MUST reject absent, invalid, shared or contradictory assignments; repository paths, caller aliases, basenames and Agora membership MUST NOT supply authority. `ki registry add --search-boundary <id>` assigns exactly one selected registered KB and preserves its identity and store bindings. The generated named index is `ki-kb-<registry-key>` and contains only that KB.
+Each searchable Knowledge Base MUST have one stable local registry key and an explicitly assigned, unique `search_boundary`. Indexing MUST reject absent, invalid, shared or contradictory assignments; repository paths, caller aliases, basenames and Territory membership MUST NOT supply authority. `ki registry add --search-boundary <id>` assigns exactly one selected registered KB and preserves its identity and store bindings. The generated named index is `ki-kb-<registry-key>` and contains only that KB.
 
 _Conformance:_ conforming
 

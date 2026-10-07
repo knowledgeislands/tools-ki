@@ -5,7 +5,11 @@ import { resolveRepositoryTargets } from '../../core/repository/index.ts'
 
 export const createRepoSkillCommand = (
   context: KiContext,
-  selectedRepositories: () => { readonly repositories: readonly string[]; readonly agora?: string }
+  selectedRepositories: () => {
+    readonly repositories: readonly string[]
+    readonly territory?: string
+    readonly filters?: readonly string[]
+  }
 ): Command =>
   new Command('skill')
     .description('manage KI-managed skills in one or more repositories')

@@ -1,7 +1,7 @@
 /** Root command families; Commander sorts the complete help inventory. */
 export const rootCommandNames = [
   'acquire',
-  'agora',
+  'territory',
   'bootstrap',
   'dev',
   'harness',

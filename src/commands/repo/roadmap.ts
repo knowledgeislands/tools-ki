@@ -47,7 +47,8 @@ interface RoadmapOptions {
 
 type RepositorySelection = () => {
   readonly repositories: readonly string[]
-  readonly agora?: string
+  readonly territory?: string
+  readonly filters?: readonly string[]
   readonly estate?: boolean
 }
 

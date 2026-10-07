@@ -2,16 +2,18 @@ import { readFile } from 'node:fs/promises'
 import { parse } from 'smol-toml'
 import { isRecord } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
+import {
+  isCanonicalRepository,
+  isLowerHyphenIdentifier,
+  repositoryList,
+  skillTable,
+  territoryDeclarationFrom
+} from '../territory/declaration.ts'
+
+export { claimedRepository } from '../territory/declaration.ts'
 
 const TRADES_TABLE = 'skills.ki-trades'
-const REPOSITORY_TABLE = 'skills.ki-repo'
 const POLICY_TABLE = `${TRADES_TABLE}.territory`
-const RETIRED_TERRITORY_TABLE = `${REPOSITORY_TABLE}.territory`
-const TERRITORY_NAME = `[${REPOSITORY_TABLE}].territory_name`
-const TERRITORY_MEMBERS = `[${REPOSITORY_TABLE}].territory_members`
-const repositoryExpression =
-  /^https:\/\/github\.com\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)$/
-const identifierExpression = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 
 export const tradeKinds = ['work', 'knowledge'] as const
 
@@ -76,19 +78,13 @@ export interface RepositoryDeclaration {
   readonly policy?: TerritoryPolicy
 }
 
-/** One skill's table under the `[skills]` namespace, or undefined where the file declares neither. */
-const skillTable = (parsed: Record<string, unknown>, name: string): unknown => {
-  const skills = parsed['skills']
-  return isRecord(skills) ? skills[name] : undefined
-}
-
 const tradeError = (message: string): KiError => new KiError(message, 2)
 
-export const isTradeRepository = (value: string): boolean => repositoryExpression.test(value)
+export const isTradeRepository = (value: string): boolean => isCanonicalRepository(value)
 
 export const isTradeKind = (value: string): value is TradeKind => tradeKinds.includes(value as TradeKind)
 
-export const isKnowledgeSubtype = (value: string): boolean => identifierExpression.test(value)
+export const isKnowledgeSubtype = (value: string): boolean => isLowerHyphenIdentifier(value)
 
 export const isObservationPolicy = (value: string): value is ObservationPolicy =>
   observationPolicies.includes(value as ObservationPolicy)
@@ -102,38 +98,11 @@ const mapBonus = (value: unknown, path: string): number => {
   return value as number
 }
 
-const repositoryList = (value: unknown, label: string): readonly string[] => {
-  if (
-    !Array.isArray(value) ||
-    !value.length ||
-    value.some((entry) => typeof entry !== 'string' || !isTradeRepository(entry))
-  )
-    throw tradeError(`${label} must be a non-empty array of canonical HTTPS GitHub repositories`)
-  const entries = value as string[]
-  if (new Set(entries).size !== entries.length) throw tradeError(`${label} must not repeat a repository`)
-  return entries
-}
-
 const exactKeys = (value: Record<string, unknown>, keys: readonly string[], label: string): void => {
   const unknown = Object.keys(value).find((key) => !keys.includes(key))
   if (unknown) throw tradeError(`${label} has unrecognised key ${unknown}`)
   const missing = keys.find((key) => !(key in value))
   if (missing) throw tradeError(`${label} must declare ${missing}`)
-}
-
-const parseTerritory = (
-  declaration: Record<string, unknown>,
-  path: string,
-  repository: string
-): { readonly name: string; readonly members: readonly string[] } => {
-  const name = declaration['territory_name']
-  if (typeof name !== 'string' || !name.trim()) throw tradeError(`${path} ${TERRITORY_NAME} must be a non-empty string`)
-  const members = repositoryList(declaration['territory_members'], `${path} ${TERRITORY_MEMBERS}`)
-  // Code-point order, not locale collation, so every reader agrees on one canonical listing.
-  if (!members.every((member, index) => index === 0 || (members[index - 1] as string) < member))
-    throw tradeError(`${path} ${TERRITORY_MEMBERS} must be sorted ascending`)
-  if (!members.includes(repository)) throw tradeError(`${path} ${TERRITORY_MEMBERS} must include the Capital itself`)
-  return { name, members }
 }
 
 const parseSubtypes = (value: unknown, path: string): Readonly<Record<string, string>> => {
@@ -178,7 +147,7 @@ const parseChannels = (value: unknown, path: string, members: readonly string[])
     const label = `${path} channel ${typeof entry['id'] === 'string' ? entry['id'] : `#${channels.length + 1}`}`
     exactKeys(entry, ['id', 'purpose', 'from', 'to', 'kinds'], label)
     const id = entry['id']
-    if (typeof id !== 'string' || !identifierExpression.test(id))
+    if (typeof id !== 'string' || !isLowerHyphenIdentifier(id))
       throw tradeError(`${label} id must use a lower-case hyphenated identifier`)
     if (channels.some((channel) => channel.id === id)) throw tradeError(`${label} id is declared twice`)
     const purpose = entry['purpose']
@@ -276,33 +245,10 @@ const parseTrades = (
   return { mapBonus: mapBonus(value['map_bonus'], path), policy: value['territory'] }
 }
 
-/** The canonical `[skills.ki-repo].repository` a parsed declaration claims, even where the rest is invalid. */
-export const claimedRepository = (document: Record<string, unknown>): string | undefined => {
-  const declaration = skillTable(document, 'ki-repo')
-  const repository = isRecord(declaration) ? declaration['repository'] : undefined
-  return typeof repository === 'string' && isTradeRepository(repository) ? repository : undefined
-}
-
 /** Validates the trade-relevant facts of an already parsed `.ki.toml` document. */
 export const repositoryDeclarationFrom = (document: Record<string, unknown>, path: string): RepositoryDeclaration => {
-  const repository = claimedRepository(document)
-  if (!repository)
-    throw tradeError(`${path} [${REPOSITORY_TABLE}].repository must use canonical HTTPS GitHub repository form`)
-  const declaration = skillTable(document, 'ki-repo') as Record<string, unknown>
-  const capital = declaration['capital']
-  if (typeof capital !== 'string' || !isTradeRepository(capital))
-    throw tradeError(`${path} [${REPOSITORY_TABLE}].capital must name the territory Capital in canonical HTTPS form`)
+  const { repository, capital, territory } = territoryDeclarationFrom(document, path)
   const isCapital = capital === repository
-  if (declaration['territory'] !== undefined)
-    throw tradeError(
-      `${path} [${RETIRED_TERRITORY_TABLE}] is retired; move its name and members to ${TERRITORY_NAME} and ${TERRITORY_MEMBERS}, then remove the table`
-    )
-  const declared = declaration['territory_name'] !== undefined || declaration['territory_members'] !== undefined
-  if (!isCapital && declared)
-    throw tradeError(`${path} ${TERRITORY_NAME} and ${TERRITORY_MEMBERS} are permitted only in a territory Capital`)
-  if (isCapital && !declared)
-    throw tradeError(`${path} is a territory Capital and must declare ${TERRITORY_NAME} and ${TERRITORY_MEMBERS}`)
-  const territory = isCapital ? parseTerritory(declaration, path, repository) : undefined
   const trades = parseTrades(skillTable(document, 'ki-trades'), path, isCapital)
   return {
     repository,

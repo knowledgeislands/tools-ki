@@ -33,7 +33,7 @@ afterEach(() => {
 })
 
 const declaration = (name: string, kind: 'project' | 'kb', roles = ['notes']): string =>
-  `[repo]\nharnesses = ["example/harness"]\n\n[skills.${kind === 'kb' ? 'ki-repo-kb' : 'ki-repo-project'}]\n\n[skills.ki-repo]\nrepo_type = "${kind}"\nprimary_shape = "${kind === 'kb' ? 'ki-repo-kb' : 'ki-repo-project'}"\nrepository = "https://github.com/example/${name}"\n${kind === 'kb' ? `store_roles = ${JSON.stringify(roles)}\n` : ''}`
+  `[repo]\nharnesses = ["example/harness"]\n\n[skills.${kind === 'kb' ? 'ki-repo-kb' : 'ki-repo-project'}]\n\n[skills.ki-repo]\nrepo_type = "${kind}"\nprimary_shape = "${kind === 'kb' ? 'ki-repo-kb' : 'ki-repo-project'}"\nrepository = "https://github.com/example/${name}"\ncapital = "https://github.com/example/capital"\n${kind === 'kb' ? `store_roles = ${JSON.stringify(roles)}\n` : ''}`
 
 const registry = (entries: readonly { name: string; path: string }[]): string =>
   `schema = 1\n${entries

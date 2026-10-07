@@ -15,14 +15,25 @@ export const createRegistryCommand = (context: KiContext): Command => {
       (value: string, previous: readonly string[] = []) => [...previous, value],
       []
     )
-    .option('--agora <name>', 'declared named Agora or the registered estate')
+    .option('-t, --territory <handle>', 'select a registered territory')
+    .option(
+      '-f, --filter <prefix>',
+      'literal directory-name prefix (repeatable alternatives)',
+      (value: string, previous: readonly string[] = []) => [...previous, value],
+      []
+    )
     .option('--estate', 'select every repository in the registered estate')
   const selectedRepositories = (): RegistrySelection => {
-    const options = command.opts<{ repo: readonly string[]; agora?: string; estate?: boolean }>()
-    return { repositories: options.repo, agora: options.agora, estate: options.estate }
+    const options = command.opts<{
+      repo: readonly string[]
+      territory?: string
+      filter?: readonly string[]
+      estate?: boolean
+    }>()
+    return { repositories: options.repo, territory: options.territory, filters: options.filter, estate: options.estate }
   }
   return command
     .addCommand(createRegistryAddCommand(context, selectedRepositories))
-    .addCommand(createRegistryListCommand(context))
+    .addCommand(createRegistryListCommand(context, selectedRepositories))
     .addCommand(createRegistryRemoveCommand(context, selectedRepositories))
 }

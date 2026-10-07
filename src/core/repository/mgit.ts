@@ -2,6 +2,7 @@ import { lstat, readFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
 import { parse } from 'smol-toml'
 import { KiError } from '../errors.ts'
+import { matchesDirectoryName } from '../territory/filters.ts'
 import { inspectRepositoryDeclarationState, repositoryDeclarationError } from './declaration.ts'
 import { physicalDirectory, type RepositoryLocation } from './location.ts'
 
@@ -183,13 +184,14 @@ const readManifest = async (directory: string): Promise<MgitManifest | undefined
 const resolveWorkspace = async (
   directory: string,
   manifest: WorkspaceManifest,
+  filters: readonly string[],
   prefix = ''
 ): Promise<WorkspaceTargets> => {
   const repositories: RepositoryLocation[] = []
   const skipped: string[] = []
   for (const member of manifest.members) {
     if (member.kind === 'repository') {
-      if (member.type === 'bare') continue
+      if (member.type === 'bare' || !matchesDirectoryName(member.path, filters)) continue
       const checkout = member.type === 'nested' ? join(directory, member.path, 'main') : join(directory, member.path)
       const root = await physicalDirectory(checkout, `${manifest.path} has invalid repository member ${member.path}`)
       const declaration = await inspectRepositoryDeclarationState(root)
@@ -216,15 +218,18 @@ const resolveWorkspace = async (
         manifest.path,
         `child workspace ${member.path} must contain workspace-kind ${MGIT_MANIFEST_FILE}`
       )
-    const nested = await resolveWorkspace(child, childManifest, join(prefix, member.path))
+    const nested = await resolveWorkspace(child, childManifest, filters, join(prefix, member.path))
     repositories.push(...nested.repositories)
     skipped.push(...nested.skipped)
   }
   return { repositories, skipped }
 }
 
-export const repositoriesFromMgitManifest = async (directory: string): Promise<WorkspaceTargets | undefined> => {
+export const repositoriesFromMgitManifest = async (
+  directory: string,
+  filters: readonly string[] = []
+): Promise<WorkspaceTargets | undefined> => {
   const manifest = await readManifest(directory)
   if (!manifest || manifest.kind === 'repository') return undefined
-  return resolveWorkspace(directory, manifest)
+  return resolveWorkspace(directory, manifest, filters)
 }

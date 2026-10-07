@@ -50,7 +50,8 @@ export interface RepositoryOperationContext {
 
 export interface RepositorySelection {
   readonly repositories: readonly string[]
-  readonly agora?: string
+  readonly territory?: string
+  readonly filters?: readonly string[]
   readonly estate?: boolean
   readonly skill?: string
   readonly onSkippedMgitMembers?: (members: readonly string[]) => void

@@ -25,6 +25,9 @@ const declaration = (repository?: string, capital?: string, components?: readonl
     'primary_shape = "ki-repo-project"',
     ...(repository ? [`repository = ${JSON.stringify(repository)}`] : []),
     ...(capital ? [`capital = ${JSON.stringify(capital)}`] : []),
+    ...(repository && capital === repository
+      ? ['territory_name = "Example territory"', `territory_members = ${JSON.stringify([repository])}`]
+      : []),
     ''
   ].join('\n')
 
@@ -514,10 +517,10 @@ describe('[ki repo roadmap list --by]', () => {
     expect(project).toContain('project member/host (1)')
     expect(project).toContain('KI-TOOL-CLI-004: project other/ghost is not in the registry')
     expect(project).toContain(
-      'territory nowhere registry unavailable: territory nowhere is not in the local ki registry'
+      'territory nowhere registry unavailable: territory nowhere is not declared by a registered Capital'
     )
     expect(project).toContain(
-      'territory member registry unavailable: territory member is not a registered Capital checkout'
+      'territory member registry unavailable: territory member is not declared by a registered Capital'
     )
     expect(project).toContain(
       'territory bare registry unavailable: the capital has no Streams/Projects/ or Streams/Initiatives/ registry'
@@ -535,7 +538,7 @@ describe('[ki repo roadmap list --by]', () => {
 
     await box.state.write('ki/registry.toml', 'schema = [\n')
     const invalid = await box.run('ki repo --repo member roadmap list --by project')
-    expect(invalid.output).toMatch(/territory other registry unavailable: the local ki registry .* is invalid/)
+    expect(invalid.output).toMatch(/territory other registry unavailable: local KI repository registry is invalid/)
 
     await box.state.write(
       'ki/registry.toml',

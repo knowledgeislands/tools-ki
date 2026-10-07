@@ -53,7 +53,7 @@ The operation changes only the current receiver repository. Review and commit th
 
 ## Use an itemized trade when standing authority does not fit
 
-Standing intake is knowledge-only and intentionally narrow. Use `ki repo trade prepare <repository> --kind knowledge ...` when the insight does not match an active grant, needs receiver review before retention, introduces a distinct decision or work scope, or cannot be pinned to the required source evidence. A standing grant never grants roadmap priority, implementation, publication, acceptance, completion, Agora, or peer-write authority.
+Standing intake is knowledge-only and intentionally narrow. Use `ki repo trade prepare <repository> --kind knowledge ...` when the insight does not match an active grant, needs receiver review before retention, introduces a distinct decision or work scope, or cannot be pinned to the required source evidence. A standing grant never grants roadmap priority, implementation, publication, acceptance, completion, Territory, or peer-write authority.
 
 ## Withdraw the grant
 

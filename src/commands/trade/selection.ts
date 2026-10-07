@@ -31,7 +31,7 @@ export const tradeSelection = (context: KiContext, selection: SelectRepositories
     )
     return repositories
   }
-  const aggregate = (): boolean => Boolean(selection().estate || selection().agora)
+  const aggregate = (): boolean => Boolean(selection().estate || selection().territory)
   return {
     selected,
     aggregate,
