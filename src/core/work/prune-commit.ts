@@ -70,7 +70,7 @@ const refuseStagedChanges = async (context: PruneCommitContext, repository: stri
 /**
  * Refuses, without changing anything, unless the repository is a Git work tree with an empty index and every
  * selected record is tracked and unmodified, so the prune commit can contain exactly the record deletions and
- * each record's committed `done` state precedes it.
+ * each record's committed terminal state precedes it.
  */
 export const preflightPruneCommit = async (
   context: PruneCommitContext,
@@ -91,7 +91,7 @@ export const preflightPruneCommit = async (
   const untracked = new Set(paths.filter((path) => !trackedPaths.has(path)))
   if (untracked.size)
     throw new KiError(
-      `work item ${named(records, untracked)} in ${repository} is not committed; commit its done state before pruning, ${NO_COMMIT_HINT}`,
+      `work item ${named(records, untracked)} in ${repository} is not committed; commit its terminal state before pruning, ${NO_COMMIT_HINT}`,
       2
     )
   const changedPaths = new Set(
@@ -100,7 +100,7 @@ export const preflightPruneCommit = async (
   const modifiedPaths = new Set(paths.filter((path) => changedPaths.has(path)))
   if (modifiedPaths.size)
     throw new KiError(
-      `work item ${named(records, modifiedPaths)} in ${repository} has uncommitted changes; commit its done state before pruning, ${NO_COMMIT_HINT}`,
+      `work item ${named(records, modifiedPaths)} in ${repository} has uncommitted changes; commit its terminal state before pruning, ${NO_COMMIT_HINT}`,
       2
     )
 }

@@ -1,4 +1,4 @@
-import type { WorkItem } from '../../core/work/index.ts'
+import { type WorkItem, workItemLane } from '../../core/work/index.ts'
 import type { TaskLink } from '../../core/work/items.ts'
 import type { TreeEntry } from '../presentation/index.ts'
 
@@ -6,6 +6,8 @@ export interface RoadmapTextOptions {
   readonly links: 'compact' | 'all'
   readonly icons: boolean
   readonly dim: boolean
+  /** Show each item's lane, for groupings that are not already by lane. */
+  readonly lane?: boolean
 }
 
 const providers = new Map([
@@ -37,7 +39,9 @@ const linkedTasks = (item: WorkItem): readonly LinkedTask[] =>
     )
 
 export const renderRoadmapItem = (item: WorkItem, options: RoadmapTextOptions): TreeEntry => {
-  const label = `${item.id} [${item.status}] ${item.title}`
+  const lane = workItemLane(item)
+  const placement = options.lane && lane !== item.status ? ` @ ${lane}` : ''
+  const label = `${item.id} [${item.status}${placement}] ${item.title}${item.legacy ? ' · legacy' : ''}`
   const links = linkedTasks(item)
   const first = links[0]
   if (!first) return { label }

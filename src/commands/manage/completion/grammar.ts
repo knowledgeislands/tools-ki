@@ -1,4 +1,5 @@
 import type { Argument, Command, Option } from 'commander'
+import { workItemHorizons, workItemStatuses } from '../../../core/work/index.ts'
 
 export type CompletionValueStrategy =
   | { readonly kind: 'none' }
@@ -42,13 +43,13 @@ const optionNames = (option: Option): readonly string[] =>
 const closedOptionValues: Readonly<Record<string, readonly string[]>> = {
   '--direction': ['import', 'export'],
   '--format': ['text', 'json'],
-  '--horizon': ['now', 'next', 'soon', 'waiting-for', 'parked', 'future'],
+  '--horizon': workItemHorizons,
   '--kind': ['work', 'knowledge'],
   '--progress': ['auto', 'always', 'never'],
   '--progress-style': ['single', 'multi'],
   '--reporter-levels': ['levels', 'all'],
   '--runtime': ['claude-code', 'claude-desktop', 'chatgpt-codex'],
-  '--status': ['draft', 'ready', 'in-progress', 'awaiting-review', 'done'],
+  '--status': workItemStatuses,
   '--visibility': ['public', 'private']
 }
 
@@ -72,8 +73,6 @@ const optionValueStrategy = (path: string, option: Option): CompletionValueStrat
         'superseded'
       ]
     }
-  if (name === '--horizon' && path === 'repo roadmap list')
-    return { kind: 'values', values: ['now', 'next', 'soon', 'waiting-for', 'parked', 'future', 'triage'] }
   if (name === '--direction' && path === 'repo trade list')
     return { kind: 'values', values: ['prepare', 'import', 'export'] }
   if (name === '--observation') return { kind: 'values', values: ['unattended', 'receipt', 'decision', 'completion'] }

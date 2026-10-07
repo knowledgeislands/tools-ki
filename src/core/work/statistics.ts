@@ -1,4 +1,4 @@
-import type { WorkItem } from './items.ts'
+import { isOpenWorkItem, type WorkItem } from './items.ts'
 
 export interface RoadmapStatistics {
   readonly items: number
@@ -35,11 +35,11 @@ export const roadmapStatistics = (
     staleAfterSeconds === undefined
       ? []
       : usable
-          .filter((item) => item.status !== 'done' && now - Date.parse(item.updatedAt) >= staleAfterSeconds * 1000)
+          .filter((item) => isOpenWorkItem(item) && now - Date.parse(item.updatedAt) >= staleAfterSeconds * 1000)
           .map((item) => item.id)
   return {
     items: items.length,
-    active: items.filter((item) => item.status !== 'done').length,
+    active: items.filter(isOpenWorkItem).length,
     ...(medianAgeSeconds === undefined ? {} : { medianAgeSeconds, maximumAgeSeconds: Math.max(...ages) }),
     ...(medianInactivitySeconds === undefined
       ? {}

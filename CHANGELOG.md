@@ -81,12 +81,13 @@ This baseline describes the `v0.7.1` release. Domain imports and extracted type 
 - `ki repo audit`
 - `ki repo conform`
 - `ki repo diag`
-- `ki repo roadmap list [--format <text|json>] [--links <compact|all>]`
+- `ki repo roadmap list [--format <text|json>] [--links <compact|all>] [--by <project|initiative>]`
 - `ki repo roadmap summary`
 - `ki repo roadmap stats [--stale-after <duration>] [--format <text|json>]`
 - `ki repo roadmap prune [id]`
 - `ki repo roadmap promote <id> [horizon]`
-- `ki repo roadmap demote <id> [horizon]`
+- `ki repo roadmap demote <id> [horizon] [--reason <reason>] [--condition <text>] [--review <date>]`
+- `ki repo roadmap migrate [--apply]`
 - `ki repo educate`
 - `ki repo repair`
 - `ki repo skill add`
@@ -171,6 +172,11 @@ This baseline describes the `v0.7.1` release. Domain imports and extracted type 
 - `ki repo conform` stages safe writes until every initial audit passes, labels proposed and applied writes separately, and leaves proposed conform writes unapplied when an initial audit blocks publication.
 - `ki repo roadmap list` is a framed horizon- and lifecycle-grouped text inventory with per-repository import and export trade context, including unadopted `triage` intake.
 - `ki repo roadmap summary` reports per-repository item, horizon, and lifecycle counts without listing work-item details or reading trades.
+- `ki repo roadmap` reads the v1 roadmap model: statuses add `triage` and `cancelled`, horizons are `now`, `next`, `soon`, `future` and `hold`, `theme` is optional, and `kind`, `purpose`, `project`, `initiative`, `component`, `hold` and `resolution` are validated. Old horizons and fields still list as `legacy`. Text output and the summary order lanes `now` to `hold`, then triage, then done and cancelled, with `NOW=`, `CANCELLED=` and `LEGACY=` counts; `docs/roadmap/_IDEAS.md` is not a record.
+- `ki repo roadmap list --by project|initiative` groups text output through the Capital's `Streams/Projects/` registry and warns, without failing, when the registry is unavailable.
+- `ki repo roadmap promote` and `demote` move along `now` to `hold` within the status's allowed horizons; entering `hold` needs `--reason` and `--condition`, and leaving it needs an explicit destination.
+- `ki repo roadmap migrate` previews, and with `--apply` on one repository writes, the mechanical move of open records to the v1 model without committing.
+- `ki repo roadmap prune` removes cancelled records as well as done ones, under the same committed-state guard and commit subject.
 - `ki repo roadmap list --format json` emits the path-free `ki/roadmap/v1` contract with canonical record URLs.
 - `ki repo roadmap` operations resolve a local roadmap only from the declared `[skills.ki-work]` adapter and its adapter table, never from a physical `docs/roadmap/` or `Streams/Roadmap/` directory; an unknown, inapplicable or tableless adapter is a usage error. Identifier-free `ki repo roadmap prune` skips repositories with no declared local roadmap or no roadmap root instead of failing.
 - Roadmap text listings show compact external ticket keys and counts; `--links all` expands mappings into child entries with full task URLs and disambiguating identity details where needed.

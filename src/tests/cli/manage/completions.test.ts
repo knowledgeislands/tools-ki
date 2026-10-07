@@ -76,6 +76,7 @@ const commandPaths = [
   'repo roadmap',
   'repo roadmap demote',
   'repo roadmap list',
+  'repo roadmap migrate',
   'repo roadmap stats',
   'repo roadmap promote',
   'repo roadmap prune',
@@ -259,11 +260,13 @@ describe('[ki completion]', () => {
       { cwd: box.root.path }
     )
     expect(statusCompletion.stdout.trim().split('\n')).toEqual([
+      'triage',
       'draft',
       'ready',
       'in-progress',
       'awaiting-review',
-      'done'
+      'done',
+      'cancelled'
     ])
 
     const tradeStatusCompletion = await execute(
@@ -294,15 +297,7 @@ describe('[ki completion]', () => {
       ],
       { cwd: box.root.path }
     )
-    expect(horizonCompletion.stdout.trim().split('\n')).toEqual([
-      'now',
-      'next',
-      'soon',
-      'waiting-for',
-      'parked',
-      'future',
-      'triage'
-    ])
+    expect(horizonCompletion.stdout.trim().split('\n')).toEqual(['now', 'next', 'soon', 'future', 'hold'])
   })
 
   test('rejects retired manage grouping and plural completion command names', async () => {

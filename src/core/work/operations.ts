@@ -2,20 +2,27 @@ import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { declaredRepositoryIdentity, readRepositoryDeclaration } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
+import { prepareWrites, publishWrites } from '../filesystem/index.ts'
 import { resolveRepositoryTargets } from '../repository/index.ts'
 import type { LocatedTrade } from '../trade/model.ts'
 import {
   hasWorkItemRoot,
+  isAllowedHorizon,
+  type LegacyWorkItemHorizon,
   readWorkItemInventoryIfPresent,
+  readWorkItemRecordInventory,
   readWorkItems,
   removeWorkItemRecords,
-  selectDoneWorkItems,
+  selectTerminalWorkItems,
   updateWorkItemHorizon,
   type WorkItem,
   type WorkItemFault,
+  type WorkItemHold,
   type WorkItemHorizon,
-  workItemHorizons
+  workItemHorizons,
+  workItemLane
 } from './items.ts'
+import { migrateWorkItem, type WorkItemMigration } from './migration.ts'
 import { type RepositoryPlanningSource, readDeclaredPlanningSource, readRepositoryPlanningSource } from './planning.ts'
 import {
   commitPrune,
@@ -24,6 +31,7 @@ import {
   preflightPruneCommit,
   pruneCommitMessage
 } from './prune-commit.ts'
+import { loadProjectRegistry, type RoadmapGrouping, type WorkItemGroup, workItemGroup } from './registry.ts'
 import { type RoadmapStatistics, roadmapStatistics } from './statistics.ts'
 
 export interface RoadmapSelection {
@@ -52,6 +60,14 @@ export interface RoadmapListOptions {
   readonly horizon?: string
   readonly status?: string
   readonly includeProjection?: boolean
+  readonly by?: RoadmapGrouping
+}
+
+/** Registry grouping for one repository's listed records; an unavailable registry is a warning. */
+export interface RoadmapGroupingResult {
+  readonly by: RoadmapGrouping
+  readonly registryWarning?: string
+  readonly groups: ReadonlyMap<string, WorkItemGroup>
 }
 
 export interface RoadmapListItem extends WorkItem {
@@ -67,6 +83,7 @@ interface RoadmapItemEvidence {
   readonly faults?: readonly WorkItemFault[]
   readonly roadmap?: 'absent'
   readonly diagnostic?: string
+  readonly grouping?: RoadmapGroupingResult
 }
 
 export interface RoadmapItemResult extends RoadmapItemEvidence {
@@ -103,6 +120,18 @@ export interface RoadmapMoveResult {
   readonly to: WorkItemHorizon
 }
 
+export interface RoadmapMigrateOptions {
+  /** Write the migrated records; false previews the comparison without changing anything. */
+  readonly apply: boolean
+}
+
+export interface RoadmapMigrateResult {
+  readonly repository: string
+  readonly roadmap?: 'absent'
+  readonly faults: readonly WorkItemFault[]
+  readonly migrations: readonly Omit<WorkItemMigration, 'contents'>[]
+}
+
 export interface RoadmapStatisticsResult {
   readonly repository: string
   readonly statistics?: RoadmapStatistics
@@ -129,7 +158,7 @@ const resolveTargets = (
 const oneMutationTarget = async (
   context: RoadmapOperationContext,
   selection: RoadmapSelection,
-  operation: 'prune' | RoadmapMove
+  operation: 'prune' | 'migrate' | RoadmapMove
 ): Promise<ResolvedRepository> => {
   const repositories = await resolveTargets(context, selection)
   const repository = repositories[0]
@@ -138,11 +167,28 @@ const oneMutationTarget = async (
   return repository
 }
 
+/** Filters by model placement, so legacy Waiting for and Parked list under Hold and Triage intake as triage. */
 const filterItems = (items: readonly WorkItem[], options: RoadmapListOptions): readonly WorkItem[] =>
-  items.filter(
-    (item) =>
-      (!options.horizon || item.horizon === options.horizon) && (!options.status || item.status === options.status)
-  )
+  items.filter((item) => {
+    const lane = workItemLane(item)
+    const status = lane === 'triage' ? 'triage' : item.status
+    return (!options.horizon || lane === options.horizon) && (!options.status || status === options.status)
+  })
+
+const groupItems = async (
+  repository: string,
+  stateDirectory: string,
+  by: RoadmapGrouping,
+  items: readonly WorkItem[]
+): Promise<RoadmapGroupingResult> => {
+  const lookup = await loadProjectRegistry(repository, stateDirectory)
+  const registry = 'registry' in lookup ? lookup.registry : undefined
+  return {
+    by,
+    ...('unavailable' in lookup ? { registryWarning: `project registry unavailable: ${lookup.unavailable}` } : {}),
+    groups: new Map(items.map((item) => [item.id, workItemGroup(item, by, registry)]))
+  }
+}
 
 const repositoryIdentity = (repository: string): string => repository.slice('https://github.com/'.length)
 
@@ -180,27 +226,49 @@ const selectedItem = async (repository: string, planning: RepositoryPlanningSour
   return items[0] as WorkItem
 }
 
-const movableHorizons = workItemHorizons.filter((horizon) => horizon !== 'triage')
+const legacyHorizons = new Set<string>(['waiting-for', 'parked'] satisfies LegacyWorkItemHorizon[])
 
-const moveHorizon = (item: WorkItem, operation: RoadmapMove, requested?: string): WorkItemHorizon => {
-  const current = movableHorizons.indexOf(item.horizon as (typeof movableHorizons)[number])
-  const direction = operation === 'promote' ? -1 : 1
-  const target =
-    requested === undefined
-      ? current + direction
-      : movableHorizons.indexOf(requested as (typeof movableHorizons)[number])
-  if (requested !== undefined && target === -1)
-    throw new KiError(`roadmap ${operation} horizon must be one of ${movableHorizons.join(', ')}`, 2)
-  if (current === -1)
+const moveHorizon = (
+  item: WorkItem,
+  operation: RoadmapMove,
+  requested?: string,
+  hold?: WorkItemHold
+): WorkItemHorizon => {
+  const lane = workItemLane(item)
+  if (lane === 'triage')
     throw new KiError(`work item ${item.id} at triage must be adopted through the planning workflow`, 2)
-  if (target < 0 || target >= movableHorizons.length)
+  if (lane === 'done' || lane === 'cancelled')
+    throw new KiError(`work item ${item.id} is ${lane} and has no horizon`, 2)
+  if (legacyHorizons.has(item.horizon as string))
+    throw new KiError(
+      `work item ${item.id} is at the legacy ${item.horizon} horizon; run ki repo roadmap migrate first`,
+      2
+    )
+  const current = workItemHorizons.indexOf(item.horizon as WorkItemHorizon)
+  const direction = operation === 'promote' ? -1 : 1
+  const target = requested === undefined ? current + direction : workItemHorizons.indexOf(requested as WorkItemHorizon)
+  if (requested !== undefined && target === -1)
+    throw new KiError(`roadmap ${operation} horizon must be one of ${workItemHorizons.join(', ')}`, 2)
+  if (requested === undefined && item.horizon === 'hold' && operation === 'promote')
+    throw new KiError(`leaving hold re-decides the horizon: name the destination for ${item.id}`, 2)
+  if (target < 0 || target >= workItemHorizons.length)
     throw new KiError(`work item ${item.id} is already at the ${operation} limit`, 2)
   if ((operation === 'promote' && target >= current) || (operation === 'demote' && target <= current))
     throw new KiError(
-      `roadmap ${operation} must move ${item.id} ${operation === 'promote' ? 'toward now' : 'toward future'}`,
+      `roadmap ${operation} must move ${item.id} ${operation === 'promote' ? 'toward now' : 'toward hold'}`,
       2
     )
-  return movableHorizons[target] as WorkItemHorizon
+  const destination = workItemHorizons[target] as WorkItemHorizon
+  if ((destination === 'hold') !== (hold !== undefined))
+    throw new KiError(
+      destination === 'hold'
+        ? `moving ${item.id} to hold requires --reason and --condition`
+        : '--reason, --condition and --review apply only to a move to hold',
+      2
+    )
+  if (!isAllowedHorizon(item.status, destination))
+    throw new KiError(`work item ${item.id} at status ${item.status} cannot move to ${destination}`, 2)
+  return destination
 }
 
 export const listRoadmapItems = async (
@@ -220,6 +288,8 @@ export const listRoadmapItems = async (
         const planning = await readDeclaredPlanningSource(repository.declaration)
         const inventory = planning && (await readWorkItemInventoryIfPresent(repository.root, planning))
         const items = inventory === undefined ? undefined : filterItems(inventory.items, options)
+        const grouping =
+          options.by && items ? await groupItems(repository.root, context.stateDirectory, options.by, items) : undefined
         return {
           repository: repository.root,
           ...projection,
@@ -239,7 +309,8 @@ export const listRoadmapItems = async (
                       )
                     }
                   : {}),
-                faults: inventory.faults
+                faults: inventory.faults,
+                ...(grouping ? { grouping } : {})
               })
         }
       } catch (error) {
@@ -309,7 +380,7 @@ export const pruneRoadmap = async (
   const selected = await Promise.all(
     sources.map(async ({ repository, planning }) => ({
       repository: repository.root,
-      records: await selectDoneWorkItems(repository.root, planning, id)
+      records: await selectTerminalWorkItems(repository.root, planning, id)
     }))
   )
   // Validate every repository before deleting anything, so one refusal leaves the whole selection untouched.
@@ -352,14 +423,58 @@ export const moveRoadmapItem = async (
   selection: RoadmapSelection,
   operation: RoadmapMove,
   id: string,
-  requested?: string
+  requested?: string,
+  hold?: WorkItemHold
 ): Promise<RoadmapMoveResult> => {
   const repository = await oneMutationTarget(context, selection, operation)
   const planning = await readRepositoryPlanningSource(repository.declaration)
   const item = await selectedItem(repository.root, planning, id)
-  const destination = moveHorizon(item, operation, requested)
-  await updateWorkItemHorizon(repository.root, planning, id, destination, context.now())
-  return { id, from: item.horizon, to: destination }
+  const destination = moveHorizon(item, operation, requested, hold)
+  await updateWorkItemHorizon(repository.root, planning, id, destination, hold, context.now())
+  return { id, from: item.horizon as WorkItemHorizon, to: destination }
+}
+
+/**
+ * Previews, or with `apply` writes, the mechanical model migration. Writing needs exactly one repository and a roadmap
+ * with no unreadable record; nothing is staged or committed.
+ */
+export const migrateRoadmap = async (
+  context: RoadmapOperationContext,
+  selection: RoadmapSelection,
+  options: RoadmapMigrateOptions
+): Promise<readonly RoadmapMigrateResult[]> => {
+  const repositories = options.apply
+    ? [await oneMutationTarget(context, selection, 'migrate')]
+    : await resolveTargets(context, selection)
+  const now = context.now()
+  const results = await Promise.all(
+    repositories.map(async (repository) => {
+      const planning = await readDeclaredPlanningSource(repository.declaration)
+      if (!planning || !(await hasWorkItemRoot(repository.root, planning)))
+        return { repository: repository.root, roadmap: 'absent' as const, faults: [], migrations: [], writes: [] }
+      const { records, faults } = await readWorkItemRecordInventory(repository.root, planning)
+      const migrations = records.flatMap(({ item, file, contents }) => {
+        const migration = migrateWorkItem(item, file, contents, now)
+        return migration ? [migration] : []
+      })
+      return {
+        repository: repository.root,
+        faults,
+        migrations,
+        writes: migrations.map(({ file, contents }) => ({ path: join(planning.directory, file), content: contents }))
+      }
+    })
+  )
+  for (const result of results) {
+    if (!options.apply || !result.writes.length) continue
+    if (result.faults.length)
+      throw new KiError(`repository ${result.repository} has unreadable work items; fix them before migrating`, 2)
+    await publishWrites(await prepareWrites(result.repository, result.writes), false)
+  }
+  return results.map(({ writes: _writes, migrations, ...result }) => ({
+    ...result,
+    migrations: migrations.map(({ contents: _contents, ...migration }) => migration)
+  }))
 }
 
 export const roadmapStatisticsForSelection = async (

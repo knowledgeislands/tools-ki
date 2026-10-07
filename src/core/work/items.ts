@@ -6,12 +6,11 @@ import { prepareWrites, publishWrites } from '../filesystem/index.ts'
 import type { RepositoryPlanningAdapter, RepositoryPlanningSource } from './planning.ts'
 
 const ISSUE_LEDGER = '_ISSUES.md'
+const IDEAS_LIST = '_IDEAS.md'
 const KB_ROADMAP_INDEX = 'Roadmap.md'
 const requiredFields = [
   'id',
   'title',
-  'theme',
-  'horizon',
   'status',
   'blocks',
   'blocked_by',
@@ -22,6 +21,15 @@ const requiredFields = [
 type RequiredField = (typeof requiredFields)[number]
 const optionalFields = [
   'area',
+  'theme',
+  'horizon',
+  'kind',
+  'purpose',
+  'project',
+  'initiative',
+  'component',
+  'resolution',
+  'resolution_target',
   'waiting_on_trades',
   'intake_disposition',
   'intake_disposition_target',
@@ -30,21 +38,77 @@ const optionalFields = [
   'scheduled_for'
 ] as const
 type WorkItemField = RequiredField | (typeof optionalFields)[number]
-type WorkItemFields = Partial<Record<WorkItemField, string>> & { task_links?: TaskLinks }
+type WorkItemFields = Partial<Record<WorkItemField, string>> & { task_links?: TaskLinks; hold?: WorkItemHold }
 
-const allowedFields = new Set<string>([...requiredFields, ...optionalFields, 'task_links'])
-export const workItemHorizons = ['now', 'next', 'soon', 'waiting-for', 'parked', 'future', 'triage'] as const
+const nestedFields = ['task_links', 'hold'] as const
+const allowedFields = new Set<string>([...requiredFields, ...optionalFields, ...nestedFields])
+/** Horizons in selection order. */
+export const workItemHorizons = ['now', 'next', 'soon', 'future', 'hold'] as const
 export type WorkItemHorizon = (typeof workItemHorizons)[number]
-const horizons = new Set<WorkItemHorizon>(workItemHorizons)
-const statuses = new Set<WorkItemStatus>(['draft', 'ready', 'in-progress', 'awaiting-review', 'done'])
+/** Former horizons read during the migration tolerance window and reported as legacy. */
+export const legacyWorkItemHorizons = ['waiting-for', 'parked', 'triage'] as const
+export type LegacyWorkItemHorizon = (typeof legacyWorkItemHorizons)[number]
+const horizons = new Set<string>([...workItemHorizons, ...legacyWorkItemHorizons])
+export const workItemStatuses = [
+  'triage',
+  'draft',
+  'ready',
+  'in-progress',
+  'awaiting-review',
+  'done',
+  'cancelled'
+] as const
+export type WorkItemStatus = (typeof workItemStatuses)[number]
+const statuses = new Set<string>(workItemStatuses)
+export const workItemKinds = ['deliver', 'decide', 'investigate', 'audit'] as const
+export const workItemPurposes = [
+  'capability',
+  'corrective',
+  'debt',
+  'governance',
+  'learning',
+  'adoption',
+  'upkeep'
+] as const
+export const holdReasons = ['waiting-for', 'parked'] as const
+export type HoldReason = (typeof holdReasons)[number]
+export const workItemResolutions = ['obsolete', 'rejected', 'duplicate', 'merged', 'superseded'] as const
+const targetedResolutions = new Set<string>(['duplicate', 'merged', 'superseded'])
+/** Where a record sits in reports: an adopted open horizon, unadopted intake, or a terminal ending. */
+export const workItemLanes = [...workItemHorizons, 'triage', 'done', 'cancelled'] as const
+export type WorkItemLane = (typeof workItemLanes)[number]
+/** Status and horizon combinations the model allows; anything else is a tolerated legacy shape. */
+const allowedHorizons: Readonly<Record<WorkItemStatus, readonly WorkItemHorizon[]>> = {
+  triage: [],
+  draft: workItemHorizons,
+  ready: ['now', 'next', 'hold'],
+  'in-progress': ['now', 'hold'],
+  'awaiting-review': ['now', 'hold'],
+  done: [],
+  cancelled: []
+}
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const WORK_ITEM_ID = /^[A-Z0-9][A-Z0-9-]{1,23}-\d{3,}$/
+const TRADE_ID = /^TRD-[0-9a-f]{8}$/
 const taskLinkRelations = ['evaluation', 'implementation', 'review', 'integration', 'coordination', 'related'] as const
 export type TaskLinkRelation = (typeof taskLinkRelations)[number]
 const validTaskLinkRelations = new Set<string>(taskLinkRelations)
 
 export const isWorkItemFile = (file: string, adapter: RepositoryPlanningAdapter): boolean =>
-  file.endsWith('.md') && file !== ISSUE_LEDGER && (adapter !== 'kb-streams' || file !== KB_ROADMAP_INDEX)
+  file.endsWith('.md') &&
+  file !== ISSUE_LEDGER &&
+  file !== IDEAS_LIST &&
+  (adapter !== 'kb-streams' || file !== KB_ROADMAP_INDEX)
 
-export type WorkItemStatus = 'draft' | 'ready' | 'in-progress' | 'awaiting-review' | 'done'
+export const isAllowedHorizon = (status: WorkItemStatus, horizon: WorkItemHorizon): boolean =>
+  allowedHorizons[status].includes(horizon)
+
+export interface WorkItemHold {
+  readonly reason: HoldReason
+  readonly condition: string
+  readonly review?: string
+  readonly trades?: readonly string[]
+}
 
 export interface TaskLink {
   readonly authority: string
@@ -61,9 +125,19 @@ export interface WorkItem {
   readonly id: string
   readonly area?: string
   readonly title: string
-  readonly theme: string
-  readonly horizon: WorkItemHorizon
+  /** Deprecated grouping, read only during the migration tolerance window. */
+  readonly theme?: string
+  /** Absent on triage and terminal records; a legacy horizon is reported, never rewritten here. */
+  readonly horizon?: WorkItemHorizon | LegacyWorkItemHorizon
   readonly status: WorkItemStatus
+  readonly kind?: (typeof workItemKinds)[number]
+  readonly purpose?: (typeof workItemPurposes)[number]
+  readonly project?: string
+  readonly initiative?: string
+  readonly component?: string
+  readonly hold?: WorkItemHold
+  readonly resolution?: (typeof workItemResolutions)[number]
+  readonly resolutionTarget?: string
   readonly blocks: readonly string[]
   readonly blockedBy: readonly string[]
   readonly baselineRef: null | string
@@ -71,9 +145,11 @@ export interface WorkItem {
   readonly updatedAt: string
   readonly transferredFrom?: string
   readonly taskLinks?: TaskLinks
+  /** Deprecated shapes this record still carries, in a stable order; absent when it has none. */
+  readonly legacy?: readonly string[]
 }
 
-interface WorkItemRecord {
+export interface WorkItemRecord {
   readonly item: WorkItem
   readonly file: string
   readonly path: string
@@ -157,6 +233,44 @@ const parseTaskLinks = (lines: readonly string[], file: string): TaskLinks => {
   return result
 }
 
+const parseHold = (lines: readonly string[], file: string): WorkItemHold => {
+  let value: unknown
+  try {
+    value = parse(`hold:\n${lines.join('\n')}`)
+  } catch {
+    throw itemError(file, 'hold must be a mapping with reason and condition')
+  }
+  const hold = (value as { hold?: unknown } | null)?.hold
+  if (!hold || typeof hold !== 'object' || Array.isArray(hold))
+    throw itemError(file, 'hold must be a mapping with reason and condition')
+  const record = hold as Record<string, unknown>
+  if (Object.keys(record).some((key) => !['reason', 'condition', 'review', 'trades'].includes(key)))
+    throw itemError(file, 'hold may contain only reason, condition, review and trades')
+  if (!holdReasons.includes(record['reason'] as HoldReason))
+    throw itemError(file, `hold.reason must be one of ${holdReasons.join(', ')}`)
+  if (typeof record['condition'] !== 'string' || !record['condition'].trim())
+    throw itemError(file, 'hold.condition must name the release condition')
+  if (
+    record['review'] !== undefined &&
+    (typeof record['review'] !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(record['review']))
+  )
+    throw itemError(file, 'hold.review must be an ISO date')
+  const trades = record['trades']
+  if (
+    trades !== undefined &&
+    (!Array.isArray(trades) ||
+      trades.some((trade) => typeof trade !== 'string' || !TRADE_ID.test(trade)) ||
+      new Set(trades).size !== trades.length)
+  )
+    throw itemError(file, 'hold.trades must list unique TRD identities')
+  return {
+    reason: record['reason'] as HoldReason,
+    condition: record['condition'],
+    ...(record['review'] === undefined ? {} : { review: record['review'] as string }),
+    ...(trades === undefined ? {} : { trades: trades as string[] })
+  }
+}
+
 const frontmatter = (contents: string, file: string, adapter: RepositoryPlanningAdapter): Readonly<WorkItemFields> => {
   const match = /^---\n([\s\S]*?)\n---(?:\n|$)/.exec(contents)
   if (!match?.[1]) throw itemError(file, 'must declare canonical frontmatter')
@@ -178,12 +292,19 @@ const frontmatter = (contents: string, file: string, adapter: RepositoryPlanning
     seen.add(key)
     adapterField = common ? undefined : key
     if (!common) continue
-    if (key === 'task_links') {
-      if (value) throw itemError(file, 'task_links must be a nested provider map')
+    if (key === 'task_links' || key === 'hold') {
+      if (value)
+        throw itemError(
+          file,
+          key === 'hold'
+            ? 'hold must be a mapping with reason and condition'
+            : 'task_links must be a nested provider map'
+        )
       const nested: string[] = []
       while (index + 1 < lines.length && (lines[index + 1] === '' || /^\s+/.test(lines[index + 1] as string)))
         nested.push(lines[++index] as string)
-      fields.task_links = parseTaskLinks(nested, file)
+      if (key === 'hold') fields.hold = parseHold(nested, file)
+      else fields.task_links = parseTaskLinks(nested, file)
       continue
     }
     if (!value) throw itemError(file, 'frontmatter must contain simple key-value fields')
@@ -193,16 +314,71 @@ const frontmatter = (contents: string, file: string, adapter: RepositoryPlanning
   return fields
 }
 
+const enumField = <T extends string>(
+  fields: Readonly<WorkItemFields>,
+  field: WorkItemField,
+  values: readonly T[],
+  file: string
+): T | undefined => {
+  const value = fields[field]
+  if (value === undefined) return undefined
+  if (!values.includes(value as T)) throw itemError(file, `${field} must be one of ${values.join(', ')}`)
+  return value as T
+}
+
+const slugField = (fields: Readonly<WorkItemFields>, field: WorkItemField, file: string): string | undefined => {
+  const value = fields[field]
+  if (value !== undefined && !SLUG.test(value)) throw itemError(file, `${field} must be a lowercase kebab-case slug`)
+  return value
+}
+
+/** Names each deprecated shape a record carries, so readers report rather than reject it. */
+const legacyShapes = (fields: Readonly<WorkItemFields>, status: WorkItemStatus): readonly string[] => [
+  ...(fields.theme ? ['theme'] : []),
+  ...(legacyWorkItemHorizons.includes(fields.horizon as LegacyWorkItemHorizon) ? [`horizon ${fields.horizon}`] : []),
+  ...(fields.waiting_on_trades ? ['waiting_on_trades'] : []),
+  ...(fields.intake_disposition || fields.intake_disposition_target ? ['intake_disposition'] : []),
+  ...(status === 'done' && fields.horizon && fields.horizon !== 'triage' ? ['horizon on done'] : []),
+  ...(workItemHorizons.includes(fields.horizon as WorkItemHorizon) &&
+  !isAllowedHorizon(status, fields.horizon as WorkItemHorizon) &&
+  status !== 'done'
+    ? [`${status} at ${fields.horizon}`]
+    : [])
+]
+
 export const parseWorkItem = (contents: string, file: string, adapter: RepositoryPlanningAdapter): WorkItem => {
   /* v8 ignore next -- Every live and historical inventory filters entries through isWorkItemFile first. */
   if (!file.endsWith('.md')) throw itemError(file, 'must use the .md extension')
   const fields = frontmatter(contents, file, adapter)
   const id = fields.id as string
-  if (!/^[A-Z0-9][A-Z0-9-]{1,23}-\d{3,}$/.test(id) || !file.startsWith(`${id}-`))
+  if (!WORK_ITEM_ID.test(id) || !file.startsWith(`${id}-`))
     throw itemError(file, 'must use a matching work-item identifier')
-  if (!fields.title || !/^[a-z0-9-]+$/.test(fields.theme as string) || !horizons.has(fields.horizon as WorkItemHorizon))
+  if (
+    !fields.title ||
+    (fields.theme !== undefined && !SLUG.test(fields.theme)) ||
+    (fields.horizon !== undefined && !horizons.has(fields.horizon))
+  )
     throw itemError(file, 'has invalid title, theme, or horizon')
-  if (!statuses.has(fields.status as WorkItemStatus)) throw itemError(file, 'has an invalid lifecycle status')
+  if (!statuses.has(fields.status as string)) throw itemError(file, 'has an invalid lifecycle status')
+  const status = fields.status as WorkItemStatus
+  const horizon = fields.horizon as WorkItemHorizon | LegacyWorkItemHorizon | undefined
+  if ((status === 'triage' || status === 'cancelled') && horizon !== undefined)
+    throw itemError(file, `must omit horizon at status ${status}`)
+  if (horizon === undefined && status !== 'triage' && status !== 'done' && status !== 'cancelled')
+    throw itemError(file, `must declare a horizon at status ${status}`)
+  if ((horizon === 'hold') !== (fields.hold !== undefined))
+    throw itemError(file, 'must carry a hold mapping exactly when its horizon is hold')
+  const resolution = enumField(fields, 'resolution', workItemResolutions, file)
+  if ((status === 'cancelled') !== (resolution !== undefined))
+    throw itemError(file, 'must carry a resolution exactly when it is cancelled')
+  const target = fields.resolution_target
+  if (resolution !== undefined && targetedResolutions.has(resolution) !== (target !== undefined))
+    throw itemError(
+      file,
+      `resolution ${resolution} ${targetedResolutions.has(resolution) ? 'requires' : 'forbids'} resolution_target`
+    )
+  if (target !== undefined && (!WORK_ITEM_ID.test(target) || target === id))
+    throw itemError(file, 'resolution_target must be another canonical work-item identifier')
   const baseline = fields['baseline_ref']
   if (baseline !== 'null' && !/^[a-f0-9]{40}$/.test(baseline as string))
     throw itemError(file, 'baseline_ref must be null or a full commit ID')
@@ -210,22 +386,48 @@ export const parseWorkItem = (contents: string, file: string, adapter: Repositor
   const updatedAt = timestamp(fields.updated_at as string, file, 'updated_at')
   if (Date.parse(createdAt) > Date.parse(updatedAt))
     throw itemError(file, 'created_at must not be later than updated_at')
+  const kind = enumField(fields, 'kind', workItemKinds, file)
+  const purpose = enumField(fields, 'purpose', workItemPurposes, file)
+  const project = slugField(fields, 'project', file)
+  const initiative = slugField(fields, 'initiative', file)
+  const component = slugField(fields, 'component', file)
+  const legacy = legacyShapes(fields, status)
   return {
     id,
     ...(fields.area ? { area: fields.area } : {}),
     title: fields.title as string,
-    theme: fields.theme as string,
-    horizon: fields.horizon as WorkItemHorizon,
-    status: fields.status as WorkItemStatus,
+    ...(fields.theme ? { theme: fields.theme } : {}),
+    ...(horizon ? { horizon } : {}),
+    status,
+    ...(kind ? { kind } : {}),
+    ...(purpose ? { purpose } : {}),
+    ...(project ? { project } : {}),
+    ...(initiative ? { initiative } : {}),
+    ...(component ? { component } : {}),
+    ...(fields.hold ? { hold: fields.hold } : {}),
+    ...(resolution ? { resolution } : {}),
+    ...(target ? { resolutionTarget: target } : {}),
     blocks: parseList(fields.blocks as string, file, 'blocks'),
     blockedBy: parseList(fields['blocked_by'] as string, file, 'blocked_by'),
     baselineRef: baseline === 'null' ? null : (baseline as string),
     createdAt,
     updatedAt,
     ...(fields.transferred_from ? { transferredFrom: fields.transferred_from } : {}),
-    ...(fields.task_links ? { taskLinks: fields.task_links } : {})
+    ...(fields.task_links ? { taskLinks: fields.task_links } : {}),
+    ...(legacy.length ? { legacy } : {})
   }
 }
+
+/** Reads a record into the model: a legacy Triage horizon is intake, and Waiting for and Parked are Hold. */
+export const workItemLane = (item: WorkItem): WorkItemLane => {
+  if (item.status === 'done' || item.status === 'cancelled') return item.status
+  if (item.status === 'triage' || item.horizon === 'triage') return 'triage'
+  if (item.horizon === 'waiting-for' || item.horizon === 'parked') return 'hold'
+  return item.horizon as WorkItemHorizon
+}
+
+/** Open records carry neither terminal status. */
+export const isOpenWorkItem = (item: WorkItem): boolean => item.status !== 'done' && item.status !== 'cancelled'
 
 const readItem = async (
   directory: string,
@@ -239,12 +441,12 @@ const readItem = async (
   return { item: parseWorkItem(contents, file, adapter), file, path, contents }
 }
 
-interface WorkItemRecordInventory {
+export interface WorkItemRecordInventory {
   readonly records: readonly WorkItemRecord[]
   readonly faults: readonly WorkItemFault[]
 }
 
-const readWorkItemRecordInventory = async (
+export const readWorkItemRecordInventory = async (
   repository: string,
   planning: RepositoryPlanningSource
 ): Promise<WorkItemRecordInventory> => {
@@ -317,14 +519,44 @@ const workItemRecord = async (
   return matches[0] as WorkItemRecord
 }
 
-const utcSecond = (milliseconds: number): string =>
+export const utcSecond = (milliseconds: number): string =>
   new Date(Math.floor(milliseconds / 1000) * 1000).toISOString().replace('.000Z', 'Z')
 
-const renderHorizon = (contents: string, horizon: WorkItemHorizon, updatedAt: string): string => {
+/** The next `updated_at` for a governed mutation: now, or one second after the previous value. */
+export const advancedTimestamp = (previous: string, now: number): string =>
+  utcSecond(Math.max(now, Date.parse(previous) + 1000))
+
+/** Renders a hold mapping as indented frontmatter lines. */
+export const renderHold = (hold: WorkItemHold): readonly string[] => [
+  'hold:',
+  `  reason: ${hold.reason}`,
+  `  condition: ${JSON.stringify(hold.condition)}`,
+  ...(hold.review ? [`  review: ${JSON.stringify(hold.review)}`] : []),
+  ...(hold.trades?.length ? [`  trades: [${hold.trades.join(', ')}]`] : [])
+]
+
+const renderHorizon = (
+  contents: string,
+  horizon: WorkItemHorizon,
+  hold: WorkItemHold | undefined,
+  updatedAt: string
+): string => {
   return contents.replace(/^---\n([\s\S]*?)\n---/, (_frontmatter, fields: string) => {
-    const withHorizon = fields.replace(/^horizon: .+$/m, `horizon: ${horizon}`)
-    const withTimestamp = withHorizon.replace(/^updated_at: .+$/m, `updated_at: ${updatedAt}`)
-    return `---\n${withTimestamp}\n---`
+    const lines: string[] = []
+    const source = fields.split('\n')
+    for (let index = 0; index < source.length; index++) {
+      const line = source[index] as string
+      if (line === 'hold:') {
+        while (index + 1 < source.length && /^\s+/.test(source[index + 1] as string)) index++
+        continue
+      }
+      if (line.startsWith('horizon: ')) {
+        lines.push(`horizon: ${horizon}`, ...(hold ? renderHold(hold) : []))
+        continue
+      }
+      lines.push(line.startsWith('updated_at: ') ? `updated_at: ${updatedAt}` : line)
+    }
+    return `---\n${lines.join('\n')}\n---`
   })
 }
 
@@ -333,24 +565,28 @@ export const updateWorkItemHorizon = async (
   planning: RepositoryPlanningSource,
   id: string,
   horizon: WorkItemHorizon,
+  hold: WorkItemHold | undefined,
   now: number
 ): Promise<WorkItem> => {
   const record = await workItemRecord(repository, planning, id)
-  const updatedAt = utcSecond(Math.max(now, Date.parse(record.item.updatedAt) + 1000))
-  const content = renderHorizon(record.contents, horizon, updatedAt)
+  const updatedAt = advancedTimestamp(record.item.updatedAt, now)
+  const content = renderHorizon(record.contents, horizon, hold, updatedAt)
   const writes = await prepareWrites(repository, [{ path: join(planning.directory, record.file), content }])
   await publishWrites(writes, false)
-  return { ...record.item, horizon, updatedAt }
+  const { hold: _previous, ...item } = record.item
+  return { ...item, horizon, ...(hold ? { hold } : {}), updatedAt }
 }
 
-/** A selected `done` record: its item and repository-relative record path. */
+/** A selected terminal (`done` or `cancelled`) record: its item and repository-relative record path. */
 export interface PrunableWorkItem {
   readonly item: WorkItem
   readonly path: string
 }
 
-/** Selects every `done` record, or exactly the named `done` record, without changing the repository. */
-export const selectDoneWorkItems = async (
+/** Selects every terminal record, or exactly the named terminal record, without changing the repository. */
+const isOpenRecord = ({ item }: { readonly item: WorkItem }): boolean => isOpenWorkItem(item)
+
+export const selectTerminalWorkItems = async (
   repository: string,
   planning: RepositoryPlanningSource,
   id?: string
@@ -358,12 +594,11 @@ export const selectDoneWorkItems = async (
   const records = await readWorkItemRecords(repository, planning)
   const selected =
     id === undefined
-      ? records.filter(({ item }) => item.status === 'done')
+      ? records.filter(({ item }) => !isOpenWorkItem(item))
       : records.filter(({ item }) => item.id === id)
   if (id !== undefined && selected.length !== 1)
     throw new KiError(`repository ${repository} must contain exactly one work item ${id}`, 2)
-  if (selected.some(({ item }) => item.status !== 'done'))
-    throw new KiError(`work item ${id} must be done before pruning`, 2)
+  if (selected.some(isOpenRecord)) throw new KiError(`work item ${id} must be done or cancelled before pruning`, 2)
   return selected.map(({ item, file }) => ({ item, path: join(planning.directory, file) }))
 }
 

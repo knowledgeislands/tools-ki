@@ -4,18 +4,26 @@ import type { KiContext } from '../../context.ts'
 import { grammarError, KiExit } from '../../core/errors.ts'
 import { type LocatedTrade, locateTrades, tradeLifecycle } from '../../core/trade/index.ts'
 import {
+  holdReasons,
   listRoadmap,
   listRoadmapItems,
+  migrateRoadmap,
   moveRoadmapItem,
   pruneRoadmap,
+  type RoadmapGrouping,
   type RoadmapItemResult,
   type RoadmapListResult,
   type RoadmapOperationContext,
   type RoadmapStatisticsResult,
   roadmapReport,
   roadmapStatisticsForSelection,
+  UNASSIGNED_GROUP,
   type WorkItem,
-  workItemHorizons
+  type WorkItemHold,
+  workItemHorizons,
+  workItemLane,
+  workItemLanes,
+  workItemStatuses
 } from '../../core/work/index.ts'
 import {
   presentation,
@@ -27,6 +35,7 @@ import {
 import { type RoadmapTextOptions, renderRoadmapItem, roadmapLinkLegend } from './roadmap-links.ts'
 
 interface RoadmapOptions {
+  readonly by?: string
   readonly horizon?: string
   readonly status?: string
   readonly aggregate?: boolean
@@ -41,8 +50,8 @@ type RepositorySelection = () => {
   readonly estate?: boolean
 }
 
-const horizonOrder = workItemHorizons
-const statusOrder = ['done', 'awaiting-review', 'in-progress', 'ready', 'draft'] as const
+/** Within one lane, the furthest-advanced lifecycle first. */
+const statusOrder = ['awaiting-review', 'in-progress', 'ready', 'draft', 'triage', 'done', 'cancelled'] as const
 
 const operationContext = (context: KiContext): RoadmapOperationContext => ({
   configurationDirectory: context.paths.config,
@@ -56,18 +65,82 @@ const operationContext = (context: KiContext): RoadmapOperationContext => ({
 const orderItemsForText = (items: readonly WorkItem[]): readonly WorkItem[] =>
   [...items].sort(
     (left, right) =>
-      horizonOrder.indexOf(left.horizon) - horizonOrder.indexOf(right.horizon) ||
+      workItemLanes.indexOf(workItemLane(left)) - workItemLanes.indexOf(workItemLane(right)) ||
       statusOrder.indexOf(left.status) - statusOrder.indexOf(right.status) ||
       left.id.localeCompare(right.id)
   )
 
-const textHorizonGroups = (
-  items: readonly WorkItem[]
-): readonly { readonly horizon: string; readonly items: readonly WorkItem[] }[] =>
-  horizonOrder.flatMap((horizon) => {
-    const group = orderItemsForText(items.filter((item) => item.horizon === horizon))
-    return group.length ? [{ horizon, items: group }] : []
+/** Lane groups in report order: now, next, soon, future, hold, triage, then done and cancelled. */
+const laneEntries = (items: readonly WorkItem[], options: RoadmapTextOptions): readonly TreeEntry[] =>
+  workItemLanes.flatMap((lane) => {
+    const group = orderItemsForText(items.filter((item) => workItemLane(item) === lane))
+    return group.length
+      ? [{ label: `${lane} (${group.length})`, children: group.map((item) => renderRoadmapItem(item, options)) }]
+      : []
   })
+
+/** Project or Initiative groups, named groups first and the explicit unassigned group last. */
+const groupedEntries = (
+  results: readonly RoadmapListResult[],
+  by: RoadmapGrouping,
+  options: RoadmapTextOptions
+): readonly TreeEntry[] => {
+  const groups = new Map<string, WorkItem[]>()
+  for (const { grouping, items } of results) {
+    // A repository without a roadmap carries no grouping; a grouping covers every listed item.
+    if (!grouping) continue
+    for (const item of items as readonly WorkItem[]) {
+      const { group } = grouping.groups.get(item.id) as { readonly group: string }
+      groups.set(group, [...(groups.get(group) ?? []), item])
+    }
+  }
+  const names = [...groups.keys()].sort(
+    (left, right) => Number(left === UNASSIGNED_GROUP) - Number(right === UNASSIGNED_GROUP) || left.localeCompare(right)
+  )
+  return names.map((name) => {
+    const group = orderItemsForText(groups.get(name) as WorkItem[])
+    return {
+      label: `${name === UNASSIGNED_GROUP ? name : `${by} ${name}`} (${group.length})`,
+      children: group.map((item) => renderRoadmapItem(item, { ...options, lane: true }))
+    }
+  })
+}
+
+/** Registry warnings for grouped output; they never change the exit status. */
+const groupingWarnings = (results: readonly RoadmapListResult[]): readonly TreeEntry[] => {
+  const warnings = [
+    ...new Set(
+      results.flatMap((result) => [
+        ...(result.grouping?.registryWarning ? [result.grouping.registryWarning] : []),
+        ...[...(result.grouping?.groups.entries() ?? [])].flatMap(([id, group]) =>
+          group.warning ? [`${id}: ${group.warning}`] : []
+        )
+      ])
+    )
+  ]
+  return warnings.length
+    ? [
+        {
+          label: `warnings (${warnings.length})`,
+          children: warnings.map((warning) => ({ label: `${presentation('status.warn').terminal} ${warning}` }))
+        }
+      ]
+    : []
+}
+
+/** Counts shared by every list summary; the Now count is a signal, never a cap. */
+const itemSummary = (items: readonly WorkItem[]): string => {
+  const count = (predicate: (item: WorkItem) => boolean) => items.filter(predicate).length
+  const done = count((item) => item.status === 'done')
+  const cancelled = count((item) => item.status === 'cancelled')
+  const legacy = count((item) => Boolean(item.legacy))
+  return (
+    `ITEMS=${items.length} NOW=${count((item) => workItemLane(item) === 'now')} ` +
+    `NOT_DONE=${items.length - done - cancelled} DONE=${done}` +
+    (cancelled ? ` CANCELLED=${cancelled}` : '') +
+    (legacy ? ` LEGACY=${legacy}` : '')
+  )
+}
 
 const renderTradeEntries = (
   trades: readonly LocatedTrade[],
@@ -117,23 +190,17 @@ const renderTextResult = (
   const trades = result.trades
   const items = result.items ?? []
   const faults = result.faults ?? []
-  const groups = textHorizonGroups(items)
   const roadmap = result.diagnostic
     ? [{ label: `${presentation('status.unavailable').terminal} ${result.diagnostic}` }]
     : result.roadmap === 'absent'
       ? [{ label: `${presentation('status.skip').terminal} no roadmap` }]
       : [
-          ...groups.map(({ horizon, items: group }) => ({
-            label: `${horizon} (${group.length})`,
-            children: group.map((item) => renderRoadmapItem(item, options))
-          })),
+          ...(result.grouping ? groupedEntries([result], result.grouping.by, options) : laneEntries(items, options)),
           ...faults.map((fault) => ({
             label: `${presentation('status.unavailable').terminal} ${fault.message}`
           }))
         ]
   const { inbound, outbound } = countTradeDirections(trades)
-  const done = items.filter((item) => item.status === 'done').length
-  const notDone = items.length - done
   const tradeSummary = result.tradeDiagnostic
     ? 'unavailable'
     : `${trades.length} IMPORTS=${inbound} EXPORTS=${outbound}`
@@ -142,12 +209,13 @@ const renderTextResult = (
     context,
     entries: [
       { label: `roadmap (${items.length})`, children: roadmap },
+      ...groupingWarnings([result]),
       ...roadmapLinkLegend(items, options),
       {
         label: `trades (${trades.length})`,
         children: renderTradeEntries(trades, estate, result.tradeDiagnostic, options.icons)
       },
-      { label: `summary: ITEMS=${items.length} NOT_DONE=${notDone} DONE=${done} TRADES=${tradeSummary}` }
+      { label: `summary: ${itemSummary(items)} TRADES=${tradeSummary}` }
     ]
   }).join('\n')
 }
@@ -166,20 +234,12 @@ const renderAggregateResult = (
       label: `${presentation('status.unavailable').terminal} ${basename(result.repository)}: ${fault.message}`
     }))
   )
-  const horizonEntries = horizonOrder.flatMap((horizon) => {
-    const grouped = orderItemsForText(
-      results.flatMap((result) => result.items ?? []).filter((item) => item.horizon === horizon)
-    )
-    return grouped.length
-      ? [
-          {
-            label: `${horizon} (${grouped.length})`,
-            children: grouped.map((item) => renderRoadmapItem(item, options))
-          }
-        ]
-      : []
+  const by = results.find((result) => result.grouping)?.grouping?.by
+  entries.push({
+    label: `roadmap (${items.length})`,
+    children: by ? groupedEntries(results, by, options) : laneEntries(items, options)
   })
-  entries.push({ label: `roadmap (${items.length})`, children: horizonEntries })
+  entries.push(...groupingWarnings(results))
   entries.push(...roadmapLinkLegend(items, options))
   if (absent.length)
     entries.push({
@@ -208,13 +268,11 @@ const renderAggregateResult = (
         children: renderTradeEntries(result.trades, estate, result.tradeDiagnostic, options.icons)
       }))
     })
-  const done = items.filter((item) => item.status === 'done').length
-  const notDone = items.length - done
   const tradeDiagnostic = results.some((result) => result.tradeDiagnostic)
   entries.push({
     label:
       `summary: REPOSITORIES=${results.length} ROADMAPS=${results.length - absent.length} ` +
-      `NO_ROADMAP=${absent.length} ITEMS=${items.length} NOT_DONE=${notDone} DONE=${done} ` +
+      `NO_ROADMAP=${absent.length} ${itemSummary(items)} ` +
       `TRADES=${tradeDiagnostic ? 'unavailable' : tradeCount}`
   })
   return renderTree({ title: 'KI AGGREGATE ROADMAP', entries }).join('\n')
@@ -228,14 +286,16 @@ const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
       : result.repository
   )
   const statusLabels = {
+    triage: 't',
     draft: 'd',
     ready: 'r',
     'in-progress': 'ip',
     'awaiting-review': 'ar',
-    done: 'x'
+    done: 'x',
+    cancelled: 'c'
   } as const
   const cell = (items: readonly WorkItem[]): string => {
-    const counts = [...statusOrder].reverse().flatMap((status) => {
+    const counts = workItemStatuses.flatMap((status) => {
       const value = items.filter((item) => item.status === status).length
       return value ? [`${statusLabels[status]}=${value}`] : []
     })
@@ -247,16 +307,16 @@ const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
     const items = result.items ?? []
     return [
       labels[index] as string,
-      ...horizonOrder.map((horizon) =>
-        unavailable ? '?' : absent ? '—' : cell(items.filter((item) => item.horizon === horizon))
+      ...workItemLanes.map((lane) =>
+        unavailable ? '?' : absent ? '—' : cell(items.filter((item) => workItemLane(item) === lane))
       ),
       unavailable ? '?' : absent ? '—' : cell(items)
     ]
   })
   const items = results.flatMap((result) => result.items ?? [])
-  const table = renderMatrixTable('KI REPO ROADMAP SUMMARY', ['Repository', ...horizonOrder, 'Σ'], rows, [
+  const table = renderMatrixTable('KI REPO ROADMAP SUMMARY', ['Repository', ...workItemLanes, 'Σ'], rows, [
     'Σ',
-    ...horizonOrder.map((horizon) => cell(items.filter((item) => item.horizon === horizon))),
+    ...workItemLanes.map((lane) => cell(items.filter((item) => workItemLane(item) === lane))),
     cell(items)
   ])
   const diagnostics = results.flatMap((result, index) => [
@@ -266,7 +326,7 @@ const renderSummaryResult = (results: readonly RoadmapItemResult[]): string => {
   const absent = results.flatMap((result, index) => (result.roadmap === 'absent' ? [labels[index]] : []))
   return [
     ...table,
-    'd=draft r=ready ip=in-progress ar=awaiting-review x=done; Σ=total',
+    't=triage d=draft r=ready ip=in-progress ar=awaiting-review x=done c=cancelled; Σ=total',
     '— no items; ? unavailable',
     ...(absent.length ? [`No roadmap: ${absent.join(', ')}`] : []),
     ...(diagnostics.length ? ['Diagnostics (counts include valid items only)', ...diagnostics] : [])
@@ -350,6 +410,12 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
     .option('--aggregate', 'render one selected-set roadmap inventory')
     .option('--horizon <horizon>', 'only items at this horizon')
     .option('--status <status>', 'only items at this status')
+    .addOption(
+      new Option('--by <grouping>', 'group text output by Project or by Initiative from the Project registry').choices([
+        'project',
+        'initiative'
+      ])
+    )
     .option('--no-icons', 'omit decorative trade badge icons')
     .option('--format <text|json>', 'render roadmap evidence as text or versioned JSON', 'text')
     .addOption(
@@ -362,12 +428,14 @@ const listCommand = (context: KiContext, selectedRepositories: RepositorySelecti
         throw grammarError('roadmap list --format must be text or json')
       if (options.horizon && !workItemHorizons.includes(options.horizon as (typeof workItemHorizons)[number]))
         throw grammarError(`roadmap list --horizon must be one of ${workItemHorizons.join(', ')}`)
-      if (options.status && !statusOrder.includes(options.status as (typeof statusOrder)[number]))
-        throw grammarError(`roadmap list --status must be one of ${statusOrder.join(', ')}`)
+      if (options.status && !workItemStatuses.includes(options.status as (typeof workItemStatuses)[number]))
+        throw grammarError(`roadmap list --status must be one of ${workItemStatuses.join(', ')}`)
+      if (options.by && options.format === 'json') throw grammarError('roadmap list --by applies only to text output')
       const { estate, results } = await listRoadmap(operationContext(context), selectedRepositories(), {
         horizon: options.horizon,
         status: options.status,
-        includeProjection: options.format === 'json'
+        includeProjection: options.format === 'json',
+        ...(options.by ? { by: options.by as RoadmapGrouping } : {})
       })
       const textOptions: RoadmapTextOptions = {
         links: options.links,
@@ -420,8 +488,8 @@ const statsCommand = (context: KiContext, selectedRepositories: RepositorySelect
 
 const pruneCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('prune')
-    .description('delete completed governed work items and commit the deletions')
-    .argument('[id]', 'canonical completed work-item identifier')
+    .description('delete done or cancelled governed work items and commit the deletions')
+    .argument('[id]', 'canonical done or cancelled work-item identifier')
     .option('--no-commit', 'delete the records without staging or committing them')
     .option('--dry-run', 'report the records and commits a prune would make without changing anything')
     .addHelpText(
@@ -446,10 +514,12 @@ const pruneCommand = (context: KiContext, selectedRepositories: RepositorySelect
         { commit: options.commit, dryRun }
       )
       const entries = removed.flatMap(({ repository, items }) =>
-        items.map((item) => `${dryRun ? 'would prune' : 'pruned'} ${repository}: ${item.id} [done] ${item.title}`)
+        items.map(
+          (item) => `${dryRun ? 'would prune' : 'pruned'} ${repository}: ${item.id} [${item.status}] ${item.title}`
+        )
       )
       if (!entries.length) {
-        context.stdout.write('ki repo roadmap prune: no done work items\n')
+        context.stdout.write('ki repo roadmap prune: no done or cancelled work items\n')
         return
       }
       const commits = removed.flatMap(({ repository, commit, plannedCommit }) =>
@@ -460,26 +530,103 @@ const pruneCommand = (context: KiContext, selectedRepositories: RepositorySelect
             : []
       )
       const summary = dryRun
-        ? `would remove ${entries.length} done work item(s)${options.commit ? '' : ' without committing'}`
-        : `removed ${entries.length} done work item(s)${options.commit ? '' : ' without committing'}`
+        ? `would remove ${entries.length} terminal work item(s)${options.commit ? '' : ' without committing'}`
+        : `removed ${entries.length} terminal work item(s)${options.commit ? '' : ' without committing'}`
       context.stdout.write(`${[...entries, ...commits].join('\n')}\nki repo roadmap prune: ${summary}\n`)
     })
+
+interface MoveOptions {
+  readonly reason?: string
+  readonly condition?: string
+  readonly review?: string
+}
+
+/** Builds the Hold mapping a move into Hold records; any option without the others is a grammar error. */
+const holdOption = (options: MoveOptions): WorkItemHold | undefined => {
+  if (options.reason === undefined && options.condition === undefined && options.review === undefined) return undefined
+  if (!holdReasons.includes(options.reason as WorkItemHold['reason']))
+    throw grammarError(`roadmap --reason must be one of ${holdReasons.join(', ')}`)
+  if (!options.condition?.trim()) throw grammarError('roadmap --condition must name the release condition')
+  if (options.review !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(options.review))
+    throw grammarError('roadmap --review must be an ISO date (YYYY-MM-DD)')
+  return {
+    reason: options.reason as WorkItemHold['reason'],
+    condition: options.condition.trim(),
+    ...(options.review ? { review: options.review } : {})
+  }
+}
 
 const moveCommand = (
   context: KiContext,
   selectedRepositories: RepositorySelection,
   operation: 'promote' | 'demote'
-): Command =>
-  new Command(operation)
-    .description(operation === 'promote' ? 'move one work item toward now' : 'move one work item toward future')
+): Command => {
+  const command = new Command(operation)
+    .description(operation === 'promote' ? 'move one work item toward now' : 'move one work item toward hold')
     .argument('<id>', 'canonical work-item identifier')
     .argument(
       '[horizon]',
-      operation === 'promote' ? 'direct destination horizon toward now' : 'direct destination horizon toward future'
+      operation === 'promote' ? 'direct destination horizon toward now' : 'direct destination horizon toward hold'
     )
-    .action(async (id: string, horizon: string | undefined) => {
-      const result = await moveRoadmapItem(operationContext(context), selectedRepositories(), operation, id, horizon)
-      context.stdout.write(`ki repo roadmap ${operation}: ${result.id} ${result.from} -> ${result.to}\n`)
+  if (operation === 'demote')
+    command
+      .addOption(new Option('--reason <reason>', 'why the item is held').choices([...holdReasons]))
+      .option('--condition <text>', 'the release condition that ends the hold')
+      .option('--review <date>', 'optional ISO date on which to review the hold')
+  return command.action(async (id: string, horizon: string | undefined, options: MoveOptions) => {
+    const result = await moveRoadmapItem(
+      operationContext(context),
+      selectedRepositories(),
+      operation,
+      id,
+      horizon,
+      holdOption(options)
+    )
+    context.stdout.write(`ki repo roadmap ${operation}: ${result.id} ${result.from} -> ${result.to}\n`)
+  })
+}
+
+const migrateCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
+  new Command('migrate')
+    .description('preview or apply the mechanical roadmap model migration')
+    .option('--apply', 'write the migrated records in exactly one repository without committing')
+    .addHelpText(
+      'after',
+      '\nThe mechanical pass moves the Triage horizon to status triage, Waiting for and\n' +
+        'Parked to the Hold horizon with a hold reason and a condition lifted from the\n' +
+        'record prose or a REVIEW placeholder, waiting_on_trades to hold.trades, and a\n' +
+        'terminal Triage disposition to status cancelled with its resolution. It\n' +
+        'advances updated_at, never touches theme, kind, project or purpose, and never\n' +
+        'stages or commits. Without --apply it only prints the comparison.'
+    )
+    .action(async (options: { readonly apply?: boolean }) => {
+      const apply = Boolean(options.apply)
+      const results = await migrateRoadmap(operationContext(context), selectedRepositories(), { apply })
+      const entries: TreeEntry[] = results.map((result) => ({
+        label: result.repository,
+        children:
+          result.roadmap === 'absent'
+            ? [{ label: `${presentation('status.skip').terminal} no roadmap` }]
+            : [
+                ...result.migrations.map((migration) => ({
+                  label: `${migration.id} ${migration.file}`,
+                  children: [
+                    ...migration.before.map((line) => ({ label: `- ${line}` })),
+                    ...migration.after.map((line) => ({ label: `+ ${line}` })),
+                    ...migration.notes.map((note) => ({ label: `${presentation('status.warn').terminal} ${note}` }))
+                  ]
+                })),
+                ...result.faults.map((fault) => ({
+                  label: `${presentation('status.unavailable').terminal} ${fault.message}`
+                }))
+              ]
+      }))
+      const count = results.reduce((total, result) => total + result.migrations.length, 0)
+      entries.push({
+        label: `summary: ${apply ? 'MIGRATED' : 'WOULD_MIGRATE'}=${count} REPOSITORIES=${results.length}`
+      })
+      context.stdout.write(`${renderTree({ title: 'KI REPO ROADMAP MIGRATE', entries }).join('\n')}\n`)
+      if (results.some((result) => result.faults.length)) throw new KiExit(1)
     })
 
 export const createRepoRoadmapCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
@@ -491,3 +638,4 @@ export const createRepoRoadmapCommand = (context: KiContext, selectedRepositorie
     .addCommand(pruneCommand(context, selectedRepositories))
     .addCommand(moveCommand(context, selectedRepositories, 'promote'))
     .addCommand(moveCommand(context, selectedRepositories, 'demote'))
+    .addCommand(migrateCommand(context, selectedRepositories))

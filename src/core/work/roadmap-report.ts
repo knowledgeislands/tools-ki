@@ -1,4 +1,4 @@
-import type { TaskLinks } from './items.ts'
+import { type TaskLinks, type WorkItemHold, type WorkItemLane, workItemLane } from './items.ts'
 import type { RoadmapListResult } from './operations.ts'
 
 const ROADMAP_REPORT_SCHEMA = 'ki/roadmap/v1' as const
@@ -16,10 +16,20 @@ interface RoadmapReport {
     readonly repository: string
     readonly id: string
     readonly area: string | null
-    readonly theme: string
+    readonly theme: string | null
     readonly title: string
-    readonly horizon: string
+    readonly horizon: string | null
     readonly status: string
+    readonly lane: WorkItemLane
+    readonly kind: string | null
+    readonly purpose: string | null
+    readonly project: string | null
+    readonly initiative: string | null
+    readonly component: string | null
+    readonly hold?: WorkItemHold
+    readonly resolution?: string
+    readonly resolutionTarget?: string
+    readonly legacy: readonly string[]
     readonly blocks: readonly string[]
     readonly blockedBy: readonly string[]
     readonly createdAt: string
@@ -50,10 +60,20 @@ export const roadmapReport = (results: readonly RoadmapListResult[]): RoadmapRep
       repository: result.repositoryUrl as string,
       id: item.id,
       area: item.area ?? null,
-      theme: item.theme,
+      theme: item.theme ?? null,
       title: item.title,
-      horizon: item.horizon,
+      horizon: item.horizon ?? null,
       status: item.status,
+      lane: workItemLane(item),
+      kind: item.kind ?? null,
+      purpose: item.purpose ?? null,
+      project: item.project ?? null,
+      initiative: item.initiative ?? null,
+      component: item.component ?? null,
+      ...(item.hold ? { hold: item.hold } : {}),
+      ...(item.resolution ? { resolution: item.resolution } : {}),
+      ...(item.resolutionTarget ? { resolutionTarget: item.resolutionTarget } : {}),
+      legacy: item.legacy ?? [],
       blocks: item.blocks,
       blockedBy: item.blockedBy,
       createdAt: item.createdAt,

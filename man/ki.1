@@ -150,24 +150,27 @@ changing repository or registry state.
 Record selected physical KI repository roots, then reconcile only their
 proven KI-managed projections.
 .TP
-.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>] [--format <text|json>] [--links <compact|all>]
-List governed work items in a framed deterministic horizon and lifecycle tree
+.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>] [--by <grouping>] [--format <text|json>] [--links <compact|all>]
+List governed work items in a framed deterministic lane and lifecycle tree
 without changing their lifecycle.
 .TP
 .B ki repo [repo-options] roadmap summary
-Show repository-by-horizon counts and totals without listing records.
+Show repository-by-lane counts and totals without listing records.
 .TP
 .B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
 Report timestamp coverage, age, and inactivity for governed work items.
 .TP
 .B ki repo [repo-options] roadmap prune [id] [--no-commit] [--dry-run]
-Delete completed canonical work-item records and commit the deletions.
+Delete done or cancelled canonical work-item records and commit the deletions.
 .TP
 .B ki repo [repo-options] roadmap promote <id> [horizon]
 Move one work item toward the now horizon.
 .TP
-.B ki repo [repo-options] roadmap demote <id> [horizon]
-Move one work item toward the future horizon.
+.B ki repo [repo-options] roadmap demote <id> [horizon] [--reason <reason>] [--condition <text>] [--review <date>]
+Move one work item toward the hold horizon.
+.TP
+.B ki repo [repo-options] roadmap migrate [--apply]
+Preview or apply the mechanical roadmap model migration.
 .TP
 .B ki repo [repo-options] educate [--skill <skill>]
 Explain the registered repository maintenance catalogue.
@@ -745,35 +748,52 @@ machine-local registry before evaluating findings. Registration is
 an inventory action, not evidence of conformance, so a failing repository
 remains available for later repair and bulk maintenance.
 .TP
-.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>] [--format <text|json>] [--links <compact|all>]
+.B ki repo [repo-options] roadmap list [--horizon <horizon>] [--status <status>] [--by <grouping>] [--format <text|json>] [--links <compact|all>]
 List canonical governed work items from every selected repository without
 changing their lifecycle. The framed text output names each selected repository,
-then groups items by horizon from \fBnow\fR through unadopted
-\fBtriage\fR and by lifecycle from \fBdone\fR through \fBdraft\fR, with
-identifiers breaking ties.
+then groups items by lane: open adopted records by horizon \fBnow\fR,
+\fBnext\fR, \fBsoon\fR, \fBfuture\fR and \fBhold\fR, then \fBtriage\fR
+intake, then \fBdone\fR and \fBcancelled\fR records last. Within a lane,
+items run from \fBawaiting-review\fR through \fBdraft\fR, with identifiers
+breaking ties. The summary line counts the \fBnow\fR lane as a signal with no
+cap. Records still in the old shape (a \fBtheme\fR, a \fBwaiting-for\fR,
+\fBparked\fR or \fBtriage\fR horizon, \fBwaiting_on_trades\fR or
+\fBintake_disposition\fR) are listed in the lane they migrate to, marked
+\fBlegacy\fR, and counted as \fBLEGACY\fR; they are tolerated until migration.
 Linked items append one compact provider-qualified task key and a count of
 additional distinct tickets, preferring implementation links. A legend explains
 provider abbreviations. Use \fB--links all\fR to replace the suffix with nested
 task entries showing provider, key, and relation, each with its full URL on a
 further indented line. Ambiguous keys include authority, scope, and task ID on
-separate child lines. These options also apply to \fB--aggregate\fR; JSON output
-is unchanged. Mappings are read locally without contacting task systems and
-do not imply current task status or ownership.
+separate child lines. These options also apply to \fB--aggregate\fR. JSON
+output stays \fBki/roadmap/v1\fR and adds each record's lane, classification,
+hold, resolution and legacy shapes. Mappings are read locally without
+contacting task systems and do not imply current task status or ownership.
 \fB--horizon\fR
-and \fB--status\fR filter before rendering; unsupported values fail with a
-usage error rather than an empty result. A missing roadmap directory or
+and \fB--status\fR filter by lane and lifecycle before rendering; unsupported
+values fail with a usage error rather than an empty result.
+\fB--by project\fR
+groups text output by each record's \fBproject\fR, and
+\fB--by initiative\fR
+by the Initiative its Project names in the Capital's
+\fBStreams/Projects/\fR registry, found through the repository's
+\fB[skills.ki-repo].capital\fR and the local ki registry; a projectless record
+groups under its own \fBinitiative\fR. Records with neither group under
+\fBunassigned\fR. An unavailable registry, an unknown slug, or an
+\fBinitiative\fR that contradicts the registry is a warning that never changes
+the exit status. \fB--by\fR does not apply to JSON output.
+A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
 selected repositories still report, and any roadmap or trade diagnostic makes
 the command exit with status 1 after rendering the inventory. The command
-never creates, transitions, accepts, prunes, or repairs a work item. Generic
-promote and demote operations exclude the unadopted \fBtriage\fR horizon.
+never creates, transitions, accepts, prunes, or repairs a work item.
 .TP
 .B ki repo [repo-options] roadmap summary
-Show selected repositories as rows against horizon columns. Each cell shows
+Show selected repositories as rows against lane columns. Each cell shows
 nonzero lifecycle-status counts and a sum, such as d=1 r=2 Σ=3.
 The Σ column and row aggregate the same counts per repository and per
-horizon. A legend expands d (draft), r (ready), ip (in-progress),
-ar (awaiting-review), and x (done).
+lane. A legend expands t (triage), d (draft), r (ready), ip (in-progress),
+ar (awaiting-review), x (done), and c (cancelled).
 A dash means no items in that cell; a question mark means
 unavailable. Repositories without a roadmap are named below the table.
 Invalid roadmap evidence
@@ -784,7 +804,8 @@ titles, and trade records are omitted.
 Report age and inactivity metrics for selected local roadmaps. Every valid work
 item requires paired canonical UTC-second creation and update timestamps;
 timestamp-free records are diagnostics, not compatibility records. The
-\fBNOT_DONE\fR count includes every non-done item, including Triage drafts.
+\fBNOT_DONE\fR count includes every open item, including triage records, and
+excludes done and cancelled ones.
 Multiple selected repositories add a selected-set
 aggregate. A positive stale duration uses seconds, minutes, hours, or days,
 such as
@@ -795,20 +816,23 @@ for a versioned machine-readable report.
 .TP
 .B ki repo [repo-options] roadmap prune [id] [--no-commit] [--dry-run]
 Without an ID, delete every canonical work-item record whose lifecycle status
-is exactly
-.BR done
-from the selected repositories. It leaves every other lifecycle status,
+is
+.B done
+or
+.B cancelled
+from the selected repositories. It leaves every open lifecycle status,
 non-canonical file, and peer repository untouched. If no selected repository
-contains a completed record, it reports that no record was pruned. With an ID,
-require exactly one selected repository and delete only that named completed
-record. By default, each repository with pruned records gets one commit that
-contains exactly those deletions, with the subject
+contains a terminal record, it reports that no record was pruned. With an ID,
+require exactly one selected repository and delete only that named done or
+cancelled record. By default, each repository with pruned records gets one
+commit that contains exactly those deletions, with the subject
 .B chore(roadmap): prune <N> done work record(s)
-and one
+whichever terminal state the records reached, and one
 .B - <ID>
 body line per record; commit hooks run. Before deleting anything, the command
 refuses when a selected repository is not a Git work tree, has staged changes,
-or holds a selected record that is untracked or modified. A failed commit
+or holds a selected record that is untracked or modified, so each record's
+terminal state is committed before the prune commit. A failed commit
 restores that repository's records, and a commit that a hook widened with other
 paths is reported as an error.
 .B --no-commit
@@ -819,23 +843,82 @@ commits without deleting or committing.
 .TP
 .B ki repo [repo-options] roadmap promote <id> [horizon]
 Move exactly one selected repository's named work item one horizon toward
-.BR now .
+.B now
+along now, next, soon, future and hold.
 With an optional destination horizon, move directly only toward
 .BR now ;
-the current horizon, a future-facing destination, and the now endpoint are
-errors. The command changes only the item's horizon frontmatter; moving from
-.BR future
-also removes its required candidate marker.
+the current horizon, a hold-facing destination, and the now endpoint are
+errors. Leaving
+.B hold
+re-decides the horizon, so it requires a named destination and removes the
+record's hold mapping. Triage records are adopted through the planning
+workflow, done and cancelled records have no horizon, and records still at a
+legacy horizon must be migrated first. The destination must be allowed for the
+record's status: ready records stay within now, next and hold, and in-progress
+and awaiting-review records within now and hold. The command changes only the
+item's horizon frontmatter and its update timestamp.
 .TP
-.B ki repo [repo-options] roadmap demote <id> [horizon]
+.B ki repo [repo-options] roadmap demote <id> [horizon] [--reason <reason>] [--condition <text>] [--review <date>]
 Move exactly one selected repository's named work item one horizon toward
-.BR future .
+.BR hold .
 With an optional destination horizon, move directly only toward
-.BR future ;
-the current horizon, a now-facing destination, and the future endpoint are
-errors. The command changes only the item's horizon frontmatter; moving to
-.BR future
-adds its required candidate marker.
+.BR hold ;
+the current horizon, a now-facing destination, and the hold endpoint are
+errors. A move into
+.B hold
+requires
+.B --reason
+.RB ( waiting-for
+or
+.BR parked )
+and a
+.B --condition
+naming the release condition, with an optional ISO
+.B --review
+date; these options are rejected for any other destination. The same lifecycle
+and status rules as
+.B promote
+apply.
+.TP
+.B ki repo [repo-options] roadmap migrate [--apply]
+Preview the mechanical roadmap model migration for every selected repository,
+printing each changed record's removed and added frontmatter lines and the
+review notes it needs. The pass moves a
+.B triage
+horizon on a draft to
+.BR "status: triage" ;
+a
+.B waiting-for
+or
+.B parked
+horizon on an open record to
+.B horizon: hold
+with a hold reason and a condition lifted from the record prose, or a
+.B REVIEW
+placeholder when none is found;
+.B waiting_on_trades
+to
+.BR hold.trades ;
+and a done Triage intake disposition to
+.B status: cancelled
+with its
+.B resolution
+and any
+.BR resolution_target ,
+noting that a Cancelled section is still needed. It advances
+.BR updated_at ,
+never touches
+.BR theme ,
+.BR kind ,
+.BR project ,
+or
+.BR purpose ,
+and a migrated record needs no further mechanical change, so a second run
+reports nothing.
+.B --apply
+writes the records in exactly one selected repository whose roadmap has no
+unreadable record, and never stages or commits. Unreadable records are
+diagnostics that make the command exit with status 1.
 .TP
 .B ki repo [repo-options] store list [--format <text|json>]
 List every store role declared by selected Knowledge Bases. The \fBnotes\fR role
