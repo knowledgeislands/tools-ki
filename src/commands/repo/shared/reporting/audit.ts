@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
 import type { KiContext } from '../../../../context.ts'
-import type { Finding, PreparedSkill } from '../../../../core/runtime/index.ts'
+import type { AuditCriteria, Finding, PreparedSkill } from '../../../../core/runtime/index.ts'
 import { renderTree, type TreeReporter } from '../../../presentation/index.ts'
 import type { ReporterLevel } from '../progress/index.ts'
 import { findingEntry, REPORT_ICON, REPORT_LABEL, renderOperationFrameStart } from './shared.ts'
@@ -8,6 +8,7 @@ import { findingEntry, REPORT_ICON, REPORT_LABEL, renderOperationFrameStart } fr
 interface AuditSkillReport {
   readonly skill: PreparedSkill
   readonly findings: readonly Finding[]
+  readonly criteria: AuditCriteria
 }
 
 export interface AuditRepositorySummary {
@@ -17,7 +18,20 @@ export interface AuditRepositorySummary {
   readonly failingSkills: number
   readonly failingFindings: number
   readonly warningFindings: number
+  readonly criteria: AuditCriteria
 }
+
+const NO_CRITERIA: AuditCriteria = { mechanical: 0, evaluated: 0, judgment: 0 }
+
+const addCriteria = (total: AuditCriteria, criteria: AuditCriteria): AuditCriteria => ({
+  mechanical: total.mechanical + criteria.mechanical,
+  evaluated: total.evaluated + criteria.evaluated,
+  judgment: total.judgment + criteria.judgment
+})
+
+/** Discloses coverage so a pass with nothing to check never reads as a fully checked pass. */
+const criteriaLabel = (criteria: AuditCriteria): string =>
+  `CRITERIA: EVALUATED=${criteria.evaluated}/${criteria.mechanical} JUDGMENT=${criteria.judgment}`
 
 const auditSkillSummary = (
   findings: readonly Finding[]
@@ -35,15 +49,19 @@ const skillCount = (count: number): string => `${count} skill${count === 1 ? '' 
 const auditPassed = (summary: Pick<AuditRepositorySummary, 'failingSkills' | 'warningSkills'>): boolean =>
   summary.failingSkills === 0 && summary.warningSkills === 0
 
+const auditCountsLabel = (summary: Omit<AuditRepositorySummary, 'repository'>): string =>
+  `PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings} · ${criteriaLabel(summary.criteria)}`
+
 const auditSummaryLabel = (summary: AuditRepositorySummary): string => {
   const prefix = `summary: KI REPO AUDIT on ${basename(summary.repository)}`
-  if (auditPassed(summary)) return `${prefix} PASS · ${skillCount(summary.passingSkills)}`
-  return `${prefix} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
+  if (auditPassed(summary))
+    return `${prefix} PASS · ${skillCount(summary.passingSkills)} · ${criteriaLabel(summary.criteria)}`
+  return `${prefix} ${auditCountsLabel(summary)}`
 }
 
-const auditSkillLabel = (identity: string, summary: ReturnType<typeof auditSkillSummary>): string => {
-  const result = `${REPORT_ICON[summary.level]} ${identity} ${REPORT_LABEL[summary.level].toUpperCase()}`
-  return `${result} · FAIL=${summary.fails} WARN=${summary.warnings}`
+const auditSkillLabel = (report: AuditSkillReport, summary: ReturnType<typeof auditSkillSummary>): string => {
+  const result = `${REPORT_ICON[summary.level]} ${report.skill.skill.identity} ${REPORT_LABEL[summary.level].toUpperCase()}`
+  return `${result} · FAIL=${summary.fails} WARN=${summary.warnings} · ${criteriaLabel(report.criteria)}`
 }
 
 const auditRepositorySummary = (
@@ -59,7 +77,8 @@ const auditRepositorySummary = (
     failingSkills: skillSummaries.filter((item) => item.level === 'fail').length + Number(Boolean(registrationFailure)),
     failingFindings:
       skillSummaries.reduce((total, summary) => total + summary.fails, 0) + Number(Boolean(registrationFailure)),
-    warningFindings: skillSummaries.reduce((total, summary) => total + summary.warnings, 0)
+    warningFindings: skillSummaries.reduce((total, summary) => total + summary.warnings, 0),
+    criteria: reports.reduce((total, report) => addCriteria(total, report.criteria), NO_CRITERIA)
   }
 }
 
@@ -88,7 +107,7 @@ export const renderAuditResults = (
     for (const { report, summary: reportSummary } of resultReports) {
       const visible = report.findings.filter((entry) => reporterLevels.includes(entry.level))
       results.entry({
-        label: auditSkillLabel(report.skill.skill.identity, reportSummary),
+        label: auditSkillLabel(report, reportSummary),
         children: visible.map(findingEntry)
       })
     }
@@ -120,9 +139,17 @@ const auditTotals = (summaries: readonly AuditRepositorySummary[]) =>
       warningSkills: total.warningSkills + summary.warningSkills,
       failingSkills: total.failingSkills + summary.failingSkills,
       failingFindings: total.failingFindings + summary.failingFindings,
-      warningFindings: total.warningFindings + summary.warningFindings
+      warningFindings: total.warningFindings + summary.warningFindings,
+      criteria: addCriteria(total.criteria, summary.criteria)
     }),
-    { passingSkills: 0, warningSkills: 0, failingSkills: 0, failingFindings: 0, warningFindings: 0 }
+    {
+      passingSkills: 0,
+      warningSkills: 0,
+      failingSkills: 0,
+      failingFindings: 0,
+      warningFindings: 0,
+      criteria: NO_CRITERIA
+    }
   )
 
 /** Render one compact recap after every selected repository completed its audit. */
@@ -135,11 +162,11 @@ export const renderMultiRepositoryAuditSummary = (
     `\n${renderTree({
       title: 'KI REPO AUDIT · MULTI-REPOSITORY SUMMARY',
       context: summaries.map((summary) => ({
-        label: `${auditSummaryIcon(summary)} ${basename(summary.repository)} PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings}`
+        label: `${auditSummaryIcon(summary)} ${basename(summary.repository)} ${auditCountsLabel(summary)}`
       })),
       entries: [
         {
-          label: `totals: PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} · FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}`
+          label: `totals: ${auditCountsLabel(totals)}`
         }
       ]
     }).join('\n')}\n`
@@ -152,7 +179,5 @@ export const renderConciseMultiRepositoryAuditSummary = (
   summaries: readonly AuditRepositorySummary[]
 ): void => {
   const totals = auditTotals(summaries)
-  context.stdout.write(
-    `totals: KI REPO AUDIT PASS=${totals.passingSkills} WARN=${totals.warningSkills} FAIL=${totals.failingSkills} · FINDINGS: FAIL=${totals.failingFindings} WARN=${totals.warningFindings}\n`
-  )
+  context.stdout.write(`totals: KI REPO AUDIT ${auditCountsLabel(totals)}\n`)
 }

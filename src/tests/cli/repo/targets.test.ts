@@ -463,12 +463,12 @@ describe('[ki repo target sets]', () => {
       expect(result.output.match(/╭─ KI REPO AUDIT\n/g)).toHaveLength(2)
       expect(result.output).toContain(`╭─ KI REPO AUDIT\n│  ├─ 📁 second (${second})`)
       expect(result.output).toContain(
-        `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✓ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n│  ╰─ ✓ second PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n╰─ totals: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0`
+        `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✓ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0 · CRITERIA: EVALUATED=0/0 JUDGMENT=0\n│  ╰─ ✓ second PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0 · CRITERIA: EVALUATED=0/0 JUDGMENT=0\n╰─ totals: PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0 · CRITERIA: EVALUATED=0/0 JUDGMENT=0`
       )
       expect(concise).toEqual({
         exitCode: 0,
         output:
-          'summary: KI REPO AUDIT on first PASS · 1 skill\nsummary: KI REPO AUDIT on second PASS · 1 skill\ntotals: KI REPO AUDIT PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n'
+          'summary: KI REPO AUDIT on first PASS · 1 skill · CRITERIA: EVALUATED=0/0 JUDGMENT=0\nsummary: KI REPO AUDIT on second PASS · 1 skill · CRITERIA: EVALUATED=0/0 JUDGMENT=0\ntotals: KI REPO AUDIT PASS=2 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0 · CRITERIA: EVALUATED=0/0 JUDGMENT=0\n'
       })
     })
 
@@ -498,13 +498,13 @@ describe('[ki repo target sets]', () => {
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('╰─ summary: KI REPO AUDIT on first PASS · 1 skill')
       expect(result.output).toContain(
-        '╰─ summary: KI REPO AUDIT on second PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1'
+        '╰─ summary: KI REPO AUDIT on second PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1 · CRITERIA: EVALUATED=1/2 JUDGMENT=0'
       )
       expect(result.output).toContain(
-        '╰─ summary: KI REPO AUDIT on third PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0'
+        '╰─ summary: KI REPO AUDIT on third PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0 · CRITERIA: EVALUATED=1/2 JUDGMENT=0'
       )
       expect(result.output).toContain(
-        `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✓ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0\n│  ├─ ! second PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1\n│  ╰─ × third PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0\n╰─ totals: PASS=1 WARN=1 FAIL=1 · FINDINGS: FAIL=1 WARN=1`
+        `╭─ KI REPO AUDIT · MULTI-REPOSITORY SUMMARY\n│  ├─ ✓ first PASS=1 WARN=0 FAIL=0 · FINDINGS: FAIL=0 WARN=0 · CRITERIA: EVALUATED=0/2 JUDGMENT=0\n│  ├─ ! second PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1 · CRITERIA: EVALUATED=1/2 JUDGMENT=0\n│  ╰─ × third PASS=0 WARN=0 FAIL=1 · FINDINGS: FAIL=1 WARN=0 · CRITERIA: EVALUATED=1/2 JUDGMENT=0\n╰─ totals: PASS=1 WARN=1 FAIL=1 · FINDINGS: FAIL=1 WARN=1 · CRITERIA: EVALUATED=2/6 JUDGMENT=0`
       )
     })
 

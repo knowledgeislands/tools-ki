@@ -1,5 +1,5 @@
 import { gatherSkillAuditEvidence, runGatheredSkillAudit } from '../../runtime/audit.ts'
-import type { Finding, PreparedSkill } from '../../runtime/types.ts'
+import type { AuditCriteria, Finding, PreparedSkill } from '../../runtime/types.ts'
 import { runWithEvidenceProgress } from '../progress/run.ts'
 import { localRepositoryRegistration, repositorySkillActivation } from './local-state.ts'
 import { selectRepositorySkills } from './selection.ts'
@@ -8,6 +8,7 @@ import type { RepositoryOperationContext, RepositorySelection } from './types.ts
 export interface RepositoryAuditReport {
   readonly skill: PreparedSkill
   readonly findings: readonly Finding[]
+  readonly criteria: AuditCriteria
 }
 
 export interface RepositoryAuditResult {
@@ -75,7 +76,7 @@ export const auditRepositories = async (
       const result: RepositoryAuditResult = {
         repository: repository.root,
         skills,
-        reports: results.map(({ skill, audit }) => ({ skill, findings: audit.findings })),
+        reports: results.map(({ skill, audit }) => ({ skill, findings: audit.findings, criteria: audit.criteria })),
         ...(registration ? { registration } : {})
       }
       completed.push(result)

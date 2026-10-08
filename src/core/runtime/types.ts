@@ -57,9 +57,20 @@ export interface PreparedRubricItem {
   readonly itemIndex: number
 }
 
+/** How many of a skill's criteria one audit actually evaluated, disclosed beside its verdict. */
+export interface AuditCriteria {
+  /** Mechanical items the host planned to run. */
+  readonly mechanical: number
+  /** Planned mechanical items with at least one outcome other than NOT_APPLICABLE. */
+  readonly evaluated: number
+  /** Items with a judgment aspect, which the host never assesses. */
+  readonly judgment: number
+}
+
 export interface SkillAuditResult {
   readonly findings: readonly Finding[]
   readonly items: readonly ItemAuditState[]
+  readonly criteria: AuditCriteria
 }
 
 /** A validated rubric definition and its execution order, loaded once by the repository host. */

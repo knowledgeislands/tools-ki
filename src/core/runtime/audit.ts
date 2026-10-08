@@ -13,6 +13,7 @@ import type {
 } from '../rubric/index.ts'
 import { prepareRubricPublication } from '../rubric/publication.ts'
 import type {
+  AuditCriteria,
   EvidenceProgress,
   Finding,
   FindingLevel,
@@ -249,6 +250,16 @@ export const gatherSkillAuditEvidence = async (
   progress?: EvidenceProgress
 ): Promise<GatheredSkillAudit> => gatherSkillAudit(scope, prepared, 'audit', progress)
 
+/** Counts the criteria one audit evaluated against those its skill declares. */
+const auditCriteria = (prepared: PreparedSkill, items: readonly ItemAuditState[]): AuditCriteria => ({
+  mechanical: items.length,
+  evaluated: items.filter((state) => state.outcomes.some((outcome) => outcome.status !== 'NOT_APPLICABLE')).length,
+  judgment: prepared.definition.families.reduce(
+    (total, family) => total + family.items.filter((item) => item.judgment).length,
+    0
+  )
+})
+
 /** Runs one gathered audit session's mechanical items in its already-validated context. */
 export const runGatheredSkillAudit = async (
   prepared: PreparedSkill,
@@ -256,7 +267,7 @@ export const runGatheredSkillAudit = async (
   progress?: ItemProgress
 ): Promise<SkillAuditResult> => {
   const { items, findings } = await auditGatheredSkill(prepared, gathered, progress)
-  return { findings, items }
+  return { findings, items, criteria: auditCriteria(prepared, items) }
 }
 
 export const runSkillAudit = async (
@@ -265,5 +276,5 @@ export const runSkillAudit = async (
   progress?: ItemProgress
 ): Promise<SkillAuditResult> => {
   const { items, findings } = await auditSkill(scope, prepared, 'audit', progress)
-  return { findings, items }
+  return { findings, items, criteria: auditCriteria(prepared, items) }
 }

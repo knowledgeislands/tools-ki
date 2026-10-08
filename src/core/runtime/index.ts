@@ -11,6 +11,7 @@ export { aggregatePackageScriptClaims, prepareSkill } from './preparation.ts'
  * @public
  */
 export type {
+  AuditCriteria,
   EvidenceProgress,
   Finding,
   FindingLevel,

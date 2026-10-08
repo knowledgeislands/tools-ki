@@ -96,6 +96,16 @@ _Verify:_ `src/tests/cli/territory/selection.test.ts` - Capital metadata, regist
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### REPO-AUDIT-010 — Criteria coverage disclosure
+
+`ki repo audit` MUST disclose, beside every skill, repository, multi-repository and total verdict, how many of the selected mechanical criteria it evaluated and how many judgment criteria remain unassessed. A mechanical criterion is evaluated when it reports at least one outcome other than not-applicable. The disclosure MUST NOT change any verdict or exit status.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/repo.test.ts` — `discloses evaluated mechanical and unassessed judgment criteria`; `src/tests/cli/repo/targets.test.ts` — `recaps every repository verdict and aggregate finding volume`.
+
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this pilot.

@@ -213,7 +213,7 @@ describe('[ki repo]', () => {
 │  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
 │  ╰─ ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
-╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill · CRITERIA: EVALUATED=1/1 JUDGMENT=1
 `
       })
     })
@@ -227,7 +227,7 @@ describe('[ki repo]', () => {
 
       expect(result).toEqual({
         exitCode: 0,
-        output: 'summary: KI REPO AUDIT on project PASS · 1 skill\n'
+        output: 'summary: KI REPO AUDIT on project PASS · 1 skill · CRITERIA: EVALUATED=0/0 JUDGMENT=0\n'
       })
     })
 
@@ -354,7 +354,7 @@ describe('[ki repo]', () => {
 │  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
 │  ╰─ ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
-╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill · CRITERIA: EVALUATED=0/0 JUDGMENT=0
 `
       })
     })
@@ -459,7 +459,7 @@ describe('[ki repo]', () => {
 │  ╰─ ✦ 2 skills selected
 │     ├─ example/harness:ki-example
 │     ╰─ example/harness:ki-extra
-╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 2 skills
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 2 skills · CRITERIA: EVALUATED=0/3 JUDGMENT=0
 `
       })
     })
@@ -682,6 +682,32 @@ describe('[ki repo]', () => {
       expect(result.output).toContain('repository audit found failures')
     })
 
+    test('discloses evaluated mechanical and unassessed judgment criteria', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
+      await box.setupExampleHarness({
+        rubric: rubric(`[{
+          code: 'F', title: 'Family',
+          items: [
+            { kind: 'judgment', code: 'J-1', title: 'Judgment', prompt: 'never executed' },
+            { kind: 'mechanical', code: 'NA-1', title: 'Inapplicable', level: 'FAIL', phase: 'PRIMARY',
+              audit: async () => [{ status: 'NOT_APPLICABLE', message: 'nothing to check' }] },
+            { kind: 'mechanical', code: 'WARN-1', title: 'Warning', level: 'WARN', phase: 'PRIMARY',
+              audit: async () => [{ status: 'VIOLATION', message: 'needs attention' }] }
+          ]
+        }]`)
+      })
+
+      const result = await box.run('ki repo audit --progress never')
+
+      expect(result.output).toContain(
+        '! example/harness:ki-example WARN · FAIL=0 WARN=1 · CRITERIA: EVALUATED=1/2 JUDGMENT=1'
+      )
+      expect(result.output).toContain(
+        'PASS=0 WARN=1 FAIL=0 · FINDINGS: FAIL=0 WARN=1 · CRITERIA: EVALUATED=1/2 JUDGMENT=1'
+      )
+    })
+
     test('appends the subject to a finding message when an outcome declares one', async () => {
       const box = await sandbox()
       await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-example]\n')
@@ -701,7 +727,7 @@ describe('[ki repo]', () => {
 │  ├─ 📁 ${basename(await projectRoot(box.project))} (${await projectRoot(box.project)})
 │  ╰─ ✦ 1 skill selected
 │     ╰─ example/harness:ki-example
-╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill
+╰─ summary: KI REPO AUDIT on ${basename(await projectRoot(box.project))} PASS · 1 skill · CRITERIA: EVALUATED=1/1 JUDGMENT=0
 `
       })
     })
