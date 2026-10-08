@@ -44,6 +44,16 @@ _Verify:_ `src/tests/cli/skill/rubric.test.ts` — `renders mechanical and judgm
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### SKILL-005 — Attributable publication tree
+
+`ki dev skill rubric` resolves installed Harnesses and not the current directory, so it MUST name the resolved publication root in every result, and `--write` MUST publish only when that root and the current directory belong to the same Git working tree, refusing any other tree with both roots named.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/skill/rubric.test.ts` — `names the resolved publication root even when the caller is nowhere near it`, `permits --write from …`, and `refuses --write from …`, which covers a linked worktree of the same repository, an unrelated repository, no repository, an enclosing repository, and an exported `GIT_WORK_TREE`.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

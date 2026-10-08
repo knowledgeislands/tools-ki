@@ -1,7 +1,7 @@
 import { rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
-import { sandbox } from '../_cli_helper.ts'
+import { type Sandbox, sandbox } from '../_cli_helper.ts'
 
 // Builds a full canonical `scripts/rubric/items/index.ts` catalogue.
 const rubric = (families: string, skill = 'ki-example'): string => `
@@ -66,8 +66,14 @@ const expectedRendered = [
   ''
 ].join('\n')
 
-// Simulates a complete local Harness root without going through `ki dev local on`.
-const devLinkExampleHarness = async (box: Awaited<ReturnType<typeof sandbox>>, rubricSource: string): Promise<void> => {
+// Simulates a complete local Harness root without going through `ki dev local on`. The checkout is a
+// real Git working tree, as a development Harness always is — `--write` resolves that tree and refuses
+// to publish into it from anywhere else. Returns the resolved skill source directory, which is the
+// publication root every event now names.
+const devLinkExampleHarness = async (
+  box: Awaited<ReturnType<typeof sandbox>>,
+  rubricSource: string
+): Promise<string> => {
   await box.root.write('local/.ki.toml', '[skills.ki-repo-harness]\nprefix = "ki"\n')
   await box.root.write('local/skills/ki-example/SKILL.md', '---\nname: ki-example\nki-depends-on: []\n---\n')
   await box.root.write('local/skills/ki-example/scripts/rubric/items/index.ts', rubricSource)
@@ -75,6 +81,8 @@ const devLinkExampleHarness = async (box: Awaited<ReturnType<typeof sandbox>>, r
   const installed = join(box.data.path, 'ki/harnesses/example/harness')
   await rm(installed, { recursive: true, force: true })
   await symlink(join(box.root.path, 'local'), installed)
+  await box.root.git(['init'], 'local')
+  return box.root.mkdir('local/skills/ki-example')
 }
 
 describe('[ki dev skill rubric]', () => {
@@ -90,17 +98,18 @@ describe('[ki dev skill rubric]', () => {
     const box = await sandbox()
     await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
     const target = 'ki/harnesses/example/harness/skills/ki-example/references/rubric.md'
-    await devLinkExampleHarness(box, rubric(mixedFamilies))
+    const publicationRoot = await devLinkExampleHarness(box, rubric(mixedFamilies))
+    box.cd('../local')
 
-    const written = await box.run('ki dev skill rubric ki-example --write')
+    const written = await box.run('ki dev skill rubric ki-example --write', { runner: 'default' })
     expect(written.exitCode).toBe(0)
-    expect(written.output).toMatch(/^write .*local\/skills\/ki-example\/references\/rubric\.md\n$/)
+    expect(written.output).toBe(`write ${publicationRoot}/references/rubric.md\n`)
     expect(await box.data.read(target)).toBe(expectedRendered)
 
     const checked = await box.run('ki dev skill rubric ki-example')
     expect(checked).toEqual({
       exitCode: 0,
-      output: 'ki dev skill rubric: example/harness:ki-example references/rubric.md is in sync\n'
+      output: `ki dev skill rubric: example/harness:ki-example references/rubric.md is in sync in ${publicationRoot}\n`
     })
   })
 
@@ -111,7 +120,9 @@ describe('[ki dev skill rubric]', () => {
     const result = await box.run('ki dev skill rubric ki-example')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('references/rubric.md is missing; run with --write from a dev-linked harness')
+    expect(result.output).toMatch(
+      /references\/rubric\.md is missing in .*skills\/ki-example; run with --write from a dev-linked harness/
+    )
   })
 
   test('reports stale when the on-disk catalogue no longer matches the definition', async () => {
@@ -122,18 +133,21 @@ describe('[ki dev skill rubric]', () => {
     const result = await box.run('ki dev skill rubric ki-example')
 
     expect(result.exitCode).toBe(1)
-    expect(result.output).toContain('references/rubric.md is stale; run with --write from a dev-linked harness')
+    expect(result.output).toMatch(
+      /references\/rubric\.md is stale in .*skills\/ki-example; run with --write from a dev-linked harness/
+    )
   })
 
   test('produces byte-identical output across repeated renders', async () => {
     const box = await sandbox()
     await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
     await devLinkExampleHarness(box, rubric(mixedFamilies))
+    box.cd('../local')
     const target = 'ki/harnesses/example/harness/skills/ki-example/references/rubric.md'
 
-    await box.run('ki dev skill rubric ki-example --write')
+    await box.run('ki dev skill rubric ki-example --write', { runner: 'default' })
     const first = await box.data.read(target)
-    await box.run('ki dev skill rubric ki-example --write')
+    await box.run('ki dev skill rubric ki-example --write', { runner: 'default' })
     const second = await box.data.read(target)
 
     expect(first).toBe(second)
@@ -170,6 +184,20 @@ describe('[ki dev skill rubric]', () => {
     expect(result.output).toContain('no installed harness provides skill does-not-exist')
   })
 
+  test('names the resolved publication root even when the caller is nowhere near it', async () => {
+    const box = await sandbox()
+    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+    const publicationRoot = await devLinkExampleHarness(box, rubric(mixedFamilies))
+    box.cd('../home')
+
+    const result = await box.run('ki dev skill rubric ki-example')
+
+    // The command resolves the install and nothing about cwd, so a reader can only tell which tree it
+    // answered about if the answer says so. `home` is not a checkout of anything.
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toContain(publicationRoot)
+  })
+
   test('refuses an installed Harness prefix collision before resolving a skill', async () => {
     const box = await sandbox()
     await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
@@ -183,5 +211,88 @@ describe('[ki dev skill rubric]', () => {
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('harness prefix ki is already owned by installed harness')
+  })
+})
+
+// `--write` publishes into the tree the install resolves to, which under a dev-linked harness is a
+// development checkout the caller may not be in. The guard compares working-tree roots for equality
+// and refuses everything else, so a worktree cannot dirty the checkout its own install points at.
+describe('[ki dev skill rubric --write publication-tree guard]', () => {
+  const published = 'ki/harnesses/example/harness/skills/ki-example/references/rubric.md'
+
+  const guardFixture = async (): Promise<{ readonly box: Sandbox; readonly checkoutRoot: string }> => {
+    const box = await sandbox()
+    await box.setupExampleHarness({ rubric: rubric(mixedFamilies) })
+    await devLinkExampleHarness(box, rubric(mixedFamilies))
+    return { box, checkoutRoot: await box.root.mkdir('local') }
+  }
+
+  test.each([
+    ['the checkout root itself', '../local'],
+    ['a subdirectory of the checkout', '../local/skills']
+  ])('permits --write from %s', async (_, directory) => {
+    const { box } = await guardFixture()
+    box.cd(directory)
+
+    const result = await box.run('ki dev skill rubric ki-example --write', { runner: 'default' })
+
+    expect(result.exitCode).toBe(0)
+    expect(await box.data.read(published)).toBe(expectedRendered)
+  })
+
+  test.each<[string, (box: Sandbox) => Promise<{ readonly directory: string; readonly caller: string }>]>([
+    [
+      'a linked worktree of the same repository',
+      async (box) => {
+        await box.root.git(['commit', '--allow-empty', '-m', 'base'], 'local')
+        await box.root.git(['worktree', 'add', '../worktree', '-b', 'guard'], 'local')
+        return { directory: '../worktree', caller: await box.root.mkdir('worktree') }
+      }
+    ],
+    [
+      'an unrelated repository',
+      async (box) => {
+        await box.root.git(['init'], 'other')
+        return { directory: '../other', caller: await box.root.mkdir('other') }
+      }
+    ],
+    [
+      'a directory inside no repository at all',
+      async (box) => ({
+        directory: '.',
+        caller: `${await box.project.mkdir('.')}, which is not inside a Git working tree`
+      })
+    ],
+    [
+      'a repository whose working tree encloses the checkout',
+      async (box) => {
+        await box.root.git(['init'])
+        return { directory: '..', caller: await box.root.mkdir('.') }
+      }
+    ],
+    [
+      // The accidental form: a human exports GIT_WORK_TREE for their own tree, for an unrelated reason.
+      // Both rev-parse calls inherit one environment, so unscrubbed this collapses each side onto that
+      // value, equality holds vacuously, and the bytes still land in the resolved checkout.
+      'a linked worktree with GIT_WORK_TREE exported for that same worktree',
+      async (box) => {
+        await box.root.git(['commit', '--allow-empty', '-m', 'base'], 'local')
+        await box.root.git(['worktree', 'add', '../worktree', '-b', 'guard'], 'local')
+        const caller = await box.root.mkdir('worktree')
+        box.setEnv({ GIT_WORK_TREE: caller })
+        return { directory: '../worktree', caller }
+      }
+    ]
+  ])('refuses --write from %s', async (_, prepare) => {
+    const { box, checkoutRoot } = await guardFixture()
+    const { directory, caller } = await prepare(box)
+    box.cd(directory)
+
+    const result = await box.run('ki dev skill rubric ki-example --write', { runner: 'default' })
+
+    expect(result.exitCode).toBe(2)
+    expect(result.output).toContain(`rubric catalogue belongs to ${checkoutRoot}`)
+    expect(result.output).toContain(`not to the current working tree ${caller}`)
+    await expect(box.data.read(published)).rejects.toThrow()
   })
 })

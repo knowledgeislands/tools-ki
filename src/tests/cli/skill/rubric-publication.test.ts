@@ -213,7 +213,11 @@ describe('[ki generated rubric publication]', () => {
     await projectLinkedHarness(box)
     const target = 'skills/ki-example/references/rubric.md'
 
-    const standalone = await box.run('ki dev skill rubric ki-example --write')
+    // `--write` publishes only inside the caller's own working tree, so the project that backs the
+    // dev-linked install is a real checkout here and the command runs from within it.
+    await box.project.git(['init'])
+
+    const standalone = await box.run('ki dev skill rubric ki-example --write', { runner: 'default' })
     expect(standalone.exitCode).toBe(0)
     const rendered = await box.project.read(target)
     await box.project.write(target, 'stale publication\n')

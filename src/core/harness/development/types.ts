@@ -77,10 +77,18 @@ export interface DevelopmentRubricPort {
   readonly resolveSkill: (skill: string) => Promise<ResolvedSkill>
   readonly preparePublication: (skill: ResolvedSkill) => Promise<PreparedRubricPublication>
   readonly developmentLinked: (identifier: string) => Promise<boolean>
+  /** The Git working-tree root containing a path, or undefined when it is not inside one. */
+  readonly repositoryRoot: (path: string) => Promise<string | undefined>
   readonly publish: (root: string, write: ConformWrite) => Promise<void>
 }
 
+/** Every event names the resolved publication root, because the command never resolves the caller's tree. */
 export type DevelopmentRubricEvent =
   | { readonly kind: 'written'; readonly target: string }
-  | { readonly kind: 'in-sync'; readonly identity: string }
-  | { readonly kind: 'out-of-sync'; readonly identity: string; readonly reason: 'is missing' | 'is stale' }
+  | { readonly kind: 'in-sync'; readonly identity: string; readonly root: string }
+  | {
+      readonly kind: 'out-of-sync'
+      readonly identity: string
+      readonly reason: 'is missing' | 'is stale'
+      readonly root: string
+    }

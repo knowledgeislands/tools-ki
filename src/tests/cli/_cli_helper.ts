@@ -34,7 +34,7 @@ import { createContext } from '../../context.ts'
 import type { AgentProcesses } from '../../core/agent/processes.ts'
 import type { Fetcher } from '../../core/harness/acquire.ts'
 import type { KiInstallationMode } from '../../core/paths.ts'
-import type { Runner } from '../../core/runtime/runner.ts'
+import { type Runner, runCommand } from '../../core/runtime/runner.ts'
 
 export type { AgentLaunch, AgentProcesses } from '../../core/agent/processes.ts'
 export type { Runner } from '../../core/runtime/runner.ts'
@@ -92,12 +92,37 @@ export interface SandboxArea {
   readonly read: (relativePath: string) => Promise<string>
   readonly mkdir: (relativePath: string) => Promise<string>
   readonly isSymlink: (relativePath: string) => Promise<boolean>
+  /**
+   * Runs real `git` from this area, or from a directory within it, for repository-shaped
+   * fixtures — a working tree, a linked worktree, a repository that encloses another. Throws
+   * on a non-zero exit so a broken fixture fails at its own line, and returns trimmed output.
+   */
+  readonly git: (arguments_: readonly string[], relativePath?: string) => Promise<string>
 }
 
-const area = (path: string): SandboxArea => {
+// A deterministic identity and no system or global configuration, so a fixture commit does not
+// depend on the developer's own git setup. HOME is the sandbox's, which carries no .gitconfig.
+const gitFixtureEnvironment = (home: string): NodeJS.ProcessEnv => ({
+  HOME: home,
+  GIT_CONFIG_NOSYSTEM: '1',
+  GIT_AUTHOR_NAME: 'ki sandbox',
+  GIT_AUTHOR_EMAIL: 'sandbox@ki.invalid',
+  GIT_COMMITTER_NAME: 'ki sandbox',
+  GIT_COMMITTER_EMAIL: 'sandbox@ki.invalid'
+})
+
+const area = (path: string, home: string): SandboxArea => {
   const resolve = (relativePath: string): string => join(path, relativePath)
   return {
     path,
+    git: async (arguments_, relativePath = '.') => {
+      const directory = resolve(relativePath)
+      await mkdir(directory, { recursive: true })
+      const result = await runCommand('git', ['-C', directory, ...arguments_], gitFixtureEnvironment(home))
+      if (result.exitCode !== 0)
+        throw new Error(`sandbox git ${arguments_.join(' ')} failed in ${directory}: ${result.output}`)
+      return result.output.trim()
+    },
     write: async (relativePath, content) => {
       const target = resolve(relativePath)
       await mkdir(dirname(target), { recursive: true })
@@ -236,12 +261,13 @@ export interface Sandbox {
 const create = async (): Promise<Sandbox> => {
   const rootPath = await mkdtemp(join(tmpdir(), 'ki-test-'))
   onTestFinished(() => rm(rootPath, { recursive: true, force: true }))
-  const root = area(rootPath)
-  const home = area(join(rootPath, 'home'))
-  const config = area(join(rootPath, 'config'))
-  const data = area(join(rootPath, 'data'))
-  const state = area(join(rootPath, 'state'))
-  const project = area(join(rootPath, 'project'))
+  const homePath = join(rootPath, 'home')
+  const root = area(rootPath, homePath)
+  const home = area(homePath, homePath)
+  const config = area(join(rootPath, 'config'), homePath)
+  const data = area(join(rootPath, 'data'), homePath)
+  const state = area(join(rootPath, 'state'), homePath)
+  const project = area(join(rootPath, 'project'), homePath)
   await mkdir(home.path, { recursive: true })
   await mkdir(project.path, { recursive: true })
   const env = { HOME: home.path, XDG_CONFIG_HOME: config.path, XDG_DATA_HOME: data.path, XDG_STATE_HOME: state.path }

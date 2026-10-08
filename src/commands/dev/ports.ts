@@ -19,6 +19,7 @@ import {
 } from '../../core/harness/index.ts'
 import { loadRubricDefinition } from '../../core/rubric/loader.ts'
 import { prepareRubricPublication } from '../../core/rubric/publication.ts'
+import { gitWorkingTreeRoot } from '../../core/runtime/git.ts'
 import {
   enableHarnessDevelopment,
   harnessDevelopmentEnabled,
@@ -90,5 +91,6 @@ export const developmentSkillRubricPort = (context: KiContext): DevelopmentRubri
   preparePublication: async (skill) =>
     prepareRubricPublication(skill, await loadRubricDefinition(skill), undefined, context.lstat),
   developmentLinked: (identifier) => isHarnessDevelopmentLinked(context.paths.data, identifier),
+  repositoryRoot: (path) => gitWorkingTreeRoot(path, context.runner, context.environment),
   publish: async (root, write) => publishWrites(await prepareWrites(root, [write]), false)
 })

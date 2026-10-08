@@ -525,7 +525,7 @@
         },
         {
           "invocation": "ki dev skill rubric <skill> [--write]",
-          "description": "Check or regenerate a skill's rubric catalogue."
+          "description": "Check or regenerate a skill's rubric catalogue. The skill is resolved from the installed Harnesses and never from the current directory, so every result names the resolved publication root that it answers about. With --write, publish only when that publication root and the current directory belong to the same Git working tree; any other tree, including another worktree of the same repository, is refused with both roots named."
         }
       ]
     }

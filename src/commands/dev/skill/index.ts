@@ -8,9 +8,9 @@ const renderRubricEvent = (event: DevelopmentRubricEvent): string => {
     case 'written':
       return `write ${event.target}\n`
     case 'in-sync':
-      return `ki dev skill rubric: ${event.identity} references/rubric.md is in sync\n`
+      return `ki dev skill rubric: ${event.identity} references/rubric.md is in sync in ${event.root}\n`
     case 'out-of-sync':
-      return `ki dev skill rubric: ${event.identity} references/rubric.md ${event.reason}; run with --write from a dev-linked harness\n`
+      return `ki dev skill rubric: ${event.identity} references/rubric.md ${event.reason} in ${event.root}; run with --write from a dev-linked harness\n`
   }
 }
 
@@ -21,8 +21,11 @@ export const createDevSkillCommand = (context: KiContext): Command =>
       .argument('<skill>', 'skill capability name whose rubric to render')
       .option('--write', 'publish the rendered catalogue to references/rubric.md (dev-linked harness installs only)')
       .action(async (skill: string, options: { write?: boolean }) => {
-        await inspectDevelopmentRubric(developmentSkillRubricPort(context), skill, Boolean(options.write), (event) =>
-          context.stdout.write(renderRubricEvent(event))
+        await inspectDevelopmentRubric(
+          developmentSkillRubricPort(context),
+          skill,
+          { write: Boolean(options.write), workingDirectory: context.workingDirectory },
+          (event) => context.stdout.write(renderRubricEvent(event))
         )
       })
   )
