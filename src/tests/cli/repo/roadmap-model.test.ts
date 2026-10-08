@@ -387,10 +387,29 @@ describe('[ki repo roadmap] areas', () => {
     expect(byArea.output).toContain('area CLI (1)')
   })
 
+  test('accepts a digit-leading area code', async () => {
+    const box = await sandbox()
+    await box.project.write('repo/.ki.toml', withAreas('{ 5GE = "5G Emerge delivery" }'))
+    await roadmapFile(box, 'repo', 'KI-TOOL-5GE-001', record({ id: 'KI-TOOL-5GE-001', area: '5GE' }))
+
+    const json = JSON.parse((await box.run('ki repo --repo repo roadmap list --format json')).output)
+
+    expect(json.items[0]).toMatchObject({ area: '5GE', areaTitle: '5G Emerge delivery' })
+  })
+
   test('rejects areas that do not map uppercase codes to titles', async () => {
     const box = await sandbox()
     await roadmapFile(box, 'repo', 'KI-TOOL-CLI-003', record())
-    for (const areas of ['"CLI"', '["cli"]', '["CLI", "CLI"]', '[7]', '{ CLI = 7 }', '{ cli = "Command line" }']) {
+    for (const areas of [
+      '"CLI"',
+      '["cli"]',
+      '["CLI", "CLI"]',
+      '[7]',
+      '["555"]',
+      '{ CLI = 7 }',
+      '{ cli = "Command line" }',
+      '{ 555 = "Numbered delivery" }'
+    ]) {
       await box.project.write('repo/.ki.toml', withAreas(areas))
       const result = await box.run('ki repo --repo repo roadmap list')
       expect(result.output, areas).toContain('[skills.ki-work-roadmap].areas must map uppercase area codes to titles')

@@ -38,7 +38,8 @@ const declaredComponents = (configuration: Readonly<Record<string, unknown>> | u
   return new Set(components as string[])
 }
 
-const AREA = /^[A-Z][A-Z0-9]*$/
+/** An issuing-area code follows the Decision Record scope-segment grammar: it may lead with a digit but contains a letter. */
+const AREA = /^[A-Z0-9]*[A-Z][A-Z0-9]*$/
 
 const AREAS_ERROR = '[skills.ki-work-roadmap].areas must map uppercase area codes to titles'
 
