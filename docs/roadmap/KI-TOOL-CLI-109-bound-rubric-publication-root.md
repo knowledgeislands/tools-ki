@@ -6,13 +6,12 @@ kind: deliver
 purpose: corrective
 initiative: platform-foundations
 component: dev
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: d23398f33789f3ab97cc83dc30b54cf7a12e922a
 created_at: 2026-10-06T23:03:55Z
-updated_at: 2026-10-08T08:09:27Z
+updated_at: 2026-10-08T08:09:41Z
 ---
 
 # Bound rubric publication root
@@ -117,6 +116,10 @@ The goal is met at the single command boundary, and read-only results now say wh
 ### Mini recap
 
 Rubric publication bounded to the caller's working tree and specified as `SKILL-005`; no learning route beyond the specification and manual.
+
+## Done
+
+Accepted 2026-10-08 by Kris Brown on the review packet above, under the standing decision that delivered and verified work counts as accepted (state-of-play Decisions 12, 17 and 19).
 
 ## Discussion
 
