@@ -1,5 +1,5 @@
 ---
-id: ADR-KI-TOOLS-001
+id: ADR-KI-TOOL-001
 title: 'TypeScript-native command host'
 date: 2026-07-24
 status: current
@@ -7,7 +7,7 @@ decision_type_url: https://knowledgeislands.info/specifications/decision-records
 decision_type: architecture
 ---
 
-# ADR-KI-TOOLS-001: TypeScript-native command host
+# ADR-KI-TOOL-001: TypeScript-native command host
 
 ## Context
 

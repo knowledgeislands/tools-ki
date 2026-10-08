@@ -1,5 +1,5 @@
 ---
-id: PDR-KI-TOOLS-001
+id: PDR-KI-TOOL-001
 title: 'Installer version pinning'
 date: 2026-09-18
 status: current
@@ -7,7 +7,7 @@ decision_type: product
 decision_type_url: https://knowledgeislands.info/specifications/decision-records/pdr
 ---
 
-# PDR-KI-TOOLS-001: Installer version pinning
+# PDR-KI-TOOL-001: Installer version pinning
 
 ## Context
 

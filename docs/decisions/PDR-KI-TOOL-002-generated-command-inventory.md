@@ -1,5 +1,5 @@
 ---
-id: PDR-KI-TOOLS-002
+id: PDR-KI-TOOL-002
 title: 'Generated command inventory'
 date: 2026-09-25
 status: current
@@ -7,7 +7,7 @@ decision_type: product
 decision_type_url: https://knowledgeislands.info/specifications/decision-records/pdr
 ---
 
-# PDR-KI-TOOLS-002: Generated command inventory
+# PDR-KI-TOOL-002: Generated command inventory
 
 ## Context
 

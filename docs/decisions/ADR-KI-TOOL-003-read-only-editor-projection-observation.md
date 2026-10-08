@@ -1,15 +1,15 @@
 ---
-id: ADR-KI-TOOLS-003
+id: ADR-KI-TOOL-003
 title: 'Read-only editor projection observation'
 date: 2026-09-01
 status: current
 decision_type_url: https://knowledgeislands.info/specifications/decision-records/adr
 decision_type: architecture
 decision_depends_on:
-  - ADR-KI-TOOLS-001
+  - ADR-KI-TOOL-001
 ---
 
-# ADR-KI-TOOLS-003: Read-only editor projection observation
+# ADR-KI-TOOL-003: Read-only editor projection observation
 
 ## Context
 
@@ -33,6 +33,6 @@ After target decoding, one target-neutral classifier compares canonical physical
 
 ## References
 
-- [ADR-KI-TOOLS-001](ADR-KI-TOOLS-001-typescript-native-command-host.md) — TypeScript-native executable host.
+- [ADR-KI-TOOL-001](ADR-KI-TOOL-001-typescript-native-command-host.md) — TypeScript-native executable host.
 - [VS Code multi-root workspaces](https://code.visualstudio.com/docs/editing/workspaces/multi-root-workspaces) — physical workspace-file format.
 - [Zed workspace persistence](https://github.com/zed-industries/zed/blob/main/crates/workspace/src/persistence.rs) — application-owned persisted workspace state.

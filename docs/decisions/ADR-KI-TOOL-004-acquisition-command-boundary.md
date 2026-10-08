@@ -1,15 +1,15 @@
 ---
-id: ADR-KI-TOOLS-004
+id: ADR-KI-TOOL-004
 title: 'Acquisition command boundary'
 date: 2026-09-30
 status: current
 decision_type: architecture
 decision_type_url: https://knowledgeislands.info/specifications/decision-records/adr
 decision_depends_on:
-  - ADR-KI-TOOLS-001
+  - ADR-KI-TOOL-001
 ---
 
-# ADR-KI-TOOLS-004: Acquisition command boundary
+# ADR-KI-TOOL-004: Acquisition command boundary
 
 ## Context
 
@@ -27,4 +27,4 @@ We keep acquisition commands, including Granola, in the main `ki` codebase and r
 
 ## References
 
-- [ADR-KI-TOOLS-001](ADR-KI-TOOLS-001-typescript-native-command-host.md) — the native command host.
+- [ADR-KI-TOOL-001](ADR-KI-TOOL-001-typescript-native-command-host.md) — the native command host.

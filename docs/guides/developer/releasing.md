@@ -84,7 +84,7 @@ curl --fail --location --proto '=https' --proto-redir '=https' --output install.
 bash ./install.sh vX.Y.Z
 ```
 
-The canonical cross-tool pinning form is an exact positional `vX.Y.Z`, as recorded in `PDR-KI-TOOLS-001`. For a pipe installation, pass the tag after the shell's option terminator:
+The canonical cross-tool pinning form is an exact positional `vX.Y.Z`, as recorded in `PDR-KI-TOOL-001`. For a pipe installation, pass the tag after the shell's option terminator:
 
 ```sh
 curl -fsSL https://knowledgeislands.info/install/ki | sh -s -- vX.Y.Z
