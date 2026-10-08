@@ -85,6 +85,16 @@ bun run build
 
 The compiled executable contains the Bun runtime and its dependency graph, so it does not need Bun on `PATH`. Public installation is deliberately release-based: `install.sh` verifies a signed archive instead of copying a mutable local build.
 
+## Rebuild the local `ki` from `main`
+
+Releases are held until one is due under the release-on-demand policy named in [Release tools-ki](releasing.md#when-to-release), so the owner uses newly delivered capability by rebuilding the default installation from `main`. Run this one command from a clean primary checkout:
+
+```sh
+git switch main && git pull --ff-only && bun install --frozen-lockfile && bun run build && install -m 755 dist/ki "$HOME/.local/bin/ki" && install -m 644 man/ki.1 "$HOME/.local/share/man/man1/ki.1"
+```
+
+It replaces the compiled executable and manual at the installer's default destinations with a build of current `main`. The rebuilt executable still reports `Installation  release` and the last released version from `package.json`, because both come from the compiled build rather than a published release; check `git log -1` in the checkout to see which commit is installed. Run `./install.sh` to return to the latest signed release.
+
 ## Link a development command
 
 Install a symbolic link to the current checkout into a dedicated development command directory:
