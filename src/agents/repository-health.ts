@@ -112,7 +112,7 @@ export const inspectRepositoryHealth = async (
       }),
       repositorySupportedRuntimes(location.declaration)
     ])
-    const skills = await resolveRepositoryDeclaredSkills(location.root, declarations, harnesses)
+    const skills = await resolveRepositoryDeclaredSkills(location.root, declarations, harnesses, options.dataDirectory)
     const localProviders = skills.filter((skill) => skill.provider.kind === 'repository-local')
     const repositoryAgents = agents.filter((agent) => runtimes.includes(runtimeForAgent(agent)))
     const projections = (

@@ -27,6 +27,17 @@ export interface ResolvedSkill {
   readonly capability: HarnessCapability
 }
 
+/** Where installed harnesses were sought, so a missing provider names the environment it searched. */
+export interface DataRootEvidence {
+  readonly path: string
+  readonly exists: boolean
+}
+
+const dataRootHint = (dataRoot: DataRootEvidence): string =>
+  dataRoot.exists
+    ? ` in data root ${dataRoot.path}`
+    : `: data root ${dataRoot.path} does not exist; check KI_DATA_HOME, XDG_DATA_HOME and HOME`
+
 const installedProvider = (harness: InstalledHarness): InstalledHarnessSkillProvider => ({
   kind: 'installed-harness',
   root: harness.root,
@@ -110,6 +121,7 @@ const providedSkill = (harness: InstalledHarness, name: string): HarnessCapabili
 export const resolveDeclaredSkills = (
   declaration: RepositoryDeclaration,
   harnesses: readonly InstalledHarness[],
+  dataRoot: DataRootEvidence,
   selected?: string,
   localCandidates: readonly RepositoryLocalSkillCandidate[] = []
 ): readonly ResolvedSkill[] => {
@@ -134,7 +146,7 @@ export const resolveDeclaredSkills = (
     if (!provider) {
       throw new KiError(
         `declared skill ${skill.name} is provided by no declared harness (${declaration.harnesses.join(', ')})${
-          absent.length ? `; ${absent.join(', ')} is not installed` : ''
+          absent.length ? `; ${absent.join(', ')} is not installed${dataRootHint(dataRoot)}` : ''
         }`,
         1
       )

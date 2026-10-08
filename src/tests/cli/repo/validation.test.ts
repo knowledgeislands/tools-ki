@@ -1120,6 +1120,23 @@ script_exclusions = ["vendor:generate"]
       )
     })
 
+    test('names the data root searched for a declared harness that is not installed', async () => {
+      const box = await sandbox()
+      await box.project.write('.ki.toml', '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-missing]\n')
+      await box.data.write('ki/.keep', '')
+      const present = await box.run('ki repo audit')
+      expect(present.output).toContain(`example/harness is not installed in data root ${box.data.path}/ki`)
+
+      const absent = `${box.root.path}/run-home/.local/share/ki`
+      box.setEnv({ KI_DATA_HOME: absent })
+      const result = await box.run('ki repo audit')
+
+      expect(result.exitCode).toBe(1)
+      expect(result.output).toContain(
+        `example/harness is not installed: data root ${absent} does not exist; check KI_DATA_HOME, XDG_DATA_HOME and HOME`
+      )
+    })
+
     test('refuses a declared skill missing from its installed provider', async () => {
       const box = await sandbox()
       await box.setupExampleHarness()

@@ -60,9 +60,9 @@ export const repositorySkillActivation = async (
   const runtimeConfiguration = declaration.skills.find((skill) => skill.name === 'ki-repo')?.configuration
   if (!runtimeConfiguration || !Object.hasOwn(runtimeConfiguration, 'supported_runtimes')) return undefined
   const harnesses = await discoverInstalledHarnesses(context.dataDirectory)
-  const skills = (await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses)).filter(
-    (skill) => skill.provider.kind === 'installed-harness'
-  )
+  const skills = (
+    await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses, context.dataDirectory)
+  ).filter((skill) => skill.provider.kind === 'installed-harness')
   return context.createSkillActivation({
     repository: repository.root,
     repositoryDeclaration: repository.declaration,

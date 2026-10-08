@@ -77,7 +77,7 @@ export const conformRepositories = async (
       observer.event({ kind: 'registry-write', path: write.path, dryRun: options.dryRun })
     await publishWrites(registryWrites, options.dryRun)
 
-    const resolved = await resolveSkillsForRepositories([repository], harnesses, options.skill)
+    const resolved = await resolveSkillsForRepositories([repository], harnesses, context.dataDirectory, options.skill)
     const selected = resolved[0]
     // The one-element input above guarantees this result; retain a guard for a future resolver change.
     /* v8 ignore next */

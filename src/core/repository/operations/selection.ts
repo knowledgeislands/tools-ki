@@ -8,17 +8,23 @@ import type { RepositoryOperationContext, RepositorySelection, SelectedRepositor
 export const resolveSkillsForRepositories = async (
   repositories: readonly RepositoryLocation[],
   harnesses: readonly InstalledHarness[],
+  dataDirectory: string,
   skill?: string
 ): Promise<readonly SelectedRepositorySkills[]> =>
   Promise.all(
     repositories.map(async (repository) => {
       const declaration = await readRepositoryDeclaration(repository.declaration)
-      const resolvedSkills = await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses)
+      const resolvedSkills = await resolveRepositoryDeclaredSkills(
+        repository.root,
+        declaration,
+        harnesses,
+        dataDirectory
+      )
       return {
         repository,
         resolvedSkills,
         skills: skill
-          ? await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses, skill)
+          ? await resolveRepositoryDeclaredSkills(repository.root, declaration, harnesses, dataDirectory, skill)
           : resolvedSkills
       }
     })
@@ -40,5 +46,5 @@ export const selectRepositorySkills = async (
     onSkippedMgitMembers: options.onSkippedMgitMembers
   })
   const harnesses = await discoverInstalledHarnesses(context.dataDirectory)
-  return resolveSkillsForRepositories(repositories, harnesses, options.skill)
+  return resolveSkillsForRepositories(repositories, harnesses, context.dataDirectory, options.skill)
 }

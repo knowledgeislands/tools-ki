@@ -30,7 +30,8 @@ export const createUpgradeCommand = (
         const skills = await resolveRepositoryDeclaredSkills(
           repository.root,
           await readRepositoryDeclaration(repository.declaration),
-          harnesses
+          harnesses,
+          context.paths.data
         )
         const selected = [
           ...new Map(
