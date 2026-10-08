@@ -1,16 +1,16 @@
 ---
 id: KI-TOOL-CLI-115
 area: CLI
-title: Refuse roadmap writes on the host marker
+title: Refuse host roadmap writes
 status: triage
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-08T07:24:10Z
-updated_at: 2026-10-08T07:24:10Z
+updated_at: 2026-10-08T07:27:50Z
 ---
 
-# Refuse Roadmap Writes on the Host Marker
+# Refuse Host Roadmap Writes
 
 ## Goal
 
