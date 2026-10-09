@@ -2,12 +2,13 @@
 id: KI-TOOL-CLI-115
 area: CLI
 title: Enforce roadmap writing checkout
+project: agent-host
 status: triage
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-08T07:24:10Z
-updated_at: 2026-10-09T21:02:38Z
+updated_at: 2026-10-09T21:18:32Z
 ---
 
 # Enforce Roadmap Writing Checkout
