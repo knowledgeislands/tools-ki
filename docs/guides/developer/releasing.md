@@ -4,7 +4,7 @@ The `ki-repo-tools` release-readiness checklist owns common release checks; this
 
 ## When to release
 
-Release timing follows the `ki-repo-tools` [release-on-demand policy](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/skills/repo-structure/ki-repo-tools/references/standards-release-readiness.md#release-on-demand): hold releases by default and do not release after each change, and close delivered work without waiting for a release. The steps below apply only once a release is due under that policy. To use unreleased capability on your own machine, [rebuild the local `ki` from `main`](local-development.md#rebuild-the-local-ki-from-main) instead.
+Release timing follows the `ki-repo-tools` [release-on-demand policy](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/skills/repo-structure/ki-repo-tools/references/standards-release-readiness.md#release-on-demand): hold releases by default and do not release after each change, and close delivered work without waiting for a release. The steps below apply only once a release is due under that policy. To use unreleased capability on your own machine, [rebuild the local `ki` from `main`](local-development.md#rebuild-the-local-ki-from-main) instead. For the whole flow in plain language, from Harness pin through release to each repository's CI pin, see [how releases reach your repositories](../user/how-releases-reach-your-repositories.md).
 
 `tools-ki` releases compiled archives for `darwin-arm64`, `darwin-x64`, and glibc `linux-x64`.
 
