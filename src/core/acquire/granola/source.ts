@@ -289,9 +289,13 @@ const inspectSchema = async (runner: Runner, environment: NodeJS.ProcessEnv): Pr
 export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessEnv): Promise<GranolaSource> => {
   const schemaSha256 = await inspectSchema(runner, environment)
   const gate = requestGate(environment)
-  const account = record(await call(runner, environment, 'get_account_info', {}, gate), 'account')
+  const accountResponse = record(await call(runner, environment, 'get_account_info', {}, gate), 'account')
+  const account = accountResponse['data'] === undefined ? accountResponse : record(accountResponse['data'], 'account')
   // Workspace inventory is discovery metadata; membership changes do not change the active source identity.
-  const accountIdentity = Object.fromEntries(Object.entries(account).filter(([key]) => key !== 'workspaces'))
+  const identityFields = ['email', 'active_workspace', 'mcp_note_access'] as const
+  if (identityFields.some((key) => account[key] === undefined))
+    throw new KiError('Granola account response lacks stable identity or note-access scopes')
+  const accountIdentity = Object.fromEntries(identityFields.map((key) => [key, account[key]]))
   const accountSha256 = sha256(stableJson(accountIdentity))
   return {
     accountSha256,

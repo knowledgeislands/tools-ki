@@ -71,7 +71,14 @@ export const granolaFixtureRunner = (fixture: GranolaFixture): GranolaFixtureRun
     const argumentsIndex = arguments_.indexOf('--args')
     const parsed = JSON.parse(arguments_[argumentsIndex + 1] ?? '{}') as Readonly<Record<string, unknown>>
     calls.push({ tool, arguments: parsed })
-    if (tool === 'get_account_info') return callResult(fixture.account ?? { account: 'fixture', workspace: 'fixture' })
+    if (tool === 'get_account_info')
+      return callResult(
+        fixture.account ?? {
+          email: 'fixture@example.com',
+          active_workspace: { id: 'fixture' },
+          mcp_note_access: { scopes: ['owned'] }
+        }
+      )
     if (tool === 'list_meeting_folders') return callResult({ folders: fixture.folders ?? [] })
     if (tool === 'list_meetings') {
       const since = String(parsed['custom_start'])

@@ -1,4 +1,5 @@
 import { KiError } from '../../errors.ts'
+import { attribute, decodeXml, record, stringField } from './projection.ts'
 import type { RoutedGranolaMeeting } from './routing.ts'
 import type { GranolaDetail, GranolaFolder, GranolaTranscript } from './source.ts'
 
@@ -23,33 +24,6 @@ const KNOWN_OMISSIONS = [
   'transcript_timestamps',
   'updated_at'
 ] as const
-
-const record = (value: unknown): Readonly<Record<string, unknown>> | undefined =>
-  value && typeof value === 'object' && !Array.isArray(value) ? (value as Readonly<Record<string, unknown>>) : undefined
-
-const stringField = (value: unknown, names: readonly string[]): string | undefined => {
-  const item = record(value)
-  if (!item) return undefined
-  for (const name of names) {
-    const candidate = item[name]
-    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim()
-  }
-  return undefined
-}
-
-const decodeXml = (value: string): string =>
-  value
-    .replaceAll('&quot;', '"')
-    .replaceAll('&apos;', "'")
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&amp;', '&')
-
-const attribute = (value: unknown, name: string): string | undefined => {
-  if (typeof value !== 'string') return undefined
-  const match = new RegExp(`\\b${name}=(['"])(.*?)\\1`, 's').exec(value)
-  return match?.[2] ? decodeXml(match[2]).trim() : undefined
-}
 
 const element = (value: unknown, name: string): string | undefined => {
   if (typeof value !== 'string') return undefined
@@ -181,6 +155,7 @@ const folderName = (folder: GranolaFolder): string | undefined =>
   attribute(folder.projection, 'title')
 
 export const renderGranolaMeeting = (options: {
+  readonly captureRoot?: string
   readonly accountSha256: string
   readonly acquiredAt: string
   readonly detail: GranolaDetail
@@ -225,9 +200,12 @@ export const renderGranolaMeeting = (options: {
     id,
     name: folderName(options.folders.find((folder) => folder.id === id) as GranolaFolder)
   }))
-  const path = `${isoDate(date)}--${slug(title)}--${options.meeting.id}.md`
-  if (path.includes('/') || path.includes('\\'))
+  const filename = `${isoDate(date)}--${slug(title)}--${options.meeting.id}.md`
+  if (filename.includes('/') || filename.includes('\\'))
     throw new KiError(`Granola meeting ${options.meeting.id} produced unsafe path`)
+  const path = options.captureRoot
+    ? `${options.captureRoot}/${options.meeting.territories.length === 1 && !options.meeting.unmappedFolderIds.length ? options.meeting.territories[0] : '_review'}/granola/${filename.slice(0, -3)}/meeting.md`
+    : filename
   const frontmatter = [
     '---',
     'type: granola-meeting',
@@ -251,6 +229,12 @@ export const renderGranolaMeeting = (options: {
           ])
         ]
       : ['folders: []']),
+    ...(options.captureRoot
+      ? [
+          ...yamlList('territory_names', options.meeting.territories),
+          ...yamlList('unmapped_folder_ids', options.meeting.unmappedFolderIds)
+        ]
+      : []),
     ...yamlList('participants', participants),
     ...yamlList('omissions', omissions),
     '---'

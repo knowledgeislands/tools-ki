@@ -39,6 +39,28 @@ duplicate_folder_ids = ["stable-granola-folder-id"]
 
 User-skill activation alone does not enable acquisition for a repository. The repository declaration remains required and must resolve through one of its declared Harnesses.
 
+## Use one temporary inbox for several territories
+
+A receiver may select several folder IDs. For a central capture repository, declare a safe repository-relative `capture_root` and an explicit territory name for every selected ID. Granola display titles may change without changing those stable IDs. Several folders may map to the same territory.
+
+```toml
+[skills.ki-acquire-granola]
+folder_ids = ["folder-one", "folder-two"]
+capture_root = "captures"
+unfoldered = "flag"
+residual = "flag"
+
+[skills.ki-acquire-granola.folder_territories]
+folder-one = "personal"
+folder-two = "legal"
+```
+
+`"flag"` reports unfoldered or unmatched identities during each run and saves their listing metadata in `.acquire/granola/flagged.json`; their meeting details and transcripts are not acquired. With `residual = "flag"`, unmatched live folders are also reported even when empty. A dry run reports them without saving files. The operator can assign a source folder or explicitly revise the receiver policy before a later run. `true` still acquires those identities; `false` does not select them. Conflicting receivers still fail closed.
+
+Each selected meeting UUID produces one package at `captures/<territory>/granola/<date>--<topic>--<uuid>/meeting.md`. All source folder IDs and titles and the explicit territory names remain in the document. A package keeps its original path when its title or date changes. A changed territory classification preserves the complete package, including images and source variants, until the new checkpoint commits; the old active package is then removed. Meetings belonging to several territories go into `captures/_review/granola/` for an operator decision; they are not copied once per folder. Meetings with any unmapped folder membership, or without an explicit territory, also use `_review` if their receiver policy acquires them.
+
+The central checkpoint and recovery journal live in `.acquire/granola/`, outside capture packages. After verifying preservation in the owning knowledge base or declared source store, record the matching handled disposition before removing a package. Keep the technical checkpoint: it prevents an unchanged handled source being staged again. If its local transcript copy is absent, a later import re-reads the provider transcript to verify the stored source hash; a provider omission fails visibly, and an amendment becomes awaiting review. This is on-demand acquisition; configuration does not create a schedule or automate reconciliation.
+
 ## Run and inspect acquisition
 
 From the receiving repository, run:
@@ -76,13 +98,13 @@ ki acquire reconcile --adapter granola
 
 `status` reports checkpoint, transcript, disposition, image-manifest, and journal summaries. `reconcile` additionally verifies the checkpoint's staged or disposed document evidence and every acquired image checksum.
 
-The account checkpoint binds the connected account, active workspace and note-access scopes. Granola's list of joined workspaces is discovery metadata and does not affect that binding; an added workspace alone does not block a later import. Changes to the account, active workspace or access scopes still require review.
+The account checkpoint binds the connected account, active workspace and note-access scopes. The stable account projection is `email`, `active_workspace`, and `mcp_note_access`; missing fields fail visibly. Joined workspaces, plan information, and sign-out links are discovery or connection metadata and do not affect that binding; an added workspace or changed plan metadata alone does not block a later import. Changes to the account, active workspace or access scopes still require review.
 
 ## Acquire desktop screenshots
 
 The Granola MCP has no attachment list or image bytes. For a note with an Images stack, observe the current image count in the desktop app. Open each image and use its Download control to save the original into a new, otherwise empty directory. Keep the app-generated `attachment-<uuid>` names. The app may use a `.jpg` filename for PNG bytes; the importer detects the actual format.
 
-After the meeting Markdown is staged in its registered Knowledge Base, run:
+After the meeting Markdown is staged in its registered receiving repository, run:
 
 ```sh
 ki acquire images --adapter granola --repo /path/to/knowledge-base --source <meeting-uuid> --directory /path/to/exports --expected <desktop-image-count> --dry-run
@@ -90,7 +112,7 @@ ki acquire images --adapter granola --repo /path/to/knowledge-base --source <mee
 ki acquire reconcile --adapter granola --repo /path/to/knowledge-base
 ```
 
-The command rejects missing, extra, duplicate, non-image, and conflicting files. It preserves the export bytes beside the meeting Markdown and writes `<meeting-uuid>--attachments.json` with each attachment UUID, SHA-256, and byte count. Repeating the command with the same exports is safe; changed exports require review. The manifest records a user-observed source count, not an MCP-certified inventory. The KB must retain the committed images and manifest before any source retirement.
+The command rejects missing, extra, duplicate, non-image, and conflicting files. It preserves the export bytes beside the meeting Markdown and writes `<meeting-uuid>--attachments.json` with each attachment UUID, SHA-256, and byte count. Repeating the command with the same exports is safe; changed exports require review. The manifest records a user-observed source count, not an MCP-certified inventory. The receiving repository or verified durable destination must retain the original images and manifest before any source retirement.
 
 ## Prepare manual retirement
 
@@ -102,7 +124,7 @@ Present the exact eligible list to the human operator and stop. The human delete
 
 ## Understand staged evidence and recovery
 
-Meeting Markdown is staged beneath `+/_ACQUIRE/granola/`. The authoritative `ledger.json` records one completely verified generation, with separate detail and transcript hashes and transcript retry state. The in-progress `journal.json` records the selected identities, verified staged paths and component hashes, failures, retry state, and remaining work.
+Without `capture_root`, meeting Markdown is staged beneath `+/_ACQUIRE/granola/`. The authoritative `ledger.json` records one completely verified generation, with separate detail and transcript hashes and transcript retry state. The in-progress `journal.json` records the selected identities, verified staged paths and component hashes, failures, retry state, and remaining work.
 
 Both state files are replaced atomically. A failed run leaves the last committed checkpoint authoritative and keeps its journal for the next run. Rerunning the same command revalidates mutable detail and reuses already verified immutable transcripts and staged documents. A stale, corrupt, differently bound journal fails closed and is never treated as completion.
 

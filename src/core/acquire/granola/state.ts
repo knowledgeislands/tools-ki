@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { lstat, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, normalize } from 'node:path'
 import { KiError } from '../../errors.ts'
+import { verifyGranolaParents } from './layout.ts'
 import { sha256 } from './source.ts'
 import type { GranolaWindowEvidence } from './windows.ts'
 
@@ -140,12 +141,14 @@ const parseJson = async (path: string, label: string): Promise<unknown> => {
 }
 
 const fileState = async (path: string): Promise<'missing' | 'file' | 'unsafe'> => {
+  await verifyGranolaParents(path)
   const state = await lstat(path).catch(() => undefined)
   if (!state) return 'missing'
   return state.isFile() && !state.isSymbolicLink() ? 'file' : 'unsafe'
 }
 
 export const writeAcquisitionStateAtomic = async (path: string, value: unknown): Promise<void> => {
+  await verifyGranolaParents(path)
   const temporary = join(dirname(path), `.${basename(path)}.${randomUUID()}.tmp`)
   try {
     await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' })

@@ -1365,8 +1365,18 @@ enumerates complete global and folder identity evidence, revalidates
 mutable detail, reuses verified transcripts by default, records separate
 detail and transcript hashes, journals interrupted work atomically, and
 advances the authoritative checkpoint only after the selected generation
-verifies. It stages meeting Markdown beneath
+verifies. By default it stages meeting Markdown beneath
 .IR +/_ACQUIRE/granola/ .
+A configured capture_root and complete folder_territories table receive
+several folders as one package per meeting UUID, retaining every membership.
+Central checkpoints and journals remain in
+.IR .acquire/granola/ .
+The unfoldered and residual selectors also accept "flag", which reports
+identities without reading their details or transcripts; unmatched live
+folders are reported even when empty. Multiple territories or unmapped
+folder memberships require review. Handled checkpoints survive capture
+removal: unchanged source evidence remains handled, while amendments are
+staged for renewed review.
 Conflicting receiver mappings fail closed; acquisition never tags, edits,
 archives, deletes, or moves Granola data.
 .SS Background agents

@@ -89,7 +89,12 @@ const renderGranolaResult = (result: GranolaImportResult): string =>
     `${result.dryRun ? 'Granola acquisition plan' : 'Granola acquisition complete'}: ${result.repository}`,
     `Interval: ${result.since} through ${result.until} (complete identity enumeration)`,
     `Coverage: ${result.discovered} discovered, ${result.selected} selected, ${result.excluded} routed elsewhere`,
-    `Routing: ${result.unfoldered} unfoldered, ${result.duplicated} intentionally duplicated`,
+    `Routing: ${result.unfoldered} unfoldered, ${result.duplicated} intentionally duplicated, ${result.flagged.length} flagged without content acquisition`,
+    ...result.unknownFolders.map((folder) => `Unmatched folder: ${folder.id} · ${folder.title ?? 'unknown title'}`),
+    ...result.flagged.map(
+      (meeting) =>
+        `Flagged: ${meeting.id} · ${meeting.reason} · ${meeting.date ?? 'unknown date'} · ${meeting.title ?? 'unknown title'} · folders=${JSON.stringify(meeting.folderIds)}`
+    ),
     `Meetings: ${result.created} new, ${result.amended} amended, ${result.unchanged} unchanged`,
     `Transcripts: ${result.transcriptReads} provider reads, ${result.omissions} omissions, ${result.resumed} resumed`,
     'Attachments: not inventoried by Granola MCP; snapshot-bearing notes need separate image verification before deletion.',
@@ -241,6 +246,7 @@ const runImages = async (context: KiContext, options: ImageOptions): Promise<voi
   const result = await importGranolaImages({
     repository: selection.inventory.root,
     repositoryId: selection.inventory.repository,
+    captureRoot: configurationString(selection.adapters[0] as AcquisitionAdapterInventoryItem, 'capture_root'),
     source: options.source,
     directory: options.directory,
     expected: Number(options.expected),

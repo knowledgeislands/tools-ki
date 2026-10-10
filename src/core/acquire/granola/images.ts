@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { lstat, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 import { KiError } from '../../errors.ts'
+import { granolaCaptureRoot, granolaLayout, verifyGranolaParents } from './layout.ts'
 import {
   type GranolaCheckpointMeeting,
   loadGranolaCheckpoint,
@@ -14,6 +15,7 @@ const sourcePattern = new RegExp(`^attachment-(${uuid})\\.(?:jpg|jpeg|png|webp)$
 const meetingPattern = new RegExp(`^${uuid}$`, 'i')
 const digest = (bytes: Buffer): string => createHash('sha256').update(bytes).digest('hex')
 const regularFile = async (path: string): Promise<boolean> => {
+  await verifyGranolaParents(path)
   const state = await lstat(path).catch(() => undefined)
   if (!state) return false
   if (!state.isFile() || state.isSymbolicLink()) throw new KiError(`Unsafe Granola image file: ${path}`)
@@ -84,6 +86,7 @@ export const verifyGranolaImages = async (
 export interface GranolaImageOptions {
   readonly repository: string
   readonly repositoryId: string
+  readonly captureRoot?: string
   readonly source: string
   readonly directory: string
   readonly expected: number
@@ -104,9 +107,10 @@ export const importGranolaImages = async (options: GranolaImageOptions): Promise
   if (!meetingPattern.test(options.source)) throw new KiError('--source must be a Granola meeting UUID', 2)
   if (!Number.isSafeInteger(options.expected) || options.expected < 1)
     throw new KiError('--expected must be a positive integer from the Granola image stack', 2)
-  const root = join(options.repository, '+/_ACQUIRE/granola')
-  const checkpoint = await loadGranolaCheckpoint(join(root, 'ledger.json'), options.repositoryId)
-  if (!checkpoint || checkpoint.schema !== 3) throw new KiError('Current Granola checkpoint is required')
+  const layout = granolaLayout(options.repository, granolaCaptureRoot(options.captureRoot))
+  const root = layout.documents
+  const checkpoint = await loadGranolaCheckpoint(join(layout.state, 'ledger.json'), options.repositoryId)
+  if (checkpoint?.schema !== 3) throw new KiError('Current Granola checkpoint is required')
   const meeting = checkpoint.meetings[options.source]
   if (!meeting) throw new KiError(`Granola checkpoint has no meeting ${options.source}`)
   if (!(await verifyGranolaDocument(root, meeting, options.source)))
