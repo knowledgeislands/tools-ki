@@ -1,7 +1,7 @@
 ---
 id: ADR-KI-TOOL-002
 title: 'Compatible harness registry and native operations'
-date: 2026-08-06
+date: 2026-10-11
 status: current
 decision_type_url: https://knowledgeislands.info/specifications/decision-records/adr
 decision_type: architecture
@@ -25,7 +25,7 @@ Private GitHub archives explicitly opt into `auth = "github-cli"` with a matchin
 
 Harness installation, updates, and removal preserve activation. `ki skill add|remove` owns user projections; `ki repo skill add|remove` owns repository declarations and projections. User inventory does not resolve a repository. Removal requires ownership proof and cannot remove the canonical Harness.
 
-Repository operations resolve shared explicit repository or Agora selectors, or the supported direct-CWD mGit manifest before ordinary discovery. Every selected target is a physical repository with a regular `.ki.toml`. Verified providers and explicit dependencies determine stable prerequisite-first order.
+Repository operations resolve shared explicit repository, territory or estate selectors, or the supported direct-CWD mGit manifest before ordinary discovery. Every selected target is a physical repository with a regular `.ki.toml`. Verified providers and explicit dependencies determine stable prerequisite-first order.
 
 Native operations import only validated catalogues. Audit is read-only; conform checks declared write scopes, supports preview, publishes guarded atomic writes, and re-audits changes. The host never falls back to repository-vendored runners, copied governance wrappers, package-script aliases, or arbitrary child processes.
 
