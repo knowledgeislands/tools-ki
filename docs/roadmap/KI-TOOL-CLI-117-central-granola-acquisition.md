@@ -5,13 +5,12 @@ title: Central Granola Acquisition
 kind: deliver
 purpose: capability
 component: acquire
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 7b1cfb3b69657fb05540a2cc7eebff3d33cbcb4c
 created_at: 2026-10-10T05:54:13Z
-updated_at: 2026-10-10T06:11:24Z
+updated_at: 2026-10-11T02:23:09Z
 ---
 
 # Central Granola Acquisition
@@ -102,6 +101,10 @@ The implementation satisfies the approved receiving and routing behaviour and ke
 ### Mini recap
 
 Central acquisition, safe retained checkpoints and faithful evidence packages are implemented, documented, verified and locally activated. The remaining warning belongs to the existing CI configuration. Reusable routing and lifecycle semantics remain with the Harness; implementation details remain in this repository's operator guide. Human acceptance owns terminal closure and pruning.
+
+## Done
+
+Accepted 2026-10-11 by Kris Brown on the review packet above (state-of-play decisions log, Decision 38: roadmap triage approved in full).
 
 ## Discussion
 
