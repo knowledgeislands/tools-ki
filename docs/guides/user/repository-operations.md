@@ -14,7 +14,7 @@ Territory registration must be complete before filtering. Selected roots must be
 
 ```sh
 ki repo audit --repo .
-ki repo -t ki -f tools- audit --concise
+ki repo -t knowledge-islands -f tools- audit --concise
 ki repo audit --estate --concise
 ```
 
