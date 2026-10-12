@@ -6,13 +6,12 @@ kind: deliver
 purpose: capability
 project: estate-factorisation
 component: territory
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 3de097d0dbb140769db0dee7f936296de408a63c
 created_at: 2026-10-12T04:03:08Z
-updated_at: 2026-10-12T04:16:48Z
+updated_at: 2026-10-12T04:30:23Z
 ---
 
 # Principals Territory Selector
@@ -111,6 +110,10 @@ The selector reuses Capital discovery and root validation rather than adding a p
 ### Mini recap
 
 Decision 82 delivered as a third primary scope with a membership-derived order. Not accepted or pruned; no release.
+
+## Done
+
+Accepted 2026-10-12 by Kris Brown on the review packet above, after trying `--principals` (state-of-play decisions log, Decision 94).
 
 ## Discussion
 
