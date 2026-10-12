@@ -46,7 +46,7 @@ const fakeProcesses = (box: Sandbox, onSleep: () => Promise<void> = async () => 
 const runPath = (box: Sandbox, file: string): string => `${box.state.path}/ki/agents/r/${file}`
 
 describe('ki agent launch', () => {
-  test('writes the run packet and detaches the Claude Code adapter with the footer and gates', async () => {
+  test('writes the run packet and detaches the Claude Code adapter with the footer', async () => {
     const box = await sandbox()
     await setupDelegation(box)
     const processes = fakeProcesses(box)
@@ -54,16 +54,12 @@ describe('ki agent launch', () => {
     await box.project.write('task.md', '# Task: do it\n\n1. Step.\n')
     await box.project.mkdir('extra')
 
-    const result = await box.run(
-      'ki agent launch r one . task.md --rules push --add-dir extra --wait-for zero --wait-for first',
-      { now }
-    )
+    const result = await box.run('ki agent launch r one . task.md --rules push --add-dir extra', { now })
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toBe(`launched r/one (pid 1001) in ${box.state.path}/ki/agents/r\n`)
     const prompt = await box.state.read('ki/agents/r/one.prompt.md')
-    expect(prompt).toContain('# Task: do it\n\n1. Step.\n\nWait gate.')
-    expect(prompt).toContain(`${runPath(box, 'zero.status')}, ${runPath(box, 'first.status')}.`)
+    expect(prompt).toContain('# Task: do it\n\n1. Step.\n\n## Rules')
     expect(prompt).toContain('## Rules\n\n- Tier push rule.\n\n---\n\nProgress protocol.')
     expect(prompt).not.toContain('Preamble the launcher drops.')
     expect(prompt).toContain("(time from: TZ=Europe/Paris date '+%H:%M %Z')")
@@ -122,6 +118,7 @@ describe('ki agent launch', () => {
     ['ki agent launch r/x one . task.md', 2, "invalid run: 'r/x'"],
     ['ki agent launch r o.ne . task.md', 2, "invalid name: 'o.ne'"],
     ['ki agent launch r one . task.md --wait-for a.b', 2, "invalid wait-for name: 'a.b'"],
+    ['ki agent launch r one . task.md --wait-for one', 2, 'one cannot wait for itself'],
     ['ki agent launch r one missing task.md', 2, 'no such workdir: missing'],
     ['ki agent launch r one . task.md --add-dir missing', 2, 'no such directory: missing'],
     ['ki agent launch r one . absent.md', 2, 'no such prompt file: absent.md']
@@ -158,6 +155,131 @@ describe('ki agent launch', () => {
     const zone = await box.run('ki agent launch r one . task.md --rules push', { now })
     expect(zone.exitCode).toBe(2)
     expect(zone.stderr).toBe("ki: error: invalid TZ: 'Nowhere/Never'\n")
+  })
+})
+
+describe('ki agent launch --wait-for', () => {
+  const runDirectory = (box: Sandbox): string => `${box.state.path}/ki/agents/r`
+
+  test('starts the runtime at once when every gate is already DONE', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    const processes = fakeProcesses(box)
+    await box.project.write('task.md', '# Task\n')
+    await box.state.write('ki/agents/r/zero.status', '21:00 CEST - reported\nDONE\n')
+
+    const result = await box.run('ki agent launch r one . task.md --wait-for zero', { now })
+    expect(result.stdout).toBe(`launched r/one (pid 1001) in ${runDirectory(box)}\n`)
+    expect((processes.launches[0] as AgentLaunch).command).toBe('claude')
+  })
+
+  test('holds the agent in a detached process until every gate is DONE, then starts the runtime', async () => {
+    const box = await sandbox()
+    box.setEnv({ TZ: 'UTC' })
+    await setupDelegation(box)
+    const processes = fakeProcesses(box)
+    await box.project.write('task.md', '# Task: do it\n')
+    await box.project.mkdir('extra')
+    await box.state.write('ki/agents/r/zero.status', 'DONE\n')
+    processes.alive.add(7)
+    await box.state.write('ki/agents/r/first.pid', '7\n')
+    await box.state.write('ki/agents/r/first.status', '19:00 UTC - building\n')
+
+    const result = await box.run(
+      'ki agent launch r one . task.md --runtime codex --rules push --add-dir extra --wait-for zero --wait-for first --wait-for later',
+      { now }
+    )
+
+    expect(result.stdout).toBe(`held r/one until first, later finish (pid 1001) in ${runDirectory(box)}\n`)
+    const prompt = await box.state.read('ki/agents/r/one.prompt.md')
+    expect(prompt).toContain('- Tier push rule.')
+    expect(prompt).not.toContain('Wait gate.')
+    expect(await box.state.read('ki/agents/r/one.status')).toBe('19:30 UTC - held until first, later finish\n')
+    expect(await box.state.read('ki/agents/r/one.pid')).toBe('1001\n')
+    const [hold] = processes.launches as [AgentLaunch]
+    const project = await realpath(box.project.path)
+    expect(hold.command).toBe(box.executable)
+    expect(hold.arguments).toEqual([
+      'agent',
+      'launch',
+      'r',
+      'one',
+      project,
+      runPath(box, 'one.prompt.md'),
+      '--runtime',
+      'codex',
+      '--add-dir',
+      `${project}/extra`,
+      '--wait-for',
+      'zero',
+      '--wait-for',
+      'first',
+      '--wait-for',
+      'later',
+      '--foreground'
+    ])
+    expect(hold.workingDirectory).toBe(runDirectory(box))
+    expect(hold.log).toBe(runPath(box, 'one.log'))
+    expect((await box.run('ki agent status r', { now })).stdout).toContain(
+      'one: 19:30 UTC - held until first, later finish\n'
+    )
+
+    const intervals: number[] = []
+    const launches: AgentLaunch[] = []
+    box.setAgentProcesses({
+      launch: async (launch) => {
+        launches.push(launch)
+        return 2001
+      },
+      alive: () => true,
+      sleep: async (milliseconds) => {
+        intervals.push(milliseconds)
+        if (intervals.length === 1) await box.state.write('ki/agents/r/first.status', 'DONE\n')
+        if (intervals.length === 2) {
+          expect(await box.state.read('ki/agents/r/one.status')).toBe('19:30 UTC - held until later finish\n')
+          await box.state.write('ki/agents/r/later.status', 'DONE\n')
+        }
+      }
+    })
+    const held = await box.run(['ki', ...hold.arguments], { now })
+
+    expect(held.stdout).toBe('19:30 UTC launched r/one (pid 2001)\n')
+    expect(intervals).toEqual([30_000, 30_000])
+    const [launch] = launches as [AgentLaunch]
+    expect(launch.command).toBe('codex')
+    expect(launch.arguments.at(-1)).toBe(prompt)
+    expect(launch.arguments).toContain(`${project}/extra`)
+    expect(launch.log).toBe(runPath(box, 'one.log'))
+    expect(await box.state.read('ki/agents/r/one.status')).toBe('19:30 UTC - launched\n')
+    expect(await box.state.read('ki/agents/r/one.pid')).toBe('2001\n')
+  })
+
+  test('refuses a gate that cannot open and ends a held agent when its gate closes', async () => {
+    const box = await sandbox()
+    box.setEnv({ TZ: 'UTC' })
+    await setupDelegation(box)
+    const processes = fakeProcesses(box)
+    await box.project.write('task.md', '# Task\n')
+    await box.state.write('ki/agents/r/gone.pid', '5\n')
+    await box.state.write('ki/agents/r/gone.status', '19:10 UTC - halfway\n')
+
+    const closed = await box.run('ki agent launch r one . task.md --wait-for gone', { now })
+    expect(closed.exitCode).toBe(1)
+    expect(closed.stderr).toBe('ki: error: r/one gate cannot open: gone exited without DONE\n')
+    expect(processes.launches).toHaveLength(0)
+
+    processes.alive.add(6)
+    await box.state.write('ki/agents/r/slow.pid', '6\n')
+    const held = await box.run('ki agent launch r one . task.md --wait-for slow', { now })
+    expect(held.stdout).toContain('held r/one until slow finish (pid 1001)')
+
+    const holder = fakeProcesses(box)
+    const ended = await box.run(['ki', ...(processes.launches[0] as AgentLaunch).arguments], { now })
+    expect(ended.stdout).toBe('19:30 UTC - gate cannot open: slow exited without DONE\n')
+    expect(holder.launches).toHaveLength(0)
+    expect((await box.run('ki agent status r', { now })).stdout).toContain(
+      'one: EXITED WITHOUT DONE (19:30 UTC - gate cannot open: slow exited without DONE)\n'
+    )
   })
 })
 
@@ -357,6 +479,40 @@ describe('ki agent queue, dispatch and wait', () => {
     )
     expect(processes.launches.map((launch) => launch.log)).toEqual(
       ['a', 'b', 'c', 'e'].map((name) => runPath(box, `${name}.log`))
+    )
+    expect(processes.sleeps()).toBe(2)
+    expect(await box.state.read('ki/agents/r/queue.jsonl')).toBe('')
+  })
+
+  test('launches each queued agent once its gate opens and drops gates that cannot open', async () => {
+    const box = await sandbox()
+    box.setEnv({ TZ: 'UTC' })
+    await setupDelegation(box)
+    const processes = fakeProcesses(box, async () => {
+      await box.state.write('ki/agents/r/a.status', 'DONE\n')
+      processes.finish()
+    })
+    await box.project.write('task.md', '# Task\n')
+    await box.state.write('ki/agents/r/gone.pid', '5\n')
+    await box.run('ki agent queue r b task.md --wait-for a', { now })
+    await box.run('ki agent queue r a task.md', { now })
+    await box.run('ki agent queue r c task.md --wait-for gone', { now })
+    await box.run('ki agent queue r d task.md --wait-for never', { now })
+
+    const result = await box.run('ki agent dispatch r --max 1 --interval 1 --foreground', { now })
+
+    expect(result.stdout).toBe(
+      [
+        '19:30 UTC launched a',
+        '19:30 UTC could not launch c: gate cannot open: gone exited without DONE',
+        '19:30 UTC launched b',
+        '19:30 UTC could not launch d: gate cannot open: nothing running for never',
+        '19:30 UTC queue empty, all finished',
+        ''
+      ].join('\n')
+    )
+    expect(processes.launches.map((launch) => launch.log)).toEqual(
+      ['a', 'b'].map((name) => runPath(box, `${name}.log`))
     )
     expect(processes.sleeps()).toBe(2)
     expect(await box.state.read('ki/agents/r/queue.jsonl')).toBe('')

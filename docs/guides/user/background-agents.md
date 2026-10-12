@@ -20,14 +20,20 @@ This guide shows how to delegate work to detached Claude Code or Codex agents wi
 ki agent launch <run> <name> <workdir> <prompt-file> --rules push --add-dir <dir>
 ```
 
-The launcher appends any wait gate, the tier's footer and the progress protocol, then starts the agent in its own session with standard input from `/dev/null`. The run packet lives under `$KI_STATE_HOME/agents/<run>/`: `<name>.prompt.md`, `.status`, `.pid`, `.log` and `.report.md`.
+The launcher appends the tier's footer and the progress protocol, then starts the agent in its own session with standard input from `/dev/null`. The run packet lives under `$KI_STATE_HOME/agents/<run>/`: `<name>.prompt.md`, `.status`, `.pid`, `.log` and `.report.md`.
 
-Use `--wait-for <other>` when an agent must not start its work until another agent in the run writes `DONE`. Parallel agents in one repository each need their own Git worktree as `<workdir>`.
+Use `--wait-for <other>` when an agent must not start until another agent in the run writes `DONE`. The launcher holds the gate itself, so the agent's runtime cannot end its session while waiting:
+
+- When every named agent has already written `DONE`, the agent starts at once.
+- Otherwise `ki` writes the run packet, sets the status to `held until <names> finish`, and detaches a hold process that checks every 30 seconds and starts the agent once the gate opens. While held, `.pid` names the hold process, so status, watch and wait count the agent as running.
+- When a named agent exits without `DONE`, the gate can never open: the launch is refused, or a held agent ends with the status `gate cannot open: <name> exited without DONE`, which in turn closes any gate waiting on it. Relaunch the failed agent under its name, then the agents behind it.
+
+A name not yet launched keeps the gate waiting, so you may launch the dependent agent first. Parallel agents in one repository each need their own Git worktree as `<workdir>`.
 
 ## Keep a queue moving
 
 1. Queue ready-made prompts in priority order: `ki agent queue <run> <name> <prompt-file> --workdir <dir> --rules push`.
-2. Start the dispatcher once: `ki agent dispatch <run> --max 4`. It launches the next queued agent as soon as any running one finishes, logs each launch to `dispatch.log`, and exits when the queue is empty and nothing is running.
+2. Start the dispatcher once: `ki agent dispatch <run> --max 4`. It launches the first queued agent whose `--wait-for` gate is open as soon as any running one finishes, logs each launch to `dispatch.log`, and exits when the queue is empty and nothing is running. It drops, and logs, a queued agent whose gate cannot open, including one still waiting once nothing in the run is running.
 3. Arm the waiter in the background: `ki agent wait <run> --next`. It returns `<name> finished: <last status>`, or that the agent exited without `DONE`, and marks that agent seen.
 4. On each wake, read the agent's report, tell the owner the outcome, and re-arm the waiter. Stop re-arming once it prints `ALL FINISHED`.
 

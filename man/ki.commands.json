@@ -479,7 +479,7 @@
       "commands": [
         {
           "invocation": "ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]",
-          "description": "Launch one detached agent. The prompt gains a wait gate for each --wait-for agent, the authority footer the pinned Harness's ki-delegation skill ships for the --rules tier (default none ), and the progress protocol. The status time zone follows TZ ."
+          "description": "Launch one detached agent. The prompt gains the authority footer the pinned Harness's ki-delegation skill ships for the --rules tier (default none ) and the progress protocol. The status time zone follows TZ . Until every --wait-for agent has written DONE , a detached hold process keeps the agent held, checking every 30 seconds, and then starts it. When a named agent exits without DONE , the launch fails, or a held agent ends with a gate cannot open status."
         },
         {
           "invocation": "ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]",
@@ -487,7 +487,7 @@
         },
         {
           "invocation": "ki agent dispatch <run> --max <count> [--interval <seconds>]",
-          "description": "Start a detached dispatcher that keeps up to count agents running, launches the next queued agent as soon as one finishes, logs each launch to dispatch.log , and exits when the queue is empty and nothing is running."
+          "description": "Start a detached dispatcher that keeps up to count agents running, launches the first queued agent whose --wait-for gate is open as soon as one finishes, logs each launch to dispatch.log , drops a queued agent whose gate cannot open, and exits when the queue is empty and nothing is running."
         },
         {
           "invocation": "ki agent wait <run> [--next] [--interval <seconds>]",

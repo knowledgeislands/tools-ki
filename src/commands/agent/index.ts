@@ -5,6 +5,7 @@ import {
   type AuthorityTier,
   authorityTiers,
   dispatchRun,
+  holdAgent,
   type LaunchRequest,
   launchAgent,
   newPrompt,
@@ -94,10 +95,27 @@ export const createAgentCommand = (context: KiContext): Command => {
         .argument('<name>', 'agent name')
         .argument('<workdir>', 'working directory for the agent')
         .argument('<prompt-file>', 'prompt to launch')
-    ).action(async (run: string, name: string, workdir: string, prompt: string, options: LaunchOptions) => {
-      const result = await launchAgent(agentContext(context), request(run, name, workdir, prompt, options))
-      write(`launched ${run}/${name} (pid ${result.pid}) in ${result.directory}`)
-    })
+        .addOption(
+          new Option('--foreground', 'hold the composed prompt in this process until its gate opens').hideHelp()
+        )
+    ).action(
+      async (
+        run: string,
+        name: string,
+        workdir: string,
+        prompt: string,
+        options: LaunchOptions & { foreground?: boolean }
+      ) => {
+        const launch = request(run, name, workdir, prompt, options)
+        if (options.foreground) return write(await holdAgent(agentContext(context), launch))
+        const result = await launchAgent(agentContext(context), launch)
+        write(
+          result.held.length
+            ? `held ${run}/${name} until ${result.held.join(', ')} finish (pid ${result.pid}) in ${result.directory}`
+            : `launched ${run}/${name} (pid ${result.pid}) in ${result.directory}`
+        )
+      }
+    )
   )
 
   command.addCommand(

@@ -116,6 +116,31 @@ const agentState = async (context: AgentContext, directory: string, name: string
   return { kind, last: status.at(-1) }
 }
 
+/** A wait gate: open, still waiting on some names, or closed for good. */
+type Gate =
+  | { readonly kind: 'open' }
+  | { readonly kind: 'waiting'; readonly names: readonly string[] }
+  | { readonly kind: 'closed'; readonly reason: string }
+
+/** Seconds a held agent waits between gate checks. */
+const holdSeconds = 30
+
+/**
+ * A gate opens when every named agent has written `DONE` and closes for good when one
+ * has a pid but has ended without it; a name not yet launched keeps it waiting.
+ */
+const gate = async (context: AgentContext, directory: string, names: readonly string[]): Promise<Gate> => {
+  const waiting: string[] = []
+  for (const name of names) {
+    const state = await agentState(context, directory, name)
+    if (state.kind === 'finished') continue
+    if (state.kind === 'exited' && (await pidOf(join(directory, `${name}.pid`))) !== undefined)
+      return { kind: 'closed', reason: `${name} exited without DONE` }
+    waiting.push(name)
+  }
+  return waiting.length ? { kind: 'waiting', names: waiting } : { kind: 'open' }
+}
+
 const describe = (state: AgentState): string =>
   state.kind === 'finished'
     ? 'finished'
@@ -145,6 +170,7 @@ const validated = async (context: AgentContext, request: LaunchRequest): Promise
   runDirectory(context, request.run)
   checkName(request.name, 'name')
   for (const name of request.waitFor) checkName(name, 'wait-for name')
+  if (request.waitFor.includes(request.name)) throw new KiError(`${request.name} cannot wait for itself`, 2)
   return {
     ...request,
     workdir: await resolveDirectory(context, request.workdir, 'workdir'),
@@ -161,10 +187,6 @@ const composePrompt = async (
   const base = join(directory, request.name)
   const zone = context.environment.TZ ? `TZ=${context.environment.TZ} ` : ''
   const sections = [body.trimEnd()]
-  if (request.waitFor.length)
-    sections.push(
-      `Wait gate. Before starting, wait until the last line of each of these status files is DONE, checking every two minutes and keeping your own status current meanwhile: ${request.waitFor.map((name) => `${join(directory, name)}.status`).join(', ')}.`
-    )
   sections.push(
     await footer(context, request.rules),
     [
@@ -176,23 +198,18 @@ const composePrompt = async (
   return `${sections.join('\n\n')}\n`
 }
 
-/** Launches one detached agent and writes its run packet. */
-export const launchAgent = async (
-  context: AgentContext,
-  candidate: LaunchRequest
-): Promise<{ readonly pid: number; readonly directory: string }> => {
-  const request = await validated(context, candidate)
-  const body = await promptText(context, request.prompt)
-  const directory = runDirectory(context, request.run)
-  await mkdir(directory, { recursive: true })
-  const base = join(directory, request.name)
-  const live = await running(context, `${base}.pid`)
-  if (live) throw new KiError(`${request.run}/${request.name} is already running (pid ${live})`, 1)
+const heldLine = (context: AgentContext, names: readonly string[]): string =>
+  `${stamp(context)} - held until ${names.join(', ')} finish\n`
 
-  const prompt = await composePrompt(context, directory, request, body)
-  await writeFile(`${base}.prompt.md`, prompt)
+/** Starts the runtime on a composed prompt and records its pid. */
+const startRuntime = async (
+  context: AgentContext,
+  directory: string,
+  request: LaunchRequest,
+  prompt: string
+): Promise<number> => {
+  const base = join(directory, request.name)
   await writeFile(`${base}.status`, `${stamp(context)} - launched\n`)
-  await rm(`${base}.report.md`, { force: true })
   const pid = await context.processes.launch(
     runtimeLaunch(request.runtime, {
       prompt,
@@ -203,7 +220,91 @@ export const launchAgent = async (
     })
   )
   await writeFile(`${base}.pid`, `${pid}\n`)
-  return { pid, directory }
+  return pid
+}
+
+/** Detaches the hold process: `ki agent launch --foreground` on the composed prompt. */
+const startHold = (context: AgentContext, directory: string, request: LaunchRequest): Promise<number> => {
+  const base = join(directory, request.name)
+  return context.processes.launch({
+    command: context.executable,
+    arguments: [
+      'agent',
+      'launch',
+      request.run,
+      request.name,
+      request.workdir,
+      `${base}.prompt.md`,
+      '--runtime',
+      request.runtime,
+      ...request.addDirs.flatMap((path) => ['--add-dir', path]),
+      ...request.waitFor.flatMap((name) => ['--wait-for', name]),
+      '--foreground'
+    ],
+    workingDirectory: directory,
+    environment: context.environment,
+    log: `${base}.log`
+  })
+}
+
+export interface LaunchResult {
+  readonly pid: number
+  readonly directory: string
+  /** Agents the launch is held for; empty when the runtime started at once. */
+  readonly held: readonly string[]
+}
+
+/**
+ * Launches one detached agent and writes its run packet. With an open gate the runtime
+ * starts at once; otherwise a detached hold process starts it once the gate opens.
+ */
+export const launchAgent = async (context: AgentContext, candidate: LaunchRequest): Promise<LaunchResult> => {
+  const request = await validated(context, candidate)
+  const body = await promptText(context, request.prompt)
+  const directory = runDirectory(context, request.run)
+  await mkdir(directory, { recursive: true })
+  const base = join(directory, request.name)
+  const live = await running(context, `${base}.pid`)
+  if (live) throw new KiError(`${request.run}/${request.name} is already running (pid ${live})`, 1)
+  const state = await gate(context, directory, request.waitFor)
+  if (state.kind === 'closed') throw new KiError(`${request.run}/${request.name} gate cannot open: ${state.reason}`, 1)
+
+  const prompt = await composePrompt(context, directory, request, body)
+  await writeFile(`${base}.prompt.md`, prompt)
+  await rm(`${base}.report.md`, { force: true })
+  if (state.kind === 'open')
+    return { pid: await startRuntime(context, directory, request, prompt), directory, held: [] }
+  await writeFile(`${base}.status`, heldLine(context, state.names))
+  const pid = await startHold(context, directory, request)
+  await writeFile(`${base}.pid`, `${pid}\n`)
+  return { pid, directory, held: state.names }
+}
+
+/**
+ * The hold process: waits for the gate, then starts the runtime on the composed prompt,
+ * or ends with a "gate cannot open" status when a gating agent exits without `DONE`.
+ */
+export const holdAgent = async (context: AgentContext, candidate: LaunchRequest): Promise<string> => {
+  const request = await validated(context, candidate)
+  const prompt = await promptText(context, request.prompt)
+  const directory = runDirectory(context, request.run)
+  const base = join(directory, request.name)
+  for (;;) {
+    // The launcher has just seen the gate shut, so the first check waits a full interval.
+    await context.processes.sleep(holdSeconds * 1000)
+    const state = await gate(context, directory, request.waitFor)
+    if (state.kind === 'waiting') {
+      await writeFile(`${base}.status`, heldLine(context, state.names))
+      continue
+    }
+    if (state.kind === 'closed') {
+      const line = `${stamp(context)} - gate cannot open: ${state.reason}`
+      await writeFile(`${base}.status`, `${line}\n`)
+      return line
+    }
+    const pid = await startRuntime(context, directory, request, prompt)
+    return `${stamp(context)} launched ${request.run}/${request.name} (pid ${pid})`
+  }
 }
 
 const queueFile = (directory: string): string => join(directory, 'queue.jsonl')
@@ -337,29 +438,51 @@ export const startDispatcher = async (context: AgentContext, request: DispatchRe
   return pid
 }
 
-/** Keeps up to `max` agents running from the queue until it is empty and nothing runs. */
+/**
+ * Keeps up to `max` agents running from the queue until it is empty and nothing runs,
+ * launching the first request whose gate is open and dropping any whose gate cannot open.
+ */
 export const dispatchRun = async (
   context: AgentContext,
   request: DispatchRequest,
   emit: (line: string) => void
 ): Promise<void> => {
   const directory = await existingRun(context, request.run)
+  const drop = (name: string, reason: string): void => emit(`${stamp(context)} could not launch ${name}: ${reason}`)
   for (;;) {
     let alive = 0
     for (const name of await agents(directory)) if (await running(context, join(directory, `${name}.pid`))) alive += 1
-    const [next, ...rest] = await readQueue(directory)
+    const queue = await readQueue(directory)
+    const gates: Gate[] = []
+    for (const queued of queue) gates.push(await gate(context, directory, queued.waitFor))
+    const index = gates.findIndex((state) => state.kind !== 'waiting')
+    const next = queue[index]
+    const state = gates[index]
+    if (state?.kind === 'closed') {
+      await writeQueue(directory, queue.toSpliced(index, 1))
+      drop((next as LaunchRequest).name, `gate cannot open: ${state.reason}`)
+      continue
+    }
     if (next && alive < request.max) {
-      await writeQueue(directory, rest)
+      await writeQueue(directory, queue.toSpliced(index, 1))
       try {
         await launchAgent(context, next)
         emit(`${stamp(context)} launched ${next.name}`)
       } catch (error) {
         if (!(error instanceof KiError)) throw error
-        emit(`${stamp(context)} could not launch ${next.name}: ${error.message}`)
+        drop(next.name, error.message)
       }
       continue
     }
-    if (!next && alive === 0) return emit(`${stamp(context)} queue empty, all finished`)
+    if (alive === 0) {
+      // Nothing runs and nothing can launch, so every remaining gate waits for good.
+      for (const [position, queued] of queue.entries()) {
+        const waiting = gates[position] as Extract<Gate, { kind: 'waiting' }>
+        drop(queued.name, `gate cannot open: nothing running for ${waiting.names.join(', ')}`)
+      }
+      if (queue.length) await writeQueue(directory, [])
+      return emit(`${stamp(context)} queue empty, all finished`)
+    }
     await context.processes.sleep(request.seconds * 1000)
   }
 }

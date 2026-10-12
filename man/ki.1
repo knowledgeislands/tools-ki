@@ -1431,16 +1431,25 @@ Claude Code or Codex in their own session with standard input from
 so an interrupt of the launching session cannot stop them.
 .TP
 .B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]
-Launch one detached agent. The prompt gains a wait gate for each
-.B --wait-for
-agent, the authority footer the pinned Harness's
+Launch one detached agent. The prompt gains the authority footer the pinned
+Harness's
 .B ki-delegation
 skill ships for the
 .B --rules
 tier (default
-.BR none ),
+.BR none )
 and the progress protocol. The status time zone follows
 .BR TZ .
+Until every
+.B --wait-for
+agent has written
+.BR DONE ,
+a detached hold process keeps the agent held, checking every 30 seconds, and
+then starts it. When a named agent exits without
+.BR DONE ,
+the launch fails, or a held agent ends with a
+.I gate cannot open
+status.
 .TP
 .B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]
 Append a ready-made agent to the run queue, copying its prompt. Queue order
@@ -1449,10 +1458,12 @@ is priority order.
 .B ki agent dispatch <run> --max <count> [--interval <seconds>]
 Start a detached dispatcher that keeps up to
 .I count
-agents running, launches the next queued agent as soon as one finishes,
-logs each launch to
+agents running, launches the first queued agent whose
+.B --wait-for
+gate is open as soon as one finishes, logs each launch to
 .IR dispatch.log ,
-and exits when the queue is empty and nothing is running.
+drops a queued agent whose gate cannot open, and exits when the queue is
+empty and nothing is running.
 .TP
 .B ki agent wait <run> [--next] [--interval <seconds>]
 With
