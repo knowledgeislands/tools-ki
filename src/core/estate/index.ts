@@ -1,5 +1,4 @@
-export { convergeLogDirectory, executeConvergence, planRollback, type RollbackPlan } from './apply.ts'
-export { expandHome } from './manifest.ts'
+export { executeConvergence, planRollback } from './apply.ts'
 export type { ConvergeAction, ConvergeItem, ConvergePlan, EstatePorts, SweepHit } from './model.ts'
-export { type ConvergeOptions, planConvergence } from './plan.ts'
+export { planConvergence } from './plan.ts'
 export { sweepOccurrences } from './sweep.ts'
