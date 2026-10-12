@@ -6,13 +6,12 @@ kind: deliver
 purpose: corrective
 project: agent-host
 component: agent
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: c68e7c010685cb98f7339f69253e5da728847543
 created_at: 2026-10-10T05:41:22Z
-updated_at: 2026-10-12T05:35:30Z
+updated_at: 2026-10-12T07:23:00Z
 ---
 
 # Launcher-Held Wait Gates
@@ -118,7 +117,15 @@ The gate reuses existing agent-state evaluation, so status, watch and wait need 
 
 Decision 107 delivered: gates are a launcher behaviour for both `launch` and `dispatch`, with clean failure propagation. Not accepted or pruned; no release.
 
+## Done
+
+Accepted 2026-10-12 by Kris on the review packet above.
+
 ## Discussion
+
+### Acceptance authority
+
+Kris explicitly approved acceptance and eligible pruning on 12 October 2026: "can you approve/accept anything awaiting review and prune all done including those too please" (tools-burndown Decision 12). The independent review checked the unchanged producer packet at `85a5c766554641c037b01935eff174a47b73aa29`; immutable baselines, completed Steps and producer evidence remain intact. No release or remote operation is authorised.
 
 ### Approval
 

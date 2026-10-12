@@ -6,13 +6,12 @@ kind: deliver
 purpose: corrective
 project: agent-host
 component: bootstrap
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 455495e8b9e0ba4f5513edea96238f25982b3f5d
 created_at: 2026-10-12T05:57:09Z
-updated_at: 2026-10-12T06:06:30Z
+updated_at: 2026-10-12T07:23:00Z
 ---
 
 # Config Writer and Relaunch
@@ -107,7 +106,15 @@ Writers that edit text surgically, such as the harness-registry recorder, were a
 
 Both defects fixed with public CLI tests; not accepted, no release.
 
+## Done
+
+Accepted 2026-10-12 by Kris on the review packet above.
+
 ## Discussion
+
+### Acceptance authority
+
+Kris explicitly approved acceptance and eligible pruning on 12 October 2026: "can you approve/accept anything awaiting review and prune all done including those too please" (tools-burndown Decision 12). The independent review checked the unchanged producer packet at `85a5c766554641c037b01935eff174a47b73aa29`; immutable baselines, completed Steps and producer evidence remain intact. No release or remote operation is authorised.
 
 Master state-of-play Decision 114 (12 October 2026, 06:45 BST) asks for the configuration-writer fix found after the ranking record closed; the run brief adds the re-launch defect to the same small record and authorises adoption, planning, delivery and push, but no acceptance or release.
 

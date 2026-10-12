@@ -6,13 +6,12 @@ kind: deliver
 purpose: capability
 project: estate-factorisation
 component: territory
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: fe3c4bcfaf6961ad3c4b7ab17504ce654642fb4d
 created_at: 2026-10-11T11:12:48Z
-updated_at: 2026-10-12T06:21:59Z
+updated_at: 2026-10-12T07:23:00Z
 ---
 
 # Capital Stores and Aliases
@@ -167,7 +166,17 @@ The change stays inside existing command/core boundaries: storage takes names an
 
 Record 118 delivered under Decision 114 rather than deferred: aliases and Capital store naming land in tools-ki; Harness and Arcadia agreement remain. Not accepted or pruned; no release.
 
+## Done
+
+Accepted 2026-10-12 by Kris on the review packet above.
+
 ## Discussion
+
+### Acceptance authority
+
+Kris explicitly approved acceptance and eligible pruning on 12 October 2026: "can you approve/accept anything awaiting review and prune all done including those too please" (tools-burndown Decision 12). The independent review checked the unchanged producer packet at `85a5c766554641c037b01935eff174a47b73aa29`; immutable baselines, completed Steps and producer evidence remain intact. No release or remote operation is authorised.
+
+Acceptance includes the delivered canonical registered-key fallback and read-only canonical-plus-historical scan. Remaining Harness/Principal governance and real Capital alias-declaration choices are carried by the live ALIAS-OWNERS question in the [estate-factorisation checkpoint](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_CHECKPOINTS/platform-foundations.estate-factorisation.md), routed to Master CLI118-OWNERS. Those owner actions remain outside the tools-ki delivery boundary.
 
 ### Approval
 
