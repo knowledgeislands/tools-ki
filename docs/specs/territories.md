@@ -1,6 +1,6 @@
 # Territory selection — TERRITORY
 
-This area specifies KI's implementation of the [accepted territory decision](https://github.com/knowledgeislands/ki-arcadia-principal/blob/main/Admin/Governance/Decisions/ADR-KI-ARCADIA-002-territory-derived-repository-selection.md).
+This area specifies KI's implementation of the [accepted territory decision](https://github.com/knowledgeislands/ki-principal/blob/main/Admin/Governance/Decisions/ADR-KI-PRINCIPAL-002-territory-derived-repository-selection.md).
 
 ## Selection
 

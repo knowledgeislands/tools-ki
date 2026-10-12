@@ -1,6 +1,6 @@
 # Decision Records — KI CLI
 
-This directory holds the Decision Records for `tools-ki`, the Knowledge Islands CLI platform. The records follow the shared `ki-decision-records` standard. The ecosystem fundamentals these records build on - routing responsibility, repository structures and boundaries, and ecosystem coordination - are Arcadia's [Knowledge Islands ecosystem fundamentals](https://github.com/knowledgeislands/ki-arcadia-principal/blob/main/Admin/Governance/Decisions/GDR-KI-ARCADIA-006-knowledge-islands-ecosystem-fundamentals.md) (GDR-KI-ARCADIA-006), cited by URL rather than copied.
+This directory holds the Decision Records for `tools-ki`, the Knowledge Islands CLI platform. The records follow the shared `ki-decision-records` standard. The ecosystem fundamentals these records build on - routing responsibility, repository structures and boundaries, and ecosystem coordination - are Arcadia's [Knowledge Islands ecosystem fundamentals](https://github.com/knowledgeislands/ki-principal/blob/main/Admin/Governance/Decisions/GDR-KI-PRINCIPAL-006-knowledge-islands-ecosystem-fundamentals.md) (GDR-KI-PRINCIPAL-006), cited by URL rather than copied.
 
 <!-- ki-decision-records: adoption-root -->
 
