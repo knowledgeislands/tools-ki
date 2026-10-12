@@ -153,6 +153,11 @@ This baseline describes the `v0.10.1` release. Domain imports and extracted type
 - `ki agent new <run> <name>`
 - `ki agent decide <run> <text...> [--log <path>]`
 
+#### Estate convergence
+
+- `ki estate converge <manifest> [--apply] [--clone] [--allow-busy <path>]...`
+- `ki estate converge --rollback <log> [--apply]`
+
 #### Development
 
 - `ki dev local set <harness-id> <local-harness-path>`
@@ -162,6 +167,7 @@ This baseline describes the `v0.10.1` release. Domain imports and extracted type
 
 ### Behaviours
 
+- `ki estate converge` reshapes this machine’s checkouts to a tracked estate targets manifest: it discovers checkouts by normalised origin remote, previews by default, and with `--apply` moves clean, idle checkouts, retargets `origin`, repairs linked worktrees, updates the local registry, renames Claude project history, rewrites untracked symlinks and removes empty former parents, logging every action for `--rollback`. A report-only sweep lists remaining old paths and renamed identities in local configuration by file and line.
 - `ki agent` is the reference launcher for the `ki-delegation` background-run contract. It detaches Claude Code or Codex agents in their own session, writes each run packet under `$KI_STATE_HOME/agents/<run>/`, appends the pinned Harness's authority footer for the chosen tier, keeps a numbered decisions log, and provides a run queue, a detached concurrency-capped dispatcher, a waiter that returns on each finish, and status and watch views that flag agents which exited without `DONE`.
 - Diagnostics and doctor reports share tool/version, checkout-verified local/release/unknown installation mode, executing platform/architecture, runtime/version, and configuration state. Copied or unidentified source is unknown rather than guessed local. Doctor reports its read-only scope, verdict, and pass/warn/fail/skipped counts without implying package freshness.
 - KI's own CI runs from the checked-out source, while release packaging pins a verified Harness revision.

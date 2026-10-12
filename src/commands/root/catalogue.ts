@@ -5,6 +5,7 @@ export const rootCommandNames = [
   'territory',
   'bootstrap',
   'dev',
+  'estate',
   'harness',
   'kb',
   'registry',

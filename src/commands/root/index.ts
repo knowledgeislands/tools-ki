@@ -4,6 +4,7 @@ import { createAcquireCommand } from '../acquire/index.ts'
 import { createAgentCommand } from '../agent/index.ts'
 import { createBootstrapCommand } from '../bootstrap/index.ts'
 import { createDevCommand } from '../dev/index.ts'
+import { createEstateCommand } from '../estate/index.ts'
 import { createHarnessCommand } from '../harness/index.ts'
 import { createKbCommand } from '../kb/index.ts'
 import { createHarnessStatusCommands, createSupportCommands } from '../manage/index.ts'
@@ -21,6 +22,7 @@ const rootCommandFactories: Record<RootCommandName, RootCommandFactory> = {
   bootstrap: (context) => createBootstrapCommand(context),
   territory: (context) => createTerritoryCommand(context),
   dev: (context) => createDevCommand(context),
+  estate: (context) => createEstateCommand(context),
   harness: (context) => createHarnessCommand(context),
   repo: (context) => createRepoCommand(context),
   kb: (context) => createKbCommand(context),

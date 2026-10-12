@@ -13,6 +13,7 @@ const rootHelpCommands = [
   'diag',
   'docs',
   'doctor',
+  'estate',
   'harness',
   'help',
   'inventory',
@@ -90,7 +91,8 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   agent: ['decide', 'dispatch', 'launch', 'new', 'queue', 'status', 'wait', 'watch'],
   dev: ['local', 'skill'],
   'dev local': ['off', 'on', 'set'],
-  'dev skill': ['rubric']
+  'dev skill': ['rubric'],
+  estate: ['converge']
 }
 
 describe('[ki command inventory]', () => {

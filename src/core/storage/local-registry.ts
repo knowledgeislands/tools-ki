@@ -263,3 +263,36 @@ export const localRegistryWriteMany = async (
   if (renderLocalRegistry(repositories) === renderLocalRegistry(inspection.repositories)) return undefined
   return { path: REGISTRY_FILE, content: renderLocalRegistry(repositories), create: inspection.state === 'missing' }
 }
+
+/**
+ * Replace one exact registry entry, renaming its key when the replacement does, so a checkout
+ * that moves or changes identity keeps one record.
+ */
+export const replaceLocalRegistryEntry = (
+  repositories: readonly LocalRegistryEntry[],
+  before: LocalRegistryEntry,
+  after: LocalRegistryEntry
+): readonly LocalRegistryEntry[] => {
+  const current = repositories.find((entry) => entry.key === before.key)
+  if (current?.repository !== before.repository || current.path !== before.path)
+    throw new KiError(`local KI repository registry no longer holds ${before.key} at ${before.path}`, 1)
+  const remaining = repositories.filter((entry) => entry !== current)
+  for (const field of ['key', 'repository', 'path'] as const)
+    if (remaining.some((entry) => entry[field] === after[field]))
+      throw new KiError(`local KI repository registry already holds ${field} ${after[field]}`, 1)
+  return [...remaining, after]
+}
+
+/** Publish one registry replacement against the current machine-local registry. */
+export const publishLocalRegistryReplacement = async (
+  stateDirectory: string,
+  before: LocalRegistryEntry,
+  after: LocalRegistryEntry
+): Promise<void> => {
+  const repositories = replaceLocalRegistryEntry(await requiredLocalRegistry(stateDirectory), before, after)
+  await publishLocalRegistryProposal(
+    stateDirectory,
+    { path: REGISTRY_FILE, content: renderLocalRegistry(repositories) },
+    false
+  )
+}

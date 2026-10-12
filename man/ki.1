@@ -389,6 +389,14 @@ Write a prompt skeleton from the run contract.
 .TP
 .B ki agent decide <run> <text...> [--log <path>]
 Append a numbered, dated owner decision.
+.SS Estate convergence
+\&
+.TP
+.B ki estate converge <manifest> [--apply] [--clone] [--allow-busy <path>]...
+Preview or apply moving this machine's checkouts to an estate targets manifest.
+.TP
+.B ki estate converge --rollback <log> [--apply]
+Preview or apply the reverse of a recorded convergence.
 .SS Development
 \&
 .TP
@@ -1449,6 +1457,54 @@ run contract to
 Append a numbered, dated owner decision to the run's
 .I decisions.md
 or the named log, for prompts to cite as their authority.
+.SS Estate convergence
+\&
+.PP
+These commands reshape this machine's checkouts to match a tracked estate
+targets manifest. They preview by default, are idempotent, never delete a
+repository, never touch working-tree contents, and make no network call except
+an explicitly requested clone.
+.TP
+.B ki estate converge <manifest> [--apply] [--clone] [--allow-busy <path>]...
+Discover each checkout by its normalised origin remote, matched against the
+manifest's
+.I from
+or
+.I to
+identity, under
+.IR ~/workspaces ,
+the chezmoi source and every registered path. For each checkout that must
+change, check that tracked files are clean, the target is free and no process
+is working inside it, then move the folder, set
+.I origin
+to the target identity keeping its scheme, repair linked worktrees including
+Paperclip worktrees, update the local registry entry and its key, and rename
+Claude project folders and
+.I ~/.claude.json
+project keys without merging. Untracked symlinks under
+.I ~/workspaces
+and OneDrive
+.I sources-*
+stores are rewritten; tracked symlinks and leftover former parents are only
+reported, and empty former parents are removed. Registered targets without a
+checkout are reported and cloned only with
+.BR --clone .
+Repeat
+.B --allow-busy
+to accept a busy checkout. Every run ends with a report-only sweep of
+configuration files for remaining old paths and renamed identities, printing
+file and line but never line text.
+.B --apply
+writes a JSON log and backups of
+.I registry.toml
+and
+.I ~/.claude.json
+under
+.IR $KI_STATE_HOME/converge/ .
+.TP
+.B ki estate converge --rollback <log> [--apply]
+Reverse the actions recorded in a convergence log, newest first, refusing any
+step whose recorded state has since changed. Cloned checkouts are retained.
 .SS Development
 \&
 .PP
