@@ -1,15 +1,15 @@
 ---
-id: ADR-KI-TOOL-002
+id: ADR-KI-TOOL-KI-002
 title: 'Compatible harness registry and native operations'
 date: 2026-10-11
 status: current
 decision_type_url: https://knowledgeislands.info/specifications/decision-records/adr
 decision_type: architecture
 decision_depends_on:
-  - ADR-KI-TOOL-001
+  - ADR-KI-TOOL-KI-001
 ---
 
-# ADR-KI-TOOL-002: Compatible harness registry and native operations
+# ADR-KI-TOOL-KI-002: Compatible harness registry and native operations
 
 ## Context
 
@@ -43,4 +43,4 @@ One explicitly declared repository-local `ki-self` provider may live at the exac
 
 ## References
 
-- [TypeScript-native command host](ADR-KI-TOOL-001-typescript-native-command-host.md) — executable-host ownership.
+- [TypeScript-native command host](ADR-KI-TOOL-KI-001-typescript-native-command-host.md) — executable-host ownership.

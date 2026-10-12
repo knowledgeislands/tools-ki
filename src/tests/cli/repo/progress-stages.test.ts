@@ -2,7 +2,7 @@ import { stripVTControlCharacters } from 'node:util'
 import { describe, expect, test } from 'vitest'
 import { sandbox } from '../_cli_helper.ts'
 
-// KI-TOOL-CLI-022. Evidence gathering happens inside `createSession`, before any criterion
+// KI-TOOL-KI-CLI-022. Evidence gathering happens inside `createSession`, before any criterion
 // runs, and on a real catalogue it dominates the operation. These exercise the emitter the
 // contract gives a session for that span, and the host's own bracket around it for a session
 // that emits nothing at all.

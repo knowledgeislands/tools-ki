@@ -1,5 +1,5 @@
 ---
-id: KI-TOOL-CLI-118
+id: KI-TOOL-KI-CLI-118
 area: CLI
 title: Capital stores and aliases
 kind: deliver

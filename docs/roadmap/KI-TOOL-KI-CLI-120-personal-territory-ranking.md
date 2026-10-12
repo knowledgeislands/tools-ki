@@ -1,5 +1,5 @@
 ---
-id: KI-TOOL-CLI-120
+id: KI-TOOL-KI-CLI-120
 area: CLI
 title: Personal territory ranking
 kind: deliver
@@ -24,7 +24,7 @@ A user can rank territory handles in their own `ki` configuration, and every mul
 
 Master state-of-play Decision 95 (12 October 2026, 05:28 BST) records Kris's ranking of territories by where Kris should spend most time - personal, knowledge-islands, legal, humans-not-robots, valle-armonia, sacred-inquiry, techmedix, equal-remedy - and asks that `--principals`, Zed opening and the estate follow it. The ranking is a personal, user-level preference, not public governance, so it belongs in the user configuration (`config.toml`), not in a Capital's `.ki.toml`, and it falls back to the current derived order when unset. The decision grants delivery to `main` and push; it grants no acceptance, release or Homebrew publish.
 
-`KI-TOOL-CLI-119` (commit `311c762`, closed in `24d9fd9`, since pruned) delivered `--principals` with the derived order in [TERRITORY-005](../specs/territories.md#territory-005--principals-selection): the system Capital first, then territory name, then handle. `mgit --principals` consumes `ki territory roots --null --principals`, so it inherits the ranking without change.
+`KI-TOOL-KI-CLI-119` (commit `311c762`, closed in `24d9fd9`, since pruned) delivered `--principals` with the derived order in [TERRITORY-005](../specs/territories.md#territory-005--principals-selection): the system Capital first, then territory name, then handle. `mgit --principals` consumes `ki territory roots --null --principals`, so it inherits the ranking without change.
 
 ## Boundary
 
@@ -53,7 +53,7 @@ Public CLI tests at 100% coverage, TypeScript, Biome, Markdown and manual lint, 
 
 ## Dependencies / blocks
 
-None. KI-TOOL-CLI-118 may add handle aliases; the ranking names canonical handles, so an alias in the ranking is an unknown handle until that work decides otherwise.
+None. KI-TOOL-KI-CLI-118 may add handle aliases; the ranking names canonical handles, so an alias in the ranking is an unknown handle until that work decides otherwise.
 
 ## Documentation impact
 
@@ -102,7 +102,7 @@ An optional `[territories] ranking` of handles in `$XDG_CONFIG_HOME/ki/config.to
 
 ### Post-change review
 
-The ranking is one extra leading sort key over the existing Capital discovery; no handle, alias or membership semantics changed, so KI-TOOL-CLI-118 is unaffected. Estate grouping applies only when a ranking is set, keeping unset estate output byte-identical.
+The ranking is one extra leading sort key over the existing Capital discovery; no handle, alias or membership semantics changed, so KI-TOOL-KI-CLI-118 is unaffected. Estate grouping applies only when a ranking is set, keeping unset estate output byte-identical.
 
 ### Mini recap
 

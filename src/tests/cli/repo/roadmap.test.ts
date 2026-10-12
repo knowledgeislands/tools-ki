@@ -29,7 +29,7 @@ afterEach(() => {
 
 const item = (overrides: Record<string, string | undefined> = {}): string => {
   const fields = {
-    id: 'KI-TOOL-CLI-003',
+    id: 'KI-TOOL-KI-CLI-003',
     title: 'Inspect governed work',
     kind: 'deliver',
     horizon: 'next',
@@ -280,14 +280,14 @@ describe('[ki repo roadmap]', () => {
       'project/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-project-item.md', item())
+    await box.project.write('project/docs/roadmap/KI-TOOL-KI-CLI-003-project-item.md', item())
 
     const result = await box.run(
       'ki repo --repo project --repo knowledge roadmap list --horizon next --status draft --no-icons'
     )
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work')
     expect(result.output).toContain('KBS-001 [draft] Native proposal')
     expect(result.output).not.toContain('unsupported or repeated field note_type')
   })
@@ -297,12 +297,12 @@ describe('[ki repo roadmap]', () => {
     const project =
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     await box.project.write('undeclared/.ki.toml', project)
-    await box.project.write('undeclared/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    await box.project.write('undeclared/docs/roadmap/KI-TOOL-KI-CLI-003-done.md', item({ status: 'done' }))
     await box.project.write(
       'remote/.ki.toml',
       `${project}\n[skills.ki-work]\nadapter = "github-issues"\n\n[skills.ki-work-github-issues]\n`
     )
-    await box.project.write('remote/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    await box.project.write('remote/docs/roadmap/KI-TOOL-KI-CLI-003-done.md', item({ status: 'done' }))
     await box.project.write('untabled/.ki.toml', `${project}\n[skills.ki-work]\nadapter = "roadmap"\n`)
     await box.project.write('unknown/.ki.toml', `${project}\n[skills.ki-work]\nadapter = "jira"\n`)
     await box.project.write(
@@ -313,15 +313,15 @@ describe('[ki repo roadmap]', () => {
 
     const listed = await box.run('ki repo --repo undeclared --repo remote roadmap list --no-icons')
     const pruned = await box.run('ki repo --repo undeclared --repo remote roadmap prune')
-    const exact = await box.run('ki repo --repo undeclared roadmap prune KI-TOOL-CLI-003')
-    const moved = await box.run('ki repo --repo remote roadmap promote KI-TOOL-CLI-003')
+    const exact = await box.run('ki repo --repo undeclared roadmap prune KI-TOOL-KI-CLI-003')
+    const moved = await box.run('ki repo --repo remote roadmap promote KI-TOOL-KI-CLI-003')
     const untabled = await box.run('ki repo --repo untabled roadmap list')
     const unknown = await box.run('ki repo --repo unknown roadmap prune')
     const inapplicable = await box.run('ki repo --repo inapplicable roadmap list')
 
     expect(listed.exitCode).toBe(0)
     expect(listed.output).toContain('no roadmap')
-    expect(listed.output).not.toContain('KI-TOOL-CLI-003')
+    expect(listed.output).not.toContain('KI-TOOL-KI-CLI-003')
     expect(pruned).toEqual({ exitCode: 0, output: 'ki repo roadmap prune: no done or cancelled work items\n' })
     expect(exact).toEqual({
       exitCode: 2,
@@ -337,20 +337,22 @@ describe('[ki repo roadmap]', () => {
     expect(inapplicable.output).toContain(
       '[skills.ki-work].adapter = "kb-streams" does not apply to repo_type = "project"'
     )
-    await expect(box.project.read('undeclared/docs/roadmap/KI-TOOL-CLI-003-done.md')).resolves.toContain('status: done')
-    await expect(box.project.read('remote/docs/roadmap/KI-TOOL-CLI-003-done.md')).resolves.toContain('status: done')
+    await expect(box.project.read('undeclared/docs/roadmap/KI-TOOL-KI-CLI-003-done.md')).resolves.toContain(
+      'status: done'
+    )
+    await expect(box.project.read('remote/docs/roadmap/KI-TOOL-KI-CLI-003-done.md')).resolves.toContain('status: done')
   })
 
   test('treats absent Knowledge Base roadmaps as empty but diagnoses malformed and misconfigured ones', async () => {
     const box = await sandbox()
     const configuration = knowledgeBaseConfiguration()
     await box.project.write('missing/.ki.toml', configuration)
-    await box.project.write('missing/docs/roadmap/KI-TOOL-CLI-003-project-item.md', item())
+    await box.project.write('missing/docs/roadmap/KI-TOOL-KI-CLI-003-project-item.md', item())
     await box.project.write('malformed/.ki.toml', configuration)
     await box.project.write('malformed/Streams/Roadmap/KBS-001-valid.md', item({ id: 'KBS-001', title: 'Valid' }))
     await box.project.write('malformed/Streams/Roadmap/KBS-002-invalid.md', item({ id: 'KBS-002', status: 'closed' }))
     await box.project.write('misconfigured/.ki.toml', configuration.replace('kb-streams', 'roadmap'))
-    await box.project.write('misconfigured/docs/roadmap/KI-TOOL-CLI-003-project-item.md', item())
+    await box.project.write('misconfigured/docs/roadmap/KI-TOOL-KI-CLI-003-project-item.md', item())
     await box.project.write('repeated/.ki.toml', configuration)
     await box.project.write(
       'repeated/Streams/Roadmap/KBS-001-repeated.md',
@@ -376,7 +378,7 @@ describe('[ki repo roadmap]', () => {
 
     expect(missing.exitCode).toBe(0)
     expect(missing.output).toContain('○ no roadmap')
-    expect(missing.output).not.toContain('KI-TOOL-CLI-003')
+    expect(missing.output).not.toContain('KI-TOOL-KI-CLI-003')
     expect(malformed.exitCode).toBe(1)
     expect(malformed.output).toContain('has an invalid lifecycle status')
     expect(misconfigured.exitCode).toBe(1)
@@ -465,11 +467,11 @@ describe('[ki repo roadmap]', () => {
       'repo/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/repo"\ncapital = "https://github.com/example/capital"\n'
     )
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item({ blocked_by: '[KI-OTHER-999]' }))
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md', item({ blocked_by: '[KI-OTHER-999]' }))
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-010-cleanup.md',
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-010-cleanup.md',
       item({
-        id: 'KI-TOOL-CLI-010',
+        id: 'KI-TOOL-KI-CLI-010',
         title: 'Cleanup',
         horizon: 'future',
         status: 'awaiting-review',
@@ -477,8 +479,8 @@ describe('[ki repo roadmap]', () => {
       })
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-011-done.md',
-      item({ id: 'KI-TOOL-CLI-011', title: 'Done', status: 'done' })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-011-done.md',
+      item({ id: 'KI-TOOL-KI-CLI-011', title: 'Done', status: 'done' })
     )
     const root = await realpath(`${box.project.path}/repo`)
     await box.state.write(
@@ -496,13 +498,13 @@ describe('[ki repo roadmap]', () => {
 
     expect(text).toEqual({
       exitCode: 0,
-      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0\n`
+      output: `╭─ KI REPO ROADMAP\n│  ╰─ 📁 repo (${root})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-KI-CLI-003 [draft] Inspect governed work\n├─ trades (0)\n│  ├─ import (0)\n│  ╰─ export (0)\n╰─ summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0 TRADES=0 IMPORTS=0 EXPORTS=0\n`
     })
-    expect(accepted.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
+    expect(accepted.output).toContain('KI-TOOL-KI-CLI-010 [awaiting-review] Cleanup')
     expect(accepted.output).toContain('summary: ITEMS=1 NOW=0 NOT_DONE=1 DONE=0')
     expect(done.output).toContain('summary: ITEMS=1 NOW=0 NOT_DONE=0 DONE=1')
-    expect(accepted.output).not.toContain('KI-TOOL-CLI-003')
-    expect(territory.output).toContain('KI-TOOL-CLI-010 [awaiting-review] Cleanup')
+    expect(accepted.output).not.toContain('KI-TOOL-KI-CLI-003')
+    expect(territory.output).toContain('KI-TOOL-KI-CLI-010 [awaiting-review] Cleanup')
     expect(empty.output).toContain('├─ roadmap (0)\n├─ trades (0)')
     expect(empty.output).toContain('summary: ITEMS=0 NOW=0 NOT_DONE=0 DONE=0')
     expect(empty.output).not.toContain('items: none')
@@ -521,7 +523,7 @@ describe('[ki repo roadmap]', () => {
         {
           identity: 'example/repo',
           repository: 'https://github.com/example/repo',
-          id: 'KI-TOOL-CLI-003',
+          id: 'KI-TOOL-KI-CLI-003',
           area: null,
           areaTitle: null,
           theme: null,
@@ -539,7 +541,7 @@ describe('[ki repo roadmap]', () => {
           blockedBy: ['KI-OTHER-999'],
           createdAt: '2026-09-01T00:00:00Z',
           updatedAt: '2026-09-01T00:00:00Z',
-          record: 'https://github.com/example/repo/blob/HEAD/docs/roadmap/KI-TOOL-CLI-003-inspect.md'
+          record: 'https://github.com/example/repo/blob/HEAD/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md'
         }
       ])
     })
@@ -557,13 +559,13 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write('repo/docs/roadmap/_ISSUES.md', 'last_id: 3\n')
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md', item())
 
     const result = await box.run('ki repo --repo repo roadmap list')
 
     expect(result.exitCode).toBe(0)
     expect(result.output).toContain('roadmap (1)')
-    expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work')
   })
 
   test('aggregates selected roadmaps while treating absent roots as empty', async () => {
@@ -572,14 +574,14 @@ describe('[ki repo roadmap]', () => {
       'first/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/first"\n'
     )
-    await box.project.write('first/docs/roadmap/KI-TOOL-CLI-003-now.md', item({ horizon: 'now' }))
+    await box.project.write('first/docs/roadmap/KI-TOOL-KI-CLI-003-now.md', item({ horizon: 'now' }))
     await box.project.write(
       'second/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/second"\n'
     )
     await box.project.write(
-      'second/docs/roadmap/KI-TOOL-CLI-004-next.md',
-      item({ id: 'KI-TOOL-CLI-004', title: 'Next work' })
+      'second/docs/roadmap/KI-TOOL-KI-CLI-004-next.md',
+      item({ id: 'KI-TOOL-KI-CLI-004', title: 'Next work' })
     )
     await box.project.write(
       'absent/.ki.toml',
@@ -595,8 +597,8 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).toContain('╭─ KI AGGREGATE ROADMAP')
     expect(result.output).toContain('now (1)')
     expect(result.output).toContain('next (1)')
-    expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
-    expect(result.output).toContain('KI-TOOL-CLI-004 [draft] Next work')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-004 [draft] Next work')
     expect(result.output).not.toContain('📁 first (1)')
     expect(result.output).not.toContain('📁 second (1)')
     expect(result.output).toContain('no roadmap (1)')
@@ -630,8 +632,8 @@ describe('[ki repo roadmap]', () => {
       items: [
         expect.objectContaining({
           identity: 'example/second',
-          id: 'KI-TOOL-CLI-004',
-          record: 'https://github.com/example/second/blob/HEAD/docs/roadmap/KI-TOOL-CLI-004-next.md'
+          id: 'KI-TOOL-KI-CLI-004',
+          record: 'https://github.com/example/second/blob/HEAD/docs/roadmap/KI-TOOL-KI-CLI-004-next.md'
         })
       ]
     })
@@ -696,8 +698,8 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'valid/docs/roadmap/KI-TOOL-CLI-003-inspect.md',
-      item({ blocks: '[KI-TOOL-CLI-010]', transferred_from: 'example/source' })
+      'valid/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md',
+      item({ blocks: '[KI-TOOL-KI-CLI-010]', transferred_from: 'example/source' })
     )
     await box.project.write(
       'missing/.ki.toml',
@@ -707,7 +709,7 @@ describe('[ki repo roadmap]', () => {
       'invalid-status/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    await box.project.write('invalid-status/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item({ status: 'closed' }))
+    await box.project.write('invalid-status/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md', item({ status: 'closed' }))
     await box.project.write(
       'unsafe/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\nrepository = "https://github.com/example/unsafe"\n'
@@ -715,7 +717,7 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('unsafe/docs/roadmap/target.md', item())
     await symlink(
       `${box.project.path}/unsafe/docs/roadmap/target.md`,
-      `${box.project.path}/unsafe/docs/roadmap/KI-TOOL-CLI-003-inspect.md`
+      `${box.project.path}/unsafe/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md`
     )
     const valid = await realpath(`${box.project.path}/valid`)
     const missing = await realpath(`${box.project.path}/missing`)
@@ -740,13 +742,13 @@ describe('[ki repo roadmap]', () => {
     const retiredFormat = await box.run('ki repo --repo valid roadmap list --format yaml')
 
     expect(result.output).toContain(
-      `│  ╰─ 📁 valid (${valid})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-CLI-003 [draft] Inspect governed work`
+      `│  ╰─ 📁 valid (${valid})\n├─ roadmap (1)\n│  ╰─ next (1)\n│     ╰─ KI-TOOL-KI-CLI-003 [draft] Inspect governed work`
     )
     expect(result.output).toContain(`│  ╰─ ○ no roadmap`)
     expect(result.output).not.toContain(`repository ${missing} has no physical docs/roadmap directory`)
-    expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-CLI-003-inspect.md has an invalid lifecycle status`)
+    expect(result.output).toContain(`│  ╰─ ❌ work item KI-TOOL-KI-CLI-003-inspect.md has an invalid lifecycle status`)
     expect(result.output).toContain(
-      `├─ roadmap (0)\n│  ├─ ❌ work item KI-TOOL-CLI-003-inspect.md must be a regular file\n│  ╰─ ❌ work item target.md must use a matching work-item identifier`
+      `├─ roadmap (0)\n│  ├─ ❌ work item KI-TOOL-KI-CLI-003-inspect.md must be a regular file\n│  ╰─ ❌ work item target.md must use a matching work-item identifier`
     )
     expect(result.exitCode).toBe(1)
     expect(json.exitCode).toBe(1)
@@ -761,10 +763,10 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     await box.project.write('project/.ki.toml', project)
     await box.project.write('project/docs/roadmap/_ISSUES.md', 'last_id: 4\n')
-    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-first.md', item())
-    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-second.md', item({ title: 'Duplicate item' }))
-    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-third.md', item({ title: 'Third holder' }))
-    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-004-bare.md', '# No frontmatter\n')
+    await box.project.write('project/docs/roadmap/KI-TOOL-KI-CLI-003-first.md', item())
+    await box.project.write('project/docs/roadmap/KI-TOOL-KI-CLI-003-second.md', item({ title: 'Duplicate item' }))
+    await box.project.write('project/docs/roadmap/KI-TOOL-KI-CLI-003-third.md', item({ title: 'Third holder' }))
+    await box.project.write('project/docs/roadmap/KI-TOOL-KI-CLI-004-bare.md', '# No frontmatter\n')
     await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
     await box.project.write('knowledge/Streams/Roadmap/_ISSUES.md', 'last_id: 3\n')
     await box.project.write('knowledge/Streams/Roadmap/Roadmap.md', '---\nnote_type: index\n---\n\n# Roadmap\n')
@@ -779,13 +781,13 @@ describe('[ki repo roadmap]', () => {
     for (const result of [list, summary]) {
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain(
-        'work item KI-TOOL-CLI-003-first.md shares identifier KI-TOOL-CLI-003 with KI-TOOL-CLI-003-second.md, KI-TOOL-CLI-003-third.md'
+        'work item KI-TOOL-KI-CLI-003-first.md shares identifier KI-TOOL-KI-CLI-003 with KI-TOOL-KI-CLI-003-second.md, KI-TOOL-KI-CLI-003-third.md'
       )
       expect(result.output).toContain(
-        'work item KI-TOOL-CLI-003-third.md shares identifier KI-TOOL-CLI-003 with KI-TOOL-CLI-003-first.md, KI-TOOL-CLI-003-second.md'
+        'work item KI-TOOL-KI-CLI-003-third.md shares identifier KI-TOOL-KI-CLI-003 with KI-TOOL-KI-CLI-003-first.md, KI-TOOL-KI-CLI-003-second.md'
       )
       expect(result.output).toContain('work item KBS-002-second.md shares identifier KBS-002 with KBS-002-first.md')
-      expect(result.output).toContain('work item KI-TOOL-CLI-004-bare.md must declare canonical frontmatter')
+      expect(result.output).toContain('work item KI-TOOL-KI-CLI-004-bare.md must declare canonical frontmatter')
       expect(result.output).toContain('work item KBS-003-bare.md must declare canonical frontmatter')
       expect(result.output).not.toContain('_ISSUES.md')
       expect(result.output).not.toContain('Roadmap.md')
@@ -794,9 +796,9 @@ describe('[ki repo roadmap]', () => {
     expect(list.output).toContain('├─ roadmap (1)')
     expect(list.output).not.toContain('Duplicate item')
 
-    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-004-bare.md', item({ id: 'KI-TOOL-CLI-004' }))
-    await rm(`${box.project.path}/project/docs/roadmap/KI-TOOL-CLI-003-second.md`)
-    await rm(`${box.project.path}/project/docs/roadmap/KI-TOOL-CLI-003-third.md`)
+    await box.project.write('project/docs/roadmap/KI-TOOL-KI-CLI-004-bare.md', item({ id: 'KI-TOOL-KI-CLI-004' }))
+    await rm(`${box.project.path}/project/docs/roadmap/KI-TOOL-KI-CLI-003-second.md`)
+    await rm(`${box.project.path}/project/docs/roadmap/KI-TOOL-KI-CLI-003-third.md`)
     await box.project.write('knowledge/Streams/Roadmap/KBS-003-bare.md', item({ id: 'KBS-003' }))
     await rm(`${box.project.path}/knowledge/Streams/Roadmap/KBS-002-second.md`)
 
@@ -813,14 +815,14 @@ describe('[ki repo roadmap]', () => {
       'repo/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md', item())
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-004-future.md',
-      item({ id: 'KI-TOOL-CLI-004', horizon: 'future' })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-004-future.md',
+      item({ id: 'KI-TOOL-KI-CLI-004', horizon: 'future' })
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-005-candidate.md',
-      item({ id: 'KI-TOOL-CLI-005', candidate: 'true' })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-005-candidate.md',
+      item({ id: 'KI-TOOL-KI-CLI-005', candidate: 'true' })
     )
 
     const result = await box.run('ki repo --repo repo roadmap list')
@@ -828,15 +830,15 @@ describe('[ki repo roadmap]', () => {
 
     expect(result.exitCode).toBe(1)
     expect(result.output).toContain('roadmap (2)')
-    expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
-    expect(result.output).toContain('KI-TOOL-CLI-004 [draft] Inspect governed work')
-    expect(result.output).toContain('KI-TOOL-CLI-005-candidate.md has unsupported or repeated field candidate')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-004 [draft] Inspect governed work')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-005-candidate.md has unsupported or repeated field candidate')
     expect(result.output).toContain('summary: ITEMS=2 NOW=0 NOT_DONE=2 DONE=0')
     expect(aggregate.exitCode).toBe(1)
-    expect(aggregate.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
-    expect(aggregate.output).toContain('KI-TOOL-CLI-004 [draft] Inspect governed work')
+    expect(aggregate.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work')
+    expect(aggregate.output).toContain('KI-TOOL-KI-CLI-004 [draft] Inspect governed work')
     expect(aggregate.output).toContain(
-      'repo: work item KI-TOOL-CLI-005-candidate.md has unsupported or repeated field candidate'
+      'repo: work item KI-TOOL-KI-CLI-005-candidate.md has unsupported or repeated field candidate'
     )
   })
 
@@ -848,19 +850,19 @@ describe('[ki repo roadmap]', () => {
     )
     const hold = '\n  reason: parked\n  condition: "After the release"'
     const items: readonly Record<string, string | undefined>[] = [
-      { id: 'KI-TOOL-CLI-006', title: 'Now draft', horizon: 'now', status: 'draft' },
-      { id: 'KI-TOOL-CLI-005', title: 'Now in progress', horizon: 'now', status: 'in-progress' },
-      { id: 'KI-TOOL-CLI-014', title: 'Next draft', horizon: 'next', status: 'draft' },
-      { id: 'KI-TOOL-CLI-013', title: 'Next ready', horizon: 'next', status: 'ready' },
-      { id: 'KI-TOOL-CLI-012', title: 'Next draft first', horizon: 'next', status: 'draft' },
-      { id: 'KI-TOOL-CLI-015', title: 'Soon', horizon: 'soon', status: 'draft' },
-      { id: 'KI-TOOL-CLI-018', title: 'Future', horizon: 'future', status: 'draft' },
-      { id: 'KI-TOOL-CLI-016', title: 'Waiting', horizon: 'waiting-for', status: 'draft' },
-      { id: 'KI-TOOL-CLI-017', title: 'Held', horizon: 'hold', status: 'ready', hold },
-      { id: 'KI-TOOL-CLI-020', title: 'Old intake', horizon: 'triage', status: 'draft' },
-      { id: 'KI-TOOL-CLI-019', title: 'Intake', horizon: undefined, status: 'triage' },
-      { id: 'KI-TOOL-CLI-009', title: 'Done', horizon: undefined, status: 'done' },
-      { id: 'KI-TOOL-CLI-010', title: 'Cancelled', horizon: undefined, status: 'cancelled', resolution: 'obsolete' }
+      { id: 'KI-TOOL-KI-CLI-006', title: 'Now draft', horizon: 'now', status: 'draft' },
+      { id: 'KI-TOOL-KI-CLI-005', title: 'Now in progress', horizon: 'now', status: 'in-progress' },
+      { id: 'KI-TOOL-KI-CLI-014', title: 'Next draft', horizon: 'next', status: 'draft' },
+      { id: 'KI-TOOL-KI-CLI-013', title: 'Next ready', horizon: 'next', status: 'ready' },
+      { id: 'KI-TOOL-KI-CLI-012', title: 'Next draft first', horizon: 'next', status: 'draft' },
+      { id: 'KI-TOOL-KI-CLI-015', title: 'Soon', horizon: 'soon', status: 'draft' },
+      { id: 'KI-TOOL-KI-CLI-018', title: 'Future', horizon: 'future', status: 'draft' },
+      { id: 'KI-TOOL-KI-CLI-016', title: 'Waiting', horizon: 'waiting-for', status: 'draft' },
+      { id: 'KI-TOOL-KI-CLI-017', title: 'Held', horizon: 'hold', status: 'ready', hold },
+      { id: 'KI-TOOL-KI-CLI-020', title: 'Old intake', horizon: 'triage', status: 'draft' },
+      { id: 'KI-TOOL-KI-CLI-019', title: 'Intake', horizon: undefined, status: 'triage' },
+      { id: 'KI-TOOL-KI-CLI-009', title: 'Done', horizon: undefined, status: 'done' },
+      { id: 'KI-TOOL-KI-CLI-010', title: 'Cancelled', horizon: undefined, status: 'cancelled', resolution: 'obsolete' }
     ]
     for (const fields of items) await box.project.write(`repo/docs/roadmap/${fields['id']}-item.md`, item(fields))
 
@@ -869,24 +871,24 @@ describe('[ki repo roadmap]', () => {
     expect(result.exitCode).toBe(0)
     const expectedOrder = [
       'now (2)',
-      'KI-TOOL-CLI-005 [in-progress] Now in progress',
-      'KI-TOOL-CLI-006 [draft] Now draft',
+      'KI-TOOL-KI-CLI-005 [in-progress] Now in progress',
+      'KI-TOOL-KI-CLI-006 [draft] Now draft',
       'next (3)',
-      'KI-TOOL-CLI-013 [ready] Next ready',
-      'KI-TOOL-CLI-012 [draft] Next draft first',
-      'KI-TOOL-CLI-014 [draft] Next draft',
+      'KI-TOOL-KI-CLI-013 [ready] Next ready',
+      'KI-TOOL-KI-CLI-012 [draft] Next draft first',
+      'KI-TOOL-KI-CLI-014 [draft] Next draft',
       'soon (1)',
       'future (1)',
       'hold (2)',
-      'KI-TOOL-CLI-017 [ready] Held',
-      'KI-TOOL-CLI-016 [draft] Waiting · legacy',
+      'KI-TOOL-KI-CLI-017 [ready] Held',
+      'KI-TOOL-KI-CLI-016 [draft] Waiting · legacy',
       'triage (2)',
-      'KI-TOOL-CLI-020 [draft] Old intake · legacy',
-      'KI-TOOL-CLI-019 [triage] Intake',
+      'KI-TOOL-KI-CLI-020 [draft] Old intake · legacy',
+      'KI-TOOL-KI-CLI-019 [triage] Intake',
       'done (1)',
-      'KI-TOOL-CLI-009 [done] Done',
+      'KI-TOOL-KI-CLI-009 [done] Done',
       'cancelled (1)',
-      'KI-TOOL-CLI-010 [cancelled] Cancelled'
+      'KI-TOOL-KI-CLI-010 [cancelled] Cancelled'
     ]
     let previous = -1
     for (const line of expectedOrder) {
@@ -918,11 +920,11 @@ describe('[ki repo roadmap]', () => {
       channels: [{ from: [sourceHome], to: [receiverHome], kinds: ['work', 'knowledge'] }]
     })
     const record = (recordId: string, kind: 'work' | 'knowledge', status = ''): string =>
-      `---\nid: ${recordId}\ntitle: Trade-aware planning\ncreated_at: 2026-08-05T12:00:00Z\nsender: example/source\nreceiver: example/receiver\nkind: ${kind}\nsource_ref: KI-TOOL-CLI-012\nobservation: decision\nphase: ${status ? 'received' : 'submitted'}${status}\n---\n# ${recordId}: Trade-aware planning\n\n## Context\n\nTrade context.\n\n## Submission\n\nShow trades with roadmap work.\n\n## Constraints\n\nRemain read-only.\n`
+      `---\nid: ${recordId}\ntitle: Trade-aware planning\ncreated_at: 2026-08-05T12:00:00Z\nsender: example/source\nreceiver: example/receiver\nkind: ${kind}\nsource_ref: KI-TOOL-KI-CLI-012\nobservation: decision\nphase: ${status ? 'received' : 'submitted'}${status}\n---\n# ${recordId}: Trade-aware planning\n\n## Context\n\nTrade context.\n\n## Submission\n\nShow trades with roadmap work.\n\n## Constraints\n\nRemain read-only.\n`
     await box.project.write('source/.ki.toml', configuration(sourceHome))
     await box.project.write('receiver/.ki.toml', configuration(receiverHome))
-    await box.project.write('source/docs/roadmap/KI-TOOL-CLI-003-inspect.md', item())
-    await box.project.write('receiver/docs/roadmap/KI-TOOL-CLI-004-inspect.md', item({ id: 'KI-TOOL-CLI-004' }))
+    await box.project.write('source/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md', item())
+    await box.project.write('receiver/docs/roadmap/KI-TOOL-KI-CLI-004-inspect.md', item({ id: 'KI-TOOL-KI-CLI-004' }))
     await box.project.write(`source/-/_TRADES/example/receiver/${id}.md`, record(id, 'work'))
     await box.project.write(
       `receiver/+/_TRADES/example/source/${id}.md`,
@@ -985,7 +987,7 @@ describe('[ki repo roadmap]', () => {
     const cases = [
       ['absent.md', 'no frontmatter\n', 'must declare canonical frontmatter'],
       ['invalid.md', '---\nwrong\n---\n', 'frontmatter must contain simple key-value fields'],
-      ['missing.md', '---\nid: KI-TOOL-CLI-003\n---\n', 'must declare title'],
+      ['missing.md', '---\nid: KI-TOOL-KI-CLI-003\n---\n', 'must declare title'],
       ['extra.md', item({ extra: 'field' }), 'has unsupported or repeated field extra'],
       [
         'repeated.md',
@@ -993,20 +995,24 @@ describe('[ki repo roadmap]', () => {
         'has unsupported or repeated field title'
       ],
       ['id.md', item({ id: 'wrong' }), 'must use a matching work-item identifier'],
-      ['KI-TOOL-CLI-003-invalid.md', item({ theme: 'Wrong' }), 'has invalid title, theme, or horizon'],
-      ['KI-TOOL-CLI-003-baseline.md', item({ baseline_ref: 'wrong' }), 'baseline_ref must be null or a full commit ID'],
-      ['KI-TOOL-CLI-003-candidate.md', item({ candidate: 'true' }), 'has unsupported or repeated field candidate'],
+      ['KI-TOOL-KI-CLI-003-invalid.md', item({ theme: 'Wrong' }), 'has invalid title, theme, or horizon'],
       [
-        'KI-TOOL-CLI-003-housekeeping.md',
+        'KI-TOOL-KI-CLI-003-baseline.md',
+        item({ baseline_ref: 'wrong' }),
+        'baseline_ref must be null or a full commit ID'
+      ],
+      ['KI-TOOL-KI-CLI-003-candidate.md', item({ candidate: 'true' }), 'has unsupported or repeated field candidate'],
+      [
+        'KI-TOOL-KI-CLI-003-housekeeping.md',
         item({ 'housekeeping-template': 'HK-001' }),
         'has unsupported or repeated field housekeeping-template'
       ],
       [
-        'KI-TOOL-CLI-003-scheduled.md',
+        'KI-TOOL-KI-CLI-003-scheduled.md',
         item({ 'scheduled-for': '2026-08-09' }),
         'has unsupported or repeated field scheduled-for'
       ],
-      ['KI-TOOL-CLI-003-list.md', item({ blocks: '[wrong]' }), 'blocks must be an identifier array']
+      ['KI-TOOL-KI-CLI-003-list.md', item({ blocks: '[wrong]' }), 'blocks must be an identifier array']
     ] as const
     for (const [index, [name, contents, message]] of cases.entries()) {
       const repository = `repo-${index}`
@@ -1028,14 +1034,14 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md',
-      item({ id: "'KI-TOOL-CLI-003'", title: '"Inspect governed work"', theme: "'cli'" })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md',
+      item({ id: "'KI-TOOL-KI-CLI-003'", title: '"Inspect governed work"', theme: "'cli'" })
     )
 
     const result = await box.run('ki repo --repo repo roadmap list')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work')
   })
 
   test('accepts a repository code beginning with a digit and a serial beyond three places', async () => {
@@ -1062,12 +1068,12 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-003-inspect.md',
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-003-inspect.md',
       item({
         area: 'CLI',
         waiting_on_trades: '[TRD-12345678]',
         intake_disposition: 'merged',
-        intake_disposition_target: 'KI-TOOL-CLI-002',
+        intake_disposition_target: 'KI-TOOL-KI-CLI-002',
         transferred_from: 'example/source',
         housekeeping_template: 'HK-001',
         scheduled_for: '2026-08-09'
@@ -1077,7 +1083,7 @@ describe('[ki repo roadmap]', () => {
     const result = await box.run('ki repo --repo repo roadmap list')
 
     expect(result.exitCode).toBe(0)
-    expect(result.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work')
+    expect(result.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work')
     expect(result.output).not.toContain('has unsupported or repeated field area')
     expect(result.output).not.toContain('has unsupported or repeated field transferred_from')
     expect(result.output).not.toContain('has unsupported or repeated field housekeeping_template')
@@ -1093,15 +1099,15 @@ describe('[ki repo roadmap]', () => {
     await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
     const linked = item({ task_links: taskLinks })
     const kbLinked = item({ id: 'KBS-001', task_links: taskLinks, ...knowledgeBaseMetadata })
-    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-003-linked.md', linked)
-    await box.project.write('project/docs/roadmap/KI-TOOL-CLI-004-unlinked.md', item({ id: 'KI-TOOL-CLI-004' }))
+    await box.project.write('project/docs/roadmap/KI-TOOL-KI-CLI-003-linked.md', linked)
+    await box.project.write('project/docs/roadmap/KI-TOOL-KI-CLI-004-unlinked.md', item({ id: 'KI-TOOL-KI-CLI-004' }))
     await box.project.write('knowledge/Streams/Roadmap/KBS-001-linked.md', kbLinked)
 
     const listed = await box.run('ki repo --repo project --repo knowledge roadmap list --format json')
     expect(listed.exitCode, listed.output).toBe(0)
     const report = JSON.parse(listed.output)
     expect(report.schema).toBe('ki/roadmap/v1')
-    const linkedItems = report.items.filter((entry: { id: string }) => entry.id !== 'KI-TOOL-CLI-004')
+    const linkedItems = report.items.filter((entry: { id: string }) => entry.id !== 'KI-TOOL-KI-CLI-004')
     expect(linkedItems).toHaveLength(2)
     for (const entry of linkedItems) {
       expect(entry.taskLinks).toEqual({
@@ -1123,13 +1129,15 @@ describe('[ki repo roadmap]', () => {
         linear: [expect.objectContaining({ key: 'KIS-5', relation: 'related' })]
       })
     }
-    expect(report.items.find((entry: { id: string }) => entry.id === 'KI-TOOL-CLI-004')).not.toHaveProperty('taskLinks')
+    expect(report.items.find((entry: { id: string }) => entry.id === 'KI-TOOL-KI-CLI-004')).not.toHaveProperty(
+      'taskLinks'
+    )
     expect(listed.output).not.toContain(box.project.path)
 
     const now = () => Date.parse('2026-09-02T00:00:00Z')
-    expect((await box.run('ki repo --repo project roadmap promote KI-TOOL-CLI-003', { now })).exitCode).toBe(0)
+    expect((await box.run('ki repo --repo project roadmap promote KI-TOOL-KI-CLI-003', { now })).exitCode).toBe(0)
     expect((await box.run('ki repo --repo knowledge roadmap promote KBS-001', { now })).exitCode).toBe(0)
-    expect(await box.project.read('project/docs/roadmap/KI-TOOL-CLI-003-linked.md')).toBe(
+    expect(await box.project.read('project/docs/roadmap/KI-TOOL-KI-CLI-003-linked.md')).toBe(
       linked
         .replace('horizon: next', 'horizon: now')
         .replace('updated_at: 2026-09-01T00:00:00Z', 'updated_at: 2026-09-02T00:00:00Z')
@@ -1147,14 +1155,14 @@ describe('[ki repo roadmap]', () => {
       'repo/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-linked.md', item({ task_links: taskLinks }))
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-004-unlinked.md', item({ id: 'KI-TOOL-CLI-004' }))
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-linked.md', item({ task_links: taskLinks }))
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-004-unlinked.md', item({ id: 'KI-TOOL-KI-CLI-004' }))
 
     for (const view of ['', '--aggregate --no-icons']) {
       const compact = await box.run(`ki repo --repo repo roadmap list ${view}`)
       expect(compact.exitCode).toBe(0)
-      expect(compact.output).toContain('KI-TOOL-CLI-003 [draft] Inspect governed work · PC:KIS-5 +2\n')
-      expect(compact.output).toContain('KI-TOOL-CLI-004 [draft] Inspect governed work\n')
+      expect(compact.output).toContain('KI-TOOL-KI-CLI-003 [draft] Inspect governed work · PC:KIS-5 +2\n')
+      expect(compact.output).toContain('KI-TOOL-KI-CLI-004 [draft] Inspect governed work\n')
       expect(compact.output.match(/Links: PC = Paperclip/g)).toHaveLength(1)
       expect(compact.output).not.toContain('http')
       expect(compact.output).not.toContain('\u001b')
@@ -1162,7 +1170,7 @@ describe('[ki repo roadmap]', () => {
       const expanded = await box.run(`ki repo --repo repo roadmap list ${view} --links all`)
       expect(expanded.exitCode).toBe(0)
       expect(expanded.output).toContain(
-        '│     ├─ KI-TOOL-CLI-003 [draft] Inspect governed work\n' +
+        '│     ├─ KI-TOOL-KI-CLI-003 [draft] Inspect governed work\n' +
           '│     │  ├─ Paperclip KIS-5 · implementation\n' +
           '│     │  │  ├─ http://127.0.0.1:3100/KIS/issues/KIS-5\n'
       )
@@ -1197,7 +1205,7 @@ describe('[ki repo roadmap]', () => {
       'repo/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    const record = 'repo/docs/roadmap/KI-TOOL-CLI-003-linked.md'
+    const record = 'repo/docs/roadmap/KI-TOOL-KI-CLI-003-linked.md'
     const repeated = taskLinks.replace('7afd7214-386e-455f-83bd-6ac4c9f1bf7f', 'b76a4ec9-be48-4a3c-8568-7885b5e6789b')
     await box.project.write(record, item({ task_links: repeated }))
     expect((await box.run('ki repo --repo repo roadmap list')).output).toContain(' · PC:KIS-5 +1\n')
@@ -1241,7 +1249,7 @@ describe('[ki repo roadmap]', () => {
       first +
       reference.replaceAll('3100', '3200') +
       reference.replace('558dd49e-7615-409f-b7b2-7f19e22171d9', 'another-company')
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-linked.md', item({ task_links: links }))
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-linked.md', item({ task_links: links }))
     expect((await box.run('ki repo --repo repo roadmap list')).output).toContain(' · PC:KIS-5 +2\n')
     const expanded = await box.run('ki repo --repo repo roadmap list --links all')
     expect(expanded.output).toContain('authority: http://127.0.0.1:3200')
@@ -1255,7 +1263,7 @@ describe('[ki repo roadmap]', () => {
       'repo/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-linked.md', item({ task_links: taskLinks }))
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-linked.md', item({ task_links: taskLinks }))
     box.setEnv({ TERM: 'xterm', NO_COLOR: undefined })
     const terminal = await box.run('ki repo --repo repo roadmap list', { interactive: true })
     expect(terminal.output).toContain('Inspect governed work\u001b[2m · PC:KIS-5 +2\u001b[22m\n')
@@ -1271,7 +1279,7 @@ describe('[ki repo roadmap]', () => {
       'repo/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    const record = 'repo/docs/roadmap/KI-TOOL-CLI-003-linked.md'
+    const record = 'repo/docs/roadmap/KI-TOOL-KI-CLI-003-linked.md'
     for (const relation of ['evaluation', 'implementation', 'review', 'integration', 'coordination', 'related']) {
       await box.project.write(
         record,
@@ -1415,15 +1423,15 @@ describe('[ki repo roadmap]', () => {
       'first/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    await box.project.write('first/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
-    await box.project.write('first/docs/roadmap/KI-TOOL-CLI-004-draft.md', item({ id: 'KI-TOOL-CLI-004' }))
+    await box.project.write('first/docs/roadmap/KI-TOOL-KI-CLI-003-done.md', item({ status: 'done' }))
+    await box.project.write('first/docs/roadmap/KI-TOOL-KI-CLI-004-draft.md', item({ id: 'KI-TOOL-KI-CLI-004' }))
     await box.project.write(
       'second/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'second/docs/roadmap/KI-TOOL-CLI-005-done.md',
-      item({ id: 'KI-TOOL-CLI-005', horizon: undefined, status: 'cancelled', resolution: 'obsolete' })
+      'second/docs/roadmap/KI-TOOL-KI-CLI-005-done.md',
+      item({ id: 'KI-TOOL-KI-CLI-005', horizon: undefined, status: 'cancelled', resolution: 'obsolete' })
     )
     await box.project.write(
       'absent/.ki.toml',
@@ -1433,9 +1441,9 @@ describe('[ki repo roadmap]', () => {
     const second = await realpath(`${box.project.path}/second`)
     const absent = await realpath(`${box.project.path}/absent`)
 
-    const exact = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-003 --no-commit')
-    const notDone = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-004')
-    const missing = await box.run('ki repo --repo first roadmap prune KI-TOOL-CLI-999')
+    const exact = await box.run('ki repo --repo first roadmap prune KI-TOOL-KI-CLI-003 --no-commit')
+    const notDone = await box.run('ki repo --repo first roadmap prune KI-TOOL-KI-CLI-004')
+    const missing = await box.run('ki repo --repo first roadmap prune KI-TOOL-KI-CLI-999')
     const multiple = await box.run([
       'ki',
       'repo',
@@ -1445,7 +1453,7 @@ describe('[ki repo roadmap]', () => {
       second,
       'roadmap',
       'prune',
-      'KI-TOOL-CLI-005'
+      'KI-TOOL-KI-CLI-005'
     ])
     const pruned = await box.run([
       'ki',
@@ -1462,19 +1470,19 @@ describe('[ki repo roadmap]', () => {
     ])
     const empty = await box.run('ki repo --repo first roadmap prune')
     const absentEmpty = await box.run(['ki', 'repo', '--repo', absent, 'roadmap', 'prune'])
-    const absentExact = await box.run(['ki', 'repo', '--repo', absent, 'roadmap', 'prune', 'KI-TOOL-CLI-003'])
+    const absentExact = await box.run(['ki', 'repo', '--repo', absent, 'roadmap', 'prune', 'KI-TOOL-KI-CLI-003'])
 
     expect(exact).toEqual({
       exitCode: 0,
-      output: `pruned ${first}: KI-TOOL-CLI-003 [done] Inspect governed work\nki repo roadmap prune: removed 1 terminal work item(s) without committing\n`
+      output: `pruned ${first}: KI-TOOL-KI-CLI-003 [done] Inspect governed work\nki repo roadmap prune: removed 1 terminal work item(s) without committing\n`
     })
     expect(notDone).toEqual({
       exitCode: 2,
-      output: 'ki: error: work item KI-TOOL-CLI-004 must be done or cancelled before pruning\n'
+      output: 'ki: error: work item KI-TOOL-KI-CLI-004 must be done or cancelled before pruning\n'
     })
     expect(missing).toEqual({
       exitCode: 2,
-      output: `ki: error: repository ${first} must contain exactly one work item KI-TOOL-CLI-999\n`
+      output: `ki: error: repository ${first} must contain exactly one work item KI-TOOL-KI-CLI-999\n`
     })
     expect(multiple).toEqual({
       exitCode: 2,
@@ -1482,11 +1490,11 @@ describe('[ki repo roadmap]', () => {
     })
     expect(pruned).toEqual({
       exitCode: 0,
-      output: `pruned ${second}: KI-TOOL-CLI-005 [cancelled] Inspect governed work\nki repo roadmap prune: removed 1 terminal work item(s) without committing\n`
+      output: `pruned ${second}: KI-TOOL-KI-CLI-005 [cancelled] Inspect governed work\nki repo roadmap prune: removed 1 terminal work item(s) without committing\n`
     })
-    await expect(box.project.read('first/docs/roadmap/KI-TOOL-CLI-003-done.md')).rejects.toThrow()
-    await expect(box.project.read('second/docs/roadmap/KI-TOOL-CLI-005-done.md')).rejects.toThrow()
-    await expect(box.project.read('first/docs/roadmap/KI-TOOL-CLI-004-draft.md')).resolves.toContain('status: draft')
+    await expect(box.project.read('first/docs/roadmap/KI-TOOL-KI-CLI-003-done.md')).rejects.toThrow()
+    await expect(box.project.read('second/docs/roadmap/KI-TOOL-KI-CLI-005-done.md')).rejects.toThrow()
+    await expect(box.project.read('first/docs/roadmap/KI-TOOL-KI-CLI-004-draft.md')).resolves.toContain('status: draft')
     expect(empty).toEqual({ exitCode: 0, output: 'ki repo roadmap prune: no done or cancelled work items\n' })
     expect(absentEmpty).toEqual({ exitCode: 0, output: 'ki repo roadmap prune: no done or cancelled work items\n' })
     expect(absentExact).toEqual({
@@ -1499,12 +1507,12 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'invalid/docs/roadmap/KI-TOOL-CLI-006-invalid.md',
-      item({ id: 'KI-TOOL-CLI-006', status: 'closed' })
+      'invalid/docs/roadmap/KI-TOOL-KI-CLI-006-invalid.md',
+      item({ id: 'KI-TOOL-KI-CLI-006', status: 'closed' })
     )
     await box.project.write(
-      'first/docs/roadmap/KI-TOOL-CLI-007-done.md',
-      item({ id: 'KI-TOOL-CLI-007', status: 'done' })
+      'first/docs/roadmap/KI-TOOL-KI-CLI-007-done.md',
+      item({ id: 'KI-TOOL-KI-CLI-007', status: 'done' })
     )
     const invalid = await realpath(`${box.project.path}/invalid`)
 
@@ -1512,7 +1520,7 @@ describe('[ki repo roadmap]', () => {
 
     expect(rejected.exitCode).toBe(2)
     expect(rejected.output).toContain('has an invalid lifecycle status')
-    await expect(box.project.read('first/docs/roadmap/KI-TOOL-CLI-007-done.md')).resolves.toContain('status: done')
+    await expect(box.project.read('first/docs/roadmap/KI-TOOL-KI-CLI-007-done.md')).resolves.toContain('status: done')
   })
 
   test('promotes and demotes one explicit item with directional horizon validation', async () => {
@@ -1522,52 +1530,55 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-003-next.md',
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-003-next.md',
       `${item({ title: 'Priority item' })}\ncandidate: body content remains.\n`
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-004-future.md',
-      item({ id: 'KI-TOOL-CLI-004', title: 'Future item', horizon: 'future' })
-    )
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-005-now.md', item({ id: 'KI-TOOL-CLI-005', horizon: 'now' }))
-    await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-006-triage.md',
-      item({ id: 'KI-TOOL-CLI-006', horizon: 'triage' })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-004-future.md',
+      item({ id: 'KI-TOOL-KI-CLI-004', title: 'Future item', horizon: 'future' })
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-007-ready.md',
-      item({ id: 'KI-TOOL-CLI-007', status: 'ready' })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-005-now.md',
+      item({ id: 'KI-TOOL-KI-CLI-005', horizon: 'now' })
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-008-done.md',
-      item({ id: 'KI-TOOL-CLI-008', horizon: undefined, status: 'done' })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-006-triage.md',
+      item({ id: 'KI-TOOL-KI-CLI-006', horizon: 'triage' })
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-009-waiting.md',
-      item({ id: 'KI-TOOL-CLI-009', horizon: 'waiting-for' })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-007-ready.md',
+      item({ id: 'KI-TOOL-KI-CLI-007', status: 'ready' })
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-010-intake.md',
-      item({ id: 'KI-TOOL-CLI-010', horizon: undefined, status: 'triage' })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-008-done.md',
+      item({ id: 'KI-TOOL-KI-CLI-008', horizon: undefined, status: 'done' })
+    )
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-009-waiting.md',
+      item({ id: 'KI-TOOL-KI-CLI-009', horizon: 'waiting-for' })
+    )
+    await box.project.write(
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-010-intake.md',
+      item({ id: 'KI-TOOL-KI-CLI-010', horizon: undefined, status: 'triage' })
     )
     await box.project.write(
       'other/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    await box.project.write('other/docs/roadmap/KI-TOOL-CLI-003-item.md', item())
+    await box.project.write('other/docs/roadmap/KI-TOOL-KI-CLI-003-item.md', item())
     const root = await realpath(`${box.project.path}/repo`)
     const other = await realpath(`${box.project.path}/other`)
 
-    const promote = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-003')
-    const demoteDirect = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-003 future')
-    const promoteDirect = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-004 next')
-    const promoted = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-004-future.md')
-    const demoted = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-next.md')
-    const unknown = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-003 unknown')
-    const backwards = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-003 future')
-    const same = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-004 next')
-    const promoteLimit = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-005')
-    const unheld = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-003')
+    const promote = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-003')
+    const demoteDirect = await box.run('ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-003 future')
+    const promoteDirect = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-004 next')
+    const promoted = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-004-future.md')
+    const demoted = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-next.md')
+    const unknown = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-003 unknown')
+    const backwards = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-003 future')
+    const same = await box.run('ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-004 next')
+    const promoteLimit = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-005')
+    const unheld = await box.run('ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-003')
     const hold = await box.run([
       'ki',
       'repo',
@@ -1575,7 +1586,7 @@ describe('[ki repo roadmap]', () => {
       'repo',
       'roadmap',
       'demote',
-      'KI-TOOL-CLI-003',
+      'KI-TOOL-KI-CLI-003',
       '--reason',
       'parked',
       '--condition',
@@ -1583,26 +1594,26 @@ describe('[ki repo roadmap]', () => {
       '--review',
       '2026-12-01'
     ])
-    const held = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-next.md')
-    const demoteLimit = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-003')
-    const leaveHold = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-003')
-    const released = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-003 next')
-    const releasedRecord = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-next.md')
+    const held = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-next.md')
+    const demoteLimit = await box.run('ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-003')
+    const leaveHold = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-003')
+    const released = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-003 next')
+    const releasedRecord = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-next.md')
     const holdOptionsElsewhere = await box.run(
-      'ki repo --repo repo roadmap demote KI-TOOL-CLI-003 soon --reason parked --condition Later'
+      'ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-003 soon --reason parked --condition Later'
     )
-    const reviewOnly = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-003 hold --review 2026-12-01')
-    const badReason = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-003 hold --reason bogus')
-    const noCondition = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-003 hold --reason parked')
+    const reviewOnly = await box.run('ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-003 hold --review 2026-12-01')
+    const badReason = await box.run('ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-003 hold --reason bogus')
+    const noCondition = await box.run('ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-003 hold --reason parked')
     const badReview = await box.run(
-      'ki repo --repo repo roadmap demote KI-TOOL-CLI-003 hold --reason parked --condition Later --review soon'
+      'ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-003 hold --reason parked --condition Later --review soon'
     )
-    const readyToSoon = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-007')
-    const done = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-008')
-    const legacy = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-009')
-    const intake = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-010')
-    const triage = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-006')
-    const missing = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-999')
+    const readyToSoon = await box.run('ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-007')
+    const done = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-008')
+    const legacy = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-009')
+    const intake = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-010')
+    const triage = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-006')
+    const missing = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-999')
     const multiple = await box.run([
       'ki',
       'repo',
@@ -1612,12 +1623,15 @@ describe('[ki repo roadmap]', () => {
       other,
       'roadmap',
       'promote',
-      'KI-TOOL-CLI-003'
+      'KI-TOOL-KI-CLI-003'
     ])
 
-    expect(promote).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-CLI-003 next -> now\n' })
-    expect(demoteDirect).toEqual({ exitCode: 0, output: 'ki repo roadmap demote: KI-TOOL-CLI-003 now -> future\n' })
-    expect(promoteDirect).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-CLI-004 future -> next\n' })
+    expect(promote).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-KI-CLI-003 next -> now\n' })
+    expect(demoteDirect).toEqual({ exitCode: 0, output: 'ki repo roadmap demote: KI-TOOL-KI-CLI-003 now -> future\n' })
+    expect(promoteDirect).toEqual({
+      exitCode: 0,
+      output: 'ki repo roadmap promote: KI-TOOL-KI-CLI-004 future -> next\n'
+    })
     expect(promoted).toContain('horizon: next')
     expect(promoted).not.toContain('candidate: true')
     expect(demoted).toContain('horizon: future')
@@ -1625,17 +1639,19 @@ describe('[ki repo roadmap]', () => {
     expect(demoted).toContain('## Discussion\n\n### Test\n\nTest.\n')
     expect(demoted).toContain('candidate: body content remains.')
     expect(unknown.output).toContain('roadmap promote horizon must be one of')
-    expect(backwards.output).toContain('roadmap promote must move KI-TOOL-CLI-003 toward now')
-    expect(same.output).toContain('roadmap demote must move KI-TOOL-CLI-004 toward hold')
-    expect(promoteLimit.output).toContain('work item KI-TOOL-CLI-005 is already at the promote limit')
-    expect(unheld.output).toContain('moving KI-TOOL-CLI-003 to hold requires --reason and --condition')
-    expect(hold).toEqual({ exitCode: 0, output: 'ki repo roadmap demote: KI-TOOL-CLI-003 future -> hold\n' })
+    expect(backwards.output).toContain('roadmap promote must move KI-TOOL-KI-CLI-003 toward now')
+    expect(same.output).toContain('roadmap demote must move KI-TOOL-KI-CLI-004 toward hold')
+    expect(promoteLimit.output).toContain('work item KI-TOOL-KI-CLI-005 is already at the promote limit')
+    expect(unheld.output).toContain('moving KI-TOOL-KI-CLI-003 to hold requires --reason and --condition')
+    expect(hold).toEqual({ exitCode: 0, output: 'ki repo roadmap demote: KI-TOOL-KI-CLI-003 future -> hold\n' })
     expect(held).toContain(
       'horizon: hold\nhold:\n  reason: parked\n  condition: "After the release"\n  review: "2026-12-01"\n'
     )
-    expect(demoteLimit.output).toContain('work item KI-TOOL-CLI-003 is already at the demote limit')
-    expect(leaveHold.output).toContain('leaving hold re-decides the horizon: name the destination for KI-TOOL-CLI-003')
-    expect(released).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-CLI-003 hold -> next\n' })
+    expect(demoteLimit.output).toContain('work item KI-TOOL-KI-CLI-003 is already at the demote limit')
+    expect(leaveHold.output).toContain(
+      'leaving hold re-decides the horizon: name the destination for KI-TOOL-KI-CLI-003'
+    )
+    expect(released).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-KI-CLI-003 hold -> next\n' })
     expect(releasedRecord).toContain('horizon: next\n')
     expect(releasedRecord).not.toContain('hold:')
     expect(releasedRecord).not.toContain('After the release')
@@ -1644,14 +1660,18 @@ describe('[ki repo roadmap]', () => {
     expect(badReason.output).toContain("argument 'bogus' is invalid")
     expect(noCondition.output).toContain('roadmap --condition must name the release condition')
     expect(badReview.output).toContain('roadmap --review must be an ISO date (YYYY-MM-DD)')
-    expect(readyToSoon.output).toContain('work item KI-TOOL-CLI-007 at status ready cannot move to soon')
-    expect(done.output).toContain('work item KI-TOOL-CLI-008 is done and has no horizon')
+    expect(readyToSoon.output).toContain('work item KI-TOOL-KI-CLI-007 at status ready cannot move to soon')
+    expect(done.output).toContain('work item KI-TOOL-KI-CLI-008 is done and has no horizon')
     expect(legacy.output).toContain(
-      'work item KI-TOOL-CLI-009 is at the legacy waiting-for horizon; run ki repo roadmap migrate first'
+      'work item KI-TOOL-KI-CLI-009 is at the legacy waiting-for horizon; run ki repo roadmap migrate first'
     )
-    expect(intake.output).toContain('work item KI-TOOL-CLI-010 at triage must be adopted through the planning workflow')
-    expect(triage.output).toContain('work item KI-TOOL-CLI-006 at triage must be adopted through the planning workflow')
-    expect(missing.output).toContain(`repository ${root} must contain exactly one work item KI-TOOL-CLI-999`)
+    expect(intake.output).toContain(
+      'work item KI-TOOL-KI-CLI-010 at triage must be adopted through the planning workflow'
+    )
+    expect(triage.output).toContain(
+      'work item KI-TOOL-KI-CLI-006 at triage must be adopted through the planning workflow'
+    )
+    expect(missing.output).toContain(`repository ${root} must contain exactly one work item KI-TOOL-KI-CLI-999`)
     expect(multiple.output).toContain('ki repo roadmap promote requires exactly one repository target')
   })
 
@@ -1662,27 +1682,27 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-003-timestamped.md',
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-003-timestamped.md',
       item({ created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-02T00:00:00Z' })
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-004-missing.md',
-      item({ id: 'KI-TOOL-CLI-004', created_at: undefined, updated_at: undefined })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-004-missing.md',
+      item({ id: 'KI-TOOL-KI-CLI-004', created_at: undefined, updated_at: undefined })
     )
     await box.project.write(
-      'repo/docs/roadmap/KI-TOOL-CLI-005-invalid.md',
-      item({ id: 'KI-TOOL-CLI-005', created_at: '2026-09-02T00:00:00Z', updated_at: undefined })
+      'repo/docs/roadmap/KI-TOOL-KI-CLI-005-invalid.md',
+      item({ id: 'KI-TOOL-KI-CLI-005', created_at: '2026-09-02T00:00:00Z', updated_at: undefined })
     )
 
     const list = await box.run('ki repo --repo repo roadmap list')
     await Promise.all([
-      rm(`${box.project.path}/repo/docs/roadmap/KI-TOOL-CLI-004-missing.md`),
-      rm(`${box.project.path}/repo/docs/roadmap/KI-TOOL-CLI-005-invalid.md`)
+      rm(`${box.project.path}/repo/docs/roadmap/KI-TOOL-KI-CLI-004-missing.md`),
+      rm(`${box.project.path}/repo/docs/roadmap/KI-TOOL-KI-CLI-005-invalid.md`)
     ])
-    const promoted = await box.run('ki repo --repo repo roadmap promote KI-TOOL-CLI-003', {
+    const promoted = await box.run('ki repo --repo repo roadmap promote KI-TOOL-KI-CLI-003', {
       now: () => Date.parse('2026-09-02T00:00:00Z')
     })
-    const changed = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-timestamped.md')
+    const changed = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-timestamped.md')
     const stats = await box.run('ki repo --repo repo roadmap stats --stale-after 1s --format json', {
       now: () => Date.parse('2026-09-03T00:00:00Z')
     })
@@ -1691,7 +1711,7 @@ describe('[ki repo roadmap]', () => {
     expect(list.exitCode).toBe(1)
     expect(list.output).toContain('must declare created_at')
     expect(list.output).toContain('must declare updated_at')
-    expect(promoted).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-CLI-003 next -> now\n' })
+    expect(promoted).toEqual({ exitCode: 0, output: 'ki repo roadmap promote: KI-TOOL-KI-CLI-003 next -> now\n' })
     expect(changed).toContain('updated_at: 2026-09-02T00:00:01Z')
     expect(stats.exitCode).toBe(0)
     expect(JSON.parse(stats.output)).toMatchObject({
@@ -1700,13 +1720,13 @@ describe('[ki repo roadmap]', () => {
       staleAfterSeconds: 1,
       aggregate: {
         items: 1,
-        stale: ['KI-TOOL-CLI-003']
+        stale: ['KI-TOOL-KI-CLI-003']
       },
       results: [
         {
           statistics: {
             items: 1,
-            stale: ['KI-TOOL-CLI-003']
+            stale: ['KI-TOOL-KI-CLI-003']
           }
         }
       ]
@@ -1724,7 +1744,7 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'legacy/docs/roadmap/KI-TOOL-CLI-003-item.md',
+      'legacy/docs/roadmap/KI-TOOL-KI-CLI-003-item.md',
       item({ created_at: undefined, updated_at: undefined })
     )
     await box.project.write(
@@ -1732,9 +1752,9 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'future/docs/roadmap/KI-TOOL-CLI-004-item.md',
+      'future/docs/roadmap/KI-TOOL-KI-CLI-004-item.md',
       item({
-        id: 'KI-TOOL-CLI-004',
+        id: 'KI-TOOL-KI-CLI-004',
         created_at: '2026-09-04T00:00:00Z',
         updated_at: '2026-09-04T00:00:00Z'
       })
@@ -1744,16 +1764,16 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'invalid/docs/roadmap/KI-TOOL-CLI-005-invalid.md',
-      item({ id: 'KI-TOOL-CLI-005', created_at: 'not-a-timestamp', updated_at: '2026-09-01T00:00:00Z' })
+      'invalid/docs/roadmap/KI-TOOL-KI-CLI-005-invalid.md',
+      item({ id: 'KI-TOOL-KI-CLI-005', created_at: 'not-a-timestamp', updated_at: '2026-09-01T00:00:00Z' })
     )
     await box.project.write(
-      'invalid/docs/roadmap/KI-TOOL-CLI-006-reversed.md',
-      item({ id: 'KI-TOOL-CLI-006', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' })
+      'invalid/docs/roadmap/KI-TOOL-KI-CLI-006-reversed.md',
+      item({ id: 'KI-TOOL-KI-CLI-006', created_at: '2026-09-02T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' })
     )
     await box.project.write(
-      'invalid/docs/roadmap/KI-TOOL-CLI-009-calendar.md',
-      item({ id: 'KI-TOOL-CLI-009', created_at: '2026-02-31T00:00:00Z', updated_at: '2026-03-01T00:00:00Z' })
+      'invalid/docs/roadmap/KI-TOOL-KI-CLI-009-calendar.md',
+      item({ id: 'KI-TOOL-KI-CLI-009', created_at: '2026-02-31T00:00:00Z', updated_at: '2026-03-01T00:00:00Z' })
     )
     await box.project.write(
       'missing/.ki.toml',
@@ -1764,20 +1784,20 @@ describe('[ki repo roadmap]', () => {
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'paired/docs/roadmap/KI-TOOL-CLI-007-item.md',
-      item({ id: 'KI-TOOL-CLI-007', created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' })
+      'paired/docs/roadmap/KI-TOOL-KI-CLI-007-item.md',
+      item({ id: 'KI-TOOL-KI-CLI-007', created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' })
     )
     await box.project.write(
-      'paired/docs/roadmap/KI-TOOL-CLI-008-item.md',
-      item({ id: 'KI-TOOL-CLI-008', created_at: '2026-09-01T00:57:58Z', updated_at: '2026-09-01T00:57:58Z' })
+      'paired/docs/roadmap/KI-TOOL-KI-CLI-008-item.md',
+      item({ id: 'KI-TOOL-KI-CLI-008', created_at: '2026-09-01T00:57:58Z', updated_at: '2026-09-01T00:57:58Z' })
     )
     await box.project.write(
       'current/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
     await box.project.write(
-      'current/docs/roadmap/KI-TOOL-CLI-010-item.md',
-      item({ id: 'KI-TOOL-CLI-010', created_at: '2026-09-03T00:00:00Z', updated_at: '2026-09-03T00:00:00Z' })
+      'current/docs/roadmap/KI-TOOL-KI-CLI-010-item.md',
+      item({ id: 'KI-TOOL-KI-CLI-010', created_at: '2026-09-03T00:00:00Z', updated_at: '2026-09-03T00:00:00Z' })
     )
 
     const listed = await box.run('ki repo --repo invalid roadmap list')
@@ -1805,7 +1825,7 @@ describe('[ki repo roadmap]', () => {
     expect(statistics.exitCode).toBe(1)
     expect(statistics.output).toContain('legacy: ITEMS=0 NOT_DONE=0')
     expect(statistics.output).toContain('age: MEDIAN=n/a MAX=n/a')
-    expect(statistics.output).toContain('future timestamps: KI-TOOL-CLI-004')
+    expect(statistics.output).toContain('future timestamps: KI-TOOL-KI-CLI-004')
     expect(statistics.output).toContain('invalid: ITEMS=0 NOT_DONE=0')
     expect(statistics.output).toContain('missing: no roadmap')
     expect(statistics.output).toContain('aggregate: ITEMS=1 NOT_DONE=1')
@@ -1813,7 +1833,7 @@ describe('[ki repo roadmap]', () => {
     expect(paired.output).toContain('age: MEDIAN=1d 23h 31m 1s MAX=2d')
     expect(paired.output).toContain('inactivity: MEDIAN=1d 23h 31m 1s MAX=2d')
     expect(stale.output).toContain('stale after 1d')
-    expect(stale.output).toContain('stale (2): KI-TOOL-CLI-007, KI-TOOL-CLI-008')
+    expect(stale.output).toContain('stale (2): KI-TOOL-KI-CLI-007, KI-TOOL-KI-CLI-008')
     expect(fresh.output).toContain('stale after 7d')
     expect(fresh.output).toContain('stale (0): none')
     expect(current.output).toContain('age: MEDIAN=0s MAX=0s')
@@ -1827,21 +1847,21 @@ describe('[ki repo roadmap]', () => {
       'repo/.ki.toml',
       '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
     )
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-first.md', item())
-    await box.project.write('repo/docs/roadmap/KI-TOOL-CLI-003-second.md', item({ title: 'Duplicate item' }))
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-first.md', item())
+    await box.project.write('repo/docs/roadmap/KI-TOOL-KI-CLI-003-second.md', item({ title: 'Duplicate item' }))
 
-    const result = await box.run('ki repo --repo repo roadmap demote KI-TOOL-CLI-003')
-    const prune = await box.run('ki repo --repo repo roadmap prune KI-TOOL-CLI-003')
+    const result = await box.run('ki repo --repo repo roadmap demote KI-TOOL-KI-CLI-003')
+    const prune = await box.run('ki repo --repo repo roadmap prune KI-TOOL-KI-CLI-003')
 
     expect(result.exitCode).toBe(2)
     expect(result.output).toContain(
-      'work item KI-TOOL-CLI-003-first.md shares identifier KI-TOOL-CLI-003 with KI-TOOL-CLI-003-second.md'
+      'work item KI-TOOL-KI-CLI-003-first.md shares identifier KI-TOOL-KI-CLI-003 with KI-TOOL-KI-CLI-003-second.md'
     )
     expect(prune.output).toContain(
-      'work item KI-TOOL-CLI-003-first.md shares identifier KI-TOOL-CLI-003 with KI-TOOL-CLI-003-second.md'
+      'work item KI-TOOL-KI-CLI-003-first.md shares identifier KI-TOOL-KI-CLI-003 with KI-TOOL-KI-CLI-003-second.md'
     )
-    await expect(box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-first.md')).resolves.toContain('horizon: next')
-    await expect(box.project.read('repo/docs/roadmap/KI-TOOL-CLI-003-second.md')).resolves.toContain('horizon: next')
+    await expect(box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-first.md')).resolves.toContain('horizon: next')
+    await expect(box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-003-second.md')).resolves.toContain('horizon: next')
   })
 
   test('rejects the retired plan namespace', async () => {
@@ -1902,9 +1922,9 @@ describe('[ki repo roadmap prune] commits', () => {
   test('commits exactly the pruned records with the standardised message and runs commit hooks', async () => {
     const box = await sandbox()
     const root = await committedRepository(box, 'repo', {
-      'KI-TOOL-CLI-003-done.md': item({ status: 'done' }),
-      'KI-TOOL-CLI-004-draft.md': item({ id: 'KI-TOOL-CLI-004' }),
-      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+      'KI-TOOL-KI-CLI-003-done.md': item({ status: 'done' }),
+      'KI-TOOL-KI-CLI-004-draft.md': item({ id: 'KI-TOOL-KI-CLI-004' }),
+      'KI-TOOL-KI-CLI-005-done.md': item({ id: 'KI-TOOL-KI-CLI-005', status: 'done' })
     })
     await hook(box, 'repo', 'pre-commit', 'touch .git/pre-commit-ran')
     await hook(box, 'repo', 'commit-msg', 'cp "$1" .git/commit-msg-seen')
@@ -1917,33 +1937,33 @@ describe('[ki repo roadmap prune] commits', () => {
     expect(result).toEqual({
       exitCode: 0,
       output: [
-        `pruned ${root}: KI-TOOL-CLI-003 [done] Inspect governed work`,
-        `pruned ${root}: KI-TOOL-CLI-005 [done] Inspect governed work`,
+        `pruned ${root}: KI-TOOL-KI-CLI-003 [done] Inspect governed work`,
+        `pruned ${root}: KI-TOOL-KI-CLI-005 [done] Inspect governed work`,
         `committed ${root}: ${head.slice(0, 12)} chore(roadmap): prune 2 done work records`,
         'ki repo roadmap prune: removed 2 terminal work item(s)',
         ''
       ].join('\n')
     })
     expect(git(box, 'repo', 'log', '-1', '--format=%B')).toBe(
-      'chore(roadmap): prune 2 done work records\n\n- KI-TOOL-CLI-003\n- KI-TOOL-CLI-005\n\n'
+      'chore(roadmap): prune 2 done work records\n\n- KI-TOOL-KI-CLI-003\n- KI-TOOL-KI-CLI-005\n\n'
     )
     expect(git(box, 'repo', 'show', '--name-status', '--format=', 'HEAD')).toBe(
-      'D\tdocs/roadmap/KI-TOOL-CLI-003-done.md\nD\tdocs/roadmap/KI-TOOL-CLI-005-done.md\n'
+      'D\tdocs/roadmap/KI-TOOL-KI-CLI-003-done.md\nD\tdocs/roadmap/KI-TOOL-KI-CLI-005-done.md\n'
     )
     expect(git(box, 'repo', 'status', '--porcelain')).toBe(' M README.md\n?? notes.txt\n')
     await expect(box.project.read('repo/.git/pre-commit-ran')).resolves.toBe('')
     await expect(box.project.read('repo/.git/commit-msg-seen')).resolves.toContain('prune 2 done work records')
-    await expect(box.project.read('repo/docs/roadmap/KI-TOOL-CLI-004-draft.md')).resolves.toContain('status: draft')
+    await expect(box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-004-draft.md')).resolves.toContain('status: draft')
   })
 
   test('commits each selected repository separately and names one record in the singular', async () => {
     const box = await sandbox()
     const first = await committedRepository(box, 'first', {
-      'KI-TOOL-CLI-003-done.md': item({ status: 'done' })
+      'KI-TOOL-KI-CLI-003-done.md': item({ status: 'done' })
     })
     const second = await committedRepository(box, 'second', {
-      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' }),
-      'KI-TOOL-CLI-006-done.md': item({ id: 'KI-TOOL-CLI-006', status: 'done' })
+      'KI-TOOL-KI-CLI-005-done.md': item({ id: 'KI-TOOL-KI-CLI-005', status: 'done' }),
+      'KI-TOOL-KI-CLI-006-done.md': item({ id: 'KI-TOOL-KI-CLI-006', status: 'done' })
     })
 
     const result = await run(box, 'ki repo --repo first --repo second roadmap prune')
@@ -1952,7 +1972,7 @@ describe('[ki repo roadmap prune] commits', () => {
     expect(result.output).toContain(`committed ${first}: `)
     expect(result.output).toContain(`committed ${second}: `)
     expect(git(box, 'first', 'log', '-1', '--format=%B')).toBe(
-      'chore(roadmap): prune 1 done work record\n\n- KI-TOOL-CLI-003\n\n'
+      'chore(roadmap): prune 1 done work record\n\n- KI-TOOL-KI-CLI-003\n\n'
     )
     expect(git(box, 'second', 'log', '-1', '--format=%s')).toBe('chore(roadmap): prune 2 done work records\n')
     expect(git(box, 'first', 'status', '--porcelain')).toBe('')
@@ -1962,27 +1982,27 @@ describe('[ki repo roadmap prune] commits', () => {
   test('refuses before deleting anything when a repository cannot take a clean prune commit', async () => {
     const box = await sandbox()
     await box.project.write('plain/.ki.toml', declaration)
-    await box.project.write('plain/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    await box.project.write('plain/docs/roadmap/KI-TOOL-KI-CLI-003-done.md', item({ status: 'done' }))
     const plain = await realpath(`${box.project.path}/plain`)
     const clean = await committedRepository(box, 'clean', {
-      'KI-TOOL-CLI-003-done.md': item({ status: 'done' })
+      'KI-TOOL-KI-CLI-003-done.md': item({ status: 'done' })
     })
     const staged = await committedRepository(box, 'staged', {
-      'KI-TOOL-CLI-003-done.md': item({ status: 'done' })
+      'KI-TOOL-KI-CLI-003-done.md': item({ status: 'done' })
     })
     await box.project.write('staged/README.md', 'Unrelated staged change.\n')
     git(box, 'staged', 'add', 'README.md')
     const untracked = await committedRepository(box, 'untracked', {})
-    await box.project.write('untracked/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    await box.project.write('untracked/docs/roadmap/KI-TOOL-KI-CLI-003-done.md', item({ status: 'done' }))
     const modified = await committedRepository(box, 'modified', {
-      'KI-TOOL-CLI-003-done.md': item({ status: 'awaiting-review' })
+      'KI-TOOL-KI-CLI-003-done.md': item({ status: 'awaiting-review' })
     })
-    await box.project.write('modified/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    await box.project.write('modified/docs/roadmap/KI-TOOL-KI-CLI-003-done.md', item({ status: 'done' }))
 
     const outside = await run(box, 'ki repo --repo plain roadmap prune')
     const withStaged = await run(box, 'ki repo --repo clean --repo staged roadmap prune')
     const withUntracked = await run(box, 'ki repo --repo untracked roadmap prune')
-    const withModified = await run(box, 'ki repo --repo modified roadmap prune KI-TOOL-CLI-003')
+    const withModified = await run(box, 'ki repo --repo modified roadmap prune KI-TOOL-KI-CLI-003')
 
     expect(outside).toEqual({
       exitCode: 2,
@@ -1994,14 +2014,14 @@ describe('[ki repo roadmap prune] commits', () => {
     })
     expect(withUntracked).toEqual({
       exitCode: 2,
-      output: `ki: error: work item KI-TOOL-CLI-003 in ${untracked} is not committed; commit its terminal state before pruning, or rerun with --no-commit to delete without committing\n`
+      output: `ki: error: work item KI-TOOL-KI-CLI-003 in ${untracked} is not committed; commit its terminal state before pruning, or rerun with --no-commit to delete without committing\n`
     })
     expect(withModified).toEqual({
       exitCode: 2,
-      output: `ki: error: work item KI-TOOL-CLI-003 in ${modified} has uncommitted changes; commit its terminal state before pruning, or rerun with --no-commit to delete without committing\n`
+      output: `ki: error: work item KI-TOOL-KI-CLI-003 in ${modified} has uncommitted changes; commit its terminal state before pruning, or rerun with --no-commit to delete without committing\n`
     })
     for (const repository of ['plain', 'clean', 'staged', 'untracked', 'modified'])
-      await expect(box.project.read(`${repository}/docs/roadmap/KI-TOOL-CLI-003-done.md`)).resolves.toContain(
+      await expect(box.project.read(`${repository}/docs/roadmap/KI-TOOL-KI-CLI-003-done.md`)).resolves.toContain(
         'status: done'
       )
     expect(git(box, 'clean', 'log', '--format=%s')).toBe('chore: seed roadmap\n')
@@ -2011,11 +2031,11 @@ describe('[ki repo roadmap prune] commits', () => {
     const deleted = await run(box, 'ki repo --repo plain roadmap prune --no-commit')
     expect(deleted).toEqual({
       exitCode: 0,
-      output: `pruned ${plain}: KI-TOOL-CLI-003 [done] Inspect governed work\nki repo roadmap prune: removed 1 terminal work item(s) without committing\n`
+      output: `pruned ${plain}: KI-TOOL-KI-CLI-003 [done] Inspect governed work\nki repo roadmap prune: removed 1 terminal work item(s) without committing\n`
     })
     const unstaged = await run(box, 'ki repo --repo clean roadmap prune --no-commit')
     expect(unstaged.exitCode, unstaged.output).toBe(0)
-    expect(git(box, 'clean', 'status', '--porcelain')).toBe(' D docs/roadmap/KI-TOOL-CLI-003-done.md\n')
+    expect(git(box, 'clean', 'status', '--porcelain')).toBe(' D docs/roadmap/KI-TOOL-KI-CLI-003-done.md\n')
     expect(git(box, 'clean', 'log', '--format=%s')).toBe('chore: seed roadmap\n')
   })
 
@@ -2049,7 +2069,7 @@ describe('[ki repo roadmap prune] commits', () => {
       matches: (arguments_: readonly string[]) => arguments_[2] === 'commit' || arguments_[2] === 'checkout',
       result: { exitCode: 1, output: '' },
       message: (root: string) =>
-        `git commit failed in ${root}; the record deletions remain staged; restore them with git checkout HEAD -- 'docs/roadmap/KI-TOOL-CLI-003-done.md'`
+        `git commit failed in ${root}; the record deletions remain staged; restore them with git checkout HEAD -- 'docs/roadmap/KI-TOOL-KI-CLI-003-done.md'`
     },
     {
       failing: 'rev-parse HEAD',
@@ -2060,7 +2080,7 @@ describe('[ki repo roadmap prune] commits', () => {
   ])('reports a failing git $failing without claiming success', async ({ matches, result, message }) => {
     const box = await sandbox()
     const root = await committedRepository(box, 'repo', {
-      'KI-TOOL-CLI-003-done.md': item({ status: 'done' })
+      'KI-TOOL-KI-CLI-003-done.md': item({ status: 'done' })
     })
     box.setEnv(gitEnvironment(box))
     box.setRunner(async (command, arguments_, environment, limits) =>
@@ -2075,9 +2095,9 @@ describe('[ki repo roadmap prune] commits', () => {
 
   test('restores the records and names earlier commits when the runner throws during a commit', async () => {
     const box = await sandbox()
-    const first = await committedRepository(box, 'first', { 'KI-TOOL-CLI-003-done.md': item({ status: 'done' }) })
+    const first = await committedRepository(box, 'first', { 'KI-TOOL-KI-CLI-003-done.md': item({ status: 'done' }) })
     const second = await committedRepository(box, 'second', {
-      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+      'KI-TOOL-KI-CLI-005-done.md': item({ id: 'KI-TOOL-KI-CLI-005', status: 'done' })
     })
     box.setEnv(gitEnvironment(box))
     box.setRunner(async (command, arguments_, environment, limits) => {
@@ -2104,9 +2124,9 @@ describe('[ki repo roadmap prune] commits', () => {
 
   test('refuses a change staged by an earlier repository hook and reports a commit a hook widened', async () => {
     const box = await sandbox()
-    const first = await committedRepository(box, 'first', { 'KI-TOOL-CLI-003-done.md': item({ status: 'done' }) })
+    const first = await committedRepository(box, 'first', { 'KI-TOOL-KI-CLI-003-done.md': item({ status: 'done' }) })
     const second = await committedRepository(box, 'second', {
-      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+      'KI-TOOL-KI-CLI-005-done.md': item({ id: 'KI-TOOL-KI-CLI-005', status: 'done' })
     })
     await hook(
       box,
@@ -2122,7 +2142,7 @@ describe('[ki repo roadmap prune] commits', () => {
       exitCode: 2,
       output: `ki: error: repository ${second} has staged changes (README.md); commit or unstage them before pruning, or rerun with --no-commit to delete without committing\nalready committed: ${first} at ${firstHead}\n`
     })
-    await expect(box.project.read('second/docs/roadmap/KI-TOOL-CLI-005-done.md')).resolves.toContain('status: done')
+    await expect(box.project.read('second/docs/roadmap/KI-TOOL-KI-CLI-005-done.md')).resolves.toContain('status: done')
 
     git(box, 'second', 'reset', '--quiet', '--hard')
     await hook(box, 'second', 'pre-commit', 'echo widened > sibling.txt\ngit add sibling.txt')
@@ -2134,7 +2154,7 @@ describe('[ki repo roadmap prune] commits', () => {
       output: `ki: error: prune commit ${secondHead} in ${second} also contains sibling.txt, which a commit hook staged; inspect it with git show ${secondHead.slice(0, 12)} and amend or revert it\n`
     })
     expect(git(box, 'second', 'show', '--name-status', '--format=', 'HEAD')).toBe(
-      'D\tdocs/roadmap/KI-TOOL-CLI-005-done.md\nA\tsibling.txt\n'
+      'D\tdocs/roadmap/KI-TOOL-KI-CLI-005-done.md\nA\tsibling.txt\n'
     )
   })
 
@@ -2150,7 +2170,7 @@ describe('[ki repo roadmap prune] commits', () => {
     git(box, 'knowledge', 'commit', '--quiet', '-m', 'chore: seed roadmap')
     await box.project.write('mono/README.md', 'Monorepo.\n')
     await box.project.write('mono/tools/inner/.ki.toml', declaration)
-    await box.project.write('mono/tools/inner/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    await box.project.write('mono/tools/inner/docs/roadmap/KI-TOOL-KI-CLI-003-done.md', item({ status: 'done' }))
     git(box, 'mono', 'init', '--quiet', '--initial-branch=main')
     git(box, 'mono', 'add', '--all')
     git(box, 'mono', 'commit', '--quiet', '-m', 'chore: seed roadmap')
@@ -2164,7 +2184,7 @@ describe('[ki repo roadmap prune] commits', () => {
       'chore(roadmap): prune 1 done work record\n\n- KBS-002\n\n\nD\tStreams/Roadmap/KBS-002-done record.md\n'
     )
     expect(git(box, 'mono', 'show', '--name-status', '--format=', 'HEAD')).toBe(
-      'D\ttools/inner/docs/roadmap/KI-TOOL-CLI-003-done.md\n'
+      'D\ttools/inner/docs/roadmap/KI-TOOL-KI-CLI-003-done.md\n'
     )
     expect(git(box, 'mono', 'status', '--porcelain')).toBe('')
   })
@@ -2172,11 +2192,11 @@ describe('[ki repo roadmap prune] commits', () => {
   test('previews a prune and its commit with --dry-run without changing either repository', async () => {
     const box = await sandbox()
     const root = await committedRepository(box, 'repo', {
-      'KI-TOOL-CLI-003-done.md': item({ status: 'done' }),
-      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+      'KI-TOOL-KI-CLI-003-done.md': item({ status: 'done' }),
+      'KI-TOOL-KI-CLI-005-done.md': item({ id: 'KI-TOOL-KI-CLI-005', status: 'done' })
     })
     await box.project.write('plain/.ki.toml', declaration)
-    await box.project.write('plain/docs/roadmap/KI-TOOL-CLI-003-done.md', item({ status: 'done' }))
+    await box.project.write('plain/docs/roadmap/KI-TOOL-KI-CLI-003-done.md', item({ status: 'done' }))
     const plain = await realpath(`${box.project.path}/plain`)
 
     const preview = await run(box, 'ki repo --repo repo roadmap prune --dry-run')
@@ -2186,8 +2206,8 @@ describe('[ki repo roadmap prune] commits', () => {
     expect(preview).toEqual({
       exitCode: 0,
       output: [
-        `would prune ${root}: KI-TOOL-CLI-003 [done] Inspect governed work`,
-        `would prune ${root}: KI-TOOL-CLI-005 [done] Inspect governed work`,
+        `would prune ${root}: KI-TOOL-KI-CLI-003 [done] Inspect governed work`,
+        `would prune ${root}: KI-TOOL-KI-CLI-005 [done] Inspect governed work`,
         `would commit ${root}: chore(roadmap): prune 2 done work records`,
         'ki repo roadmap prune: would remove 2 terminal work item(s)',
         ''
@@ -2199,18 +2219,18 @@ describe('[ki repo roadmap prune] commits', () => {
     })
     expect(uncommitted).toEqual({
       exitCode: 0,
-      output: `would prune ${plain}: KI-TOOL-CLI-003 [done] Inspect governed work\nki repo roadmap prune: would remove 1 terminal work item(s) without committing\n`
+      output: `would prune ${plain}: KI-TOOL-KI-CLI-003 [done] Inspect governed work\nki repo roadmap prune: would remove 1 terminal work item(s) without committing\n`
     })
     expect(git(box, 'repo', 'log', '--format=%s')).toBe('chore: seed roadmap\n')
     expect(git(box, 'repo', 'status', '--porcelain')).toBe('')
-    await expect(box.project.read('plain/docs/roadmap/KI-TOOL-CLI-003-done.md')).resolves.toContain('status: done')
+    await expect(box.project.read('plain/docs/roadmap/KI-TOOL-KI-CLI-003-done.md')).resolves.toContain('status: done')
   })
 
   test('names no earlier commit when only a repository without done records preceded the rejected prune', async () => {
     const box = await sandbox()
-    await committedRepository(box, 'open', { 'KI-TOOL-CLI-004-draft.md': item({ id: 'KI-TOOL-CLI-004' }) })
+    await committedRepository(box, 'open', { 'KI-TOOL-KI-CLI-004-draft.md': item({ id: 'KI-TOOL-KI-CLI-004' }) })
     const rejecting = await committedRepository(box, 'rejecting', {
-      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+      'KI-TOOL-KI-CLI-005-done.md': item({ id: 'KI-TOOL-KI-CLI-005', status: 'done' })
     })
     await hook(box, 'rejecting', 'pre-commit', 'exit 1')
 
@@ -2224,10 +2244,10 @@ describe('[ki repo roadmap prune] commits', () => {
   test('restores the records when a commit hook rejects the prune', async () => {
     const box = await sandbox()
     const first = await committedRepository(box, 'first', {
-      'KI-TOOL-CLI-003-done.md': item({ status: 'done' })
+      'KI-TOOL-KI-CLI-003-done.md': item({ status: 'done' })
     })
     const second = await committedRepository(box, 'second', {
-      'KI-TOOL-CLI-005-done.md': item({ id: 'KI-TOOL-CLI-005', status: 'done' })
+      'KI-TOOL-KI-CLI-005-done.md': item({ id: 'KI-TOOL-KI-CLI-005', status: 'done' })
     })
     await hook(box, 'second', 'pre-commit', 'echo "hook refused" >&2\nexit 1')
 
@@ -2241,6 +2261,6 @@ describe('[ki repo roadmap prune] commits', () => {
     expect(git(box, 'first', 'log', '-1', '--format=%s')).toBe('chore(roadmap): prune 1 done work record\n')
     expect(git(box, 'second', 'log', '--format=%s')).toBe('chore: seed roadmap\n')
     expect(git(box, 'second', 'status', '--porcelain')).toBe('')
-    await expect(box.project.read('second/docs/roadmap/KI-TOOL-CLI-005-done.md')).resolves.toContain('status: done')
+    await expect(box.project.read('second/docs/roadmap/KI-TOOL-KI-CLI-005-done.md')).resolves.toContain('status: done')
   })
 })

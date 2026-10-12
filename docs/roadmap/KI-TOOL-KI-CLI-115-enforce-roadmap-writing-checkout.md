@@ -1,5 +1,5 @@
 ---
-id: KI-TOOL-CLI-115
+id: KI-TOOL-KI-CLI-115
 area: CLI
 title: Enforce roadmap writing checkout
 project: agent-host

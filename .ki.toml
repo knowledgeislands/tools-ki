@@ -17,7 +17,7 @@ repository = "https://github.com/knowledgeislands/tools-ki"
 title = "ki"
 capital = "https://github.com/knowledgeislands/ki-principal"
 description = "Knowledge Islands command-line interface."
-repo_code = "KI-TOOL"
+repo_code = "KI-TOOL-KI"
 supported_runtimes = [
   "claude-code",
   "claude-desktop",

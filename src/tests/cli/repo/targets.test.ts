@@ -401,7 +401,7 @@ describe('[ki repo target sets]', () => {
       expect(childResult.exitCode).toBe(2)
       expect(childResult.output).toContain('child workspace child must contain workspace-kind .mgit.toml')
     })
-    // KI-TOOL-CLI-030 decision: an mGit document that names members selects those members and not
+    // KI-TOOL-KI-CLI-030 decision: an mGit document that names members selects those members and not
     // the repository it sits in, even when that directory carries its own `.ki.toml`. A
     // workspace root's declaration governs the workspace; its members are audited on their own.
     test('selects only the members of an mGit document that also sits in a KI repository', async () => {

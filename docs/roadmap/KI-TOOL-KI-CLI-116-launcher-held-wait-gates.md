@@ -1,5 +1,5 @@
 ---
-id: KI-TOOL-CLI-116
+id: KI-TOOL-KI-CLI-116
 area: CLI
 title: Launcher-held wait gates
 kind: deliver
@@ -122,7 +122,7 @@ Decision 107 delivered: gates are a launcher behaviour for both `launch` and `di
 
 ### Approval
 
-Master state-of-play Decision 107 (12 October 2026, 06:12 BST): "KI-TOOL-CLI-116 adopted now - plan, implement and roll it out." It authorises adoption, planning, delivery to `main` and push after full gates; it grants no acceptance or release.
+Master state-of-play Decision 107 (12 October 2026, 06:12 BST): "KI-TOOL-KI-CLI-116 adopted now - plan, implement and roll it out." It authorises adoption, planning, delivery to `main` and push after full gates; it grants no acceptance or release.
 
 ### Design choices
 

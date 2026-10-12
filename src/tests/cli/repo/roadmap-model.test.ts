@@ -36,7 +36,7 @@ const record = (
   body = '## Context\n\nTest item.\n'
 ): string => {
   const values = {
-    id: 'KI-TOOL-CLI-003',
+    id: 'KI-TOOL-KI-CLI-003',
     title: 'Model item',
     kind: 'deliver',
     horizon: 'next',
@@ -123,7 +123,7 @@ describe('[ki repo roadmap] model fields', () => {
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-003',
+      'KI-TOOL-KI-CLI-003',
       record({
         kind: 'deliver',
         purpose: 'capability',
@@ -137,20 +137,20 @@ describe('[ki repo roadmap] model fields', () => {
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-004',
+      'KI-TOOL-KI-CLI-004',
       record({
-        id: 'KI-TOOL-CLI-004',
+        id: 'KI-TOOL-KI-CLI-004',
         horizon: undefined,
         status: 'cancelled',
         resolution: 'duplicate',
-        resolution_target: 'KI-TOOL-CLI-003'
+        resolution_target: 'KI-TOOL-KI-CLI-003'
       })
     )
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-005',
-      record({ id: 'KI-TOOL-CLI-005', theme: 'cli', status: 'in-progress', waiting_on_trades: '[TRD-0000000b]' })
+      'KI-TOOL-KI-CLI-005',
+      record({ id: 'KI-TOOL-KI-CLI-005', theme: 'cli', status: 'in-progress', waiting_on_trades: '[TRD-0000000b]' })
     )
 
     const result = await box.run('ki repo --repo repo roadmap list --format json')
@@ -159,7 +159,7 @@ describe('[ki repo roadmap] model fields', () => {
     expect(result.exitCode).toBe(0)
     expect(report.schema).toBe('ki/roadmap/v1')
     const byId = Object.fromEntries(report.items.map((entry: { id: string }) => [entry.id, entry]))
-    expect(byId['KI-TOOL-CLI-003']).toMatchObject({
+    expect(byId['KI-TOOL-KI-CLI-003']).toMatchObject({
       horizon: 'hold',
       lane: 'hold',
       kind: 'deliver',
@@ -170,13 +170,13 @@ describe('[ki repo roadmap] model fields', () => {
       hold: { reason: 'waiting-for', condition: 'The harness release', review: '2026-11-01', trades: ['TRD-0000000a'] },
       legacy: []
     })
-    expect(byId['KI-TOOL-CLI-004']).toMatchObject({
+    expect(byId['KI-TOOL-KI-CLI-004']).toMatchObject({
       horizon: null,
       lane: 'cancelled',
       resolution: 'duplicate',
-      resolutionTarget: 'KI-TOOL-CLI-003'
+      resolutionTarget: 'KI-TOOL-KI-CLI-003'
     })
-    expect(byId['KI-TOOL-CLI-005']).toMatchObject({
+    expect(byId['KI-TOOL-KI-CLI-005']).toMatchObject({
       theme: 'cli',
       legacy: ['theme', 'waiting_on_trades', 'in-progress at next']
     })
@@ -260,12 +260,12 @@ describe('[ki repo roadmap] model fields', () => {
       ],
       [
         'forbidden target',
-        { horizon: undefined, status: 'cancelled', resolution: 'rejected', resolution_target: 'KI-TOOL-CLI-004' },
+        { horizon: undefined, status: 'cancelled', resolution: 'rejected', resolution_target: 'KI-TOOL-KI-CLI-004' },
         'resolution rejected forbids resolution_target'
       ],
       [
         'self target',
-        { horizon: undefined, status: 'cancelled', resolution: 'superseded', resolution_target: 'KI-TOOL-CLI-003' },
+        { horizon: undefined, status: 'cancelled', resolution: 'superseded', resolution_target: 'KI-TOOL-KI-CLI-003' },
         'resolution_target must be another canonical work-item identifier'
       ],
       [
@@ -275,7 +275,7 @@ describe('[ki repo roadmap] model fields', () => {
       ]
     ]
     for (const [name, fields, message] of cases) {
-      await roadmapFile(box, 'repo', 'KI-TOOL-CLI-003', record(fields))
+      await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-003', record(fields))
       const result = await box.run('ki repo --repo repo roadmap list')
       expect(result.exitCode, name).toBe(1)
       expect(result.output, name).toContain(message)
@@ -284,22 +284,22 @@ describe('[ki repo roadmap] model fields', () => {
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-003',
+      'KI-TOOL-KI-CLI-003',
       record({ status: 'done', horizon: 'triage', intake_disposition: 'rejected' })
     )
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-004', record({ id: 'KI-TOOL-CLI-004', status: 'done' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-004', record({ id: 'KI-TOOL-KI-CLI-004', status: 'done' }))
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-005',
-      record({ id: 'KI-TOOL-CLI-005', horizon: 'parked', kind: undefined })
+      'KI-TOOL-KI-CLI-005',
+      record({ id: 'KI-TOOL-KI-CLI-005', horizon: 'parked', kind: undefined })
     )
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-006', record({ id: 'KI-TOOL-CLI-006', kind: undefined }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-006', record({ id: 'KI-TOOL-KI-CLI-006', kind: undefined }))
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-007',
-      record({ id: 'KI-TOOL-CLI-007', horizon: undefined, status: 'triage', kind: undefined })
+      'KI-TOOL-KI-CLI-007',
+      record({ id: 'KI-TOOL-KI-CLI-007', horizon: undefined, status: 'triage', kind: undefined })
     )
     const legacy = await box.run('ki repo --repo repo roadmap list --format json')
     expect(legacy.exitCode).toBe(0)
@@ -311,15 +311,15 @@ describe('[ki repo roadmap] model fields', () => {
       []
     ])
     const filtered = await box.run('ki repo --repo repo roadmap list --horizon hold')
-    expect(filtered.output).toContain('KI-TOOL-CLI-005 [draft] Model item · legacy')
-    expect(filtered.output).not.toContain('KI-TOOL-CLI-004')
+    expect(filtered.output).toContain('KI-TOOL-KI-CLI-005 [draft] Model item · legacy')
+    expect(filtered.output).not.toContain('KI-TOOL-KI-CLI-004')
     const done = await box.run('ki repo --repo repo roadmap list --status done')
     expect(done.output).toContain('done (2)')
   })
 
   test('rejects a component vocabulary that is not a list of unique kebab-case names', async () => {
     const box = await sandbox()
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-003', record())
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-003', record())
     for (const components of ['"cli"', '["cli", "cli"]', '["Not A Slug"]', '[7]']) {
       await box.project.write(
         'repo/.ki.toml',
@@ -346,11 +346,11 @@ describe('[ki repo roadmap] areas', () => {
   test('reads area titles from the map form and groups by area', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki.toml', withAreas('{ CLI = "Command line", OPS = "Operations", OLD = "Retired" }'))
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-001', record({ id: 'KI-TOOL-CLI-001', area: 'CLI' }))
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-002', record({ id: 'KI-TOOL-CLI-002', area: 'CLI' }))
-    await roadmapFile(box, 'repo', 'KI-TOOL-OPS-003', record({ id: 'KI-TOOL-OPS-003', area: 'OPS' }))
-    await roadmapFile(box, 'repo', 'KI-TOOL-NEW-004', record({ id: 'KI-TOOL-NEW-004', area: 'NEW' }))
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-005', record({ id: 'KI-TOOL-CLI-005' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-001', record({ id: 'KI-TOOL-KI-CLI-001', area: 'CLI' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-002', record({ id: 'KI-TOOL-KI-CLI-002', area: 'CLI' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-OPS-003', record({ id: 'KI-TOOL-KI-OPS-003', area: 'OPS' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-NEW-004', record({ id: 'KI-TOOL-KI-NEW-004', area: 'NEW' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-005', record({ id: 'KI-TOOL-KI-CLI-005' }))
 
     const json = JSON.parse((await box.run('ki repo --repo repo roadmap list --format json')).output)
     const byArea = await box.run('ki repo --repo repo roadmap list --by area')
@@ -360,11 +360,11 @@ describe('[ki repo roadmap] areas', () => {
         json.items.map((entry: { id: string; areaTitle: string | null }) => [entry.id, entry.areaTitle])
       )
     ).toEqual({
-      'KI-TOOL-CLI-001': 'Command line',
-      'KI-TOOL-CLI-002': 'Command line',
-      'KI-TOOL-OPS-003': 'Operations',
-      'KI-TOOL-NEW-004': null,
-      'KI-TOOL-CLI-005': null
+      'KI-TOOL-KI-CLI-001': 'Command line',
+      'KI-TOOL-KI-CLI-002': 'Command line',
+      'KI-TOOL-KI-OPS-003': 'Operations',
+      'KI-TOOL-KI-NEW-004': null,
+      'KI-TOOL-KI-CLI-005': null
     })
     expect(byArea.exitCode).toBe(0)
     const output = byArea.output
@@ -378,7 +378,7 @@ describe('[ki repo roadmap] areas', () => {
   test('reads a legacy bare list without titles', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki.toml', withAreas('["CLI"]'))
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-001', record({ id: 'KI-TOOL-CLI-001', area: 'CLI' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-001', record({ id: 'KI-TOOL-KI-CLI-001', area: 'CLI' }))
 
     const json = JSON.parse((await box.run('ki repo --repo repo roadmap list --format json')).output)
     const byArea = await box.run('ki repo --repo repo roadmap list --by area')
@@ -390,7 +390,7 @@ describe('[ki repo roadmap] areas', () => {
   test('accepts a digit-leading area code', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki.toml', withAreas('{ 5GE = "5G Emerge delivery" }'))
-    await roadmapFile(box, 'repo', 'KI-TOOL-5GE-001', record({ id: 'KI-TOOL-5GE-001', area: '5GE' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-5GE-001', record({ id: 'KI-TOOL-KI-5GE-001', area: '5GE' }))
 
     const json = JSON.parse((await box.run('ki repo --repo repo roadmap list --format json')).output)
 
@@ -399,7 +399,7 @@ describe('[ki repo roadmap] areas', () => {
 
   test('rejects areas that do not map uppercase codes to titles', async () => {
     const box = await sandbox()
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-003', record())
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-003', record())
     for (const areas of [
       '"CLI"',
       '["cli"]',
@@ -422,15 +422,15 @@ describe('[ki repo roadmap list --by]', () => {
     const box = await sandbox()
     await territory(box)
     const items: readonly Readonly<Record<string, string | undefined>>[] = [
-      { id: 'KI-TOOL-CLI-001', project: 'alpha' },
-      { id: 'KI-TOOL-CLI-002', project: 'beta' },
-      { id: 'KI-TOOL-CLI-003', project: 'gamma', initiative: 'init-two' },
-      { id: 'KI-TOOL-CLI-004', project: 'gamma' },
-      { id: 'KI-TOOL-CLI-005', initiative: 'init-one' },
-      { id: 'KI-TOOL-CLI-006', initiative: 'ghost' },
-      { id: 'KI-TOOL-CLI-007', project: 'alpha', initiative: 'init-two' },
-      { id: 'KI-TOOL-CLI-008', horizon: 'now' },
-      { id: 'KI-TOOL-CLI-009', project: 'alpha', initiative: 'init-one', horizon: undefined, status: 'done' }
+      { id: 'KI-TOOL-KI-CLI-001', project: 'alpha' },
+      { id: 'KI-TOOL-KI-CLI-002', project: 'beta' },
+      { id: 'KI-TOOL-KI-CLI-003', project: 'gamma', initiative: 'init-two' },
+      { id: 'KI-TOOL-KI-CLI-004', project: 'gamma' },
+      { id: 'KI-TOOL-KI-CLI-005', initiative: 'init-one' },
+      { id: 'KI-TOOL-KI-CLI-006', initiative: 'ghost' },
+      { id: 'KI-TOOL-KI-CLI-007', project: 'alpha', initiative: 'init-two' },
+      { id: 'KI-TOOL-KI-CLI-008', horizon: 'now' },
+      { id: 'KI-TOOL-KI-CLI-009', project: 'alpha', initiative: 'init-one', horizon: undefined, status: 'done' }
     ]
     for (const fields of items) await roadmapFile(box, 'member', fields['id'] as string, record(fields))
 
@@ -443,10 +443,10 @@ describe('[ki repo roadmap list --by]', () => {
     const project = byProject.output
     expect(project.indexOf('project alpha (3)')).toBeLessThan(project.indexOf('project beta (1)'))
     expect(project.indexOf('project gamma (2)')).toBeLessThan(project.indexOf('unassigned (3)'))
-    expect(project).toContain('KI-TOOL-CLI-009 [done] Model item')
-    expect(project).toContain('KI-TOOL-CLI-008 [draft @ now] Model item')
+    expect(project).toContain('KI-TOOL-KI-CLI-009 [done] Model item')
+    expect(project).toContain('KI-TOOL-KI-CLI-008 [draft @ now] Model item')
     expect(project).toContain('warnings (2)')
-    expect(project).toContain('KI-TOOL-CLI-003: project gamma is not in the registry')
+    expect(project).toContain('KI-TOOL-KI-CLI-003: project gamma is not in the registry')
 
     expect(byInitiative.exitCode).toBe(0)
     const initiative = byInitiative.output
@@ -454,10 +454,10 @@ describe('[ki repo roadmap list --by]', () => {
     expect(initiative).toContain('initiative init-two (1)')
     expect(initiative).toContain('initiative ghost (1)')
     expect(initiative).toContain('unassigned (3)')
-    expect(initiative).toContain('KI-TOOL-CLI-002: project beta names no initiative')
-    expect(initiative).toContain('KI-TOOL-CLI-006: initiative ghost is not in the registry')
-    expect(initiative).toContain('KI-TOOL-CLI-007: initiative init-two contradicts project alpha in init-one')
-    expect(initiative).toContain('KI-TOOL-CLI-004: project gamma is not in the registry')
+    expect(initiative).toContain('KI-TOOL-KI-CLI-002: project beta names no initiative')
+    expect(initiative).toContain('KI-TOOL-KI-CLI-006: initiative ghost is not in the registry')
+    expect(initiative).toContain('KI-TOOL-KI-CLI-007: initiative init-two contradicts project alpha in init-one')
+    expect(initiative).toContain('KI-TOOL-KI-CLI-004: project gamma is not in the registry')
 
     expect(json).toEqual({ exitCode: 2, output: 'ki: error: roadmap list --by applies only to text output\n' })
     expect(invalid.exitCode).toBe(2)
@@ -467,8 +467,8 @@ describe('[ki repo roadmap list --by]', () => {
   test('reads the registry from the Capital itself and in aggregate listings', async () => {
     const box = await sandbox()
     await territory(box)
-    await roadmapFile(box, 'capital', 'KI-TOOL-CLI-001', record({ id: 'KI-TOOL-CLI-001', project: 'alpha' }))
-    await roadmapFile(box, 'member', 'KI-TOOL-CLI-002', record({ id: 'KI-TOOL-CLI-002', project: 'alpha' }))
+    await roadmapFile(box, 'capital', 'KI-TOOL-KI-CLI-001', record({ id: 'KI-TOOL-KI-CLI-001', project: 'alpha' }))
+    await roadmapFile(box, 'member', 'KI-TOOL-KI-CLI-002', record({ id: 'KI-TOOL-KI-CLI-002', project: 'alpha' }))
     await box.project.mkdir('empty/docs/roadmap')
     await box.project.write('empty/.ki.toml', declaration(home('example/empty'), capitalHome))
     await box.project.write('absent/.ki.toml', declaration(home('example/absent'), capitalHome))
@@ -514,17 +514,17 @@ describe('[ki repo roadmap list --by]', () => {
       ])
     )
     const items: readonly Readonly<Record<string, string | undefined>>[] = [
-      { id: 'KI-TOOL-CLI-001', project: 'other/host' },
-      { id: 'KI-TOOL-CLI-002', project: 'capital/alpha' },
-      { id: 'KI-TOOL-CLI-003', initiative: 'other/rig' },
-      { id: 'KI-TOOL-CLI-004', project: 'other/ghost' },
-      { id: 'KI-TOOL-CLI-005', project: 'nowhere/host' },
-      { id: 'KI-TOOL-CLI-006', project: 'member/host' },
-      { id: 'KI-TOOL-CLI-007', project: 'other/host', initiative: 'rig' },
-      { id: 'KI-TOOL-CLI-008', initiative: 'other/ghost' },
-      { id: 'KI-TOOL-CLI-009', project: 'other/host', initiative: 'other/rig' },
-      { id: 'KI-TOOL-CLI-010', project: 'nowhere/host', initiative: 'nowhere/rig' },
-      { id: 'KI-TOOL-CLI-011', initiative: 'bare/rig' }
+      { id: 'KI-TOOL-KI-CLI-001', project: 'other/host' },
+      { id: 'KI-TOOL-KI-CLI-002', project: 'capital/alpha' },
+      { id: 'KI-TOOL-KI-CLI-003', initiative: 'other/rig' },
+      { id: 'KI-TOOL-KI-CLI-004', project: 'other/ghost' },
+      { id: 'KI-TOOL-KI-CLI-005', project: 'nowhere/host' },
+      { id: 'KI-TOOL-KI-CLI-006', project: 'member/host' },
+      { id: 'KI-TOOL-KI-CLI-007', project: 'other/host', initiative: 'rig' },
+      { id: 'KI-TOOL-KI-CLI-008', initiative: 'other/ghost' },
+      { id: 'KI-TOOL-KI-CLI-009', project: 'other/host', initiative: 'other/rig' },
+      { id: 'KI-TOOL-KI-CLI-010', project: 'nowhere/host', initiative: 'nowhere/rig' },
+      { id: 'KI-TOOL-KI-CLI-011', initiative: 'bare/rig' }
     ]
     for (const fields of items) await roadmapFile(box, 'member', fields['id'] as string, record(fields))
 
@@ -537,7 +537,7 @@ describe('[ki repo roadmap list --by]', () => {
     expect(project).toContain('project alpha (1)')
     expect(project).toContain('project nowhere/host (2)')
     expect(project).toContain('project member/host (1)')
-    expect(project).toContain('KI-TOOL-CLI-004: project other/ghost is not in the registry')
+    expect(project).toContain('KI-TOOL-KI-CLI-004: project other/ghost is not in the registry')
     expect(project).toContain(
       'territory nowhere registry unavailable: territory nowhere is not declared by a registered Capital'
     )
@@ -553,10 +553,10 @@ describe('[ki repo roadmap list --by]', () => {
     expect(initiative).toContain('initiative init-one (1)')
     expect(initiative).toContain('initiative nowhere/rig (1)')
     expect(initiative).toContain('initiative bare/rig (1)')
-    expect(initiative).toContain('KI-TOOL-CLI-007: initiative rig contradicts project other/host in other/rig')
-    expect(initiative).toContain('KI-TOOL-CLI-008: initiative other/ghost is not in the registry')
-    expect(initiative).not.toContain('KI-TOOL-CLI-009:')
-    expect(initiative).not.toContain('KI-TOOL-CLI-011:')
+    expect(initiative).toContain('KI-TOOL-KI-CLI-007: initiative rig contradicts project other/host in other/rig')
+    expect(initiative).toContain('KI-TOOL-KI-CLI-008: initiative other/ghost is not in the registry')
+    expect(initiative).not.toContain('KI-TOOL-KI-CLI-009:')
+    expect(initiative).not.toContain('KI-TOOL-KI-CLI-011:')
 
     await box.state.write('ki/registry.toml', 'schema = [\n')
     const invalid = await box.run('ki repo --repo member roadmap list --by project')
@@ -567,7 +567,7 @@ describe('[ki repo roadmap list --by]', () => {
       registryFile([{ key: 'other', repository: home('example/other'), path: other }])
     )
     await box.project.write('loose/.ki.toml', declaration(home('example/loose')))
-    await roadmapFile(box, 'loose', 'KI-TOOL-CLI-001', record({ id: 'KI-TOOL-CLI-001', project: 'other/host' }))
+    await roadmapFile(box, 'loose', 'KI-TOOL-KI-CLI-001', record({ id: 'KI-TOOL-KI-CLI-001', project: 'other/host' }))
     const loose = await box.run('ki repo --repo loose roadmap list --by project')
     expect(loose.output).toContain('project other/host (1)')
     expect(loose.output).not.toContain('registry unavailable')
@@ -576,10 +576,10 @@ describe('[ki repo roadmap list --by]', () => {
   test('warns and still lists when the Project registry is unavailable', async () => {
     const box = await sandbox()
     await box.project.write('plain/.ki.toml', declaration(home('example/plain')))
-    await roadmapFile(box, 'plain', 'KI-TOOL-CLI-001', record({ id: 'KI-TOOL-CLI-001', project: 'alpha' }))
-    await roadmapFile(box, 'plain', 'KI-TOOL-CLI-002', record({ id: 'KI-TOOL-CLI-002', initiative: 'init-one' }))
+    await roadmapFile(box, 'plain', 'KI-TOOL-KI-CLI-001', record({ id: 'KI-TOOL-KI-CLI-001', project: 'alpha' }))
+    await roadmapFile(box, 'plain', 'KI-TOOL-KI-CLI-002', record({ id: 'KI-TOOL-KI-CLI-002', initiative: 'init-one' }))
     await box.project.write('member/.ki.toml', declaration(home('example/member'), capitalHome))
-    await roadmapFile(box, 'member', 'KI-TOOL-CLI-001', record({ id: 'KI-TOOL-CLI-001', project: 'alpha' }))
+    await roadmapFile(box, 'member', 'KI-TOOL-KI-CLI-001', record({ id: 'KI-TOOL-KI-CLI-001', project: 'alpha' }))
     const member = await realpath(`${box.project.path}/member`)
 
     const undeclared = await box.run('ki repo --repo plain roadmap list --by initiative')
@@ -605,7 +605,7 @@ describe('[ki repo roadmap list --by]', () => {
     )
     const noProjects = await box.run('ki repo --repo member roadmap list --by initiative')
     await box.project.write('capital/Streams/Initiatives/init-one.md', initiativeNote('init-one'))
-    await roadmapFile(box, 'member', 'KI-TOOL-CLI-002', record({ id: 'KI-TOOL-CLI-002', initiative: 'init-one' }))
+    await roadmapFile(box, 'member', 'KI-TOOL-KI-CLI-002', record({ id: 'KI-TOOL-KI-CLI-002', initiative: 'init-one' }))
     const initiativesOnly = await box.run('ki repo --repo member roadmap list --by initiative')
 
     expect(undeclared.exitCode).toBe(0)
@@ -625,7 +625,7 @@ describe('[ki repo roadmap list --by]', () => {
     )
     expect(initiativesOnly.exitCode).toBe(0)
     expect(initiativesOnly.output).toContain('initiative init-one (1)')
-    expect(initiativesOnly.output).toContain('KI-TOOL-CLI-001: project alpha is not in the registry')
+    expect(initiativesOnly.output).toContain('KI-TOOL-KI-CLI-001: project alpha is not in the registry')
     expect(initiativesOnly.output).not.toContain('registry unavailable')
   })
 })
@@ -652,14 +652,14 @@ describe('[ki repo roadmap] grouping across the selected set', () => {
       ])
     )
     const items: readonly (readonly [string, Readonly<Record<string, string>>])[] = [
-      ['member', { id: 'KI-TOOL-CLI-001', project: 'alpha', horizon: 'now' }],
-      ['member', { id: 'KI-TOOL-CLI-002', project: 'capital/alpha' }],
-      ['member', { id: 'KI-TOOL-CLI-003', initiative: 'init-two' }],
-      ['member', { id: 'KI-TOOL-CLI-008', project: 'ghost' }],
-      ['other', { id: 'KI-TOOL-CLI-004', project: 'capital/alpha' }],
-      ['other', { id: 'KI-TOOL-CLI-005', project: 'alpha' }],
-      ['other', { id: 'KI-TOOL-CLI-006', project: 'host' }],
-      ['other', { id: 'KI-TOOL-CLI-007', initiative: 'capital/init-two' }]
+      ['member', { id: 'KI-TOOL-KI-CLI-001', project: 'alpha', horizon: 'now' }],
+      ['member', { id: 'KI-TOOL-KI-CLI-002', project: 'capital/alpha' }],
+      ['member', { id: 'KI-TOOL-KI-CLI-003', initiative: 'init-two' }],
+      ['member', { id: 'KI-TOOL-KI-CLI-008', project: 'ghost' }],
+      ['other', { id: 'KI-TOOL-KI-CLI-004', project: 'capital/alpha' }],
+      ['other', { id: 'KI-TOOL-KI-CLI-005', project: 'alpha' }],
+      ['other', { id: 'KI-TOOL-KI-CLI-006', project: 'host' }],
+      ['other', { id: 'KI-TOOL-KI-CLI-007', initiative: 'capital/init-two' }]
     ]
     for (const [repository, fields] of items) await roadmapFile(box, repository, fields['id'] as string, record(fields))
 
@@ -677,7 +677,7 @@ describe('[ki repo roadmap] grouping across the selected set', () => {
     expect(byProject.output).toContain('project host (1)')
     expect(byProject.output).toContain('project ghost (1)')
     expect(byProject.output).toContain('unassigned (2)')
-    expect(byProject.output).toContain('KI-TOOL-CLI-008: project ghost is not in the registry')
+    expect(byProject.output).toContain('KI-TOOL-KI-CLI-008: project ghost is not in the registry')
     expect(byInitiative.output).toContain('initiative init-one (3)')
     expect(byInitiative.output).toContain('initiative init-two (2)')
     expect(byInitiative.output).toContain('initiative rig (2)')
@@ -689,7 +689,7 @@ describe('[ki repo roadmap] grouping across the selected set', () => {
     expect(summary.output).toMatch(/│ +capital\/alpha \[active\] +│ +d=1 Σ=1 +│ +d=2 Σ=2 /)
     expect(summary.output).toMatch(/│ +unassigned +│ +— +│ +d=2 Σ=2 /)
     expect(summary.output).toMatch(/│ +Σ +│ +d=1 Σ=1 +│ +d=7 Σ=7 /)
-    expect(summary.output).toContain('Warnings\n  KI-TOOL-CLI-008: project ghost is not in the registry')
+    expect(summary.output).toContain('Warnings\n  KI-TOOL-KI-CLI-008: project ghost is not in the registry')
     expect(summaryByInitiative.output).toMatch(/│ +Initiative +│/)
     expect(summaryByInitiative.output).toMatch(/│ +init-two +│ +— +│ +d=2 Σ=2 /)
     expect(summaryByArea.output).toMatch(/│ +Area +│/)
@@ -702,10 +702,10 @@ describe('[ki repo roadmap] grouping across the selected set', () => {
     await box.project.write('repo/.ki.toml', declaration())
     await box.project.write('repo/docs/roadmap/README.md', '# Roadmap areas\n\n- `CLI` - command line.\n')
     for (const [id, horizon] of [
-      ['KI-TOOL-CLI-001', 'now'],
-      ['KI-TOOL-CLI-002', 'next'],
-      ['KI-TOOL-CLI-003', 'soon'],
-      ['KI-TOOL-CLI-004', 'future']
+      ['KI-TOOL-KI-CLI-001', 'now'],
+      ['KI-TOOL-KI-CLI-002', 'next'],
+      ['KI-TOOL-KI-CLI-003', 'soon'],
+      ['KI-TOOL-KI-CLI-004', 'future']
     ] as const)
       await roadmapFile(box, 'repo', id, record({ id, horizon }))
 
@@ -715,12 +715,12 @@ describe('[ki repo roadmap] grouping across the selected set', () => {
     const summary = await box.run('ki repo --repo repo roadmap summary')
 
     expect(commaSeparated.exitCode).toBe(0)
-    expect(commaSeparated.output).toContain('KI-TOOL-CLI-001')
-    expect(commaSeparated.output).toContain('KI-TOOL-CLI-002')
-    expect(commaSeparated.output).not.toContain('KI-TOOL-CLI-003')
+    expect(commaSeparated.output).toContain('KI-TOOL-KI-CLI-001')
+    expect(commaSeparated.output).toContain('KI-TOOL-KI-CLI-002')
+    expect(commaSeparated.output).not.toContain('KI-TOOL-KI-CLI-003')
     expect(repeated.output).toContain('ITEMS=2 NOW=1')
-    expect(repeated.output).toContain('KI-TOOL-CLI-003')
-    expect(repeated.output).not.toContain('KI-TOOL-CLI-002')
+    expect(repeated.output).toContain('KI-TOOL-KI-CLI-003')
+    expect(repeated.output).not.toContain('KI-TOOL-KI-CLI-002')
     expect(invalid).toEqual({
       exitCode: 2,
       output: 'ki: error: roadmap list --horizon must be one of now, next, soon, future, hold\n'
@@ -737,34 +737,34 @@ describe('[ki repo roadmap migrate]', () => {
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-001',
-      record({ id: 'KI-TOOL-CLI-001', theme: 'cli', horizon: 'triage' })
+      'KI-TOOL-KI-CLI-001',
+      record({ id: 'KI-TOOL-KI-CLI-001', theme: 'cli', horizon: 'triage' })
     )
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-002',
+      'KI-TOOL-KI-CLI-002',
       record({
-        id: 'KI-TOOL-CLI-002',
+        id: 'KI-TOOL-KI-CLI-002',
         horizon: 'triage',
         status: 'done',
         intake_disposition: 'duplicate',
-        intake_disposition_target: "'KI-TOOL-CLI-001'"
+        intake_disposition_target: "'KI-TOOL-KI-CLI-001'"
       })
     )
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-003',
-      record({ id: 'KI-TOOL-CLI-003', horizon: 'triage', status: 'done', intake_disposition: 'rejected' })
+      'KI-TOOL-KI-CLI-003',
+      record({ id: 'KI-TOOL-KI-CLI-003', horizon: 'triage', status: 'done', intake_disposition: 'rejected' })
     )
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-004',
+      'KI-TOOL-KI-CLI-004',
       record(
         {
-          id: 'KI-TOOL-CLI-004',
+          id: 'KI-TOOL-KI-CLI-004',
           horizon: 'waiting-for',
           waiting_on_trades: '[TRD-0000000a, TRD-0000000a, TRD-0000000b]'
         },
@@ -785,40 +785,40 @@ describe('[ki repo roadmap migrate]', () => {
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-005',
-      record({ id: 'KI-TOOL-CLI-005', horizon: 'parked' }, 'Plain context. Parked until the spring review!\n')
+      'KI-TOOL-KI-CLI-005',
+      record({ id: 'KI-TOOL-KI-CLI-005', horizon: 'parked' }, 'Plain context. Parked until the spring review!\n')
     )
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-006',
-      record({ id: 'KI-TOOL-CLI-006', horizon: 'parked', project: 'other/host', initiative: 'other/rig' })
+      'KI-TOOL-KI-CLI-006',
+      record({ id: 'KI-TOOL-KI-CLI-006', horizon: 'parked', project: 'other/host', initiative: 'other/rig' })
     )
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-007',
-      record({ id: 'KI-TOOL-CLI-007', status: 'done', horizon: 'parked' })
+      'KI-TOOL-KI-CLI-007',
+      record({ id: 'KI-TOOL-KI-CLI-007', status: 'done', horizon: 'parked' })
     )
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-008',
-      record({ id: 'KI-TOOL-CLI-008', status: 'done', horizon: 'triage' })
+      'KI-TOOL-KI-CLI-008',
+      record({ id: 'KI-TOOL-KI-CLI-008', status: 'done', horizon: 'triage' })
     )
     await roadmapFile(
       box,
       'repo',
-      'KI-TOOL-CLI-009',
-      record({ id: 'KI-TOOL-CLI-009', status: 'ready', horizon: 'triage' })
+      'KI-TOOL-KI-CLI-009',
+      record({ id: 'KI-TOOL-KI-CLI-009', status: 'ready', horizon: 'triage' })
     )
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-010', record({ id: 'KI-TOOL-CLI-010' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-010', record({ id: 'KI-TOOL-KI-CLI-010' }))
   }
 
   test('previews the mechanical pass without changing any record', async () => {
     const box = await sandbox()
     await migrationFixture(box)
-    const before = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-004-item.md')
+    const before = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-004-item.md')
     await box.project.write('absent/.ki.toml', declaration())
     await box.project.write('undeclared/.ki.toml', '[repo]\nharnesses = ["example/harness"]\n')
 
@@ -827,12 +827,12 @@ describe('[ki repo roadmap migrate]', () => {
     expect(preview.exitCode).toBe(0)
     const output = preview.output
     expect(output).toContain('KI REPO ROADMAP MIGRATE')
-    expect(output).toContain('KI-TOOL-CLI-001 KI-TOOL-CLI-001-item.md')
+    expect(output).toContain('KI-TOOL-KI-CLI-001 KI-TOOL-KI-CLI-001-item.md')
     expect(output).toContain('- horizon: triage')
     expect(output).toContain('+ status: triage')
     expect(output).toContain('+ status: cancelled')
     expect(output).toContain('+ resolution: duplicate')
-    expect(output).toContain('+ resolution_target: KI-TOOL-CLI-001')
+    expect(output).toContain('+ resolution_target: KI-TOOL-KI-CLI-001')
     expect(output).toContain('+ resolution: rejected')
     expect(output).toContain('add a ## Cancelled section recording the approved disposition')
     expect(output).toContain('+ trades: [TRD-0000000a, TRD-0000000b]')
@@ -843,12 +843,12 @@ describe('[ki repo roadmap migrate]', () => {
     expect(output).toContain('review the hold condition lifted from the record prose')
     expect(output).toContain('state the hold release condition')
     expect(output).toContain('+ updated_at: 2026-10-07T12:00:00Z')
-    for (const untouched of ['KI-TOOL-CLI-007', 'KI-TOOL-CLI-008', 'KI-TOOL-CLI-009', 'KI-TOOL-CLI-010'])
+    for (const untouched of ['KI-TOOL-KI-CLI-007', 'KI-TOOL-KI-CLI-008', 'KI-TOOL-KI-CLI-009', 'KI-TOOL-KI-CLI-010'])
       expect(output).not.toContain(`${untouched} ${untouched}`)
     expect(output).not.toContain('- theme')
     expect(output).toContain('no roadmap')
     expect(output).toContain('summary: WOULD_MIGRATE=6 REPOSITORIES=2')
-    expect(await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-004-item.md')).toBe(before)
+    expect(await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-004-item.md')).toBe(before)
     expect((await box.run('ki repo --repo undeclared roadmap migrate')).output).toContain('no roadmap')
   })
 
@@ -869,15 +869,15 @@ describe('[ki repo roadmap migrate]', () => {
     expect(applied.exitCode).toBe(0)
     expect(applied.output).toContain('summary: MIGRATED=6 REPOSITORIES=1')
     expect(again.output).toContain('summary: MIGRATED=0 REPOSITORIES=1')
-    expect(await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-005-item.md')).toContain(
+    expect(await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-005-item.md')).toContain(
       'horizon: hold\nhold:\n  reason: parked\n  condition: "Parked until the spring review!"\nstatus: draft'
     )
-    const cancelled = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-002-item.md')
-    expect(cancelled).toContain('status: cancelled\nresolution: duplicate\nresolution_target: KI-TOOL-CLI-001\n')
+    const cancelled = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-002-item.md')
+    expect(cancelled).toContain('status: cancelled\nresolution: duplicate\nresolution_target: KI-TOOL-KI-CLI-001\n')
     expect(cancelled).not.toContain('intake_disposition')
     expect(cancelled).not.toContain('horizon')
-    expect(await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-001-item.md')).toContain('theme: cli')
-    const qualified = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-006-item.md')
+    expect(await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-001-item.md')).toContain('theme: cli')
+    const qualified = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-006-item.md')
     expect(qualified).toContain('horizon: hold\n')
     expect(qualified).toContain('project: other/host\ninitiative: other/rig\n')
     expect(listed.exitCode).toBe(0)
@@ -885,28 +885,28 @@ describe('[ki repo roadmap migrate]', () => {
       JSON.parse(listed.output).items.map((entry: { id: string; lane: string }) => [entry.id, entry.lane])
     )
     expect(lanes).toMatchObject({
-      'KI-TOOL-CLI-001': 'triage',
-      'KI-TOOL-CLI-002': 'cancelled',
-      'KI-TOOL-CLI-004': 'hold',
-      'KI-TOOL-CLI-006': 'hold'
+      'KI-TOOL-KI-CLI-001': 'triage',
+      'KI-TOOL-KI-CLI-002': 'cancelled',
+      'KI-TOOL-KI-CLI-004': 'hold',
+      'KI-TOOL-KI-CLI-006': 'hold'
     })
   })
 
   test('reports unreadable records and refuses to apply around them', async () => {
     const box = await sandbox()
     await box.project.write('repo/.ki.toml', declaration())
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-001', record({ id: 'KI-TOOL-CLI-001', horizon: 'parked' }))
-    await roadmapFile(box, 'repo', 'KI-TOOL-CLI-002', record({ id: 'KI-TOOL-CLI-002', status: 'closed' }))
-    const before = await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-001-item.md')
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-001', record({ id: 'KI-TOOL-KI-CLI-001', horizon: 'parked' }))
+    await roadmapFile(box, 'repo', 'KI-TOOL-KI-CLI-002', record({ id: 'KI-TOOL-KI-CLI-002', status: 'closed' }))
+    const before = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-001-item.md')
 
     const preview = await box.run('ki repo --repo repo roadmap migrate')
     const apply = await box.run('ki repo --repo repo roadmap migrate --apply')
 
     expect(preview.exitCode).toBe(1)
-    expect(preview.output).toContain('KI-TOOL-CLI-002-item.md has an invalid lifecycle status')
-    expect(preview.output).toContain('KI-TOOL-CLI-001 KI-TOOL-CLI-001-item.md')
+    expect(preview.output).toContain('KI-TOOL-KI-CLI-002-item.md has an invalid lifecycle status')
+    expect(preview.output).toContain('KI-TOOL-KI-CLI-001 KI-TOOL-KI-CLI-001-item.md')
     expect(apply.exitCode).toBe(2)
     expect(apply.output).toContain('has unreadable work items; fix them before migrating')
-    expect(await box.project.read('repo/docs/roadmap/KI-TOOL-CLI-001-item.md')).toBe(before)
+    expect(await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-001-item.md')).toBe(before)
   })
 })

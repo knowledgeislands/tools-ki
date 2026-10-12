@@ -70,7 +70,7 @@ const prepareTrade = (
   '--title',
   overrides.title ?? 'Route contract',
   '--source-ref',
-  'KI-TOOL-CLI-012',
+  'KI-TOOL-KI-CLI-012',
   '--context',
   'The host needs an executable contract.',
   '--submission',
@@ -875,7 +875,7 @@ describe('[ki repo trade]', () => {
         outbound.replace('title: "Route contract"', 'title: "Route contract"\ntitle: "Again"'),
         'repeats trade field title'
       ],
-      [outbound.replace('source_ref: "KI-TOOL-CLI-012"', 'extra: value'), 'has unrecognised trade field extra'],
+      [outbound.replace('source_ref: "KI-TOOL-KI-CLI-012"', 'extra: value'), 'has unrecognised trade field extra'],
       [outbound.replace('created_at:', 'created_at: invalid #'), 'has invalid created_at timestamp'],
       [outbound.replace('sender: example/source', 'sender: Example/source'), 'trade record address must use canonical'],
       [outbound.replace('kind: work', 'kind: other'), 'has invalid trade kind'],
@@ -884,7 +884,7 @@ describe('[ki repo trade]', () => {
         outbound.replace(`# ${id}: Route contract`, '# Some other heading'),
         'H1 must exactly repeat trade id and title'
       ],
-      [outbound.replace('source_ref: "KI-TOOL-CLI-012"\n', ''), 'must declare non-empty trade field source_ref']
+      [outbound.replace('source_ref: "KI-TOOL-KI-CLI-012"\n', ''), 'must declare non-empty trade field source_ref']
     ]
 
     for (const [contents, message] of cases) {
