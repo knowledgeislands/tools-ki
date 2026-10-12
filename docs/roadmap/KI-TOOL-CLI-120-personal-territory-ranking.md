@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 104ab7b62a7e1fe0be647055286b73ffbb07a9ea
 created_at: 2026-10-12T04:33:13Z
-updated_at: 2026-10-12T04:40:52Z
+updated_at: 2026-10-12T05:11:30Z
 ---
 
 # Personal Territory Ranking
@@ -25,7 +25,7 @@ A user can rank territory handles in their own `ki` configuration, and every mul
 
 Master state-of-play Decision 95 (12 October 2026, 05:28 BST) records Kris's ranking of territories by where Kris should spend most time - personal, knowledge-islands, legal, humans-not-robots, valle-armonia, sacred-inquiry, techmedix, equal-remedy - and asks that `--principals`, Zed opening and the estate follow it. The ranking is a personal, user-level preference, not public governance, so it belongs in the user configuration (`config.toml`), not in a Capital's `.ki.toml`, and it falls back to the current derived order when unset. The decision grants delivery to `main` and push; it grants no acceptance, release or Homebrew publish.
 
-[KI-TOOL-CLI-119](KI-TOOL-CLI-119-principals-territory-selector.md) delivered `--principals` with the derived order in [TERRITORY-005](../specs/territories.md#territory-005--principals-selection): the system Capital first, then territory name, then handle. `mgit --principals` consumes `ki territory roots --null --principals`, so it inherits the ranking without change.
+`KI-TOOL-CLI-119` (commit `311c762`, closed in `24d9fd9`, since pruned) delivered `--principals` with the derived order in [TERRITORY-005](../specs/territories.md#territory-005--principals-selection): the system Capital first, then territory name, then handle. `mgit --principals` consumes `ki territory roots --null --principals`, so it inherits the ranking without change.
 
 ## Boundary
 
