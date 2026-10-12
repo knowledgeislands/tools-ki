@@ -6,7 +6,7 @@ This area specifies KI's implementation of the [accepted territory decision](htt
 
 ### TERRITORY-001 — Canonical Capital membership
 
-KI MUST derive territory membership from the Capital's flat `ki-repo.territory_name` and `territory_members`. The optional Capital-only `territory_prefix` MUST be a lower-case hyphenated slug; without it the handle MUST be the Capital's registry key. An explicit prefix MUST replace the key as a selector. Duplicate handles, including prefix/key collisions, MUST fail. Selection MUST NOT depend on valid trade routing.
+KI MUST derive territory membership from the Capital's flat `ki-repo.territory_name` and `territory_members`. The optional Capital-only `territory_prefix` MUST be a lower-case hyphenated slug; without it the handle MUST be the Capital's registry key. An explicit prefix MUST replace the key as a selector. Duplicate handles, including prefix/key collisions, MUST fail. A Capital MAY declare optional [aliases](#territory-007--territory-aliases). Selection MUST NOT depend on valid trade routing.
 
 _Conformance:_ conforming
 
@@ -61,6 +61,16 @@ A user MAY rank territories in the `ki` user configuration, `$XDG_CONFIG_HOME/ki
 _Conformance:_ conforming
 
 _Verify:_ `src/core/territory/ranking.ts`, `src/core/territory/resolution.ts`; `src/tests/cli/territory/ranking.test.ts` exercises the unset fallback, a partial ranking across principals, list, estate, filters, a single territory, repository and Zed opening, unknown-handle warnings and malformed configuration.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### TERRITORY-007 — Territory aliases
+
+A Capital MAY declare `ki-repo.territory_aliases`: an array of distinct lower-case hyphenated identifiers that select its territory exactly as its canonical handle does, wherever a `--territory` selector is accepted. An absent or empty array MUST leave selection unchanged. A non-array value, an invalid identifier, a repeated alias, or the key on a repository that is not a territory Capital MUST fail as declaration errors. Handles and aliases MUST share one selector namespace across every registered Capital: an alias equal to any handle, including its own Capital's, or to another Capital's alias MUST fail every territory selection before any repository is selected. Aliases MUST NOT appear in `ki territory list`, selected identities or output, MUST NOT name a sources store, and MUST NOT be a [ranking](#territory-006--personal-territory-ranking) handle.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/core/territory/declaration.ts`, `src/core/territory/resolution.ts`; `src/tests/cli/territory/aliases.test.ts` exercises alias and handle equivalence across `show`, `roots`, `audit` and `ki repo` opening with both selector spellings, malformed and non-Capital aliases, and every collision class.
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

@@ -1,6 +1,6 @@
 # Select a territory or estate
 
-Run `ki territory list` to discover registered Capital handles. A Capital's explicit `territory_prefix` is its sole handle; without that declaration, use its local registry key. Membership comes from the Capital's canonical `territory_members`, including the Capital itself.
+Run `ki territory list` to discover registered Capital handles. A Capital's explicit `territory_prefix` is its canonical handle; without that declaration, use its local registry key. A Capital may also declare `territory_aliases = ["ki"]`: each alias selects the territory exactly as its handle does, but output, `ki territory list`, your ranking and the Capital's `sources-<handle>` store always use the canonical handle. An alias that collides with any handle or another alias fails every territory command until it is removed. Membership comes from the Capital's canonical `territory_members`, including the Capital itself.
 
 ## Select and narrow
 

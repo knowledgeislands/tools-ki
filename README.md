@@ -65,7 +65,7 @@ Neither command changes user or repository skill activation. [Maintain a local i
 
 A Capital owns its territory through `[skills.ki-repo].territory_name` and `territory_members`. The Capital names itself in `capital` and lists every member, including itself, in sorted canonical HTTPS GitHub identity order. Member repositories declare the same `capital`; selection does not depend on a trade policy.
 
-The optional Capital-only `territory_prefix` supplies the territory handle, such as `ki`. Without it, use the Capital's local registry key. An explicit prefix replaces that key as a selector. `ki territory list` discovers these handles; `show`, `audit`, `open` and `inspect` accept `-t, --territory <handle>`, `--estate` or `--principals`.
+The optional Capital-only `territory_prefix` supplies the territory handle, such as `ki`. Without it, use the Capital's local registry key. An explicit prefix replaces that key as a selector. A Capital may also declare `territory_aliases`, extra selectors that resolve to its canonical handle; they never appear in output or name a sources store. `ki territory list` discovers these handles; `show`, `audit`, `open` and `inspect` accept `-t, --territory <handle>`, `--estate` or `--principals`.
 
 `--principals` selects only the registered territory Capitals. The system Capital — the one whose territory includes the canonical KI Harness, `knowledgeislands/ki-agentic-harness` — comes first, then the others by territory name. `ki territory open --principals --target zed` opens them so Zed's project list follows that order; VS Code and Delta receive the same order.
 

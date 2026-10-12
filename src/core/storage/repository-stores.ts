@@ -1,5 +1,5 @@
 import { lstat } from 'node:fs/promises'
-import { basename, dirname, join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { KnowledgeBaseStoreRole } from '../configuration/declaration.ts'
 import {
   declaredKnowledgeBaseStoreRoles,
@@ -77,8 +77,12 @@ export const unbindRepositoryStore = (
   return { ...base, ...(Object.keys(stores).length ? { stores } : { stores: undefined }) }
 }
 
-export const conventionalSourcesStore = (homeDirectory: string, repository: string): string =>
-  join(homeDirectory, 'Library', 'CloudStorage', 'OneDrive-Personal', `sources-${basename(repository)}`)
+const sourcesStoreRoot = (homeDirectory: string): string =>
+  join(homeDirectory, 'Library', 'CloudStorage', 'OneDrive-Personal')
+
+/** The conventional source-store directory for a store name, such as a territory handle or basename. */
+export const conventionalSourcesStore = (homeDirectory: string, name: string): string =>
+  join(sourcesStoreRoot(homeDirectory), `sources-${name}`)
 
 export interface UndeclaredSourcesStore {
   readonly repository: string
@@ -101,6 +105,8 @@ export interface SourcesStoreInspection {
 export interface SourcesStoreTarget {
   readonly path: string
   readonly repository?: string
+  /** Conventional store names to inspect, in order; a naming failure becomes this target's diagnostic. */
+  readonly names: () => Promise<readonly string[]>
 }
 
 /** Inspect conventional directories only; declaration and binding decisions remain with each repository. */
@@ -111,45 +117,65 @@ export const inspectUndeclaredSourcesStores = async (
   const undeclared: UndeclaredSourcesStore[] = []
   const diagnostics: SourcesStoreDiagnostic[] = []
   for (const entry of entries) {
-    const path = conventionalSourcesStore(homeDirectory, entry.path)
+    let names: readonly string[]
     try {
-      const state = await lstat(path).catch((error: NodeJS.ErrnoException) => {
-        if (error.code === 'ENOENT') return undefined
-        throw error
-      })
-      if (!state) continue
-      if (!state.isDirectory() || state.isSymbolicLink())
-        throw new KiError('conventional sources path is not a direct directory', 1)
-      const parent = await lstat(dirname(path))
-      if (!parent.isDirectory() || parent.isSymbolicLink())
-        throw new KiError('OneDrive source-store root is not a direct directory', 1)
-      const root = await lstat(entry.path)
-      if (!root.isDirectory() || root.isSymbolicLink())
-        throw new KiError('repository root is not a direct directory', 1)
-      const declarationPath = join(entry.path, REPOSITORY_DECLARATION_FILE)
-      const declarationState = await lstat(declarationPath).catch(() => undefined)
-      if (!declarationState?.isFile() || declarationState.isSymbolicLink())
-        throw new KiError('repository declaration is not a direct file', 1)
-      const declaration = await readRepositoryDeclaration(declarationPath)
-      const identity = declaredRepositoryIdentity(declaration)
-      if (entry.repository && identity !== entry.repository)
-        throw new KiError('repository declaration does not match its registered identity', 1)
-      const kind = declaredRepositoryKind(declaration)
-      if (declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) continue
-      undeclared.push({ repository: identity, root: entry.path, path, kind })
+      names = await entry.names()
     } catch (error) {
-      diagnostics.push({ repository: entry.repository ?? entry.path, path, message: (error as Error).message })
+      diagnostics.push({
+        repository: entry.repository ?? entry.path,
+        path: join(entry.path, REPOSITORY_DECLARATION_FILE),
+        message: (error as Error).message
+      })
+      continue
     }
+    for (const name of names)
+      await inspectSourcesStore(entry, conventionalSourcesStore(homeDirectory, name), undeclared, diagnostics)
   }
   return { undeclared, diagnostics }
 }
 
-export const managedSourcesStore = async (homeDirectory: string, repository: string): Promise<string> => {
-  const root = join(homeDirectory, 'Library', 'CloudStorage', 'OneDrive-Personal')
+/** Inspect one conventional directory, rechecking the repository after the directory is seen. */
+const inspectSourcesStore = async (
+  entry: SourcesStoreTarget,
+  path: string,
+  undeclared: UndeclaredSourcesStore[],
+  diagnostics: SourcesStoreDiagnostic[]
+): Promise<void> => {
+  try {
+    const state = await lstat(path).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return undefined
+      throw error
+    })
+    if (!state) return
+    if (!state.isDirectory() || state.isSymbolicLink())
+      throw new KiError('conventional sources path is not a direct directory', 1)
+    const parent = await lstat(dirname(path))
+    if (!parent.isDirectory() || parent.isSymbolicLink())
+      throw new KiError('OneDrive source-store root is not a direct directory', 1)
+    const root = await lstat(entry.path)
+    if (!root.isDirectory() || root.isSymbolicLink()) throw new KiError('repository root is not a direct directory', 1)
+    const declarationPath = join(entry.path, REPOSITORY_DECLARATION_FILE)
+    const declarationState = await lstat(declarationPath).catch(() => undefined)
+    if (!declarationState?.isFile() || declarationState.isSymbolicLink())
+      throw new KiError('repository declaration is not a direct file', 1)
+    const declaration = await readRepositoryDeclaration(declarationPath)
+    const identity = declaredRepositoryIdentity(declaration)
+    if (entry.repository && identity !== entry.repository)
+      throw new KiError('repository declaration does not match its registered identity', 1)
+    const kind = declaredRepositoryKind(declaration)
+    if (declaredKnowledgeBaseStoreRoles(declaration).includes('sources')) return
+    undeclared.push({ repository: identity, root: entry.path, path, kind })
+  } catch (error) {
+    diagnostics.push({ repository: entry.repository ?? entry.path, path, message: (error as Error).message })
+  }
+}
+
+export const managedSourcesStore = async (homeDirectory: string, name: string): Promise<string> => {
+  const root = sourcesStoreRoot(homeDirectory)
   const state = await lstat(root).catch(() => undefined)
   if (!state?.isDirectory() || state.isSymbolicLink())
     throw new KiError(`OneDrive source-store root is unavailable: ${root}`, 1)
-  const path = conventionalSourcesStore(homeDirectory, repository)
+  const path = conventionalSourcesStore(homeDirectory, name)
   const store = await lstat(path).catch(() => undefined)
   if (store && (!store.isDirectory() || store.isSymbolicLink()))
     throw new KiError('sources store path must be absent or an existing direct directory', 1)

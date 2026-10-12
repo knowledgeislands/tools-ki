@@ -141,7 +141,7 @@
         },
         {
           "invocation": "-t, --territory <handle>",
-          "description": "Select the Capital's declared territory through its territory_prefix, or its registry key when no prefix is declared. The registry maps every canonical member identity before filtering. This scope conflicts with --repo, --estate and --principals."
+          "description": "Select the Capital's declared territory through its territory_prefix, or its registry key when no prefix is declared, or through any of its declared territory_aliases. The registry maps every canonical member identity before filtering. This scope conflicts with --repo, --estate and --principals."
         },
         {
           "invocation": "--estate",
@@ -211,11 +211,11 @@
         },
         {
           "invocation": "ki repo [repo-options] store scan",
-          "description": "Inspect selected repositories for direct conventional OneDrive sources-<repository-basename> directories without a matching declared sources store role. Warnings identify the repository kind and an explicit decision to declare and bind, migrate to a Knowledge Base, or retire the directory; warnings exit successfully. Unsafe paths or unreadable repository declarations remain diagnostics and cause a non-zero exit. Repository selection follows normal ki repo semantics, including --estate for every registered repository. The command never creates, binds, moves, or removes a directory."
+          "description": "Inspect selected repositories for direct conventional OneDrive sources-<name> directories without a matching declared sources store role. Warnings identify the repository kind and an explicit decision to declare and bind, migrate to a Knowledge Base, or retire the directory; warnings exit successfully. Unsafe paths or unreadable repository declarations remain diagnostics and cause a non-zero exit. A territory Capital is checked under both its canonical handle and its historical basename, and malformed Capital territory metadata is a diagnostic. Repository selection follows normal ki repo semantics, including --estate for every registered repository. The command never creates, binds, moves, or removes a directory."
         },
         {
           "invocation": "ki repo [repo-options] store create sources [--write]",
-          "description": "Preview the conventional opt-in OneDrive sources-<repository-basename> directory and registry binding. With --write, create and bind it. Automatic creation is unavailable for legacy."
+          "description": "Preview the conventional opt-in OneDrive sources-<name> directory and registry binding. The name is the repository basename, or a territory Capital's canonical handle: its territory_prefix, else its registry key. A Capital with neither fails. With --write, create and bind it. Automatic creation is unavailable for legacy."
         },
         {
           "invocation": "ki repo [repo-options] store bind <sources|legacy> <absolute-path> [--write]",
@@ -415,7 +415,7 @@
     },
     {
       "name": "Territory management",
-      "purpose": "Territories derive membership from registered Capital declarations. Use the Capital's territory_prefix handle, or its registry key when no prefix exists. Exactly one of --territory, --estate and --principals is required for scoped commands. --principals selects only the registered Capitals: first the system Capital, whose territory includes knowledgeislands/ki-agentic-harness, then the rest by territory name. A territories.ranking list of handles in config.toml puts ranked territories first, in that order, for --principals, territory list and --estate; the estate groups roots by their ranked territory. Repeated --filter values match directory basenames literally and case-sensitively.",
+      "purpose": "Territories derive membership from registered Capital declarations. Use the Capital's territory_prefix handle, or its registry key when no prefix exists; a declared territory_aliases entry selects the same territory. Exactly one of --territory, --estate and --principals is required for scoped commands. --principals selects only the registered Capitals: first the system Capital, whose territory includes knowledgeislands/ki-agentic-harness, then the rest by territory name. A territories.ranking list of handles in config.toml puts ranked territories first, in that order, for --principals, territory list and --estate; the estate groups roots by their ranked territory. Repeated --filter values match directory basenames literally and case-sensitively.",
       "commands": [
         {
           "invocation": "ki territory list",

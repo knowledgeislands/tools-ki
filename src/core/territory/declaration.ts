@@ -6,6 +6,7 @@ const RETIRED_TERRITORY_TABLE = `${REPOSITORY_TABLE}.territory`
 const TERRITORY_NAME = `[${REPOSITORY_TABLE}].territory_name`
 const TERRITORY_MEMBERS = `[${REPOSITORY_TABLE}].territory_members`
 const TERRITORY_PREFIX = `[${REPOSITORY_TABLE}].territory_prefix`
+const TERRITORY_ALIASES = `[${REPOSITORY_TABLE}].territory_aliases`
 const repositoryExpression =
   /^https:\/\/github\.com\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)\/([a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)$/
 const identifierExpression = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
@@ -13,8 +14,13 @@ const identifierExpression = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 export interface TerritoryDeclaration {
   readonly repository: string
   readonly capital: string
-  /** Present only on a Capital; `prefix` is its optional territory handle. */
-  readonly territory?: { readonly name: string; readonly members: readonly string[]; readonly prefix?: string }
+  /** Present only on a Capital; `prefix` is its optional territory handle and `aliases` extra selectors. */
+  readonly territory?: {
+    readonly name: string
+    readonly members: readonly string[]
+    readonly prefix?: string
+    readonly aliases: readonly string[]
+  }
 }
 
 const declarationError = (message: string): KiError => new KiError(message, 2)
@@ -66,7 +72,12 @@ const parseTerritory = (
   const prefix = declaration['territory_prefix']
   if (prefix !== undefined && (typeof prefix !== 'string' || !isLowerHyphenIdentifier(prefix)))
     throw declarationError(`${path} ${TERRITORY_PREFIX} must use a lower-case hyphenated identifier`)
-  return { name, members, ...(prefix !== undefined ? { prefix: prefix as string } : {}) }
+  const aliases = declaration['territory_aliases'] ?? []
+  if (!Array.isArray(aliases) || aliases.some((alias) => typeof alias !== 'string' || !isLowerHyphenIdentifier(alias)))
+    throw declarationError(`${path} ${TERRITORY_ALIASES} must be an array of lower-case hyphenated identifiers`)
+  if (new Set(aliases).size !== aliases.length)
+    throw declarationError(`${path} ${TERRITORY_ALIASES} must not repeat an alias`)
+  return { name, members, ...(prefix !== undefined ? { prefix: prefix as string } : {}), aliases }
 }
 
 /** Validates the repository identity and, for a Capital, its territory membership and optional handle. */
@@ -85,12 +96,12 @@ export const territoryDeclarationFrom = (document: Record<string, unknown>, path
     throw declarationError(
       `${path} [${RETIRED_TERRITORY_TABLE}] is retired; move its name and members to ${TERRITORY_NAME} and ${TERRITORY_MEMBERS}, then remove the table`
     )
-  const declared = ['territory_name', 'territory_members', 'territory_prefix'].some(
+  const declared = ['territory_name', 'territory_members', 'territory_prefix', 'territory_aliases'].some(
     (key) => declaration[key] !== undefined
   )
   if (!isCapital && declared)
     throw declarationError(
-      `${path} ${TERRITORY_NAME}, ${TERRITORY_MEMBERS} and ${TERRITORY_PREFIX} are permitted only in a territory Capital`
+      `${path} ${TERRITORY_NAME}, ${TERRITORY_MEMBERS}, ${TERRITORY_PREFIX} and ${TERRITORY_ALIASES} are permitted only in a territory Capital`
     )
   if (isCapital && !declared)
     throw declarationError(`${path} is a territory Capital and must declare ${TERRITORY_NAME} and ${TERRITORY_MEMBERS}`)

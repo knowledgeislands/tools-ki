@@ -322,7 +322,8 @@ Prune one eligible local inbound copy, or preview and confirm a batch.
 \&
 .PP
 Territories derive membership from registered Capital declarations. Use the
-Capital's territory_prefix handle, or its registry key when no prefix exists.
+Capital's territory_prefix handle, or its registry key when no prefix exists;
+a declared territory_aliases entry selects the same territory.
 Exactly one of --territory, --estate and --principals is required for scoped
 commands. --principals selects only the registered Capitals: first the system
 Capital, whose territory includes knowledgeislands/ki-agentic-harness, then
@@ -680,7 +681,8 @@ rejects unmatched patterns, invalid roots, and duplicate physical roots.
 .TP
 .B -t, --territory <handle>
 Select the Capital's declared territory through its territory_prefix, or its
-registry key when no prefix is declared. The registry maps every canonical
+registry key when no prefix is declared, or through any of its declared
+territory_aliases. The registry maps every canonical
 member identity before filtering. This scope conflicts with --repo, --estate
 and --principals.
 .TP
@@ -994,18 +996,22 @@ or unbound state. JSON emits the versioned
 .TP
 .B ki repo [repo-options] store scan
 Inspect selected repositories for direct conventional OneDrive
-\fBsources-<repository-basename>\fR directories without a matching declared
+\fBsources-<name>\fR directories without a matching declared
 \fBsources\fR store role. Warnings identify the repository kind and an explicit
 decision to declare and bind, migrate to a Knowledge Base, or retire the
 directory; warnings exit successfully. Unsafe paths or unreadable repository
-declarations remain diagnostics and cause a non-zero exit. Repository
+declarations remain diagnostics and cause a non-zero exit. A territory Capital
+is checked under both its canonical handle and its historical basename, and
+malformed Capital territory metadata is a diagnostic. Repository
 selection follows normal \fBki repo\fR semantics, including \fB--estate\fR
 for every registered repository. The command never creates, binds, moves, or
 removes a directory.
 .TP
 .B ki repo [repo-options] store create sources [--write]
 Preview the conventional opt-in OneDrive
-\fBsources-<repository-basename>\fR directory and registry binding. With
+\fBsources-<name>\fR directory and registry binding. The name is the
+repository basename, or a territory Capital's canonical handle: its
+territory_prefix, else its registry key. A Capital with neither fails. With
 \fB--write\fR, create and bind it. Automatic creation is unavailable for
 \fBlegacy\fR.
 .TP
@@ -1314,7 +1320,8 @@ nothing unless \fB--yes\fR is also supplied.
 \&
 .PP
 Territories derive membership from registered Capital declarations. Use the
-Capital's territory_prefix handle, or its registry key when no prefix exists.
+Capital's territory_prefix handle, or its registry key when no prefix exists;
+a declared territory_aliases entry selects the same territory.
 Exactly one of --territory, --estate and --principals is required for scoped
 commands. --principals selects only the registered Capitals: first the system
 Capital, whose territory includes knowledgeislands/ki-agentic-harness, then

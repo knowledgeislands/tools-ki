@@ -67,15 +67,30 @@ const capitals = async (entries: readonly LocalRegistryEntry[]): Promise<readonl
       throw new KiError(`territory handle ${capital.handle} is declared more than once`, 2)
     handles.add(capital.handle)
   }
+  // Handles and declared aliases share one selector namespace; any collision fails before selection.
+  const selectors = new Map(found.map((capital) => [capital.handle, capital]))
+  for (const capital of found)
+    for (const alias of capital.declaration.territory.aliases) {
+      const owner = selectors.get(alias)
+      if (owner)
+        throw new KiError(
+          `territory alias ${alias} of ${capital.handle} collides with ${owner.handle === alias ? 'the handle' : 'an alias'} of ${owner.handle}`,
+          2
+        )
+      selectors.set(alias, capital)
+    }
   return found.sort((left, right) => left.handle.localeCompare(right.handle, 'en'))
 }
-export const resolveTerritoryCapital = async (stateDirectory: string, handle: string): Promise<LocalRegistryEntry> => {
-  const entries = await requiredLocalRegistry(stateDirectory)
-  const found = await capitals(entries)
-  const capital = found.find((candidate) => candidate.handle === handle)
-  if (!capital) throw new KiError(`territory ${handle} is not declared by a registered Capital`, 2)
-  return capital.entry
+/** The Capital a handle or declared alias selects. */
+const selectedCapital = (found: readonly Capital[], selector: string): Capital => {
+  const capital = found.find(
+    (candidate) => candidate.handle === selector || candidate.declaration.territory.aliases.includes(selector)
+  )
+  if (!capital) throw new KiError(`territory ${selector} is not declared by a registered Capital`, 2)
+  return capital
 }
+export const resolveTerritoryCapital = async (stateDirectory: string, handle: string): Promise<LocalRegistryEntry> =>
+  selectedCapital(await capitals(await requiredLocalRegistry(stateDirectory)), handle).entry
 /**
  * Ranked handles lead in ranking order. The rest follow the derived order: the Capital whose
  * territory holds the canonical KI Harness, then territory name, then handle.
@@ -146,10 +161,7 @@ export const resolveTerritory = async (
       ? await rankedCapitals(entries, directories.configuration, warn)
       : { ordered: await capitals(entries), ranking: [] }
   if (selection.principals) return resolvePrincipals(ordered, filters)
-  const capital =
-    selection.territory === undefined ? undefined : ordered.find((entry) => entry.handle === selection.territory)
-  if (selection.territory !== undefined && !capital)
-    throw new KiError(`territory ${selection.territory} is not declared by a registered Capital`, 2)
+  const capital = selection.territory === undefined ? undefined : selectedCapital(ordered, selection.territory)
   const identities = capital?.declaration.territory.members ?? entries.map((entry) => entry.repository)
   // Registration completeness is authoritative before a basename filter can exclude anything.
   const scoped = identities.map((identity) => {

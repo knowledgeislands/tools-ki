@@ -691,11 +691,15 @@ describe('[ki repo trade]', () => {
       [bare.replace(`capital = "${capitalHome}"`, 'capital = "example/capital"'), capitalForm],
       [
         `${bare}territory_name = "Rogue"\n`,
-        '[skills.ki-repo].territory_name, [skills.ki-repo].territory_members and [skills.ki-repo].territory_prefix are permitted only in a territory Capital'
+        '[skills.ki-repo].territory_name, [skills.ki-repo].territory_members, [skills.ki-repo].territory_prefix and [skills.ki-repo].territory_aliases are permitted only in a territory Capital'
       ],
       [
         `${bare}territory_prefix = "rogue"\n`,
-        '[skills.ki-repo].territory_prefix are permitted only in a territory Capital'
+        '[skills.ki-repo].territory_aliases are permitted only in a territory Capital'
+      ],
+      [
+        `${bare}territory_aliases = []\n`,
+        '[skills.ki-repo].territory_aliases are permitted only in a territory Capital'
       ],
       [
         bare.replace('[skills.ki-repo-project]\n', '[skills]\nki-trades = "none"\n\n[skills.ki-repo-project]\n'),

@@ -51,7 +51,7 @@ ki repo store list
 ki repo --estate store list --format json
 ```
 
-To find conventional OneDrive `sources-<repository-basename>` directories that have no declared `sources` role, scan the current repository or selected estate:
+To find conventional OneDrive `sources-<name>` directories that have no declared `sources` role, scan the current repository or selected estate:
 
 ```sh
 ki repo store scan
@@ -69,7 +69,7 @@ ki repo store unbind sources
 ki repo store unbind sources --write
 ```
 
-Unbinding never deletes store content. For the established opt-in OneDrive source location, `ki repo store create sources` previews `sources-<repository-basename>` and `--write` creates and binds it. `legacy` has no automatic creation policy; bind its existing directory explicitly. Do not use stores for credentials.
+Unbinding never deletes store content. For the established opt-in OneDrive source location, `ki repo store create sources` previews `sources-<repository-basename>` and `--write` creates and binds it. A territory Capital's store is instead named by its canonical territory handle, `territory_prefix` or else its registry key, so `-t ki` and `-t knowledge-islands` both create `sources-knowledge-islands`; a prefixless Capital must be registered first. `store scan` checks a Capital under both its handle and its old basename name. `legacy` has no automatic creation policy; bind its existing directory explicitly. Do not use stores for credentials.
 
 ## Run an audit
 

@@ -202,11 +202,11 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### REPO-OPS-020 — Managed sources creation
 
-`ki repo store create sources` MUST derive the established opt-in OneDrive `sources-<repository-basename>` location, preview creation and binding by default, and perform both only with `--write`. It MUST refuse unavailable or unsafe managed roots, replacement of a different binding, and automatic creation for `legacy`.
+`ki repo store create sources` MUST derive the opt-in OneDrive `sources-<name>` location, preview creation and binding by default, and perform both only with `--write`. It MUST refuse unavailable or unsafe managed roots, replacement of a different binding, and automatic creation for `legacy`. The name MUST be the repository basename, except for a territory Capital, whose name MUST be its canonical territory handle (`territory_prefix`, else its registry key) whichever selector chose it; a Capital with neither MUST fail rather than fall back to its basename. Malformed Capital territory metadata MUST fail. A territory alias MUST NOT name a store.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/repo/store.test.ts` — `previews and creates the conventional managed sources store without touching VS Code` and `rejects automatic creation without its managed root or over a different binding`.
+_Verify:_ `src/tests/cli/repo/store.test.ts` — `previews and creates the conventional managed sources store without touching VS Code` and `rejects automatic creation without its managed root or over a different binding`; `src/tests/cli/repo/store-capital.test.ts` — `creates a Capital store under its canonical territory handle, whichever selector chose it` and `refuses to name a store for a prefixless Capital that is not registered`.
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
@@ -254,11 +254,11 @@ _Evidence:_ The named in-process CLI tests cover the horizon matrix and totals, 
 
 ### REPO-OPS-025 — Undeclared conventional sources
 
-`ki repo store scan` MUST inspect selected repositories for existing direct conventional OneDrive source directories without a declared `sources` store role. It MUST use the normal `ki repo` selectors, including `--estate` for all registered repositories, name the repository kind, and present an explicit declaration, migration, or retirement decision without changing any directory, declaration, or binding. Undeclared directories MUST be warnings with exit zero; unsafe store paths and unreadable declarations MUST be diagnostics with a nonzero exit. Invalid repository selection MUST fail before scanning.
+`ki repo store scan` MUST inspect selected repositories for existing direct conventional OneDrive source directories without a declared `sources` store role. It MUST use the normal `ki repo` selectors, including `--estate` for all registered repositories, name the repository kind, and present an explicit declaration, migration, or retirement decision without changing any directory, declaration, or binding. Undeclared directories MUST be warnings with exit zero; unsafe store paths, unreadable declarations and malformed Capital territory metadata MUST be diagnostics with a nonzero exit. For a territory Capital it MUST inspect both its canonical [REPO-OPS-020](#repo-ops-020--managed-sources-creation) name and its historical basename name, reporting a directory once when the names are equal. Invalid repository selection MUST fail before scanning.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/repo/store-scan.test.ts` — `warns about undeclared direct source stores without changing the registry or directories`, `scans the current repository and explicit selection without requiring registration`, and `reports unsafe and unavailable conventional source-store evidence separately`.
+_Verify:_ `src/tests/cli/repo/store-scan.test.ts` — `warns about undeclared direct source stores without changing the registry or directories`, `scans the current repository and explicit selection without requiring registration`, and `reports unsafe and unavailable conventional source-store evidence separately`; `src/tests/cli/repo/store-capital.test.ts` — `scans canonical and historical Capital store names, reporting an equal name once` and `diagnoses malformed Capital naming metadata without hiding other repositories`.
 
 _Evidence:_ The named in-process CLI tests cover current, explicit, and estate selection; Projects and Knowledge Bases; declared and absent stores; unchanged files; unsafe paths; and warning versus diagnostic exit status without network access.
 

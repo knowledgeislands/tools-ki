@@ -21,6 +21,7 @@ import {
   unbindRepositoryStore,
   validateRepositoryStore
 } from '../../core/storage/index.ts'
+import { scannedSourcesStoreNames, sourcesStoreNames } from '../../core/territory/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
 import type { RepositorySelection } from './selection.ts'
 
@@ -147,10 +148,14 @@ const createStoreScanCommand = (context: KiContext, selection: SelectRepositorie
       ])
       const entries = registry.state === 'valid' ? registry.repositories : []
       const report = await inspectUndeclaredSourcesStores(
-        repositories.map(({ root }) => ({
-          path: root,
-          repository: entries.find((entry) => entry.path === root)?.repository
-        })),
+        repositories.map(({ root }) => {
+          const entry = entries.find((candidate) => candidate.path === root)
+          return {
+            path: root,
+            repository: entry?.repository,
+            names: async () => scannedSourcesStoreNames(await sourcesStoreNames(root, entry?.key))
+          }
+        }),
         context.homeDirectory
       )
       context.stdout.write(
@@ -210,7 +215,16 @@ const createStoreCreateCommand = (context: KiContext, selection: SelectRepositor
         repository.roles,
         entries
       ).stores.find((store) => store.role === role)
-      const path = await managedSourcesStore(context.homeDirectory, repository.root)
+      const names = await sourcesStoreNames(
+        repository.root,
+        entries.find((entry) => entry.repository === repository.identity)?.key
+      )
+      if (names.capital && !names.canonical)
+        throw new KiError(
+          'territory Capital has no territory handle to name its sources store; register it with ki registry add or declare territory_prefix',
+          1
+        )
+      const path = await managedSourcesStore(context.homeDirectory, names.canonical ?? names.historical)
       if (current?.path && current.path !== path)
         throw new KiError(`sources store is already bound to ${current.path}; use ki repo store bind to replace it`, 2)
       const exists = Boolean(await lstat(path).catch(() => undefined))
