@@ -12,6 +12,8 @@ export interface KiContext {
   readonly stdout: Output
   readonly stderr: Output
   readonly executable: string
+  /** Command and leading arguments that start this same `ki` again, as a detached agent process does. */
+  readonly launcher: readonly [string, ...string[]]
   readonly installation: KiInstallationMode
   readonly installationProvenance: 'local' | 'release' | 'unknown'
   readonly architecture: string
@@ -42,6 +44,8 @@ export interface ContextOptions {
   readonly executable: string
   /** Internal update mode is independent of diagnostic provenance; callers default to regular. */
   readonly installation?: KiInstallationMode
+  /** Runtime that runs a local-mode entry script; defaults to this process's own runtime. */
+  readonly runtimeExecutable?: string
   readonly installationProvenance?: KiContext['installationProvenance']
   /** Process entrypoint evidence; source URLs require identified checkout markers. */
   readonly entrypointUrl?: string
@@ -95,11 +99,17 @@ export const createContext = async (options: ContextOptions): Promise<KiContext>
   const homeDirectory = await realpath(userHome(options.environment)).catch(() =>
     resolve(userHome(options.environment))
   )
+  const installation = options.installation ?? 'regular'
   return {
     stdout: options.stdout,
     stderr: options.stderr,
     executable: options.executable,
-    installation: options.installation ?? 'regular',
+    // A local-mode executable is the entry script, which only its runtime can start.
+    launcher:
+      installation === 'local'
+        ? [options.runtimeExecutable ?? process.execPath, options.executable]
+        : [options.executable],
+    installation,
     installationProvenance: options.installationProvenance ?? installationProvenance(options.entrypointUrl),
     architecture: options.architecture ?? process.arch,
     runtime: options.runtime ?? hostRuntime(),

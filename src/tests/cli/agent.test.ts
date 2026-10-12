@@ -451,6 +451,22 @@ describe('ki agent queue, dispatch and wait', () => {
     expect(again.stderr).toBe('ki: error: the r dispatcher is already running (pid 1001)\n')
   })
 
+  test('re-launches a local-mode ki through the runtime that runs its entry script', async () => {
+    const box = await sandbox()
+    const processes = fakeProcesses(box)
+    await box.state.mkdir('ki/agents/r')
+    await box.state.mkdir('ki/agents/s')
+
+    await box.run('ki agent dispatch r --max 2', { now, installation: 'local', runtimeExecutable: '/opt/bun' })
+    await box.run('ki agent dispatch s --max 2', { now, installation: 'local' })
+
+    const [explicit, inherited] = processes.launches as [AgentLaunch, AgentLaunch]
+    expect(explicit.command).toBe('/opt/bun')
+    expect(explicit.arguments.slice(0, 3)).toEqual([box.executable, 'agent', 'dispatch'])
+    expect(inherited.command).toBe(process.execPath)
+    expect(inherited.arguments[0]).toBe(box.executable)
+  })
+
   test('keeps up to the maximum running and launches the next as soon as one finishes', async () => {
     const box = await sandbox()
     box.setEnv({ TZ: 'UTC' })

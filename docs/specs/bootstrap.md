@@ -16,11 +16,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### BOOT-002 — Preserved user state on refresh
 
-`ki bootstrap --refresh` MUST preserve registered local and repository settings while refreshing the current unversioned configuration shape.
+`ki bootstrap --refresh` MUST preserve registered local and repository settings while refreshing the current unversioned configuration shape. Every command that rewrites the user configuration, including refresh, `ki dev local` and skill activation, MUST keep the values of every top-level table it does not own, such as `[territories]` and `[mcp]`.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/bootstrap/bootstrap.test.ts` — `preserves registered local and repository settings while refreshing configuration`.
+_Verify:_ `src/tests/cli/bootstrap/bootstrap.test.ts` — `preserves registered local and repository settings while refreshing configuration`; `src/tests/cli/dev/dev.test.ts` — `keeps the configuration tables it does not own when it rewrites the file`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

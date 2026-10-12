@@ -26,7 +26,7 @@ const agentContext = (context: KiContext): AgentContext => ({
   harnessDirectory: harnessDirectory(context.paths.data, DEFAULT_HARNESS),
   workingDirectory: context.workingDirectory,
   environment: context.environment,
-  executable: context.executable,
+  launcher: context.launcher,
   processes: context.agentProcesses,
   now: context.now
 })

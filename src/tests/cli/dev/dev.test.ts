@@ -1,4 +1,5 @@
 import { lstat, readlink, realpath, rename, rm, symlink, unlink } from 'node:fs/promises'
+import { parse } from 'smol-toml'
 import { describe, expect, test } from 'vitest'
 import { makeHarnessArchive } from '../_archive_helper.ts'
 import { type Sandbox, sandbox } from '../_cli_helper.ts'
@@ -125,6 +126,25 @@ path = ${JSON.stringify(harnessPath)}
         `${harnessPath}/skills/keystone/ki-bootstrap`
       )
       expect(config).toBe(expectedConfig)
+    })
+
+    test('keeps the configuration tables it does not own when it rewrites the file', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      const inventory = `${box.root.path}/mcp-servers.yaml`
+      const kept = `[territories]\nranking = ["personal", "knowledge-islands"]\n\n[mcp]\ninventory = ${JSON.stringify(inventory)}\n`
+      await box.config.write('ki/config.toml', `${await box.config.read('ki/config.toml')}\n${kept}`)
+
+      expect((await enableLocal(box, harnessPath)).exitCode).toBe(0)
+      expect((await box.run('ki bootstrap --refresh')).exitCode).toBe(0)
+
+      const config = await box.config.read('ki/config.toml')
+      expect(config).toContain(`[locals."knowledgeislands/ki-agentic-harness"]`)
+      const { territories, mcp } = parse(config)
+      expect({ territories, mcp }).toEqual(parse(kept))
+      expect((await box.run('ki diag')).output).not.toContain('unrecognised key')
     })
 
     test('remembers a local source without activating it', async () => {

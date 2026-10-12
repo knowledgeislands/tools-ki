@@ -16,7 +16,8 @@ export interface AgentContext {
   readonly harnessDirectory: string
   readonly workingDirectory: string
   readonly environment: Environment
-  readonly executable: string
+  /** Command and leading arguments that start this same `ki` again. */
+  readonly launcher: readonly [string, ...string[]]
   readonly processes: AgentProcesses
   readonly now: () => number
 }
@@ -227,8 +228,9 @@ const startRuntime = async (
 const startHold = (context: AgentContext, directory: string, request: LaunchRequest): Promise<number> => {
   const base = join(directory, request.name)
   return context.processes.launch({
-    command: context.executable,
+    command: context.launcher[0],
     arguments: [
+      ...context.launcher.slice(1),
       'agent',
       'launch',
       request.run,
@@ -419,8 +421,9 @@ export const startDispatcher = async (context: AgentContext, request: DispatchRe
   const live = await running(context, join(directory, 'dispatch.pid'))
   if (live) throw new KiError(`the ${request.run} dispatcher is already running (pid ${live})`, 1)
   const pid = await context.processes.launch({
-    command: context.executable,
+    command: context.launcher[0],
     arguments: [
+      ...context.launcher.slice(1),
       'agent',
       'dispatch',
       request.run,

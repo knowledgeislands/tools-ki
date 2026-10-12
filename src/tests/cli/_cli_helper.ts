@@ -242,6 +242,7 @@ export interface Sandbox {
       readonly agentProcesses?: 'default'
       readonly executable?: string
       readonly installation?: KiInstallationMode
+      readonly runtimeExecutable?: string
       readonly installationProvenance?: 'local' | 'release' | 'unknown'
       readonly entrypointUrl?: string
       readonly architecture?: string
@@ -333,6 +334,7 @@ const create = async (): Promise<Sandbox> => {
       readonly agentProcesses?: 'default'
       readonly executable?: string
       readonly installation?: KiInstallationMode
+      readonly runtimeExecutable?: string
       readonly installationProvenance?: 'local' | 'release' | 'unknown'
       readonly entrypointUrl?: string
       readonly architecture?: string
@@ -365,6 +367,7 @@ const create = async (): Promise<Sandbox> => {
       stderr: { write: write('stderr'), isTTY: options?.interactive, columns: options?.columns },
       executable,
       installation: options?.installation,
+      runtimeExecutable: options?.runtimeExecutable,
       installationProvenance: options?.installationProvenance,
       entrypointUrl: options?.entrypointUrl,
       architecture: options?.architecture,

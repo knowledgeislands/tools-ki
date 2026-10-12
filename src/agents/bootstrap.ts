@@ -1,4 +1,4 @@
-import { lstat, mkdir, readdir, readlink, realpath, symlink, unlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readlink, realpath, symlink, unlink } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../core/errors.ts'
 import { minimumBootstrapUserSkills } from '../core/harness/bootstrap-capabilities.ts'
@@ -9,10 +9,9 @@ import {
   inspectHarnessSourceRoot,
   readInstalledHarness
 } from '../core/harness/index.ts'
-import { inspectUserConfiguration, readConfiguration, renderConfiguration } from './configuration.ts'
+import { inspectUserConfiguration, readConfiguration, writeUserConfiguration } from './configuration.ts'
 import {
   type BootstrapConfiguration,
-  bootstrapConfigurationPath,
   type InstalledAgent,
   type LocalDevelopmentConfiguration,
   type ManagedUserSkill,
@@ -104,7 +103,6 @@ export const configureBootstrapAgents = async (options: {
   readonly refresh?: boolean
   readonly dropLegacyRepositories?: boolean
 }): Promise<BootstrapConfiguration> => {
-  const path = bootstrapConfigurationPath(options.configurationDirectory)
   const state = await lstat(options.configurationDirectory).catch(() => undefined)
   if (state && (!state.isDirectory() || state.isSymbolicLink()))
     throw new KiError('ki configuration directory must be a directory', 1)
@@ -117,18 +115,13 @@ export const configureBootstrapAgents = async (options: {
   const agents = options.refresh || !configured ? await detectAgents(options.homeDirectory) : configured
   if (!configured) {
     await mkdir(options.configurationDirectory, { recursive: true })
-    await writeFile(
-      path,
-      renderConfiguration(
-        agents,
-        existing.harnesses,
-        existing.skills,
-        existing.locals,
-        options.dropLegacyRepositories ? [] : existing.repositories
-      ),
-      {
-        encoding: 'utf8'
-      }
+    await writeUserConfiguration(
+      options.configurationDirectory,
+      agents,
+      existing.harnesses,
+      existing.skills,
+      existing.locals,
+      options.dropLegacyRepositories ? [] : existing.repositories
     )
   }
   return { agents, disposition: options.refresh ? 'refreshed' : !configured ? 'created' : 'reused' }
@@ -171,12 +164,13 @@ export const refreshUserConfiguration = async (
   const existing = await inspectUserConfiguration(configurationDirectory)
   const harnesses = installed.map((harness) => harness.id).sort((left, right) => left.localeCompare(right))
   const skills = await discoverManagedUserSkills(agents, installed)
-  await writeFile(
-    bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(agents, harnesses, skills, locals, options.dropLegacyRepositories ? [] : existing.repositories),
-    {
-      encoding: 'utf8'
-    }
+  await writeUserConfiguration(
+    configurationDirectory,
+    agents,
+    harnesses,
+    skills,
+    locals,
+    options.dropLegacyRepositories ? [] : existing.repositories
   )
   return { harnesses: harnesses.length, skills: skills.length }
 }

@@ -1,6 +1,6 @@
 import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
-import { parse } from 'smol-toml'
+import { parse, stringify } from 'smol-toml'
 import {
   declaredRepositoryIdentity,
   REPOSITORY_DECLARATION_FILE,
@@ -23,12 +23,32 @@ import {
   type UserConfigurationInspection
 } from './internal.ts'
 
+/** Top-level keys the bootstrap writer renders; every other table belongs to another reader. */
+const OWNED_KEYS = ['schema', 'agents', 'harnesses', 'skills', 'locals', 'repositories']
+/** Top-level tables other `ki` readers own, such as the territory ranking and the MCP inventory. */
+const DELEGATED_KEYS = ['territories', 'mcp']
+
+/**
+ * The current file's tables the bootstrap writer does not own, kept so a rewrite never drops a
+ * setting another reader validates. A missing or unparseable file has nothing to keep.
+ */
+const preservedTables = async (configurationDirectory: string): Promise<Record<string, unknown>> => {
+  let parsed: Record<string, unknown>
+  try {
+    parsed = parse(await readFile(bootstrapConfigurationPath(configurationDirectory), 'utf8'))
+  } catch {
+    return {}
+  }
+  return Object.fromEntries(Object.entries(parsed).filter(([key]) => !OWNED_KEYS.includes(key)))
+}
+
 export const renderConfiguration = (
   agents: readonly InstalledAgent[],
   harnesses: readonly string[] = [],
   skills: readonly string[] = [],
   locals: readonly LocalDevelopmentConfiguration[] = [],
-  repositories: readonly string[] = []
+  repositories: readonly string[] = [],
+  preserved: Record<string, unknown> = {}
 ): string =>
   [
     '[agents]',
@@ -58,8 +78,26 @@ export const renderConfiguration = (
           ']'
         ]
       : []),
+    ...(Object.keys(preserved).length ? ['', stringify(preserved).trimEnd()] : []),
     ''
   ].join('\n')
+
+/** Rewrites the user configuration, keeping every table the bootstrap writer does not own. */
+export const writeUserConfiguration = async (
+  configurationDirectory: string,
+  agents: readonly InstalledAgent[],
+  harnesses: readonly string[],
+  skills: readonly string[],
+  locals: readonly LocalDevelopmentConfiguration[],
+  repositories: readonly string[]
+): Promise<void> => {
+  const preserved = await preservedTables(configurationDirectory)
+  await writeFile(
+    bootstrapConfigurationPath(configurationDirectory),
+    renderConfiguration(agents, harnesses, skills, locals, repositories, preserved),
+    'utf8'
+  )
+}
 
 const inspectStringList = (value: unknown, key: string, errors: string[]): string[] => {
   if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string' || !entry)) {
@@ -148,7 +186,7 @@ export const inspectUserConfiguration = async (
     repositories?: unknown
   }
   const warnings = Object.keys(configuration)
-    .filter((key) => !['schema', 'agents', 'harnesses', 'skills', 'locals', 'repositories'].includes(key))
+    .filter((key) => ![...OWNED_KEYS, ...DELEGATED_KEYS].includes(key))
     .map((key) => `unrecognised key ${key}`)
   const errors: string[] = []
   if (configuration.schema !== undefined && configuration.schema !== 1) errors.push('schema must equal 1 when present')
@@ -328,10 +366,13 @@ export const setLocalBootstrapHarness = async (
   const agents = await configuredAgents({ homeDirectory, configurationDirectory })
   const inspection = await inspectUserConfiguration(configurationDirectory)
   const locals = [...inspection.locals.filter((candidate) => candidate.harness !== local.harness), local]
-  await writeFile(
-    bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(agents, inspection.harnesses, inspection.skills, locals, inspection.repositories),
-    'utf8'
+  await writeUserConfiguration(
+    configurationDirectory,
+    agents,
+    inspection.harnesses,
+    inspection.skills,
+    locals,
+    inspection.repositories
   )
 }
 
@@ -342,10 +383,13 @@ export const setConfiguredUserSkills = async (
 ): Promise<void> => {
   const agents = await configuredAgents({ homeDirectory, configurationDirectory })
   const inspection = await inspectUserConfiguration(configurationDirectory)
-  await writeFile(
-    bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(agents, inspection.harnesses, skills, inspection.locals, inspection.repositories),
-    'utf8'
+  await writeUserConfiguration(
+    configurationDirectory,
+    agents,
+    inspection.harnesses,
+    skills,
+    inspection.locals,
+    inspection.repositories
   )
 }
 
