@@ -3,12 +3,17 @@ id: KI-TOOL-KI-CLI-115
 area: CLI
 title: Enforce roadmap writing checkout
 project: agent-host
-status: triage
+kind: deliver
+horizon: hold
+status: draft
+hold:
+  reason: parked
+  condition: Kris explicitly releases local planning through Techne agent-host.
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-08T07:24:10Z
-updated_at: 2026-10-09T21:53:46Z
+updated_at: 2026-10-12T07:13:21Z
 ---
 
 # Enforce Roadmap Writing Checkout
@@ -38,3 +43,7 @@ The `ki-work-roadmap` standard already requires every roadmap write to be serial
 - Is a per-machine marker (as on the agent host) a designation, or only an exclusion?
 - The [durability report](https://github.com/knowledgeislands/ki-principal/blob/a94b76c/Streams/Projects/agent-host/design/agent-host-durability-report.md) records both reviewers' view that a remote-`main` design needs its own approval, because a standing push breaks the bound that pushes happen only when asked, and that ledger-only commits can still be dropped on rebase.
 - Merged on 2026-10-09 with Kris's approval (state-of-play decisions log, Decision 21): this record absorbed `ki-agentic-harness`'s work to declare the roadmap writing checkout, which the harness cancelled as merged into this record, because `tools-ki` owns the enforcing behaviour. The harness keeps the `ki-work-roadmap` standard change.
+
+### Adoption and hold approval
+
+Kris approved adoption in tools-burndown Decision 11 (12 October 2026): "I approve your recommendation, I can review it further later". This record is adopted as Deliver / draft on Hold. Local planning remains held until Kris explicitly releases it through Techne agent-host. Adoption grants no planning, implementation, acceptance or release authority.
