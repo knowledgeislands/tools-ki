@@ -151,7 +151,7 @@ describe('[ki completion]', () => {
     expect(bash.output).toContain("'repo roadmap')")
     expect(bash.output).toContain("'repo trade routes')")
     expect(bash.output).toContain(
-      "'repo trade routes list') printf '%s\\n' '-V --version -h --help --repo -t --territory -f --filter --estate --incomplete --format'"
+      "'repo trade routes list') printf '%s\\n' '-V --version -h --help --repo -t --territory -f --filter --estate --principals --incomplete --format'"
     )
     expect(bash.output).toContain("'repo trade standing capture:--capture')")
     expect(bash.output).toContain("'repo trade policy compare:--baseline')")

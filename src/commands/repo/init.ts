@@ -15,6 +15,7 @@ export const createRepoInitCommand = (
     readonly territory?: string
     readonly filters?: readonly string[]
     readonly estate?: boolean
+    readonly principals?: boolean
   }
 ): Command =>
   new Command('init')
@@ -50,9 +51,10 @@ export const createRepoInitCommand = (
           selection.repositories.length ||
           selection.territory !== undefined ||
           selection.estate ||
+          selection.principals ||
           selection.filters?.length
         )
-          throw new KiError('ki repo init does not accept --repo, --territory, or --estate', 2)
+          throw new KiError('ki repo init does not accept --repo, --territory, --estate, or --principals', 2)
         const declaration = renderRepositoryDeclaration({
           title: options.title ?? '',
           description: options.description ?? '',

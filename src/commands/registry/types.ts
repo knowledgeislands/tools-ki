@@ -3,4 +3,5 @@ export interface RegistrySelection {
   readonly territory?: string
   readonly filters?: readonly string[]
   readonly estate?: boolean
+  readonly principals?: boolean
 }

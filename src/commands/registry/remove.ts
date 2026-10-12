@@ -12,8 +12,8 @@ const removalSelector = async (
   key: string | undefined,
   selection: RegistrySelection
 ): Promise<LocalRegistryRemovalSelector> => {
-  if (selection.territory !== undefined || selection.estate || selection.filters?.length)
-    throw grammarError('ki registry remove does not accept --territory, --estate, or --filter')
+  if (selection.territory !== undefined || selection.estate || selection.principals || selection.filters?.length)
+    throw grammarError('ki registry remove does not accept --territory, --estate, --principals, or --filter')
   if (selection.repositories.length > 1) throw grammarError('ki registry remove accepts exactly one --repo path')
   const repository = selection.repositories[0]
   if (key !== undefined) {

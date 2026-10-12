@@ -6,7 +6,7 @@ Two ideas carry the whole surface. **Selection happens before anything runs**, a
 
 ## Select targets
 
-Use repeated `--repo <path-or-pattern>` for explicit physical roots. Use `-t, --territory <handle>` for a registered Capital's declared members, or `--estate` for every registered repository. These primary scopes are mutually exclusive. The optional Capital-only `territory_prefix` supplies the handle; without it use the Capital's local registry key.
+Use repeated `--repo <path-or-pattern>` for explicit physical roots. Use `-t, --territory <handle>` for a registered Capital's declared members, `--estate` for every registered repository, or `--principals` for the registered territory Capitals alone, system Capital first. These primary scopes are mutually exclusive. The optional Capital-only `territory_prefix` supplies the handle; without it use the Capital's local registry key.
 
 Repeated `-f, --filter <prefix>` arguments narrow directory basenames literally and case-sensitively with OR semantics. Filter alone narrows the native current-repository or direct-CWD mGit workspace default. Filtering happens before nested worktree expansion; empty prefixes and no matches fail.
 

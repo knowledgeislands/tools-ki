@@ -14,6 +14,7 @@ export const createRegistryListCommand = (context: KiContext, selection: () => R
         selectors.repositories.length ||
         selectors.territory !== undefined ||
         selectors.estate ||
+        selectors.principals ||
         selectors.filters?.length
       )
         throw grammarError('ki registry list does not accept repository selectors')

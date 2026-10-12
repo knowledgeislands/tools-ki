@@ -1,4 +1,5 @@
 export {
+  DEFAULT_HARNESS,
   declaredKnowledgeBaseStoreRoles,
   declaredRepositoryIdentity,
   declaredRepositoryKind,

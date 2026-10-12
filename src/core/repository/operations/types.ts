@@ -53,6 +53,7 @@ export interface RepositorySelection {
   readonly territory?: string
   readonly filters?: readonly string[]
   readonly estate?: boolean
+  readonly principals?: boolean
   readonly skill?: string
   readonly onSkippedMgitMembers?: (members: readonly string[]) => void
 }

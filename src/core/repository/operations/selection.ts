@@ -39,6 +39,7 @@ export const selectRepositorySkills = async (
     territory: options.territory,
     filters: options.filters,
     estate: options.estate,
+    principals: options.principals,
     configurationDirectory: context.configurationDirectory,
     stateDirectory: context.stateDirectory,
     workingDirectory: context.workingDirectory,

@@ -284,7 +284,7 @@ test('refuses non-Git targets and invalid or incomplete explicit identity metada
   })
   expect(selectors).toEqual({
     exitCode: 2,
-    output: 'ki: error: ki repo init does not accept --repo, --territory, or --estate\n'
+    output: 'ki: error: ki repo init does not accept --repo, --territory, --estate, or --principals\n'
   })
   await expect(box.project.read('.ki.toml')).rejects.toThrow()
 })
@@ -597,11 +597,11 @@ test('requires exactly one key or path and rejects bulk or unknown registry remo
   })
   expect(territory).toEqual({
     exitCode: 2,
-    output: 'ki: error: ki registry remove does not accept --territory, --estate, or --filter\n'
+    output: 'ki: error: ki registry remove does not accept --territory, --estate, --principals, or --filter\n'
   })
   expect(estate).toEqual({
     exitCode: 2,
-    output: 'ki: error: ki registry remove does not accept --territory, --estate, or --filter\n'
+    output: 'ki: error: ki registry remove does not accept --territory, --estate, --principals, or --filter\n'
   })
   expect(invalidKey).toEqual({
     exitCode: 2,

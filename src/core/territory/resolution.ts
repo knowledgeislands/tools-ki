@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'smol-toml'
-import { REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
+import { DEFAULT_HARNESS, REPOSITORY_DECLARATION_FILE } from '../configuration/index.ts'
 import { KiError } from '../errors.ts'
 import { targetFromDirectory } from '../repository/location.ts'
 import { type LocalRegistryEntry, requiredLocalRegistry } from '../storage/index.ts'
@@ -12,6 +12,7 @@ import type { TerritoryMember, TerritoryProfile } from './types.ts'
 export interface TerritorySelection {
   readonly territory?: string
   readonly estate?: boolean
+  readonly principals?: boolean
   readonly filters: readonly string[]
 }
 interface Capital {
@@ -67,15 +68,50 @@ export const resolveTerritoryCapital = async (stateDirectory: string, handle: st
   if (!capital) throw new KiError(`territory ${handle} is not declared by a registered Capital`, 2)
   return capital.entry
 }
+/** The Capital whose territory holds the canonical KI Harness leads; the rest follow by territory name. */
+const SYSTEM_HARNESS = `https://github.com/${DEFAULT_HARNESS}`
+const principalOrder = (found: readonly Capital[]): readonly Capital[] =>
+  [...found].sort(
+    (left, right) =>
+      Number(!left.declaration.territory.members.includes(SYSTEM_HARNESS)) -
+        Number(!right.declaration.territory.members.includes(SYSTEM_HARNESS)) ||
+      left.declaration.territory.name.localeCompare(right.declaration.territory.name, 'en') ||
+      left.handle.localeCompare(right.handle, 'en')
+  )
+const memberAt = async (entry: LocalRegistryEntry, kind: TerritoryMember['kind']): Promise<TerritoryMember> => {
+  const target = await targetFromDirectory(
+    entry.path,
+    `${entry.key}: selected root must be an existing physical directory`
+  )
+  return { key: entry.key, repository: entry.repository, root: target.root, kind }
+}
+const resolvePrincipals = async (
+  entries: readonly LocalRegistryEntry[],
+  filters: readonly string[]
+): Promise<TerritoryProfile> => {
+  const selected = principalOrder(await capitals(entries)).filter((capital) =>
+    matchesDirectoryName(capital.entry.path, filters)
+  )
+  if (!selected.length) throw new KiError('repository selection matched no repositories', 2)
+  const members: TerritoryMember[] = []
+  for (const capital of selected) members.push(await memberAt(capital.entry, 'owner'))
+  return { id: 'principals', title: 'Territory Capitals', members, roots: members, system: true }
+}
 export const resolveTerritory = async (
   stateDirectory: string,
   selection: TerritorySelection
 ): Promise<TerritoryProfile> => {
-  if (Number(selection.territory !== undefined) + Number(Boolean(selection.estate)) !== 1)
-    throw new KiError('select exactly one of --territory or --estate', 2)
+  if (
+    Number(selection.territory !== undefined) +
+      Number(Boolean(selection.estate)) +
+      Number(Boolean(selection.principals)) !==
+    1
+  )
+    throw new KiError('select exactly one of --territory, --estate, or --principals', 2)
   const { filters } = selection
   validateFilters(filters)
   const entries = await requiredLocalRegistry(stateDirectory)
+  if (selection.principals) return resolvePrincipals(entries, filters)
   const found = await capitals(entries)
   const capital =
     selection.territory === undefined ? undefined : found.find((entry) => entry.handle === selection.territory)
@@ -92,22 +128,14 @@ export const resolveTerritory = async (
   if (!selected.length) throw new KiError('repository selection matched no repositories', 2)
   const members: TerritoryMember[] = []
   for (const entry of selected) {
-    const target = await targetFromDirectory(
-      entry.path,
-      `${entry.key}: selected root must be an existing physical directory`
-    )
+    const member = await memberAt(entry, entry === capital?.entry ? 'owner' : 'member')
     const declaration = await declarationAt(entry)
     if (capital && declaration.capital !== capital.entry.repository)
       throw new KiError(
         `${entry.key}: declared Capital ${declaration.capital} differs from territory ${capital.handle}`,
         2
       )
-    members.push({
-      key: entry.key,
-      repository: entry.repository,
-      root: target.root,
-      kind: entry === capital?.entry ? 'owner' : 'member'
-    })
+    members.push(member)
   }
   // Code-point order; each root's checkout identity was verified, so no two roots are equal.
   members.sort((left, right) => (left.root < right.root ? -1 : 1))

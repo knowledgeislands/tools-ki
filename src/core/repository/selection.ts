@@ -130,6 +130,7 @@ interface RepositorySelection {
   readonly territory?: string
   readonly filters?: readonly string[]
   readonly estate?: boolean
+  readonly principals?: boolean
   readonly configurationDirectory: string
   readonly stateDirectory: string
   readonly workingDirectory: string
@@ -139,10 +140,13 @@ interface RepositorySelection {
 
 const selectRepositoryTargets = async (options: RepositorySelection): Promise<readonly RepositoryLocation[]> => {
   const selectorCount =
-    Number(options.repositories.length > 0) + Number(options.territory !== undefined) + Number(Boolean(options.estate))
+    Number(options.repositories.length > 0) +
+    Number(options.territory !== undefined) +
+    Number(Boolean(options.estate)) +
+    Number(Boolean(options.principals))
   const filters = options.filters ?? []
   validateFilters(filters)
-  if (selectorCount > 1) throw new KiError('--repo, --territory, and --estate cannot be used together', 2)
+  if (selectorCount > 1) throw new KiError('--repo, --territory, --estate, and --principals cannot be used together', 2)
   if (options.repositories.length) {
     const targets: RepositoryLocation[] = []
     for (const value of options.repositories) {
@@ -167,7 +171,7 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
     if (!targets.length) throw new KiError('repository selection matched no repositories', 2)
     return distinctTargets(targets, '--repo')
   }
-  if (options.territory !== undefined || options.estate) {
+  if (options.territory !== undefined || options.estate || options.principals) {
     const profile = await resolveTerritory(options.stateDirectory, { ...options, filters })
     return profile.roots.map((member) => ({
       root: member.root,

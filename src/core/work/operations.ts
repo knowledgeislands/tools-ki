@@ -48,6 +48,7 @@ export interface RoadmapSelection {
   readonly territory?: string
   readonly filters?: readonly string[]
   readonly estate?: boolean
+  readonly principals?: boolean
 }
 
 export interface RoadmapOperationContext {

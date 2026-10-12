@@ -16,7 +16,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### TERRITORY-002 — Literal filters and native defaults
 
-Supported operations MUST accept `-t, --territory`, `--estate` and repeatable `-f, --filter`. Primary scopes MUST conflict with one another and explicit repository selection. Filters MUST match directory basenames literally and case-sensitively with OR semantics, before worktree expansion, including on the caller's native default. Empty values and zero matches MUST fail. Commands that cannot use selectors MUST reject them.
+Supported operations MUST accept `-t, --territory`, `--estate`, `--principals` and repeatable `-f, --filter`. Primary scopes MUST conflict with one another and explicit repository selection. Filters MUST match directory basenames literally and case-sensitively with OR semantics, before worktree expansion, including on the caller's native default. Empty values and zero matches MUST fail. Commands that cannot use selectors MUST reject them.
 
 _Conformance:_ conforming
 
@@ -41,6 +41,16 @@ Territory opening MUST use the existing local target adapters. Inspection MUST r
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/territory/inspect.test.ts` and territory opening fixtures.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### TERRITORY-005 — Principals selection
+
+`--principals` MUST select every registered Capital discovered from its available checkout and no other repository, each as an owner root. The system Capital, whose `territory_members` include the canonical KI Harness `https://github.com/knowledgeislands/ki-agentic-harness`, MUST come first; the remaining Capitals MUST follow by territory name in English collation, then by handle. Without such a Capital the name order MUST apply to all. Literal filters MUST narrow Capital basenames without changing that order. Opening MUST preserve the order in each target's resulting project list, compensating for Zed's prepend behaviour.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/core/territory/resolution.ts`; `src/tests/cli/territory/principals.test.ts` exercises ordering, filters, conflicts, inspection, repository, registry and trade selection, and the Zed, VS Code and Delta invocation order.
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

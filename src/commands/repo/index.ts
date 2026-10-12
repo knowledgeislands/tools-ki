@@ -32,14 +32,22 @@ export const createRepoCommand = (context: KiContext): Command => {
       []
     )
     .option('--estate', 'select every repository in the registered estate')
+    .option('--principals', 'select every registered territory Capital')
   const selectedRepositories = (): RepositorySelection => {
     const options = command.opts<{
       repo: readonly string[]
       territory?: string
       filter?: readonly string[]
       estate?: boolean
+      principals?: boolean
     }>()
-    return { repositories: options.repo, territory: options.territory, filters: options.filter, estate: options.estate }
+    return {
+      repositories: options.repo,
+      territory: options.territory,
+      filters: options.filter,
+      estate: options.estate,
+      principals: options.principals
+    }
   }
 
   command

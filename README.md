@@ -65,7 +65,9 @@ Neither command changes user or repository skill activation. [Maintain a local i
 
 A Capital owns its territory through `[skills.ki-repo].territory_name` and `territory_members`. The Capital names itself in `capital` and lists every member, including itself, in sorted canonical HTTPS GitHub identity order. Member repositories declare the same `capital`; selection does not depend on a trade policy.
 
-The optional Capital-only `territory_prefix` supplies the territory handle, such as `ki`. Without it, use the Capital's local registry key. An explicit prefix replaces that key as a selector. `ki territory list` discovers these handles; `show`, `audit`, `open` and `inspect` accept `-t, --territory <handle>` or `--estate`.
+The optional Capital-only `territory_prefix` supplies the territory handle, such as `ki`. Without it, use the Capital's local registry key. An explicit prefix replaces that key as a selector. `ki territory list` discovers these handles; `show`, `audit`, `open` and `inspect` accept `-t, --territory <handle>`, `--estate` or `--principals`.
+
+`--principals` selects only the registered territory Capitals. The system Capital — the one whose territory includes the canonical KI Harness, `knowledgeislands/ki-agentic-harness` — comes first, then the others by territory name. `ki territory open --principals --target zed` opens them so Zed's project list follows that order; VS Code and Delta receive the same order.
 
 `ki territory roots --null --territory knowledge-islands` returns deterministic absolute primary checkout paths separated by NUL bytes. Repeated `-f, --filter <prefix>` arguments narrow the directory basenames literally and case-sensitively, with OR semantics. Registration and naming metadata must be complete before filtering; an excluded registered unavailable checkout does not prevent a selected operation. The endpoint validates the complete selection before writing stdout.
 
@@ -73,7 +75,7 @@ The optional Capital-only `territory_prefix` supplies the territory handle, such
 
 ## Select repository targets
 
-Supported `ki repo` operations accept repeated `--repo <path-or-pattern>`, `-t, --territory <handle>`, or `--estate`. These primary scopes are mutually exclusive. Repeated `-f, --filter <prefix>` values narrow any scope, including the native default, using literal case-sensitive directory basenames. Empty prefixes or no matches fail before execution.
+Supported `ki repo` operations accept repeated `--repo <path-or-pattern>`, `-t, --territory <handle>`, `--estate`, or `--principals`. These primary scopes are mutually exclusive. Repeated `-f, --filter <prefix>` values narrow any scope, including the native default, using literal case-sensitive directory basenames. Empty prefixes or no matches fail before execution.
 
 Without an explicit scope, KI keeps the current repository or direct-CWD `.mgit.toml` selection. Workspace manifests select their existing members, recurse through child workspaces, skip bare stores and apply filters before nested `main/` checkout expansion. KI never invokes `mgit`. Every selected physical root must be available; registered territory members must match their canonical identity and Capital. Registration completeness is checked before filtering.
 
@@ -106,6 +108,7 @@ ki territory show --estate
 ki territory roots --estate | xargs -n 1 sh -c 'git -C "$1" status --short' _
 ki territory roots --estate --null | xargs -0 -n 1 sh -c 'git -C "$1" status --short' _
 ki territory open --estate --target zed
+ki territory open --principals --target zed
 ki repo init --repository https://github.com/example/example --capital https://github.com/example/example --title 'Example repository' --description 'An explicit KI repository identity.' --repo-code EXAMPLE --runtime claude-code --runtime chatgpt-codex --visibility private
 ki diag
 ki repo diag

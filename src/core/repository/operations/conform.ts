@@ -55,6 +55,7 @@ const repositoryTargets = (context: RepositoryOperationContext, selection: Repos
     territory: selection.territory,
     filters: selection.filters,
     estate: selection.estate,
+    principals: selection.principals,
     configurationDirectory: context.configurationDirectory,
     stateDirectory: context.stateDirectory,
     workingDirectory: context.workingDirectory,

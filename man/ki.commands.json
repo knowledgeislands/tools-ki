@@ -141,11 +141,15 @@
         },
         {
           "invocation": "-t, --territory <handle>",
-          "description": "Select the Capital's declared territory through its territory_prefix, or its registry key when no prefix is declared. The registry maps every canonical member identity before filtering. This scope conflicts with --repo and --estate."
+          "description": "Select the Capital's declared territory through its territory_prefix, or its registry key when no prefix is declared. The registry maps every canonical member identity before filtering. This scope conflicts with --repo, --estate and --principals."
         },
         {
           "invocation": "--estate",
-          "description": "Select every repository in the registered estate, conflicting with --repo and --territory. Without an explicit scope, keep the current repository or direct-CWD \\&.mgit.toml workspace selection. KI does not invoke mgit."
+          "description": "Select every repository in the registered estate, conflicting with --repo, --territory and --principals."
+        },
+        {
+          "invocation": "--principals",
+          "description": "Select every registered territory Capital, system Capital first and the rest by territory name, conflicting with --repo, --territory and --estate. Without an explicit scope, keep the current repository or direct-CWD \\&.mgit.toml workspace selection. KI does not invoke mgit."
         },
         {
           "invocation": "-f, --filter <prefix>",
@@ -292,7 +296,7 @@
       "purpose": "Use these root-level commands to record and list canonical KI repository roots in $XDG_STATE_HOME/ki/registry.toml. Registry membership is an inventory, not a repository-operation or conformance verdict. The repository key names each record; each record holds a canonical HTTPS GitHub repository identity and physical checkout path.",
       "commands": [
         {
-          "invocation": "ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [-f|--filter <prefix>]... add [--dry-run] [--search-boundary <id>]",
+          "invocation": "ki registry [--repo <path-or-pattern>]... [-t|--territory <handle>] [--estate] [--principals] [-f|--filter <prefix>]... add [--dry-run] [--search-boundary <id>]",
           "description": "Record selected canonical KI repository roots in $XDG_STATE_HOME/ki/registry.toml without applying repository repairs. This explicit inventory action validates the selected root's declared canonical identity and preserves existing entries. It never searches outside the supplied target selection. The command writes by default; --dry-run reports proposed registration without creating the state directory or changing disk state."
         },
         {
@@ -337,7 +341,7 @@
     },
     {
       "name": "Trades",
-      "purpose": "Use these commands with repositories that declare the portable ki-repo-trades capability and are present in the local registered repository estate. Routes and standing grants come only from the territory Capital's [skills.ki-trades.territory] policy, resolved through each repository's declared [skills.ki-repo].capital; no command edits that policy, and a member declaration carries no route table. Parent --repo, --territory, and --estate selectors scope reads; mutations require exactly one selected registered repository. Every mutation writes only the selected repository, a granted route gives visibility rather than acceptance or retention, and no command changes a peer roadmap or knowledge. A repository that declares ki-trades but whose Capital does not resolve is never dropped silently. Aggregate routes list and trade list views, and policy compare, print skipped: <identity> (<reason>) for it and add SKIPPED=n to the summary; under --format json, and for trade show, the line is written to standard error so standard output is unchanged. Selected alone, such a repository fails closed with the reason.",
+      "purpose": "Use these commands with repositories that declare the portable ki-repo-trades capability and are present in the local registered repository estate. Routes and standing grants come only from the territory Capital's [skills.ki-trades.territory] policy, resolved through each repository's declared [skills.ki-repo].capital; no command edits that policy, and a member declaration carries no route table. Parent --repo, --territory, --estate and --principals selectors scope reads; mutations require exactly one selected registered repository. Every mutation writes only the selected repository, a granted route gives visibility rather than acceptance or retention, and no command changes a peer roadmap or knowledge. A repository that declares ki-trades but whose Capital does not resolve is never dropped silently. Aggregate routes list and trade list views, and policy compare, print skipped: <identity> (<reason>) for it and add SKIPPED=n to the summary; under --format json, and for trade show, the line is written to standard error so standard output is unchanged. Selected alone, such a repository fails closed with the reason.",
       "commands": [
         {
           "invocation": "ki repo [repo-options] trade routes list [--incomplete] [--format text|json]",
@@ -411,31 +415,31 @@
     },
     {
       "name": "Territory management",
-      "purpose": "Territories derive membership from registered Capital declarations. Use the Capital's territory_prefix handle, or its registry key when no prefix exists. Exactly one of --territory and --estate is required for scoped commands. Repeated --filter values match directory basenames literally and case-sensitively.",
+      "purpose": "Territories derive membership from registered Capital declarations. Use the Capital's territory_prefix handle, or its registry key when no prefix exists. Exactly one of --territory, --estate and --principals is required for scoped commands. --principals selects only the registered Capitals: first the system Capital, whose territory includes knowledgeislands/ki-agentic-harness, then the rest by territory name. Repeated --filter values match directory basenames literally and case-sensitively.",
       "commands": [
         {
           "invocation": "ki territory list",
           "description": "List registered territory handles, titles, Capitals and declared member counts."
         },
         {
-          "invocation": "ki territory audit (--territory <handle>|--estate) [--filter <prefix>]...",
+          "invocation": "ki territory audit (--territory <handle>|--estate|--principals) [--filter <prefix>]...",
           "description": "Validate the complete selection and its physical checkouts without mutation."
         },
         {
-          "invocation": "ki territory inspect (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode> --workspace <selector>",
+          "invocation": "ki territory inspect (--territory <handle>|--estate|--principals) [--filter <prefix>]... --target <zed|vscode> --workspace <selector>",
           "description": "Compare selected roots with one explicit local editor projection. Exit 0 for exact state, 1 for drift or unsupported source, and 2 for invalid selection."
         },
         {
-          "invocation": "ki territory show (--territory <handle>|--estate) [--filter <prefix>]... [--verbose]",
+          "invocation": "ki territory show (--territory <handle>|--estate|--principals) [--filter <prefix>]... [--verbose]",
           "description": "Show selected repositories, optionally with canonical identities and paths."
         },
         {
-          "invocation": "ki territory roots (--territory <handle>|--estate) [--filter <prefix>]... [--null]",
+          "invocation": "ki territory roots (--territory <handle>|--estate|--principals) [--filter <prefix>]... [--null]",
           "description": "Write deterministic absolute primary checkout roots. Use --null or -0 for NUL termination. Validate the complete selection before writing any stdout bytes."
         },
         {
-          "invocation": "ki territory open (--territory <handle>|--estate) [--filter <prefix>]... --target <zed|vscode|delta>",
-          "description": "Open the selected repositories through an explicit existing local adapter."
+          "invocation": "ki territory open (--territory <handle>|--estate|--principals) [--filter <prefix>]... --target <zed|vscode|delta>",
+          "description": "Open the selected repositories through an explicit existing local adapter. Each target's project list follows the selection order; Zed, which prepends each folder, is opened in reverse."
         }
       ]
     },

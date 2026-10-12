@@ -36,11 +36,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REGISTRY-004 — Registered-estate selector
 
-`ki registry --estate add` MUST resolve the registered estate; `--territory <handle>` MUST resolve the Capital's membership. Repeated literal `--filter <prefix>` values MUST narrow the selected basenames before root validation. `list` and `remove` MUST reject selectors they cannot apply, and removal MUST retain its exactly-one key or path contract.
+`ki registry --estate add` MUST resolve the registered estate; `--territory <handle>` MUST resolve the Capital's membership; `--principals` MUST resolve the registered territory Capitals. Repeated literal `--filter <prefix>` values MUST narrow the selected basenames before root validation. `list` and `remove` MUST reject selectors they cannot apply, and removal MUST retain its exactly-one key or path contract.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/registry/registry.test.ts` — `lists registered repositories as a newline-delimited absolute-path stream`.
+_Verify:_ `src/tests/cli/registry/registry.test.ts` — `lists registered repositories as a newline-delimited absolute-path stream`; `src/tests/cli/territory/principals.test.ts` — principals registry selection and rejection.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
