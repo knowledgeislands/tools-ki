@@ -7,12 +7,12 @@ purpose: capability
 project: estate-factorisation
 component: territory
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: fe3c4bcfaf6961ad3c4b7ab17504ce654642fb4d
 created_at: 2026-10-11T11:12:48Z
-updated_at: 2026-10-12T06:06:50Z
+updated_at: 2026-10-12T06:21:59Z
 ---
 
 # Capital Stores and Aliases
@@ -80,17 +80,15 @@ Both resolver entry points use the same canonical lookup. Existing `-t/--territo
 ## Steps
 
 - [x] Obtain Kris's approval of the plan and both compatibility choices and record it (see Approval). External owner agreement is not a precondition for the tools-ki side; it is carried as remaining work.
-- [ ] Add the optional aliases value to the core Capital declaration type/validator; build one reusable collision-checked lookup for both resolver entry points. Keep canonical profile/list output and selected repository identities unchanged.
-- [ ] Pass validated Capital naming context into managed creation and scanner candidate derivation; preserve non-Capital naming, explicit bindings, preview/write checks and scanner role suppression. Implement the approved prefixless rule and canonical-plus-historical deduplication.
-- [ ] Extend public sandbox CLI tests for aliases, validation, collisions, selector coverage, naming and scan safety. Use only fixture Capitals and fixture OneDrive roots; never call a live store operation.
-- [ ] Update tools-ki specifications, README, territory-selection guide and manual/help wording where it describes the single-handle rule. Reconcile Harness-owned governance through its owner rather than changing a vendored copy. Inspect current docs and leave prior Master corrections intact.
-- [ ] Run focused CLI suites, 100% coverage and relevant governance/documentation checks; review the diff against the approved boundary. Commit only intended verified paths with hooks and co-author trailer. Publish only when explicitly authorised, then return the delivery review packet for human acceptance; no self-acceptance or release.
+- [x] Add the optional aliases value to the core Capital declaration type/validator; build one reusable collision-checked lookup for both resolver entry points. Keep canonical profile/list output and selected repository identities unchanged.
+- [x] Pass validated Capital naming context into managed creation and scanner candidate derivation; preserve non-Capital naming, explicit bindings, preview/write checks and scanner role suppression. Implement the approved prefixless rule and canonical-plus-historical deduplication.
+- [x] Extend public sandbox CLI tests for aliases, validation, collisions, selector coverage, naming and scan safety. Use only fixture Capitals and fixture OneDrive roots; never call a live store operation.
+- [x] Update tools-ki specifications, README, territory-selection guide and manual/help wording where it describes the single-handle rule. Reconcile Harness-owned governance through its owner rather than changing a vendored copy. Inspect current docs and leave prior Master corrections intact.
+- [x] Run focused CLI suites, 100% coverage and relevant governance/documentation checks; review the diff against the approved boundary. Commit only intended verified paths with hooks and co-author trailer. Publish only when explicitly authorised, then return the delivery review packet for human acceptance; no self-acceptance or release.
 
 ## Files touched
 
-Planning writes only this record and the prior standalone reservation in [the issue ledger](_ISSUES.md). No implementation files have changed.
-
-Expected delivery paths: `src/core/territory/declaration.ts`, `src/core/territory/resolution.ts`, `src/core/storage/repository-stores.ts`, `src/commands/repo/store.ts`; the relevant existing `src/tests/cli/territory/selection.test.ts`, `src/tests/cli/territory/inspect.test.ts`, `src/tests/cli/repo/store.test.ts`, `src/tests/cli/repo/store-scan.test.ts`, repo target/roadmap and registry selector suites; `docs/specs/repository-operations.md`, `docs/specs/repository-audit.md`, `docs/specs/registry.md`, `README.md`, `docs/guides/user/territory-selection.md` and `man/ki.1` where affected. No Capital configuration, protected record, sibling repository or runtime-state path is in delivery scope.
+Delivery paths are recorded in Review. No Capital configuration, protected record, sibling repository or runtime-state path changed.
 
 ## Verify
 
@@ -131,6 +129,43 @@ Update current README and territory-selection guidance to explain canonical hand
 ### Roadmap
 
 Promoted to Now and Ready under Decision 114; delivery stops at Awaiting review. No second item, external capture, protected-record change, acceptance or prune is included.
+
+## Review
+
+### Delivered
+
+A territory Capital may declare `territory_aliases`, an optional array of distinct lower-case hyphenated identifiers. Each alias selects the territory exactly as its canonical handle does wherever `-t, --territory` is accepted (`ki territory`, `ki repo`, `ki registry` and the commands built on repository selection). Handles and aliases share one namespace across every registered Capital; any collision, including an alias equal to its own handle, fails every territory command before selection. Output, `ki territory list`, the ranking and selected identities stay canonical.
+
+`ki repo store create sources` now names a Capital's store `sources-<canonical handle>` (`territory_prefix`, else the registry key) whichever selector chose it, and refuses a prefixless, unregistered Capital with a register-or-declare-prefix error. Non-Capital naming is unchanged. `ki repo store scan` checks a Capital under its canonical and historical basename names, reports an equal name once, and turns malformed Capital territory metadata into a diagnostic.
+
+### Change Summary
+
+- `src/core/territory/declaration.ts` validates `territory_aliases` on Capitals only; `src/core/territory/resolution.ts` builds one collision-checked selector map used by `resolveTerritory` and `resolveTerritoryCapital`.
+- New `src/core/territory/naming.ts` derives a repository's canonical and historical sources-store names; `src/core/storage/repository-stores.ts` takes store names instead of a root and inspects each scan candidate; `src/commands/repo/store.ts` wires both.
+- New `src/tests/cli/territory/aliases.test.ts` and `src/tests/cli/repo/store-capital.test.ts`; `src/tests/cli/trade/trade.test.ts` updates the non-Capital key message.
+- New TERRITORY-007; TERRITORY-001, REPO-OPS-020, REPO-OPS-025, REPO-AUDIT-009 and REGISTRY-004 revised. README, the territory-selection and repository-operations guides and `man/ki.1` describe aliases and Capital store names; `man/ki.commands.json` regenerated.
+
+### Verification
+
+- `bun run test:coverage`: 69 files, 1,139 tests passed, 100% statements, branches, functions and lines.
+- TypeScript clean; Biome at the existing baseline (26 warnings, 13 infos); `mandoc -T lint`, the command inventory check and `rumdl` passed.
+- `ki repo audit --repo .`: roadmap and documentation criteria pass. Remaining findings are pre-existing on `main`: KNIP-2 (unused `src/core/estate/index.ts` exports), CI-1 and HOOK-1 warnings.
+- All store tests use fixture Capitals and a sandbox OneDrive root; no live store was touched.
+
+### Outstanding concerns
+
+- Remaining external work: the Harness-owned `ki-repo` TERR-2/TERR-3 contract does not yet know `territory_aliases`, and the Arcadia territory-selection decision predates aliases. Both owners must agree before any real Capital declares the key; until the Harness audit accepts it, a declared alias would fail Harness governance even though `ki` accepts it.
+- The approved `territory_aliases = ["ki"]` for the knowledge-islands Capital is not applied; that is the Capital owner's change after the Harness accepts the key.
+- Existing Capital stores bound under their basename stay bound; `store create` refuses to replace a different binding and no store is renamed or migrated.
+- Alias selection through trade commands and qualified Project Capital lookup uses the same resolver but has no dedicated alias test.
+
+### Post-change review
+
+The change stays inside existing command/core boundaries: storage takes names and never imports territory, and the command composes them. Selection, filtering, scope conflicts and ranking are unchanged when no Capital declares aliases, and non-Capital store names are byte-identical.
+
+### Mini recap
+
+Record 118 delivered under Decision 114 rather than deferred: aliases and Capital store naming land in tools-ki; Harness and Arcadia agreement remain. Not accepted or pruned; no release.
 
 ## Discussion
 
