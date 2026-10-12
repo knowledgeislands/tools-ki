@@ -6,13 +6,12 @@ kind: deliver
 purpose: capability
 project: estate-factorisation
 component: territory
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 104ab7b62a7e1fe0be647055286b73ffbb07a9ea
 created_at: 2026-10-12T04:33:13Z
-updated_at: 2026-10-12T05:11:30Z
+updated_at: 2026-10-12T05:24:06Z
 ---
 
 # Personal Territory Ranking
@@ -108,6 +107,10 @@ The ranking is one extra leading sort key over the existing Capital discovery; n
 ### Mini recap
 
 Decision 95 delivered as a personal configuration key with derived fallback. Not accepted or pruned; no release.
+
+## Done
+
+Accepted 2026-10-12 by Kris Brown on the review packet above (state-of-play decisions log, Decision 107).
 
 ## Discussion
 
