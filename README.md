@@ -1,4 +1,4 @@
-# tools-ki
+# ki
 
 The home of `ki`, the Knowledge Islands command-line interface (CLI).
 

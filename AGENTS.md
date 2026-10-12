@@ -1,4 +1,4 @@
-# AGENTS.md — tools-ki
+# AGENTS.md — ki
 
 `tools-ki` is the runtime-neutral command host for Knowledge Islands. The [README](README.md) is the user-facing entry point; this file keeps only the standing contribution context that must be loaded for every task.
 
