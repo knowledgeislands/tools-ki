@@ -7,12 +7,12 @@ purpose: corrective
 project: agent-host
 component: bootstrap
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 455495e8b9e0ba4f5513edea96238f25982b3f5d
 created_at: 2026-10-12T05:57:09Z
-updated_at: 2026-10-12T06:04:57Z
+updated_at: 2026-10-12T06:06:30Z
 ---
 
 # Config Writer and Relaunch
@@ -39,10 +39,10 @@ Found on terra on 12 October 2026 after `ki` switched to local mode, where `~/.l
 
 ## Steps
 
-- [ ] Route every configuration rewrite through one writer that reads the current file and appends each top-level table outside the bootstrap-owned keys, by value; stop inspection warning about the tables other readers own.
-- [ ] Add a context launcher: the executable for a compiled `ki`, or the runtime followed by the entry script in local mode; start the hold and dispatcher processes with it.
-- [ ] Prove both through the public CLI: a `dev local on` and `bootstrap --refresh` cycle keeps `[territories]` and `[mcp]`, and a local-mode dispatch starts the runtime with the entry script.
-- [ ] Extend BOOT-002 to require preserving unowned tables.
+- [x] Route every configuration rewrite through one writer that reads the current file and appends each top-level table outside the bootstrap-owned keys, by value; stop inspection warning about the tables other readers own.
+- [x] Add a context launcher: the executable for a compiled `ki`, or the runtime followed by the entry script in local mode; start the hold and dispatcher processes with it.
+- [x] Prove both through the public CLI: a `dev local on` and `bootstrap --refresh` cycle keeps `[territories]` and `[mcp]`, and a local-mode dispatch starts the runtime with the entry script.
+- [x] Extend BOOT-002 to require preserving unowned tables.
 
 ## Files touched
 
@@ -73,6 +73,35 @@ None; no user-visible command changes.
 ### Roadmap
 
 Immediate delivery under Decision 114, stopping at Awaiting review.
+
+## Review
+
+### Delivered
+
+Commands that rewrite the user configuration (`ki bootstrap --refresh`, `ki dev local set|on|off`, skill activation) now keep every top-level table they do not own, so `[territories] ranking` and `[mcp]` survive. `ki diag` no longer calls those tables unrecognised. A `ki` running from source starts its detached hold and dispatcher processes as `<runtime> <entry script> agent …`, so `ki agent launch --wait-for` and `ki agent dispatch` work in local mode.
+
+### Change Summary
+
+- `src/agents/configuration.ts` adds `writeUserConfiguration`, which appends preserved unowned tables after the rendered inventory; the local-source and skill setters use it, and inspection recognises `territories` and `mcp`.
+- `src/agents/bootstrap.ts` routes bootstrap creation and refresh through the same writer.
+- `src/context.ts` adds `launcher` (executable, or runtime plus entry script in local mode, with an injectable `runtimeExecutable`); `src/core/agent/runs.ts` and `src/commands/agent/index.ts` start the hold and dispatcher with it.
+- Tests: `src/tests/cli/dev/dev.test.ts` (`keeps the configuration tables it does not own when it rewrites the file`), `src/tests/cli/agent.test.ts` (`re-launches a local-mode ki through the runtime that runs its entry script`), and the `runtimeExecutable` pass-through in `src/tests/cli/_cli_helper.ts`.
+- `docs/specs/bootstrap.md` extends BOOT-002.
+
+### Verification
+
+- `bun run test:coverage`: 67 files, 1,132 tests passed at 100% statements, branches, functions and lines.
+- TypeScript, `mandoc -T lint`, command inventory test and `rumdl` passed; Biome warnings unchanged from baseline (26 warnings, 13 infos).
+- `ki repo audit --repo .`: one failure and two warnings, all pre-existing on `main` — KNIP-2 (unused `src/core/estate/index.ts` exports), CI-1 and HOOK-1.
+- Live on terra through the local runner with a temporary state root: `ki agent dispatch probe` started a detached dispatcher, which logged `queue empty, all finished`, without the earlier `EACCES`.
+
+### Outstanding concerns
+
+- Preserved tables are re-serialised, so comments and layout inside them are not kept and chezmoi will show a cosmetic diff after a rewrite (it already did for the owned tables).
+
+### Mini recap
+
+Both defects fixed with public CLI tests; not accepted, no release.
 
 ## Discussion
 
