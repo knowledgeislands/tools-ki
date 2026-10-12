@@ -99,6 +99,10 @@ Commands that rewrite the user configuration (`ki bootstrap --refresh`, `ki dev 
 
 - Preserved tables are re-serialised, so comments and layout inside them are not kept and chezmoi will show a cosmetic diff after a rewrite (it already did for the owned tables).
 
+### Post-change review
+
+Writers that edit text surgically, such as the harness-registry recorder, were already safe and are unchanged. A compiled `ki` keeps launching itself directly; only local mode gains the runtime prefix.
+
 ### Mini recap
 
 Both defects fixed with public CLI tests; not accepted, no release.
