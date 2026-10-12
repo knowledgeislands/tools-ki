@@ -3,12 +3,13 @@ id: KI-TOOL-KI-CLI-122
 area: CLI
 title: Accepted audit deviations
 project: baseline-rollout
-status: triage
+status: cancelled
+resolution: rejected
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-12T09:38:03Z
-updated_at: 2026-10-12T09:38:03Z
+updated_at: 2026-10-12T19:57:12Z
 ---
 
 # Accepted Audit Deviations
@@ -27,6 +28,10 @@ The first consumer is `apps-tower.midnight.ninja`. Kris accepted its `ki-repo-we
 
 - **In:** the `.ki.toml` declaration shape and its validation in `tools-ki`; matching declared deviations to findings by skill and criterion code, optionally narrowed to a subject; a distinct accepted status in human, JSON and progress output, with the reason and decision link shown; verdict and exit-code effects; reporting a declared deviation that no longer matches any finding; tests through `run(args, context)`; adopting the Tower declaration once the mechanism ships.
 - **Out:** rubric content and per-skill marker tables, which `ki-agentic-harness` owns; the portable contract text, if it belongs in KI Specifications, which reaches that repository through a `ki-trades` work trade; any change to which findings a rubric emits; waiving checks in `ki-accept` or roadmap lifecycle gates.
+
+## Cancelled
+
+Kris approved rejecting this record on 12 October 2026 (state-of-play thread, Decision 147), accepting the triage review's proposal as written. Kris chose to conform Tower to the website standard rather than waive the audit (Decision 142) and judged an accepted-deviation mechanism too big an escape hatch (Decision 140). Tower now conforms: `apps-tower.midnight.ninja` revision `72b0bd1` audits with no failures. No outstanding changes remain.
 
 ## Discussion
 
