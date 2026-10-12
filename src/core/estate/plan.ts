@@ -47,9 +47,24 @@ const item = (
   ...fields
 })
 
-const planTarget = async (survey: Survey, target: EstateTarget): Promise<ConvergeItem> => {
+const checkoutsOf = (survey: Survey, target: EstateTarget): readonly string[] => [
+  ...new Set([...(survey.checkouts.get(target.from) ?? []), ...(survey.checkouts.get(target.to) ?? [])])
+]
+
+/** A manifest entry without `path_to` has no local placement, so any checkout of it is only reported. */
+const unplaced = (survey: Survey, target: EstateTarget): ConvergeItem => {
+  const paths = checkoutsOf(survey, target)
+  return paths.length
+    ? item(target, { state: 'skip', reasons: [`the manifest gives no path_to for ${paths.join(', ')}`] })
+    : item(target, { state: 'absent', reasons: ['no local checkout'] })
+}
+
+const planTarget = async (
+  survey: Survey,
+  target: EstateTarget & { readonly pathTo: string }
+): Promise<ConvergeItem> => {
   const { ports, options } = survey
-  const paths = [...new Set([...(survey.checkouts.get(target.from) ?? []), ...(survey.checkouts.get(target.to) ?? [])])]
+  const paths = checkoutsOf(survey, target)
   if (!paths.length) {
     if (!target.register) return item(target, { state: 'absent', reasons: ['no local checkout'] })
     if (await exists(target.pathTo))
@@ -165,7 +180,7 @@ export const planConvergence = async (ports: EstatePorts, options: ConvergeOptio
   const targets = await readEstateTargets(options.manifest, ports.homeDirectory)
   const registry = await requiredLocalRegistry(ports.stateDirectory)
   const destinations = new Map<string, number>()
-  for (const target of targets) destinations.set(target.pathTo, (destinations.get(target.pathTo) ?? 0) + 1)
+  for (const { pathTo } of targets) if (pathTo) destinations.set(pathTo, (destinations.get(pathTo) ?? 0) + 1)
   const survey: Survey = {
     ports,
     options,
@@ -176,7 +191,10 @@ export const planConvergence = async (ports: EstatePorts, options: ConvergeOptio
     registry
   }
   const items: ConvergeItem[] = []
-  for (const target of targets) items.push(await planTarget(survey, target))
+  for (const target of targets) {
+    const { pathTo } = target
+    items.push(pathTo ? await planTarget(survey, { ...target, pathTo }) : unplaced(survey, target))
+  }
   const moves = items.flatMap((entry) => entry.actions.flatMap((action) => (action.kind === 'move' ? [action] : [])))
   const symlinks = await symlinkChanges(ports, moves)
   const parents = await formerParents(join(ports.homeDirectory, 'workspaces'), moves)

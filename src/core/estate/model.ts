@@ -17,7 +17,8 @@ export interface EstateTarget {
   readonly title: string
   readonly register: boolean
   readonly pathFrom?: string
-  readonly pathTo: string
+  /** Absent for repositories the manifest gives no local placement. */
+  readonly pathTo?: string
 }
 
 export interface WorktreeMove {

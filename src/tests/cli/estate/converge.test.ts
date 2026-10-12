@@ -345,6 +345,7 @@ describe('[ki estate converge]', () => {
     await repository('workspaces/old/two', 'git@github.com:acme/two.git')
     await repository('workspaces/old/keyed', 'git@github.com:acme/keyed.git')
     await box.home.mkdir('workspaces/new/occupied')
+    await repository('workspaces/old/unplaced', 'git@github.com:acme/unplaced.git')
     await registry({
       keyed: { repository: 'https://github.com/acme/keyed', path: 'workspaces/old/keyed' },
       taken: { repository: 'https://github.com/acme/other', path: 'workspaces/other/taken' }
@@ -357,7 +358,9 @@ describe('[ki estate converge]', () => {
       { from: 'acme/one', path_to: '~/workspaces/new/shared' },
       { from: 'acme/two', path_to: '~/workspaces/new/shared' },
       { from: 'acme/keyed', path_to: '~/workspaces/new/taken' },
-      { from: 'acme/pending', register: true, path_to: '~/workspaces/new/occupied' }
+      { from: 'acme/pending', register: true, path_to: '~/workspaces/new/occupied' },
+      { from: 'acme/unplaced', path_from: '', path_to: '' },
+      { from: 'acme/nowhere', path_from: '', path_to: '' }
     ])
     const result = await box.run(['ki', 'estate', 'converge', path, '--apply'])
     expect(result.exitCode).toBe(0)
@@ -383,6 +386,10 @@ describe('[ki estate converge]', () => {
     expect(result.output).toContain(
       `skip acme/pending (acme/pending): target ${home}/workspaces/new/occupied exists but is not a checkout of acme/pending`
     )
+    expect(result.output).toContain(
+      `skip acme/unplaced (acme/unplaced): the manifest gives no path_to for ${home}/workspaces/old/unplaced`
+    )
+    expect(result.output).toContain('absent acme/nowhere (acme/nowhere): no local checkout')
     expect(result.output).toContain('nothing to apply')
     expect(await box.home.read('workspaces/old/dirty/README.md')).toBe('changed\n')
     expect(await exists(join(home, 'workspaces/old/busy'))).toBe(true)
@@ -605,6 +612,9 @@ describe('[ki estate converge]', () => {
     )
     expect(await invalid('{"repositories":[{"from":"a/b","to":"a/b","path_to":"relative/x"}]}')).toContain(
       'estate targets path relative/x must be absolute or start with ~/'
+    )
+    expect(await invalid('{"repositories":[{"from":"a/b","to":"a/b","register":true,"path_to":""}]}')).toContain(
+      'estate targets repositories[0] needs path_to'
     )
     box.setRunner(async () => {
       throw new Error('spawn lsof ENOENT')

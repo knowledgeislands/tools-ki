@@ -36,15 +36,18 @@ export const readEstateTargets = async (path: string, homeDirectory: string): Pr
     if (!IDENTITY.test(from) || !IDENTITY.test(to))
       throw new KiError(`estate targets repositories[${index}] from and to must be GitHub owner/name identities`, 1)
     const record = entry as Record<string, unknown>
-    const pathFrom =
-      typeof record['path_from'] === 'string' ? expandHome(record['path_from'], homeDirectory) : undefined
+    const path = (name: string): string | undefined =>
+      typeof record[name] === 'string' && record[name] ? expandHome(record[name], homeDirectory) : undefined
+    const register = record['register'] === true
+    const pathFrom = path('path_from')
+    const pathTo = register ? expandHome(field('path_to'), homeDirectory) : path('path_to')
     return {
       from,
       to,
       title: typeof record['title'] === 'string' ? record['title'] : to,
-      register: record['register'] === true,
+      register,
       ...(pathFrom ? { pathFrom } : {}),
-      pathTo: expandHome(field('path_to'), homeDirectory)
+      ...(pathTo ? { pathTo } : {})
     }
   })
 }
