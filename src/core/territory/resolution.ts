@@ -7,6 +7,7 @@ import { targetFromDirectory } from '../repository/location.ts'
 import { type LocalRegistryEntry, requiredLocalRegistry } from '../storage/index.ts'
 import { type TerritoryDeclaration, territoryDeclarationFrom } from './declaration.ts'
 import { matchesDirectoryName, validateFilters } from './filters.ts'
+import { readTerritoryRanking } from './ranking.ts'
 import type { TerritoryMember, TerritoryProfile } from './types.ts'
 
 export interface TerritorySelection {
@@ -15,6 +16,13 @@ export interface TerritorySelection {
   readonly principals?: boolean
   readonly filters: readonly string[]
 }
+/** Where selection reads the local registry and the user's territory ranking. */
+export interface TerritoryDirectories {
+  readonly state: string
+  readonly configuration: string
+}
+/** Receives a diagnostic that does not stop the selection. */
+export type TerritoryWarning = (message: string) => void
 interface Capital {
   readonly entry: LocalRegistryEntry
   readonly declaration: TerritoryDeclaration & { readonly territory: NonNullable<TerritoryDeclaration['territory']> }
@@ -68,16 +76,38 @@ export const resolveTerritoryCapital = async (stateDirectory: string, handle: st
   if (!capital) throw new KiError(`territory ${handle} is not declared by a registered Capital`, 2)
   return capital.entry
 }
-/** The Capital whose territory holds the canonical KI Harness leads; the rest follow by territory name. */
+/**
+ * Ranked handles lead in ranking order. The rest follow the derived order: the Capital whose
+ * territory holds the canonical KI Harness, then territory name, then handle.
+ */
 const SYSTEM_HARNESS = `https://github.com/${DEFAULT_HARNESS}`
-const principalOrder = (found: readonly Capital[]): readonly Capital[] =>
-  [...found].sort(
+const territoryOrder = (found: readonly Capital[], ranking: readonly string[]): readonly Capital[] => {
+  const position = (capital: Capital): number => {
+    const index = ranking.indexOf(capital.handle)
+    return index < 0 ? ranking.length : index
+  }
+  return [...found].sort(
     (left, right) =>
+      position(left) - position(right) ||
       Number(!left.declaration.territory.members.includes(SYSTEM_HARNESS)) -
         Number(!right.declaration.territory.members.includes(SYSTEM_HARNESS)) ||
       left.declaration.territory.name.localeCompare(right.declaration.territory.name, 'en') ||
       left.handle.localeCompare(right.handle, 'en')
   )
+}
+/** Capitals in ranked order; a ranked handle no registered Capital declares is a warning, never a failure. */
+const rankedCapitals = async (
+  entries: readonly LocalRegistryEntry[],
+  configurationDirectory: string,
+  warn?: TerritoryWarning
+): Promise<{ readonly ordered: readonly Capital[]; readonly ranking: readonly string[] }> => {
+  const ranking = await readTerritoryRanking(configurationDirectory)
+  const found = await capitals(entries)
+  for (const handle of ranking)
+    if (!found.some((capital) => capital.handle === handle))
+      warn?.(`territory ranking names ${handle}, which no registered Capital declares`)
+  return { ordered: territoryOrder(found, ranking), ranking }
+}
 const memberAt = async (entry: LocalRegistryEntry, kind: TerritoryMember['kind']): Promise<TerritoryMember> => {
   const target = await targetFromDirectory(
     entry.path,
@@ -86,20 +116,19 @@ const memberAt = async (entry: LocalRegistryEntry, kind: TerritoryMember['kind']
   return { key: entry.key, repository: entry.repository, root: target.root, kind }
 }
 const resolvePrincipals = async (
-  entries: readonly LocalRegistryEntry[],
+  ordered: readonly Capital[],
   filters: readonly string[]
 ): Promise<TerritoryProfile> => {
-  const selected = principalOrder(await capitals(entries)).filter((capital) =>
-    matchesDirectoryName(capital.entry.path, filters)
-  )
+  const selected = ordered.filter((capital) => matchesDirectoryName(capital.entry.path, filters))
   if (!selected.length) throw new KiError('repository selection matched no repositories', 2)
   const members: TerritoryMember[] = []
   for (const capital of selected) members.push(await memberAt(capital.entry, 'owner'))
   return { id: 'principals', title: 'Territory Capitals', members, roots: members, system: true }
 }
 export const resolveTerritory = async (
-  stateDirectory: string,
-  selection: TerritorySelection
+  directories: TerritoryDirectories,
+  selection: TerritorySelection,
+  warn?: TerritoryWarning
 ): Promise<TerritoryProfile> => {
   if (
     Number(selection.territory !== undefined) +
@@ -110,11 +139,15 @@ export const resolveTerritory = async (
     throw new KiError('select exactly one of --territory, --estate, or --principals', 2)
   const { filters } = selection
   validateFilters(filters)
-  const entries = await requiredLocalRegistry(stateDirectory)
-  if (selection.principals) return resolvePrincipals(entries, filters)
-  const found = await capitals(entries)
+  const entries = await requiredLocalRegistry(directories.state)
+  // The ranking orders territories, so a single territory neither reads nor reports it.
+  const { ordered, ranking } =
+    selection.territory === undefined
+      ? await rankedCapitals(entries, directories.configuration, warn)
+      : { ordered: await capitals(entries), ranking: [] }
+  if (selection.principals) return resolvePrincipals(ordered, filters)
   const capital =
-    selection.territory === undefined ? undefined : found.find((entry) => entry.handle === selection.territory)
+    selection.territory === undefined ? undefined : ordered.find((entry) => entry.handle === selection.territory)
   if (selection.territory !== undefined && !capital)
     throw new KiError(`territory ${selection.territory} is not declared by a registered Capital`, 2)
   const identities = capital?.declaration.territory.members ?? entries.map((entry) => entry.repository)
@@ -137,8 +170,15 @@ export const resolveTerritory = async (
       )
     members.push(member)
   }
-  // Code-point order; each root's checkout identity was verified, so no two roots are equal.
-  members.sort((left, right) => (left.root < right.root ? -1 : 1))
+  // Estate roots follow the ranked territory declaring them, earliest rank first; unranked roots keep
+  // code-point order after them. Each root's checkout identity was verified, so no two roots are equal.
+  const rank = new Map<string, number>()
+  for (const owner of [...ordered].reverse()) {
+    const index = ranking.indexOf(owner.handle)
+    if (index >= 0) for (const identity of owner.declaration.territory.members) rank.set(identity, index)
+  }
+  const position = (member: TerritoryMember): number => rank.get(member.repository) ?? ranking.length
+  members.sort((left, right) => position(left) - position(right) || (left.root < right.root ? -1 : 1))
   return {
     id: capital?.handle ?? 'estate',
     title: capital?.declaration.territory.name ?? 'Registered estate',
@@ -158,7 +198,8 @@ export const resolveTerritory = async (
   }
 }
 export const listTerritories = async (
-  stateDirectory: string
+  directories: TerritoryDirectories,
+  warn?: TerritoryWarning
 ): Promise<
   readonly {
     readonly handle: string
@@ -167,9 +208,11 @@ export const listTerritories = async (
     readonly members: number
   }[]
 > =>
-  (await capitals(await requiredLocalRegistry(stateDirectory))).map((entry) => ({
-    handle: entry.handle,
-    name: entry.declaration.territory.name,
-    capital: entry.entry,
-    members: entry.declaration.territory.members.length
-  }))
+  (await rankedCapitals(await requiredLocalRegistry(directories.state), directories.configuration, warn)).ordered.map(
+    (entry) => ({
+      handle: entry.handle,
+      name: entry.declaration.territory.name,
+      capital: entry.entry,
+      members: entry.declaration.territory.members.length
+    })
+  )

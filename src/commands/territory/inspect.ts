@@ -41,7 +41,11 @@ export const createTerritoryInspectCommand = (context: KiContext): Command =>
           readonly workspace: string
         }
       ) => {
-        const territory = await resolveTerritory(context.paths.state, { ...options, filters: options.filter })
+        const territory = await resolveTerritory(
+          { state: context.paths.state, configuration: context.paths.config },
+          { ...options, filters: options.filter },
+          (message) => context.stderr.write(`ki: warning: ${message}\n`)
+        )
         const observation = await observeLocalTarget(options.target, options.workspace, {
           environment: context.environment,
           platform: context.platform

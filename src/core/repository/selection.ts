@@ -172,7 +172,10 @@ const selectRepositoryTargets = async (options: RepositorySelection): Promise<re
     return distinctTargets(targets, '--repo')
   }
   if (options.territory !== undefined || options.estate || options.principals) {
-    const profile = await resolveTerritory(options.stateDirectory, { ...options, filters })
+    const profile = await resolveTerritory(
+      { state: options.stateDirectory, configuration: options.configurationDirectory },
+      { ...options, filters }
+    )
     return profile.roots.map((member) => ({
       root: member.root,
       declaration: join(member.root, REPOSITORY_DECLARATION_FILE)

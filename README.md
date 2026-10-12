@@ -69,6 +69,8 @@ The optional Capital-only `territory_prefix` supplies the territory handle, such
 
 `--principals` selects only the registered territory Capitals. The system Capital — the one whose territory includes the canonical KI Harness, `knowledgeislands/ki-agentic-harness` — comes first, then the others by territory name. `ki territory open --principals --target zed` opens them so Zed's project list follows that order; VS Code and Delta receive the same order.
 
+A personal `[territories] ranking` of handles in `config.toml` puts your territories in your own order of priority. `--principals`, `ki territory list` and `--estate` follow it, and territories it omits keep the order above. See [Select a territory or the estate](docs/guides/user/territory-selection.md#rank-your-territories).
+
 `ki territory roots --null --territory knowledge-islands` returns deterministic absolute primary checkout paths separated by NUL bytes. Repeated `-f, --filter <prefix>` arguments narrow the directory basenames literally and case-sensitively, with OR semantics. Registration and naming metadata must be complete before filtering; an excluded registered unavailable checkout does not prevent a selected operation. The endpoint validates the complete selection before writing stdout.
 
 `ki territory inspect --territory knowledge-islands --target vscode --workspace <absolute-file>` compares a local projection read-only. It reports matched, missing, extra registered, unregistered KI and external roots. An exact projection exits `0`, drift exits `1`, and an invalid selection exits `2`. Opening uses the existing Zed, VS Code and Delta local adapters. Historical local Agora reference state is retained as provenance and has no selection role.

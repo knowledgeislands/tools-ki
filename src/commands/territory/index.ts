@@ -20,11 +20,13 @@ type Options = TerritorySelection & {
   readonly target?: OpenTargetName
 }
 export const createTerritoryCommand = (context: KiContext): Command => {
-  const resolve = (options: Options) => resolveTerritory(context.paths.state, { ...options, filters: options.filter })
+  const directories = { state: context.paths.state, configuration: context.paths.config }
+  const warn = (message: string) => context.stderr.write(`ki: warning: ${message}\n`)
+  const resolve = (options: Options) => resolveTerritory(directories, { ...options, filters: options.filter }, warn)
   const command = new Command('territory').description('discover and select territories from their Capitals')
   command.addCommand(
     new Command('list').description('list registered territory Capitals').action(async () => {
-      const territories = await listTerritories(context.paths.state)
+      const territories = await listTerritories(directories, warn)
       context.stdout.write(
         `${renderTree({ title: 'KI TERRITORIES', entries: territories.map((territory) => ({ label: `${territory.handle}: ${territory.name} (Capital: ${territory.capital.key}, members: ${territory.members})` })) }).join('\n')}\n`
       )

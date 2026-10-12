@@ -10,7 +10,7 @@ Supported repository commands use the same selectors, for example `ki repo -t kn
 
 ## Open the Principals
 
-`--principals` selects every registered territory Capital and no other repository. The system Capital comes first: the one whose territory includes the canonical KI Harness, `knowledgeislands/ki-agentic-harness`, which in this estate is Knowledge Islands Principal. The other Capitals follow alphabetically by territory name, then by handle. A Capital whose checkout is unavailable cannot be recognised as one and is left out.
+`--principals` selects every registered territory Capital and no other repository. The system Capital comes first: the one whose territory includes the canonical KI Harness, `knowledgeislands/ki-agentic-harness`, which in this estate is Knowledge Islands Principal. The other Capitals follow alphabetically by territory name, then by handle, unless you [rank your territories](#rank-your-territories). A Capital whose checkout is unavailable cannot be recognised as one and is left out.
 
 Use `ki territory open --principals --target zed` to open them in that order. Zed adds each opened folder to the top of its project list, so `ki` opens them in reverse and the list reads in principals order; VS Code and Delta receive the order directly. Filters narrow the Capitals as usual, for example `ki territory open --principals -f ki- -f hnr- --target vscode`.
 
@@ -23,3 +23,21 @@ Use `ki territory roots --null -t knowledge-islands -f tools-` for NUL-delimited
 Use `ki territory audit -t knowledge-islands` to validate the selected territory. Missing registration fails before filters can exclude a member: register the canonical member identity first. An unavailable selected root or checkout identity/Capital mismatch fails before operations. A registered unavailable root excluded by a filter does not block the remaining selection.
 
 Use `ki territory open -t knowledge-islands --target zed` to open local roots. For a read-only projection comparison, use `ki territory inspect -t knowledge-islands --target vscode --workspace <absolute-code-workspace-file>` or select an explicit Zed workspace ID. Legacy Agora membership, inclusions and reference association commands are retired; existing historical local files remain untouched.
+
+## Rank your territories
+
+To list, select and open territories in your own order of priority, rank their handles in your `ki` user configuration, `$XDG_CONFIG_HOME/ki/config.toml`:
+
+```toml
+[territories]
+
+ranking = [
+  "personal",
+  "knowledge-islands",
+  "legal",
+]
+```
+
+`--principals` and `ki territory list` then follow the ranking, and `--estate` groups its roots by the ranked territory that declares them, in path order within each. Territories missing from the ranking follow it in the usual order: Knowledge Islands first, then by name; repositories no ranked territory declares keep their path order at the end. Selecting one territory with `-t` is unaffected. The ranking is a personal preference, so it lives in your configuration rather than in any repository.
+
+Use the handles that `ki territory list` shows. A handle that no registered Capital declares, for example a territory whose Capital is not checked out on this machine, is skipped with a warning from `ki territory` commands; a malformed ranking stops the command with a configuration error. Tools that read `ki territory roots`, such as `mgit --principals`, inherit the same order.

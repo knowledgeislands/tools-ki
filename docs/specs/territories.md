@@ -46,11 +46,21 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### TERRITORY-005 — Principals selection
 
-`--principals` MUST select every registered Capital discovered from its available checkout and no other repository, each as an owner root. The system Capital, whose `territory_members` include the canonical KI Harness `https://github.com/knowledgeislands/ki-agentic-harness`, MUST come first; the remaining Capitals MUST follow by territory name in English collation, then by handle. Without such a Capital the name order MUST apply to all. Literal filters MUST narrow Capital basenames without changing that order. Opening MUST preserve the order in each target's resulting project list, compensating for Zed's prepend behaviour.
+`--principals` MUST select every registered Capital discovered from its available checkout and no other repository, each as an owner root, in territory order. Territory order MUST place ranked territories first in [ranking](#territory-006--personal-territory-ranking) order; the remaining Capitals MUST follow the derived order: the system Capital, whose `territory_members` include the canonical KI Harness `https://github.com/knowledgeislands/ki-agentic-harness`, first, then territory name in English collation, then handle. Without such a Capital the name order MUST apply to all unranked Capitals. `ki territory list` MUST list territories in the same order. Literal filters MUST narrow Capital basenames without changing that order. Opening MUST preserve the order in each target's resulting project list, compensating for Zed's prepend behaviour.
 
 _Conformance:_ conforming
 
 _Verify:_ `src/core/territory/resolution.ts`; `src/tests/cli/territory/principals.test.ts` exercises ordering, filters, conflicts, inspection, repository, registry and trade selection, and the Zed, VS Code and Delta invocation order.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### TERRITORY-006 — Personal territory ranking
+
+A user MAY rank territories in the `ki` user configuration, `$XDG_CONFIG_HOME/ki/config.toml`, as `[territories] ranking`: an array of distinct territory handles. It is a personal preference, never Capital or repository metadata. A present `[territories]` table MUST contain only `ranking`, and a present `ranking` MUST be such an array; any other shape MUST fail as a configuration error before selection. An absent ranking, or an absent or unreadable configuration file, MUST leave the derived order unchanged. The ranking MUST order every multi-territory selection: `--principals` and `ki territory list` by [TERRITORY-005](#territory-005--principals-selection), and `--estate` roots by the earliest-ranked territory whose `territory_members` declare them, physical-path order within each, followed by every other root in its unranked physical-path order. A single `--territory` selection MUST neither read nor apply the ranking. A ranked handle that no registered Capital declares MUST NOT fail selection; `ki territory` commands MUST report it as a warning on standard error.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/core/territory/ranking.ts`, `src/core/territory/resolution.ts`; `src/tests/cli/territory/ranking.test.ts` exercises the unset fallback, a partial ranking across principals, list, estate, filters, a single territory, repository and Zed opening, unknown-handle warnings and malformed configuration.
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 

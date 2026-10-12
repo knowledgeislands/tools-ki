@@ -327,11 +327,15 @@ Exactly one of --territory, --estate and --principals is required for scoped
 commands. --principals selects only the registered Capitals: first the system
 Capital, whose territory includes knowledgeislands/ki-agentic-harness, then
 the rest by territory name.
+A territories.ranking list of handles in config.toml puts ranked territories
+first, in that order, for --principals, territory list and --estate; the
+estate groups roots by their ranked territory.
 Repeated --filter values match directory basenames literally and
 case-sensitively.
 .TP
 .B ki territory list
-List registered territory handles, titles, Capitals and declared member counts.
+List registered territory handles, titles, Capitals and declared member counts,
+in territory order.
 .TP
 .B ki territory audit (--territory <handle>|--estate|--principals) [--filter <prefix>]...
 Validate the complete selection and its physical checkouts without mutation.
@@ -685,8 +689,9 @@ Select every repository in the registered estate, conflicting with --repo,
 --territory and --principals.
 .TP
 .B --principals
-Select every registered territory Capital, system Capital first and the rest
-by territory name, conflicting with --repo, --territory and --estate.
+Select every registered territory Capital, ranked territories first, then the
+system Capital and the rest by territory name, conflicting with --repo,
+--territory and --estate.
 Without an explicit scope, keep the current repository or
 direct-CWD
 \&.mgit.toml workspace selection. KI does not invoke mgit.
@@ -1314,11 +1319,15 @@ Exactly one of --territory, --estate and --principals is required for scoped
 commands. --principals selects only the registered Capitals: first the system
 Capital, whose territory includes knowledgeislands/ki-agentic-harness, then
 the rest by territory name.
+A territories.ranking list of handles in config.toml puts ranked territories
+first, in that order, for --principals, territory list and --estate; the
+estate groups roots by their ranked territory.
 Repeated --filter values match directory basenames literally and
 case-sensitively.
 .TP
 .B ki territory list
-List registered territory handles, titles, Capitals and declared member counts.
+List registered territory handles, titles, Capitals and declared member counts,
+in territory order.
 .TP
 .B ki territory audit (--territory <handle>|--estate|--principals) [--filter <prefix>]...
 Validate the complete selection and its physical checkouts without mutation.
