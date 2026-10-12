@@ -7,12 +7,12 @@ purpose: corrective
 project: agent-host
 component: agent
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: 0216c77d282d521e23e5cadb658e3a0dbf540a16
+baseline_ref: c68e7c010685cb98f7339f69253e5da728847543
 created_at: 2026-10-10T05:41:22Z
-updated_at: 2026-10-12T05:28:05Z
+updated_at: 2026-10-12T05:35:30Z
 ---
 
 # Launcher-Held Wait Gates
@@ -46,12 +46,12 @@ Until this is fixed, the reliable workaround is to avoid `--wait-for`: launch th
 
 ## Steps
 
-- [ ] Evaluate a gate over the named agents: open when every one has written `DONE`; closed when one has a `.pid` whose process has ended without `DONE`; otherwise waiting, including names not yet launched. Reject an agent that waits for itself.
-- [ ] `ki agent launch --wait-for`: refuse with exit 1 when the gate is already closed; start the runtime at once when it is open; otherwise write the packet, set `.status` to a held line, and detach a hidden `ki agent launch ... --foreground` hold process whose pid goes in `.pid`.
-- [ ] The hold process checks every 30 seconds, rewriting the held line, then starts the runtime with the composed prompt and replaces `.pid` with the runtime's pid; on a closed gate it writes a "gate cannot open" status and ends without starting the runtime.
-- [ ] Drop the prompt-only wait-gate paragraph.
-- [ ] `ki agent dispatch` launches the first queued request whose gate is open, drops one whose gate is closed, and, once nothing in the run is running, drops requests still waiting, logging each drop.
-- [ ] Prove launch, hold, propagation and dispatch through the public CLI with injected processes and time; update the background-agents guide and `man/ki.1`.
+- [x] Evaluate a gate over the named agents: open when every one has written `DONE`; closed when one has a `.pid` whose process has ended without `DONE`; otherwise waiting, including names not yet launched. Reject an agent that waits for itself.
+- [x] `ki agent launch --wait-for`: refuse with exit 1 when the gate is already closed; start the runtime at once when it is open; otherwise write the packet, set `.status` to a held line, and detach a hidden `ki agent launch ... --foreground` hold process whose pid goes in `.pid`.
+- [x] The hold process checks every 30 seconds, rewriting the held line, then starts the runtime with the composed prompt and replaces `.pid` with the runtime's pid; on a closed gate it writes a "gate cannot open" status and ends without starting the runtime.
+- [x] Drop the prompt-only wait-gate paragraph.
+- [x] `ki agent dispatch` launches the first queued request whose gate is open, drops one whose gate is closed, and, once nothing in the run is running, drops requests still waiting, logging each drop.
+- [x] Prove launch, hold, propagation and dispatch through the public CLI with injected processes and time; update the background-agents guide and `man/ki.1`.
 
 ## Files touched
 
@@ -82,6 +82,41 @@ The background-agents guide describes held agents, the closed-gate status and ga
 ### Roadmap
 
 Approved immediate delivery stops at Awaiting review.
+
+## Review
+
+### Delivered
+
+`--wait-for` is now held by `ki`, not by the agent. `ki agent launch` starts the agent at once when every named agent has written `DONE`, refuses with exit 1 when one has already exited without it, and otherwise writes the run packet, sets the status to `held until <names> finish` and detaches a hold process. The hold process checks every 30 seconds and starts the runtime once the gate opens; if a gating agent exits without `DONE` it ends with `gate cannot open: <name> exited without DONE`, which closes any gate behind it. `ki agent dispatch` launches the first queued agent whose gate is open and drops, with a log line, queued agents whose gate cannot open. The prompt-only wait-gate paragraph is gone.
+
+### Change Summary
+
+- `src/core/agent/runs.ts` adds gate evaluation, `startRuntime`, the detached hold (`startHold`) and `holdAgent`; `launchAgent` returns the names it is held for; `dispatchRun` launches by gate rather than queue head; `composePrompt` drops the wait-gate paragraph; an agent waiting for itself is rejected.
+- `src/commands/agent/index.ts` adds the hidden `launch --foreground` hold mode and prints `held <run>/<name> until <names> finish` for a held launch.
+- `src/tests/cli/agent.test.ts` proves the immediate start, the held launch and its hold-process arguments, the held status, the hold opening over two checks, closed-gate refusal, held-agent ending and propagation into `status`, self-wait rejection, and gated dispatch (skip-ahead, closed and never-opening gates).
+- `docs/guides/user/background-agents.md`, `man/ki.1` and the regenerated `man/ki.commands.json` describe held launches and gated dispatch.
+- `.ki.toml` declares the `agent` roadmap component, mirroring the existing command group.
+
+### Verification
+
+- `bun run test:coverage`: 67 files, 1,130 tests passed, 100% statements, branches, functions and lines.
+- TypeScript, Biome on changed files (whole-tree warnings unchanged from baseline), `mandoc -T lint`, command inventory check and `rumdl` passed.
+- `ki repo audit`: roadmap, work and authoring criteria pass. Remaining findings are pre-existing on `main`: KNIP-2 (unused `src/core/estate/index.ts` exports), CI-1, HOOK-1 and CLAUDEBIND-1 warnings.
+- Compiled `dist/ki` against a temporary state root: a launch gated on a dead agent was refused; a launch gated on a live `sleep 40` was held by a real detached hold process, showed `held until slow finish` in `ki agent status`, and ended about a minute later with `gate cannot open: slow exited without DONE` without starting a runtime. The open-gate start of a real runtime was not exercised live, to avoid starting an agent; tests cover it.
+
+### Outstanding concerns
+
+- Takes effect on terra once `ki` runs from this checkout (Decision 108) or after a release; no release made.
+- A gate naming an agent that is never launched keeps a held agent waiting until the owner stops it; the dispatcher drops such queued agents once nothing in the run is running.
+- The `ki-delegation` skill's wording about prompt-held waits belongs to the harness; it may want a trade noting the launcher now holds gates.
+
+### Post-change review
+
+The gate reuses existing agent-state evaluation, so status, watch and wait need no change: a held agent's `.pid` names the hold process and reads as running. Agents launched without `--wait-for` follow the unchanged path. `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0` stays for waits authored in prompts and agents' own builds.
+
+### Mini recap
+
+Decision 107 delivered: gates are a launcher behaviour for both `launch` and `dispatch`, with clean failure propagation. Not accepted or pruned; no release.
 
 ## Discussion
 
