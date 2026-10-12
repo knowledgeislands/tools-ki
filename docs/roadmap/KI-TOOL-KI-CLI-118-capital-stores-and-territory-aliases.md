@@ -6,13 +6,13 @@ kind: deliver
 purpose: capability
 project: estate-factorisation
 component: territory
-horizon: next
-status: draft
+horizon: now
+status: ready
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: fe3c4bcfaf6961ad3c4b7ab17504ce654642fb4d
 created_at: 2026-10-11T11:12:48Z
-updated_at: 2026-10-11T11:14:45Z
+updated_at: 2026-10-12T06:06:50Z
 ---
 
 # Capital Stores and Aliases
@@ -79,7 +79,7 @@ Both resolver entry points use the same canonical lookup. Existing `-t/--territo
 
 ## Steps
 
-- [ ] Obtain Kris's approval of the complete plan and both compatibility choices; reconcile external metadata/decision owner agreement before marking Ready. Record the approval and advance updated_at, then use ki-implement only under an explicit delivery grant.
+- [x] Obtain Kris's approval of the plan and both compatibility choices and record it (see Approval). External owner agreement is not a precondition for the tools-ki side; it is carried as remaining work.
 - [ ] Add the optional aliases value to the core Capital declaration type/validator; build one reusable collision-checked lookup for both resolver entry points. Keep canonical profile/list output and selected repository identities unchanged.
 - [ ] Pass validated Capital naming context into managed creation and scanner candidate derivation; preserve non-Capital naming, explicit bindings, preview/write checks and scanner role suppression. Implement the approved prefixless rule and canonical-plus-historical deduplication.
 - [ ] Extend public sandbox CLI tests for aliases, validation, collisions, selector coverage, naming and scan safety. Use only fixture Capitals and fixture OneDrive roots; never call a live store operation.
@@ -94,7 +94,7 @@ Expected delivery paths: `src/core/territory/declaration.ts`, `src/core/territor
 
 ## Verify
 
-Planning gates: `ki repo audit --skill ki-work --repo .`, `ki repo audit --skill ki-work-roadmap --repo .`, `ki repo audit --skill ki-trades --repo .`, `ki repo audit --skill ki-authoring --repo .`, focused `rumdl check`, `git diff --check`, parsed identity/classification/timestamp checks and protected-path equality. Manually assess roadmap readiness and authoring judgments; Draft and null baseline are mandatory until approval. A mechanically clean record does not count as approved Ready.
+Planning gates: `ki repo audit --skill ki-work --repo .`, `ki repo audit --skill ki-work-roadmap --repo .`, `ki repo audit --skill ki-trades --repo .`, `ki repo audit --skill ki-authoring --repo .`, focused `rumdl check`, `git diff --check`, parsed identity/classification/timestamp checks and protected-path equality. Manually assess roadmap readiness and authoring judgments; Ready followed the recorded approval, not the mechanical checks alone.
 
 Delivery gates after approval: `bun run test -- src/tests/cli/territory src/tests/cli/repo/store.test.ts src/tests/cli/repo/store-scan.test.ts src/tests/cli/repo/targets.test.ts src/tests/cli/repo/roadmap.test.ts src/tests/cli/registry`, then `bun run test:coverage`, relevant `ki-self`/engineering/repository audits, authored-document audit and `bun run ki:tools:lint-man` if the manual changes. Assert behaviour through `run(args, context)` and `sandbox()` with injected roots, streams and network; never add tests of private implementation structure or contact a network.
 
@@ -108,11 +108,11 @@ Required observable cases:
 
 ## Dependencies / blocks
 
-No local build-order dependency exists, and protected host records remain untouched. Delivery waits for Kris's plan approval and explicit implementation authority, not another record's lifecycle. Readiness also needs owner agreement on the Harness-owned TERR-2/TERR-3 alias contract and the accepted territory decision's revised naming policy; do not claim tooling validation parity before that contract exists. The coordinator routes that agreement without this task capturing or editing external work.
+No local build-order dependency exists, and protected host records remain untouched. Decision 114 grants delivery authority. Owner agreement on the Harness-owned TERR-2/TERR-3 alias contract and the accepted territory decision's revised naming policy is remaining external work, not a tools-ki precondition; do not claim tooling validation parity before that contract exists. The coordinator routes that agreement without this task capturing or editing external work.
 
 ## Delegation
 
-This planning run is one exclusive tools-ki writer under Decision 8; it launches no subagents. Its deliverable is the reservation, one complete Draft record and the run report, with no implementation or live configuration effects. It stops after planning checks and authorised publication, before Ready or delivery. A durable high-risk worker packet is unnecessary: no workers or delegated implementation lanes are authorised. The coordinator reviews the record with Kris; any future delegation requires a fresh bounded brief and authority, and the delivering agent owns the final CLI/coverage verification and review packet.
+The original planning run under tools-burndown Decision 8 produced the Draft. Delivery under Decision 114 is one exclusive tools-ki writer with no subagents or delegated lanes; it owns the CLI and coverage verification and the review packet.
 
 ## Documentation impact
 
@@ -130,9 +130,15 @@ Update current README and territory-selection guidance to explain canonical hand
 
 ### Roadmap
 
-One capture increases tools-ki's open count from two to three, an impact of +1 in the burndown. CLI-118 is reserved by the preceding ledger-only commit. This record is Next / Draft pending approval; no second item, external capture, protected-record change, acceptance or prune is included.
+Promoted to Now and Ready under Decision 114; delivery stops at Awaiting review. No second item, external capture, protected-record change, acceptance or prune is included.
 
 ## Discussion
+
+### Approval
+
+Master state-of-play Decision 114 (12 October 2026, 06:45 BST) directs delivery of this record rather than deferral, and the run brief confirms "Kris does not want it deferred": take it to Ready, deliver and submit for review, delivering the rest and naming what remains if part genuinely depends on something not yet built. Under that grant the plan's recommendations are adopted as written: prefixless registered Capitals name stores by their registry-key handle, prefixless unregistered Capitals fail managed creation, scan reports canonical and historical Capital names read-only, and `territory_aliases` is an optional array with global fail-closed collisions. The grant covers adoption, planning, delivery to `main` and push after full gates, not acceptance, release or edits outside tools-ki.
+
+Owner agreement on the Harness-owned TERR-2/TERR-3 metadata contract and the Arcadia territory decision is outside tools-ki. It does not block the tools-ki behaviour, but no real Capital should declare `territory_aliases` until the Harness `ki-repo` audit accepts the key, so delivery reports it as remaining work rather than claiming validation parity.
 
 ### Why one record fits
 
