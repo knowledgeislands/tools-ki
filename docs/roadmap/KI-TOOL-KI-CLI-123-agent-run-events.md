@@ -4,12 +4,14 @@ area: CLI
 title: Agent run events
 project: ways-of-working
 component: agent
-status: triage
+kind: deliver
+horizon: next
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-13T13:53:24Z
-updated_at: 2026-10-13T13:53:24Z
+updated_at: 2026-10-13T21:14:24Z
 ---
 
 # Agent Run Events
@@ -20,7 +22,7 @@ updated_at: 2026-10-13T13:53:24Z
 
 ## Context
 
-Knowledge Islands Principal owns the notification strategy for delegated work, record `KI-PRINCIPAL-ECO-012` in its Streams roadmap under the [ways-of-working](https://github.com/knowledgeislands/ki-principal/blob/main/Streams/Projects/ways-of-working/ways-of-working.md) Project. Kris adopted it on 2026-10-13 as `ADOPT` in Decision 17 of the `ways-of-working` run, with `HOME` (a): the strategy stays in the Capital and each delivery is handed to the repository that owns it. This record is the phase 1 handoff for the mechanics; the sibling handoff for the `ki-delegation` vocabulary and progress-protocol wording is in `ki-agentic-harness`. `tools-ki` owns this record's priority, plan and acceptance.
+Knowledge Islands Principal owns the notification strategy for delegated work, record `KI-PRINCIPAL-ECO-012` in its Streams roadmap under the [ways-of-working](https://github.com/knowledgeislands/ki-principal/blob/main/Streams/Projects/ways-of-working/ways-of-working.md) Project. Kris adopted the strategy on 2026-10-13, in his words "ADOPT adopt KI-PRINCIPAL-ECO-012 to draft through ki-next; hand phase 1 to tools-ki and the harness now", with the home decision "HOME (a) keep KI-PRINCIPAL-ECO-012 in ki-principal; hand deliveries to each repository": the strategy stays in the Capital and each delivery is handed to the repository that owns it. This record is the phase 1 handoff for the mechanics; the sibling handoff for the `ki-delegation` vocabulary and progress-protocol wording is in `ki-agentic-harness`, record `KI-HARNESS-GOV-175`. Kris adopted both handoffs on 2026-10-13: "RECV-ADOPT - Adopt KI-TOOL-KI-CLI-123 and KI-HARNESS-GOV-175 draft next deliver; tools-ki first." This record therefore comes first in order and the harness record follows it. `tools-ki` owns this record's priority, plan and acceptance.
 
 Today the run packet under `$KI_STATE_HOME/agents/<run>/` carries, per agent, a one-line status file, a log, a report and the `DONE` marker, and `wait --next` marks agents seen by name in the run's `seen` file. There is no event log and no delivery receipt. Phase 1 is the strategy's smallest useful step: events derived from the packet and surfaced through the thread channel, with no integration, so the interim chat-only preference stands and becomes event-based.
 
@@ -40,10 +42,44 @@ The run that produced the strategy also showed that the waiter's order is wrong.
 4. The milestone line form `HH:MM TZ - milestone: <text>` is added to the progress protocol the launcher appends, in the wording the harness adopts; every other status line stays local and produces no event.
 5. Duplicate suppression at the source: a tag is one `needs-owner` event until its wording changes, an unchanged status line is never re-emitted, and relaunching an agent of the same name starts a new sequence.
 
+## Current state
+
+Adopted to `next` as a draft and not yet planned. The run packet carries a status file, a log, a report and `DONE` per agent and `wait --next` marks agents seen by name; there is no events log, and `waitForRun` in `src/core/agent/runs.ts` returns the first unseen finished agent in name order. `ki-plan` shapes the plan below before this record becomes Ready.
+
+## Steps
+
+- [ ] Shape this record through `ki-plan` against requirements 1 to 5; no delivery step is planned yet.
+
+## Files touched
+
+Not yet determined. The plan is expected to name `src/core/agent/runs.ts`, the `ki agent` command surface, their tests and the README's `ki agent` section.
+
+## Verify
+
+Not yet set. The plan names the exact gates; at minimum the repository test suite and the `ki-engineering` audit.
+
 ## Dependencies / blocks
 
 - `ki-agentic-harness` owns the `ki-delegation` background-run standard, which names the events, the milestone line, what `wait --next` and `watch` return and the rule that the coordinator stays out of any delivery path; the launcher's appended wording follows it. Durable documentation: [the background-run standard](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/skills/governance/ki-delegation/references/standards-background-runs.md). This is a sequencing preference, not build order: the mechanics can land first and the wording be aligned after, so `blocked_by` is empty.
 - Knowledge Islands Principal owns the strategy, its phase plan and the owner decisions behind it; this record delivers phase 1 only and does not decide phases 2 to 4.
+
+## Documentation impact
+
+### Decision Records
+
+Not yet assessed; `ki-plan` states whether the event vocabulary needs a Decision Record or follows the strategy's existing decisions.
+
+### Specifications
+
+Not yet assessed; `ki-plan` states whether a behaviour-level contract changes.
+
+### Guides
+
+Not yet assessed; `ki-plan` states whether human guidance changes.
+
+### Roadmap
+
+Phases 2 to 4 of the notification strategy are later records in their owning repositories; this record adds none of them.
 
 ## Discussion
 
@@ -53,7 +89,7 @@ Deriving events from the packet keeps every existing prompt valid: an agent's du
 
 ### Detecting failure and outstanding queries in the report
 
-The strategy was written against the earlier report shape with a Failed section and a Needs section. The owner report that replaced it on 2026-10-13 (Decision 14 of the `ways-of-working` run) puts material failures inside "What has been done" and gives each outstanding query its own heading `<tag> - <title>` under "Outstanding queries". `needs-owner` therefore derives from those headings; `failed` needs either a parseable signal in the report or the agent's final status line, and the exact rule is settled in planning alongside the harness wording.
+The strategy was written against the earlier report shape with a Failed section and a Needs section. The owner report that replaced it on 2026-10-13, in Kris's words "standardise owner reports through the ways-of-working process. Three sections in order: 1 What has been done (outcomes, material failures, corrections, limitations); 2 What is in progress ...; 3 Outstanding queries, each headed '<stable tag> - <plain title>'", puts material failures inside "What has been done" and gives each outstanding query its own heading `<tag> - <title>` under "Outstanding queries". `needs-owner` therefore derives from those headings; `failed` needs either a parseable signal in the report or the agent's final status line, and the exact rule is settled in planning alongside the harness wording.
 
 ### Open questions
 
