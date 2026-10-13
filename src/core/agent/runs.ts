@@ -197,7 +197,7 @@ const composePrompt = async (
     [
       '---',
       '',
-      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${base}.report.md in the Done / Failed / Needs the owner format, then write DONE as the last line of ${base}.status. Do not use background subagents. Never end your session while waiting.`
+      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${base}.report.md as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries with the reply block), then write DONE as the last line of ${base}.status. Do not use background subagents. Never end your session while waiting.`
     ].join('\n')
   )
   return `${sections.join('\n\n')}\n`
