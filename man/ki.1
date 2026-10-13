@@ -379,10 +379,10 @@ each folder, is opened in reverse.
 .SS Background agents
 \&
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]
 Launch one detached agent and write its run packet.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]
 Append a ready-made agent to the run queue.
 .TP
 .B ki agent dispatch <run> --max <count> [--interval <seconds>]
@@ -1437,7 +1437,7 @@ Claude Code or Codex in their own session with standard input from
 .IR /dev/null ,
 so an interrupt of the launching session cannot stop them.
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]
 Launch one detached agent. The prompt gains the authority footer the pinned
 Harness's
 .B ki-delegation
@@ -1457,10 +1457,28 @@ then starts it. When a named agent exits without
 the launch fails, or a held agent ends with a
 .I gate cannot open
 status.
+.B --model
+names the runtime's model and is passed through verbatim;
+.B --effort
+sets its reasoning effort, which the runtime may still reject for that
+model. Claude Code receives
+.B --model
+and
+.BR --effort ;
+Codex receives
+.B -m
+and
+.BR "-c model_reasoning_effort=" .
+Omitted, each uses the runtime's own default.
+.I <name>.launch.json
+records the runtime, model, and effort.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]
 Append a ready-made agent to the run queue, copying its prompt. Queue order
-is priority order.
+is priority order. The dispatcher launches it with the queued
+.B --model
+and
+.BR --effort .
 .TP
 .B ki agent dispatch <run> --max <count> [--interval <seconds>]
 Start a detached dispatcher that keeps up to

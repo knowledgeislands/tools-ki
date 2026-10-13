@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import type { Environment } from '../paths.ts'
 import type { AgentProcesses } from './processes.ts'
-import { type AgentRuntime, runtimeLaunch } from './runtimes.ts'
+import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
 
 /** Cumulative authority tiers whose footers ship with the ki-delegation skill. */
 export const authorityTiers = ['none', 'push', 'prune', 'release'] as const
@@ -31,6 +31,9 @@ export interface LaunchRequest {
   readonly addDirs: readonly string[]
   readonly rules: AuthorityTier
   readonly waitFor: readonly string[]
+  /** Omitted, the runtime uses its own default model or effort. */
+  readonly model?: string | undefined
+  readonly effort?: AgentEffort | undefined
 }
 
 type AgentState =
@@ -172,6 +175,7 @@ const validated = async (context: AgentContext, request: LaunchRequest): Promise
   checkName(request.name, 'name')
   for (const name of request.waitFor) checkName(name, 'wait-for name')
   if (request.waitFor.includes(request.name)) throw new KiError(`${request.name} cannot wait for itself`, 2)
+  if (request.model !== undefined && !request.model.trim()) throw new KiError('a model needs a name', 2)
   return {
     ...request,
     workdir: await resolveDirectory(context, request.workdir, 'workdir'),
@@ -217,7 +221,9 @@ const startRuntime = async (
       workingDirectory: request.workdir,
       directories: [directory, ...request.addDirs],
       environment: context.environment,
-      log: `${base}.log`
+      log: `${base}.log`,
+      model: request.model,
+      effort: request.effort
     })
   )
   await writeFile(`${base}.pid`, `${pid}\n`)
@@ -241,6 +247,8 @@ const startHold = (context: AgentContext, directory: string, request: LaunchRequ
       request.runtime,
       ...request.addDirs.flatMap((path) => ['--add-dir', path]),
       ...request.waitFor.flatMap((name) => ['--wait-for', name]),
+      ...(request.model === undefined ? [] : ['--model', request.model]),
+      ...(request.effort === undefined ? [] : ['--effort', request.effort]),
       '--foreground'
     ],
     workingDirectory: directory,
@@ -248,6 +256,10 @@ const startHold = (context: AgentContext, directory: string, request: LaunchRequ
     log: `${base}.log`
   })
 }
+
+/** The runtime, model and effort an agent starts with; a default is left out. */
+const launchDetails = (request: LaunchRequest): string =>
+  `${JSON.stringify({ runtime: request.runtime, model: request.model, effort: request.effort })}\n`
 
 export interface LaunchResult {
   readonly pid: number
@@ -273,6 +285,7 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
 
   const prompt = await composePrompt(context, directory, request, body)
   await writeFile(`${base}.prompt.md`, prompt)
+  await writeFile(`${base}.launch.json`, launchDetails(request))
   await rm(`${base}.report.md`, { force: true })
   if (state.kind === 'open')
     return { pid: await startRuntime(context, directory, request, prompt), directory, held: [] }

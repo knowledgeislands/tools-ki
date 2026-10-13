@@ -5,6 +5,10 @@ import type { AgentLaunch } from './processes.ts'
 export const agentRuntimes = ['claude', 'codex'] as const
 export type AgentRuntime = (typeof agentRuntimes)[number]
 
+/** Reasoning efforts `ki agent` accepts; each runtime rejects any its model lacks. */
+export const agentEfforts = ['low', 'medium', 'high', 'xhigh', 'max'] as const
+export type AgentEffort = (typeof agentEfforts)[number]
+
 export interface RuntimeRequest {
   readonly prompt: string
   readonly workingDirectory: string
@@ -12,7 +16,13 @@ export interface RuntimeRequest {
   readonly directories: readonly string[]
   readonly environment: Environment
   readonly log: string
+  /** Passed through verbatim; omitted, the runtime uses its own default. */
+  readonly model?: string | undefined
+  readonly effort?: AgentEffort | undefined
 }
+
+const optional = (value: string | undefined, form: (value: string) => readonly string[]): readonly string[] =>
+  value === undefined ? [] : form(value)
 
 /**
  * Runtime adapters: the only runtime-specific mechanics behind the ki-delegation
@@ -27,7 +37,9 @@ const adapters: Record<AgentRuntime, (request: RuntimeRequest) => AgentLaunch> =
       request.prompt,
       '--permission-mode',
       'bypassPermissions',
-      ...request.directories.flatMap((directory) => ['--add-dir', directory])
+      ...request.directories.flatMap((directory) => ['--add-dir', directory]),
+      ...optional(request.model, (model) => ['--model', model]),
+      ...optional(request.effort, (effort) => ['--effort', effort])
     ],
     workingDirectory: request.workingDirectory,
     // A zero ceiling stops print mode ending the session while the agent waits.
@@ -43,6 +55,8 @@ const adapters: Record<AgentRuntime, (request: RuntimeRequest) => AgentLaunch> =
       '--cd',
       request.workingDirectory,
       ...request.directories.flatMap((directory) => ['--add-dir', directory]),
+      ...optional(request.model, (model) => ['-m', model]),
+      ...optional(request.effort, (effort) => ['-c', `model_reasoning_effort=${effort}`]),
       request.prompt
     ],
     workingDirectory: request.workingDirectory,

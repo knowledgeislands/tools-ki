@@ -478,12 +478,12 @@
       "purpose": "Launch and coordinate detached background agents under the ki-delegation background-run contract. Each run lives in $KI_STATE_HOME/agents/<run>/ , with a prompt, one-line status, pid, log, and report per agent. An agent writes DONE as the last line of its status when it finishes. Runtime adapters start Claude Code or Codex in their own session with standard input from /dev/null , so an interrupt of the launching session cannot stop them.",
       "commands": [
         {
-          "invocation": "ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]",
-          "description": "Launch one detached agent. The prompt gains the authority footer the pinned Harness's ki-delegation skill ships for the --rules tier (default none ) and the progress protocol. The status time zone follows TZ . Until every --wait-for agent has written DONE , a detached hold process keeps the agent held, checking every 30 seconds, and then starts it. When a named agent exits without DONE , the launch fails, or a held agent ends with a gate cannot open status."
+          "invocation": "ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]",
+          "description": "Launch one detached agent. The prompt gains the authority footer the pinned Harness's ki-delegation skill ships for the --rules tier (default none ) and the progress protocol. The status time zone follows TZ . Until every --wait-for agent has written DONE , a detached hold process keeps the agent held, checking every 30 seconds, and then starts it. When a named agent exits without DONE , the launch fails, or a held agent ends with a gate cannot open status. --model names the runtime's model and is passed through verbatim; --effort sets its reasoning effort, which the runtime may still reject for that model. Claude Code receives --model and --effort ; Codex receives -m and -c model_reasoning_effort= . Omitted, each uses the runtime's own default. <name>.launch.json records the runtime, model, and effort."
         },
         {
-          "invocation": "ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...]",
-          "description": "Append a ready-made agent to the run queue, copying its prompt. Queue order is priority order."
+          "invocation": "ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]",
+          "description": "Append a ready-made agent to the run queue, copying its prompt. Queue order is priority order. The dispatcher launches it with the queued --model and --effort ."
         },
         {
           "invocation": "ki agent dispatch <run> --max <count> [--interval <seconds>]",

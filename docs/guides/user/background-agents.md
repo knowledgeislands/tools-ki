@@ -20,7 +20,9 @@ This guide shows how to delegate work to detached Claude Code or Codex agents wi
 ki agent launch <run> <name> <workdir> <prompt-file> --rules push --add-dir <dir>
 ```
 
-The launcher appends the tier's footer and the progress protocol, then starts the agent in its own session with standard input from `/dev/null`. The run packet lives under `$KI_STATE_HOME/agents/<run>/`: `<name>.prompt.md`, `.status`, `.pid`, `.log` and `.report.md`.
+The launcher appends the tier's footer and the progress protocol, then starts the agent in its own session with standard input from `/dev/null`. The run packet lives under `$KI_STATE_HOME/agents/<run>/`: `<name>.prompt.md`, `.launch.json`, `.status`, `.pid`, `.log` and `.report.md`.
+
+Choose the model and reasoning effort with `--model <model>` and `--effort low|medium|high|xhigh|max`, for example `--runtime claude --model claude-fable-5-1 --effort high` or `--runtime codex --model gpt-6-astra --effort xhigh`. The model name passes through verbatim, and the runtime rejects an effort its model does not support. Omit either to keep the runtime's own default. `<name>.launch.json` records the runtime, model and effort the agent started with; `ki agent queue` carries both options through to the dispatcher.
 
 Use `--wait-for <other>` when an agent must not start until another agent in the run writes `DONE`. The launcher holds the gate itself, so the agent's runtime cannot end its session while waiting:
 

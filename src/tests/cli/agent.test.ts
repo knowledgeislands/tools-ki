@@ -66,6 +66,7 @@ describe('ki agent launch', () => {
     expect(prompt).toContain('Do not use background subagents. Never end your session while waiting.\n')
     expect(await box.state.read('ki/agents/r/one.status')).toBe('21:30 CEST - launched\n')
     expect(await box.state.read('ki/agents/r/one.pid')).toBe('1001\n')
+    expect(await box.state.read('ki/agents/r/one.launch.json')).toBe('{"runtime":"claude"}\n')
     const [launch] = processes.launches as [AgentLaunch]
     expect(launch.command).toBe('claude')
     expect(launch.arguments).toEqual([
@@ -115,6 +116,43 @@ describe('ki agent launch', () => {
   })
 
   test.each([
+    [
+      'claude',
+      'claude-fable-5-1',
+      ['--model', 'claude-fable-5-1', '--effort', 'xhigh'],
+      (prompt: string) => ['-p', prompt, '--permission-mode', 'bypassPermissions']
+    ],
+    [
+      'codex',
+      'gpt-6-astra',
+      ['-m', 'gpt-6-astra', '-c', 'model_reasoning_effort=xhigh'],
+      (_prompt: string) => ['exec', '--dangerously-bypass-approvals-and-sandbox', '--skip-git-repo-check']
+    ]
+  ])('passes the model and effort to the %s adapter in its own form', async (runtime, model, form, leading) => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    const processes = fakeProcesses(box)
+    await box.project.write('task.md', '# Task: do it\n')
+
+    const result = await box.run(
+      `ki agent launch r one . task.md --runtime ${runtime} --model ${model} --effort xhigh`,
+      {
+        now
+      }
+    )
+
+    expect(result.exitCode).toBe(0)
+    const prompt = await box.state.read('ki/agents/r/one.prompt.md')
+    const [launch] = processes.launches as [AgentLaunch]
+    expect(launch.arguments.slice(0, leading(prompt).length)).toEqual(leading(prompt))
+    const at = launch.arguments.indexOf(form[0] as string)
+    expect(launch.arguments.slice(at, at + 4)).toEqual(form)
+    if (runtime === 'codex') expect(launch.arguments.at(-1)).toBe(prompt)
+    expect(JSON.parse(await box.state.read('ki/agents/r/one.launch.json'))).toEqual({ runtime, model, effort: 'xhigh' })
+  })
+
+  test.each([
+    ['ki agent launch r one . task.md --model=', 2, 'a model needs a name'],
     ['ki agent launch r/x one . task.md', 2, "invalid run: 'r/x'"],
     ['ki agent launch r o.ne . task.md', 2, "invalid name: 'o.ne'"],
     ['ki agent launch r one . task.md --wait-for a.b', 2, "invalid wait-for name: 'a.b'"],
@@ -130,6 +168,16 @@ describe('ki agent launch', () => {
     const result = await box.run(command, { now })
     expect(result.exitCode).toBe(exitCode)
     expect(result.stderr).toBe(`ki: error: ${message}\n`)
+  })
+
+  test('rejects an effort outside the shared set', async () => {
+    const box = await sandbox()
+    fakeProcesses(box)
+    const result = await box.run('ki agent launch r one . task.md --effort extreme', { now })
+    expect(result.exitCode).toBe(2)
+    expect(result.stderr).toContain(
+      "error: option '--effort <level>' argument 'extreme' is invalid. Allowed choices are low, medium, high, xhigh, max."
+    )
   })
 
   test('requires the pinned harness to ship well-formed run assets and a valid TZ', async () => {
@@ -186,7 +234,7 @@ describe('ki agent launch --wait-for', () => {
     await box.state.write('ki/agents/r/first.status', '19:00 UTC - building\n')
 
     const result = await box.run(
-      'ki agent launch r one . task.md --runtime codex --rules push --add-dir extra --wait-for zero --wait-for first --wait-for later',
+      'ki agent launch r one . task.md --runtime codex --rules push --add-dir extra --wait-for zero --wait-for first --wait-for later --model gpt-6-astra --effort high',
       { now }
     )
 
@@ -216,6 +264,10 @@ describe('ki agent launch --wait-for', () => {
       'first',
       '--wait-for',
       'later',
+      '--model',
+      'gpt-6-astra',
+      '--effort',
+      'high',
       '--foreground'
     ])
     expect(hold.workingDirectory).toBe(runDirectory(box))
@@ -249,6 +301,7 @@ describe('ki agent launch --wait-for', () => {
     expect(launch.command).toBe('codex')
     expect(launch.arguments.at(-1)).toBe(prompt)
     expect(launch.arguments).toContain(`${project}/extra`)
+    expect(launch.arguments.slice(-5, -1)).toEqual(['-m', 'gpt-6-astra', '-c', 'model_reasoning_effort=high'])
     expect(launch.log).toBe(runPath(box, 'one.log'))
     expect(await box.state.read('ki/agents/r/one.status')).toBe('19:30 UTC - launched\n')
     expect(await box.state.read('ki/agents/r/one.pid')).toBe('2001\n')
@@ -431,6 +484,31 @@ describe('ki agent queue, dispatch and wait', () => {
     expect(duplicate.stderr).toBe('ki: error: r/one is already queued or launched\n')
     await box.state.write('ki/agents/r/three.pid', '5\n')
     expect((await box.run('ki agent queue r three task.md', { now })).exitCode).toBe(1)
+  })
+
+  test('carries the model and effort through the queue to the launched runtime', async () => {
+    const box = await sandbox()
+    box.setEnv({ TZ: 'UTC' })
+    await setupDelegation(box)
+    const processes = fakeProcesses(box, async () => processes.finish())
+    await box.project.write('task.md', '# Task\n')
+    await box.run('ki agent queue r fable task.md --model claude-fable-5-1 --effort max', { now })
+    await box.run('ki agent queue r plain task.md --runtime codex', { now })
+    const [fable, plain] = (await box.state.read('ki/agents/r/queue.jsonl')).split('\n')
+    expect(JSON.parse(fable as string)).toMatchObject({ name: 'fable', model: 'claude-fable-5-1', effort: 'max' })
+    expect(Object.keys(JSON.parse(plain as string))).not.toContain('model')
+    expect(Object.keys(JSON.parse(plain as string))).not.toContain('effort')
+
+    expect((await box.run('ki agent dispatch r --max 2 --interval 1 --foreground', { now })).exitCode).toBe(0)
+
+    const [first, second] = processes.launches as [AgentLaunch, AgentLaunch]
+    expect(first.arguments.slice(-4)).toEqual(['--model', 'claude-fable-5-1', '--effort', 'max'])
+    expect(second.arguments).not.toContain('-m')
+    expect(second.arguments).not.toContain('-c')
+    expect(await box.state.read('ki/agents/r/fable.launch.json')).toBe(
+      '{"runtime":"claude","model":"claude-fable-5-1","effort":"max"}\n'
+    )
+    expect(await box.state.read('ki/agents/r/plain.launch.json')).toBe('{"runtime":"codex"}\n')
   })
 
   test('starts one detached dispatcher per run', async () => {

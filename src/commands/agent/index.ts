@@ -16,7 +16,7 @@ import {
   waitForRun,
   watchRun
 } from '../../core/agent/runs.ts'
-import { type AgentRuntime, agentRuntimes } from '../../core/agent/runtimes.ts'
+import { type AgentEffort, type AgentRuntime, agentEfforts, agentRuntimes } from '../../core/agent/runtimes.ts'
 import { DEFAULT_HARNESS } from '../../core/configuration/declaration.ts'
 import { grammarError } from '../../core/errors.ts'
 import { harnessDirectory } from '../../core/storage/harness-paths.ts'
@@ -43,6 +43,8 @@ interface LaunchOptions {
   readonly addDir: readonly string[]
   readonly rules: AuthorityTier
   readonly waitFor: readonly string[]
+  readonly model?: string
+  readonly effort?: AgentEffort
 }
 
 /** The launch options `launch` and `queue` share. */
@@ -54,6 +56,8 @@ const withLaunchOptions = (command: Command): Command =>
       new Option('--rules <tier>', 'ki-delegation authority footer to append').choices(authorityTiers).default('none')
     )
     .option('--wait-for <name>', 'agent in this run whose DONE gates the start; repeatable', collect, [])
+    .option('--model <model>', "runtime model, passed through verbatim; omitted, the runtime's default")
+    .addOption(new Option('--effort <level>', "reasoning effort; omitted, the runtime's default").choices(agentEfforts))
 
 const request = (
   run: string,
@@ -69,7 +73,9 @@ const request = (
   runtime: options.runtime,
   addDirs: options.addDir,
   rules: options.rules,
-  waitFor: options.waitFor
+  waitFor: options.waitFor,
+  model: options.model,
+  effort: options.effort
 })
 
 export const createAgentCommand = (context: KiContext): Command => {
