@@ -217,6 +217,7 @@ const startRuntime = async (
   await writeFile(`${base}.status`, `${stamp(context)} - launched\n`)
   const pid = await context.processes.launch(
     runtimeLaunch(request.runtime, {
+      run: request.run,
       prompt,
       workingDirectory: request.workdir,
       directories: [directory, ...request.addDirs],

@@ -81,6 +81,7 @@ describe('ki agent launch', () => {
     ])
     expect(launch.workingDirectory).toBe(await realpath(box.project.path))
     expect(launch.environment['CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS']).toBe('0')
+    expect(launch.environment['KI_AGENT_RUN']).toBe('r')
     expect(launch.log).toBe(runPath(box, 'one.log'))
 
     const again = await box.run('ki agent launch r one . task.md', { now })
@@ -113,6 +114,7 @@ describe('ki agent launch', () => {
       prompt
     ])
     expect(launch.environment['CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS']).toBeUndefined()
+    expect(launch.environment['KI_AGENT_RUN']).toBe('r')
   })
 
   test.each([

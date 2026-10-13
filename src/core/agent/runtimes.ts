@@ -9,7 +9,12 @@ export type AgentRuntime = (typeof agentRuntimes)[number]
 export const agentEfforts = ['low', 'medium', 'high', 'xhigh', 'max'] as const
 export type AgentEffort = (typeof agentEfforts)[number]
 
+/** Environment variable naming the run in every agent `ki agent` starts. */
+export const agentRunMarker = 'KI_AGENT_RUN'
+
 export interface RuntimeRequest {
+  /** Run name, set as the child's run marker so hooks can tell a background agent apart. */
+  readonly run: string
   readonly prompt: string
   readonly workingDirectory: string
   /** Absolute directories the agent may write besides its working directory. */
@@ -27,7 +32,8 @@ const optional = (value: string | undefined, form: (value: string) => readonly s
 /**
  * Runtime adapters: the only runtime-specific mechanics behind the ki-delegation
  * background-run contract. Each grants the agent full non-interactive autonomy,
- * because a detached agent cannot answer a permission prompt.
+ * because a detached agent cannot answer a permission prompt, and marks the
+ * child's environment with its run so a coordinating thread's hooks stay silent in it.
  */
 const adapters: Record<AgentRuntime, (request: RuntimeRequest) => AgentLaunch> = {
   claude: (request) => ({
@@ -43,7 +49,7 @@ const adapters: Record<AgentRuntime, (request: RuntimeRequest) => AgentLaunch> =
     ],
     workingDirectory: request.workingDirectory,
     // A zero ceiling stops print mode ending the session while the agent waits.
-    environment: { ...request.environment, CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: '0' },
+    environment: { ...request.environment, [agentRunMarker]: request.run, CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: '0' },
     log: request.log
   }),
   codex: (request) => ({
@@ -60,7 +66,7 @@ const adapters: Record<AgentRuntime, (request: RuntimeRequest) => AgentLaunch> =
       request.prompt
     ],
     workingDirectory: request.workingDirectory,
-    environment: request.environment,
+    environment: { ...request.environment, [agentRunMarker]: request.run },
     log: request.log
   })
 }
