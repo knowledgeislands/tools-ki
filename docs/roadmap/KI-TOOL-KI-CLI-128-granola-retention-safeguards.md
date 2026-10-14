@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 88de22802f2a42bd5d4015f09c8fc0928307dce8
 created_at: 2026-10-14T14:26:48Z
-updated_at: 2026-10-14T17:04:12Z
+updated_at: 2026-10-14T22:58:36Z
 ---
 
 # KI-TOOL-KI-CLI-128: Granola retention safeguards
@@ -22,6 +22,8 @@ updated_at: 2026-10-14T17:04:12Z
 Prevent Granola resets destroying retained handling evidence or migration proof, without adding optional discovery, importer or state-root machinery.
 
 ## Context
+
+On 14 October 2026, the owner confirmed RESET-FIRST: safe reset is this record’s first piece of work; independent `state_root` remains conditional. The refusal step explicitly covers both `--rebuild` and ordinary adapter reset before any Ready request. This documentation clarification preserves this copy’s existing lifecycle and implementation evidence; it grants no Ready transition, new coding, integration, acceptance, migration or actual reset. Receiving evidence: [owner-answer relay](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_THREADS/knowledge-acquisition/handoff-review.report.md); owner decision: [Acquire decisions](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/decisions.md#decision-38-2026-10-14t225614z).
 
 The owner permitted one defect carrier before coding on 14 October 2026, then instructed “Can we get on with both roadmap items, please?” and explicitly authorised bounded local engineering of the narrowed retention defect. [Acquire's owner log](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/decisions.md#decision-34-2026-10-14t164640z) and the task grant supersede the earlier preparation-only restriction for the exact paths below. No repeated carrier/readiness question is needed. The original reservation remains in its ledger-only commit.
 
@@ -33,7 +35,7 @@ Corrective delivery is isolated on `fix/granola-retention-20261014` at `/Users/k
 
 ## Steps
 
-- [x] Refuse all reset scopes when a journal exists, the ledger is unsafe/corrupt, or the selected scope includes any non-staged disposition, including awaiting-review amendments and handled-but-absent evidence.
+- [x] Refuse all reset scopes, explicitly including both ordinary adapter reset (without `--rebuild`) and adapter reset with `--rebuild`, when a journal exists, the ledger is unsafe/corrupt, or the selected scope includes any non-staged disposition, including awaiting-review amendments and handled-but-absent evidence.
 - [x] Replace recursive rebuild deletion with exact prevalidated staged-document and ledger paths; preserve directories, proof, assets, variants and unknown files. Component reset affects only its selected staged entry.
 - [x] Show the exact deletion/update plan before confirmation and exercise legacy and capture-root layouts through the public offline CLI seam.
 - [ ] Complete the broader engineering gate or obtain a bounded pre-existing-gate disposition, then return Awaiting review without activation, integration or acceptance. The code/specification/guide, focused tests, TypeScript and 100% coverage are delivered locally.
