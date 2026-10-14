@@ -83,7 +83,7 @@ export const renderConformReports = (
       const visible = findings.filter((finding) => reporterLevels.includes(finding.level))
       results.entry({
         label: conformSkillLabel(report.skill.skill.identity, reportSummary),
-        children: visible.map(findingEntry)
+        children: visible.map((finding) => findingEntry(finding))
       })
     }
   }

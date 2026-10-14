@@ -4,6 +4,12 @@ import { runWithEvidenceProgress } from '../progress/run.ts'
 import { localRepositoryRegistration, repositorySkillActivation } from './local-state.ts'
 import { selectRepositorySkills } from './selection.ts'
 import type { RepositoryOperationContext, RepositorySelection } from './types.ts'
+import {
+  type AuditVerdictScope,
+  findingInScope,
+  resolveVerdictScope,
+  type VerdictScopeRequest
+} from './verdict-scope.ts'
 
 export interface RepositoryAuditReport {
   readonly skill: PreparedSkill
@@ -16,13 +22,20 @@ export interface RepositoryAuditResult {
   readonly skills: readonly { readonly identity: string }[]
   readonly reports: readonly RepositoryAuditReport[]
   readonly registration?: string
+  /** Present when the verdict was scoped; evaluation and rendering stay whole-tree. */
+  readonly scope?: AuditVerdictScope
+}
+
+export interface RepositoryAuditOptions extends RepositorySelection {
+  readonly verdict?: VerdictScopeRequest
 }
 
 export interface RepositoryAuditObserver {
   readonly repositoryStarted: (
     repository: string,
     skills: readonly { readonly identity: string }[],
-    index: number
+    index: number,
+    scope?: AuditVerdictScope
   ) => void
   readonly repositoryCompleted: (result: RepositoryAuditResult) => void
   readonly repositoryFailed: (repository: string) => void
@@ -35,14 +48,18 @@ export interface RepositoryAuditOperationResult {
 
 export const auditRepositories = async (
   context: RepositoryOperationContext,
-  selection: RepositorySelection,
+  selection: RepositoryAuditOptions,
   observer: RepositoryAuditObserver
 ): Promise<RepositoryAuditOperationResult> => {
   const selected = await selectRepositorySkills(context, selection)
   const completed: RepositoryAuditResult[] = []
   let failed = false
   for (const [index, { repository, skills, resolvedSkills }] of selected.entries()) {
-    observer.repositoryStarted(repository.root, skills, index)
+    // Resolved before the frame opens, so an unreadable index fails the command, not the audit.
+    const scope = selection.verdict
+      ? await resolveVerdictScope(selection.verdict, repository.root, context.runner, context.environment)
+      : undefined
+    observer.repositoryStarted(repository.root, skills, index, scope)
     try {
       const repositorySkills = await repositorySkillActivation(context, repository, skills)
       const results = await runWithEvidenceProgress(
@@ -77,11 +94,13 @@ export const auditRepositories = async (
         repository: repository.root,
         skills,
         reports: results.map(({ skill, audit }) => ({ skill, findings: audit.findings, criteria: audit.criteria })),
-        ...(registration ? { registration } : {})
+        ...(registration ? { registration } : {}),
+        ...(scope ? { scope } : {})
       }
       completed.push(result)
       observer.repositoryCompleted(result)
-      failed ||= Boolean(registration) || findings.some((finding) => finding.level === 'fail')
+      const blocking = scope ? findings.filter((finding) => findingInScope(scope, repository.root, finding)) : findings
+      failed ||= Boolean(registration) || blocking.some((finding) => finding.level === 'fail')
     } catch (error) {
       observer.repositoryFailed(repository.root)
       throw error

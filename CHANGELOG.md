@@ -76,7 +76,7 @@ This baseline describes the `v0.10.3` release. Domain imports and extracted type
 - `ki repo store create <sources> [--write]`
 - `ki repo store bind <sources|legacy> <absolute-path> [--write]`
 - `ki repo store unbind <sources|legacy> [--write]`
-- `ki repo audit`
+- `ki repo audit [--staged] [--paths <path...>]`
 - `ki repo conform`
 - `ki repo diag`
 - `ki repo roadmap list [--horizon <horizons>] [--status <status>] [--format <text|json>] [--links <compact|all>] [--by <project|initiative|area>]`
@@ -217,6 +217,7 @@ This baseline describes the `v0.10.3` release. Domain imports and extracted type
 - Trade pairing compares the payload the sender authored — its field values as parsed and its prose — rather than raw bytes, so a receiver that formats its own Markdown does not read as having tampered with a record.
 - `ki repo trade list` is a framed selected-repository inventory of preparations, outbound submissions, received imports, and imports awaiting local receipt, including their observation and cleanup state. `ki repo --estate trade list` aggregates the same view across registered repositories.
 - `ki repo audit` and `ki repo conform` report the span in which a skill gathers its evidence, which precedes every criterion and on a subprocess-backed rubric is nearly the whole operation. The host names that span itself, so a session that emits nothing is still reported as gathering evidence rather than as a stalled item count; a session that takes the optional emitter refines it with its own named stages and steps.
+- `ki repo audit --staged` and `--paths <path...>` scope the verdict without scoping the evaluation: every criterion still runs against the whole repository and every finding is rendered, but only a FAIL finding whose subject is a scoped path, a path under one, or a directory containing one fails the audit. `--staged` reads the Git index, deletions included; the frame names the scope, findings outside it are marked, and the summary leads with the scoped verdict and its `SCOPE:` counts.
 - `ki repo audit` discloses criteria coverage beside every verdict as `CRITERIA: EVALUATED=<evaluated>/<mechanical> JUDGMENT=<judgment>`, so a pass with nothing to check no longer reads like a fully checked pass. A mechanical criterion counts as evaluated when it reports at least one outcome other than not-applicable; judgment criteria are counted but never assessed by the host.
 - `ki dev skill rubric` resolves installed Harnesses rather than the current directory and names the resolved publication root; `--write` publishes only when that root and the current directory share a Git working tree, and otherwise refuses, naming both roots.
 - Repository audit and conform now share a compact receipt stream and one mutable activity row. The bar indicates activity without estimating completion from item count or declared `cost`; evidence-ready skills receive one full receipt before collapsing to a timed evidence receipt, queued skills stay hidden, and the operation receipt retains total elapsed time. All-pass result trees end at the repository summary; per-skill results are retained only for WARN, FAIL, or FIXED outcomes. Conform labels a post-write pass `re-audit` and skips it with an explicit message when no write or command was staged.

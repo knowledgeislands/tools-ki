@@ -21,6 +21,8 @@ interface RepositoryAuditOptions {
   readonly progressStyle?: string
   readonly reporterLevels?: string
   readonly concise?: boolean
+  readonly staged?: boolean
+  readonly paths?: readonly string[]
 }
 
 export const createRepoAuditCommand = (context: KiContext, selectedRepositories: SelectRepositories): Command =>
@@ -31,8 +33,12 @@ export const createRepoAuditCommand = (context: KiContext, selectedRepositories:
     .option('--progress-style <style>', 'progress layout: single or multi (default: multi on a TTY)')
     .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN)')
     .option('--concise', 'render only one final summary per repository')
+    .option('--staged', 'scope the verdict to paths staged in the Git index; evaluation stays whole-tree')
+    .option('--paths <path...>', 'scope the verdict to these repository paths; evaluation stays whole-tree')
     .action(async (options: RepositoryAuditOptions) => {
       const output = operationOptions('audit', options)
+      const verdict =
+        options.staged || options.paths ? { staged: Boolean(options.staged), paths: options.paths ?? [] } : undefined
       const summaries: AuditRepositorySummary[] = []
       let reporter: ReturnType<typeof renderAuditFrameStart> | undefined
       const result = await auditRepositories(
@@ -40,11 +46,12 @@ export const createRepoAuditCommand = (context: KiContext, selectedRepositories:
         {
           ...options,
           ...selectedRepositories(),
+          ...(verdict ? { verdict } : {}),
           onSkippedMgitMembers: (members) =>
             context.stdout.write(`skipped mGit members (no .ki.toml): ${members.join(', ')}\n`)
         },
         {
-          repositoryStarted: (repository, skills, index) => {
+          repositoryStarted: (repository, skills, index, scope) => {
             if (index && !output.concise) context.stdout.write('\n')
             reporter = output.concise
               ? undefined
@@ -52,19 +59,21 @@ export const createRepoAuditCommand = (context: KiContext, selectedRepositories:
                   context,
                   repository,
                   skills,
-                  context.stdout.isTTY === true && output.progress !== 'never'
+                  context.stdout.isTTY === true && output.progress !== 'never',
+                  scope
                 )
           },
-          repositoryCompleted: ({ repository, reports, registration }) => {
+          repositoryCompleted: ({ repository, reports, registration, scope }) => {
             summaries.push(
               output.concise
-                ? renderConciseAuditSummary(context, repository, reports, registration)
+                ? renderConciseAuditSummary(context, repository, reports, registration, scope)
                 : renderAuditResults(
                     reporter as NonNullable<typeof reporter>,
                     repository,
                     reports,
                     output.reporterLevels,
-                    registration
+                    registration,
+                    scope
                   )
             )
           },

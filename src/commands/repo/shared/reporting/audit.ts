@@ -1,7 +1,8 @@
 import { basename } from 'node:path'
 import type { KiContext } from '../../../../context.ts'
+import { type AuditVerdictScope, findingInScope } from '../../../../core/repository/index.ts'
 import type { AuditCriteria, Finding, PreparedSkill } from '../../../../core/runtime/index.ts'
-import { renderTree, type TreeReporter } from '../../../presentation/index.ts'
+import { renderTree, type TreeEntry, type TreeReporter } from '../../../presentation/index.ts'
 import type { ReporterLevel } from '../progress/index.ts'
 import { findingEntry, REPORT_ICON, REPORT_LABEL, renderOperationFrameStart } from './shared.ts'
 
@@ -19,7 +20,15 @@ export interface AuditRepositorySummary {
   readonly failingFindings: number
   readonly warningFindings: number
   readonly criteria: AuditCriteria
+  /** The scoped verdict's own counts when the verdict was narrowed; the counts above stay whole-tree. */
+  readonly scope?: {
+    readonly paths: number
+    readonly failingFindings: number
+    readonly warningFindings: number
+  }
 }
+
+const OUTSIDE_SCOPE = ' (outside scope)'
 
 const NO_CRITERIA: AuditCriteria = { mechanical: 0, evaluated: 0, judgment: 0 }
 
@@ -41,23 +50,40 @@ const auditSkillSummary = (
   return { level: fails ? 'fail' : warnings ? 'warn' : 'pass', fails, warnings }
 }
 
-const auditSummaryIcon = (summary: Pick<AuditRepositorySummary, 'failingSkills' | 'warningSkills'>): string =>
-  summary.failingSkills ? REPORT_ICON.fail : summary.warningSkills ? REPORT_ICON.warn : REPORT_ICON.pass
+/**
+ * The verdict a summary carries: the scoped counts when the verdict was narrowed, otherwise
+ * the whole-tree skill verdicts. A registration failure is counted in the failing skills.
+ */
+const verdictLevel = (summary: Omit<AuditRepositorySummary, 'repository'>): 'pass' | 'warn' | 'fail' => {
+  const failing = summary.scope ? summary.scope.failingFindings : summary.failingSkills
+  const warning = summary.scope ? summary.scope.warningFindings : summary.warningSkills
+  return failing ? 'fail' : warning ? 'warn' : 'pass'
+}
+
+const auditSummaryIcon = (summary: Omit<AuditRepositorySummary, 'repository'>): string =>
+  REPORT_ICON[verdictLevel(summary)]
 
 const skillCount = (count: number): string => `${count} skill${count === 1 ? '' : 's'}`
 
-const auditPassed = (summary: Pick<AuditRepositorySummary, 'failingSkills' | 'warningSkills'>): boolean =>
-  summary.failingSkills === 0 && summary.warningSkills === 0
+const scopeLabel = (scope: NonNullable<AuditRepositorySummary['scope']>): string =>
+  `SCOPE: ${scope.paths} path${scope.paths === 1 ? '' : 's'} FAIL=${scope.failingFindings} WARN=${scope.warningFindings}`
 
 const auditCountsLabel = (summary: Omit<AuditRepositorySummary, 'repository'>): string =>
   `PASS=${summary.passingSkills} WARN=${summary.warningSkills} FAIL=${summary.failingSkills} · FINDINGS: FAIL=${summary.failingFindings} WARN=${summary.warningFindings} · ${criteriaLabel(summary.criteria)}`
 
 const auditSummaryLabel = (summary: AuditRepositorySummary): string => {
   const prefix = `summary: KI REPO AUDIT on ${basename(summary.repository)}`
-  if (auditPassed(summary))
+  if (summary.scope)
+    return `${prefix} ${REPORT_LABEL[verdictLevel(summary)].toUpperCase()} · ${scopeLabel(summary.scope)} · ${auditCountsLabel(summary)}`
+  if (verdictLevel(summary) === 'pass')
     return `${prefix} PASS · ${skillCount(summary.passingSkills)} · ${criteriaLabel(summary.criteria)}`
   return `${prefix} ${auditCountsLabel(summary)}`
 }
+
+/** The verdict-scope line in the report frame, naming how many paths narrow the verdict. */
+const scopeEntry = (scope: AuditVerdictScope): TreeEntry => ({
+  label: `⌖ verdict scoped to ${scope.paths.length} ${scope.source} path${scope.paths.length === 1 ? '' : 's'}`
+})
 
 const auditSkillLabel = (report: AuditSkillReport, summary: ReturnType<typeof auditSkillSummary>): string => {
   const result = `${REPORT_ICON[summary.level]} ${report.skill.skill.identity} ${REPORT_LABEL[summary.level].toUpperCase()}`
@@ -67,9 +93,15 @@ const auditSkillLabel = (report: AuditSkillReport, summary: ReturnType<typeof au
 const auditRepositorySummary = (
   repository: string,
   reports: readonly AuditSkillReport[],
-  registrationFailure?: string
+  registrationFailure?: string,
+  scope?: AuditVerdictScope
 ): AuditRepositorySummary => {
   const skillSummaries = reports.map((report) => auditSkillSummary(report.findings))
+  const scoped = scope
+    ? auditSkillSummary(
+        reports.flatMap((report) => report.findings).filter((finding) => findingInScope(scope, repository, finding))
+      )
+    : undefined
   return {
     repository,
     passingSkills: skillSummaries.filter((item) => item.level === 'pass').length,
@@ -78,7 +110,17 @@ const auditRepositorySummary = (
     failingFindings:
       skillSummaries.reduce((total, summary) => total + summary.fails, 0) + Number(Boolean(registrationFailure)),
     warningFindings: skillSummaries.reduce((total, summary) => total + summary.warnings, 0),
-    criteria: reports.reduce((total, report) => addCriteria(total, report.criteria), NO_CRITERIA)
+    criteria: reports.reduce((total, report) => addCriteria(total, report.criteria), NO_CRITERIA),
+    ...(scope && scoped
+      ? {
+          scope: {
+            paths: scope.paths.length,
+            // Registration is not a path, so its failure blocks every verdict, scoped or not.
+            failingFindings: scoped.fails + Number(Boolean(registrationFailure)),
+            warningFindings: scoped.warnings
+          }
+        }
+      : {})
   }
 }
 
@@ -87,8 +129,10 @@ export const renderAuditFrameStart = (
   context: KiContext,
   repository: string,
   skills: readonly { readonly identity: string }[],
-  compact = false
-): TreeReporter => renderOperationFrameStart(context, 'AUDIT', repository, skills, compact)
+  compact = false,
+  scope?: AuditVerdictScope
+): TreeReporter =>
+  renderOperationFrameStart(context, 'AUDIT', repository, skills, compact, scope ? [scopeEntry(scope)] : [])
 
 /** Render the result portion and close one framed audit report. */
 export const renderAuditResults = (
@@ -96,9 +140,10 @@ export const renderAuditResults = (
   repository: string,
   reports: readonly AuditSkillReport[],
   reporterLevels: readonly ReporterLevel[],
-  registrationFailure?: string
+  registrationFailure?: string,
+  scope?: AuditVerdictScope
 ): AuditRepositorySummary => {
-  const summary = auditRepositorySummary(repository, reports, registrationFailure)
+  const summary = auditRepositorySummary(repository, reports, registrationFailure, scope)
   const resultReports = reports
     .map((report) => ({ report, summary: auditSkillSummary(report.findings) }))
     .filter(({ summary }) => summary.level !== 'pass')
@@ -108,7 +153,9 @@ export const renderAuditResults = (
       const visible = report.findings.filter((entry) => reporterLevels.includes(entry.level))
       results.entry({
         label: auditSkillLabel(report, reportSummary),
-        children: visible.map(findingEntry)
+        children: visible.map((finding) =>
+          findingEntry(finding, scope && !findingInScope(scope, repository, finding) ? OUTSIDE_SCOPE : '')
+        )
       })
     }
     if (registrationFailure)
@@ -125,9 +172,10 @@ export const renderConciseAuditSummary = (
   context: KiContext,
   repository: string,
   reports: readonly AuditSkillReport[],
-  registrationFailure?: string
+  registrationFailure?: string,
+  scope?: AuditVerdictScope
 ): AuditRepositorySummary => {
-  const summary = auditRepositorySummary(repository, reports, registrationFailure)
+  const summary = auditRepositorySummary(repository, reports, registrationFailure, scope)
   context.stdout.write(`${auditSummaryLabel(summary)}\n`)
   return summary
 }
@@ -162,7 +210,7 @@ export const renderMultiRepositoryAuditSummary = (
     `\n${renderTree({
       title: 'KI REPO AUDIT · MULTI-REPOSITORY SUMMARY',
       context: summaries.map((summary) => ({
-        label: `${auditSummaryIcon(summary)} ${basename(summary.repository)} ${auditCountsLabel(summary)}`
+        label: `${auditSummaryIcon(summary)} ${basename(summary.repository)} ${summary.scope ? `${scopeLabel(summary.scope)} · ` : ''}${auditCountsLabel(summary)}`
       })),
       entries: [
         {

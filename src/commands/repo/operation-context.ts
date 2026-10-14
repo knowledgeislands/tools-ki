@@ -12,7 +12,9 @@ export const repositoryOperationContext = (
   stateDirectory: context.paths.state,
   workingDirectory: context.workingDirectory,
   homeDirectory: context.homeDirectory,
+  environment: context.environment,
   lstat: context.lstat,
+  runner: context.runner,
   inspectUserConfiguration,
   createSkillActivation: (options) =>
     createRepositorySkillActivation({

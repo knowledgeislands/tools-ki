@@ -91,6 +91,20 @@ Three output controls are worth knowing:
 
 Redirected output with `--progress always` defaults to the single-row form, and `--progress-style single` requests it explicitly.
 
+### Scope the verdict, not the evaluation
+
+```sh
+ki repo audit --repo . --staged
+ki repo audit --repo . --paths docs/roadmap Streams/Projects/example
+```
+
+Two options narrow what can fail without narrowing what is checked. Every criterion still runs against the whole repository, because zone layout, unique identities and link resolution cannot be answered from one file, and every finding is still rendered. Only a FAIL finding whose subject is a scoped path, a path under a scoped directory, or a directory containing a scoped path fails the audit; a finding with no subject is outside the scope.
+
+- `--staged` scopes the verdict to the paths staged in the Git index, deletions included. A pre-commit hook uses it so a commit is refused only for a finding it causes, while unrelated findings elsewhere in the tree are reported but do not block.
+- `--paths` scopes the verdict to the paths you name, relative to the repository root. The two combine into one scope.
+
+The report frame names the scope, a finding outside it carries `(outside scope)` after its subject, and the summary leads with the scoped verdict and its `SCOPE:` counts before the whole-tree counts. A local registration failure blocks whatever the scope. Keep a whole-tree audit in CI or a scheduled run: the scoped verdict is for the committer, not for the repository.
+
 ## Conform, and what it will not do
 
 ```sh

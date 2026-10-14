@@ -1,6 +1,8 @@
 import type { lstat } from 'node:fs/promises'
 import type { ResolvedSkill } from '../../configuration/resolution.ts'
+import type { Environment } from '../../paths.ts'
 import type { RepositorySkillActivation } from '../../rubric/index.ts'
+import type { Runner } from '../../runtime/runner.ts'
 import type { RepositoryLocation } from '../location.ts'
 import type { ProgressTracker } from '../progress/run.ts'
 
@@ -38,7 +40,10 @@ export interface RepositoryOperationContext {
   readonly stateDirectory: string
   readonly workingDirectory: string
   readonly homeDirectory: string
+  readonly environment: Environment
   readonly lstat: typeof lstat
+  /** Injected process runner, so a Git read stays reachable from a CLI test. */
+  readonly runner: Runner
   readonly inspectUserConfiguration: (configurationDirectory: string) => Promise<UserConfigurationInspection>
   readonly createSkillActivation: (options: {
     readonly repository: string

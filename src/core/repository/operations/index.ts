@@ -6,3 +6,5 @@ export type {
   RepositoryOperationContext,
   RepositoryOperationProgress
 } from './types.ts'
+export type { AuditVerdictScope } from './verdict-scope.ts'
+export { findingInScope } from './verdict-scope.ts'

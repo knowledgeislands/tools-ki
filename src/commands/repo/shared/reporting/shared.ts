@@ -36,20 +36,24 @@ export const renderOperationFrameStart = (
   operation: 'AUDIT' | 'CONFORM',
   repository: string,
   skills: readonly { readonly identity: string }[],
-  compact = false
+  compact = false,
+  trailing: readonly TreeEntry[] = []
 ): TreeReporter => {
   const count = skills.length
   return createTreeReporter((output) => context.stdout.write(output), {
     title: `KI REPO ${operation}`,
-    context: compact
-      ? [{ label: `📁 ${basename(repository)} · ${count} skill${count === 1 ? '' : 's'}` }]
-      : [
-          { label: `📁 ${basename(repository)} (${repository})` },
-          {
-            label: `✦ ${count} skill${count === 1 ? '' : 's'} selected`,
-            children: skills.map((skill) => ({ label: skill.identity }))
-          }
-        ]
+    context: [
+      ...(compact
+        ? [{ label: `📁 ${basename(repository)} · ${count} skill${count === 1 ? '' : 's'}` }]
+        : [
+            { label: `📁 ${basename(repository)} (${repository})` },
+            {
+              label: `✦ ${count} skill${count === 1 ? '' : 's'} selected`,
+              children: skills.map((skill) => ({ label: skill.identity }))
+            }
+          ]),
+      ...trailing
+    ]
   })
 }
 
@@ -58,14 +62,15 @@ export const withFixed = (report: SkillReport): readonly RenderedFinding[] => [
   ...(report.fixed ?? []).map((finding) => ({ ...finding, level: 'fixed' as const }))
 ]
 
-const formatFinding = (finding: RenderedFinding): string => {
+const formatFinding = (finding: RenderedFinding, mark: string): string => {
   const safeMessage = stripVTControlCharacters(finding.message)
   const subject = finding.subject ? ` ${finding.subject}` : ''
   const prefix = `${REPORT_ICON[finding.level]} ${REPORT_LABEL[finding.level]}`
-  return `${prefix} [${finding.title} (${finding.code})]${subject} — ${safeMessage.replace(/\r?\n/g, '\n    ')}`
+  return `${prefix} [${finding.title} (${finding.code})]${subject}${mark} — ${safeMessage.replace(/\r?\n/g, '\n    ')}`
 }
 
-export const findingEntry = (finding: RenderedFinding): TreeEntry => {
-  const [label = '', ...continuation] = formatFinding(finding).split('\n')
+/** One finding as a tree entry; `mark` follows the subject, as `(outside scope)` does. */
+export const findingEntry = (finding: RenderedFinding, mark = ''): TreeEntry => {
+  const [label = '', ...continuation] = formatFinding(finding, mark).split('\n')
   return { label, ...(continuation.length ? { continuation } : {}) }
 }

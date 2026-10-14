@@ -48,11 +48,11 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### REPO-AUDIT-005 — Validated output controls
 
-`ki repo audit` MUST accept only its documented `--progress`, `--progress-style`, and `--reporter-levels` values, rejecting invalid values before it runs an audit.
+`ki repo audit` MUST accept only its documented `--progress`, `--progress-style`, and `--reporter-levels` values, and only `--paths` values inside the repository, rejecting invalid values before it runs an audit.
 
 _Conformance:_ conforming
 
-_Verify:_ `src/tests/cli/repo/repo.test.ts` — `exposes and validates repository-operation output controls`.
+_Verify:_ `src/tests/cli/repo/repo.test.ts` — `exposes and validates repository-operation output controls`; `src/tests/cli/repo/verdict-scope.test.ts` — `refuses a path outside the repository and an unreadable index before auditing`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
@@ -103,6 +103,16 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 _Conformance:_ conforming
 
 _Verify:_ `src/tests/cli/repo/repo.test.ts` — `discloses evaluated mechanical and unassessed judgment criteria`; `src/tests/cli/repo/targets.test.ts` — `recaps every repository verdict and aggregate finding volume`.
+
+_Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### REPO-AUDIT-011 — Scoped verdict
+
+With `--staged`, `--paths`, or both, `ki repo audit` MUST still evaluate every selected mechanical criterion against the whole repository and render every finding under the selected reporter levels, and MUST fail only on a FAIL finding whose subject names a scoped path, a path under a scoped directory, or a directory containing a scoped path, or on a local registration failure. `--staged` MUST read the staged paths, deletions included, from the repository's Git index through the injected runner and MUST fail before auditing when the index cannot be read. The output MUST name the scope, mark each finding outside it, and lead the summary with the scoped verdict and its counts before the whole-tree counts. Without either option, output and exit status MUST be unchanged.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/repo/verdict-scope.test.ts` — `scopes the verdict to staged paths and marks findings outside it`, `keeps a finding on a containing directory in scope when a staged deletion sits under it`, `scopes the verdict to explicit paths, including everything under a named directory`, `attributes a finding by its subject within the repository only`, `keeps a local registration failure blocking under a scoped verdict` and `leaves the unscoped audit unchanged`.
 
 _Evidence:_ The named CLI contract test is part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
