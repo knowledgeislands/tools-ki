@@ -6,13 +6,12 @@ project: ways-of-working
 component: agent
 purpose: capability
 kind: deliver
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: acd0c2373f271309c41e8d074bc72e5a3a139f76
 created_at: 2026-10-14T21:29:44Z
-updated_at: 2026-10-14T21:29:44Z
+updated_at: 2026-10-14T22:31:47Z
 ---
 
 # Launcher Only Thread Writer
@@ -104,6 +103,10 @@ Awaiting Kris's review through `ki-accept`.
 ### Mini recap
 
 The state folder now holds runtime only for every run, old or new, once `decide` or `close` has touched it. No learning route proposed.
+
+## Done
+
+Accepted 2026-10-14 by Kris on the review packet above, under his KI-RELEASE decision in the `ways-of-working` thread: "accept KI-TOOL-KI-CLI-132 through ki-accept now, and release it in the same tools-ki release CLI126-DELIVER makes". Re-verified at `9717954`: `bun run test:coverage` passes 1185 tests at 100%, and `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip` and `mandoc -T lint man/ki.1` are clean. KI-TOOL-KI-CLI-133 carries the follow-up for retired reports that the move copies back.
 
 ## Discussion
 
