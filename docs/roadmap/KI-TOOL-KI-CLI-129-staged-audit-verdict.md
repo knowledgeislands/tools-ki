@@ -6,13 +6,12 @@ project: ways-of-working
 component: repo
 purpose: capability
 kind: deliver
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 3026ab6a4255d960364b89ce1586776b79fefa06
 created_at: 2026-10-14T19:25:02Z
-updated_at: 2026-10-14T19:47:24Z
+updated_at: 2026-10-14T20:18:39Z
 ---
 
 # Staged and explicit-path verdict scope on `ki repo audit`
@@ -120,6 +119,10 @@ The goal is met: the verdict is scoped, the evaluation is not, and the design's 
 ### Mini recap
 
 Delivered `--staged` and `--paths` on `ki repo audit` with scoped verdict, whole-tree evaluation, marked findings and scoped summary; verified by the full gate at 100% coverage and a self-audit whose only failure predates the change. Concerns: the pre-existing DEPS-1 failure, the separate release decision, and the subject-less-finding rule. Possible learning route, not promoted: a rubric-authoring note that a FAIL finding should name its subject so scoped verdicts can attribute it.
+
+## Done
+
+Accepted 2026-10-14 by Kris on the review packet above, under his GATE-RELEASE decision of 21:13 BST: "accept KI-TOOL-KI-CLI-129; release tools-ki as the next 0.x carrying --staged and --paths, bump ki-principal's .github/ki-version to it, then add --staged to the pre-commit audit line and update the Conformance.md sentence under GATE-SCOPE; CI stays whole-tree". The Verify gate was re-run at acceptance: 1164 tests pass at 100% coverage, `tsc`, Biome, the manual lint and `git diff --check` are clean, and the `ki-work-roadmap` audit passes on this record. The whole-tree `ki repo audit --repo .` fails only on the pre-existing DEPS-1 finding named under Outstanding concerns; Kris was offered holding the release until those updates were adopted and chose to accept and release, leaving DEPS-1 to its own record.
 
 ## Discussion
 
