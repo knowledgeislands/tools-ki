@@ -1,7 +1,7 @@
 ---
 id: KI-TOOL-KI-CLI-127
 area: CLI
-title: Agent status live threads
+title: Agent thread coordination commands
 project: ways-of-working
 component: agent
 purpose: capability
@@ -12,63 +12,130 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-14T13:55:48Z
-updated_at: 2026-10-14T13:55:48Z
+updated_at: 2026-10-14T16:46:34Z
 ---
 
-# Agent Status Live Threads
+# Agent Thread Coordination Commands
 
 ## Goal
 
-`ki agent status` with no run name lists the live threads on this machine: every run under `$KI_STATE_HOME/agents/` that has an agent running, held or queued, with its thread home, so a coordinating thread re-anchoring after compaction, or Kris at a shell, can see what is in flight without knowing each run's name. A run with nothing live is left out unless asked for.
+`ki agent` and `ki` gain the five small pieces the thread model adopted in `ki-agentic-harness` on 2026-10-14 asks of the launcher, so a coordinating thread can see what is live, classify each decision as it logs it, speak to another live thread, stay silent in a launched Codex agent, and link a record in one call:
+
+1. `ki agent status` with no run name lists the live threads on this machine.
+2. `ki agent decide` carries each entry's decision class beside its `home:`, as the `ki-pmo` standard's decision classes require.
+3. `ki agent send` delivers a line from one thread, or from the state-of-play thread, to another live coordination thread.
+4. `KI_AGENT_RUN` is set by the Codex launcher as it is by the Claude launcher, so the coordinator reminder hook stays silent in launched Codex agents.
+5. A link printer: a `ki` command that takes a roadmap record identifier and prints the ready Markdown link to its local file, resolving the repository from the identifier's scope through the registry, and for a pruned record a link to its last Git revision.
+
+Item 5 is delivered first; the other groups of Steps follow in any order.
 
 ## Context
 
-Kris asked for this on 2026-10-14 in the `ways-of-working` thread, approving among a batch of recommendations "the surfaces rule and the ki agent status follow-on". It serves the `ki-delegation` re-anchoring rule that landed the same day, which has a thread that has just compacted re-read its standards and its checkpoint and then run `ki agent status` before confirming where it stands. Today the command needs a run name, so a thread that has lost its context cannot ask what is running.
+Kris asked for the first item on 2026-10-14 in the `ways-of-working` thread, approving among a batch of recommendations "the surfaces rule and the ki agent status follow-on". It serves the re-anchoring rule that landed the same day, which has a thread that has just compacted re-read its standards and its checkpoint and then run `ki agent status` before confirming where it stands. Today the command needs a run name, so a thread that has lost its context cannot ask what is running.
 
-The record is captured under the burn-down because Kris requested it; it is not built here. The retired state-of-play report that proposed the re-anchoring subsection is in the harness's run folder and is not a durable source.
+The harness record [KI-HARNESS-GOV-187](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-187-thread-model-and-banner.md), which made the thread model normative, put every `tools-ki` change out of its own scope and listed four handoffs in its outstanding concerns: "`ki agent status` listing threads beside runs; the `home:` convention on `ki agent decide` so the log carries each entry's class; `ki agent send` to replace the `--log` inbox idiom; `KI_AGENT_RUN` on the Codex launcher so the hook can drop the terminal check there." Kris widened this record to carry them on 2026-10-14 with "KI-HANDOFFS - widen KI-TOOL-KI-CLI-127 to carry all four plus the link printer".
+
+The link printer comes from the same day's linking lesson. Kris said, as received, "Getting a bit frustrated here again because now we're also losing the linking again for roadmap items in the summary output text", and settled the response with "LINK-GUARD - approve: hook line plus KI-HARNESS-GOV-188 in the harness, link printer in KI-TOOL-KI-CLI-127, output style handed to Rig: chezmoi". The harness side is [KI-HARNESS-GOV-188](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-188-report-record-links.md), a `ki-pmo` rubric check that every identifier an owner report cites is a link. The printer is the `tools-ki` side: the `ki-pmo` standard limits a coordinator turn to five tool calls, so a link must cost one call, not a registry lookup, a directory listing and a path assembly.
+
+`ki agent send` is the route Kris named for re-bootstrap openers: "REBOOT-ALL - after GOV-187 is accepted and reply-stack lands, this thread re-bootstraps first, then the Master sends each live coordination thread its one-line re-bootstrap opener". Today a thread reaches another only by writing to a file the other thread polls, the `--log` inbox idiom the harness record asks to replace.
+
+The retired state-of-play report that proposed the re-anchoring subsection is in the harness's run folder and is not a durable source.
 
 ## Boundary
 
-- In scope: `ki agent status` without a run argument; the listing's shape; which runs count as live; reading each run's `thread.json`, pid, status and queue files already in the state folder.
-- Out of scope: any change to the per-run `status` output, `watch` or `wait`; inspecting agent logs or reports; archived runs under `_archive/`; any network or Git call.
+- In scope: `ki agent status` without a run argument and its listing; a decision class on `ki agent decide` and `ki agent reconcile`, and what the `ki agent close` gate makes of it; `ki agent send`, its delivery file and how the receiving thread sees a line; verification that the Codex launcher sets `KI_AGENT_RUN`; the link printer command, its registry resolution and its pruned-record fallback; tests through `run(args, context)` and `sandbox()`; `README.md`, `man/ki.1`, the background-agents guide and the `CHANGELOG.md` command surface.
+- Out of scope: any change to the per-run `status` output, `watch` or `wait`; inspecting agent logs or reports; archived runs under `_archive/`; the `coordinator-reminder` hook, the `ki-pmo` and `ki-delegation` standards and the `ki-pmo` rubric, which the harness owns; a notification surface beyond a file the receiving thread reads; any network or Git push; consolidating decisions into their homes, which stays the coordinating thread's duty.
 
 ## Requirements
 
-- The listing names each live run, its thread home when recorded, and each live agent with its state and latest status line, in a shape `ki-delegation`'s banner can quote as `running: <agent> - <what>` lines.
-- A run whose folder predates `thread.json` is listed with no home rather than skipped.
-- The command reads only packet files and changes nothing.
+- The live listing names each live run, its thread home when recorded, and each live agent with its state and latest status line, in a shape `ki-delegation`'s banner can quote as `running: <agent> - <what>` lines. A run whose folder predates `thread.json` is listed with no home rather than skipped. The command reads only packet files and changes nothing.
+- A decision entry can carry one of the four classes `ki-pmo` defines, operational, rule, standalone or held, beside its `home:`, and `reconcile` can set or change the class of an existing entry. The `close` gate reads the class: an operational entry with no home is its own home and passes; a held entry whose home is the thread's checkpoint passes when that checkpoint exists, even where the repository's ignore block keeps `+/_CHECKPOINTS/` out of Git; a standalone entry still needs a Decision Record or the owner's `--reconciled` waiver. An entry with no class is treated as it is today.
+- `ki agent send <run> <line>` appends one timestamped line, naming the sending run, to an inbox the receiving run owns, and refuses when the receiving run is not live. The receiving thread sees new lines through `ki agent status` on its run.
+- Every agent the Codex launcher starts, through `launch` and `dispatch`, carries the run name in `KI_AGENT_RUN`, and a test asserts it for both runtimes.
+- The link printer prints `[<identifier>](<absolute path>)` for a record found under `docs/roadmap/` or `Streams/Roadmap/` in the repository the registry resolves from the identifier's scope. For a pruned record it prints a link to the record's last committed revision, in a form the owner's editor or `git show` can open, and says which revision. When the identifier resolves to nothing it prints why and exits non-zero, so a link is never invented. Several identifiers print one link per line.
 
 ## Current state
 
 `src/commands/agent/index.ts` registers `status <run>` and calls `runStatus` in `src/core/agent/runs.ts`, which summarises one run from its `.pid`, `.status` and `queue.jsonl` files. `agents()` already lists a run's agents from its pid files, and `readThread` in `src/core/agent/thread.ts` reads the home. Nothing enumerates the runs under `$KI_STATE_HOME/agents/`.
 
+[KI-TOOL-KI-CLI-124](KI-TOOL-KI-CLI-124-agent-run-close.md), accepted and released in 0.10.3, gave `decide` a `--home <path or identifier>` option, added `ki agent reconcile <run> <number> <home>`, and made the `close` gate check that every entry's home exists and is Git-tracked or names a roadmap record found through the registry. The entry shape in `src/core/agent/thread.ts` is a heading, an optional `home:` line and the text; there is no field for a class, and the gate has no notion of an entry being its own home or of a checkpoint home that Git does not track, which that record's Discussion already flagged.
+
+`src/core/agent/runtimes.ts` sets `KI_AGENT_RUN` in the environment of both adapters, Claude and Codex, since `feat(agent): mark every launched agent with KI_AGENT_RUN`, released in 0.10.2, and `src/tests/cli/agent.test.ts` asserts the marker for a Codex launch. The harness hook still keeps its terminal check for Codex, with the comment that it does so "until its launcher sets `KI_AGENT_RUN`"; the launcher already does.
+
+Nothing in `ki agent` sends anything to another run. The `close` gate in `src/core/agent/close.ts` already walks the local registry for a record identifier, so the link printer's resolution can share that lookup; nothing yet maps an identifier's scope to one repository or finds a pruned record's last revision.
+
 ## Steps
 
-- [ ] Make the run argument optional; without it, enumerate the run folders under `agents/`, skipping `_archive`, and summarise each through the existing per-run reader.
-- [ ] Define live as at least one agent running or held, or a non-empty queue, and list only live runs by default.
-- [ ] Print one block per run: the run name and thread home, then one line per agent as the per-run `status` prints it.
-- [ ] Tests through `run(args, context)` and `sandbox()` for a mix of live, finished and legacy runs.
-- [ ] Document the form in `README.md`, `man/ki.1`, the background-agents guide and the `CHANGELOG.md` command surface.
+- [ ] **Link printer.** Choose the command's name and place in `src/commands/` under `ki-self`: a top-level `ki link <identifier>...` is the recommendation, since it serves roadmap, checkpoint and thread work alike, with the identifier grammar imported from the work core rather than restated.
+- [ ] **Link printer.** Resolve the repository from the identifier's scope through the local registry: the `repo_code` and, where declared, the area code each registered repository's `.ki.toml` issues, so `KI-TOOL-KI-CLI-127` reaches `tools-ki` without a directory walk across every repository. Fall back to the walk `close` already does when no scope matches.
+- [ ] **Link printer.** Find the record file under `docs/roadmap/` or `Streams/Roadmap/` and print `[<identifier>](<absolute path>)`.
+- [ ] **Link printer.** For an identifier with no file but a number at or below the `_ISSUES.md` high-water mark, find its last committed revision with `git log --diff-filter=D` on the roadmap directory and print a link to that revision's copy of the file, saying which revision it is, in a form the owner can open.
+- [ ] **Link printer.** When nothing resolves, print the reason to stderr and exit non-zero.
+- [ ] **Link printer.** Tests through `run(args, context)` and `sandbox()` with a registry of two temporary repositories: a live record, a pruned record, an unknown scope and a bad identifier.
+- [ ] **Link printer.** Document the command in `README.md`, `man/ki.1` and the `CHANGELOG.md` command surface, and name it in the background-agents guide beside the owner report's linking rule.
+- [ ] **`ki agent status` lists live threads.** Make the run argument optional; without it, enumerate the run folders under `agents/`, skipping `_archive`, and summarise each through the existing per-run reader.
+- [ ] **`ki agent status` lists live threads.** Define live as at least one agent running or held, or a non-empty queue, and list only live runs by default.
+- [ ] **`ki agent status` lists live threads.** Print one block per run: the run name and thread home, then one line per agent as the per-run `status` prints it.
+- [ ] **`ki agent status` lists live threads.** Tests for a mix of live, finished and legacy runs.
+- [ ] **`ki agent status` lists live threads.** Document the form in `README.md`, `man/ki.1`, the background-agents guide and the `CHANGELOG.md` command surface.
+- [ ] **Decision class on `decide`.** Add `--class <operational|rule|standalone|held>` to `decide`, written as a `class:` line beside `home:` in the entry, and a `--class` option on `reconcile` that sets or replaces it; an entry keeps working with neither.
+- [ ] **Decision class on `decide`.** Teach the `close` gate the classes: operational with no home passes as its own home; held with a checkpoint home passes when the checkpoint file exists, tracked or not; standalone and rule keep the tracked-path or record test; `close.md` records each entry's class beside its home.
+- [ ] **Decision class on `decide`.** Tests for each class through the gate, and for `reconcile --class`.
+- [ ] **Decision class on `decide`.** Document `--class` and the gate's reading of it in the guide, `README.md`, `man/ki.1` and `CHANGELOG.md`.
+- [ ] **`ki agent send`.** Add `ki agent send <run> <line>`: resolve the receiving run's thread home, refuse unless the run is live by the listing's definition, and append `<RFC 3339 UTC seconds> from <sending run>: <line>` to `inbox.md` in the receiving run's tracked thread folder, so the line survives the state folder. The sending run is `KI_AGENT_RUN` when set, else `--from <run>`, else the current directory's run.
+- [ ] **`ki agent send`.** Make `ki agent status <run>` print the inbox lines added since the run's last `status` call, with the seen mark kept in the state folder, so a receiving thread's existing re-anchoring step shows what it was sent.
+- [ ] **`ki agent send`.** Tests for a send to a live run, a refusal for a finished run, the sender taken from the marker, and the inbox shown once in `status`.
+- [ ] **`ki agent send`.** Document `send` and the inbox in the guide, `README.md`, `man/ki.1` and `CHANGELOG.md`, and name the inbox file in the thread folder's file list.
+- [ ] **`KI_AGENT_RUN` on the Codex launcher.** Confirm in `src/core/agent/runtimes.ts` and the dispatcher path that both adapters set the marker, and add one test that launches the same task on both runtimes and asserts the marker on each, so a later adapter change cannot drop it.
+- [ ] **`KI_AGENT_RUN` on the Codex launcher.** Say in the guide that every launched agent, Claude or Codex, carries the marker, so the harness can drop the Codex terminal check in its hook.
 
 ## Files touched
 
 - `src/commands/agent/index.ts`
+- `src/commands/` (the link printer's command module)
 - `src/core/agent/runs.ts`
-- `src/tests/cli/agent.test.ts`
+- `src/core/agent/thread.ts`
+- `src/core/agent/close.ts`
+- `src/core/agent/runtimes.ts`
+- `src/core/work/` (identifier scope resolution shared with the printer)
+- `src/tests/cli/agent.test.ts` and a test file for the printer
 - `README.md`
-- `man/ki.1`
+- `man/ki.1` and `man/ki.commands.json`
 - `docs/guides/user/background-agents.md`
 - `CHANGELOG.md`
 
 ## Verify
 
-- `bun run test:coverage` passes with the new cases.
-- `ki agent status` on this machine lists the running coordination threads and nothing archived.
+### Link printer
+
+- `bun run test:coverage` passes with the printer's cases.
+- From any directory on this machine, the command given `KI-TOOL-KI-CLI-127` prints the link to this file by absolute path, and given this repository's most recently pruned identifier prints a link to its last revision; given `KI-NOWHERE-XYZ-1` it exits non-zero with a reason.
+
+### `ki agent status`
+
+- `bun run test:coverage` passes with the listing's cases.
+- `ki agent status` on this machine lists the running coordination threads with their thread homes and nothing archived.
+
+### Decision class
+
+- `bun run test:coverage` passes with the gate cases.
+- In a temporary repository, `decide` with `--class operational` and no home passes `close`; `--class held --home +/_CHECKPOINTS/x.md` passes once the file exists; `--class standalone` with no home is a blocker.
+
+### `ki agent send`
+
+- `bun run test:coverage` passes with the send cases.
+- From a shell, `ki agent send ways-of-working "probe"` against a live run appends one line to that run's tracked `inbox.md`, and the next `ki agent status ways-of-working` shows it once; the same against an archived run is refused.
+
+### `KI_AGENT_RUN` on Codex
+
+- The two-runtime marker test passes.
+- `ki agent launch` of a trivial task with `--runtime codex` on this machine records `KI_AGENT_RUN` in the agent's environment, shown by a prompt that prints it.
 
 ## Dependencies / blocks
 
-- Follows [KI-TOOL-KI-CLI-124](KI-TOOL-KI-CLI-124-agent-run-close.md), accepted, which fixed the thread home the listing reads.
-- The `ki-delegation` re-anchoring rule in `ki-agentic-harness` names `ki agent status` as the step a thread takes after compaction; this record gives that step a form that needs no run name.
+- Follows [KI-TOOL-KI-CLI-124](KI-TOOL-KI-CLI-124-agent-run-close.md), accepted, which fixed the thread home the listing reads and the `home:` line the class sits beside.
+- The thread model and the four handoffs are in [KI-HARNESS-GOV-187](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-187-thread-model-and-banner.md), accepted; the harness's own linking check is [KI-HARNESS-GOV-188](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-188-report-record-links.md), which the printer makes cheap to satisfy but does not depend on.
+- Once `send` and the Codex marker test ship, the harness can retire the `--log` inbox idiom in `ki-delegation` and the Codex terminal check in `coordinator-reminder.sh`; those are harness changes and are not made here.
 
 ## Documentation impact
 
@@ -82,15 +149,25 @@ None.
 
 ### Guides
 
-The background-agents guide gains the no-argument form under checking on a run.
+The background-agents guide gains the no-argument `status` form, `--class` and the gate's reading of it, `send` and the inbox, the statement that both runtimes carry the marker, and a line naming the link printer beside the owner-report linking rule.
 
 ### Roadmap
 
-No follow-on record.
+No follow-on record. Harness follow-ons are named under Dependencies / blocks for the harness to capture when it chooses.
 
 ## Discussion
 
+### The `home:` gap
+
+The `ki-pmo` standard asks that each log entry be classified at the mark "under Decision classes: operational, rule, standalone or held, each with its home named in the log", and the harness handoff reads "the `home:` convention on `ki agent decide` so the log carries each entry's class". KI-TOOL-KI-CLI-124 delivered `decide --home` and `reconcile` for the home alone. The gap carried here is the class itself and what the gate makes of it: an operational entry whose home is "the log entry itself" and a held entry whose home is the checkpoint both fail today's gate, which is why KI-TOOL-KI-CLI-124 closed with sixty blockers against this thread and flagged the checkpoint case. There is a gap, and it is this.
+
+### The Codex marker
+
+The launcher already sets `KI_AGENT_RUN` for Codex, so the fourth handoff is nearly closed on the `tools-ki` side: what remains is the two-runtime test that pins it and the guide sentence the harness can cite when it drops its Codex terminal check. The hook change itself is the harness's.
+
 ### Open questions
 
-- Whether the listing should also show runs with nothing live behind a flag, for the sweep of old run folders.
+- Whether the live listing should also show runs with nothing live behind a flag, for the sweep of old run folders.
 - Whether the output should be plain lines or a table; plain lines match the banner's `running:` prefix rule.
+- The link form for a pruned record: a `git show <rev>:<path>` locator, or a path into a materialised copy. The former needs no file to exist; the latter opens in an editor. The printer should pick one and KI-HARNESS-GOV-188's check should accept it.
+- Whether the printer should also take checkpoint, Project and Initiative identifiers, which the `ki-pmo` rule links the same way; the first delivery takes roadmap records only.
