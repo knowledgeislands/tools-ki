@@ -1,7 +1,9 @@
 import type { ResolvedSkill } from '../../configuration/resolution.ts'
+import type { NativeWrite } from '../../filesystem/index.ts'
 import type { ConformWrite } from '../../rubric/index.ts'
 import type { PreparedRubricPublication } from '../../rubric/publication.ts'
 import type { BootstrapInstallationResult, BootstrapRefreshResult } from '../bootstrap/types.ts'
+import type { DevelopmentWriteTreePort } from './write-tree.ts'
 
 export interface DevelopmentConfigurationInspection {
   readonly locals: readonly { readonly harness: string; readonly path: string }[]
@@ -73,12 +75,9 @@ export interface DisabledDevelopmentResult extends BootstrapRefreshResult, Boots
   readonly projections: readonly DevelopmentProjectionView[]
 }
 
-export interface DevelopmentRubricPort {
+export interface DevelopmentRubricPort extends DevelopmentWriteTreePort {
   readonly resolveSkill: (skill: string) => Promise<ResolvedSkill>
   readonly preparePublication: (skill: ResolvedSkill) => Promise<PreparedRubricPublication>
-  readonly developmentLinked: (identifier: string) => Promise<boolean>
-  /** The Git working-tree root containing a path, or undefined when it is not inside one. */
-  readonly repositoryRoot: (path: string) => Promise<string | undefined>
   readonly publish: (root: string, write: ConformWrite) => Promise<void>
 }
 
@@ -89,6 +88,38 @@ export type DevelopmentRubricEvent =
   | {
       readonly kind: 'out-of-sync'
       readonly identity: string
+      readonly reason: 'is missing' | 'is stale'
+      readonly root: string
+    }
+
+/** One surface a skill's generator renders, with how the bytes below the Harness root compare. */
+export interface GeneratedSurfaceState {
+  readonly path: string
+  readonly content: string
+  readonly state: 'in-sync' | 'stale' | 'missing'
+  /** Permission bits of the existing file, kept when it is rewritten. */
+  readonly mode?: number
+}
+
+export interface PreparedSkillGeneration {
+  readonly root: string
+  readonly surfaces: readonly GeneratedSurfaceState[]
+}
+
+export interface DevelopmentGenerationPort extends DevelopmentWriteTreePort {
+  readonly resolveSkill: (skill: string) => Promise<ResolvedSkill>
+  readonly prepareGeneration: (skill: ResolvedSkill) => Promise<PreparedSkillGeneration>
+  readonly publish: (root: string, writes: readonly NativeWrite[]) => Promise<void>
+}
+
+/** Every event names the resolved Harness root, because the command never resolves the caller's tree. */
+export type DevelopmentGenerationEvent =
+  | { readonly kind: 'written'; readonly target: string }
+  | { readonly kind: 'in-sync'; readonly identity: string; readonly count: number; readonly root: string }
+  | {
+      readonly kind: 'out-of-sync'
+      readonly identity: string
+      readonly path: string
       readonly reason: 'is missing' | 'is stale'
       readonly root: string
     }

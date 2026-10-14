@@ -91,7 +91,7 @@ const nestedHelpOrder: Readonly<Record<string, readonly string[]>> = {
   agent: ['close', 'decide', 'dispatch', 'launch', 'new', 'queue', 'reconcile', 'status', 'wait', 'watch'],
   dev: ['local', 'skill'],
   'dev local': ['off', 'on', 'set'],
-  'dev skill': ['rubric'],
+  'dev skill': ['generate', 'rubric'],
   estate: ['converge']
 }
 

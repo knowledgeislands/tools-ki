@@ -54,6 +54,16 @@ _Verify:_ `src/tests/cli/skill/rubric.test.ts` — `names the resolved publicati
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
 
+### SKILL-006 — Generated skill surfaces
+
+`ki dev skill generate` MUST import a skill's `scripts/generate/index.ts`, render its surfaces against the resolved Harness root and name every missing or stale surface, failing until they are written; `--write` MUST publish only those surfaces, keeping an existing file's permission bits, under the development-link and working-tree guard of SKILL-005.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/skill/generate.test.ts` — `reports each missing and stale surface and fails until they are written`, `writes only the surfaces out of step, keeps an existing mode and then reports in sync`, the two `--write` refusals and the generator contract refusals.
+
+_Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
 ## Gaps
 
 No unbuilt candidate behaviour is in scope for this area.

@@ -26,6 +26,7 @@ const commandPaths = [
   'dev local on',
   'dev local set',
   'dev skill',
+  'dev skill generate',
   'dev skill rubric',
   'harness',
   'harness info',

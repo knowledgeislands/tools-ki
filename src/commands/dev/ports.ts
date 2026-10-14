@@ -11,10 +11,12 @@ import type { KiContext } from '../../context.ts'
 import { resolveInstalledSkill } from '../../core/configuration/index.ts'
 import { prepareWrites, publishWrites } from '../../core/filesystem/index.ts'
 import {
+  type DevelopmentGenerationPort,
   type DevelopmentRubricPort,
   type DisableDevelopmentPort,
   discoverInstalledHarnesses,
   type EnableDevelopmentPort,
+  prepareSkillGeneration,
   type SetDevelopmentSourcePort
 } from '../../core/harness/index.ts'
 import { loadRubricDefinition } from '../../core/rubric/loader.ts'
@@ -93,4 +95,12 @@ export const developmentSkillRubricPort = (context: KiContext): DevelopmentRubri
   developmentLinked: (identifier) => isHarnessDevelopmentLinked(context.paths.data, identifier),
   repositoryRoot: (path) => gitWorkingTreeRoot(path, context.runner, context.environment),
   publish: async (root, write) => publishWrites(await prepareWrites(root, [write]), false)
+})
+
+export const developmentSkillGenerationPort = (context: KiContext): DevelopmentGenerationPort => ({
+  resolveSkill: async (skill) => resolveInstalledSkill(await discoverInstalledHarnesses(context.paths.data), skill),
+  prepareGeneration: prepareSkillGeneration,
+  developmentLinked: (identifier) => isHarnessDevelopmentLinked(context.paths.data, identifier),
+  repositoryRoot: (path) => gitWorkingTreeRoot(path, context.runner, context.environment),
+  publish: async (root, writes) => publishWrites(await prepareWrites(root, writes), false)
 })

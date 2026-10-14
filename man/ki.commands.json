@@ -550,6 +550,10 @@
           "description": "Remove each selected recognised local Harness root, reinstall its verified archive, retain its entry below [locals] , and reconcile its managed user-skill links to the restored archive. An explicit Harness ID selects one source; omitting it selects all remembered sources."
         },
         {
+          "invocation": "ki dev skill generate <skill> [--write]",
+          "description": "Check or regenerate the surfaces a skill's scripts/generate/index.ts module renders below its Harness root, such as files the skill's standard is the one source of. The module renders and never writes. Without --write, every missing or stale surface is named and the command fails; with --write, only those surfaces are published, an existing file keeping its permission bits, under the same development-link and working-tree guard as ki dev skill rubric."
+        },
+        {
           "invocation": "ki dev skill rubric <skill> [--write]",
           "description": "Check or regenerate a skill's rubric catalogue. The skill is resolved from the installed Harnesses and never from the current directory, so every result names the resolved publication root that it answers about. With --write, publish only when that publication root and the current directory belong to the same Git working tree; any other tree, including another worktree of the same repository, is refused with both roots named."
         }

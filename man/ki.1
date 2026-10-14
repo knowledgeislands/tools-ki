@@ -430,6 +430,9 @@ local checkouts.
 Restore one remembered harness, or all remembered harnesses, from their
 verified archives.
 .TP
+.B ki dev skill generate <skill> [--write]
+Check or regenerate the surfaces a skill's generator renders.
+.TP
 .B ki dev skill rubric <skill> [--write]
 Check or regenerate a skill's rubric catalogue.
 .SH DESCRIPTION
@@ -1690,6 +1693,16 @@ archive, retain its entry below
 .BR [locals] ,
 and reconcile its managed user-skill links to the restored archive. An explicit
 Harness ID selects one source; omitting it selects all remembered sources.
+.TP
+.B ki dev skill generate <skill> [--write]
+Check or regenerate the surfaces a skill's
+.I scripts/generate/index.ts
+module renders below its Harness root, such as files the skill's standard is
+the one source of. The module renders and never writes. Without
+\fB--write\fR, every missing or stale surface is named and the command fails;
+with \fB--write\fR, only those surfaces are published, an existing file keeping
+its permission bits, under the same development-link and working-tree guard as
+\fBki dev skill rubric\fR.
 .TP
 .B ki dev skill rubric <skill> [--write]
 Check or regenerate a skill's rubric catalogue. The skill is resolved from the
