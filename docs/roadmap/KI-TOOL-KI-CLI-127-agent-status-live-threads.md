@@ -25,7 +25,7 @@ updated_at: 2026-10-14T16:46:34Z
 2. `ki agent decide` carries each entry's decision class beside its `home:`, as the `ki-pmo` standard's decision classes require.
 3. `ki agent send` delivers a line from one thread, or from the state-of-play thread, to another live coordination thread.
 4. `KI_AGENT_RUN` is set by the Codex launcher as it is by the Claude launcher, so the coordinator reminder hook stays silent in launched Codex agents.
-5. A link printer: a `ki` command that takes a roadmap record identifier and prints the ready Markdown link to its local file, resolving the repository from the identifier's scope through the registry, and for a pruned record a link to its last Git revision.
+5. A link printer: a `ki` command that takes a roadmap record identifier and prints the ready Markdown link to its local file, resolving the repository from the identifier's scope through the registry, and for a pruned record the link `[<FULL-ID> (pruned)](https://github.com/<owner>/<repo>/blob/<last revision>/<path>)`.
 
 Item 5 is delivered first; the other groups of Steps follow in any order.
 
@@ -52,7 +52,7 @@ The retired state-of-play report that proposed the re-anchoring subsection is in
 - A decision entry can carry one of the four classes `ki-pmo` defines, operational, rule, standalone or held, beside its `home:`, and `reconcile` can set or change the class of an existing entry. The `close` gate reads the class: an operational entry with no home is its own home and passes; a held entry whose home is the thread's checkpoint passes when that checkpoint exists, even where the repository's ignore block keeps `+/_CHECKPOINTS/` out of Git; a standalone entry still needs a Decision Record or the owner's `--reconciled` waiver. An entry with no class is treated as it is today.
 - `ki agent send <run> <line>` appends one timestamped line, naming the sending run, to an inbox the receiving run owns, and refuses when the receiving run is not live. The receiving thread sees new lines through `ki agent status` on its run.
 - Every agent the Codex launcher starts, through `launch` and `dispatch`, carries the run name in `KI_AGENT_RUN`, and a test asserts it for both runtimes.
-- The link printer prints `[<identifier>](<absolute path>)` for a record found under `docs/roadmap/` or `Streams/Roadmap/` in the repository the registry resolves from the identifier's scope. For a pruned record it prints a link to the record's last committed revision, in a form the owner's editor or `git show` can open, and says which revision. When the identifier resolves to nothing it prints why and exits non-zero, so a link is never invented. Several identifiers print one link per line.
+- The link printer prints `[<identifier>](<absolute path>)` for a record found under `docs/roadmap/` or `Streams/Roadmap/` in the repository the registry resolves from the identifier's scope. For a pruned record it prints `[<FULL-ID> (pruned)](https://github.com/<owner>/<repo>/blob/<last revision>/<path>)`, where the last revision is the last commit in which the file existed, usually the parent of the prune commit, and the owner and repository come from the verified canonical remote; the link text is always the full identifier followed by `(pruned)`. Kris set this form on 2026-10-14, as received: "LINK-FORM / clickable GitHub link to the file at its last revision; KI-HARNESS-GOV-188's check accepts it. Perhaps the link text can be `KI-HARNESS-GOV-188 (pruned)`". When the identifier resolves to nothing it prints why and exits non-zero, so a link is never invented. Several identifiers print one link per line.
 
 ## Current state
 
@@ -69,7 +69,7 @@ Nothing in `ki agent` sends anything to another run. The `close` gate in `src/co
 - [ ] **Link printer.** Choose the command's name and place in `src/commands/` under `ki-self`: a top-level `ki link <identifier>...` is the recommendation, since it serves roadmap, checkpoint and thread work alike, with the identifier grammar imported from the work core rather than restated.
 - [ ] **Link printer.** Resolve the repository from the identifier's scope through the local registry: the `repo_code` and, where declared, the area code each registered repository's `.ki.toml` issues, so `KI-TOOL-KI-CLI-127` reaches `tools-ki` without a directory walk across every repository. Fall back to the walk `close` already does when no scope matches.
 - [ ] **Link printer.** Find the record file under `docs/roadmap/` or `Streams/Roadmap/` and print `[<identifier>](<absolute path>)`.
-- [ ] **Link printer.** For an identifier with no file but a number at or below the `_ISSUES.md` high-water mark, find its last committed revision with `git log --diff-filter=D` on the roadmap directory and print a link to that revision's copy of the file, saying which revision it is, in a form the owner can open.
+- [ ] **Link printer.** For an identifier with no file but a number at or below the `_ISSUES.md` high-water mark, find its last committed revision with `git log --diff-filter=D` on the roadmap directory, take the parent of the deleting commit, and print `[<FULL-ID> (pruned)](https://github.com/<owner>/<repo>/blob/<last revision>/<path>)` with the owner and repository taken from the canonical remote.
 - [ ] **Link printer.** When nothing resolves, print the reason to stderr and exit non-zero.
 - [ ] **Link printer.** Tests through `run(args, context)` and `sandbox()` with a registry of two temporary repositories: a live record, a pruned record, an unknown scope and a bad identifier.
 - [ ] **Link printer.** Document the command in `README.md`, `man/ki.1` and the `CHANGELOG.md` command surface, and name it in the background-agents guide beside the owner report's linking rule.
@@ -109,7 +109,7 @@ Nothing in `ki agent` sends anything to another run. The `close` gate in `src/co
 ### Link printer
 
 - `bun run test:coverage` passes with the printer's cases.
-- From any directory on this machine, the command given `KI-TOOL-KI-CLI-127` prints the link to this file by absolute path, and given this repository's most recently pruned identifier prints a link to its last revision; given `KI-NOWHERE-XYZ-1` it exits non-zero with a reason.
+- From any directory on this machine, the command given `KI-TOOL-KI-CLI-127` prints the link to this file by absolute path, and given this repository's most recently pruned identifier prints `[<FULL-ID> (pruned)](https://github.com/knowledgeislands/tools-ki/blob/<last revision>/docs/roadmap/<file>)`; given `KI-NOWHERE-XYZ-1` it exits non-zero with a reason.
 
 ### `ki agent status`
 
@@ -169,5 +169,5 @@ The launcher already sets `KI_AGENT_RUN` for Codex, so the fourth handoff is nea
 
 - Whether the live listing should also show runs with nothing live behind a flag, for the sweep of old run folders.
 - Whether the output should be plain lines or a table; plain lines match the banner's `running:` prefix rule.
-- The link form for a pruned record: a `git show <rev>:<path>` locator, or a path into a materialised copy. The former needs no file to exist; the latter opens in an editor. The printer should pick one and KI-HARNESS-GOV-188's check should accept it.
+- The link form for a pruned record is settled: Kris decided on 2026-10-14, as received, "LINK-FORM / clickable GitHub link to the file at its last revision; KI-HARNESS-GOV-188's check accepts it. Perhaps the link text can be `KI-HARNESS-GOV-188 (pruned)`". The printer prints `[<FULL-ID> (pruned)](https://github.com/<owner>/<repo>/blob/<last revision>/<path>)` and the harness check under [KI-HARNESS-GOV-188](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-188-report-record-links.md) accepts that form; the `git show` locator and the materialised copy are dropped.
 - Whether the printer should also take checkpoint, Project and Initiative identifiers, which the `ki-pmo` rule links the same way; the first delivery takes roadmap records only.
