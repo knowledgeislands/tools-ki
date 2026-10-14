@@ -5,12 +5,12 @@ title: Retired reports come back
 purpose: corrective
 kind: deliver
 horizon: now
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-14T23:40:00Z
-updated_at: 2026-10-14T23:45:01Z
+updated_at: 2026-10-15T00:12:00Z
 ---
 
 # Retired Reports Come Back
@@ -32,36 +32,56 @@ Observed on 14 October 2026 by the techne thread, which coordinates the agent-ho
 
 ## Current state
 
-**Source, as read at `0fcc593`.** The only code that copies state-folder reports into the thread folder is `adoptStateFiles` in `src/core/agent/thread.ts`, added by `0fcc593` under [KI-TOOL-KI-CLI-132](https://github.com/knowledgeislands/tools-ki/blob/c57d01e59fdf19d4fa42e53c7acef239b715faaf/docs/roadmap/KI-TOOL-KI-CLI-132-launcher-only-thread-writer.md). It lists the state folder's `decisions.md` and every `*.report.md`, skips a file only when `stat` finds the target already present in the thread folder, and otherwise copies it in and removes the state copy. A report the thread has deleted is therefore indistinguishable from one never copied, so it is copied again. Callers:
+**Which build the installed `ki` runs.** `~/.local/bin/ki` links to `~/.local/bin/.ki-local-runner`, which executes `bun /Users/krisbrown/workspaces/knowledge-islands/tools-ki/src/main.ts`: the working tree's source, not a built release. `ki --version` prints 0.10.4, as `package.json` does. At planning, `main` was `634f73e`, clean and level with origin, so the installed `ki` and HEAD behave the same, and `0fcc593` is in them.
 
-- `appendDecision` in `src/core/agent/thread.ts`, which serves `ki agent decide`;
-- `gateLines` in `src/core/agent/close.ts`, which serves `ki agent close`.
+**Source, as read at `634f73e`.** The only code that copies state-folder reports into the thread folder is `adoptStateFiles` in `src/core/agent/thread.ts`, added by `0fcc593` under [KI-TOOL-KI-CLI-132](https://github.com/knowledgeislands/tools-ki/blob/c57d01e59fdf19d4fa42e53c7acef239b715faaf/docs/roadmap/KI-TOOL-KI-CLI-132-launcher-only-thread-writer.md). It lists the state folder's `decisions.md` and every `*.report.md`, skips a file only when `stat` finds the target present in the thread folder, and otherwise copies it in and removes the state copy. Callers: `appendDecision` (`ki agent decide`, unless `--log` is given) and `gateLines` in `src/core/agent/close.ts` (`ki agent close`). `launchAgent`, `queue` and `new` do not call it, so they cannot re-copy a report.
 
-`launchAgent` in `src/core/agent/runs.ts` does not call it: it creates the thread folder and gives the agent the report path `reportPath(thread, name)` in the thread folder, and nothing more. So the source at this commit does not explain a re-copy after `launch` alone, and it removes each state copy as it moves it, whereas the state folder was observed to keep every report. Either the installed `ki` (0.10.4, a local runner) predates or differs from `0fcc593` and mirrors reports on launch, or `decide` or `close` ran in between. Planning must settle which before choosing the fix.
+**Reproduced 2026-10-15 against the installed `ki`, in a throwaway setup.** A temporary Git repository (`git init`, one commit) under `/tmp`, `KI_STATE_HOME` pointed at a temporary directory, a state folder `agents/demo/` seeded with `a.report.md`, and `ki agent decide --repo <temp repo> demo "<text>"`. No real run, thread folder or checkout was touched; the setup is removed.
 
-Reproduce:
+1. `decide` moved `a.report.md` into `+/_THREADS/demo/` and removed the state copy (the `0fcc593` migration working as designed). Committed the folder, then `git rm` of the report and a commit: tree clean.
+2. `decide` again with no state copy: only `decisions.md` modified. No re-copy.
+3. State copy put back (a state folder that still holds a report, as in the field), then `decide`: `Moved a.report.md from the state folder into .../+/_THREADS/demo` and `?? +/_THREADS/demo/a.report.md`. The retired report is back, untracked.
+4. Retired again, state copy put back, `ki agent close demo`: the gate printed `ok: moved a.report.md from the state folder into +/_THREADS/demo`, `blocker: thread folder +/_THREADS/demo has uncommitted changes`, and the report is untracked again.
 
-1. In a repository with a tracked `+/_THREADS/<run>/`, run `ki agent launch` for a run whose state folder holds `<name>.report.md`, and let the report reach the thread folder.
-2. Commit, then delete `+/_THREADS/<run>/<name>.report.md` by explicit path in a second commit, as the tidy rule directs.
-3. Run `ki agent launch <run> <other-name> ...`, then `ki agent decide` and `ki agent close` in turn, checking `git status` after each.
-4. Expected today, by the source: after `decide` or `close` the deleted report is back as an untracked file wherever the state folder still holds it; whether `launch` alone does it is the open question above.
+So `decide` and `close` both re-copy, and `launch` alone does not (source reading; the throwaway run did not launch an agent).
+
+**Root cause.** Presence in the thread folder is the only test for "already delivered", so a retired report is indistinguishable from one never delivered. The state copy survives because the move removes it only when it moves it: a state folder kept copies when the thread (or an earlier `ki`) copied reports into the folder by hand before `0fcc593`, which fits the field case of 55 reports that the state folder still held. After the thread retired them, the next `decide` adopted all 55; a `launch` in between did not copy them, and the one later `decide` re-copied one more. The open question the draft raised is therefore settled: the field reports came from `decide`, not `launch`.
+
+## Decision
+
+Chosen rule: **adopt a state-folder file only when the thread folder has never held it.** "Held" means Git knows the path: `git log -1 --format=%H --all -- <path>` prints a commit, or `git ls-files -- <path>` lists it, run in the thread's repository. A file the folder has held is skipped and its state copy is left untouched, to be archived with the run by `ki agent close`, as the `0fcc593` comment already says of a superseded copy.
+
+Why this over the candidates under Discussion:
+
+- It covers the field case, where the state copies were never recorded anywhere; recording adopted names in `thread.json` (candidate 1) would not, since the legacy copies were never adopted by `ki`.
+- It needs no new state and no change to `thread.json`, which keeps the run folder runtime-only.
+- Stopping adoption once a home is recorded (candidate 3) would break the migration of a legacy log and reports for a run whose home is recorded by `decide` itself on the same call.
+- Copying only on completion (candidate 2) has no signal today beyond the `DONE` line, and does not help a report already retired.
+
+Known limit, stated in the guide: a shallow clone that lacks the history re-adopts a retired report; a report that was never committed and was deleted from the working tree is adopted again. Both leave the state copy in place and can be deleted by hand.
+
+`adoptStateFiles` keeps its return value (names moved) and gains no new output, so `decide` and `close` print as they do now when nothing is adopted; a skipped file is not announced.
 
 ## Steps
 
-- [ ] Settle from the installed `ki` and `0fcc593` which commands copy a report into the thread folder, and whether `launch` does.
-- [ ] Make each such path leave a report the thread has retired alone, choosing among the candidate rules under Discussion.
-- [ ] Add the contract tests under Verify, then update the documentation named below.
+- [ ] In `src/core/agent/thread.ts`, add a helper that asks Git, through `git(context, home.repository, ...)` from `context.ts`, whether a thread-folder path is known (history or index), and have `adoptStateFiles` skip a file for which it says yes, as it already skips one that exists.
+- [ ] Confirm `close.ts` needs no change beyond the skip (its `gateLines` line prints only what `adoptStateFiles` returns); change `appendDecision` only if its `adopted` printout needs the new skip.
+- [ ] Add the contract tests under Verify to `src/tests/cli/agent.test.ts`, beside the legacy migration test at line 914.
+- [ ] Update `docs/guides/user/background-agents.md`, `man/ki.1` and `man/ki.commands.json` (the `decide` and `close` descriptions of the move) and the `CHANGELOG.md` entry under Unreleased.
 
 ## Files touched
 
-To be confirmed at planning; expected to be `src/core/agent/thread.ts`, `src/core/agent/close.ts`, possibly `src/core/agent/runs.ts`, and `src/tests/cli/agent.test.ts`.
+`src/core/agent/thread.ts`; possibly `src/core/agent/close.ts` (comment only); `src/tests/cli/agent.test.ts`; `docs/guides/user/background-agents.md`; `man/ki.1`; `man/ki.commands.json`; `CHANGELOG.md`.
 
 ## Verify
 
-1. A contract test: a run whose state folder holds `a.report.md`, adopted once, then deleted from the thread folder, is not re-created by `launch`, `queue`, `decide`, `close` or `new`.
-2. A report new since the last copy, or changed since it, is still delivered.
-3. The pre-tracked migration `0fcc593` added still moves a legacy state-folder log and reports on the first use.
-4. `bun run test:coverage` passes at 100%; `bunx tsc --noEmit`, `bunx biome check .` and `bunx knip` are clean.
+1. Contract test, through `run(args, context)` with `sandbox()`: a run whose state folder holds `a.report.md`, adopted by `decide`, committed, deleted by a second commit, with the state copy put back, is not re-created by `decide`, and the same for `close` (its gate prints no `moved a.report.md` line and the folder stays clean); `launch`, `queue` and `new` leave it absent too.
+2. The skipped state copy is still in the state folder after `decide` and `close`.
+3. A report new since the last move (no Git history in the thread folder) is still delivered by `decide` and `close`, and a retired one beside it stays retired in the same call.
+4. A report tracked and present in the thread folder is untouched, as today; a tracked report deleted in the working tree but not yet committed is not re-copied (index check).
+5. The pre-tracked migration `0fcc593` added still moves a legacy state-folder log and reports on the first use (the existing test at `src/tests/cli/agent.test.ts:914` keeps passing unchanged).
+6. `bun run test:coverage` passes at 100%; `bunx tsc --noEmit`, `bunx biome check .` and `bunx knip` are clean; `ki repo audit --skill ki-work-roadmap` and rumdl pass.
+7. After delivery, repeat the throwaway reproduction above with the fixed source: steps 3 and 4 leave the tree clean.
 
 ## Dependencies / blocks
 
@@ -87,10 +107,12 @@ None.
 
 ## Discussion
 
-Captured as triage, then adopted into Now as a deliver record at the techne thread's request; planning is next. The background-agents guide, [Background agents](../guides/user/background-agents.md), describes the launcher's thread-folder writes.
+Captured as triage, then adopted into Now as a deliver record at the techne thread's request; planned on 15 October 2026 and set Ready for the owner's go-ahead to deliver. The background-agents guide, [Background agents](../guides/user/background-agents.md), describes the launcher's thread-folder writes.
 
-Candidate rules for the expected behaviour, not decided here:
+Candidate rules considered, with the choice under Decision:
 
 - copy a state-folder report only when it is new or changed since the run's last copy, recorded in the run's `thread.json` or beside it;
 - copy a report only on the run's own completion, when the agent that wrote it finishes;
 - stop adopting reports at all once a run's thread home is recorded, keeping adoption for the pre-tracked migration that `0fcc593` was written for.
+
+The "changed since" part of the first candidate is dropped from this record: the agent writes into the thread folder, so a state copy that changes after delivery is not an expected case.
