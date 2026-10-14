@@ -4,13 +4,15 @@ area: CLI
 title: Agent run close
 project: ways-of-working
 component: agent
+purpose: capability
 kind: deliver
-status: triage
+status: draft
+horizon: next
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-13T21:37:16Z
-updated_at: 2026-10-13T23:20:00Z
+updated_at: 2026-10-14T06:52:07Z
 ---
 
 # Agent Run Close
@@ -35,10 +37,44 @@ A read-only inventory of the machine's run folders on 2026-10-13 found 25 folder
 - Out of scope: consolidating decisions into their homes, which stays the coordinating thread's duty under the standard; the one-off sweep of the 25 existing folders, which the inventory proposes folder by folder and the owner performs or delegates once `close` exists; worktree removal, which each agent owes before `DONE`; the wording of the background-run standard, which the harness owns; any scheduled or automatic close.
 - No run folder is read beyond its packet files, and no agent report content is sent anywhere.
 
+## Current state
+
+Not yet grounded. `ki-plan` records the current source facts before Ready.
+
+## Steps
+
+- [ ] Plan this record under `ki-plan` before Ready, replacing these placeholder sections.
+
+## Files touched
+
+Not yet planned.
+
+## Verify
+
+Not yet planned.
+
 ## Dependencies / blocks
 
 - The home of the decisions log is settled: Kris chose the tracked `+/_THREADS/<thread>/` folder in the owning repository, so the gate reads the committed log there rather than a file under the state root, and the state folder's own `decisions.md` is a runtime copy at most. The alternative Kris did not take, consolidating each entry of a state-local log into a home at every mark, would have had the gate check that each log entry names a home; with the log in Git the gate still checks that each in-force decision has a durable owner, but the log itself no longer needs rescuing before the folder goes. Durable documentation of the retention rule: [the background-run standard](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/skills/governance/ki-delegation/references/standards-background-runs.md). The report itself is design working material in the [ways-of-working](https://github.com/knowledgeislands/ki-principal/blob/main/Streams/Projects/ways-of-working/ways-of-working.md) Project of Knowledge Islands Principal and is slated for deletion once consolidated, which is why its options are quoted here.
 - `ki-agentic-harness` owns the `ki-delegation` standard and holds the record that rewrites its run-packet table, decisions-log section and run-close rule for the tracked home. If the gate needs a decision entry to carry its home, as proposed below, the standard's Decisions log section and `ki agent decide` change together; the mechanics can land first and the wording follow.
+
+## Documentation impact
+
+### Decision Records
+
+Not yet assessed.
+
+### Specifications
+
+Not yet assessed.
+
+### Guides
+
+Not yet assessed.
+
+### Roadmap
+
+Not yet assessed.
 
 ## Discussion
 
@@ -80,3 +116,7 @@ When the gate fails the command exits non-zero and prints one line per blocker: 
 - Whether the checkpoint check belongs in the gate at all, since master `_state-of-play.md` checkpoints mention many run names in passing; a match on the thread checkpoint's own name may be the only reliable signal.
 - Whether `ki cleanup` should list runs that would pass the gate, so the owner sees closable runs without trying each.
 - Whether `ki agent decide --home` lands ahead of `close`, so that decisions taken from now on carry a home and the sweep's reconcile step has somewhere to write.
+
+### Adoption
+
+On 14 October 2026 Kris approved the state-of-play thread's triage burn-down as written, under Kris's instruction to burn the roadmap down: adopted as `deliver / Next`. Kris approved it in STATE-CLEANUP ("Yes; queue after durability"). It is the mechanism behind the harness's tracked thread decisions home, and it should land after that standard is settled. Adoption grants no planning, implementation or acceptance authority.

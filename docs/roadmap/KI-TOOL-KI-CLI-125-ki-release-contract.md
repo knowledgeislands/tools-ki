@@ -4,12 +4,18 @@ area: CLI
 title: KI release contract
 purpose: capability
 project: agent-host
-status: triage
+kind: deliver
+status: draft
+horizon: hold
+hold:
+  reason: waiting-for
+  condition: An ARM host is needed, or vega is rebuilt
+  review: 2026-11-16
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-13T22:53:48Z
-updated_at: 2026-10-13T22:53:48Z
+updated_at: 2026-10-14T06:52:07Z
 ---
 
 # KI Release Contract
@@ -36,3 +42,7 @@ Not blocked. Blocks nothing today; ARM hosts wait for the linux-arm64 archive.
 ## Discussion
 
 Origin: `ki-principal`, state-of-play thread, under Kris Brown's acceptance of the audit decisions. Capture only; adoption, priority and plan belong to this repository. Cutting a release stays a separate, explicitly approved action.
+
+### Adoption
+
+On 14 October 2026 Kris approved the state-of-play thread's triage burn-down as written, under Kris's instruction to burn the roadmap down: adopted as `deliver / Hold` until 2026-11-16. No ARM host exists and vega has been deleted; `ki` already ships signed archives for the three platforms in use. Review it with the vega rebuild. Adoption grants no planning, implementation or acceptance authority.
