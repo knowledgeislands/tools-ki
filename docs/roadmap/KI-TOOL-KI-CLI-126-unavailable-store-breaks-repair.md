@@ -7,12 +7,12 @@ purpose: corrective
 kind: deliver
 component: repo
 horizon: now
-status: ready
+status: in-progress
 blocks: [KI-TOOL-KI-CLI-131]
 blocked_by: []
-baseline_ref: null
+baseline_ref: 5658f8766f81a24639cf205d80ad7cd9b7d0c147
 created_at: 2026-10-14T08:58:13Z
-updated_at: 2026-10-14T20:58:30Z
+updated_at: 2026-10-14T22:39:30Z
 ---
 
 # Unavailable Store Breaks Repair
@@ -48,11 +48,11 @@ Observed at `43da380`:
 
 ## Steps
 
-- [ ] Add a non-throwing helper in `src/core/storage/local-stores.ts` that returns, per declared external role, either the validated store root or an unavailability reason (`not bound`, or the `repositoryStoreDirectory` message), and export it through `src/core/storage/index.ts`. Keep `registeredKnowledgeBaseStoreRoots` throwing for its other caller, `ki repo open`.
-- [ ] In `src/commands/repo/repair.ts`, make the registry step uniform: write the registry entry when absent for every repository, using the existing `localRegistryWrite` path and `--dry-run` handling, then for store-declaring repositories add one `status.warn` entry per unavailable role, such as `! Store: sources store is unavailable on this host (not bound); commands that need originals will fail; run ki repo --repo <root> store list`, and `Registry: complete <root>` only when every role is available. An unavailable store never sets `failed`. An invalid registry still fails as now.
-- [ ] Replace the failing-case assertion in `repair.test.ts` with contract tests through `run(args, context)`: an unbound `sources` role with a registry entry warns and passes, with skills projected; a bound path that no longer exists warns and passes; a Knowledge Base with no registry entry is registered and warns; `--dry-run` reports the registration without writing; the bound case keeps "Registry: complete"; an invalid registry still fails.
-- [ ] Add a contract test that replays the CI sequence in one sandbox without network: `ki bootstrap`, `ki registry add --repo .`, `ki repo repair --repo .` and `ki repo audit --repo .` against a store-declaring Knowledge Base fixture, asserting that repair exits 0 with the warning and that the audit runs and returns its own verdict.
-- [ ] Make the documentation changes listed under Documentation impact.
+- [x] Add a non-throwing helper in `src/core/storage/local-stores.ts` that returns, per declared external role, either the validated store root or an unavailability reason (`not bound`, or the `repositoryStoreDirectory` message), and export it through `src/core/storage/index.ts`. Keep `registeredKnowledgeBaseStoreRoots` throwing for its other caller, `ki repo open`.
+- [x] In `src/commands/repo/repair.ts`, make the registry step uniform: write the registry entry when absent for every repository, using the existing `localRegistryWrite` path and `--dry-run` handling, then for store-declaring repositories add one `status.warn` entry per unavailable role, such as `! Store: sources store is unavailable on this host (not bound); commands that need originals will fail; run ki repo --repo <root> store list`, and `Registry: complete <root>` only when every role is available. An unavailable store never sets `failed`. An invalid registry still fails as now.
+- [x] Replace the failing-case assertion in `repair.test.ts` with contract tests through `run(args, context)`: an unbound `sources` role with a registry entry warns and passes, with skills projected; a bound path that no longer exists warns and passes; a Knowledge Base with no registry entry is registered and warns; `--dry-run` reports the registration without writing; the bound case keeps "Registry: complete"; an invalid registry still fails.
+- [x] Add a contract test that replays the CI sequence in one sandbox without network: `ki bootstrap`, `ki registry add --repo .`, `ki repo repair --repo .` and `ki repo audit --repo .` against a store-declaring Knowledge Base fixture, asserting that repair exits 0 with the warning and that the audit runs and returns its own verdict.
+- [x] Make the documentation changes listed under Documentation impact.
 - [ ] Run the repository checks and the Verify below.
 
 ## Files touched
@@ -98,3 +98,7 @@ Capture was under Kris Brown's approval of 14 October 2026 to record this defect
 Warning everywhere was chosen over failing until a host marks the store absent, because the decision asks for repair that "reports an unbound store without failing", and the absence marker is not in this record. Whether a marker should later make an unmarked unbound store fail again is left to [KI-TOOL-KI-CLI-131](KI-TOOL-KI-CLI-131-host-absent-store-state.md).
 
 One implementer in this repository is enough; the change is a single command and its tests. Do not touch `src/commands/agent/` or `src/core/agent/`, which another thread may be changing.
+
+Implementation began on 2026-10-14 under Kris Brown's CLI126-DELIVER decision in the `ways-of-working` thread: "implement KI-TOOL-KI-CLI-126 to awaiting review, release tools-ki, bump ki-principal's .github/ki-version, and confirm ki-principal CI reaches the audit step". The code, tests and changelog are delivered from baseline `5658f87`. `bun run test:coverage` passes 1189 tests at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip` and `mandoc -T lint man/ki.1` are clean, and the local CI reproduction against ki-principal in Verify 3 passes, with repair exiting 0 and the audit running to its own verdict. Repair no longer checks registry validity up front: an invalid registry lists no entries, and writing the registration proposal reports it as invalid with the unchanged message. `man/ki.1` and `README.md` did not describe repair's store handling, so they are unchanged.
+
+The record stays `in-progress` because Verify 2 fails: `ki repo audit --repo .` on tools-ki reports one `ki-engineering` `DEPS-1` failure, unrelated to this change, because `@biomejs/biome` 2.5.15, `@vitest/coverage-v8` 5.0.3, `knip` 6.39.0 and `vitest` 5.0.3 have now passed the 14-day adoption window. Adopting them is a package install, which the run's brief forbids, and a `dependency_holds` entry is an owner decision, so the record waits for one of those.

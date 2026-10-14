@@ -26,3 +26,27 @@ export const registeredKnowledgeBaseStoreRoots = async (
   }
   return roots
 }
+
+export type KnowledgeBaseStoreAvailability =
+  | { readonly role: ExternalStoreRole; readonly root: string }
+  | { readonly role: ExternalStoreRole; readonly unavailable: string }
+
+/** Report each declared external store as its validated root or the reason it is unavailable on this host. */
+export const knowledgeBaseStoreAvailability = async (
+  entry: LocalRegistryEntry | undefined,
+  roles: readonly ExternalStoreRole[]
+): Promise<readonly KnowledgeBaseStoreAvailability[]> => {
+  const stores: KnowledgeBaseStoreAvailability[] = []
+  for (const role of roles) {
+    const path = entry?.stores?.[role]
+    if (!path) stores.push({ role, unavailable: 'not bound' })
+    else
+      stores.push(
+        await repositoryStoreDirectory(role, path).then(
+          (root) => ({ role, root }),
+          (error: Error) => ({ role, unavailable: error.message })
+        )
+      )
+  }
+  return stores
+}

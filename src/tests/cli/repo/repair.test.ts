@@ -31,6 +31,19 @@ const preparedRepository = async () => {
   return box
 }
 
+const knowledgeBaseConfiguration = repositoryConfiguration
+  .replaceAll('ki-repo-project', 'ki-repo-kb')
+  .replace('repo_type = "project"', 'repo_type = "kb"\nstore_roles = ["notes", "sources"]')
+
+const preparedKnowledgeBase = async () => {
+  const box = await preparedRepository()
+  await box.project.write('.ki.toml', knowledgeBaseConfiguration)
+  return box
+}
+
+const knowledgeBaseRegistry = (root: string, sources?: string) =>
+  `schema = 1\n\n[repositories."project"]\nrepository = "https://github.com/example/project"\npath = ${JSON.stringify(root)}\n${sources ? `\n[repositories."project".stores]\nsources = ${JSON.stringify(sources)}\n` : ''}`
+
 describe('[ki repo repair]', () => {
   test('registers the selected physical root before repairing a missing compatible projection', async () => {
     const box = await preparedRepository()
@@ -206,13 +219,7 @@ describe('[ki repo repair]', () => {
   })
 
   test('rejects an invalid sources registry before repairing a Knowledge Base', async () => {
-    const box = await preparedRepository()
-    await box.project.write(
-      '.ki.toml',
-      repositoryConfiguration
-        .replaceAll('ki-repo-project', 'ki-repo-kb')
-        .replace('repo_type = "project"', 'repo_type = "kb"\nstore_roles = ["notes", "sources"]')
-    )
+    const box = await preparedKnowledgeBase()
     await box.state.write('ki/registry.toml', 'schema = 1\nrepositories = {}\nextra = true\n')
 
     const repair = await box.run('ki repo repair')
@@ -221,28 +228,83 @@ describe('[ki repo repair]', () => {
     expect(repair.output).toContain('Registry: local KI repository registry is invalid: unrecognised key extra')
   })
 
-  test('requires an explicit complete sources binding before repairing a Knowledge Base', async () => {
-    const box = await preparedRepository()
+  test('registers a Knowledge Base with no registry entry and warns that its store is unbound', async () => {
+    const box = await preparedKnowledgeBase()
     const root = await realpath(box.project.path)
-    const sources = await box.root.mkdir('sources')
-    await box.project.write(
-      '.ki.toml',
-      repositoryConfiguration
-        .replaceAll('ki-repo-project', 'ki-repo-kb')
-        .replace('repo_type = "project"', 'repo_type = "kb"\nstore_roles = ["notes", "sources"]')
-    )
 
-    const missing = await box.run('ki repo repair')
-    await box.state.write(
-      'ki/registry.toml',
-      `schema = 1\n\n[repositories."project"]\nrepository = "https://github.com/example/project"\npath = ${JSON.stringify(root)}\n\n[repositories."project".stores]\nsources = ${JSON.stringify(sources)}\n`
-    )
-    const complete = await box.run('ki repo repair')
+    const repair = await box.run('ki repo repair')
 
-    expect(missing.exitCode).toBe(1)
-    expect(missing.output).toContain(`run ki repo --repo ${root} store list`)
-    expect(complete.exitCode).toBe(0)
-    expect(complete.output).toContain(`Registry: complete ${root}`)
+    expect(repair.exitCode).toBe(0)
+    expect(repair.output).toContain(`Registry: registered ${root}`)
+    expect(repair.output).toContain(
+      `! Store: sources store is unavailable on this host (not bound); commands that need originals will fail; run ki repo --repo ${root} store list`
+    )
+    expect(repair.output).not.toContain('Registry: complete')
+    expect(repair.output).toContain('summary: REPOSITORIES=1 RESULT=PASS')
+    expect((await lstat(`${box.project.path}/.agents/skills/ki-example`)).isSymbolicLink()).toBe(true)
+    expect(await box.state.read('ki/registry.toml')).toContain(JSON.stringify(root))
+  })
+
+  test('previews a Knowledge Base registration without writing it', async () => {
+    const box = await preparedKnowledgeBase()
+
+    const repair = await box.run('ki repo repair --dry-run')
+
+    expect(repair.exitCode).toBe(0)
+    expect(repair.output).toContain('would register')
+    expect(repair.output).toContain('! Store: sources store is unavailable on this host (not bound)')
+    await expect(box.state.read('ki/registry.toml')).rejects.toThrow()
+  })
+
+  test('warns and passes when a registered sources store is unbound or no longer exists', async () => {
+    const box = await preparedKnowledgeBase()
+    const root = await realpath(box.project.path)
+    await box.state.write('ki/registry.toml', knowledgeBaseRegistry(root))
+    const unbound = await box.run('ki repo repair')
+    await box.state.write('ki/registry.toml', knowledgeBaseRegistry(root, `${box.root.path}/gone`))
+    const gone = await box.run('ki repo repair')
+
+    expect(unbound.exitCode).toBe(0)
+    expect(unbound.output).toContain('! Store: sources store is unavailable on this host (not bound)')
+    expect(unbound.output).not.toContain('Registry: registered')
+    expect(unbound.output).toContain('link ')
+    expect(gone.exitCode).toBe(0)
+    expect(gone.output).toContain(
+      '! Store: sources store is unavailable on this host (sources store must be an existing direct directory)'
+    )
+  })
+
+  test('reports a complete Knowledge Base registry once its sources store is bound', async () => {
+    const box = await preparedKnowledgeBase()
+    const root = await realpath(box.project.path)
+    await box.state.write('ki/registry.toml', knowledgeBaseRegistry(root, await box.root.mkdir('sources')))
+
+    const repair = await box.run('ki repo repair')
+
+    expect(repair.exitCode).toBe(0)
+    expect(repair.output).toContain(`Registry: complete ${root}`)
+    expect(repair.output).not.toContain('! Store:')
+  })
+
+  test('replays the CI sequence for a Knowledge Base whose store is absent from the runner', async () => {
+    const box = await sandbox()
+    await box.setupAgentHome('chatgpt-codex')
+    expect((await box.run('ki bootstrap')).exitCode).toBe(0)
+    await box.setupExampleHarness({ name: 'ki-repo' })
+    await box.setupExampleHarness()
+    await box.project.write('.ki.toml', knowledgeBaseConfiguration)
+
+    const registered = await box.run('ki registry add --repo .')
+    const repair = await box.run('ki repo repair --repo .')
+    const audit = await box.run('ki repo audit --repo .')
+
+    expect(registered.exitCode).toBe(0)
+    expect(repair.exitCode).toBe(0)
+    expect(repair.output).toContain('! Store: sources store is unavailable on this host (not bound)')
+    // The fixture Harness publishes no rubric, so the audit's own verdict is that error, not a store one.
+    expect(audit.output).toContain('3 skills selected')
+    expect(audit.output).toContain('ki-example does not provide a rubric catalogue')
+    expect(audit.output).not.toMatch(/store|Registry/)
   })
 
   // Health inspects the projection path itself, and lstat resolves the components above it, so a
