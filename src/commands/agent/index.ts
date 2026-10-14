@@ -1,3 +1,4 @@
+import { dirname } from 'node:path'
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
 import { closeRun } from '../../core/agent/close.ts'
@@ -217,6 +218,8 @@ export const createAgentCommand = (context: KiContext): Command => {
           home: options.home,
           repo: options.repo
         })
+        if (result.adopted.length)
+          write(`Moved ${result.adopted.join(', ')} from the state folder into ${dirname(result.path)}`)
         write(`Decision ${result.number} recorded in ${result.path}`)
       })
   )

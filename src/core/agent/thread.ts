@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readdir, writeFile } from 'node:fs/promises'
+import { appendFile, copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitWorkingTreeRoot } from '../runtime/git.ts'
@@ -27,6 +27,37 @@ export const decisionsLog = (home: ThreadHome): string => join(threadPath(home),
 
 /** Where the named agent writes its final report. */
 export const reportPath = (home: ThreadHome, name: string): string => join(threadPath(home), `${name}.report.md`)
+
+/**
+ * Moves the knowledge files a run kept in its state folder before the tracked home existed,
+ * `decisions.md` and each `<name>.report.md`, into the thread folder, so that the launcher is
+ * their only writer and no thread copies them by hand. Kris settled this on 2026-10-14: "make
+ * the launcher the only writer of the thread folder's log and report files". A file the
+ * thread folder already holds supersedes its state-folder copy, which stays to be archived
+ * with the run. Returns the names moved, in name order.
+ */
+export const adoptStateFiles = async (
+  context: AgentContext,
+  run: string,
+  home: ThreadHome
+): Promise<readonly string[]> => {
+  const directory = runDirectory(context, run)
+  // Resolving the home records `thread.json`, so the state folder always exists here.
+  const files = (await readdir(directory))
+    .filter((file) => file === 'decisions.md' || file.endsWith('.report.md'))
+    .sort()
+  const moved: string[] = []
+  for (const file of files) {
+    const target = join(threadPath(home), file)
+    if (await stat(target).catch(() => undefined)) continue
+    await mkdir(threadPath(home), { recursive: true })
+    // Copy then remove: the state folder and the repository may sit on different devices.
+    await copyFile(join(directory, file), target)
+    await rm(join(directory, file))
+    moved.push(file)
+  }
+  return moved
+}
 
 const threadFile = (context: AgentContext, run: string): string => join(runDirectory(context, run), 'thread.json')
 
@@ -185,18 +216,25 @@ export interface DecisionRequest {
   readonly repo?: string | undefined
 }
 
-/** Appends a numbered, timestamped owner decision; returns its number and the log written. */
+/**
+ * Appends a numbered, timestamped owner decision; returns its number, the log written and
+ * the state-folder files moved into the thread folder first, so that a run's tracked log
+ * continues its legacy numbering rather than restarting it.
+ */
 export const appendDecision = async (
   context: AgentContext,
   run: string,
   request: DecisionRequest
-): Promise<{ readonly number: number; readonly path: string }> => {
+): Promise<{ readonly number: number; readonly path: string; readonly adopted: readonly string[] }> => {
   if (!request.text.trim()) throw new KiError('a decision needs text', 2)
   if (request.home !== undefined && !request.home.trim()) throw new KiError('a home needs a path or identifier', 2)
-  const path =
-    request.log === undefined
-      ? decisionsLog(await threadHome(context, run, request.repo))
-      : resolve(context.workingDirectory, request.log)
+  let adopted: readonly string[] = []
+  let path: string
+  if (request.log === undefined) {
+    const home = await threadHome(context, run, request.repo)
+    adopted = await adoptStateFiles(context, run, home)
+    path = decisionsLog(home)
+  } else path = resolve(context.workingDirectory, request.log)
   const existing = await read(path)
   const number = Math.max(0, ...parseDecisions(existing ?? '').map((entry) => entry.number)) + 1
   if (existing === undefined) {
@@ -205,7 +243,7 @@ export const appendDecision = async (
   }
   const home = request.home === undefined ? '' : `home: ${request.home.trim()}\n\n`
   await appendFile(path, `\n## Decision ${number} (${instant(context)})\n\n${home}- ${request.text.trim()}\n`)
-  return { number, path }
+  return { number, path, adopted }
 }
 
 /** Writes or replaces the `home:` line of one entry in the thread's tracked log. */

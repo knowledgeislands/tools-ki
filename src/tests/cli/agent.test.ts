@@ -1,4 +1,5 @@
 import { realpath, rm } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { type AgentLaunch, runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
 
@@ -705,6 +706,34 @@ describe('ki agent reconcile', () => {
   })
 })
 
+describe('ki agent decide on a run that predates the tracked home', () => {
+  test('moves the state-folder log and reports into the thread folder and continues numbering', async () => {
+    const box = await sandbox()
+    await setupRepository(box)
+    await box.state.write('ki/agents/r/decisions.md', '# Decisions\n\n## Decision 4 (2026-10-01)\n\n- Old.\n')
+    await box.state.write('ki/agents/r/b.report.md', '# B\n')
+    await box.state.write('ki/agents/r/a.report.md', '# A\n')
+    await box.state.write('ki/agents/r/a.status', 'DONE\n')
+
+    expect((await box.run('ki agent decide r New.', { now })).stdout).toBe(
+      [
+        `Moved a.report.md, b.report.md, decisions.md from the state folder into ${dirname(await threadPath(box, 'decisions.md'))}`,
+        `Decision 5 recorded in ${await threadPath(box, 'decisions.md')}`,
+        ''
+      ].join('\n')
+    )
+    expect(await box.project.read('+/_THREADS/r/decisions.md')).toContain('## Decision 4 (2026-10-01)\n\n- Old.\n')
+    expect(await box.project.read('+/_THREADS/r/a.report.md')).toBe('# A\n')
+    expect(await box.state.read('ki/agents/r/a.report.md').catch(() => 'absent')).toBe('absent')
+    expect(await box.state.read('ki/agents/r/a.status')).toBe('DONE\n')
+
+    // Nothing left to move: the next decision prints only its own line.
+    expect((await box.run('ki agent decide r Next.', { now })).stdout).toBe(
+      `Decision 6 recorded in ${await threadPath(box, 'decisions.md')}\n`
+    )
+  })
+})
+
 describe('ki agent close', () => {
   /** A finished run whose only decision is housed in a committed file. */
   const setupFinishedRun = async (box: Sandbox) => {
@@ -882,7 +911,7 @@ describe('ki agent close', () => {
     expect((await box.run('ki agent status r', { now })).stderr).toBe('ki: error: no such run: r\n')
   })
 
-  test('houses a decision in any registered roadmap record and reads a legacy state-folder log', async () => {
+  test('houses a decision in any registered roadmap record and moves a legacy state-folder log and report', async () => {
     const box = await sandbox()
     const project = await setupRepository(box)
     fakeProcesses(box)
@@ -910,21 +939,35 @@ describe('ki agent close', () => {
       '# Decisions\n\n## Decision 1 (2026-10-01)\n\nhome: KI-ISLAND-GOV-7\n\n- Old.\n\n## Decision 2 (2026-10-01)\n\n- Older.\n'
     )
 
-    // No thread.json: the home comes from the working directory, and the state log stands in.
+    await box.state.write('ki/agents/r/a.report.md', '# A\n')
+
+    // No thread.json: the home comes from the working directory, and close moves the state
+    // folder's log and report into the thread folder, which then needs committing.
     const legacy = await box.run('ki agent close r', { now })
     expect(legacy.exitCode).toBe(1)
+    expect(legacy.stdout).toContain('ok: moved a.report.md from the state folder into +/_THREADS/r\n')
+    expect(legacy.stdout).toContain('ok: moved decisions.md from the state folder into +/_THREADS/r\n')
     expect(legacy.stdout).toContain('ok: decision 1 home KI-ISLAND-GOV-7\n')
-    expect(legacy.stdout).toContain(`blocker: decision 2 has no home (${runPath(box, 'decisions.md')})\n`)
-    expect(legacy.stdout).toContain('ok: no thread folder at +/_THREADS/r\n')
+    expect(legacy.stdout).toContain(`blocker: decision 2 has no home (${await threadPath(box, 'decisions.md')})\n`)
+    expect(legacy.stdout).toContain('blocker: thread folder +/_THREADS/r has uncommitted changes\n')
+    expect(await box.project.read('+/_THREADS/r/a.report.md')).toBe('# A\n')
+    expect(await box.state.read('ki/agents/r/decisions.md').catch(() => 'absent')).toBe('absent')
     expect(await box.state.read('ki/agents/r/thread.json').catch(() => 'absent')).toBe('absent')
 
-    await box.state.write(
-      'ki/agents/r/decisions.md',
+    await box.project.write(
+      '+/_THREADS/r/decisions.md',
       '# Decisions\n\n## Decision 1 (2026-10-01)\n\nhome: KI-ISLAND-GOV-7\n\n- Old.\n'
     )
+    await box.project.git(['add', '--all'])
+    await box.project.git(['commit', '-q', '-m', 'thread'])
+    // A state-folder copy the thread folder already holds is superseded and left to archive.
+    await box.state.write('ki/agents/r/a.report.md', '# Stale\n')
     const closed = await box.run('ki agent close r', { now })
     expect(closed.exitCode).toBe(0)
-    expect(closed.stdout).toContain('ok: no thread folder at +/_THREADS/r\n')
+    expect(closed.stdout).not.toContain('moved')
+    expect(closed.stdout).toContain('ok: thread folder +/_THREADS/r committed and clean\n')
+    expect(await box.project.read('+/_THREADS/r/a.report.md')).toBe('# A\n')
+    expect(await box.state.read('ki/agents/_archive/r/a.report.md')).toBe('# Stale\n')
     expect(await box.state.read('ki/agents/_archive/r/close.md')).toContain('- Decision 1: KI-ISLAND-GOV-7')
   })
 
@@ -934,11 +977,10 @@ describe('ki agent close', () => {
     fakeProcesses(box)
     await box.state.write('ki/agents/r/a.pid', '10\n')
     await box.state.write('ki/agents/r/a.status', 'DONE\n')
-    await box.project.mkdir('+/_THREADS/r')
     const dirty = await box.run('ki agent close r', { now })
     expect(dirty.exitCode).toBe(0)
     expect(dirty.stdout).toContain('ok: no decisions log\n')
-    expect(dirty.stdout).toContain('ok: thread folder +/_THREADS/r committed and clean\n')
+    expect(dirty.stdout).toContain('ok: no thread folder at +/_THREADS/r\n')
     expect(await box.state.read('ki/agents/_archive/r/close.md')).toContain('No decisions log.')
 
     await box.state.write('ki/agents/r/a.pid', '10\n')

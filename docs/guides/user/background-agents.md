@@ -11,7 +11,7 @@ This guide shows how to delegate work to detached Claude Code or Codex agents wi
 
 ## Record the authority and write the prompt
 
-1. Record the owner's approval: `ki agent decide <run> "<the owner's words>"`. It appends a numbered, UTC-timestamped entry to the tracked `+/_THREADS/<run>/decisions.md` and prints the number. Add `--home <path-or-id>` when the decision already lives durably in a committed file or a roadmap record, or give it one later with `ki agent reconcile <run> <number> <home>`.
+1. Record the owner's approval: `ki agent decide <run> "<the owner's words>"`. It appends a numbered, UTC-timestamped entry to the tracked `+/_THREADS/<run>/decisions.md` and prints the number. For a run that predates the tracked home, `decide` first moves the state folder's `decisions.md` and reports into the thread folder and names them, so the log keeps its numbering. Add `--home <path-or-id>` when the decision already lives durably in a committed file or a roadmap record, or give it one later with `ki agent reconcile <run> <number> <home>`.
 2. Write a skeleton with `ki agent new <run> <name>` and complete it: the task citing that decision in the owner's words, numbered steps, a verification step and the report path the skeleton already names.
 3. Choose the lowest sufficient authority tier: `none`, `push`, `prune` or `release`. Name every remote call the task relies on in the prompt itself.
 
@@ -21,7 +21,7 @@ This guide shows how to delegate work to detached Claude Code or Codex agents wi
 ki agent launch <run> <name> <workdir> <prompt-file> --rules push --add-dir <dir>
 ```
 
-The launcher appends the tier's footer and the progress protocol, then starts the agent in its own session with standard input from `/dev/null`. The runtime packet lives under `$KI_STATE_HOME/agents/<run>/`: `<name>.prompt.md`, `.launch.json`, `.status`, `.pid` and `.log`, with `thread.json` naming the thread home. The agent writes `<name>.report.md` into the owning repository's `+/_THREADS/<run>/` beside `decisions.md`; the launcher adds that repository to the agent's writable directories when the working directory lies outside it. `ki` never commits the thread folder: commit it with the thread's other work.
+The launcher appends the tier's footer and the progress protocol, then starts the agent in its own session with standard input from `/dev/null`. The runtime packet lives under `$KI_STATE_HOME/agents/<run>/`: `<name>.prompt.md`, `.launch.json`, `.status`, `.pid` and `.log`, with `thread.json` naming the thread home. The agent writes `<name>.report.md` into the owning repository's `+/_THREADS/<run>/` beside `decisions.md`; the launcher adds that repository to the agent's writable directories when the working directory lies outside it. `ki` is the only writer of those files and never commits the thread folder: commit it with the thread's other work.
 
 Choose the model and reasoning effort with `--model <model>` and `--effort low|medium|high|xhigh|max`, for example `--runtime claude --model claude-fable-5-1 --effort high` or `--runtime codex --model gpt-6-astra --effort xhigh`. The model name passes through verbatim, and the runtime rejects an effort its model does not support. Omit either to keep the runtime's own default. `<name>.launch.json` records the runtime, model, effort and working directory the agent started with; `ki agent queue` carries both options through to the dispatcher.
 
@@ -59,7 +59,7 @@ ki agent close <run>
 
 The reconcile gate prints one line per check and must pass whole: every agent finished with `DONE` or is named in `--accept-exited <name>`, no dispatcher is running, the queue and `worktrees/` are empty, every decision in the tracked log carries a `home:` that is a Git-tracked path or a roadmap record of a registered repository, and the thread folder is committed and clean. On any blocker it prints every line, exits 1 and changes nothing. Give an unhoused decision its home with `ki agent reconcile <run> <number> <home>`, or waive the decision check with `--reconciled`, which the close note records.
 
-When the gate passes the state folder moves to `$KI_STATE_HOME/agents/_archive/<run>/` with a `close.md` note of the gate and each decision's home. `--compress` writes `_archive/<run>.tar.gz` and `--delete` removes the folder instead, each leaving the note at `_archive/<run>.close.md`. A run that predates the tracked home keeps its log in the state folder; `close` reads that log until the thread copies it across.
+When the gate passes the state folder moves to `$KI_STATE_HOME/agents/_archive/<run>/` with a `close.md` note of the gate and each decision's home. `--compress` writes `_archive/<run>.tar.gz` and `--delete` removes the folder instead, each leaving the note at `_archive/<run>.close.md`. For a run that predates the tracked home, `close` first moves any `decisions.md` or `<name>.report.md` left in the state folder into the thread folder and prints an `ok` line for each, so commit the folder and run `close` again; a copy the thread folder already holds supersedes the state folder's, which is archived with the run.
 
 ## Recover
 

@@ -1463,8 +1463,8 @@ live in the owning repository's tracked
 .I +/_THREADS/<run>/
 folder, so the state folder can go without losing them.
 .B ki
-writes those files but never commits them; the thread commits them with its
-other work. The first
+is their only writer, so no thread copies them by hand, and never commits
+them; the thread commits them with its other work. The first
 .BR launch ,
 .BR queue ,
 .B new
@@ -1570,7 +1570,14 @@ with the thread's decisions log and report paths filled in.
 .B ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--repo <dir>]
 Append a numbered owner decision, timestamped in UTC, to the thread's tracked
 .I decisions.md
-or the named log, for prompts to cite as their authority.
+or the named log, for prompts to cite as their authority. Writing the
+thread's own log, it first moves any
+.I decisions.md
+and
+.I <name>.report.md
+a run predating the tracked home kept in its state folder into the thread
+folder, where no copy already exists, and names them, so the tracked log
+continues the old numbering.
 .B --home
 names where the decision now lives durably: a committed path, optionally
 with a
@@ -1591,10 +1598,17 @@ or named in
 .BR --accept-exited ,
 no dispatcher running, the queue and
 .I worktrees/
-empty, every decision in the tracked log (or, for a run that predates the
-tracked home, the state folder's own log) housed in a tracked path or a
+empty, every decision in the tracked log housed in a tracked path or a
 roadmap record of a registered repository, and the thread folder committed
-and clean. On any blocker the command prints every line, exits 1 and
+and clean. It first moves into the thread folder any
+.I decisions.md
+or
+.I <name>.report.md
+that a run predating the tracked home kept in its state folder, printing an
+.B ok
+line for each, so the folder then needs committing; a copy the thread folder
+already holds supersedes the state folder's, which is archived with the run.
+Beyond that move, on any blocker the command prints every line, exits 1 and
 changes nothing.
 .B --reconciled
 waives the decision check and the close note records the waiver. When the

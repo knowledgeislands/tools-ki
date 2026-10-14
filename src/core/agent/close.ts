@@ -4,7 +4,15 @@ import { KiError } from '../errors.ts'
 import { requiredLocalRegistry } from '../storage/local-registry.ts'
 import { type AgentContext, agentsDirectory, git, instant, read } from './context.ts'
 import { agentState, agents, existingRun, pidOf, readQueue, running } from './runs.ts'
-import { type DecisionEntry, decisionsLog, parseDecisions, type ThreadHome, threadHome, threadPath } from './thread.ts'
+import {
+  adoptStateFiles,
+  type DecisionEntry,
+  decisionsLog,
+  parseDecisions,
+  type ThreadHome,
+  threadHome,
+  threadPath
+} from './thread.ts'
 
 export interface CloseRequest {
   readonly run: string
@@ -71,20 +79,16 @@ const unresolved = async (context: AgentContext, thread: ThreadHome, home: strin
 const decisionLines = async (
   context: AgentContext,
   thread: ThreadHome,
-  request: CloseRequest,
-  directory: string
+  request: CloseRequest
 ): Promise<{
   readonly lines: readonly GateLine[]
   readonly decisions: readonly DecisionEntry[]
   readonly log: string | undefined
 }> => {
-  // A run that predates the tracked home keeps its log in the state folder until the thread
-  // copies it across; the tracked log, once it exists, supersedes that copy.
-  const tracked = decisionsLog(thread)
-  const legacy = join(directory, 'decisions.md')
-  const log = (await read(tracked)) !== undefined ? tracked : (await read(legacy)) !== undefined ? legacy : undefined
-  if (log === undefined) return { lines: [ok('no decisions log')], decisions: [], log }
-  const decisions = parseDecisions((await read(log)) as string)
+  const log = decisionsLog(thread)
+  const text = await read(log)
+  if (text === undefined) return { lines: [ok('no decisions log')], decisions: [], log: undefined }
+  const decisions = parseDecisions(text)
   if (request.reconciled)
     return {
       lines: [ok(`decision gate waived by --reconciled (${decisions.length} entries in ${log})`)],
@@ -145,7 +149,9 @@ const gateLines = async (
   lines.push(queue.length ? blocker(`queue holds ${listed(queue.map((queued) => queued.name))}`) : ok('queue empty'))
   const worktrees = await entries(join(directory, 'worktrees'))
   lines.push(worktrees.length ? blocker(`worktrees/ holds ${listed(worktrees)}`) : ok('no worktrees'))
-  const decided = await decisionLines(context, thread, request, directory)
+  const adopted = await adoptStateFiles(context, request.run, thread)
+  lines.push(...adopted.map((file) => ok(`moved ${file} from the state folder into ${thread.folder}`)))
+  const decided = await decisionLines(context, thread, request)
   lines.push(...decided.lines, await folderLine(context, thread))
   return { lines, decisions: decided.decisions, log: decided.log }
 }
@@ -184,9 +190,11 @@ const note = (
 /**
  * Retires a finished run's state folder once the reconcile gate passes: no agent or
  * dispatcher alive, every agent `DONE` or accepted, the queue and worktrees empty, every
- * decision housed, and the tracked thread folder committed and clean. On any blocker it
- * reports every line and changes nothing. It archives by default, so a run folder never
- * goes while anything durable exists only inside it, and deletes only on `--delete`.
+ * decision housed, and the tracked thread folder committed and clean. It first moves any
+ * log or report the run kept in its state folder into the thread folder, which then needs
+ * committing; beyond that move, on any blocker it reports every line and changes nothing. It
+ * archives by default, so a run folder never goes while anything durable exists only inside
+ * it, and deletes only on `--delete`.
  */
 export const closeRun = async (context: AgentContext, request: CloseRequest): Promise<CloseResult> => {
   if (request.delete && request.compress) throw new KiError('--delete and --compress exclude each other', 2)
