@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-14T14:26:48Z
-updated_at: 2026-10-14T14:26:48Z
+updated_at: 2026-10-14T22:58:36Z
 ---
 
 # KI-TOOL-KI-CLI-128: Granola retention safeguards
@@ -22,6 +22,8 @@ updated_at: 2026-10-14T14:26:48Z
 Prevent Granola reset operations from destroying retained handling evidence or migration proof. Keep on-demand discovery able to distinguish existing packages, previously handled sources and genuinely unevidenced candidates without introducing another persistent index.
 
 ## Context
+
+On 14 October 2026, the owner confirmed RESET-FIRST: safe reset is this record’s first piece of work; independent `state_root` remains conditional. The refusal step explicitly covers both `--rebuild` and ordinary adapter reset before any Ready request. This documentation clarification preserves this copy’s existing lifecycle and implementation evidence; it grants no Ready transition, new coding, integration, acceptance, migration or actual reset. Receiving evidence: [owner-answer relay](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_THREADS/knowledge-acquisition/handoff-review.report.md); owner decision: [Acquire decisions](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/decisions.md#decision-38-2026-10-14t225614z).
 
 The owner authorised one tools-ki defect carrier and planning before coding on 14 October 2026 in the [Acquire approvals](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/decisions.md#decision-30-2026-10-14t141105z). This single Draft organises bounded tools-ki importer and associated Harness contract support; it is not implementation authority. The CLI number was reserved in a ledger-only commit before this record was written.
 
@@ -49,7 +51,7 @@ The installed `ki` executes the primary tools-ki source checkout. Documentation 
 
 - [ ] Have the existing receiving coordinator review this narrowed corrective plan against the discovery-first proposal. Freeze reset semantics, deletion preview and exact paths before requesting separate Ready and implementation authority.
 - [ ] Under that later grant, replace recursive state-directory deletion with an exact preview of only verified, owned disposable files. Preserve nested proof, unknown files, attachments and variants; do not silently broaden ownership to a directory.
-- [ ] Refuse adapter reset and rebuild whenever deleting the ledger would lose any handled disposition. Refuse source reset for a handled UUID; refuse component reset if it would invalidate its retained evidence. Preserve unsupported/corrupt evidence and interrupted-write journals, and return a clear refusal rather than resetting to make state appear clean.
+- [ ] Refuse both ordinary adapter reset (without `--rebuild`) and adapter reset with `--rebuild` whenever deleting the ledger would lose any handled disposition. Refuse source reset for a handled UUID; refuse component reset if it would invalidate its retained evidence. Preserve unsupported/corrupt evidence and interrupted-write journals, and return a clear refusal rather than resetting to make state appear clean.
 - [ ] Prove reset refusal and safe disposable-only behaviour through injected public CLI sandbox fixtures, including central and legacy layouts, handled-but-absent packages, nested proof, symlinks, corrupt journals and unknown files. No real provider or source state is used.
 - [ ] Have the Harness owner separately approve its bounded contract wording and any necessary existing catalogue tests. Describe identity-only discovery as a distinct, separately authorised read operation; do not weaken faithful acquisition or amendment checks globally. Return compatible local revisions and fixture results, without changing projection/install state.
 - [ ] Return the corrective delivery for human review. Reconsider optional discovery/state-root support only after its necessity is demonstrated; refresh Acquire's exact migration plan separately and stop before migration, source retirement or cleanup.
