@@ -10,7 +10,7 @@ export const agentEfforts = ['low', 'medium', 'high', 'xhigh', 'max'] as const
 export type AgentEffort = (typeof agentEfforts)[number]
 
 /** Environment variable naming the run in every agent `ki agent` starts. */
-export const agentRunMarker = 'KI_AGENT_RUN'
+const agentRunMarker = 'KI_AGENT_RUN'
 
 export interface RuntimeRequest {
   /** Run name, set as the child's run marker so hooks can tell a background agent apart. */
