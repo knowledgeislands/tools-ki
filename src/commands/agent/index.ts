@@ -1,5 +1,6 @@
 import { Command, Option } from 'commander'
 import type { KiContext } from '../../context.ts'
+import { closeRun } from '../../core/agent/close.ts'
 import {
   type AgentContext,
   type AuthorityTier,
@@ -18,7 +19,7 @@ import {
 import { type AgentEffort, type AgentRuntime, agentEfforts, agentRuntimes } from '../../core/agent/runtimes.ts'
 import { appendDecision, reconcileDecision } from '../../core/agent/thread.ts'
 import { DEFAULT_HARNESS } from '../../core/configuration/declaration.ts'
-import { grammarError } from '../../core/errors.ts'
+import { grammarError, KiError } from '../../core/errors.ts'
 import { harnessDirectory } from '../../core/storage/harness-paths.ts'
 
 const agentContext = (context: KiContext): AgentContext => ({
@@ -230,6 +231,41 @@ export const createAgentCommand = (context: KiContext): Command => {
         write(
           `Decision ${number} home ${home} recorded in ${await reconcileDecision(agentContext(context), run, number, home)}`
         )
+      )
+  )
+
+  command.addCommand(
+    new Command('close')
+      .description("retire a finished run's state folder once its reconcile gate passes")
+      .argument('<run>', 'run name')
+      .option('--delete', 'remove the state folder instead of archiving it')
+      .option('--compress', 'archive the state folder as a tarball')
+      .option('--accept-exited <name>', 'accept an agent that exited without DONE; repeatable', collect, [])
+      .option('--reconciled', 'waive the decision gate; the close note records the waiver')
+      .addOption(repoOption)
+      .action(
+        async (
+          run: string,
+          options: {
+            delete?: boolean
+            compress?: boolean
+            acceptExited: readonly string[]
+            reconciled?: boolean
+            repo?: string
+          }
+        ) => {
+          const result = await closeRun(agentContext(context), {
+            run,
+            repo: options.repo,
+            delete: options.delete === true,
+            compress: options.compress === true,
+            acceptExited: options.acceptExited,
+            reconciled: options.reconciled === true
+          })
+          for (const line of result.lines) write(line)
+          if (result.outcome === undefined) throw new KiError(`${run} cannot close until every blocker clears`, 1)
+          write(result.outcome)
+        }
       )
   )
 

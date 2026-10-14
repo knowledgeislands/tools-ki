@@ -512,6 +512,10 @@
         {
           "invocation": "ki agent reconcile <run> <number> <home>",
           "description": "Write or replace the home: line of one decision in the thread's tracked log."
+        },
+        {
+          "invocation": "ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]",
+          "description": "Retire a finished run's state folder. The reconcile gate prints one line per check and must pass whole: every agent finished with DONE or named in --accept-exited , no dispatcher running, the queue and worktrees/ empty, every decision in the tracked log (or, for a run that predates the tracked home, the state folder's own log) housed in a tracked path or a roadmap record of a registered repository, and the thread folder committed and clean. On any blocker the command prints every line, exits 1 and changes nothing. --reconciled waives the decision check and the close note records the waiver. When the gate passes the state folder moves to $KI_STATE_HOME/agents/_archive/<run>/ with a close.md note of the gate and each decision's home; with --compress it becomes _archive/<run>.tar.gz , and with --delete it is removed, each with the note at _archive/<run>.close.md ."
         }
       ]
     },

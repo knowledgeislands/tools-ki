@@ -405,6 +405,9 @@ Append a numbered, timestamped owner decision to the thread's tracked log.
 .TP
 .B ki agent reconcile <run> <number> <home>
 Write or replace one decision's durable home.
+.TP
+.B ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
+Retire a finished run's state folder once its reconcile gate passes.
 .SS Estate convergence
 \&
 .TP
@@ -1561,6 +1564,34 @@ or a work-record identifier such as
 Write or replace the
 .I home:
 line of one decision in the thread's tracked log.
+.TP
+.B ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
+Retire a finished run's state folder. The reconcile gate prints one line per
+check and must pass whole: every agent finished with
+.B DONE
+or named in
+.BR --accept-exited ,
+no dispatcher running, the queue and
+.I worktrees/
+empty, every decision in the tracked log (or, for a run that predates the
+tracked home, the state folder's own log) housed in a tracked path or a
+roadmap record of a registered repository, and the thread folder committed
+and clean. On any blocker the command prints every line, exits 1 and
+changes nothing.
+.B --reconciled
+waives the decision check and the close note records the waiver. When the
+gate passes the state folder moves to
+.IR $KI_STATE_HOME/agents/_archive/<run>/
+with a
+.I close.md
+note of the gate and each decision's home; with
+.B --compress
+it becomes
+.IR _archive/<run>.tar.gz ,
+and with
+.B --delete
+it is removed, each with the note at
+.IR _archive/<run>.close.md .
 .SS Estate convergence
 \&
 .PP

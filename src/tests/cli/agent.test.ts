@@ -615,6 +615,256 @@ describe('ki agent reconcile', () => {
   })
 })
 
+describe('ki agent close', () => {
+  /** A finished run whose only decision is housed in a committed file. */
+  const setupFinishedRun = async (box: Sandbox) => {
+    const project = await setupRepository(box)
+    const processes = fakeProcesses(box)
+    await box.state.write('ki/agents/r/a.pid', '10\n')
+    await box.state.write('ki/agents/r/a.status', '21:00 CEST - final check\nDONE\n')
+    await box.project.write('docs/x.md', '# X\n')
+    await box.run('ki agent decide r Ship it. --home docs/x.md', { now })
+    await box.project.git(['add', '--all'])
+    await box.project.git(['commit', '-q', '-m', 'thread'])
+    return { project, processes }
+  }
+  const archive = (box: Sandbox, file: string): string => `${box.state.path}/ki/agents/_archive/${file}`
+
+  test('reports every blocker and changes nothing', async () => {
+    const box = await sandbox()
+    const { processes } = await setupFinishedRun(box)
+    processes.alive.add(12)
+    await box.state.write('ki/agents/r/b.pid', '11\n')
+    await box.state.write('ki/agents/r/b.status', '21:05 CEST - testing\n')
+    await box.state.write('ki/agents/r/c.pid', '12\n')
+    await box.state.write('ki/agents/r/dispatch.pid', '12\n')
+    await box.state.write('ki/agents/r/queue.jsonl', '{"name":"d"}\n{"name":"e"}\n')
+    await box.state.mkdir('ki/agents/r/worktrees/d')
+    await box.run('ki agent decide r Unhoused.', { now })
+    await box.run('ki agent decide r Missing. --home docs/missing.md', { now })
+    await box.project.write('docs/untracked.md', '# U\n')
+    await box.run('ki agent decide r Untracked. --home docs/untracked.md#section', { now })
+    await box.run('ki agent decide r Unknown. --home KI-NOPE-1', { now })
+    await box.run(`ki agent decide r Absolute. --home ${await realpath(box.project.path)}/docs/x.md`, { now })
+    await box.project.write(
+      '+/_THREADS/r/decisions.md',
+      `${await box.project.read('+/_THREADS/r/decisions.md')}\n## Notes\n\nNot a decision.\n`
+    )
+
+    const result = await box.run('ki agent close r', { now })
+
+    expect(result.exitCode).toBe(1)
+    expect(result.stdout).toBe(
+      [
+        'ok: a finished',
+        'blocker: b exited without DONE',
+        'blocker: c still running (pid 12)',
+        'blocker: dispatcher still running (pid 12)',
+        'blocker: queue holds d, e',
+        'blocker: worktrees/ holds d',
+        'ok: decision 1 home docs/x.md',
+        `blocker: decision 2 has no home (${await threadPath(box, 'decisions.md')})`,
+        'blocker: decision 3 home docs/missing.md does not exist',
+        'blocker: decision 4 home docs/untracked.md#section is not tracked by Git',
+        'blocker: decision 5 home KI-NOPE-1 matches no roadmap record in the registry',
+        `ok: decision 6 home ${await realpath(box.project.path)}/docs/x.md`,
+        'blocker: thread folder +/_THREADS/r has uncommitted changes',
+        ''
+      ].join('\n')
+    )
+    expect(result.stderr).toBe('ki: error: r cannot close until every blocker clears\n')
+    expect(await box.state.read('ki/agents/r/a.pid')).toBe('10\n')
+
+    const unknown = await box.run('ki agent close r --accept-exited zzz', { now })
+    expect(unknown.exitCode).toBe(2)
+    expect(unknown.stderr).toBe('ki: error: no agent zzz in r\n')
+    const both = await box.run('ki agent close r --delete --compress', { now })
+    expect(both.exitCode).toBe(2)
+    expect(both.stderr).toBe('ki: error: --delete and --compress exclude each other\n')
+    expect((await box.run('ki agent close nope', { now })).stderr).toBe('ki: error: no such run: nope\n')
+  })
+
+  test('archives the state folder once the gate passes and writes the close note', async () => {
+    const box = await sandbox()
+    const { project } = await setupFinishedRun(box)
+    await box.state.write('ki/agents/r/b.pid', '11\n')
+    await box.state.write('ki/agents/r/b.status', '21:05 CEST - testing\n')
+    await box.state.mkdir('ki/agents/r/worktrees')
+
+    const result = await box.run('ki agent close r --accept-exited b', { now })
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toBe(
+      [
+        'ok: a finished',
+        'ok: b exited without DONE, accepted',
+        'ok: no dispatcher running',
+        'ok: queue empty',
+        'ok: no worktrees',
+        'ok: decision 1 home docs/x.md',
+        'ok: thread folder +/_THREADS/r committed and clean',
+        `archived ${runDir(box)} to ${archive(box, 'r')}; close note at ${archive(box, 'r/close.md')}`,
+        ''
+      ].join('\n')
+    )
+    expect(await box.state.read('ki/agents/_archive/r/a.status')).toBe('21:00 CEST - final check\nDONE\n')
+    expect(await box.state.read('ki/agents/_archive/r/close.md')).toBe(
+      [
+        '# Close of run r',
+        '',
+        `Closed 2026-10-07T19:30:00Z by \`ki agent close\`. archived ${runDir(box)} to ${archive(box, 'r')}.`,
+        '',
+        '## Gate',
+        '',
+        '- ok: a finished',
+        '- ok: b exited without DONE, accepted',
+        '- ok: no dispatcher running',
+        '- ok: queue empty',
+        '- ok: no worktrees',
+        '- ok: decision 1 home docs/x.md',
+        '- ok: thread folder +/_THREADS/r committed and clean',
+        '',
+        '## Decisions',
+        '',
+        '- Decision 1: docs/x.md',
+        ''
+      ].join('\n')
+    )
+    expect(await box.project.read('+/_THREADS/r/decisions.md')).toContain('- Ship it.')
+    expect((await box.run('ki agent close r', { now })).stderr).toBe('ki: error: no such run: r\n')
+
+    await box.state.write('ki/agents/r/a.pid', '10\n')
+    await box.state.write('ki/agents/r/a.status', 'DONE\n')
+    await box.state.write(
+      'ki/agents/r/thread.json',
+      `${JSON.stringify({ repository: project, folder: '+/_THREADS/r' })}\n`
+    )
+    const again = await box.run('ki agent close r', { now })
+    expect(again.exitCode).toBe(1)
+    expect(again.stderr).toBe(`ki: error: r is already archived at ${archive(box, 'r')}\n`)
+  })
+
+  test('compresses or deletes on request, waives the decision gate with --reconciled', async () => {
+    const box = await sandbox()
+    await setupFinishedRun(box)
+    await box.run('ki agent decide r Unhoused.', { now })
+    await box.project.git(['add', '--all'])
+    await box.project.git(['commit', '-q', '-m', 'more'])
+
+    box.setRunner((command, arguments_, environment) =>
+      command === 'tar'
+        ? Promise.resolve({ exitCode: 1, output: 'tar: boom\n' })
+        : runCommand(command, arguments_, environment)
+    )
+    const broken = await box.run('ki agent close r --compress --reconciled', { now })
+    expect(broken.exitCode).toBe(1)
+    expect(broken.stderr).toBe('ki: error: tar failed: tar: boom\n')
+    expect(await box.state.read('ki/agents/r/a.status')).toContain('DONE')
+    box.setRunner(runCommand)
+
+    const compressed = await box.run('ki agent close r --compress --reconciled', { now })
+    expect(compressed.exitCode).toBe(0)
+    expect(compressed.stdout).toContain(
+      `ok: decision gate waived by --reconciled (2 entries in ${await threadPath(box, 'decisions.md')})\n`
+    )
+    expect(compressed.stdout).toContain(
+      `compressed ${runDir(box)} to ${archive(box, 'r.tar.gz')}; close note at ${archive(box, 'r.close.md')}\n`
+    )
+    const listing = await runCommand('tar', ['-tzf', archive(box, 'r.tar.gz')], {})
+    expect(listing.output).toContain('r/a.status')
+    expect(await box.state.read('ki/agents/_archive/r.close.md')).toContain(
+      'with the decision gate waived by the owner (`--reconciled`). compressed'
+    )
+    expect(await box.state.read('ki/agents/_archive/r.close.md')).toContain(
+      `The owner waived the decision gate with \`--reconciled\`; 2 entries in ${await threadPath(box, 'decisions.md')} were not checked.`
+    )
+    expect((await box.run('ki agent status r', { now })).stderr).toBe('ki: error: no such run: r\n')
+
+    await box.state.write('ki/agents/r/a.pid', '10\n')
+    await box.state.write('ki/agents/r/a.status', 'DONE\n')
+    const repeat = await box.run('ki agent close r --compress --reconciled', { now })
+    expect(repeat.stderr).toBe(`ki: error: r is already archived at ${archive(box, 'r.tar.gz')}\n`)
+
+    const deleted = await box.run('ki agent close r --delete --reconciled', { now })
+    expect(deleted.exitCode).toBe(0)
+    expect(deleted.stdout).toContain(`deleted ${runDir(box)}; close note at ${archive(box, 'r.close.md')}\n`)
+    expect(await box.state.read('ki/agents/_archive/r.close.md')).toContain('deleted')
+    expect((await box.run('ki agent status r', { now })).stderr).toBe('ki: error: no such run: r\n')
+  })
+
+  test('houses a decision in any registered roadmap record and reads a legacy state-folder log', async () => {
+    const box = await sandbox()
+    const project = await setupRepository(box)
+    fakeProcesses(box)
+    await box.root.mkdir('island/Streams/Roadmap')
+    await box.root.write('island/Streams/Roadmap/KI-ISLAND-GOV-7-thing.md', '# 7\n')
+    await box.state.write(
+      'ki/registry.toml',
+      [
+        'schema = 1',
+        '',
+        '[repositories."tools-ki"]',
+        'repository = "https://github.com/knowledgeislands/tools-ki"',
+        `path = ${JSON.stringify(project)}`,
+        '',
+        '[repositories."island"]',
+        'repository = "https://github.com/knowledgeislands/island"',
+        `path = ${JSON.stringify(`${box.root.path}/island`)}`,
+        ''
+      ].join('\n')
+    )
+    await box.state.write('ki/agents/r/a.pid', '10\n')
+    await box.state.write('ki/agents/r/a.status', 'DONE\n')
+    await box.state.write(
+      'ki/agents/r/decisions.md',
+      '# Decisions\n\n## Decision 1 (2026-10-01)\n\nhome: KI-ISLAND-GOV-7\n\n- Old.\n\n## Decision 2 (2026-10-01)\n\n- Older.\n'
+    )
+
+    // No thread.json: the home comes from the working directory, and the state log stands in.
+    const legacy = await box.run('ki agent close r', { now })
+    expect(legacy.exitCode).toBe(1)
+    expect(legacy.stdout).toContain('ok: decision 1 home KI-ISLAND-GOV-7\n')
+    expect(legacy.stdout).toContain(`blocker: decision 2 has no home (${runPath(box, 'decisions.md')})\n`)
+    expect(legacy.stdout).toContain('ok: no thread folder at +/_THREADS/r\n')
+    expect(await box.state.read('ki/agents/r/thread.json').catch(() => 'absent')).toBe('absent')
+
+    await box.state.write(
+      'ki/agents/r/decisions.md',
+      '# Decisions\n\n## Decision 1 (2026-10-01)\n\nhome: KI-ISLAND-GOV-7\n\n- Old.\n'
+    )
+    const closed = await box.run('ki agent close r', { now })
+    expect(closed.exitCode).toBe(0)
+    expect(closed.stdout).toContain('ok: no thread folder at +/_THREADS/r\n')
+    expect(await box.state.read('ki/agents/_archive/r/close.md')).toContain('- Decision 1: KI-ISLAND-GOV-7')
+  })
+
+  test('treats a run with no log as housed and surfaces a git status failure', async () => {
+    const box = await sandbox()
+    await setupRepository(box)
+    fakeProcesses(box)
+    await box.state.write('ki/agents/r/a.pid', '10\n')
+    await box.state.write('ki/agents/r/a.status', 'DONE\n')
+    await box.project.mkdir('+/_THREADS/r')
+    const dirty = await box.run('ki agent close r', { now })
+    expect(dirty.exitCode).toBe(0)
+    expect(dirty.stdout).toContain('ok: no decisions log\n')
+    expect(dirty.stdout).toContain('ok: thread folder +/_THREADS/r committed and clean\n')
+    expect(await box.state.read('ki/agents/_archive/r/close.md')).toContain('No decisions log.')
+
+    await box.state.write('ki/agents/r/a.pid', '10\n')
+    await box.state.write('ki/agents/r/a.status', 'DONE\n')
+    await box.state.write(
+      'ki/agents/r/thread.json',
+      `${JSON.stringify({ repository: `${box.root.path}/nowhere`, folder: '+/_THREADS/r' })}\n`
+    )
+    await box.root.mkdir('nowhere/+/_THREADS/r')
+    const failed = await box.run('ki agent close r --delete', { now })
+    expect(failed.exitCode).toBe(1)
+    expect(failed.stderr).toContain(`ki: error: git status failed in ${box.root.path}/nowhere: `)
+    expect(await box.state.read('ki/agents/r/a.pid')).toBe('10\n')
+  })
+})
+
 describe('ki agent queue, dispatch and wait', () => {
   test('queues ready-made prompts and refuses duplicates', async () => {
     const box = await sandbox()

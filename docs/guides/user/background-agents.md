@@ -1,6 +1,6 @@
 # Run detached background agents
 
-This guide shows how to delegate work to detached Claude Code or Codex agents with `ki agent`, keep a queue of them moving, and know when each one finishes. The [`ki-delegation` background-run standard](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/skills/governance/ki-delegation/references/standards-background-runs.md) owns the contract; `ki agent` is its reference launcher. Exact grammar is in `ki agent --help` and `man ki`.
+This guide shows how to delegate work to detached Claude Code or Codex agents with `ki agent`, keep a queue of them moving, know when each one finishes, and close the run once its decisions are housed. The [`ki-delegation` background-run standard](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/skills/governance/ki-delegation/references/standards-background-runs.md) owns the contract; `ki agent` is its reference launcher. Exact grammar is in `ki agent --help` and `man ki`.
 
 ## Before you start
 
@@ -11,7 +11,7 @@ This guide shows how to delegate work to detached Claude Code or Codex agents wi
 
 ## Record the authority and write the prompt
 
-1. Record the owner's approval: `ki agent decide <run> "<the owner's words>"`. It appends a numbered, UTC-timestamped entry to the tracked `+/_THREADS/<run>/decisions.md` and prints the number. Add `--home <path-or-id>` when the decision already lives durably in a committed file or a roadmap record, or give it one later with `ki agent reconcile <run> <number> <home>`, so that the run can close once every decision is housed.
+1. Record the owner's approval: `ki agent decide <run> "<the owner's words>"`. It appends a numbered, UTC-timestamped entry to the tracked `+/_THREADS/<run>/decisions.md` and prints the number. Add `--home <path-or-id>` when the decision already lives durably in a committed file or a roadmap record, or give it one later with `ki agent reconcile <run> <number> <home>`.
 2. Write a skeleton with `ki agent new <run> <name>` and complete it: the task citing that decision in the owner's words, numbered steps, a verification step and the report path the skeleton already names.
 3. Choose the lowest sufficient authority tier: `none`, `push`, `prune` or `release`. Name every remote call the task relies on in the prompt itself.
 
@@ -49,9 +49,22 @@ Reorder priorities by editing nothing but the queue order: queue new work last, 
 
 After an interrupt of your own session, run `ki agent status` before claiming anything is still running. Relaunch an agent flagged `EXITED WITHOUT DONE` rather than waiting for it.
 
+## Close a run
+
+Once every agent has finished and the thread has consolidated each decision into its durable home, retire the state folder:
+
+```sh
+ki agent close <run>
+```
+
+The reconcile gate prints one line per check and must pass whole: every agent finished with `DONE` or is named in `--accept-exited <name>`, no dispatcher is running, the queue and `worktrees/` are empty, every decision in the tracked log carries a `home:` that is a Git-tracked path or a roadmap record of a registered repository, and the thread folder is committed and clean. On any blocker it prints every line, exits 1 and changes nothing. Give an unhoused decision its home with `ki agent reconcile <run> <number> <home>`, or waive the decision check with `--reconciled`, which the close note records.
+
+When the gate passes the state folder moves to `$KI_STATE_HOME/agents/_archive/<run>/` with a `close.md` note of the gate and each decision's home. `--compress` writes `_archive/<run>.tar.gz` and `--delete` removes the folder instead, each leaving the note at `_archive/<run>.close.md`. A run that predates the tracked home keeps its log in the state folder; `close` reads that log until the thread copies it across.
+
 ## Recover
 
 - **Already running:** `launch` refuses a name whose process is alive. Choose a new name or wait for it.
 - **Missing assets:** update or relink the canonical Harness so its `ki-delegation` skill ships the run assets.
 - **A queued launch failed:** the dispatcher logs `could not launch <name>` and moves on. Fix the cause and queue the agent again under a new name.
 - **Not inside a Git repository:** `launch`, `queue`, `new` and `decide` need the thread home. Run from the owning repository or pass `--repo <dir>`.
+- **Close blocked:** read each `blocker:` line. Relaunch or accept an agent that exited without `DONE`, stop or finish the dispatcher, remove finished worktrees, house or reconcile each decision, and commit the thread folder.

@@ -120,13 +120,14 @@ ki repo --estate audit
 
 ## Delegate to background agents
 
-`ki agent` launches detached Claude Code or Codex agents under the `ki-delegation` background-run contract. Each agent gets a prompt with its authority footer and progress protocol, a one-line status ending `DONE`, a pid and a log under `$KI_STATE_HOME/agents/<run>/`. The run's knowledge, its decisions log and each agent's report, lives in the owning repository's tracked `+/_THREADS/<run>/` folder, which `ki` writes but never commits. A queue and a concurrency-capped dispatcher keep agents moving and `ki agent wait --next` wakes the coordinator on each finish.
+`ki agent` launches detached Claude Code or Codex agents under the `ki-delegation` background-run contract. Each agent gets a prompt with its authority footer and progress protocol, a one-line status ending `DONE`, a pid and a log under `$KI_STATE_HOME/agents/<run>/`. The run's knowledge, its decisions log and each agent's report, lives in the owning repository's tracked `+/_THREADS/<run>/` folder, which `ki` writes but never commits. A queue and a concurrency-capped dispatcher keep agents moving, `ki agent wait --next` wakes the coordinator on each finish, and `ki agent close` retires a finished run's state folder once every decision has a durable home.
 
 ```sh
 ki agent decide gov "Ship the launcher." --home docs/roadmap/KI-TOOL-KI-CLI-124-agent-run-close.md
 ki agent queue gov build task.md --workdir ~/src/repo --rules push
 ki agent dispatch gov --max 4
 ki agent wait gov --next
+ki agent close gov
 ```
 
 See [run detached background agents](docs/guides/user/background-agents.md).
