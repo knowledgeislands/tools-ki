@@ -28,7 +28,7 @@ ki-implement for chatgpt-codex installed
 ki-accept for chatgpt-codex installed
 ki-batch for chatgpt-codex installed
 ki-recap for chatgpt-codex installed
-ki-design-loop for chatgpt-codex installed
+ki-pmo-design for chatgpt-codex installed
 `
     })
     expect(repeated).toEqual({
@@ -41,7 +41,7 @@ ki-implement for chatgpt-codex already installed
 ki-accept for chatgpt-codex already installed
 ki-batch for chatgpt-codex already installed
 ki-recap for chatgpt-codex already installed
-ki-design-loop for chatgpt-codex already installed
+ki-pmo-design for chatgpt-codex already installed
 `
     })
     expect(refreshed).toEqual({
@@ -56,7 +56,7 @@ ki-implement for chatgpt-codex already installed
 ki-accept for chatgpt-codex already installed
 ki-batch for chatgpt-codex already installed
 ki-recap for chatgpt-codex already installed
-ki-design-loop for chatgpt-codex already installed
+ki-pmo-design for chatgpt-codex already installed
 `
     })
     expect(checked.output).toContain('✓ Configuration:')
@@ -86,9 +86,6 @@ harness = "knowledgeislands/ki-agentic-harness"
 [skills.ki-bootstrap]
 harness = "knowledgeislands/ki-agentic-harness"
 
-[skills.ki-design-loop]
-harness = "knowledgeislands/ki-agentic-harness"
-
 [skills.ki-implement]
 harness = "knowledgeislands/ki-agentic-harness"
 
@@ -96,6 +93,9 @@ harness = "knowledgeislands/ki-agentic-harness"
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-plan]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-pmo-design]
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-recap]

@@ -68,7 +68,7 @@ ki-implement for chatgpt-codex installed
 ki-accept for chatgpt-codex installed
 ki-batch for chatgpt-codex installed
 ki-recap for chatgpt-codex installed
-ki-design-loop for chatgpt-codex installed
+ki-pmo-design for chatgpt-codex installed
 `
       })
       const dataIsSymlink = await box.data.isSymlink('ki/harnesses/knowledgeislands/ki-agentic-harness')
@@ -95,9 +95,6 @@ harness = "knowledgeislands/ki-agentic-harness"
 [skills.ki-bootstrap]
 harness = "knowledgeislands/ki-agentic-harness"
 
-[skills.ki-design-loop]
-harness = "knowledgeislands/ki-agentic-harness"
-
 [skills.ki-implement]
 harness = "knowledgeislands/ki-agentic-harness"
 
@@ -105,6 +102,9 @@ harness = "knowledgeislands/ki-agentic-harness"
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-plan]
+harness = "knowledgeislands/ki-agentic-harness"
+
+[skills.ki-pmo-design]
 harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-recap]

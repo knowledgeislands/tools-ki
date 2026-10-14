@@ -65,7 +65,7 @@ const bootstrapHarnessSkills = [
   'ki-accept',
   'ki-batch',
   'ki-recap',
-  'ki-design-loop'
+  'ki-pmo-design'
 ] as const
 
 // This tools-ki checkout's own `bin/ki` — never spawned (run() drives the CLI in-process),
