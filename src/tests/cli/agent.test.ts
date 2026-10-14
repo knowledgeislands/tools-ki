@@ -82,7 +82,9 @@ describe('ki agent launch', () => {
     expect(await box.project.mkdir('+/_THREADS/r')).toBe(`${await realpath(box.project.path)}/+/_THREADS/r`)
     expect(await box.state.read('ki/agents/r/one.status')).toBe('21:30 CEST - launched\n')
     expect(await box.state.read('ki/agents/r/one.pid')).toBe('1001\n')
-    expect(await box.state.read('ki/agents/r/one.launch.json')).toBe('{"runtime":"claude"}\n')
+    expect(await box.state.read('ki/agents/r/one.launch.json')).toBe(
+      `{"runtime":"claude","workdir":"${await realpath(box.project.path)}"}\n`
+    )
     const [launch] = processes.launches as [AgentLaunch]
     expect(launch.command).toBe('claude')
     expect(launch.arguments).toEqual([
@@ -166,7 +168,12 @@ describe('ki agent launch', () => {
     const at = launch.arguments.indexOf(form[0] as string)
     expect(launch.arguments.slice(at, at + 4)).toEqual(form)
     if (runtime === 'codex') expect(launch.arguments.at(-1)).toBe(prompt)
-    expect(JSON.parse(await box.state.read('ki/agents/r/one.launch.json'))).toEqual({ runtime, model, effort: 'xhigh' })
+    expect(JSON.parse(await box.state.read('ki/agents/r/one.launch.json'))).toEqual({
+      runtime,
+      model,
+      effort: 'xhigh',
+      workdir: await realpath(box.project.path)
+    })
   })
 
   test.each([
@@ -562,6 +569,89 @@ describe('ki agent thread home', () => {
     const shape = await box.run('ki agent decide r Text.', { now })
     expect(shape.stderr).toBe(`ki: error: ${runPath(box, 'thread.json')} does not name a repository and folder\n`)
   })
+
+  test('keeps the recorded home whatever the current directory', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    const processes = fakeProcesses(box)
+    const owner = await realpath(box.project.path)
+    await box.project.write('task.md', '# Task\n')
+    expect((await box.run('ki agent decide r First.', { now })).stdout).toBe(
+      `Decision 1 recorded in ${owner}/+/_THREADS/r/decisions.md\n`
+    )
+
+    // From another checkout, every later command still works in the recorded home.
+    await box.root.git(['init', '-q'], 'other')
+    box.cd('../other')
+    expect((await box.run('ki agent decide r Second.', { now })).stdout).toBe(
+      `Decision 2 recorded in ${owner}/+/_THREADS/r/decisions.md\n`
+    )
+    expect(await box.state.read('ki/agents/r/one.draft.md').catch(() => 'absent')).toBe('absent')
+    await box.run('ki agent new r one', { now })
+    expect(await box.state.read('ki/agents/r/one.draft.md')).toContain('Report to +/_THREADS/r/one.report.md.')
+    const launched = await box.run(`ki agent launch r one . ${owner}/task.md`, { now })
+    expect(launched.exitCode).toBe(0)
+    expect(await box.state.read('ki/agents/r/one.prompt.md')).toContain(
+      `write your report to ${owner}/+/_THREADS/r/one.report.md as the owner report`
+    )
+    const [launch] = processes.launches as [AgentLaunch]
+    expect(launch.arguments.slice(-2)).toEqual(['--add-dir', owner])
+    expect(await box.state.read('ki/agents/r/thread.json')).toBe(
+      `${JSON.stringify({ repository: owner, folder: '+/_THREADS/r' })}\n`
+    )
+  })
+
+  test("fixes a new home only from the launch's working directory unless --repo says otherwise", async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    fakeProcesses(box)
+    const current = await realpath(box.project.path)
+    await box.root.git(['init', '-q'], 'other')
+    const other = await realpath(`${box.root.path}/other`)
+    await box.root.mkdir('plain')
+    await box.project.write('task.md', '# Task\n')
+    const refuse = (run: string, root: string): string =>
+      `ki: error: ${run} has no thread home yet; the current directory is in ${current}, not the launch's working directory ${root}; run from there or pass --repo <dir>\n`
+
+    // A launch into another checkout, or a directory outside Git, does not take its home from here.
+    const elsewhere = await box.run(`ki agent launch r one ${other} task.md`, { now })
+    expect(elsewhere.exitCode).toBe(2)
+    expect(elsewhere.stderr).toBe(refuse('r', other))
+    const plain = await box.run(`ki agent queue r one task.md --workdir ${box.root.path}/plain`, { now })
+    expect(plain.exitCode).toBe(2)
+    expect(plain.stderr).toBe(refuse('r', `${box.root.path}/plain`))
+    expect(await box.state.read('ki/agents/r/thread.json').catch(() => 'absent')).toBe('absent')
+    expect((await box.run(`ki agent launch r one ${other} task.md --repo .`, { now })).exitCode).toBe(0)
+    expect(await box.state.read('ki/agents/r/thread.json')).toBe(
+      `${JSON.stringify({ repository: current, folder: '+/_THREADS/r' })}\n`
+    )
+
+    // A later command on a run launched elsewhere compares against the recorded launch.
+    await box.state.write('ki/agents/s/a.launch.json', `${JSON.stringify({ runtime: 'claude', workdir: other })}\n`)
+    const later = await box.run('ki agent decide s Text.', { now })
+    expect(later.exitCode).toBe(2)
+    expect(later.stderr).toBe(refuse('s', other))
+    expect((await box.run(`ki agent decide s Text. --repo ${other}`, { now })).stdout).toBe(
+      `Decision 1 recorded in ${other}/+/_THREADS/s/decisions.md\n`
+    )
+
+    // Launches that ran in several repositories, or predate the record, need --repo.
+    await box.state.write('ki/agents/t/a.launch.json', `${JSON.stringify({ runtime: 'claude', workdir: other })}\n`)
+    await box.state.write('ki/agents/t/b.launch.json', `${JSON.stringify({ runtime: 'claude', workdir: current })}\n`)
+    const several = await box.run('ki agent new t c', { now })
+    expect(several.exitCode).toBe(2)
+    expect(several.stderr).toBe(
+      `ki: error: t has no thread home yet and its launches ran in ${other}, ${current}; pass --repo <dir>\n`
+    )
+    await box.state.write('ki/agents/u/a.launch.json', '{"runtime":"claude"}\n')
+    await box.state.write('ki/agents/u/b.launch.json', '{not json')
+    const unrecorded = await box.run('ki agent decide u Text.', { now })
+    expect(unrecorded.exitCode).toBe(2)
+    expect(unrecorded.stderr).toBe(
+      'ki: error: u has no thread home yet and a launch of it has no recorded working directory; pass --repo <dir>\n'
+    )
+    expect((await box.run('ki agent decide u Text. --repo .', { now })).exitCode).toBe(0)
+  })
 })
 
 describe('ki agent reconcile', () => {
@@ -916,10 +1006,11 @@ describe('ki agent queue, dispatch and wait', () => {
     expect(first.arguments.slice(-4)).toEqual(['--model', 'claude-fable-5-1', '--effort', 'max'])
     expect(second.arguments).not.toContain('-m')
     expect(second.arguments).not.toContain('-c')
+    const workdir = await realpath(box.project.path)
     expect(await box.state.read('ki/agents/r/fable.launch.json')).toBe(
-      '{"runtime":"claude","model":"claude-fable-5-1","effort":"max"}\n'
+      `{"runtime":"claude","model":"claude-fable-5-1","effort":"max","workdir":"${workdir}"}\n`
     )
-    expect(await box.state.read('ki/agents/r/plain.launch.json')).toBe('{"runtime":"codex"}\n')
+    expect(await box.state.read('ki/agents/r/plain.launch.json')).toBe(`{"runtime":"codex","workdir":"${workdir}"}\n`)
   })
 
   test('starts one detached dispatcher per run', async () => {

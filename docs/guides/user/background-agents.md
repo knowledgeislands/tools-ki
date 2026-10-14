@@ -7,7 +7,7 @@ This guide shows how to delegate work to detached Claude Code or Codex agents wi
 - The canonical Harness is installed or linked with `ki dev local on`, so the `ki-delegation` footers and prompt skeleton resolve.
 - The `claude` or `codex` executable is on `PATH`.
 - Set `TZ` to the owner's time zone if the host default is not it; status lines use it. Decision timestamps are UTC.
-- Run from inside the repository that owns the thread, or pass `--repo <dir>`. The first `launch`, `queue`, `new` or `decide` for a run fixes that repository as the thread home and records it in the state folder's `thread.json`; a later `--repo` that disagrees is refused.
+- The first `launch`, `queue`, `new` or `decide` for a run fixes the thread home: the Git top level of `--repo <dir>`, or else of the launch's working directory, which the directory the command runs from must share. The home is recorded in the state folder's `thread.json`, and from then on every command for the run uses it whatever directory it runs from; a later `--repo` that disagrees is refused.
 
 ## Record the authority and write the prompt
 
@@ -23,7 +23,7 @@ ki agent launch <run> <name> <workdir> <prompt-file> --rules push --add-dir <dir
 
 The launcher appends the tier's footer and the progress protocol, then starts the agent in its own session with standard input from `/dev/null`. The runtime packet lives under `$KI_STATE_HOME/agents/<run>/`: `<name>.prompt.md`, `.launch.json`, `.status`, `.pid` and `.log`, with `thread.json` naming the thread home. The agent writes `<name>.report.md` into the owning repository's `+/_THREADS/<run>/` beside `decisions.md`; the launcher adds that repository to the agent's writable directories when the working directory lies outside it. `ki` never commits the thread folder: commit it with the thread's other work.
 
-Choose the model and reasoning effort with `--model <model>` and `--effort low|medium|high|xhigh|max`, for example `--runtime claude --model claude-fable-5-1 --effort high` or `--runtime codex --model gpt-6-astra --effort xhigh`. The model name passes through verbatim, and the runtime rejects an effort its model does not support. Omit either to keep the runtime's own default. `<name>.launch.json` records the runtime, model and effort the agent started with; `ki agent queue` carries both options through to the dispatcher.
+Choose the model and reasoning effort with `--model <model>` and `--effort low|medium|high|xhigh|max`, for example `--runtime claude --model claude-fable-5-1 --effort high` or `--runtime codex --model gpt-6-astra --effort xhigh`. The model name passes through verbatim, and the runtime rejects an effort its model does not support. Omit either to keep the runtime's own default. `<name>.launch.json` records the runtime, model, effort and working directory the agent started with; `ki agent queue` carries both options through to the dispatcher.
 
 Use `--wait-for <other>` when an agent must not start until another agent in the run writes `DONE`. The launcher holds the gate itself, so the agent's runtime cannot end its session while waiting:
 
@@ -67,4 +67,5 @@ When the gate passes the state folder moves to `$KI_STATE_HOME/agents/_archive/<
 - **Missing assets:** update or relink the canonical Harness so its `ki-delegation` skill ships the run assets.
 - **A queued launch failed:** the dispatcher logs `could not launch <name>` and moves on. Fix the cause and queue the agent again under a new name.
 - **Not inside a Git repository:** `launch`, `queue`, `new` and `decide` need the thread home. Run from the owning repository or pass `--repo <dir>`.
+- **No thread home yet:** a command run from a different repository than the launch's working directory, or on a run whose launches predate the recorded working directory, refuses to fix the home. Run it from the launch's working directory or pass `--repo <dir>` once; the recorded home holds from then on.
 - **Close blocked:** read each `blocker:` line. Relaunch or accept an agent that exited without `DONE`, stop or finish the dispatcher, remove finished worktrees, house or reconcile each decision, and commit the thread folder.

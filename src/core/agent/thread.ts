@@ -1,4 +1,4 @@
-import { appendFile, mkdir, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitWorkingTreeRoot } from '../runtime/git.ts'
@@ -63,17 +63,73 @@ const repositoryRoot = async (context: AgentContext, directory: string, label?: 
   return root
 }
 
+/** The `workdir` a `<name>.launch.json` records, or undefined when it predates that field. */
+const recordedWorkdir = (text: string | undefined): string | undefined => {
+  try {
+    const { workdir } = JSON.parse(String(text)) as { readonly workdir?: unknown }
+    return typeof workdir === 'string' ? workdir : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** The working directory of each launch the run has on record, in name order. */
+const launchDirectories = async (context: AgentContext, run: string): Promise<readonly (string | undefined)[]> => {
+  const directory = runDirectory(context, run)
+  const files = (await readdir(directory).catch(() => [])).filter((file) => file.endsWith('.launch.json')).sort()
+  return Promise.all(files.map(async (file) => recordedWorkdir(await read(join(directory, file)))))
+}
+
+/**
+ * The repository a new home comes from without `--repo`: the launch's working directory,
+ * which the current directory must share. Kris settled this on 2026-10-14 after a run whose
+ * home had been taken from the shell's directory wrote a report into an unrelated checkout:
+ * "thread home from the launch's working directory". A run with no launch yet starts from
+ * the current directory, and a run whose launches predate the record needs `--repo`.
+ */
+const launchRoot = async (context: AgentContext, run: string, launch: string | undefined): Promise<string> => {
+  const current = await repositoryRoot(context, context.workingDirectory)
+  const launches = launch === undefined ? await launchDirectories(context, run) : [launch]
+  if (launches.length === 0) return current
+  if (launches.some((directory) => directory === undefined))
+    throw new KiError(
+      `${run} has no thread home yet and a launch of it has no recorded working directory; pass --repo <dir>`,
+      2
+    )
+  const roots = [
+    ...new Set(
+      await Promise.all(
+        (launches as readonly string[]).map(
+          async (directory) => (await gitWorkingTreeRoot(directory, context.runner, context.environment)) ?? directory
+        )
+      )
+    )
+  ]
+  if (roots.length > 1)
+    throw new KiError(`${run} has no thread home yet and its launches ran in ${roots.join(', ')}; pass --repo <dir>`, 2)
+  const [root] = roots as [string]
+  if (root !== current)
+    throw new KiError(
+      `${run} has no thread home yet; the current directory is in ${current}, not the launch's working directory ${root}; run from there or pass --repo <dir>`,
+      2
+    )
+  return current
+}
+
 /**
  * Resolves the run's thread home. The first `launch`, `queue`, `new` or `decide` for a run
- * fixes it as the Git top level of the working directory, or of `--repo`, and records it in
- * the state folder's `thread.json`; later commands read it, and an explicit `--repo` that
- * disagrees is an error. With `write` false the home is resolved but never recorded.
+ * fixes it as the Git top level of `--repo`, or else of the launch's working directory, which
+ * the current directory must share, and records it in the state folder's `thread.json`. Once
+ * recorded the home holds whatever the current directory, and an explicit `--repo` that
+ * disagrees is an error. With `write` false the home is resolved but never recorded; `launch`
+ * names the working directory of the launch being made, when the command is one.
  */
 export const threadHome = async (
   context: AgentContext,
   run: string,
   repo?: string | undefined,
-  write = true
+  write = true,
+  launch?: string | undefined
 ): Promise<ThreadHome> => {
   const existing = await readThread(context, run)
   const requested =
@@ -81,14 +137,14 @@ export const threadHome = async (
   if (existing && requested !== undefined && requested !== existing.repository)
     throw new KiError(`${run} belongs to ${existing.repository}, not ${requested}`, 2)
   if (existing) return existing
-  const home: ThreadHome = {
-    repository: requested ?? (await repositoryRoot(context, context.workingDirectory)),
-    folder: threadFolder(run)
-  }
-  if (write) {
-    await mkdir(runDirectory(context, run), { recursive: true })
-    await writeFile(threadFile(context, run), `${JSON.stringify(home)}\n`)
-  }
+  const repository = requested ?? (await launchRoot(context, run, launch))
+  const home: ThreadHome = { repository, folder: threadFolder(run) }
+  return write ? recordThread(context, run, home) : home
+}
+
+const recordThread = async (context: AgentContext, run: string, home: ThreadHome): Promise<ThreadHome> => {
+  await mkdir(runDirectory(context, run), { recursive: true })
+  await writeFile(threadFile(context, run), `${JSON.stringify(home)}\n`)
   return home
 }
 

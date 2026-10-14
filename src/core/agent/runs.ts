@@ -239,9 +239,12 @@ const startHold = (context: AgentContext, directory: string, request: LaunchRequ
   })
 }
 
-/** The runtime, model and effort an agent starts with; a default is left out. */
+/**
+ * The runtime, model and effort an agent starts with, a default left out, and its working
+ * directory, from which a later command may fix the thread home.
+ */
 const launchDetails = (request: LaunchRequest): string =>
-  `${JSON.stringify({ runtime: request.runtime, model: request.model, effort: request.effort })}\n`
+  `${JSON.stringify({ runtime: request.runtime, model: request.model, effort: request.effort, workdir: request.workdir })}\n`
 
 export interface LaunchResult {
   readonly pid: number
@@ -257,7 +260,7 @@ export interface LaunchResult {
 export const launchAgent = async (context: AgentContext, candidate: LaunchRequest): Promise<LaunchResult> => {
   const accepted = await validated(context, candidate)
   const body = await promptText(context, accepted.prompt)
-  const thread = await threadHome(context, accepted.run, accepted.repo)
+  const thread = await threadHome(context, accepted.run, accepted.repo, true, accepted.workdir)
   const request = withRepository(accepted, thread)
   const directory = runDirectory(context, request.run)
   const base = join(directory, request.name)
@@ -319,7 +322,7 @@ export const queueAgent = async (context: AgentContext, candidate: LaunchRequest
   const request = await validated(context, candidate)
   await promptText(context, request.prompt)
   await delegationAssets(context)
-  await threadHome(context, request.run, request.repo)
+  await threadHome(context, request.run, request.repo, true, request.workdir)
   const directory = runDirectory(context, request.run)
   const queue = await readQueue(directory)
   if (queue.some((queued) => queued.name === request.name) || (await pidOf(join(directory, `${request.name}.pid`))))
