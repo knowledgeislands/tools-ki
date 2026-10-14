@@ -7,12 +7,12 @@ purpose: corrective
 project: knowledge-acquisition
 component: acquire
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-14T14:26:48Z
-updated_at: 2026-10-14T22:58:36Z
+updated_at: 2026-10-14T16:52:32Z
 ---
 
 # KI-TOOL-KI-CLI-128: Granola retention safeguards
@@ -23,9 +23,7 @@ Prevent Granola reset operations from destroying retained handling evidence or m
 
 ## Context
 
-On 14 October 2026, the owner confirmed RESET-FIRST: safe reset is this record’s first piece of work; independent `state_root` remains conditional. The refusal step explicitly covers both `--rebuild` and ordinary adapter reset before any Ready request. This documentation clarification preserves this copy’s existing lifecycle and implementation evidence; it grants no Ready transition, new coding, integration, acceptance, migration or actual reset. Receiving evidence: [owner-answer relay](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_THREADS/knowledge-acquisition/handoff-review.report.md); owner decision: [Acquire decisions](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/decisions.md#decision-38-2026-10-14t225614z).
-
-The owner authorised one tools-ki defect carrier and planning before coding on 14 October 2026 in the [Acquire approvals](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/decisions.md#decision-30-2026-10-14t141105z). This single Draft organises bounded tools-ki importer and associated Harness contract support; it is not implementation authority. The CLI number was reserved in a ledger-only commit before this record was written.
+The owner authorised one tools-ki defect carrier and planning before coding on 14 October 2026 in the [Acquire approvals](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/decisions.md#decision-30-2026-10-14t141105z). This single carrier organises bounded tools-ki importer and associated Harness contract support; it is not implementation authority. The CLI number was reserved in a ledger-only commit before this record was written.
 
 The [simplification report](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/simplify-granola-discovery.report.md) recommends on-demand identity/window/folder enumeration, an in-memory UUID-to-package map and the existing canonical ledger plus historical handled evidence. UUID and source-account binding are identity; title and territory are locators. Presence alone cannot prove completeness. Previously handled identities remain suppressed after their packages leave the inbox. No continuous importer, replacement ledger or second index is necessary for this model.
 
@@ -49,28 +47,18 @@ The installed `ki` executes the primary tools-ki source checkout. Documentation 
 
 ## Steps
 
-- [ ] Have the existing receiving coordinator review this narrowed corrective plan against the discovery-first proposal. Freeze reset semantics, deletion preview and exact paths before requesting separate Ready and implementation authority.
-- [ ] Under that later grant, replace recursive state-directory deletion with an exact preview of only verified, owned disposable files. Preserve nested proof, unknown files, attachments and variants; do not silently broaden ownership to a directory.
-- [ ] Refuse both ordinary adapter reset (without `--rebuild`) and adapter reset with `--rebuild` whenever deleting the ledger would lose any handled disposition. Refuse source reset for a handled UUID; refuse component reset if it would invalidate its retained evidence. Preserve unsupported/corrupt evidence and interrupted-write journals, and return a clear refusal rather than resetting to make state appear clean.
-- [ ] Prove reset refusal and safe disposable-only behaviour through injected public CLI sandbox fixtures, including central and legacy layouts, handled-but-absent packages, nested proof, symlinks, corrupt journals and unknown files. No real provider or source state is used.
-- [ ] Have the Harness owner separately approve its bounded contract wording and any necessary existing catalogue tests. Describe identity-only discovery as a distinct, separately authorised read operation; do not weaken faithful acquisition or amendment checks globally. Return compatible local revisions and fixture results, without changing projection/install state.
-- [ ] Return the corrective delivery for human review. Reconsider optional discovery/state-root support only after its necessity is demonstrated; refresh Acquire's exact migration plan separately and stop before migration, source retirement or cleanup.
+- [ ] Refuse all reset scopes when interrupted-write journal evidence is present, the ledger is malformed/unsafe, or the selected scope includes a disposition other than staged (including awaiting-review amendments). Preserve handled-but-absent evidence.
+- [ ] Replace recursive rebuild removal with an exact prevalidated regular-file deletion list: ledger and verified staged meeting documents only. Preserve nested migration proof, unknown files, attachments, variants and directories. Component reset updates only its selected staged entry.
+- [ ] Show the same exact deletion/update preview before confirmation, validate all affected documents before the first write and test through the public offline CLI seam for legacy and capture-root layouts.
+- [ ] Update the existing specification and guide; run focused CLI tests, TypeScript, full 100% coverage and required repository gates. Commit explicit paths in this isolated worktree and return Awaiting review without activation or integration.
 
 ## Files touched
 
-Current preparation: only `docs/roadmap/_ISSUES.md` in its completed reservation commit and this record in a separate documentation commit.
-
-Prospective minimum corrective implementation, not authorised now: `src/core/acquire/granola/import.ts`, `src/tests/cli/acquire/granola.test.ts`, `docs/specs/acquisition.md` and `docs/guides/user/granola-acquisition.md`. Inspect existing helpers before expanding this list. A path addition requires review, not an implicit glob grant. Changes to `layout.ts`, `routing.ts`, `images.ts`, adapter inventory or command plumbing are conditional on later state-root/discovery selection.
-
-Harness support stays in its own repository and requires its own grant. Candidate contract file: `skills/acquire/ki-acquire-granola/references/standards-granola-acquisition.md`; tests/catalogue under the skill's actual `scripts/rubric/` root only where the selected contract requires them. No Harness record or file is written here.
+Only `src/core/acquire/granola/import.ts`, `src/tests/cli/acquire/granola.test.ts`, `docs/specs/acquisition.md`, `docs/guides/user/granola-acquisition.md` and this record. No Harness change is required for the conservative refusal/exact-file deletion slice. Its optional discovery/state-root contract work stays deferred.
 
 ## Verify
 
-Preparation: `ki repo audit --skill ki-work --repo .`, `ki repo audit --skill ki-work-roadmap --repo .`, scoped `rumdl check` and `git diff --check`. Assert one reserved CLI identity, Next/Draft, null baseline, unchecked Steps and explicit-path commits with the actual model trailer. Check that source/configuration and all pre-existing records are unchanged.
-
-Later corrective gate: invoke public `run(args, context)` and sandbox fixtures through `src/tests/cli/acquire/granola.test.ts`; run the local Vitest executable for that file, local TypeScript `--noEmit -p tsconfig.json`, `bun run test:coverage` at the repository's 100% thresholds, local Biome checks and scoped rumdl. Assert no provider calls; unchanged handled UUIDs/account/version/hash evidence; byte-identical nested proof, variants and unknown files; exact preview matching permitted effects; and no ledger/journal advance after refusal. A fixture pass cannot certify source completeness or installed support.
-
-Future Harness gate is its owner's offline acquisition-contract/catalogue tests, TypeScript and skill audit, scoped to the separately approved files. No test is run against a live receiver, provider or installation as part of this plan.
+`ki repo audit --skill ki-work --repo .` and `ki repo audit --skill ki-work-roadmap --repo .`; public `run(args, context)` sandbox fixtures in `src/tests/cli/acquire/granola.test.ts` and `adapters.test.ts`; `bunx tsc --noEmit -p tsconfig.json`; `bun run test:coverage` with 100% thresholds; scoped Biome, rumdl and `git diff --check`. Assert source/handled ledger, proof, assets and unrelated files retain bytes; previews and refusals call no provider. No real reset is run.
 
 ## Dependencies / blocks
 
@@ -98,9 +86,7 @@ One owner-requested defect carrier only. No binary carrier, Harness sibling, Rea
 
 ## Delegation
 
-This is a reviewable plan, not an active worker packet. The existing [knowledge-acquisition coordinator](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_CHECKPOINTS/knowledge-islands-model.knowledge-acquisition.md) owns receiving review; tools-ki owns the corrective host lane, Harness owns its contract lane, and Acquire owns any later local cutover. No delegated agent is launched.
-
-Before future integration, record the known-good executable/configuration/projection revisions and prove disposable-fixture restoration preserves prior state/proof bytes. A runtime or connection-critical rollout needs separately authorised activation and a tested restore path that reconnects first. No service, auth, network, host or credential operation is in this plan.
+No subagents. The owner instruction on 14 October 2026 to progress both roadmap items, followed by the explicit bounded-local-engineering task, grants necessary readiness and delivery of this narrowed defect slice. It supersedes the prior preparation-only boundary for these exact paths. Use runtime-owned worktree `/Users/krisbrown/.local/state/ki/worktrees/tools-ki/granola-retention-20261014` on `fix/granola-retention-20261014`, because primary tools-ki source drives live ki. No primary-checkout integration, projection, migration, real reset, provider operation, source cleanup, release, push or self-acceptance. Stop for broader file/schema/runtime authority, failed gates or ambiguous evidence. Preserve on-demand UUID/package discovery and the canonical handled ledger; no new index or importer machinery.
 
 ## Discussion
 
