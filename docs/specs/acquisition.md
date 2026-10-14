@@ -142,7 +142,7 @@ _Evidence:_ The named CLI contract test is part of the passing `bun run test:cov
 
 ### ACQUIRE-016 — Governed local reset
 
-`ki acquire reset` MUST show its local reset plan before mutation, require explicit confirmation, distinguish adapter, source, component, and complete-rebuild scopes, reject incompatible scope combinations, and never authorize provider mutation.
+`ki acquire reset` MUST show an exact local file deletion/update plan before mutation, require explicit confirmation, distinguish adapter, source, component and rebuild scopes, reject incompatible scope combinations, and never authorise provider mutation. It MUST refuse any selected non-staged disposition, including awaiting-review amendments, even when its capture is absent. It MUST refuse reset while any journal exists or the ledger is unsafe/corrupt. Rebuild MUST prevalidate every selected staged document and delete only its exact regular-file paths and ledger; it MUST preserve directories, migration proof, unknown files, attachments and source variants in both legacy and central layouts. Component reset MUST preserve all unrelated entries. Reset is not recovery authority for interrupted writes.
 
 _Conformance:_ conforming
 
