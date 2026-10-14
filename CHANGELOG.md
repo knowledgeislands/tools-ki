@@ -144,14 +144,15 @@ This baseline describes the `v0.10.2` release. Domain imports and extracted type
 
 #### Background agents
 
-- `ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]`
+- `ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]`
 - `ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [launch options]`
 - `ki agent dispatch <run> --max <count> [--interval <seconds>]`
 - `ki agent wait <run> [--next] [--interval <seconds>]`
 - `ki agent status <run>`
 - `ki agent watch <run> [seconds]`
-- `ki agent new <run> <name>`
-- `ki agent decide <run> <text...> [--log <path>]`
+- `ki agent new <run> <name> [--repo <dir>]`
+- `ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--repo <dir>]`
+- `ki agent reconcile <run> <number> <home>`
 
 #### Estate convergence
 
@@ -169,6 +170,7 @@ This baseline describes the `v0.10.2` release. Domain imports and extracted type
 
 - `ki estate converge` reshapes this machine’s checkouts to a tracked estate targets manifest: it discovers checkouts by normalised origin remote, previews by default, and with `--apply` moves clean, idle checkouts, retargets `origin`, repairs linked worktrees, updates the local registry, renames Claude project history, rewrites untracked symlinks and removes empty former parents, logging every action for `--rollback`. A report-only sweep lists remaining old paths and renamed identities in local configuration by file and line.
 - `ki agent` is the reference launcher for the `ki-delegation` background-run contract. It detaches Claude Code or Codex agents in their own session, writes each run packet under `$KI_STATE_HOME/agents/<run>/`, appends the pinned Harness's authority footer for the chosen tier, keeps a numbered decisions log, and provides a run queue, a detached concurrency-capped dispatcher, a waiter that returns on each finish, and status and watch views that flag agents which exited without `DONE`. `--model` and `--effort` choose each agent's model, passed through verbatim, and reasoning effort; `<name>.launch.json` records both, and omitting either keeps the runtime's own default. Every launched agent, through launch and dispatch alike, carries the run name in `KI_AGENT_RUN` so runtime hooks can tell a background agent from an interactive session without inspecting process state.
+- `ki agent` keeps only runtime material in the state folder. A run's knowledge files, `decisions.md` and each agent's `<name>.report.md`, live in the owning repository's tracked `+/_THREADS/<run>/` folder, which `ki` writes but never commits; the first `launch`, `queue`, `new` or `decide` fixes the home as the Git top level of the working directory or of `--repo`, records it in `thread.json`, and refuses to run outside a repository. Decisions are timestamped in UTC seconds and may carry a `home:` line from `decide --home` or `ki agent reconcile`.
 - Diagnostics and doctor reports share tool/version, checkout-verified local/release/unknown installation mode, executing platform/architecture, runtime/version, and configuration state. Copied or unidentified source is unknown rather than guessed local. Doctor reports its read-only scope, verdict, and pass/warn/fail/skipped counts without implying package freshness.
 - KI's own CI runs from the checked-out source, while release packaging pins a verified Harness revision.
 - The canonical Harness pin is `ki-agentic-harness` `86744bf`. It carries the Wave E skill renames (`ki-pmo-design`, `ki-work-recurring` and `ki-pulse` under acquire) with their regenerated skill graph and map, the `ki-delegation` background-run contract, thread working rules, owner reporting practices, authority footers and prompt skeleton that `ki agent` reads, `ki-checkpoint` Project threads named `<initiative>.<project>` with a `label`, central Granola capture routing, the five-rule `.ki.toml` layout checked by FILES-10, the flat `territory_name` and `territory_members` keys under `[skills.ki-repo]` with a finding for the retired `[skills.ki-repo.territory]` table, an optional roadmap README and `## Areas` section, bare `[skills.ki-trades]` tables while the trades hold stands, and a warning when that hold passes its review date.

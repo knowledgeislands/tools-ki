@@ -1,20 +1,28 @@
 import { realpath, rm } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
-import { type AgentLaunch, type Sandbox, sandbox } from './_cli_helper.ts'
+import { type AgentLaunch, runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
 
 const now = () => Date.parse('2026-10-07T19:30:00Z')
 const assets = 'ki/harnesses/knowledgeislands/ki-agentic-harness/skills/governance/ki-delegation/assets'
 const footer = (tier: string): string =>
   `# Authority footer: ${tier}\n\nPreamble the launcher drops.\n\n## Rules\n\n- Tier ${tier} rule.\n`
 
+/** The project is a Git repository, so a run's thread home resolves to it; returns its physical path. */
+const setupRepository = async (box: Sandbox): Promise<string> => {
+  await box.project.git(['init', '-q'])
+  box.setRunner(runCommand)
+  return realpath(box.project.path)
+}
+
+const skeleton =
+  '# Task: <one-line outcome>\n\n<Owner> approved this; see Decision <N> in `+/_THREADS/<run>/decisions.md`. Report to <report path>.\n'
+
 const setupDelegation = async (box: Sandbox): Promise<void> => {
+  await setupRepository(box)
   await box.data.mkdir('ki/harnesses/knowledgeislands/ki-agentic-harness/skills/agentic-systems/other')
   for (const tier of ['none', 'push', 'prune', 'release'])
     await box.data.write(`${assets}/rules-${tier}.md`, footer(tier))
-  await box.data.write(
-    `${assets}/run-prompt.md`,
-    '# Task: <one-line outcome>\n\n<Owner> approved this; see Decision <N> in `<decisions log path>`.\n'
-  )
+  await box.data.write(`${assets}/run-prompt.md`, skeleton)
 }
 
 /** Fake detached processes: every launched pid stays alive until `finish` is called. */
@@ -43,7 +51,10 @@ const fakeProcesses = (box: Sandbox, onSleep: () => Promise<void> = async () => 
   }
 }
 
-const runPath = (box: Sandbox, file: string): string => `${box.state.path}/ki/agents/r/${file}`
+const runDir = (box: Sandbox): string => `${box.state.path}/ki/agents/r`
+const runPath = (box: Sandbox, file: string): string => `${runDir(box)}/${file}`
+const threadPath = async (box: Sandbox, file: string): Promise<string> =>
+  `${await realpath(box.project.path)}/+/_THREADS/r/${file}`
 
 describe('ki agent launch', () => {
   test('writes the run packet and detaches the Claude Code adapter with the footer', async () => {
@@ -64,6 +75,11 @@ describe('ki agent launch', () => {
     expect(prompt).not.toContain('Preamble the launcher drops.')
     expect(prompt).toContain("(time from: TZ=Europe/Paris date '+%H:%M %Z')")
     expect(prompt).toContain('Do not use background subagents. Never end your session while waiting.\n')
+    expect(prompt).toContain(`write your report to ${await threadPath(box, 'one.report.md')} as the owner report`)
+    expect(await box.state.read('ki/agents/r/thread.json')).toBe(
+      `${JSON.stringify({ repository: await realpath(box.project.path), folder: '+/_THREADS/r' })}\n`
+    )
+    expect(await box.project.mkdir('+/_THREADS/r')).toBe(`${await realpath(box.project.path)}/+/_THREADS/r`)
     expect(await box.state.read('ki/agents/r/one.status')).toBe('21:30 CEST - launched\n')
     expect(await box.state.read('ki/agents/r/one.pid')).toBe('1001\n')
     expect(await box.state.read('ki/agents/r/one.launch.json')).toBe('{"runtime":"claude"}\n')
@@ -184,6 +200,7 @@ describe('ki agent launch', () => {
 
   test('requires the pinned harness to ship well-formed run assets and a valid TZ', async () => {
     const box = await sandbox()
+    await setupRepository(box)
     fakeProcesses(box)
     await box.project.write('task.md', '# Task\n')
 
@@ -423,36 +440,178 @@ describe('ki agent new and decide', () => {
 
     const result = await box.run('ki agent new r one', { now })
     expect(result.stdout).toBe(`${runPath(box, 'one.draft.md')}\n`)
-    expect(await box.state.read('ki/agents/r/one.draft.md')).toContain(
-      `Decision <N> in \`${runPath(box, 'decisions.md')}\``
+    expect(await box.state.read('ki/agents/r/one.draft.md')).toBe(
+      '# Task: <one-line outcome>\n\n<Owner> approved this; see Decision <N> in `+/_THREADS/r/decisions.md`. Report to +/_THREADS/r/one.report.md.\n'
     )
+    expect(await box.state.read('ki/agents/r/thread.json')).toContain(await realpath(box.project.path))
 
     const again = await box.run('ki agent new r one', { now })
     expect(again.exitCode).toBe(1)
     expect(again.stderr).toBe(`ki: error: prompt draft already exists: ${runPath(box, 'one.draft.md')}\n`)
   })
 
-  test('numbers and dates each decision', async () => {
+  test('numbers and timestamps each decision in the tracked thread log', async () => {
     const box = await sandbox()
+    await setupRepository(box)
     box.setEnv({ TZ: 'Pacific/Kiritimati' })
 
     expect((await box.run('ki agent decide r Ship the launcher.', { now })).stdout).toBe(
-      `Decision 1 recorded in ${runPath(box, 'decisions.md')}\n`
+      `Decision 1 recorded in ${await threadPath(box, 'decisions.md')}\n`
     )
-    await box.run('ki agent decide r Release it.', { now })
-    expect(await box.state.read('ki/agents/r/decisions.md')).toBe(
-      '# Decisions\n\n## Decision 1 (2026-10-08)\n\n- Ship the launcher.\n\n## Decision 2 (2026-10-08)\n\n- Release it.\n'
+    await box.run('ki agent decide r Release it. --home docs/roadmap/KI-TOOL-KI-CLI-124-agent-run-close.md', { now })
+    expect(await box.project.read('+/_THREADS/r/decisions.md')).toBe(
+      [
+        '# Decisions',
+        '',
+        '## Decision 1 (2026-10-07T19:30:00Z)',
+        '',
+        '- Ship the launcher.',
+        '',
+        '## Decision 2 (2026-10-07T19:30:00Z)',
+        '',
+        'home: docs/roadmap/KI-TOOL-KI-CLI-124-agent-run-close.md',
+        '',
+        '- Release it.',
+        ''
+      ].join('\n')
     )
+    expect(await box.state.read('ki/agents/r/thread.json')).toContain('"folder":"+/_THREADS/r"')
 
     await box.project.write('log.md', '# Log\n\n## Decision 18 (2026-10-07)\n\n- Earlier.\n')
     expect((await box.run('ki agent decide r Later. --log log.md', { now })).stdout).toBe(
       `Decision 19 recorded in ${await realpath(box.project.path)}/log.md\n`
     )
-    expect(await box.project.read('log.md')).toContain('## Decision 19 (2026-10-08)\n\n- Later.\n')
+    expect(await box.project.read('log.md')).toContain('## Decision 19 (2026-10-07T19:30:00Z)\n\n- Later.\n')
 
     const empty = await box.run(['ki', 'agent', 'decide', 'r', ' '], { now })
     expect(empty.exitCode).toBe(2)
     expect(empty.stderr).toBe('ki: error: a decision needs text\n')
+    const blank = await box.run(['ki', 'agent', 'decide', 'r', 'Text.', '--home', ' '], { now })
+    expect(blank.exitCode).toBe(2)
+    expect(blank.stderr).toBe('ki: error: a home needs a path or identifier\n')
+  })
+})
+
+describe('ki agent thread home', () => {
+  test('refuses to start a run outside a Git repository and fixes the home on first use', async () => {
+    const box = await sandbox()
+    box.setRunner(runCommand)
+    const outside = await box.run('ki agent decide r Text.', { now })
+    expect(outside.exitCode).toBe(2)
+    expect(outside.stderr).toBe(
+      'ki: error: the working directory is not inside a Git repository; run from the owning repository or pass --repo <dir>\n'
+    )
+    expect(await box.run('ki agent reconcile r 1 docs/x.md', { now })).toMatchObject({
+      exitCode: 1,
+      stderr: 'ki: error: r has no thread home yet; record a decision first\n'
+    })
+
+    await box.root.git(['init', '-q'], 'owner')
+    const owner = await realpath(`${box.root.path}/owner`)
+    const missing = await box.run('ki agent decide r Text. --repo nowhere', { now })
+    expect(missing.exitCode).toBe(2)
+    expect(missing.stderr).toBe('ki: error: no Git repository at nowhere\n')
+    expect((await box.run(`ki agent decide r Text. --repo ${owner}`, { now })).stdout).toBe(
+      `Decision 1 recorded in ${owner}/+/_THREADS/r/decisions.md\n`
+    )
+    expect(await box.state.read('ki/agents/r/thread.json')).toBe(
+      `${JSON.stringify({ repository: owner, folder: '+/_THREADS/r' })}\n`
+    )
+
+    // Once fixed, the home holds without --repo, and a disagreeing --repo is refused.
+    expect((await box.run('ki agent decide r Again.', { now })).stdout).toBe(
+      `Decision 2 recorded in ${owner}/+/_THREADS/r/decisions.md\n`
+    )
+    expect((await box.run(`ki agent decide r Agreed. --repo ${owner}`, { now })).exitCode).toBe(0)
+    await setupRepository(box)
+    const mismatch = await box.run('ki agent decide r Text. --repo .', { now })
+    expect(mismatch.exitCode).toBe(2)
+    expect(mismatch.stderr).toBe(`ki: error: r belongs to ${owner}, not ${await realpath(box.project.path)}\n`)
+  })
+
+  test('adds the owning repository to a launch from elsewhere and rejects a broken thread file', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    const processes = fakeProcesses(box)
+    const project = await realpath(box.project.path)
+    await box.root.mkdir('elsewhere')
+    await box.root.write('elsewhere/task.md', '# Task\n')
+    const result = await box.run(
+      `ki agent launch r one ${box.root.path}/elsewhere ${box.root.path}/elsewhere/task.md --repo .`,
+      { now }
+    )
+    expect(result.exitCode).toBe(0)
+    const [launch] = processes.launches as [AgentLaunch]
+    expect(launch.arguments.slice(-4)).toEqual(['--add-dir', runDir(box), '--add-dir', project])
+    expect(JSON.parse(await box.state.read('ki/agents/r/queue.jsonl').catch(() => '{}'))).toEqual({})
+
+    // A queued launch carries no --repo of its own: the recorded home serves the dispatcher.
+    await box.run(
+      `ki agent queue r two ${box.root.path}/elsewhere/task.md --add-dir . --workdir ${box.root.path}/elsewhere`,
+      { now }
+    )
+    const [queued] = (await box.state.read('ki/agents/r/queue.jsonl')).split('\n')
+    expect(JSON.parse(queued as string)).toMatchObject({ addDirs: [project] })
+    expect(Object.keys(JSON.parse(queued as string))).not.toContain('repo')
+
+    await box.state.write('ki/agents/r/thread.json', '{not json')
+    const invalid = await box.run('ki agent decide r Text.', { now })
+    expect(invalid.exitCode).toBe(1)
+    expect(invalid.stderr).toBe(`ki: error: ${runPath(box, 'thread.json')} is not valid JSON\n`)
+    await box.state.write('ki/agents/r/thread.json', '{"repository":1}\n')
+    const shape = await box.run('ki agent decide r Text.', { now })
+    expect(shape.stderr).toBe(`ki: error: ${runPath(box, 'thread.json')} does not name a repository and folder\n`)
+  })
+})
+
+describe('ki agent reconcile', () => {
+  test('writes or replaces one decision home in the tracked log', async () => {
+    const box = await sandbox()
+    await setupRepository(box)
+    await box.run('ki agent decide r First.', { now })
+    await box.run('ki agent decide r Second. --home old/path.md', { now })
+    await box.run('ki agent decide r Third.', { now })
+
+    expect((await box.run('ki agent reconcile r 1 KI-TOOL-KI-CLI-124', { now })).stdout).toBe(
+      `Decision 1 home KI-TOOL-KI-CLI-124 recorded in ${await threadPath(box, 'decisions.md')}\n`
+    )
+    expect((await box.run('ki agent reconcile r 2 new/path.md', { now })).exitCode).toBe(0)
+    expect(await box.project.read('+/_THREADS/r/decisions.md')).toBe(
+      [
+        '# Decisions',
+        '',
+        '## Decision 1 (2026-10-07T19:30:00Z)',
+        '',
+        'home: KI-TOOL-KI-CLI-124',
+        '',
+        '- First.',
+        '',
+        '## Decision 2 (2026-10-07T19:30:00Z)',
+        '',
+        'home: new/path.md',
+        '',
+        '- Second.',
+        '',
+        '## Decision 3 (2026-10-07T19:30:00Z)',
+        '',
+        '- Third.',
+        ''
+      ].join('\n')
+    )
+
+    const absent = await box.run('ki agent reconcile r 9 x.md', { now })
+    expect(absent.exitCode).toBe(1)
+    expect(absent.stderr).toBe(`ki: error: no Decision 9 in ${await threadPath(box, 'decisions.md')}\n`)
+    expect((await box.run(['ki', 'agent', 'reconcile', 'r', '1', ' '], { now })).stderr).toBe(
+      'ki: error: a home needs a path or identifier\n'
+    )
+    expect((await box.run('ki agent reconcile r x x.md', { now })).stderr).toBe(
+      "ki: error: expected a positive whole number, got 'x'\n"
+    )
+    await rm(await threadPath(box, 'decisions.md'))
+    expect((await box.run('ki agent reconcile r 1 x.md', { now })).stderr).toBe(
+      `ki: error: no decisions log at ${await threadPath(box, 'decisions.md')}\n`
+    )
   })
 })
 

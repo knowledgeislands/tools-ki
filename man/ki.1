@@ -379,10 +379,10 @@ each folder, is opened in reverse.
 .SS Background agents
 \&
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]
 Launch one detached agent and write its run packet.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]
 Append a ready-made agent to the run queue.
 .TP
 .B ki agent dispatch <run> --max <count> [--interval <seconds>]
@@ -397,11 +397,14 @@ Print each agent's latest status and the queue.
 .B ki agent watch <run> [seconds]
 Print one status line per interval until the run ends.
 .TP
-.B ki agent new <run> <name>
+.B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the run contract.
 .TP
-.B ki agent decide <run> <text...> [--log <path>]
-Append a numbered, dated owner decision.
+.B ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--repo <dir>]
+Append a numbered, timestamped owner decision to the thread's tracked log.
+.TP
+.B ki agent reconcile <run> <number> <home>
+Write or replace one decision's durable home.
 .SS Estate convergence
 \&
 .TP
@@ -1427,9 +1430,31 @@ archives, deletes, or moves Granola data.
 .PP
 Launch and coordinate detached background agents under the
 .B ki-delegation
-background-run contract. Each run lives in
-.IR $KI_STATE_HOME/agents/<run>/ ,
-with a prompt, one-line status, pid, log, and report per agent. An agent
+background-run contract. A run's runtime files live in
+.IR $KI_STATE_HOME/agents/<run>/ :
+a prompt, one-line status, pid, and log per agent, the queue, and
+.IR thread.json ,
+which records the run's thread home. Its knowledge files, the
+.I decisions.md
+log and each agent's
+.IR <name>.report.md ,
+live in the owning repository's tracked
+.I +/_THREADS/<run>/
+folder, so the state folder can go without losing them.
+.B ki
+writes those files but never commits them; the thread commits them with its
+other work. The first
+.BR launch ,
+.BR queue ,
+.B new
+or
+.B decide
+for a run fixes the home as the Git top level of the working directory, or
+of
+.BR "--repo <dir>" ;
+later commands read it, and a disagreeing
+.B --repo
+is an error. Outside a repository the command refuses with exit 2. An agent
 writes
 .B DONE
 as the last line of its status when it finishes. Runtime adapters start
@@ -1437,7 +1462,7 @@ Claude Code or Codex in their own session with standard input from
 .IR /dev/null ,
 so an interrupt of the launching session cannot stop them.
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]
 Launch one detached agent. The prompt gains the authority footer the pinned
 Harness's
 .B ki-delegation
@@ -1471,9 +1496,12 @@ and
 .BR "-c model_reasoning_effort=" .
 Omitted, each uses the runtime's own default.
 .I <name>.launch.json
-records the runtime, model, and effort.
+records the runtime, model, and effort. The progress protocol names the
+agent's report path in the thread folder, and the owning repository is added
+to the agent's writable directories when the working directory lies outside
+it.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]
 Append a ready-made agent to the run queue, copying its prompt. Queue order
 is priority order. The dispatcher launches it with the queued
 .B --model
@@ -1511,16 +1539,28 @@ Print one line per interval (default 120 seconds) until no agent is
 running, ending with
 .BR "ALL FINISHED" .
 .TP
-.B ki agent new <run> <name>
+.B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the
 .B ki-delegation
 run contract to
-.IR <name>.draft.md .
+.IR <name>.draft.md ,
+with the thread's decisions log and report paths filled in.
 .TP
-.B ki agent decide <run> <text...> [--log <path>]
-Append a numbered, dated owner decision to the run's
+.B ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--repo <dir>]
+Append a numbered owner decision, timestamped in UTC, to the thread's tracked
 .I decisions.md
 or the named log, for prompts to cite as their authority.
+.B --home
+names where the decision now lives durably: a committed path, optionally
+with a
+.I #fragment
+or a work-record identifier such as
+.IR KI-TOOL-KI-CLI-124 .
+.TP
+.B ki agent reconcile <run> <number> <home>
+Write or replace the
+.I home:
+line of one decision in the thread's tracked log.
 .SS Estate convergence
 \&
 .PP

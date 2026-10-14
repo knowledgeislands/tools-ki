@@ -10,13 +10,13 @@ import {
   launchAgent,
   newPrompt,
   queueAgent,
-  recordDecision,
   runStatus,
   startDispatcher,
   waitForRun,
   watchRun
 } from '../../core/agent/runs.ts'
 import { type AgentEffort, type AgentRuntime, agentEfforts, agentRuntimes } from '../../core/agent/runtimes.ts'
+import { appendDecision, reconcileDecision } from '../../core/agent/thread.ts'
 import { DEFAULT_HARNESS } from '../../core/configuration/declaration.ts'
 import { grammarError } from '../../core/errors.ts'
 import { harnessDirectory } from '../../core/storage/harness-paths.ts'
@@ -28,6 +28,7 @@ const agentContext = (context: KiContext): AgentContext => ({
   environment: context.environment,
   launcher: context.launcher,
   processes: context.agentProcesses,
+  runner: context.runner,
   now: context.now
 })
 
@@ -38,6 +39,11 @@ const seconds = (value: string): number => {
   return Number(value)
 }
 
+const repoOption = new Option(
+  '--repo <dir>',
+  "repository owning the run's thread; default, the working directory's Git repository"
+)
+
 interface LaunchOptions {
   readonly runtime: AgentRuntime
   readonly addDir: readonly string[]
@@ -45,6 +51,7 @@ interface LaunchOptions {
   readonly waitFor: readonly string[]
   readonly model?: string
   readonly effort?: AgentEffort
+  readonly repo?: string
 }
 
 /** The launch options `launch` and `queue` share. */
@@ -58,6 +65,7 @@ const withLaunchOptions = (command: Command): Command =>
     .option('--wait-for <name>', 'agent in this run whose DONE gates the start; repeatable', collect, [])
     .option('--model <model>', "runtime model, passed through verbatim; omitted, the runtime's default")
     .addOption(new Option('--effort <level>', "reasoning effort; omitted, the runtime's default").choices(agentEfforts))
+    .addOption(repoOption)
 
 const request = (
   run: string,
@@ -75,7 +83,8 @@ const request = (
   rules: options.rules,
   waitFor: options.waitFor,
   model: options.model,
-  effort: options.effort
+  effort: options.effort,
+  repo: options.repo
 })
 
 export const createAgentCommand = (context: KiContext): Command => {
@@ -186,19 +195,42 @@ export const createAgentCommand = (context: KiContext): Command => {
       .description('write a prompt skeleton from the ki-delegation run contract')
       .argument('<run>', 'run name')
       .argument('<name>', 'agent name')
-      .action(async (run: string, name: string) => write(await newPrompt(agentContext(context), run, name)))
+      .addOption(repoOption)
+      .action(async (run: string, name: string, options: { repo?: string }) =>
+        write(await newPrompt(agentContext(context), run, name, options.repo))
+      )
   )
 
   command.addCommand(
     new Command('decide')
-      .description("append a numbered, dated owner decision to the run's decisions log")
+      .description("append a numbered, timestamped owner decision to the thread's tracked decisions log")
       .argument('<run>', 'run name')
       .argument('<text...>', "the decision, in the owner's words")
-      .option('--log <path>', "decisions log to append instead of the run's own")
-      .action(async (run: string, text: readonly string[], options: { log?: string }) => {
-        const result = await recordDecision(agentContext(context), run, text.join(' '), options.log)
+      .option('--log <path>', "decisions log to append instead of the thread's own")
+      .option('--home <path-or-id>', "the decision's durable home: a committed path or a work-record identifier")
+      .addOption(repoOption)
+      .action(async (run: string, text: readonly string[], options: { log?: string; home?: string; repo?: string }) => {
+        const result = await appendDecision(agentContext(context), run, {
+          text: text.join(' '),
+          log: options.log,
+          home: options.home,
+          repo: options.repo
+        })
         write(`Decision ${result.number} recorded in ${result.path}`)
       })
+  )
+
+  command.addCommand(
+    new Command('reconcile')
+      .description("write or replace one decision's durable home in the thread's tracked log")
+      .argument('<run>', 'run name')
+      .argument('<number>', 'decision number', seconds)
+      .argument('<home>', 'a committed path or a work-record identifier')
+      .action(async (run: string, number: number, home: string) =>
+        write(
+          `Decision ${number} home ${home} recorded in ${await reconcileDecision(agentContext(context), run, number, home)}`
+        )
+      )
   )
 
   return command

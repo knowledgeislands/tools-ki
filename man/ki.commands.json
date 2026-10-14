@@ -475,14 +475,14 @@
     },
     {
       "name": "Background agents",
-      "purpose": "Launch and coordinate detached background agents under the ki-delegation background-run contract. Each run lives in $KI_STATE_HOME/agents/<run>/ , with a prompt, one-line status, pid, log, and report per agent. An agent writes DONE as the last line of its status when it finishes. Runtime adapters start Claude Code or Codex in their own session with standard input from /dev/null , so an interrupt of the launching session cannot stop them.",
+      "purpose": "Launch and coordinate detached background agents under the ki-delegation background-run contract. A run's runtime files live in $KI_STATE_HOME/agents/<run>/ : a prompt, one-line status, pid, and log per agent, the queue, and thread.json , which records the run's thread home. Its knowledge files, the decisions.md log and each agent's <name>.report.md , live in the owning repository's tracked +/_THREADS/<run>/ folder, so the state folder can go without losing them. ki writes those files but never commits them; the thread commits them with its other work. The first launch , queue , new or decide for a run fixes the home as the Git top level of the working directory, or of --repo <dir> ; later commands read it, and a disagreeing --repo is an error. Outside a repository the command refuses with exit 2. An agent writes DONE as the last line of its status when it finishes. Runtime adapters start Claude Code or Codex in their own session with standard input from /dev/null , so an interrupt of the launching session cannot stop them.",
       "commands": [
         {
-          "invocation": "ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]",
-          "description": "Launch one detached agent. The prompt gains the authority footer the pinned Harness's ki-delegation skill ships for the --rules tier (default none ) and the progress protocol. The status time zone follows TZ . Until every --wait-for agent has written DONE , a detached hold process keeps the agent held, checking every 30 seconds, and then starts it. When a named agent exits without DONE , the launch fails, or a held agent ends with a gate cannot open status. --model names the runtime's model and is passed through verbatim; --effort sets its reasoning effort, which the runtime may still reject for that model. Claude Code receives --model and --effort ; Codex receives -m and -c model_reasoning_effort= . Omitted, each uses the runtime's own default. <name>.launch.json records the runtime, model, and effort."
+          "invocation": "ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]",
+          "description": "Launch one detached agent. The prompt gains the authority footer the pinned Harness's ki-delegation skill ships for the --rules tier (default none ) and the progress protocol. The status time zone follows TZ . Until every --wait-for agent has written DONE , a detached hold process keeps the agent held, checking every 30 seconds, and then starts it. When a named agent exits without DONE , the launch fails, or a held agent ends with a gate cannot open status. --model names the runtime's model and is passed through verbatim; --effort sets its reasoning effort, which the runtime may still reject for that model. Claude Code receives --model and --effort ; Codex receives -m and -c model_reasoning_effort= . Omitted, each uses the runtime's own default. <name>.launch.json records the runtime, model, and effort. The progress protocol names the agent's report path in the thread folder, and the owning repository is added to the agent's writable directories when the working directory lies outside it."
         },
         {
-          "invocation": "ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max]",
+          "invocation": "ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]",
           "description": "Append a ready-made agent to the run queue, copying its prompt. Queue order is priority order. The dispatcher launches it with the queued --model and --effort ."
         },
         {
@@ -502,12 +502,16 @@
           "description": "Print one line per interval (default 120 seconds) until no agent is running, ending with ALL FINISHED ."
         },
         {
-          "invocation": "ki agent new <run> <name>",
-          "description": "Write a prompt skeleton from the ki-delegation run contract to <name>.draft.md ."
+          "invocation": "ki agent new <run> <name> [--repo <dir>]",
+          "description": "Write a prompt skeleton from the ki-delegation run contract to <name>.draft.md , with the thread's decisions log and report paths filled in."
         },
         {
-          "invocation": "ki agent decide <run> <text...> [--log <path>]",
-          "description": "Append a numbered, dated owner decision to the run's decisions.md or the named log, for prompts to cite as their authority."
+          "invocation": "ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--repo <dir>]",
+          "description": "Append a numbered owner decision, timestamped in UTC, to the thread's tracked decisions.md or the named log, for prompts to cite as their authority. --home names where the decision now lives durably: a committed path, optionally with a #fragment or a work-record identifier such as KI-TOOL-KI-CLI-124 ."
+        },
+        {
+          "invocation": "ki agent reconcile <run> <number> <home>",
+          "description": "Write or replace the home: line of one decision in the thread's tracked log."
         }
       ]
     },

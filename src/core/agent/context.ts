@@ -1,0 +1,51 @@
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { KiError } from '../errors.ts'
+import type { Environment } from '../paths.ts'
+import type { Runner } from '../runtime/runner.ts'
+import type { AgentProcesses } from './processes.ts'
+
+/** Cumulative authority tiers whose footers ship with the ki-delegation skill. */
+export const authorityTiers = ['none', 'push', 'prune', 'release'] as const
+export type AuthorityTier = (typeof authorityTiers)[number]
+
+export interface AgentContext {
+  /** The KI state root; runs live under its `agents/` directory. */
+  readonly stateDirectory: string
+  /** The pinned canonical harness that ships the ki-delegation run assets. */
+  readonly harnessDirectory: string
+  readonly workingDirectory: string
+  readonly environment: Environment
+  /** Command and leading arguments that start this same `ki` again. */
+  readonly launcher: readonly [string, ...string[]]
+  readonly processes: AgentProcesses
+  /** Runs `git` and `tar`; injected so tests drive real commands against a sandbox. */
+  readonly runner: Runner
+  readonly now: () => number
+}
+
+export const checkName = (value: string, label: string): string => {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new KiError(`invalid ${label}: '${value}'`, 2)
+  return value
+}
+
+/** The directory holding every run's state folder. */
+export const agentsDirectory = (context: AgentContext): string => join(context.stateDirectory, 'agents')
+
+/** The run's state folder: runtime files only, never knowledge. */
+export const runDirectory = (context: AgentContext, run: string): string =>
+  join(agentsDirectory(context), checkName(run, 'run'))
+
+export const read = (path: string): Promise<string | undefined> => readFile(path, 'utf8').catch(() => undefined)
+
+/** The run's `git`, with discovery left to `-C` so the answer follows the directory asked about. */
+export const git = async (
+  context: AgentContext,
+  directory: string,
+  arguments_: readonly string[]
+): Promise<{ readonly exitCode: number; readonly output: string }> =>
+  context.runner('git', ['-C', directory, ...arguments_], context.environment)
+
+/** `YYYY-MM-DDTHH:MM:SSZ`: the instant in UTC to the second, as the decisions log and close note record it. */
+export const instant = (context: AgentContext): string =>
+  new Date(context.now()).toISOString().replace(/\.\d{3}Z$/, 'Z')

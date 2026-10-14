@@ -1,26 +1,12 @@
-import { appendFile, copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { appendFile, copyFile, mkdir, readdir, stat, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
-import type { Environment } from '../paths.ts'
-import type { AgentProcesses } from './processes.ts'
+import { type AgentContext, type AuthorityTier, checkName, read, runDirectory } from './context.ts'
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
+import { reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
-/** Cumulative authority tiers whose footers ship with the ki-delegation skill. */
-export const authorityTiers = ['none', 'push', 'prune', 'release'] as const
-export type AuthorityTier = (typeof authorityTiers)[number]
-
-export interface AgentContext {
-  /** The KI state root; runs live under its `agents/` directory. */
-  readonly stateDirectory: string
-  /** The pinned canonical harness that ships the ki-delegation run assets. */
-  readonly harnessDirectory: string
-  readonly workingDirectory: string
-  readonly environment: Environment
-  /** Command and leading arguments that start this same `ki` again. */
-  readonly launcher: readonly [string, ...string[]]
-  readonly processes: AgentProcesses
-  readonly now: () => number
-}
+export type { AgentContext, AuthorityTier } from './context.ts'
+export { authorityTiers } from './context.ts'
 
 export interface LaunchRequest {
   readonly run: string
@@ -34,27 +20,19 @@ export interface LaunchRequest {
   /** Omitted, the runtime uses its own default model or effort. */
   readonly model?: string | undefined
   readonly effort?: AgentEffort | undefined
+  /** The repository owning the run's thread; omitted, the Git repository of the working directory. */
+  readonly repo?: string | undefined
 }
 
-type AgentState =
+export type AgentState =
   | { readonly kind: 'finished'; readonly last: string }
   | { readonly kind: 'running' | 'exited'; readonly last: string | undefined }
 
-const checkName = (value: string, label: string): string => {
-  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new KiError(`invalid ${label}: '${value}'`, 2)
-  return value
-}
-
-const runDirectory = (context: AgentContext, run: string): string =>
-  join(context.stateDirectory, 'agents', checkName(run, 'run'))
-
-const existingRun = async (context: AgentContext, run: string): Promise<string> => {
+export const existingRun = async (context: AgentContext, run: string): Promise<string> => {
   const directory = runDirectory(context, run)
   if (!(await stat(directory).catch(() => undefined))?.isDirectory()) throw new KiError(`no such run: ${run}`, 1)
   return directory
 }
-
-const read = (path: string): Promise<string | undefined> => readFile(path, 'utf8').catch(() => undefined)
 
 const lines = (text: string | undefined): string[] => (text ?? '').split('\n').filter((line) => line.trim())
 
@@ -78,11 +56,6 @@ const stamp = (context: AgentContext): string => {
   return `${part(parts, 'hour')}:${part(parts, 'minute')} ${part(parts, 'timeZoneName')}`
 }
 
-const today = (context: AgentContext): string => {
-  const parts = clock(context, { year: 'numeric', month: '2-digit', day: '2-digit' })
-  return `${part(parts, 'year')}-${part(parts, 'month')}-${part(parts, 'day')}`
-}
-
 const delegationAssets = async (context: AgentContext): Promise<string> => {
   const skills = join(context.harnessDirectory, 'skills')
   const groups = await readdir(skills).catch(() => [] as string[])
@@ -103,17 +76,17 @@ const footer = async (context: AgentContext, tier: AuthorityTier): Promise<strin
   return text.slice(start).trimEnd()
 }
 
-const pidOf = async (path: string): Promise<number | undefined> => {
+export const pidOf = async (path: string): Promise<number | undefined> => {
   const pid = Number.parseInt((await read(path)) ?? '', 10)
   return Number.isInteger(pid) && pid > 0 ? pid : undefined
 }
 
-const running = async (context: AgentContext, pidFile: string): Promise<number | undefined> => {
+export const running = async (context: AgentContext, pidFile: string): Promise<number | undefined> => {
   const pid = await pidOf(pidFile)
   return pid !== undefined && context.processes.alive(pid) ? pid : undefined
 }
 
-const agentState = async (context: AgentContext, directory: string, name: string): Promise<AgentState> => {
+export const agentState = async (context: AgentContext, directory: string, name: string): Promise<AgentState> => {
   const status = lines(await read(join(directory, `${name}.status`)))
   if (status.at(-1)?.trim() === 'DONE') return { kind: 'finished', last: status.at(-2) ?? 'DONE' }
   const kind = (await running(context, join(directory, `${name}.pid`))) ? 'running' : 'exited'
@@ -152,7 +125,7 @@ const describe = (state: AgentState): string =>
       ? (state.last ?? 'no status yet')
       : `EXITED WITHOUT DONE (${state.last ?? 'no status'})`
 
-const agents = async (directory: string): Promise<string[]> =>
+export const agents = async (directory: string): Promise<string[]> =>
   (await readdir(directory))
     .filter((file) => file.endsWith('.pid') && file !== 'dispatch.pid')
     .map((file) => file.slice(0, -'.pid'.length))
@@ -179,14 +152,22 @@ const validated = async (context: AgentContext, request: LaunchRequest): Promise
   return {
     ...request,
     workdir: await resolveDirectory(context, request.workdir, 'workdir'),
-    addDirs: await Promise.all(request.addDirs.map((path) => resolveDirectory(context, path, 'directory')))
+    addDirs: await Promise.all(request.addDirs.map((path) => resolveDirectory(context, path, 'directory'))),
+    repo: request.repo === undefined ? undefined : await resolveDirectory(context, request.repo, 'repository')
   }
 }
+
+/** The request with the thread's repository among the directories the agent may write. */
+const withRepository = (request: LaunchRequest, thread: ThreadHome): LaunchRequest =>
+  request.workdir === thread.repository || request.addDirs.includes(thread.repository)
+    ? request
+    : { ...request, addDirs: [...request.addDirs, thread.repository] }
 
 const composePrompt = async (
   context: AgentContext,
   directory: string,
   request: LaunchRequest,
+  report: string,
   body: string
 ): Promise<string> => {
   const base = join(directory, request.name)
@@ -197,7 +178,7 @@ const composePrompt = async (
     [
       '---',
       '',
-      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${base}.report.md as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries with the reply block), then write DONE as the last line of ${base}.status. Do not use background subagents. Never end your session while waiting.`
+      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${report} as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries with the reply block), then write DONE as the last line of ${base}.status. Do not use background subagents. Never end your session while waiting.`
     ].join('\n')
   )
   return `${sections.join('\n\n')}\n`
@@ -274,20 +255,22 @@ export interface LaunchResult {
  * starts at once; otherwise a detached hold process starts it once the gate opens.
  */
 export const launchAgent = async (context: AgentContext, candidate: LaunchRequest): Promise<LaunchResult> => {
-  const request = await validated(context, candidate)
-  const body = await promptText(context, request.prompt)
+  const accepted = await validated(context, candidate)
+  const body = await promptText(context, accepted.prompt)
+  const thread = await threadHome(context, accepted.run, accepted.repo)
+  const request = withRepository(accepted, thread)
   const directory = runDirectory(context, request.run)
-  await mkdir(directory, { recursive: true })
   const base = join(directory, request.name)
   const live = await running(context, `${base}.pid`)
   if (live) throw new KiError(`${request.run}/${request.name} is already running (pid ${live})`, 1)
   const state = await gate(context, directory, request.waitFor)
   if (state.kind === 'closed') throw new KiError(`${request.run}/${request.name} gate cannot open: ${state.reason}`, 1)
 
-  const prompt = await composePrompt(context, directory, request, body)
+  // The agent writes its report into the tracked thread folder, so the folder must exist.
+  await mkdir(threadPath(thread), { recursive: true })
+  const prompt = await composePrompt(context, directory, request, reportPath(thread, request.name), body)
   await writeFile(`${base}.prompt.md`, prompt)
   await writeFile(`${base}.launch.json`, launchDetails(request))
-  await rm(`${base}.report.md`, { force: true })
   if (state.kind === 'open')
     return { pid: await startRuntime(context, directory, request, prompt), directory, held: [] }
   await writeFile(`${base}.status`, heldLine(context, state.names))
@@ -325,7 +308,7 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
 
 const queueFile = (directory: string): string => join(directory, 'queue.jsonl')
 
-const readQueue = async (directory: string): Promise<LaunchRequest[]> =>
+export const readQueue = async (directory: string): Promise<LaunchRequest[]> =>
   lines(await read(queueFile(directory))).map((line) => JSON.parse(line) as LaunchRequest)
 
 const writeQueue = (directory: string, queue: readonly LaunchRequest[]): Promise<void> =>
@@ -336,14 +319,15 @@ export const queueAgent = async (context: AgentContext, candidate: LaunchRequest
   const request = await validated(context, candidate)
   await promptText(context, request.prompt)
   await delegationAssets(context)
+  await threadHome(context, request.run, request.repo)
   const directory = runDirectory(context, request.run)
-  await mkdir(directory, { recursive: true })
   const queue = await readQueue(directory)
   if (queue.some((queued) => queued.name === request.name) || (await pidOf(join(directory, `${request.name}.pid`))))
     throw new KiError(`${request.run}/${request.name} is already queued or launched`, 1)
   const prompt = join(directory, `${request.name}.queued.md`)
   await copyFile(resolve(context.workingDirectory, request.prompt), prompt)
-  await writeQueue(directory, [...queue, { ...request, prompt }])
+  // The thread home is on record now, so the dispatcher's launch needs no repository.
+  await writeQueue(directory, [...queue, { ...request, prompt, repo: undefined }])
   return queue.length + 1
 }
 
@@ -391,36 +375,29 @@ export const watchRun = async (
   }
 }
 
-/** Writes a prompt skeleton from the ki-delegation contract for the owner to complete. */
-export const newPrompt = async (context: AgentContext, run: string, name: string): Promise<string> => {
+/**
+ * Writes a prompt skeleton from the ki-delegation contract for the owner to complete, naming
+ * the run's tracked decisions log and the agent's report path in the thread folder.
+ */
+export const newPrompt = async (
+  context: AgentContext,
+  run: string,
+  name: string,
+  repo?: string | undefined
+): Promise<string> => {
   const directory = runDirectory(context, run)
   const path = join(directory, `${checkName(name, 'name')}.draft.md`)
   const skeleton = (await read(join(await delegationAssets(context), 'run-prompt.md'))) as string
   if (await read(path)) throw new KiError(`prompt draft already exists: ${path}`, 1)
-  await mkdir(directory, { recursive: true })
-  await writeFile(path, skeleton.replaceAll('<decisions log path>', join(directory, 'decisions.md')))
+  const thread = await threadHome(context, run, repo)
+  await writeFile(
+    path,
+    skeleton
+      .replaceAll('<decisions log path>', `${thread.folder}/decisions.md`)
+      .replaceAll('<report path>', `${thread.folder}/${name}.report.md`)
+      .replaceAll('<run>', run)
+  )
   return path
-}
-
-/** Appends a numbered, dated owner decision; returns its number. */
-export const recordDecision = async (
-  context: AgentContext,
-  run: string,
-  text: string,
-  log?: string
-): Promise<{ readonly number: number; readonly path: string }> => {
-  const directory = runDirectory(context, run)
-  const path = log ? resolve(context.workingDirectory, log) : join(directory, 'decisions.md')
-  if (!text.trim()) throw new KiError('a decision needs text', 2)
-  const existing = await read(path)
-  const numbers = [...(existing ?? '').matchAll(/^## Decision (\d+)\b/gm)].map((match) => Number(match[1]))
-  const number = Math.max(0, ...numbers) + 1
-  if (existing === undefined) {
-    await mkdir(directory, { recursive: true })
-    await writeFile(path, '# Decisions\n')
-  }
-  await appendFile(path, `\n## Decision ${number} (${today(context)})\n\n- ${text.trim()}\n`)
-  return { number, path }
 }
 
 export interface DispatchRequest {
