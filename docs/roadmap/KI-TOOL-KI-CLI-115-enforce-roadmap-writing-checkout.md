@@ -4,16 +4,13 @@ area: CLI
 title: Enforce roadmap writing checkout
 project: agent-host
 kind: deliver
-horizon: hold
-status: draft
-hold:
-  reason: parked
-  condition: Kris explicitly releases local planning through Techne agent-host.
+status: cancelled
+resolution: rejected
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-08T07:24:10Z
-updated_at: 2026-10-12T07:13:21Z
+updated_at: 2026-10-14T13:23:40Z
 ---
 
 # Enforce Roadmap Writing Checkout
@@ -33,6 +30,10 @@ The `ki-work-roadmap` standard already requires every roadmap write to be serial
 - **In:** detecting the marker; refusing the roadmap write paths in `ki` with a clear message naming the writing checkout; tests for refusal and for the unmarked path.
 - **In:** where a designation is declared (estate-wide, per repository in `.ki.toml`, or per machine) and how `ki` and skills read it; a recommendation on whether a remote-history serialisation design, in which the remote's `main` is the single roadmap history, is worth opening.
 - **Out:** setting the marker, owned by `ki-techne-harness`'s agent-host recipe; the `ki-work-roadmap` standard text the declaration needs, which `ki-agentic-harness` owns and receives through a `ki-trades` work trade; the two-checkout rule in personal instructions (the chezmoi source); designing the remote-history serialisation itself, and any change to the Arcadia Decision Record that bounds pushes, which only Arcadia's Enactment Process can make.
+
+## Cancelled
+
+Cancelled 2026-10-14 as rejected (parked), approved by Kris Brown in the state-of-play run ('RC-ALL: approve all' to the roadmap census): the host marker's shape is unsettled and the hold had no review date. Its Goal, Boundary and open questions are kept as an idea in the agent-host Project (`ki-principal`, `Streams/Projects/agent-host/agent-host.md`); Git history keeps the full record. It leaves no outstanding change.
 
 ## Discussion
 
