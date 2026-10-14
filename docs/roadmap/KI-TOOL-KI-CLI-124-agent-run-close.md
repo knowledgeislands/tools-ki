@@ -6,13 +6,13 @@ project: ways-of-working
 component: agent
 purpose: capability
 kind: deliver
-status: draft
+status: ready
 horizon: next
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-13T21:37:16Z
-updated_at: 2026-10-14T09:20:04Z
+updated_at: 2026-10-14T10:06:00Z
 ---
 
 # Agent Run Close
@@ -157,3 +157,7 @@ Still open, for Kris:
 ### Adoption
 
 On 14 October 2026 Kris approved the state-of-play thread's triage burn-down as written, under Kris's instruction to burn the roadmap down: adopted as `deliver / Next`. Kris approved it in STATE-CLEANUP ("Yes; queue after durability"). It is the mechanism behind the harness's tracked thread decisions home, and it should land after that standard is settled. Adoption grants no planning, implementation or acceptance authority.
+
+### Approval
+
+On 2026-10-14 Kris approved the plan as it stands, in these words: "approve KI-TOOL-KI-CLI-124". The `ways-of-working` thread delivers it under `ki-implement` through one detached background agent, as Delegation says. The harness wording this record depends on landed the same day: the `ki-delegation` background-run standard now places the decisions log and each agent's report in the owning repository's tracked `+/_THREADS/<run>/` folder and says `ki agent` writes them there "once `tools-ki` ships that change". Kris's standing instruction for any further `tools-ki` release is to ask first, so delivery stops at merged and pushed.
