@@ -146,3 +146,7 @@ Apply the exact reviewed plan by repeating it with `--confirm`. Component reset 
 ## Safety boundary
 
 Granola operations are limited to account, folder, meeting-list, meeting-detail, and transcript reads. Acquisition never tags, edits, archives, deletes, or moves provider data; does not automate a browser; does not harvest knowledge; and does not write another repository. Folder membership is routing evidence rather than canonical classification, explicit provider omissions remain omissions, and conflicting receiver mappings fail closed.
+
+Reset previews list exact files to delete or update. Rebuild removes only verified staged meeting documents and the ledger; directories, original attachments, source variants, nested migration proof and unknown files remain. Preserved assets are not a complete captured meeting after its staged document is reset. Adapter reset removes only the ledger when every entry is staged. Source/component reset refuses selected retained, harvested, trade-routed, superseded and awaiting-review evidence, including handled identities whose documents have left the inbox. Other sources remain unchanged.
+
+Any journal blocks reset, including a malformed or stale journal. Preserve it for separately authorised interruption recovery; do not delete it to bypass refusal. Unsafe/corrupt ledgers and changed or missing staged documents stop rebuild before its first deletion. Refusal applies to previews too. No existing proof is disposable merely because it shares a state directory.

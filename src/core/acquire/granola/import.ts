@@ -708,60 +708,64 @@ export const resetGranola = async (
   if (options.rebuild && (options.source || options.component)) {
     throw new KiError('--rebuild cannot be combined with --source or --component', 2)
   }
+  const path = checkpointPath(target)
+  await verifyGranolaParents(path)
+  const journal = journalPath(target)
+  await verifyGranolaParents(journal)
+  if (await lstat(journal).catch(() => undefined)) {
+    throw new KiError('Granola reset refused: preserve and review the in-progress journal before recovery')
+  }
+  const checkpoint = await currentCheckpoint(target)
+  if (options.source && !checkpoint) throw new KiError('Granola checkpoint is absent')
+  const meeting = options.source ? checkpoint?.meetings[options.source] : undefined
+  if (options.source && !meeting) throw new KiError(`Granola checkpoint has no source ${options.source}`)
+  const selected = meeting ? [meeting] : Object.values(checkpoint?.meetings ?? {})
+  if (selected.some((entry) => entry.disposition.state !== 'staged')) {
+    throw new KiError('Granola reset refused: selected scope contains retained handling or awaiting-review evidence')
+  }
+  // Validate the complete deletion scope before the first mutation, including legacy layouts.
+  const documents = options.rebuild || (options.source && !options.component) ? selected : []
+  for (const entry of documents) await verifyGranolaDocument(basePath(target), entry, 'reset')
+  const deletions = documents.map((entry) => join(basePath(target), entry.path))
+  if (!options.source && checkpoint) deletions.push(path)
   const scope = options.rebuild
-    ? 'complete rebuild (checkpoint, journal, and staged meeting documents)'
+    ? 'complete rebuild (verified staged meeting documents and checkpoint only)'
     : options.source && options.component
       ? `${options.component} component for source ${options.source}`
       : options.source
         ? `checkpoint entry and staged document for source ${options.source}`
-        : 'adapter checkpoint and in-progress journal'
-  const plan = `Reset plan for ${target.repository}: ${scope}. Provider data will not be changed.`
+        : 'adapter checkpoint only'
+  const updates = options.source ? [path] : []
+  const plan = [
+    `Reset plan for ${target.repository}: ${scope}. Provider data will not be changed.`,
+    `Delete files: ${deletions.length ? deletions.join(', ') : 'none'}.`,
+    `Update files: ${updates.length ? updates.join(', ') : 'none'}.`,
+    'Preserve directories, attachments, source variants, unknown files and migration proof.'
+  ].join('\n')
   if (!options.confirm) return { repository: target.repository, plan, changed: false }
-
-  const path = checkpointPath(target)
-  const checkpoint = await currentCheckpoint(target)
-  if (options.rebuild) {
-    if (target.captureRoot) {
-      if (checkpoint) {
-        await verifyGranolaCheckpoint(basePath(target), checkpoint)
-        for (const meeting of Object.values(checkpoint.meetings)) {
-          if (meeting.disposition.state === 'staged' || meeting.disposition.state === 'awaiting-review')
-            await rm(join(basePath(target), meeting.path), { force: true })
-        }
-      }
-      await rm(granolaLayout(target.root, target.captureRoot).state, { recursive: true, force: true })
-    } else await rm(basePath(target), { recursive: true, force: true })
-    return { repository: target.repository, plan, changed: true }
-  }
-  if (!options.source) {
-    await rm(path, { force: true })
-    await removeGranolaJournal(journalPath(target))
-    return { repository: target.repository, plan, changed: true }
-  }
-  if (!checkpoint) throw new KiError('Granola checkpoint is absent')
-  const meeting = checkpoint.meetings[options.source]
-  if (!meeting) throw new KiError(`Granola checkpoint has no source ${options.source}`)
+  for (const file of deletions) await rm(file, { force: true })
+  if (!checkpoint || !options.source) return { repository: target.repository, plan, changed: deletions.length > 0 }
+  // A selected source above implies a checkpoint entry; do not re-resolve it after deletion.
+  const selectedMeeting = selected[0] as GranolaCheckpointMeeting
   let nextMeeting: GranolaCheckpointMeeting | undefined
   if (options.component === 'transcript') {
-    const { transcript_sha256: _transcriptSha256, transcript_observed_at: _transcriptObservedAt, ...rest } = meeting
+    const {
+      transcript_sha256: _transcriptSha256,
+      transcript_observed_at: _transcriptObservedAt,
+      ...rest
+    } = selectedMeeting
     nextMeeting = { ...rest, transcript_state: 'retrying', transcript_retry_count: 0 }
   } else if (options.component === 'detail') {
-    nextMeeting = { ...meeting, detail_sha256: '' }
+    nextMeeting = { ...selectedMeeting, detail_sha256: '' }
   }
   const meetings = { ...checkpoint.meetings }
   if (nextMeeting) meetings[options.source] = nextMeeting
-  else {
-    delete meetings[options.source]
-    if (meeting.disposition.state === 'staged' || meeting.disposition.state === 'awaiting-review') {
-      await rm(join(basePath(target), meeting.path), { force: true })
-    }
-  }
+  else delete meetings[options.source]
   await writeAcquisitionStateAtomic(path, {
     ...checkpoint,
     generation: randomUUID(),
     meetings,
     updated_at: new Date(context.now()).toISOString()
   })
-  await removeGranolaJournal(journalPath(target))
   return { repository: target.repository, plan, changed: true }
 }
