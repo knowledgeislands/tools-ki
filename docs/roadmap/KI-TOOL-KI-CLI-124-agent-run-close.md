@@ -6,13 +6,13 @@ project: ways-of-working
 component: agent
 purpose: capability
 kind: deliver
-status: in-progress
+status: awaiting-review
 horizon: now
 blocks: []
 blocked_by: []
 baseline_ref: 91e6e0b5ff3c6bc9e215b936d7c68f1b3a2f427c
 created_at: 2026-10-13T21:37:16Z
-updated_at: 2026-10-14T12:45:00Z
+updated_at: 2026-10-14T13:00:00Z
 ---
 
 # Agent Run Close
@@ -106,6 +106,44 @@ None. `tools-ki` publishes its command surface in the changelog baseline and the
 ### Roadmap
 
 No follow-on record. A `ki cleanup` listing of closable runs is noted in Discussion and not opened, under the standing instruction to create no new feature records.
+
+## Review
+
+### Delivered
+
+Both planned commits, on `main` from baseline `91e6e0b5ff3c6bc9e215b936d7c68f1b3a2f427c`:
+
+- `feat(agent): write the decisions log and reports to the tracked thread folder`: the thread home fixed at first use and recorded in `thread.json`, `+/_THREADS/<run>/decisions.md` and `<name>.report.md` as the knowledge files, UTC-seconds timestamps, `decide --home`, `ki agent reconcile`, `--repo <dir>` on `launch`, `queue`, `new` and `decide`, and the owning repository added to a launch from outside it.
+- `feat(agent): add close with a reconcile gate`: `ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]` with every gate line printed `ok` or `blocker`, archive by default, and the close note.
+
+`ki` writes the tracked files but never commits them, as Kris settled: "tracked +/_THREADS/<thread>/ for the decisions log and agent reports; state folder keeps runtime only."
+
+### Change Summary
+
+- `src/core/agent/context.ts` (new) holds `AgentContext`, now with a `runner`, and the shared path, clock and Git helpers; `src/core/agent/thread.ts` (new) owns the thread home, decision parsing, `appendDecision` and `reconcileDecision`; `src/core/agent/close.ts` (new) owns the gate and the archive, compress and delete actions. `src/core/agent/runs.ts` loses `recordDecision` and `today`, and no longer deletes a report before launch, since reports now live in the tracked folder.
+- Two small additions beyond the Steps' letter: `newPrompt` fills the skeleton's `<report path>` placeholder as well as the decisions log path, because the harness skeleton now carries both; and `close` reads a run's state-folder `decisions.md` when no tracked log exists, so runs that predate this change gate on their existing decisions rather than passing vacuously. The tracked log, once present, supersedes the state copy.
+- `README.md`, `man/ki.1` (both `Background agents` sections, with `man/ki.commands.json` regenerated), `docs/guides/user/background-agents.md` and the `CHANGELOG.md` command surface and behaviours describe the new home, `--home`, `reconcile` and `close`.
+
+### Verification
+
+- `bun run test:coverage`: 1152 tests pass at 100% lines, functions, branches and statements; `bunx tsc --noEmit` and `biome check src` clean; `mandoc -T lint man/ki.1` clean; `depcruise --config .dependency-cruiser.ts src` reports no violations.
+- `ki repo audit --skill ki-work-roadmap` passes. `ki repo audit --skill ki-engineering` on the merged primary checkout carries only the pre-existing CI-1 warning about the inline `KI_VERSION` pin; the same audit run inside the delivery worktree failed DESIGN-2 because that worktree's `node_modules` is a symlink into the primary checkout, which is the worktree's arrangement and not this change.
+- Temporary-repository transcript, run with the worktree's source: `ki agent new t a` wrote a draft naming `+/_THREADS/t/decisions.md` and `+/_THREADS/t/a.report.md`; `ki agent decide t "Ship it." --home docs/x.md` appended `## Decision 1 (2026-10-14T10:40:53Z)` with `home: docs/x.md`; with `docs/x.md` present but untracked, `ki agent close t` printed `blocker: decision 1 home docs/x.md is not tracked by Git` and `blocker: thread folder +/_THREADS/t has uncommitted changes` and exited 1; after committing both, `ki agent close t` printed every line `ok`, archived the folder, and `$KI_STATE_HOME/agents/_archive/t/close.md` listed the gate and `Decision 1: docs/x.md`.
+- Read-only check against this machine's `ways-of-working` run from the Knowledge Islands Principal checkout: 60 blocker lines, among them one per decision in its state-folder log without a home, the delivery agent still running and its worktree; exit 1; no `thread.json` written and the run folder untouched.
+
+### Outstanding concerns
+
+- The gate's "Git-tracked path" test treats a decision housed in a checkpoint under `+/_CHECKPOINTS/` as unhoused in repositories whose managed ignore block excludes that folder. Such a decision needs a tracked home, or the owner's `--reconciled` waiver, before close; the standard names "the thread's checkpoint" as a valid durable owner, so this may want a follow-up ruling.
+- The Delegation section's gate between rounds, the thread reading the first commit's report before `close` begins, was not observed: the brief asked for both commits in one run, and the harness wording had already landed, so the tracked home shape was fixed before `close` was written.
+- This change is merged but not released. The installed `ki` lacks the tracked home and `close` until a release or a `ki dev local on` link; Kris has said any further `tools-ki` release must be asked for first.
+
+### Post-change review
+
+Ready for Kris's review through `ki-accept`: the two feature commits and this record change on `main`.
+
+### Mini recap
+
+Runs now keep knowledge in the repository and runtime in state; `close` is the first `ki agent` command that removes anything, and it refuses unless every decision names a home. No learning route proposed beyond the checkpoint-home concern above.
 
 ## Discussion
 
