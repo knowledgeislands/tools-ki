@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-13T21:37:16Z
-updated_at: 2026-10-14T06:52:07Z
+updated_at: 2026-10-14T09:20:04Z
 ---
 
 # Agent Run Close
@@ -31,6 +31,8 @@ Today `ki agent` writes the whole run folder under the state root and never reti
 
 A read-only inventory of the machine's run folders on 2026-10-13 found 25 folders, 4 with an agent still running, every one with a `decisions.md` holding between 1 and 153 decisions, 3 with an empty `worktrees/` directory, and 5 holding over 18 MB of agent scratch, the largest 851 MB. Most of those decisions were consolidated by hand, if at all, so the gate must be able to tell which decisions still have no home before any folder goes. The inventory is machine-local working material and is not committed.
 
+On 2026-10-14 Kris read a numbered citation in a thread summary and said, as relayed by the master thread: "has no meaning to me because I don't know what the decision was ... and I don't know where the list is. I thought we'd looked at changing the way that decisions were recorded like this so that they became durable knowledge." The master thread's relay keeps this record with its owner: "tools-ki launcher change and ki-principal run-folder sweep stay with their owners as handoffs named in the plan." Kris then placed the subject: "everything to do with the decisions log belongs to ways-of-working", so that thread plans this record and `tools-ki` delivers it.
+
 ## Boundary
 
 - In scope: `ki agent` writing `decisions.md` and each `<name>.report.md` under the owning repository's `+/_THREADS/<thread>/` instead of the state folder, with `decide` appending to the tracked log and the state folder keeping `<name>.prompt.md`, `<name>.launch.json`, `<name>.pid`, `<name>.status`, `<name>.log`, `queue.jsonl`, `seen`, `dispatch.*` and `worktrees/`; how `ki agent` learns the owning repository and thread for a run; `ki agent close <run>` and its reconcile gate; the blocker report; archive as the default action and delete behind an explicit flag; how a decision records its durable home so the gate can check it; tests through `run(args, context)` and `sandbox()`; the README's `ki agent` section and the background-agents guide.
@@ -39,42 +41,71 @@ A read-only inventory of the machine's run folders on 2026-10-13 found 25 folder
 
 ## Current state
 
-Not yet grounded. `ki-plan` records the current source facts before Ready.
+Grounded on 2026-10-14 at `tools-ki` `b5a669d`, with installed `ki` 0.10.1:
+
+- `src/commands/agent/index.ts` registers `launch`, `queue`, `dispatch`, `status`, `watch`, `wait`, `new` and `decide` on commander and builds an `AgentContext` from the state directory, the harness directory, the working directory, the environment, the launcher, the process adapter and the clock. `decide` takes `--log <path>` and prints `Decision N recorded in <path>`.
+- `src/core/agent/runs.ts` (532 lines) resolves every run file from `runDirectory`, which joins the state directory, `agents` and the run name. `newPrompt` fills the `ki-delegation` skeleton's `<decisions log path>` with the state folder's `decisions.md`. `recordDecision` appends `## Decision N (YYYY-MM-DD)` with the next number and the day; it carries no time of day and no field for a durable home. `composePrompt` tells the agent to write `<name>.report.md` beside its status file in the state folder. `agentState` reads `finished` from a trailing `DONE`, `running` from a live pid and `exited` otherwise; `waitForRun`'s gate already reports `<name> exited without DONE`, so the close gate can reuse `agentState`, `pidOf` and `running`.
+- The state folder is the only home: nothing under `src/core/agent/` knows a repository, a checkpoint or `+/_THREADS/`. `src/core/agent/runtimes.ts` sets the `KI_AGENT_RUN` marker; `src/core/agent/processes.ts` spawns and probes processes. `src/commands/manage/cleanup.ts` reports managed stale state and knows nothing of runs; it stays that way under this record.
+- `src/tests/cli/agent.test.ts` (682 lines) drives every subcommand through `run(args, context)` in a `sandbox()` from `src/tests/cli/_cli_helper.ts`, with a fake process adapter, so a close gate and a tracked home are testable without a live agent or a real repository beyond a temporary directory with `git init`.
+- Documentation naming the run packet: `README.md` lines 123 to 131, the `Background agents` section of `man/ki.1` from line 379, `docs/guides/user/background-agents.md` (Before start, Record authority and write prompt, Launch one agent, Keep queue moving, Check on run, Recover) and the `Pre-1.0 baseline` command surface in `CHANGELOG.md`.
+- `+/_THREADS/` is tracked by default in this repository, the harness and Knowledge Islands Principal: the managed ignore block names only `+/README.md`, `+/_BATCHES`, `+/_CHECKPOINTS` and `+/_TRADES`, so no ignore change is needed.
 
 ## Steps
 
-- [ ] Plan this record under `ki-plan` before Ready, replacing these placeholder sections.
+- [ ] Thread home. At first `launch`, `queue`, `new` or `decide` for a run, resolve the owning repository as the Git top level of the working directory, or of `--repo <dir>` when given, and write `thread.json` in the state folder with the repository path and the folder `+/_THREADS/<run>/`; later commands read it, and a mismatch with an explicit `--repo` is an error. Refuse when the working directory is not inside a Git repository.
+- [ ] Tracked knowledge files. `recordDecision` appends to `<repo>/+/_THREADS/<run>/decisions.md` by default, with `--log` still overriding; each entry becomes `## Decision N (<RFC 3339 UTC seconds>)` and an optional `home: <path or record id>` line from `decide --home`. `newPrompt` fills `<decisions log path>` with the tracked path. `composePrompt` names `<repo>/+/_THREADS/<run>/<name>.report.md` as the report path, and `launch` passes the repository with `--add-dir` so the agent may write it. `status`, `watch` and `wait` keep reading `<name>.status` from the state folder.
+- [ ] `ki agent reconcile <run> <number> <home>`. Writes or replaces the `home:` line of one entry in the tracked log, so decisions taken before this change can be given a home before close.
+- [ ] `ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled]`. Gate, each line printed as `ok` or as a blocker: no agent pid alive; every agent ended `DONE` or is named in `--accept-exited`; `dispatch.pid` not alive and `queue.jsonl` empty or absent; `worktrees/` empty or absent; every entry in the tracked log carries a `home:` whose path exists in the repository and is Git-tracked, or whose identifier matches a roadmap record found through the registry, unless `--reconciled` waives the decision lines; the tracked folder is committed and clean. On any blocker exit 1 and change nothing. On success move the state folder to `$KI_STATE_HOME/agents/_archive/<run>/`, or write `_archive/<run>.tar.gz` with `--compress`, or remove it with `--delete`, and write `close.md` in the archive, or beside the tarball, naming the date, each gate line and each decision's home; with `--reconciled` the note says the owner waived the decision gate.
+- [ ] Tests in `src/tests/cli/agent.test.ts` for: the thread home written at first use and refused outside a repository; `decide` appending to the tracked log with a timestamp and `home:`; `reconcile` replacing a home; the prompt skeleton and composed prompt naming the tracked paths; `close` blocking on each gate line, passing in the sandbox and archiving, compressing and deleting; `--reconciled` recorded in `close.md`.
+- [ ] Documentation: the `README.md` `ki agent` section, `man/ki.1` `Background agents`, `docs/guides/user/background-agents.md` (which files live where, `decide --home`, `reconcile`, `close`) and the `Pre-1.0 baseline` command surface in `CHANGELOG.md`.
+- [ ] Deliver as two Conventional Commits so the harness wording can land between them: `feat(agent): write the decisions log and reports to the tracked thread folder` (thread home, tracked files, timestamps, `--home`, `reconcile`) and `feat(agent): add close with a reconcile gate`.
 
 ## Files touched
 
-Not yet planned.
+- `src/commands/agent/index.ts`
+- `src/core/agent/runs.ts`
+- `src/tests/cli/agent.test.ts`
+- `README.md`
+- `man/ki.1`
+- `docs/guides/user/background-agents.md`
+- `CHANGELOG.md`
 
 ## Verify
 
-Not yet planned.
+- `bun run test` passes with the new `agent.test.ts` cases.
+- `bunx tsc --noEmit` passes.
+- `ki repo audit --skill ki-engineering` and `ki repo audit --skill ki-work-roadmap` report no failure.
+- From a temporary Git repository: `ki agent new t a` fills the skeleton with `+/_THREADS/t/decisions.md`; `ki agent decide t "text" --home docs/x.md` appends an entry with a seconds timestamp and a `home:` line; `ki agent close t` reports the untracked home as a blocker and exits 1; after committing `docs/x.md` and the thread folder, `ki agent close t` prints every line `ok` and `$KI_STATE_HOME/agents/_archive/t/close.md` exists.
+- `ki agent close` against this machine's `ways-of-working` run, taken read-only by omitting any archive flag and expecting blockers, prints a blocker line for each decision without a home and changes nothing.
 
 ## Dependencies / blocks
 
-- The home of the decisions log is settled: Kris chose the tracked `+/_THREADS/<thread>/` folder in the owning repository, so the gate reads the committed log there rather than a file under the state root, and the state folder's own `decisions.md` is a runtime copy at most. The alternative Kris did not take, consolidating each entry of a state-local log into a home at every mark, would have had the gate check that each log entry names a home; with the log in Git the gate still checks that each in-force decision has a durable owner, but the log itself no longer needs rescuing before the folder goes. Durable documentation of the retention rule: [the background-run standard](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/skills/governance/ki-delegation/references/standards-background-runs.md). The report itself is design working material in the [ways-of-working](https://github.com/knowledgeislands/ki-principal/blob/main/Streams/Projects/ways-of-working/ways-of-working.md) Project of Knowledge Islands Principal and is slated for deletion once consolidated, which is why its options are quoted here.
-- `ki-agentic-harness` owns the `ki-delegation` standard and holds the record that rewrites its run-packet table, decisions-log section and run-close rule for the tracked home. If the gate needs a decision entry to carry its home, as proposed below, the standard's Decisions log section and `ki agent decide` change together; the mechanics can land first and the wording follow.
+- `blocked_by` is empty: nothing in this repository is missing. [KI-TOOL-KI-CLI-123](KI-TOOL-KI-CLI-123-agent-run-events.md) touches the same module for events and is independent; whichever lands second rebases.
+- The `ki-delegation` background-run standard in `ki-agentic-harness` is being reworded to name `+/_THREADS/<run>/` as the home of the log and the reports and to describe decisions in the owner's words rather than by number. Kris said of a numbered citation on 2026-10-14: "has no meaning to me because I don't know what the decision was ... and I don't know where the list is." That wording describes what this record builds and can land before or after the first commit here; the second commit, `close`, is only useful once threads write to the tracked folder, which the first commit makes `ki agent` do. Durable documentation: the standard at `skills/governance/ki-delegation/references/standards-background-runs.md` in the harness.
+- Knowledge Islands Principal's sweep of the existing run folders waits for `close`; Kris queued it "after durability: ki agent close with reconcile gate, plus sweep of existing run folders." This record does not perform that sweep.
+- The installed `ki` must be released or linked from this change before any thread uses the tracked home mechanically; until then threads copy by hand as the standard will say.
+
+## Delegation
+
+One detached background agent under `ki-delegation` in a worktree under its run folder, briefed with this record, the standard's new wording when it has landed, and `ki-engineering`. Deliverable: the two commits above, each passing the Verify gates, pushed fast-forward under the thread's standing push permission, with the temporary-repository transcript in its report. Gate between rounds: the `ways-of-working` thread reads the first commit's report before the agent starts `close`, because the tracked home shape is what the gate reads. Kris accepts through `ki-accept`.
 
 ## Documentation impact
 
 ### Decision Records
 
-Not yet assessed.
+None. The retention rule and the tracked home are owned by the `ki-delegation` standard; this record mechanises them.
 
 ### Specifications
 
-Not yet assessed.
+None. `tools-ki` publishes its command surface in the changelog baseline and the man page, both updated here.
 
 ### Guides
 
-Not yet assessed.
+`docs/guides/user/background-agents.md` gains the tracked home, `decide --home`, `reconcile` and `close`; `README.md` and `man/ki.1` name the new subcommands and options.
 
 ### Roadmap
 
-Not yet assessed.
+No follow-on record. A `ki cleanup` listing of closable runs is noted in Discussion and not opened, under the standing instruction to create no new feature records.
 
 ## Discussion
 
@@ -111,11 +142,17 @@ When the gate fails the command exits non-zero and prints one line per blocker: 
 
 ### Open questions
 
-- How a run names its owning repository and thread, so that `ki agent launch` knows where `+/_THREADS/<thread>/` is: a `--thread <repo>:<name>` option, the checkout the launch runs from, or the checkpoint that opened the thread.
-- Whether `ki agent` commits the tracked log and report itself at each decision and report, or leaves committing to the coordinating thread, which the standard says commits at each mark, when a report lands and before close.
-- Whether the checkpoint check belongs in the gate at all, since master `_state-of-play.md` checkpoints mention many run names in passing; a match on the thread checkpoint's own name may be the only reliable signal.
-- Whether `ki cleanup` should list runs that would pass the gate, so the owner sees closable runs without trying each.
-- Whether `ki agent decide --home` lands ahead of `close`, so that decisions taken from now on carry a home and the sweep's reconcile step has somewhere to write.
+Settled at planning on 2026-10-14:
+
+- The owning repository is the Git top level of the checkout the first `ki agent` command for the run is issued from, or `--repo <dir>`, recorded in the state folder's `thread.json`; the thread folder takes the run's name. A `--thread <repo>:<name>` form is not needed, since the coordinating thread launches from its own checkout.
+- `ki agent` writes the tracked files and never commits them; the coordinating thread commits at each mark, when a report lands and before close, as the standard says, and the close gate refuses a dirty or uncommitted thread folder. `ki agent` runs no Git write operation today and this record keeps that property.
+- The checkpoint check is not in the gate: master checkpoints mention run names in passing, so the signal is unreliable. The committed-and-clean check on the thread folder, and the owner's act of running `close`, stand in for it.
+- `ki cleanup` does not list closable runs under this record; the idea is kept here and opens no record.
+- `decide --home` and `reconcile` land in the first commit, ahead of `close`, so decisions taken from then on carry a home and the sweep has somewhere to write.
+
+Still open, for Kris:
+
+- None.
 
 ### Adoption
 
