@@ -10,7 +10,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-14T23:40:00Z
-updated_at: 2026-10-14T23:45:00Z
+updated_at: 2026-10-14T23:45:01Z
 ---
 
 # Retired Reports Come Back
@@ -32,7 +32,7 @@ Observed on 14 October 2026 by the techne thread, which coordinates the agent-ho
 
 ## Current state
 
-**Source, as read at `0fcc593`.** The only code that copies state-folder reports into the thread folder is `adoptStateFiles` in `src/core/agent/thread.ts`, added by `0fcc593` under [KI-TOOL-KI-CLI-132](KI-TOOL-KI-CLI-132-launcher-only-thread-writer.md). It lists the state folder's `decisions.md` and every `*.report.md`, skips a file only when `stat` finds the target already present in the thread folder, and otherwise copies it in and removes the state copy. A report the thread has deleted is therefore indistinguishable from one never copied, so it is copied again. Callers:
+**Source, as read at `0fcc593`.** The only code that copies state-folder reports into the thread folder is `adoptStateFiles` in `src/core/agent/thread.ts`, added by `0fcc593` under [KI-TOOL-KI-CLI-132](https://github.com/knowledgeislands/tools-ki/blob/c57d01e59fdf19d4fa42e53c7acef239b715faaf/docs/roadmap/KI-TOOL-KI-CLI-132-launcher-only-thread-writer.md). It lists the state folder's `decisions.md` and every `*.report.md`, skips a file only when `stat` finds the target already present in the thread folder, and otherwise copies it in and removes the state copy. A report the thread has deleted is therefore indistinguishable from one never copied, so it is copied again. Callers:
 
 - `appendDecision` in `src/core/agent/thread.ts`, which serves `ki agent decide`;
 - `gateLines` in `src/core/agent/close.ts`, which serves `ki agent close`.
@@ -65,7 +65,7 @@ To be confirmed at planning; expected to be `src/core/agent/thread.ts`, `src/cor
 
 ## Dependencies / blocks
 
-None. It amends behaviour delivered by [KI-TOOL-KI-CLI-132](KI-TOOL-KI-CLI-132-launcher-only-thread-writer.md), which is awaiting review.
+None. It amends behaviour delivered by [KI-TOOL-KI-CLI-132](https://github.com/knowledgeislands/tools-ki/blob/c57d01e59fdf19d4fa42e53c7acef239b715faaf/docs/roadmap/KI-TOOL-KI-CLI-132-launcher-only-thread-writer.md), accepted done and pruned.
 
 ## Documentation impact
 
