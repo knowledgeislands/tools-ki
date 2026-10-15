@@ -7,12 +7,12 @@ purpose: corrective
 kind: deliver
 component: repo
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: [KI-TOOL-KI-CLI-131]
 blocked_by: []
 baseline_ref: 5658f8766f81a24639cf205d80ad7cd9b7d0c147
 created_at: 2026-10-14T08:58:13Z
-updated_at: 2026-10-14T22:39:30Z
+updated_at: 2026-10-15T21:36:52Z
 ---
 
 # Unavailable Store Breaks Repair
@@ -53,7 +53,7 @@ Observed at `43da380`:
 - [x] Replace the failing-case assertion in `repair.test.ts` with contract tests through `run(args, context)`: an unbound `sources` role with a registry entry warns and passes, with skills projected; a bound path that no longer exists warns and passes; a Knowledge Base with no registry entry is registered and warns; `--dry-run` reports the registration without writing; the bound case keeps "Registry: complete"; an invalid registry still fails.
 - [x] Add a contract test that replays the CI sequence in one sandbox without network: `ki bootstrap`, `ki registry add --repo .`, `ki repo repair --repo .` and `ki repo audit --repo .` against a store-declaring Knowledge Base fixture, asserting that repair exits 0 with the warning and that the audit runs and returns its own verdict.
 - [x] Make the documentation changes listed under Documentation impact.
-- [ ] Run the repository checks and the Verify below.
+- [x] Run the repository checks and the Verify below.
 
 ## Files touched
 
@@ -91,6 +91,36 @@ None.
 
 [KI-TOOL-KI-CLI-131](KI-TOOL-KI-CLI-131-host-absent-store-state.md) holds the remainder of the original boundary.
 
+## Review
+
+### Delivered
+
+Two commits on `main` from baseline `5658f87`: `726243d`, `fix(repo): warn on an unavailable declared store instead of failing repair`, with the code, tests and changelog, and `7eb3000`, `chore(deps): adopt patch-level dev-tool updates`, which clears the unrelated `DEPS-1` failure that held Verify 2.
+
+### Change Summary
+
+`ki repo repair` registers a store-declaring Knowledge Base like any other repository, reports each unbound or missing declared store as a `! Store:` warning, still projects its skills, and passes when nothing else is wrong; an invalid registry still fails. Contract tests through `run(args, context)` cover the unbound, missing-path, unregistered, dry-run and bound cases, and one test replays the CI sequence `bootstrap`, `registry add`, `repair`, `audit` in one sandbox.
+
+### Verification
+
+- Verify 1, at `7eb3000` with `@biomejs/biome` 2.5.15, `@vitest/coverage-v8` 5.0.3, `knip` 6.39.0 and `vitest` 5.0.3: both frozen installs pass; `bun run test:coverage` passes 1189 tests at the 100% thresholds; `bunx tsc --noEmit`, `bunx biome check .` (warnings and infos only), `bunx knip` and `mandoc -T lint man/ki.1` are clean.
+- Verify 2: `ki repo audit --repo .` on tools-ki passes with FAIL=0 and two unrelated warnings, `ki-engineering` `CI-1` and `ki-repo` `HOOK-1`.
+- Verify 3: passed at `726243d` against ki-principal in a throwaway home and XDG sandbox; repair exited 0 with the `sources` warning and 44 skill links, `ki diag` showed "Registry: valid", and `ki repo audit` ran to its own verdict.
+- Verify 4 belongs to acceptance, after the release and ki-principal's pin bump.
+
+### Outstanding concerns
+
+- Verify 4 depends on the tools-ki release and ki-principal's `.github/ki-version` bump.
+- `knip` 6.39.0 prints four configuration hints suggesting ignore entries in `knip.json` are now unnecessary; it still exits 0.
+
+### Post-change review
+
+Awaiting Kris's review through `ki-accept`.
+
+### Mini recap
+
+Repair now warns rather than fails on an unavailable declared store, so ki-principal's CI can reach its audit step once the release is pinned. No learning route proposed.
+
 ## Discussion
 
 Capture was under Kris Brown's approval of 14 October 2026 to record this defect. Adoption into Now, Project `ways-of-working`, and planning to Ready were under the CI-STORE decision quoted in Context.
@@ -102,3 +132,5 @@ One implementer in this repository is enough; the change is a single command and
 Implementation began on 2026-10-14 under Kris Brown's CLI126-DELIVER decision in the `ways-of-working` thread: "implement KI-TOOL-KI-CLI-126 to awaiting review, release tools-ki, bump ki-principal's .github/ki-version, and confirm ki-principal CI reaches the audit step". The code, tests and changelog are delivered from baseline `5658f87`. `bun run test:coverage` passes 1189 tests at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip` and `mandoc -T lint man/ki.1` are clean, and the local CI reproduction against ki-principal in Verify 3 passes, with repair exiting 0 and the audit running to its own verdict. Repair no longer checks registry validity up front: an invalid registry lists no entries, and writing the registration proposal reports it as invalid with the unchanged message. `man/ki.1` and `README.md` did not describe repair's store handling, so they are unchanged.
 
 The record stays `in-progress` because Verify 2 fails: `ki repo audit --repo .` on tools-ki reports one `ki-engineering` `DEPS-1` failure, unrelated to this change, because `@biomejs/biome` 2.5.15, `@vitest/coverage-v8` 5.0.3, `knip` 6.39.0 and `vitest` 5.0.3 have now passed the 14-day adoption window. Adopting them is a package install, which the run's brief forbids, and a `dependency_holds` entry is an owner decision, so the record waits for one of those.
+
+The hold cleared under Kris Brown's DEPS-HOLD decision of 15 October 2026: "Authorise a run to adopt the four patch-level dev-tool updates (@biomejs/biome 2.5.15, @vitest/coverage-v8 5.0.3, knip 6.39.0, vitest 5.0.3) in tools-ki in its own chore(deps) commit, re-run every gate, move KI-TOOL-KI-CLI-126 to awaiting review, cut the patch release carrying it and KI-TOOL-KI-CLI-132, bump ki-principal's .github/ki-version and watch CI to the audit step".
