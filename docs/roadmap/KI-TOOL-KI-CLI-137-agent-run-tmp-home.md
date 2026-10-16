@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-15T21:48:02Z
-updated_at: 2026-10-16T01:15:23Z
+updated_at: 2026-10-16T01:22:13Z
 ---
 
 # Agent Run Temporary Home
@@ -38,37 +38,63 @@ What `ki` does today, observed at `86adda02`:
 
 ## Current state
 
-Adopted to `next` as a draft on 16 October 2026 and not yet planned; `ki-plan` records the current state before this record becomes Ready.
+Read at `bb446bb0` on 16 October 2026; the Context above still holds.
+
+- `launchAgent` (`src/core/agent/runs.ts:260`) creates only the thread folder and writes the packet; `composePrompt` (`runs.ts:166`) names the status and report paths and no temporary folder. Each agent's working directory is recorded in `<name>.launch.json` (`workdir`).
+- `closeRun` (`src/core/agent/close.ts:199`) gates, then archives, compresses or deletes the state folder; it touches no working checkout.
+- **Conflicting owner rule.** After this record was captured, Kris decided on 16 October 2026, in the 5G Emerge Phase 3 thread, that "screenshots and other scratch output go in the system temp folder, never in a thread folder or repository", captured on `ki-agentic-harness` `origin/main` as KI-HARNESS-GOV-196 (`docs/roadmap/KI-HARNESS-GOV-196-scratch-output-in-temp.md`) (triage, not yet in the local harness checkout). That contradicts THREADS-TMP-HOME's `<primary checkout>/tmp/<run>/<name>/` "in the repository the agent works in". The path this record creates cannot be fixed until Kris reconciles the two.
+- **Pair record.** The paired harness record exists only as an unpushed local commit in `ki-agentic-harness` under the identifier KI-HARNESS-GOV-195 (`f0f62c02`, `c068e4be`), and `origin/main` has already used KI-HARNESS-GOV-195 for a different record (Granola workflow). The pair's identifier will change when that session reconciles; this record names it by subject until then.
+
+## Decision
+
+Settled now, whichever location Kris chooses:
+
+1. **One folder per agent**, `<temp root>/<run>/<name>/`, created at launch and named in the composed prompt beside the report path, in one sentence of the progress protocol.
+2. **Close removes** each agent's folder after the gate passes, reporting each path removed; it never removes a folder that holds a Git-tracked file (only possible under a repository root) and reports that as a line, not a blocker.
+3. **Linked worktrees** resolve to the primary checkout through `git rev-parse --git-common-dir`, if the root is a repository's `tmp/`.
+
+Waiting on Kris (see Dependencies): the temp root. Option a) keeps THREADS-TMP-HOME, `<primary checkout>/tmp/`, with a launch warning when `tmp/` is not ignored. Option b) follows the 16 October rule, `$TMPDIR/ki-agents/` (as KI-HARNESS-GOV-196's Discussion suggests), which needs no ignore check and leaves every repository untouched.
 
 ## Steps
 
-- [ ] Shape this record through `ki-plan`; no delivery step is planned yet.
+- [ ] Resolve the temp root per Kris's answer in one helper in `src/core/agent/context.ts` (`agentTempDirectory(context, request, thread)`), injected through `AgentContext` for tests.
+- [ ] `launchAgent`: create the folder (recursive), pass its absolute path into `composePrompt`, and add it to the agent's writable directories; for option a), warn when `git check-ignore -q tmp/` fails in that checkout.
+- [ ] `composePrompt`: name the folder in the progress protocol ("Temporary output goes in <path>; it is removed when the run closes").
+- [ ] `closeRun`: after the gate passes and before archiving, remove each agent folder recorded in the run's `<name>.launch.json` files, skipping any that holds a tracked file, and add one line per path to the close output and close note.
+- [ ] Contract tests in `src/tests/cli/agent.test.ts` (see Verify).
+- [ ] `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
 
 ## Files touched
 
-Not yet determined.
+`src/core/agent/context.ts`, `runs.ts`, `close.ts`; `src/tests/cli/agent.test.ts`; `README.md`; `man/ki.1`; `man/ki.commands.json`; `docs/guides/user/background-agents.md`; `CHANGELOG.md`.
 
 ## Verify
 
-Not yet set. The plan names the exact gates; at minimum the repository test suite through `run(args, context)` and the `ki-engineering` audit.
+1. Launch creates `<temp root>/<run>/<name>/`, the composed prompt names it, and the runtime's writable directories include it.
+2. A run launched from a linked worktree resolves to the primary checkout's root (option a only).
+3. Option a): launch warns, and still launches, when `tmp/` is not ignored.
+4. Close after a passing gate removes both agents' folders and lists them in its output and close note; a folder holding a tracked file is left and reported; a failing gate removes nothing.
+5. `bun run test:coverage` at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` clean.
 
 ## Dependencies / blocks
 
-Not blocked for planning. Pairs with the ki-agentic-harness THREADS-TELL record, whose run-prompt footer line should name the same path; the harness wording can land first, since the path is fixed by the owner decision.
+- **Blocked on Kris (TMP-HOME):** THREADS-TMP-HOME (15 October) and the system-temp rule behind KI-HARNESS-GOV-196 (16 October) disagree on the temp root. Set Ready once the root is chosen; the Steps above need only the helper's body filled in.
+- Pairs with the harness thread-folder record (local KI-HARNESS-GOV-195, to be renumbered) and with KI-HARNESS-GOV-196 (`docs/roadmap/KI-HARNESS-GOV-196-scratch-output-in-temp.md`); their run-prompt wording should name the same root. Neither is a `blocked_by`.
+- Shares `src/core/agent/runs.ts` with [KI-TOOL-KI-CLI-135](KI-TOOL-KI-CLI-135-reused-agent-name-overwrites.md) (deliver first) and [KI-TOOL-KI-CLI-134](KI-TOOL-KI-CLI-134-launch-footer-follows-brief.md).
 
 ## Documentation impact
 
 ### Decision Records
 
-Not yet assessed.
+None in `tools-ki`; the location rule is owned by the harness `ki-delegation` standard.
 
 ### Specifications
 
-Not yet assessed.
+None.
 
 ### Guides
 
-Not yet assessed.
+`README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`: the temporary folder and its removal at close.
 
 ### Roadmap
 
@@ -79,3 +105,5 @@ None.
 Capture only, on Kris Brown's explicit request in THREADS-TELL; adoption, priority and plan belong to this repository. Questions for planning: whether close removes the folder unconditionally or only when it holds nothing tracked; and whether launch should resolve the primary checkout from the workdir's Git common directory, so that a run in a linked worktree still writes to the primary checkout's `tmp/`.
 
 Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, on Kris Brown's TRIAGE-ADOPT answer (option a) as applied in the tools-burndown thread's BURN-OVERNIGHT decision.
+
+Planned on 16 October 2026 in the tools-burndown thread as far as the open owner question allows: the Decision settles both planning questions above (close removes only a folder holding nothing tracked; launch resolves the primary checkout through the Git common directory) and leaves the temp root to Kris, because THREADS-TMP-HOME and the 16 October system-temp rule disagree. It stays draft until Kris chooses the root.
