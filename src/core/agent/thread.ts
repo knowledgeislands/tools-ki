@@ -239,6 +239,62 @@ export interface DecisionRequest {
   readonly repo?: string | undefined
 }
 
+const bareLetter = /^([a-z])\)?$/
+const taggedLetter = /^([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*) [-–—] ([a-z])\)?$/
+
+/** The `<letter>) <wording>` options of the query under `tag` in a report's `## Queries`, or undefined without it. */
+const queryOptions = (report: string, tag: string): Map<string, string> | undefined => {
+  let section = ''
+  let options: Map<string, string> | undefined
+  let listing = false
+  for (const line of report.split('\n')) {
+    const heading = /^(#+)\s+(.*?)\s*$/.exec(line)
+    if (heading?.[1] === '##') section = (heading[2] as string).toLowerCase()
+    if (heading) {
+      if (options) return options
+      if (section === 'queries' && heading[1] !== '##' && (heading[2] as string).startsWith(`${tag} `))
+        options = new Map()
+      listing = false
+    } else if (options && line.startsWith('**Options')) listing = true
+    else if (options && listing) {
+      const option = /^(?:[-*] )?([a-z])\) (.+)$/.exec(line.trim())
+      if (option) options.set(option[1] as string, (option[2] as string).replace(/\s*\(recommended\)\s*/, ' ').trim())
+    }
+  }
+  return options
+}
+
+/**
+ * The entry text and `source:` of a decision given as `<TAG> - <letter>`: the option's wording
+ * from the newest report in the thread folder carrying that query. Other text passes as it is.
+ */
+const resolveLetter = async (
+  context: AgentContext,
+  run: string,
+  text: string
+): Promise<{ readonly text: string; readonly source?: string }> => {
+  if (bareLetter.test(text))
+    throw new KiError(`'${text}' is a bare option letter; give its query tag, as '<TAG> - ${text.charAt(0)}'`, 2)
+  const match = taggedLetter.exec(text)
+  if (!match) return { text }
+  const [, tag, letter] = match as unknown as [string, string, string]
+  const thread = await readThread(context, run)
+  const folder = thread && threadPath(thread)
+  const reports: { readonly file: string; readonly at: number }[] = []
+  for (const file of folder ? await readdir(folder).catch(() => [] as string[]) : [])
+    if (file.endsWith('.report.md')) reports.push({ file, at: (await stat(join(folder as string, file))).mtimeMs })
+  reports.sort((left, right) => right.at - left.at)
+  for (const { file } of reports) {
+    const options = queryOptions((await read(join(folder as string, file))) as string, tag)
+    if (options === undefined) continue
+    const source = join((thread as ThreadHome).folder, file)
+    const wording = options.get(letter)
+    if (wording === undefined) throw new KiError(`${source} has no option ${letter}) under ${tag}`, 1)
+    return { text: `${letter}) ${wording}`, source }
+  }
+  throw new KiError(`no report in the thread folder of ${run} carries a ${tag} query`, 1)
+}
+
 /**
  * Appends a numbered, timestamped owner decision; returns its number, the log written and
  * the state-folder files moved into the thread folder first, so that a run's tracked log
@@ -251,6 +307,7 @@ export const appendDecision = async (
 ): Promise<{ readonly number: number; readonly path: string; readonly adopted: readonly string[] }> => {
   if (!request.text.trim()) throw new KiError('a decision needs text', 2)
   if (request.home !== undefined && !request.home.trim()) throw new KiError('a home needs a path or identifier', 2)
+  const answer = await resolveLetter(context, run, request.text.trim())
   let adopted: readonly string[] = []
   let path: string
   if (request.log === undefined) {
@@ -266,11 +323,12 @@ export const appendDecision = async (
   }
   const fields = [
     ...(request.home === undefined ? [] : [`home: ${request.home.trim()}\n`]),
-    ...(request.class === undefined ? [] : [`class: ${request.class}\n`])
+    ...(request.class === undefined ? [] : [`class: ${request.class}\n`]),
+    ...(answer.source === undefined ? [] : [`source: ${answer.source}\n`])
   ].join('')
   await appendFile(
     path,
-    `\n## Decision ${number} (${instant(context)})\n\n${fields}${fields ? '\n' : ''}- ${request.text.trim()}\n`
+    `\n## Decision ${number} (${instant(context)})\n\n${fields}${fields ? '\n' : ''}- ${answer.text}\n`
   )
   return { number, path, adopted }
 }

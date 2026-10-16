@@ -1726,6 +1726,17 @@ a run predating the tracked home kept in its state folder into the thread
 folder, where no copy exists and Git has never held one, and names them, so
 the tracked log continues the old numbering and a report the thread has
 retired stays retired.
+.I "<TAG> - <letter>"
+text, an owner's bare option letter, is logged as that option's
+.I "<letter>) <wording>"
+from the newest
+.I *.report.md
+in the thread folder carrying a
+.I <TAG>
+query, with a
+.I source:
+line naming that report; a letter with no tag, a tag no report carries, or
+a letter that report lacks is refused and nothing is written.
 .B --home
 names where the decision now lives durably: a committed path, optionally
 with a

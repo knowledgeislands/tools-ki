@@ -105,12 +105,12 @@ These settle the open questions below.
 - [x] **`ki agent send`.** Document `send` and the inbox in the guide, `README.md`, `man/ki.1` and `CHANGELOG.md`, and name the inbox file in the state folder's file list.
 - [x] **`KI_AGENT_RUN` on the Codex launcher.** Launch already asserts the marker for both runtimes (`src/tests/cli/agent.test.ts:103` and `:136`); add the missing assertion for a Codex agent started by `dispatch` from the queue, so a later adapter change cannot drop it on either path.
 - [x] **`KI_AGENT_RUN` on the Codex launcher.** Say in the guide that every launched agent, Claude or Codex, carries the marker, so the harness can drop the Codex terminal check in its hook.
-- [ ] **Bare-letter resolution.** In `decide`, detect a decision whose text after `<TAG> -` is one letter `a` to `z`, optionally followed by `)`; anything longer is logged as today.
-- [ ] **Bare-letter resolution.** Resolve the run's thread folder through `readThread`, list its `*.report.md` files newest first by modification time, and take the first whose `## Queries` section has a heading beginning with the tag; parse that query's **Options** lines, `<letter>)` with or without `(recommended)`, into letter and wording.
-- [ ] **Bare-letter resolution.** Write the entry's text as `<letter>) <wording>`, with the wording's `(recommended)` marker stripped, and a `source:` line naming the report file, beside `home:` and `class:`.
-- [ ] **Bare-letter resolution.** Refuse with a one-line reason and a non-zero exit when the decision carries no tag, no report under the thread folder carries the tag, or the latest such report has no option with that letter; write nothing in any of those cases.
-- [ ] **Bare-letter resolution.** Tests through `run(args, context)` and `sandbox()` with a thread folder holding two reports carrying the same tag: a letter resolved from the newer report, a letter the newer report lacks, a tag no report carries, a decision with no tag, and a plain decision logged unchanged.
-- [ ] **Bare-letter resolution.** Document the letter form in the background-agents guide beside the reply block, `README.md`, `man/ki.1` and `CHANGELOG.md`.
+- [x] **Bare-letter resolution.** In `decide`, detect a decision whose text after `<TAG> -` is one letter `a` to `z`, optionally followed by `)`; anything longer is logged as today.
+- [x] **Bare-letter resolution.** Resolve the run's thread folder through `readThread`, list its `*.report.md` files newest first by modification time, and take the first whose `## Queries` section has a heading beginning with the tag; parse that query's **Options** lines, `<letter>)` with or without `(recommended)`, into letter and wording.
+- [x] **Bare-letter resolution.** Write the entry's text as `<letter>) <wording>`, with the wording's `(recommended)` marker stripped, and a `source:` line naming the report file, beside `home:` and `class:`.
+- [x] **Bare-letter resolution.** Refuse with a one-line reason and a non-zero exit when the decision carries no tag, no report under the thread folder carries the tag, or the latest such report has no option with that letter; write nothing in any of those cases.
+- [x] **Bare-letter resolution.** Tests through `run(args, context)` and `sandbox()` with a thread folder holding two reports carrying the same tag: a letter resolved from the newer report, a letter the newer report lacks, a tag no report carries, a decision with no tag, and a plain decision logged unchanged.
+- [x] **Bare-letter resolution.** Document the letter form in the background-agents guide beside the reply block, `README.md`, `man/ki.1` and `CHANGELOG.md`.
 
 ## Files touched
 

@@ -1,4 +1,4 @@
-import { realpath } from 'node:fs/promises'
+import { realpath, utimes } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import { runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
 
@@ -142,5 +142,101 @@ describe('ki agent send', () => {
       "ki: error: no run has its thread in this directory's repository; name the sender with --from <run>\n"
     )
     expect(await box.state.read('ki/agents/live/inbox.md').catch(() => 'absent')).toBe('absent')
+  })
+})
+
+describe('ki agent decide with a bare option letter', () => {
+  const report = async (box: Sandbox, name: string, body: string, day: number): Promise<void> => {
+    await box.project.write(`+/_THREADS/r/${name}`, body)
+    const at = new Date(`2026-10-0${day}T12:00:00Z`)
+    await utimes(`${box.project.path}/+/_THREADS/r/${name}`, at, at)
+  }
+
+  test('logs the option wording from the newest report carrying the tag, naming it in source:', async () => {
+    const box = await sandbox()
+    await box.project.git(['init', '-q'])
+    box.setRunner(runCommand)
+    await box.run('ki agent decide r PROBE - ship it as planned', { now })
+    await report(
+      box,
+      'older.report.md',
+      '## Queries\n\n### PROBE - Pick\n\n**Options:**\n\na) Old.\nb) Old.\nc) Old.\n',
+      1
+    )
+    await report(
+      box,
+      'newer.report.md',
+      [
+        '# Report',
+        '## Done',
+        '### PROBE - not a query',
+        '## Queries',
+        '### OTHER - Else',
+        '**Options:**',
+        'a) Other.',
+        '### PROBE - Pick one',
+        '**Context:** a) not an option.',
+        'a) Nor this.',
+        '**Options:**',
+        'a) (recommended) Ship it now.',
+        '- b) Hold it.',
+        '### NEXT - Later',
+        '**Options:**',
+        'c) Stray.',
+        ''
+      ].join('\n\n'),
+      2
+    )
+    await report(box, 'none.report.md', '## Queries\n\n### ELSE - Nothing\n', 3)
+    await box.project.write('+/_THREADS/r/notes.md', '## Queries\n\n### PROBE - Pick\n')
+
+    expect((await box.run('ki agent decide r PROBE - a', { now })).exitCode).toBe(0)
+    await box.run(['ki', 'agent', 'decide', 'r', 'PROBE — b)', '--home', 'docs/x.md', '--class', 'operational'], {
+      now
+    })
+    const log = await box.project.read('+/_THREADS/r/decisions.md')
+    expect(log).toBe(
+      [
+        '# Decisions',
+        '',
+        '## Decision 1 (2026-10-07T19:30:00Z)',
+        '',
+        '- PROBE - ship it as planned',
+        '',
+        '## Decision 2 (2026-10-07T19:30:00Z)',
+        '',
+        'source: +/_THREADS/r/newer.report.md',
+        '',
+        '- a) Ship it now.',
+        '',
+        '## Decision 3 (2026-10-07T19:30:00Z)',
+        '',
+        'home: docs/x.md',
+        'class: operational',
+        'source: +/_THREADS/r/newer.report.md',
+        '',
+        '- b) Hold it.',
+        ''
+      ].join('\n')
+    )
+
+    const missing = await box.run('ki agent decide r PROBE - c', { now })
+    expect(missing.exitCode).toBe(1)
+    expect(missing.stderr).toBe('ki: error: +/_THREADS/r/newer.report.md has no option c) under PROBE\n')
+    const untagged = await box.run('ki agent decide r NOWHERE - b', { now })
+    expect(untagged.exitCode).toBe(1)
+    expect(untagged.stderr).toBe('ki: error: no report in the thread folder of r carries a NOWHERE query\n')
+    const bare = await box.run('ki agent decide r b)', { now })
+    expect(bare.exitCode).toBe(2)
+    expect(bare.stderr).toBe("ki: error: 'b)' is a bare option letter; give its query tag, as '<TAG> - b'\n")
+    expect((await box.run('ki agent decide fresh PROBE - a --log elsewhere.md', { now })).stderr).toBe(
+      'ki: error: no report in the thread folder of fresh carries a PROBE query\n'
+    )
+    await box.state.write('ki/agents/moved/thread.json', '{"repository":"/nowhere","folder":"+/_THREADS/moved"}\n')
+    expect((await box.run('ki agent decide moved PROBE - a', { now })).stderr).toBe(
+      'ki: error: no report in the thread folder of moved carries a PROBE query\n'
+    )
+    expect(await box.project.read('+/_THREADS/r/decisions.md')).toBe(log)
+    expect(await box.project.read('elsewhere.md').catch(() => 'absent')).toBe('absent')
   })
 })
