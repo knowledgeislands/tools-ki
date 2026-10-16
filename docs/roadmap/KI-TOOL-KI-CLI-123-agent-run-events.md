@@ -6,12 +6,12 @@ project: ways-of-working
 component: agent
 kind: deliver
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-13T13:53:24Z
-updated_at: 2026-10-13T21:14:24Z
+updated_at: 2026-10-16T01:24:28Z
 ---
 
 # Agent Run Events
@@ -44,38 +44,68 @@ The run that produced the strategy also showed that the waiter's order is wrong.
 
 ## Current state
 
-Adopted to `next` as a draft and not yet planned. The run packet carries a status file, a log, a report and `DONE` per agent and `wait --next` marks agents seen by name; there is no events log, and `waitForRun` in `src/core/agent/runs.ts` returns the first unseen finished agent in name order. `ki-plan` shapes the plan below before this record becomes Ready.
+Read at `a57617f0` on 16 October 2026.
+
+- `waitForRun` (`src/core/agent/runs.ts:491`) still loops over `agents(directory)` in name order and returns the first unseen agent that is not running, appending its name to the run's `seen` file; the ordering defect in the Context is unchanged. `watchRun` (`runs.ts:365`) prints one `summary` line per interval and ends `ALL FINISHED`. There is no `events.jsonl`.
+- The launcher's progress protocol (`composePrompt`, `runs.ts:166`) asks for `HH:MM <zone> - what you are doing` and `DONE`; it has no milestone, blocked or failed form.
+- **The owner report changed shape again on 14 October 2026.** The `ki-pmo` owner-report standard (`ki-agentic-harness` `origin/main`) now has `## Done`, `## In Progress` and `## Queries`, each query headed `### <TAG> - <title>` with **Context**, **Query** and **Options**, and a reply block reading `No reply needed.` when there are none; reports written before then keep `## Outstanding queries` with `<TAG> - <title>` headings, and readers accept both. Material failures sit in prose under `## Done`, so a report gives no parseable failure signal.
+- [KI-HARNESS-GOV-175](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/KI-HARNESS-GOV-175-delegation-run-events.md) is still a draft waiting for this record, as Kris ordered ("tools-ki first").
+
+## Decision
+
+1. **Derived on observation, under a lock.** Launch, hold and gate-closed events are appended by the launcher when they happen. Everything else is derived by one `deriveEvents(directory)` that `wait`, `watch` and `status` call before reading: it compares each agent's status file, pid and report with a snapshot in `events.state.json` and appends what changed. An exclusive `events.lock` (created with `wx`, removed after, stale after 30 seconds) keeps two observers from appending twice. No daemon is added.
+2. **Order.** The sequence is the line number in `events.jsonl`. Events found in one derivation pass are appended in the order of the source file's modification time, then name, so a pass that finds three finishes records them in the order they finished.
+3. **Fixed status-line forms.** Besides `milestone:`, the protocol offers `HH:MM TZ - blocked: <text>` and `HH:MM TZ - failed: <text>`. `blocked` and `failed` come only from these forms, from a gate, or from an exit without `DONE`; free text is never parsed, which settles the second open question. `done` needs `DONE` and the report; `DONE` with no report is `failed` ("no report").
+4. **`needs-owner`** comes from `### <TAG> - <title>` headings under `## Queries`, and from `<TAG> - <title>` headings under `## Outstanding queries` in older reports. The key is agent, tag and title, so a changed title emits a new event and an unchanged one never repeats.
+5. **Seen cursor.** `wait --next` stores the last returned sequence number in `events.seen` and returns the next event of kind `done`, `failed`, `blocked` or `needs-owner`, or `all finished`. `progress`, `launch` and `held` stay visible in `watch` and the log. The per-run cursor stays and a passed cursor for two coordinators is out of scope, which settles the third open question. The old name-keyed `seen` file is no longer read: a run in flight at upgrade returns its earlier finishes once more, with no compatibility path.
+6. **`watch`** prints each new event on its own line, `HH:MM TZ | <agent> <kind>: <text>`, before that interval's status line, and still ends `ALL FINISHED`, which settles the first open question.
+7. **Relaunch.** Each event carries `attempt`, which is one more than the agent's `<name>.prev-<n>` folders from [KI-TOOL-KI-CLI-135](KI-TOOL-KI-CLI-135-reused-agent-name-overwrites.md), or 1 before that lands. The snapshot resets per attempt, so a relaunch starts a new sequence of its own events.
+8. **Event shape.** One JSON object per line: `{"seq", "at", "run", "agent", "attempt", "kind", "text"}`, plus `tag` for `needs-owner`; `at` is UTC ISO. It carries only what the packet already holds, and no report body beyond a heading.
 
 ## Steps
 
-- [ ] Shape this record through `ki-plan` against requirements 1 to 5; no delivery step is planned yet.
+- [ ] Add `src/core/agent/events.ts` with the `RunEvent` type, `appendEvent`, the lock, `deriveEvents` (Decisions 1 to 4, 7 and 8), report heading parsing for both shapes, and `readEvents(directory, after)`.
+- [ ] `runs.ts`: append `launch` in `launchAgent`, `held` when a launch is held, and `blocked` when a gate closes; add the milestone, blocked and failed forms to `composePrompt`'s protocol.
+- [ ] Rewrite `waitForRun` over `deriveEvents` and the `events.seen` cursor (Decision 5); `wait` without `--next` still waits for the whole run.
+- [ ] Rewrite `watchRun` to print new events before each interval's line (Decision 6); call `deriveEvents` in `runStatus`.
+- [ ] `src/commands/agent/index.ts`: update the `wait --next` and `watch` descriptions.
+- [ ] Contract tests in `src/tests/cli/agent.test.ts` (see Verify); add `src/tests/cli/agent-events.test.ts` if the file grows past the repository's size norm.
+- [ ] `README.md` `ki agent` section, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
 
 ## Files touched
 
-Not yet determined. The plan is expected to name `src/core/agent/runs.ts`, the `ki agent` command surface, their tests and the README's `ki agent` section.
+`src/core/agent/events.ts` (new), `runs.ts`; `src/commands/agent/index.ts`; `src/tests/cli/agent.test.ts` (and possibly `agent-events.test.ts`); `README.md`; `man/ki.1`; `man/ki.commands.json`; `docs/guides/user/background-agents.md`; `CHANGELOG.md`.
 
 ## Verify
 
-Not yet set. The plan names the exact gates; at minimum the repository test suite and the `ki-engineering` audit.
+1. **Order regression (the 13 October defect):** with agents `merge`, `notify` and `review-astra` finishing in the order `notify`, `review-astra`, `merge` (status files with ascending modification times) before the first `wait --next`, three calls return `notify`, `review-astra` and `merge` in that order, then `ALL FINISHED`.
+2. A report with `### HOOK-FIX - Fix the hook` and `### TMP-HOME - Choose the root` under `## Queries` gives two `needs-owner` events after `done`; a second derivation adds none; a changed title adds one; an older report with `## Outstanding queries` and `HOOK-FIX - ...` gives the same tag.
+3. `HH:MM TZ - milestone: built` gives one `progress` event; a repeat gives none; an ordinary status line gives none. `blocked:` and `failed:` lines give `blocked` and `failed`.
+4. Exit without `DONE` gives `failed`; `DONE` with no report gives `failed` ("no report"); a held agent whose gate closes gives `blocked`.
+5. Two `deriveEvents` calls racing on one run append each event once; a stale lock older than 30 seconds is taken over.
+6. `watch` prints event lines before the interval's status line and ends `ALL FINISHED`; `wait --next` never returns `progress`.
+7. An agent relaunched under the same name has events with `attempt: 2` that do not repeat attempt 1's.
+8. `bun run test:coverage` at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` clean.
 
 ## Dependencies / blocks
 
-- `ki-agentic-harness` owns the `ki-delegation` background-run standard, which names the events, the milestone line, what `wait --next` and `watch` return and the rule that the coordinator stays out of any delivery path; the launcher's appended wording follows it. Durable documentation: [the background-run standard](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/skills/governance/ki-delegation/references/standards-background-runs.md). This is a sequencing preference, not build order: the mechanics can land first and the wording be aligned after, so `blocked_by` is empty.
-- Knowledge Islands Principal owns the strategy, its phase plan and the owner decisions behind it; this record delivers phase 1 only and does not decide phases 2 to 4.
+- None blocking. [KI-HARNESS-GOV-175](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/KI-HARNESS-GOV-175-delegation-run-events.md) follows this record and writes the standard's wording against these mechanics. The three status-line forms in Decision 3 are this record's proposal for that wording.
+- Decision 7 reads [KI-TOOL-KI-CLI-135](KI-TOOL-KI-CLI-135-reused-agent-name-overwrites.md)'s `<name>.prev-<n>` folders. Deliver KI-TOOL-KI-CLI-135 first; if it has not landed, `attempt` is 1 throughout.
+- Shares `src/core/agent/runs.ts` with KI-TOOL-KI-CLI-134, KI-TOOL-KI-CLI-135 and KI-TOOL-KI-CLI-137.
 
 ## Documentation impact
 
 ### Decision Records
 
-Not yet assessed; `ki-plan` states whether the event vocabulary needs a Decision Record or follows the strategy's existing decisions.
+None. The event vocabulary follows KI-PRINCIPAL-ECO-012's adopted strategy, and the harness standard owns its wording.
 
 ### Specifications
 
-Not yet assessed; `ki-plan` states whether a behaviour-level contract changes.
+None. `events.jsonl` is a machine-local state file, not a published contract.
 
 ### Guides
 
-Not yet assessed; `ki-plan` states whether human guidance changes.
+`README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`: the events log, the three status-line forms, and the new `wait --next` and `watch` behaviour.
 
 ### Roadmap
 
@@ -96,3 +126,5 @@ The strategy was written against the earlier report shape with a Failed section 
 - Whether `watch` prints events inline between its status lines or as a trailing list per interval.
 - Whether a `blocked` status line needs a fixed form, mirroring the milestone line, so that derivation does not rely on free text.
 - Whether the seen marker stays a per-run file or becomes a cursor the coordinator passes, which would let two coordinators watch one run.
+
+Planned to Ready on 16 October 2026 in the tools-burndown thread, which Kris's OWNER-LANE decision made this record's writer lane; the record stays in the ways-of-working Project. Decisions 3, 5 and 6 settle the three open questions above, and Decision 4 follows the owner-report shape of 14 October 2026.
