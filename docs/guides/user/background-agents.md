@@ -15,6 +15,8 @@ This guide shows how to delegate work to detached Claude Code or Codex agents wi
 2. Write a skeleton with `ki agent new <run> <name>` and complete it: the task citing that decision in the owner's words, numbered steps, a verification step and the report path the skeleton already names.
 3. Choose the lowest sufficient authority tier: `none`, `push`, `prune` or `release`. Name every remote call the task relies on in the prompt itself.
 
+An owner report links every work record it cites. `ki link <identifier...>` prints each link in one call: `[KI-TOOL-KI-CLI-127](<absolute path>)` for a live record, found through the registered repository whose `repo_code` scopes the identifier, and `[<identifier> (pruned)](https://github.com/<owner>/<repo>/blob/<last revision>/<path>)` for a record pruned from its roadmap. An identifier that resolves to nothing exits 1 with the reason rather than an invented link.
+
 ## Launch one agent
 
 ```sh

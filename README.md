@@ -128,7 +128,10 @@ ki agent queue gov build task.md --workdir ~/src/repo --rules push
 ki agent dispatch gov --max 4
 ki agent wait gov --next
 ki agent close gov
+ki link KI-TOOL-KI-CLI-127 KI-TOOL-KI-CLI-124
 ```
+
+`ki link <identifier...>` prints the Markdown link to each roadmap record an owner report cites: the local file by absolute path, or for a pruned record its last committed revision on the canonical repository.
 
 See [run detached background agents](docs/guides/user/background-agents.md).
 

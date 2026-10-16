@@ -6,13 +6,13 @@ project: ways-of-working
 component: agent
 purpose: capability
 kind: deliver
-horizon: next
-status: ready
+horizon: now
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 5f1349e59cc72fc8afc946d789565ab2a1dba8c2
 created_at: 2026-10-14T13:55:48Z
-updated_at: 2026-10-16T01:25:17Z
+updated_at: 2026-10-16T01:35:25Z
 ---
 
 # Agent Thread Coordination Commands
@@ -83,13 +83,13 @@ These settle the open questions below.
 
 ## Steps
 
-- [ ] **Link printer.** Choose the command's name and place in `src/commands/` under `ki-self`: a top-level `ki link <identifier>...` is the recommendation, since it serves roadmap, checkpoint and thread work alike, with the identifier grammar imported from the work core rather than restated.
-- [ ] **Link printer.** Resolve the repository from the identifier's scope through the local registry: the `repo_code` and, where declared, the area code each registered repository's `.ki.toml` issues, so `KI-TOOL-KI-CLI-127` reaches `tools-ki` without a directory walk across every repository. Fall back to the walk `close` already does when no scope matches.
-- [ ] **Link printer.** Find the record file under `docs/roadmap/` or `Streams/Roadmap/` and print `[<identifier>](<absolute path>)`.
-- [ ] **Link printer.** For an identifier with no file but a number at or below the `_ISSUES.md` high-water mark, find its last committed revision with `git log --diff-filter=D` on the roadmap directory, take the parent of the deleting commit, and print `[<FULL-ID> (pruned)](https://github.com/<owner>/<repo>/blob/<last revision>/<path>)` with the owner and repository taken from the canonical remote.
-- [ ] **Link printer.** When nothing resolves, print the reason to stderr and exit non-zero.
-- [ ] **Link printer.** Tests through `run(args, context)` and `sandbox()` with a registry of two temporary repositories: a live record, a pruned record, an unknown scope and a bad identifier.
-- [ ] **Link printer.** Document the command in `README.md`, `man/ki.1` and the `CHANGELOG.md` command surface, and name it in the background-agents guide beside the owner report's linking rule.
+- [x] **Link printer.** Choose the command's name and place in `src/commands/` under `ki-self`: a top-level `ki link <identifier>...` is the recommendation, since it serves roadmap, checkpoint and thread work alike, with the identifier grammar imported from the work core rather than restated.
+- [x] **Link printer.** Resolve the repository from the identifier's scope through the local registry: the `repo_code` and, where declared, the area code each registered repository's `.ki.toml` issues, so `KI-TOOL-KI-CLI-127` reaches `tools-ki` without a directory walk across every repository. Fall back to the walk `close` already does when no scope matches.
+- [x] **Link printer.** Find the record file under `docs/roadmap/` or `Streams/Roadmap/` and print `[<identifier>](<absolute path>)`.
+- [x] **Link printer.** For an identifier with no file but a number at or below the `_ISSUES.md` high-water mark, find its last committed revision with `git log --diff-filter=D` on the roadmap directory, take the parent of the deleting commit, and print `[<FULL-ID> (pruned)](https://github.com/<owner>/<repo>/blob/<last revision>/<path>)` with the owner and repository taken from the canonical remote.
+- [x] **Link printer.** When nothing resolves, print the reason to stderr and exit non-zero.
+- [x] **Link printer.** Tests through `run(args, context)` and `sandbox()` with a registry of two temporary repositories: a live record, a pruned record, an unknown scope and a bad identifier.
+- [x] **Link printer.** Document the command in `README.md`, `man/ki.1` and the `CHANGELOG.md` command surface, and name it in the background-agents guide beside the owner report's linking rule.
 - [ ] **`ki agent status` lists live threads.** Make the run argument optional; without it, enumerate the run folders under `agents/`, skipping `_archive`, and summarise each through the existing per-run reader.
 - [ ] **`ki agent status` lists live threads.** Define live as at least one agent running or held, or a non-empty queue, and list only live runs by default; `--all` adds the rest per Decision 2.
 - [ ] **`ki agent status` lists live threads.** Print one block per run: the run name and thread home, then one line per agent as the per-run `status` prints it.

@@ -67,6 +67,9 @@ Print canonical KI documentation locations.
 List verified installed harnesses and capabilities with declared user skills and
 local registered repositories.
 .TP
+.B ki link <identifier...>
+Print the Markdown link to each roadmap work record.
+.TP
 .B ki mcp install <owner/repository> [version] [--auth github-cli]
 Install and activate one verified MCP source release.
 .TP
@@ -610,6 +613,27 @@ Any other topic is invalid command grammar.
 List verified installed harnesses and their capabilities with declared user
 skills and local registered repositories. The command does not fetch, discover a
 repository, or change state.
+.TP
+.B ki link <identifier...>
+Print one Markdown link per roadmap work-record identifier, such as
+.BR KI-TOOL-KI-CLI-127 ,
+so an owner report or checkpoint links a record in one call. The registered
+repository whose declared
+.B repo_code
+scopes the identifier is searched first, under
+.I docs/roadmap/
+or
+.IR Streams/Roadmap/ ;
+with no scope match every registered repository is walked. A live record prints
+.BR [<identifier>](<absolute path>) .
+A record no longer on disk whose number is within its area's high-water mark in
+.I _ISSUES.md
+prints
+.B [<identifier> (pruned)](<repository>/blob/<last revision>/<path>)
+on the registered canonical repository, where the last revision is the first
+parent of the newest commit that deleted it. An identifier that resolves to
+nothing is never given an invented link: the command prints every link it can,
+then exits 1 naming each reason. It does not fetch or change state.
 .TP
 .B ki mcp install <owner/repository> [version] [--auth github-cli]
 Install and activate one governed MCP server source release from GitHub. An

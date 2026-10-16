@@ -8,6 +8,7 @@ export const rootCommandNames = [
   'estate',
   'harness',
   'kb',
+  'link',
   'registry',
   'repo',
   'skill'

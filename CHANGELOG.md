@@ -37,6 +37,7 @@ This baseline describes the `v0.10.5` release. Domain imports and extracted type
 - `ki repair [--apply | --dry-run]`
 - `ki docs`
 - `ki inventory`
+- `ki link <identifier...>`
 - `ki mcp install <owner/repository> [version] [--auth github-cli]`
 - `ki mcp update <owner/repository> [version] [--auth github-cli]`
 - `ki mcp rollback <owner/repository> <version>`

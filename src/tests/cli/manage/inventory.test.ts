@@ -18,6 +18,7 @@ const rootHelpCommands = [
   'help',
   'inventory',
   'kb',
+  'link',
   'mcp',
   'registry',
   'repair',

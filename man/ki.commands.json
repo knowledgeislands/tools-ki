@@ -88,6 +88,10 @@
           "description": "List verified installed harnesses and their capabilities with declared user skills and local registered repositories. The command does not fetch, discover a repository, or change state."
         },
         {
+          "invocation": "ki link <identifier...>",
+          "description": "Print one Markdown link per roadmap work-record identifier, such as KI-TOOL-KI-CLI-127 , so an owner report or checkpoint links a record in one call. The registered repository whose declared repo_code scopes the identifier is searched first, under docs/roadmap/ or Streams/Roadmap/ ; with no scope match every registered repository is walked. A live record prints [<identifier>](<absolute path>) . A record no longer on disk whose number is within its area's high-water mark in _ISSUES.md prints [<identifier> (pruned)](<repository>/blob/<last revision>/<path>) on the registered canonical repository, where the last revision is the first parent of the newest commit that deleted it. An identifier that resolves to nothing is never given an invented link: the command prints every link it can, then exits 1 naming each reason. It does not fetch or change state."
+        },
+        {
           "invocation": "ki mcp install <owner/repository> [version] [--auth github-cli]",
           "description": "Install and activate one governed MCP server source release from GitHub. An explicit version selects only its exact annotated v<SemVer> tag. With no version, public access resolves the latest stable GitHub Release without authentication. Private access requires deliberate --auth github-cli , which uses the existing GitHub CLI session for release lookup and clone. KI never reads, persists, or displays its credential."
         },
