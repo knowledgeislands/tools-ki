@@ -12,7 +12,7 @@ blocks: [KI-TOOL-KI-CLI-131]
 blocked_by: []
 baseline_ref: 5658f8766f81a24639cf205d80ad7cd9b7d0c147
 created_at: 2026-10-14T08:58:13Z
-updated_at: 2026-10-15T21:36:52Z
+updated_at: 2026-10-16T01:03:48Z
 ---
 
 # Unavailable Store Breaks Repair
@@ -106,11 +106,11 @@ Two commits on `main` from baseline `5658f87`: `726243d`, `fix(repo): warn on an
 - Verify 1, at `7eb3000` with `@biomejs/biome` 2.5.15, `@vitest/coverage-v8` 5.0.3, `knip` 6.39.0 and `vitest` 5.0.3: both frozen installs pass; `bun run test:coverage` passes 1189 tests at the 100% thresholds; `bunx tsc --noEmit`, `bunx biome check .` (warnings and infos only), `bunx knip` and `mandoc -T lint man/ki.1` are clean.
 - Verify 2: `ki repo audit --repo .` on tools-ki passes with FAIL=0 and two unrelated warnings, `ki-engineering` `CI-1` and `ki-repo` `HOOK-1`.
 - Verify 3: passed at `726243d` against ki-principal in a throwaway home and XDG sandbox; repair exited 0 with the `sources` warning and 44 skill links, `ki diag` showed "Registry: valid", and `ki repo audit` ran to its own verdict.
-- Verify 4 belongs to acceptance, after the release and ki-principal's pin bump.
+- Verify 4, local replay on 16 October 2026: `v0.10.5` contains `726243d`, and ki-principal's `.github/ki-version` is `v0.10.5`. The installed `ki` runs the tools-ki primary checkout, whose `src/`, `package.json` and `bun.lock` are identical to `v0.10.5`. ki-principal's CI "Install released KI" step was replayed against a fresh clone of its `origin/main` at `a86245c`, in a throwaway home and XDG sandbox with no store bound. `ki --version` matched the pin. `ki bootstrap` installed the canonical harness, and `ki registry add --repo .` succeeded. `ki repo repair --repo .` exited 0 with the `! Store: sources store is unavailable on this host (not bound)` warning, 44 projected skill links, `result: healthy` and `RESULT=PASS`. `ki diag` showed "Configuration: valid" and "Registry: valid", and `ki harness list` named `knowledgeislands/ki-agentic-harness`, so the step passes. `ki repo audit --repo .` then ran to its own verdict, FAIL=8 of 25 skills with 110 failing findings, all audit findings and none a repair or store error. They include the known STREAM-9 note, PMO-7 (91), LIFECYCLE-1 (8), BODY-11 (3), RECORD-2 (2), NOTE-1a and MD-mech. The clone's local `origin` causes FILES-2, and skipping `bun install` causes KNIP-2 and TSC-1, so the runner does not share them. The GitHub-hosted run on `main` was not observed, because this run had no GitHub access.
 
 ### Outstanding concerns
 
-- Verify 4 depends on the tools-ki release and ki-principal's `.github/ki-version` bump.
+- Verify 4 rests on the local replay; the GitHub-hosted ki-principal CI run on `main` has not been checked.
 - `knip` 6.39.0 prints four configuration hints suggesting ignore entries in `knip.json` are now unnecessary; it still exits 0.
 
 ### Post-change review
