@@ -1326,6 +1326,9 @@ describe('ki agent queue, dispatch and wait', () => {
     expect(first.arguments.slice(-4)).toEqual(['--model', 'claude-fable-5-1', '--effort', 'max'])
     expect(second.arguments).not.toContain('-m')
     expect(second.arguments).not.toContain('-c')
+    // Both runtimes carry the run marker on the dispatch path too, so the harness hook can trust it.
+    expect(second.arguments).toContain('exec')
+    expect([first.environment['KI_AGENT_RUN'], second.environment['KI_AGENT_RUN']]).toEqual(['r', 'r'])
     const workdir = await realpath(box.project.path)
     expect(await box.state.read('ki/agents/r/fable.launch.json')).toBe(
       `{"runtime":"claude","model":"claude-fable-5-1","effort":"max","workdir":"${workdir}"}\n`
