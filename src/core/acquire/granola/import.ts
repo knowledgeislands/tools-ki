@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { KiError } from '../../errors.ts'
-import type { Runner } from '../../runtime/runner.ts'
-import { verifyGranolaImages } from './images.ts'
+import { storeGranolaMcpImages, verifyGranolaImages, verifyGranolaMcpImages } from './images.ts'
 import { centralGranolaPath, copyGranolaPackage, granolaLayout, verifyGranolaParents } from './layout.ts'
 import { renderGranolaMeeting } from './markdown.ts'
+import { privateGranolaMarker, verifyGranolaPreservation } from './marker.ts'
+import { granolaAttachmentInventory, granolaScreenshotCount } from './projection.ts'
 import {
   type FlaggedGranolaMeeting,
   type GranolaReceiver,
@@ -15,7 +16,9 @@ import {
 } from './routing.ts'
 import {
   type GranolaDetail,
+  type GranolaOperationContext,
   type GranolaTranscript,
+  granolaDetailHash,
   granolaSource,
   sha256,
   stableJson,
@@ -50,6 +53,7 @@ export interface GranolaImportOptions {
   readonly until: string
   readonly dryRun?: boolean
   readonly refreshTranscripts?: boolean
+  readonly refreshAcquired?: boolean
 }
 
 export interface GranolaImportResult {
@@ -69,6 +73,10 @@ export interface GranolaImportResult {
   readonly omissions: number
   readonly transcriptReads: number
   readonly resumed: number
+  readonly imageMeetings: number
+  readonly images: number
+  readonly skipped: number
+  readonly attachmentsAvailable: boolean
   readonly ledgerChanged: boolean
   readonly dryRun: boolean
 }
@@ -103,15 +111,6 @@ export interface GranolaResetResult {
   readonly changed: boolean
 }
 
-export interface GranolaOperationContext {
-  readonly workingDirectory: string
-  readonly homeDirectory: string
-  readonly stateDirectory: string
-  readonly environment: NodeJS.ProcessEnv
-  readonly runner: Runner
-  readonly now: () => number
-}
-
 const basePath = (target: GranolaReceiver): string => granolaLayout(target.root, target.captureRoot).documents
 const checkpointPath = (target: GranolaReceiver): string =>
   join(granolaLayout(target.root, target.captureRoot).state, 'ledger.json')
@@ -123,16 +122,6 @@ const batches = <T>(items: readonly T[], size: number): readonly (readonly T[])[
   for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size))
   return result
 }
-
-const detailHash = (meeting: RoutedGranolaMeeting, detail: GranolaDetail): string =>
-  sha256(
-    stableJson({
-      listing: meeting.projection,
-      detail: detail.projection,
-      folder_ids: meeting.folderIds,
-      inferred_unfoldered: meeting.inferredUnfoldered
-    })
-  )
 
 const transcriptHash = (transcript: Extract<GranolaTranscript, { readonly state: 'available' }>): string =>
   sha256(stableJson(transcript.projection))
@@ -395,11 +384,8 @@ export const importGranola = async (
       if (!existing) discoveredMeetings.set(meetingId, meeting)
     }
   }
-  const routing = routeGranolaMeetings({ target, receivers, meetings: discoveredMeetings, folders, folderMeetings })
+  let routing = routeGranolaMeetings({ target, receivers, meetings: discoveredMeetings, folders, folderMeetings })
   const identity = identityCheckpointSha256(global, folderEnumerations)
-  const selectedIds = routing.selected
-    .map((meeting) => meeting.id)
-    .sort((left, right) => left.localeCompare(right, 'en'))
   const root = basePath(target)
   const observedAt = new Date(context.now()).toISOString()
   const previous = await currentCheckpoint(target)
@@ -410,6 +396,43 @@ export const importGranola = async (
     await verifyGranolaCheckpoint(root, previous)
   }
 
+  let skipped = 0
+  if (target.acquiredFolderId) {
+    privateGranolaMarker(target.acquiredFolderId, folders)
+    if (!options.refreshAcquired) {
+      // The validated private marker is one of the exhaustively enumerated folders.
+      const marked = folderMeetings.get(target.acquiredFolderId) as ReadonlyMap<string, unknown>
+      const selected: RoutedGranolaMeeting[] = []
+      const flagged = [...routing.flagged]
+      for (const meeting of routing.selected) {
+        if (!marked.has(meeting.id)) {
+          selected.push(meeting)
+          continue
+        }
+        try {
+          const entry = previous?.meetings[meeting.id]
+          if (!entry) throw new KiError('No local preservation receipt')
+          await verifyGranolaPreservation({
+            repository: target.root,
+            root,
+            ledger: checkpointPath(target),
+            id: meeting.id,
+            entry,
+            expectedImages: granolaScreenshotCount(meeting.projection),
+            runner: context.runner,
+            environment: context.environment
+          })
+          skipped += 1
+        } catch {
+          flagged.push({ id: meeting.id, folderIds: meeting.folderIds, reason: 'acquired-without-proof' })
+        }
+      }
+      routing = { ...routing, selected, flagged }
+    }
+  }
+  const selectedIds = routing.selected
+    .map((meeting) => meeting.id)
+    .sort((left, right) => left.localeCompare(right, 'en'))
   const binding = {
     repository: target.repository,
     account: source.accountSha256,
@@ -443,6 +466,8 @@ export const importGranola = async (
   let omissions = 0
   let transcriptReads = 0
   let resumed = 0
+  let imageMeetings = 0
+  let images = 0
 
   for (const batch of batches(routing.selected, 10)) {
     let details: ReadonlyMap<string, GranolaDetail>
@@ -463,11 +488,19 @@ export const importGranola = async (
       const detail = details.get(meeting.id)
       /* v8 ignore next -- granolaSource.details accounts every requested identity as available or explicitly unavailable. */
       if (!detail) throw new KiError(`Granola detail batch omitted ${meeting.id}`)
-      const observedDetailHash = detailHash(meeting, detail)
+      const observedDetailHash = granolaDetailHash(meeting, detail)
       const recovered: GranolaJournalComponent | undefined = journal.components[meeting.id]
       if (recovered?.detail_sha256 === observedDetailHash) {
         const staged = await physicalDocument(join(root, recovered.staged_document_path))
         if (staged && sha256(staged) === recovered.staged_document_sha256) {
+          if (source.images && detail.state === 'available')
+            await verifyGranolaMcpImages(
+              root,
+              meeting.id,
+              recovered.checkpoint,
+              granolaScreenshotCount(meeting.projection)
+            )
+          else await verifyGranolaImages(root, meeting.id, recovered.checkpoint)
           meetings[meeting.id] = recovered.checkpoint
           const previousMeeting = previous?.meetings[meeting.id]
           if (target.captureRoot && previousMeeting && previousMeeting.path !== recovered.checkpoint.path)
@@ -478,6 +511,11 @@ export const importGranola = async (
       }
 
       const current = previous?.meetings[meeting.id]
+      const inventory =
+        source.images && detail.state === 'available'
+          ? granolaAttachmentInventory(detail.projection, meeting.projection)
+          : undefined
+      const imageBlocks = inventory && source.images ? await source.images(meeting.id, inventory.ids) : undefined
       let transcriptResult: Awaited<ReturnType<typeof readTranscript>>
       try {
         transcriptResult = await readTranscript({
@@ -499,8 +537,14 @@ export const importGranola = async (
         throw error
       }
       if (transcriptResult.read) transcriptReads += 1
+      const imageUpgrade = Boolean(
+        imageBlocks &&
+          current?.disposition.state === 'staged' &&
+          !(await physicalDocument(join(root, current.path)))?.includes('\nattachment_state: verified-mcp\n')
+      )
       const changed: boolean =
         !current ||
+        imageUpgrade ||
         current.detail_sha256 !== observedDetailHash ||
         current.transcript_sha256 !== transcriptResult.hash ||
         current.transcript_state !== transcriptResult.state ||
@@ -511,6 +555,7 @@ export const importGranola = async (
         : (current?.transcript_observed_at ?? current?.acquired_at ?? observedAt)
       const acquiredAt = changed ? observedAt : (current as GranolaCheckpointMeeting).acquired_at
       const document = renderGranolaMeeting({
+        attachmentsVerified: Boolean(imageBlocks),
         ...(target.captureRoot ? { captureRoot: target.captureRoot } : {}),
         accountSha256: source.accountSha256,
         acquiredAt,
@@ -529,6 +574,17 @@ export const importGranola = async (
       const documentSha256: string = changed
         ? sha256(document.content)
         : (current as GranolaCheckpointMeeting).document_sha256
+      if (imageBlocks && (changed || (await physicalDocument(join(root, documentPath))))) {
+        images += await storeGranolaMcpImages({
+          root,
+          path: documentPath,
+          meetingId: meeting.id,
+          detailSha256: observedDetailHash,
+          images: imageBlocks,
+          dryRun: Boolean(options.dryRun)
+        })
+        imageMeetings += 1
+      }
       const sourceVersionSha256 = sha256(
         stableJson({
           detail_sha256: observedDetailHash,
@@ -639,6 +695,10 @@ export const importGranola = async (
     omissions,
     transcriptReads,
     resumed,
+    imageMeetings,
+    images,
+    skipped,
+    attachmentsAvailable: Boolean(source.images),
     ledgerChanged,
     dryRun: Boolean(options.dryRun)
   }

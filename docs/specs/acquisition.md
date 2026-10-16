@@ -38,7 +38,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### ACQUIRE-004 — Read-only provider boundary
 
-`ki acquire import --adapter granola` MUST use only allowlisted read-only Granola MCP account, folder, meeting-list, meeting-detail, and transcript operations without initiating OAuth, mutating Granola, harvesting knowledge, or writing another repository.
+`ki acquire import --adapter granola` MUST use only allowlisted read-only Granola MCP account, folder, meeting-list, meeting-detail, transcript, and screenshot operations without initiating OAuth, mutating Granola, harvesting knowledge, or writing another repository.
 
 _Conformance:_ conforming
 
@@ -82,7 +82,7 @@ Deprecated in 2026-09-16 when explicit Markdown fields, component hashes, transc
 
 ### ACQUIRE-010 — Verified adapter declarations
 
-`ki acquire` MUST discover adapters from verified machine-readable Harness skill metadata that declares adapter identity, supported actions, repository and invocation properties, capabilities, omissions, read-only boundary, checkpoint contract, and reset scopes; it MUST NOT infer executability from a skill name or parse prose instructions at runtime.
+`ki acquire` MUST discover adapters from verified machine-readable Harness skill metadata that declares adapter identity, supported actions, repository and invocation properties, capabilities, omissions, read-only or explicit-marker boundary, checkpoint contract, and reset scopes; it MUST NOT infer executability from a skill name or parse prose instructions at runtime.
 
 _Conformance:_ conforming
 
@@ -92,7 +92,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### ACQUIRE-011 — Action-first selection
 
-`ki acquire` MUST expose `list`, `import`, `status`, `reconcile`, and `reset` as actions; select exactly one adapter with `--adapter`, all applicable enabled adapters with `--all`, or infer only a sole enabled adapter; and reject the retired provider-first grammar.
+`ki acquire` MUST expose `list`, `import`, `status`, `reconcile`, `reset`, and explicitly selected `mark` as actions; select exactly one adapter with `--adapter`, all applicable enabled adapters with `--all`, or infer only a sole enabled adapter; and reject the retired provider-first grammar.
 
 _Conformance:_ conforming
 
@@ -149,6 +149,26 @@ _Conformance:_ conforming
 _Verify:_ `src/tests/cli/acquire/granola.test.ts` reset planning, confirmation, scope, and no-provider-call cases.
 
 _Evidence:_ The named CLI contract tests are part of the passing `bun run test:coverage` gate, which enforces 100% coverage across statements, branches, functions, and lines.
+
+### ACQUIRE-017 — MCP screenshot preservation
+
+Granola import MUST restrict every listing to principal-owned notes, complete folder and transcript pagination, reconcile screenshot counts and distinct attachment UUIDs, fetch at most five images per request, bind image metadata to requested identities, and validate canonical base64, true format and MIME. Exact returned bytes, metadata, counts and checksums MUST be stored beside the meeting before its receipt advances; prior evidence and immutable attachment bytes remain preserved. Unsupported attachment access MUST remain an explicit omission.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/acquire/granola-marker.test.ts` owned-note, paging, screenshot identity, batching, format, dry-run and variant cases.
+
+_Evidence:_ Public in-process CLI fixtures establish the returned-byte boundary; equality with separately exported desktop originals remains outside it.
+
+### ACQUIRE-018 — Explicit progress markers
+
+Routine Granola import MAY skip Acquired members only after validating committed preservation receipts and document/image bytes. An unproved marker MUST be flagged without content reads. Explicit `--refresh-acquired` MUST bypass that skip. Marking MUST remain a separate preview/`--confirm` action, require an owner-controlled private selector distinct from routing, and verify committed local evidence, fresh source hashes and screenshot bytes before invoking only `add_note_to_folder`. Readback MUST preserve all original memberships. No marker confers reconciliation or retirement authority.
+
+_Conformance:_ conforming
+
+_Verify:_ `src/tests/cli/acquire/granola-marker.test.ts` preview, committed evidence, private folder, mutation allowlist, idempotence, skip, refresh, amendment and failed-marker cases.
+
+_Evidence:_ Synthetic public CLI tests exercise both read and explicitly confirmed write paths without live network access.
 
 ## Gaps
 

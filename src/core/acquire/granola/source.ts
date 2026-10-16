@@ -1,8 +1,24 @@
 import { createHash } from 'node:crypto'
 import { KiError } from '../../errors.ts'
 import type { CommandResult, Runner } from '../../runtime/runner.ts'
+import {
+  completeGranolaTranscript,
+  decodeGranolaImages,
+  type GranolaAttachmentImage,
+  readGranolaFolders
+} from './projection.ts'
+
+export interface GranolaOperationContext {
+  readonly workingDirectory: string
+  readonly homeDirectory: string
+  readonly stateDirectory: string
+  readonly environment: NodeJS.ProcessEnv
+  readonly runner: Runner
+  readonly now: () => number
+}
 
 export interface GranolaSource {
+  readonly images?: (meetingId: string, ids: readonly string[]) => Promise<readonly GranolaAttachmentImage[]>
   readonly accountSha256: string
   readonly schemaSha256: string
   readonly folders: () => Promise<readonly GranolaFolder[]>
@@ -62,6 +78,23 @@ export const stableJson = (value: unknown): string => {
 }
 
 export const sha256 = (value: string | Uint8Array): string => createHash('sha256').update(value).digest('hex')
+
+export const granolaDetailHash = (
+  meeting: {
+    readonly projection: unknown
+    readonly folderIds: readonly string[]
+    readonly inferredUnfoldered: boolean
+  },
+  detail: GranolaDetail
+): string =>
+  sha256(
+    stableJson({
+      listing: meeting.projection,
+      detail: detail.projection,
+      folder_ids: meeting.folderIds,
+      inferred_unfoldered: meeting.inferredUnfoldered
+    })
+  )
 
 const record = (value: unknown, label: string): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -272,22 +305,44 @@ const call = async (
   return unwrap(parseJson(result.output, tool))
 }
 
-const inspectSchema = async (runner: Runner, environment: NodeJS.ProcessEnv): Promise<string> => {
+const inspectSchema = async (
+  runner: Runner,
+  environment: NodeJS.ProcessEnv
+): Promise<{ readonly sha256: string; readonly images: boolean; readonly marker: boolean }> => {
   const result = await runner('mcporter', ['list', 'granola', '--schema', '--json', '--no-oauth'], environment)
   if (result.exitCode !== 0)
     throw new KiError(`Granola MCP schema inspection failed: ${result.output.trim() || 'mcporter exited non-zero'}`)
   const response = record(parseJson(result.output, 'schema'), 'schema')
   const tools = collection(response['tools'], ['tools'], 'schema tools').map((value) => record(value, 'schema tool'))
-  const selected = REQUIRED_TOOLS.map((name) => {
+  const selected: { name: string; inputSchema: unknown }[] = REQUIRED_TOOLS.map((name) => {
     const tool = tools.find((candidate) => candidate['name'] === name)
     if (!tool) throw new KiError(`Granola MCP is missing required read-only tool ${name}`)
     return { name, inputSchema: tool['inputSchema'] }
   })
-  return sha256(stableJson(selected))
+  const imageTool = tools.find((tool) => tool['name'] === 'get_meeting_attachment')
+  if (imageTool) selected.push({ name: 'get_meeting_attachment', inputSchema: imageTool['inputSchema'] })
+  return {
+    sha256: sha256(stableJson(selected)),
+    images: Boolean(imageTool),
+    marker: tools.some((tool) => tool['name'] === 'add_note_to_folder')
+  }
+}
+
+/** A separate, explicitly invoked writer; acquisition never constructs this capability. */
+export const granolaFolderMarker = async (
+  runner: Runner,
+  environment: NodeJS.ProcessEnv
+): Promise<(meetingId: string, folderId: string) => Promise<unknown>> => {
+  if (!(await inspectSchema(runner, environment)).marker)
+    throw new KiError('Granola does not advertise the explicit folder-marker tool')
+  const gate = requestGate(environment)
+  return (meetingId, folderId) =>
+    call(runner, environment, 'add_note_to_folder', { note_id: meetingId, folder_id: folderId }, gate)
 }
 
 export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessEnv): Promise<GranolaSource> => {
-  const schemaSha256 = await inspectSchema(runner, environment)
+  const schema = await inspectSchema(runner, environment)
+  const schemaSha256 = schema.sha256
   const gate = requestGate(environment)
   const accountResponse = record(await call(runner, environment, 'get_account_info', {}, gate), 'account')
   const account = accountResponse['data'] === undefined ? accountResponse : record(accountResponse['data'], 'account')
@@ -300,13 +355,31 @@ export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessE
   return {
     accountSha256,
     schemaSha256,
-    folders: async () =>
-      collection(await call(runner, environment, 'list_meeting_folders', {}, gate), ['folders'], 'folders').map(
-        (projection) => ({
-          id: identity(projection, ['id', 'folder_id'], 'folder'),
-          projection
-        })
-      ),
+    ...(schema.images
+      ? {
+          images: async (meetingId: string, ids: readonly string[]) => {
+            const images: GranolaAttachmentImage[] = []
+            for (let index = 0; index < ids.length; index += 5) {
+              const selected = ids.slice(index, index + 5)
+              const result = await runGranolaCall(
+                runner,
+                environment,
+                'get_meeting_attachment',
+                {
+                  meeting_id: meetingId,
+                  attachment_ids: selected
+                },
+                gate
+              )
+              if (result.exitCode !== 0) throw new KiError(`Granola image read failed: ${result.output.trim()}`)
+              images.push(...decodeGranolaImages(parseJson(result.output, 'image'), meetingId, selected))
+            }
+            return images
+          }
+        }
+      : {}),
+    folders: () =>
+      readGranolaFolders((arguments_) => call(runner, environment, 'list_meeting_folders', arguments_, gate)),
     meetings: async (window, folderId) => {
       const response = await call(
         runner,
@@ -316,6 +389,7 @@ export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessE
           time_range: 'custom',
           custom_start: window.since,
           custom_end: window.until,
+          involvement: { captured_by_me: true },
           ...(folderId ? { folder_id: folderId } : {})
         },
         gate
@@ -361,7 +435,12 @@ export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessE
           reason:
             typeof projection === 'string' ? projection.trim() : 'provider returned unavailable transcript projection'
         }
-      return { state: 'available', projection }
+      return {
+        state: 'available',
+        projection: await completeGranolaTranscript(projection, (offset) =>
+          call(runner, environment, 'get_meeting_transcript', { meeting_id: meetingId, offset }, gate)
+        )
+      }
     }
   }
 }

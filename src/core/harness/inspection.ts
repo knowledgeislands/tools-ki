@@ -14,7 +14,7 @@ export const HARNESS_DECLARATION_FILE = '.ki.toml'
 export const supportedRuntimes = ['claude-code', 'claude-desktop', 'chatgpt-codex'] as const
 export type SupportedRuntime = (typeof supportedRuntimes)[number]
 
-export const acquisitionActions = ['import', 'status', 'reconcile', 'reset'] as const
+export const acquisitionActions = ['import', 'status', 'reconcile', 'reset', 'mark'] as const
 export type AcquisitionAction = (typeof acquisitionActions)[number]
 
 export interface AcquisitionAdapterDeclaration {
@@ -24,7 +24,7 @@ export interface AcquisitionAdapterDeclaration {
   readonly invocationProperties: readonly string[]
   readonly capabilities: readonly string[]
   readonly omissions: readonly string[]
-  readonly mutationBoundary: 'read-only'
+  readonly mutationBoundary: 'read-only' | 'explicit-marker'
   readonly checkpoint: string
   readonly resetScopes: readonly string[]
 }
@@ -182,11 +182,13 @@ const acquisitionMetadata = (metadata: Readonly<Record<string, string>>): Acquis
     !verifiedActions?.length ||
     verifiedActions.some((action) => !acquisitionActions.includes(action as AcquisitionAction))
   ) {
-    return { state: 'invalid', reason: 'actions must be a non-empty list of import, status, reconcile, reset' }
+    return { state: 'invalid', reason: 'actions must be a non-empty list of import, status, reconcile, reset, mark' }
   }
-  if (metadata['ki-acquire-mutation-boundary'] !== 'read-only') {
-    return { state: 'invalid', reason: 'mutation boundary must be read-only' }
-  }
+  const mutationBoundary = metadata['ki-acquire-mutation-boundary']
+  if (mutationBoundary !== 'read-only' && mutationBoundary !== 'explicit-marker')
+    return { state: 'invalid', reason: 'mutation boundary must be read-only or explicit-marker' }
+  if (verifiedActions.includes('mark') !== (mutationBoundary === 'explicit-marker'))
+    return { state: 'invalid', reason: 'mark requires an explicit-marker boundary, and only mark may declare it' }
   const checkpoint = metadata['ki-acquire-checkpoint'] as string
   if (!/^[a-z][a-z0-9-]*$/.test(checkpoint))
     return { state: 'invalid', reason: 'checkpoint must be lower-case hyphenated ID' }
@@ -203,7 +205,7 @@ const acquisitionMetadata = (metadata: Readonly<Record<string, string>>): Acquis
       invocationProperties: verifiedInvocationProperties as readonly string[],
       capabilities: verifiedCapabilities as readonly string[],
       omissions: verifiedOmissions as readonly string[],
-      mutationBoundary: 'read-only',
+      mutationBoundary,
       checkpoint,
       resetScopes: verifiedResetScopes as readonly string[]
     }

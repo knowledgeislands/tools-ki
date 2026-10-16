@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { lstat, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 import { KiError } from '../../errors.ts'
 import { granolaCaptureRoot, granolaLayout, verifyGranolaParents } from './layout.ts'
+import type { GranolaAttachmentImage } from './projection.ts'
 import {
   type GranolaCheckpointMeeting,
   loadGranolaCheckpoint,
@@ -92,6 +93,88 @@ export interface GranolaImageOptions {
   readonly expected: number
   readonly dryRun?: boolean
   readonly now: () => number
+}
+
+export interface GranolaMcpImageManifest {
+  readonly expected_count: number
+  readonly detail_sha256: string
+  readonly assets: readonly { readonly attachment_id: string; readonly file: string; readonly sha256: string }[]
+}
+
+export const verifyGranolaMcpImages = async (
+  root: string,
+  meetingId: string,
+  meeting: GranolaCheckpointMeeting,
+  expected: number
+): Promise<GranolaMcpImageManifest> => {
+  const count = await verifyGranolaImages(root, meetingId, meeting)
+  const path = join(dirname(join(root, meeting.path)), `${meetingId}--attachments.json`)
+  if (!(await regularFile(path))) throw new KiError('Granola MCP screenshot manifest is missing')
+  const raw = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>
+  if (raw['provider'] !== 'granola-mcp' || raw['detail_sha256'] !== meeting.detail_sha256 || count !== expected)
+    throw new KiError('Granola screenshot inventory is not verified for this source version')
+  return raw as unknown as GranolaMcpImageManifest
+}
+
+/** Preserve the exact MCP image blocks, independently of the manual-export ingress. */
+export const storeGranolaMcpImages = async (options: {
+  readonly root: string
+  readonly path: string
+  readonly meetingId: string
+  readonly detailSha256: string
+  readonly images: readonly GranolaAttachmentImage[]
+  readonly dryRun: boolean
+}): Promise<number> => {
+  if (!meetingPattern.test(options.meetingId)) throw new KiError('Granola MCP image destination identity is unsafe')
+  const directory = dirname(join(options.root, options.path))
+  const manifestPath = join(directory, `${options.meetingId}--attachments.json`)
+  await verifyGranolaParents(manifestPath)
+  const assets = []
+  const copies: { path: string; bytes: Buffer }[] = []
+  for (const image of [...options.images].sort((left, right) => left.id.localeCompare(right.id, 'en'))) {
+    const extension = imageExtension(image.bytes)
+    const expectedMime = extension === 'jpg' ? 'image/jpeg' : `image/${extension}`
+    if (image.mimeType !== expectedMime) throw new KiError('Granola image MIME type differs from its bytes')
+    const file = `${options.meetingId}--attachment-${image.id}.${extension}`
+    const path = join(directory, file)
+    const sha256 = digest(image.bytes)
+    if (await regularFile(path)) {
+      if (digest(await readFile(path)) !== sha256)
+        throw new KiError(`Granola immutable image ${image.id} changed bytes`)
+    } else copies.push({ path, bytes: image.bytes })
+    assets.push({ attachment_id: image.id, file, sha256, bytes: image.bytes.length, metadata: image.metadata })
+  }
+  const manifest = {
+    schema: 1,
+    meeting_id: options.meetingId,
+    provider: 'granola-mcp',
+    expected_count: assets.length,
+    detail_sha256: options.detailSha256,
+    assets
+  }
+  const content = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`)
+  const old = (await regularFile(manifestPath)) ? await readFile(manifestPath) : undefined
+  if (options.dryRun) return assets.length
+  await mkdir(directory, { recursive: true })
+  for (const copy of copies) {
+    const temporary = join(directory, `.${basename(copy.path)}.${randomUUID()}.tmp`)
+    await writeFile(temporary, copy.bytes, { flag: 'wx' })
+    await rename(temporary, copy.path)
+  }
+  if (old && !old.equals(content)) {
+    const archive = join(directory, 'source-evidence', `images-${digest(old)}.json`)
+    await verifyGranolaParents(archive)
+    await mkdir(dirname(archive), { recursive: true })
+    if (await regularFile(archive)) {
+      if (!(await readFile(archive)).equals(old)) throw new KiError('Granola image evidence archive changed bytes')
+    } else await writeFile(archive, old, { flag: 'wx' })
+  }
+  if (!old?.equals(content)) {
+    const temporary = join(directory, `.${basename(manifestPath)}.${randomUUID()}.tmp`)
+    await writeFile(temporary, content, { flag: 'wx' })
+    await rename(temporary, manifestPath)
+  }
+  return assets.length
 }
 
 export interface GranolaImageResult {

@@ -138,6 +138,7 @@ This baseline describes the `v0.10.5` release. Domain imports and extracted type
 - `ki acquire images --adapter granola [--repo <path>] --source <uuid> --directory <path> --expected <count> [--dry-run]`
 - `ki acquire list [--repo <path>]`
 - `ki acquire import [--adapter <name>|--all] [--repo <path>] [--since <date>] [--until <date>] [--dry-run]`
+- `ki acquire mark --adapter granola [--repo <path>] [--since <date>] [--until <date>] [--source <UUID...>] [--confirm]`
 - `ki acquire status [--adapter <name>|--all] [--repo <path>]`
 - `ki acquire reconcile [--adapter <name>|--all] [--repo <path>]`
 - `ki acquire reset [--adapter <name>] [--repo <path>] [--source <identity>] [--component <name>] [--rebuild] [--confirm]`

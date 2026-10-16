@@ -1,6 +1,6 @@
 # Acquire Granola meetings
 
-Use this guide to acquire Granola meeting evidence into a registered Knowledge Islands repository. It explains how to activate the repository adapter, run read-only imports, inspect resumable state, and recover safely without allowing provider access to mutate the source.
+Use this guide to acquire Granola meeting evidence into a registered Knowledge Islands repository. It explains how to activate the repository adapter, run read-only imports, inspect resumable state, and recover safely with a separate explicitly confirmed additive progress marker.
 
 ## Prepare the source connection
 
@@ -102,7 +102,7 @@ The account checkpoint binds the connected account, active workspace and note-ac
 
 ## Acquire desktop screenshots
 
-The Granola MCP has no attachment list or image bytes. For a note with an Images stack, observe the current image count in the desktop app. Open each image and use its Download control to save the original into a new, otherwise empty directory. Keep the app-generated `attachment-<uuid>` names. The app may use a `.jpg` filename for PNG bytes; the importer detects the actual format.
+When the connected MCP advertises attachment reads, normal import reconciles screenshot counts and UUIDs and saves exact decoded image bytes with a checksum manifest, including an explicit zero-image inventory. This proves the returned MCP representation, not equivalence with desktop originals. If the provider lacks attachment access, the omission remains visible. For independently exported originals, use the manual path below. For a note with an Images stack, observe the current image count in the desktop app. Open each image and use its Download control to save the original into a new, otherwise empty directory. Keep the app-generated `attachment-<uuid>` names. The app may use a `.jpg` filename for PNG bytes; the importer detects the actual format.
 
 After the meeting Markdown is staged in its registered receiving repository, run:
 
@@ -114,11 +114,26 @@ ki acquire reconcile --adapter granola --repo /path/to/knowledge-base
 
 The command rejects missing, extra, duplicate, non-image, and conflicting files. It preserves the export bytes beside the meeting Markdown and writes `<meeting-uuid>--attachments.json` with each attachment UUID, SHA-256, and byte count. Repeating the command with the same exports is safe; changed exports require review. The manifest records a user-observed source count, not an MCP-certified inventory. The receiving repository or verified durable destination must retain the original images and manifest before any source retirement.
 
+## Track Acquired notes
+
+The optional `acquired_folder_id` selects an owner-controlled private folder with audience `only you`. Keep it separate from `folder_ids` and territory mappings. It adds a progress marker while retaining every existing folder membership.
+
+Routine import builds the marker membership set before reading content. It skips only notes with valid committed local preservation receipts and verified document/image evidence; a marker without proof remains a visible exception. Skipping does not claim that mutable source content is unchanged. Use `--refresh-acquired --refresh-transcripts` for an explicit full re-read.
+
+After capture verification and a local Git commit, preview and explicitly apply a bounded marker operation:
+
+```sh
+ki acquire mark --adapter granola --since YYYY-MM-DD --until YYYY-MM-DD
+ki acquire mark --adapter granola --since YYYY-MM-DD --until YYYY-MM-DD --confirm
+```
+
+Add `--source <UUID...>` for an exact subset. The confirmed operation checks the account, private folder, committed receipt and files, available transcript, fresh source hashes, screenshot UUIDs and bytes, and unchanged original memberships. It invokes only additive membership, then verifies the union of original folders plus Acquired. Incomplete notes remain exceptions. Import never marks implicitly. A marker establishes neither receiver reconciliation nor deletion clearance, and retained technical checkpoints remain necessary preservation evidence.
+
 ## Prepare manual retirement
 
 Granola exposes no supported archive or delete operation through its official MCP, so acquisition never deletes meetings. The accepted retirement path is a verified manual-release manifest followed by human deletion in Granola.
 
-Before producing a manifest, run a full-history `--refresh-transcripts` import for every configured receiver, repeat it until every receiver reports all meetings unchanged, run `reconcile`, and commit each receiver's `+/_ACQUIRE/granola/` state. For screenshot-bearing notes, re-export the current desktop Images stack and repeat `ki acquire images` to check count, UUIDs, and bytes against the committed manifest. The release manifest must reconcile one shared account, source schema, interval, and identity checkpoint across the complete receiver union; deduplicate intentional receiver copies; name each meeting UUID and source-version hash; and exclude any meeting with an unavailable detail or transcript projection, unresolved routing conflict, failed checksum, uncommitted receiver document, or unverified current screenshot stack.
+Before producing a manifest, run a full-history `--refresh-acquired --refresh-transcripts` import for every configured receiver, repeat it until every receiver reports all meetings unchanged, run `reconcile`, and commit each receiver's `+/_ACQUIRE/granola/` state. For screenshot-bearing notes, re-export the current desktop Images stack and repeat `ki acquire images` to check count, UUIDs, and bytes against the committed manifest. The release manifest must reconcile one shared account, source schema, interval, and identity checkpoint across the complete receiver union; deduplicate intentional receiver copies; name each meeting UUID and source-version hash; and exclude any meeting with an unavailable detail or transcript projection, unresolved routing conflict, failed checksum, uncommitted receiver document, or unverified current screenshot stack.
 
 Present the exact eligible list to the human operator and stop. The human deletes only that list in Granola. A later complete discovery treats the meetings' source-side absence as the signifier that manual retirement completed while the committed receiver documents and ledgers remain durable evidence. Any Granola or receiver change after manifest generation invalidates the affected list and requires fresh reconciliation.
 
@@ -145,4 +160,4 @@ Apply the exact reviewed plan by repeating it with `--confirm`. Component reset 
 
 ## Safety boundary
 
-Granola operations are limited to account, folder, meeting-list, meeting-detail, and transcript reads. Acquisition never tags, edits, archives, deletes, or moves provider data; does not automate a browser; does not harvest knowledge; and does not write another repository. Folder membership is routing evidence rather than canonical classification, explicit provider omissions remain omissions, and conflicting receiver mappings fail closed.
+Granola import is limited to allowlisted account, folder, owned meeting-list, meeting-detail, transcript and screenshot reads. The separate confirmed marker adds only the configured private membership. No operation edits, archives, deletes, removes membership, switches workspace or signs out; acquisition does not automate a browser; does not harvest knowledge; and does not write another repository. Folder membership is routing evidence rather than canonical classification, explicit provider omissions remain omissions, and conflicting receiver mappings fail closed.
