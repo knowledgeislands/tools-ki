@@ -1,6 +1,5 @@
 export type { WorkItem, WorkItemHold } from './items.ts'
 export { holdReasons, workItemHorizons, workItemLane, workItemLanes, workItemStatuses } from './items.ts'
-export type { RecordLink } from './links.ts'
 export { recordLink } from './links.ts'
 export type {
   RoadmapItemResult,
