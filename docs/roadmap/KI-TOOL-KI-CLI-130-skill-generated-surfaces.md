@@ -7,12 +7,12 @@ component: dev
 purpose: capability
 kind: deliver
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 41e11c949b746be916b554cf9b66859fdcd2fc8b
 created_at: 2026-10-14T20:46:12Z
-updated_at: 2026-10-14T20:46:12Z
+updated_at: 2026-10-16T01:06:59Z
 ---
 
 # Generated Skill Surfaces
@@ -83,6 +83,42 @@ None.
 ### Roadmap
 
 None.
+
+## Review
+
+### Delivered
+
+`ki dev skill generate <skill> [--write]`, within the approved boundary: the subcommand, the generator module contract, drift reporting, `--write` behind the shared development-link and working-tree guard, tests, manual, command inventory, completions, SKILL-006 and the changelog. The harness generator and its surfaces, a conform or audit hook and the deletion of surfaces a generator no longer names stay out of scope. Baseline `41e11c949b746be916b554cf9b66859fdcd2fc8b`; delivered in `9c4c0c0ef55feac893e869b886e87639ece9d791`, `feat(dev): add ki dev skill generate for generated skill surfaces`, which `v0.10.5` already contains.
+
+### Change Summary
+
+- `src/core/harness/development/write-tree.ts` now holds the write guard the rubric command kept privately, with the subject named per command; `rubric.ts` uses it and its messages are otherwise unchanged.
+- `src/core/harness/development/generation.ts` imports `<skill source>/scripts/generate/index.ts` under the provider's real root, validates the contract, compares each surface with disk and publishes only drifted surfaces, keeping an existing file's mode; `types.ts` and `index.ts` carry its types and exports.
+- `src/commands/dev/ports.ts` and `src/commands/dev/skill/index.ts` register `generate <skill> [--write]`.
+- `src/tests/cli/skill/generate.test.ts` covers drift reporting, writing with the mode kept, both guard refusals and every contract refusal; `completions.test.ts` lists the command.
+- `man/ki.1`, `man/ki.commands.json`, `docs/specs/skills.md` (SKILL-006) and `CHANGELOG.md` document it.
+- Deviation, within scope: `src/tests/cli/manage/inventory.test.ts` gained `generate` in its `dev skill` command list, a consequence of registering the command that the Files touched list did not name.
+
+### Verification
+
+Run on 16 October 2026 at `HEAD` `d64ed454`, whose `src/` contains the delivery unchanged; the installed `ki` runs the tools-ki primary checkout.
+
+- `bun run test:coverage`: 71 files, 1189 tests pass; statements, branches, functions and lines all at 100%. `bunx tsc --noEmit` is clean. Additionally, `bunx biome check .` exits 0 with warnings and infos only, `bunx knip` exits 0 with configuration hints only, and `mandoc -T lint man/ki.1` is clean.
+- `ki dev skill generate ki-pmo` in `ki-agentic-harness` reports "7 generated surface(s) are in sync" and exits 0.
+- The `ki-pmo` generator splices only the hook's `line=` and `pointer=` values, so the deliberate edit went into the generated `line=` value: the check names `hooks/coordinator-reminder.sh` stale and exits 1. `--write` from the tools-ki working tree is refused with exit 2, naming the owning tree. `--write` from the harness rewrites the hook, its SHA-256 matches the original and its mode stays `-rwxr-xr-x`; the harness working tree is clean afterwards and a recheck exits 0.
+- A first attempt appended a line at the end of the hook instead; the command rightly reported it in sync, because that line is outside the generated values. The original was restored from a copy, and the harness was left clean.
+
+### Outstanding concerns
+
+None.
+
+### Post-change review
+
+The goal holds: a skill's standard can be the one source of the files its generator names, and the command both detects and repairs drift without reaching outside the caller's working tree. Scope held apart from the one inventory-test line above. Regression risk is low: the rubric command's behaviour is covered unchanged through the shared guard, and the full suite is at 100% coverage. Ready for acceptance.
+
+### Mini recap
+
+`ki dev skill generate` shipped in `9c4c0c0e` and is in `v0.10.5`; Verify passed in full on 16 October 2026 against the live `ki-pmo` generator. No concerns. Learning route, not promoted: Verify steps that edit a generated file should name the generated region when a generator splices lines into a hand-kept file, as the `ki-pmo` hook generator does.
 
 ## Discussion
 
