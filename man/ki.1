@@ -392,13 +392,13 @@ Append a ready-made agent to the run queue.
 Keep up to the given number of queued agents running, detached.
 .TP
 .B ki agent wait <run> [--next] [--interval <seconds>]
-Block until the next unseen agent, or the whole run, finishes.
+Block until the next unseen run event, or until the whole run finishes.
 .TP
 .B ki agent status <run>
 Print each agent's latest status and the queue.
 .TP
 .B ki agent watch <run> [seconds]
-Print one status line per interval until the run ends.
+Print each new run event and one status line per interval until the run ends.
 .TP
 .B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the run contract.
@@ -1590,10 +1590,32 @@ empty and nothing is running.
 .B ki agent wait <run> [--next] [--interval <seconds>]
 With
 .BR --next ,
-block until the next unseen agent finishes, print
-.I "<name> finished: <last status>"
-or that it exited without DONE, and mark it seen. A coordinator runs it in
-the background, reports each finish, and re-arms it. Without
+block until the run has an event the coordinator has not yet seen, print it
+as
+.IR "<name> <kind>: <text>" ,
+and move the run's
+.I events.seen
+cursor past it. The kinds returned are
+.B done
+(DONE and a report),
+.B failed
+(an exit without DONE, DONE with no report, or a
+.I failed:
+status line),
+.B blocked
+(a gate that cannot open, a dispatcher drop, or a
+.I blocked:
+status line) and
+.B needs-owner
+(one per
+.I "### <TAG> - <title>"
+query in the report, or per
+.I "<TAG> - <title>"
+heading under an older
+.IR "## Outstanding queries" ).
+Events are returned in the order they happened, never in name order. A
+coordinator runs it in the background, reports each event, and re-arms it.
+Without
 .BR --next ,
 wait for the whole run. Either form prints
 .B ALL FINISHED
@@ -1604,9 +1626,49 @@ Print each agent's latest status, flag any agent whose process exited
 without DONE, and list the queue.
 .TP
 .B ki agent watch <run> [seconds]
-Print one line per interval (default 120 seconds) until no agent is
+Print each new event as
+.IR "HH:MM TZ | <name> <kind>: <text>" ,
+including
+.BR launch ,
+.B held
+and
+.BR progress ,
+then one status line, per interval (default 120 seconds) until no agent is
 running, ending with
 .BR "ALL FINISHED" .
+.IP
+Each run keeps an append-only
+.I events.jsonl
+in its state folder, one JSON object per line with
+.IR seq ,
+.IR at ,
+.IR run ,
+.IR agent ,
+.IR attempt ,
+.I kind
+and
+.IR text ,
+and
+.I tag
+for a query. The launcher appends launches, holds and closed gates;
+.BR status ,
+.B watch
+and
+.B wait
+derive the rest from each agent's status file, pid and report under the
+run's
+.IR events.lock .
+The progress protocol offers the status-line forms
+.IR "HH:MM <zone> - milestone: <text>" ,
+which becomes a
+.B progress
+event, and the
+.I blocked:
+and
+.I failed:
+forms; any other status line stays local. An unchanged line or query is
+never reported twice, and a relaunched agent's events carry the next
+.IR attempt .
 .TP
 .B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the

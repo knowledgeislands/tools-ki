@@ -39,15 +39,17 @@ A name not yet launched keeps the gate waiting, so you may launch the dependent 
 
 1. Queue ready-made prompts in priority order: `ki agent queue <run> <name> <prompt-file> --workdir <dir> --rules push`.
 2. Start the dispatcher once: `ki agent dispatch <run> --max 4`. It launches the first queued agent whose `--wait-for` gate is open as soon as any running one finishes, logs each launch to `dispatch.log`, and exits when the queue is empty and nothing is running. It drops, and logs, a queued agent whose gate cannot open, including one still waiting once nothing in the run is running.
-3. Arm the waiter in the background: `ki agent wait <run> --next`. It returns `<name> finished: <last status>`, or that the agent exited without `DONE`, and marks that agent seen.
+3. Arm the waiter in the background: `ki agent wait <run> --next`. It returns the next run event you have not seen, in the order events happened, as `<name> <kind>: <text>`: `done` for `DONE` with a report, `failed` for an exit without `DONE`, `DONE` with no report or a `failed:` status line, `blocked` for a gate that cannot open, a dispatcher drop or a `blocked:` status line, and `needs-owner` for each outstanding query heading in the report.
 4. On each wake, read the agent's report, tell the owner the outcome, and re-arm the waiter. Stop re-arming once it prints `ALL FINISHED`.
+
+Agents need do nothing new: the events derive from the status line, `DONE` and the report. The progress protocol also offers `HH:MM <zone> - milestone: <text>`, which `watch` shows as a `progress` event, and the `blocked:` and `failed:` forms, which wake the waiter. Every event lands in the run's append-only `events.jsonl`.
 
 Reorder priorities by editing nothing but the queue order: queue new work last, or launch urgent work directly.
 
 ## Check on a run
 
 - `ki agent status <run>` prints each agent's latest status, flags any agent that exited without `DONE`, and lists the queue.
-- `ki agent watch <run>` prints one line every two minutes and ends with `ALL FINISHED`.
+- `ki agent watch <run>` prints each new event, launches and milestones included, then one status line every two minutes, and ends with `ALL FINISHED`.
 
 After an interrupt of your own session, run `ki agent status` before claiming anything is still running. Relaunch an agent flagged `EXITED WITHOUT DONE` rather than waiting for it.
 

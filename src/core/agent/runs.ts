@@ -1,7 +1,8 @@
-import { appendFile, copyFile, mkdir, readdir, rename, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readdir, rename, stat, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { type AgentContext, type AuthorityTier, checkName, git, read, runDirectory } from './context.ts'
+import { deriveEvents, type RunEvent, readEvents, recordEvent } from './events.ts'
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
 import { reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
@@ -180,7 +181,7 @@ const composePrompt = async (
     [
       '---',
       '',
-      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${report} as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries with the reply block), then write DONE as the last line of ${base}.status. Do not use background subagents. Never end your session while waiting.`
+      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${report} as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries with the reply block), then write DONE as the last line of ${base}.status. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.`
     ].join('\n')
   )
   return `${sections.join('\n\n')}\n`
@@ -335,11 +336,15 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
   const prompt = await composePrompt(context, directory, request, reportPath(thread, request.name), body)
   await writeFile(`${base}.prompt.md`, prompt)
   await writeFile(`${base}.launch.json`, launchDetails(request))
-  if (state.kind === 'open')
-    return { pid: await startRuntime(context, directory, request, prompt), directory, held: [] }
+  if (state.kind === 'open') {
+    const pid = await startRuntime(context, directory, request, prompt)
+    await recordEvent(context, directory, request.name, 'launch', `launched (pid ${pid})`)
+    return { pid, directory, held: [] }
+  }
   await writeFile(`${base}.status`, heldLine(context, state.names))
   const pid = await startHold(context, directory, request)
   await writeFile(`${base}.pid`, `${pid}\n`)
+  await recordEvent(context, directory, request.name, 'held', `held until ${state.names.join(', ')} finish`)
   return { pid, directory, held: state.names }
 }
 
@@ -363,9 +368,11 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
     if (state.kind === 'closed') {
       const line = `${stamp(context)} - gate cannot open: ${state.reason}`
       await writeFile(`${base}.status`, `${line}\n`)
+      await recordEvent(context, directory, request.name, 'blocked', `gate cannot open: ${state.reason}`)
       return line
     }
     const pid = await startRuntime(context, directory, request, prompt)
+    await recordEvent(context, directory, request.name, 'launch', `launched (pid ${pid})`)
     return `${stamp(context)} launched ${request.run}/${request.name} (pid ${pid})`
   }
 }
@@ -420,10 +427,28 @@ const summary = async (context: AgentContext, directory: string): Promise<AgentS
   return { lines: result, live }
 }
 
-export const runStatus = async (context: AgentContext, run: string): Promise<AgentSummary> =>
-  summary(context, await existingRun(context, run))
+/** Brings the run's `events.jsonl` up to date with its packet. */
+const observe = async (context: AgentContext, directory: string): Promise<void> =>
+  deriveEvents(
+    context,
+    directory,
+    await agents(directory),
+    async (name) => (await running(context, join(directory, `${name}.pid`))) !== undefined
+  )
 
-/** Emits one line per interval until no agent is running, ending with ALL FINISHED. */
+const eventText = (event: RunEvent): string =>
+  `${event.agent} ${event.kind}: ${event.tag === undefined ? '' : `${event.tag} - `}${event.text}`
+
+export const runStatus = async (context: AgentContext, run: string): Promise<AgentSummary> => {
+  const directory = await existingRun(context, run)
+  await observe(context, directory)
+  return summary(context, directory)
+}
+
+/**
+ * Emits each new event, then one status line, per interval until no agent is running,
+ * ending with ALL FINISHED.
+ */
 export const watchRun = async (
   context: AgentContext,
   run: string,
@@ -431,8 +456,14 @@ export const watchRun = async (
   emit: (line: string) => void
 ): Promise<void> => {
   const directory = await existingRun(context, run)
+  let cursor = (await readEvents(directory)).length
   for (;;) {
     const current = await summary(context, directory)
+    await observe(context, directory)
+    for (const event of await readEvents(directory, cursor)) {
+      emit(`${stamp(context)} | ${eventText(event)}`)
+      cursor = event.seq
+    }
     const line = [stamp(context), ...current.lines].join(' | ')
     if (!current.live) return emit(`${line} | ALL FINISHED`)
     emit(line)
@@ -507,7 +538,10 @@ export const dispatchRun = async (
   emit: (line: string) => void
 ): Promise<void> => {
   const directory = await existingRun(context, request.run)
-  const drop = (name: string, reason: string): void => emit(`${stamp(context)} could not launch ${name}: ${reason}`)
+  const drop = async (name: string, kind: 'blocked' | 'failed', reason: string): Promise<void> => {
+    await recordEvent(context, directory, name, kind, `could not launch: ${reason}`)
+    emit(`${stamp(context)} could not launch ${name}: ${reason}`)
+  }
   for (;;) {
     let alive = 0
     for (const name of await agents(directory)) if (await running(context, join(directory, `${name}.pid`))) alive += 1
@@ -519,7 +553,7 @@ export const dispatchRun = async (
     const state = gates[index]
     if (state?.kind === 'closed') {
       await writeQueue(directory, queue.toSpliced(index, 1))
-      drop((next as LaunchRequest).name, `gate cannot open: ${state.reason}`)
+      await drop((next as LaunchRequest).name, 'blocked', `gate cannot open: ${state.reason}`)
       continue
     }
     if (next && alive < request.max) {
@@ -529,7 +563,7 @@ export const dispatchRun = async (
         emit(`${stamp(context)} launched ${next.name}`)
       } catch (error) {
         if (!(error instanceof KiError)) throw error
-        drop(next.name, error.message)
+        await drop(next.name, 'failed', error.message)
       }
       continue
     }
@@ -537,7 +571,7 @@ export const dispatchRun = async (
       // Nothing runs and nothing can launch, so every remaining gate waits for good.
       for (const [position, queued] of queue.entries()) {
         const waiting = gates[position] as Extract<Gate, { kind: 'waiting' }>
-        drop(queued.name, `gate cannot open: nothing running for ${waiting.names.join(', ')}`)
+        await drop(queued.name, 'blocked', `gate cannot open: nothing running for ${waiting.names.join(', ')}`)
       }
       if (queue.length) await writeQueue(directory, [])
       return emit(`${stamp(context)} queue empty, all finished`)
@@ -546,9 +580,12 @@ export const dispatchRun = async (
   }
 }
 
+/** The events `wait --next` returns; launches, holds and milestones stay in the log and `watch`. */
+const waitedKinds: ReadonlySet<RunEvent['kind']> = new Set(['done', 'failed', 'blocked', 'needs-owner'])
+
 /**
- * Blocks until an agent the coordinator has not yet seen finishes and returns its
- * line, marking it seen; with `next` false, waits for the whole run instead.
+ * Blocks until the run has an event the coordinator has not yet seen and returns it, moving the
+ * `events.seen` cursor past it; with `next` false, waits for the whole run instead.
  */
 export const waitForRun = async (
   context: AgentContext,
@@ -556,19 +593,20 @@ export const waitForRun = async (
   options: { readonly next: boolean; readonly seconds: number }
 ): Promise<string> => {
   const directory = await existingRun(context, run)
-  const seenFile = join(directory, 'seen')
+  const seenFile = join(directory, 'events.seen')
   for (;;) {
-    const seen = new Set(lines(await read(seenFile)))
-    for (const name of await agents(directory)) {
-      if (!options.next || seen.has(name)) continue
-      const state = await agentState(context, directory, name)
-      if (state.kind === 'running') continue
-      await appendFile(seenFile, `${name}\n`)
-      return state.kind === 'finished'
-        ? `${name} finished: ${state.last}`
-        : `${name} exited without DONE: ${state.last ?? 'no status'}`
+    // Liveness first, so an agent that stops during this pass still has its events derived.
+    const { live } = await summary(context, directory)
+    await observe(context, directory)
+    if (options.next) {
+      const cursor = Number.parseInt((await read(seenFile)) ?? '0', 10)
+      const event = (await readEvents(directory, cursor)).find((candidate) => waitedKinds.has(candidate.kind))
+      if (event) {
+        await writeFile(seenFile, `${event.seq}\n`)
+        return eventText(event)
+      }
     }
-    if (!(await summary(context, directory)).live) return 'ALL FINISHED'
+    if (!live) return 'ALL FINISHED'
     await context.processes.sleep(options.seconds * 1000)
   }
 }

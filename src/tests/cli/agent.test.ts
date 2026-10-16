@@ -1,4 +1,4 @@
-import { realpath, rm } from 'node:fs/promises'
+import { realpath, rm, utimes } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { type AgentLaunch, runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
@@ -472,6 +472,7 @@ describe('ki agent status and watch', () => {
     processes.alive.add(99)
     await box.state.write('ki/agents/r/a.pid', '10\n')
     await box.state.write('ki/agents/r/a.status', '21:00 CEST - final check\nDONE\n')
+    await box.state.write('ki/agents/r/a.report.md', '# Report\n')
     await box.state.write('ki/agents/r/b.pid', '11\n')
     await box.state.write('ki/agents/r/b.status', 'DONE\n')
     await box.state.write('ki/agents/r/c.pid', '12\n')
@@ -529,12 +530,22 @@ describe('ki agent status and watch', () => {
 
     const result = await box.run('ki agent watch r 5', { now })
     const lines = result.stdout.trimEnd().split('\n')
-    expect(lines).toHaveLength(2)
-    expect(lines[0]).toBe(
+    expect(lines).toHaveLength(8)
+    expect(lines.slice(0, 4).sort()).toEqual([
+      '19:30 UTC | a done: 21:00 CEST - final check',
+      '19:30 UTC | b failed: no report',
+      '19:30 UTC | e failed: exited without DONE (21:01 CEST - halfway)',
+      '19:30 UTC | f failed: exited without DONE (no status)'
+    ])
+    expect(lines[4]).toBe(
       '19:30 UTC | a: finished | b: finished | c: 21:05 CEST - testing | d: no status yet | e: EXITED WITHOUT DONE (21:01 CEST - halfway) | f: EXITED WITHOUT DONE (no status)'
     )
-    expect(lines[1]).toContain('c: EXITED WITHOUT DONE (21:05 CEST - testing)')
-    expect(lines[1]).toMatch(/\| ALL FINISHED$/)
+    expect(lines.slice(5, 7).sort()).toEqual([
+      '19:30 UTC | c failed: exited without DONE (21:05 CEST - testing)',
+      '19:30 UTC | d failed: exited without DONE (no status)'
+    ])
+    expect(lines[7]).toContain('c: EXITED WITHOUT DONE (21:05 CEST - testing)')
+    expect(lines[7]).toMatch(/\| ALL FINISHED$/)
 
     const invalid = await box.run('ki agent watch r 0', { now })
     expect(invalid.exitCode).toBe(2)
@@ -1345,7 +1356,7 @@ describe('ki agent queue, dispatch and wait', () => {
     await expect(box.run('ki agent dispatch r --max 1 --foreground', { now })).rejects.toThrow('spawn failed')
   })
 
-  test('wakes on each finish in turn, then reports the run finished', async () => {
+  test('wakes on each event in the order it happened, then reports the run finished', async () => {
     const box = await sandbox()
     const alive = new Set([12, 13])
     box.setAgentProcesses({
@@ -1354,27 +1365,36 @@ describe('ki agent queue, dispatch and wait', () => {
       sleep: async (milliseconds) => {
         expect(milliseconds).toBe(30_000)
         alive.delete(12)
+        await box.state.write('ki/agents/r/c.report.md', '# Report\n')
         await box.state.write('ki/agents/r/c.status', '21:20 CEST - reported\nDONE\n')
       }
     })
-    await box.state.write('ki/agents/r/a.pid', '10\n')
-    await box.state.write('ki/agents/r/a.status', '21:00 CEST - final check\nDONE\n')
-    await box.state.write('ki/agents/r/b.pid', '11\n')
+    const written = async (file: string, body: string, minute: number): Promise<void> => {
+      await box.state.write(`ki/agents/r/${file}`, body)
+      const at = new Date(`2026-10-07T19:${minute}:00Z`)
+      await utimes(runPath(box, file), at, at)
+    }
+    // The agents finished d, b, then a; the old name-ordered waiter returned a first.
+    await written('d.pid', '13\n', 10)
+    await written('d.report.md', '# Report\n', 10)
+    await written('d.status', 'DONE\n', 10)
+    await written('b.pid', '11\n', 11)
+    await written('a.pid', '10\n', 12)
+    await written('a.report.md', '# Report\n', 12)
+    await written('a.status', '21:00 CEST - final check\nDONE\n', 12)
     await box.state.write('ki/agents/r/c.pid', '12\n')
     await box.state.write('ki/agents/r/c.status', '21:05 CEST - testing\n')
-    await box.state.write('ki/agents/r/d.pid', '13\n')
-    await box.state.write('ki/agents/r/d.status', 'DONE\n')
 
     const waits = []
     for (let index = 0; index < 5; index += 1) waits.push((await box.run('ki agent wait r --next', { now })).stdout)
     expect(waits).toEqual([
-      'a finished: 21:00 CEST - final check\n',
-      'b exited without DONE: no status\n',
-      'd finished: DONE\n',
-      'c finished: 21:20 CEST - reported\n',
+      'd done: DONE\n',
+      'b failed: exited without DONE (no status)\n',
+      'a done: 21:00 CEST - final check\n',
+      'c done: 21:20 CEST - reported\n',
       'ALL FINISHED\n'
     ])
-    expect(await box.state.read('ki/agents/r/seen')).toBe('a\nb\nd\nc\n')
+    expect(await box.state.read('ki/agents/r/events.seen')).toBe('4\n')
   })
 
   test('waits for the whole run without --next', async () => {
@@ -1392,7 +1412,7 @@ describe('ki agent queue, dispatch and wait', () => {
     await box.state.write('ki/agents/s/e.pid', '14\n')
     await box.state.write('ki/agents/s/e.status', '21:01 CEST - halfway\n')
     expect((await box.run('ki agent wait s --next', { now })).stdout).toBe(
-      'e exited without DONE: 21:01 CEST - halfway\n'
+      'e failed: exited without DONE (21:01 CEST - halfway)\n'
     )
   })
 })

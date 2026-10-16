@@ -178,7 +178,7 @@ export const createAgentCommand = (context: KiContext): Command => {
 
   command.addCommand(
     new Command('watch')
-      .description('print one status line per interval until every agent stops, ending ALL FINISHED')
+      .description('print each new event and one status line per interval until every agent stops, ending ALL FINISHED')
       .argument('<run>', 'run name')
       .argument('[seconds]', 'seconds between lines', seconds, 120)
       .action((run: string, interval: number) => watchRun(agentContext(context), run, interval, write))
@@ -186,9 +186,9 @@ export const createAgentCommand = (context: KiContext): Command => {
 
   command.addCommand(
     new Command('wait')
-      .description('block until the next unseen agent finishes, or with no --next until the run ends')
+      .description('block until the next unseen finish, failure, block or query, or with no --next until the run ends')
       .argument('<run>', 'run name')
-      .option('--next', 'return when the next unseen agent finishes, marking it seen')
+      .option('--next', 'return the next unseen done, failed, blocked or needs-owner event, marking it seen')
       .option('--interval <seconds>', 'seconds between checks', seconds, 30)
       .action(async (run: string, options: { next?: boolean; interval: number }) =>
         write(await waitForRun(agentContext(context), run, { next: options.next === true, seconds: options.interval }))

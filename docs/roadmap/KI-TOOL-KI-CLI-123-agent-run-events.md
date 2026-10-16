@@ -5,13 +5,13 @@ title: Agent run events
 project: ways-of-working
 component: agent
 kind: deliver
-horizon: next
-status: ready
+horizon: now
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 29d42d95d1989d1479ff15fadd96aaa9937a0681
 created_at: 2026-10-13T13:53:24Z
-updated_at: 2026-10-16T01:24:28Z
+updated_at: 2026-10-16T01:52:25Z
 ---
 
 # Agent Run Events
@@ -64,13 +64,13 @@ Read at `a57617f0` on 16 October 2026.
 
 ## Steps
 
-- [ ] Add `src/core/agent/events.ts` with the `RunEvent` type, `appendEvent`, the lock, `deriveEvents` (Decisions 1 to 4, 7 and 8), report heading parsing for both shapes, and `readEvents(directory, after)`.
-- [ ] `runs.ts`: append `launch` in `launchAgent`, `held` when a launch is held, and `blocked` when a gate closes; add the milestone, blocked and failed forms to `composePrompt`'s protocol.
-- [ ] Rewrite `waitForRun` over `deriveEvents` and the `events.seen` cursor (Decision 5); `wait` without `--next` still waits for the whole run.
-- [ ] Rewrite `watchRun` to print new events before each interval's line (Decision 6); call `deriveEvents` in `runStatus`.
-- [ ] `src/commands/agent/index.ts`: update the `wait --next` and `watch` descriptions.
-- [ ] Contract tests in `src/tests/cli/agent.test.ts` (see Verify); add `src/tests/cli/agent-events.test.ts` if the file grows past the repository's size norm.
-- [ ] `README.md` `ki agent` section, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
+- [x] Add `src/core/agent/events.ts` with the `RunEvent` type, `appendEvent`, the lock, `deriveEvents` (Decisions 1 to 4, 7 and 8), report heading parsing for both shapes, and `readEvents(directory, after)`.
+- [x] `runs.ts`: append `launch` in `launchAgent`, `held` when a launch is held, and `blocked` when a gate closes; add the milestone, blocked and failed forms to `composePrompt`'s protocol.
+- [x] Rewrite `waitForRun` over `deriveEvents` and the `events.seen` cursor (Decision 5); `wait` without `--next` still waits for the whole run.
+- [x] Rewrite `watchRun` to print new events before each interval's line (Decision 6); call `deriveEvents` in `runStatus`.
+- [x] `src/commands/agent/index.ts`: update the `wait --next` and `watch` descriptions.
+- [x] Contract tests in `src/tests/cli/agent.test.ts` (see Verify); add `src/tests/cli/agent-events.test.ts` if the file grows past the repository's size norm.
+- [x] `README.md` `ki agent` section, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
 
 ## Files touched
 
@@ -110,6 +110,57 @@ None. `events.jsonl` is a machine-local state file, not a published contract.
 ### Roadmap
 
 Phases 2 to 4 of the notification strategy are later records in their owning repositories; this record adds none of them.
+
+## Review
+
+### Delivered
+
+Each run keeps an append-only `events.jsonl` in its state folder. `ki agent wait --next` returns the next unseen `done`, `failed`, `blocked` or `needs-owner` event in the order events happened, ending the 13 October name-order defect, and `ki agent watch` prints each new event before its interval's status line. The progress protocol offers the `milestone:`, `blocked:` and `failed:` status-line forms. Agents need write nothing new, and no channel is called.
+
+### Change Summary
+
+- `src/core/agent/events.ts` (new): the `RunEvent` shape of Decision 8; `withLock` on `events.lock`, created with `wx` and taken over after 30 seconds; `recordEvent` for launcher-observed events; `deriveEvents`, which compares each agent's status, pid and report with `events.state.json` and appends changes ordered by source modification time, then name; `reportQueries` for both report shapes; and `readEvents`. `attempt` counts `<name>.prev-<n>` folders from KI-TOOL-KI-CLI-135.
+- `src/core/agent/runs.ts`: `launch` and `held` events from `launchAgent`, `launch` and `blocked` from the hold process, and `blocked` or `failed` for each dispatcher drop; the three status-line forms in `composePrompt`; `waitForRun` over the `events.seen` cursor; `watchRun` printing events; `runStatus` deriving before it reads.
+- `src/commands/agent/index.ts`: `wait --next` and `watch` descriptions.
+- `src/tests/cli/agent-events.test.ts` (new) and `src/tests/cli/agent.test.ts`: the contract tests and the updated wait and watch expectations.
+- `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md`, `CHANGELOG.md`.
+
+Beyond the Steps, dispatcher drops are recorded as `blocked` (a gate that cannot open) or `failed` (any other launch error). Requirement 2 counts a gate that cannot open as `blocked`, and the dispatcher otherwise logged drops only to `dispatch.log`. `wait --next` now prints `<name> done: <last status>` where it printed `<name> finished: <last status>`, and `<name> failed: exited without DONE (<last status>)` for an exit.
+
+### Verification
+
+Verify 1 to 7 are covered through `run(args, context)` and `sandbox()` in `src/tests/cli/agent-events.test.ts`:
+
+- the `notify`, `review-astra`, `merge` order regression;
+- two `needs-owner` events after `done`, none on a second pass, one on a changed title, and the older `## Outstanding queries` shape;
+- `milestone:`, `blocked:` and `failed:` lines, with no repeat, no event for a plain line and no `progress` from `wait`;
+- a held launch, a closed gate and a dispatcher drop;
+- two racing observers appending once, a fresh lock waited for and a stale lock taken over;
+- a relaunch numbered `attempt: 2` with its own events.
+
+`DONE` with no report giving `failed` (`no report`) and `watch` printing events before its status line are in the updated `src/tests/cli/agent.test.ts`.
+
+On 16 October 2026:
+
+- `bun run test:coverage` passed 73 files and 1203 tests at 100% statements, branches, functions and lines.
+- `bunx tsc --noEmit -p .`, biome, `bunx knip`, `mandoc -T lint man/ki.1` and rumdl were clean.
+- `ki repo audit --repo .` reports only DEPS-1, `@types/node` 26.6.3 → 26.6.4, which predates this record.
+
+A live check on a copy of the tools-burndown run's state folder returned that run's finishes and outstanding queries in the order they happened.
+
+### Outstanding concerns
+
+- The `ki` on this machine runs from this working tree, so the live tools-burndown coordinator picked these mechanics up before commit, as Decision 5 allows ("a run in flight at upgrade returns its earlier finishes once more").
+- [KI-HARNESS-GOV-175](https://github.com/knowledgeislands/ki-agentic-harness/blob/main/docs/roadmap/KI-HARNESS-GOV-175-delegation-run-events.md) still owns the `ki-delegation` wording. The protocol sentence the launcher appends is this record's proposal for it.
+- DEPS-1 in `ki repo audit` predates this record and needs a network install.
+
+### Post-change review
+
+Derivation keeps every existing prompt valid: an agent that writes only its status line, `DONE` and its report still produces `done`, `failed` and `needs-owner` events. The snapshot makes each pass idempotent, and the lock keeps concurrent observers from appending twice. A gate-closed or dropped agent is marked ended, so no spurious `failed` follows its `blocked`. Free text is never parsed: only the three fixed forms and the query headings produce events.
+
+### Mini recap
+
+`wait --next` now wakes the coordinator on finishes, failures, blocks and owner queries in the order they happened, from an append-only events log derived from the run packet.
 
 ## Discussion
 

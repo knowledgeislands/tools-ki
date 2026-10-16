@@ -495,7 +495,7 @@
         },
         {
           "invocation": "ki agent wait <run> [--next] [--interval <seconds>]",
-          "description": "With --next , block until the next unseen agent finishes, print <name> finished: <last status> or that it exited without DONE, and mark it seen. A coordinator runs it in the background, reports each finish, and re-arms it. Without --next , wait for the whole run. Either form prints ALL FINISHED when nothing is left to wait for."
+          "description": "With --next , block until the run has an event the coordinator has not yet seen, print it as <name> <kind>: <text> , and move the run's events.seen cursor past it. The kinds returned are done (DONE and a report), failed (an exit without DONE, DONE with no report, or a failed: status line), blocked (a gate that cannot open, a dispatcher drop, or a blocked: status line) and needs-owner (one per ### <TAG> - <title> query in the report, or per <TAG> - <title> heading under an older ## Outstanding queries ). Events are returned in the order they happened, never in name order. A coordinator runs it in the background, reports each event, and re-arms it. Without --next , wait for the whole run. Either form prints ALL FINISHED when nothing is left to wait for."
         },
         {
           "invocation": "ki agent status <run>",
@@ -503,7 +503,7 @@
         },
         {
           "invocation": "ki agent watch <run> [seconds]",
-          "description": "Print one line per interval (default 120 seconds) until no agent is running, ending with ALL FINISHED ."
+          "description": "Print each new event as HH:MM TZ | <name> <kind>: <text> , including launch , held and progress , then one status line, per interval (default 120 seconds) until no agent is running, ending with ALL FINISHED . .IP Each run keeps an append-only events.jsonl in its state folder, one JSON object per line with seq , at , run , agent , attempt , kind and text , and tag for a query. The launcher appends launches, holds and closed gates; status , watch and wait derive the rest from each agent's status file, pid and report under the run's events.lock . The progress protocol offers the status-line forms HH:MM <zone> - milestone: <text> , which becomes a progress event, and the blocked: and failed: forms; any other status line stays local. An unchanged line or query is never reported twice, and a relaunched agent's events carry the next attempt ."
         },
         {
           "invocation": "ki agent new <run> <name> [--repo <dir>]",
