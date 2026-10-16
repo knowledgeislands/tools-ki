@@ -6,13 +6,13 @@ project: tools-burndown
 purpose: corrective
 kind: deliver
 component: repo
-horizon: next
-status: ready
+horizon: now
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 7eeeb54e1ab551eefed5345dcfaf3c454efc74c0
 created_at: 2026-10-15T21:48:02Z
-updated_at: 2026-10-16T01:20:20Z
+updated_at: 2026-10-16T02:12:55Z
 ---
 
 # Warn Unknown Record Fields

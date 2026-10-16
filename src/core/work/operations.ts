@@ -97,6 +97,8 @@ interface RoadmapItemEvidence {
   readonly items?: readonly WorkItem[]
   readonly projectedItems?: readonly RoadmapListItem[]
   readonly faults?: readonly WorkItemFault[]
+  /** Unknown KB Streams record fields; they never change the exit status. */
+  readonly warnings?: readonly string[]
   readonly roadmap?: 'absent'
   readonly diagnostic?: string
   readonly grouping?: RoadmapGroupingResult
@@ -371,6 +373,7 @@ export const listRoadmapItems = async (
                     }
                   : {}),
                 faults: inventory.faults,
+                warnings: inventory.warnings,
                 ...(grouping ? { grouping } : {})
               })
         }

@@ -292,6 +292,117 @@ describe('[ki repo roadmap]', () => {
     expect(result.output).not.toContain('unsupported or repeated field note_type')
   })
 
+  test('warns on each unknown KB Streams record field without changing the exit status', async () => {
+    const box = await sandbox()
+    await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
+    await box.project.write(
+      'knowledge/Streams/Roadmap/KBS-001-prioritised.md',
+      item({ id: 'KBS-001', priority: 'high', note_type: 'roadmap', tags: '\n  - roadmap\n  - delivery' })
+    )
+    await box.project.write(
+      'knowledge/Streams/Roadmap/KBS-002-owned.md',
+      item({ id: 'KBS-002', owner: 'x', aliases: '\n  - Owned\n  - Claimed', audience: 'Delivery' })
+    )
+    await box.project.write(
+      'knowledge/Streams/Roadmap/KBS-003-known.md',
+      item({
+        id: 'KBS-003',
+        note_type: 'roadmap',
+        tags: '[roadmap]',
+        author: 'Knowledge Islands',
+        created: '2026-09-01'
+      })
+    )
+
+    const result = await box.run('ki repo --repo knowledge roadmap list --no-icons')
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('├─ roadmap (3)')
+    expect(result.output).toContain('├─ warnings (4)')
+    expect(result.output).toContain(
+      'KBS-001-prioritised.md: unknown field priority; horizon is the only priority signal'
+    )
+    expect(result.output).toContain('KBS-002-owned.md: unknown field owner\n')
+    expect(result.output).toContain('KBS-002-owned.md: unknown field aliases\n')
+    expect(result.output).toContain('KBS-002-owned.md: unknown field audience\n')
+    expect(result.output).not.toContain('KBS-003-known.md')
+    expect(result.output).not.toMatch(/unknown field (tags|note_type|author|created)/)
+
+    const summary = await box.run('ki repo --repo knowledge roadmap summary')
+    expect(summary.exitCode).toBe(0)
+    expect(summary.output).toContain('Warnings\n  KBS-001-prioritised.md: unknown field priority')
+
+    const json = await box.run('ki repo --repo knowledge roadmap list --format json')
+    expect(json.exitCode).toBe(0)
+    expect(JSON.parse(json.output).repositories[0].warnings).toEqual([
+      'KBS-001-prioritised.md: unknown field priority; horizon is the only priority signal',
+      'KBS-002-owned.md: unknown field owner',
+      'KBS-002-owned.md: unknown field aliases',
+      'KBS-002-owned.md: unknown field audience'
+    ])
+
+    await box.project.write(
+      'project/.ki.toml',
+      '[repo]\nharnesses = ["example/harness"]\n\n[skills.ki-repo-project]\n\n[skills.ki-work]\nadapter = "roadmap"\n\n[skills.ki-work-roadmap]\n\n[skills.ki-repo]\nrepo_type = "project"\nprimary_shape = "ki-repo-project"\n'
+    )
+    await box.project.write('project/docs/roadmap/KI-TOOL-KI-CLI-003-owned.md', item({ owner: 'x' }))
+    const strict = await box.run('ki repo --repo project roadmap list')
+    expect(strict.exitCode).toBe(1)
+    expect(strict.output).toContain('has unsupported or repeated field owner')
+    expect(strict.output).not.toContain('unknown field owner')
+  })
+
+  test('pins the KB Streams known fields to the Harness Streams checker', async () => {
+    // Mirrors RECORD_FIELDS plus KB_NOTE_FIELDS in ki-agentic-harness
+    // skills/repo-structure/ki-repo-kb-streams/scripts/rubric/contexts/streams.ts (origin/main 05ee5b1f).
+    // A change to either list needs the matching change on the other side.
+    const known = [
+      'id',
+      'title',
+      'status',
+      'blocks',
+      'blocked_by',
+      'baseline_ref',
+      'created_at',
+      'updated_at',
+      'area',
+      'theme',
+      'horizon',
+      'kind',
+      'purpose',
+      'project',
+      'initiative',
+      'component',
+      'resolution',
+      'resolution_target',
+      'waiting_on_trades',
+      'intake_disposition',
+      'intake_disposition_target',
+      'transferred_from',
+      'housekeeping_template',
+      'scheduled_for',
+      'task_links',
+      'hold',
+      'note_type',
+      'updated',
+      'reviewed',
+      'created',
+      'tags',
+      'author'
+    ]
+    const box = await sandbox()
+    await box.project.write('knowledge/.ki.toml', knowledgeBaseConfiguration())
+    for (const [index, field] of [...known, 'owner'].entries()) {
+      const id = `KBS-${String(index + 1).padStart(3, '0')}`
+      await box.project.write(`knowledge/Streams/Roadmap/${id}-probe.md`, item({ id, [field]: 'probe' }))
+    }
+
+    const result = await box.run('ki repo --repo knowledge roadmap list --format json')
+
+    // A known field may fail its own validation, but only the field outside the set is unknown.
+    expect(JSON.parse(result.output).repositories[0].warnings).toEqual(['KBS-033-probe.md: unknown field owner'])
+  })
+
   test('resolves roadmaps only from the declared work adapter and its adapter table', async () => {
     const box = await sandbox()
     const project =

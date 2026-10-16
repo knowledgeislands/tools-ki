@@ -82,7 +82,7 @@ const laneEntries = (items: readonly WorkItem[], options: RoadmapTextOptions): r
       : []
   })
 
-type GroupedResult = Pick<RoadmapItemResult, 'grouping' | 'items'>
+type GroupedResult = Pick<RoadmapItemResult, 'grouping' | 'items' | 'warnings'>
 
 interface MergedGroup {
   readonly name: string
@@ -144,19 +144,20 @@ const groupedEntries = (
     children: orderItemsForText(group.items).map((item) => renderRoadmapItem(item, { ...options, lane: true }))
   }))
 
-/** Registry warnings for grouped output; they never change the exit status. */
+/** Registry warnings for grouped output, then unknown record fields; they never change the exit status. */
 const groupingWarningLines = (results: readonly GroupedResult[]): readonly string[] => [
   ...new Set(
     results.flatMap((result) => [
       ...(result.grouping?.registryWarnings ?? []),
       ...[...(result.grouping?.groups.entries() ?? [])].flatMap(([id, group]) =>
         group.warning ? [`${id}: ${group.warning}`] : []
-      )
+      ),
+      ...(result.warnings ?? [])
     ])
   )
 ]
 
-const groupingWarnings = (results: readonly RoadmapListResult[]): readonly TreeEntry[] => {
+const groupingWarnings = (results: readonly GroupedResult[]): readonly TreeEntry[] => {
   const warnings = groupingWarningLines(results)
   return warnings.length
     ? [
@@ -249,6 +250,7 @@ const renderTextResult = (
     context,
     entries: [
       { label: `roadmap (${items.length})`, children: roadmap },
+      ...groupingWarnings([result]),
       ...roadmapLinkLegend(items, options),
       {
         label: `trades (${trades.length})`,

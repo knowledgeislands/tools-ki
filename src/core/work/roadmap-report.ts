@@ -10,6 +10,7 @@ interface RoadmapReport {
     readonly repository: string | null
     readonly roadmap: 'present' | 'absent' | 'unavailable'
     readonly items: number
+    readonly warnings?: readonly string[]
   }[]
   readonly items: readonly {
     readonly identity: string
@@ -52,7 +53,8 @@ export const roadmapReport = (results: readonly RoadmapListResult[]): RoadmapRep
     identity: result.repositoryIdentity ?? null,
     repository: result.repositoryUrl ?? null,
     roadmap: roadmapState(result),
-    items: result.items?.length ?? 0
+    items: result.items?.length ?? 0,
+    ...(result.warnings?.length ? { warnings: result.warnings } : {})
   })),
   items: results.flatMap((result) => {
     if (!result.repositoryIdentity || !result.repositoryUrl) return []

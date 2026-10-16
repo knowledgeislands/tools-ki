@@ -44,6 +44,10 @@ type WorkItemFields = Partial<Record<WorkItemField, string>> & { task_links?: Ta
 
 const nestedFields = ['task_links', 'hold'] as const
 const allowedFields = new Set<string>([...requiredFields, ...optionalFields, ...nestedFields])
+/** The `ki-repo-kb` universal note fields a KB Streams record may also carry. */
+const kbNoteFields = ['note_type', 'updated', 'reviewed', 'created', 'tags', 'author'] as const
+/** Every field a KB Streams record may carry without a warning, kept level with the Harness Streams checker. */
+const kbStreamsKnownFields: ReadonlySet<string> = new Set([...allowedFields, ...kbNoteFields])
 /** Horizons in selection order. */
 export const workItemHorizons = ['now', 'next', 'soon', 'future', 'hold'] as const
 export type WorkItemHorizon = (typeof workItemHorizons)[number]
@@ -157,6 +161,8 @@ export interface WorkItemRecord {
   readonly file: string
   readonly path: string
   readonly contents: string
+  /** KB Streams fields outside the known set, in record order; the roadmap adapter rejects them instead. */
+  readonly unknownFields: readonly string[]
 }
 
 export interface WorkItemFault {
@@ -167,6 +173,8 @@ export interface WorkItemFault {
 export interface WorkItemInventory {
   readonly items: readonly WorkItem[]
   readonly faults: readonly WorkItemFault[]
+  /** One line per record and unknown field; warnings never fault a record. */
+  readonly warnings: readonly string[]
 }
 
 const itemError = (file: string, message: string): KiError => new KiError(`work item ${file} ${message}`, 2)
@@ -274,7 +282,12 @@ const parseHold = (lines: readonly string[], file: string): WorkItemHold => {
   }
 }
 
-const frontmatter = (contents: string, file: string, adapter: RepositoryPlanningAdapter): Readonly<WorkItemFields> => {
+const frontmatter = (
+  contents: string,
+  file: string,
+  adapter: RepositoryPlanningAdapter,
+  unknownFields: string[] = []
+): Readonly<WorkItemFields> => {
   const match = /^---\n([\s\S]*?)\n---(?:\n|$)/.exec(contents)
   if (!match?.[1]) throw itemError(file, 'must declare canonical frontmatter')
   const fields: WorkItemFields = {}
@@ -294,7 +307,10 @@ const frontmatter = (contents: string, file: string, adapter: RepositoryPlanning
       throw itemError(file, `has unsupported or repeated field ${key}`)
     seen.add(key)
     adapterField = common ? undefined : key
-    if (!common) continue
+    if (!common) {
+      if (!kbStreamsKnownFields.has(key)) unknownFields.push(key)
+      continue
+    }
     if (key === 'task_links' || key === 'hold') {
       if (value)
         throw itemError(
@@ -380,10 +396,15 @@ const legacyShapes = (fields: Readonly<WorkItemFields>, status: WorkItemStatus):
     : [])
 ]
 
-export const parseWorkItem = (contents: string, file: string, planning: RepositoryPlanningSource): WorkItem => {
+export const parseWorkItem = (
+  contents: string,
+  file: string,
+  planning: RepositoryPlanningSource,
+  unknownFields: string[] = []
+): WorkItem => {
   /* v8 ignore next -- Every live and historical inventory filters entries through isWorkItemFile first. */
   if (!file.endsWith('.md')) throw itemError(file, 'must use the .md extension')
-  const fields = frontmatter(contents, file, planning.adapter)
+  const fields = frontmatter(contents, file, planning.adapter, unknownFields)
   const id = fields.id as string
   if (!WORK_ITEM_ID.test(id) || !file.startsWith(`${id}-`))
     throw itemError(file, 'must use a matching work-item identifier')
@@ -474,12 +495,18 @@ const readItem = async (
   const state = await lstat(path)
   if (!state.isFile() || state.isSymbolicLink()) throw itemError(file, 'must be a regular file')
   const contents = await readFile(path, 'utf8')
-  return { item: parseWorkItem(contents, file, planning), file, path, contents }
+  const unknownFields: string[] = []
+  return { item: parseWorkItem(contents, file, planning, unknownFields), file, path, contents, unknownFields }
 }
+
+/** The warning line for one unknown field; `priority` names horizon as the only priority signal. */
+const unknownFieldWarning = (file: string, field: string): string =>
+  `${file}: unknown field ${field}${field === 'priority' ? '; horizon is the only priority signal' : ''}`
 
 export interface WorkItemRecordInventory {
   readonly records: readonly WorkItemRecord[]
   readonly faults: readonly WorkItemFault[]
+  readonly warnings: readonly string[]
 }
 
 export const readWorkItemRecordInventory = async (
@@ -517,6 +544,9 @@ export const readWorkItemRecordInventory = async (
     records: readable
       .filter((record) => !duplicated(record))
       .sort((left, right) => left.item.id.localeCompare(right.item.id)),
+    warnings: readable.flatMap((record) =>
+      record.unknownFields.map((field) => unknownFieldWarning(record.file, field))
+    ),
     faults: outcomes.flatMap((outcome) => {
       if ('fault' in outcome) return [outcome.fault]
       const { record } = outcome
@@ -557,8 +587,8 @@ export const readWorkItemInventoryIfPresent = async (
   planning: RepositoryPlanningSource
 ): Promise<undefined | WorkItemInventory> => {
   if (!(await hasWorkItemRoot(repository, planning))) return undefined
-  const { records, faults } = await readWorkItemRecordInventory(repository, planning)
-  return { items: records.map(({ item }) => item), faults }
+  const { records, faults, warnings } = await readWorkItemRecordInventory(repository, planning)
+  return { items: records.map(({ item }) => item), faults, warnings }
 }
 
 const workItemRecord = async (

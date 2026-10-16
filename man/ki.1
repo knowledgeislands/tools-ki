@@ -898,6 +898,13 @@ groups by each record's fixed \fBarea\fR under the title that
 reads without titles, and JSON output adds \fBareaTitle\fR.
 \fB--by\fR does not apply to JSON output.
 The roadmap folder's \fBREADME.md\fR index is not read as a work item.
+A KB Streams record field outside the shared record model and the
+\fBki-repo-kb\fR note fields is a warning naming the file and field, such as
+\fBKBS-001-x.md: unknown field owner\fR; for \fBpriority\fR it adds that
+horizon is the only priority signal.
+The warning never changes the exit status, and JSON output lists it under the
+repository's \fBwarnings\fR.
+The roadmap adapter still rejects such a field.
 A missing roadmap directory or
 malformed or unsafe item is an isolated diagnostic for that repository; other
 selected repositories still report, and any roadmap or trade diagnostic makes
@@ -918,6 +925,7 @@ titles, and trade records are omitted.
 \fB--by project\fR, \fB--by initiative\fR or \fB--by area\fR replaces the
 repository rows with one row per group, aggregated across the selected set as
 for \fBroadmap list --by\fR, and appends any grouping warnings.
+Unknown KB Streams record fields are listed under the same warnings.
 .TP
 .B ki repo [repo-options] roadmap stats [--stale-after <duration>] [--format <text|json>]
 Report age and inactivity metrics for selected local roadmaps. Every valid work
