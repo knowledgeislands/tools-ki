@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-16T01:23:09Z
+updated_at: 2026-10-16T21:10:00Z
 ---
 
 # Launch Footer Follows Brief
@@ -49,7 +49,7 @@ Read at `0f61dd83` on 16 October 2026; the Context above still holds.
 
 1. **Marker.** The footer starts at the first line that is exactly `## Rules`, so the fix holds whatever the intro line says and needs no harness change. Relative Markdown link targets in the footer are rewritten to absolute paths resolved from the asset's own folder, so they open from a prompt.
 2. **One report path.** The progress protocol keeps the thread-folder path. Launch warns, and still launches, when the brief names a `<name>.report.md` in any other folder, naming both paths. The protocol adds that its report path governs. A warning rather than a refusal, because a brief may cite other agents' reports and a reviewed brief is the owner's to correct.
-3. **Authority (recommended; needs Kris and the harness).** Orthogonal grants rather than a fifth tier: `--allow fetch` and `--allow machine`, repeatable beside `--rules <tier>`, each appending a harness-owned `assets/grant-<name>.md` section that names what it permits and states that it overrides the tier's matching prohibition. Fetch-without-push and an approved local change are not steps on the cumulative publication ladder (`push` already allows fetch; no tier allows a machine change), so a fifth tier would either break the ladder or duplicate it. A footer that simply defers to the brief was rejected: it turns every footer into advice and loses the launcher's guarantee.
+3. **Authority (approved by Kris; needs the harness).** Orthogonal grants rather than a fifth tier: `--allow fetch` and `--allow machine`, repeatable beside `--rules <tier>`, each appending a harness-owned `assets/grant-<name>.md` section that names what it permits and states that it overrides the tier's matching prohibition. Fetch-without-push and an approved local change are not steps on the cumulative publication ladder (`push` already allows fetch; no tier allows a machine change), so a fifth tier would either break the ladder or duplicate it. A footer that simply defers to the brief was rejected: it turns every footer into advice and loses the launcher's guarantee.
 
 ## Steps
 
@@ -57,7 +57,7 @@ Read at `0f61dd83` on 16 October 2026; the Context above still holds.
 - [ ] Contract-test fixture: give the fixture preamble the "`## Rules` onwards" mention and a relative link, so the tests pin both fixes.
 - [ ] `composePrompt`: scan the brief for paths ending `/<name>.report.md` or a bare `<name>.report.md` outside `+/_THREADS/<run>/`; return a launch warning naming both paths; add "This is the only report path; it governs any other the brief names." to the protocol.
 - [ ] `ki agent launch` and `ki agent queue` print the warning on stderr, exit 0.
-- [ ] After Kris approves Decision 3 and the harness ships the grant assets: `grantNames` in `context.ts`, `--allow <grant>` (repeatable, choices) in `src/commands/agent/index.ts`, carried through `LaunchRequest`, the queue file and the hold relaunch; `composePrompt` appends each grant section after the tier footer; a missing grant asset fails like a missing tier.
+- [ ] Once the harness ships the agreed grant assets: `grantNames` in `context.ts`, `--allow <grant>` (repeatable, choices) in `src/commands/agent/index.ts`, carried through `LaunchRequest`, the queue file and the hold relaunch; `composePrompt` appends each grant section after the tier footer; a missing grant asset fails like a missing tier.
 - [ ] `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
 
 ## Files touched
@@ -74,7 +74,7 @@ Read at `0f61dd83` on 16 October 2026; the Context above still holds.
 
 ## Dependencies / blocks
 
-- **Blocked on Kris and the harness (FOOTER-GRANTS):** Decision 3's shape needs Kris's choice, then `grant-fetch.md` and `grant-machine.md` in `ki-agentic-harness` `skills/governance/ki-delegation/assets/` with the background-run standard's tier table updated. No harness record exists for it yet; the harness owner opens one. Set Ready once the grant shape is approved, or sooner if Kris narrows this record to Decisions 1 and 2, which need nothing outside `tools-ki`.
+- **Blocked on the harness (FOOTER-GRANTS):** Kris approved Decision 3's shape on 16 October 2026; it needs `grant-fetch.md` and `grant-machine.md` in `ki-agentic-harness` `skills/governance/ki-delegation/assets/` with the background-run standard's tier table updated. The harness owner opens a `ki-delegation` record for the two grant texts; set Ready once those texts are agreed.
 - Shares `src/core/agent/runs.ts` with [KI-TOOL-KI-CLI-135](KI-TOOL-KI-CLI-135-reused-agent-name-overwrites.md) and [KI-TOOL-KI-CLI-137](KI-TOOL-KI-CLI-137-agent-run-tmp-home.md); deliver after KI-TOOL-KI-CLI-135.
 
 ## Documentation impact
@@ -102,3 +102,5 @@ Origin: the `sol` bring-up, captured on Kris Brown's TOOL-RECORDS approval on 20
 Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, on Kris Brown's TRIAGE-ADOPT answer (option a) as applied in the tools-burndown thread's BURN-OVERNIGHT decision.
 
 Planned on 16 October 2026 in the tools-burndown thread: the marker and report-path fixes are settled; the authority shape is recommended as orthogonal grants and waits on Kris and a harness asset, so the record stays draft.
+
+Kris Brown answered FOOTER-GRANTS on 16 October 2026: this record delivers separate `--allow fetch` and `--allow machine` grants beside `--rules <tier>`, each a harness-owned section that lifts only the matching ban. The harness owner opens a `ki-delegation` record for the two grant texts, and KI-TOOL-KI-CLI-134 becomes Ready once that is agreed; until then it stays draft.
