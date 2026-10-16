@@ -7,12 +7,12 @@ purpose: corrective
 kind: deliver
 component: repo
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 7eeeb54e1ab551eefed5345dcfaf3c454efc74c0
 created_at: 2026-10-15T21:48:02Z
-updated_at: 2026-10-16T02:12:55Z
+updated_at: 2026-10-16T02:21:00Z
 ---
 
 # Warn Unknown Record Fields
@@ -53,11 +53,11 @@ Read at `b36b3312` on 16 October 2026.
 
 ## Steps
 
-- [ ] In `src/core/work/items.ts`, add `kbNoteFields` and collect each uncommon key for `kb-streams` into `unknownFields` on the parsed result instead of discarding it; keep skipping its value lines.
-- [ ] Carry `unknownFields` on `WorkItemRecord` and add `warnings: readonly string[]` to `WorkItemRecordInventory` (and `WorkItemInventory`), formatted `<file>: unknown field <name>` with the `priority` addendum.
-- [ ] In `src/commands/repo/roadmap.ts`, merge the inventory warnings into the existing warnings block for text and JSON output, after the grouping warnings.
-- [ ] Contract tests through `run(args, context)` (see Verify).
-- [ ] `CHANGELOG.md`, `man/ki.1` and `man/ki.commands.json` where `ki repo roadmap` lists its warnings, and `docs/guides/user/repository-operations.md` if it describes the warnings block.
+- [x] In `src/core/work/items.ts`, add `kbNoteFields` and collect each uncommon key for `kb-streams` into `unknownFields` on the parsed result instead of discarding it; keep skipping its value lines.
+- [x] Carry `unknownFields` on `WorkItemRecord` and add `warnings: readonly string[]` to `WorkItemRecordInventory` (and `WorkItemInventory`), formatted `<file>: unknown field <name>` with the `priority` addendum.
+- [x] In `src/commands/repo/roadmap.ts`, merge the inventory warnings into the existing warnings block for text and JSON output, after the grouping warnings.
+- [x] Contract tests through `run(args, context)` (see Verify).
+- [x] `CHANGELOG.md`, `man/ki.1` and `man/ki.commands.json` where `ki repo roadmap` lists its warnings, and `docs/guides/user/repository-operations.md` if it describes the warnings block.
 
 ## Files touched
 
@@ -94,6 +94,55 @@ None.
 ### Roadmap
 
 None.
+
+## Review
+
+### Delivered
+
+`ki repo roadmap list` and `summary` now warn on each KB Streams record field outside the shared record model and the six `ki-repo-kb` note fields, as `<file>: unknown field <name>`. For `priority` the line adds `; horizon is the only priority signal`. The warnings sit in the existing warnings block, and JSON output lists them under each repository's `warnings`. The exit status never changes, and the roadmap adapter still rejects such a field.
+
+### Change Summary
+
+- `6aa676a0`:
+  - `src/core/work/items.ts`: `kbNoteFields` and the known set. `frontmatter` collects each unknown KB Streams key and still skips its continuation lines. `WorkItemRecord` carries `unknownFields`, and both inventories carry `warnings`.
+  - `src/core/work/operations.ts`: the list result carries the inventory warnings.
+  - `src/commands/repo/roadmap.ts`: the warnings join the grouping warnings. A single-repository list now also shows a warnings block.
+  - `src/core/work/roadmap-report.ts`: a repository entry gains `warnings` only when it has some, so existing `ki/roadmap/v1` output keeps its shape.
+  - `CHANGELOG.md`, `man/ki.1` and the regenerated `man/ki.commands.json`.
+- `docs/guides/user/repository-operations.md` does not describe the roadmap warnings block, so it is unchanged.
+
+One choice went beyond the Steps. The pinned known-field test runs through `run(args, context)` rather than importing the set, because the CLI test boundary forbids product imports in tests. It writes one record per pinned field plus `owner`, and expects `owner` as the only warning. Removing `author` from the set made it fail, as intended. It cannot catch a field that `tools-ki` adds to its model without the Harness, because a field `tools-ki` knows never warns.
+
+### Verification
+
+Through `run(args, context)` and `sandbox()`:
+
+- **Verify 1:** a `priority: high` record lists, and the warning line appears in text, in `summary` and in JSON, with exit 0.
+- **Verify 2:** `tags`, `note_type`, `author` and `created` draw no warning. `owner` draws one, and a record with three unknown fields draws three lines.
+- **Verify 3:** a multi-line `aliases` list is skipped and does not fault its record.
+- **Verify 4:** a roadmap-adapter record with `owner` still fails with `has unsupported or repeated field owner` and no warning.
+- **Verify 5:** the pinned test lists the 26 shared fields plus the six note fields.
+
+Gates, on 16 October 2026:
+
+- `bun run test:coverage` passed 74 files and 1212 tests at 100% statements, branches, functions and lines.
+- `bunx tsc --noEmit -p .`, biome, `bunx knip`, `mandoc -T lint man/ki.1` and rumdl were clean.
+- `ki repo audit --repo .` reports only the earlier DEPS-1 failure and the CI-1 and HOOK-1 warnings.
+
+**Verify 7:** `ki repo --repo <ki-principal> roadmap list`, run read-only, listed four records with no warnings and exit 0. KI-PRINCIPAL-MOD-006 and KI-PRINCIPAL-MOD-008 no longer carry `priority`.
+
+### Outstanding concerns
+
+- The pinned list mirrors the Harness at `05ee5b1f` and was not re-read there, because this run makes no remote calls. A later change to the Harness lists needs a matching change here.
+- `ki repo audit` does not yet report these warnings. The Decision limits this record to the `ki repo roadmap` views, and the Harness checker owns the audit side.
+
+### Post-change review
+
+The change adds data alongside existing data and leaves the failure paths alone. Unknown fields are gathered while the frontmatter is read, using the same skip rule as before. A record that fails validation adds no warning. A warning never reaches the exit-status checks. The `ki/roadmap/v1` report is unchanged for any repository without warnings.
+
+### Mini recap
+
+KB Streams records now report fields outside the shared model, such as `priority`, naming the file and field without failing. A test checks the known set against the Harness checker's lists.
 
 ## Discussion
 
