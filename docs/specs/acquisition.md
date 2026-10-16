@@ -152,7 +152,7 @@ _Evidence:_ The named CLI contract tests are part of the passing `bun run test:c
 
 ### ACQUIRE-017 — MCP screenshot preservation
 
-Granola import MUST restrict every listing to principal-owned notes, complete folder and transcript pagination, reconcile screenshot counts and distinct attachment UUIDs, fetch at most five images per request, bind image metadata to requested identities, and validate canonical base64, true format and MIME. Exact returned bytes, metadata, counts and checksums MUST be stored beside the meeting before its receipt advances; prior evidence and immutable attachment bytes remain preserved. Unsupported attachment access MUST remain an explicit omission.
+Granola import MUST restrict every listing to principal-owned notes, complete folder and transcript pagination, reconcile screenshot counts and distinct attachment UUIDs, fetch at most five images per request, bind image metadata to requested identities, and validate canonical base64, true format and MIME. Exact returned bytes, metadata, counts and checksums MUST be stored beside the meeting before its receipt advances; prior evidence and immutable attachment bytes remain preserved. Unsupported attachment access MUST remain an explicit omission. A known daemon frame-limit failure MUST reduce the batch, down to singletons, without modifying returned bytes; a singleton failure MUST remain visible in the recovery journal. Completed interrupted amendments MUST verify their document and promised image evidence before bypassing old-generation checks.
 
 _Conformance:_ conforming
 

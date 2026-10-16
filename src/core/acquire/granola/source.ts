@@ -358,9 +358,7 @@ export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessE
     ...(schema.images
       ? {
           images: async (meetingId: string, ids: readonly string[]) => {
-            const images: GranolaAttachmentImage[] = []
-            for (let index = 0; index < ids.length; index += 5) {
-              const selected = ids.slice(index, index + 5)
+            const readBatch = async (selected: readonly string[]): Promise<readonly GranolaAttachmentImage[]> => {
               const result = await runGranolaCall(
                 runner,
                 environment,
@@ -371,8 +369,16 @@ export const granolaSource = async (runner: Runner, environment: NodeJS.ProcessE
                 },
                 gate
               )
+              if (result.exitCode !== 0 && selected.length > 1 && /Daemon frame limit exceeded/i.test(result.output)) {
+                const middle = Math.floor(selected.length / 2)
+                return [...(await readBatch(selected.slice(0, middle))), ...(await readBatch(selected.slice(middle)))]
+              }
               if (result.exitCode !== 0) throw new KiError(`Granola image read failed: ${result.output.trim()}`)
-              images.push(...decodeGranolaImages(parseJson(result.output, 'image'), meetingId, selected))
+              return decodeGranolaImages(parseJson(result.output, 'image'), meetingId, selected)
+            }
+            const images: GranolaAttachmentImage[] = []
+            for (let index = 0; index < ids.length; index += 5) {
+              images.push(...(await readBatch(ids.slice(index, index + 5))))
             }
             return images
           }

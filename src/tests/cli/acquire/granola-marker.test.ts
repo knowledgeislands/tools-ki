@@ -224,6 +224,8 @@ const fixture = async (settings: Settings = {}) => {
     }
     if (tool === 'get_meeting_attachment') {
       const ids = args['attachment_ids'] as string[]
+      if (settings.imageError === 'frame-single' || (settings.imageError === 'frame' && ids.length > 2))
+        return { exitCode: 1, output: 'Daemon frame limit exceeded.' }
       if (settings.imageError === 'failure')
         return json({ isError: true, content: [{ type: 'text', text: 'failure' }] })
       return json({
@@ -504,6 +506,32 @@ describe('[Granola screenshots and Acquired markers]', () => {
     expect((await f.box.run(f.command)).stderr).toContain('no stable identity')
   })
 
+  test('splits oversized daemon image frames without changing any returned bytes', async () => {
+    const f = await fixture({ images: 8, imageError: 'frame' })
+    const result = await f.box.run(f.command)
+    expect(result.exitCode, result.stderr).toBe(0)
+    const sizes = f.calls
+      .filter((call) => call.tool === 'get_meeting_attachment')
+      .map((call) => (call.args['attachment_ids'] as string[]).length)
+    expect(sizes).toEqual([5, 2, 3, 1, 2, 3, 1, 2])
+    const entry = (await f.ledger()).meetings[id]
+    const directory = join(entry.path, '..')
+    const manifest = JSON.parse(await f.box.project.read(join(directory, `${id}--attachments.json`)))
+    expect(manifest.assets).toHaveLength(8)
+    for (const asset of manifest.assets)
+      expect(await readFile(join(f.box.project.path, directory, asset.file))).toEqual(png)
+  })
+
+  test('retains a visible failure if a single image still exceeds the daemon frame', async () => {
+    const f = await fixture({ images: 2, imageError: 'frame-single' })
+    expect((await f.box.run(f.command)).stderr).toContain('Daemon frame limit exceeded')
+    const journal = JSON.parse(await f.box.project.read('.acquire/granola/journal.json'))
+    expect(journal.failures).toHaveLength(1)
+    expect(journal.failures[0].source_id).toBe(id)
+    expect(await exists(join(f.box.project.path, '.acquire/granola/ledger.json'))).toBe(false)
+    expect(f.note.folders).toEqual(['personal'])
+  })
+
   test('checks ledger and committed blobs independently of local checksums', async () => {
     const f = await fixture({ images: 1 })
     await f.box.run(f.command)
@@ -764,55 +792,77 @@ describe('[Granola screenshots and Acquired markers]', () => {
     expect((await f.box.run(f.command)).stderr).toContain('separate from every receiver')
   })
 
-  test.each(['present', 'missing', 'stale', 'unavailable-detail'])(
-    'verifies MCP screenshot evidence before journal reuse: %s',
-    async (state) => {
-      const f = await fixture({ images: 1 })
-      if (state === 'unavailable-detail') f.respond('get_meetings', { meetings: [], not_found: [id] })
+  test.each([
+    'present',
+    'missing',
+    'stale',
+    'unavailable-detail',
+    'amendment',
+    'amendment-corrupt',
+    'amendment-unavailable',
+    'amendment-unavailable-corrupt'
+  ])('verifies MCP screenshot evidence before journal reuse: %s', async (state) => {
+    const f = await fixture({
+      images: 1,
+      ...(state.includes('unavailable-corrupt') || state === 'amendment-unavailable'
+        ? { transcriptError: 'unavailable' }
+        : {})
+    })
+    if (state === 'unavailable-detail') f.respond('get_meetings', { meetings: [], not_found: [id] })
+    await f.box.run(f.command)
+    const oldLedger = await f.ledger()
+    if (state.startsWith('amendment')) {
+      f.note.notes = 'Amended after the prior committed generation'
       await f.box.run(f.command)
-      const ledger = await f.ledger()
-      const entry = ledger.meetings[id]
-      const journal = {
-        schema: 1,
-        phase: 'in-progress',
-        run_id: 'test-run',
-        adapter: 'granola',
-        repository: ledger.repository,
-        account_sha256: ledger.account_sha256,
-        source_schema_sha256: ledger.source_schema_sha256,
-        discovery_interval: ledger.interval,
-        identity_checkpoint_sha256: ledger.identity_checkpoint_sha256,
-        selected_identities: [id],
-        remaining_identities: [],
-        failures: [],
-        retry_state: {},
-        created_at: ledger.updated_at,
-        updated_at: ledger.updated_at,
-        components: {
-          [id]: {
-            detail_sha256: entry.detail_sha256,
-            transcript_sha256: entry.transcript_sha256,
-            transcript_state: entry.transcript_state,
-            transcript_observed_at: entry.transcript_observed_at,
-            staged_document_path: entry.path,
-            staged_document_sha256: entry.document_sha256,
-            verified_at: ledger.updated_at,
-            checkpoint: entry
-          }
+    }
+    const ledger = await f.ledger()
+    const entry = ledger.meetings[id]
+    const journal = {
+      schema: 1,
+      phase: 'in-progress',
+      run_id: 'test-run',
+      adapter: 'granola',
+      repository: ledger.repository,
+      account_sha256: ledger.account_sha256,
+      source_schema_sha256: ledger.source_schema_sha256,
+      discovery_interval: ledger.interval,
+      identity_checkpoint_sha256: ledger.identity_checkpoint_sha256,
+      selected_identities: [id],
+      remaining_identities: [],
+      failures: [],
+      retry_state: {},
+      created_at: ledger.updated_at,
+      updated_at: ledger.updated_at,
+      components: {
+        [id]: {
+          detail_sha256: entry.detail_sha256,
+          transcript_sha256: entry.transcript_sha256,
+          transcript_state: entry.transcript_state,
+          transcript_observed_at: entry.transcript_observed_at,
+          staged_document_path: entry.path,
+          staged_document_sha256: entry.document_sha256,
+          verified_at: ledger.updated_at,
+          checkpoint: entry
         }
       }
-      await f.box.project.write('.acquire/granola/journal.json', JSON.stringify(journal))
-      const path = join(entry.path, '..', `${id}--attachments.json`)
-      if (state === 'missing') await rm(join(f.box.project.path, path))
-      if (state === 'stale') {
-        const manifest = JSON.parse(await f.box.project.read(path))
-        manifest.detail_sha256 = '0'.repeat(64)
-        await f.box.project.write(path, JSON.stringify(manifest))
-      }
-      const result = await f.box.run(f.command)
-      expect(result.exitCode, result.stderr).toBe(['present', 'unavailable-detail'].includes(state) ? 0 : 1)
-      if (['present', 'unavailable-detail'].includes(state)) expect(result.stdout).toContain('1 resumed')
-      else expect(await exists(join(f.box.project.path, '.acquire/granola/journal.json'))).toBe(true)
     }
-  )
+    await f.box.project.write('.acquire/granola/journal.json', JSON.stringify(journal))
+    if (state.startsWith('amendment'))
+      await f.box.project.write('.acquire/granola/ledger.json', JSON.stringify(oldLedger))
+    if (state.endsWith('-corrupt')) await f.box.project.write(entry.path, 'corrupted staged amendment')
+    const path = join(entry.path, '..', `${id}--attachments.json`)
+    if (state === 'missing') await rm(join(f.box.project.path, path))
+    if (state === 'stale') {
+      const manifest = JSON.parse(await f.box.project.read(path))
+      manifest.detail_sha256 = '0'.repeat(64)
+      await f.box.project.write(path, JSON.stringify(manifest))
+    }
+    const result = await f.box.run(f.command)
+    expect(result.exitCode, result.stderr).toBe(
+      ['present', 'unavailable-detail', 'amendment', 'amendment-unavailable'].includes(state) ? 0 : 1
+    )
+    if (['present', 'unavailable-detail', 'amendment', 'amendment-unavailable'].includes(state))
+      expect(result.stdout).toContain('1 resumed')
+    else expect(await exists(join(f.box.project.path, '.acquire/granola/journal.json'))).toBe(true)
+  })
 })

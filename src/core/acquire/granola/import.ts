@@ -6,7 +6,7 @@ import { storeGranolaMcpImages, verifyGranolaImages, verifyGranolaMcpImages } fr
 import { centralGranolaPath, copyGranolaPackage, granolaLayout, verifyGranolaParents } from './layout.ts'
 import { renderGranolaMeeting } from './markdown.ts'
 import { privateGranolaMarker, verifyGranolaPreservation } from './marker.ts'
-import { granolaAttachmentInventory, granolaScreenshotCount } from './projection.ts'
+import { type GranolaAttachmentImage, granolaAttachmentInventory, granolaScreenshotCount } from './projection.ts'
 import {
   type FlaggedGranolaMeeting,
   type GranolaReceiver,
@@ -16,6 +16,7 @@ import {
 } from './routing.ts'
 import {
   type GranolaDetail,
+  type GranolaMeeting,
   type GranolaOperationContext,
   type GranolaTranscript,
   granolaDetailHash,
@@ -393,7 +394,6 @@ export const importGranola = async (
     if (previous.account_sha256 !== source.accountSha256) {
       throw new KiError('Granola account differs from receiver checkpoint; refusing to mix source identities')
     }
-    await verifyGranolaCheckpoint(root, previous)
   }
 
   let skipped = 0
@@ -444,6 +444,26 @@ export const importGranola = async (
   let journal = await loadGranolaJournal(journalPath(target))
   if (journal) validateJournalBinding(journal, binding)
   else journal = initialJournal({ ...binding, observedAt })
+  if (previous) {
+    // Completed, bound journal entries supersede their old document bytes during an interrupted amendment.
+    // Their document and screenshot evidence is checked in the resume loop before checkpoint advancement.
+    const completedJournalIds = new Set(Object.keys(journal.components))
+    for (const id of Object.keys(previous.meetings).filter((id) => completedJournalIds.has(id))) {
+      const recovered = journal.components[id] as GranolaJournalComponent
+      const staged = await physicalDocument(join(root, recovered.staged_document_path))
+      if (!staged || sha256(staged) !== recovered.staged_document_sha256)
+        throw new KiError(`Granola completed amendment ${id} failed document verification`)
+      await verifyGranolaDocument(root, recovered.checkpoint, id)
+      if (staged.includes('\nattachment_state: verified-mcp\n')) {
+        const meeting = discoveredMeetings.get(id) as GranolaMeeting
+        await verifyGranolaMcpImages(root, id, recovered.checkpoint, granolaScreenshotCount(meeting.projection))
+      } else await verifyGranolaImages(root, id, recovered.checkpoint)
+    }
+    await verifyGranolaCheckpoint(root, {
+      ...previous,
+      meetings: Object.fromEntries(Object.entries(previous.meetings).filter(([id]) => !completedJournalIds.has(id)))
+    })
+  }
   if (!options.dryRun) {
     await verifyGranolaParents(journalPath(target))
     await mkdir(granolaLayout(target.root, target.captureRoot).state, { recursive: true })
@@ -511,13 +531,14 @@ export const importGranola = async (
       }
 
       const current = previous?.meetings[meeting.id]
-      const inventory =
-        source.images && detail.state === 'available'
-          ? granolaAttachmentInventory(detail.projection, meeting.projection)
-          : undefined
-      const imageBlocks = inventory && source.images ? await source.images(meeting.id, inventory.ids) : undefined
+      let imageBlocks: readonly GranolaAttachmentImage[] | undefined
       let transcriptResult: Awaited<ReturnType<typeof readTranscript>>
       try {
+        const inventory =
+          source.images && detail.state === 'available'
+            ? granolaAttachmentInventory(detail.projection, meeting.projection)
+            : undefined
+        imageBlocks = inventory && source.images ? await source.images(meeting.id, inventory.ids) : undefined
         transcriptResult = await readTranscript({
           source,
           meetingId: meeting.id,

@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 14a8e39ce17e7c51b4f26d9b62c1db1a297ad002
 created_at: 2026-10-16T00:36:09Z
-updated_at: 2026-10-16T01:04:35Z
+updated_at: 2026-10-16T01:14:49Z
 ---
 
 # KI-TOOL-KI-CLI-141: Granola screenshots and markers
@@ -85,6 +85,8 @@ Updated source ports, paging and image validation, manifests and recovery, routi
 
 ### Verification
 
+The live-transport follow-up passes the complete 1258-test suite with 100% statements, branches, functions and lines, plus TypeScript, scoped formatting, ki-self and independent recovery review. Bounded frame splitting, singleton failure, and valid/corrupt interrupted amendments with available or unavailable transcripts are covered.
+
 The full public CLI suite passed: 1,252 tests across 72 files, with 100% statements, branches, functions and lines. TypeScript, scoped Biome/rumdl, command inventory generation, manual lint, boundary tests, ki-self and work/roadmap audits pass. A separately authorised live read-only 6 October dry run returned one owned note and a verified zero-image inventory. The native engineering audit reran the checks but reports an unrelated DEPS-1 failure: @types/node 26.6.3 to 26.6.4 is beyond its adoption window; CI-1 also warns about an inline KI pin. Dependencies and CI remain outside this approved slice.
 
 ### Outstanding concerns
@@ -100,6 +102,10 @@ An independent runtime reviewer found missing screenshot-proof validation during
 Read import remains source-read-only. Explicit marking adds one private membership after committed preservation checks, retains every original membership and verifies the result. No deletion, reset, migration, publication or push was performed. Owner acceptance remains pending.
 
 ## Discussion
+
+### Live transport follow-up
+
+The owner-authorised Acquire run stopped after 27 of 52 selected notes when an image response exceeded MCPorter's daemon frame limit. This is transport evidence, not an empty source or permission to change service settings. The same approved delivery now splits only that exact oversized batch into smaller reads, retains singleton failure as an explicit journal failure, and preserves exact returned bytes. An interrupted amended generation delegates old-document verification only after the bound completed component's document, disposition and promised image evidence validate; missing or corrupt evidence fails before overwrite. The separate retention branch remains untouched.
 
 ### Preservation and marker semantics
 
