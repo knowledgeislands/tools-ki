@@ -1,10 +1,18 @@
 import { copyFile, mkdir, readdir, rename, stat, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
-import { type AgentContext, type AuthorityTier, checkName, git, read, runDirectory } from './context.ts'
+import {
+  type AgentContext,
+  type AuthorityTier,
+  agentsDirectory,
+  checkName,
+  git,
+  read,
+  runDirectory
+} from './context.ts'
 import { deriveEvents, type RunEvent, readEvents, recordEvent } from './events.ts'
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
-import { reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
+import { readThread, reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
 export type { AgentContext, AuthorityTier } from './context.ts'
 export { authorityTiers } from './context.ts'
@@ -443,6 +451,54 @@ export const runStatus = async (context: AgentContext, run: string): Promise<Age
   const directory = await existingRun(context, run)
   await observe(context, directory)
   return summary(context, directory)
+}
+
+/** One live item of a run, in the `ki-pmo` banner's `- [running] <agent> - <what>` form. */
+export interface RunItem {
+  readonly kind: 'running' | 'queued'
+  readonly agent: string
+  readonly what: string
+}
+
+export interface RunOverview {
+  readonly run: string
+  /** The thread folder, absent for a run that predates `thread.json`. */
+  readonly home: string | undefined
+  /** Running or held agents, then queued ones; empty for a run at rest. */
+  readonly items: readonly RunItem[]
+}
+
+/** A run's running or held agents and its queue, read from packet files alone. */
+export const runOverview = async (context: AgentContext, run: string): Promise<RunOverview> => {
+  const directory = runDirectory(context, run)
+  const items: RunItem[] = []
+  for (const name of await agents(directory)) {
+    const state = await agentState(context, directory, name)
+    if (state.kind === 'running') items.push({ kind: 'running', agent: name, what: describe(state) })
+  }
+  for (const [position, request] of (await readQueue(directory)).entries())
+    items.push({
+      kind: 'queued',
+      agent: request.name,
+      what: `position ${position + 1}${request.waitFor.length ? `, waiting for ${request.waitFor.join(', ')}` : ''}`
+    })
+  const thread = await readThread(context, run)
+  return { run, home: thread && threadPath(thread), items }
+}
+
+/**
+ * Every run on this machine with an agent running or held or a non-empty queue; with `all`,
+ * the runs at rest too. Archived runs are never listed, and nothing is written.
+ */
+export const listRuns = async (context: AgentContext, all: boolean): Promise<RunOverview[]> => {
+  const entries = await readdir(agentsDirectory(context), { withFileTypes: true }).catch(() => [])
+  const runs = entries.filter((entry) => entry.isDirectory() && entry.name !== '_archive').map((entry) => entry.name)
+  const overviews: RunOverview[] = []
+  for (const run of runs.sort()) {
+    const overview = await runOverview(context, run)
+    if (all || overview.items.length) overviews.push(overview)
+  }
+  return overviews
 }
 
 /**

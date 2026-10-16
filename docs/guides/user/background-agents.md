@@ -49,9 +49,10 @@ Reorder priorities by editing nothing but the queue order: queue new work last, 
 ## Check on a run
 
 - `ki agent status <run>` prints each agent's latest status, flags any agent that exited without `DONE`, and lists the queue.
+- `ki agent status` with no run lists every live thread on this machine: `<run> (<thread home>)`, then `- [running] <agent> - <status>` and `- [queued] <agent> - position <n>` lines a banner can quote as they are. `--all` adds runs at rest; archived runs never appear.
 - `ki agent watch <run>` prints each new event, launches and milestones included, then one status line every two minutes, and ends with `ALL FINISHED`.
 
-After an interrupt of your own session, run `ki agent status` before claiming anything is still running. Relaunch an agent flagged `EXITED WITHOUT DONE` rather than waiting for it.
+After an interrupt of your own session, or a compaction, run `ki agent status` before claiming anything is still running. Relaunch an agent flagged `EXITED WITHOUT DONE` rather than waiting for it.
 
 ## Close a run
 

@@ -10,6 +10,7 @@ import {
   holdAgent,
   type LaunchRequest,
   launchAgent,
+  listRuns,
   newPrompt,
   queueAgent,
   runStatus,
@@ -169,10 +170,29 @@ export const createAgentCommand = (context: KiContext): Command => {
 
   command.addCommand(
     new Command('status')
-      .description("print each agent's latest status")
-      .argument('<run>', 'run name')
-      .action(async (run: string) => {
-        for (const line of (await runStatus(agentContext(context), run)).lines) write(line)
+      .description("print each agent's latest status, or with no run every live thread's")
+      .argument('[run]', 'run name; omitted, every run with an agent running or queued')
+      .option('--all', 'with no run, also list the runs at rest')
+      .action(async (run: string | undefined, options: { all?: boolean }) => {
+        if (run !== undefined) {
+          if (options.all) throw grammarError('--all lists every run; give it without a run name')
+          for (const line of (await runStatus(agentContext(context), run)).lines) write(line)
+          return
+        }
+        const runs = await listRuns(agentContext(context), options.all === true)
+        if (!runs.length) return write(options.all ? 'no runs' : 'no live runs')
+        write(
+          runs
+            .map((overview) =>
+              [
+                `${overview.run} (${overview.home ?? 'no thread home'})`,
+                ...(overview.items.length
+                  ? overview.items.map((item) => `- [${item.kind}] ${item.agent} - ${item.what}`)
+                  : ['- [at rest]'])
+              ].join('\n')
+            )
+            .join('\n\n')
+        )
       })
   )
 

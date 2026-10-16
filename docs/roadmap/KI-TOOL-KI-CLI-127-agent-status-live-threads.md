@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 5f1349e59cc72fc8afc946d789565ab2a1dba8c2
 created_at: 2026-10-14T13:55:48Z
-updated_at: 2026-10-16T01:35:25Z
+updated_at: 2026-10-16T01:55:11Z
 ---
 
 # Agent Thread Coordination Commands
@@ -90,11 +90,11 @@ These settle the open questions below.
 - [x] **Link printer.** When nothing resolves, print the reason to stderr and exit non-zero.
 - [x] **Link printer.** Tests through `run(args, context)` and `sandbox()` with a registry of two temporary repositories: a live record, a pruned record, an unknown scope and a bad identifier.
 - [x] **Link printer.** Document the command in `README.md`, `man/ki.1` and the `CHANGELOG.md` command surface, and name it in the background-agents guide beside the owner report's linking rule.
-- [ ] **`ki agent status` lists live threads.** Make the run argument optional; without it, enumerate the run folders under `agents/`, skipping `_archive`, and summarise each through the existing per-run reader.
-- [ ] **`ki agent status` lists live threads.** Define live as at least one agent running or held, or a non-empty queue, and list only live runs by default; `--all` adds the rest per Decision 2.
-- [ ] **`ki agent status` lists live threads.** Print one block per run: the run name and thread home, then one line per agent as the per-run `status` prints it.
-- [ ] **`ki agent status` lists live threads.** Tests for a mix of live, finished and legacy runs.
-- [ ] **`ki agent status` lists live threads.** Document the form in `README.md`, `man/ki.1`, the background-agents guide and the `CHANGELOG.md` command surface.
+- [x] **`ki agent status` lists live threads.** Make the run argument optional; without it, enumerate the run folders under `agents/`, skipping `_archive`, and summarise each through the existing per-run reader.
+- [x] **`ki agent status` lists live threads.** Define live as at least one agent running or held, or a non-empty queue, and list only live runs by default; `--all` adds the rest per Decision 2.
+- [x] **`ki agent status` lists live threads.** Print one block per run: the run name and thread home, then one line per agent as the per-run `status` prints it.
+- [x] **`ki agent status` lists live threads.** Tests for a mix of live, finished and legacy runs.
+- [x] **`ki agent status` lists live threads.** Document the form in `README.md`, `man/ki.1`, the background-agents guide and the `CHANGELOG.md` command surface.
 - [ ] **Decision class on `decide`.** Add `--class <operational|rule|standalone|held>` to `decide`, written as a `class:` line beside `home:` in the entry, and a `--class` option on `reconcile` that sets or replaces it; an entry keeps working with neither.
 - [ ] **Decision class on `decide`.** Teach the `close` gate the classes: operational with no home passes as its own home; held with a checkpoint home passes when the checkpoint file exists, tracked or not; standalone and rule keep the tracked-path or record test; `close.md` records each entry's class beside its home.
 - [ ] **Decision class on `decide`.** Tests for each class through the gate, and for `reconcile --class`.

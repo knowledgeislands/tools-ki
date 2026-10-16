@@ -394,8 +394,8 @@ Keep up to the given number of queued agents running, detached.
 .B ki agent wait <run> [--next] [--interval <seconds>]
 Block until the next unseen run event, or until the whole run finishes.
 .TP
-.B ki agent status <run>
-Print each agent's latest status and the queue.
+.B ki agent status [<run>] [--all]
+Print each agent's latest status, or with no run every live thread.
 .TP
 .B ki agent watch <run> [seconds]
 Print each new run event and one status line per interval until the run ends.
@@ -1621,9 +1621,23 @@ wait for the whole run. Either form prints
 .B ALL FINISHED
 when nothing is left to wait for.
 .TP
-.B ki agent status <run>
+.B ki agent status [<run>] [--all]
 Print each agent's latest status, flag any agent whose process exited
-without DONE, and list the queue.
+without DONE, and list the queue. With no run, list every run on this
+machine with an agent running or held or a non-empty queue: a
+.I "<run> (<thread home>)"
+line, then one
+.I "- [running] <agent> - <status>"
+or
+.I "- [queued] <agent> - position <n>"
+line per live item, in the form the
+.B ki-pmo
+banner quotes. A run that predates its thread home shows
+.IR "(no thread home)" .
+.B --all
+adds the runs at rest, marked
+.IR "- [at rest]" ;
+archived runs are never listed, and the listing writes nothing.
 .TP
 .B ki agent watch <run> [seconds]
 Print each new event as

@@ -498,8 +498,8 @@
           "description": "With --next , block until the run has an event the coordinator has not yet seen, print it as <name> <kind>: <text> , and move the run's events.seen cursor past it. The kinds returned are done (DONE and a report), failed (an exit without DONE, DONE with no report, or a failed: status line), blocked (a gate that cannot open, a dispatcher drop, or a blocked: status line) and needs-owner (one per ### <TAG> - <title> query in the report, or per <TAG> - <title> heading under an older ## Outstanding queries ). Events are returned in the order they happened, never in name order. A coordinator runs it in the background, reports each event, and re-arms it. Without --next , wait for the whole run. Either form prints ALL FINISHED when nothing is left to wait for."
         },
         {
-          "invocation": "ki agent status <run>",
-          "description": "Print each agent's latest status, flag any agent whose process exited without DONE, and list the queue."
+          "invocation": "ki agent status [<run>] [--all]",
+          "description": "Print each agent's latest status, flag any agent whose process exited without DONE, and list the queue. With no run, list every run on this machine with an agent running or held or a non-empty queue: a <run> (<thread home>) line, then one - [running] <agent> - <status> or - [queued] <agent> - position <n> line per live item, in the form the ki-pmo banner quotes. A run that predates its thread home shows (no thread home) . --all adds the runs at rest, marked - [at rest] ; archived runs are never listed, and the listing writes nothing."
         },
         {
           "invocation": "ki agent watch <run> [seconds]",
