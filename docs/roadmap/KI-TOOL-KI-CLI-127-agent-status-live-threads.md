@@ -7,12 +7,12 @@ component: agent
 purpose: capability
 kind: deliver
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 5f1349e59cc72fc8afc946d789565ab2a1dba8c2
 created_at: 2026-10-14T13:55:48Z
-updated_at: 2026-10-16T01:55:11Z
+updated_at: 2026-10-16T02:11:09Z
 ---
 
 # Agent Thread Coordination Commands
@@ -182,6 +182,95 @@ The background-agents guide gains the no-argument `status` form, `--class` and t
 ### Roadmap
 
 No follow-on record. Harness follow-ons are named under Dependencies / blocks for the harness to capture when it chooses.
+
+## Review
+
+### Delivered
+
+All six pieces are in place. `ki link <identifier>...` prints a roadmap record's Markdown link, or its pruned form. `ki agent status` with no run lists every live thread in the `ki-pmo` banner form. `decide` and `reconcile` carry a decision class, and the `close` gate reads it. `ki agent send` leaves a line in a live run's inbox, and that run's next `status` shows it. A test now pins `KI_AGENT_RUN` on a Codex agent the dispatcher starts. `decide <run> '<TAG> - <letter>'` logs an owner's bare option letter with its wording and the report it came from.
+
+### Change Summary
+
+- `fed22276`, with `f27c2fb1`: the link printer, `src/commands/link/` and the scope resolution in `src/core/work/`.
+- `7160ff99`, `ki agent status` with no run: `runOverview` and `listRuns` in `src/core/agent/runs.ts`, the optional run and `--all` in `src/commands/agent/index.ts`, and `src/tests/cli/agent-threads.test.ts` (new).
+- `9f96c528`, decision class:
+  - `decisionClasses`, the `class:` field of `DecisionEntry`, and `--class` on `appendDecision` and `reconcileDecision` in `src/core/agent/thread.ts`. `reconcile`'s home is now optional, and either field can be set alone.
+  - The class rules in the `close` gate and the class in `close.md`, in `src/core/agent/close.ts`.
+- `b6aae291`, `ki agent send`: `sendLine`, sender resolution and `unreadInbox` in `src/core/agent/runs.ts`. The seen mark is kept in `inbox.seen`.
+- `dfcbfcb8`: the Codex dispatch marker assertion, and the guide sentence saying both runtimes carry the marker.
+- `20c1cfb6`, bare letters: `resolveLetter` and `queryOptions` in `src/core/agent/thread.ts`.
+- Docs: each group updated `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
+
+Two choices went beyond the Steps:
+
+- With neither `KI_AGENT_RUN` nor `--from`, the sender is the one run whose `thread.json` names the working directory's repository. Several such runs, or none, are refused with a request for `--from`.
+- A held entry passes on an untracked checkpoint only when its home has a `_CHECKPOINTS` path segment. Any other held home keeps the tracked-path test.
+
+### Verification
+
+Each Verify heading is covered through `run(args, context)` and `sandbox()`:
+
+- **Link printer:** a live record, a pruned record, an unknown scope and a bad identifier.
+- **Listing:** live, queued, at-rest, legacy and archived runs; `--all`; and the refusal of `--all` beside a run name.
+- **Decision class:**
+  - `--class` written beside `home:`, and `reconcile` setting either field alone;
+  - operational with no home passing;
+  - held passing on an untracked checkpoint, and blocked while it is missing;
+  - standalone with no home blocked;
+  - rule still needing tracking;
+  - `close.md` naming each class.
+- **Send:**
+  - a send to a live run;
+  - the sender taken from the marker, `--from` and the repository;
+  - the inbox shown once by `status`;
+  - refusals for a finished run, an archived run, a bad line, a bad sender, an ambiguous repository and no owning run.
+- **Codex marker:** asserted on the dispatch path.
+- **Bare letters:**
+  - a letter resolved from the newer of two reports carrying the tag;
+  - a letter the newer report lacks;
+  - a tag no report carries;
+  - a bare letter with no tag;
+  - a run with no thread folder;
+  - a plain decision logged unchanged.
+
+Gates, on 16 October 2026:
+
+- `bun run test:coverage` passed 74 files and 1210 tests at 100% statements, branches, functions and lines.
+- `bunx tsc --noEmit -p .`, biome, `bunx knip`, `mandoc -T lint man/ki.1` and rumdl were clean.
+- `ki repo audit --repo .` reports only DEPS-1, `@types/node` 26.6.3 → 26.6.4, plus two warnings, CI-1 and HOOK-1. All three predate this record.
+
+Live checks ran in a temporary state root and repository:
+
+- **`close`:** passed an operational entry and a held entry on an ignored checkpoint, and blocked a standalone entry until `reconcile --class` changed it.
+- **`send`:** reached a run with a live process, `status` showed the line once, and an archived run was refused.
+- **Bare letters:** `decide w 'PROBE - b'` logged `b) Second way.` with its `source:`. `PROBE - c` and `NOWHERE - b` were refused, and the log was unchanged.
+- **`ki agent status`:** listed the tools-burndown thread on this machine, as recorded at `7160ff99`.
+
+Two Verify items were not run:
+
+- The Codex launch, because it would contact the Codex service.
+- `ki agent send ways-of-working "probe"`, because it would write into another session's live run.
+
+### Outstanding concerns
+
+- The live Codex launch and the send to a real run are left for the owner.
+- The harness still has to retire the `--log` inbox idiom in `ki-delegation` and the Codex terminal check in `coordinator-reminder.sh`, as Dependencies / blocks names.
+- DEPS-1 predates this record and needs a network install.
+
+### Post-change review
+
+Each new path leaves earlier logs and runs valid:
+
+- An entry with no class reads and gates exactly as before.
+- `reconcile <run> <n> <home>` keeps its old form.
+- A decision longer than one letter is logged as given.
+- `status <run>` prints inbox lines only when an inbox exists.
+
+Every refusal checks before writing: a bare-letter refusal leaves the log unchanged, and `send` refuses before it appends. The inbox stays in the state folder, so the thread folder keeps its closed list.
+
+### Mini recap
+
+A coordinating thread can now list live threads, classify each decision so `close` accepts operational and held entries, message another live thread, rely on the run marker for both runtimes, and log an owner's bare letter with the option's wording.
 
 ## Discussion
 
