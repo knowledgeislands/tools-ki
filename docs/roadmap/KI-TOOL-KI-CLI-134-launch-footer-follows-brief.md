@@ -2,14 +2,17 @@
 id: KI-TOOL-KI-CLI-134
 area: CLI
 title: Launch footer follows brief
+project: tools-burndown
 purpose: corrective
+kind: deliver
 component: agent
-status: triage
+horizon: next
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-14T17:05:00Z
+updated_at: 2026-10-16T01:15:23Z
 ---
 
 # Launch Footer Follows Brief
@@ -34,10 +37,46 @@ What `ki agent` does today:
 - In (ki-agentic-harness, handoff): the `ki-delegation` standard and assets define whichever new tier or grant wording is chosen, and the intro lines stop matching the footer marker. The harness owns that change; this record only consumes it.
 - Out: inferring authority from free text in the brief; changing what any existing tier grants; the decisions-log format.
 
+## Current state
+
+Adopted to `next` as a draft on 16 October 2026 and not yet planned; `ki-plan` records the current state before this record becomes Ready.
+
+## Steps
+
+- [ ] Shape this record through `ki-plan`; no delivery step is planned yet.
+
+## Files touched
+
+Not yet determined.
+
+## Verify
+
+Not yet set. The plan names the exact gates; at minimum the repository test suite through `run(args, context)` and the `ki-engineering` audit.
+
 ## Dependencies / blocks
 
 Not blocked to plan. Delivery of a new tier depends on the matching `ki-delegation` asset in `ki-agentic-harness`; the footer-marker fix and the report-path agreement do not.
 
+## Documentation impact
+
+### Decision Records
+
+Not yet assessed.
+
+### Specifications
+
+Not yet assessed.
+
+### Guides
+
+Not yet assessed.
+
+### Roadmap
+
+None.
+
 ## Discussion
 
 Origin: the `sol` bring-up, captured on Kris Brown's TOOL-RECORDS approval on 2026-10-14 (decision 70 in the thread's decisions log). The planning choice is between a fifth cumulative tier (for example `local`: fetch and approved machine changes, no push), orthogonal grants (`--allow fetch --allow machine`), or a footer that defers explicitly to the brief's cited decision. A brief that is stricter than its footer is safe; a footer stricter than an approved brief costs a stop or an ignored rule, and an agent that learns to ignore the footer is the worse outcome. Capture only; adoption, priority and plan belong to this repository.
+
+Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, on Kris Brown's TRIAGE-ADOPT answer (option a) as applied in the tools-burndown thread's BURN-OVERNIGHT decision.

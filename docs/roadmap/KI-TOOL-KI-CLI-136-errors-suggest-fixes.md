@@ -2,14 +2,17 @@
 id: KI-TOOL-KI-CLI-136
 area: CLI
 title: Errors suggest fixes
+project: tools-burndown
 purpose: corrective
+kind: deliver
 component: repo
-status: triage
+horizon: next
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-15T09:36:28Z
-updated_at: 2026-10-15T09:36:28Z
+updated_at: 2026-10-16T01:15:23Z
 ---
 
 # Errors Suggest Fixes
@@ -48,10 +51,46 @@ Friction from the `registry-bind` run report, 15 October 2026:
 - In: a `ki doctor` check that warns on each declared but unbound or unavailable store with the bind command; `store list`, `repair`, `open` and the store-needing commands naming the exact `ki repo --repo <checkout> store bind <role> <path> --write`, with the path filled in when one conventional folder matches and a placeholder otherwise; telling `EPERM` and `EACCES` apart from `ENOENT` wherever `ki` reads a store or the OneDrive root, and reporting a denial as such with its fix (grant Full Disk Access to the terminal or `sshd-keygen-wrapper`, or run at the Mac's screen); a structured suggestion on `KiError` rendered by [cli.ts](../../src/cli.ts) as a `next:` line, adopted across user-facing errors; a matching rule in the product-engineering standard; the help and wording fixes in friction items 3 to 6; contract tests through `run(args, context)`, with denial simulated through injected file-system errors.
 - Out: binding anything automatically; Full Disk Access or other privacy changes on a host; syncing or mounting stores; the host-absent marker and distinct store states, which [KI-TOOL-KI-CLI-131](KI-TOOL-KI-CLI-131-host-absent-store-state.md) owns; repair's warning itself, delivered by [KI-TOOL-KI-CLI-126](KI-TOOL-KI-CLI-126-unavailable-store-breaks-repair.md).
 
+## Current state
+
+Adopted to `next` as a draft on 16 October 2026 and not yet planned; `ki-plan` records the current state before this record becomes Ready.
+
+## Steps
+
+- [ ] Shape this record through `ki-plan`; no delivery step is planned yet.
+
+## Files touched
+
+Not yet determined.
+
+## Verify
+
+Not yet set. The plan names the exact gates; at minimum the repository test suite through `run(args, context)` and the `ki-engineering` audit.
+
 ## Dependencies / blocks
 
 Not blocked to plan. It overlaps [KI-TOOL-KI-CLI-131](KI-TOOL-KI-CLI-131-host-absent-store-state.md), which changes the same store states and `store list` output, and builds on the availability helper and warning wording from [KI-TOOL-KI-CLI-126](KI-TOOL-KI-CLI-126-unavailable-store-breaks-repair.md); planning should settle the order or fold the store-suggestion part into one of them.
 
+## Documentation impact
+
+### Decision Records
+
+Not yet assessed.
+
+### Specifications
+
+Not yet assessed.
+
+### Guides
+
+Not yet assessed.
+
+### Roadmap
+
+None.
+
 ## Discussion
 
 Capture only, on Kris Brown's explicit request (decision 106), outside the thread's burn-down rule; adoption, priority and plan belong to this repository. Questions for planning: whether a folder hint for friction item 7 belongs in `.ki.toml` (an optional expected store name) or is inferred from the territory handle; whether the general rule is enforced by a test that every `KiError` thrown from a command carries a suggestion, or applied incrementally; and whether the record should split into the store work and the cross-cutting error rule.
+
+Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, on Kris Brown's TRIAGE-ADOPT answer (option a) as applied in the tools-burndown thread's BURN-OVERNIGHT decision.

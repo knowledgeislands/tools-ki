@@ -2,15 +2,17 @@
 id: KI-TOOL-KI-CLI-131
 area: CLI
 title: Host-absent store state
+project: tools-burndown
 purpose: corrective
 kind: deliver
 component: repo
-status: triage
+horizon: next
+status: draft
 blocks: []
 blocked_by: [KI-TOOL-KI-CLI-126]
 baseline_ref: null
 created_at: 2026-10-14T20:57:30Z
-updated_at: 2026-10-14T20:57:30Z
+updated_at: 2026-10-16T01:15:23Z
 ---
 
 # Host-Absent Store State
@@ -35,9 +37,43 @@ On the Linux agent host vega, ki-principal's `sources` store is bound to an empt
 - In: `ki repo open` and the VS Code workspace skipping an unavailable store with a warning; a registry representation for a store deliberately absent on a host, with a command to set and clear it; status and `store list` reporting bound, absent-by-choice and missing stores distinctly; `ki repo store create` failing clearly, not wrongly, where the OneDrive root does not exist; contract tests through `run(args, context)`.
 - Out: `ki repo repair`, which [KI-TOOL-KI-CLI-126](KI-TOOL-KI-CLI-126-unavailable-store-breaks-repair.md) owns; syncing or mounting stores across hosts; any change to the mirror-note contract; commands that need originals, which keep failing clearly when the store is unavailable; changes on vega itself.
 
+## Current state
+
+Adopted to `next` as a draft on 16 October 2026 and not yet planned; `ki-plan` records the current state before this record becomes Ready.
+
+## Steps
+
+- [ ] Shape this record through `ki-plan`; no delivery step is planned yet.
+
+## Files touched
+
+Not yet determined.
+
+## Verify
+
+Not yet set. The plan names the exact gates; at minimum the repository test suite through `run(args, context)` and the `ki-engineering` audit.
+
 ## Dependencies / blocks
 
 Blocked by [KI-TOOL-KI-CLI-126](KI-TOOL-KI-CLI-126-unavailable-store-breaks-repair.md), whose warning wording and shared store-availability helper this reuses. Removing vega's stopgap binding waits for this record.
+
+## Documentation impact
+
+### Decision Records
+
+Not yet assessed.
+
+### Specifications
+
+Not yet assessed.
+
+### Guides
+
+Not yet assessed.
+
+### Roadmap
+
+None.
 
 ## Discussion
 
@@ -48,3 +84,5 @@ Open design points for planning:
 - Whether the absence marker belongs in the existing `stores` table, for example a reserved value per role, or in a separate per-host table.
 - Whether, once a marker exists, an unbound store with no marker should go on warning as KI-TOOL-KI-CLI-126 makes repair do, or fail until the host says the store is absent, so that an accidental omission stays visible.
 - Whether `ki repo store create` should learn a non-macOS default or only refuse clearly and point to `store bind`.
+
+Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, on Kris Brown's TRIAGE-ADOPT answer (option a) as applied in the tools-burndown thread's BURN-OVERNIGHT decision.

@@ -2,14 +2,17 @@
 id: KI-TOOL-KI-CLI-139
 area: CLI
 title: EBU sources sync
+project: knowledge-acquisition
 purpose: capability
+kind: deliver
 component: acquire
-status: triage
+horizon: next
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-15T23:15:13Z
-updated_at: 2026-10-15T23:15:13Z
+updated_at: 2026-10-16T01:15:23Z
 ---
 
 # EBU Sources Sync
@@ -45,12 +48,48 @@ Out:
 - unattended scheduling, which needs its own approval; and
 - keeping copies on different machines aligned beyond what OneDrive does for the store.
 
+## Current state
+
+Adopted to `next` as a draft on 16 October 2026 and not yet planned; `ki-plan` records the current state before this record becomes Ready.
+
+## Steps
+
+- [ ] Shape this record through `ki-plan`; no delivery step is planned yet.
+
+## Files touched
+
+Not yet determined.
+
+## Verify
+
+Not yet set. The plan names the exact gates; at minimum the repository test suite through `run(args, context)` and the `ki-engineering` audit.
+
 ## Dependencies / blocks
 
 Not blocked; blocks nothing in this repository. [HNR-PRINCIPAL-5GE-005](/Users/krisbrown/workspaces/humans-not-robots/hnr-principal/Streams/Roadmap/HNR-PRINCIPAL-5GE-005-keep-ebu-sources-aligned.md) depends on this record for `hnr-principal`'s sync. The Phase 2 and Phase 3 records the owner asked for (SRC-MATCHING) consume the status shape defined here.
+
+## Documentation impact
+
+### Decision Records
+
+Not yet assessed.
+
+### Specifications
+
+Not yet assessed.
+
+### Guides
+
+Not yet assessed.
+
+### Roadmap
+
+None.
 
 ## Discussion
 
 Origin: SRC-TOOLING in Decision 55, captured at triage by the `sources-decisions` run on 16 October 2026. Capture only; adoption, priority and plan belong to this repository.
 
 Planning has to settle where the command sits. [ADR-KI-TOOL-KI-004](../decisions/ADR-KI-TOOL-KI-004-acquisition-command-boundary.md) keeps acquisition inside `ki`, and the [acquisition specification](../specs/acquisition.md) discovers adapters from Harness skill metadata (ACQUIRE-010). A SharePoint mirror that refreshes a store copy in place is not a Knowledge Exchange Package import, so it may be a new `ki acquire` adapter with a matching Harness skill or a separate command group; either way a specification change comes first. The configuration keys, the status file's schema version and whether the shape is published in KI Specifications are planning questions too.
+
+Adopted on 16 October 2026 through `ki-next` as deliver / Next under the knowledge-acquisition Project, on Kris Brown's TRIAGE-ADOPT answer (option a) as applied in the tools-burndown thread's BURN-OVERNIGHT decision.

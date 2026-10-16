@@ -2,14 +2,17 @@
 id: KI-TOOL-KI-CLI-140
 area: CLI
 title: Git hygiene estate audit
+project: tools-burndown
 purpose: capability
+kind: deliver
 component: repo
-status: triage
+horizon: next
+status: draft
 blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-16T00:29:07Z
-updated_at: 2026-10-16T00:29:07Z
+updated_at: 2026-10-16T01:15:23Z
 ---
 
 # Git Hygiene Estate Audit
@@ -44,10 +47,46 @@ A read-only `mgit --estate` survey on 16 October 2026 across 50 repositories, fr
 - In: read-only Git facts per selected repository (branches with upstream track, merged-into-default and patch-equivalence, age, remote branches including `automation/*`, `dependabot/*` and `renovate/*`, stashes, linked worktrees, untracked and staged paths, open PR count when a provider is available); mechanical audit findings for them under the ki-git rubric's criteria; `conform` proposals that never delete a remote branch or close a PR without explicit approval; fleet runs through the existing `ki repo` selectors; contract tests through `run(args, context)` with injected Git and no network.
 - Out: the ki-git rubric and standard wording, which KI Model: ways-of-working owns in ki-agentic-harness; any change to `mgit` (a read-only `mgit` report is an alternative for planning); deleting or pushing anything during audit; clean-down of today's branches, which runs as the tools-burndown queries.
 
+## Current state
+
+Adopted to `next` as a draft on 16 October 2026 and not yet planned; `ki-plan` records the current state before this record becomes Ready.
+
+## Steps
+
+- [ ] Shape this record through `ki-plan`; no delivery step is planned yet.
+
+## Files touched
+
+Not yet determined.
+
+## Verify
+
+Not yet set. The plan names the exact gates; at minimum the repository test suite through `run(args, context)` and the `ki-engineering` audit.
+
 ## Dependencies / blocks
 
 Planning depends on the ki-git rubric gaining the clean-down criteria the audit evaluates, routed to KI Model: ways-of-working.
 
+## Documentation impact
+
+### Decision Records
+
+Not yet assessed.
+
+### Specifications
+
+Not yet assessed.
+
+### Guides
+
+Not yet assessed.
+
+### Roadmap
+
+None.
+
 ## Discussion
 
 Capture only; adoption, priority and plan belong to this repository. Questions for planning: whether open-PR facts come from `gh` behind an injected provider or stay out of scope offline; whether the Git fact collection belongs in `ki` or as a read-only `mgit` report that `ki` consumes; and the stale-age threshold.
+
+Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, whose Scope lists this record as the one REPO-GIT-HYGIENE capture inside its burn-to-zero, under the tools-burndown thread's BURN-OVERNIGHT decision. Planning waits on the ki-git rubric dependency above.
