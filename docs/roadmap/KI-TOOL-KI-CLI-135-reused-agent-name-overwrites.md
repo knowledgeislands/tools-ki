@@ -6,13 +6,13 @@ project: tools-burndown
 purpose: corrective
 kind: deliver
 component: agent
-horizon: next
-status: ready
+horizon: now
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: fed222765aebead409e0e53d4cd970dd4a0042aa
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-16T01:19:25Z
+updated_at: 2026-10-16T01:40:32Z
 ---
 
 # Reused Agent Name Overwrites
@@ -51,12 +51,12 @@ Read at `a17afa7e` on 16 October 2026; the Context above still holds.
 
 ## Steps
 
-- [ ] In `src/core/agent/runs.ts`, add `takenBy(directory, thread, name)` returning the files that take a name, and `freeName(directory, thread, name)` for the first free `<name>-<n>`.
-- [ ] Call the check in `launchAgent` after the live-pid check and in `queueAgent` beside its queue check; refuse per Decision 1, exit 1.
-- [ ] Add `relaunch?: boolean` to `LaunchRequest`, and `--relaunch` to `ki agent launch` and `ki agent queue` in `src/commands/agent/index.ts`; on relaunch, refuse a dirty thread-folder report (`git status --porcelain -- <report>` through `git(context, ...)`), else move the packet files into `<name>.prev-<n>/` and continue.
-- [ ] Keep `dispatchRun`'s launch path working: a queued request carries `relaunch` through the queue file.
-- [ ] Contract tests in `src/tests/cli/agent.test.ts` (see Verify).
-- [ ] `README.md` `ki agent` section, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` ("names are unique within a run") and `CHANGELOG.md`.
+- [x] In `src/core/agent/runs.ts`, add `takenBy(directory, thread, name)` returning the files that take a name, and `freeName(directory, thread, name)` for the first free `<name>-<n>`.
+- [x] Call the check in `launchAgent` after the live-pid check and in `queueAgent` beside its queue check; refuse per Decision 1, exit 1.
+- [x] Add `relaunch?: boolean` to `LaunchRequest`, and `--relaunch` to `ki agent launch` and `ki agent queue` in `src/commands/agent/index.ts`; on relaunch, refuse a dirty thread-folder report (`git status --porcelain -- <report>` through `git(context, ...)`), else move the packet files into `<name>.prev-<n>/` and continue.
+- [x] Keep `dispatchRun`'s launch path working: a queued request carries `relaunch` through the queue file.
+- [x] Contract tests in `src/tests/cli/agent.test.ts` (see Verify).
+- [x] `README.md` `ki agent` section, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` ("names are unique within a run") and `CHANGELOG.md`.
 
 ## Files touched
 
@@ -93,6 +93,39 @@ None.
 ### Roadmap
 
 None.
+
+## Review
+
+### Delivered
+
+A launch or queue of an agent name that has already run in the run now refuses, exit 1, naming the files that take the name and the first free suffix: `<run>/<name> has already run (<files>); launch it as <name>-<n> or pass --relaunch`. `--relaunch`, on both `ki agent launch` and `ki agent queue`, moves the earlier state-folder packet and log into `<name>.prev-<n>/` and starts the agent; it refuses, changing nothing, while the thread-folder report has uncommitted changes. A queued request carries `--relaunch` through to the dispatcher. Drafts and queue files do not take a name.
+
+### Change Summary
+
+- `src/core/agent/runs.ts`: `takenBy` lists the files taking a name (`pid`, `status`, `prompt.md`, `launch.json`, `report.md` in the state folder, and the thread-folder report); `refuseTaken` refuses with the first free `<name>-<n>` from 2, folding the planned `freeName` into the refusal; `setAside` checks the report with `git status --porcelain` and moves the packet and log into the first free `<name>.prev-<n>/`. `launchAgent` refuses after the live-pid check, or sets aside after the gate check on `--relaunch`. `queueAgent` refuses a queued duplicate as `is already queued` and a taken name through the same check, replacing its pid-file test.
+- `src/commands/agent/index.ts`: `--relaunch` on launch and queue.
+- `src/tests/cli/agent.test.ts`: four contract tests and the changed queued-duplicate message.
+- `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md`, `CHANGELOG.md`: the refusal, the suffix and `--relaunch`.
+
+### Verification
+
+Verify 1 to 6 are covered by the new tests in `ki agent launch of a name that has already run`, through `run(args, context)` and `sandbox()`: refusal naming the files and `fix-2`, with `fix`'s files unchanged; `fix-3` once `fix-2` is taken; a thread-folder report alone refusing; queue refusal and the dispatcher's launch of a queued agent; `--relaunch` into `fix.prev-1/` then `fix.prev-2/`, a committed report untouched and a dirty report refused with nothing changed; a draft launch unaffected.
+
+On 16 October 2026: `bun run test:coverage` passed 72 files and 1197 tests at 100% statements, branches, functions and lines; `bunx tsc --noEmit -p .`, biome on the changed files, `bunx knip` and rumdl clean; `bun run ki:tools:lint-man` showed only the warnings present before this change. `ki repo audit --repo .` reports one failure outside this record: DEPS-1, `@types/node` 26.6.3 → 26.6.4 past the 14-day window, which needs a network install this run may not make. Its KNIP-2 failure came from the link printer's unused `RecordLink` type export and was fixed separately in `f27c2fb1`.
+
+### Outstanding concerns
+
+- DEPS-1 in `ki repo audit` predates this record and needs a dependency update with network access.
+- `holdAgent` (`--foreground`) still does not pass through `launchAgent`'s checks, as Current state notes; out of this record's boundary.
+- The `ki-delegation` run-packet table may add "names are unique within a run"; that line is the harness's.
+
+### Post-change review
+
+The refusal and the relaunch share one notion of "taken", so launch, queue and dispatch cannot disagree. Nothing is deleted: relaunch moves files and refuses rather than overwrite an uncommitted report. Pre-existing run folders keep working; a name that ran before this change is refused on reuse, which is the intended behaviour.
+
+### Mini recap
+
+Agent names are now unique within a run unless `--relaunch` is passed, and a relaunch keeps the earlier packet in `<name>.prev-<n>/`.
 
 ## Discussion
 

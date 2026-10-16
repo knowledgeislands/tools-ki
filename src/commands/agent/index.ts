@@ -54,6 +54,7 @@ interface LaunchOptions {
   readonly model?: string
   readonly effort?: AgentEffort
   readonly repo?: string
+  readonly relaunch?: boolean
 }
 
 /** The launch options `launch` and `queue` share. */
@@ -67,6 +68,7 @@ const withLaunchOptions = (command: Command): Command =>
     .option('--wait-for <name>', 'agent in this run whose DONE gates the start; repeatable', collect, [])
     .option('--model <model>', "runtime model, passed through verbatim; omitted, the runtime's default")
     .addOption(new Option('--effort <level>', "reasoning effort; omitted, the runtime's default").choices(agentEfforts))
+    .option('--relaunch', 'start a name that has already run, keeping its earlier packet in <name>.prev-<n>/')
     .addOption(repoOption)
 
 const request = (
@@ -86,7 +88,8 @@ const request = (
   waitFor: options.waitFor,
   model: options.model,
   effort: options.effort,
-  repo: options.repo
+  repo: options.repo,
+  relaunch: options.relaunch
 })
 
 export const createAgentCommand = (context: KiContext): Command => {

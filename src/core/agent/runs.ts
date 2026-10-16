@@ -1,7 +1,7 @@
-import { appendFile, copyFile, mkdir, readdir, stat, writeFile } from 'node:fs/promises'
+import { appendFile, copyFile, mkdir, readdir, rename, stat, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
-import { type AgentContext, type AuthorityTier, checkName, read, runDirectory } from './context.ts'
+import { type AgentContext, type AuthorityTier, checkName, git, read, runDirectory } from './context.ts'
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
 import { reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
@@ -22,6 +22,8 @@ export interface LaunchRequest {
   readonly effort?: AgentEffort | undefined
   /** The repository owning the run's thread; omitted, the Git repository of the working directory. */
   readonly repo?: string | undefined
+  /** Start a name that has already run, setting its earlier packet aside in `<name>.prev-<n>/`. */
+  readonly relaunch?: boolean | undefined
 }
 
 export type AgentState =
@@ -246,6 +248,63 @@ const startHold = (context: AgentContext, directory: string, request: LaunchRequ
 const launchDetails = (request: LaunchRequest): string =>
   `${JSON.stringify({ runtime: request.runtime, model: request.model, effort: request.effort, workdir: request.workdir })}\n`
 
+/** State-folder files that mark a name as having run; `.queued.md` and `.draft.md` do not. */
+const packetFiles = ['pid', 'status', 'prompt.md', 'launch.json', 'report.md'] as const
+
+const exists = async (path: string): Promise<boolean> => (await stat(path).catch(() => undefined)) !== undefined
+
+/** The files that take a name in this run: its state-folder packet and its thread-folder report. */
+const takenBy = async (directory: string, thread: ThreadHome, name: string): Promise<readonly string[]> => {
+  const files: string[] = []
+  for (const suffix of packetFiles)
+    if (await exists(join(directory, `${name}.${suffix}`))) files.push(`${name}.${suffix}`)
+  if (await exists(reportPath(thread, name))) files.push(`${thread.folder}/${name}.report.md`)
+  return files
+}
+
+/** Refuses a name that has already run, suggesting the first free `<name>-<n>` from 2. */
+const refuseTaken = async (directory: string, thread: ThreadHome, request: LaunchRequest): Promise<void> => {
+  const files = await takenBy(directory, thread, request.name)
+  if (!files.length) return
+  let suffix = 2
+  while ((await takenBy(directory, thread, `${request.name}-${suffix}`)).length) suffix += 1
+  throw new KiError(
+    `${request.run}/${request.name} has already run (${files.join(', ')}); launch it as ${request.name}-${suffix} or pass --relaunch`,
+    1
+  )
+}
+
+/**
+ * Sets a relaunched name's earlier packet aside in the first free `<name>.prev-<n>/` of the
+ * state folder, deleting nothing. The thread-folder report stays where it is, so a relaunch
+ * is refused while that report has changes Git does not hold.
+ */
+const setAside = async (
+  context: AgentContext,
+  directory: string,
+  thread: ThreadHome,
+  request: LaunchRequest
+): Promise<void> => {
+  const report = reportPath(thread, request.name)
+  if (await exists(report)) {
+    const status = await git(context, thread.repository, ['status', '--porcelain', '--', report])
+    if (status.output.trim())
+      throw new KiError(
+        `${request.run}/${request.name} cannot relaunch: ${thread.folder}/${request.name}.report.md has uncommitted changes`,
+        1
+      )
+  }
+  const files: string[] = []
+  for (const suffix of [...packetFiles, 'log'])
+    if (await exists(join(directory, `${request.name}.${suffix}`))) files.push(`${request.name}.${suffix}`)
+  if (!files.length) return
+  let previous = 1
+  while (await exists(join(directory, `${request.name}.prev-${previous}`))) previous += 1
+  const target = join(directory, `${request.name}.prev-${previous}`)
+  await mkdir(target)
+  for (const file of files) await rename(join(directory, file), join(target, file))
+}
+
 export interface LaunchResult {
   readonly pid: number
   readonly directory: string
@@ -266,8 +325,10 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
   const base = join(directory, request.name)
   const live = await running(context, `${base}.pid`)
   if (live) throw new KiError(`${request.run}/${request.name} is already running (pid ${live})`, 1)
+  if (!request.relaunch) await refuseTaken(directory, thread, request)
   const state = await gate(context, directory, request.waitFor)
   if (state.kind === 'closed') throw new KiError(`${request.run}/${request.name} gate cannot open: ${state.reason}`, 1)
+  if (request.relaunch) await setAside(context, directory, thread, request)
 
   // The agent writes its report into the tracked thread folder, so the folder must exist.
   await mkdir(threadPath(thread), { recursive: true })
@@ -322,11 +383,12 @@ export const queueAgent = async (context: AgentContext, candidate: LaunchRequest
   const request = await validated(context, candidate)
   await promptText(context, request.prompt)
   await delegationAssets(context)
-  await threadHome(context, request.run, request.repo, true, request.workdir)
+  const thread = await threadHome(context, request.run, request.repo, true, request.workdir)
   const directory = runDirectory(context, request.run)
   const queue = await readQueue(directory)
-  if (queue.some((queued) => queued.name === request.name) || (await pidOf(join(directory, `${request.name}.pid`))))
-    throw new KiError(`${request.run}/${request.name} is already queued or launched`, 1)
+  if (queue.some((queued) => queued.name === request.name))
+    throw new KiError(`${request.run}/${request.name} is already queued`, 1)
+  if (!request.relaunch) await refuseTaken(directory, thread, request)
   const prompt = join(directory, `${request.name}.queued.md`)
   await copyFile(resolve(context.workingDirectory, request.prompt), prompt)
   // The thread home is on record now, so the dispatcher's launch needs no repository.

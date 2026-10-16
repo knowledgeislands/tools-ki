@@ -233,6 +233,107 @@ describe('ki agent launch', () => {
   })
 })
 
+describe('ki agent launch of a name that has already run', () => {
+  /** A finished agent `fix`: its packet in the state folder and its report committed in the thread folder. */
+  const setupFinished = async (box: Sandbox) => {
+    await setupDelegation(box)
+    const processes = fakeProcesses(box)
+    await box.project.write('task.md', '# Task\n')
+    expect((await box.run('ki agent launch r fix . task.md', { now })).exitCode).toBe(0)
+    processes.finish()
+    await box.state.write('ki/agents/r/fix.status', '21:31 CET - done\nDONE\n')
+    await box.state.write('ki/agents/r/fix.log', 'first run\n')
+    await box.project.write('+/_THREADS/r/fix.report.md', '# First\n')
+    await box.project.git(['add', '--all'])
+    await box.project.git(['commit', '-q', '-m', 'thread'])
+    return processes
+  }
+
+  test('refuses the name, names its files and suggests the first free suffix, changing nothing', async () => {
+    const box = await sandbox()
+    await setupFinished(box)
+    const before = await box.state.read('ki/agents/r/fix.prompt.md')
+
+    const again = await box.run('ki agent launch r fix . task.md', { now })
+    expect(again.exitCode).toBe(1)
+    expect(again.stderr).toBe(
+      'ki: error: r/fix has already run (fix.pid, fix.status, fix.prompt.md, fix.launch.json, +/_THREADS/r/fix.report.md); launch it as fix-2 or pass --relaunch\n'
+    )
+    expect(await box.state.read('ki/agents/r/fix.prompt.md')).toBe(before)
+    expect(await box.state.read('ki/agents/r/fix.status')).toBe('21:31 CET - done\nDONE\n')
+
+    await box.state.write('ki/agents/r/fix-2.status', 'DONE\n')
+    expect((await box.run('ki agent launch r fix . task.md', { now })).stderr).toContain('launch it as fix-3 or')
+    expect((await box.run('ki agent queue r fix task.md', { now })).stderr).toContain(
+      'ki: error: r/fix has already run (fix.pid,'
+    )
+
+    // A name with only its thread-folder report, the state folder gone, is still taken.
+    await box.project.write('+/_THREADS/r/old.report.md', '# Old\n')
+    expect((await box.run('ki agent launch r old . task.md', { now })).stderr).toBe(
+      'ki: error: r/old has already run (+/_THREADS/r/old.report.md); launch it as old-2 or pass --relaunch\n'
+    )
+    await box.state.write('ki/agents/r/stray.report.md', '# Stray\n')
+    expect((await box.run('ki agent launch r stray . task.md', { now })).stderr).toContain('(stray.report.md)')
+  })
+
+  test('launches from a draft or the queue without counting those files as a run', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    const processes = fakeProcesses(box, async () => processes.finish())
+    expect((await box.run('ki agent new r fresh', { now })).exitCode).toBe(0)
+    const launched = await box.run(`ki agent launch r fresh . ${runPath(box, 'fresh.draft.md')}`, { now })
+    expect(launched.exitCode).toBe(0)
+    await box.project.write('task.md', '# Task\n')
+    expect((await box.run('ki agent queue r later task.md', { now })).exitCode).toBe(0)
+    expect((await box.run('ki agent dispatch r --max 1 --interval 1 --foreground', { now })).exitCode).toBe(0)
+    expect(await box.state.read('ki/agents/r/later.pid')).toBe('1002\n')
+  })
+
+  test('--relaunch sets the earlier packet aside and starts the agent, keeping the committed report', async () => {
+    const box = await sandbox()
+    const processes = await setupFinished(box)
+    const before = await box.state.read('ki/agents/r/fix.prompt.md')
+
+    const relaunched = await box.run('ki agent launch r fix . task.md --relaunch', { now })
+    expect(relaunched.exitCode).toBe(0)
+    expect(relaunched.stdout).toBe(`launched r/fix (pid 1002) in ${runDir(box)}\n`)
+    expect(await box.state.read('ki/agents/r/fix.prev-1/fix.prompt.md')).toBe(before)
+    expect(await box.state.read('ki/agents/r/fix.prev-1/fix.status')).toBe('21:31 CET - done\nDONE\n')
+    expect(await box.state.read('ki/agents/r/fix.prev-1/fix.log')).toBe('first run\n')
+    expect(await box.state.read('ki/agents/r/fix.prev-1/fix.pid')).toBe('1001\n')
+    expect(await box.state.read('ki/agents/r/fix.prev-1/fix.launch.json')).toContain('"runtime":"claude"')
+    expect(await box.state.read('ki/agents/r/fix.pid')).toBe('1002\n')
+    expect(await box.project.read('+/_THREADS/r/fix.report.md')).toBe('# First\n')
+
+    // A second relaunch takes the next free folder; an uncommitted report refuses and changes nothing.
+    processes.finish()
+    await box.project.write('+/_THREADS/r/fix.report.md', '# Second, not committed\n')
+    const dirty = await box.run('ki agent launch r fix . task.md --relaunch', { now })
+    expect(dirty.exitCode).toBe(1)
+    expect(dirty.stderr).toBe('ki: error: r/fix cannot relaunch: +/_THREADS/r/fix.report.md has uncommitted changes\n')
+    expect(await box.state.read('ki/agents/r/fix.pid')).toBe('1002\n')
+    await box.project.git(['commit', '-q', '-am', 'second'])
+    expect((await box.run('ki agent launch r fix . task.md --relaunch', { now })).exitCode).toBe(0)
+    expect(await box.state.read('ki/agents/r/fix.prev-2/fix.pid')).toBe('1002\n')
+
+    // A relaunch of a name that never ran has nothing to set aside.
+    expect((await box.run('ki agent launch r new . task.md --relaunch', { now })).exitCode).toBe(0)
+    expect(await box.state.read('ki/agents/r/new.pid')).toBe('1004\n')
+  })
+
+  test('--relaunch rides the queue to the dispatcher', async () => {
+    const box = await sandbox()
+    const processes = await setupFinished(box)
+    expect((await box.run('ki agent queue r fix task.md --relaunch', { now })).exitCode).toBe(0)
+    expect(JSON.parse(await box.state.read('ki/agents/r/queue.jsonl'))).toMatchObject({ name: 'fix', relaunch: true })
+    box.setAgentProcesses({ ...processes, launch: async () => 1002, alive: () => false, sleep: async () => {} })
+    expect((await box.run('ki agent dispatch r --max 1 --interval 1 --foreground', { now })).exitCode).toBe(0)
+    expect(await box.state.read('ki/agents/r/fix.prev-1/fix.pid')).toBe('1001\n')
+    expect(await box.state.read('ki/agents/r/fix.pid')).toBe('1002\n')
+  })
+})
+
 describe('ki agent launch --wait-for', () => {
   const runDirectory = (box: Sandbox): string => `${box.state.path}/ki/agents/r`
 
@@ -1097,7 +1198,7 @@ describe('ki agent queue, dispatch and wait', () => {
 
     const duplicate = await box.run('ki agent queue r one task.md', { now })
     expect(duplicate.exitCode).toBe(1)
-    expect(duplicate.stderr).toBe('ki: error: r/one is already queued or launched\n')
+    expect(duplicate.stderr).toBe('ki: error: r/one is already queued\n')
     await box.state.write('ki/agents/r/three.pid', '5\n')
     expect((await box.run('ki agent queue r three task.md', { now })).exitCode).toBe(1)
   })

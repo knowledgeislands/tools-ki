@@ -382,10 +382,10 @@ each folder, is opened in reverse.
 .SS Background agents
 \&
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
 Launch one detached agent and write its run packet.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
 Append a ready-made agent to the run queue.
 .TP
 .B ki agent dispatch <run> --max <count> [--interval <seconds>]
@@ -1507,7 +1507,7 @@ Claude Code or Codex in their own session with standard input from
 .IR /dev/null ,
 so an interrupt of the launching session cannot stop them.
 .TP
-.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]
+.B ki agent launch <run> <name> <workdir> <prompt-file> [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
 Launch one detached agent. The prompt gains the authority footer the pinned
 Harness's
 .B ki-delegation
@@ -1544,10 +1544,34 @@ Omitted, each uses the runtime's own default.
 records the runtime, model, and effort. The progress protocol names the
 agent's report path in the thread folder, and the owning repository is added
 to the agent's writable directories when the working directory lies outside
-it.
+it. Names are unique within a run: a name that has already run, shown by its
+.IR .pid ,
+.IR .status ,
+.IR .prompt.md ,
+.I .launch.json
+or
+.I .report.md
+in the state folder or its report in the thread folder, is refused with the
+first free
+.I <name>-<n>
+suggestion and nothing changes; a
+.I .queued.md
+or
+.I .draft.md
+does not take a name.
+.B --relaunch
+starts it again deliberately: the earlier state-folder packet, log included,
+moves into the first free
+.I <name>.prev-<n>/
+and nothing is deleted, but the relaunch is refused while the thread-folder
+report has uncommitted changes.
 .TP
-.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--repo <dir>]
-Append a ready-made agent to the run queue, copying its prompt. Queue order
+.B ki agent queue <run> <name> <prompt-file> [--workdir <dir>] [--runtime claude|codex] [--add-dir <dir>...] [--rules none|push|prune|release] [--wait-for <name>...] [--model <model>] [--effort low|medium|high|xhigh|max] [--relaunch] [--repo <dir>]
+Append a ready-made agent to the run queue, copying its prompt. A name already
+queued or already run is refused as for
+.BR launch ;
+.B --relaunch
+rides the queue to the dispatcher's launch. Queue order
 is priority order. The dispatcher launches it with the queued
 .B --model
 and

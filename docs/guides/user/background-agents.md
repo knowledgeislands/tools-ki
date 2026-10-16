@@ -68,6 +68,7 @@ A report the thread has retired from its folder stays retired: `decide` and `clo
 ## Recover
 
 - **Already running:** `launch` refuses a name whose process is alive. Choose a new name or wait for it.
+- **Already run:** names are unique within a run. `launch` and `queue` refuse a name whose packet or report already exists, naming the files and the first free `<name>-<n>`; use that name, or pass `--relaunch` to start the same agent again. A relaunch moves the earlier prompt, status, log, launch details and pid into `<name>.prev-<n>/` in the state folder and is refused until the thread-folder report is committed, so the earlier report survives in Git.
 - **Missing assets:** update or relink the canonical Harness so its `ki-delegation` skill ships the run assets.
 - **A queued launch failed:** the dispatcher logs `could not launch <name>` and moves on. Fix the cause and queue the agent again under a new name.
 - **Not inside a Git repository:** `launch`, `queue`, `new` and `decide` need the thread home. Run from the owning repository or pass `--repo <dir>`.
