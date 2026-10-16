@@ -499,7 +499,11 @@
         },
         {
           "invocation": "ki agent status [<run>] [--all]",
-          "description": "Print each agent's latest status, flag any agent whose process exited without DONE, and list the queue. With no run, list every run on this machine with an agent running or held or a non-empty queue: a <run> (<thread home>) line, then one - [running] <agent> - <status> or - [queued] <agent> - position <n> line per live item, in the form the ki-pmo banner quotes. A run that predates its thread home shows (no thread home) . --all adds the runs at rest, marked - [at rest] ; archived runs are never listed, and the listing writes nothing."
+          "description": "Print each agent's latest status, flag any agent whose process exited without DONE, list the queue, and print each inbox: line sent since the run's last status . With no run, list every run on this machine with an agent running or held or a non-empty queue: a <run> (<thread home>) line, then one - [running] <agent> - <status> or - [queued] <agent> - position <n> line per live item, in the form the ki-pmo banner quotes. A run that predates its thread home shows (no thread home) . --all adds the runs at rest, marked - [at rest] ; archived runs are never listed, and the listing writes nothing."
+        },
+        {
+          "invocation": "ki agent send <run> <line...> [--from <run>]",
+          "description": "Append <UTC time> from <sender>: <line> to inbox.md in the receiving run's state folder, refusing a run with no agent running or held and an empty queue. The sender is KI_AGENT_RUN when set, else --from , else the one run whose thread lives in the working directory's repository. The receiving thread sees each line once, in its next ki agent status <run> , which keeps its place in inbox.seen ."
         },
         {
           "invocation": "ki agent watch <run> [seconds]",

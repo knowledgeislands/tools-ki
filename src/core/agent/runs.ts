@@ -1,12 +1,14 @@
-import { copyFile, mkdir, readdir, rename, stat, writeFile } from 'node:fs/promises'
+import { appendFile, copyFile, mkdir, readdir, rename, stat, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
+import { gitWorkingTreeRoot } from '../runtime/git.ts'
 import {
   type AgentContext,
   type AuthorityTier,
   agentsDirectory,
   checkName,
   git,
+  instant,
   read,
   runDirectory
 } from './context.ts'
@@ -447,10 +449,23 @@ const observe = async (context: AgentContext, directory: string): Promise<void> 
 const eventText = (event: RunEvent): string =>
   `${event.agent} ${event.kind}: ${event.tag === undefined ? '' : `${event.tag} - `}${event.text}`
 
+const inboxFile = (directory: string): string => join(directory, 'inbox.md')
+
+/** The lines of the run's `inbox.md` that no `status` has shown yet, which it marks shown. */
+const unreadInbox = async (directory: string): Promise<string[]> => {
+  const inbox = lines(await read(inboxFile(directory)))
+  const seen = Number((await read(join(directory, 'inbox.seen'))) ?? 0)
+  if (inbox.length > seen) await writeFile(join(directory, 'inbox.seen'), `${inbox.length}\n`)
+  return inbox.slice(seen)
+}
+
+/** Each agent's latest status, the queue, and the inbox lines sent since the last call. */
 export const runStatus = async (context: AgentContext, run: string): Promise<AgentSummary> => {
   const directory = await existingRun(context, run)
   await observe(context, directory)
-  return summary(context, directory)
+  const current = await summary(context, directory)
+  const inbox = (await unreadInbox(directory)).map((line) => `inbox: ${line}`)
+  return { lines: [...current.lines, ...inbox], live: current.live }
 }
 
 /** One live item of a run, in the `ki-pmo` banner's `- [running] <agent> - <what>` form. */
@@ -499,6 +514,42 @@ export const listRuns = async (context: AgentContext, all: boolean): Promise<Run
     if (all || overview.items.length) overviews.push(overview)
   }
   return overviews
+}
+
+/** The sending run: the agent's marker, else `--from`, else the one run whose thread this repository owns. */
+const sendingRun = async (context: AgentContext, from: string | undefined): Promise<string> => {
+  const marked = context.environment['KI_AGENT_RUN']
+  if (marked) return checkName(marked, 'run')
+  if (from !== undefined) return checkName(from, 'run')
+  const root = await gitWorkingTreeRoot(context.workingDirectory, context.runner, context.environment)
+  const owned: string[] = []
+  for (const { run } of await listRuns(context, true))
+    if (root !== undefined && (await readThread(context, run))?.repository === root) owned.push(run)
+  if (owned.length === 1) return owned[0] as string
+  throw new KiError(
+    owned.length
+      ? `${owned.join(', ')} all have their thread in this repository; name the sender with --from <run>`
+      : "no run has its thread in this directory's repository; name the sender with --from <run>",
+    2
+  )
+}
+
+/**
+ * Appends one timestamped line, naming the sender, to a live run's `inbox.md` in its state
+ * folder, where the receiving thread's next `status` shows it; returns the inbox path.
+ */
+export const sendLine = async (
+  context: AgentContext,
+  request: { readonly run: string; readonly line: string; readonly from?: string | undefined }
+): Promise<string> => {
+  const line = request.line.trim()
+  if (!line || line.includes('\n')) throw new KiError('send takes one non-empty line', 2)
+  const directory = await existingRun(context, request.run)
+  const from = await sendingRun(context, request.from)
+  if (!(await runOverview(context, request.run)).items.length)
+    throw new KiError(`${request.run} is not live: no agent is running or held and its queue is empty`, 1)
+  await appendFile(inboxFile(directory), `${instant(context)} from ${from}: ${line}\n`)
+  return inboxFile(directory)
 }
 
 /**

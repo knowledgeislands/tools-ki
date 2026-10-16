@@ -1,5 +1,6 @@
+import { realpath } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
-import { type Sandbox, sandbox } from './_cli_helper.ts'
+import { runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
 
 const now = () => Date.parse('2026-10-07T19:30:00Z')
 
@@ -62,5 +63,84 @@ describe('ki agent status with no run', () => {
     const both = await box.run('ki agent status rest --all', { now })
     expect(both.exitCode).toBe(2)
     expect(both.stderr).toBe('ki: error: --all lists every run; give it without a run name\n')
+  })
+})
+
+describe('ki agent send', () => {
+  /** A Git project owning the at-rest coordinator run `gov`, a live run and a finished one. */
+  const setupSend = async (box: Sandbox): Promise<string> => {
+    await box.project.git(['init', '-q'])
+    box.setRunner(runCommand)
+    alive(box, [11])
+    const root = await realpath(box.project.path)
+    await box.state.write(
+      'ki/agents/gov/thread.json',
+      `${JSON.stringify({ repository: root, folder: '+/_THREADS/gov' })}\n`
+    )
+    await box.state.write('ki/agents/gov/a.pid', '10\n')
+    await box.state.write('ki/agents/live/a.pid', '11\n')
+    await box.state.write('ki/agents/live/a.status', '19:20 UTC - building\n')
+    await box.state.write('ki/agents/rest/c.pid', '13\n')
+    await box.state.write('ki/agents/rest/c.status', 'DONE\n')
+    return root
+  }
+  const send = (box: Sandbox, ...rest: string[]) => box.run(['ki', 'agent', 'send', ...rest], { now })
+
+  test("appends a line naming the sender to a live run's inbox, which its next status shows once", async () => {
+    const box = await sandbox()
+    await setupSend(box)
+
+    expect((await send(box, 'live', 'Rebase', 'on main.')).stdout).toBe(
+      `Sent to live in ${box.state.path}/ki/agents/live/inbox.md\n`
+    )
+    box.setEnv({ KI_AGENT_RUN: 'marked' })
+    expect((await send(box, 'live', 'From the marker.', '--from', 'ignored')).exitCode).toBe(0)
+    box.setEnv({ KI_AGENT_RUN: undefined })
+    expect((await send(box, 'live', 'From the option.', '--from', 'named')).exitCode).toBe(0)
+    const sent = [
+      '2026-10-07T19:30:00Z from gov: Rebase on main.',
+      '2026-10-07T19:30:00Z from marked: From the marker.',
+      '2026-10-07T19:30:00Z from named: From the option.'
+    ]
+    expect(await box.state.read('ki/agents/live/inbox.md')).toBe(`${sent.join('\n')}\n`)
+
+    const status = await box.run('ki agent status live', { now })
+    expect(status.stdout).toBe(['a: 19:20 UTC - building', ...sent.map((line) => `inbox: ${line}`), ''].join('\n'))
+    expect((await box.run('ki agent status live', { now })).stdout).toBe('a: 19:20 UTC - building\n')
+    await send(box, 'live', 'Later.')
+    expect((await box.run('ki agent status live', { now })).stdout).toBe(
+      'a: 19:20 UTC - building\ninbox: 2026-10-07T19:30:00Z from gov: Later.\n'
+    )
+  })
+
+  test('refuses a run that is not live, a bad line, and an unknown sender', async () => {
+    const box = await sandbox()
+    const root = await setupSend(box)
+
+    const rest = await send(box, 'rest', 'Hello.')
+    expect(rest.exitCode).toBe(1)
+    expect(rest.stderr).toBe('ki: error: rest is not live: no agent is running or held and its queue is empty\n')
+    expect((await send(box, 'gone', 'Hello.')).stderr).toBe('ki: error: no such run: gone\n')
+    for (const line of [' ', 'two\nlines'])
+      expect((await send(box, 'live', line)).stderr).toBe('ki: error: send takes one non-empty line\n')
+    expect((await send(box, 'live', 'Hello.', '--from', 'bad/name')).stderr).toBe(
+      "ki: error: invalid run: 'bad/name'\n"
+    )
+    expect(await box.state.read('ki/agents/rest/inbox.md').catch(() => 'absent')).toBe('absent')
+
+    await box.state.write(
+      'ki/agents/live/thread.json',
+      `${JSON.stringify({ repository: root, folder: '+/_THREADS/live' })}\n`
+    )
+    const shared = await send(box, 'live', 'Hello.')
+    expect(shared.exitCode).toBe(2)
+    expect(shared.stderr).toBe(
+      'ki: error: gov, live all have their thread in this repository; name the sender with --from <run>\n'
+    )
+    box.cd('../home')
+    expect((await send(box, 'live', 'Hello.')).stderr).toBe(
+      "ki: error: no run has its thread in this directory's repository; name the sender with --from <run>\n"
+    )
+    expect(await box.state.read('ki/agents/live/inbox.md').catch(() => 'absent')).toBe('absent')
   })
 })

@@ -14,6 +14,7 @@ import {
   newPrompt,
   queueAgent,
   runStatus,
+  sendLine,
   startDispatcher,
   waitForRun,
   watchRun
@@ -197,6 +198,22 @@ export const createAgentCommand = (context: KiContext): Command => {
             .join('\n\n')
         )
       })
+  )
+
+  command.addCommand(
+    new Command('send')
+      .description("append one line, naming the sender, to a live run's inbox, shown by its next status")
+      .argument('<run>', 'receiving run name')
+      .argument('<line...>', 'the line to send')
+      .option(
+        '--from <run>',
+        'sending run, when KI_AGENT_RUN is unset; default, the run whose thread this repository owns'
+      )
+      .action(async (run: string, line: readonly string[], options: { from?: string }) =>
+        write(
+          `Sent to ${run} in ${await sendLine(agentContext(context), { run, line: line.join(' '), from: options.from })}`
+        )
+      )
   )
 
   command.addCommand(

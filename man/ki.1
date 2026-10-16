@@ -397,6 +397,9 @@ Block until the next unseen run event, or until the whole run finishes.
 .B ki agent status [<run>] [--all]
 Print each agent's latest status, or with no run every live thread.
 .TP
+.B ki agent send <run> <line...> [--from <run>]
+Append one line, naming the sender, to a live run's inbox.
+.TP
 .B ki agent watch <run> [seconds]
 Print each new run event and one status line per interval until the run ends.
 .TP
@@ -1623,7 +1626,11 @@ when nothing is left to wait for.
 .TP
 .B ki agent status [<run>] [--all]
 Print each agent's latest status, flag any agent whose process exited
-without DONE, and list the queue. With no run, list every run on this
+without DONE, list the queue, and print each
+.I inbox:
+line sent since the run's last
+.BR status .
+With no run, list every run on this
 machine with an agent running or held or a non-empty queue: a
 .I "<run> (<thread home>)"
 line, then one
@@ -1638,6 +1645,22 @@ banner quotes. A run that predates its thread home shows
 adds the runs at rest, marked
 .IR "- [at rest]" ;
 archived runs are never listed, and the listing writes nothing.
+.TP
+.B ki agent send <run> <line...> [--from <run>]
+Append
+.I "<UTC time> from <sender>: <line>"
+to
+.I inbox.md
+in the receiving run's state folder, refusing a run with no agent running
+or held and an empty queue. The sender is
+.B KI_AGENT_RUN
+when set, else
+.BR --from ,
+else the one run whose thread lives in the working directory's repository.
+The receiving thread sees each line once, in its next
+.BR "ki agent status <run>" ,
+which keeps its place in
+.IR inbox.seen .
 .TP
 .B ki agent watch <run> [seconds]
 Print each new event as
