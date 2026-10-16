@@ -66,12 +66,19 @@ const recordExists = async (context: AgentContext, identifier: string): Promise<
 }
 
 /** Undefined when the home resolves; otherwise why it does not. */
-const unresolved = async (context: AgentContext, thread: ThreadHome, home: string): Promise<string | undefined> => {
+const unresolved = async (
+  context: AgentContext,
+  thread: ThreadHome,
+  home: string,
+  kind: string | undefined
+): Promise<string | undefined> => {
   const target = home.split('#')[0] as string
   if (recordIdentifier.test(target))
     return (await recordExists(context, target)) ? undefined : 'matches no roadmap record in the registry'
   const path = isAbsolute(target) ? target : join(thread.repository, target)
   if (!(await stat(path).catch(() => undefined))) return 'does not exist'
+  // A held decision waits in the thread's checkpoint, which the ignore block may keep out of Git.
+  if (kind === 'held' && target.split('/').includes('_CHECKPOINTS')) return undefined
   const tracked = await git(context, dirname(path), ['ls-files', '--error-unmatch', '--', path])
   return tracked.exitCode === 0 ? undefined : 'is not tracked by Git'
 }
@@ -97,15 +104,16 @@ const decisionLines = async (
     }
   const lines: GateLine[] = []
   for (const entry of decisions) {
+    const name = `decision ${entry.number}${entry.class === undefined ? '' : ` (${entry.class})`}`
     if (entry.home === undefined) {
-      lines.push(blocker(`decision ${entry.number} has no home (${log})`))
+      lines.push(
+        entry.class === 'operational' ? ok(`${name} is its own home`) : blocker(`${name} has no home (${log})`)
+      )
       continue
     }
-    const reason = await unresolved(context, thread, entry.home)
+    const reason = await unresolved(context, thread, entry.home, entry.class)
     lines.push(
-      reason === undefined
-        ? ok(`decision ${entry.number} home ${entry.home}`)
-        : blocker(`decision ${entry.number} home ${entry.home} ${reason}`)
+      reason === undefined ? ok(`${name} home ${entry.home}`) : blocker(`${name} home ${entry.home} ${reason}`)
     )
   }
   return { lines, decisions, log }
@@ -183,7 +191,10 @@ const note = (
         ? [
             `The owner waived the decision gate with \`--reconciled\`; ${decisions.length} entries in ${log} were not checked.`
           ]
-        : decisions.map((entry) => `- Decision ${entry.number}: ${entry.home as string}`)),
+        : decisions.map(
+            (entry) =>
+              `- Decision ${entry.number}${entry.class === undefined ? '' : ` (${entry.class})`}: ${entry.home ?? 'its own home'}`
+          )),
     ''
   ].join('\n')
 

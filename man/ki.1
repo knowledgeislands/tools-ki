@@ -403,10 +403,10 @@ Print each new run event and one status line per interval until the run ends.
 .B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the run contract.
 .TP
-.B ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--repo <dir>]
+.B ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--class <class>] [--repo <dir>]
 Append a numbered, timestamped owner decision to the thread's tracked log.
 .TP
-.B ki agent reconcile <run> <number> <home>
+.B ki agent reconcile <run> <number> [<home>] [--class <class>]
 Write or replace one decision's durable home.
 .TP
 .B ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
@@ -1691,7 +1691,7 @@ run contract to
 .IR <name>.draft.md ,
 with the thread's decisions log and report paths filled in.
 .TP
-.B ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--repo <dir>]
+.B ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--class <class>] [--repo <dir>]
 Append a numbered owner decision, timestamped in UTC, to the thread's tracked
 .I decisions.md
 or the named log, for prompts to cite as their authority. Writing the
@@ -1709,11 +1709,26 @@ with a
 .I #fragment
 or a work-record identifier such as
 .IR KI-TOOL-KI-CLI-124 .
+.B --class
+writes the entry's ki-pmo class,
+.BR operational ,
+.BR rule ,
+.B standalone
+or
+.BR held ,
+on a
+.I class:
+line beside
+.IR home: .
 .TP
-.B ki agent reconcile <run> <number> <home>
+.B ki agent reconcile <run> <number> [<home>] [--class <class>]
 Write or replace the
 .I home:
-line of one decision in the thread's tracked log.
+line, the
+.I class:
+line given by
+.BR --class ,
+or both, of one decision in the thread's tracked log.
 .TP
 .B ki agent close <run> [--delete] [--compress] [--accept-exited <name>...] [--reconciled] [--repo <dir>]
 Retire a finished run's state folder. The reconcile gate prints one line per
@@ -1725,7 +1740,16 @@ no dispatcher running, the queue and
 .I worktrees/
 empty, every decision in the tracked log housed in a tracked path or a
 roadmap record of a registered repository, and the thread folder committed
-and clean. It first moves into the thread folder any
+and clean.
+An
+.B operational
+decision with no home is its own home, and a
+.B held
+decision whose home is a
+.I _CHECKPOINTS/
+file passes once that file exists, tracked or not; any other class,
+or none, needs a tracked path or a record.
+It first moves into the thread folder any
 .I decisions.md
 or
 .I <name>.report.md

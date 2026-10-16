@@ -193,10 +193,17 @@ const recordThread = async (context: AgentContext, run: string, home: ThreadHome
   return home
 }
 
+/** The `ki-pmo` decision classes, which tell the `close` gate what home an entry needs. */
+export const decisionClasses = ['operational', 'rule', 'standalone', 'held'] as const
+
+export type DecisionClass = (typeof decisionClasses)[number]
+
 /** One entry of a decisions log, with the line range it spans. */
 export interface DecisionEntry {
   readonly number: number
   readonly home: string | undefined
+  /** As written, so an entry with a class `ki` does not know is still read. */
+  readonly class: string | undefined
   /** Index of the heading line and of the first line after the entry. */
   readonly start: number
   readonly end: number
@@ -204,6 +211,10 @@ export interface DecisionEntry {
 
 const heading = /^## Decision (\d+)\b/
 const homeLine = /^home: (.+)$/
+const classLine = /^class: (.+)$/
+
+const field = (lines: readonly string[], pattern: RegExp): string | undefined =>
+  lines.map((line) => pattern.exec(line)?.[1]).find((value) => value !== undefined)
 
 /** The numbered entries of a log, in file order; an entry runs to the next `## ` heading. */
 export const parseDecisions = (text: string): readonly DecisionEntry[] => {
@@ -213,11 +224,8 @@ export const parseDecisions = (text: string): readonly DecisionEntry[] => {
     const match = heading.exec(all[start] as string)
     if (!match) return []
     const end = sections[position + 1] ?? all.length
-    const home = all
-      .slice(start + 1, end)
-      .map((line) => homeLine.exec(line)?.[1])
-      .find((value) => value !== undefined)
-    return [{ number: Number(match[1]), home, start, end }]
+    const body = all.slice(start + 1, end)
+    return [{ number: Number(match[1]), home: field(body, homeLine), class: field(body, classLine), start, end }]
   })
 }
 
@@ -227,6 +235,7 @@ export interface DecisionRequest {
   readonly log?: string | undefined
   /** The decision's durable home: a committed path or a work-record identifier. */
   readonly home?: string | undefined
+  readonly class?: DecisionClass | undefined
   readonly repo?: string | undefined
 }
 
@@ -255,19 +264,26 @@ export const appendDecision = async (
     await mkdir(dirname(path), { recursive: true })
     await writeFile(path, '# Decisions\n')
   }
-  const home = request.home === undefined ? '' : `home: ${request.home.trim()}\n\n`
-  await appendFile(path, `\n## Decision ${number} (${instant(context)})\n\n${home}- ${request.text.trim()}\n`)
+  const fields = [
+    ...(request.home === undefined ? [] : [`home: ${request.home.trim()}\n`]),
+    ...(request.class === undefined ? [] : [`class: ${request.class}\n`])
+  ].join('')
+  await appendFile(
+    path,
+    `\n## Decision ${number} (${instant(context)})\n\n${fields}${fields ? '\n' : ''}- ${request.text.trim()}\n`
+  )
   return { number, path, adopted }
 }
 
-/** Writes or replaces the `home:` line of one entry in the thread's tracked log. */
+/** Writes or replaces the `home:` or `class:` line of one entry in the thread's tracked log. */
 export const reconcileDecision = async (
   context: AgentContext,
   run: string,
   number: number,
-  home: string
+  change: { readonly home?: string | undefined; readonly class?: DecisionClass | undefined }
 ): Promise<string> => {
-  if (!home.trim()) throw new KiError('a home needs a path or identifier', 2)
+  if (change.home === undefined && change.class === undefined) throw new KiError('give a home, --class or both', 2)
+  if (change.home !== undefined && !change.home.trim()) throw new KiError('a home needs a path or identifier', 2)
   const existing = await readThread(context, run)
   if (existing === undefined) throw new KiError(`${run} has no thread home yet; record a decision first`, 1)
   const path = decisionsLog(existing)
@@ -276,9 +292,22 @@ export const reconcileDecision = async (
   const entry = parseDecisions(text).find((candidate) => candidate.number === number)
   if (entry === undefined) throw new KiError(`no Decision ${number} in ${path}`, 1)
   const all = text.split('\n')
-  const at = all.findIndex((line, index) => index > entry.start && index < entry.end && homeLine.test(line))
-  if (at >= 0) all[at] = `home: ${home.trim()}`
-  else all.splice(entry.start + 1, 0, '', `home: ${home.trim()}`)
+  let end = entry.end
+  const find = (pattern: RegExp): number =>
+    all.findIndex((line, index) => index > entry.start && index < end && pattern.test(line))
+  const set = (pattern: RegExp, line: string, after: number): void => {
+    const at = find(pattern)
+    if (at >= 0) all[at] = line
+    else if (after >= 0) {
+      all.splice(after + 1, 0, line)
+      end += 1
+    } else {
+      all.splice(entry.start + 1, 0, '', line)
+      end += 2
+    }
+  }
+  if (change.home !== undefined) set(homeLine, `home: ${change.home.trim()}`, find(classLine) - 1)
+  if (change.class !== undefined) set(classLine, `class: ${change.class}`, find(homeLine))
   await writeFile(path, all.join('\n'))
   return path
 }

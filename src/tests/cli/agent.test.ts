@@ -818,6 +818,53 @@ describe('ki agent reconcile', () => {
   })
 })
 
+describe('ki agent decide and reconcile with a decision class', () => {
+  test('writes the class beside the home, and sets or replaces either alone', async () => {
+    const box = await sandbox()
+    await setupRepository(box)
+    await box.run('ki agent decide r First. --class rule', { now })
+    await box.run('ki agent decide r Second. --home a.md --class held', { now })
+    await box.run('ki agent decide r Third.', { now })
+    await box.run('ki agent decide r Fourth.', { now })
+    const log = await threadPath(box, 'decisions.md')
+
+    expect((await box.run('ki agent reconcile r 1 --class standalone', { now })).stdout).toBe(
+      `Decision 1 class standalone recorded in ${log}\n`
+    )
+    expect((await box.run('ki agent reconcile r 1 docs/d.md', { now })).exitCode).toBe(0)
+    expect((await box.run('ki agent reconcile r 2 --class operational', { now })).exitCode).toBe(0)
+    expect((await box.run('ki agent reconcile r 3 x.md --class operational', { now })).stdout).toBe(
+      `Decision 3 home x.md class operational recorded in ${log}\n`
+    )
+    expect((await box.run('ki agent reconcile r 4 --class rule', { now })).exitCode).toBe(0)
+    const entry = (number: number, fields: readonly string[], text: string) => [
+      `## Decision ${number} (2026-10-07T19:30:00Z)`,
+      '',
+      ...fields,
+      '',
+      `- ${text}`,
+      ''
+    ]
+    expect(await box.project.read('+/_THREADS/r/decisions.md')).toBe(
+      [
+        '# Decisions',
+        '',
+        ...entry(1, ['home: docs/d.md', 'class: standalone'], 'First.'),
+        ...entry(2, ['home: a.md', 'class: operational'], 'Second.'),
+        ...entry(3, ['home: x.md', 'class: operational'], 'Third.'),
+        ...entry(4, ['class: rule'], 'Fourth.')
+      ].join('\n')
+    )
+
+    const neither = await box.run('ki agent reconcile r 2', { now })
+    expect(neither.exitCode).toBe(2)
+    expect(neither.stderr).toBe('ki: error: give a home, --class or both\n')
+    const unknown = await box.run('ki agent decide r Text. --class urgent', { now })
+    expect(unknown.exitCode).toBe(2)
+    expect(unknown.stderr).toContain('Allowed choices are operational, rule, standalone, held')
+  })
+})
+
 describe('ki agent decide on a run that predates the tracked home', () => {
   test('moves the state-folder log and reports into the thread folder and continues numbering', async () => {
     const box = await sandbox()
@@ -973,6 +1020,52 @@ describe('ki agent close', () => {
     const again = await box.run('ki agent close r', { now })
     expect(again.exitCode).toBe(1)
     expect(again.stderr).toBe(`ki: error: r is already archived at ${archive(box, 'r')}\n`)
+  })
+
+  test('reads each decision class: operational is its own home, held may wait in an untracked checkpoint', async () => {
+    const box = await sandbox()
+    await setupFinishedRun(box)
+    await box.project.write('.gitignore', '+/_CHECKPOINTS/\n')
+    await box.project.write('+/_CHECKPOINTS/x.md', '# Checkpoint\n')
+    await box.run('ki agent decide r Routine. --class operational', { now })
+    await box.run('ki agent decide r Wait. --class held --home +/_CHECKPOINTS/x.md', { now })
+    await box.run('ki agent decide r Later. --class held --home +/_CHECKPOINTS/gone.md', { now })
+    await box.run('ki agent decide r Alone. --class standalone', { now })
+    await box.run('ki agent decide r Rule. --class rule --home +/_CHECKPOINTS/x.md', { now })
+    await box.project.git(['add', '--all'])
+    await box.project.git(['commit', '-q', '-m', 'decisions'])
+
+    const blocked = await box.run('ki agent close r', { now })
+    expect(blocked.exitCode).toBe(1)
+    expect(blocked.stdout).toContain(
+      [
+        'ok: decision 1 home docs/x.md',
+        'ok: decision 2 (operational) is its own home',
+        'ok: decision 3 (held) home +/_CHECKPOINTS/x.md',
+        'blocker: decision 4 (held) home +/_CHECKPOINTS/gone.md does not exist',
+        `blocker: decision 5 (standalone) has no home (${await threadPath(box, 'decisions.md')})`,
+        'blocker: decision 6 (rule) home +/_CHECKPOINTS/x.md is not tracked by Git',
+        ''
+      ].join('\n')
+    )
+
+    await box.project.write('+/_CHECKPOINTS/gone.md', '# Back\n')
+    await box.run('ki agent reconcile r 5 docs/x.md', { now })
+    await box.run('ki agent reconcile r 6 --class held', { now })
+    await box.project.git(['add', '--all'])
+    await box.project.git(['commit', '-q', '-m', 'reconciled'])
+    expect((await box.run('ki agent close r', { now })).exitCode).toBe(0)
+    expect(await box.state.read('ki/agents/_archive/r/close.md')).toContain(
+      [
+        '- Decision 1: docs/x.md',
+        '- Decision 2 (operational): its own home',
+        '- Decision 3 (held): +/_CHECKPOINTS/x.md',
+        '- Decision 4 (held): +/_CHECKPOINTS/gone.md',
+        '- Decision 5 (standalone): docs/x.md',
+        '- Decision 6 (held): +/_CHECKPOINTS/x.md',
+        ''
+      ].join('\n')
+    )
   })
 
   test('compresses or deletes on request, waives the decision gate with --reconciled', async () => {

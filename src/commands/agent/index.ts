@@ -19,7 +19,7 @@ import {
   watchRun
 } from '../../core/agent/runs.ts'
 import { type AgentEffort, type AgentRuntime, agentEfforts, agentRuntimes } from '../../core/agent/runtimes.ts'
-import { appendDecision, reconcileDecision } from '../../core/agent/thread.ts'
+import { appendDecision, type DecisionClass, decisionClasses, reconcileDecision } from '../../core/agent/thread.ts'
 import { DEFAULT_HARNESS } from '../../core/configuration/declaration.ts'
 import { grammarError, KiError } from '../../core/errors.ts'
 import { harnessDirectory } from '../../core/storage/harness-paths.ts'
@@ -46,6 +46,9 @@ const repoOption = new Option(
   '--repo <dir>',
   "repository owning the run's thread; default, the working directory's Git repository"
 )
+
+const classOption = (): Option =>
+  new Option('--class <class>', "the decision's ki-pmo class; the close gate reads it").choices(decisionClasses)
 
 interface LaunchOptions {
   readonly runtime: AgentRuntime
@@ -233,31 +236,43 @@ export const createAgentCommand = (context: KiContext): Command => {
       .argument('<text...>', "the decision, in the owner's words")
       .option('--log <path>', "decisions log to append instead of the thread's own")
       .option('--home <path-or-id>', "the decision's durable home: a committed path or a work-record identifier")
+      .addOption(classOption())
       .addOption(repoOption)
-      .action(async (run: string, text: readonly string[], options: { log?: string; home?: string; repo?: string }) => {
-        const result = await appendDecision(agentContext(context), run, {
-          text: text.join(' '),
-          log: options.log,
-          home: options.home,
-          repo: options.repo
-        })
-        if (result.adopted.length)
-          write(`Moved ${result.adopted.join(', ')} from the state folder into ${dirname(result.path)}`)
-        write(`Decision ${result.number} recorded in ${result.path}`)
-      })
+      .action(
+        async (
+          run: string,
+          text: readonly string[],
+          options: { log?: string; home?: string; class?: DecisionClass; repo?: string }
+        ) => {
+          const result = await appendDecision(agentContext(context), run, {
+            text: text.join(' '),
+            log: options.log,
+            home: options.home,
+            class: options.class,
+            repo: options.repo
+          })
+          if (result.adopted.length)
+            write(`Moved ${result.adopted.join(', ')} from the state folder into ${dirname(result.path)}`)
+          write(`Decision ${result.number} recorded in ${result.path}`)
+        }
+      )
   )
 
   command.addCommand(
     new Command('reconcile')
-      .description("write or replace one decision's durable home in the thread's tracked log")
+      .description("write or replace one decision's durable home or class in the thread's tracked log")
       .argument('<run>', 'run name')
       .argument('<number>', 'decision number', seconds)
-      .argument('<home>', 'a committed path or a work-record identifier')
-      .action(async (run: string, number: number, home: string) =>
-        write(
-          `Decision ${number} home ${home} recorded in ${await reconcileDecision(agentContext(context), run, number, home)}`
-        )
-      )
+      .argument('[home]', 'a committed path or a work-record identifier')
+      .addOption(classOption())
+      .action(async (run: string, number: number, home: string | undefined, options: { class?: DecisionClass }) => {
+        const path = await reconcileDecision(agentContext(context), run, number, { home, class: options.class })
+        const changed = [
+          ...(home === undefined ? [] : [`home ${home}`]),
+          ...(options.class === undefined ? [] : [`class ${options.class}`])
+        ]
+        write(`Decision ${number} ${changed.join(' ')} recorded in ${path}`)
+      })
   )
 
   command.addCommand(
