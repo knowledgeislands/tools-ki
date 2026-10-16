@@ -1,7 +1,7 @@
 ---
 id: KI-TOOL-KI-CLI-145
 area: CLI
-title: Thread session bindings and role
+title: Thread session bindings
 status: triage
 blocks: []
 blocked_by: []
@@ -10,7 +10,7 @@ created_at: 2026-10-16T21:28:02Z
 updated_at: 2026-10-16T21:28:02Z
 ---
 
-# KI-TOOL-KI-CLI-145: Thread Session Bindings and Role
+# KI-TOOL-KI-CLI-145: Thread Session Bindings
 
 ## Goal
 
