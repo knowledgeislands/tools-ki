@@ -2,7 +2,7 @@ import { appendFile, copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:
 import { dirname, join, resolve } from 'node:path'
 import { KiError } from '../errors.ts'
 import { gitWorkingTreeRoot } from '../runtime/git.ts'
-import { type AgentContext, instant, read, runDirectory } from './context.ts'
+import { type AgentContext, git, instant, read, runDirectory } from './context.ts'
 
 /**
  * Where a run's knowledge files live: the owning repository's tracked `+/_THREADS/<run>/`
@@ -29,12 +29,25 @@ export const decisionsLog = (home: ThreadHome): string => join(threadPath(home),
 export const reportPath = (home: ThreadHome, name: string): string => join(threadPath(home), `${name}.report.md`)
 
 /**
+ * Whether Git knows the thread-folder file: staged or tracked in the index, or in any commit
+ * reachable from a ref. A shallow clone that lacks the commit answers no.
+ */
+const held = async (context: AgentContext, home: ThreadHome, file: string): Promise<boolean> => {
+  const path = `${home.folder}/${file}`
+  const indexed = await git(context, home.repository, ['ls-files', '--', path])
+  if (indexed.exitCode === 0 && indexed.output.trim()) return true
+  const logged = await git(context, home.repository, ['log', '-1', '--format=%H', '--all', '--', path])
+  return logged.exitCode === 0 && logged.output.trim() !== ''
+}
+
+/**
  * Moves the knowledge files a run kept in its state folder before the tracked home existed,
  * `decisions.md` and each `<name>.report.md`, into the thread folder, so that the launcher is
  * their only writer and no thread copies them by hand. Kris settled this on 2026-10-14: "make
  * the launcher the only writer of the thread folder's log and report files". A file the
- * thread folder already holds supersedes its state-folder copy, which stays to be archived
- * with the run. Returns the names moved, in name order.
+ * thread folder holds now, or has ever held in Git, supersedes its state-folder copy, which
+ * stays to be archived with the run, so that a report the thread has retired stays retired.
+ * Returns the names moved, in name order.
  */
 export const adoptStateFiles = async (
   context: AgentContext,
@@ -50,6 +63,7 @@ export const adoptStateFiles = async (
   for (const file of files) {
     const target = join(threadPath(home), file)
     if (await stat(target).catch(() => undefined)) continue
+    if (await held(context, home, file)) continue
     await mkdir(threadPath(home), { recursive: true })
     // Copy then remove: the state folder and the repository may sit on different devices.
     await copyFile(join(directory, file), target)

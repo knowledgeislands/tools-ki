@@ -971,6 +971,79 @@ describe('ki agent close', () => {
     expect(await box.state.read('ki/agents/_archive/r/close.md')).toContain('- Decision 1: KI-ISLAND-GOV-7')
   })
 
+  test('leaves a report the thread has retired, delivering only one Git has never held', async () => {
+    const box = await sandbox()
+    await setupRepository(box)
+    fakeProcesses(box)
+    const commit = async (message: string) => {
+      await box.project.git(['add', '--all'])
+      await box.project.git(['commit', '-q', '-m', message])
+    }
+    await box.state.write('ki/agents/r/a.report.md', '# A\n')
+    expect((await box.run('ki agent decide r First.', { now })).stdout).toContain(
+      `Moved a.report.md from the state folder into ${dirname(await threadPath(box, 'decisions.md'))}\n`
+    )
+    await commit('thread')
+    await box.project.git(['rm', '-q', '+/_THREADS/r/a.report.md'])
+    await commit('retire')
+
+    // The state folder still holds the retired report, beside one never delivered.
+    await box.state.write('ki/agents/r/a.report.md', '# A\n')
+    await box.state.write('ki/agents/r/b.report.md', '# B\n')
+    const decided = await box.run('ki agent decide r Second.', { now })
+    expect(decided.stdout).toBe(
+      `Moved b.report.md from the state folder into ${dirname(await threadPath(box, 'decisions.md'))}\nDecision 2 recorded in ${await threadPath(box, 'decisions.md')}\n`
+    )
+    expect(await box.project.read('+/_THREADS/r/a.report.md').catch(() => 'absent')).toBe('absent')
+    expect(await box.state.read('ki/agents/r/a.report.md')).toBe('# A\n')
+    expect(await box.project.read('+/_THREADS/r/b.report.md')).toBe('# B\n')
+    await commit('deliver')
+
+    // A tracked report present in the folder is untouched; one staged then deleted from the
+    // working tree is held by the index alone and is not re-copied.
+    await box.state.write('ki/agents/r/b.report.md', '# Stale\n')
+    await box.project.write('+/_THREADS/r/c.report.md', '# C\n')
+    await box.project.git(['add', '+/_THREADS/r/c.report.md'])
+    await rm(`${box.project.path}/+/_THREADS/r/c.report.md`)
+    await box.state.write('ki/agents/r/c.report.md', '# C\n')
+    expect((await box.run('ki agent decide r Third.', { now })).stdout).not.toContain('Moved')
+    expect(await box.project.read('+/_THREADS/r/b.report.md')).toBe('# B\n')
+    expect(await box.project.read('+/_THREADS/r/c.report.md').catch(() => 'absent')).toBe('absent')
+    // Committing the index keeps c in history once the deletion is committed too.
+    await box.project.git(['add', '+/_THREADS/r/decisions.md'])
+    await box.project.git(['commit', '-q', '-m', 'staged'])
+    await commit('retire c')
+
+    await box.state.write('ki/agents/r/a.pid', '10\n')
+    await box.state.write('ki/agents/r/a.status', 'DONE\n')
+    const closed = await box.run('ki agent close r --reconciled', { now })
+    expect(closed.exitCode).toBe(0)
+    expect(closed.stdout).not.toContain('moved')
+    expect(closed.stdout).toContain('ok: thread folder +/_THREADS/r committed and clean\n')
+    expect(await box.project.read('+/_THREADS/r/a.report.md').catch(() => 'absent')).toBe('absent')
+    expect(await box.state.read('ki/agents/_archive/r/a.report.md')).toBe('# A\n')
+    expect(await box.state.read('ki/agents/_archive/r/c.report.md')).toBe('# C\n')
+  })
+
+  test('launch, queue and new never bring back a retired report', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    fakeProcesses(box)
+    await box.project.write('task.md', '# Task\n')
+    await box.project.write('+/_THREADS/r/a.report.md', '# A\n')
+    await box.project.git(['add', '--all'])
+    await box.project.git(['commit', '-q', '-m', 'thread'])
+    await box.project.git(['rm', '-q', '+/_THREADS/r/a.report.md'])
+    await box.project.git(['commit', '-q', '-m', 'retire'])
+    await box.state.write('ki/agents/r/a.report.md', '# A\n')
+
+    expect((await box.run('ki agent new r one', { now })).exitCode).toBe(0)
+    expect((await box.run('ki agent launch r two . task.md', { now })).exitCode).toBe(0)
+    expect((await box.run('ki agent queue r three task.md', { now })).exitCode).toBe(0)
+    expect(await box.project.read('+/_THREADS/r/a.report.md').catch(() => 'absent')).toBe('absent')
+    expect(await box.state.read('ki/agents/r/a.report.md')).toBe('# A\n')
+  })
+
   test('treats a run with no log as housed and surfaces a git status failure', async () => {
     const box = await sandbox()
     await setupRepository(box)

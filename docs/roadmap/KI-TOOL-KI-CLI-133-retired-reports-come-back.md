@@ -2,15 +2,16 @@
 id: KI-TOOL-KI-CLI-133
 area: CLI
 title: Retired reports come back
+project: tools-burndown
 purpose: corrective
 kind: deliver
 horizon: now
-status: ready
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: f0f2192251cad452fb0f4cb3b47c35ce79e32aaa
 created_at: 2026-10-14T23:40:00Z
-updated_at: 2026-10-15T00:12:00Z
+updated_at: 2026-10-16T01:13:06Z
 ---
 
 # Retired Reports Come Back
@@ -64,10 +65,10 @@ Known limit, stated in the guide: a shallow clone that lacks the history re-adop
 
 ## Steps
 
-- [ ] In `src/core/agent/thread.ts`, add a helper that asks Git, through `git(context, home.repository, ...)` from `context.ts`, whether a thread-folder path is known (history or index), and have `adoptStateFiles` skip a file for which it says yes, as it already skips one that exists.
-- [ ] Confirm `close.ts` needs no change beyond the skip (its `gateLines` line prints only what `adoptStateFiles` returns); change `appendDecision` only if its `adopted` printout needs the new skip.
-- [ ] Add the contract tests under Verify to `src/tests/cli/agent.test.ts`, beside the legacy migration test at line 914.
-- [ ] Update `docs/guides/user/background-agents.md`, `man/ki.1` and `man/ki.commands.json` (the `decide` and `close` descriptions of the move) and the `CHANGELOG.md` entry under Unreleased.
+- [x] In `src/core/agent/thread.ts`, add a helper that asks Git, through `git(context, home.repository, ...)` from `context.ts`, whether a thread-folder path is known (history or index), and have `adoptStateFiles` skip a file for which it says yes, as it already skips one that exists.
+- [x] Confirm `close.ts` needs no change beyond the skip (its `gateLines` line prints only what `adoptStateFiles` returns); change `appendDecision` only if its `adopted` printout needs the new skip.
+- [x] Add the contract tests under Verify to `src/tests/cli/agent.test.ts`, beside the legacy migration test at line 914.
+- [x] Update `docs/guides/user/background-agents.md`, `man/ki.1` and `man/ki.commands.json` (the `decide` and `close` descriptions of the move) and the `CHANGELOG.md` entry under Unreleased.
 
 ## Files touched
 
@@ -104,6 +105,39 @@ None.
 ### Roadmap
 
 None.
+
+## Review
+
+### Delivered
+
+Within the approved boundary: `ki agent decide` and `ki agent close` no longer move a state-folder `decisions.md` or `<name>.report.md` into `+/_THREADS/<run>/` when Git knows the thread-folder path, in the index or in any commit reachable from a ref, so a report the thread has retired stays retired and its state copy stays to be archived with the run. Contract tests, manual, user guide and changelog updated. Out of scope and untouched: the thread's own tidy and commits, `decisions.md` handling beyond the shared rule, the `ki-pmo` tidy rule, and release. Immutable baseline `f0f2192251cad452fb0f4cb3b47c35ce79e32aaa`; the delivery is the single commit that sets this record to Awaiting review.
+
+### Change Summary
+
+- `src/core/agent/thread.ts`: new private `held` helper asks `git ls-files` and then `git log -1 --format=%H --all` in the thread's repository; `adoptStateFiles` skips a file it says is held, after the existing presence check. Its return value and output are unchanged, so a skipped file is not announced.
+- `src/core/agent/close.ts`: no change needed; its gate prints only what `adoptStateFiles` returns, and `appendDecision` likewise needed no change.
+- `src/tests/cli/agent.test.ts`: two contract tests beside the legacy migration test, covering `decide`, `close`, `launch`, `queue` and `new`.
+- `man/ki.1` and the regenerated `man/ki.commands.json` (`decide` and `close`), `docs/guides/user/background-agents.md` (the move, the rule and its two known limits), and the `ki agent` entry of `CHANGELOG.md`. The changelog has no Unreleased section; it is a consolidated Pre-1.0 baseline, so the existing `ki agent` bullet was amended in place.
+- Record: `project: tools-burndown` added under the tools-burndown thread's BURN-OVERNIGHT authority (RETIRED-REPORTS option a).
+
+### Verification
+
+1. Verify 1 to 4: the new test `leaves a report the thread has retired, delivering only one Git has never held` passes: a committed-then-retired `a.report.md` with its state copy put back is not re-created by `decide` or `close` (no `moved` line, `close` reports the folder committed and clean and exits 0); the state copy survives `decide` and is archived by `close`; a new `b.report.md` is delivered in the same `decide` call; a tracked present report is untouched; a report staged then deleted from the working tree is not re-copied (index check). The test `launch, queue and new never bring back a retired report` passes. With the `held` skip disabled the first test fails, so it guards the fix.
+2. Verify 5: the legacy migration test passes unchanged.
+3. Verify 6: `bun run test:coverage` 71 files, 1191 tests passed, 100% statements, branches, functions and lines; `bunx tsc --noEmit` clean; `bunx biome check .` no errors (26 warnings and 14 infos, none in the changed files, which check clean); `bunx knip` exit 0 (configuration hints only); `mandoc -T lint man/ki.1` clean; rumdl clean on the changed Markdown; `ki repo audit --skill ki-work-roadmap` PASS (15/15 criteria evaluated).
+4. Verify 7: the throwaway reproduction repeated with the fixed source under `/tmp` with its own `KI_STATE_HOME`: step 3 left only `decisions.md` modified, and step 4 printed no `moved` line, reported the thread folder committed and clean, and archived the state copy of `a.report.md`. The setup was removed.
+
+### Outstanding concerns
+
+None. The two known limits, a shallow clone lacking the history and a report never committed before deletion, are stated in the guide as the Decision requires.
+
+### Post-change review
+
+The goal holds: the field case, a state folder still holding reports the thread retired by commit, no longer re-creates them on `decide` or `close`. Scope stayed within the listed files; `close.ts` needed no comment change. Regression risk is low: the new check runs only for a state-folder file absent from the thread folder, costs at most two local `git` calls per such file, and a failing `git` (for example a home that is no longer a repository) answers "not held", which keeps the previous behaviour. Ready for the owner's acceptance review.
+
+### Mini recap
+
+Delivered the "adopt only what Git has never held" rule for `ki agent decide` and `close`, with contract tests, docs and a clean full gate at 100% coverage; the field reproduction now leaves the tree clean. No concerns. Learning route proposed, not promoted: threads that tidy their folder can rely on `ki` again, which the tools-burndown and techne threads may note when they next tidy.
 
 ## Discussion
 
