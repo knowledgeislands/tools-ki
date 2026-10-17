@@ -7,12 +7,12 @@ purpose: corrective
 project: knowledge-acquisition
 component: acquire
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 88de22802f2a42bd5d4015f09c8fc0928307dce8
 created_at: 2026-10-14T14:26:48Z
-updated_at: 2026-10-14T22:58:36Z
+updated_at: 2026-10-17T23:40:17Z
 ---
 
 # KI-TOOL-KI-CLI-128: Granola retention safeguards
@@ -31,14 +31,14 @@ The [discovery simplification](/Users/krisbrown/workspaces/personal/acquire/+/_T
 
 ## Current state
 
-Corrective delivery is isolated on `fix/granola-retention-20261014` at `/Users/krisbrown/.local/state/ki/worktrees/tools-ki/granola-retention-20261014`. Primary tools-ki source drives live ki; it is not edited or activated. Delivery is held In progress at the broader engineering gate. Acquire's settled `+/_ACQUIRE/` placement remains inactive.
+Corrective delivery is isolated on `fix/granola-retention-20261014` at `/Users/krisbrown/.local/state/ki/worktrees/tools-ki/granola-retention-20261014`. On 18 October 2026 the owner approved rebasing it onto `main`, resolving it against `24a584a` and `c058981`, running the checks and landing it on `main` at Awaiting review, then retiring the branch and worktree ([Product management decisions](/Users/krisbrown/workspaces/humans-not-robots/hnr-principal/+/_THREADS/product-management/decisions.md), REPO-FOLLOWUPS). Landing on `main` makes the safeguard live in the installed `ki`. Acquire's settled `+/_ACQUIRE/` placement remains inactive.
 
 ## Steps
 
 - [x] Refuse all reset scopes, explicitly including both ordinary adapter reset (without `--rebuild`) and adapter reset with `--rebuild`, when a journal exists, the ledger is unsafe/corrupt, or the selected scope includes any non-staged disposition, including awaiting-review amendments and handled-but-absent evidence.
 - [x] Replace recursive rebuild deletion with exact prevalidated staged-document and ledger paths; preserve directories, proof, assets, variants and unknown files. Component reset affects only its selected staged entry.
 - [x] Show the exact deletion/update plan before confirmation and exercise legacy and capture-root layouts through the public offline CLI seam.
-- [ ] Complete the broader engineering gate or obtain a bounded pre-existing-gate disposition, then return Awaiting review without activation, integration or acceptance. The code/specification/guide, focused tests, TypeScript and 100% coverage are delivered locally.
+- [x] Complete the broader engineering gate or obtain a bounded pre-existing-gate disposition, then return Awaiting review without acceptance. The 18 October 2026 owner decision supplied the disposition: run the repository's offline checks and deliver to Awaiting review.
 
 ## Files touched
 
@@ -72,35 +72,37 @@ This single corrective carrier reaches Awaiting review. Acquire's migration and 
 
 ## Delegation
 
-No subagents. Use the runtime-owned isolated worktree because the primary source drives live ki. Only local commits of named paths are authorised. No primary integration, projection change, real reset, provider call, file migration, cleanup, acceptance, release or push. The worktree remains an active review delivery until separately authorised integration/retirement.
+No subagents. Use the runtime-owned isolated worktree because the primary source drives live ki. Only local commits of named paths were authorised on 14 October. The 18 October 2026 decision added rebase, fast-forward landing on `main`, push and retirement of the branch and worktree. No projection change, real reset, provider call, file migration, acceptance or release.
 
 ## Review
 
 ### Delivered
 
-Narrowed retention repair from immutable baseline `88de22802f2a42bd5d4015f09c8fc0928307dce8`, the committed approved Ready plan. No live CLI activation. Reset refuses unsafe/interrupted or non-staged evidence and deletes only verified exact files in disposable fixtures.
+Narrowed retention repair from immutable baseline `88de22802f2a42bd5d4015f09c8fc0928307dce8`, the committed approved Ready plan, rebased onto `main` and landed there on 18 October 2026. Reset refuses unsafe/interrupted or non-staged evidence and deletes only verified exact files in disposable fixtures.
 
 ### Change Summary
 
 Removed recursive directory deletion in reset; prevalidate selected staged documents before the first mutation and show exact file deletions/updates. Refuse awaiting-review amendments conservatively, since they may carry earlier handled evidence. Preserve original attachments, source variants, proof, unknown files and directories. Source/component reset preserves unrelated ledger entries. Existing contract expectations now require retention/refusal instead of erasing handled suppression.
 
+On 18 October 2026 the branch was rebased onto `main` past `24a584a` and `c058981`. Neither commit touches reset: they add MCP screenshot storage, private Acquired-marker verification and oversized screenshot resumption in import, and `resetGranola` on `main` still deleted state recursively and removed journals. The whole safeguard therefore remains needed and nothing was dropped. The record conflict took this delivery's lifecycle copy, whose clarification already carries `634f73e`'s RESET-FIRST wording; the guide's safety boundary keeps `main`'s screenshot and marker paragraph followed by this delivery's reset paragraphs. Code, specification and tests merged without conflict.
+
 ### Verification
 
-Focused acquisition fixtures: 143 tests pass. Full suite: 69 files, 1,155 tests pass, with 100% statements (12,391), branches (8,021), functions (2,825) and lines (10,510). TypeScript and scoped Biome pass. The isolated checkout initially lacked boundary-tool dependencies; linking the existing local dependency cache corrected that fixture setup without network or installation. Final scoped authoring, governance, engineering and hook evidence is consolidated in the [progress report](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/progress-roadmap-items.report.md).
+After the 18 October 2026 rebase onto `main`: full suite 72 files, 1,259 tests pass, with 100% statements (12,937), branches (8,437), functions (2,907) and lines (10,982); `bunx tsc --noEmit -p tsconfig.json` passes; `bunx biome check .` exits clean, with no diagnostics in touched code and only warnings in untouched files; rumdl passes on the three touched Markdown files; `mandoc -T lint man/ki.1`, `syncpack format --check` and `git diff --check` pass. The broad ki-engineering audit was not rerun because it performs dependency registry calls, which this task does not permit. 14 October evidence remains in the [progress report](/Users/krisbrown/workspaces/personal/acquire/+/_THREADS/acquire-intake/progress-roadmap-items.report.md).
 
 ### Outstanding concerns
 
-The broader ki-engineering audit fails pre-existing dependency freshness and CI-pin drift, and rejects linked boundary evidence outside the worktree. No dependency/configuration drift is changed under this narrow file grant. Full offline tests and coverage passed; they do not erase that audit failure. Running the broad audit also breached the task’s no-remote rule through dependency registry lookups. The route is stopped, with no dependency/environment/configuration change to repair or hide the failure.
+The broad ki-engineering audit's 14 October findings, dependency freshness and CI-pin drift, are pre-existing and outside this record; they are not fixed here and the audit was not rerun. Its objection to linked boundary dependencies was specific to the isolated worktree and does not apply on `main`.
 
-Delivery is not integrated into the primary/live source. Preserved assets alone do not constitute a complete staged meeting after its document is deliberately reset. Interrupted writes require separately authorised recovery rather than journal deletion. No real reset/provider/migration or optional discovery feature is exercised or delivered.
+A staged entry whose meeting carries the private Acquired marker can still be reset; the next import then flags it `acquired-without-proof` rather than silently skipping it, so evidence loss fails closed but needs a re-import. Preserved assets alone do not constitute a complete staged meeting after its document is deliberately reset. Interrupted writes require separately authorised recovery rather than journal deletion. No real reset, provider call, migration or optional discovery feature is exercised or delivered.
 
 ### Post-change review
 
-The concrete proof/evidence-loss defect is addressed in both layouts without expanding the state model or file scope. Scope remains conservative: refusing any selected non-staged disposition prevents handling history from being silently forgotten. Existing non-reset import, amendment and on-demand UUID/package behaviour is unchanged. The tested corrective candidate is reviewable, but the broader engineering audit is not clean; do not infer Awaiting review or acceptance.
+The concrete proof/evidence-loss defect is addressed in both layouts without expanding the state model or file scope, and the rebase shows the 16 October screenshot and marker work left it unaddressed. Refusing any selected non-staged disposition prevents handling history being silently forgotten. Existing import, amendment, screenshot and marker behaviour is unchanged.
 
 ### Mini recap
 
-One isolated corrective slice, public offline CLI proof and 100% coverage. Resolve the engineering-gate disposition before an Awaiting review transition; separately bounded primary integration follows only after review; acquisition completeness/receipt design and migration remain with their receiving owners. No durable policy or broader work is promoted automatically.
+One corrective slice, rebased over the screenshot and marker work, with public offline CLI proof and 100% coverage, landed on `main` at Awaiting review. Acceptance belongs to `ki-accept`; acquisition completeness, receipt design and migration remain with their receiving owners.
 
 ## Discussion
 
