@@ -12,18 +12,20 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-15T21:48:02Z
-updated_at: 2026-10-16T21:35:00Z
+updated_at: 2026-10-18T02:46:11Z
 ---
 
 # Agent Run Temporary Home
 
 ## Goal
 
-`ki agent launch` creates `<primary checkout>/tmp/<run>/<name>/` in the repository the agent works in and names it in the composed prompt, and `ki agent close` removes it, so a background agent's temporary output has one ignored home that does not outlive its run.
+`ki agent launch` creates `$TMPDIR/ki-agents/<run>/<name>/` and names it in the composed prompt, and `ki agent close` removes it, so a background agent's temporary output has one home outside every repository that does not outlive its run. The record also carries the tools-ki state-folder tooling handed over under TOOLS-PUSH.
 
 ## Context
 
 Kris Brown, in the ways-of-working thread on 15 October 2026, set where temporary output lives (THREADS-TMP-HOME): "Temporary output goes in <primary checkout>/tmp/<run>/<name>/ in the repository the agent works in, ignored and deleted when the run closes or they are superflous to requirements; machine-only scratch may stay in the state folder as <name>.work/." The same day (THREADS-CONTENT) Kris closed the thread folder's contents: "A thread folder holds a closed list, decisions.md and <name>.report.md only; briefs live in the state folder, work products in their owning home, temporary output in the temporary location." Kris asked for this record in THREADS-TELL: "Open one ki-agentic-harness record (closed list in the ki-delegation run packet, one run-prompt.md footer line, a ki-pmo rubric item) and one tools-ki record (ki agent launch creates tmp/<run>/<name>/, ki agent close removes it)."
+
+Kris then set the temporary root on 17 October 2026 at 22:25 BST, in the tools-burndown thread (TMP-HOME): "Use $TMPDIR/ki-agents/<run>/<name>/ for KI-TOOL-KI-CLI-137." That follows the 16 October system-temp rule behind KI-HARNESS-GOV-196 and replaces THREADS-TMP-HOME's `<primary checkout>/tmp/` for this record. At 22:50 BST the same day, in the ways-of-working thread (TOOLS-PUSH), Kris added: "the tools-ki state tooling joins KI-TOOL-KI-CLI-137." The ways-of-working restart design names that tooling as the report path default (a run report written to the run's state folder), de-duplicated briefs, `_archive/` retention and sweep pruning.
 
 What `ki` does today, observed at `86adda02`:
 
@@ -33,7 +35,7 @@ What `ki` does today, observed at `86adda02`:
 
 ## Boundary
 
-- In: launch creating `tmp/<run>/<name>/` under the agent's workdir checkout root and passing its absolute path into the composed prompt beside the report path; a launch warning, not a failure, when the checkout does not ignore `tmp/`; close removing each `tmp/<run>/` folder its run's packets name, reporting each path removed and leaving any folder that holds tracked files; tests through `run(args, context)` and `sandbox()`; `README.md`, `man/ki.1`, the background-agents guide and `CHANGELOG.md`.
+- In: launch creating `$TMPDIR/ki-agents/<run>/<name>/` and passing its absolute path into the composed prompt beside the report path; close removing each `$TMPDIR/ki-agents/<run>/<name>/` folder its run's packets name and reporting each path removed; the TOOLS-PUSH state-folder tooling (report path default, de-duplicated briefs, `_archive/` retention, sweep pruning), still to be planned; tests through `run(args, context)` and `sandbox()`; `README.md`, `man/ki.1`, the background-agents guide and `CHANGELOG.md`.
 - Out: the `<name>.work/` state-folder scratch, which already lives in the state folder; editing any repository's `.gitignore`; the closed thread-folder list, its run-packet and run-prompt wording and the ki-pmo rubric item, which the paired ki-agentic-harness record owns; removing an output earlier than close because it is superfluous, which stays the agent's own act.
 
 ## Current state
@@ -42,25 +44,26 @@ Read at `bb446bb0` on 16 October 2026; the Context above still holds.
 
 - `launchAgent` (`src/core/agent/runs.ts:260`) creates only the thread folder and writes the packet; `composePrompt` (`runs.ts:166`) names the status and report paths and no temporary folder. Each agent's working directory is recorded in `<name>.launch.json` (`workdir`).
 - `closeRun` (`src/core/agent/close.ts:199`) gates, then archives, compresses or deletes the state folder; it touches no working checkout.
-- **Conflicting owner rule.** After this record was captured, Kris decided on 16 October 2026, in the 5G Emerge Phase 3 thread, that "screenshots and other scratch output go in the system temp folder, never in a thread folder or repository", captured on `ki-agentic-harness` `origin/main` as KI-HARNESS-GOV-196 (`docs/roadmap/KI-HARNESS-GOV-196-scratch-output-in-temp.md`) (triage, not yet in the local harness checkout). That contradicts THREADS-TMP-HOME's `<primary checkout>/tmp/<run>/<name>/` "in the repository the agent works in". The path this record creates cannot be fixed until Kris reconciles the two.
-- **Pair record.** The paired harness record exists only as an unpushed local commit in `ki-agentic-harness` under the identifier KI-HARNESS-GOV-195 (`f0f62c02`, `c068e4be`), and `origin/main` has already used KI-HARNESS-GOV-195 for a different record (Granola workflow). The pair's identifier will change when that session reconciles; this record names it by subject until then.
+- **Owner rule reconciled.** Kris's 16 October system-temp rule (KI-HARNESS-GOV-196) contradicted THREADS-TMP-HOME's `<primary checkout>/tmp/<run>/<name>/`; TMP-HOME on 17 October settled it as `$TMPDIR/ki-agents/<run>/<name>/`.
+- **Pair record.** The paired harness record is KI-HARNESS-GOV-200 (`docs/roadmap/KI-HARNESS-GOV-200-thread-folder-closed-list.md`, triage on `ki-agentic-harness` `origin/main`), renumbered from its earlier local KI-HARNESS-GOV-195.
 
 ## Decision
 
-Settled now, whichever location Kris chooses:
+Settled:
 
-1. **One folder per agent**, `<temp root>/<run>/<name>/`, created at launch and named in the composed prompt beside the report path, in one sentence of the progress protocol.
-2. **Close keeps a non-empty folder under the strict gate** (TMP-CLOSE). `ki agent close` lists each non-empty `<temp root>/<run>/<name>/` and refuses, as it does for any other unreconciled run output; `--reconciled` is Kris's waiver. A draft that must survive is homed first, as an uncommitted change named in the report or committed in its owning repository. Once the gate passes, close removes each agent's folder and reports each path removed; it never removes a folder that holds a Git-tracked file (only possible under a repository root) and reports that as a line, not a blocker.
-3. **Linked worktrees** resolve to the primary checkout through `git rev-parse --git-common-dir`, if the root is a repository's `tmp/`.
+1. **One folder per agent**, `$TMPDIR/ki-agents/<run>/<name>/` (TMP-HOME), created at launch and named in the composed prompt beside the report path, in one sentence of the progress protocol.
+2. **Close keeps a non-empty folder under the strict gate** (TMP-CLOSE). `ki agent close` lists each non-empty `$TMPDIR/ki-agents/<run>/<name>/` and refuses, as it does for any other unreconciled run output; `--reconciled` is Kris's waiver. A draft that must survive is homed first, as an uncommitted change named in the report or committed in its owning repository. Once the gate passes, close removes each agent's folder and reports each path removed.
+3. **No repository is touched.** The root sits outside every checkout, so launch needs no ignore check and no linked-worktree resolution.
 
-Waiting on Kris (see Dependencies): the temp root. Option a) keeps THREADS-TMP-HOME, `<primary checkout>/tmp/`, with a launch warning when `tmp/` is not ignored. Option b) follows the 16 October rule, `$TMPDIR/ki-agents/` (as KI-HARNESS-GOV-196's Discussion suggests), which needs no ignore check and leaves every repository untouched.
+Still to plan: the TOOLS-PUSH state-folder tooling, whose steps are not yet written.
 
 ## Steps
 
-- [ ] Resolve the temp root per Kris's answer in one helper in `src/core/agent/context.ts` (`agentTempDirectory(context, request, thread)`), injected through `AgentContext` for tests.
-- [ ] `launchAgent`: create the folder (recursive), pass its absolute path into `composePrompt`, and add it to the agent's writable directories; for option a), warn when `git check-ignore -q tmp/` fails in that checkout.
+- [ ] Resolve `$TMPDIR/ki-agents/<run>/<name>/` in one helper in `src/core/agent/context.ts` (`agentTempDirectory(context, request, thread)`), reading `TMPDIR` from the injected environment, through `AgentContext` for tests.
+- [ ] `launchAgent`: create the folder (recursive), pass its absolute path into `composePrompt`, and add it to the agent's writable directories.
 - [ ] `composePrompt`: name the folder in the progress protocol ("Temporary output goes in <path>; it is removed when the run closes").
-- [ ] `closeRun`: list each non-empty agent folder recorded in the run's `<name>.launch.json` files as a gate finding, refusing without `--reconciled`; after the gate passes and before archiving, remove each agent folder recorded in the run's `<name>.launch.json` files, skipping any that holds a tracked file, and add one line per path to the close output and close note.
+- [ ] `closeRun`: list each non-empty agent folder recorded in the run's `<name>.launch.json` files as a gate finding, refusing without `--reconciled`; after the gate passes and before archiving, remove each agent folder recorded in the run's `<name>.launch.json` files and add one line per path to the close output and close note.
+- [ ] Plan the TOOLS-PUSH state-folder tooling (report path default, de-duplicated briefs, `_archive/` retention, sweep pruning) through `ki-plan` and add its steps here.
 - [ ] Contract tests in `src/tests/cli/agent.test.ts` (see Verify).
 - [ ] `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
 
@@ -70,16 +73,14 @@ Waiting on Kris (see Dependencies): the temp root. Option a) keeps THREADS-TMP-H
 
 ## Verify
 
-1. Launch creates `<temp root>/<run>/<name>/`, the composed prompt names it, and the runtime's writable directories include it.
-2. A run launched from a linked worktree resolves to the primary checkout's root (option a only).
-3. Option a): launch warns, and still launches, when `tmp/` is not ignored.
-4. Close refuses while an agent folder is non-empty and lists it; with `--reconciled` it removes both agents' folders and lists them in its output and close note; a folder holding a tracked file is left and reported; a failing gate removes nothing.
-5. `bun run test:coverage` at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` clean.
+1. Launch creates `$TMPDIR/ki-agents/<run>/<name>/` under the injected `TMPDIR`, the composed prompt names it, and the runtime's writable directories include it.
+2. Close refuses while an agent folder is non-empty and lists it; with `--reconciled` it removes both agents' folders and lists them in its output and close note; a failing gate removes nothing.
+3. `bun run test:coverage` at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` clean.
 
 ## Dependencies / blocks
 
-- **Blocked on Kris (TMP-HOME):** THREADS-TMP-HOME (15 October) and the system-temp rule behind KI-HARNESS-GOV-196 (16 October) disagree on the temp root. Set Ready once the root is chosen; the Steps above need only the helper's body filled in.
-- Pairs with the harness thread-folder record (local KI-HARNESS-GOV-195, to be renumbered) and with KI-HARNESS-GOV-196 (`docs/roadmap/KI-HARNESS-GOV-196-scratch-output-in-temp.md`); their run-prompt wording should name the same root. Neither is a `blocked_by`.
+- TMP-HOME answered on 17 October 2026: the root is `$TMPDIR/ki-agents/`. The record stays draft until the TOOLS-PUSH state-folder tooling is planned.
+- Pairs with the harness thread-folder record KI-HARNESS-GOV-200 (`docs/roadmap/KI-HARNESS-GOV-200-thread-folder-closed-list.md`) and with KI-HARNESS-GOV-196 (`docs/roadmap/KI-HARNESS-GOV-196-scratch-output-in-temp.md`); their run-prompt wording should name the same root. Neither is a `blocked_by`.
 - Shares `src/core/agent/runs.ts` with [KI-TOOL-KI-CLI-135](KI-TOOL-KI-CLI-135-reused-agent-name-overwrites.md) (deliver first) and [KI-TOOL-KI-CLI-134](KI-TOOL-KI-CLI-134-launch-footer-follows-brief.md).
 
 ## Documentation impact
@@ -109,3 +110,5 @@ Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-b
 Planned on 16 October 2026 in the tools-burndown thread as far as the open owner question allows: the Decision settles both planning questions above (close removes only a folder holding nothing tracked; launch resolves the primary checkout through the Git common directory) and leaves the temp root to Kris, because THREADS-TMP-HOME and the 16 October system-temp rule disagree. It stays draft until Kris chooses the root.
 
 TMP-CLOSE answered on 16 October 2026 in the ways-of-working thread, by Kris Brown's ROUTINE answer taking option a): close lists each non-empty `tmp/<run>/<name>/` and keeps it under the strict close gate, with `--reconciled` as the owner's waiver; a draft that must survive is homed first, as an uncommitted change named in the report or committed in its owning repository. Decision 2, the close step and Verify 4 now say so. The record stays draft on TMP-HOME.
+
+TMP-HOME answered on 17 October 2026 at 22:25 BST in the tools-burndown thread: "Use $TMPDIR/ki-agents/<run>/<name>/ for KI-TOOL-KI-CLI-137." The Goal, Boundary, Decision, Steps and Verify now use that root, and the option a) ignore warning and linked-worktree resolution are dropped. The same answer set (PUSH-REBASE-CODE) repointed the pair record to KI-HARNESS-GOV-200. TOOLS-PUSH (ways-of-working thread, 17 October 22:50 BST) added the tools-ki state-folder tooling to this record's boundary; it is captured, not planned, so the record stays draft.
