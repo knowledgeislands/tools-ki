@@ -11,7 +11,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 2777b4d6eabe12fb4c55bbcc427fb990ecece04c
 created_at: 2026-10-16T19:29:34Z
-updated_at: 2026-10-18T05:05:00Z
+updated_at: 2026-10-18T07:12:00Z
 ---
 
 # Preserve harness release settings
@@ -113,3 +113,13 @@ Decide how the writer carries complete supported harness release entries alongsi
 The future repair needs public CLI contract coverage through `run(args, context)` for the supported rewrite paths, using synthetic releases and injected capabilities without network access or secrets. Verify that parsed release identity, URL, digest and authentication settings survive, while the requested bootstrap, skill or local-setting change still takes effect.
 
 After an approved implementation, verify Terra and Sol separately against their own reviewed source and live configurations, recording the installed CLI version and the operations actually exercised. Any managed configuration apply or rewrite needs its normal approval boundary. Current code evidence establishes the defect; Sol has not been inspected for this concern, and a result on Terra must not be reported as proof for Sol.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against its Goal, Steps and three Verify items. No code was changed, no configuration was rewritten and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Steps:** `preservedReleases` and `releaseLines` in `src/agents/configuration.ts` carry `harnesses.releases` through the one writer as data, as `[[harnesses.releases]]` tables, or inline when an entry is not a table; the inspector accepts `auth`.
+- **Verify 1 and 2:** the tests at `src/tests/cli/dev/dev.test.ts:150` and `:179` run `ki dev local set`, `ki dev local on` and `ki bootstrap --refresh` through the public CLI, and assert both synthetic releases, the `auth` value, the local binding taking effect, no unrecognised key from `ki diag`, and the malformed list kept.
+- **Verify 3:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc and biome were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1, neither from this record.
+- **Still open for Kris:** the Discussion asks for live checks on Terra and Sol, each against its own configuration. The delivery withheld them and this review did not run them, because they need a managed configuration rewrite. The three provisional choices under Outstanding concerns also need his confirmation.
