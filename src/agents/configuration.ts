@@ -1,10 +1,15 @@
 import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
 import { parse, stringify } from 'smol-toml'
 import {
+  addTomlTable,
   declaredRepositoryIdentity,
   REPOSITORY_DECLARATION_FILE,
-  readRepositoryDeclaration
+  readRepositoryDeclaration,
+  removeTomlTable,
+  setTomlString,
+  setTomlStringArray
 } from '../core/configuration/index.ts'
 import { KiError } from '../core/errors.ts'
 import type { Runner } from '../core/runtime/runner.ts'
@@ -29,10 +34,10 @@ const DELEGATED_KEYS = ['territories', 'mcp']
 /** Host-local tables kept verbatim and read only as one-time migration input to the state directory. */
 const MIGRATION_KEYS = ['locals']
 
-/** The current file's parsed tables; a missing or unparseable file has nothing to keep. */
-const currentConfiguration = async (configurationDirectory: string): Promise<Record<string, unknown>> => {
+/** The file's parsed tables; an unparseable file has nothing to keep. */
+const parsedConfiguration = (contents: string): Record<string, unknown> => {
   try {
-    return parse(await readFile(bootstrapConfigurationPath(configurationDirectory), 'utf8'))
+    return parse(contents)
   } catch {
     return {}
   }
@@ -59,45 +64,122 @@ const releaseLines = (releases: readonly unknown[]): string[] =>
       ? ['', stringify({ harnesses: { releases } }).trimEnd()]
       : [stringify({ releases }).trimEnd()]
 
-export const renderConfiguration = (
-  agents: readonly InstalledAgent[],
-  harnesses: readonly string[] = [],
-  skills: readonly string[] = [],
-  repositories: readonly string[] = [],
-  preserved: Record<string, unknown> = {},
-  releases: readonly unknown[] = []
-): string =>
+/**
+ * The owned sections with no values, ahead of every table the bootstrap writer does not own; the
+ * owned values are then filled in by the same edits that update an existing file.
+ */
+const renderSkeleton = (preserved: Record<string, unknown>, releases: readonly unknown[]): string =>
   [
     '[agents]',
     'ids = [',
-    ...agents.map((agent) => `  ${JSON.stringify(agent.descriptor.id)},`),
     ']',
     '',
     '[harnesses]',
     'ids = [',
-    ...harnesses.map((harness) => `  ${JSON.stringify(harness)},`),
     ']',
     ...releaseLines(releases),
     '',
     '[skills]',
-    ...skills.flatMap((skill) => {
-      const separator = skill.lastIndexOf(':')
-      return ['', `[skills.${skill.slice(separator + 1)}]`, `harness = ${JSON.stringify(skill.slice(0, separator))}`]
-    }),
-    ...(repositories.length
-      ? [
-          '',
-          '[repositories]',
-          'paths = [',
-          ...repositories.map((repository) => `  ${JSON.stringify(repository)},`),
-          ']'
-        ]
-      : []),
     ...(Object.keys(preserved).length ? ['', stringify(preserved).trimEnd()] : []),
     ''
   ].join('\n')
 
-/** Rewrites the user configuration, keeping every table the bootstrap writer does not own. */
+/** The values the bootstrap writer owns, each list compared as the set it represents. */
+interface OwnedValues {
+  readonly agents: readonly string[]
+  readonly harnesses: readonly string[]
+  readonly skills: readonly string[]
+  readonly repositories: readonly string[]
+}
+
+const sameSet = (current: unknown, desired: readonly string[]): boolean =>
+  Array.isArray(current) && current.length === desired.length && desired.every((value) => current.includes(value))
+
+const table = (configuration: Record<string, unknown>, key: string): Record<string, unknown> => {
+  const value = configuration[key]
+  return isRecord(value) ? value : {}
+}
+
+const skillHarnesses = (skills: readonly string[]): ReadonlyMap<string, string> =>
+  new Map(
+    skills.map((skill) => {
+      const separator = skill.lastIndexOf(':')
+      return [skill.slice(separator + 1), skill.slice(0, separator)] as const
+    })
+  )
+
+/** A table without `key`, absent once nothing else is left in it. */
+const without = (value: unknown, key: string): unknown => {
+  if (!isRecord(value)) return value
+  const rest = Object.fromEntries(Object.entries(value).filter(([name]) => name !== key))
+  return Object.keys(rest).length ? rest : undefined
+}
+
+/** A parsed configuration with every owned value masked, to prove an edit touched nothing else. */
+const unowned = (configuration: Record<string, unknown>): Record<string, unknown> => ({
+  ...configuration,
+  agents: without(configuration['agents'], 'ids'),
+  harnesses: without(configuration['harnesses'], 'ids'),
+  skills: undefined,
+  repositories: without(configuration['repositories'], 'paths')
+})
+
+/** Whether a parsed configuration already holds every owned value, so nothing needs writing. */
+const holds = (configuration: Record<string, unknown>, desired: OwnedValues): boolean => {
+  const skills = table(configuration, 'skills')
+  const wanted = skillHarnesses(desired.skills)
+  const repositories = table(configuration, 'repositories')['paths']
+  return (
+    sameSet(table(configuration, 'agents')['ids'], desired.agents) &&
+    sameSet(table(configuration, 'harnesses')['ids'], desired.harnesses) &&
+    isRecord(configuration['skills']) &&
+    Object.keys(skills).length === wanted.size &&
+    [...wanted].every(([name, harness]) => isRecord(skills[name]) && skills[name]['harness'] === harness) &&
+    (desired.repositories.length ? sameSet(repositories, desired.repositories) : repositories === undefined)
+  )
+}
+
+/**
+ * Edits only the owned statements whose values differ, leaving every other line, comment and
+ * array layout as written. Undefined when the file does not parse, or when its layout defeats a
+ * text edit (an owned value spelt as an inline table or dotted key), so the caller renders afresh.
+ */
+const editConfiguration = (before: string, desired: OwnedValues): string | undefined => {
+  let current: Record<string, unknown>
+  try {
+    current = parse(before)
+  } catch {
+    return undefined
+  }
+  if (holds(current, desired)) return before
+  let text = before
+  if (!sameSet(table(current, 'agents')['ids'], desired.agents))
+    text = setTomlStringArray(text, ['agents'], 'ids', desired.agents)
+  if (!sameSet(table(current, 'harnesses')['ids'], desired.harnesses))
+    text = setTomlStringArray(text, ['harnesses'], 'ids', desired.harnesses)
+  const skills = table(current, 'skills')
+  const wanted = skillHarnesses(desired.skills)
+  for (const name of Object.keys(skills)) if (!wanted.has(name)) text = removeTomlTable(text, ['skills', name])
+  for (const [name, harness] of wanted) {
+    const skill = skills[name]
+    if (!isRecord(skill) || skill['harness'] !== harness)
+      text = setTomlString(text, ['skills', name], 'harness', harness)
+  }
+  if (!isRecord(current['skills']) && !wanted.size) text = addTomlTable(text, ['skills'])
+  const repositories = table(current, 'repositories')['paths']
+  if (!desired.repositories.length) text = removeTomlTable(text, ['repositories'])
+  else if (!sameSet(repositories, desired.repositories))
+    text = setTomlStringArray(text, ['repositories'], 'paths', desired.repositories)
+  const after = parsedConfiguration(text)
+  return isDeepStrictEqual(unowned(after), unowned(current)) && holds(after, desired) ? text : undefined
+}
+
+/**
+ * Brings the user configuration's owned values up to date, writing only when one changes and then
+ * editing in place, so a file another tool manages stays byte-identical when nothing in it changes.
+ * A missing file, or one a text edit cannot safely change, is laid out afresh keeping every table
+ * the bootstrap writer does not own.
+ */
 export const writeUserConfiguration = async (
   configurationDirectory: string,
   agents: readonly InstalledAgent[],
@@ -105,12 +187,15 @@ export const writeUserConfiguration = async (
   skills: readonly string[],
   repositories: readonly string[]
 ): Promise<void> => {
-  const current = await currentConfiguration(configurationDirectory)
-  await writeFile(
-    bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(agents, harnesses, skills, repositories, preservedTables(current), preservedReleases(current)),
-    'utf8'
-  )
+  const path = bootstrapConfigurationPath(configurationDirectory)
+  const before = await readFile(path, 'utf8').catch(() => undefined)
+  const desired = { agents: agents.map((agent) => agent.descriptor.id), harnesses, skills, repositories }
+  const current = parsedConfiguration(before ?? '')
+  const next =
+    (before !== undefined && editConfiguration(before, desired)) ||
+    // A skeleton is laid out for these edits, so filling it in always succeeds.
+    (editConfiguration(renderSkeleton(preservedTables(current), preservedReleases(current)), desired) as string)
+  if (next !== before) await writeFile(path, next, 'utf8')
 }
 
 const inspectStringList = (value: unknown, key: string, errors: string[]): string[] => {

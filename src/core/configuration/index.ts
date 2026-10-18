@@ -13,3 +13,4 @@ export {
 export { resolveRepositoryDeclaredSkills } from './local-provider.ts'
 export type { ResolvedSkill } from './resolution.ts'
 export { resolveInstalledSkill } from './resolution.ts'
+export { addTomlTable, removeTomlTable, setTomlString, setTomlStringArray } from './toml-edit.ts'

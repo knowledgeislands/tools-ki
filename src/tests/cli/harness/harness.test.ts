@@ -142,6 +142,35 @@ describe('[ki harness]', () => {
       expect(config).toContain('[harnesses]\nids = [\n]\nreleases = []')
     })
 
+    test('un-records a harness by editing only its ids, leaving an unrecorded one byte-identical', async () => {
+      const box = await sandbox()
+      const configuration = [
+        '# Managed by chezmoi.',
+        '[harnesses]',
+        'ids = ["example/harness", "other/harness"] # installed here',
+        '',
+        '[territories]',
+        'ranking = [',
+        '  "alpha", # the capital',
+        ']',
+        ''
+      ].join('\n')
+      await box.config.write('ki/config.toml', configuration)
+      await box.setupExampleHarness()
+      await box.setupExampleHarness({ identifier: 'unrecorded/harness', name: 'other-example' })
+
+      const unrecorded = await box.run('ki harness uninstall unrecorded/harness')
+      const untouched = await box.config.read('ki/config.toml')
+      const removed = await box.run('ki harness uninstall example/harness')
+
+      expect(unrecorded.output).toContain('uninstalled unrecorded/harness')
+      expect(untouched).toBe(configuration)
+      expect(removed.output).toContain('uninstalled example/harness')
+      expect(await box.config.read('ki/config.toml')).toBe(
+        configuration.replace('ids = ["example/harness", "other/harness"] # installed here', 'ids = ["other/harness"]')
+      )
+    })
+
     test('refuses to uninstall the canonical harness', async () => {
       const box = await sandbox()
       await box.setupCanonicalHarness()

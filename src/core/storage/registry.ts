@@ -1,6 +1,7 @@
 import { lstat, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'smol-toml'
+import { setTomlStringArray } from '../configuration/toml-edit.ts'
 import { KiError } from '../errors.ts'
 import { canonicalHarnessIdentifier } from '../harness/inspection.ts'
 import { harnessIdentifier } from './harness-paths.ts'
@@ -166,21 +167,15 @@ export const recordInstalledHarness = async (
   /* v8 ignore next */
   if (!harnessIdentifier.test(identifier)) throw new KiError('harness identifier must be an owner/name identifier', 2)
   const identifiers = await configuredHarnessIds(configurationDirectory)
-  if (identifiers === undefined) return
+  if (identifiers === undefined || identifiers.includes(identifier) === installed) return
   const next = new Set(identifiers)
   if (installed) next.add(identifier)
   else next.delete(identifier)
   const path = join(configurationDirectory, 'config.toml')
-  const contents = await readFile(path, 'utf8')
-  const ids = ['ids = [', ...[...next].sort().map((id) => `  ${JSON.stringify(id)},`), ']'].join('\n')
-  const section = /\[harnesses\]\n([\s\S]*?)(?=\n\[|$)/
-  const match = section.exec(contents)
-  const updated = match
-    ? contents.replace(section, (_whole, body: string) => {
-        const existing = /ids\s*=\s*\[[\s\S]*?\](?=\n|$)/.exec(body)
-        const nextBody = existing ? body.replace(existing[0], ids) : `${ids}\n${body}`
-        return `[harnesses]\n${nextBody}`
-      })
-    : `${contents.trimEnd()}\n\n[harnesses]\n${ids}\n`
-  await writeFile(path, updated, 'utf8')
+  // Edit only the ids statement, so the rest of a file another tool manages keeps its layout.
+  await writeFile(
+    path,
+    setTomlStringArray(await readFile(path, 'utf8'), ['harnesses'], 'ids', [...next].sort()),
+    'utf8'
+  )
 }
