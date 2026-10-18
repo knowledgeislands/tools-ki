@@ -6,8 +6,8 @@ status: triage
 blocks: []
 blocked_by: []
 baseline_ref: null
-created_at: 2026-10-18T19:30:00Z
-updated_at: 2026-10-18T19:30:00Z
+created_at: 2026-10-18T19:23:40Z
+updated_at: 2026-10-18T19:23:40Z
 ---
 
 # KI-TOOL-KI-CLI-151: CLI Conventions Departures
