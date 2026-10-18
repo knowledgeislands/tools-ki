@@ -7,7 +7,7 @@ blocks: []
 blocked_by: []
 baseline_ref: null
 created_at: 2026-10-18T10:26:00Z
-updated_at: 2026-10-18T18:50:00Z
+updated_at: 2026-10-18T19:22:14Z
 ---
 
 # KI-TOOL-KI-CLI-150: Work Folder Entry Points
@@ -23,7 +23,7 @@ Kris Brown made `ki-work-folder` the canonical specification of the work folder 
 - WORK-FOLDER-OWNER a): "the work-folder skill is the canonical specification; ki-coordination timing and judgement; ki-delegation run side only; ki-work-design graduation; others check in on the four-point contract."
 - WORK-FOLDER-CHECKS a): "audit checks into KI-HARNESS-GOV-200; one new tools-ki record for the close-gate parse, unnumbered `decide`, launch refusal and `ki work message`/`prune`." The same answer settles DECIDE-NUMBERS a).
 
-The harness wording landed under [KI-HARNESS-GOV-217](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-217-coordination-and-work-design-renames.md): the [work-folder standard](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/skills/governance/ki-work-folder/references/standards-work-folder.md#the-work-folder) owns the closed list, entry points, tidy rules and Messages line shape; the `ki-coordination` decisions log section says entries are timestamped and carry no numbers; and the `ki-delegation` run packet says an agent writes its report to the run's state folder and nowhere else, the launcher homing it.
+The harness wording landed under [KI-HARNESS-GOV-217](https://github.com/knowledgeislands/ki-agentic-harness/blob/87da1b262fcc60678a31850461dd63c4a848e592/docs/roadmap/KI-HARNESS-GOV-217-coordination-and-work-design-renames.md): the [work-folder standard](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/skills/governance/ki-work-folder/references/standards-work-folder.md#the-work-folder) owns the closed list, entry points, tidy rules and Messages line shape; the `ki-coordination` decisions log section says entries are timestamped and carry no numbers; and the `ki-delegation` run packet says an agent writes its report to the run's state folder and nowhere else, the launcher homing it.
 
 Today the code disagrees in four places:
 

@@ -12,14 +12,14 @@ blocks: []
 blocked_by: []
 baseline_ref: 53bee079fb949fb19f604bf923517c6d7f3303d4
 created_at: 2026-10-18T09:17:41Z
-updated_at: 2026-10-18T10:31:30Z
+updated_at: 2026-10-18T19:22:14Z
 ---
 
 # Coordination Rename, CLI Side
 
 ## Goal
 
-`ki` follows the harness renames of [KI-HARNESS-GOV-217](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-217-coordination-and-work-design-renames.md), `ki-pmo` to `ki-coordination`, `ki-pmo-design` to `ki-work-design` and `ki-checkpoint` to `ki-work-folder`, with no alias; and the `ki agent` help text speaks the work model rather than the thread model.
+`ki` follows the harness renames of [KI-HARNESS-GOV-217](https://github.com/knowledgeislands/ki-agentic-harness/blob/87da1b262fcc60678a31850461dd63c4a848e592/docs/roadmap/KI-HARNESS-GOV-217-coordination-and-work-design-renames.md), `ki-pmo` to `ki-coordination`, `ki-pmo-design` to `ki-work-design` and `ki-checkpoint` to `ki-work-folder`, with no alias; and the `ki agent` help text speaks the work model rather than the thread model.
 
 ## Context
 
@@ -66,7 +66,7 @@ Kris reopened the work-folder skill at 10:15 the same day and answered it later 
 
 ## Dependencies / blocks
 
-Lands beside [KI-HARNESS-GOV-217](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-217-coordination-and-work-design-renames.md). The canonical harness pin still names `4cae8271`, which carries `ki-pmo-design`, so a fresh bootstrap from this source refuses that harness until the pin moves to a harness commit carrying `ki-work-design`; that repin needs the pushed commit's archive digest and belongs to the next release's preparation, which asks Kris first.
+Lands beside [KI-HARNESS-GOV-217](https://github.com/knowledgeislands/ki-agentic-harness/blob/87da1b262fcc60678a31850461dd63c4a848e592/docs/roadmap/KI-HARNESS-GOV-217-coordination-and-work-design-renames.md). The canonical harness pin still names `4cae8271`, which carries `ki-pmo-design`, so a fresh bootstrap from this source refuses that harness until the pin moves to a harness commit carrying `ki-work-design`; that repin needs the pushed commit's archive digest and belongs to the next release's preparation, which asks Kris first.
 
 ## Documentation impact
 

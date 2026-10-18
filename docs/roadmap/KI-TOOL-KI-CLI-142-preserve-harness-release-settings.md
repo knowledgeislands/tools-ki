@@ -10,7 +10,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 2777b4d6eabe12fb4c55bbcc427fb990ecece04c
 created_at: 2026-10-16T19:29:34Z
-updated_at: 2026-10-18T08:53:02Z
+updated_at: 2026-10-18T19:22:14Z
 ---
 
 # Preserve harness release settings
@@ -54,7 +54,7 @@ The single user-configuration writer, `writeUserConfiguration` in [configuration
 
 ## Dependencies / blocks
 
-None. Moving host-specific local harness paths remains [KI-TOOL-KI-CLI-143](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-143-separate-local-harness-paths.md).
+None. Moving host-specific local harness paths remains [KI-TOOL-KI-CLI-143](https://github.com/knowledgeislands/tools-ki/blob/47bb069f646b9d20b585de486f9b5b14cf273415/docs/roadmap/KI-TOOL-KI-CLI-143-separate-local-harness-paths.md).
 
 ## Documentation impact
 
