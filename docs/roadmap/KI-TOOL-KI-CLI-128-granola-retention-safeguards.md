@@ -6,13 +6,12 @@ kind: deliver
 purpose: corrective
 project: knowledge-acquisition
 component: acquire
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 88de22802f2a42bd5d4015f09c8fc0928307dce8
 created_at: 2026-10-14T14:26:48Z
-updated_at: 2026-10-17T23:40:17Z
+updated_at: 2026-10-18T00:02:17Z
 ---
 
 # KI-TOOL-KI-CLI-128: Granola retention safeguards
@@ -108,8 +107,16 @@ The concrete proof/evidence-loss defect is addressed in both layouts without exp
 
 One corrective slice, rebased over the screenshot and marker work, with public offline CLI proof and 100% coverage, landed on `main` at Awaiting review. Acceptance belongs to `ki-accept`; acquisition completeness, receipt design and migration remain with their receiving owners.
 
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above.
+
 ## Discussion
 
 ### Deferred support
 
 Independent state-root/property admission, identity-only discovery commands, durable receipt redesign and automated importer machinery remain deferred. The settled physical placement does not make them prerequisites for deterministic UUID/package discovery. Real migration needs a refreshed exact-path inventory and explicit implementation authority.
+
+### Acceptance
+
+Kris accepted the record on 18 October 2026 in the [Product management decisions](/Users/krisbrown/workspaces/humans-not-robots/hnr-principal/+/_THREADS/product-management/decisions.md), ACCEPT-128: “Launch a tools-ki background run to accept KI-TOOL-KI-CLI-128 under ki-accept, verifying the delivery (51e5e5b, 2bd1ffb, 32ef624, 33926e6) against the record before accepting.” Acceptance first waited on the `ki-work-roadmap` audit, because delivery commit `32ef624` had removed the Boundary section. Under BOUNDARY-128 the section was restored from scope the record already set, and the `ki-work-roadmap` and `ki-authoring` audits then passed.
