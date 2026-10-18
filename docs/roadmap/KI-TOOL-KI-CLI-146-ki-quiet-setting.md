@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 7df8187f2011040725f9d07bf747db8e92a0c161
 created_at: 2026-10-18T04:25:00Z
-updated_at: 2026-10-18T06:40:00Z
+updated_at: 2026-10-18T07:30:00Z
 ---
 
 # KI_QUIET Setting
@@ -143,3 +143,13 @@ Open questions for planning:
 - Whether `ki agent` output, read mainly by coordinators, follows the same switch.
 
 ki-burndown-3 adopted and planned this on 18 October 2026, answering the three questions in Decision provisionally, for Kris to confirm, and built it to Awaiting review the same day.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against Decisions 1 to 4 and Verify 1 to 5. No code was changed and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Decisions:** `operationOptions` reads `KI_QUIET` from the injected environment, treats empty and `0` as unset, and gives way to any explicit output flag. Under quiet, audit and conform open a failing repository's frame and list its FAIL findings.
+- **Verify 1 to 4:** covered through `run(args, context)` and `sandbox()` in `src/tests/cli/repo/quiet.test.ts`, as the Verification lists.
+- **Verify 5:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1. Live: `KI_QUIET=1 ki repo audit --repo .` printed one summary line and exited 0.
+- **Observation, not blocking:** the Goal says "every `ki` command that renders operation output", but Decision 1 limits it to audit and conform, the only commands with `--concise`. Kris confirming Decision 1 settles the wording. The four Decision answers are provisional.
