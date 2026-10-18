@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 0e48ca2764f7ab3eb9a54b99b4a8e2a40aa4edc8
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-18T17:14:44Z
+updated_at: 2026-10-18T18:15:26Z
 ---
 
 # Launch Footer Follows Brief
@@ -112,7 +112,7 @@ Planned on 16 October 2026 in the tools-burndown thread: the marker and report-p
 
 Kris Brown answered FOOTER-GRANTS on 16 October 2026: this record delivers separate `--allow fetch` and `--allow machine` grants beside `--rules <tier>`, each a harness-owned section that lifts only the matching ban. The harness owner opens a `ki-delegation` record for the two grant texts, and KI-TOOL-KI-CLI-134 becomes Ready once that is agreed; until then it stays draft.
 
-Decisions 1 and 2 delivered on 18 October 2026 by the tools-burndown run under Kris Brown's overnight instruction to burn down the tools roadmap; the record stays in progress for the grants, which wait on [KI-HARNESS-GOV-201](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-201-fetch-and-machine-grants.md) (triage) for the agreed `grant-fetch.md` and `grant-machine.md` texts. Provisional, for Kris to confirm: delivering the two fixes ahead of the grants; a bare `<name>.report.md` draws no warning; the warning names each differing path once. The four `rules-*.md` assets on `ki-agentic-harness` main still carry the "`## Rules` onwards" intro mention, so the marker fix takes effect at once.
+Decisions 1 and 2 delivered on 18 October 2026 by the tools-burndown run under Kris Brown's overnight instruction to burn down the tools roadmap; the record stays in progress for the grants, which wait on [KI-HARNESS-GOV-201](https://github.com/knowledgeislands/ki-agentic-harness/blob/f7982a61/docs/roadmap/KI-HARNESS-GOV-201-fetch-and-machine-grants.md) (triage) for the agreed `grant-fetch.md` and `grant-machine.md` texts. Provisional, for Kris to confirm: delivering the two fixes ahead of the grants; a bare `<name>.report.md` draws no warning; the warning names each differing path once. The four `rules-*.md` assets on `ki-agentic-harness` main still carry the "`## Rules` onwards" intro mention, so the marker fix takes effect at once.
 
 Kris Brown folded COMPOSE-REPLY-BLOCK into this record on 18 October 2026, recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) as COMPOSE-REPLY-BLOCK a): fold the reply-block wording fix into KI-TOOL-KI-CLI-134. The launch prompt tools-ki writes still asks for "outstanding queries with the reply block", which the owner report no longer carries; Requirement 1, its Step and Verify 5 add the fix. Recorded by the `release-ki` run, which does not build it; the record stays in progress.
 
