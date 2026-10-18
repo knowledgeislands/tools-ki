@@ -69,10 +69,10 @@ const registryFile = (
     ''
   ].join('\n')
 
-const projectNote = (slug: string, initiative?: string): string =>
-  `---\nnote_type: streams/project\nslug: ${slug}\n${initiative ? `initiative: ${initiative}\n` : ''}---\n\n# ${slug}\n`
+const projectNote = (slug: string, theme?: string): string =>
+  `---\nnote_type: streams/project\nslug: ${slug}\n${theme ? `theme: ${theme}\n` : ''}---\n\n# ${slug}\n`
 
-const initiativeNote = (slug: string): string => `---\nnote_type: streams/initiative\nslug: ${slug}\n---\n\n# ${slug}\n`
+const themeNote = (slug: string): string => `---\nnote_type: streams/theme\nslug: ${slug}\n---\n\n# ${slug}\n`
 
 /** A member repository and its Capital, with the Capital's Project registry and a local ki registry naming both. */
 const territory = async (box: Box): Promise<{ readonly member: string; readonly capital: string }> => {
@@ -84,12 +84,12 @@ const territory = async (box: Box): Promise<{ readonly member: string; readonly 
   await box.project.write('capital/Streams/Projects/beta/design/design.md', projectNote('design-index'))
   await box.project.write('capital/Streams/Projects/gamma/notes.md', projectNote('gamma'))
   await box.project.write('capital/Streams/Projects/Projects.md', projectNote('indexed', 'init-one'))
-  await box.project.write('capital/Streams/Initiatives/init-one.md', initiativeNote('init-one'))
-  await box.project.write('capital/Streams/Initiatives/init-two/init-two.md', initiativeNote('init-two'))
-  await box.project.write('capital/Streams/Initiatives/Initiatives.md', initiativeNote('indexed'))
-  await box.project.write('capital/Streams/Initiatives/bad.md', initiativeNote('Bad Slug'))
-  await box.project.write('capital/Streams/Initiatives/project.md', projectNote('stray', 'init-one'))
-  await box.project.write('capital/Streams/Initiatives/bare.md', '# No frontmatter\n')
+  await box.project.write('capital/Streams/Themes/init-one.md', themeNote('init-one'))
+  await box.project.write('capital/Streams/Themes/init-two.md', themeNote('init-two'))
+  await box.project.write('capital/Streams/Themes/Themes.md', themeNote('indexed'))
+  await box.project.write('capital/Streams/Themes/bad.md', themeNote('Bad Slug'))
+  await box.project.write('capital/Streams/Themes/project.md', projectNote('stray', 'init-one'))
+  await box.project.write('capital/Streams/Themes/bare.md', '# No frontmatter\n')
   await box.project.write('capital/Streams/Projects/Loose.md', '---\ninitiatives: none\n---\n')
   await box.project.write('capital/Streams/Projects/other.md', '---\nnote_type: streams/other\nslug: other\n---\n')
   await box.project.write(
@@ -128,7 +128,7 @@ describe('[ki repo roadmap] model fields', () => {
         kind: 'deliver',
         purpose: 'capability',
         project: 'alpha',
-        initiative: 'init-one',
+        theme: 'init-one',
         component: 'cli',
         horizon: 'hold',
         hold: '\n  reason: waiting-for\n  condition: "The harness release"\n  review: "2026-11-01"\n  trades: [TRD-0000000a]'
@@ -150,7 +150,12 @@ describe('[ki repo roadmap] model fields', () => {
       box,
       'repo',
       'KI-TOOL-KI-CLI-005',
-      record({ id: 'KI-TOOL-KI-CLI-005', theme: 'cli', status: 'in-progress', waiting_on_trades: '[TRD-0000000b]' })
+      record({
+        id: 'KI-TOOL-KI-CLI-005',
+        initiative: 'cli',
+        status: 'in-progress',
+        waiting_on_trades: '[TRD-0000000b]'
+      })
     )
 
     const result = await box.run('ki repo --repo repo roadmap list --format json')
@@ -165,7 +170,7 @@ describe('[ki repo roadmap] model fields', () => {
       kind: 'deliver',
       purpose: 'capability',
       project: 'alpha',
-      initiative: 'init-one',
+      theme: 'init-one',
       component: 'cli',
       hold: { reason: 'waiting-for', condition: 'The harness release', review: '2026-11-01', trades: ['TRD-0000000a'] },
       legacy: []
@@ -177,8 +182,8 @@ describe('[ki repo roadmap] model fields', () => {
       resolutionTarget: 'KI-TOOL-KI-CLI-003'
     })
     expect(byId['KI-TOOL-KI-CLI-005']).toMatchObject({
-      theme: 'cli',
-      legacy: ['theme', 'waiting_on_trades', 'in-progress at next']
+      initiative: 'cli',
+      legacy: ['initiative', 'waiting_on_trades', 'in-progress at next']
     })
   })
 
@@ -418,24 +423,24 @@ describe('[ki repo roadmap] areas', () => {
 })
 
 describe('[ki repo roadmap list --by]', () => {
-  test('groups by Project and by registry Initiative with warnings that never fail the listing', async () => {
+  test('groups by Project and by registry theme with warnings that never fail the listing', async () => {
     const box = await sandbox()
     await territory(box)
     const items: readonly Readonly<Record<string, string | undefined>>[] = [
       { id: 'KI-TOOL-KI-CLI-001', project: 'alpha' },
       { id: 'KI-TOOL-KI-CLI-002', project: 'beta' },
-      { id: 'KI-TOOL-KI-CLI-003', project: 'gamma', initiative: 'init-two' },
+      { id: 'KI-TOOL-KI-CLI-003', project: 'gamma', theme: 'init-two' },
       { id: 'KI-TOOL-KI-CLI-004', project: 'gamma' },
-      { id: 'KI-TOOL-KI-CLI-005', initiative: 'init-one' },
-      { id: 'KI-TOOL-KI-CLI-006', initiative: 'ghost' },
-      { id: 'KI-TOOL-KI-CLI-007', project: 'alpha', initiative: 'init-two' },
+      { id: 'KI-TOOL-KI-CLI-005', theme: 'init-one' },
+      { id: 'KI-TOOL-KI-CLI-006', theme: 'ghost' },
+      { id: 'KI-TOOL-KI-CLI-007', project: 'alpha', theme: 'init-two' },
       { id: 'KI-TOOL-KI-CLI-008', horizon: 'now' },
-      { id: 'KI-TOOL-KI-CLI-009', project: 'alpha', initiative: 'init-one', horizon: undefined, status: 'done' }
+      { id: 'KI-TOOL-KI-CLI-009', project: 'alpha', theme: 'init-one', horizon: undefined, status: 'done' }
     ]
     for (const fields of items) await roadmapFile(box, 'member', fields['id'] as string, record(fields))
 
     const byProject = await box.run('ki repo --repo member roadmap list --by project')
-    const byInitiative = await box.run('ki repo --repo member roadmap list --by initiative')
+    const byTheme = await box.run('ki repo --repo member roadmap list --by theme')
     const json = await box.run('ki repo --repo member roadmap list --by project --format json')
     const invalid = await box.run('ki repo --repo member roadmap list --by team')
 
@@ -445,19 +450,20 @@ describe('[ki repo roadmap list --by]', () => {
     expect(project.indexOf('project gamma (2)')).toBeLessThan(project.indexOf('unassigned (3)'))
     expect(project).toContain('KI-TOOL-KI-CLI-009 [done] Model item')
     expect(project).toContain('KI-TOOL-KI-CLI-008 [draft @ now] Model item')
-    expect(project).toContain('warnings (2)')
+    expect(project).toContain('warnings (3)')
+    expect(project).toContain('Project folder notes beta; make each a flat Streams/Projects/<slug>.md')
     expect(project).toContain('KI-TOOL-KI-CLI-003: project gamma is not in the registry')
 
-    expect(byInitiative.exitCode).toBe(0)
-    const initiative = byInitiative.output
-    expect(initiative).toContain('initiative init-one (4)')
-    expect(initiative).toContain('initiative init-two (1)')
-    expect(initiative).toContain('initiative ghost (1)')
-    expect(initiative).toContain('unassigned (3)')
-    expect(initiative).toContain('KI-TOOL-KI-CLI-002: project beta names no initiative')
-    expect(initiative).toContain('KI-TOOL-KI-CLI-006: initiative ghost is not in the registry')
-    expect(initiative).toContain('KI-TOOL-KI-CLI-007: initiative init-two contradicts project alpha in init-one')
-    expect(initiative).toContain('KI-TOOL-KI-CLI-004: project gamma is not in the registry')
+    expect(byTheme.exitCode).toBe(0)
+    const theme = byTheme.output
+    expect(theme).toContain('theme init-one (4)')
+    expect(theme).toContain('theme init-two (1)')
+    expect(theme).toContain('theme ghost (1)')
+    expect(theme).toContain('unassigned (3)')
+    expect(theme).toContain('KI-TOOL-KI-CLI-002: project beta names no theme')
+    expect(theme).toContain('KI-TOOL-KI-CLI-006: theme ghost is not in the registry')
+    expect(theme).toContain('KI-TOOL-KI-CLI-007: theme init-two contradicts project alpha in init-one')
+    expect(theme).toContain('KI-TOOL-KI-CLI-004: project gamma is not in the registry')
 
     expect(json).toEqual({ exitCode: 2, output: 'ki: error: roadmap list --by applies only to text output\n' })
     expect(invalid.exitCode).toBe(2)
@@ -472,27 +478,64 @@ describe('[ki repo roadmap list --by]', () => {
     await box.project.mkdir('empty/docs/roadmap')
     await box.project.write('empty/.ki.toml', declaration(home('example/empty'), capitalHome))
     await box.project.write('absent/.ki.toml', declaration(home('example/absent'), capitalHome))
-    await rm(`${box.project.path}/capital/Streams/Initiatives`, { recursive: true })
+    await rm(`${box.project.path}/capital/Streams/Themes`, { recursive: true })
     await box.project.write(
       'capital/Streams/Projects/Initiatives.md',
       '---\ninitiatives:\n  - init-one\n  - Not A Slug\n  - 7\n---\n\n# Initiatives\n\nSlug `init-two`.\n'
     )
 
-    const own = await box.run('ki repo --repo capital roadmap list --by initiative')
+    const own = await box.run('ki repo --repo capital roadmap list --by theme')
     await box.project.write('capital/Streams/Projects/Initiatives.md', '# Initiatives\n\nSlug `init-one`.\n')
     const aggregate = await box.run(
-      'ki repo --repo capital --repo member --repo empty --repo absent roadmap list --aggregate --by initiative'
+      'ki repo --repo capital --repo member --repo empty --repo absent roadmap list --aggregate --by theme'
     )
     const plain = await box.run('ki repo --repo capital --repo member roadmap list --aggregate')
 
     expect(own.exitCode).toBe(0)
-    expect(own.output).toContain('initiative init-one (1)')
+    expect(own.output).toContain('theme init-one (1)')
     expect(own.output).toContain(
-      'Streams/Projects/Initiatives.md is retired; keep one note per Initiative in Streams/Initiatives/'
+      'Streams/Projects/Initiatives.md is retired; keep one theme page per theme in Streams/Themes/'
     )
     expect(aggregate.exitCode).toBe(0)
-    expect(aggregate.output).toContain('initiative init-one (2)')
+    expect(aggregate.output).toContain('theme init-one (2)')
     expect(plain.output).toContain('next (2)')
+  })
+
+  test('reads the thread-model registry and initiative fields as themes, warning of each new home', async () => {
+    const box = await sandbox()
+    await territory(box)
+    await rm(`${box.project.path}/capital/Streams/Themes`, { recursive: true })
+    await box.project.write(
+      'capital/Streams/Initiatives/init-one.md',
+      '---\nnote_type: streams/initiative\nslug: init-one\n---\n'
+    )
+    await box.project.write('capital/Streams/Initiatives/Initiatives.md', '---\nnote_type: streams/initiative\n---\n')
+    await box.project.write(
+      'capital/Streams/Initiatives/bad.md',
+      '---\nnote_type: streams/initiative\nslug: Bad\n---\n'
+    )
+    await box.project.write('capital/Streams/Initiatives/stray.md', projectNote('stray'))
+    await box.project.write(
+      'capital/Streams/Projects/delta.md',
+      '---\nnote_type: streams/project\nslug: delta\ninitiative: init-one\n---\n'
+    )
+    await roadmapFile(box, 'member', 'KI-TOOL-KI-CLI-001', record({ id: 'KI-TOOL-KI-CLI-001', project: 'delta' }))
+    await roadmapFile(box, 'member', 'KI-TOOL-KI-CLI-002', record({ id: 'KI-TOOL-KI-CLI-002', initiative: 'init-one' }))
+    await roadmapFile(
+      box,
+      'member',
+      'KI-TOOL-KI-CLI-003',
+      record({ id: 'KI-TOOL-KI-CLI-003', theme: 'init-one', initiative: 'init-one' })
+    )
+
+    const byTheme = await box.run('ki repo --repo member roadmap list --by theme')
+
+    expect(byTheme.output).toContain('theme init-one (2)')
+    expect(byTheme.output).toContain(
+      'Streams/Initiatives/ is the thread-model registry; move init-one to theme pages in Streams/Themes/'
+    )
+    expect(byTheme.output).toContain('Project notes delta name initiative; rename it theme')
+    expect(byTheme.output).toContain('must name a theme or a legacy initiative, not both')
   })
 
   test('resolves qualified references in their named territory and warns when it cannot', async () => {
@@ -500,7 +543,7 @@ describe('[ki repo roadmap list --by]', () => {
     const { member, capital } = await territory(box)
     await box.project.write('other/.ki.toml', declaration(home('example/other'), home('example/other')))
     await box.project.write('other/Streams/Projects/host.md', projectNote('host', 'rig'))
-    await box.project.write('other/Streams/Initiatives/rig.md', initiativeNote('rig'))
+    await box.project.write('other/Streams/Themes/rig.md', themeNote('rig'))
     await box.project.write('bare/.ki.toml', declaration(home('example/bare'), home('example/bare')))
     const other = await realpath(`${box.project.path}/other`)
     const bare = await realpath(`${box.project.path}/bare`)
@@ -516,20 +559,20 @@ describe('[ki repo roadmap list --by]', () => {
     const items: readonly Readonly<Record<string, string | undefined>>[] = [
       { id: 'KI-TOOL-KI-CLI-001', project: 'other/host' },
       { id: 'KI-TOOL-KI-CLI-002', project: 'capital/alpha' },
-      { id: 'KI-TOOL-KI-CLI-003', initiative: 'other/rig' },
+      { id: 'KI-TOOL-KI-CLI-003', theme: 'other/rig' },
       { id: 'KI-TOOL-KI-CLI-004', project: 'other/ghost' },
       { id: 'KI-TOOL-KI-CLI-005', project: 'nowhere/host' },
       { id: 'KI-TOOL-KI-CLI-006', project: 'member/host' },
-      { id: 'KI-TOOL-KI-CLI-007', project: 'other/host', initiative: 'rig' },
-      { id: 'KI-TOOL-KI-CLI-008', initiative: 'other/ghost' },
-      { id: 'KI-TOOL-KI-CLI-009', project: 'other/host', initiative: 'other/rig' },
-      { id: 'KI-TOOL-KI-CLI-010', project: 'nowhere/host', initiative: 'nowhere/rig' },
-      { id: 'KI-TOOL-KI-CLI-011', initiative: 'bare/rig' }
+      { id: 'KI-TOOL-KI-CLI-007', project: 'other/host', theme: 'rig' },
+      { id: 'KI-TOOL-KI-CLI-008', theme: 'other/ghost' },
+      { id: 'KI-TOOL-KI-CLI-009', project: 'other/host', theme: 'other/rig' },
+      { id: 'KI-TOOL-KI-CLI-010', project: 'nowhere/host', theme: 'nowhere/rig' },
+      { id: 'KI-TOOL-KI-CLI-011', theme: 'bare/rig' }
     ]
     for (const fields of items) await roadmapFile(box, 'member', fields['id'] as string, record(fields))
 
     const byProject = await box.run('ki repo --repo member roadmap list --by project')
-    const byInitiative = await box.run('ki repo --repo member roadmap list --by initiative')
+    const byTheme = await box.run('ki repo --repo member roadmap list --by theme')
 
     expect(byProject.exitCode).toBe(0)
     const project = byProject.output
@@ -545,18 +588,18 @@ describe('[ki repo roadmap list --by]', () => {
       'territory member registry unavailable: territory member is not declared by a registered Capital'
     )
     expect(project).toContain(
-      'territory bare registry unavailable: the capital has no Streams/Projects/ or Streams/Initiatives/ registry'
+      'territory bare registry unavailable: the capital has no Streams/Projects/ or Streams/Themes/ registry'
     )
-    expect(byInitiative.exitCode).toBe(0)
-    const initiative = byInitiative.output
-    expect(initiative).toContain('initiative other/rig (4)')
-    expect(initiative).toContain('initiative init-one (1)')
-    expect(initiative).toContain('initiative nowhere/rig (1)')
-    expect(initiative).toContain('initiative bare/rig (1)')
-    expect(initiative).toContain('KI-TOOL-KI-CLI-007: initiative rig contradicts project other/host in other/rig')
-    expect(initiative).toContain('KI-TOOL-KI-CLI-008: initiative other/ghost is not in the registry')
-    expect(initiative).not.toContain('KI-TOOL-KI-CLI-009:')
-    expect(initiative).not.toContain('KI-TOOL-KI-CLI-011:')
+    expect(byTheme.exitCode).toBe(0)
+    const theme = byTheme.output
+    expect(theme).toContain('theme other/rig (4)')
+    expect(theme).toContain('theme init-one (1)')
+    expect(theme).toContain('theme nowhere/rig (1)')
+    expect(theme).toContain('theme bare/rig (1)')
+    expect(theme).toContain('KI-TOOL-KI-CLI-007: theme rig contradicts project other/host in other/rig')
+    expect(theme).toContain('KI-TOOL-KI-CLI-008: theme other/ghost is not in the registry')
+    expect(theme).not.toContain('KI-TOOL-KI-CLI-009:')
+    expect(theme).not.toContain('KI-TOOL-KI-CLI-011:')
 
     await box.state.write('ki/registry.toml', 'schema = [\n')
     const invalid = await box.run('ki repo --repo member roadmap list --by project')
@@ -577,12 +620,12 @@ describe('[ki repo roadmap list --by]', () => {
     const box = await sandbox()
     await box.project.write('plain/.ki.toml', declaration(home('example/plain')))
     await roadmapFile(box, 'plain', 'KI-TOOL-KI-CLI-001', record({ id: 'KI-TOOL-KI-CLI-001', project: 'alpha' }))
-    await roadmapFile(box, 'plain', 'KI-TOOL-KI-CLI-002', record({ id: 'KI-TOOL-KI-CLI-002', initiative: 'init-one' }))
+    await roadmapFile(box, 'plain', 'KI-TOOL-KI-CLI-002', record({ id: 'KI-TOOL-KI-CLI-002', theme: 'init-one' }))
     await box.project.write('member/.ki.toml', declaration(home('example/member'), capitalHome))
     await roadmapFile(box, 'member', 'KI-TOOL-KI-CLI-001', record({ id: 'KI-TOOL-KI-CLI-001', project: 'alpha' }))
     const member = await realpath(`${box.project.path}/member`)
 
-    const undeclared = await box.run('ki repo --repo plain roadmap list --by initiative')
+    const undeclared = await box.run('ki repo --repo plain roadmap list --by theme')
     const missingRegistry = await box.run('ki repo --repo member roadmap list --by project')
     await box.state.write('ki/registry.toml', 'schema = [\n')
     const invalidRegistry = await box.run('ki repo --repo member roadmap list --by project')
@@ -603,15 +646,15 @@ describe('[ki repo roadmap list --by]', () => {
         { key: 'capital', repository: capitalHome, path: capital }
       ])
     )
-    const noProjects = await box.run('ki repo --repo member roadmap list --by initiative')
-    await box.project.write('capital/Streams/Initiatives/init-one.md', initiativeNote('init-one'))
-    await roadmapFile(box, 'member', 'KI-TOOL-KI-CLI-002', record({ id: 'KI-TOOL-KI-CLI-002', initiative: 'init-one' }))
-    const initiativesOnly = await box.run('ki repo --repo member roadmap list --by initiative')
+    const noProjects = await box.run('ki repo --repo member roadmap list --by theme')
+    await box.project.write('capital/Streams/Themes/init-one.md', themeNote('init-one'))
+    await roadmapFile(box, 'member', 'KI-TOOL-KI-CLI-002', record({ id: 'KI-TOOL-KI-CLI-002', theme: 'init-one' }))
+    const themesOnly = await box.run('ki repo --repo member roadmap list --by theme')
 
     expect(undeclared.exitCode).toBe(0)
     expect(undeclared.output).toContain('project registry unavailable: the repository declares no ki-repo capital')
     expect(undeclared.output).toContain('unassigned (1)')
-    expect(undeclared.output).toContain('initiative init-one (1)')
+    expect(undeclared.output).toContain('theme init-one (1)')
     expect(missingRegistry.exitCode).toBe(0)
     expect(missingRegistry.output).toMatch(/project registry unavailable: the local ki registry .* is missing/)
     expect(missingRegistry.output).toContain('project alpha (1)')
@@ -621,12 +664,12 @@ describe('[ki repo roadmap list --by]', () => {
     )
     expect(noProjects.exitCode).toBe(0)
     expect(noProjects.output).toContain(
-      'project registry unavailable: the capital has no Streams/Projects/ or Streams/Initiatives/ registry'
+      'project registry unavailable: the capital has no Streams/Projects/ or Streams/Themes/ registry'
     )
-    expect(initiativesOnly.exitCode).toBe(0)
-    expect(initiativesOnly.output).toContain('initiative init-one (1)')
-    expect(initiativesOnly.output).toContain('KI-TOOL-KI-CLI-001: project alpha is not in the registry')
-    expect(initiativesOnly.output).not.toContain('registry unavailable')
+    expect(themesOnly.exitCode).toBe(0)
+    expect(themesOnly.output).toContain('theme init-one (1)')
+    expect(themesOnly.output).toContain('KI-TOOL-KI-CLI-001: project alpha is not in the registry')
+    expect(themesOnly.output).not.toContain('registry unavailable')
   })
 })
 
@@ -636,12 +679,12 @@ describe('[ki repo roadmap] grouping across the selected set', () => {
     const { member, capital } = await territory(box)
     await box.project.write(
       'capital/Streams/Projects/alpha.md',
-      '---\nnote_type: streams/project\nslug: alpha\ninitiative: init-one\nlifecycle: active\n---\n\n# alpha\n'
+      '---\nnote_type: streams/project\nslug: alpha\ntheme: init-one\nlifecycle: active\n---\n\n# alpha\n'
     )
     await box.project.write('other/.ki.toml', declaration(home('example/other'), home('example/other')))
     await box.project.write('other/Streams/Projects/alpha.md', projectNote('alpha', 'rig'))
     await box.project.write('other/Streams/Projects/host.md', projectNote('host', 'rig'))
-    await box.project.write('other/Streams/Initiatives/rig.md', initiativeNote('rig'))
+    await box.project.write('other/Streams/Themes/rig.md', themeNote('rig'))
     const other = await realpath(`${box.project.path}/other`)
     await box.state.write(
       'ki/registry.toml',
@@ -654,20 +697,20 @@ describe('[ki repo roadmap] grouping across the selected set', () => {
     const items: readonly (readonly [string, Readonly<Record<string, string>>])[] = [
       ['member', { id: 'KI-TOOL-KI-CLI-001', project: 'alpha', horizon: 'now' }],
       ['member', { id: 'KI-TOOL-KI-CLI-002', project: 'capital/alpha' }],
-      ['member', { id: 'KI-TOOL-KI-CLI-003', initiative: 'init-two' }],
+      ['member', { id: 'KI-TOOL-KI-CLI-003', theme: 'init-two' }],
       ['member', { id: 'KI-TOOL-KI-CLI-008', project: 'ghost' }],
       ['other', { id: 'KI-TOOL-KI-CLI-004', project: 'capital/alpha' }],
       ['other', { id: 'KI-TOOL-KI-CLI-005', project: 'alpha' }],
       ['other', { id: 'KI-TOOL-KI-CLI-006', project: 'host' }],
-      ['other', { id: 'KI-TOOL-KI-CLI-007', initiative: 'capital/init-two' }]
+      ['other', { id: 'KI-TOOL-KI-CLI-007', theme: 'capital/init-two' }]
     ]
     for (const [repository, fields] of items) await roadmapFile(box, repository, fields['id'] as string, record(fields))
 
     const byProject = await box.run('ki repo --repo member --repo other roadmap list --by project')
-    const byInitiative = await box.run('ki repo --repo member --repo other roadmap list --by initiative')
+    const byTheme = await box.run('ki repo --repo member --repo other roadmap list --by theme')
     const foreign = await box.run('ki repo --repo other roadmap list --by project')
     const summary = await box.run('ki repo --repo member --repo other roadmap summary --by project')
-    const summaryByInitiative = await box.run('ki repo --repo member --repo other roadmap summary --by initiative')
+    const summaryByTheme = await box.run('ki repo --repo member --repo other roadmap summary --by theme')
     const summaryByArea = await box.run('ki repo --repo member roadmap summary --by area')
 
     expect(byProject.exitCode).toBe(0)
@@ -678,10 +721,10 @@ describe('[ki repo roadmap] grouping across the selected set', () => {
     expect(byProject.output).toContain('project ghost (1)')
     expect(byProject.output).toContain('unassigned (2)')
     expect(byProject.output).toContain('KI-TOOL-KI-CLI-008: project ghost is not in the registry')
-    expect(byInitiative.output).toContain('initiative init-one (3)')
-    expect(byInitiative.output).toContain('initiative init-two (2)')
-    expect(byInitiative.output).toContain('initiative rig (2)')
-    expect(byInitiative.output).not.toContain('capital/init-two')
+    expect(byTheme.output).toContain('theme init-one (3)')
+    expect(byTheme.output).toContain('theme init-two (2)')
+    expect(byTheme.output).toContain('theme rig (2)')
+    expect(byTheme.output).not.toContain('capital/init-two')
     expect(foreign.output).toContain('project capital/alpha [active] (1)')
     expect(foreign.output).toContain('project other/alpha (1)')
     expect(summary.exitCode).toBe(0)
@@ -689,9 +732,11 @@ describe('[ki repo roadmap] grouping across the selected set', () => {
     expect(summary.output).toMatch(/│ +capital\/alpha \[active\] +│ +d=1 Σ=1 +│ +d=2 Σ=2 /)
     expect(summary.output).toMatch(/│ +unassigned +│ +— +│ +d=2 Σ=2 /)
     expect(summary.output).toMatch(/│ +Σ +│ +d=1 Σ=1 +│ +d=7 Σ=7 /)
-    expect(summary.output).toContain('Warnings\n  KI-TOOL-KI-CLI-008: project ghost is not in the registry')
-    expect(summaryByInitiative.output).toMatch(/│ +Initiative +│/)
-    expect(summaryByInitiative.output).toMatch(/│ +init-two +│ +— +│ +d=2 Σ=2 /)
+    expect(summary.output).toContain(
+      'Warnings\n  Project folder notes beta; make each a flat Streams/Projects/<slug>.md\n  KI-TOOL-KI-CLI-008: project ghost is not in the registry'
+    )
+    expect(summaryByTheme.output).toMatch(/│ +Theme +│/)
+    expect(summaryByTheme.output).toMatch(/│ +init-two +│ +— +│ +d=2 Σ=2 /)
     expect(summaryByArea.output).toMatch(/│ +Area +│/)
     expect(summaryByArea.output).toMatch(/│ +unassigned +│ +d=1 Σ=1 +│ +d=3 Σ=3 /)
     expect(summaryByArea.output).not.toContain('Warnings')
@@ -792,7 +837,7 @@ describe('[ki repo roadmap migrate]', () => {
       box,
       'repo',
       'KI-TOOL-KI-CLI-006',
-      record({ id: 'KI-TOOL-KI-CLI-006', horizon: 'parked', project: 'other/host', initiative: 'other/rig' })
+      record({ id: 'KI-TOOL-KI-CLI-006', horizon: 'parked', project: 'other/host', theme: 'other/rig' })
     )
     await roadmapFile(
       box,
@@ -879,7 +924,7 @@ describe('[ki repo roadmap migrate]', () => {
     expect(await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-001-item.md')).toContain('theme: cli')
     const qualified = await box.project.read('repo/docs/roadmap/KI-TOOL-KI-CLI-006-item.md')
     expect(qualified).toContain('horizon: hold\n')
-    expect(qualified).toContain('project: other/host\ninitiative: other/rig\n')
+    expect(qualified).toContain('project: other/host\ntheme: other/rig\n')
     expect(listed.exitCode).toBe(0)
     const lanes = Object.fromEntries(
       JSON.parse(listed.output).items.map((entry: { id: string; lane: string }) => [entry.id, entry.lane])

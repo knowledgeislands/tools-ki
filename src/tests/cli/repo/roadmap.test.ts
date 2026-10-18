@@ -1106,7 +1106,7 @@ describe('[ki repo roadmap]', () => {
         'has unsupported or repeated field title'
       ],
       ['id.md', item({ id: 'wrong' }), 'must use a matching work-item identifier'],
-      ['KI-TOOL-KI-CLI-003-invalid.md', item({ theme: 'Wrong' }), 'has invalid title, theme, or horizon'],
+      ['KI-TOOL-KI-CLI-003-invalid.md', item({ theme: 'Wrong' }), 'theme must be a lowercase kebab-case slug'],
       [
         'KI-TOOL-KI-CLI-003-baseline.md',
         item({ baseline_ref: 'wrong' }),

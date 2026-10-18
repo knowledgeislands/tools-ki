@@ -865,7 +865,7 @@ then groups items by lane: open adopted records by horizon \fBnow\fR,
 intake, then \fBdone\fR and \fBcancelled\fR records last. Within a lane,
 items run from \fBawaiting-review\fR through \fBdraft\fR, with identifiers
 breaking ties. The summary line counts the \fBnow\fR lane as a signal with no
-cap. Records still in the old shape (a \fBtheme\fR, a \fBwaiting-for\fR,
+cap. Records still in the old shape (an \fBinitiative\fR, a \fBwaiting-for\fR,
 \fBparked\fR or \fBtriage\fR horizon, \fBwaiting_on_trades\fR or
 \fBintake_disposition\fR, or an adopted open record without \fBkind\fR) are
 listed in the lane they migrate to, marked \fBlegacy\fR, and counted as
@@ -891,16 +891,21 @@ set, and implies \fB--aggregate\fR; groups from the same Project in different
 repositories merge, and a Project from another territory is qualified with
 that territory's name. Each Project group shows its registry
 \fBlifecycle\fR, such as \fB[active]\fR.
-\fB--by initiative\fR groups
-by the Initiative its Project names in the Capital's
-\fBStreams/Projects/\fR notes, with Initiatives read from
-\fBStreams/Initiatives/\fR, found through the repository's
+\fB--by theme\fR groups
+by the theme its Project names in the Capital's
+\fBStreams/Projects/\fR notes, with themes read from
+\fBStreams/Themes/\fR, found through the repository's
 \fB[skills.ki-repo].capital\fR and the local ki registry; a projectless record
-groups under its own \fBinitiative\fR. Records with neither group under
-\fBunassigned\fR. An unavailable registry, the retired
-\fBStreams/Projects/Initiatives.md\fR index, an unknown slug, or an
-\fBinitiative\fR that contradicts the registry is a warning that never changes
+groups under its own \fBtheme\fR. Records with neither group under
+\fBunassigned\fR. An unavailable registry, an unknown slug, or a
+\fBtheme\fR that contradicts the registry is a warning that never changes
 the exit status.
+Through the work model's tolerance window the thread-model shapes still read,
+each with a warning naming its new home: \fBStreams/Initiatives/\fR,
+Project folder notes \fBStreams/Projects/<slug>/<slug>.md\fR, a Project's
+\fBinitiative\fR, the retired \fBStreams/Projects/Initiatives.md\fR index, and
+a record's \fBinitiative\fR, which groups as its theme.
+A record naming both \fBtheme\fR and \fBinitiative\fR is invalid.
 \fB--by area\fR
 groups by each record's fixed \fBarea\fR under the title that
 \fB[skills.ki-work-roadmap.areas]\fR maps to its code; a legacy bare areas list
@@ -931,7 +936,7 @@ unavailable. Repositories without a roadmap are named below the table.
 Invalid roadmap evidence
 remains diagnostic and makes the command exit with status 1. Item identifiers,
 titles, and trade records are omitted.
-\fB--by project\fR, \fB--by initiative\fR or \fB--by area\fR replaces the
+\fB--by project\fR, \fB--by theme\fR or \fB--by area\fR replaces the
 repository rows with one row per group, aggregated across the selected set as
 for \fBroadmap list --by\fR, and appends any grouping warnings.
 Unknown KB Streams record fields are listed under the same warnings.

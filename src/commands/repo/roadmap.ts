@@ -345,7 +345,7 @@ const laneCells = (items: readonly WorkItem[]): readonly string[] => [
 
 const groupHeadings: Readonly<Record<RoadmapGrouping, string>> = {
   project: 'Project',
-  initiative: 'Initiative',
+  theme: 'Theme',
   area: 'Area'
 }
 
@@ -477,8 +477,8 @@ const selectedHorizons = (horizons: readonly string[] = []): readonly string[] =
 const byOption = (description: string): Option =>
   new Option(
     '--by <grouping>',
-    `${description}: by Project or by Initiative from the Project registry, or by fixed area`
-  ).choices(['project', 'initiative', 'area'])
+    `${description}: by Project or by theme from the Project registry, or by fixed area`
+  ).choices(['project', 'theme', 'area'])
 
 const listCommand = (context: KiContext, selectedRepositories: RepositorySelection): Command =>
   new Command('list')

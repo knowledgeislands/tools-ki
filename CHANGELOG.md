@@ -80,8 +80,8 @@ This baseline describes the `v0.10.5` release. Domain imports and extracted type
 - `ki repo audit [--staged] [--paths <path...>]`
 - `ki repo conform`
 - `ki repo diag`
-- `ki repo roadmap list [--horizon <horizons>] [--status <status>] [--format <text|json>] [--links <compact|all>] [--by <project|initiative|area>]`
-- `ki repo roadmap summary [--by <project|initiative|area>]`
+- `ki repo roadmap list [--horizon <horizons>] [--status <status>] [--format <text|json>] [--links <compact|all>] [--by <project|theme|area>]`
+- `ki repo roadmap summary [--by <project|theme|area>]`
 - `ki repo roadmap stats [--stale-after <duration>] [--format <text|json>]`
 - `ki repo roadmap prune [id]`
 - `ki repo roadmap promote <id> [horizon]`

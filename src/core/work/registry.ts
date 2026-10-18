@@ -6,23 +6,24 @@ import { inspectLocalRegistry } from '../storage/index.ts'
 import { resolveTerritoryCapital } from '../territory/resolution.ts'
 import { parseRegistryReference, type RegistryReference } from './items.ts'
 
-/** A territory's Project registry: each Project's Initiative, and every declared Initiative. */
+/** A territory's Project registry: each Project's theme, and every declared theme. */
 export interface ProjectRegistry {
   readonly root: string
   readonly projects: ReadonlyMap<string, string | undefined>
   /** Each registered Project's declared `lifecycle`, such as `active` or `paused`. */
   readonly lifecycles: ReadonlyMap<string, string>
-  readonly initiatives: ReadonlySet<string>
-  /** Set when Initiative slugs still come from the retired `Streams/Projects/Initiatives.md` index. */
-  readonly legacyInitiativesIndex: boolean
+  readonly themes: ReadonlySet<string>
+  /** One line per thread-model shape still read during the tolerance window, naming its new home. */
+  readonly legacy: readonly string[]
 }
 
 export type ProjectRegistryLookup = { readonly registry: ProjectRegistry } | { readonly unavailable: string }
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const PROJECTS_DIRECTORY = join('Streams', 'Projects')
+const THEMES_DIRECTORY = join('Streams', 'Themes')
 const INITIATIVES_DIRECTORY = join('Streams', 'Initiatives')
-const INDEX_NOTES = new Set(['Projects.md', 'Initiatives.md'])
+const INDEX_NOTES = new Set(['Projects.md', 'Themes.md', 'Initiatives.md'])
 
 const declaredIdentity = async (root: string): Promise<{ repository?: unknown; capital?: unknown } | undefined> => {
   try {
@@ -71,13 +72,19 @@ const isDirectory = async (path: string): Promise<boolean> =>
 
 const isFile = async (path: string): Promise<boolean> => (await lstat(path).catch(() => undefined))?.isFile() === true
 
+interface RegistryNote {
+  readonly name: string
+  readonly text: string
+  readonly values?: Record<string, unknown>
+  /** Set for a thread-model folder note, `<slug>/<slug>.md`, read under the name `<slug>.md`. */
+  readonly folder?: true
+}
+
 /**
- * Regular Markdown notes directly inside one registry folder, in name order, as name and frontmatter. A note that holds
- * a design folder is the folder note `<slug>/<slug>.md`, read under the name `<slug>.md`.
+ * Regular Markdown notes directly inside one registry folder, in name order, as name and frontmatter. A thread-model
+ * folder note `<slug>/<slug>.md` stays readable during the tolerance window, under the name `<slug>.md`.
  */
-const registryNotes = async (
-  directory: string
-): Promise<readonly { readonly name: string; readonly text: string; readonly values?: Record<string, unknown> }[]> => {
+const registryNotes = async (directory: string): Promise<readonly RegistryNote[]> => {
   if (!(await isDirectory(directory))) return []
   const entries = await readdir(directory, { withFileTypes: true })
   const notes = [
@@ -90,24 +97,25 @@ const registryNotes = async (
           .filter((entry) => entry.isDirectory())
           .map(async ({ name }) => {
             const path = join(directory, name, `${name}.md`)
-            return (await isFile(path)) ? [{ name: `${name}.md`, path }] : []
+            return (await isFile(path)) ? [{ name: `${name}.md`, path, folder: true as const }] : []
           })
       )
     ).flat()
   ].sort((left, right) => left.name.localeCompare(right.name))
   return Promise.all(
-    notes.map(async ({ name, path }) => {
+    notes.map(async ({ name, path, ...rest }) => {
       const text = await readFile(path, 'utf8')
       const values = frontmatter(text)
-      return { name, text, ...(values ? { values } : {}) }
+      return { name, text, ...(values ? { values } : {}), ...('folder' in rest ? { folder: true as const } : {}) }
     })
   )
 }
 
 /**
- * Reads the Capital's `Streams/Projects/` and `Streams/Initiatives/` registry through runtime registry discovery. Any
+ * Reads the Capital's `Streams/Projects/` and `Streams/Themes/` registry through runtime registry discovery. Any
  * missing step is returned as an unavailable reason for the caller to report as a warning; it never fails a listing.
- * The retired `Streams/Projects/Initiatives.md` index stays readable during the migration tolerance window.
+ * The thread-model shapes, `Streams/Initiatives/`, Project folder notes, `initiative:` and the retired
+ * `Streams/Projects/Initiatives.md` index, stay readable with a warning during the work model's tolerance window.
  */
 export const loadProjectRegistry = async (
   repository: string,
@@ -128,44 +136,67 @@ export const loadTerritoryRegistry = async (
 
 const readRegistry = async (root: string): Promise<ProjectRegistryLookup> => {
   const projectsDirectory = join(root, PROJECTS_DIRECTORY)
+  const themesDirectory = join(root, THEMES_DIRECTORY)
   const initiativesDirectory = join(root, INITIATIVES_DIRECTORY)
-  if (!(await isDirectory(projectsDirectory)) && !(await isDirectory(initiativesDirectory)))
-    return { unavailable: `the capital has no ${PROJECTS_DIRECTORY}/ or ${INITIATIVES_DIRECTORY}/ registry` }
+  const directories = [projectsDirectory, themesDirectory, initiativesDirectory]
+  if (!(await Promise.all(directories.map(isDirectory))).some(Boolean))
+    return { unavailable: `the capital has no ${PROJECTS_DIRECTORY}/ or ${THEMES_DIRECTORY}/ registry` }
   const projects = new Map<string, string | undefined>()
   const lifecycles = new Map<string, string>()
-  const initiatives = new Set<string>()
-  let legacyInitiativesIndex = false
-  for (const { name, text, values } of await registryNotes(projectsDirectory)) {
+  const themes = new Set<string>()
+  const legacy: string[] = []
+  const folderNotes: string[] = []
+  const initiativeKeys: string[] = []
+  for (const { name, text, values, folder } of await registryNotes(projectsDirectory)) {
     if (name === 'Initiatives.md') {
-      legacyInitiativesIndex = true
+      legacy.push('Streams/Projects/Initiatives.md is retired; keep one theme page per theme in Streams/Themes/')
       const declared = Array.isArray(values?.['initiatives']) ? (values['initiatives'] as unknown[]) : []
-      for (const slug of declared) if (typeof slug === 'string' && SLUG.test(slug)) initiatives.add(slug)
-      for (const match of text.matchAll(/^Slug `([a-z0-9]+(?:-[a-z0-9]+)*)`\./gm)) initiatives.add(match[1] as string)
+      for (const slug of declared) if (typeof slug === 'string' && SLUG.test(slug)) themes.add(slug)
+      for (const match of text.matchAll(/^Slug `([a-z0-9]+(?:-[a-z0-9]+)*)`\./gm)) themes.add(match[1] as string)
       continue
     }
     if (INDEX_NOTES.has(name) || values?.['note_type'] !== 'streams/project') continue
     const slug = values['slug']
     if (typeof slug !== 'string' || !SLUG.test(slug)) continue
+    const declared = typeof values['theme'] === 'string' ? values['theme'] : undefined
     const initiative = typeof values['initiative'] === 'string' ? values['initiative'] : undefined
-    projects.set(slug, initiative)
+    if (initiative !== undefined) initiativeKeys.push(slug)
+    if (folder) folderNotes.push(slug)
+    const theme = declared ?? initiative
+    projects.set(slug, theme)
     if (typeof values['lifecycle'] === 'string') lifecycles.set(slug, values['lifecycle'])
-    if (initiative) initiatives.add(initiative)
+    if (theme) themes.add(theme)
   }
+  for (const { name, values } of await registryNotes(themesDirectory)) {
+    if (INDEX_NOTES.has(name) || values?.['note_type'] !== 'streams/theme') continue
+    const slug = values['slug']
+    if (typeof slug === 'string' && SLUG.test(slug)) themes.add(slug)
+  }
+  const initiatives: string[] = []
   for (const { name, values } of await registryNotes(initiativesDirectory)) {
     if (INDEX_NOTES.has(name) || values?.['note_type'] !== 'streams/initiative') continue
     const slug = values['slug']
-    if (typeof slug === 'string' && SLUG.test(slug)) initiatives.add(slug)
+    if (typeof slug !== 'string' || !SLUG.test(slug)) continue
+    themes.add(slug)
+    initiatives.push(slug)
   }
-  return { registry: { root, projects, lifecycles, initiatives, legacyInitiativesIndex } }
+  if (initiatives.length)
+    legacy.push(
+      `Streams/Initiatives/ is the thread-model registry; move ${initiatives.join(', ')} to theme pages in Streams/Themes/`
+    )
+  if (folderNotes.length)
+    legacy.push(`Project folder notes ${folderNotes.join(', ')}; make each a flat Streams/Projects/<slug>.md`)
+  if (initiativeKeys.length) legacy.push(`Project notes ${initiativeKeys.join(', ')} name initiative; rename it theme`)
+  return { registry: { root, projects, lifecycles, themes, legacy } }
 }
 
-export type RoadmapGrouping = 'project' | 'initiative' | 'area'
+export type RoadmapGrouping = 'project' | 'theme' | 'area'
 
-/** Records with no resolvable Project or Initiative group here explicitly rather than disappearing. */
+/** Records with no resolvable Project or theme group here explicitly rather than disappearing. */
 export const UNASSIGNED_GROUP = 'unassigned'
 
 /**
- * A grouped slug's registry identity, so that listings across repositories merge one Project or Initiative however
+ * A grouped slug's registry identity, so that listings across repositories merge one Project or theme however
  * each record spells it: `territory` is the territory's registry root, `?<name>` for a qualifier whose registry is
  * unreadable, or empty when the repository's own registry is unreadable.
  */
@@ -189,12 +220,12 @@ export interface WorkItemGroup {
 export type TerritoryRegistries = (territory: string | undefined) => ProjectRegistry | undefined
 
 /**
- * Groups one record by Project, or by Initiative derived from its Project through the registry, with a projectless
- * record under its direct `initiative`. A qualified reference resolves in its named territory and keeps its qualifier
+ * Groups one record by Project, or by theme derived from its Project through the registry, with a projectless
+ * record under its direct `theme`. A qualified reference resolves in its named territory and keeps its qualifier
  * unless that territory is the repository's own. Unknown slugs and registry contradictions are warnings, never failures.
  */
 export const workItemGroup = (
-  item: { readonly project?: string; readonly initiative?: string },
+  item: { readonly project?: string; readonly theme?: string },
   by: RoadmapGrouping,
   registries: TerritoryRegistries
 ): WorkItemGroup => {
@@ -212,10 +243,9 @@ export const workItemGroup = (
     }
   }
   const project = item.project === undefined ? undefined : (parseRegistryReference(item.project) as RegistryReference)
-  const initiative =
-    item.initiative === undefined ? undefined : (parseRegistryReference(item.initiative) as RegistryReference)
+  const theme = item.theme === undefined ? undefined : (parseRegistryReference(item.theme) as RegistryReference)
   const projectRegistry = project && registries(project.territory)
-  const initiativeRegistry = initiative && registries(initiative.territory)
+  const themeRegistry = theme && registries(theme.territory)
   const unknownProject =
     project && projectRegistry && !projectRegistry.projects.has(project.slug)
       ? `project ${item.project} is not in the registry`
@@ -231,23 +261,21 @@ export const workItemGroup = (
   }
   if (project && projectRegistry?.projects.has(project.slug)) {
     const registered = projectRegistry.projects.get(project.slug)
-    if (!registered) return { group: UNASSIGNED_GROUP, warning: `project ${item.project} names no initiative` }
+    if (!registered) return { group: UNASSIGNED_GROUP, warning: `project ${item.project} names no theme` }
     const group = located(
       { ...(project.territory ? { territory: project.territory } : {}), slug: registered },
       projectRegistry
     )
-    return initiative &&
-      initiativeRegistry &&
-      (initiative.slug !== registered || initiativeRegistry.root !== projectRegistry.root)
-      ? { ...group, warning: `initiative ${item.initiative} contradicts project ${item.project} in ${group.group}` }
+    return theme && themeRegistry && (theme.slug !== registered || themeRegistry.root !== projectRegistry.root)
+      ? { ...group, warning: `theme ${item.theme} contradicts project ${item.project} in ${group.group}` }
       : group
   }
-  const initiativeGroup = initiative ? located(initiative, initiativeRegistry) : { group: UNASSIGNED_GROUP }
-  if (unknownProject) return { ...initiativeGroup, warning: unknownProject }
-  if (project && !initiative) return { group: UNASSIGNED_GROUP }
+  const themeGroup = theme ? located(theme, themeRegistry) : { group: UNASSIGNED_GROUP }
+  if (unknownProject) return { ...themeGroup, warning: unknownProject }
+  if (project && !theme) return { group: UNASSIGNED_GROUP }
   const warning =
-    initiative && initiativeRegistry && !initiativeRegistry.initiatives.has(initiative.slug)
-      ? `initiative ${item.initiative} is not in the registry`
+    theme && themeRegistry && !themeRegistry.themes.has(theme.slug)
+      ? `theme ${item.theme} is not in the registry`
       : undefined
-  return { ...initiativeGroup, ...(warning ? { warning } : {}) }
+  return { ...themeGroup, ...(warning ? { warning } : {}) }
 }

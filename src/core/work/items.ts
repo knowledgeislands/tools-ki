@@ -132,7 +132,7 @@ export interface WorkItem {
   readonly id: string
   readonly area?: string
   readonly title: string
-  /** Deprecated grouping, read only during the migration tolerance window. */
+  /** The theme label, a registry reference like `project`. */
   readonly theme?: string
   /** Absent on triage and terminal records; a legacy horizon is reported, never rewritten here. */
   readonly horizon?: WorkItemHorizon | LegacyWorkItemHorizon
@@ -140,6 +140,7 @@ export interface WorkItem {
   readonly kind?: (typeof workItemKinds)[number]
   readonly purpose?: (typeof workItemPurposes)[number]
   readonly project?: string
+  /** The thread-model classification, read as the theme during the work model's tolerance window. */
   readonly initiative?: string
   readonly component?: string
   readonly hold?: WorkItemHold
@@ -351,7 +352,7 @@ const slugField = (fields: Readonly<WorkItemFields>, field: WorkItemField, file:
   return value
 }
 
-/** A Project or Initiative reference: a bare slug in the own territory, or one qualified by a territory's Capital key. */
+/** A Project or theme reference: a bare slug in the own territory, or one qualified by a territory's Capital key. */
 export interface RegistryReference {
   readonly territory?: string
   readonly slug: string
@@ -378,7 +379,7 @@ const adoptedOpenStatuses = new Set<WorkItemStatus>(['draft', 'ready', 'in-progr
 
 /** Names each deprecated shape a record carries, so readers report rather than reject it. */
 const legacyShapes = (fields: Readonly<WorkItemFields>, status: WorkItemStatus): readonly string[] => [
-  ...(fields.theme ? ['theme'] : []),
+  ...(fields.initiative ? ['initiative'] : []),
   ...(legacyWorkItemHorizons.includes(fields.horizon as LegacyWorkItemHorizon) ? [`horizon ${fields.horizon}`] : []),
   ...(fields.waiting_on_trades ? ['waiting_on_trades'] : []),
   ...(fields.intake_disposition || fields.intake_disposition_target ? ['intake_disposition'] : []),
@@ -408,12 +409,8 @@ export const parseWorkItem = (
   const id = fields.id as string
   if (!WORK_ITEM_ID.test(id) || !file.startsWith(`${id}-`))
     throw itemError(file, 'must use a matching work-item identifier')
-  if (
-    !fields.title ||
-    (fields.theme !== undefined && !SLUG.test(fields.theme)) ||
-    (fields.horizon !== undefined && !horizons.has(fields.horizon))
-  )
-    throw itemError(file, 'has invalid title, theme, or horizon')
+  if (!fields.title || (fields.horizon !== undefined && !horizons.has(fields.horizon)))
+    throw itemError(file, 'has an invalid title or horizon')
   if (!statuses.has(fields.status as string)) throw itemError(file, 'has an invalid lifecycle status')
   const status = fields.status as WorkItemStatus
   const horizon = fields.horizon as WorkItemHorizon | LegacyWorkItemHorizon | undefined
@@ -444,7 +441,9 @@ export const parseWorkItem = (
   const kind = enumField(fields, 'kind', workItemKinds, file)
   const purpose = enumField(fields, 'purpose', workItemPurposes, file)
   const project = referenceField(fields, 'project', file)
+  const theme = referenceField(fields, 'theme', file)
   const initiative = referenceField(fields, 'initiative', file)
+  if (theme && initiative) throw itemError(file, 'must name a theme or a legacy initiative, not both')
   const component = slugField(fields, 'component', file)
   if (component !== undefined && !planning.components.has(component))
     throw itemError(file, `component ${component} must be declared in [skills.ki-work-roadmap].components`)
@@ -453,7 +452,7 @@ export const parseWorkItem = (
     id,
     ...(fields.area ? { area: fields.area } : {}),
     title: fields.title as string,
-    ...(fields.theme ? { theme: fields.theme } : {}),
+    ...(theme ? { theme } : {}),
     ...(horizon ? { horizon } : {}),
     status,
     ...(kind ? { kind } : {}),
