@@ -13,6 +13,8 @@ const setupRun = async (box: Sandbox) => {
   await box.data.write(`${assets}/rules-none.md`, '# Footer\n\n## Rules\n\n- Rule.\n')
   await box.data.write(`${assets}/run-prompt.md`, '# Task\n')
   await box.project.write('task.md', '# Task\n')
+  // A run started under run events; a test of an older run removes the snapshot.
+  await box.state.write('ki/agents/r/events.state.json', '{}\n')
   const launches: AgentLaunch[] = []
   const alive = new Set<number>()
   box.setAgentProcesses({
@@ -44,6 +46,18 @@ const events = async (box: Sandbox): Promise<Event[]> =>
 
 const kinds = async (box: Sandbox): Promise<string[]> =>
   (await events(box)).map((event) => `${event.agent} ${event.kind}: ${event.tag ? `${event.tag} - ` : ''}${event.text}`)
+
+/** A run from before run events: no snapshot and no log, with agents that already ended. */
+const olderRun = async (box: Sandbox): Promise<void> => {
+  await rm(`${box.state.path}/ki/agents/r/events.state.json`)
+  await box.state.write('ki/agents/r/answered.pid', '5\n')
+  await box.state.write('ki/agents/r/answered.report.md', '## Queries\n\n### HOOK-FIX - Fix the hook\n')
+  await box.state.write('ki/agents/r/answered.status', '19:20 UTC - milestone: reported\nDONE\n')
+  await box.state.write('ki/agents/r/moved.pid', '6\n')
+  await box.state.write('ki/agents/r/moved.status', 'DONE\n')
+  await box.state.write('ki/agents/r/quit.pid', '7\n')
+  await box.state.write('ki/agents/r/quit.status', '19:22 UTC - failed: tests red\n')
+}
 
 const wait = async (box: Sandbox): Promise<string> => (await box.run('ki agent wait r --next', { now })).stdout
 
@@ -193,6 +207,51 @@ describe('ki agent run events', () => {
     await box.state.write('ki/agents/r/d.pid', '8\n')
     expect((await box.run('ki agent status r', { now })).exitCode).toBe(0)
     expect(await kinds(box)).toHaveLength(4)
+  })
+
+  test('treats the agents an older run had already ended as seen on its first read', async () => {
+    const box = await sandbox()
+    const processes = await setupRun(box)
+    await olderRun(box)
+    processes.alive.add(8)
+    await box.state.write('ki/agents/r/live.pid', '8\n')
+    await box.state.write('ki/agents/r/live.status', '19:25 UTC - working\n')
+
+    await box.run('ki agent status r', { now })
+    expect(await kinds(box)).toEqual([])
+    await box.state.write('ki/agents/r/live.report.md', '## Queries\n\n### TMP-HOME - Choose the root\n')
+    await box.state.write('ki/agents/r/live.status', '19:40 UTC - reported\nDONE\n')
+    expect([await wait(box), await wait(box), await wait(box)]).toEqual([
+      'live done: 19:40 UTC - reported\n',
+      'live needs-owner: TMP-HOME - Choose the root\n',
+      'ALL FINISHED\n'
+    ])
+  })
+
+  test('starts an older run seen when its first event is a launch, and derives a lost snapshot from empty', async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    await olderRun(box)
+    await box.run('ki agent launch r fresh . task.md', { now })
+    await box.run('ki agent status r', { now })
+    expect(await kinds(box)).toEqual(['fresh launch: launched (pid 1001)'])
+
+    const lost = await sandbox()
+    await setupRun(lost)
+    await olderRun(lost)
+    await lost.state.write(
+      'ki/agents/r/events.jsonl',
+      `${JSON.stringify({ seq: 1, at: 'x', run: 'r', agent: 'quit', attempt: 1, kind: 'launch', text: 'launched (pid 7)' })}\n`
+    )
+    await lost.run('ki agent status r', { now })
+    expect(await kinds(lost)).toEqual([
+      'quit launch: launched (pid 7)',
+      'answered progress: reported',
+      'answered done: 19:20 UTC - milestone: reported',
+      'answered needs-owner: HOOK-FIX - Fix the hook',
+      'moved failed: no report',
+      'quit failed: tests red'
+    ])
   })
 
   test('numbers a relaunched agent as a new attempt with events of its own', async () => {

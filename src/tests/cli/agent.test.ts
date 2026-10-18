@@ -53,6 +53,10 @@ const fakeProcesses = (box: Sandbox, onSleep: () => Promise<void> = async () => 
 }
 
 const runDir = (box: Sandbox): string => `${box.state.path}/ki/agents/r`
+
+/** Marks a run as started under run events, so agents written by hand are not an older run's past. */
+const eventRun = (box: Sandbox, run = 'r'): Promise<void> =>
+  box.state.write(`ki/agents/${run}/events.state.json`, '{}\n')
 const runPath = (box: Sandbox, file: string): string => `${runDir(box)}/${file}`
 const threadPath = async (box: Sandbox, file: string): Promise<string> =>
   `${await realpath(box.project.path)}/+/_THREADS/r/${file}`
@@ -518,6 +522,7 @@ describe('ki agent status and watch', () => {
     const box = await sandbox()
     box.setEnv({ TZ: 'UTC' })
     const processes = await setupRun(box)
+    await eventRun(box)
     const original = processes.alive
     box.setAgentProcesses({
       launch: async () => 0,
@@ -1534,6 +1539,7 @@ describe('ki agent queue, dispatch and wait', () => {
       const at = new Date(`2026-10-07T19:${minute}:00Z`)
       await utimes(runPath(box, file), at, at)
     }
+    await eventRun(box)
     // The agents finished d, b, then a; the old name-ordered waiter returned a first.
     await written('d.pid', '13\n', 10)
     await written('d.report.md', '# Report\n', 10)
@@ -1561,6 +1567,7 @@ describe('ki agent queue, dispatch and wait', () => {
     const box = await sandbox()
     const processes = fakeProcesses(box, async () => processes.finish())
     processes.alive.add(12)
+    await eventRun(box)
     await box.state.write('ki/agents/r/c.pid', '12\n')
     await box.state.write('ki/agents/r/e.pid', '14\n')
     await box.state.write('ki/agents/r/e.status', '21:01 CEST - halfway\n')
@@ -1569,6 +1576,7 @@ describe('ki agent queue, dispatch and wait', () => {
     expect(result.stdout).toBe('ALL FINISHED\n')
     expect(processes.sleeps()).toBe(1)
 
+    await eventRun(box, 's')
     await box.state.write('ki/agents/s/e.pid', '14\n')
     await box.state.write('ki/agents/s/e.status', '21:01 CEST - halfway\n')
     expect((await box.run('ki agent wait s --next', { now })).stdout).toBe(

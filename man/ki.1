@@ -1757,6 +1757,14 @@ and
 forms; any other status line stays local. An unchanged line or query is
 never reported twice, and a relaunched agent's events carry the next
 .IR attempt .
+A run with neither
+.I events.jsonl
+nor
+.I events.state.json
+predates run events: its first read or launch records each agent that had
+already ended as seen, so no finish, query or
+.I failed: no report
+is replayed, while a live agent keeps ordinary derivation.
 .TP
 .B ki agent home <run> [--work <id>] [--repo <dir>]
 Print the run's thread home, resolving it as the first command would

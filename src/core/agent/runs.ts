@@ -13,7 +13,7 @@ import {
   read,
   runDirectory
 } from './context.ts'
-import { deriveEvents, type RunEvent, readEvents, recordEvent } from './events.ts'
+import { deriveEvents, type Observed, type RunEvent, readEvents, recordEvent } from './events.ts'
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
 import { readThread, reportPath, type ThreadHome, threadHome, threadPath } from './thread.ts'
 
@@ -144,6 +144,12 @@ export const agents = async (directory: string): Promise<string[]> =>
     .filter((file) => file.endsWith('.pid') && file !== 'dispatch.pid')
     .map((file) => file.slice(0, -'.pid'.length))
     .sort()
+
+/** The run's agents and their liveness, which event derivation and recording read. */
+const observed = async (context: AgentContext, directory: string): Promise<Observed> => ({
+  agents: await agents(directory),
+  alive: async (name) => (await running(context, join(directory, `${name}.pid`))) !== undefined
+})
 
 const resolveDirectory = async (context: AgentContext, path: string, label: string): Promise<string> => {
   const directory = resolve(context.workingDirectory, path)
@@ -349,13 +355,27 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
   await writeFile(`${base}.launch.json`, launchDetails(request))
   if (state.kind === 'open') {
     const pid = await startRuntime(context, directory, request, prompt)
-    await recordEvent(context, directory, request.name, 'launch', `launched (pid ${pid})`)
+    await recordEvent(
+      context,
+      directory,
+      await observed(context, directory),
+      request.name,
+      'launch',
+      `launched (pid ${pid})`
+    )
     return { pid, directory, held: [] }
   }
   await writeFile(`${base}.status`, heldLine(context, state.names))
   const pid = await startHold(context, directory, request)
   await writeFile(`${base}.pid`, `${pid}\n`)
-  await recordEvent(context, directory, request.name, 'held', `held until ${state.names.join(', ')} finish`)
+  await recordEvent(
+    context,
+    directory,
+    await observed(context, directory),
+    request.name,
+    'held',
+    `held until ${state.names.join(', ')} finish`
+  )
   return { pid, directory, held: state.names }
 }
 
@@ -379,11 +399,25 @@ export const holdAgent = async (context: AgentContext, candidate: LaunchRequest)
     if (state.kind === 'closed') {
       const line = `${stamp(context)} - gate cannot open: ${state.reason}`
       await writeFile(`${base}.status`, `${line}\n`)
-      await recordEvent(context, directory, request.name, 'blocked', `gate cannot open: ${state.reason}`)
+      await recordEvent(
+        context,
+        directory,
+        await observed(context, directory),
+        request.name,
+        'blocked',
+        `gate cannot open: ${state.reason}`
+      )
       return line
     }
     const pid = await startRuntime(context, directory, request, prompt)
-    await recordEvent(context, directory, request.name, 'launch', `launched (pid ${pid})`)
+    await recordEvent(
+      context,
+      directory,
+      await observed(context, directory),
+      request.name,
+      'launch',
+      `launched (pid ${pid})`
+    )
     return `${stamp(context)} launched ${request.run}/${request.name} (pid ${pid})`
   }
 }
@@ -440,12 +474,7 @@ const summary = async (context: AgentContext, directory: string): Promise<AgentS
 
 /** Brings the run's `events.jsonl` up to date with its packet. */
 const observe = async (context: AgentContext, directory: string): Promise<void> =>
-  deriveEvents(
-    context,
-    directory,
-    await agents(directory),
-    async (name) => (await running(context, join(directory, `${name}.pid`))) !== undefined
-  )
+  deriveEvents(context, directory, await observed(context, directory))
 
 const eventText = (event: RunEvent): string =>
   `${event.agent} ${event.kind}: ${event.tag === undefined ? '' : `${event.tag} - `}${event.text}`
@@ -667,7 +696,7 @@ export const dispatchRun = async (
 ): Promise<void> => {
   const directory = await existingRun(context, request.run)
   const drop = async (name: string, kind: 'blocked' | 'failed', reason: string): Promise<void> => {
-    await recordEvent(context, directory, name, kind, `could not launch: ${reason}`)
+    await recordEvent(context, directory, await observed(context, directory), name, kind, `could not launch: ${reason}`)
     emit(`${stamp(context)} could not launch ${name}: ${reason}`)
   }
   for (;;) {

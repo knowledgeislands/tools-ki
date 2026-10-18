@@ -31,6 +31,12 @@ type Snapshot = Record<string, Seen>
 
 type Pending = Omit<RunEvent, 'seq' | 'at' | 'run' | 'attempt'>
 
+/** The run's agents and whether each one's process is alive, as the caller observes them. */
+export interface Observed {
+  readonly agents: readonly string[]
+  readonly alive: (name: string) => Promise<boolean>
+}
+
 const eventsFile = (directory: string): string => join(directory, 'events.jsonl')
 const stateFile = (directory: string): string => join(directory, 'events.state.json')
 
@@ -72,9 +78,6 @@ export const readEvents = async (directory: string, after = 0): Promise<RunEvent
 const attemptOf = async (directory: string, name: string): Promise<number> =>
   (await readdir(directory)).filter((file) => file.startsWith(`${name}.prev-`)).length + 1
 
-const readSnapshot = async (directory: string): Promise<Snapshot> =>
-  JSON.parse((await read(stateFile(directory))) ?? '{}') as Snapshot
-
 const append = async (
   context: AgentContext,
   directory: string,
@@ -101,13 +104,15 @@ const append = async (
 export const recordEvent = (
   context: AgentContext,
   directory: string,
+  observed: Observed,
   agent: string,
   kind: 'launch' | 'held' | 'blocked' | 'failed',
   text: string
 ): Promise<void> =>
   withLock(context, directory, async () => {
     const attempt = await attemptOf(directory, agent)
-    const snapshot = await readSnapshot(directory)
+    const others = { ...observed, agents: observed.agents.filter((name) => name !== agent) }
+    const snapshot = await readSnapshot(context, directory, others)
     const seen = snapshot[agent]?.attempt === attempt ? (snapshot[agent] as Seen) : { attempt }
     snapshot[agent] = kind === 'blocked' || kind === 'failed' ? { ...seen, ended: true } : seen
     await append(context, directory, snapshot, new Map([[agent, attempt]]), [{ agent, kind, text }])
@@ -144,6 +149,39 @@ const reportOf = async (context: AgentContext, directory: string, name: string):
   return (thread && (await read(reportPath(thread, name)))) ?? (await read(join(directory, `${name}.report.md`)))
 }
 
+/** The agent's last status line before any `DONE`, and whether it wrote `DONE`. */
+const statusOf = async (
+  directory: string,
+  name: string
+): Promise<{ readonly done: boolean; readonly line?: string }> => {
+  const lines = ((await read(join(directory, `${name}.status`))) ?? '').split('\n').filter((line) => line.trim())
+  const done = lines.at(-1)?.trim() === 'DONE'
+  return { done, line: done ? lines.at(-2) : lines.at(-1) }
+}
+
+const queryKeys = (report: string): string[] => reportQueries(report).map((query) => `${query.tag} - ${query.title}`)
+
+/**
+ * The snapshot in `events.state.json`. A run with neither it nor `events.jsonl` predates run
+ * events, so each agent that had already ended starts seen: its finish, status line and queries
+ * are never replayed, and a report in an older place gives no `failed: no report`. A live agent
+ * keeps ordinary derivation. A run with events but no snapshot lost its state, not its history,
+ * and derives from empty.
+ */
+const readSnapshot = async (context: AgentContext, directory: string, observed: Observed): Promise<Snapshot> => {
+  const state = await read(stateFile(directory))
+  if (state !== undefined) return JSON.parse(state) as Snapshot
+  const snapshot: Snapshot = {}
+  if ((await readEvents(directory)).length > 0) return snapshot
+  for (const name of observed.agents) {
+    const { done, line } = await statusOf(directory, name)
+    if (!done && (await observed.alive(name))) continue
+    const queries = done ? queryKeys((await reportOf(context, directory, name)) ?? '') : []
+    snapshot[name] = { attempt: await attemptOf(directory, name), line, ended: true, queries }
+  }
+  return snapshot
+}
+
 /** What changed for one agent since the snapshot, with the time it changed. */
 const agentChanges = async (
   context: AgentContext,
@@ -153,10 +191,7 @@ const agentChanges = async (
   alive: boolean
 ): Promise<{ readonly seen: Seen; readonly when: number; readonly events: Pending[] }> => {
   const events: Pending[] = []
-  const status = join(directory, `${name}.status`)
-  const statusLines = ((await read(status)) ?? '').split('\n').filter((line) => line.trim())
-  const done = statusLines.at(-1)?.trim() === 'DONE'
-  const line = done ? statusLines.at(-2) : statusLines.at(-1)
+  const { done, line } = await statusOf(directory, name)
   let seen = { ...previous, line }
   const form = line === undefined || line === previous.line ? undefined : statusForm.exec(line)
   if (form) {
@@ -164,7 +199,10 @@ const agentChanges = async (
     events.push({ agent: name, kind, text: form[2] as string })
     if (kind === 'failed') seen = { ...seen, failed: true }
   }
-  const when = Math.max(await modified(status), await modified(join(directory, `${name}.pid`)))
+  const when = Math.max(
+    await modified(join(directory, `${name}.status`)),
+    await modified(join(directory, `${name}.pid`))
+  )
   const report = done ? await reportOf(context, directory, name) : undefined
   if (!seen.ended && done) {
     events.push(
@@ -179,11 +217,10 @@ const agentChanges = async (
   }
   if (done) {
     const asked = new Set(seen.queries)
-    const queries = reportQueries(report ?? '')
-    for (const query of queries)
+    for (const query of reportQueries(report ?? ''))
       if (!asked.has(`${query.tag} - ${query.title}`))
         events.push({ agent: name, kind: 'needs-owner', text: query.title, tag: query.tag })
-    seen = { ...seen, queries: queries.map((query) => `${query.tag} - ${query.title}`) }
+    seen = { ...seen, queries: queryKeys(report ?? '') }
   }
   return { seen, when, events }
 }
@@ -193,21 +230,16 @@ const agentChanges = async (
  * appends what changed to `events.jsonl`, under the run's lock. Events found in one pass are
  * appended in the order their source files changed, then by agent name.
  */
-export const deriveEvents = (
-  context: AgentContext,
-  directory: string,
-  agents: readonly string[],
-  alive: (name: string) => Promise<boolean>
-): Promise<void> =>
+export const deriveEvents = (context: AgentContext, directory: string, observed: Observed): Promise<void> =>
   withLock(context, directory, async () => {
-    const snapshot = await readSnapshot(directory)
+    const snapshot = await readSnapshot(context, directory, observed)
     const attempts = new Map<string, number>()
     const changes: { readonly when: number; readonly name: string; readonly events: Pending[] }[] = []
-    for (const name of agents) {
+    for (const name of observed.agents) {
       const attempt = await attemptOf(directory, name)
       attempts.set(name, attempt)
       const previous = snapshot[name]?.attempt === attempt ? (snapshot[name] as Seen) : { attempt }
-      const change = await agentChanges(context, directory, name, previous, await alive(name))
+      const change = await agentChanges(context, directory, name, previous, await observed.alive(name))
       snapshot[name] = change.seen
       changes.push({ when: change.when, name, events: change.events })
     }
