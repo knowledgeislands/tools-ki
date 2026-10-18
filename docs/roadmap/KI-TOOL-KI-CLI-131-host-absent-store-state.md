@@ -7,12 +7,12 @@ purpose: corrective
 kind: deliver
 component: repo
 horizon: next
-status: draft
+status: ready
 blocks: [KI-TOOL-KI-CLI-136]
 blocked_by: [KI-TOOL-KI-CLI-126]
 baseline_ref: null
 created_at: 2026-10-14T20:57:30Z
-updated_at: 2026-10-16T01:18:25Z
+updated_at: 2026-10-18T05:50:00Z
 ---
 
 # Host-Absent Store State
@@ -94,7 +94,7 @@ Read at `46392f1a` on 16 October 2026.
 
 ## Dependencies / blocks
 
-- Blocked by [KI-TOOL-KI-CLI-126](KI-TOOL-KI-CLI-126-unavailable-store-breaks-repair.md) until Kris accepts it: this record reuses its helper and warning, which are already on `main` and in `v0.10.5`, so delivery can start the moment it is accepted.
+- Was blocked by [KI-TOOL-KI-CLI-126](KI-TOOL-KI-CLI-126-unavailable-store-breaks-repair.md), now done: this record reuses its helper and warning, which are on `main` and in `v0.10.5`.
 - Blocks [KI-TOOL-KI-CLI-136](KI-TOOL-KI-CLI-136-errors-suggest-fixes.md), which converts the fix strings this record introduces into structured suggestions.
 - Removing vega's stopgap `sources` binding waits for this record and belongs to the agent-host Project, not here.
 
@@ -129,3 +129,5 @@ Open design points for planning:
 Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, on Kris Brown's TRIAGE-ADOPT answer (option a) as applied in the tools-burndown thread's BURN-OVERNIGHT decision.
 
 Planned on 16 October 2026 and left in draft only because KI-TOOL-KI-CLI-126 is not yet accepted: the roadmap audit (ITEM-5) refuses an active record with a non-done blocker. Once Kris accepts KI-TOOL-KI-CLI-126, set this record Ready unchanged.
+
+Set Ready unchanged on 18 October 2026 by the ki-burndown-3 run, once KI-TOOL-KI-CLI-126 was accepted provisionally on Fable's opinion of 18 October; provisional, for Kris to confirm.
