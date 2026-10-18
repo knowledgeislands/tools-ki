@@ -155,6 +155,7 @@ const folderName = (folder: GranolaFolder): string | undefined =>
   attribute(folder.projection, 'title')
 
 export const renderGranolaMeeting = (options: {
+  readonly attachmentsVerified?: boolean
   readonly captureRoot?: string
   readonly accountSha256: string
   readonly acquiredAt: string
@@ -192,7 +193,7 @@ export const renderGranolaMeeting = (options: {
   ].filter((value, index, all) => all.indexOf(value) === index)
   const transcript = transcriptText(options.transcript)
   const omissions = [
-    ...KNOWN_OMISSIONS,
+    ...KNOWN_OMISSIONS.filter((omission) => omission !== 'attachments' || !options.attachmentsVerified),
     ...(options.detail.state === 'unavailable' ? ['meeting_detail'] : []),
     ...(transcript ? [] : ['transcript'])
   ].sort()
@@ -210,6 +211,7 @@ export const renderGranolaMeeting = (options: {
     '---',
     'type: granola-meeting',
     'source: granola',
+    ...(options.attachmentsVerified ? ['attachment_state: verified-mcp'] : []),
     `source_id: ${yamlString(options.meeting.id)}`,
     `title: ${yamlString(title)}`,
     `meeting_date: ${yamlString(date)}`,

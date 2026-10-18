@@ -12,6 +12,7 @@ import {
   importCapture,
   importGranola,
   importGranolaImages,
+  markGranola,
   reconcileGranola,
   resetGranola,
   selectAcquisitionAdapters
@@ -30,6 +31,7 @@ interface ImportOptions extends SelectionOptions {
   readonly until?: string
   readonly dryRun?: boolean
   readonly refreshTranscripts?: boolean
+  readonly refreshAcquired?: boolean
   readonly capture?: string
   readonly output?: string
 }
@@ -46,6 +48,13 @@ interface ImageOptions extends SelectionOptions {
   readonly directory: string
   readonly expected: string
   readonly dryRun?: boolean
+}
+
+interface MarkOptions extends SelectionOptions {
+  readonly source?: readonly string[]
+  readonly since: string
+  readonly until?: string
+  readonly confirm?: boolean
 }
 
 const granolaOperationContext = (context: KiContext): GranolaOperationContext => ({
@@ -97,7 +106,10 @@ const renderGranolaResult = (result: GranolaImportResult): string =>
     ),
     `Meetings: ${result.created} new, ${result.amended} amended, ${result.unchanged} unchanged`,
     `Transcripts: ${result.transcriptReads} provider reads, ${result.omissions} omissions, ${result.resumed} resumed`,
-    'Attachments: not inventoried by Granola MCP; snapshot-bearing notes need separate image verification before deletion.',
+    result.attachmentsAvailable
+      ? `Attachments: ${result.images} screenshots across ${result.imageMeetings} verified MCP inventories`
+      : 'Attachments: not inventoried by Granola MCP; snapshot-bearing notes need separate image verification before deletion.',
+    `Acquired: ${result.skipped} skipped with verified committed preservation evidence`,
     `Checkpoint: ${result.ledgerChanged ? (result.dryRun ? 'would advance' : 'advanced atomically') : 'unchanged'}`,
     'Boundary: read-only Granola MCP; no source mutation, harvesting, cross-repository write, archive, or deletion.',
     ...(result.dryRun ? ['Dry run: no repository files written.'] : [])
@@ -119,7 +131,7 @@ const renderStatus = (adapter: string, status: GranolaStatusResult): string =>
     `Checkpoint: ${status.checkpoint}${status.generation ? ` · ${status.generation}` : ''}`,
     `Meetings: ${status.meetings}`,
     `Transcripts: ${status.availableTranscripts} available, ${status.retryingTranscripts} retrying, ${status.durableOmissions} durable omissions`,
-    `Images: ${status.images} verified in ${status.imageMeetings} meeting manifests; Granola MCP cannot attest source image counts.`,
+    `Images: ${status.images} verified in ${status.imageMeetings} meeting manifests; MCP and desktop manifests retain their own source-count evidence.`,
     `Disposition: ${
       Object.entries(status.dispositions)
         .sort(([left], [right]) => left.localeCompare(right, 'en'))
@@ -150,6 +162,7 @@ const selected = async (
 const rejectAdapterOverrides = (options: ImportOptions): void => {
   const properties = [
     options.refreshTranscripts ? '--refresh-transcripts' : undefined,
+    options.refreshAcquired ? '--refresh-acquired' : undefined,
     options.capture ? '--capture' : undefined,
     options.output ? '--output' : undefined
   ].filter((value): value is string => Boolean(value))
@@ -177,7 +190,8 @@ const runImport = async (context: KiContext, options: ImportOptions): Promise<vo
           since: options.since,
           until: options.until ?? new Date(context.now()).toISOString().slice(0, 10),
           dryRun: options.dryRun,
-          refreshTranscripts: options.refreshTranscripts
+          refreshTranscripts: options.refreshTranscripts,
+          refreshAcquired: options.refreshAcquired
         },
         granolaOperationContext(context)
       )
@@ -258,6 +272,34 @@ const runImages = async (context: KiContext, options: ImageOptions): Promise<voi
   )
 }
 
+const runMark = async (context: KiContext, options: MarkOptions): Promise<void> => {
+  if (options.all || options.adapter !== 'granola') throw new KiError('mark requires --adapter granola', 2)
+  const selection = await selected(context, 'mark', options)
+  const result = await markGranola(
+    {
+      repository: selection.inventory.root,
+      since: options.since,
+      until: options.until ?? new Date(context.now()).toISOString().slice(0, 10),
+      sources: options.source,
+      confirm: options.confirm
+    },
+    granolaOperationContext(context)
+  )
+  context.stdout.write(
+    [
+      `Granola marker ${options.confirm ? 'result' : 'plan'}: ${result.repository}`,
+      `Acquired folder: ${result.folder}`,
+      `Captures: ${result.ready} verified, ${result.marked} marked, ${result.already} already acquired, ${result.exceptions.length} exceptions`,
+      ...result.exceptions.map((item) => `Not marked: ${item.id} · ${item.reason}`),
+      options.confirm
+        ? 'Original folder memberships retained; no source deletion.'
+        : 'No Granola changes; repeat with --confirm to add verified notes to Acquired.'
+    ].join('\n') + '\n'
+  )
+  if (result.exceptions.length)
+    throw new KiError('Some Granola notes lack current, complete committed preservation evidence')
+}
+
 export const createAcquireCommand = (context: KiContext): Command => {
   const command = new Command('acquire').description('run repository-enabled acquisition adapters')
   command.addCommand(
@@ -274,6 +316,7 @@ export const createAcquireCommand = (context: KiContext): Command => {
       .option('--until <date>', 'inclusive history end in YYYY-MM-DD')
       .option('--dry-run', 'read and validate without writing repository files')
       .option('--refresh-transcripts', 'Granola: explicitly re-read transcripts')
+      .option('--refresh-acquired', 'Granola: explicitly refresh notes already in the Acquired folder')
       .option('--capture <path>', 'ChatGPT: local capture directory')
       .option('--output <path>', 'ChatGPT: Knowledge Export Package output directory')
       .action((options: ImportOptions) => runImport(context, options))
@@ -295,6 +338,16 @@ export const createAcquireCommand = (context: KiContext): Command => {
     addSelection(new Command('reconcile').description('verify adapter checkpoints and dispositions')).action(
       (options: SelectionOptions) => runStatus(context, options, true)
     )
+  )
+  command.addCommand(
+    addSelection(
+      new Command('mark').description('verify committed Granola captures and explicitly add Acquired membership')
+    )
+      .option('--since <date>', 'inclusive history start in YYYY-MM-DD', '1970-01-01')
+      .option('--until <date>', 'inclusive history end in YYYY-MM-DD')
+      .option('--source <UUID...>', 'mark only these owned note identities in the requested interval')
+      .option('--confirm', 'add only verified committed captures to the private Acquired folder')
+      .action((options: MarkOptions) => runMark(context, options))
   )
   command.addCommand(
     addSelection(new Command('reset').description('preview or confirm destructive local acquisition reset'))

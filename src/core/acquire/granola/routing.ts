@@ -16,6 +16,7 @@ export interface GranolaReceiver {
   readonly unfoldered: boolean | 'flag'
   readonly residual: boolean | 'flag'
   readonly captureRoot?: string
+  readonly acquiredFolderId?: string
   readonly folderTerritories: Readonly<Record<string, string>>
 }
 
@@ -33,7 +34,7 @@ export interface FlaggedGranolaMeeting {
   readonly title?: string
   readonly date?: string
   readonly folderIds: readonly string[]
-  readonly reason: 'unfoldered' | 'unmatched'
+  readonly reason: 'unfoldered' | 'unmatched' | 'acquired-without-proof'
 }
 
 export interface RoutedGranolaMeeting extends GranolaMeeting {
@@ -49,6 +50,7 @@ const CONFIG_KEYS = new Set([
   'unfoldered',
   'residual',
   'capture_root',
+  'acquired_folder_id',
   'folder_territories'
 ])
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/
@@ -81,6 +83,12 @@ const receiver = async (root: string, required: boolean): Promise<GranolaReceive
   if (duplicateFolderIds.some((id) => !folderIds.includes(id)))
     throw new KiError('[skills.ki-acquire-granola].duplicate_folder_ids must be selected by folder_ids')
   const captureRoot = granolaCaptureRoot(skill.configuration['capture_root'])
+  const acquiredFolderId = skill.configuration['acquired_folder_id']
+  if (
+    acquiredFolderId !== undefined &&
+    (typeof acquiredFolderId !== 'string' || !ID.test(acquiredFolderId) || folderIds.includes(acquiredFolderId))
+  )
+    throw new KiError('[skills.ki-acquire-granola].acquired_folder_id must identify a separate marker folder')
   const mapping = skill.configuration['folder_territories']
   if (mapping !== undefined && (!captureRoot || !mapping || typeof mapping !== 'object' || Array.isArray(mapping)))
     throw new KiError(
@@ -112,6 +120,7 @@ const receiver = async (root: string, required: boolean): Promise<GranolaReceive
     unfoldered,
     residual,
     ...(captureRoot ? { captureRoot } : {}),
+    ...(typeof acquiredFolderId === 'string' ? { acquiredFolderId } : {}),
     folderTerritories
   }
 }
@@ -164,16 +173,27 @@ export const routeGranolaMeetings = (options: {
   readonly folderMeetings: ReadonlyMap<string, ReadonlyMap<string, GranolaMeeting>>
 }): GranolaRouting => {
   const knownFolders = new Set(options.folders.map((folder) => folder.id))
+  const markerFolders = new Set(
+    options.receivers.flatMap((candidate) => (candidate.acquiredFolderId ? [candidate.acquiredFolderId] : []))
+  )
   for (const candidate of options.receivers)
     for (const id of candidate.folderIds)
-      if (!knownFolders.has(id)) throw new KiError(`${candidate.repository} selects unavailable Granola folder ${id}`)
+      if (markerFolders.has(id))
+        throw new KiError('Granola progress folders must be separate from every receiver territory selector')
+      else if (!knownFolders.has(id))
+        throw new KiError(`${candidate.repository} selects unavailable Granola folder ${id}`)
 
   const selected: RoutedGranolaMeeting[] = []
   const flagged: FlaggedGranolaMeeting[] = []
   const unknownFolders =
     options.target.residual === 'flag'
       ? options.folders
-          .filter((folder) => !options.receivers.some((candidate) => candidate.folderIds.includes(folder.id)))
+          .filter(
+            (folder) =>
+              !options.receivers.some(
+                (candidate) => candidate.folderIds.includes(folder.id) || candidate.acquiredFolderId === folder.id
+              )
+          )
           .map((folder) => {
             const title = stringField(folder.projection, ['title', 'name'])
             return { id: folder.id, ...(title ? { title } : {}) }
@@ -187,14 +207,15 @@ export const routeGranolaMeetings = (options: {
       .filter(([, contents]) => contents.has(meeting.id))
       .map(([id]) => id)
       .sort((left, right) => left.localeCompare(right, 'en'))
-    const inferredUnfoldered = folderIds.length === 0
+    const routingFolderIds = folderIds.filter((id) => !markerFolders.has(id))
+    const inferredUnfoldered = routingFolderIds.length === 0
     if (inferredUnfoldered) unfoldered += 1
-    const destinations = selectedReceivers(folderIds, options.receivers)
+    const destinations = selectedReceivers(routingFolderIds, options.receivers)
     if (!destinations.length)
       throw new KiError(
         `Granola meeting ${meeting.id} is ${inferredUnfoldered ? 'unfoldered' : 'unmatched'}; receiver coverage is incomplete`
       )
-    if (destinations.length > 1 && !intentionalDuplicate(folderIds, destinations))
+    if (destinations.length > 1 && !intentionalDuplicate(routingFolderIds, destinations))
       throw new KiError(`Granola meeting ${meeting.id} maps to conflicting receivers; explicit duplication is required`)
     if (destinations.length > 1) duplicated += 1
     if (destinations.some((candidate) => candidate.root === options.target.root)) {
@@ -223,7 +244,9 @@ export const routeGranolaMeetings = (options: {
           folderIds,
           inferredUnfoldered,
           territories,
-          unmappedFolderIds: folderIds.filter((id) => !options.target.folderTerritories[id])
+          unmappedFolderIds: folderIds.filter(
+            (id) => id !== options.target.acquiredFolderId && !options.target.folderTerritories[id]
+          )
         })
       }
     } else excluded += 1

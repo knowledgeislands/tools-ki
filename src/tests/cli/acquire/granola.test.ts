@@ -1917,6 +1917,82 @@ describe('[ki acquire import --adapter granola]', () => {
     expect(status.output).toContain('journal')
   })
 
+  test('preserves proof and refuses unsafe reset scopes without provider calls', async () => {
+    const box = await sandbox()
+    const repository = await box.root.mkdir('target')
+    await setupReceivers(box, [
+      { key: 'target', repository: 'https://github.com/example/target', path: repository, unfoldered: true }
+    ])
+    const source = granolaFixtureRunner({ meetings: [{ id: 'meeting-a', date: '2026-01-02', title: 'Meeting' }] })
+    box.setRunner(source.runner)
+    expect((await box.run(command(repository))).exitCode).toBe(0)
+    const base = join(repository, '+/_ACQUIRE/granola')
+    const ledgerPath = join(base, 'ledger.json')
+    const original = await readFile(ledgerPath, 'utf8')
+    const ledger = JSON.parse(original) as JsonRecord
+    const documentPath = join(base, String(checkpointMeeting(ledger)['path']))
+    const document = await readFile(documentPath)
+    const calls = source.calls.length
+    const reset = ['ki', 'acquire', 'reset', '--adapter', 'granola', '--repo', repository]
+    for (const state of [
+      'retained',
+      'harvested-locally',
+      'routed-through-ki-trades',
+      'superseded',
+      'awaiting-review'
+    ]) {
+      checkpointDisposition(ledger)['state'] = state
+      const bytes = JSON.stringify(ledger)
+      await writeFile(ledgerPath, bytes)
+      for (const scope of [
+        [],
+        ['--rebuild'],
+        ['--source', 'meeting-a'],
+        ['--source', 'meeting-a', '--component', 'detail'],
+        ['--source', 'meeting-a', '--component', 'transcript']
+      ]) {
+        for (const confirmation of [[], ['--confirm']]) {
+          const result = await box.run([...reset, ...scope, ...confirmation])
+          expect(result.exitCode, result.output).toBe(1)
+          expect(result.output).toContain('retained handling or awaiting-review evidence')
+          expect(await readFile(ledgerPath, 'utf8')).toBe(bytes)
+          expect(await readFile(documentPath)).toEqual(document)
+        }
+      }
+    }
+    await rm(documentPath)
+    expect((await box.run([...reset, '--rebuild', '--confirm'])).exitCode).toBe(1)
+    await writeFile(documentPath, document)
+    await writeFile(ledgerPath, original)
+    await writeFile(join(base, 'journal.json'), 'interrupted evidence')
+    expect((await box.run([...reset, '--confirm'])).output).toContain('in-progress journal')
+    expect(await readFile(join(base, 'journal.json'), 'utf8')).toBe('interrupted evidence')
+    expect(await readFile(ledgerPath, 'utf8')).toBe(original)
+    await rm(join(base, 'journal.json'))
+    await writeFile(ledgerPath, '{}')
+    expect((await box.run([...reset, '--rebuild', '--confirm'])).exitCode).toBe(1)
+    expect(await readFile(ledgerPath, 'utf8')).toBe('{}')
+    await writeFile(ledgerPath, original)
+    await writeFile(documentPath, 'changed bytes')
+    expect((await box.run([...reset, '--rebuild', '--confirm'])).exitCode).toBe(1)
+    expect(await readFile(ledgerPath, 'utf8')).toBe(original)
+    await writeFile(documentPath, document)
+    for (const name of ['migration/proof.json', 'source-variants/original.md', 'attachment.jpg', 'unknown.txt']) {
+      await mkdir(join(base, name, '..'), { recursive: true })
+      await writeFile(join(base, name), 'retained bytes')
+    }
+    const preview = await box.run([...reset, '--rebuild'])
+    expect(preview.output).toContain(`Delete files: ${documentPath}, ${ledgerPath}.`)
+    expect((await box.run([...reset, '--rebuild', '--confirm'])).exitCode).toBe(0)
+    for (const name of ['migration/proof.json', 'source-variants/original.md', 'attachment.jpg', 'unknown.txt']) {
+      expect(await readFile(join(base, name), 'utf8')).toBe('retained bytes')
+    }
+    expect(await lstat(documentPath).catch(() => undefined)).toBeUndefined()
+    expect(await lstat(ledgerPath).catch(() => undefined)).toBeUndefined()
+    expect((await box.run([...reset, '--rebuild', '--confirm'])).exitCode).toBe(0)
+    expect(source.calls).toHaveLength(calls)
+  })
+
   test('previews and confirms scoped reset without provider access', async () => {
     const box = await sandbox()
     const repository = await box.root.mkdir('target')
@@ -2127,7 +2203,7 @@ describe('[ki acquire import --adapter granola]', () => {
     const rebuilt = await box.run([...reset, '--rebuild', '--confirm'])
     expect(rebuilt.exitCode, rebuilt.output).toBe(0)
     expect(rebuilt.output).toContain('complete rebuild')
-    expect(await lstat(join(repository, '+/_ACQUIRE/granola')).catch(() => undefined)).toBeUndefined()
+    expect((await lstat(join(repository, '+/_ACQUIRE/granola'))).isDirectory()).toBe(true)
   })
 
   test('accepts harvested local dispositions and stages changed-source amendments for review', async () => {
@@ -2277,7 +2353,7 @@ describe('[ki acquire import --adapter granola]', () => {
       'meeting-a',
       '--confirm'
     ])
-    expect(retainedReset.exitCode, retainedReset.output).toBe(0)
+    expect(retainedReset.exitCode, retainedReset.output).toBe(1)
 
     for (const replacement of [null, '', '_Transcript source unavailable._']) {
       const altered =
@@ -2946,7 +3022,7 @@ describe('[ki acquire central Granola inbox]', () => {
           '--confirm'
         ])
       ).exitCode
-    ).toBe(0)
+    ).toBe(1)
     expect(await readFile(acquiredImage)).toEqual(original)
     expect(await readFile(join(repository, meetingPath), 'utf8')).toContain('Images')
     expect(
@@ -2963,7 +3039,7 @@ describe('[ki acquire central Granola inbox]', () => {
           '--confirm'
         ])
       ).exitCode
-    ).toBe(0)
+    ).toBe(1)
   })
 
   test('rejects unsafe and incomplete central layout declarations and symlinked parents', async () => {
@@ -3074,8 +3150,8 @@ describe('[ki acquire central Granola inbox]', () => {
       'handled',
       '--confirm'
     ])
-    expect(reset.exitCode, reset.output).toBe(0)
-    expect(await lstat(documentPath).catch(() => undefined)).toBeUndefined()
+    expect(reset.exitCode, reset.output).toBe(1)
+    expect(await readFile(documentPath, 'utf8')).toContain('Source amendment')
   })
 })
 

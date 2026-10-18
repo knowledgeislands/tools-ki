@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto'
 import { lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { KiError } from '../../errors.ts'
-import type { Runner } from '../../runtime/runner.ts'
-import { verifyGranolaImages } from './images.ts'
+import { storeGranolaMcpImages, verifyGranolaImages, verifyGranolaMcpImages } from './images.ts'
 import { centralGranolaPath, copyGranolaPackage, granolaLayout, verifyGranolaParents } from './layout.ts'
 import { renderGranolaMeeting } from './markdown.ts'
+import { privateGranolaMarker, verifyGranolaPreservation } from './marker.ts'
+import { type GranolaAttachmentImage, granolaAttachmentInventory, granolaScreenshotCount } from './projection.ts'
 import {
   type FlaggedGranolaMeeting,
   type GranolaReceiver,
@@ -15,7 +16,10 @@ import {
 } from './routing.ts'
 import {
   type GranolaDetail,
+  type GranolaMeeting,
+  type GranolaOperationContext,
   type GranolaTranscript,
+  granolaDetailHash,
   granolaSource,
   sha256,
   stableJson,
@@ -50,6 +54,7 @@ export interface GranolaImportOptions {
   readonly until: string
   readonly dryRun?: boolean
   readonly refreshTranscripts?: boolean
+  readonly refreshAcquired?: boolean
 }
 
 export interface GranolaImportResult {
@@ -69,6 +74,10 @@ export interface GranolaImportResult {
   readonly omissions: number
   readonly transcriptReads: number
   readonly resumed: number
+  readonly imageMeetings: number
+  readonly images: number
+  readonly skipped: number
+  readonly attachmentsAvailable: boolean
   readonly ledgerChanged: boolean
   readonly dryRun: boolean
 }
@@ -103,15 +112,6 @@ export interface GranolaResetResult {
   readonly changed: boolean
 }
 
-export interface GranolaOperationContext {
-  readonly workingDirectory: string
-  readonly homeDirectory: string
-  readonly stateDirectory: string
-  readonly environment: NodeJS.ProcessEnv
-  readonly runner: Runner
-  readonly now: () => number
-}
-
 const basePath = (target: GranolaReceiver): string => granolaLayout(target.root, target.captureRoot).documents
 const checkpointPath = (target: GranolaReceiver): string =>
   join(granolaLayout(target.root, target.captureRoot).state, 'ledger.json')
@@ -123,16 +123,6 @@ const batches = <T>(items: readonly T[], size: number): readonly (readonly T[])[
   for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size))
   return result
 }
-
-const detailHash = (meeting: RoutedGranolaMeeting, detail: GranolaDetail): string =>
-  sha256(
-    stableJson({
-      listing: meeting.projection,
-      detail: detail.projection,
-      folder_ids: meeting.folderIds,
-      inferred_unfoldered: meeting.inferredUnfoldered
-    })
-  )
 
 const transcriptHash = (transcript: Extract<GranolaTranscript, { readonly state: 'available' }>): string =>
   sha256(stableJson(transcript.projection))
@@ -395,11 +385,8 @@ export const importGranola = async (
       if (!existing) discoveredMeetings.set(meetingId, meeting)
     }
   }
-  const routing = routeGranolaMeetings({ target, receivers, meetings: discoveredMeetings, folders, folderMeetings })
+  let routing = routeGranolaMeetings({ target, receivers, meetings: discoveredMeetings, folders, folderMeetings })
   const identity = identityCheckpointSha256(global, folderEnumerations)
-  const selectedIds = routing.selected
-    .map((meeting) => meeting.id)
-    .sort((left, right) => left.localeCompare(right, 'en'))
   const root = basePath(target)
   const observedAt = new Date(context.now()).toISOString()
   const previous = await currentCheckpoint(target)
@@ -407,9 +394,45 @@ export const importGranola = async (
     if (previous.account_sha256 !== source.accountSha256) {
       throw new KiError('Granola account differs from receiver checkpoint; refusing to mix source identities')
     }
-    await verifyGranolaCheckpoint(root, previous)
   }
 
+  let skipped = 0
+  if (target.acquiredFolderId) {
+    privateGranolaMarker(target.acquiredFolderId, folders)
+    if (!options.refreshAcquired) {
+      // The validated private marker is one of the exhaustively enumerated folders.
+      const marked = folderMeetings.get(target.acquiredFolderId) as ReadonlyMap<string, unknown>
+      const selected: RoutedGranolaMeeting[] = []
+      const flagged = [...routing.flagged]
+      for (const meeting of routing.selected) {
+        if (!marked.has(meeting.id)) {
+          selected.push(meeting)
+          continue
+        }
+        try {
+          const entry = previous?.meetings[meeting.id]
+          if (!entry) throw new KiError('No local preservation receipt')
+          await verifyGranolaPreservation({
+            repository: target.root,
+            root,
+            ledger: checkpointPath(target),
+            id: meeting.id,
+            entry,
+            expectedImages: granolaScreenshotCount(meeting.projection),
+            runner: context.runner,
+            environment: context.environment
+          })
+          skipped += 1
+        } catch {
+          flagged.push({ id: meeting.id, folderIds: meeting.folderIds, reason: 'acquired-without-proof' })
+        }
+      }
+      routing = { ...routing, selected, flagged }
+    }
+  }
+  const selectedIds = routing.selected
+    .map((meeting) => meeting.id)
+    .sort((left, right) => left.localeCompare(right, 'en'))
   const binding = {
     repository: target.repository,
     account: source.accountSha256,
@@ -421,6 +444,26 @@ export const importGranola = async (
   let journal = await loadGranolaJournal(journalPath(target))
   if (journal) validateJournalBinding(journal, binding)
   else journal = initialJournal({ ...binding, observedAt })
+  if (previous) {
+    // Completed, bound journal entries supersede their old document bytes during an interrupted amendment.
+    // Their document and screenshot evidence is checked in the resume loop before checkpoint advancement.
+    const completedJournalIds = new Set(Object.keys(journal.components))
+    for (const id of Object.keys(previous.meetings).filter((id) => completedJournalIds.has(id))) {
+      const recovered = journal.components[id] as GranolaJournalComponent
+      const staged = await physicalDocument(join(root, recovered.staged_document_path))
+      if (!staged || sha256(staged) !== recovered.staged_document_sha256)
+        throw new KiError(`Granola completed amendment ${id} failed document verification`)
+      await verifyGranolaDocument(root, recovered.checkpoint, id)
+      if (staged.includes('\nattachment_state: verified-mcp\n')) {
+        const meeting = discoveredMeetings.get(id) as GranolaMeeting
+        await verifyGranolaMcpImages(root, id, recovered.checkpoint, granolaScreenshotCount(meeting.projection))
+      } else await verifyGranolaImages(root, id, recovered.checkpoint)
+    }
+    await verifyGranolaCheckpoint(root, {
+      ...previous,
+      meetings: Object.fromEntries(Object.entries(previous.meetings).filter(([id]) => !completedJournalIds.has(id)))
+    })
+  }
   if (!options.dryRun) {
     await verifyGranolaParents(journalPath(target))
     await mkdir(granolaLayout(target.root, target.captureRoot).state, { recursive: true })
@@ -443,6 +486,8 @@ export const importGranola = async (
   let omissions = 0
   let transcriptReads = 0
   let resumed = 0
+  let imageMeetings = 0
+  let images = 0
 
   for (const batch of batches(routing.selected, 10)) {
     let details: ReadonlyMap<string, GranolaDetail>
@@ -463,11 +508,19 @@ export const importGranola = async (
       const detail = details.get(meeting.id)
       /* v8 ignore next -- granolaSource.details accounts every requested identity as available or explicitly unavailable. */
       if (!detail) throw new KiError(`Granola detail batch omitted ${meeting.id}`)
-      const observedDetailHash = detailHash(meeting, detail)
+      const observedDetailHash = granolaDetailHash(meeting, detail)
       const recovered: GranolaJournalComponent | undefined = journal.components[meeting.id]
       if (recovered?.detail_sha256 === observedDetailHash) {
         const staged = await physicalDocument(join(root, recovered.staged_document_path))
         if (staged && sha256(staged) === recovered.staged_document_sha256) {
+          if (source.images && detail.state === 'available')
+            await verifyGranolaMcpImages(
+              root,
+              meeting.id,
+              recovered.checkpoint,
+              granolaScreenshotCount(meeting.projection)
+            )
+          else await verifyGranolaImages(root, meeting.id, recovered.checkpoint)
           meetings[meeting.id] = recovered.checkpoint
           const previousMeeting = previous?.meetings[meeting.id]
           if (target.captureRoot && previousMeeting && previousMeeting.path !== recovered.checkpoint.path)
@@ -478,8 +531,14 @@ export const importGranola = async (
       }
 
       const current = previous?.meetings[meeting.id]
+      let imageBlocks: readonly GranolaAttachmentImage[] | undefined
       let transcriptResult: Awaited<ReturnType<typeof readTranscript>>
       try {
+        const inventory =
+          source.images && detail.state === 'available'
+            ? granolaAttachmentInventory(detail.projection, meeting.projection)
+            : undefined
+        imageBlocks = inventory && source.images ? await source.images(meeting.id, inventory.ids) : undefined
         transcriptResult = await readTranscript({
           source,
           meetingId: meeting.id,
@@ -499,8 +558,14 @@ export const importGranola = async (
         throw error
       }
       if (transcriptResult.read) transcriptReads += 1
+      const imageUpgrade = Boolean(
+        imageBlocks &&
+          current?.disposition.state === 'staged' &&
+          !(await physicalDocument(join(root, current.path)))?.includes('\nattachment_state: verified-mcp\n')
+      )
       const changed: boolean =
         !current ||
+        imageUpgrade ||
         current.detail_sha256 !== observedDetailHash ||
         current.transcript_sha256 !== transcriptResult.hash ||
         current.transcript_state !== transcriptResult.state ||
@@ -511,6 +576,7 @@ export const importGranola = async (
         : (current?.transcript_observed_at ?? current?.acquired_at ?? observedAt)
       const acquiredAt = changed ? observedAt : (current as GranolaCheckpointMeeting).acquired_at
       const document = renderGranolaMeeting({
+        attachmentsVerified: Boolean(imageBlocks),
         ...(target.captureRoot ? { captureRoot: target.captureRoot } : {}),
         accountSha256: source.accountSha256,
         acquiredAt,
@@ -529,6 +595,17 @@ export const importGranola = async (
       const documentSha256: string = changed
         ? sha256(document.content)
         : (current as GranolaCheckpointMeeting).document_sha256
+      if (imageBlocks && (changed || (await physicalDocument(join(root, documentPath))))) {
+        images += await storeGranolaMcpImages({
+          root,
+          path: documentPath,
+          meetingId: meeting.id,
+          detailSha256: observedDetailHash,
+          images: imageBlocks,
+          dryRun: Boolean(options.dryRun)
+        })
+        imageMeetings += 1
+      }
       const sourceVersionSha256 = sha256(
         stableJson({
           detail_sha256: observedDetailHash,
@@ -639,6 +716,10 @@ export const importGranola = async (
     omissions,
     transcriptReads,
     resumed,
+    imageMeetings,
+    images,
+    skipped,
+    attachmentsAvailable: Boolean(source.images),
     ledgerChanged,
     dryRun: Boolean(options.dryRun)
   }
@@ -708,60 +789,64 @@ export const resetGranola = async (
   if (options.rebuild && (options.source || options.component)) {
     throw new KiError('--rebuild cannot be combined with --source or --component', 2)
   }
+  const path = checkpointPath(target)
+  await verifyGranolaParents(path)
+  const journal = journalPath(target)
+  await verifyGranolaParents(journal)
+  if (await lstat(journal).catch(() => undefined)) {
+    throw new KiError('Granola reset refused: preserve and review the in-progress journal before recovery')
+  }
+  const checkpoint = await currentCheckpoint(target)
+  if (options.source && !checkpoint) throw new KiError('Granola checkpoint is absent')
+  const meeting = options.source ? checkpoint?.meetings[options.source] : undefined
+  if (options.source && !meeting) throw new KiError(`Granola checkpoint has no source ${options.source}`)
+  const selected = meeting ? [meeting] : Object.values(checkpoint?.meetings ?? {})
+  if (selected.some((entry) => entry.disposition.state !== 'staged')) {
+    throw new KiError('Granola reset refused: selected scope contains retained handling or awaiting-review evidence')
+  }
+  // Validate the complete deletion scope before the first mutation, including legacy layouts.
+  const documents = options.rebuild || (options.source && !options.component) ? selected : []
+  for (const entry of documents) await verifyGranolaDocument(basePath(target), entry, 'reset')
+  const deletions = documents.map((entry) => join(basePath(target), entry.path))
+  if (!options.source && checkpoint) deletions.push(path)
   const scope = options.rebuild
-    ? 'complete rebuild (checkpoint, journal, and staged meeting documents)'
+    ? 'complete rebuild (verified staged meeting documents and checkpoint only)'
     : options.source && options.component
       ? `${options.component} component for source ${options.source}`
       : options.source
         ? `checkpoint entry and staged document for source ${options.source}`
-        : 'adapter checkpoint and in-progress journal'
-  const plan = `Reset plan for ${target.repository}: ${scope}. Provider data will not be changed.`
+        : 'adapter checkpoint only'
+  const updates = options.source ? [path] : []
+  const plan = [
+    `Reset plan for ${target.repository}: ${scope}. Provider data will not be changed.`,
+    `Delete files: ${deletions.length ? deletions.join(', ') : 'none'}.`,
+    `Update files: ${updates.length ? updates.join(', ') : 'none'}.`,
+    'Preserve directories, attachments, source variants, unknown files and migration proof.'
+  ].join('\n')
   if (!options.confirm) return { repository: target.repository, plan, changed: false }
-
-  const path = checkpointPath(target)
-  const checkpoint = await currentCheckpoint(target)
-  if (options.rebuild) {
-    if (target.captureRoot) {
-      if (checkpoint) {
-        await verifyGranolaCheckpoint(basePath(target), checkpoint)
-        for (const meeting of Object.values(checkpoint.meetings)) {
-          if (meeting.disposition.state === 'staged' || meeting.disposition.state === 'awaiting-review')
-            await rm(join(basePath(target), meeting.path), { force: true })
-        }
-      }
-      await rm(granolaLayout(target.root, target.captureRoot).state, { recursive: true, force: true })
-    } else await rm(basePath(target), { recursive: true, force: true })
-    return { repository: target.repository, plan, changed: true }
-  }
-  if (!options.source) {
-    await rm(path, { force: true })
-    await removeGranolaJournal(journalPath(target))
-    return { repository: target.repository, plan, changed: true }
-  }
-  if (!checkpoint) throw new KiError('Granola checkpoint is absent')
-  const meeting = checkpoint.meetings[options.source]
-  if (!meeting) throw new KiError(`Granola checkpoint has no source ${options.source}`)
+  for (const file of deletions) await rm(file, { force: true })
+  if (!checkpoint || !options.source) return { repository: target.repository, plan, changed: deletions.length > 0 }
+  // A selected source above implies a checkpoint entry; do not re-resolve it after deletion.
+  const selectedMeeting = selected[0] as GranolaCheckpointMeeting
   let nextMeeting: GranolaCheckpointMeeting | undefined
   if (options.component === 'transcript') {
-    const { transcript_sha256: _transcriptSha256, transcript_observed_at: _transcriptObservedAt, ...rest } = meeting
+    const {
+      transcript_sha256: _transcriptSha256,
+      transcript_observed_at: _transcriptObservedAt,
+      ...rest
+    } = selectedMeeting
     nextMeeting = { ...rest, transcript_state: 'retrying', transcript_retry_count: 0 }
   } else if (options.component === 'detail') {
-    nextMeeting = { ...meeting, detail_sha256: '' }
+    nextMeeting = { ...selectedMeeting, detail_sha256: '' }
   }
   const meetings = { ...checkpoint.meetings }
   if (nextMeeting) meetings[options.source] = nextMeeting
-  else {
-    delete meetings[options.source]
-    if (meeting.disposition.state === 'staged' || meeting.disposition.state === 'awaiting-review') {
-      await rm(join(basePath(target), meeting.path), { force: true })
-    }
-  }
+  else delete meetings[options.source]
   await writeAcquisitionStateAtomic(path, {
     ...checkpoint,
     generation: randomUUID(),
     meetings,
     updated_at: new Date(context.now()).toISOString()
   })
-  await removeGranolaJournal(journalPath(target))
   return { repository: target.repository, plan, changed: true }
 }
