@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 41e11c949b746be916b554cf9b66859fdcd2fc8b
 created_at: 2026-10-14T20:46:12Z
-updated_at: 2026-10-16T01:06:59Z
+updated_at: 2026-10-18T06:36:00Z
 ---
 
 # Generated Skill Surfaces
@@ -125,3 +125,13 @@ The goal holds: a skill's standard can be the one source of the files its genera
 ### The shared guard
 
 The write guard was the rubric command's private helper. Generation needs the same rule, that `--write` publishes only within the caller's working tree and only from a dev-linked Harness, so it now lives in `write-tree.ts` with the subject named per command; the rubric command's messages are unchanged apart from that subject.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against its four Requirements and two Verify steps. No code was changed and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Requirements:** `src/core/harness/development/generation.ts` resolves the skill as the rubric command does, and `src/tests/cli/skill/generate.test.ts` covers drift reporting, writing only drifted surfaces with the mode kept, both write-guard refusals and, through one `test.each`, every contract refusal the Requirements list. SKILL-006 is in `docs/specs/skills.md`, and the command is in `man/ki.1` and `CHANGELOG.md`; delivery `9c4c0c0e` is in `v0.10.5` and `v0.11.0`.
+- **Verify 1:** on the reviewed head, `bunx vitest run --coverage` passed 78 files and 1326 tests at 100%, and `bunx tsc --noEmit` was clean.
+- **Verify 2:** `ki dev skill generate ki-pmo` in the `ki-agentic-harness` checkout reported 7 surfaces in sync and exited 0. The stale-edit and `--write` steps were not repeated, because they write to the harness; the delivery evidence above records them.
+- **Observation, not blocking:** Verify 2's deliberate edit must fall in the generated `line=` or `pointer=` value, as the Mini recap says; an edit elsewhere in the hook is rightly reported in sync.
