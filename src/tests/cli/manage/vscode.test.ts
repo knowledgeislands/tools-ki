@@ -331,7 +331,7 @@ describe('ki vscode', () => {
 
     expect(result.exitCode).toBe(0)
     expect(result.stderr).toBe(
-      `ki: warning: Knowledge Base ${root} is synchronised without its sources folder, unavailable on this host (sources store must be an existing direct directory); fix: ki repo --repo ${root} store bind sources <absolute-path> --write, or ki repo --repo ${root} store absent sources --write\n`
+      `ki: warning: Knowledge Base ${root} is synchronised without its sources folder, unavailable on this host (sources store must be an existing direct directory); fix: ki repo --repo ${root} store bind sources <absolute-path> --write, or ki repo --repo ${root} store unbind sources --write then ki repo --repo ${root} store absent sources --write\n`
     )
     expect(JSON.parse(await readFile(`${sourceRoot}/workspaces/vscode/kis-knowledge.code-workspace`, 'utf8'))).toEqual({
       folders: [{ path: root }]

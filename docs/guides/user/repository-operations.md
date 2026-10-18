@@ -81,7 +81,7 @@ ki repo store absent sources --write
 ki repo store absent sources --clear --write
 ```
 
-A bound store must be unbound before it can be marked absent. An absent store is reported once as information and never warned about. A missing or unavailable store only warns: `ki repo open` opens the repository without it, `ki repo repair` still passes, `ki vscode sync` leaves its folder out of the workspace, and `ki doctor` warns once per store without changing its exit status. Each warning names the fix.
+A bound store must be unbound before it can be marked absent, so its fix names `store unbind` before `store absent`. An absent store is reported once as information and never warned about. A missing or unavailable store only warns: `ki repo open` opens the repository without it, `ki repo repair` still passes, `ki vscode sync` leaves its folder out of the workspace, and `ki doctor` warns once per store without changing its exit status. Each warning names the fix.
 
 ## Run an audit
 

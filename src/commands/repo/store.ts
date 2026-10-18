@@ -144,7 +144,8 @@ const createStoreListCommand = (context: KiContext, selection: SelectRepositorie
                           context.homeDirectory,
                           repository.repository,
                           entries.find((entry) => entry.repository === repository.identity)?.key,
-                          store.role
+                          store.role,
+                          store.state === 'bound'
                         )}`
                       }
                     ]
@@ -254,7 +255,7 @@ const createStoreCreateCommand = (context: KiContext, selection: SelectRepositor
       const path = await managedSourcesStore(
         context.homeDirectory,
         names.canonical ?? names.historical,
-        storeFix(repository.root, externalRole, [])
+        storeFix(repository.root, externalRole, [], Boolean(current))
       )
       if (current && current !== path)
         throw new KiError(`sources store is already bound to ${current}; use ki repo store bind to replace it`, 2)

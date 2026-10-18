@@ -68,7 +68,7 @@ const availableSources = async (
     return await repositoryStoreDirectory('sources', source)
   } catch (error) {
     warnings.push(
-      `Knowledge Base ${repository.path} is synchronised without its sources folder, unavailable on this host (${(error as Error).message}); fix: ${await repositoryStoreFix(port.homeDirectory, repository.path, repository.key, 'sources')}`
+      `Knowledge Base ${repository.path} is synchronised without its sources folder, unavailable on this host (${(error as Error).message}); fix: ${await repositoryStoreFix(port.homeDirectory, repository.path, repository.key, 'sources', true)}`
     )
     return undefined
   }

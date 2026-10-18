@@ -80,7 +80,7 @@ export const createRepairCommand = (
               entries.push(`${infoMark} Store: ${store.role} store is absent on this host by choice`)
             else if ('unavailable' in store)
               entries.push(
-                `${warnMark} Store: ${store.role} store is unavailable on this host (${store.unavailable}); commands that need originals will fail; fix: ${await repositoryStoreFix(context.homeDirectory, repository.root, entry.key, store.role)}`
+                `${warnMark} Store: ${store.role} store is unavailable on this host (${store.unavailable}); commands that need originals will fail; fix: ${await repositoryStoreFix(context.homeDirectory, repository.root, entry.key, store.role, Boolean(entry.stores?.[store.role]))}`
               )
           if (roles.length && !unavailable.length) entries.push(`${passedMark} Registry: complete ${repository.root}`)
         } catch (error) {

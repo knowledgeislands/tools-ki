@@ -70,10 +70,16 @@ export const repositoryStoreInventory = async (
 
 /**
  * The commands that settle an unavailable or missing store: bind it, naming the path when exactly one
- * conventional folder matches, or record that this host does without it.
+ * conventional folder matches, or record that this host does without it, unbinding a bound role first
+ * because `store absent` refuses one.
  */
-export const storeFix = (root: string, role: ExternalStoreRole, candidates: readonly string[]): string =>
-  `ki repo --repo ${root} store bind ${role} ${candidates.length === 1 ? candidates[0] : '<absolute-path>'} --write, or ki repo --repo ${root} store absent ${role} --write`
+export const storeFix = (
+  root: string,
+  role: ExternalStoreRole,
+  candidates: readonly string[],
+  bound: boolean
+): string =>
+  `ki repo --repo ${root} store bind ${role} ${candidates.length === 1 ? candidates[0] : '<absolute-path>'} --write, or ${bound ? `ki repo --repo ${root} store unbind ${role} --write then ` : ''}ki repo --repo ${root} store absent ${role} --write`
 
 /** Existing conventional `sources-<name>` folders for the given names; only the sources role has a convention. */
 export const conventionalStoreCandidates = async (

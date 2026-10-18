@@ -173,7 +173,7 @@ describe('ki repo store', () => {
       `legacy: bound ${gone} (unavailable: legacy store must be an existing direct directory)`
     )
     expect(none.output).toContain(
-      `fix: ki repo --repo ${root} store bind legacy <absolute-path> --write, or ki repo --repo ${root} store absent legacy --write`
+      `fix: ki repo --repo ${root} store bind legacy <absolute-path> --write, or ki repo --repo ${root} store unbind legacy --write then ki repo --repo ${root} store absent legacy --write`
     )
     expect(none.output).toContain('sources: unbound (missing)')
     expect(none.output).toContain(placeholder)
@@ -201,6 +201,10 @@ describe('ki repo store', () => {
         reason: 'legacy store must be an existing direct directory'
       }
     ])
+    // The bound role's absent route works as offered, unbinding first.
+    for (const command of [`store unbind legacy --write`, `store absent legacy --write`])
+      expect((await box.run(`ki repo --repo ${root} ${command}`)).exitCode).toBe(0)
+    expect((await box.run('ki repo store list')).output).toContain('legacy: unbound (absent by choice)')
     await box.state.write('ki/registry.toml', registry('', 'absent_stores = ["legacy", "sources"]\n'))
     const absent = JSON.parse((await box.run('ki repo store list --format json')).output)
     expect(absent.repositories[0].stores.map((store: { availability: string }) => store.availability)).toEqual([

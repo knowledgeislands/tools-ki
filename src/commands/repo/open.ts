@@ -73,7 +73,7 @@ export const createRepoOpenCommand = (
           if ('root' in store) roots.push(store.root)
           else if ('unavailable' in store)
             context.stderr.write(
-              `ki: warning: Knowledge Base ${repository.root} opens without its ${store.role} store, unavailable on this host (${store.unavailable}); fix: ${await repositoryStoreFix(context.homeDirectory, repository.root, entry?.key, store.role)}\n`
+              `ki: warning: Knowledge Base ${repository.root} opens without its ${store.role} store, unavailable on this host (${store.unavailable}); fix: ${await repositoryStoreFix(context.homeDirectory, repository.root, entry?.key, store.role, Boolean(entry?.stores?.[store.role]))}\n`
             )
       }
       const result = await openLocalTarget(options.target, roots, {

@@ -44,7 +44,13 @@ const registeredStores = async (context: KiContext): Promise<readonly ManageStor
               role: store.role,
               state: 'unavailable',
               reason: store.unavailable,
-              fix: await repositoryStoreFix(context.homeDirectory, entry.path, entry.key, store.role)
+              fix: await repositoryStoreFix(
+                context.homeDirectory,
+                entry.path,
+                entry.key,
+                store.role,
+                Boolean(entry.stores?.[store.role])
+              )
             }
           : { repository: entry.path, role: store.role, state: 'absent' in store ? 'absent' : 'available' }
       )

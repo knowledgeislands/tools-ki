@@ -12,7 +12,7 @@ blocks: [KI-TOOL-KI-CLI-136]
 blocked_by: [KI-TOOL-KI-CLI-126]
 baseline_ref: 314da867d09a7283ffc1e9574999284ea4466d3f
 created_at: 2026-10-14T20:57:30Z
-updated_at: 2026-10-18T06:42:00Z
+updated_at: 2026-10-18T08:30:00Z
 ---
 
 # Host-Absent Store State
@@ -200,3 +200,13 @@ Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working P
 - **Live, read-only:** `store list` for ki-principal shows both stores `available` in text and JSON with `state` kept; `store absent sources` without `--write` refuses the bound role as specified; `ki doctor` reports "8 declared stores available or absent by choice" and `warn=0`.
 - **Verify 9:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1, neither from this record.
 - **For Kris:** the four judgement calls in the Change Summary are provisional and still need his confirmation; this review found nothing against them.
+
+### Correction, 18 October 2026
+
+The `ki-fixes` run of the ways-of-working Project corrected the review's STORE-FIX finding within this record; the record stays Awaiting review.
+
+- **Change:** `storeFix` and `repositoryStoreFix` take whether the role is bound. For a bound role the absent route reads `ki repo --repo <root> store unbind <role> --write then ki repo --repo <root> store absent <role> --write`; the bind route and the unbound `missing` case are unchanged. Every caller passes the registry binding: `store list`, `store create`, `repo open`, `repo repair`, `doctor` and `vscode sync`, which only ever warns about a bound folder.
+- **Chosen:** offering `unbind` first, the review's first option, rather than letting `store absent` replace a binding, which keeps Decision 1's rule that a role is never both bound and absent and leaves `store absent` as delivered.
+- **Tests:** `src/tests/cli/repo/store.test.ts` expects the bound `legacy` fix and then runs its two commands, which succeed and leave `legacy: unbound (absent by choice)`; `src/tests/cli/manage/vscode.test.ts` expects the bound form.
+- **Docs:** the repository-operations guide and the changelog say that a bound store's fix unbinds it first.
+- **Gate:** coverage passed 78 files and 1327 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1.

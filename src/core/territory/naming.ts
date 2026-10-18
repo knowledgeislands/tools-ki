@@ -51,8 +51,9 @@ export const repositoryStoreFix = async (
   homeDirectory: string,
   root: string,
   registryKey: string | undefined,
-  role: ExternalStoreRole
+  role: ExternalStoreRole,
+  bound: boolean
 ): Promise<string> => {
   const names = await sourcesStoreNames(root, registryKey).then(scannedSourcesStoreNames, () => [])
-  return storeFix(root, role, await conventionalStoreCandidates(homeDirectory, role, names))
+  return storeFix(root, role, await conventionalStoreCandidates(homeDirectory, role, names), bound)
 }
