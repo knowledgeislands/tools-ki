@@ -11,7 +11,7 @@ blocks: []
 blocked_by: []
 baseline_ref: d835eab86412290f9b11fa46dec5c2f1ba2f5bfc
 created_at: 2026-10-16T21:08:47Z
-updated_at: 2026-10-18T04:40:00Z
+updated_at: 2026-10-18T07:22:00Z
 ---
 
 # Older Runs Start Seen
@@ -122,3 +122,13 @@ Open questions for planning:
 - A live agent of an older run, still running at the first read, keeps ordinary derivation.
 
 Adopted, planned and delivered on 18 October 2026 by the tools-burndown run, under Kris's overnight instruction of 18 October 2026, 04:30 BST, to get through the roadmap as far as possible and take the recommended course on a judgement call; the run brief orders this record after KI-TOOL-KI-CLI-123. Its adoption to `deliver` / Now under the tools-burndown Project and the plan choices in Outstanding concerns are provisional, for Kris to confirm at review.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against its Goal, Steps and four Verify items. No code was changed and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Steps:** `readSnapshot` in `src/core/agent/events.ts:190` treats a run with neither `events.state.json` nor any logged event as older, seeds each ended agent silently with its attempt, last line, `ended` and query keys, skips a live agent, and derives a lost snapshot from empty. `recordEvent` seeds through the same function and leaves the launched agent out, so a launch into an older run replays nothing later.
+- **Verify 1 to 3:** the tests at `src/tests/cli/agent-events.test.ts:240` and `:259` cover the first read appending nothing, the live agent's later finish and `ALL FINISHED`, a launch into an older run appending only its own `launch`, and a lost snapshot deriving from empty.
+- **Verify 4:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome and mandoc were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1.
+- **Observation, not blocking:** a lost snapshot also re-runs the report copy of [KI-TOOL-KI-CLI-147](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-147-agent-state-folder-tooling.md) for every finished agent; that is recorded in its review. The three provisional plan choices still need Kris's confirmation.
