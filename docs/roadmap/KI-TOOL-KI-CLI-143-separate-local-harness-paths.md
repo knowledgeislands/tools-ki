@@ -154,6 +154,7 @@ Folded in under SOL-CONFIG-REFORMAT a), recorded in the [ways-of-working decisio
   4. Run `ki bootstrap` again, then `ki dev local on` and `ki dev local off` where the host uses a local source, ending in the host's recorded starting state. `config.toml` keeps the same sha256 throughout, and the binding and harness identity match those recorded.
   5. `ki doctor` passes, and `ki diag --full` warns only that `config.toml` `[locals]` is ignored now that `locals.toml` exists, until the chezmoi source drops the table.
   6. `chezmoi diff` shows no change to `config.toml`.
+
   Terra's run does not establish Sol's state, nor Sol's Terra's; each needs its own evidence.
 
 ## Discussion
