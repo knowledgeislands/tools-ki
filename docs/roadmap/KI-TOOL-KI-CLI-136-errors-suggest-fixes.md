@@ -6,13 +6,12 @@ project: tools-burndown
 purpose: corrective
 kind: deliver
 component: repo
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: [KI-TOOL-KI-CLI-131]
 baseline_ref: d0a4576d092a9e72dfc2e4d464daeb0f2979fdc9
 created_at: 2026-10-15T09:36:28Z
-updated_at: 2026-10-18T08:49:02Z
+updated_at: 2026-10-18T09:16:01Z
 ---
 
 # Errors Suggest Fixes
@@ -168,6 +167,10 @@ The change stays inside the Boundary: no `.ki.toml` folder hint (Decision 3) and
 ### Mini recap
 
 Errors now say what to do next, and a denied folder says it is denied instead of looking missing. Kris to review and accept, or return it.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above. Answering the skills-audit batch, Kris said "clear error messages make a lot of sense", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, skills-audit batch") as ACCEPT-136 a): accept KI-TOOL-KI-CLI-136 as delivered. The follow-up recorded with it: the next time `storeFix` changes, the denied store's `fix:` line leads with the access grant, settling the first Outstanding concern; the other two stand as delivered.
 
 ## Discussion
 
