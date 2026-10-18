@@ -2,7 +2,7 @@ import { appendFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promise
 import { basename, dirname, join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { type AgentContext, git, instant, read } from './context.ts'
-import { readThread, reportPath } from './thread.ts'
+import { heldAs, readThread, reportPath } from './thread.ts'
 
 export type EventKind = 'launch' | 'held' | 'progress' | 'done' | 'failed' | 'blocked' | 'needs-owner'
 
@@ -153,17 +153,19 @@ const reportOf = async (context: AgentContext, directory: string, name: string):
  * Copies the report the agent wrote in the state folder into the thread folder, where the
  * coordinator reads and commits it, so that the launcher stays its only writer. A thread-folder
  * copy with changes Git does not hold is left alone; one Git holds unchanged, as after a
- * relaunch, is replaced.
+ * relaunch, is replaced. A report the thread retired, which Git holds with these contents, stays
+ * retired, as when a lost `events.state.json` replays an ended agent.
  */
 const homeReport = async (context: AgentContext, directory: string, name: string): Promise<void> => {
-  const report = await read(join(directory, `${name}.report.md`))
+  const source = join(directory, `${name}.report.md`)
+  const report = await read(source)
   const thread = await readThread(context, basename(directory))
   if (report === undefined || thread === undefined) return
   const target = reportPath(thread, name)
   if ((await read(target)) !== undefined) {
     const status = await git(context, thread.repository, ['status', '--porcelain', '--', target])
     if (status.output.trim()) return
-  }
+  } else if (await heldAs(context, thread, `${name}.report.md`, source)) return
   await mkdir(dirname(target), { recursive: true })
   await writeFile(target, report)
 }

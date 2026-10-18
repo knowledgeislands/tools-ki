@@ -153,6 +153,37 @@ describe('ki agent run events', () => {
     expect(await box.project.read('+/_THREADS/r/again.report.md')).toBe('# again\n')
   })
 
+  test('leaves a report the thread retired when a lost snapshot replays its agent, homing a fresh one', async () => {
+    const box = await sandbox()
+    await setupRun(box)
+    await box.run('ki agent launch r one . task.md', { now })
+    await box.state.write('ki/agents/r/one.report.md', '# One\n')
+    await box.state.write('ki/agents/r/one.status', 'DONE\n')
+    await box.run('ki agent status r', { now })
+    await box.project.git(['add', '--', '+/_THREADS/r/one.report.md'])
+    await box.project.git(['commit', '-q', '-m', 'thread'])
+    await box.project.git(['rm', '-q', '+/_THREADS/r/one.report.md'])
+    await box.project.git(['commit', '-q', '-m', 'retire'])
+
+    // The events log survives the snapshot, so derivation starts from empty and sees one end again.
+    const replay = async () => {
+      await rm(`${box.state.path}/ki/agents/r/events.state.json`)
+      await box.run('ki agent status r', { now })
+      return box.project.read('+/_THREADS/r/one.report.md').catch(() => 'absent')
+    }
+    expect(await replay()).toBe('absent')
+    expect(await box.state.read('ki/agents/r/one.report.md')).toBe('# One\n')
+
+    // A report Git has never held with these contents, as from a relaunch, is still homed.
+    await box.state.write('ki/agents/r/one.report.md', '# One again\n')
+    expect(await replay()).toBe('# One again\n')
+
+    // Staged, then deleted from the working tree: the index alone holds it.
+    await box.project.git(['add', '--', '+/_THREADS/r/one.report.md'])
+    await rm(`${box.project.path}/+/_THREADS/r/one.report.md`)
+    expect(await replay()).toBe('absent')
+  })
+
   test('turns milestone, blocked and failed status lines into events, never re-emitting one', async () => {
     const box = await sandbox()
     await setupRun(box)

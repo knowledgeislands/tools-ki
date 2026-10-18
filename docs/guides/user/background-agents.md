@@ -80,7 +80,7 @@ ki agent sweep --write
 
 The sweep keeps the ten most recently closed runs in `_archive/`, or `--keep <n>`, aged by each run's close note, and names every older run's folder, tarball and close note together. It also names each `<name>.queued.md` or `<name>.draft.md` beside a `<name>.prompt.md` at least as new, unless the name is queued again. Without `--write` it changes nothing; it never touches any other file.
 
-A report the thread has retired from its folder stays retired: `decide` and `close` never move a state-folder file whose path Git knows, in the index or in any commit, and `launch`, `queue` and `new` never move files at all. Two cases fall outside that test: a shallow clone that lacks the commit, and a report that was never committed before it was deleted. Either brings the report back, untracked, while the state copy remains; delete it by hand.
+A report the thread has retired from its folder stays retired: `decide` and `close` never move a state-folder file whose path Git knows, in the index or in any commit, and `launch`, `queue` and `new` never move files at all. The copy made on `DONE` likewise skips a retired report Git holds with the same contents, so a lost `events.state.json` does not bring one back, while a relaunched agent's new report is still copied. Two cases fall outside that test: a shallow clone that lacks the commit, and a report that was never committed before it was deleted. Either brings the report back, untracked, while the state copy remains; delete it by hand.
 
 ## Recover
 

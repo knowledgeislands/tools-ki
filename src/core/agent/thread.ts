@@ -68,6 +68,34 @@ const held = async (context: AgentContext, home: ThreadHome, file: string): Prom
 }
 
 /**
+ * Whether Git knows the thread-folder file with the contents of `source`: staged in the index, or
+ * in any commit reachable from a ref. A report a relaunched agent wrote afresh is not held so,
+ * though an earlier attempt's report under its name may be.
+ */
+export const heldAs = async (
+  context: AgentContext,
+  home: ThreadHome,
+  file: string,
+  source: string
+): Promise<boolean> => {
+  // A failed hash gives an empty object, which neither the index nor history matches.
+  const blob = (await git(context, home.repository, ['hash-object', '--', source])).output.trim()
+  const path = `${home.folder}/${file}`
+  const indexed = await git(context, home.repository, ['ls-files', '-s', '--', path])
+  if (indexed.exitCode === 0 && indexed.output.split(/\s+/)[1] === blob) return true
+  const logged = await git(context, home.repository, [
+    'log',
+    '-1',
+    '--format=%H',
+    '--all',
+    `--find-object=${blob}`,
+    '--',
+    path
+  ])
+  return logged.exitCode === 0 && logged.output.trim() !== ''
+}
+
+/**
  * Moves the knowledge files a run kept in its state folder before the tracked home existed,
  * `decisions.md` and each `<name>.report.md`, into the thread folder, so that the launcher is
  * their only writer and no thread copies them by hand. Kris settled this on 2026-10-14: "make

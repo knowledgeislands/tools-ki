@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: aa185bf7f56c97ba0e0bb4d61ecbbe978d29bb88
 created_at: 2026-10-18T05:30:00Z
-updated_at: 2026-10-18T07:36:00Z
+updated_at: 2026-10-18T08:30:00Z
 ---
 
 # Agent State-Folder Tooling
@@ -167,3 +167,13 @@ Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working P
 - **Live, read-only:** `ki agent sweep` without `--write` listed spent briefs across this host's runs and changed nothing.
 - **Observation, not blocking:** a long-lived `ki agent dispatch` keeps the code it started with. The ways-of-working dispatcher started at 06:36 BST, before this delivery's commit at 07:16 BST, and at 07:27 it launched this review under the old protocol: a tracked report path, and `ki-review.queued.md` left beside the prompt. Readers handle it, but the new behaviour reaches a run only once its dispatcher is restarted. Outstanding concerns could say so beside its note on running agents.
 - **For Kris:** the four Decision answers are provisional.
+
+### Correction, 18 October 2026
+
+The `ki-fixes` run of the ways-of-working Project corrected the review's HOME-HELD finding within this record; the record stays Awaiting review.
+
+- **Change:** `homeReport` (`src/core/agent/events.ts`) no longer writes a report whose tracked copy is absent when Git holds that path with the same contents, in the index or in any commit reachable from a ref. A new `heldAs` in `src/core/agent/thread.ts` asks `git hash-object`, then `git ls-files -s` and `git log -1 --all --find-object=<blob>` for the path.
+- **Chosen:** matching contents rather than the path-only `held` of [KI-TOOL-KI-CLI-133](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-133-retired-reports-come-back.md). A path-only check would also withhold the new report of an agent relaunched under `--relaunch` ([KI-TOOL-KI-CLI-135](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-135-reused-agent-name-overwrites.md)) after the thread retired the earlier one; a report with new contents is still homed. `adoptStateFiles` keeps its path-only rule.
+- **Tests:** `src/tests/cli/agent-events.test.ts` "leaves a report the thread retired when a lost snapshot replays its agent, homing a fresh one": a committed then retired report stays absent after `events.state.json` is removed, a report with new contents is homed, and one staged then deleted from the working tree is not re-copied. With the check disabled the test fails.
+- **Docs:** the background-agents guide and the changelog describe the skip.
+- **Gate:** coverage passed 78 files and 1327 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1.
