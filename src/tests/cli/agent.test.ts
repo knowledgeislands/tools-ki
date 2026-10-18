@@ -765,6 +765,70 @@ describe('ki agent thread home', () => {
     )
     expect((await box.run('ki agent decide u Text. --repo .', { now })).exitCode).toBe(0)
   })
+
+  test('homes a new run in the work folder its name is the slug of, else the thread folder', async () => {
+    const box = await sandbox()
+    const repository = await setupRepository(box)
+    await box.project.write('+/_WORK/ki.ways-of-working/work.md', '---\nid: ki.ways-of-working\n---\n')
+    await box.project.mkdir('+/_WORK/ki.empty')
+    await box.project.write('+/_WORK/ki-empty', 'a file, not a work folder\n')
+
+    expect((await box.run('ki agent home ki-ways-of-working', { now })).stdout).toBe(
+      `${repository}/+/_WORK/ki.ways-of-working\n`
+    )
+    expect(await box.state.read('ki/agents/ki-ways-of-working/thread.json').catch(() => 'absent')).toBe('absent')
+    expect((await box.run('ki agent decide ki-ways-of-working Ship it.', { now })).stdout).toBe(
+      `Decision 1 recorded in ${repository}/+/_WORK/ki.ways-of-working/decisions.md\n`
+    )
+    expect(await box.state.read('ki/agents/ki-ways-of-working/thread.json')).toBe(
+      `${JSON.stringify({ repository, folder: '+/_WORK/ki.ways-of-working' })}\n`
+    )
+    expect((await box.run('ki agent home ki-empty', { now })).stdout).toBe(`${repository}/+/_THREADS/ki-empty\n`)
+
+    await box.project.write('+/_WORK/ki.a-b/work.md', '---\nid: ki.a-b\n---\n')
+    await box.project.write('+/_WORK/ki-a.b/work.md', '---\nid: ki-a.b\n---\n')
+    const shared = await box.run('ki agent decide ki-a-b Text.', { now })
+    expect(shared.exitCode).toBe(2)
+    expect(shared.stderr).toBe(
+      'ki: error: ki-a-b is the slug of ki-a.b and ki.a-b; choose one with ki agent home ki-a-b --work <id>\n'
+    )
+    expect((await box.run('ki agent home ki-a-b --work ki.a-b', { now })).stdout).toBe(
+      `Thread home of ki-a-b is now ${repository}/+/_WORK/ki.a-b\n`
+    )
+    expect((await box.run('ki agent home ki-a-b', { now })).stdout).toBe(`${repository}/+/_WORK/ki.a-b\n`)
+  })
+
+  test('re-homes a run in a work folder once its work file exists, moving no file', async () => {
+    const box = await sandbox()
+    const repository = await setupRepository(box)
+    await box.run('ki agent decide r Ship it.', { now })
+
+    const invalid = await box.run('ki agent home r --work Ways_Of_Working', { now })
+    expect(invalid.exitCode).toBe(2)
+    expect(invalid.stderr).toBe("ki: error: --work must be a dotted work id: 'Ways_Of_Working'\n")
+    const missing = await box.run('ki agent home r --work ki.r', { now })
+    expect(missing.exitCode).toBe(2)
+    expect(missing.stderr).toBe(`ki: error: ${repository}/+/_WORK/ki.r has no work.md; write the work file first\n`)
+    expect(await box.state.read('ki/agents/r/thread.json')).toContain('"folder":"+/_THREADS/r"')
+
+    await box.project.write('+/_WORK/ki.r/work.md', '---\nid: ki.r\n---\n')
+    expect((await box.run('ki agent home r --work ki.r', { now })).stdout).toBe(
+      `Thread home of r is now ${repository}/+/_WORK/ki.r\n`
+    )
+    expect(await box.state.read('ki/agents/r/thread.json')).toBe(
+      `${JSON.stringify({ repository, folder: '+/_WORK/ki.r' })}\n`
+    )
+    expect(await box.project.read('+/_THREADS/r/decisions.md')).toContain('- Ship it.')
+    await box.project.write('+/_WORK/ki.r/decisions.md', await box.project.read('+/_THREADS/r/decisions.md'))
+    expect((await box.run('ki agent decide r Again.', { now })).stdout).toBe(
+      `Decision 2 recorded in ${repository}/+/_WORK/ki.r/decisions.md\n`
+    )
+    await box.root.git(['init', '-q'], 'owner')
+    const owner = await realpath(`${box.root.path}/owner`)
+    const elsewhere = await box.run(`ki agent home r --work ki.r --repo ${owner}`, { now })
+    expect(elsewhere.exitCode).toBe(2)
+    expect(elsewhere.stderr).toBe(`ki: error: r belongs to ${repository}, not ${owner}\n`)
+  })
 })
 
 describe('ki agent reconcile', () => {

@@ -95,6 +95,12 @@ const SEGMENT = '[a-z0-9]+(?:-[a-z0-9]+)*'
 const WORK_ID = new RegExp(`^${SEGMENT}(?:\\.${SEGMENT})*$`)
 const HOLDER = new RegExp(`^(?:owner|agent|(?:run|person|repo)/[A-Za-z0-9_-]+|work/${SEGMENT}(?:\\.${SEGMENT})*)$`)
 
+/** Whether the value is a dotted work id, such as `ki.ways-of-working`. */
+export const isWorkId = (value: string): boolean => WORK_ID.test(value)
+
+/** The work's slug, its id with each `.` written as `-`; never parsed back into an id. */
+export const workSlug = (id: string): string => id.replaceAll('.', '-')
+
 /** A UTC RFC 3339 time at second precision, or undefined when the value is not a time. */
 const utc = (value: unknown): string | undefined => {
   if (typeof value !== 'string' && !(value instanceof Date)) return undefined

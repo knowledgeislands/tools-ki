@@ -20,7 +20,15 @@ import {
   watchRun
 } from '../../core/agent/runs.ts'
 import { type AgentEffort, type AgentRuntime, agentEfforts, agentRuntimes } from '../../core/agent/runtimes.ts'
-import { appendDecision, type DecisionClass, decisionClasses, reconcileDecision } from '../../core/agent/thread.ts'
+import {
+  appendDecision,
+  type DecisionClass,
+  decisionClasses,
+  reconcileDecision,
+  rehomeThread,
+  threadHome,
+  threadPath
+} from '../../core/agent/thread.ts'
 import { DEFAULT_HARNESS } from '../../core/configuration/declaration.ts'
 import { grammarError, KiError } from '../../core/errors.ts'
 import { harnessDirectory } from '../../core/storage/harness-paths.ts'
@@ -244,6 +252,21 @@ export const createAgentCommand = (context: KiContext): Command => {
       .action(async (run: string, name: string, options: { repo?: string }) =>
         write(await newPrompt(agentContext(context), run, name, options.repo))
       )
+  )
+
+  command.addCommand(
+    new Command('home')
+      .description("print the run's thread home, or record a +/_WORK/<id>/ work folder as it")
+      .argument('<run>', 'run name')
+      .option('--work <id>', 'record the work folder of this dotted work id as the home')
+      .addOption(repoOption)
+      .action(async (run: string, options: { work?: string; repo?: string }) => {
+        if (options.work === undefined)
+          return write(threadPath(await threadHome(agentContext(context), run, options.repo, false)))
+        write(
+          `Thread home of ${run} is now ${threadPath(await rehomeThread(agentContext(context), run, options.work, options.repo))}`
+        )
+      })
   )
 
   command.addCommand(

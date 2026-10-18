@@ -412,6 +412,9 @@ Append one line, naming the sender, to a live run's inbox.
 .B ki agent watch <run> [seconds]
 Print each new run event and one status line per interval until the run ends.
 .TP
+.B ki agent home <run> [--work <id>] [--repo <dir>]
+Print the run's thread home, or record a work folder as it.
+.TP
 .B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the run contract.
 .TP
@@ -1530,9 +1533,11 @@ which records the run's thread home. Its knowledge files, the
 .I decisions.md
 log and each agent's
 .IR <name>.report.md ,
-live in the owning repository's tracked
-.I +/_THREADS/<run>/
-folder, so the state folder can go without losing them.
+live in the owning repository's tracked work folder
+.IR +/_WORK/<id>/ ,
+or through the work model's tolerance window its thread folder
+.IR +/_THREADS/<run>/ ,
+so the state folder can go without losing them.
 .B ki
 is their only writer, so no thread copies them by hand, and never commits
 them; the thread commits them with its other work. The first
@@ -1543,8 +1548,10 @@ or
 .B decide
 for a run fixes the home as the Git top level of the working directory, or
 of
-.BR "--repo <dir>" ;
-later commands read it, and a disagreeing
+.BR "--repo <dir>" :
+the one work folder whose slug, its id with each dot written as a hyphen,
+is the run's name, else the thread folder. Later commands read it, and a
+disagreeing
 .B --repo
 is an error. Outside a repository the command refuses with exit 2. An agent
 writes
@@ -1750,6 +1757,16 @@ and
 forms; any other status line stays local. An unchanged line or query is
 never reported twice, and a relaunched agent's events carry the next
 .IR attempt .
+.TP
+.B ki agent home <run> [--work <id>] [--repo <dir>]
+Print the run's thread home, resolving it as the first command would
+without recording it. With
+.BR --work ,
+record
+.I +/_WORK/<id>/
+as the home, for a new run or one homed elsewhere, once that folder holds
+.IR work.md ;
+it moves no file, so move the thread folder's contents first.
 .TP
 .B ki agent new <run> <name> [--repo <dir>]
 Write a prompt skeleton from the

@@ -153,6 +153,7 @@ This baseline describes the `v0.10.5` release. Domain imports and extracted type
 - `ki agent status [<run>] [--all]`
 - `ki agent send <run> <line...> [--from <run>]`
 - `ki agent watch <run> [seconds]`
+- `ki agent home <run> [--work <id>] [--repo <dir>]`
 - `ki agent new <run> <name> [--repo <dir>]`
 - `ki agent decide <run> <text...> [--log <path>] [--home <path-or-id>] [--class <class>] [--repo <dir>]`
 - `ki agent reconcile <run> <number> [<home>] [--class <class>]`
@@ -177,6 +178,7 @@ This baseline describes the `v0.10.5` release. Domain imports and extracted type
 
 ### Behaviours
 
+- `ki agent` homes a new run in the one `+/_WORK/<id>/` work folder whose slug is the run's name, else in `+/_THREADS/<run>/` through the tolerance window; `ki agent home <run>` prints the home, and `--work <id>` records a work folder holding `work.md` as it, moving no file, so a live run can follow its thread folder into the work model.
 - `ki work status` reads each `+/_WORK/<id>/work.md` read-only into the with-you, stuck, blocked, moving and on-hold views, deriving each holder and role from the state, adding each running agent of a run homed in a work folder as an item, counting `+/_WORK_REVIEW/` and warning of each unreadable work file; `+/_CHECKPOINTS/` files still read through the tolerance window, each warning naming its new home, and `--format json` writes `ki/work-status/v1`.
 - `ki estate converge` reshapes this machine’s checkouts to a tracked estate targets manifest: it discovers checkouts by normalised origin remote, previews by default, and with `--apply` moves clean, idle checkouts, retargets `origin`, repairs linked worktrees, updates the local registry, renames Claude project history, rewrites untracked symlinks and removes empty former parents, logging every action for `--rollback`. A report-only sweep lists remaining old paths and renamed identities in local configuration by file and line.
 - `ki agent` is the reference launcher for the `ki-delegation` background-run contract. It detaches Claude Code or Codex agents in their own session, writes each run packet under `$KI_STATE_HOME/agents/<run>/`, appends the pinned Harness's authority footer for the chosen tier, keeps a numbered decisions log, and provides a run queue, a detached concurrency-capped dispatcher, a waiter that returns on each finish, and status and watch views that flag agents which exited without `DONE`. `--model` and `--effort` choose each agent's model, passed through verbatim, and reasoning effort; `<name>.launch.json` records both, and omitting either keeps the runtime's own default. Every launched agent, through launch and dispatch alike, carries the run name in `KI_AGENT_RUN` so runtime hooks can tell a background agent from an interactive session without inspecting process state.
