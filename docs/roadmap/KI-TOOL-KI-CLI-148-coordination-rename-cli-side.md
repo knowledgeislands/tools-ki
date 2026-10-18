@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 53bee079fb949fb19f604bf923517c6d7f3303d4
 created_at: 2026-10-18T09:17:41Z
-updated_at: 2026-10-18T10:26:00Z
+updated_at: 2026-10-18T10:31:30Z
 ---
 
 # Coordination Rename, CLI Side
@@ -106,7 +106,7 @@ On 18 October 2026: `bun run test` passed 1334 tests; `bunx tsc --noEmit`, `bunx
 
 ### Outstanding concerns
 
-- The canonical Harness pin still names `4cae827`, which carries `ki-pmo-design`, so a fresh bootstrap from this source refuses the pinned Harness until a release repins it to a pushed Harness commit with its archive digest; that release asks Kris first.
+- Resolved 18 October 2026 under RELEASE-REPIN a): the canonical Harness pin moved from `4cae827` to the pushed Harness `main` `0828bd0`, which carries both the coordination and work-folder renames, with archive digest `0b2bf10b`; `bun run test:coverage` passed 1346 tests and the v0.11.2 release ships it.
 - `ki agent` output strings still say "thread home" (`no thread home` and "Thread home of <run> is now"); they are behaviour asserted by tests rather than help text, and stay for a later change.
 - `decide` still writes `## Decision <n>` headings, which the coordination standard's no-numbering rule does not use for the log; [KI-TOOL-KI-CLI-150](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-150-work-folder-entry-points.md) carries the change with the close gate's parse.
 
