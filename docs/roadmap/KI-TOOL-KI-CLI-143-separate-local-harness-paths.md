@@ -11,7 +11,7 @@ blocks: []
 blocked_by: []
 baseline_ref: df1c24ed60342c2d9d194bebee9970ab3974bede
 created_at: 2026-10-16T19:30:03Z
-updated_at: 2026-10-18T05:55:00Z
+updated_at: 2026-10-18T07:18:00Z
 ---
 
 # Separate local harness paths
@@ -152,3 +152,15 @@ Design an explicit, recoverable transition from existing `locals` entries. Prese
 Future implementation needs public CLI contract tests through `run(args, context)` with isolated HOME/XDG roots, synthetic harness identities and no network access. Demonstrate independent hosts choosing different checkout locations without leaking paths into portable configuration; cover migration, remembered but disabled sources, active sources, unavailable mappings, bootstrap refresh and local on/off restoration.
 
 Verify Terra and Sol separately only after the migration and its runtime actions are approved. Record each host's pre-change source selection, active development status and installed harness identity, then prove the intended behaviour is preserved. Terra inspection does not establish Sol's state; Sol has not been inspected for this concern. Per-host physical paths belong in protected local evidence, not this shared record.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against its Plan and Verify. No code was changed, no configuration was rewritten, no bootstrap was run and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Plan:** `src/agents/local-sources.ts` owns `$XDG_STATE_HOME/ki/locals.toml` as the single authority once it exists. `config.toml` `[locals]` is migration input only and is kept verbatim, and a missing remembered checkout is refused by `on`, as the Plan and the two refinements require.
+- **Verify, tests:** the `host-local sources` block of `src/tests/cli/dev/dev.test.ts` covers each listed case through the public CLI with isolated roots: two hosts sharing one configuration, the pending read, the move on bootstrap with the table kept and then ignored, a conflicting entry losing, the missing-checkout refusal, and invalid host-local files refused.
+- **Verify, gates:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc and biome were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1, neither from this record.
+- **Live, read-only, this Mac:** there is no `locals.toml` yet and `config.toml` still has its two `[locals]` entries, so nothing was migrated early. `ki diag --full` reports them as awaiting their move, naming `ki bootstrap` or `ki dev local set`.
+- **Observation, not blocking:** plain `ki diag` counts that warning (`WARNINGS=1`) but prints it only under `--full`.
+- **Still open for Kris:** the per-host Terra and Sol verification, the chezmoi removal of `[locals]` and the five provisional choices under Outstanding concerns.
