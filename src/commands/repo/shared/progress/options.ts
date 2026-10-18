@@ -1,4 +1,5 @@
 import { KiError } from '../../../../core/errors.ts'
+import type { Environment } from '../../../../core/paths.ts'
 import type { FindingLevel } from '../../../../core/runtime/index.ts'
 
 export type ProgressMode = 'auto' | 'always' | 'never'
@@ -11,6 +12,8 @@ export interface OperationOptions {
   readonly progressStyle: ProgressStyle | undefined
   readonly reporterLevels: readonly ReporterLevel[]
   readonly concise: boolean
+  /** `KI_QUIET` chose this concise shape, so a failing repository still renders its failing findings. */
+  readonly quiet: boolean
 }
 
 const REPORTER_LEVELS: readonly ReporterLevel[] = ['fail', 'warn', 'fixed', 'info', 'not-applicable', 'pass']
@@ -45,6 +48,13 @@ const operationProgress = (options: { readonly progress?: string; readonly conci
   return options.concise ? 'never' : progress
 }
 
+/** `KI_QUIET` is set by any value but an empty one or `0`. */
+const quietSet = (environment: Environment): boolean => !['', '0', undefined].includes(environment['KI_QUIET'])
+
+/**
+ * The output shape of one audit or conform call. A set `KI_QUIET` stands for `--concise
+ * --progress never` with failing findings kept, unless the call names any output flag itself.
+ */
 export const operationOptions = (
   operation: 'audit' | 'conform',
   options: {
@@ -52,10 +62,19 @@ export const operationOptions = (
     readonly progressStyle?: string
     readonly reporterLevels?: string
     readonly concise?: boolean
+  },
+  environment: Environment
+): OperationOptions => {
+  const explicit = [options.progress, options.progressStyle, options.reporterLevels, options.concise].some(
+    (option) => option !== undefined
+  )
+  if (!explicit && quietSet(environment))
+    return { progress: 'never', progressStyle: undefined, reporterLevels: ['fail'], concise: true, quiet: true }
+  return {
+    progress: operationProgress(options),
+    progressStyle: parseProgressStyle(options.progressStyle),
+    reporterLevels: parseReporterLevels(options.reporterLevels, operation),
+    concise: Boolean(options.concise),
+    quiet: false
   }
-): OperationOptions => ({
-  progress: operationProgress(options),
-  progressStyle: parseProgressStyle(options.progressStyle),
-  reporterLevels: parseReporterLevels(options.reporterLevels, operation),
-  concise: Boolean(options.concise)
-})
+}

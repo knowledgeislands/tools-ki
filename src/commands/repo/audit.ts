@@ -6,6 +6,7 @@ import { repositoryOperationContext } from './operation-context.ts'
 import type { SelectRepositories } from './selection.ts'
 import {
   type AuditRepositorySummary,
+  auditRepositoryFails,
   operationOptions,
   renderAuditFrameStart,
   renderAuditResults,
@@ -36,11 +37,12 @@ export const createRepoAuditCommand = (context: KiContext, selectedRepositories:
     .option('--staged', 'scope the verdict to paths staged in the Git index; evaluation stays whole-tree')
     .option('--paths <path...>', 'scope the verdict to these repository paths; evaluation stays whole-tree')
     .action(async (options: RepositoryAuditOptions) => {
-      const output = operationOptions('audit', options)
+      const output = operationOptions('audit', options, context.environment)
       const verdict =
         options.staged || options.paths ? { staged: Boolean(options.staged), paths: options.paths ?? [] } : undefined
       const summaries: AuditRepositorySummary[] = []
       let reporter: ReturnType<typeof renderAuditFrameStart> | undefined
+      let selected: Parameters<typeof renderAuditFrameStart>[2] = []
       const result = await auditRepositories(
         repositoryOperationContext(context, repositoryOperationProgress(context, output)),
         {
@@ -53,6 +55,7 @@ export const createRepoAuditCommand = (context: KiContext, selectedRepositories:
         {
           repositoryStarted: (repository, skills, index, scope) => {
             if (index && !output.concise) context.stdout.write('\n')
+            selected = skills
             reporter = output.concise
               ? undefined
               : renderAuditFrameStart(
@@ -64,17 +67,20 @@ export const createRepoAuditCommand = (context: KiContext, selectedRepositories:
                 )
           },
           repositoryCompleted: ({ repository, reports, registration, scope }) => {
+            // Under KI_QUIET a failing repository keeps its frame, so the failure names its findings.
+            const framed =
+              !output.concise || (output.quiet && auditRepositoryFails(repository, reports, registration, scope))
             summaries.push(
-              output.concise
-                ? renderConciseAuditSummary(context, repository, reports, registration, scope)
-                : renderAuditResults(
-                    reporter as NonNullable<typeof reporter>,
+              framed
+                ? renderAuditResults(
+                    reporter ?? renderAuditFrameStart(context, repository, selected, false, scope),
                     repository,
                     reports,
                     output.reporterLevels,
                     registration,
                     scope
                   )
+                : renderConciseAuditSummary(context, repository, reports, registration, scope)
             )
           },
           repositoryFailed: () => reporter?.finish({ label: 'audit failed' })

@@ -1,5 +1,6 @@
 export {
   type AuditRepositorySummary,
+  auditRepositoryFails,
   renderAuditFrameStart,
   renderAuditResults,
   renderConciseAuditSummary,
@@ -7,6 +8,7 @@ export {
   renderMultiRepositoryAuditSummary
 } from './audit.ts'
 export {
+  conformFails,
   renderConciseConformSummary,
   renderConformFrameStart,
   renderConformReports

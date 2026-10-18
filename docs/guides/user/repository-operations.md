@@ -103,6 +103,14 @@ Three output controls are worth knowing:
 
 Redirected output with `--progress always` defaults to the single-row form, and `--progress-style single` requests it explicitly.
 
+To make quiet output the default without adding flags to every call, as an agent harness might, set `KI_QUIET`:
+
+```sh
+KI_QUIET=1 ki repo audit --estate
+```
+
+Any value but an empty one or `0` turns it on. `ki repo audit` and `ki repo conform` then behave as `--concise --progress never`, except that a repository whose verdict fails renders its report frame with its FAIL findings, so a failure still says what failed. The exit status is unchanged. Passing any of `--concise`, `--progress`, `--progress-style` or `--reporter-levels` gives that call its ordinary output instead.
+
 ### Scope the verdict, not the evaluation
 
 ```sh

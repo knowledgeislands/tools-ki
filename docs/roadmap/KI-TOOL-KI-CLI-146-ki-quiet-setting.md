@@ -7,12 +7,12 @@ purpose: capability
 kind: deliver
 component: repo
 horizon: now
-status: in-progress
+status: awaiting-review
 blocks: []
 blocked_by: []
 baseline_ref: 7df8187f2011040725f9d07bf747db8e92a0c161
 created_at: 2026-10-18T04:25:00Z
-updated_at: 2026-10-18T06:20:00Z
+updated_at: 2026-10-18T06:40:00Z
 ---
 
 # KI_QUIET Setting
@@ -56,15 +56,15 @@ All four answers are provisional, for Kris to confirm.
 
 ## Steps
 
-- [ ] Options: `operationOptions` takes the environment, returns `quiet` and applies Decision 2 to 4.
-- [ ] Audit and conform: under `quiet`, a failing repository renders its frame and FAIL findings; any other repository renders its concise summary.
-- [ ] Contract tests through `run(args, context)` and `sandbox()` (see Verify).
-- [ ] Documentation: `man/ki.1` (a new ENVIRONMENT section and the `--concise` options), `man/ki.commands.json` if it changes, `README.md`, `docs/guides/user/repository-operations.md` and `CHANGELOG.md`.
+- [x] Options: `operationOptions` takes the environment, returns `quiet` and applies Decision 2 to 4.
+- [x] Audit and conform: under `quiet`, a failing repository renders its frame and FAIL findings; any other repository renders its concise summary.
+- [x] Contract tests through `run(args, context)` and `sandbox()` (see Verify).
+- [x] Documentation: `man/ki.1` (a new ENVIRONMENT section), `man/ki.commands.json` if it changes, `README.md`, `docs/guides/user/repository-operations.md` and `CHANGELOG.md`.
 
 ## Files touched
 
 - `src/commands/repo/shared/progress/options.ts`, `src/commands/repo/shared/reporting/audit.ts`, `conform.ts` and `index.ts`
-- `src/commands/repo/audit.ts`, `src/commands/repo/conform.ts`
+- `src/commands/repo/audit.ts`, `src/commands/repo/conform.ts`, `src/commands/repo/educate.ts`
 - `src/tests/cli/repo/quiet.test.ts` (new)
 - `man/ki.1`, `README.md`, `docs/guides/user/repository-operations.md`, `CHANGELOG.md`
 
@@ -98,6 +98,40 @@ None.
 
 None.
 
+## Review
+
+### Delivered
+
+A set `KI_QUIET` gives `ki repo audit` and `ki repo conform` the output of `--concise --progress never`. A passing or warning repository prints its one summary line; a failing one renders its report frame with its FAIL findings and summary, so the failure names what failed, and the exit status is unchanged. An empty value and `0` count as unset, and any explicit `--concise`, `--progress`, `--progress-style` or `--reporter-levels` gives that call its ordinary output.
+
+### Change Summary
+
+- `src/commands/repo/shared/progress/options.ts`: `operationOptions` takes the environment and returns `quiet`; `quietSet` reads `KI_QUIET`.
+- `src/commands/repo/shared/reporting/audit.ts` and `conform.ts`: `auditRepositoryFails` and `conformFails`, exported through `index.ts`.
+- `src/commands/repo/audit.ts` and `conform.ts`: under `quiet`, a failing repository opens its frame late and renders its FAIL findings; `educate.ts` sets `quiet: false` in its fixed output shape.
+- `src/tests/cli/repo/quiet.test.ts` (new).
+- `man/ki.1` (new ENVIRONMENT section), `README.md`, `docs/guides/user/repository-operations.md`, `CHANGELOG.md`. `man/ki.commands.json` is unchanged, since no option changed.
+
+### Verification
+
+Verify 1 to 4 are covered through `run(args, context)` and `sandbox()` in `quiet.test.ts`: a passing audit and conform under `KI_QUIET=1` equal `--concise --progress never`; a warning-only audit prints one summary line; a failing audit and conform render the frame, the FAIL finding and not the WARN finding, and exit 1; `KI_QUIET=` and `KI_QUIET=0` equal no variable; and with each of the four output flags the output equals the same call without the variable.
+
+On 18 October 2026, `bun run test:coverage` passed 1326 tests at 100% statements, branches, functions and lines; `bunx tsc --noEmit`, `bunx biome check .` (no errors; its warnings predate this record), `bunx knip`, `mandoc -T lint man/ki.1`, the command-inventory check and rumdl were clean; and `KI_QUIET=1 ki repo audit --repo .` passed with FAIL=0 and two warnings, as at the baseline, printing one summary line.
+
+### Outstanding concerns
+
+- All four Decision answers are provisional, for Kris to confirm: the scope of audit and conform only, `0` and empty as unset, failing findings kept under the quiet shape, and any explicit output flag replacing the quiet defaults.
+- The record was captured for a decision after a week of the source-level cuts; fable-opinion-2 authorised building it sooner. Nothing sets the variable yet; KI-HARNESS-GOV-204 or a person would.
+- Under the quiet shape a failing repository's WARN findings are counted in its summary but not listed.
+
+### Post-change review
+
+`--concise` itself is unchanged and still prints counts only. The quiet shape differs from it in one way, the frame on failure, which the Goal's "failing findings stay fully visible" required.
+
+### Mini recap
+
+`KI_QUIET=1` now quietens audit and conform in one setting, while a failure still shows what failed.
+
 ## Discussion
 
 Origin: QUIET-HOOK in the ways-of-working thread, 17 October 2026, carried into the tools-burndown chain as KI-QUIET; captured on 18 October 2026 by the tools-burndown run.
@@ -108,4 +142,4 @@ Open questions for planning:
 - Precedence: whether an explicit flag always wins over the variable, and whether `KI_QUIET=0` or an empty value counts as unset.
 - Whether `ki agent` output, read mainly by coordinators, follows the same switch.
 
-ki-burndown-3 adopted and planned this on 18 October 2026, answering the three questions in Decision provisionally, for Kris to confirm.
+ki-burndown-3 adopted and planned this on 18 October 2026, answering the three questions in Decision provisionally, for Kris to confirm, and built it to Awaiting review the same day.

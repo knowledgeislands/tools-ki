@@ -14,7 +14,8 @@ export const createRepoEducateCommand = (context: KiContext, selectedRepositorie
         progress: 'auto' as const,
         progressStyle: 'single' as const,
         reporterLevels: [],
-        concise: false
+        concise: false,
+        quiet: false
       }
       await educateRepositories(
         repositoryOperationContext(context, repositoryOperationProgress(context, output)),

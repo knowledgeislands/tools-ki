@@ -47,6 +47,10 @@ const conformSkillLabel = (identity: string, summary: ConformSkillSummary): stri
   return `${result} · FAIL=${summary.fails} WARN=${summary.warnings} FIXED=${summary.fixed}`
 }
 
+/** Whether any skill's conform outcome fails. */
+export const conformFails = (reports: readonly SkillReport[]): boolean =>
+  reports.some((report) => conformSkillSummary(withFixed(report)).level === 'fail')
+
 /** Begin one framed conform report before its live progress stream starts. */
 export const renderConformFrameStart = (
   context: KiContext,

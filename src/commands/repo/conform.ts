@@ -9,6 +9,7 @@ import { presentationText, treeProgressPrefix } from '../presentation/index.ts'
 import { repositoryOperationContext } from './operation-context.ts'
 import type { SelectRepositories } from './selection.ts'
 import {
+  conformFails,
   operationOptions,
   renderConciseConformSummary,
   renderConformFrameStart,
@@ -64,8 +65,9 @@ export const createRepoConformCommand = (context: KiContext, selectedRepositorie
     .option('--reporter-levels <levels>', 'findings to render: levels or all (default: FAIL,WARN,FIXED)')
     .option('--concise', 'render only one final summary per repository')
     .action(async (options: RepositoryConformOptions) => {
-      const output = operationOptions('conform', options)
+      const output = operationOptions('conform', options, context.environment)
       let reporter: ReturnType<typeof renderConformFrameStart> | undefined
+      let selected: Parameters<typeof renderConformFrameStart>[2] = []
       await conformRepositories(
         repositoryOperationContext(context, repositoryOperationProgress(context, output)),
         {
@@ -79,6 +81,7 @@ export const createRepoConformCommand = (context: KiContext, selectedRepositorie
             if (!output.concise) context.stdout.write(renderConformEvent(event))
           },
           repositoryStarted: (repository, skills) => {
+            selected = skills
             reporter = output.concise
               ? undefined
               : renderConformFrameStart(
@@ -89,9 +92,16 @@ export const createRepoConformCommand = (context: KiContext, selectedRepositorie
                 )
           },
           reports: (repository, reports) => {
-            if (output.concise) renderConciseConformSummary(context, repository, reports)
+            // Under KI_QUIET a failing repository keeps its frame, so the failure names its findings.
+            if (output.concise && !(output.quiet && conformFails(reports)))
+              renderConciseConformSummary(context, repository, reports)
             else
-              renderConformReports(reporter as NonNullable<typeof reporter>, repository, reports, output.reporterLevels)
+              renderConformReports(
+                reporter ?? renderConformFrameStart(context, repository, selected),
+                repository,
+                reports,
+                output.reporterLevels
+              )
           }
         }
       )

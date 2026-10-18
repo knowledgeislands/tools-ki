@@ -2139,6 +2139,21 @@ $KI_STATE_HOME  | $XDG_STATE_HOME/ki  | ~/.local/state/ki
 Run
 .B ki diag
 to inspect the effective values.
+.SH ENVIRONMENT
+\&
+.TP
+.B KI_QUIET
+When set to any value other than an empty one or
+.BR 0 ,
+.B ki repo audit
+and
+.B ki repo conform
+behave as if called with
+.BR "--concise --progress never" ,
+except that a repository whose verdict fails still renders its report frame
+with its FAIL findings. Exit status is unchanged. Any explicit
+\fB--concise\fR, \fB--progress\fR, \fB--progress-style\fR or
+\fB--reporter-levels\fR option gives that call its ordinary output instead.
 .SH FILES
 \&
 .TP

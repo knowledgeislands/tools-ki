@@ -124,6 +124,14 @@ const auditRepositorySummary = (
   }
 }
 
+/** Whether one repository's audit verdict fails, scoped when the verdict was narrowed. */
+export const auditRepositoryFails = (
+  repository: string,
+  reports: readonly AuditSkillReport[],
+  registrationFailure?: string,
+  scope?: AuditVerdictScope
+): boolean => verdictLevel(auditRepositorySummary(repository, reports, registrationFailure, scope)) === 'fail'
+
 /** Begin one framed audit report before its live progress stream starts. */
 export const renderAuditFrameStart = (
   context: KiContext,

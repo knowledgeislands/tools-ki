@@ -83,6 +83,8 @@ Without an explicit scope, KI keeps the current repository or direct-CWD `.mgit.
 
 Existing physical mGit members without `.ki.toml` are skipped; `ki repo audit` names them in normal and concise output. Missing or unsafe checkouts, unsafe or invalid KI declarations, and a selection with no KI repositories fail.
 
+Set `KI_QUIET` to any value but an empty one or `0` to give `ki repo audit` and `ki repo conform` the output of `--concise --progress never` without passing the flags. A failing repository still renders its FAIL findings, and any explicit output flag gives that call its ordinary output.
+
 After target selection, operations run in target order. Read-only operations isolate a target's diagnostic; mutations retain earlier successful targets if a later target fails and return a non-zero overall result. The machine-local registry is `$XDG_STATE_HOME/ki/registry.toml`; every keyed entry holds a canonical HTTPS GitHub identity and checkout path. Use `ki registry add --repo <path-or-pattern>` to record selected canonical KI roots without applying repairs. `ki repo store scan` reports conventional OneDrive source directories for selected repositories that lack a declared `sources` role; use `ki repo --estate store scan` to check every registered repository. It only warns and leaves every store untouched. `ki bootstrap --refresh` imports the retired configuration path list once and removes it from user configuration. A local `ki repo conform` also records each selected root first, even when its later conformance checks fail, so the registry remains an inventory for repair and bulk maintenance rather than a compliance badge.
 
 ```toml
