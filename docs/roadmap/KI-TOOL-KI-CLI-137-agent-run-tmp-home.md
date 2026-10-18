@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: c79ff4c6a9c5a019d8132f0c180ef52936eb3478
 created_at: 2026-10-15T21:48:02Z
-updated_at: 2026-10-18T05:30:00Z
+updated_at: 2026-10-18T06:57:00Z
 ---
 
 # Agent Run Temporary Home
@@ -147,3 +147,13 @@ TMP-CLOSE answered on 16 October 2026 in the ways-of-working thread, by Kris Bro
 TMP-HOME answered on 17 October 2026 at 22:25 BST in the tools-burndown thread: "Use $TMPDIR/ki-agents/<run>/<name>/ for KI-TOOL-KI-CLI-137." The Goal, Boundary, Decision, Steps and Verify now use that root, and the option a) ignore warning and linked-worktree resolution are dropped. The same answer set (PUSH-REBASE-CODE) repointed the pair record to KI-HARNESS-GOV-200. TOOLS-PUSH (ways-of-working thread, 17 October 22:50 BST) added the tools-ki state-folder tooling to this record's boundary; it is captured, not planned, so the record stays draft.
 
 Delivered on 18 October 2026 by the tools-burndown run under Kris Brown's overnight instruction to burn down the tools roadmap, after splitting the unplanned TOOLS-PUSH tooling into KI-TOOL-KI-CLI-147; the split and the choices under Outstanding concerns are provisional, for Kris to confirm.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against Decisions 1 to 3 and Verify 1 to 3. No code was changed and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Verify 1:** `src/tests/cli/agent.test.ts` asserts the folder under the injected `TMPDIR`, its sentence in the composed prompt, and `--add-dir` for it in the Claude Code, Codex and hold-process launches, with the `/tmp` fallback when `TMPDIR` is unset. Live: this review run's own prompt names `$TMPDIR/ki-agents/ways-of-working/ki-review/`, which `ki agent launch` created.
+- **Verify 2:** the close test at `src/tests/cli/agent.test.ts:1176` refuses on a non-empty folder without changing it, waives it with `--reconciled`, removes both agents' folders, lists each removal and leaves another run's folder alone.
+- **Verify 3:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1, neither from this record.
+- **Observations, not blocking:** the Review packet's Verification gives no date, head or test counts, which this review supplies. The `TMPDIR`-unset test writes to the real `/tmp/ki-agents/<run>` and removes it afterwards, a small step outside the sandbox. The four provisional choices under Outstanding concerns still need Kris's confirmation.
