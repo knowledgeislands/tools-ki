@@ -6,13 +6,12 @@ project: ways-of-working
 purpose: corrective
 kind: deliver
 component: repo
-horizon: now
-status: awaiting-review
+status: done
 blocks: [KI-TOOL-KI-CLI-131]
 blocked_by: []
 baseline_ref: 5658f8766f81a24639cf205d80ad7cd9b7d0c147
 created_at: 2026-10-14T08:58:13Z
-updated_at: 2026-10-16T01:03:48Z
+updated_at: 2026-10-18T05:45:00Z
 ---
 
 # Unavailable Store Breaks Repair
@@ -120,6 +119,10 @@ Awaiting Kris's review through `ki-accept`.
 ### Mini recap
 
 Repair now warns rather than fails on an unavailable declared store, so ki-principal's CI can reach its audit step once the release is pinned. No learning route proposed.
+
+## Done
+
+Accepted 2026-10-18, provisional on Fable's opinion of 18 October, for Kris to confirm. The opinion, [fable-opinion-2](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/fable-opinion-2.report.md), recommends accepting this record under Kris's KEEP-PUSHING and FABLE-OPINION decisions, on ACCEPT-NIGHT's condition that an independent review passes. The ki-burndown-3 run, which did not write this record, reviewed it read-only against its Goal, Boundary, Steps and the CI-STORE decision at `49686ca3` and found nothing: `ki repo repair` registers a store-declaring Knowledge Base, warns per unavailable role without setting `failed`, still projects skills and reports health, an invalid registry still fails, `ki repo open` keeps failing clearly, and the 18 repair contract tests, including the CI-sequence replay, pass. One point stays open for Kris: Verify 4's GitHub-hosted ki-principal CI run on `main` has not been observed reaching its `ki repo audit --repo .` step, because no overnight run has network; a glance at ki-principal's latest CI run on `main`, now pinned to `v0.11.0`, closes it.
 
 ## Discussion
 
