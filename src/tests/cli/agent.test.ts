@@ -1,5 +1,5 @@
 import { readdir, realpath, rm, utimes } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 import { describe, expect, onTestFinished, test } from 'vitest'
 import { type AgentLaunch, runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
 
@@ -957,6 +957,37 @@ describe('ki agent thread home', () => {
     const elsewhere = await box.run(`ki agent home r --work ki.r --repo ${owner}`, { now })
     expect(elsewhere.exitCode).toBe(2)
     expect(elsewhere.stderr).toBe(`ki: error: r belongs to ${repository}, not ${owner}\n`)
+  })
+
+  test('reconcile follows a retired home, and close refuses its state-folder files until it has a work folder', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    fakeProcesses(box)
+    const repository = await realpath(box.project.path)
+
+    await box.state.write('ki/agents/r/thread.json', `${JSON.stringify({ repository, folder: '+/_THREADS/r' })}\n`)
+    await box.project.write(
+      '+/_WORK/ki.r/decisions.md',
+      '# Decisions\n\n## Decision 1 (2026-10-18T18:00:00Z)\n\n- Ship it.\n'
+    )
+    expect((await box.run('ki agent reconcile r 1 docs/x.md', { now })).exitCode).toBe(0)
+    expect(await box.state.read('ki/agents/r/thread.json')).toBe(
+      `${JSON.stringify({ repository, folder: '+/_WORK/ki.r' })}\n`
+    )
+
+    await box.state.write('ki/agents/old/thread.json', `${JSON.stringify({ repository, folder: '+/_THREADS/old' })}\n`)
+    expect(await box.run('ki agent reconcile old 1 docs/x.md', { now })).toMatchObject({
+      exitCode: 1,
+      stderr: 'ki: error: old has no work folder yet; record a decision first\n'
+    })
+    await box.state.write('ki/agents/old/one.report.md', '# Report\n')
+    expect(await box.run('ki agent close old', { now })).toMatchObject({
+      exitCode: 2,
+      stderr:
+        'ki: error: old is homed in the retired +/_THREADS/old; record its work folder with ki agent home old --work <id>\n'
+    })
+    await rm(join(box.state.path, 'ki/agents/old/one.report.md'))
+    expect((await box.run('ki agent close old', { now })).stdout).toContain('ok: no thread folder at +/_THREADS/old\n')
   })
 })
 
