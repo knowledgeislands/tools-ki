@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 7df8187f2011040725f9d07bf747db8e92a0c161
 created_at: 2026-10-18T04:25:00Z
-updated_at: 2026-10-18T07:30:00Z
+updated_at: 2026-10-18T08:23:05Z
 ---
 
 # KI_QUIET Setting
@@ -153,3 +153,7 @@ Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working P
 - **Verify 1 to 4:** covered through `run(args, context)` and `sandbox()` in `src/tests/cli/repo/quiet.test.ts`, as the Verification lists.
 - **Verify 5:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1. Live: `KI_QUIET=1 ki repo audit --repo .` printed one summary line and exited 0.
 - **Observation, not blocking:** the Goal says "every `ki` command that renders operation output", but Decision 1 limits it to audit and conform, the only commands with `--concise`. Kris confirming Decision 1 settles the wording. The four Decision answers are provisional.
+
+### Held, 18 October 2026
+
+Kris Brown held this record at Awaiting review in the ways-of-working walk-through, answering "Agreed with all of the recommendations", recorded as QUIET-146 a) in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 4"). It stays here until the week of source-level cuts ends, and is then decided alongside [KI-HARNESS-GOV-204](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-204-pretooluse-quietening-hook.md).
