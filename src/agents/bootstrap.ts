@@ -13,7 +13,6 @@ import { inspectUserConfiguration, readConfiguration, writeUserConfiguration } f
 import {
   type BootstrapConfiguration,
   type InstalledAgent,
-  type LocalDevelopmentConfiguration,
   type ManagedUserSkill,
   requiredPhysicalDirectory,
   skillCapability
@@ -111,7 +110,7 @@ export const configureBootstrapAgents = async (options: {
     : await readConfiguration(options.configurationDirectory, options.homeDirectory)
   const existing = options.refresh
     ? await inspectUserConfiguration(options.configurationDirectory)
-    : { harnesses: [], skills: [], locals: [], repositories: [] }
+    : { harnesses: [], skills: [], repositories: [] }
   const agents = options.refresh || !configured ? await detectAgents(options.homeDirectory) : configured
   if (!configured) {
     await mkdir(options.configurationDirectory, { recursive: true })
@@ -120,7 +119,6 @@ export const configureBootstrapAgents = async (options: {
       agents,
       existing.harnesses,
       existing.skills,
-      existing.locals,
       options.dropLegacyRepositories ? [] : existing.repositories
     )
   }
@@ -157,7 +155,6 @@ export const refreshUserConfiguration = async (
   configurationDirectory: string,
   dataDirectory: string,
   agents: readonly InstalledAgent[],
-  locals: readonly LocalDevelopmentConfiguration[] = [],
   options: { readonly dropLegacyRepositories?: boolean } = {}
 ): Promise<{ readonly harnesses: number; readonly skills: number }> => {
   const installed = await discoverInstalledHarnesses(dataDirectory)
@@ -169,7 +166,6 @@ export const refreshUserConfiguration = async (
     agents,
     harnesses,
     skills,
-    locals,
     options.dropLegacyRepositories ? [] : existing.repositories
   )
   return { harnesses: harnesses.length, skills: skills.length }

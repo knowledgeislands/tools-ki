@@ -39,6 +39,37 @@ export interface LocalDevelopmentConfiguration {
   readonly path: string
 }
 
+/** A `[locals]` table of harness `owner/name` identities to remembered checkout paths, sorted by harness. */
+export const inspectLocalsTable = (
+  value: unknown,
+  errors: string[],
+  warnings: string[]
+): LocalDevelopmentConfiguration[] => {
+  if (value === undefined) return []
+  if (!isRecord(value)) {
+    errors.push('locals must be a TOML table')
+    return []
+  }
+  const locals: LocalDevelopmentConfiguration[] = []
+  for (const [harness, entry] of Object.entries(value)) {
+    if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(harness)) {
+      errors.push(`locals.${harness} must name a harness owner/name identifier`)
+      continue
+    }
+    if (!isRecord(entry)) errors.push(`locals.${harness} must be a TOML table`)
+    const source: LocalSourceSection = isRecord(entry) ? entry : {}
+    for (const key of Object.keys(source)) {
+      if (key !== 'path') warnings.push(`locals.${harness} has unrecognised key ${key}`)
+    }
+    if (typeof source.path !== 'string' || !source.path) {
+      errors.push(`locals.${harness}.path must be a non-empty string`)
+      continue
+    }
+    locals.push({ harness, path: source.path })
+  }
+  return locals.toSorted((left, right) => left.harness.localeCompare(right.harness))
+}
+
 export interface RepositoriesSection {
   readonly paths?: unknown
 }
@@ -49,7 +80,8 @@ export interface UserConfigurationInspection {
   readonly agents: readonly string[]
   readonly harnesses: readonly string[]
   readonly skills: readonly string[]
-  readonly locals: readonly LocalDevelopmentConfiguration[]
+  /** `config.toml` `[locals]` entries, read only as one-time migration input to the host-local file. */
+  readonly legacyLocals: readonly LocalDevelopmentConfiguration[]
   readonly repositories: readonly string[]
   readonly warnings: readonly string[]
   readonly errors: readonly string[]

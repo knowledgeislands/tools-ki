@@ -5,8 +5,11 @@ import {
   installedBootstrapSkillSources,
   installedHarnessSkillSources,
   localBootstrapHarness,
+  localSourcesPath,
   migrateLegacyRepositoryRegistry,
+  migrateLocalSources,
   refreshUserConfiguration,
+  requireLocalSources,
   setConfiguredUserSkills
 } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
@@ -22,12 +25,17 @@ export const bootstrapPort = (
 ): BootstrapOperationPort<BootstrapAgent, BootstrapSkill, BootstrapProjection> => {
   return {
     canonicalHarnessIdentifier,
-    inspectConfiguration: () => inspectUserConfiguration(context.paths.config),
+    inspectConfiguration: async () => ({
+      ...(await inspectUserConfiguration(context.paths.config)),
+      locals: await requireLocalSources(context.paths.config, context.paths.state)
+    }),
     developmentBinding: (local) =>
       harnessDevelopmentBinding(context.paths.data, canonicalHarnessIdentifier, local?.path),
     inspectLocalHarness: (local) => localBootstrapHarness(local.path),
     migrateLegacyRepositories: () =>
       migrateLegacyRepositoryRegistry(context.paths.config, context.paths.state, context.runner, context.environment),
+    migrateLocalSources: () => migrateLocalSources(context.paths.config, context.paths.state),
+    localSourcesPath: localSourcesPath(context.paths.state),
     configureAgents: (options) =>
       configureBootstrapAgents({
         homeDirectory: context.homeDirectory,
@@ -38,8 +46,8 @@ export const bootstrapPort = (
     // Only a lost binding reads the full inventory, after restoring the pinned canonical archive that no sandbox can verify.
     /* v8 ignore next */
     installedHarnessSkills: () => installedHarnessSkillSources(context.paths.data, canonicalHarnessIdentifier),
-    refreshConfiguration: (agents, locals, options) =>
-      refreshUserConfiguration(context.paths.config, context.paths.data, agents, locals, options),
+    refreshConfiguration: (agents, options) =>
+      refreshUserConfiguration(context.paths.config, context.paths.data, agents, options),
     setConfiguredSkills: (skills) => setConfiguredUserSkills(context.paths.config, context.homeDirectory, skills),
     installSkills: (skills, agents, options) => installBootstrapSkills(skills, agents, options),
     restoreCanonicalHarness: () =>

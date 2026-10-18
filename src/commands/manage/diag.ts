@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { inspectUserConfiguration } from '../../agents/index.ts'
+import { inspectLocalSources, inspectUserConfiguration } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { harnessDevelopmentEnabled, inspectLocalRegistry } from '../../core/storage/index.ts'
 import { presentation, renderTree, type TreeEntry } from '../presentation/index.ts'
@@ -15,16 +15,19 @@ export const createDiagCommand = (context: KiContext): Command =>
     .description('print share-safe tool, installation, host, runtime, and configuration facts')
     .option('--full', 'include local paths, identities, and detailed diagnostics')
     .action(async (options: { full?: boolean }) => {
-      const [configuration, registry] = await Promise.all([
+      const [configuration, sources, registry] = await Promise.all([
         inspectUserConfiguration(context.paths.config),
+        inspectLocalSources(context.paths.config, context.paths.state),
         inspectLocalRegistry(context.paths.state)
       ])
+      const warnings = [...configuration.warnings, ...sources.warnings]
+      const errors = [...configuration.errors, ...sources.errors]
       if (!options.full) {
         const entries: TreeEntry[] = [
           ...diagnosticContext(context, configuration.state),
           { label: field('Registry', registry.state) },
           {
-            label: `summary: AGENTS=${configuration.agents.length} HARNESSES=${configuration.harnesses.length} SKILLS=${configuration.skills.length} REPOSITORIES=${registry.repositories.length} WARNINGS=${configuration.warnings.length} ERRORS=${configuration.errors.length + registry.errors.length}`
+            label: `summary: AGENTS=${configuration.agents.length} HARNESSES=${configuration.harnesses.length} SKILLS=${configuration.skills.length} REPOSITORIES=${registry.repositories.length} WARNINGS=${warnings.length} ERRORS=${errors.length + registry.errors.length}`
           }
         ]
         context.stdout.write(`${renderTree({ title: 'KI DIAG', entries }).join('\n')}\n`)
@@ -34,7 +37,7 @@ export const createDiagCommand = (context: KiContext): Command =>
 
       if (configuration.state !== 'missing') {
         const locals = await Promise.all(
-          configuration.locals.map(async (local) => ({
+          sources.locals.map(async (local) => ({
             ...local,
             mode: (await harnessDevelopmentEnabled(context.paths.data, local.harness, local.path)) ? 'on' : 'off'
           }))
@@ -82,25 +85,21 @@ export const createDiagCommand = (context: KiContext): Command =>
         }
       ]
 
-      if (configuration.warnings.length) {
+      if (warnings.length) {
         entries.push({
-          label: `warnings (${configuration.warnings.length})`,
-          children: treeEntries(
-            configuration.warnings.map((warning) => `${presentation('status.warn').terminal} ${warning}`)
-          )
+          label: `warnings (${warnings.length})`,
+          children: treeEntries(warnings.map((warning) => `${presentation('status.warn').terminal} ${warning}`))
         })
       }
-      if (configuration.errors.length) {
+      if (errors.length) {
         entries.push({
-          label: `errors (${configuration.errors.length})`,
-          children: treeEntries(
-            configuration.errors.map((error) => `${presentation('status.audit-fail').terminal} ${error}`)
-          )
+          label: `errors (${errors.length})`,
+          children: treeEntries(errors.map((error) => `${presentation('status.audit-fail').terminal} ${error}`))
         })
       }
 
       entries.push({
-        label: `summary: WARNINGS=${configuration.warnings.length} ERRORS=${configuration.errors.length + registry.errors.length}`
+        label: `summary: WARNINGS=${warnings.length} ERRORS=${errors.length + registry.errors.length}`
       })
 
       context.stdout.write(`${renderTree({ title: 'KI DIAG', entries }).join('\n')}\n`)

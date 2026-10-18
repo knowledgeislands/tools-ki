@@ -441,8 +441,8 @@ extra = true
     await box.run('ki bootstrap')
     await box.run(`ki dev local set knowledgeislands/ki-agentic-harness ${harnessPath}`)
     await box.run('ki dev local on')
-    const configuration = await box.config.read('ki/config.toml')
-    await box.config.write('ki/config.toml', configuration.replace(harnessPath, `${harnessPath}-missing`))
+    const sources = await box.state.read('ki/locals.toml')
+    await box.state.write('ki/locals.toml', sources.replace(harnessPath, `${harnessPath}-missing`))
 
     const diag = await box.run('ki diag --full')
 

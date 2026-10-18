@@ -39,6 +39,8 @@ const renderBootstrapEvent = (event: BootstrapOperationEvent): string => {
       return `refreshed ki configuration: ${event.agents} agents, ${event.harnesses} harnesses, ${event.skills} skills\n`
     case 'repositories-migrated':
       return `migrated local KI repository registry: ${event.repositories} repositories\n`
+    case 'locals-migrated':
+      return `moved remembered local harness checkouts to ${event.path}: ${event.locals} harnesses\n`
     case 'skill-projection':
       return `${event.skill} for ${event.agentId} ${event.installed ? 'installed' : 'already installed'}\n`
   }

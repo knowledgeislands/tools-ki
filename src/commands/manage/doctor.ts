@@ -1,12 +1,6 @@
 import { lstat, realpath } from 'node:fs/promises'
 import { Command } from 'commander'
-import {
-  agentSkillDirectory,
-  compatibleWithSkill,
-  configuredAgents,
-  inspectUserConfiguration,
-  localHarness
-} from '../../agents/index.ts'
+import { agentSkillDirectory, compatibleWithSkill, configuredAgents, localHarness } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
 import { readRepositoryDeclaration } from '../../core/configuration/index.ts'
 import { KiExit } from '../../core/errors.ts'
@@ -14,19 +8,18 @@ import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../co
 import {
   inspectManageDoctor,
   type ManageCheckStatus,
+  type ManageConfiguration,
   type ManageDoctorCheck,
   type ManageDoctorPort
 } from '../../core/manage/index.ts'
 import { harnessDevelopmentEnabled } from '../../core/storage/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
 import { diagnosticContext } from './diagnostic-context.ts'
+import { manageConfiguration } from './manage-configuration.ts'
 
 const mark = (status: ManageCheckStatus): string => presentation(`status.${status}`).terminal
 
-const doctorPort = (
-  context: KiContext,
-  configuration: Awaited<ReturnType<typeof inspectUserConfiguration>>
-): ManageDoctorPort => ({
+const doctorPort = (context: KiContext, configuration: ManageConfiguration): ManageDoctorPort => ({
   inspectConfiguration: async () => configuration,
   configuredAgents: async () =>
     (
@@ -79,7 +72,7 @@ export const createDoctorCommand = (context: KiContext): Command =>
   new Command('doctor')
     .description('report diagnostic context and read-only KI health checks, verdict, and counts')
     .action(async () => {
-      const configuration = await inspectUserConfiguration(context.paths.config)
+      const configuration = await manageConfiguration(context)
       const checks = await inspectManageDoctor(doctorPort(context, configuration), {
         workingDirectory: context.workingDirectory,
         canonicalHarnessIdentifier

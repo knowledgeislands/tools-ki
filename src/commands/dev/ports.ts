@@ -5,6 +5,8 @@ import {
   installedHarnessSkillSources,
   localHarness,
   refreshUserConfiguration,
+  rememberedCheckout,
+  requireLocalSources,
   setLocalBootstrapHarness
 } from '../../agents/index.ts'
 import type { KiContext } from '../../context.ts'
@@ -37,6 +39,12 @@ type DevelopmentProjection = Awaited<ReturnType<typeof installBootstrapSkills>>[
 const agents = (context: KiContext): Promise<readonly DevelopmentAgent[]> =>
   configuredAgents({ homeDirectory: context.homeDirectory, configurationDirectory: context.paths.config })
 
+/** Configured skills from `config.toml` and remembered checkouts from their host-local file. */
+const developmentConfiguration = async (context: KiContext) => ({
+  skills: (await inspectUserConfiguration(context.paths.config)).skills,
+  locals: await requireLocalSources(context.paths.config, context.paths.state)
+})
+
 const projectionView = ({ agent, skill, installed }: DevelopmentProjection) => ({
   agentId: agent.descriptor.id,
   skill,
@@ -50,19 +58,20 @@ export const setDevelopmentSourcePort = (
   requireInstalledHarness: (identifier) => installedHarnessSlot(context.paths.data, identifier),
   inspectLocalHarness: localHarness,
   configuredAgents: () => agents(context),
-  setLocalHarness: (harness) => setLocalBootstrapHarness(context.paths.config, context.homeDirectory, harness)
+  setLocalHarness: (harness) =>
+    setLocalBootstrapHarness(context.paths.config, context.paths.state, context.homeDirectory, harness)
 })
 
 export const enableDevelopmentPort = (
   context: KiContext
 ): EnableDevelopmentPort<DevelopmentAgent, DevelopmentSkill, DevelopmentProjection> => ({
-  inspectConfiguration: () => inspectUserConfiguration(context.paths.config),
-  inspectLocalHarness: localHarness,
+  inspectConfiguration: () => developmentConfiguration(context),
+  inspectLocalHarness: async (path, identifier) =>
+    localHarness(await rememberedCheckout({ harness: identifier, path }), identifier),
   configuredAgents: () => agents(context),
   enableDevelopment: (identifier, harness) => enableHarnessDevelopment(context.paths.data, identifier, harness),
   installSkills: (skills, configured) => installBootstrapSkills(skills, configured, { replace: true }),
-  refreshConfiguration: (configured, locals) =>
-    refreshUserConfiguration(context.paths.config, context.paths.data, configured, locals),
+  refreshConfiguration: (configured) => refreshUserConfiguration(context.paths.config, context.paths.data, configured),
   projectionView
 })
 
@@ -70,7 +79,7 @@ export const disableDevelopmentPort = (
   context: KiContext
 ): DisableDevelopmentPort<DevelopmentAgent, DevelopmentSkill, DevelopmentProjection> => ({
   configuredAgents: () => agents(context),
-  inspectConfiguration: () => inspectUserConfiguration(context.paths.config),
+  inspectConfiguration: () => developmentConfiguration(context),
   restoreHarness: (identifier) =>
     restoreHarness(
       context.paths.config,
@@ -83,8 +92,7 @@ export const disableDevelopmentPort = (
     ),
   installedSkills: (identifier) => installedHarnessSkillSources(context.paths.data, identifier),
   installSkills: (skills, configured) => installBootstrapSkills(skills, configured, { replace: true }),
-  refreshConfiguration: (configured, locals) =>
-    refreshUserConfiguration(context.paths.config, context.paths.data, configured, locals),
+  refreshConfiguration: (configured) => refreshUserConfiguration(context.paths.config, context.paths.data, configured),
   projectionView
 })
 

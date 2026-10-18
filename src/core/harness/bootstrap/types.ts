@@ -43,6 +43,8 @@ export interface BootstrapOperationPort<Agent, Skill, Projection> {
     readonly path: string
   }) => Promise<{ readonly harness: string; readonly skills: readonly Skill[] }>
   readonly migrateLegacyRepositories: () => Promise<number>
+  readonly migrateLocalSources: () => Promise<number>
+  readonly localSourcesPath: string
   readonly configureAgents: (options: {
     readonly refresh?: boolean
     readonly dropLegacyRepositories: boolean
@@ -51,7 +53,6 @@ export interface BootstrapOperationPort<Agent, Skill, Projection> {
   readonly installedHarnessSkills: () => Promise<readonly Skill[]>
   readonly refreshConfiguration: (
     agents: readonly Agent[],
-    locals: readonly { readonly harness: string; readonly path: string }[],
     options: { readonly dropLegacyRepositories: boolean }
   ) => Promise<BootstrapRefreshResult>
   readonly setConfiguredSkills: (skills: readonly string[]) => Promise<void>
@@ -80,4 +81,5 @@ export type BootstrapOperationEvent =
     }
   | ({ readonly kind: 'configuration-refreshed'; readonly agents: number } & BootstrapRefreshResult)
   | { readonly kind: 'repositories-migrated'; readonly repositories: number }
+  | { readonly kind: 'locals-migrated'; readonly locals: number; readonly path: string }
   | ({ readonly kind: 'skill-projection' } & BootstrapProjectionView)

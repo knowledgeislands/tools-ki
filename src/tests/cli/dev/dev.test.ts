@@ -109,9 +109,6 @@ harness = "knowledgeislands/ki-agentic-harness"
 
 [skills.ki-recap]
 harness = "knowledgeislands/ki-agentic-harness"
-
-[locals."knowledgeislands/ki-agentic-harness"]
-path = ${JSON.stringify(harnessPath)}
 `
       expect(dataIsSymlink).toBe(true)
       expect(await realpath(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness`)).toBe(harnessPath)
@@ -126,6 +123,9 @@ path = ${JSON.stringify(harnessPath)}
         `${harnessPath}/skills/keystone/ki-bootstrap`
       )
       expect(config).toBe(expectedConfig)
+      expect(await box.state.read('ki/locals.toml')).toBe(
+        `[locals."knowledgeislands/ki-agentic-harness"]\npath = ${JSON.stringify(harnessPath)}\n`
+      )
     })
 
     test('keeps the configuration tables it does not own when it rewrites the file', async () => {
@@ -141,7 +141,7 @@ path = ${JSON.stringify(harnessPath)}
       expect((await box.run('ki bootstrap --refresh')).exitCode).toBe(0)
 
       const config = await box.config.read('ki/config.toml')
-      expect(config).toContain(`[locals."knowledgeislands/ki-agentic-harness"]`)
+      expect(await box.state.read('ki/locals.toml')).toContain(`[locals."knowledgeislands/ki-agentic-harness"]`)
       const { territories, mcp } = parse(config)
       expect({ territories, mcp }).toEqual(parse(kept))
       expect((await box.run('ki diag')).output).not.toContain('unrecognised key')
@@ -171,7 +171,7 @@ path = ${JSON.stringify(harnessPath)}
       expect((await box.run('ki bootstrap --refresh')).exitCode).toBe(0)
 
       const config = await box.config.read('ki/config.toml')
-      expect(config).toContain(`[locals."knowledgeislands/ki-agentic-harness"]`)
+      expect(await box.state.read('ki/locals.toml')).toContain(`[locals."knowledgeislands/ki-agentic-harness"]`)
       expect(parse(config)['harnesses']).toMatchObject(parse(releases)['harnesses'] as object)
       expect((await box.run('ki diag')).output).not.toContain('unrecognised key')
     })
@@ -205,9 +205,10 @@ path = ${JSON.stringify(harnessPath)}
       expect(await realpath(`${box.home.path}/.claude/skills/ki-bootstrap`)).toBe(
         await realpath(`${box.data.path}/ki/harnesses/knowledgeislands/ki-agentic-harness/skills/keystone/ki-bootstrap`)
       )
-      expect(await box.config.read('ki/config.toml')).toContain(
+      expect(await box.state.read('ki/locals.toml')).toBe(
         `[locals."knowledgeislands/ki-agentic-harness"]\npath = ${JSON.stringify(harnessPath)}\n`
       )
+      expect(await box.config.read('ki/config.toml')).not.toContain('[locals')
     })
 
     test('migrates the recognised retired agents payload while switching to a local checkout', async () => {
@@ -338,6 +339,178 @@ path = ${JSON.stringify(harnessPath)}
 
       expect(result.exitCode).toBe(1)
       expect(result.output).toContain('declares prefix other; installed harness declares hnr')
+    })
+  })
+
+  describe('host-local sources', () => {
+    const canonical = 'knowledgeislands/ki-agentic-harness'
+    const sourceTable = (harness: string, path: string) =>
+      `[locals.${JSON.stringify(harness)}]\npath = ${JSON.stringify(path)}\n`
+    const withLegacyLocals = async (box: Sandbox, tables: string) =>
+      box.config.write('ki/config.toml', `${await box.config.read('ki/config.toml')}\n${tables}`)
+
+    test('lets two hosts sharing one configuration remember different checkouts without writing them into it', async () => {
+      const terra = await sandbox()
+      const sol = await sandbox()
+      const terraPath = await terra.setupLocalCanonicalHarness('dev/terra/knowledgeislands/ki-agentic-harness')
+      const solPath = await sol.setupLocalCanonicalHarness('dev/sol/knowledgeislands/ki-agentic-harness')
+      for (const box of [terra, sol]) {
+        await box.setupAgentHome('chatgpt-codex')
+        await box.run('ki bootstrap')
+      }
+      const shared = await terra.config.read('ki/config.toml')
+      await sol.config.write('ki/config.toml', shared)
+
+      expect((await terra.run(`ki dev local set ${canonical} ${terraPath}`)).exitCode).toBe(0)
+      expect((await sol.run(`ki dev local set ${canonical} ${solPath}`)).exitCode).toBe(0)
+
+      expect(await terra.config.read('ki/config.toml')).toBe(shared)
+      expect(await sol.config.read('ki/config.toml')).toBe(shared)
+      expect(await terra.state.read('ki/locals.toml')).toBe(sourceTable(canonical, terraPath))
+      expect(await sol.state.read('ki/locals.toml')).toBe(sourceTable(canonical, solPath))
+    })
+
+    test('keeps using configuration locals that still await their move', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await withLegacyLocals(box, sourceTable(canonical, harnessPath))
+
+      const diag = await box.run('ki diag --full')
+      const on = await box.run('ki dev local on')
+
+      expect(diag.output).toContain(
+        `locals in ${box.config.path}/ki/config.toml await their move to ${box.state.path}/ki/locals.toml`
+      )
+      expect(diag.output).toContain(`source: ${harnessPath}`)
+      expect(on.exitCode).toBe(0)
+      expect(await realpath(`${box.data.path}/ki/harnesses/${canonical}`)).toBe(harnessPath)
+      await expect(lstat(`${box.state.path}/ki/locals.toml`)).rejects.toThrow()
+    })
+
+    test('moves configuration locals once on bootstrap and then ignores them', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/current/knowledgeislands/ki-agentic-harness')
+      const otherPath = await box.setupLocalCanonicalHarness('dev/other/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await withLegacyLocals(box, `${sourceTable(canonical, harnessPath)}\n${sourceTable('example/other', otherPath)}`)
+
+      const moved = await box.run('ki bootstrap')
+      await box.config.write(
+        'ki/config.toml',
+        (await box.config.read('ki/config.toml')).replace(JSON.stringify(harnessPath), JSON.stringify(otherPath))
+      )
+      const again = await box.run('ki bootstrap --refresh')
+      const on = await box.run(`ki dev local on ${canonical}`)
+      const diag = await box.run('ki diag --full')
+
+      expect(moved.output).toContain(
+        `moved remembered local harness checkouts to ${box.state.path}/ki/locals.toml: 2 harnesses`
+      )
+      expect(again.output).not.toContain('moved remembered')
+      expect(await box.state.read('ki/locals.toml')).toBe(
+        `${sourceTable('example/other', otherPath)}\n${sourceTable(canonical, harnessPath)}`
+      )
+      expect(parse(await box.config.read('ki/config.toml'))['locals']).toEqual({
+        [canonical]: { path: otherPath },
+        'example/other': { path: otherPath }
+      })
+      expect(on.exitCode).toBe(0)
+      expect(await realpath(`${box.data.path}/ki/harnesses/${canonical}`)).toBe(harnessPath)
+      expect(diag.output).toContain(
+        `locals in ${box.config.path}/ki/config.toml are ignored; ${box.state.path}/ki/locals.toml holds this host's checkouts`
+      )
+      expect(diag.output).not.toContain('unrecognised key locals')
+    })
+
+    test('moves the other configuration locals before remembering a new checkout', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await withLegacyLocals(box, sourceTable('example/other', '/elsewhere/other'))
+
+      expect((await box.run(`ki dev local set ${canonical} ${harnessPath}`)).exitCode).toBe(0)
+
+      expect(await box.state.read('ki/locals.toml')).toBe(
+        `${sourceTable('example/other', '/elsewhere/other')}\n${sourceTable(canonical, harnessPath)}`
+      )
+    })
+
+    test('does not move configuration locals out of an invalid configuration', async () => {
+      const box = await sandbox()
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await withLegacyLocals(
+        box,
+        `${sourceTable('example/other', '/elsewhere/other')}\n[repositories]\npaths = ["relative"]\n`
+      )
+
+      await box.run('ki bootstrap')
+
+      await expect(lstat(`${box.state.path}/ki/locals.toml`)).rejects.toThrow()
+    })
+
+    test('refuses a remembered checkout that is missing on this host', async () => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await box.run(`ki dev local set ${canonical} ${harnessPath}`)
+      await rm(harnessPath, { recursive: true })
+
+      const on = await box.run('ki dev local on')
+
+      expect(on.exitCode).toBe(1)
+      expect(on.output).toContain(
+        `remembered checkout for ${canonical} is missing at ${harnessPath}; remember another with ki dev local set ${canonical} <path>`
+      )
+      expect(await box.data.isSymlink(`ki/harnesses/${canonical}`)).toBe(false)
+    })
+
+    test.each([
+      ['a scalar locals table', 'locals = 1\n', 'locals must be a TOML table'],
+      ['a scalar source', 'locals."example/other" = "/x"\n', 'locals.example/other must be a TOML table'],
+      ['invalid TOML', 'locals = [\n', 'locals.toml must be valid TOML'],
+      [
+        'an unrecognised key',
+        'extra = 1\n[locals.bad]\npath = "/x"\n',
+        'locals.bad must name a harness owner/name identifier'
+      ]
+    ])('refuses a host-local file with %s rather than falling back', async (_name, content, error) => {
+      const box = await sandbox()
+      const harnessPath = await box.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await withLegacyLocals(box, sourceTable(canonical, harnessPath))
+      await box.state.write('ki/locals.toml', content)
+
+      const on = await box.run('ki dev local on')
+      const bootstrap = await box.run('ki bootstrap')
+      const diag = await box.run('ki diag --full')
+      const doctor = await box.run('ki doctor')
+
+      expect(on.exitCode).toBe(1)
+      expect(on.output).toContain(`local harness sources are invalid: `)
+      expect(on.output).toContain(error)
+      expect(bootstrap.exitCode).toBe(1)
+      expect(diag.output).toContain(error)
+      expect(doctor.exitCode).toBe(1)
+      expect(doctor.output).toContain(error)
+    })
+
+    test('refuses a host-local path that is not a regular file', async () => {
+      const box = await sandbox()
+      await box.setupAgentHome('chatgpt-codex')
+      await box.run('ki bootstrap')
+      await box.state.mkdir('ki/locals.toml')
+
+      const on = await box.run('ki dev local on')
+
+      expect(on.exitCode).toBe(1)
+      expect(on.output).toContain(`${box.state.path}/ki/locals.toml must be a regular file`)
     })
   })
 

@@ -18,6 +18,8 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
   options: { readonly refresh?: boolean },
   emit: (event: BootstrapOperationEvent) => void
 ): Promise<void> => {
+  // Move remembered checkouts out of the portable configuration before reading them from their host-local file.
+  const movedLocals = await port.migrateLocalSources()
   const previous = await port.inspectConfiguration()
   const canonicalPrefix = `${port.canonicalHarnessIdentifier}:`
   const configuredCanonical = new Set(
@@ -43,9 +45,7 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
   let refreshed: BootstrapRefreshResult | undefined
   const reconcileConfiguration = async (skills: readonly Skill[]): Promise<void> => {
     if (options.refresh) {
-      refreshed = await port.refreshConfiguration(agents, previous.locals, {
-        dropLegacyRepositories: true
-      })
+      refreshed = await port.refreshConfiguration(agents, { dropLegacyRepositories: true })
       return
     }
     const selected = new Map<string, string>(
@@ -101,5 +101,6 @@ export const bootstrapEnvironment = async <Agent, Skill, Projection>(
   }
   if (refreshed) emit({ kind: 'configuration-refreshed', agents: agents.length, ...refreshed })
   if (migrated) emit({ kind: 'repositories-migrated', repositories: migrated })
+  if (movedLocals) emit({ kind: 'locals-migrated', locals: movedLocals, path: port.localSourcesPath })
   for (const projection of projections) emit({ kind: 'skill-projection', ...port.projectionView(projection) })
 }

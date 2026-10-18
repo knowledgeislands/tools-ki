@@ -55,7 +55,7 @@ export const enableDevelopment = async <Agent, Skill extends { readonly name: st
   const local = await port.inspectLocalHarness(source.path, source.harness)
   const agents = await port.configuredAgents()
   const harness = await port.enableDevelopment(source.harness, local.harness)
-  await port.refreshConfiguration(agents, configuration.locals)
+  await port.refreshConfiguration(agents)
   const activeConfiguration = await port.inspectConfiguration()
   const projections = await port.installSkills(
     selectedSkills(
@@ -65,7 +65,7 @@ export const enableDevelopment = async <Agent, Skill extends { readonly name: st
     ),
     agents
   )
-  const refreshed = await port.refreshConfiguration(agents, configuration.locals)
+  const refreshed = await port.refreshConfiguration(agents)
   return {
     identifier: source.harness,
     harness,
@@ -86,7 +86,7 @@ export const disableDevelopment = async <Agent, Skill extends { readonly name: s
     throw new KiError(`no local development source is configured for ${identifier}; run ki dev local set first`, 1)
   }
   const installation = await port.restoreHarness(source.harness)
-  await port.refreshConfiguration(agents, configuration.locals)
+  await port.refreshConfiguration(agents)
   const activeConfiguration = await port.inspectConfiguration()
   const skills = selectedSkills(
     await port.installedSkills(source.harness),
@@ -94,7 +94,7 @@ export const disableDevelopment = async <Agent, Skill extends { readonly name: s
     source.harness
   )
   const projections = await port.installSkills(skills, agents)
-  const refreshed = await port.refreshConfiguration(agents, configuration.locals)
+  const refreshed = await port.refreshConfiguration(agents)
   return {
     identifier: source.harness,
     agents: agents.length,

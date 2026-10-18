@@ -164,7 +164,7 @@ ids = [
 
     expect(migrated.output).toContain('migrated local KI repository registry: 1 repositories')
     expect(refreshed.exitCode).toBe(0)
-    expect(await box.config.read('ki/config.toml')).toContain(
+    expect(await box.state.read('ki/locals.toml')).toBe(
       `[locals."knowledgeislands/ki-agentic-harness"]\npath = ${JSON.stringify(harnessPath)}\n`
     )
     expect(await box.config.read('ki/config.toml')).not.toContain('[repositories]')
@@ -496,14 +496,7 @@ ids = ["claude-code"]
     const unconfigured = await sandbox()
     const unconfiguredPath = await unconfigured.setupLocalCanonicalHarness('dev/knowledgeislands/ki-agentic-harness')
     await prepare(unconfigured, unconfiguredPath)
-    const configuration = await unconfigured.config.read('ki/config.toml')
-    await unconfigured.config.write(
-      'ki/config.toml',
-      configuration.replace(
-        `[locals."knowledgeislands/ki-agentic-harness"]\npath = ${JSON.stringify(unconfiguredPath)}\n`,
-        ''
-      )
-    )
+    await unconfigured.state.write('ki/locals.toml', '')
     const unconfiguredResult = await unconfigured.run('ki bootstrap')
 
     const warning = 'ki: warning: leaving local development for knowledgeislands/ki-agentic-harness:'

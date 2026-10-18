@@ -2008,7 +2008,19 @@ checkouts.
 .TP
 .B ki dev local set <harness-id> <local-harness-path>
 Validate the identity against the installed estate and remember it with the
-local checkout without changing the active payload or managed user-skill links.
+local checkout in the host-local
+.I $XDG_STATE_HOME/ki/locals.toml
+without changing the active payload, managed user-skill links or the portable
+.IR config.toml .
+Remembered entries still in
+.I config.toml
+below
+.B [locals]
+are moved to the host-local file once, by
+.B ki dev local set
+or
+.BR "ki bootstrap" ;
+they are left in place and then ignored with a warning.
 When the selected harness is the canonical harness, the checkout must contain
 the core bootstrap skill at
 .IR skills/keystone/ki-bootstrap/SKILL.md
@@ -2022,18 +2034,16 @@ payload directories.
 .B ki dev local on [harness-id]
 Enable selected local checkouts for development. KI replaces each selected
 Harness's complete active root with its checkout, so its metadata and payloads
-always have one source, records each identity and path below
-.BR [locals] ,
-and reconciles its managed user-skill links to the local source on every run.
-An explicit Harness ID selects one source; omitting it selects all remembered
-sources.
+always have one source, and reconciles its managed user-skill links to the
+local source on every run. An explicit Harness ID selects one source;
+omitting it selects all remembered sources. A remembered checkout missing on
+this host is refused rather than replaced by another source.
 .TP
 .B ki dev local off [harness-id]
 Remove each selected recognised local Harness root, reinstall its verified
-archive, retain its entry below
-.BR [locals] ,
-and reconcile its managed user-skill links to the restored archive. An explicit
-Harness ID selects one source; omitting it selects all remembered sources.
+archive, retain its remembered checkout, and reconcile its managed user-skill
+links to the restored archive. An explicit Harness ID selects one source;
+omitting it selects all remembered sources.
 .TP
 .B ki dev skill generate <skill> [--write]
 Check or regenerate the surfaces a skill's

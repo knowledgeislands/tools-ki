@@ -14,9 +14,16 @@ export {
   inspectUserConfiguration,
   migrateLegacyRepositoryRegistry,
   repairLegacyUserConfiguration,
-  setConfiguredUserSkills,
-  setLocalBootstrapHarness
+  setConfiguredUserSkills
 } from './configuration.ts'
+export {
+  inspectLocalSources,
+  localSourcesPath,
+  migrateLocalSources,
+  rememberedCheckout,
+  requireLocalSources,
+  setLocalBootstrapHarness
+} from './local-sources.ts'
 export {
   inspectRepositoryHealth,
   type RepositoryHealth,

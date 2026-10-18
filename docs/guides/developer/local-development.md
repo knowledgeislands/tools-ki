@@ -44,11 +44,11 @@ ki dev local on
 ki dev local off
 ```
 
-`set` accepts any Harness identity already present in the installed KI estate. It validates and remembers that identity and physical checkout without changing the installed Harness or managed user-skill links. Each installed Harness can have its own remembered source.
+`set` accepts any Harness identity already present in the installed KI estate. It validates and remembers that identity and physical checkout without changing the installed Harness or managed user-skill links. Each installed Harness can have its own remembered source. Remembered checkouts belong to the host: they live in `$XDG_STATE_HOME/ki/locals.toml`, never in the portable `config.toml`, so two machines sharing one configuration can each remember their own checkout. Entries an older `ki` wrote below `[locals]` in `config.toml` are moved to the host-local file once, by the first `ki dev local set` or `ki bootstrap`; `ki` leaves them in `config.toml` and then ignores them with a warning until they are removed from its source. Until the move, `ki diag` and `ki dev local on|off` read them with a warning. An invalid host-local file is refused, never bypassed.
 
 The checkout and installed Harness root both use `.ki.toml` and must retain the same `[skills.ki-repo-harness].prefix`; local mode is a mutable source for the same provider identity, not a way to change or claim a capability namespace. Release archives also carry `.ki.toml` directly—there is no retired-name translation or migration path.
 
-`on` makes each selected checkout the complete active Harness root and reconciles that Harness's KI-managed user-skill links to their current local sources on every invocation. Metadata and payloads therefore always come from the same checkout; local mode never assembles a hybrid from an installed archive and selected linked directories. `on <harness-id>` selects one remembered Harness; `on` without an ID selects all of them.
+`on` makes each selected checkout the complete active Harness root and reconciles that Harness's KI-managed user-skill links to their current local sources on every invocation. Metadata and payloads therefore always come from the same checkout; local mode never assembles a hybrid from an installed archive and selected linked directories. `on <harness-id>` selects one remembered Harness; `on` without an ID selects all of them. A remembered checkout that is missing on this host is refused; remember another with `set`.
 
 `off` restores selected Harnesses from their configured verified archives and reprojects their links, while retaining each remembered identity and checkout for the next `on`. `off <harness-id>` selects one remembered Harness; `off` without an ID selects all of them.
 

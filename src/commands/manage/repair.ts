@@ -4,7 +4,6 @@ import {
   agentSkillDirectory,
   compatibleWithSkill,
   configuredAgents,
-  inspectUserConfiguration,
   repairLegacyUserConfiguration
 } from '../../agents/index.ts'
 import { linkManagedSkill } from '../../agents/skills.ts'
@@ -14,6 +13,7 @@ import { canonicalHarnessIdentifier, discoverInstalledHarnesses } from '../../co
 import { type ManageRepairItem, type ManageRepairPort, runManageRepair } from '../../core/manage/index.ts'
 import { acquireManagedArtifactRecovery, planOrphanRecovery, recoverInstallOrphans } from '../../core/storage/index.ts'
 import { presentation, renderTree } from '../presentation/index.ts'
+import { manageConfiguration } from './manage-configuration.ts'
 
 const linkedTo = async (path: string, expected: string): Promise<boolean> => {
   const entry = await lstat(path).catch(() => undefined)
@@ -23,7 +23,7 @@ const linkedTo = async (path: string, expected: string): Promise<boolean> => {
 }
 
 const repairPort = (context: KiContext): ManageRepairPort => ({
-  inspectConfiguration: () => inspectUserConfiguration(context.paths.config),
+  inspectConfiguration: () => manageConfiguration(context),
   repairConfigurationSchema: (dryRun) => repairLegacyUserConfiguration(context.paths.config, dryRun),
   acquireArtifactRecovery: () => acquireManagedArtifactRecovery(context.paths.state, context.paths.data),
   planOrphanRecovery: () => planOrphanRecovery(context.paths.data),

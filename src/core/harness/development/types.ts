@@ -36,10 +36,7 @@ export interface EnableDevelopmentPort<Agent, Skill, Projection> {
   readonly configuredAgents: () => Promise<readonly Agent[]>
   readonly enableDevelopment: (identifier: string, harness: string) => Promise<string>
   readonly installSkills: (skills: readonly Skill[], agents: readonly Agent[]) => Promise<readonly Projection[]>
-  readonly refreshConfiguration: (
-    agents: readonly Agent[],
-    locals: readonly { readonly harness: string; readonly path: string }[]
-  ) => Promise<BootstrapRefreshResult>
+  readonly refreshConfiguration: (agents: readonly Agent[]) => Promise<BootstrapRefreshResult>
   readonly projectionView: (projection: Projection) => DevelopmentProjectionView
 }
 
@@ -49,10 +46,7 @@ export interface DisableDevelopmentPort<Agent, Skill, Projection> {
   readonly restoreHarness: (identifier: string) => Promise<BootstrapInstallationResult>
   readonly installedSkills: (identifier: string) => Promise<readonly Skill[]>
   readonly installSkills: (skills: readonly Skill[], agents: readonly Agent[]) => Promise<readonly Projection[]>
-  readonly refreshConfiguration: (
-    agents: readonly Agent[],
-    locals: readonly { readonly harness: string; readonly path: string }[]
-  ) => Promise<BootstrapRefreshResult>
+  readonly refreshConfiguration: (agents: readonly Agent[]) => Promise<BootstrapRefreshResult>
   readonly projectionView: (projection: Projection) => DevelopmentProjectionView
 }
 

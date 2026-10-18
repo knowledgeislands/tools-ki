@@ -15,18 +15,19 @@ import {
   descriptor,
   type HarnessSection,
   type InstalledAgent,
+  inspectLocalsTable,
   isRecord,
-  type LocalDevelopmentConfiguration,
-  type LocalSourceSection,
   type RepositoriesSection,
   type StringListSection,
   type UserConfigurationInspection
 } from './internal.ts'
 
 /** Top-level keys the bootstrap writer renders; every other table belongs to another reader. */
-const OWNED_KEYS = ['schema', 'agents', 'harnesses', 'skills', 'locals', 'repositories']
+const OWNED_KEYS = ['schema', 'agents', 'harnesses', 'skills', 'repositories']
 /** Top-level tables other `ki` readers own, such as the territory ranking and the MCP inventory. */
 const DELEGATED_KEYS = ['territories', 'mcp']
+/** Host-local tables kept verbatim and read only as one-time migration input to the state directory. */
+const MIGRATION_KEYS = ['locals']
 
 /** The current file's parsed tables; a missing or unparseable file has nothing to keep. */
 const currentConfiguration = async (configurationDirectory: string): Promise<Record<string, unknown>> => {
@@ -62,7 +63,6 @@ export const renderConfiguration = (
   agents: readonly InstalledAgent[],
   harnesses: readonly string[] = [],
   skills: readonly string[] = [],
-  locals: readonly LocalDevelopmentConfiguration[] = [],
   repositories: readonly string[] = [],
   preserved: Record<string, unknown> = {},
   releases: readonly unknown[] = []
@@ -84,9 +84,6 @@ export const renderConfiguration = (
       const separator = skill.lastIndexOf(':')
       return ['', `[skills.${skill.slice(separator + 1)}]`, `harness = ${JSON.stringify(skill.slice(0, separator))}`]
     }),
-    ...locals
-      .toSorted((left, right) => left.harness.localeCompare(right.harness))
-      .flatMap((local) => ['', `[locals.${JSON.stringify(local.harness)}]`, `path = ${JSON.stringify(local.path)}`]),
     ...(repositories.length
       ? [
           '',
@@ -106,21 +103,12 @@ export const writeUserConfiguration = async (
   agents: readonly InstalledAgent[],
   harnesses: readonly string[],
   skills: readonly string[],
-  locals: readonly LocalDevelopmentConfiguration[],
   repositories: readonly string[]
 ): Promise<void> => {
   const current = await currentConfiguration(configurationDirectory)
   await writeFile(
     bootstrapConfigurationPath(configurationDirectory),
-    renderConfiguration(
-      agents,
-      harnesses,
-      skills,
-      locals,
-      repositories,
-      preservedTables(current),
-      preservedReleases(current)
-    ),
+    renderConfiguration(agents, harnesses, skills, repositories, preservedTables(current), preservedReleases(current)),
     'utf8'
   )
 }
@@ -152,7 +140,7 @@ export const inspectUserConfiguration = async (
       agents: [],
       harnesses: [],
       skills: [],
-      locals: [],
+      legacyLocals: [],
       repositories: [],
       warnings: [],
       errors: []
@@ -164,7 +152,7 @@ export const inspectUserConfiguration = async (
       agents: [],
       harnesses: [],
       skills: [],
-      locals: [],
+      legacyLocals: [],
       repositories: [],
       warnings: [],
       errors: ['configuration must be a regular file']
@@ -180,7 +168,7 @@ export const inspectUserConfiguration = async (
       agents: [],
       harnesses: [],
       skills: [],
-      locals: [],
+      legacyLocals: [],
       repositories: [],
       warnings: [],
       errors: ['configuration must be valid TOML']
@@ -196,7 +184,7 @@ export const inspectUserConfiguration = async (
       agents: [],
       harnesses: [],
       skills: [],
-      locals: [],
+      legacyLocals: [],
       repositories: [],
       warnings: [],
       errors: ['configuration must be a TOML table']
@@ -212,7 +200,7 @@ export const inspectUserConfiguration = async (
     repositories?: unknown
   }
   const warnings = Object.keys(configuration)
-    .filter((key) => ![...OWNED_KEYS, ...DELEGATED_KEYS].includes(key))
+    .filter((key) => ![...OWNED_KEYS, ...DELEGATED_KEYS, ...MIGRATION_KEYS].includes(key))
     .map((key) => `unrecognised key ${key}`)
   const errors: string[] = []
   if (configuration.schema !== undefined && configuration.schema !== 1) errors.push('schema must equal 1 when present')
@@ -269,23 +257,7 @@ export const inspectUserConfiguration = async (
         errors.push(`harnesses[${index}] sha256 must be lowercase SHA-256`)
     }
   }
-  const localsSection = configuration.locals === undefined ? {} : inspectSection(configuration.locals, 'locals', errors)
-  const locals: LocalDevelopmentConfiguration[] = []
-  for (const [harness, value] of Object.entries(localsSection)) {
-    if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(harness)) {
-      errors.push(`locals.${harness} must name a harness owner/name identifier`)
-      continue
-    }
-    const source = inspectSection(value, `locals.${harness}`, errors) as LocalSourceSection
-    for (const key of Object.keys(source)) {
-      if (key !== 'path') warnings.push(`locals.${harness} has unrecognised key ${key}`)
-    }
-    if (typeof source.path !== 'string' || !source.path) {
-      errors.push(`locals.${harness}.path must be a non-empty string`)
-      continue
-    }
-    locals.push({ harness, path: source.path })
-  }
+  const legacyLocals = inspectLocalsTable(configuration.locals, errors, warnings)
   const repositoriesSection =
     configuration.repositories === undefined
       ? undefined
@@ -305,7 +277,7 @@ export const inspectUserConfiguration = async (
     agents,
     harnesses,
     skills,
-    locals: locals.toSorted((left, right) => left.harness.localeCompare(right.harness)),
+    legacyLocals,
     repositories,
     warnings,
     errors,
@@ -385,24 +357,6 @@ export const configuredAgents = async (options: {
   return configured
 }
 
-export const setLocalBootstrapHarness = async (
-  configurationDirectory: string,
-  homeDirectory: string,
-  local: LocalDevelopmentConfiguration
-): Promise<void> => {
-  const agents = await configuredAgents({ homeDirectory, configurationDirectory })
-  const inspection = await inspectUserConfiguration(configurationDirectory)
-  const locals = [...inspection.locals.filter((candidate) => candidate.harness !== local.harness), local]
-  await writeUserConfiguration(
-    configurationDirectory,
-    agents,
-    inspection.harnesses,
-    inspection.skills,
-    locals,
-    inspection.repositories
-  )
-}
-
 export const setConfiguredUserSkills = async (
   configurationDirectory: string,
   homeDirectory: string,
@@ -410,14 +364,7 @@ export const setConfiguredUserSkills = async (
 ): Promise<void> => {
   const agents = await configuredAgents({ homeDirectory, configurationDirectory })
   const inspection = await inspectUserConfiguration(configurationDirectory)
-  await writeUserConfiguration(
-    configurationDirectory,
-    agents,
-    inspection.harnesses,
-    skills,
-    inspection.locals,
-    inspection.repositories
-  )
+  await writeUserConfiguration(configurationDirectory, agents, inspection.harnesses, skills, inspection.repositories)
 }
 
 /**

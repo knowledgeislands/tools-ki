@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { inspectUserConfiguration } from '../../../agents/index.ts'
+import { inspectUserConfiguration, requireLocalSources } from '../../../agents/index.ts'
 import type { KiContext } from '../../../context.ts'
 import { KiError } from '../../../core/errors.ts'
 import {
@@ -22,9 +22,10 @@ const configuredLocalHarnesses = async (context: KiContext): Promise<readonly st
     throw new KiError('ki environment is not bootstrapped; run `ki bootstrap` first', 1)
   if (configuration.state === 'invalid')
     throw new KiError(`ki configuration is invalid: ${configuration.errors.join('; ')}`, 1)
-  if (!configuration.locals.length)
+  const locals = await requireLocalSources(context.paths.config, context.paths.state)
+  if (!locals.length)
     throw new KiError('no local development source is configured; run ki dev local set <harness-id> <path>', 1)
-  return configuration.locals.map((local) => local.harness)
+  return locals.map((local) => local.harness)
 }
 
 const reportEnabled = async (context: KiContext, identifier: string): Promise<void> => {
