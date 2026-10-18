@@ -6,13 +6,12 @@ project: ways-of-working
 purpose: corrective
 kind: deliver
 component: agent
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 53bee079fb949fb19f604bf923517c6d7f3303d4
 created_at: 2026-10-18T09:17:41Z
-updated_at: 2026-10-18T19:22:14Z
+updated_at: 2026-10-18T19:24:54Z
 ---
 
 # Coordination Rename, CLI Side
@@ -117,6 +116,10 @@ None beyond the outstanding concerns.
 ### Mini recap
 
 `ki` now accepts the renamed coordination, work-design and work-folder skills, and `ki agent` help speaks of work folders and the work's decisions log.
+
+## Done
+
+Accepted 2026-10-18 on the review packet above under Kris Brown's ACCEPT-PRUNE grant of 18 October, relayed by Ways of working and recorded in the [tools-burndown decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.tools-burndown/decisions.md) ("ACCEPT-PRUNE (18 October)", restarted for tools-ki at the mark once v0.11.3 shipped): "anything which is awaiting acceptance can be accepted, and then we can prune anything which is in a state of done". Re-checked on 18 October at `d8d809ee`: `bun run test` passed 1348 tests, `bunx tsc --noEmit` and `mandoc -T lint man/ki.1` passed, `ki agent home --help` and `ki agent decide --help` carry no thread-model word, and no live `ki-pmo` or `ki-checkpoint` skill mention remains outside the old checkpoints' `type` value. The `thread home` output strings and the `## Decision <n>` headings named under Outstanding concerns stay for later changes, the latter with [KI-TOOL-KI-CLI-150](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-150-work-folder-entry-points.md).
 
 ## Discussion
 
