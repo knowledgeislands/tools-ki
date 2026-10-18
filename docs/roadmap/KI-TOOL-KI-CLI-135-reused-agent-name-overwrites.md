@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: fed222765aebead409e0e53d4cd970dd4a0042aa
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-16T01:40:32Z
+updated_at: 2026-10-18T06:52:00Z
 ---
 
 # Reused Agent Name Overwrites
@@ -134,3 +134,14 @@ Origin: the `sol` bring-up, captured on Kris Brown's TOOL-RECORDS approval on 20
 Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, on Kris Brown's TRIAGE-ADOPT answer (option a) as applied in the tools-burndown thread's BURN-OVERNIGHT decision.
 
 Planned and set Ready on 16 October 2026 under the tools-burndown thread's BURN-OVERNIGHT authority, refusing with a suffix suggestion and an explicit `--relaunch` (see Decision).
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against Decisions 1 to 4 and Verify 1 to 7. No code was changed and nothing was accepted.
+
+- **Verdict:** ready for acceptance.
+- **Decisions:** `takenBy` and `refuseTaken` in `src/core/agent/runs.ts:304` refuse a taken name with the first free `<name>-<n>` from 2; `.queued.md` and `.draft.md` do not take a name; `setAside` refuses a dirty thread-folder report and otherwise moves the packet, the state-folder report and the log into the first free `<name>.prev-<n>/`, deleting nothing. `queueAgent` uses the same check.
+- **Still holds after [KI-TOOL-KI-CLI-147](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-147-agent-state-folder-tooling.md):** agents now write their report in the state folder, and `packetFiles` already lists `report.md`, so a relaunch sets the earlier state-folder report aside; the thread-folder copy stays in Git.
+- **Verify 1 to 6:** the contract tests in `src/tests/cli/agent.test.ts` cover each step through `run(args, context)` and `sandbox()`.
+- **Verify 7:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1, neither from this record. The DEPS-1 failure the delivery recorded no longer appears.
+- **Observation, not blocking:** `holdAgent` (`--foreground`) still bypasses the check, as the record's Outstanding concerns say; it is outside the boundary.
