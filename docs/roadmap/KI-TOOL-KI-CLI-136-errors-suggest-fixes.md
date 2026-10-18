@@ -7,12 +7,12 @@ purpose: corrective
 kind: deliver
 component: repo
 horizon: next
-status: draft
+status: ready
 blocks: []
 blocked_by: [KI-TOOL-KI-CLI-131]
 baseline_ref: null
 created_at: 2026-10-15T09:36:28Z
-updated_at: 2026-10-16T01:18:25Z
+updated_at: 2026-10-18T08:27:27Z
 ---
 
 # Errors Suggest Fixes
@@ -53,29 +53,35 @@ Friction from the `registry-bind` run report, 15 October 2026:
 
 ## Current state
 
-Read at `46392f1a` on 16 October 2026; the Context above, observed at `4b99032c`, still holds line for line, with two changes:
+Re-read at `246e5ead` on 18 October 2026, after [KI-TOOL-KI-CLI-131](KI-TOOL-KI-CLI-131-host-absent-store-state.md) was accepted. The Context above was observed at `4b99032c`; since then:
 
-- `ki repo repair` now warns rather than fails on an unavailable store ([KI-TOOL-KI-CLI-126](KI-TOOL-KI-CLI-126-unavailable-store-breaks-repair.md)); `ki repo open` still fails (`src/commands/repo/open.ts:71`).
-- [KI-TOOL-KI-CLI-131](KI-TOOL-KI-CLI-131-host-absent-store-state.md), planned the same day, takes this record's store-reporting part (see Decision).
-
-`KiError` (`src/core/errors.ts`) carries a message and exit code; `src/cli.ts:123` prints `ki: error: <message>`. There are about 680 `new KiError(` sites outside tests, so "every error" cannot be retrofitted in one delivery.
+- **Store reporting is delivered.** KI-TOOL-KI-CLI-131 gave `store list` the `available`, `unavailable`, `absent` and `missing` states with a `fix:` line, made `open`, `vscode sync` and `repair` warn and carry on with the fix, added the `ki doctor` store check and the `store absent` command, and built every fix in `storeFix` (`src/core/storage/repository-stores.ts:76`). Friction items 1 and 2 are closed.
+- **Fix text in thrown errors.** Two remain: `managedSourcesStore` appends `; fix: <routes>` to `OneDrive source-store root is unavailable` (`repository-stores.ts:251`), and `store absent` on a bound role ends `unbind it first: ki repo --repo <root> store unbind <role> --write` (`src/commands/repo/store.ts:333`). Every other fix is in a warning or a doctor detail, which are not `KiError`s.
+- **Denials are still swallowed.** `repositoryStoreDirectory` (`src/core/storage/local-stores.ts:9`), `managedSourcesStore` (`repository-stores.ts:247`), `conventionalStoreCandidates` (`repository-stores.ts:85`) and the estate symlink roots (`src/core/estate/host.ts:114`) catch every error; `inspectSourcesStore` passes a non-`ENOENT` error through as a raw diagnostic. `symlinkChanges` feeds `planConvergence` (`src/core/estate/plan.ts:199`), which has no diagnostics channel.
+- **Errors.** `KiError` (`src/core/errors.ts`) carries a message and exit code; `run` (`src/cli.ts:123`) prints `ki: error: <message>`. The registry-invalid message is built at eight sites (`local-registry.ts` three times, `operations/local-state.ts` twice, `registry/add.ts`, `manage/list.ts`, `repo/store.ts`, `repo/open.ts`).
+- **Friction 4 has changed shape.** From `~/workspaces`, `ki repo store list` now selects the mGit workspace members and stops at the first without store roles: `ki: error: repository does not declare Knowledge Base store roles: <path>`, with no next step.
+- **Friction 5 is half done.** The preview already names the registry's absolute path (`would write <state>/registry.toml`); `bind --write` still gives no undo hint.
+- **Friction 3 and 6** hold as described: no subcommand help mentions repository selection, and `bind`'s `<absolute-path>` reads "existing direct directory".
+- The `platform` on `KiContext` is injected, so the denial fix can be worded for macOS and for other hosts in tests.
 
 ## Decision
 
-1. **Split with KI-TOOL-KI-CLI-131.** KI-TOOL-KI-CLI-131 delivers the store fix commands in `store list`, `repair`, `open` and the VS Code workspace, the conventional-folder path inference and the `ki doctor` store check. This record delivers what is left: privacy-denial reporting, the structured suggestion on `KiError`, its adoption on the store, registry and repository-selection errors, the product-engineering rule, and friction items 3 to 6. It follows KI-TOOL-KI-CLI-131 so that it converts that record's fix strings rather than racing them.
-2. **Incremental rule, not a blanket test.** The product-engineering standard gains the rule that a user-facing error names its next command where one exists, through the structured field. This record applies it to the error families named in Steps; a contract test pins those families. Other errors adopt the field when next touched. A test that every thrown `KiError` carries a suggestion would force invented suggestions where none exists.
-3. **No `.ki.toml` folder hint (friction item 7).** The expected folder is inferred from the names `store scan` already derives (territory handle, then basename), as KI-TOOL-KI-CLI-131 does; a declared hint adds a field to every Knowledge Base's declaration for one inference that already works. Revisit only if inference proves wrong in the field.
-4. **Not split further.** With the store part moved, the remainder is one coherent change to error presentation.
+1. **Split with KI-TOOL-KI-CLI-131.** KI-TOOL-KI-CLI-131 delivered the store fix commands in `store list`, `repair`, `open` and the VS Code workspace, the conventional-folder path inference and the `ki doctor` store check. This record delivers what is left: privacy-denial reporting, the structured suggestion on `KiError`, its adoption on the store, registry and repository-selection errors, the product-engineering rule, and friction items 3 to 6.
+2. **Incremental rule, not a blanket test.** The product-engineering standard gains the rule that a user-facing error names its next step where one exists, through the structured field. This record applies it to the error families named in Steps; a contract test pins those families. Other errors adopt the field when next touched.
+3. **No `.ki.toml` folder hint (friction item 7).** The expected folder is inferred from the names `store scan` already derives, as KI-TOOL-KI-CLI-131 does. Revisit only if inference proves wrong in the field.
+4. **Not split further.** The remainder is one coherent change to error presentation.
+5. **A denial is never empty.** `EPERM` and `EACCES` read as `access denied`; on macOS the fix names Full Disk Access for the terminal app, or `sshd-keygen-wrapper` over SSH, or running at the Mac's screen, and elsewhere the folder's permissions. A bound store that is denied is `unavailable` with that reason, so warnings and `store list` carry it unchanged. A denied OneDrive root refuses `store create` with the denial; a denied candidate folder is not offered as a fix. The estate symlink scan refuses the converge plan with the denial rather than planning without the folder, since it cannot tell whether a move breaks a link it cannot see; this matches the selection rule that an operation never reports success over what it did not read.
+6. **Friction 4 keeps the error.** A selected repository without store roles still fails `store list`, now with `next:` naming `ki repo --repo <knowledge-base-checkout> store list`. Skipping such repositories in a multi-repository listing would change the command's selection contract, which is outside this record.
 
 ## Steps
 
-- [ ] `src/core/errors.ts`: `KiError` gains an optional `next?: string` (constructor option, exit code unchanged); `src/cli.ts` prints `next: <command>` on its own line after `ki: error:` when present.
-- [ ] Denials: add a small helper in `src/core/storage/local-stores.ts` that classifies an `lstat`/`readdir` error as missing (`ENOENT`, `ENOTDIR`) or denied (`EPERM`, `EACCES`), and use it in `repositoryStoreDirectory`, `managedSourcesStore`, `inspectSourcesStore` and the estate symlink scan (`src/core/estate/host.ts:118`, `:120`), so a denied folder is reported as `access denied by macOS privacy protection` with the fix (grant Full Disk Access to the terminal app, or to `sshd-keygen-wrapper` over SSH, or run at the Mac's screen), never as missing or empty. File-system access stays injectable for the tests.
-- [ ] Convert KI-TOOL-KI-CLI-131's store fix strings in thrown errors into `next:`; keep warnings' fix text inline, since warnings are not `KiError`s.
-- [ ] Adopt `next:` on the registry errors (`local KI repository registry is invalid`, unknown repository), repository-selection errors (`ki repo store mutation requires exactly one repository`, no repository selected) and the store errors in `src/commands/repo/store.ts`.
-- [ ] Friction 3: `ki repo store <sub> --help` gains a line that repository selection (`--repo`, `--principals`, `--territory`) is given to `ki repo`, with an example `ki repo --repo <checkout> store list`.
-- [ ] Friction 4: when `store list` reports a selected path that is not a repository, say `not a KI repository: <path>` with the hint to pass `--repo`.
-- [ ] Friction 5: the preview names the registry's absolute path, and `--write` on `bind` ends with the undo command `ki repo --repo <root> store unbind <role> --write`.
+- [ ] `src/core/errors.ts`: `KiError` gains an optional `next` (third constructor argument, exit code unchanged); `src/cli.ts` prints `next: <step>` on its own line after `ki: error:` when present.
+- [ ] Denials: an `accessDenial(error, platform)` helper in `src/core/storage/local-stores.ts` that classifies `EPERM` and `EACCES` and words the fix; used by `repositoryStoreDirectory`, `managedSourcesStore`, `conventionalStoreCandidates`, `inspectSourcesStore` and the estate symlink roots. Callers pass the injected platform.
+- [ ] Convert the two thrown fix strings (`managedSourcesStore`, bound `store absent`) to `next:`.
+- [ ] One `invalidRegistryError(errors, stateDirectory)` in `src/core/storage/local-registry.ts`, with `next:` naming the registry file and `ki registry list`, used by the eight sites; the string-returning `local-state.ts:23` keeps its message text.
+- [ ] Selection errors: `no KI repository found from the current working directory`, `repository selection matched no repositories`, `ki repo store mutation requires exactly one repository`, and the store-roles error (friction 4) carry `next:`.
+- [ ] Friction 3: each `ki repo store <sub> --help` ends with a line that repository selection (`--repo`, `--territory`, `--principals`) is given to `ki repo`, with the example `ki repo --repo <checkout> store list`.
+- [ ] Friction 5: `bind --write` ends with the undo command `ki repo --repo <root> store unbind <role> --write`.
 - [ ] Friction 6: the `<absolute-path>` help reads "an existing directory, not a symbolic link".
 - [ ] Add the error-guidance rule to `.agents/skills/ki-self/references/standards-product-engineering.md`.
 - [ ] Contract tests (see Verify); `man/ki.1`, `man/ki.commands.json`, `README.md`, `docs/guides/user/repository-operations.md` and `CHANGELOG.md`.
@@ -83,24 +89,24 @@ Read at `46392f1a` on 16 October 2026; the Context above, observed at `4b99032c`
 ## Files touched
 
 - `src/core/errors.ts`, `src/cli.ts`
-- `src/core/storage/local-stores.ts`, `repository-stores.ts`, `local-registry.ts`; `src/core/estate/host.ts`
-- `src/commands/repo/store.ts`, `src/commands/repo/index.ts` (selection errors)
-- `src/tests/cli/repo/store.test.ts`, `store-scan.test.ts`, a CLI rendering test for `next:`, and the estate test that covers the symlink scan
+- `src/core/storage/local-stores.ts`, `repository-stores.ts`, `local-registry.ts`; `src/core/territory/naming.ts`; `src/core/estate/host.ts`; `src/core/repository/selection.ts`, `operations/local-state.ts`
+- `src/commands/repo/store.ts`, `open.ts`, `repair.ts`; `src/commands/registry/add.ts`; `src/commands/manage/list.ts`, `doctor.ts`, `vscode.ts` and `src/core/manage/doctor.ts`, `vscode.ts` where they pass the platform
+- `src/tests/cli/` tests for store, store scan, registry, selection, rendering and estate converge
 - `.agents/skills/ki-self/references/standards-product-engineering.md`
 - `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/repository-operations.md`, `CHANGELOG.md`
 
 ## Verify
 
-1. A `KiError` with `next` renders `ki: error: <message>` then `next: <command>` on stderr with the same exit code; one without renders as today.
-2. With an injected `EPERM` on the OneDrive root and on a bound store, `store list`, `store create`, `store scan` and repair report a denial with the Full Disk Access fix, not "missing", "unavailable" or an empty result; `ENOENT` still reads as missing.
-3. The estate symlink scan with an injected `EPERM` on an `OneDrive*` folder reports a denial diagnostic instead of returning no stores.
-4. Each adopted error family (store mutations, registry invalid, selection) carries `next:` in a contract test.
-5. Friction 3 to 6: help text and preview and write output carry the new lines, asserted by tests.
-6. `bun run test:coverage` at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` clean.
+1. A `KiError` with `next` renders `ki: error: <message>` then `next: <step>` on stderr with the same exit code; one without renders as today.
+2. With an injected `EPERM` or `EACCES` on the OneDrive root, a bound store and a candidate folder, `store list`, `store create`, `store scan` and repair report `access denied` with the platform's fix, never "missing", "not a direct directory" or an empty result; `ENOENT` still reads as missing.
+3. The estate converge plan with an injected `EPERM` on an `OneDrive*` folder refuses with the denial and its `next:` instead of planning without the folder.
+4. Each adopted error family (store mutations, registry invalid, selection, store roles) carries `next:` in a contract test.
+5. Friction 3, 5 and 6: help text and write output carry the new lines, asserted by tests.
+6. `bun run test:coverage` at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `mandoc -T lint man/ki.1`, the command-inventory check, rumdl and `ki repo audit --repo .` clean.
 
 ## Dependencies / blocks
 
-- Blocked by [KI-TOOL-KI-CLI-131](KI-TOOL-KI-CLI-131-host-absent-store-state.md), whose fix strings and availability states this converts and extends.
+- [KI-TOOL-KI-CLI-131](KI-TOOL-KI-CLI-131-host-absent-store-state.md), done, whose fix strings and availability states this converts and extends.
 - Builds on [KI-TOOL-KI-CLI-126](KI-TOOL-KI-CLI-126-unavailable-store-breaks-repair.md) through KI-TOOL-KI-CLI-131.
 
 ## Documentation impact
@@ -128,3 +134,5 @@ Capture only, on Kris Brown's explicit request (decision 106), outside the threa
 Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-burndown Project, on Kris Brown's TRIAGE-ADOPT answer (option a) as applied in the tools-burndown thread's BURN-OVERNIGHT decision.
 
 Planned on 16 October 2026, settling the three planning questions above in the Decision section, and left in draft only because KI-TOOL-KI-CLI-131 is not yet done (roadmap audit ITEM-5). Set it Ready once KI-TOOL-KI-CLI-131 is accepted, re-checking the Current state against what KI-TOOL-KI-CLI-131 delivered.
+
+Set Ready on 18 October 2026 by the `accept-ki` run of the ways-of-working Project, under Kris Brown's ACCEPT-131 a) in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 4"): "a later run sets KI-TOOL-KI-CLI-136 Ready and builds it". The Current state was re-read against what KI-TOOL-KI-CLI-131 delivered; Decisions 5 and 6 settle the two points the earlier plan left open, the estate scan's denial and friction 4's changed shape, both on the conservative side.
