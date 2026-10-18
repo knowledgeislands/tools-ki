@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 0e48ca2764f7ab3eb9a54b99b4a8e2a40aa4edc8
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-18T08:54:48Z
+updated_at: 2026-10-18T11:00:00Z
 ---
 
 # Launch Footer Follows Brief
@@ -81,7 +81,7 @@ Read at `0f61dd83` on 16 October 2026; the Context above still holds.
 
 ## Dependencies / blocks
 
-- **Blocked on the harness (FOOTER-GRANTS):** Kris approved Decision 3's shape on 16 October 2026; it needs `grant-fetch.md` and `grant-machine.md` in `ki-agentic-harness` `skills/governance/ki-delegation/assets/` with the background-run standard's tier table updated. The harness owner opens a `ki-delegation` record for the two grant texts; set Ready once those texts are agreed.
+- **Harness grants shipped (handoff, 18 October 2026):** `ki-agentic-harness` `main` at `ef9d275f` carries the approved `grant-fetch.md` and `grant-machine.md` in `skills/governance/ki-delegation/assets/`, listed in the background-run standard's [Grants](https://github.com/knowledgeislands/ki-agentic-harness/blob/ef9d275f/skills/governance/ki-delegation/references/standards-background-runs.md#grants) subsection. To build the open Step: `grantNames = ['fetch', 'machine']` mirrors the standard's table; slice each asset from the line that is exactly `## Grant: <name>` (not `## Rules`), rewriting its relative links as for the footer; append each section after the tier footer in `--allow` order. Once the option ships, the harness standard's interim rule that a brief appends a grant section by hand can go. The harness gate is cleared, so the open grants Step can proceed.
 - Shares `src/core/agent/runs.ts` with [KI-TOOL-KI-CLI-135](KI-TOOL-KI-CLI-135-reused-agent-name-overwrites.md) and [KI-TOOL-KI-CLI-137](KI-TOOL-KI-CLI-137-agent-run-tmp-home.md); deliver after KI-TOOL-KI-CLI-135.
 
 ## Documentation impact
