@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: aa185bf7f56c97ba0e0bb4d61ecbbe978d29bb88
 created_at: 2026-10-18T05:30:00Z
-updated_at: 2026-10-18T06:10:00Z
+updated_at: 2026-10-18T07:36:00Z
 ---
 
 # Agent State-Folder Tooling
@@ -154,3 +154,16 @@ Open questions for planning:
 - Whether the sweep is a separate verb or part of `close`.
 
 ki-burndown-3 adopted and planned this on 18 October 2026, answering the four questions in Decision provisionally, for Kris to confirm, and built it to Awaiting review the same day.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against Decisions 1 to 4 and Verify 1 to 5. No code was changed, the sweep was run only as a preview, and nothing was accepted.
+
+- **Verdict:** one finding, minor; otherwise ready for acceptance.
+- **Finding:** `homeReport` (`src/core/agent/events.ts:158`) writes the state-folder report into the tracked folder whenever no tracked copy is present, without the Git-history check `held` that [KI-TOOL-KI-CLI-133](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-133-retired-reports-come-back.md) added to `adoptStateFiles`. It runs on an attempt's first observed `DONE`, which is normally safe. A run whose `events.state.json` is lost, though, derives from empty ([KI-TOOL-KI-CLI-144](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-144-older-runs-start-seen.md)), and its next `status`, `watch` or `wait` writes back every report the thread has retired: the defect KI-TOOL-KI-CLI-133 closed. A fix might skip a held path unless the attempt is newer than the commit that retired it. Kris may also accept the rare path as it is.
+- **Decisions otherwise:** the protocol names `<state>/<name>.report.md`; readers look in the tracked folder first; a launch removes its spent `.queued.md` or `.draft.md` only after a successful start; `sweepAgents` keeps ten closed runs by default, removing each run's folder, tarball and note together.
+- **Verify 1 to 4:** covered through `run(args, context)` in `src/tests/cli/agent.test.ts`, `agent-events.test.ts` and `agent-sweep.test.ts`, as the Verification lists.
+- **Verify 5:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1.
+- **Live, read-only:** `ki agent sweep` without `--write` listed spent briefs across this host's runs and changed nothing.
+- **Observation, not blocking:** a long-lived `ki agent dispatch` keeps the code it started with. The ways-of-working dispatcher started at 06:36 BST, before this delivery's commit at 07:16 BST, and at 07:27 it launched this review under the old protocol: a tracked report path, and `ki-review.queued.md` left beside the prompt. Readers handle it, but the new behaviour reaches a run only once its dispatcher is restarted. Outstanding concerns could say so beside its note on running agents.
+- **For Kris:** the four Decision answers are provisional.
