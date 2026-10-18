@@ -12,7 +12,7 @@ blocks: [KI-TOOL-KI-CLI-136]
 blocked_by: [KI-TOOL-KI-CLI-126]
 baseline_ref: 314da867d09a7283ffc1e9574999284ea4466d3f
 created_at: 2026-10-14T20:57:30Z
-updated_at: 2026-10-18T06:05:00Z
+updated_at: 2026-10-18T06:42:00Z
 ---
 
 # Host-Absent Store State
@@ -189,3 +189,14 @@ Planned on 16 October 2026 and left in draft only because KI-TOOL-KI-CLI-126 is 
 Set Ready unchanged on 18 October 2026 by the ki-burndown-3 run, once KI-TOOL-KI-CLI-126 was accepted provisionally on Fable's opinion of 18 October; provisional, for Kris to confirm.
 
 Built on 18 October 2026 by the ki-burndown-3 run and set awaiting-review; the judgement calls in the Review are provisional, for Kris to confirm.
+
+### Independent review, 18 October 2026
+
+Reviewed read-only at `2393f6c6` by the `ki-review` run of the ways-of-working Project, which did not write this record, against Decisions 1 to 5 and Verify 1 to 10. No code was changed and nothing was accepted.
+
+- **Verdict:** one finding, minor; otherwise ready for acceptance.
+- **Finding:** the fix for an _unavailable_ bound store is wrong in half. `storeFix` (`src/core/storage/repository-stores.ts:75`) always offers `store bind <role> ... --write, or ... store absent <role> --write`, and the same text is used for a bound store whose path is gone (`src/tests/cli/manage/vscode.test.ts:334`). For a bound role, `store absent` refuses with "unbind it first" (`src/commands/repo/store.ts:333`), so the second route is not the exact fix Decision 4 requires. Either offer `store unbind <role> --write` before `store absent` for a bound role, or let `store absent` replace the binding as `store bind` clears the marker. The `missing` case, an unbound role, is right.
+- **Requirements otherwise:** the `absent_stores` marker, its validator, the `store absent` command, the `availability` field in `ki/repository-stores/v1`, the warn-and-continue behaviour of `open`, `vscode sync` and `repair`, the two-route `store create` refusal and the doctor `warn` count all match the Decisions, and each Verify step has a matching contract test.
+- **Live, read-only:** `store list` for ki-principal shows both stores `available` in text and JSON with `state` kept; `store absent sources` without `--write` refuses the bound role as specified; `ki doctor` reports "8 declared stores available or absent by choice" and `warn=0`.
+- **Verify 9:** on the reviewed head, coverage passed 78 files and 1326 tests at 100%; tsc, biome, knip, mandoc and rumdl were clean; `ki repo audit --repo .` gave FAIL=0 with CI-1 and HOOK-1, neither from this record.
+- **For Kris:** the four judgement calls in the Change Summary are provisional and still need his confirmation; this review found nothing against them.
