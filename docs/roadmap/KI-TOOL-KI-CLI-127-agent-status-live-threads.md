@@ -6,13 +6,12 @@ project: ways-of-working
 component: agent
 purpose: capability
 kind: deliver
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: 5f1349e59cc72fc8afc946d789565ab2a1dba8c2
 created_at: 2026-10-14T13:55:48Z
-updated_at: 2026-10-18T03:28:29Z
+updated_at: 2026-10-18T03:52:44Z
 ---
 
 # Agent Thread Coordination Commands
@@ -313,6 +312,10 @@ Every refusal checks before writing: a bare-letter refusal leaves the log unchan
 A coordinating thread can now list live threads, classify each decision so `close` accepts operational and held entries, message another live thread, rely on the run marker for both runtimes, and log an owner's bare letter with the option's wording.
 
 The seventh piece lets the tools read the work model: work by view from the work files, runs homed in work folders, and themes in place of Initiatives, with the thread-model shapes still read until phase 5 retires them.
+
+## Done
+
+Accepted 2026-10-18 under Kris's ACCEPT-NIGHT decision in the ways-of-working work, as received: "Yes if review passes (Recommended)", which lets an independent review run accept KI-HARNESS-GOV-210 and KI-TOOL-KI-CLI-127 if the review passes. The accept-review run reviewed it against its Requirements, [GDR-KI-PRINCIPAL-009](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/Admin/Governance/Decisions/GDR-KI-PRINCIPAL-009-the-work-model.md) and the Work Process note's observatory fields, and re-verified at `1d72fa94`: `bun run test:coverage` passes at 100% statements, branches, functions and lines, `bunx tsc --noEmit -p .`, `bunx biome check .`, `bunx knip` and `mandoc -T lint man/ki.1` are clean, and `ki repo audit --repo .` reports no failure. Read-only on this machine, `ki link` printed live and pruned links and refused `KI-NOWHERE-XYZ-1`, and `ki work status --repo` against Knowledge Islands Principal's migrated work folders emitted all seventeen `ki/work-status/v1` fields. The live Codex launch and the send to a real run stay unrun, as Outstanding concerns records, and are accepted as covered by the sandbox checks, provisional for Kris to confirm.
 
 ## Discussion
 
