@@ -10,7 +10,7 @@ blocks: []
 blocked_by: []
 baseline_ref: df1c24ed60342c2d9d194bebee9970ab3974bede
 created_at: 2026-10-16T19:30:03Z
-updated_at: 2026-10-18T08:53:02Z
+updated_at: 2026-10-18T10:23:53Z
 ---
 
 # Separate local harness paths
@@ -72,6 +72,7 @@ Do not place real host paths, credentials or private machine inventory in this r
 - [src/commands/manage/manage-configuration.ts](../../src/commands/manage/manage-configuration.ts), new; [src/commands/manage/diag.ts](../../src/commands/manage/diag.ts), [src/commands/manage/doctor.ts](../../src/commands/manage/doctor.ts), [src/commands/manage/repair.ts](../../src/commands/manage/repair.ts)
 - [src/tests/cli/dev/dev.test.ts](../../src/tests/cli/dev/dev.test.ts), [src/tests/cli/bootstrap/bootstrap.test.ts](../../src/tests/cli/bootstrap/bootstrap.test.ts), [src/tests/cli/manage/diag.test.ts](../../src/tests/cli/manage/diag.test.ts)
 - [man/ki.1](../../man/ki.1), [the local development guide](../../docs/guides/developer/local-development.md), [CHANGELOG.md](../../CHANGELOG.md)
+- Follow-up fix: [src/core/configuration/toml-edit.ts](../../src/core/configuration/toml-edit.ts), new; [src/core/configuration/index.ts](../../src/core/configuration/index.ts), [src/agents/configuration.ts](../../src/agents/configuration.ts), [src/core/storage/registry.ts](../../src/core/storage/registry.ts); [src/tests/cli/bootstrap/managed-configuration.test.ts](../../src/tests/cli/bootstrap/managed-configuration.test.ts), new; [src/tests/cli/harness/harness.test.ts](../../src/tests/cli/harness/harness.test.ts)
 
 ## Verify
 
@@ -137,6 +138,23 @@ Each Mac now keeps its own harness checkout paths, and the shared configuration 
 ## Done
 
 Accepted 2026-10-18 by Kris Brown on the review packet above and the independent review of 18 October, which found it ready for acceptance. In the ways-of-working walk-through Kris answered "Tools-sitting, yes, accepted", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 5") as TOOLS-SITTING a): accept the ten reviewed tools-ki records, then cut v0.11.1 and install it on this Mac. Kris accepted what is there, so any provisional call named under Outstanding concerns stands as delivered. The live checks on Terra and Sol, each against its own configuration, are not part of this closure: they follow through the chezmoi handoff under HARNESS-PATHS-LIVE a) ("owner answers, batch 3"), run on both Macs once v0.11.1 is installed.
+
+### Follow-up fix: config.toml kept byte-identical, 18 October 2026
+
+Folded in under SOL-CONFIG-REFORMAT a), recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner relays the ki.chezmoi Sol migration stop" and "owner answers SOL-CONFIG-REFORMAT"), by the ways-of-working run's `config-preserve` agent. It ships in v0.11.2; nothing was released, and no real `~/.config/ki` file, chezmoi source, Sol or Terra was touched.
+
+- **Cause:** plain `ki bootstrap` always reaches the configuration writer, which re-rendered the whole file and re-serialised every table it does not own, such as `[territories]`, through the TOML library. A chezmoi-managed `config.toml` therefore lost its comments, blank lines and multi-line array layout on Sol even though no value changed. `ki harness install` and `uninstall` likewise rewrote the ids line by pattern.
+- **Fix:** the writer compares the values it owns (agent and harness ids, user skills, repository paths) with the file first and writes nothing when they already hold. When one differs, a format-preserving text edit replaces only that statement or table, and the writer writes the result only after proving every other parsed value is unchanged. A file that text edits cannot safely change (an owned value spelt inline or dotted, or a file that does not parse) is laid out afresh as before, keeping every table it does not own. Harness install and uninstall edit only `[harnesses].ids`, and only when it changes. `ki repair` was already minimal, removing only the retired `schema` line, and is unchanged.
+- **Paths covered:** `ki bootstrap` and `--refresh`, the one-time `[locals]` move, `ki dev local set|on|off`, skill add and remove, agent changes, the retired `repositories.paths` move, and `ki harness install|uninstall`.
+- **Verification:** eleven new public-CLI tests in `managed-configuration.test.ts` run against a fixture `config.toml` with a comment banner, inline comments, a single-line ids array and a multi-line `territories` ranking with an inline comment, and assert it is byte-identical after bootstrap, refresh, the locals migration, `ki dev local on` and a set/on/off round trip; a real change edits only its own lines, and fallback cases keep every value. One new test in `harness.test.ts` covers uninstall. All seven byte-identity tests failed on the previous head `30156669`. The full coverage suite (80 files, 1346 tests) passes at the 100% thresholds; `tsc`, Biome and the man-page lint pass.
+- **What the Sol and Terra re-runs must verify,** each on its own host under the installed v0.11.2 build, with per-host paths kept in protected local evidence:
+  1. `ki --version` reports 0.11.2 before anything runs.
+  2. Record the sha256 of `config.toml`, the active harness binding (`ki dev local` status) and the installed harness identity.
+  3. Run `ki bootstrap`. `config.toml` keeps the same sha256, and its `[locals]` entries now appear in `$XDG_STATE_HOME/ki/locals.toml` and are reported as moved.
+  4. Run `ki bootstrap` again, then `ki dev local on` and `ki dev local off` where the host uses a local source, ending in the host's recorded starting state. `config.toml` keeps the same sha256 throughout, and the binding and harness identity match those recorded.
+  5. `ki doctor` passes, and `ki diag --full` warns only that `config.toml` `[locals]` is ignored now that `locals.toml` exists, until the chezmoi source drops the table.
+  6. `chezmoi diff` shows no change to `config.toml`.
+  Terra's run does not establish Sol's state, nor Sol's Terra's; each needs its own evidence.
 
 ## Discussion
 
