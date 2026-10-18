@@ -322,7 +322,7 @@ export const createAgentCommand = (context: KiContext): Command => {
       .option('--delete', 'remove the state folder instead of archiving it')
       .option('--compress', 'archive the state folder as a tarball')
       .option('--accept-exited <name>', 'accept an agent that exited without DONE; repeatable', collect, [])
-      .option('--reconciled', 'waive the decision gate; the close note records the waiver')
+      .option('--reconciled', 'waive the decision and temporary-folder checks; the close note records the waiver')
       .addOption(repoOption)
       .action(
         async (

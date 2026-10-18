@@ -271,7 +271,13 @@ const create = async (): Promise<Sandbox> => {
   const project = area(join(rootPath, 'project'), homePath)
   await mkdir(home.path, { recursive: true })
   await mkdir(project.path, { recursive: true })
-  const env = { HOME: home.path, XDG_CONFIG_HOME: config.path, XDG_DATA_HOME: data.path, XDG_STATE_HOME: state.path }
+  const env = {
+    HOME: home.path,
+    TMPDIR: join(rootPath, 'tmp'),
+    XDG_CONFIG_HOME: config.path,
+    XDG_DATA_HOME: data.path,
+    XDG_STATE_HOME: state.path
+  }
   let environmentOverrides: Record<string, string | undefined> = {}
   let workingDirectory = project.path
   // No sandbox test may reach the real network: a command that needs the fetcher

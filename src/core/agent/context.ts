@@ -36,6 +36,14 @@ export const agentsDirectory = (context: AgentContext): string => join(context.s
 export const runDirectory = (context: AgentContext, run: string): string =>
   join(agentsDirectory(context), checkName(run, 'run'))
 
+/** The run's temporary root, outside every repository: `$TMPDIR/ki-agents/<run>/`. */
+export const temporaryRoot = (context: AgentContext, run: string): string =>
+  join(context.environment['TMPDIR'] || '/tmp', 'ki-agents', checkName(run, 'run'))
+
+/** One agent's temporary folder, `$TMPDIR/ki-agents/<run>/<name>/`, removed when the run closes. */
+export const temporaryDirectory = (context: AgentContext, run: string, name: string): string =>
+  join(temporaryRoot(context, run), checkName(name, 'name'))
+
 export const read = (path: string): Promise<string | undefined> => readFile(path, 'utf8').catch(() => undefined)
 
 /** The run's `git`, with discovery left to `-C` so the answer follows the directory asked about. */

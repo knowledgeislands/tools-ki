@@ -6,20 +6,20 @@ project: tools-burndown
 purpose: capability
 kind: deliver
 component: agent
-horizon: next
-status: draft
+horizon: now
+status: awaiting-review
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: c79ff4c6a9c5a019d8132f0c180ef52936eb3478
 created_at: 2026-10-15T21:48:02Z
-updated_at: 2026-10-18T02:46:11Z
+updated_at: 2026-10-18T05:30:00Z
 ---
 
 # Agent Run Temporary Home
 
 ## Goal
 
-`ki agent launch` creates `$TMPDIR/ki-agents/<run>/<name>/` and names it in the composed prompt, and `ki agent close` removes it, so a background agent's temporary output has one home outside every repository that does not outlive its run. The record also carries the tools-ki state-folder tooling handed over under TOOLS-PUSH.
+`ki agent launch` creates `$TMPDIR/ki-agents/<run>/<name>/` and names it in the composed prompt, and `ki agent close` removes it, so a background agent's temporary output has one home outside every repository that does not outlive its run. The tools-ki state-folder tooling handed over under TOOLS-PUSH moved to [KI-TOOL-KI-CLI-147](/Users/krisbrown/workspaces/knowledge-islands/tools-ki/docs/roadmap/KI-TOOL-KI-CLI-147-agent-state-folder-tooling.md).
 
 ## Context
 
@@ -35,8 +35,8 @@ What `ki` does today, observed at `86adda02`:
 
 ## Boundary
 
-- In: launch creating `$TMPDIR/ki-agents/<run>/<name>/` and passing its absolute path into the composed prompt beside the report path; close removing each `$TMPDIR/ki-agents/<run>/<name>/` folder its run's packets name and reporting each path removed; the TOOLS-PUSH state-folder tooling (report path default, de-duplicated briefs, `_archive/` retention, sweep pruning), still to be planned; tests through `run(args, context)` and `sandbox()`; `README.md`, `man/ki.1`, the background-agents guide and `CHANGELOG.md`.
-- Out: the `<name>.work/` state-folder scratch, which already lives in the state folder; editing any repository's `.gitignore`; the closed thread-folder list, its run-packet and run-prompt wording and the ki-pmo rubric item, which the paired ki-agentic-harness record owns; removing an output earlier than close because it is superfluous, which stays the agent's own act.
+- In: launch creating `$TMPDIR/ki-agents/<run>/<name>/` and passing its absolute path into the composed prompt beside the report path; close removing each `$TMPDIR/ki-agents/<run>/<name>/` folder its run's packets name and reporting each path removed; tests through `run(args, context)` and `sandbox()`; `README.md`, `man/ki.1`, the background-agents guide and `CHANGELOG.md`.
+- Out: the TOOLS-PUSH state-folder tooling, now KI-TOOL-KI-CLI-147; the `<name>.work/` state-folder scratch, which already lives in the state folder; editing any repository's `.gitignore`; the closed thread-folder list, its run-packet and run-prompt wording and the ki-pmo rubric item, which the paired ki-agentic-harness record owns; removing an output earlier than close because it is superfluous, which stays the agent's own act.
 
 ## Current state
 
@@ -55,31 +55,31 @@ Settled:
 2. **Close keeps a non-empty folder under the strict gate** (TMP-CLOSE). `ki agent close` lists each non-empty `$TMPDIR/ki-agents/<run>/<name>/` and refuses, as it does for any other unreconciled run output; `--reconciled` is Kris's waiver. A draft that must survive is homed first, as an uncommitted change named in the report or committed in its owning repository. Once the gate passes, close removes each agent's folder and reports each path removed.
 3. **No repository is touched.** The root sits outside every checkout, so launch needs no ignore check and no linked-worktree resolution.
 
-Still to plan: the TOOLS-PUSH state-folder tooling, whose steps are not yet written.
+The TOOLS-PUSH state-folder tooling moved to KI-TOOL-KI-CLI-147 (provisional, for Kris to confirm).
 
 ## Steps
 
-- [ ] Resolve `$TMPDIR/ki-agents/<run>/<name>/` in one helper in `src/core/agent/context.ts` (`agentTempDirectory(context, request, thread)`), reading `TMPDIR` from the injected environment, through `AgentContext` for tests.
-- [ ] `launchAgent`: create the folder (recursive), pass its absolute path into `composePrompt`, and add it to the agent's writable directories.
-- [ ] `composePrompt`: name the folder in the progress protocol ("Temporary output goes in <path>; it is removed when the run closes").
-- [ ] `closeRun`: list each non-empty agent folder recorded in the run's `<name>.launch.json` files as a gate finding, refusing without `--reconciled`; after the gate passes and before archiving, remove each agent folder recorded in the run's `<name>.launch.json` files and add one line per path to the close output and close note.
-- [ ] Plan the TOOLS-PUSH state-folder tooling (report path default, de-duplicated briefs, `_archive/` retention, sweep pruning) through `ki-plan` and add its steps here.
-- [ ] Contract tests in `src/tests/cli/agent.test.ts` (see Verify).
-- [ ] `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
+- [x] Resolve the folder in one helper in `src/core/agent/context.ts`: `temporaryDirectory(context, run, name)` under `temporaryRoot(context, run)`, reading `TMPDIR` from the injected environment and falling back to `/tmp`.
+- [x] `launchAgent`: create the folder (recursive), pass its absolute path into `composePrompt`, and add it to the agent's writable directories, so a held launch's hold process passes it on too.
+- [x] `composePrompt`: name the folder in the progress protocol, beside the report sentence.
+- [x] `closeRun`: list each non-empty agent folder under the run's temporary root as a blocker, which `--reconciled` waives; after the gate passes and before archiving, remove the run's temporary root, printing one `ok: removed <path>` line per agent folder in the output and the close note.
+- [x] Split the TOOLS-PUSH state-folder tooling into KI-TOOL-KI-CLI-147.
+- [x] Contract tests in `src/tests/cli/agent.test.ts`; the sandbox sets `TMPDIR` under its root.
+- [x] `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md`, `CHANGELOG.md` and the `--reconciled` help text.
 
 ## Files touched
 
-`src/core/agent/context.ts`, `runs.ts`, `close.ts`; `src/tests/cli/agent.test.ts`; `README.md`; `man/ki.1`; `man/ki.commands.json`; `docs/guides/user/background-agents.md`; `CHANGELOG.md`.
+`src/core/agent/context.ts`, `runs.ts`, `close.ts`; `src/commands/agent/index.ts`; `src/tests/cli/agent.test.ts`, `_cli_helper.ts`; `README.md`; `man/ki.1`; `man/ki.commands.json`; `docs/guides/user/background-agents.md`; `CHANGELOG.md`.
 
 ## Verify
 
-1. Launch creates `$TMPDIR/ki-agents/<run>/<name>/` under the injected `TMPDIR`, the composed prompt names it, and the runtime's writable directories include it.
-2. Close refuses while an agent folder is non-empty and lists it; with `--reconciled` it removes both agents' folders and lists them in its output and close note; a failing gate removes nothing.
-3. `bun run test:coverage` at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` clean.
+1. Launch creates `$TMPDIR/ki-agents/<run>/<name>/` under the injected `TMPDIR`, the composed prompt names it, and the runtime's writable directories include it, for Claude Code, Codex, a held launch's hold process and a launch from outside the owning repository; with `TMPDIR` unset the prompt names `/tmp/ki-agents/<run>/<name>/`.
+2. Close refuses while an agent folder holds output and lists it, changing nothing; with `--reconciled` it waives that line, removes both agents' folders and lists each in its output and close note, leaving another run's folder alone.
+3. `bun run test:coverage` at 100%; `bunx tsc --noEmit`, Biome, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` clean.
 
 ## Dependencies / blocks
 
-- TMP-HOME answered on 17 October 2026: the root is `$TMPDIR/ki-agents/`. The record stays draft until the TOOLS-PUSH state-folder tooling is planned.
+- TMP-HOME answered on 17 October 2026: the root is `$TMPDIR/ki-agents/`. The TOOLS-PUSH state-folder tooling is KI-TOOL-KI-CLI-147.
 - Pairs with the harness thread-folder record KI-HARNESS-GOV-200 (`docs/roadmap/KI-HARNESS-GOV-200-thread-folder-closed-list.md`) and with KI-HARNESS-GOV-196 (`docs/roadmap/KI-HARNESS-GOV-196-scratch-output-in-temp.md`); their run-prompt wording should name the same root. Neither is a `blocked_by`.
 - Shares `src/core/agent/runs.ts` with [KI-TOOL-KI-CLI-135](KI-TOOL-KI-CLI-135-reused-agent-name-overwrites.md) (deliver first) and [KI-TOOL-KI-CLI-134](KI-TOOL-KI-CLI-134-launch-footer-follows-brief.md).
 
@@ -99,7 +99,40 @@ None.
 
 ### Roadmap
 
-None.
+KI-TOOL-KI-CLI-147 captures the TOOLS-PUSH state-folder tooling split out of this record.
+
+## Review
+
+### Delivered
+
+Each launched agent gets `$TMPDIR/ki-agents/<run>/<name>/`, named in its prompt and writable; close refuses while one holds output, unless `--reconciled`, and then removes the run's temporary root.
+
+### Change Summary
+
+`context.ts` gains `temporaryRoot` and `temporaryDirectory`; `launchAgent` creates the folder, adds it to the writable directories and passes it to `composePrompt`; `closeRun` gains the temporary-folder gate line and the removal step; the `--reconciled` help, manual, README, guide and changelog say so.
+
+### Verification
+
+Two new and five updated public-CLI tests in `agent.test.ts`; the full coverage suite, `tsc`, Biome, mandoc, rumdl and `ki repo audit` pass.
+
+### Outstanding concerns
+
+Provisional choices, for Kris to confirm:
+
+- Close derives each folder from `TMPDIR` at close time rather than recording it in `<name>.launch.json`, so a close run with a different `TMPDIR` from the launch would not see the folder. On macOS `TMPDIR` is fixed per user.
+- `/tmp` is the fallback when `TMPDIR` is unset.
+- An empty folder passes the gate silently.
+- The TOOLS-PUSH tooling is split into KI-TOOL-KI-CLI-147.
+
+The paired harness wording, KI-HARNESS-GOV-200 and KI-HARNESS-GOV-196, should name the same root.
+
+### Post-change review
+
+No repository is touched; launch only adds a directory and a sentence, and close removes only the run's own root under `ki-agents/` after the gate passes.
+
+### Mini recap
+
+Background agents now have a temporary folder outside every repository that the run's close checks and removes.
 
 ## Discussion
 
@@ -112,3 +145,5 @@ Planned on 16 October 2026 in the tools-burndown thread as far as the open owner
 TMP-CLOSE answered on 16 October 2026 in the ways-of-working thread, by Kris Brown's ROUTINE answer taking option a): close lists each non-empty `tmp/<run>/<name>/` and keeps it under the strict close gate, with `--reconciled` as the owner's waiver; a draft that must survive is homed first, as an uncommitted change named in the report or committed in its owning repository. Decision 2, the close step and Verify 4 now say so. The record stays draft on TMP-HOME.
 
 TMP-HOME answered on 17 October 2026 at 22:25 BST in the tools-burndown thread: "Use $TMPDIR/ki-agents/<run>/<name>/ for KI-TOOL-KI-CLI-137." The Goal, Boundary, Decision, Steps and Verify now use that root, and the option a) ignore warning and linked-worktree resolution are dropped. The same answer set (PUSH-REBASE-CODE) repointed the pair record to KI-HARNESS-GOV-200. TOOLS-PUSH (ways-of-working thread, 17 October 22:50 BST) added the tools-ki state-folder tooling to this record's boundary; it is captured, not planned, so the record stays draft.
+
+Delivered on 18 October 2026 by the tools-burndown run under Kris Brown's overnight instruction to burn down the tools roadmap, after splitting the unplanned TOOLS-PUSH tooling into KI-TOOL-KI-CLI-147; the split and the choices under Outstanding concerns are provisional, for Kris to confirm.

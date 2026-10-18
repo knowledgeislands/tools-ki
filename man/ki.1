@@ -1596,9 +1596,15 @@ and
 Omitted, each uses the runtime's own default.
 .I <name>.launch.json
 records the runtime, model, and effort. The progress protocol names the
-agent's report path in the thread folder, and the owning repository is added
-to the agent's writable directories when the working directory lies outside
-it. Names are unique within a run: a name that has already run, shown by its
+agent's report path in the thread folder and its temporary folder
+.IR $TMPDIR/ki-agents/<run>/<name>/ ,
+which launch creates outside every repository, falling back to
+.I /tmp
+when
+.B TMPDIR
+is unset. The temporary folder, and the owning repository when the working
+directory lies outside it, are added to the agent's writable directories.
+Names are unique within a run: a name that has already run, shown by its
 .IR .pid ,
 .IR .status ,
 .IR .prompt.md ,
@@ -1841,6 +1847,8 @@ or named in
 .BR --accept-exited ,
 no dispatcher running, the queue and
 .I worktrees/
+empty, every agent's temporary folder under
+.I $TMPDIR/ki-agents/<run>/
 empty, every decision in the tracked log housed in a tracked path or a
 roadmap record of a registered repository, and the thread folder committed
 and clean.
@@ -1864,8 +1872,12 @@ archived with the run.
 Beyond that move, on any blocker the command prints every line, exits 1 and
 changes nothing.
 .B --reconciled
-waives the decision check and the close note records the waiver. When the
-gate passes the state folder moves to
+waives the decision and temporary-folder checks and the close note records
+the waiver. When the gate passes, close removes
+.IR $TMPDIR/ki-agents/<run>/ ,
+printing an
+.B ok
+line for each agent folder removed, and the state folder moves to
 .IR $KI_STATE_HOME/agents/_archive/<run>/
 with a
 .I close.md

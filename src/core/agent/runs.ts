@@ -11,7 +11,8 @@ import {
   git,
   instant,
   read,
-  runDirectory
+  runDirectory,
+  temporaryDirectory
 } from './context.ts'
 import { deriveEvents, type Observed, type RunEvent, readEvents, recordEvent } from './events.ts'
 import { type AgentEffort, type AgentRuntime, runtimeLaunch } from './runtimes.ts'
@@ -177,17 +178,18 @@ const validated = async (context: AgentContext, request: LaunchRequest): Promise
   }
 }
 
-/** The request with the thread's repository among the directories the agent may write. */
-const withRepository = (request: LaunchRequest, thread: ThreadHome): LaunchRequest =>
-  request.workdir === thread.repository || request.addDirs.includes(thread.repository)
+/** The request with a directory, such as the thread's repository, among those the agent may write. */
+const withDirectory = (request: LaunchRequest, directory: string): LaunchRequest =>
+  request.workdir === directory || request.addDirs.includes(directory)
     ? request
-    : { ...request, addDirs: [...request.addDirs, thread.repository] }
+    : { ...request, addDirs: [...request.addDirs, directory] }
 
 const composePrompt = async (
   context: AgentContext,
   directory: string,
   request: LaunchRequest,
   report: string,
+  temporary: string,
   body: string
 ): Promise<string> => {
   const base = join(directory, request.name)
@@ -198,7 +200,7 @@ const composePrompt = async (
     [
       '---',
       '',
-      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${report} as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries with the reply block), then write DONE as the last line of ${base}.status. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.`
+      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${report} as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries with the reply block), then write DONE as the last line of ${base}.status. Temporary output goes in ${temporary}/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.`
     ].join('\n')
   )
   return `${sections.join('\n\n')}\n`
@@ -338,7 +340,8 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
   const accepted = await validated(context, candidate)
   const body = await promptText(context, accepted.prompt)
   const thread = await threadHome(context, accepted.run, accepted.repo, true, accepted.workdir)
-  const request = withRepository(accepted, thread)
+  const temporary = temporaryDirectory(context, accepted.run, accepted.name)
+  const request = withDirectory(withDirectory(accepted, thread.repository), temporary)
   const directory = runDirectory(context, request.run)
   const base = join(directory, request.name)
   const live = await running(context, `${base}.pid`)
@@ -350,7 +353,8 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
 
   // The agent writes its report into the tracked thread folder, so the folder must exist.
   await mkdir(threadPath(thread), { recursive: true })
-  const prompt = await composePrompt(context, directory, request, reportPath(thread, request.name), body)
+  await mkdir(temporary, { recursive: true })
+  const prompt = await composePrompt(context, directory, request, reportPath(thread, request.name), temporary, body)
   await writeFile(`${base}.prompt.md`, prompt)
   await writeFile(`${base}.launch.json`, launchDetails(request))
   if (state.kind === 'open') {

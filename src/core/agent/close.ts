@@ -2,7 +2,7 @@ import { mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join } from 'node:path'
 import { KiError } from '../errors.ts'
 import { requiredLocalRegistry } from '../storage/local-registry.ts'
-import { type AgentContext, agentsDirectory, git, instant, read } from './context.ts'
+import { type AgentContext, agentsDirectory, git, instant, read, temporaryRoot } from './context.ts'
 import { agentState, agents, existingRun, pidOf, readQueue, running } from './runs.ts'
 import {
   adoptStateFiles,
@@ -129,6 +129,27 @@ const folderLine = async (context: AgentContext, thread: ThreadHome): Promise<Ga
     : ok(`thread folder ${thread.folder} committed and clean`)
 }
 
+/** A line for each agent's temporary folder that still holds output; `--reconciled` waives it. */
+const temporaryLines = async (context: AgentContext, request: CloseRequest): Promise<readonly GateLine[]> => {
+  const root = temporaryRoot(context, request.run)
+  const lines: GateLine[] = []
+  for (const name of await entries(root)) {
+    const held = await entries(join(root, name))
+    if (!held.length) continue
+    const text = `temporary folder ${join(root, name)} holds ${listed(held)}`
+    lines.push(request.reconciled ? ok(`${text}, waived by --reconciled`) : blocker(text))
+  }
+  return lines
+}
+
+/** Removes the run's temporary root, one line for each agent folder it held. */
+const removeTemporary = async (context: AgentContext, run: string): Promise<readonly GateLine[]> => {
+  const root = temporaryRoot(context, run)
+  const folders = await entries(root)
+  await rm(root, { recursive: true, force: true })
+  return folders.map((name) => ok(`removed ${join(root, name)}`))
+}
+
 const gateLines = async (
   context: AgentContext,
   directory: string,
@@ -157,6 +178,7 @@ const gateLines = async (
   lines.push(queue.length ? blocker(`queue holds ${listed(queue.map((queued) => queued.name))}`) : ok('queue empty'))
   const worktrees = await entries(join(directory, 'worktrees'))
   lines.push(worktrees.length ? blocker(`worktrees/ holds ${listed(worktrees)}`) : ok('no worktrees'))
+  lines.push(...(await temporaryLines(context, request)))
   const adopted = await adoptStateFiles(context, request.run, thread)
   lines.push(...adopted.map((file) => ok(`moved ${file} from the state folder into ${thread.folder}`)))
   const decided = await decisionLines(context, thread, request)
@@ -201,7 +223,8 @@ const note = (
 /**
  * Retires a finished run's state folder once the reconcile gate passes: no agent or
  * dispatcher alive, every agent `DONE` or accepted, the queue and worktrees empty, every
- * decision housed, and the tracked thread folder committed and clean. It first moves any
+ * decision housed, every agent's temporary folder empty, and the tracked thread folder
+ * committed and clean; it then removes the run's temporary folders. It first moves any
  * log or report the run kept in its state folder into the thread folder, which then needs
  * committing; beyond that move, on any blocker it reports every line and changes nothing. It
  * archives by default, so a run folder never goes while anything durable exists only inside
@@ -215,9 +238,10 @@ export const closeRun = async (context: AgentContext, request: CloseRequest): Pr
   if (!request.delete && (await stat(target).catch(() => undefined)))
     throw new KiError(`${request.run} is already archived at ${target}`, 1)
   const thread = await threadHome(context, request.run, request.repo, false)
-  const { lines, decisions, log } = await gateLines(context, directory, thread, request)
-  const rendered = lines.map(render)
-  if (lines.some((line) => !line.ok)) return { lines: rendered, outcome: undefined }
+  const gate = await gateLines(context, directory, thread, request)
+  if (gate.lines.some((line) => !line.ok)) return { lines: gate.lines.map(render), outcome: undefined }
+  const lines = [...gate.lines, ...(await removeTemporary(context, request.run))]
+  const { decisions, log } = gate
 
   await mkdir(archive, { recursive: true })
   let outcome: string
@@ -242,5 +266,5 @@ export const closeRun = async (context: AgentContext, request: CloseRequest): Pr
     notePath = join(target, 'close.md')
   }
   await writeFile(notePath, note(context, request, outcome, lines, decisions, log))
-  return { lines: rendered, outcome: `${outcome}; close note at ${notePath}` }
+  return { lines: lines.map(render), outcome: `${outcome}; close note at ${notePath}` }
 }

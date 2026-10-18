@@ -1,6 +1,6 @@
-import { realpath, rm, utimes } from 'node:fs/promises'
+import { readdir, realpath, rm, utimes } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, onTestFinished, test } from 'vitest'
 import { type AgentLaunch, runCommand, type Sandbox, sandbox } from './_cli_helper.ts'
 
 const now = () => Date.parse('2026-10-07T19:30:00Z')
@@ -60,6 +60,7 @@ const eventRun = (box: Sandbox, run = 'r'): Promise<void> =>
 const runPath = (box: Sandbox, file: string): string => `${runDir(box)}/${file}`
 const threadPath = async (box: Sandbox, file: string): Promise<string> =>
   `${await realpath(box.project.path)}/+/_THREADS/r/${file}`
+const temporaryPath = (box: Sandbox, name: string, run = 'r'): string => `${box.root.path}/tmp/ki-agents/${run}/${name}`
 
 describe('ki agent launch', () => {
   test('writes the run packet and detaches the Claude Code adapter with the footer', async () => {
@@ -81,6 +82,8 @@ describe('ki agent launch', () => {
     expect(prompt).toContain("(time from: TZ=Europe/Paris date '+%H:%M %Z')")
     expect(prompt).toContain('Do not use background subagents. Never end your session while waiting.\n')
     expect(prompt).toContain(`write your report to ${await threadPath(box, 'one.report.md')} as the owner report`)
+    expect(prompt).toContain(`Temporary output goes in ${temporaryPath(box, 'one')}/, outside every repository;`)
+    expect(await readdir(temporaryPath(box, 'one'))).toEqual([])
     expect(await box.state.read('ki/agents/r/thread.json')).toBe(
       `${JSON.stringify({ repository: await realpath(box.project.path), folder: '+/_THREADS/r' })}\n`
     )
@@ -100,7 +103,9 @@ describe('ki agent launch', () => {
       '--add-dir',
       `${box.state.path}/ki/agents/r`,
       '--add-dir',
-      `${await realpath(box.project.path)}/extra`
+      `${await realpath(box.project.path)}/extra`,
+      '--add-dir',
+      temporaryPath(box, 'one')
     ])
     expect(launch.workingDirectory).toBe(await realpath(box.project.path))
     expect(launch.environment['CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS']).toBe('0')
@@ -110,6 +115,22 @@ describe('ki agent launch', () => {
     const again = await box.run('ki agent launch r one . task.md', { now })
     expect(again.exitCode).toBe(1)
     expect(again.stderr).toBe('ki: error: r/one is already running (pid 1001)\n')
+  })
+
+  test('falls back to /tmp for the temporary folder when TMPDIR is unset', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    fakeProcesses(box)
+    box.setEnv({ TMPDIR: undefined })
+    const run = `ki-test-${process.pid}-${Date.now()}`
+    onTestFinished(() => rm(`/tmp/ki-agents/${run}`, { recursive: true, force: true }))
+    await box.project.write('task.md', '# Task\n')
+
+    expect((await box.run(`ki agent launch ${run} one . task.md`, { now })).exitCode).toBe(0)
+
+    expect(await box.state.read(`ki/agents/${run}/one.prompt.md`)).toContain(
+      `Temporary output goes in /tmp/ki-agents/${run}/one/,`
+    )
   })
 
   test('detaches the Codex adapter with the none footer by default', async () => {
@@ -134,6 +155,8 @@ describe('ki agent launch', () => {
       await realpath(box.project.path),
       '--add-dir',
       `${box.state.path}/ki/agents/r`,
+      '--add-dir',
+      temporaryPath(box, 'one'),
       prompt
     ])
     expect(launch.environment['CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS']).toBeUndefined()
@@ -390,6 +413,8 @@ describe('ki agent launch --wait-for', () => {
       'codex',
       '--add-dir',
       `${project}/extra`,
+      '--add-dir',
+      temporaryPath(box, 'one'),
       '--wait-for',
       'zero',
       '--wait-for',
@@ -667,7 +692,14 @@ describe('ki agent thread home', () => {
     )
     expect(result.exitCode).toBe(0)
     const [launch] = processes.launches as [AgentLaunch]
-    expect(launch.arguments.slice(-4)).toEqual(['--add-dir', runDir(box), '--add-dir', project])
+    expect(launch.arguments.slice(-6)).toEqual([
+      '--add-dir',
+      runDir(box),
+      '--add-dir',
+      project,
+      '--add-dir',
+      temporaryPath(box, 'one')
+    ])
     expect(JSON.parse(await box.state.read('ki/agents/r/queue.jsonl').catch(() => '{}'))).toEqual({})
 
     // A queued launch carries no --repo of its own: the recorded home serves the dispatcher.
@@ -713,7 +745,7 @@ describe('ki agent thread home', () => {
       `write your report to ${owner}/+/_THREADS/r/one.report.md as the owner report`
     )
     const [launch] = processes.launches as [AgentLaunch]
-    expect(launch.arguments.slice(-2)).toEqual(['--add-dir', owner])
+    expect(launch.arguments.slice(-4)).toEqual(['--add-dir', owner, '--add-dir', temporaryPath(box, 'one')])
     expect(await box.state.read('ki/agents/r/thread.json')).toBe(
       `${JSON.stringify({ repository: owner, folder: '+/_THREADS/r' })}\n`
     )
@@ -1089,6 +1121,34 @@ describe('ki agent close', () => {
     const again = await box.run('ki agent close r', { now })
     expect(again.exitCode).toBe(1)
     expect(again.stderr).toBe(`ki: error: r is already archived at ${archive(box, 'r')}\n`)
+  })
+
+  test('refuses while a temporary folder holds output, then removes every agent folder of the run', async () => {
+    const box = await sandbox()
+    await setupFinishedRun(box)
+    await box.root.write('tmp/ki-agents/r/a/draft.md', '# Draft\n')
+    await box.root.mkdir('tmp/ki-agents/r/b')
+    await box.root.write('tmp/ki-agents/other/a/keep.md', '# Keep\n')
+
+    const blocked = await box.run('ki agent close r', { now })
+    expect(blocked.exitCode).toBe(1)
+    expect(blocked.stdout).toContain(
+      `ok: no worktrees\nblocker: temporary folder ${temporaryPath(box, 'a')} holds draft.md\nok: decision 1`
+    )
+    expect(await box.root.read('tmp/ki-agents/r/a/draft.md')).toBe('# Draft\n')
+
+    const closed = await box.run('ki agent close r --reconciled', { now })
+    expect(closed.exitCode).toBe(0)
+    expect(closed.stdout).toContain(
+      `ok: temporary folder ${temporaryPath(box, 'a')} holds draft.md, waived by --reconciled\n`
+    )
+    expect(closed.stdout).toContain(
+      `ok: removed ${temporaryPath(box, 'a')}\nok: removed ${temporaryPath(box, 'b')}\narchived ${runDir(box)}`
+    )
+    expect(await box.state.read('ki/agents/_archive/r/close.md')).toContain(
+      `- ok: removed ${temporaryPath(box, 'b')}\n`
+    )
+    expect(await readdir(`${box.root.path}/tmp/ki-agents`)).toEqual(['other'])
   })
 
   test('reads each decision class: operational is its own home, held may wait in an untracked checkpoint', async () => {
