@@ -12,7 +12,7 @@ blocks: []
 blocked_by: []
 baseline_ref: 0e48ca2764f7ab3eb9a54b99b4a8e2a40aa4edc8
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-18T05:55:00Z
+updated_at: 2026-10-18T08:54:48Z
 ---
 
 # Launch Footer Follows Brief
@@ -37,6 +37,10 @@ What `ki agent` does today:
 - In (ki-agentic-harness, handoff): the `ki-delegation` standard and assets define whichever new tier or grant wording is chosen, and the intro lines stop matching the footer marker. The harness owns that change; this record only consumes it.
 - Out: inferring authority from free text in the brief; changing what any existing tier grants; the decisions-log format.
 
+## Requirements
+
+1. The progress protocol `composePrompt` writes asks for the owner report without a reply block: its report sentence drops "with the reply block" from "outstanding queries with the reply block", because the ki-pmo owner report carries no reply block and the owner answers in speech.
+
 ## Current state
 
 Read at `0f61dd83` on 16 October 2026; the Context above still holds.
@@ -60,6 +64,7 @@ Read at `0f61dd83` on 16 October 2026; the Context above still holds.
 - [x] `ki agent launch` and `ki agent queue` print the warning on stderr, exit 0.
 - [ ] Once the harness ships the agreed grant assets: `grantNames` in `context.ts`, `--allow <grant>` (repeatable, choices) in `src/commands/agent/index.ts`, carried through `LaunchRequest`, the queue file and the hold relaunch; `composePrompt` appends each grant section after the tier footer; a missing grant asset fails like a missing tier; `README.md`, `man/ki.1`, `man/ki.commands.json`, the guide and `CHANGELOG.md` describe `--allow`.
 - [x] `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md` describe the footer and report-path fixes.
+- [ ] Requirement 1: drop "with the reply block" from the progress protocol in `composePrompt` (`src/core/agent/runs.ts`), update the contract tests that pin the protocol text, and note the change in `CHANGELOG.md`.
 
 ## Files touched
 
@@ -71,7 +76,8 @@ Read at `0f61dd83` on 16 October 2026; the Context above still holds.
 2. A footer with no exact `## Rules` line still fails with the existing message.
 3. A brief naming `<state folder>/one.report.md` launches with a stderr warning naming both paths; a brief naming the thread-folder path, or another agent's report, draws none; the protocol carries the "governs" sentence.
 4. `--allow fetch --allow machine` appends both grant sections after the tier footer in that order, survives `ki agent queue` and the dispatcher, and the hold relaunch; an unknown grant is rejected by the option parser; a missing grant asset fails naming it.
-5. `bun run test:coverage` at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` clean.
+5. The composed progress protocol asks for outstanding queries and no longer contains "reply block".
+6. `bun run test:coverage` at 100%; `bunx tsc --noEmit`, `bunx biome check .`, `bunx knip`, `mandoc -T lint man/ki.1`, rumdl and `ki repo audit --repo .` clean.
 
 ## Dependencies / blocks
 
@@ -107,3 +113,5 @@ Planned on 16 October 2026 in the tools-burndown thread: the marker and report-p
 Kris Brown answered FOOTER-GRANTS on 16 October 2026: this record delivers separate `--allow fetch` and `--allow machine` grants beside `--rules <tier>`, each a harness-owned section that lifts only the matching ban. The harness owner opens a `ki-delegation` record for the two grant texts, and KI-TOOL-KI-CLI-134 becomes Ready once that is agreed; until then it stays draft.
 
 Decisions 1 and 2 delivered on 18 October 2026 by the tools-burndown run under Kris Brown's overnight instruction to burn down the tools roadmap; the record stays in progress for the grants, which wait on [KI-HARNESS-GOV-201](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-201-fetch-and-machine-grants.md) (triage) for the agreed `grant-fetch.md` and `grant-machine.md` texts. Provisional, for Kris to confirm: delivering the two fixes ahead of the grants; a bare `<name>.report.md` draws no warning; the warning names each differing path once. The four `rules-*.md` assets on `ki-agentic-harness` main still carry the "`## Rules` onwards" intro mention, so the marker fix takes effect at once.
+
+Kris Brown folded COMPOSE-REPLY-BLOCK into this record on 18 October 2026, recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) as COMPOSE-REPLY-BLOCK a): fold the reply-block wording fix into KI-TOOL-KI-CLI-134. The launch prompt tools-ki writes still asks for "outstanding queries with the reply block", which the owner report no longer carries; Requirement 1, its Step and Verify 5 add the fix. Recorded by the `release-ki` run, which does not build it; the record stays in progress.
