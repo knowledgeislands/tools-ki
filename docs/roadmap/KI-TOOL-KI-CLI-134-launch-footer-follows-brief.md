@@ -6,13 +6,13 @@ project: tools-burndown
 purpose: corrective
 kind: deliver
 component: agent
-horizon: next
-status: draft
+horizon: now
+status: in-progress
 blocks: []
 blocked_by: []
-baseline_ref: null
+baseline_ref: 0e48ca2764f7ab3eb9a54b99b4a8e2a40aa4edc8
 created_at: 2026-10-14T17:05:00Z
-updated_at: 2026-10-16T21:10:00Z
+updated_at: 2026-10-18T05:55:00Z
 ---
 
 # Launch Footer Follows Brief
@@ -43,6 +43,7 @@ Read at `0f61dd83` on 16 October 2026; the Context above still holds.
 
 - `footer` (`src/core/agent/runs.ts:72`) slices from `text.indexOf('## Rules')`. The harness's four `rules-*.md` assets on `ki-agentic-harness` `origin/main` still open with an intro line that mentions "`## Rules` onwards" before the heading, so every composed prompt starts its footer mid-sentence and keeps relative links such as `../references/standards-background-runs.md` that do not resolve from a prompt. The contract-test fixture in `src/tests/cli/agent.test.ts` has a preamble without the marker, so the tests do not catch it.
 - `composePrompt` (`runs.ts:166`) names `reportPath(thread, name)` in the progress protocol. Since the thread-home work, `ki agent new` drafts name the same thread-folder path, so a split now comes only from a hand-written brief that names the state-folder or another path for the same `<name>.report.md`.
+- **Delivered on 18 October 2026 (Decisions 1 and 2).** `footer` now starts at the `## Rules` heading line and makes relative link targets absolute from the asset folder; launch and queue warn on standard error when the brief names this agent's `<name>.report.md` in another folder, and the protocol says its path governs.
 - `--rules` (`src/commands/agent/index.ts:65`) accepts `authorityTiers` (`none`, `push`, `prune`, `release`, `src/core/agent/context.ts:9`), one asset each. The harness has no grant or tier asset for fetch without push or for an approved machine change, and no harness record proposes one.
 
 ## Decision
@@ -53,12 +54,12 @@ Read at `0f61dd83` on 16 October 2026; the Context above still holds.
 
 ## Steps
 
-- [ ] `footer`: find `/^## Rules$/m`; rewrite relative link targets against the asset folder; keep the existing error when no such line exists.
-- [ ] Contract-test fixture: give the fixture preamble the "`## Rules` onwards" mention and a relative link, so the tests pin both fixes.
-- [ ] `composePrompt`: scan the brief for paths ending `/<name>.report.md` or a bare `<name>.report.md` outside `+/_THREADS/<run>/`; return a launch warning naming both paths; add "This is the only report path; it governs any other the brief names." to the protocol.
-- [ ] `ki agent launch` and `ki agent queue` print the warning on stderr, exit 0.
-- [ ] Once the harness ships the agreed grant assets: `grantNames` in `context.ts`, `--allow <grant>` (repeatable, choices) in `src/commands/agent/index.ts`, carried through `LaunchRequest`, the queue file and the hold relaunch; `composePrompt` appends each grant section after the tier footer; a missing grant asset fails like a missing tier.
-- [ ] `README.md`, `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md`.
+- [x] `footer`: find `/^## Rules$/m`; rewrite relative link targets against the asset folder; keep the existing error when no such line exists.
+- [x] Contract-test fixture: give the fixture preamble the "`## Rules` onwards" mention and a relative link, so the tests pin both fixes.
+- [x] `composePrompt`: scan the brief for paths ending `/<name>.report.md` outside the thread folder (a bare `<name>.report.md` names no folder and draws no warning); return a launch warning naming both paths; add "This is the only report path; it governs any other the brief names." to the protocol.
+- [x] `ki agent launch` and `ki agent queue` print the warning on stderr, exit 0.
+- [ ] Once the harness ships the agreed grant assets: `grantNames` in `context.ts`, `--allow <grant>` (repeatable, choices) in `src/commands/agent/index.ts`, carried through `LaunchRequest`, the queue file and the hold relaunch; `composePrompt` appends each grant section after the tier footer; a missing grant asset fails like a missing tier; `README.md`, `man/ki.1`, `man/ki.commands.json`, the guide and `CHANGELOG.md` describe `--allow`.
+- [x] `man/ki.1`, `man/ki.commands.json`, `docs/guides/user/background-agents.md` and `CHANGELOG.md` describe the footer and report-path fixes.
 
 ## Files touched
 
@@ -104,3 +105,5 @@ Adopted on 16 October 2026 through `ki-next` as deliver / Next under the tools-b
 Planned on 16 October 2026 in the tools-burndown thread: the marker and report-path fixes are settled; the authority shape is recommended as orthogonal grants and waits on Kris and a harness asset, so the record stays draft.
 
 Kris Brown answered FOOTER-GRANTS on 16 October 2026: this record delivers separate `--allow fetch` and `--allow machine` grants beside `--rules <tier>`, each a harness-owned section that lifts only the matching ban. The harness owner opens a `ki-delegation` record for the two grant texts, and KI-TOOL-KI-CLI-134 becomes Ready once that is agreed; until then it stays draft.
+
+Decisions 1 and 2 delivered on 18 October 2026 by the tools-burndown run under Kris Brown's overnight instruction to burn down the tools roadmap; the record stays in progress for the grants, which wait on [KI-HARNESS-GOV-201](/Users/krisbrown/workspaces/knowledge-islands/ki-agentic-harness/docs/roadmap/KI-HARNESS-GOV-201-fetch-and-machine-grants.md) (triage) for the agreed `grant-fetch.md` and `grant-machine.md` texts. Provisional, for Kris to confirm: delivering the two fixes ahead of the grants; a bare `<name>.report.md` draws no warning; the warning names each differing path once. The four `rules-*.md` assets on `ki-agentic-harness` main still carry the "`## Rules` onwards" intro mention, so the marker fix takes effect at once.

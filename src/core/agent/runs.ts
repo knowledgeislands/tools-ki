@@ -84,11 +84,32 @@ const delegationAssets = async (context: AgentContext): Promise<string> => {
   )
 }
 
+/** Relative Markdown link targets made absolute from the asset's folder, so they open from a prompt. */
+const absoluteLinks = (text: string, folder: string): string =>
+  text.replace(/\]\(([^)\s]+)\)/g, (link, target: string) =>
+    /^(?:[a-z][a-z0-9+.-]*:|[#/])/i.test(target) ? link : `](${resolve(folder, target)})`
+  )
+
+/** The tier's footer from its `## Rules` heading line, not from an earlier mention of it. */
 const footer = async (context: AgentContext, tier: AuthorityTier): Promise<string> => {
-  const text = (await read(join(await delegationAssets(context), `rules-${tier}.md`))) ?? ''
-  const start = text.indexOf('## Rules')
-  if (start < 0) throw new KiError(`the ki-delegation footer for '${tier}' has no '## Rules' section`, 1)
-  return text.slice(start).trimEnd()
+  const assets = await delegationAssets(context)
+  const text = (await read(join(assets, `rules-${tier}.md`))) ?? ''
+  const heading = /^## Rules$/m.exec(text)
+  if (!heading) throw new KiError(`the ki-delegation footer for '${tier}' has no '## Rules' section`, 1)
+  return absoluteLinks(text.slice(heading.index).trimEnd(), assets)
+}
+
+/**
+ * Each path in the brief to this agent's `<name>.report.md` in a folder other than the
+ * thread folder, as a warning naming the report path the progress protocol uses instead.
+ */
+const reportConflicts = (body: string, thread: ThreadHome, name: string): readonly string[] => {
+  const report = reportPath(thread, name)
+  const pattern = new RegExp(`(?<![^\\s(\`'"<\\[])([^\\s()\`'"<>\\[\\]]*/${name}\\.report\\.md)`, 'g')
+  const paths = new Set([...body.matchAll(pattern)].map((match) => match[1] as string))
+  return [...paths]
+    .filter((path) => path !== report && !path.endsWith(`${thread.folder}/${name}.report.md`))
+    .map((path) => `the brief names ${path}; the report goes to ${report}, which governs`)
 }
 
 export const pidOf = async (path: string): Promise<number | undefined> => {
@@ -200,7 +221,7 @@ const composePrompt = async (
     [
       '---',
       '',
-      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${report} as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries with the reply block), then write DONE as the last line of ${base}.status. Temporary output goes in ${temporary}/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.`
+      `Progress protocol. Overwrite ${base}.status with one plain-language line 'HH:MM <zone> - what you are doing' (time from: ${zone}date '+%H:%M %Z') at each change of activity and at least every two minutes. When finished, write your report to ${report} as the owner report the ki-delegation background-run standard sets (what has been done, what is in progress, outstanding queries with the reply block), then write DONE as the last line of ${base}.status. This is the only report path; it governs any other the brief names. Temporary output goes in ${temporary}/, outside every repository; ki agent close refuses while it holds anything and then removes it, so home what must survive first. For a milestone the coordinator should hear about, write the line as 'HH:MM <zone> - milestone: <text>'; when you are blocked or the work has failed, as 'HH:MM <zone> - blocked: <text>' or 'HH:MM <zone> - failed: <text>'. Do not use background subagents. Never end your session while waiting.`
     ].join('\n')
   )
   return `${sections.join('\n\n')}\n`
@@ -330,6 +351,8 @@ export interface LaunchResult {
   readonly directory: string
   /** Agents the launch is held for; empty when the runtime started at once. */
   readonly held: readonly string[]
+  /** Report paths in the brief that differ from the one the progress protocol names. */
+  readonly warnings: readonly string[]
 }
 
 /**
@@ -354,6 +377,7 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
   // The agent writes its report into the tracked thread folder, so the folder must exist.
   await mkdir(threadPath(thread), { recursive: true })
   await mkdir(temporary, { recursive: true })
+  const warnings = reportConflicts(body, thread, request.name)
   const prompt = await composePrompt(context, directory, request, reportPath(thread, request.name), temporary, body)
   await writeFile(`${base}.prompt.md`, prompt)
   await writeFile(`${base}.launch.json`, launchDetails(request))
@@ -367,7 +391,7 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
       'launch',
       `launched (pid ${pid})`
     )
-    return { pid, directory, held: [] }
+    return { pid, directory, held: [], warnings }
   }
   await writeFile(`${base}.status`, heldLine(context, state.names))
   const pid = await startHold(context, directory, request)
@@ -380,7 +404,7 @@ export const launchAgent = async (context: AgentContext, candidate: LaunchReques
     'held',
     `held until ${state.names.join(', ')} finish`
   )
-  return { pid, directory, held: state.names }
+  return { pid, directory, held: state.names, warnings }
 }
 
 /**
@@ -435,9 +459,15 @@ const writeQueue = (directory: string, queue: readonly LaunchRequest[]): Promise
   writeFile(queueFile(directory), queue.map((request) => `${JSON.stringify(request)}\n`).join(''))
 
 /** Appends a ready-made agent to the run queue; returns its position. */
-export const queueAgent = async (context: AgentContext, candidate: LaunchRequest): Promise<number> => {
+export interface QueueResult {
+  readonly position: number
+  /** Report paths in the brief that differ from the one the progress protocol will name. */
+  readonly warnings: readonly string[]
+}
+
+export const queueAgent = async (context: AgentContext, candidate: LaunchRequest): Promise<QueueResult> => {
   const request = await validated(context, candidate)
-  await promptText(context, request.prompt)
+  const body = await promptText(context, request.prompt)
   await delegationAssets(context)
   const thread = await threadHome(context, request.run, request.repo, true, request.workdir)
   const directory = runDirectory(context, request.run)
@@ -449,7 +479,7 @@ export const queueAgent = async (context: AgentContext, candidate: LaunchRequest
   await copyFile(resolve(context.workingDirectory, request.prompt), prompt)
   // The thread home is on record now, so the dispatcher's launch needs no repository.
   await writeQueue(directory, [...queue, { ...request, prompt, repo: undefined }])
-  return queue.length + 1
+  return { position: queue.length + 1, warnings: reportConflicts(body, thread, request.name) }
 }
 
 export interface AgentSummary {

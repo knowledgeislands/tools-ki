@@ -1604,6 +1604,13 @@ when
 .B TMPDIR
 is unset. The temporary folder, and the owning repository when the working
 directory lies outside it, are added to the agent's writable directories.
+The protocol's report path governs: launch and
+.B ki agent queue
+warn on standard error, and still proceed, when the brief names the agent's
+.I <name>.report.md
+in another folder. The authority footer is the tier's asset from its
+.B ## Rules
+heading line, with relative link targets made absolute.
 Names are unique within a run: a name that has already run, shown by its
 .IR .pid ,
 .IR .status ,

@@ -142,6 +142,7 @@ export const createAgentCommand = (context: KiContext): Command => {
         const launch = request(run, name, workdir, prompt, options)
         if (options.foreground) return write(await holdAgent(agentContext(context), launch))
         const result = await launchAgent(agentContext(context), launch)
+        for (const warning of result.warnings) context.stderr.write(`ki: warning: ${warning}\n`)
         write(
           result.held.length
             ? `held ${run}/${name} until ${result.held.join(', ')} finish (pid ${result.pid}) in ${result.directory}`
@@ -160,8 +161,9 @@ export const createAgentCommand = (context: KiContext): Command => {
         .argument('<prompt-file>', 'prompt to launch when dispatched')
         .option('--workdir <dir>', 'working directory for the agent', '.')
     ).action(async (run: string, name: string, prompt: string, options: LaunchOptions & { workdir: string }) => {
-      const position = await queueAgent(agentContext(context), request(run, name, options.workdir, prompt, options))
-      write(`queued ${run}/${name} at position ${position}`)
+      const queued = await queueAgent(agentContext(context), request(run, name, options.workdir, prompt, options))
+      for (const warning of queued.warnings) context.stderr.write(`ki: warning: ${warning}\n`)
+      write(`queued ${run}/${name} at position ${queued.position}`)
     })
   )
 

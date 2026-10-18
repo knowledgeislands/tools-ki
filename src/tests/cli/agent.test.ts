@@ -6,7 +6,7 @@ import { type AgentLaunch, runCommand, type Sandbox, sandbox } from './_cli_help
 const now = () => Date.parse('2026-10-07T19:30:00Z')
 const assets = 'ki/harnesses/knowledgeislands/ki-agentic-harness/skills/governance/ki-delegation/assets'
 const footer = (tier: string): string =>
-  `# Authority footer: ${tier}\n\nPreamble the launcher drops.\n\n## Rules\n\n- Tier ${tier} rule.\n`
+  `# Authority footer: ${tier}\n\nPreamble the launcher drops: it appends this file from \`## Rules\` onwards, see [the standard](../references/x.md#tiers).\n\n## Rules\n\n- Links: [rule](../references/x.md#rule), [site](https://example.com/a), [here](#rules), [root](/abs/y.md).\n- Tier ${tier} rule.\n`
 
 /** The project is a Git repository, so a run's thread home resolves to it; returns its physical path. */
 const setupRepository = async (box: Sandbox): Promise<string> => {
@@ -77,8 +77,12 @@ describe('ki agent launch', () => {
     expect(result.stdout).toBe(`launched r/one (pid 1001) in ${box.state.path}/ki/agents/r\n`)
     const prompt = await box.state.read('ki/agents/r/one.prompt.md')
     expect(prompt).toContain('# Task: do it\n\n1. Step.\n\n## Rules')
-    expect(prompt).toContain('## Rules\n\n- Tier push rule.\n\n---\n\nProgress protocol.')
-    expect(prompt).not.toContain('Preamble the launcher drops.')
+    expect(prompt).toContain(
+      `## Rules\n\n- Links: [rule](${box.data.path}/${dirname(assets)}/references/x.md#rule), [site](https://example.com/a), [here](#rules), [root](/abs/y.md).\n- Tier push rule.\n\n---\n\nProgress protocol.`
+    )
+    expect(prompt).not.toContain('Preamble the launcher drops')
+    expect(prompt).toContain('This is the only report path; it governs any other the brief names.')
+    expect(result.stderr).toBe('')
     expect(prompt).toContain("(time from: TZ=Europe/Paris date '+%H:%M %Z')")
     expect(prompt).toContain('Do not use background subagents. Never end your session while waiting.\n')
     expect(prompt).toContain(`write your report to ${await threadPath(box, 'one.report.md')} as the owner report`)
@@ -115,6 +119,30 @@ describe('ki agent launch', () => {
     const again = await box.run('ki agent launch r one . task.md', { now })
     expect(again.exitCode).toBe(1)
     expect(again.stderr).toBe('ki: error: r/one is already running (pid 1001)\n')
+  })
+
+  test('warns when the brief names another report path for the agent, and still launches or queues', async () => {
+    const box = await sandbox()
+    await setupDelegation(box)
+    fakeProcesses(box)
+    const report = await threadPath(box, 'one.report.md')
+    await box.project.write(
+      'task.md',
+      `# Task\n\nReport to ${runPath(box, 'one.report.md')} and \`+/_THREADS/r/one.report.md\`, not (${report}), +/_THREADS/r/other.report.md or x/bone.report.md; again ${runPath(box, 'one.report.md')}.\n`
+    )
+
+    const result = await box.run('ki agent launch r one . task.md', { now })
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stderr).toBe(
+      `ki: warning: the brief names ${runPath(box, 'one.report.md')}; the report goes to ${report}, which governs\n`
+    )
+    await box.project.write('two.md', '# Task\n\nReport to docs/two.report.md.\n')
+    const queued = await box.run('ki agent queue r two two.md', { now })
+    expect(queued.exitCode).toBe(0)
+    expect(queued.stderr).toBe(
+      `ki: warning: the brief names docs/two.report.md; the report goes to ${await threadPath(box, 'two.report.md')}, which governs\n`
+    )
   })
 
   test('falls back to /tmp for the temporary folder when TMPDIR is unset', async () => {
