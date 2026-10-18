@@ -6,13 +6,12 @@ project: tools-burndown
 purpose: corrective
 kind: deliver
 component: repo
-horizon: now
-status: awaiting-review
+status: done
 blocks: [KI-TOOL-KI-CLI-136]
 blocked_by: [KI-TOOL-KI-CLI-126]
 baseline_ref: 314da867d09a7283ffc1e9574999284ea4466d3f
 created_at: 2026-10-14T20:57:30Z
-updated_at: 2026-10-18T08:30:00Z
+updated_at: 2026-10-18T08:30:01Z
 ---
 
 # Host-Absent Store State
@@ -171,6 +170,10 @@ On 18 October 2026:
 ### Mini recap
 
 A host can now say it does without a store, and every command that meets a missing or unavailable store warns with the exact fix and carries on.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above, the independent review of 18 October and its STORE-FIX correction. In the ways-of-working walk-through Kris answered "Agreed with all of the recommendations", recorded as ACCEPT-131 a) in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 4"): accept this record with its four calls. The four judgement calls in the Change Summary are confirmed: `store bind` clears an absence marker and `store unbind` leaves it; the text form of `store list` prints the fix for `unavailable` and `missing` stores; the doctor store check is left out when no registered repository declares an external store; and `Registry: complete` appears when every declared store is available or absent. [KI-TOOL-KI-CLI-136](KI-TOOL-KI-CLI-136-errors-suggest-fixes.md) is now unblocked.
 
 ## Discussion
 

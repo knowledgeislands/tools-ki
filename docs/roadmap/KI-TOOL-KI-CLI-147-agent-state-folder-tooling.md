@@ -6,13 +6,12 @@ project: tools-burndown
 purpose: corrective
 kind: deliver
 component: agent
-horizon: now
-status: awaiting-review
+status: done
 blocks: []
 blocked_by: []
 baseline_ref: aa185bf7f56c97ba0e0bb4d61ecbbe978d29bb88
 created_at: 2026-10-18T05:30:00Z
-updated_at: 2026-10-18T08:30:00Z
+updated_at: 2026-10-18T08:30:01Z
 ---
 
 # Agent State-Folder Tooling
@@ -143,6 +142,10 @@ The change is additive for readers: `reportOf`, the relaunch check, the taken-na
 ### Mini recap
 
 Agents now report into the state folder and `ki` files the copy for the coordinator; briefs are kept once; and `ki agent sweep` clears out old archived runs and spent briefs on request.
+
+## Done
+
+Accepted 2026-10-18 by Kris Brown on the review packet above, the independent review of 18 October and its HOME-HELD correction. In the ways-of-working walk-through Kris answered "Agreed with all of the recommendations", recorded in the [ways-of-working decisions log](/Users/krisbrown/workspaces/knowledge-islands/ki-principal/+/_WORK/ki.ways-of-working/decisions.md) ("owner answers, batch 4") as STATE-TOOLING-147 a), accept this record with its four answers, and HOME-MATCH a), keep the contents-based check as delivered. The four Decision answers are confirmed: the report is copied on the first observed `DONE`, a launch removes its spent queued or draft brief, `_archive/` keeps ten closed runs, and the sweep is the separate `ki agent sweep` verb. The `heldAs` check, which matches a retired report by contents rather than by path, stays as delivered.
 
 ## Discussion
 
