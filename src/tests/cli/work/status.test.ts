@@ -173,8 +173,8 @@ describe('ki work status', () => {
       [
         '╭─ KI WORK STATUS example/principal',
         '├─ with you (2)',
-        '│  ├─ 🧑 ex.regular · owner · since 2026-10-17T02:00:00Z',
-        '│  ╰─ 🧑 ex.gamma · owner · since 2026-10-18T02:00:00Z',
+        '│  ├─ 👤 ex.regular · owner · since 2026-10-17T02:00:00Z',
+        '│  ╰─ 👤 ex.gamma · owner · since 2026-10-18T02:00:00Z',
         '├─ stuck (2)',
         '│  ├─ ⏳ ex-alpha/slow · run/ex-alpha · since 2026-10-18T02:30:00Z',
         '│  ╰─ ⏳ ex.beta · agent · since 2026-10-18T02:00:00Z',

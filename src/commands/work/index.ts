@@ -17,7 +17,7 @@ import { presentation, renderTree, type TreeEntry } from '../presentation/index.
 
 const viewLabels: Readonly<Record<WorkView, { readonly glyph: string; readonly label: string; readonly key: string }>> =
   {
-    'with-you': { glyph: '🧑', label: 'with you', key: 'WITH_YOU' },
+    'with-you': { glyph: '👤', label: 'with you', key: 'WITH_YOU' },
     stuck: { glyph: '⏳', label: 'stuck', key: 'STUCK' },
     blocked: { glyph: '⛔', label: 'blocked', key: 'BLOCKED' },
     moving: { glyph: '🤖', label: 'moving', key: 'MOVING' },
